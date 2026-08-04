@@ -111,7 +111,6 @@ trap 'rm -f "$native_config"' EXIT
 CEF_DIR="$cef_dir" NATIVE_CONFIG="$native_config" bun --eval '
 const cefDir = Bun.env.CEF_DIR;
 const nativeConfig = Bun.env.NATIVE_CONFIG;
-const workspace = process.cwd();
 const files = [
   "libcef.so",
   "icudtl.dat",
@@ -127,7 +126,6 @@ const files = [
   "chrome-sandbox",
 ];
 const resources = {
-  [`${workspace}/src/extensions/bundled`]: "bundled",
   [`${cefDir}/locales`]: "locales",
 };
 for (const file of files) {

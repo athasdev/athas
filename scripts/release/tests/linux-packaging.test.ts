@@ -33,6 +33,14 @@ describe("Linux release packaging", () => {
     expect(script).toContain("dpkg-deb --root-owner-group");
   });
 
+  it("does not add bundled extensions twice to native packages", () => {
+    const config = JSON.parse(readRepoFile("src-tauri/tauri.conf.json"));
+    const script = readRepoFile("scripts/release/packaging/linux/native.sh");
+
+    expect(config.bundle.resources["../src/extensions/bundled"]).toBe("bundled");
+    expect(script).not.toContain("src/extensions/bundled");
+  });
+
   it("builds Debian and RPM packages together in the release workflow", () => {
     const workflow = readRepoFile(".github/workflows/release.yml");
     const linuxBuild = workflow.indexOf("cargo tauri build --no-bundle");
