@@ -14,8 +14,8 @@ export const useCodeLens = (filePath: string | undefined, enabled: boolean) => {
   const [lenses, setLenses] = useState<CodeLensItem[]>([]);
   const requestIdRef = useRef(0);
   const lspStatusRevision = useLspStore((state) => {
-    const { status, activeWorkspaces, supportedLanguages } = state.lspStatus;
-    return `${status}:${activeWorkspaces.join("|")}:${supportedLanguages?.join("|") ?? ""}`;
+    const { status, activeWorkspaces, supportedLanguages, documentRevision } = state.lspStatus;
+    return `${status}:${activeWorkspaces.join("|")}:${supportedLanguages?.join("|") ?? ""}:${documentRevision}`;
   });
 
   const fetchLenses = useCallback(async () => {
@@ -26,7 +26,7 @@ export const useCodeLens = (filePath: string | undefined, enabled: boolean) => {
 
     const id = ++requestIdRef.current;
     const lspClient = LspClient.getInstance();
-    if (!lspClient.getActiveServerEntryForFile(filePath)) {
+    if (!lspClient.getActiveServerEntryForFile(filePath) || !lspClient.isDocumentOpen(filePath)) {
       setLenses([]);
       return;
     }

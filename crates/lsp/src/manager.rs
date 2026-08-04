@@ -935,6 +935,9 @@ impl LspManager {
       let Some(client) = self.get_client_for_file(file_path) else {
          return Ok(None);
       };
+      if !client.supports_code_lens() {
+         return Ok(None);
+      }
 
       let text_document = TextDocumentIdentifier {
          uri: manager_support::text_document_identifier(file_path)?.uri,
@@ -966,6 +969,9 @@ impl LspManager {
       let Some(client) = self.get_client_for_file(file_path) else {
          return Ok(vec![]);
       };
+      if !client.supports_code_actions() {
+         return Ok(vec![]);
+      }
 
       let text_document = TextDocumentIdentifier {
          uri: manager_support::text_document_identifier(file_path)?.uri,

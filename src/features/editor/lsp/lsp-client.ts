@@ -343,6 +343,10 @@ export class LspClient {
     return serverKey ? this.buildServerEntry(serverKey) : null;
   }
 
+  isDocumentOpen(filePath: string): boolean {
+    return this.openDocuments.has(filePath);
+  }
+
   static getInstance(): LspClient {
     if (!LspClient.instance) {
       LspClient.instance = new LspClient();
@@ -1282,6 +1286,7 @@ export class LspClient {
       await invoke<void>("lsp_document_open", { filePath, content, languageId });
       this.openDocuments.add(filePath);
       this.documentVersions.set(filePath, 1);
+      useLspStore.getState().actions.markDocumentStateChanged();
     } catch (error) {
       logger.error("LSPClient", "LSP document open error:", error);
     }
@@ -1310,9 +1315,12 @@ export class LspClient {
   }
 
   async notifyDocumentClose(filePath: string): Promise<void> {
-    this.openDocuments.delete(filePath);
+    const wasOpen = this.openDocuments.delete(filePath);
     this.documentVersions.delete(filePath);
     useDiagnosticsStore.getState().actions.clearDiagnosticsForOwner(filePath, "lsp");
+    if (wasOpen) {
+      useLspStore.getState().actions.markDocumentStateChanged();
+    }
 
     try {
       await invoke<void>("lsp_document_close", { filePath });

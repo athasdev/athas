@@ -9,6 +9,7 @@ interface LspStatusInfo {
   activeWorkspaces: string[];
   lastError?: string;
   supportedLanguages?: string[];
+  documentRevision: number;
 }
 
 interface LspState {
@@ -22,6 +23,7 @@ interface LspState {
     ) => void;
     setLspError: (error: string) => void;
     clearLspError: () => void;
+    markDocumentStateChanged: () => void;
   };
 }
 
@@ -34,6 +36,7 @@ export const useLspStore = createSelectors(
       activeWorkspaces: [],
       lastError: undefined,
       supportedLanguages: undefined,
+      documentRevision: 0,
     },
     actions: {
       updateLspStatus: (status, workspaces, error, languages) => {
@@ -67,6 +70,14 @@ export const useLspStore = createSelectors(
             ...state.lspStatus,
             lastError: undefined,
             status: state.lspStatus.activeWorkspaces.length > 0 ? "connected" : "disconnected",
+          },
+        }));
+      },
+      markDocumentStateChanged: () => {
+        set((state) => ({
+          lspStatus: {
+            ...state.lspStatus,
+            documentRevision: state.lspStatus.documentRevision + 1,
           },
         }));
       },

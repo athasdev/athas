@@ -806,6 +806,30 @@ impl LspClient {
       self.request::<request::CodeActionRequest>(params).await
    }
 
+   pub fn supports_code_lens(&self) -> bool {
+      self
+         .capabilities
+         .lock()
+         .unwrap()
+         .as_ref()
+         .and_then(|capabilities| capabilities.code_lens_provider.as_ref())
+         .is_some()
+   }
+
+   pub fn supports_code_actions(&self) -> bool {
+      match self
+         .capabilities
+         .lock()
+         .unwrap()
+         .as_ref()
+         .and_then(|capabilities| capabilities.code_action_provider.as_ref())
+      {
+         Some(CodeActionProviderCapability::Simple(enabled)) => *enabled,
+         Some(CodeActionProviderCapability::Options(_)) => true,
+         None => false,
+      }
+   }
+
    pub async fn text_document_semantic_tokens_full(
       &self,
       params: SemanticTokensParams,
