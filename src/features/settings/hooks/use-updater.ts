@@ -207,7 +207,7 @@ export const useUpdater = (checkOnMount = true) => {
       });
 
       if (updateInfoRef.current) {
-        useWhatsNewStore.getState().queuePendingUpdate(updateInfoRef.current);
+        useWhatsNewStore.getState().actions.queuePendingUpdate(updateInfoRef.current);
       }
 
       // Relaunch the app to apply the update
@@ -269,7 +269,7 @@ export const useUpdater = (checkOnMount = true) => {
       return;
     }
 
-    void useWhatsNewStore.getState().openInfo({
+    void useWhatsNewStore.getState().actions.openInfo({
       version: updateInfo.version,
       previousVersion: updateInfo.currentVersion,
       body: updateInfo.body,

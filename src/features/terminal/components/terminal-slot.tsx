@@ -27,7 +27,7 @@ export function TerminalSlot({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const { register, unregister } = useTerminalSlotsStore.getState();
+    const { register, unregister } = useTerminalSlotsStore.getState().actions;
     register(sessionId, {
       el,
       isActive,
@@ -47,7 +47,7 @@ export function TerminalSlot({
   }, [sessionId]);
 
   useEffect(() => {
-    useTerminalSlotsStore.getState().update(sessionId, {
+    useTerminalSlotsStore.getState().actions.update(sessionId, {
       isActive,
       isVisible,
       shell,

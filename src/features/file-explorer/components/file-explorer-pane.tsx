@@ -25,7 +25,7 @@ function FileExplorerPaneComponent() {
   const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
 
   const activePath = useSidebarStore.use.activePath?.();
-  const updateActivePath = useSidebarStore.use.updateActivePath?.();
+  const updateActivePath = useSidebarStore.use.actions().updateActivePath;
 
   return (
     <SidebarPanel className="relative">

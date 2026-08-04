@@ -163,7 +163,7 @@ function matchesSearchQuery(
 export function CollaborationSidebarView() {
   const user = useAuthStore((state) => state.user);
   const collaboration = useAuthStore((state) => state.subscription?.collaboration);
-  const setCollaborationSnapshot = useAuthStore((state) => state.setCollaborationSnapshot);
+  const setCollaborationSnapshot = useAuthStore((state) => state.actions.setCollaborationSnapshot);
   const presenceTarget = useCollaborationRuntimeStore((state) => state.presenceTarget);
   const activeDocumentStream = useCollaborationRuntimeStore((state) => state.activeDocumentStream);
   const mediaState = useCollaborationRuntimeStore((state) => state.mediaState);

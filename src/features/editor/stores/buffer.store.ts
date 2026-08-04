@@ -1252,7 +1252,7 @@ const createBufferStore = (workspaceId: string) => {
           if (closedBuffer.type === "terminal") {
             import("@/features/terminal/stores/terminal.store").then(({ useTerminalStore }) => {
               const terminalStore = useTerminalStore.getState();
-              const session = terminalStore.getSession(closedBuffer.sessionId);
+              const session = terminalStore.actions.getSession(closedBuffer.sessionId);
               if (session?.connectionId) {
                 const closeCommand = session.remoteConnectionId
                   ? "close_remote_terminal"
@@ -1261,7 +1261,7 @@ const createBufferStore = (workspaceId: string) => {
                   logger.error("BufferStore", "Failed to close terminal tab session:", e);
                 });
               }
-              terminalStore.removeSession(closedBuffer.sessionId);
+              terminalStore.actions.removeSession(closedBuffer.sessionId);
             });
           }
 

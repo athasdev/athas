@@ -26,7 +26,7 @@ interface ConnectionDialogProps {
 }
 
 export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
-  const { actions } = useConnectionStore();
+  const actions = useConnectionStore.use.actions();
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const availableExtensions = useExtensionStore.use.availableExtensions();
   const [mode, setMode] = useState<"form" | "string">("form");

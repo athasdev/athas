@@ -63,10 +63,10 @@ export function useMenuEventsWrapper() {
   const handleCreateNewFile = useFileSystemStore.use.handleCreateNewFile();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const closeFolder = useFileSystemStore.use.closeFolder();
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const { closeBuffer } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
-  const openWhatsNew = useWhatsNewStore((state) => state.open);
+  const openWhatsNew = useWhatsNewStore((state) => state.actions.open);
   const { checkForUpdates } = useUpdater(false);
   const { showToast } = useToast();
   const isTerminalFocused = () => {
@@ -255,7 +255,7 @@ export function useMenuEventsWrapper() {
       }
     },
     onToggleAiChat: () => {
-      useSettingsStore.getState().toggleAIChatVisible();
+      useSettingsStore.getState().actions.toggleAIChatVisible();
     },
     onSplitEditor: () => {
       splitActiveEditorGroup("horizontal");

@@ -346,7 +346,7 @@ async function applyRemoteSnapshot(snapshot: CloudSettingsSyncSnapshot) {
   try {
     const success = useSettingsStore
       .getState()
-      .updateSettingsFromJSON(JSON.stringify(snapshot.settings));
+      .actions.updateSettingsFromJSON(JSON.stringify(snapshot.settings));
     if (!success) {
       throw new Error("Could not apply cloud settings.");
     }

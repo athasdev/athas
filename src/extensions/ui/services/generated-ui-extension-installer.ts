@@ -68,13 +68,13 @@ function storeGeneratedExtension(extension: GeneratedUIExtension) {
 }
 
 function createGeneratedExtensionAPI(extensionId: string) {
-  const store = useUIExtensionStore.getState();
+  const actions = useUIExtensionStore.getState().actions;
   const storagePrefix = `ui-ext-${extensionId}-`;
 
   return {
     sidebar: {
       registerView(config: { id: string; title: string; icon: string; render: () => ReactNode }) {
-        store.registerSidebarView({
+        actions.registerSidebarView({
           id: config.id,
           extensionId,
           title: config.title,
@@ -93,7 +93,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
           },
         });
 
-        return { dispose: () => store.unregisterSidebarView(config.id) } satisfies Disposable;
+        return { dispose: () => actions.unregisterSidebarView(config.id) } satisfies Disposable;
       },
     },
     toolbar: {
@@ -105,8 +105,8 @@ function createGeneratedExtensionAPI(extensionId: string) {
         onClick: () => void;
         isVisible?: () => boolean;
       }) {
-        store.registerToolbarAction({ ...config, extensionId });
-        return { dispose: () => store.unregisterToolbarAction(config.id) } satisfies Disposable;
+        actions.registerToolbarAction({ ...config, extensionId });
+        return { dispose: () => actions.unregisterToolbarAction(config.id) } satisfies Disposable;
       },
     },
     commands: {
@@ -116,8 +116,8 @@ function createGeneratedExtensionAPI(extensionId: string) {
         handler: (...args: unknown[]) => void | Promise<void>,
         category?: string,
       ) {
-        store.registerCommand({ id, extensionId, title, category, execute: handler });
-        return { dispose: () => store.unregisterCommand(id) } satisfies Disposable;
+        actions.registerCommand({ id, extensionId, title, category, execute: handler });
+        return { dispose: () => actions.unregisterCommand(id) } satisfies Disposable;
       },
       async execute(commandId: string, ...args: unknown[]) {
         const command = useUIExtensionStore.getState().commands.get(commandId);
@@ -134,10 +134,10 @@ function createGeneratedExtensionAPI(extensionId: string) {
         width?: number;
         height?: number;
       }) {
-        store.openDialog({ ...config, extensionId });
+        actions.openDialog({ ...config, extensionId });
       },
       close(dialogId: string) {
-        store.closeDialog(dialogId);
+        actions.closeDialog(dialogId);
       },
     },
     storage: {
@@ -566,13 +566,14 @@ export function installGeneratedUIExtension(
   options: { persist?: boolean } = {},
 ) {
   const store = useUIExtensionStore.getState();
+  const { actions } = store;
   const extensionId = normalizeGeneratedExtensionId(extension.id);
 
   if (store.extensions.has(extensionId)) {
-    store.cleanupExtension(extensionId);
+    actions.cleanupExtension(extensionId);
   }
 
-  store.registerExtension({
+  actions.registerExtension({
     extensionId,
     manifestId: extensionId,
     name: extension.name,
@@ -585,14 +586,14 @@ export function installGeneratedUIExtension(
     const api = createGeneratedExtensionAPI(extensionId);
     const activate = Function("api", `"use strict";\n${extension.code}`);
     activate(api);
-    store.updateExtensionState(extensionId, "active");
+    actions.updateExtensionState(extensionId, "active");
     if (options.persist !== false) {
       storeGeneratedExtension(extension);
     }
     return { extensionId };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Install failed";
-    store.updateExtensionState(extensionId, "error", message);
+    actions.updateExtensionState(extensionId, "error", message);
     throw new Error(message);
   }
 }

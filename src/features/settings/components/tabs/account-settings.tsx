@@ -29,7 +29,7 @@ export const AccountSettings = () => {
   const user = useAuthStore((state) => state.user);
   const subscription = useAuthStore((state) => state.subscription);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const logout = useAuthStore((state) => state.logout);
+  const logout = useAuthStore((state) => state.actions.logout);
   const { isPro, hasSettingsSync } = useProFeature();
   const { isSigningIn, signIn } = useDesktopSignIn();
   const { showToast } = useToast();

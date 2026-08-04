@@ -110,7 +110,8 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   };
 
   const handleThemeChange = useCallback((theme: string) => {
-    const { settings, updateSetting } = useSettingsStore.getState();
+    const { settings, actions } = useSettingsStore.getState();
+    const { updateSetting } = actions;
     if (settings.syncSystemTheme) {
       void updateSetting("syncSystemTheme", false).then(() => updateSetting("theme", theme));
       return;
@@ -120,11 +121,11 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   }, []);
 
   const handleIconThemeChange = useCallback((iconTheme: string) => {
-    void useSettingsStore.getState().updateSetting("iconTheme", iconTheme);
+    void useSettingsStore.getState().actions.updateSetting("iconTheme", iconTheme);
   }, []);
 
   const lastEnteredActions = useActionsStore.use.lastEnteredActionsStack();
-  const pushAction = useActionsStore.use.pushAction();
+  const pushAction = useActionsStore.use.actions().pushAction;
   const aiCompletion = useSettingsStore((state) => state.settings.aiCompletion);
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
   const autoDetectLanguage = useSettingsStore((state) => state.settings.autoDetectLanguage);
@@ -159,8 +160,8 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const extensionCommands = useUIExtensionStore.use.commands();
   const extensionViews = useCommandPaletteViews();
   const { showToast } = useToast();
-  const openWhatsNew = useWhatsNewStore((state) => state.open);
-  const openOnboarding = useOnboardingStore((state) => state.openPreview);
+  const openWhatsNew = useWhatsNewStore((state) => state.actions.open);
+  const openOnboarding = useOnboardingStore((state) => state.actions.openPreview);
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = useBufferStore((state) =>
     activeBufferId ? (state.buffers.find((buffer) => buffer.id === activeBufferId) ?? null) : null,
@@ -260,7 +261,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
         compactMenuBar: commandSettings.compactMenuBar,
         webViewerEnabled: commandSettings.coreFeatures.webViewer,
       },
-      updateSetting: useSettingsStore.getState().updateSetting as (
+      updateSetting: useSettingsStore.getState().actions.updateSetting as (
         key: string,
         value: any,
       ) => void | Promise<void>,
@@ -275,9 +276,9 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       settings: commandSettings,
       setIsSettingsDialogVisible,
       openSettingsDialog,
-      setSettingsSearchQuery: useSettingsStore.getState().setSearchQuery,
+      setSettingsSearchQuery: useSettingsStore.getState().actions.setSearchQuery,
       pushPaletteView: pushView,
-      updateSetting: useSettingsStore.getState().updateSetting as (
+      updateSetting: useSettingsStore.getState().actions.updateSetting as (
         key: string,
         value: any,
       ) => void | Promise<void>,
@@ -360,7 +361,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
         showGitHubIssues: commandSettings.showGitHubIssues,
         showGitHubActions: commandSettings.showGitHubActions,
       },
-      updateSetting: useSettingsStore.getState().updateSetting as (
+      updateSetting: useSettingsStore.getState().actions.updateSetting as (
         key: string,
         value: any,
       ) => void | Promise<void>,

@@ -92,9 +92,11 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
   const [statusMap, setStatusMap] = useState<Record<string, "idle" | "error">>({});
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
-  const openRecentFolder = useRecentFoldersStore((state) => state.openRecentFolder);
-  const removeFromRecents = useRecentFoldersStore((state) => state.removeFromRecents);
-  const removeMissingFromRecents = useRecentFoldersStore((state) => state.removeMissingFromRecents);
+  const openRecentFolder = useRecentFoldersStore((state) => state.actions.openRecentFolder);
+  const removeFromRecents = useRecentFoldersStore((state) => state.actions.removeFromRecents);
+  const removeMissingFromRecents = useRecentFoldersStore(
+    (state) => state.actions.removeMissingFromRecents,
+  );
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const handleOpenWslProject = useFileSystemStore((state) => state.handleOpenWslProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();

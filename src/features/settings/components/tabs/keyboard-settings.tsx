@@ -69,7 +69,7 @@ export const KeyboardSettings = () => {
   const { showToast } = useToast();
   const keybindingPreset = useSettingsStore((state) => state.settings.keybindingPreset);
   const vimMode = useSettingsStore((state) => state.settings.vimMode);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
 
   const userKeybindings = useKeymapStore.use.keybindings();
   const { resetToDefaults } = useKeymapStore.use.actions();

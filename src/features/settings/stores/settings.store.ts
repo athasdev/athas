@@ -37,7 +37,7 @@ export function initializeSettingsStore(): Promise<Settings> {
   }
 
   settingsStoreInitPromise = initializeSettingsState((loadedSettings) => {
-    useSettingsStore.getState().initializeSettings(loadedSettings);
+    useSettingsStore.getState().actions.initializeSettings(loadedSettings);
   });
 
   return settingsStoreInitPromise;
@@ -57,141 +57,148 @@ const useSettingsStoreBase = create(
         } as SearchState,
       },
       (set, get) => ({
-        updateSettingsFromJSON: (jsonString: string): boolean => {
-          try {
-            const validatedSettings = parseSettingsImportJson(jsonString);
+        actions: {
+          updateSettingsFromJSON: (jsonString: string): boolean => {
+            try {
+              const validatedSettings = parseSettingsImportJson(jsonString);
 
-            if (!validatedSettings) {
+              if (!validatedSettings) {
+                return false;
+              }
+
+              set((state) => {
+                state.settings = validatedSettings;
+              });
+
+              applySettingsSideEffects(validatedSettings);
+              void saveSettingsToStore(validatedSettings);
+              return true;
+            } catch (error) {
+              console.error("Error parsing settings JSON:", error);
               return false;
             }
+          },
+
+          initializeSettings: (loadedSettings: Settings) => {
+            set((state) => {
+              state.settings = loadedSettings;
+            });
+          },
+
+          resetToDefaults: async () => {
+            const nextSettings = getDefaultSettingsSnapshot();
 
             set((state) => {
-              state.settings = validatedSettings;
+              state.settings = nextSettings;
             });
 
-            applySettingsSideEffects(validatedSettings);
-            void saveSettingsToStore(validatedSettings);
-            return true;
-          } catch (error) {
-            console.error("Error parsing settings JSON:", error);
-            return false;
-          }
-        },
+            applySettingsSideEffects(nextSettings);
+            await saveSettingsToStore(nextSettings);
+          },
 
-        initializeSettings: (loadedSettings: Settings) => {
-          set((state) => {
-            state.settings = loadedSettings;
-          });
-        },
-
-        resetToDefaults: async () => {
-          const nextSettings = getDefaultSettingsSnapshot();
-
-          set((state) => {
-            state.settings = nextSettings;
-          });
-
-          applySettingsSideEffects(nextSettings);
-          await saveSettingsToStore(nextSettings);
-        },
-
-        toggleAIChatVisible: (forceValue?: boolean) => {
-          const now = Date.now();
-          const previousToggleAt = get()._lastAiChatToggleAt;
-          if (now - previousToggleAt < AI_CHAT_TOGGLE_COOLDOWN_MS) {
-            return;
-          }
-
-          const nextValue = forceValue !== undefined ? forceValue : !get().settings.isAIChatVisible;
-
-          set((state) => {
-            state.settings.isAIChatVisible = nextValue;
-            state._lastAiChatToggleAt = now;
-          });
-
-          debouncedSaveSettingsToStore({ isAIChatVisible: nextValue });
-        },
-
-        updateSetting: async <K extends keyof Settings>(key: K, value: Settings[K]) => {
-          const normalizedValue = normalizeSettingValue(key, value);
-          const savePatch: Partial<Settings> = { [key]: normalizedValue };
-
-          set((state) => {
-            state.settings[key] = normalizedValue;
-            if (key === "syncSystemTheme" && normalizedValue === true) {
-              const syncThemePatch = getSystemSyncThemePreferencePatch(state.settings);
-              Object.assign(state.settings, syncThemePatch);
-              Object.assign(savePatch, syncThemePatch);
+          toggleAIChatVisible: (forceValue?: boolean) => {
+            const now = Date.now();
+            const previousToggleAt = get()._lastAiChatToggleAt;
+            if (now - previousToggleAt < AI_CHAT_TOGGLE_COOLDOWN_MS) {
+              return;
             }
 
-            const aiModelPatch = getAIModelSelectionPatch(state.settings, key);
-            Object.assign(state.settings, aiModelPatch);
-            Object.assign(savePatch, aiModelPatch);
-          });
+            const nextValue =
+              forceValue !== undefined ? forceValue : !get().settings.isAIChatVisible;
 
-          applySettingSideEffect(key, normalizedValue, () => useSettingsStore.getState().settings);
-
-          if (key === "theme") {
-            const activeProject = useWorkspaceTabsStore.getState().getActiveProjectTab();
-            if (activeProject) {
-              useWorkspaceTabsStore
-                .getState()
-                .setProjectTheme(activeProject.id, normalizedValue as string);
-            }
-          }
-
-          debouncedSaveSettingsToStore(savePatch);
-        },
-
-        setSearchQuery: (query: string) => {
-          set((state) => {
-            state.search.query = query;
-            state.search.selectedResultId = null;
-          });
-          useSettingsStore.getState().runSearch();
-        },
-
-        runSearch: () => {
-          const query = useSettingsStore.getState().search.query.trim().toLowerCase();
-
-          if (!query) {
             set((state) => {
-              state.search.results = [];
+              state.settings.isAIChatVisible = nextValue;
+              state._lastAiChatToggleAt = now;
+            });
+
+            debouncedSaveSettingsToStore({ isAIChatVisible: nextValue });
+          },
+
+          updateSetting: async <K extends keyof Settings>(key: K, value: Settings[K]) => {
+            const normalizedValue = normalizeSettingValue(key, value);
+            const savePatch: Partial<Settings> = { [key]: normalizedValue };
+
+            set((state) => {
+              state.settings[key] = normalizedValue;
+              if (key === "syncSystemTheme" && normalizedValue === true) {
+                const syncThemePatch = getSystemSyncThemePreferencePatch(state.settings);
+                Object.assign(state.settings, syncThemePatch);
+                Object.assign(savePatch, syncThemePatch);
+              }
+
+              const aiModelPatch = getAIModelSelectionPatch(state.settings, key);
+              Object.assign(state.settings, aiModelPatch);
+              Object.assign(savePatch, aiModelPatch);
+            });
+
+            applySettingSideEffect(
+              key,
+              normalizedValue,
+              () => useSettingsStore.getState().settings,
+            );
+
+            if (key === "theme") {
+              const activeProject = useWorkspaceTabsStore.getState().actions.getActiveProjectTab();
+              if (activeProject) {
+                useWorkspaceTabsStore
+                  .getState()
+                  .actions.setProjectTheme(activeProject.id, normalizedValue as string);
+              }
+            }
+
+            debouncedSaveSettingsToStore(savePatch);
+          },
+
+          setSearchQuery: (query: string) => {
+            set((state) => {
+              state.search.query = query;
+              state.search.selectedResultId = null;
+            });
+            useSettingsStore.getState().actions.runSearch();
+          },
+
+          runSearch: () => {
+            const query = useSettingsStore.getState().search.query.trim().toLowerCase();
+
+            if (!query) {
+              set((state) => {
+                state.search.results = [];
+                state.search.isSearching = false;
+              });
+              return;
+            }
+
+            set((state) => {
+              state.search.isSearching = true;
+            });
+
+            const results: SearchResult[] = settingsSearchIndex
+              .map((record) => {
+                return { ...record, score: scoreSettingSearchRecord(query, record) };
+              })
+              .filter((result) => result.score > 0)
+              .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
+
+            set((state) => {
+              state.search.results = results;
               state.search.isSearching = false;
             });
-            return;
-          }
+          },
 
-          set((state) => {
-            state.search.isSearching = true;
-          });
+          clearSearch: () => {
+            set((state) => {
+              state.search.query = "";
+              state.search.results = [];
+              state.search.isSearching = false;
+              state.search.selectedResultId = null;
+            });
+          },
 
-          const results: SearchResult[] = settingsSearchIndex
-            .map((record) => {
-              return { ...record, score: scoreSettingSearchRecord(query, record) };
-            })
-            .filter((result) => result.score > 0)
-            .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
-
-          set((state) => {
-            state.search.results = results;
-            state.search.isSearching = false;
-          });
-        },
-
-        clearSearch: () => {
-          set((state) => {
-            state.search.query = "";
-            state.search.results = [];
-            state.search.isSearching = false;
-            state.search.selectedResultId = null;
-          });
-        },
-
-        selectSearchResult: (resultId: string) => {
-          set((state) => {
-            state.search.selectedResultId = resultId;
-          });
+          selectSearchResult: (resultId: string) => {
+            set((state) => {
+              state.search.selectedResultId = resultId;
+            });
+          },
         },
       }),
     ),

@@ -58,7 +58,7 @@ export const AppearanceSettings = () => {
       windowChromeDensity: state.settings.windowChromeDensity,
     })),
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const registeredThemes = useRegisteredThemes();
   const registeredIconThemes = useRegisteredIconThemes();
   const [isThemeCreatorOpen, setIsThemeCreatorOpen] = useState(false);

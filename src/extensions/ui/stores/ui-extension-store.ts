@@ -43,7 +43,9 @@ interface UIExtensionActions {
   cleanupExtension: (extensionId: string) => void;
 }
 
-type UIExtensionStore = UIExtensionState & UIExtensionActions;
+interface UIExtensionStore extends UIExtensionState {
+  actions: UIExtensionActions;
+}
 
 export const useUIExtensionStore = createSelectors(
   create<UIExtensionStore>()(
@@ -55,105 +57,107 @@ export const useUIExtensionStore = createSelectors(
       commands: new Map(),
       activeDialogs: [],
 
-      registerExtension: (registration) => {
-        set((state) => {
-          state.extensions.set(registration.extensionId, registration);
-        });
-      },
+      actions: {
+        registerExtension: (registration) => {
+          set((state) => {
+            state.extensions.set(registration.extensionId, registration);
+          });
+        },
 
-      unregisterExtension: (extensionId) => {
-        set((state) => {
-          state.extensions.delete(extensionId);
-        });
-      },
+        unregisterExtension: (extensionId) => {
+          set((state) => {
+            state.extensions.delete(extensionId);
+          });
+        },
 
-      updateExtensionState: (extensionId, newState, error) => {
-        set((state) => {
-          const ext = state.extensions.get(extensionId);
-          if (ext) {
-            ext.state = newState;
-            ext.error = error;
-          }
-        });
-      },
-
-      registerSidebarView: (view) => {
-        set((state) => {
-          state.sidebarViews.set(view.id, view);
-          state.viewRevisions.set(view.id, 0);
-        });
-      },
-
-      unregisterSidebarView: (viewId) => {
-        set((state) => {
-          state.sidebarViews.delete(viewId);
-          state.viewRevisions.delete(viewId);
-        });
-      },
-
-      invalidateSidebarView: (viewId) => {
-        set((state) => {
-          state.viewRevisions.set(viewId, (state.viewRevisions.get(viewId) ?? 0) + 1);
-        });
-      },
-
-      registerToolbarAction: (action) => {
-        set((state) => {
-          state.toolbarActions.set(action.id, action);
-        });
-      },
-
-      unregisterToolbarAction: (actionId) => {
-        set((state) => {
-          state.toolbarActions.delete(actionId);
-        });
-      },
-
-      registerCommand: (command) => {
-        set((state) => {
-          state.commands.set(command.id, command);
-        });
-      },
-
-      unregisterCommand: (commandId) => {
-        set((state) => {
-          state.commands.delete(commandId);
-        });
-      },
-
-      openDialog: (dialog) => {
-        set((state) => {
-          state.activeDialogs.push(dialog);
-        });
-      },
-
-      closeDialog: (dialogId) => {
-        set((state) => {
-          state.activeDialogs = state.activeDialogs.filter((d) => d.id !== dialogId);
-        });
-      },
-
-      cleanupExtension: (extensionId) => {
-        set((state) => {
-          for (const [id, view] of state.sidebarViews) {
-            if (view.extensionId === extensionId) {
-              state.sidebarViews.delete(id);
-              state.viewRevisions.delete(id);
+        updateExtensionState: (extensionId, newState, error) => {
+          set((state) => {
+            const ext = state.extensions.get(extensionId);
+            if (ext) {
+              ext.state = newState;
+              ext.error = error;
             }
-          }
-          for (const [id, action] of state.toolbarActions) {
-            if (action.extensionId === extensionId) {
-              state.toolbarActions.delete(id);
+          });
+        },
+
+        registerSidebarView: (view) => {
+          set((state) => {
+            state.sidebarViews.set(view.id, view);
+            state.viewRevisions.set(view.id, 0);
+          });
+        },
+
+        unregisterSidebarView: (viewId) => {
+          set((state) => {
+            state.sidebarViews.delete(viewId);
+            state.viewRevisions.delete(viewId);
+          });
+        },
+
+        invalidateSidebarView: (viewId) => {
+          set((state) => {
+            state.viewRevisions.set(viewId, (state.viewRevisions.get(viewId) ?? 0) + 1);
+          });
+        },
+
+        registerToolbarAction: (action) => {
+          set((state) => {
+            state.toolbarActions.set(action.id, action);
+          });
+        },
+
+        unregisterToolbarAction: (actionId) => {
+          set((state) => {
+            state.toolbarActions.delete(actionId);
+          });
+        },
+
+        registerCommand: (command) => {
+          set((state) => {
+            state.commands.set(command.id, command);
+          });
+        },
+
+        unregisterCommand: (commandId) => {
+          set((state) => {
+            state.commands.delete(commandId);
+          });
+        },
+
+        openDialog: (dialog) => {
+          set((state) => {
+            state.activeDialogs.push(dialog);
+          });
+        },
+
+        closeDialog: (dialogId) => {
+          set((state) => {
+            state.activeDialogs = state.activeDialogs.filter((d) => d.id !== dialogId);
+          });
+        },
+
+        cleanupExtension: (extensionId) => {
+          set((state) => {
+            for (const [id, view] of state.sidebarViews) {
+              if (view.extensionId === extensionId) {
+                state.sidebarViews.delete(id);
+                state.viewRevisions.delete(id);
+              }
             }
-          }
-          for (const [id, cmd] of state.commands) {
-            if (cmd.extensionId === extensionId) {
-              state.commands.delete(id);
+            for (const [id, action] of state.toolbarActions) {
+              if (action.extensionId === extensionId) {
+                state.toolbarActions.delete(id);
+              }
             }
-          }
-          state.activeDialogs = state.activeDialogs.filter((d) => d.extensionId !== extensionId);
-          state.extensions.delete(extensionId);
-        });
+            for (const [id, cmd] of state.commands) {
+              if (cmd.extensionId === extensionId) {
+                state.commands.delete(id);
+              }
+            }
+            state.activeDialogs = state.activeDialogs.filter((d) => d.extensionId !== extensionId);
+            state.extensions.delete(extensionId);
+          });
+        },
       },
     })),
   ),

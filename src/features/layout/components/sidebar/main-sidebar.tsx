@@ -151,7 +151,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     (state) => state.settings.showActivityRailProjectIcons,
   );
   const projectCarouselEnabled = !openFoldersInNewWindow;
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const [activityRailWidth, setActivityRailWidth] = useState(() =>
     clampActivityRailWidth(configuredActivityRailWidth || DEFAULT_ACTIVITY_RAIL_WIDTH),
   );

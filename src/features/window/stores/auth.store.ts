@@ -10,6 +10,7 @@ import {
   removeAuthToken,
   storeAuthToken,
 } from "@/features/window/services/auth-api";
+import { createSelectors } from "@/utils/zustand-selectors";
 
 interface AuthState {
   user: AuthUser | null;
@@ -28,147 +29,180 @@ interface AuthActions {
   logout: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState & AuthActions>()(
-  immer((set, get) => ({
-    user: null,
-    subscription: null,
-    isAuthenticated: false,
-    isLoading: true,
-    error: null,
+interface AuthStore extends AuthState {
+  actions: AuthActions;
+}
 
-    initialize: async () => {
-      set((state) => {
-        state.isLoading = true;
-        state.error = null;
-      });
-      try {
-        const token = await getAuthToken();
-        if (token) {
-          const user = await fetchCurrentUser(token);
-          let subscription: SubscriptionInfo | null = null;
+export interface AuthStoreDependencies {
+  fetchCurrentUser: typeof fetchCurrentUser;
+  fetchSubscriptionStatus: typeof fetchSubscriptionStatus;
+  getAuthToken: typeof getAuthToken;
+  isAuthInvalidError: typeof isAuthInvalidError;
+  logoutFromServer: typeof logoutFromServer;
+  removeAuthToken: typeof removeAuthToken;
+  storeAuthToken: typeof storeAuthToken;
+}
+
+const defaultAuthStoreDependencies: AuthStoreDependencies = {
+  fetchCurrentUser,
+  fetchSubscriptionStatus,
+  getAuthToken,
+  isAuthInvalidError,
+  logoutFromServer,
+  removeAuthToken,
+  storeAuthToken,
+};
+
+export function createAuthStore(
+  dependencies: AuthStoreDependencies = defaultAuthStoreDependencies,
+) {
+  return create<AuthStore>()(
+    immer((set, get) => ({
+      user: null,
+      subscription: null,
+      isAuthenticated: false,
+      isLoading: true,
+      error: null,
+
+      actions: {
+        initialize: async () => {
+          set((state) => {
+            state.isLoading = true;
+            state.error = null;
+          });
           try {
-            subscription = await fetchSubscriptionStatus(token);
-          } catch (error) {
-            if (isAuthInvalidError(error)) {
-              throw error;
+            const token = await dependencies.getAuthToken();
+            if (token) {
+              const user = await dependencies.fetchCurrentUser(token);
+              let subscription: SubscriptionInfo | null = null;
+              try {
+                subscription = await dependencies.fetchSubscriptionStatus(token);
+              } catch (error) {
+                if (dependencies.isAuthInvalidError(error)) {
+                  throw error;
+                }
+              }
+              set((state) => {
+                state.user = user;
+                state.subscription = subscription;
+                state.isAuthenticated = true;
+                state.isLoading = false;
+              });
+            } else {
+              set((state) => {
+                state.isLoading = false;
+              });
             }
+          } catch (error) {
+            if (dependencies.isAuthInvalidError(error)) {
+              await dependencies.removeAuthToken();
+            }
+            set((state) => {
+              state.user = null;
+              state.subscription = null;
+              state.isAuthenticated = false;
+              state.error = dependencies.isAuthInvalidError(error)
+                ? null
+                : "Could not verify your saved session. Check your connection and try again.";
+              state.isLoading = false;
+            });
           }
-          set((state) => {
-            state.user = user;
-            state.subscription = subscription;
-            state.isAuthenticated = true;
-            state.isLoading = false;
-          });
-        } else {
-          set((state) => {
-            state.isLoading = false;
-          });
-        }
-      } catch (error) {
-        if (isAuthInvalidError(error)) {
-          await removeAuthToken();
-        }
-        set((state) => {
-          state.user = null;
-          state.subscription = null;
-          state.isAuthenticated = false;
-          state.error = isAuthInvalidError(error)
-            ? null
-            : "Could not verify your saved session. Check your connection and try again.";
-          state.isLoading = false;
-        });
-      }
-    },
+        },
 
-    handleAuthCallback: async (token: string) => {
-      set((state) => {
-        state.isLoading = true;
-        state.error = null;
-      });
-      try {
-        await storeAuthToken(token);
-        const user = await fetchCurrentUser(token);
-        let subscription: SubscriptionInfo | null = null;
-        try {
-          subscription = await fetchSubscriptionStatus(token);
-        } catch (error) {
-          if (isAuthInvalidError(error)) {
+        handleAuthCallback: async (token: string) => {
+          set((state) => {
+            state.isLoading = true;
+            state.error = null;
+          });
+          try {
+            await dependencies.storeAuthToken(token);
+            const user = await dependencies.fetchCurrentUser(token);
+            let subscription: SubscriptionInfo | null = null;
+            try {
+              subscription = await dependencies.fetchSubscriptionStatus(token);
+            } catch (error) {
+              if (dependencies.isAuthInvalidError(error)) {
+                throw error;
+              }
+            }
+            set((state) => {
+              state.user = user;
+              state.subscription = subscription;
+              state.isAuthenticated = true;
+              state.isLoading = false;
+            });
+          } catch (error) {
+            if (dependencies.isAuthInvalidError(error)) {
+              await dependencies.removeAuthToken();
+            }
+            set((state) => {
+              if (dependencies.isAuthInvalidError(error)) {
+                state.user = null;
+                state.subscription = null;
+                state.isAuthenticated = false;
+              }
+              state.error = "Authentication failed. Please try again.";
+              state.isLoading = false;
+            });
             throw error;
           }
-        }
-        set((state) => {
-          state.user = user;
-          state.subscription = subscription;
-          state.isAuthenticated = true;
-          state.isLoading = false;
-        });
-      } catch (error) {
-        if (isAuthInvalidError(error)) {
-          await removeAuthToken();
-        }
-        set((state) => {
-          if (isAuthInvalidError(error)) {
+        },
+
+        refreshUser: async () => {
+          try {
+            const user = await dependencies.fetchCurrentUser();
+            set((state) => {
+              state.user = user;
+              state.isAuthenticated = true;
+              state.error = null;
+            });
+          } catch (error) {
+            if (dependencies.isAuthInvalidError(error)) {
+              await get().actions.logout();
+              return;
+            }
+
+            set((state) => {
+              state.error =
+                "Could not refresh account details. Check your connection and try again.";
+            });
+          }
+        },
+
+        refreshSubscription: async () => {
+          try {
+            const subscription = await dependencies.fetchSubscriptionStatus();
+            set((state) => {
+              state.subscription = subscription;
+              state.error = null;
+            });
+          } catch (error) {
+            if (dependencies.isAuthInvalidError(error)) {
+              await get().actions.logout();
+            }
+          }
+        },
+
+        setCollaborationSnapshot: (collaboration) => {
+          set((state) => {
+            if (!state.subscription) return;
+            state.subscription.collaboration = collaboration;
+          });
+        },
+
+        logout: async () => {
+          await dependencies.logoutFromServer();
+          await dependencies.removeAuthToken();
+          set((state) => {
             state.user = null;
             state.subscription = null;
             state.isAuthenticated = false;
-          }
-          state.error = "Authentication failed. Please try again.";
-          state.isLoading = false;
-        });
-        throw error;
-      }
-    },
+            state.error = null;
+          });
+        },
+      },
+    })),
+  );
+}
 
-    refreshUser: async () => {
-      try {
-        const user = await fetchCurrentUser();
-        set((state) => {
-          state.user = user;
-          state.isAuthenticated = true;
-          state.error = null;
-        });
-      } catch (error) {
-        if (isAuthInvalidError(error)) {
-          await get().logout();
-          return;
-        }
-
-        set((state) => {
-          state.error = "Could not refresh account details. Check your connection and try again.";
-        });
-      }
-    },
-
-    refreshSubscription: async () => {
-      try {
-        const subscription = await fetchSubscriptionStatus();
-        set((state) => {
-          state.subscription = subscription;
-          state.error = null;
-        });
-      } catch (error) {
-        if (isAuthInvalidError(error)) {
-          await get().logout();
-        }
-      }
-    },
-
-    setCollaborationSnapshot: (collaboration) => {
-      set((state) => {
-        if (!state.subscription) return;
-        state.subscription.collaboration = collaboration;
-      });
-    },
-
-    logout: async () => {
-      await logoutFromServer();
-      await removeAuthToken();
-      set((state) => {
-        state.user = null;
-        state.subscription = null;
-        state.isAuthenticated = false;
-        state.error = null;
-      });
-    },
-  })),
-);
+export const useAuthStore = createSelectors(createAuthStore());

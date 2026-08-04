@@ -129,7 +129,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const gitLastPanelMode = useSettingsStore((state) => state.settings.gitLastPanelMode);
   const gitSidebarTabOrder = useSettingsStore((state) => state.settings.gitSidebarTabOrder);
   const openDiffOnClick = useSettingsStore((state) => state.settings.openDiffOnClick);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const [activeTab, setActiveTab] = useState<GitSidebarTab>("changes");
   const [fileDiffStats, setFileDiffStats] = useState<Record<string, GitFileDiffStats>>({});
 

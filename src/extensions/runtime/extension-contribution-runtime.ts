@@ -173,7 +173,7 @@ function fallbackThemeIfNeeded(themes: ThemeContribution[]) {
 
   const fallback = getDefaultSetting("theme");
   themeRegistry.applyTheme(fallback);
-  void useSettingsStore.getState().updateSetting("theme", fallback);
+  void useSettingsStore.getState().actions.updateSetting("theme", fallback);
 }
 
 function fallbackIconThemeIfNeeded(iconThemes: IconThemeContribution[]) {
@@ -182,7 +182,9 @@ function fallbackIconThemeIfNeeded(iconThemes: IconThemeContribution[]) {
     return;
   }
 
-  void useSettingsStore.getState().updateSetting("iconTheme", getDefaultSetting("iconTheme"));
+  void useSettingsStore
+    .getState()
+    .actions.updateSetting("iconTheme", getDefaultSetting("iconTheme"));
 }
 
 export async function activateExtensionContributions(

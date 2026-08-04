@@ -93,7 +93,7 @@ export function SkillsCommand({
   const [isLoadingMarketplace, setIsLoadingMarketplace] = useState(false);
 
   const skills = useSettingsStore((state) => state.settings.aiSkills);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const syncEnabled = useSettingsSyncStore((state) => state.enabled);
   const syncStatus = useSettingsSyncStore((state) => state.status);
   const openSettingsDialog = useUIState((state) => state.openSettingsDialog);

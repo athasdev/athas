@@ -19,7 +19,7 @@ export const ProjectNameMenu = () => {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const handleCollapseAllFolders = useFileSystemStore((state) => state.handleCollapseAllFolders);
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
-  const openRecentFolder = useRecentFoldersStore((state) => state.openRecentFolder);
+  const openRecentFolder = useRecentFoldersStore((state) => state.actions.openRecentFolder);
 
   const items = useMemo<MenuItem[]>(() => {
     const baseItems: MenuItem[] = [

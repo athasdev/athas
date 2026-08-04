@@ -54,16 +54,16 @@ export interface UIExtensionHostAPI {
 }
 
 export function createExtensionAPI(extensionId: string): UIExtensionHostAPI {
-  const store = useUIExtensionStore.getState();
+  const actions = useUIExtensionStore.getState().actions;
   const storagePrefix = `ui-ext-${extensionId}-`;
 
   return {
     sidebar: {
       registerView(config) {
         const view = { ...config, extensionId };
-        store.registerSidebarView(view);
+        actions.registerSidebarView(view);
         return {
-          dispose: () => store.unregisterSidebarView(config.id),
+          dispose: () => actions.unregisterSidebarView(config.id),
         };
       },
     },
@@ -71,9 +71,9 @@ export function createExtensionAPI(extensionId: string): UIExtensionHostAPI {
     toolbar: {
       registerAction(config) {
         const action = { ...config, extensionId };
-        store.registerToolbarAction(action);
+        actions.registerToolbarAction(action);
         return {
-          dispose: () => store.unregisterToolbarAction(config.id),
+          dispose: () => actions.unregisterToolbarAction(config.id),
         };
       },
     },
@@ -81,9 +81,9 @@ export function createExtensionAPI(extensionId: string): UIExtensionHostAPI {
     commands: {
       register(id, title, handler, category) {
         const command = { id, extensionId, title, category, execute: handler };
-        store.registerCommand(command);
+        actions.registerCommand(command);
         return {
-          dispose: () => store.unregisterCommand(id),
+          dispose: () => actions.unregisterCommand(id),
         };
       },
       async execute(commandId, ...args) {
@@ -96,10 +96,10 @@ export function createExtensionAPI(extensionId: string): UIExtensionHostAPI {
 
     dialog: {
       open(config) {
-        store.openDialog({ ...config, extensionId });
+        actions.openDialog({ ...config, extensionId });
       },
       close(dialogId) {
-        store.closeDialog(dialogId);
+        actions.closeDialog(dialogId);
       },
     },
 

@@ -186,7 +186,7 @@ function FileExplorerTreeComponent({
       showIndentGuidesInFileTree: state.settings.showIndentGuidesInFileTree,
     })),
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const cutClipboardEntries = useFileClipboardStore((state) =>
     state.clipboard?.operation === "cut" ? state.clipboard.entries : null,
   );
@@ -206,12 +206,12 @@ function FileExplorerTreeComponent({
 
   useLayoutEffect(() => {
     if (!rootFolderPath) return;
-    useFileTreeStore.getState().expandRootOnce(rootFolderPath);
+    useFileTreeStore.getState().actions.expandRootOnce(rootFolderPath);
   }, [rootFolderPath]);
 
   const handleAutoExpandDirectory = useCallback(
     (path: string) => {
-      if (useFileTreeStore.getState().isExpanded(path)) return;
+      if (useFileTreeStore.getState().actions.isExpanded(path)) return;
       void Promise.resolve(onFileSelect(path, true));
     },
     [onFileSelect],
@@ -601,10 +601,10 @@ function FileExplorerTreeComponent({
 
     // Ensure the target folder is expanded in UI
     try {
-      const current = useFileTreeStore.getState().getExpandedPaths();
+      const current = useFileTreeStore.getState().actions.getExpandedPaths();
       const next = new Set(current);
       next.add(parentPath);
-      useFileTreeStore.getState().setExpandedPaths(next);
+      useFileTreeStore.getState().actions.setExpandedPaths(next);
     } catch {}
 
     setEditingValue("");
@@ -1151,7 +1151,7 @@ function FileExplorerTreeComponent({
             if (!current) break;
             e.preventDefault();
             if (isDir) {
-              const expanded = useFileTreeStore.getState().isExpanded(current.path);
+              const expanded = useFileTreeStore.getState().actions.isExpanded(current.path);
               if (!expanded) {
                 void toggleDirectory(current.path);
               } else {
@@ -1167,7 +1167,7 @@ function FileExplorerTreeComponent({
           case "ArrowLeft": {
             if (!current) break;
             e.preventDefault();
-            if (isDir && useFileTreeStore.getState().isExpanded(current.path)) {
+            if (isDir && useFileTreeStore.getState().actions.isExpanded(current.path)) {
               void toggleDirectory(current.path);
             } else {
               const sep = current.path.includes("\\") ? "\\" : "/";

@@ -125,7 +125,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       category: "View",
       commandId: "workbench.toggleAIChat",
       action: () => {
-        useSettingsStore.getState().toggleAIChatVisible();
+        useSettingsStore.getState().actions.toggleAIChatVisible();
         onClose();
       },
     },

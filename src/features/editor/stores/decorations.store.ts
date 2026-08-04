@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createSelectors } from "@/utils/zustand-selectors";
 import type { Decoration, Position, Range } from "../types/editor.types";
 import { logger } from "../utils/logger";
 
@@ -8,18 +9,18 @@ interface DecorationWithId extends Decoration {
 
 interface EditorDecorationsStore {
   decorations: Map<string, DecorationWithId>;
-
-  // Actions
-  addDecoration: (decoration: Decoration) => string;
-  addDecorations: (decorations: Decoration[]) => string[];
-  removeDecoration: (id: string) => void;
-  removeDecorations: (ids: string[]) => void;
-  updateDecoration: (id: string, decoration: Partial<Decoration>) => void;
-  clearDecorations: () => void;
-  getDecorations: () => Decoration[];
-  getDecorationsInRange: (range: Range) => Decoration[];
-  getDecorationsAtPosition: (position: Position) => Decoration[];
-  getDecorationsForLine: (lineNumber: number) => Decoration[];
+  actions: {
+    addDecoration: (decoration: Decoration) => string;
+    addDecorations: (decorations: Decoration[]) => string[];
+    removeDecoration: (id: string) => void;
+    removeDecorations: (ids: string[]) => void;
+    updateDecoration: (id: string, decoration: Partial<Decoration>) => void;
+    clearDecorations: () => void;
+    getDecorations: () => Decoration[];
+    getDecorationsInRange: (range: Range) => Decoration[];
+    getDecorationsAtPosition: (position: Position) => Decoration[];
+    getDecorationsForLine: (lineNumber: number) => Decoration[];
+  };
 }
 
 function isPositionInRange(position: Position, range: Range): boolean {
@@ -57,110 +58,114 @@ function rangesOverlap(a: Range, b: Range): boolean {
   return true;
 }
 
-export const useEditorDecorationsStore = create<EditorDecorationsStore>((set, get) => ({
+const useEditorDecorationsStoreBase = create<EditorDecorationsStore>((set, get) => ({
   decorations: new Map(),
 
-  addDecoration: (decoration) => {
-    const id = `decoration-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    const decorationWithId: DecorationWithId = { ...decoration, id };
+  actions: {
+    addDecoration: (decoration) => {
+      const id = `decoration-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const decorationWithId: DecorationWithId = { ...decoration, id };
 
-    logger.debug(
-      "Editor",
-      `DecorationsStore: Adding decoration ${decoration.type} with class ${decoration.className}`,
-    );
+      logger.debug(
+        "Editor",
+        `DecorationsStore: Adding decoration ${decoration.type} with class ${decoration.className}`,
+      );
 
-    set((state) => {
-      const newDecorations = new Map(state.decorations);
-      newDecorations.set(id, decorationWithId);
-      return { decorations: newDecorations };
-    });
-
-    return id;
-  },
-
-  addDecorations: (decorations) => {
-    const ids: string[] = [];
-    const timestamp = Date.now();
-
-    set((state) => {
-      const newDecorations = new Map(state.decorations);
-
-      decorations.forEach((decoration, index) => {
-        const id = `decoration-${timestamp}-${index}-${Math.random().toString(36).slice(2, 9)}`;
-        const decorationWithId: DecorationWithId = { ...decoration, id };
+      set((state) => {
+        const newDecorations = new Map(state.decorations);
         newDecorations.set(id, decorationWithId);
-        ids.push(id);
+        return { decorations: newDecorations };
       });
 
-      logger.debug("Editor", `DecorationsStore: Adding ${decorations.length} decorations`);
+      return id;
+    },
 
-      return { decorations: newDecorations };
-    });
+    addDecorations: (decorations) => {
+      const ids: string[] = [];
+      const timestamp = Date.now();
 
-    return ids;
-  },
+      set((state) => {
+        const newDecorations = new Map(state.decorations);
 
-  removeDecoration: (id) => {
-    set((state) => {
-      const newDecorations = new Map(state.decorations);
-      newDecorations.delete(id);
-      return { decorations: newDecorations };
-    });
-  },
+        decorations.forEach((decoration, index) => {
+          const id = `decoration-${timestamp}-${index}-${Math.random().toString(36).slice(2, 9)}`;
+          const decorationWithId: DecorationWithId = { ...decoration, id };
+          newDecorations.set(id, decorationWithId);
+          ids.push(id);
+        });
 
-  removeDecorations: (ids) => {
-    set((state) => {
-      const newDecorations = new Map(state.decorations);
-      let changed = false;
-      ids.forEach((id) => {
-        if (newDecorations.has(id)) {
-          newDecorations.delete(id);
-          changed = true;
-        }
+        logger.debug("Editor", `DecorationsStore: Adding ${decorations.length} decorations`);
+
+        return { decorations: newDecorations };
       });
-      return changed ? { decorations: newDecorations } : state;
-    });
-  },
 
-  updateDecoration: (id, updates) => {
-    set((state) => {
-      const existing = state.decorations.get(id);
-      if (!existing) return state;
+      return ids;
+    },
 
-      const newDecorations = new Map(state.decorations);
-      newDecorations.set(id, { ...existing, ...updates });
-      return { decorations: newDecorations };
-    });
-  },
+    removeDecoration: (id) => {
+      set((state) => {
+        const newDecorations = new Map(state.decorations);
+        newDecorations.delete(id);
+        return { decorations: newDecorations };
+      });
+    },
 
-  clearDecorations: () => {
-    set({ decorations: new Map() });
-  },
+    removeDecorations: (ids) => {
+      set((state) => {
+        const newDecorations = new Map(state.decorations);
+        let changed = false;
+        ids.forEach((id) => {
+          if (newDecorations.has(id)) {
+            newDecorations.delete(id);
+            changed = true;
+          }
+        });
+        return changed ? { decorations: newDecorations } : state;
+      });
+    },
 
-  getDecorations: () => {
-    const { decorations } = get();
-    return Array.from(decorations.values());
-  },
+    updateDecoration: (id, updates) => {
+      set((state) => {
+        const existing = state.decorations.get(id);
+        if (!existing) return state;
 
-  getDecorationsInRange: (range) => {
-    const { decorations } = get();
-    return Array.from(decorations.values()).filter((decoration) =>
-      rangesOverlap(decoration.range, range),
-    );
-  },
+        const newDecorations = new Map(state.decorations);
+        newDecorations.set(id, { ...existing, ...updates });
+        return { decorations: newDecorations };
+      });
+    },
 
-  getDecorationsAtPosition: (position) => {
-    const { decorations } = get();
-    return Array.from(decorations.values()).filter((decoration) =>
-      isPositionInRange(position, decoration.range),
-    );
-  },
+    clearDecorations: () => {
+      set({ decorations: new Map() });
+    },
 
-  getDecorationsForLine: (lineNumber) => {
-    const { decorations } = get();
-    return Array.from(decorations.values()).filter(
-      (decoration) =>
-        decoration.range.start.line <= lineNumber && decoration.range.end.line >= lineNumber,
-    );
+    getDecorations: () => {
+      const { decorations } = get();
+      return Array.from(decorations.values());
+    },
+
+    getDecorationsInRange: (range) => {
+      const { decorations } = get();
+      return Array.from(decorations.values()).filter((decoration) =>
+        rangesOverlap(decoration.range, range),
+      );
+    },
+
+    getDecorationsAtPosition: (position) => {
+      const { decorations } = get();
+      return Array.from(decorations.values()).filter((decoration) =>
+        isPositionInRange(position, decoration.range),
+      );
+    },
+
+    getDecorationsForLine: (lineNumber) => {
+      const { decorations } = get();
+      return Array.from(decorations.values()).filter(
+        (decoration) =>
+          decoration.range.start.line <= lineNumber && decoration.range.end.line >= lineNumber,
+      );
+    },
   },
 }));
+
+export const useEditorDecorationsStore = createSelectors(useEditorDecorationsStoreBase);

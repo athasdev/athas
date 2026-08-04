@@ -26,7 +26,7 @@ export const useVimStore = createSelectors(
 
         set({ relativeLineNumbers: enabled });
         if (options?.persist !== false) {
-          void useSettingsStore.getState().updateSetting("vimRelativeLineNumbers", enabled);
+          void useSettingsStore.getState().actions.updateSetting("vimRelativeLineNumbers", enabled);
         }
       },
     },

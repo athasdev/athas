@@ -10,15 +10,21 @@ import type {
   PullRequestDetails,
   PullRequestFile,
 } from "../types/github.types";
+import { syncGitHubTokenFromAccount } from "../services/github-token-service";
 import {
-  syncGitHubTokenFromAccount,
-  type GitHubTokenSyncStatus,
-} from "../services/github-token-service";
+  AUTH_CACHE_TTL_MS,
+  fetchNormalizedPRDetails,
+  getGitHubAccountStatus,
+  getGitHubErrorMessage,
+  getPRDetailsCacheKey,
+  getPRListCacheKey,
+  isFresh,
+  normalizePullRequest,
+  normalizePullRequestFiles,
+  PR_DETAILS_CACHE_TTL_MS,
+  PR_LIST_CACHE_TTL_MS,
+} from "../services/github-pr-store-service";
 import { createSelectors } from "@/utils/zustand-selectors";
-
-const PR_LIST_CACHE_TTL_MS = 5 * 60_000;
-const PR_DETAILS_CACHE_TTL_MS = 120_000;
-const AUTH_CACHE_TTL_MS = 2 * 60_000;
 
 interface PRListCacheEntry {
   fetchedAt: number;
@@ -100,124 +106,6 @@ const prContentRequestSeqByKey: Record<string, number> = {};
 const prDetailsInFlightByKey: Record<string, Promise<PullRequestDetails> | undefined> = {};
 const prContentInFlightByKey: Record<string, Promise<void> | undefined> = {};
 
-function getPRListCacheKey(repoPath: string, filter: PRFilter): string {
-  return `${repoPath}::${filter}`;
-}
-
-function getPRDetailsCacheKey(repoPath: string, prNumber: number): string {
-  return `${repoPath}::${prNumber}`;
-}
-
-function isFresh(timestamp: number, ttlMs: number): boolean {
-  return Date.now() - timestamp < ttlMs;
-}
-
-function getAccountStatus(syncStatus: GitHubTokenSyncStatus): GitHubAccountStatus {
-  if (syncStatus === "synced") return "connected";
-  if (syncStatus === "notSignedIn") return "notSignedIn";
-  return "notConnected";
-}
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  if (
-    error &&
-    typeof error === "object" &&
-    "message" in error &&
-    typeof error.message === "string"
-  ) {
-    return error.message;
-  }
-  return String(error);
-}
-
-function normalizePullRequestFiles(files: unknown): PullRequestFile[] {
-  if (!Array.isArray(files)) return [];
-
-  return files
-    .map((file) => {
-      if (!file || typeof file !== "object") return null;
-      const record = file as Record<string, unknown>;
-      const path = typeof record.path === "string" ? record.path.trim() : "";
-      if (!path) return null;
-
-      return {
-        path,
-        additions: typeof record.additions === "number" ? record.additions : 0,
-        deletions: typeof record.deletions === "number" ? record.deletions : 0,
-      };
-    })
-    .filter((file): file is PullRequestFile => !!file);
-}
-
-function getStringValue(record: Record<string, unknown>, keys: string[]): string {
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === "string" && value.trim()) {
-      return value;
-    }
-  }
-
-  return "";
-}
-
-function normalizePullRequest(pr: PullRequest): PullRequest {
-  const record = pr as PullRequest & Record<string, unknown>;
-  const headRef = getStringValue(record, ["headRef", "headRefName", "head_ref"]);
-  const baseRef = getStringValue(record, ["baseRef", "baseRefName", "base_ref"]);
-
-  if (!headRef || !baseRef) {
-    console.warn("GitHub PR list item is missing branch refs", {
-      number: pr.number,
-      title: pr.title,
-      headRef,
-      baseRef,
-      rawKeys: Object.keys(record),
-    });
-  }
-
-  return {
-    ...pr,
-    headRef,
-    baseRef,
-  };
-}
-
-function normalizePullRequestDetails(details: PullRequestDetails): PullRequestDetails {
-  const record = details as PullRequestDetails & Record<string, unknown>;
-  const statusChecks =
-    details.statusChecks ??
-    (Array.isArray(record.statusCheckRollup)
-      ? (record.statusCheckRollup as PullRequestDetails["statusChecks"])
-      : []);
-  const linkedIssues =
-    details.linkedIssues ??
-    (Array.isArray(record.closingIssuesReferences)
-      ? (record.closingIssuesReferences as PullRequestDetails["linkedIssues"])
-      : []);
-
-  return {
-    ...details,
-    headRef: getStringValue(record, ["headRef", "headRefName", "head_ref"]),
-    baseRef: getStringValue(record, ["baseRef", "baseRefName", "base_ref"]),
-    statusChecks,
-    linkedIssues,
-  };
-}
-
-async function fetchNormalizedPRDetails(
-  repoPath: string,
-  prNumber: number,
-): Promise<PullRequestDetails> {
-  const detailsResponse = await invoke<PullRequestDetails>("github_get_pr_details", {
-    repoPath,
-    prNumber,
-  });
-
-  return normalizePullRequestDetails(detailsResponse);
-}
-
 const useGitHubStoreBase = create(
   combine(initialState, (set, get) => ({
     actions: {
@@ -268,7 +156,7 @@ const useGitHubStoreBase = create(
             if (status === "notAuthenticated") {
               try {
                 const syncResult = await syncGitHubTokenFromAccount();
-                githubAccountStatus = getAccountStatus(syncResult.status);
+                githubAccountStatus = getGitHubAccountStatus(syncResult.status);
 
                 if (syncResult.status === "synced") {
                   const syncedStatus = await invoke<GitHubAuthStatus>("github_check_auth");
@@ -301,7 +189,7 @@ const useGitHubStoreBase = create(
                   return;
                 }
               } catch (error) {
-                const message = getErrorMessage(error);
+                const message = getGitHubErrorMessage(error);
                 console.error("Failed to sync GitHub account token:", error);
                 set({ authError: `Failed to sync GitHub account token: ${message}` });
               }
@@ -322,7 +210,7 @@ const useGitHubStoreBase = create(
           }
           authCheckedAt = Date.now();
         } catch (error) {
-          const message = getErrorMessage(error);
+          const message = getGitHubErrorMessage(error);
           console.error("Failed to check GitHub authentication:", error);
           set({
             isAuthenticated: false,

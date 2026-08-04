@@ -197,7 +197,7 @@ export const CommandHeader = ({
   className,
   contentClassName,
 }: CommandHeaderProps) => {
-  const clearActionsStack = useActionsStore.use.clearStack();
+  const clearActionsStack = useActionsStore.use.actions().clearStack;
 
   return (
     <div data-command-header className={cn("border-border border-b", className)}>

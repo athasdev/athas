@@ -1,5 +1,6 @@
 import type { Terminal as XtermInstance } from "@xterm/xterm";
 import { create } from "zustand";
+import { createSelectors } from "@/utils/zustand-selectors";
 
 export interface TerminalSlotProps {
   el: HTMLDivElement;
@@ -23,38 +24,44 @@ export interface TerminalSlotProps {
 
 interface TerminalSlotsStore {
   slots: Map<string, TerminalSlotProps>;
-  register: (sessionId: string, slot: TerminalSlotProps) => void;
-  unregister: (sessionId: string, el: HTMLDivElement) => void;
-  update: (sessionId: string, partial: Partial<Omit<TerminalSlotProps, "el">>) => void;
+  actions: {
+    register: (sessionId: string, slot: TerminalSlotProps) => void;
+    unregister: (sessionId: string, el: HTMLDivElement) => void;
+    update: (sessionId: string, partial: Partial<Omit<TerminalSlotProps, "el">>) => void;
+  };
 }
 
-export const useTerminalSlotsStore = create<TerminalSlotsStore>()((set) => ({
+const useTerminalSlotsStoreBase = create<TerminalSlotsStore>()((set) => ({
   slots: new Map(),
 
-  register: (sessionId, slot) =>
-    set((state) => {
-      const next = new Map(state.slots);
-      next.set(sessionId, slot);
-      return { slots: next };
-    }),
+  actions: {
+    register: (sessionId, slot) =>
+      set((state) => {
+        const next = new Map(state.slots);
+        next.set(sessionId, slot);
+        return { slots: next };
+      }),
 
-  unregister: (sessionId, el) =>
-    set((state) => {
-      const existing = state.slots.get(sessionId);
-      // Only unregister if the element matches — avoids races where a new
-      // mount registered before the old unmount cleanup ran.
-      if (!existing || existing.el !== el) return state;
-      const next = new Map(state.slots);
-      next.delete(sessionId);
-      return { slots: next };
-    }),
+    unregister: (sessionId, el) =>
+      set((state) => {
+        const existing = state.slots.get(sessionId);
+        // Only unregister if the element matches — avoids races where a new
+        // mount registered before the old unmount cleanup ran.
+        if (!existing || existing.el !== el) return state;
+        const next = new Map(state.slots);
+        next.delete(sessionId);
+        return { slots: next };
+      }),
 
-  update: (sessionId, partial) =>
-    set((state) => {
-      const existing = state.slots.get(sessionId);
-      if (!existing) return state;
-      const next = new Map(state.slots);
-      next.set(sessionId, { ...existing, ...partial });
-      return { slots: next };
-    }),
+    update: (sessionId, partial) =>
+      set((state) => {
+        const existing = state.slots.get(sessionId);
+        if (!existing) return state;
+        const next = new Map(state.slots);
+        next.set(sessionId, { ...existing, ...partial });
+        return { slots: next };
+      }),
+  },
 }));
+
+export const useTerminalSlotsStore = createSelectors(useTerminalSlotsStoreBase);

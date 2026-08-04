@@ -77,8 +77,8 @@ export const XtermTerminal = ({
   const isInitializingRef = useRef(false);
   const fitFrameRef = useRef<number | null>(null);
 
-  const updateSession = useTerminalStore((state) => state.updateSession);
-  const getSession = useTerminalStore((state) => state.getSession);
+  const updateSession = useTerminalStore((state) => state.actions.updateSession);
+  const getSession = useTerminalStore((state) => state.actions.getSession);
   const session = useTerminalStore((state) => state.sessions.get(sessionId));
   const connectionId = session?.connectionId;
   const hadExistingConnectionOnMountRef = useRef(Boolean(session?.connectionId));
@@ -656,7 +656,7 @@ export const XtermTerminal = ({
   const handleZoom = useCallback(
     (delta: number) => {
       const newSize = Math.min(Math.max(terminalFontSize + delta, 8), 32);
-      useSettingsStore.getState().updateSetting("terminalFontSize", newSize);
+      useSettingsStore.getState().actions.updateSetting("terminalFontSize", newSize);
       if (xtermRef.current) {
         xtermRef.current.options.fontSize = newSize;
         fitTerminal();
@@ -666,7 +666,7 @@ export const XtermTerminal = ({
   );
 
   const handleZoomReset = useCallback(() => {
-    useSettingsStore.getState().updateSetting("terminalFontSize", 14);
+    useSettingsStore.getState().actions.updateSetting("terminalFontSize", 14);
     if (xtermRef.current) {
       xtermRef.current.options.fontSize = 14;
       fitTerminal();

@@ -130,7 +130,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const aiAutocompleteCustomModelId = useSettingsStore(
     (state) => state.settings.aiAutocompleteCustomModelId,
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
 
   // Check if current agent is "custom" (only show model selector for custom agent)
   const isCustomAgent = currentAgentId === "custom";

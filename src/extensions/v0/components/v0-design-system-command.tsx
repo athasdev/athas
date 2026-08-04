@@ -121,7 +121,7 @@ export function V0DesignSystemCommandContent({
       v0DesignSystems: state.settings.v0DesignSystems,
     })),
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const [mode, setMode] = useState<"list" | "add">("list");
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);

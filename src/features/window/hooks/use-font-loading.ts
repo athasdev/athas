@@ -29,7 +29,7 @@ export function useFontLoading() {
         [DEFAULT_MONO_FONT_FAMILY],
       );
       if (nextEditorFontFamily !== settings.fontFamily) {
-        updates.push(settingsStore.updateSetting("fontFamily", nextEditorFontFamily));
+        updates.push(settingsStore.actions.updateSetting("fontFamily", nextEditorFontFamily));
       }
 
       const nextTerminalFontFamily = resolveAvailableFontFamily(
@@ -39,7 +39,9 @@ export function useFontLoading() {
         [DEFAULT_MONO_FONT_FAMILY],
       );
       if (nextTerminalFontFamily !== settings.terminalFontFamily) {
-        updates.push(settingsStore.updateSetting("terminalFontFamily", nextTerminalFontFamily));
+        updates.push(
+          settingsStore.actions.updateSetting("terminalFontFamily", nextTerminalFontFamily),
+        );
       }
 
       const nextUiFontFamily = resolveAvailableFontFamily(
@@ -49,7 +51,7 @@ export function useFontLoading() {
         [DEFAULT_UI_FONT_FAMILY],
       );
       if (nextUiFontFamily !== settings.uiFontFamily) {
-        updates.push(settingsStore.updateSetting("uiFontFamily", nextUiFontFamily));
+        updates.push(settingsStore.actions.updateSetting("uiFontFamily", nextUiFontFamily));
       }
 
       await Promise.all(updates);

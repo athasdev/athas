@@ -25,7 +25,7 @@ const ProjectIconPicker = memo(
   ({ isOpen, onClose, projectId, projectPath }: ProjectIconPickerProps) => {
     const [icons, setIcons] = useState<ProjectIconFile[]>([]);
     const [loading, setLoading] = useState(false);
-    const { setProjectIcon } = useWorkspaceTabsStore.getState();
+    const { setProjectIcon } = useWorkspaceTabsStore.getState().actions;
     const currentIcon = useWorkspaceTabsStore(
       (s) => s.projectTabs.find((t) => t.id === projectId)?.customIcon,
     );
@@ -43,7 +43,7 @@ const ProjectIconPicker = memo(
     const handleSelect = useCallback(
       (iconPath: string) => {
         setProjectIcon(projectId, iconPath);
-        useRecentFoldersStore.getState().updateRecentFolder(projectPath, {
+        useRecentFoldersStore.getState().actions.updateRecentFolder(projectPath, {
           activeProjectTabId: projectId,
           customIcon: iconPath,
         });
@@ -54,7 +54,7 @@ const ProjectIconPicker = memo(
 
     const handleRemoveIcon = useCallback(() => {
       setProjectIcon(projectId, undefined);
-      useRecentFoldersStore.getState().updateRecentFolder(projectPath, {
+      useRecentFoldersStore.getState().actions.updateRecentFolder(projectPath, {
         activeProjectTabId: projectId,
         customIcon: undefined,
       });

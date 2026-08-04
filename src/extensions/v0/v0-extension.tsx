@@ -77,7 +77,7 @@ export const v0ExtensionModule = {
       getDescription: getActiveDesignSystemDescription,
     });
 
-    useUIExtensionStore.getState().registerCommand({
+    useUIExtensionStore.getState().actions.registerCommand({
       id: `${V0_EXTENSION_ID}.designSystems`,
       extensionId,
       title: "AI: v0 Design System",
@@ -91,6 +91,6 @@ export const v0ExtensionModule = {
     unregisterAIProviderIconsByExtension(extensionId);
     unregisterAIProviderSettingsActionsByExtension(extensionId);
     unregisterCommandPaletteViewsByExtension(extensionId);
-    useUIExtensionStore.getState().cleanupExtension(extensionId);
+    useUIExtensionStore.getState().actions.cleanupExtension(extensionId);
   },
 };

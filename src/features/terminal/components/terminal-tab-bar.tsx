@@ -280,13 +280,13 @@ const TerminalTabBar = ({
   }>({ isOpen: false, position: { x: 0, y: 0 } });
 
   const widthMode = useTerminalStore((state) => state.widthMode);
-  const setWidthMode = useTerminalStore((state) => state.setWidthMode);
+  const setWidthMode = useTerminalStore((state) => state.actions.setWidthMode);
   const tabLayout = useTerminalStore((state) => state.tabLayout);
-  const setTabLayout = useTerminalStore((state) => state.setTabLayout);
+  const setTabLayout = useTerminalStore((state) => state.actions.setTabLayout);
   const tabSidebarWidth = useTerminalStore((state) => state.tabSidebarWidth);
-  const setTabSidebarWidth = useTerminalStore((state) => state.setTabSidebarWidth);
+  const setTabSidebarWidth = useTerminalStore((state) => state.actions.setTabSidebarWidth);
   const tabSidebarPosition = useTerminalStore((state) => state.tabSidebarPosition);
-  const setTabSidebarPosition = useTerminalStore((state) => state.setTabSidebarPosition);
+  const setTabSidebarPosition = useTerminalStore((state) => state.actions.setTabSidebarPosition);
   const sessions = useTerminalStore((state) => state.sessions);
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
@@ -940,7 +940,7 @@ const TerminalTabBar = ({
             onCloseAll={onCloseAllTabs || (() => {})}
             onCloseToRight={onCloseTabsToRight || (() => {})}
             onClear={(terminalId) => {
-              const session = useTerminalStore.getState().getSession(terminalId);
+              const session = useTerminalStore.getState().actions.getSession(terminalId);
               if (session?.ref?.current) {
                 session.ref.current.clear();
               }
@@ -955,7 +955,7 @@ const TerminalTabBar = ({
               startRename(terminalId);
             }}
             onExport={async (terminalId) => {
-              const session = useTerminalStore.getState().getSession(terminalId);
+              const session = useTerminalStore.getState().actions.getSession(terminalId);
               const terminal = terminals.find((t) => t.id === terminalId);
               if (session?.ref?.current && terminal) {
                 try {

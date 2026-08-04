@@ -68,7 +68,8 @@ export const ExternalEditorTerminal = ({
   const queuedOutputBytesRef = useRef(0);
   const outputPausedRef = useRef(false);
 
-  const { fontSize: editorFontSize, fontFamily: editorFontFamily } = useEditorSettingsStore();
+  const editorFontSize = useEditorSettingsStore.use.fontSize();
+  const editorFontFamily = useEditorSettingsStore.use.fontFamily();
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const externalEditor = useSettingsStore((state) => state.settings.externalEditor);
   const customEditorCommand = useSettingsStore((state) => state.settings.customEditorCommand);

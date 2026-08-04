@@ -84,10 +84,8 @@
 
 ## Zustand
 
-- Always use the `createSelectors` wrapper for stores.
-- Group store actions inside an `actions` object.
-- Use `getState()` to access other stores inside actions instead of passing dependent state through parameters.
-- Use `immer` when store updates are deeply nested.
+- New React Zustand stores should use the shared `createSelectors` helper.
+- Keep store actions grouped under an `actions` object.
 
 ## Code Organization
 

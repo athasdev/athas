@@ -100,7 +100,7 @@ const TabBar = ({
   const { handleSave } = useEditorAppStore.use.actions();
   const horizontalTabScroll = useSettingsStore((state) => state.settings.horizontalTabScroll);
   const maxOpenTabs = useSettingsStore((state) => state.settings.maxOpenTabs);
-  const updateActivePath = useSidebarStore.use.updateActivePath();
+  const updateActivePath = useSidebarStore.use.actions().updateActivePath;
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
   const jumpListActions = useJumpListStore.use.actions();
   const bufferById = useMemo(() => {
@@ -438,7 +438,7 @@ const TabBar = ({
         return;
       }
 
-      useTerminalStore.getState().updateSession(buffer.sessionId, {
+      useTerminalStore.getState().actions.updateSession(buffer.sessionId, {
         name: nextName,
         customName: true,
       });

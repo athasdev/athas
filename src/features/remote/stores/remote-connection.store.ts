@@ -54,7 +54,9 @@ class ConnectionStore {
     try {
       const { useWorkspaceTabsStore } =
         await import("@/features/window/stores/workspace-tabs.store");
-      useWorkspaceTabsStore.getState().renameRemoteProjectTabs(connectionId, connectionName);
+      useWorkspaceTabsStore
+        .getState()
+        .actions.renameRemoteProjectTabs(connectionId, connectionName);
     } catch (error) {
       console.warn("Failed to sync remote workspace tab name:", error);
     }

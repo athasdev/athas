@@ -47,7 +47,7 @@ function useActivityRailSectionCollapse(sectionId: "agents" | "terminals") {
   const collapsedSections = useSettingsStore(
     (state) => state.settings.collapsedActivityRailSections,
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const isCollapsed = collapsedSections.includes(sectionId);
 
   const toggleCollapsed = useCallback(() => {
@@ -334,7 +334,7 @@ export function SidebarPinnedItems({
   const handleTabPin = useBufferStore.use.actions().handleTabPin;
   const panelTerminals = useTerminalTabsStore((state) => state.terminals);
   const activePanelTerminalId = useTerminalTabsStore((state) => state.activeTerminalId);
-  const dispatchTerminalAction = useTerminalTabsStore((state) => state.dispatch);
+  const dispatchTerminalAction = useTerminalTabsStore((state) => state.actions.dispatch);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
@@ -465,7 +465,7 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
   const setActiveBuffer = useBufferStore.use.actions().setActiveBuffer;
   const panelTerminals = useTerminalTabsStore((state) => state.terminals);
   const activePanelTerminalId = useTerminalTabsStore((state) => state.activeTerminalId);
-  const dispatchTerminalAction = useTerminalTabsStore((state) => state.dispatch);
+  const dispatchTerminalAction = useTerminalTabsStore((state) => state.actions.dispatch);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);

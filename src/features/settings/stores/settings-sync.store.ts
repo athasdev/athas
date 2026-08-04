@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createSelectors } from "@/utils/zustand-selectors";
 
 export type SettingsSyncSource = "cloud" | "local";
 type SettingsSyncStatus = "disabled" | "idle" | "syncing" | "synced" | "error";
@@ -26,7 +27,7 @@ interface SettingsSyncActions {
   setError: (message: string) => void;
 }
 
-export const useSettingsSyncStore = create<SettingsSyncState & { actions: SettingsSyncActions }>(
+const useSettingsSyncStoreBase = create<SettingsSyncState & { actions: SettingsSyncActions }>(
   (set) => ({
     enabled: false,
     isHydrated: false,
@@ -81,3 +82,5 @@ export const useSettingsSyncStore = create<SettingsSyncState & { actions: Settin
     },
   }),
 );
+
+export const useSettingsSyncStore = createSelectors(useSettingsSyncStoreBase);

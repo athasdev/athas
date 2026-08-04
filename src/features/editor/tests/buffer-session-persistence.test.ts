@@ -23,7 +23,11 @@ describe("buffer session persistence", () => {
 
     vi.advanceTimersByTime(300);
 
-    expect(useSessionStore.getState().getSession("/workspace-a")?.projectPath).toBe("/workspace-a");
-    expect(useSessionStore.getState().getSession("/workspace-b")?.projectPath).toBe("/workspace-b");
+    expect(useSessionStore.getState().actions.getSession("/workspace-a")?.projectPath).toBe(
+      "/workspace-a",
+    );
+    expect(useSessionStore.getState().actions.getSession("/workspace-b")?.projectPath).toBe(
+      "/workspace-b",
+    );
   });
 });

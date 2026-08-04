@@ -123,7 +123,7 @@ export function useInlineEdit({
 
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const subscription = useAuthStore((state) => state.subscription);
   const checkAllProviderApiKeys = useAIChatStore((state) => state.actions.checkAllProviderApiKeys);

@@ -93,7 +93,7 @@ function IdeSettingsImportContent({ onClose, onBack }: IdeSettingsImportContentP
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const importRecentFolders = useRecentFoldersStore((state) => state.importRecentFolders);
+  const importRecentFolders = useRecentFoldersStore((state) => state.actions.importRecentFolders);
   const { showToast } = useToast();
 
   const importSources = useMemo(

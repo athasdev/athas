@@ -1,3 +1,3 @@
 import { createSqlStore } from "../../sql/stores/create-sql.store";
 
-export const useMysqlStore = createSqlStore("mysql", "connection");
+export const createMysqlStore = () => createSqlStore("mysql", "connection");

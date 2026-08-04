@@ -40,7 +40,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const subscription = useAuthStore((s) => s.subscription);
-  const logout = useAuthStore((s) => s.logout);
+  const logout = useAuthStore((s) => s.actions.logout);
   const checkAllProviderApiKeys = useAIChatStore((state) => state.actions.checkAllProviderApiKeys);
   const hasOpenRouterKey = useAIChatStore(
     (state) => state.providerApiKeys.get("openrouter") || false,

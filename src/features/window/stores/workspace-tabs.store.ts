@@ -1,8 +1,9 @@
 import { getAllWebviewWindows, getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { createSafeJSONStorage } from "@/utils/zustand-storage";
 import { removeProjectTabItems } from "../utils/project-tab-close";
 import { reorderProjectTabItems } from "../utils/project-tab-order";
 import { renameRemoteProjectTabs } from "../utils/project-tab-remote";
@@ -59,109 +60,121 @@ if (currentWebviewWindow) {
   })();
 }
 
-const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActions>()(
+interface WorkspaceTabsStore extends WorkspaceTabsState {
+  actions: WorkspaceTabsActions;
+}
+
+const useWorkspaceTabsStoreBase = create<WorkspaceTabsStore>()(
   persist(
     immer((set, get) => ({
       projectTabs: [],
 
-      addProjectTab: (path: string, name: string, theme?: string) => {
-        const normalizedPath = normalizeProjectTabPath(path);
-        const existing = get().projectTabs.find((tab) =>
-          areProjectTabPathsEqual(tab.path, normalizedPath),
-        );
-
-        if (existing) {
-          set((state) => {
-            const tab = state.projectTabs.find((projectTab) => projectTab.id === existing.id);
-            if (tab) {
-              tab.name = name;
-              tab.path = normalizedPath;
-            }
-          });
-          get().setActiveProjectTab(existing.id);
-          return;
-        }
-
-        set((state) => {
-          // Deactivate all other tabs
-          state.projectTabs.forEach((tab) => {
-            tab.isActive = false;
-          });
-
-          // Add new tab
-          state.projectTabs.push({
-            id: createProjectTabId(normalizedPath),
-            name,
-            path: normalizedPath,
-            isActive: true,
-            lastOpened: Date.now(),
-            theme,
-          });
-        });
-      },
-
-      removeProjectTab: (projectId: string) => {
-        set((state) => {
-          state.projectTabs = removeProjectTabItems(state.projectTabs, projectId);
-        });
-      },
-
-      setActiveProjectTab: (projectId: string) => {
-        set((state) => {
-          state.projectTabs.forEach((tab) => {
-            tab.isActive = tab.id === projectId;
-            if (tab.id === projectId) {
-              tab.lastOpened = Date.now();
-            }
-          });
-        });
-      },
-
-      reorderProjectTabs: (fromIndex: number, toIndex: number) => {
-        set((state) => {
-          state.projectTabs = reorderProjectTabItems(state.projectTabs, fromIndex, toIndex);
-        });
-      },
-
-      getActiveProjectTab: () => {
-        return get().projectTabs.find((tab) => tab.isActive);
-      },
-
-      hasProjectTab: (path: string) => {
-        return get().projectTabs.some((tab) => areProjectTabPathsEqual(tab.path, path));
-      },
-
-      renameRemoteProjectTabs: (connectionId: string, connectionName: string) => {
-        set((state) => {
-          state.projectTabs = renameRemoteProjectTabs(
-            state.projectTabs,
-            connectionId,
-            connectionName,
+      actions: {
+        addProjectTab: (path: string, name: string, theme?: string) => {
+          const normalizedPath = normalizeProjectTabPath(path);
+          const existing = get().projectTabs.find((tab) =>
+            areProjectTabPathsEqual(tab.path, normalizedPath),
           );
-        });
-      },
 
-      setProjectIcon: (projectId: string, iconPath: string | undefined) => {
-        set((state) => {
-          const tab = state.projectTabs.find((t) => t.id === projectId);
-          if (tab) {
-            tab.customIcon = iconPath;
+          if (existing) {
+            set((state) => {
+              const tab = state.projectTabs.find((projectTab) => projectTab.id === existing.id);
+              if (tab) {
+                tab.name = name;
+                tab.path = normalizedPath;
+              }
+            });
+            get().actions.setActiveProjectTab(existing.id);
+            return;
           }
-        });
-      },
 
-      setProjectTheme: (projectId: string, theme: string) => {
-        set((state) => {
-          const tab = state.projectTabs.find((projectTab) => projectTab.id === projectId);
-          if (tab) {
-            tab.theme = theme;
-          }
-        });
+          set((state) => {
+            // Deactivate all other tabs
+            state.projectTabs.forEach((tab) => {
+              tab.isActive = false;
+            });
+
+            // Add new tab
+            state.projectTabs.push({
+              id: createProjectTabId(normalizedPath),
+              name,
+              path: normalizedPath,
+              isActive: true,
+              lastOpened: Date.now(),
+              theme,
+            });
+          });
+        },
+
+        removeProjectTab: (projectId: string) => {
+          set((state) => {
+            state.projectTabs = removeProjectTabItems(state.projectTabs, projectId);
+          });
+        },
+
+        setActiveProjectTab: (projectId: string) => {
+          set((state) => {
+            state.projectTabs.forEach((tab) => {
+              tab.isActive = tab.id === projectId;
+              if (tab.id === projectId) {
+                tab.lastOpened = Date.now();
+              }
+            });
+          });
+        },
+
+        reorderProjectTabs: (fromIndex: number, toIndex: number) => {
+          set((state) => {
+            state.projectTabs = reorderProjectTabItems(state.projectTabs, fromIndex, toIndex);
+          });
+        },
+
+        getActiveProjectTab: () => {
+          return get().projectTabs.find((tab) => tab.isActive);
+        },
+
+        hasProjectTab: (path: string) => {
+          return get().projectTabs.some((tab) => areProjectTabPathsEqual(tab.path, path));
+        },
+
+        renameRemoteProjectTabs: (connectionId: string, connectionName: string) => {
+          set((state) => {
+            state.projectTabs = renameRemoteProjectTabs(
+              state.projectTabs,
+              connectionId,
+              connectionName,
+            );
+          });
+        },
+
+        setProjectIcon: (projectId: string, iconPath: string | undefined) => {
+          set((state) => {
+            const tab = state.projectTabs.find((t) => t.id === projectId);
+            if (tab) {
+              tab.customIcon = iconPath;
+            }
+          });
+        },
+
+        setProjectTheme: (projectId: string, theme: string) => {
+          set((state) => {
+            const tab = state.projectTabs.find((projectTab) => projectTab.id === projectId);
+            if (tab) {
+              tab.theme = theme;
+            }
+          });
+        },
       },
     })),
     {
       name: workspaceTabsStorageKey,
-      storage: createJSONStorage(() => localStorage),
+      storage: createSafeJSONStorage<WorkspaceTabsState>(),
+      partialize: ({ projectTabs }) => ({ projectTabs }),
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...(persistedState as WorkspaceTabsState),
+        actions: currentState.actions,
+      }),
       version: 1,
     },
   ),

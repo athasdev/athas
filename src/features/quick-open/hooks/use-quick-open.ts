@@ -36,7 +36,7 @@ export const useQuickOpen = () => {
     () => getNativeWorkspaceRootPaths(rootFolderPath, workspaceFolders),
     [rootFolderPath, workspaceFolders],
   );
-  const addOrUpdateRecentFile = useRecentFilesStore((state) => state.addOrUpdateRecentFile);
+  const addOrUpdateRecentFile = useRecentFilesStore((state) => state.actions.addOrUpdateRecentFile);
   const [query, setQuery] = useState("");
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
   const inputRef = useRef<HTMLInputElement>(null);

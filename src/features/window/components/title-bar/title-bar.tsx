@@ -85,7 +85,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const headerTrailingItemsOrder = useSettingsStore(
     (state) => state.settings.headerTrailingItemsOrder,
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
@@ -293,7 +293,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
           tooltipSide="bottom"
           commandId="workbench.toggleAIChat"
           onClick={() => {
-            useSettingsStore.getState().toggleAIChatVisible();
+            useSettingsStore.getState().actions.toggleAIChatVisible();
           }}
           aria-label="Toggle Agent"
           size="icon-xs"

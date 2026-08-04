@@ -286,23 +286,23 @@ class EditorAPIImpl implements EditorAPI {
 
   // Decoration operations
   addDecoration(decoration: Decoration): string {
-    const id = useEditorDecorationsStore.getState().addDecoration(decoration);
+    const id = useEditorDecorationsStore.getState().actions.addDecoration(decoration);
     this.emit("decorationChange", { type: "add", decoration, id });
     return id;
   }
 
   removeDecoration(id: string): void {
-    useEditorDecorationsStore.getState().removeDecoration(id);
+    useEditorDecorationsStore.getState().actions.removeDecoration(id);
     this.emit("decorationChange", { type: "remove", id });
   }
 
   updateDecoration(id: string, decoration: Partial<Decoration>): void {
-    useEditorDecorationsStore.getState().updateDecoration(id, decoration);
+    useEditorDecorationsStore.getState().actions.updateDecoration(id, decoration);
     this.emit("decorationChange", { type: "update", id, decoration });
   }
 
   clearDecorations(): void {
-    useEditorDecorationsStore.getState().clearDecorations();
+    useEditorDecorationsStore.getState().actions.clearDecorations();
     this.emit("decorationChange", { type: "clear" });
   }
 

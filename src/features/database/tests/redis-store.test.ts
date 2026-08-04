@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { invokeDatabaseProvider } from "@/features/database/services/database-provider-sidecar";
-import { useRedisStore } from "@/features/database/providers/redis/stores/redis.store";
+import { createRedisStore } from "@/features/database/providers/redis/stores/redis.store";
 
 vi.mock("@/features/database/services/database-provider-sidecar", () => ({
   invokeDatabaseProvider: vi.fn(),
 }));
 
 const mockInvokeDatabaseProvider = vi.mocked(invokeDatabaseProvider);
+const useRedisStore = createRedisStore();
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

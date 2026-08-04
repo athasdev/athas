@@ -12,13 +12,15 @@ export interface TerminalStore {
   tabLayout: TerminalTabLayout;
   tabSidebarWidth: number;
   tabSidebarPosition: TerminalTabSidebarPosition;
-  updateSession: (sessionId: string, updates: Partial<Terminal>) => void;
-  getSession: (sessionId: string) => Partial<Terminal> | undefined;
-  removeSession: (sessionId: string) => void;
-  setWidthMode: (mode: TerminalWidthMode) => void;
-  setTabLayout: (layout: TerminalTabLayout) => void;
-  setTabSidebarWidth: (width: number) => void;
-  setTabSidebarPosition: (position: TerminalTabSidebarPosition) => void;
+  actions: {
+    updateSession: (sessionId: string, updates: Partial<Terminal>) => void;
+    getSession: (sessionId: string) => Partial<Terminal> | undefined;
+    removeSession: (sessionId: string) => void;
+    setWidthMode: (mode: TerminalWidthMode) => void;
+    setTabLayout: (layout: TerminalTabLayout) => void;
+    setTabSidebarWidth: (width: number) => void;
+    setTabSidebarPosition: (position: TerminalTabSidebarPosition) => void;
+  };
 }
 
 const createTerminalStore = () =>
@@ -29,41 +31,43 @@ const createTerminalStore = () =>
     tabSidebarWidth: 180,
     tabSidebarPosition: "left",
 
-    updateSession: (sessionId: string, updates: Partial<Terminal>) => {
-      set((state) => {
-        const newSessions = new Map(state.sessions);
-        const currentSession = newSessions.get(sessionId) || {};
-        newSessions.set(sessionId, { ...currentSession, ...updates });
-        return { sessions: newSessions };
-      });
-    },
+    actions: {
+      updateSession: (sessionId: string, updates: Partial<Terminal>) => {
+        set((state) => {
+          const newSessions = new Map(state.sessions);
+          const currentSession = newSessions.get(sessionId) || {};
+          newSessions.set(sessionId, { ...currentSession, ...updates });
+          return { sessions: newSessions };
+        });
+      },
 
-    getSession: (sessionId: string) => {
-      return get().sessions.get(sessionId);
-    },
+      getSession: (sessionId: string) => {
+        return get().sessions.get(sessionId);
+      },
 
-    removeSession: (sessionId: string) => {
-      set((state) => {
-        const newSessions = new Map(state.sessions);
-        newSessions.delete(sessionId);
-        return { sessions: newSessions };
-      });
-    },
+      removeSession: (sessionId: string) => {
+        set((state) => {
+          const newSessions = new Map(state.sessions);
+          newSessions.delete(sessionId);
+          return { sessions: newSessions };
+        });
+      },
 
-    setWidthMode: (mode: TerminalWidthMode) => {
-      set({ widthMode: mode });
-    },
+      setWidthMode: (mode: TerminalWidthMode) => {
+        set({ widthMode: mode });
+      },
 
-    setTabLayout: (tabLayout: TerminalTabLayout) => {
-      set({ tabLayout });
-    },
+      setTabLayout: (tabLayout: TerminalTabLayout) => {
+        set({ tabLayout });
+      },
 
-    setTabSidebarWidth: (tabSidebarWidth: number) => {
-      set({ tabSidebarWidth: Math.max(80, Math.min(400, tabSidebarWidth)) });
-    },
+      setTabSidebarWidth: (tabSidebarWidth: number) => {
+        set({ tabSidebarWidth: Math.max(80, Math.min(400, tabSidebarWidth)) });
+      },
 
-    setTabSidebarPosition: (tabSidebarPosition: TerminalTabSidebarPosition) => {
-      set({ tabSidebarPosition });
+      setTabSidebarPosition: (tabSidebarPosition: TerminalTabSidebarPosition) => {
+        set({ tabSidebarPosition });
+      },
     },
   }));
 

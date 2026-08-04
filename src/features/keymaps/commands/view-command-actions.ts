@@ -121,30 +121,34 @@ export function showThemeSelector(): void {
 }
 
 export async function showWhatsNew(): Promise<void> {
-  await useWhatsNewStore.getState().open();
+  await useWhatsNewStore.getState().actions.open();
 }
 
 export function toggleAIChat(): void {
-  useSettingsStore.getState().toggleAIChatVisible();
+  useSettingsStore.getState().actions.toggleAIChatVisible();
 }
 
 export function toggleMinimap(): void {
-  const { settings, updateSetting } = useSettingsStore.getState();
+  const { settings, actions } = useSettingsStore.getState();
+  const { updateSetting } = actions;
   updateSetting("showMinimap", !settings.showMinimap);
 }
 
 export function toggleWordWrap(): void {
-  const { settings, updateSetting } = useSettingsStore.getState();
+  const { settings, actions } = useSettingsStore.getState();
+  const { updateSetting } = actions;
   updateSetting("wordWrap", !settings.wordWrap);
 }
 
 export function toggleLineNumbers(): void {
-  const { settings, updateSetting } = useSettingsStore.getState();
+  const { settings, actions } = useSettingsStore.getState();
+  const { updateSetting } = actions;
   updateSetting("lineNumbers", !settings.lineNumbers);
 }
 
 export function toggleRenderWhitespace(): void {
-  const { settings, updateSetting } = useSettingsStore.getState();
+  const { settings, actions } = useSettingsStore.getState();
+  const { updateSetting } = actions;
   updateSetting("renderWhitespace", settings.renderWhitespace === "none" ? "all" : "none");
 }
 

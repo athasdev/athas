@@ -225,7 +225,9 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
 
 interface TerminalTabsStore extends TerminalState {
   hasHydrated: boolean;
-  dispatch: (action: TerminalAction) => void;
+  actions: {
+    dispatch: (action: TerminalAction) => void;
+  };
 }
 
 const createTerminalTabsStore = () =>
@@ -233,11 +235,13 @@ const createTerminalTabsStore = () =>
     terminals: [],
     activeTerminalId: null,
     hasHydrated: false,
-    dispatch: (action) =>
-      set((state) => ({
-        ...terminalReducer(state, action),
-        hasHydrated: true,
-      })),
+    actions: {
+      dispatch: (action) =>
+        set((state) => ({
+          ...terminalReducer(state, action),
+          hasHydrated: true,
+        })),
+    },
   }));
 
 export const useTerminalTabsStore = createWorkspaceScopedStore(

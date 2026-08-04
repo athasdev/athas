@@ -136,7 +136,9 @@ export function MainLayout() {
   const setWorkspaceGitStatus = useGitStore((state) => state.actions.setWorkspaceGitStatus);
   const onboardingOpen = useOnboardingStore((state) => state.isOpen);
   const onboardingContext = useOnboardingStore((state) => state.context);
-  const consumeOnboardingOpenRequest = useOnboardingStore((state) => state.consumeOpenRequest);
+  const consumeOnboardingOpenRequest = useOnboardingStore(
+    (state) => state.actions.consumeOpenRequest,
+  );
   const openOnboardingBuffer = useBufferStore.use.actions().openOnboardingBuffer;
 
   const hasRestoredWorkspace = useRef(false);
@@ -199,7 +201,7 @@ export function MainLayout() {
 
     const resolveRestorableActiveTab = async () => {
       while (true) {
-        const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+        const activeTab = useWorkspaceTabsStore.getState().actions.getActiveProjectTab();
         if (!activeTab) return null;
 
         if (activeTab.path.startsWith("remote://") || isWslPath(activeTab.path)) {
@@ -215,7 +217,7 @@ export function MainLayout() {
           console.warn("Persisted workspace no longer exists:", activeTab.path, error);
         }
 
-        useWorkspaceTabsStore.getState().removeProjectTab(activeTab.id);
+        useWorkspaceTabsStore.getState().actions.removeProjectTab(activeTab.id);
         toast.warning(`Removed missing project "${activeTab.name}"`);
       }
     };

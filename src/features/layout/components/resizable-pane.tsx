@@ -34,7 +34,7 @@ export function ResizablePane({
   reservedWidth = 0,
 }: ResizablePaneProps) {
   const storedWidth = useSettingsStore((state) => state.settings[widthKey]);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const [width, setWidth] = useState(Math.max(storedWidth, MIN_RESPONSIVE_PANE_WIDTH));
   const [isResizing, setIsResizing] = useState(false);
   const paneRef = useRef<HTMLDivElement>(null);

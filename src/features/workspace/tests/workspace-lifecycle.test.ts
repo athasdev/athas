@@ -167,10 +167,10 @@ describe("workspace lifecycle", () => {
       descriptor: { path: "/workspace-a", name: "A" },
       initialize: async () => true,
     });
-    useWorkspaceTabsStore.getState().addProjectTab("/workspace-b", "B");
+    useWorkspaceTabsStore.getState().actions.addProjectTab("/workspace-b", "B");
     const workspaceAId = createProjectTabId("/workspace-a");
     const workspaceBId = createProjectTabId("/workspace-b");
-    useWorkspaceTabsStore.getState().setActiveProjectTab(workspaceAId);
+    useWorkspaceTabsStore.getState().actions.setActiveProjectTab(workspaceAId);
 
     let finishInitialization: ((initialized: boolean) => void) | undefined;
     const initialize = vi.fn(

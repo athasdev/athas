@@ -63,10 +63,10 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
       vimMode: state.settings.vimMode,
     })),
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const closeBufferForce = useBufferStore.use.actions().closeBufferForce;
-  const openWhatsNew = useWhatsNewStore((state) => state.open);
+  const openWhatsNew = useWhatsNewStore((state) => state.actions.open);
   const viewModel = buildOnboardingViewModel(context);
   const [telemetry, setTelemetry] = useState(settings.telemetry);
   const [vimMode, setVimMode] = useState(settings.vimMode);

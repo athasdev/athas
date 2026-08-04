@@ -65,7 +65,7 @@ const TerminalContainer = ({
   const closeTerminal = useCallback(
     (terminalId: string, options: CloseTerminalOptions = {}) => {
       const terminalStore = useTerminalStore.getState();
-      const session = terminalStore.getSession(terminalId);
+      const session = terminalStore.actions.getSession(terminalId);
       originalCloseTerminal(terminalId);
 
       if (options.preserveSession) return;
@@ -79,7 +79,7 @@ const TerminalContainer = ({
         });
       }
 
-      terminalStore.removeSession(terminalId);
+      terminalStore.actions.removeSession(terminalId);
     },
     [originalCloseTerminal],
   );
@@ -243,7 +243,7 @@ const TerminalContainer = ({
       if (!trimmedName) return;
 
       updateTerminalName(terminalId, trimmedName);
-      useTerminalStore.getState().updateSession(terminalId, {
+      useTerminalStore.getState().actions.updateSession(terminalId, {
         name: trimmedName,
         customName: true,
       });

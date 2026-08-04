@@ -554,7 +554,7 @@ export const ExtensionsSidebar = () => {
       theme: state.settings.theme,
     })),
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [extensions, setExtensions] = useState<UnifiedExtension[]>([]);

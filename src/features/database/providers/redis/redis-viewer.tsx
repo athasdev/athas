@@ -22,7 +22,7 @@ import {
   databaseHeaderClassName,
   databasePanelClassName,
 } from "../../components/database-surface";
-import { useRedisStore } from "./stores/redis.store";
+import { createRedisStore } from "./stores/redis.store";
 
 const TYPE_COLORS: Record<string, string> = {
   string: "text-primary",
@@ -38,7 +38,8 @@ interface RedisViewerProps {
 }
 
 export default function RedisViewer({ connectionId }: RedisViewerProps) {
-  const store = useRedisStore();
+  const [useStore] = useState(() => createRedisStore());
+  const store = useStore();
   const { actions } = store;
   const [patternInput, setPatternInput] = useState("*");
   const [showInfo, setShowInfo] = useState(false);

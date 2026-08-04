@@ -19,7 +19,7 @@ const parseAllowlistInput = (value: string): string[] =>
 
 export const EnterpriseSettings = () => {
   const subscription = useAuthStore((state) => state.subscription);
-  const refreshSubscription = useAuthStore((state) => state.refreshSubscription);
+  const refreshSubscription = useAuthStore((state) => state.actions.refreshSubscription);
 
   const enterprise = subscription?.enterprise;
   const policy = enterprise?.policy;

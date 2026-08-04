@@ -32,7 +32,7 @@ interface CloseWorkspaceRuntimeOptions {
 }
 
 const activateDescriptor = (descriptor: WorkspaceRuntimeDescriptor) => {
-  useWorkspaceTabsStore.getState().setActiveProjectTab(descriptor.id);
+  useWorkspaceTabsStore.getState().actions.setActiveProjectTab(descriptor.id);
   workspaceRuntimeRegistry.activateWorkspace(descriptor, "opening");
 };
 
@@ -105,7 +105,7 @@ const restorePreviousWorkspace = (workspaceId: string | undefined) => {
     return;
   }
 
-  useWorkspaceTabsStore.getState().setActiveProjectTab(previousTab.id);
+  useWorkspaceTabsStore.getState().actions.setActiveProjectTab(previousTab.id);
   workspaceRuntimeRegistry.activateWorkspace(
     { id: previousTab.id, name: previousTab.name, path: previousTab.path },
     workspaceRuntimeRegistry.getWorkspace(previousTab.id)?.status ?? "ready",
@@ -129,7 +129,11 @@ export async function openWorkspaceRuntime({
 
   useWorkspaceTabsStore
     .getState()
-    .addProjectTab(descriptor.path, descriptor.name, useSettingsStore.getState().settings.theme);
+    .actions.addProjectTab(
+      descriptor.path,
+      descriptor.name,
+      useSettingsStore.getState().settings.theme,
+    );
   activateDescriptor({ ...descriptor, id: workspaceId });
 
   try {
@@ -154,7 +158,7 @@ export async function openWorkspaceRuntime({
     );
 
     if (!wasKnown) {
-      useWorkspaceTabsStore.getState().removeProjectTab(workspaceId);
+      useWorkspaceTabsStore.getState().actions.removeProjectTab(workspaceId);
       workspaceRuntimeRegistry.removeWorkspace(workspaceId);
     }
     if (shouldRestorePrevious) {
@@ -179,7 +183,7 @@ export async function switchWorkspaceRuntime(
     workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId &&
     workspaceRuntimeRegistry.isWorkspaceReady(workspaceId)
   ) {
-    useWorkspaceTabsStore.getState().setActiveProjectTab(workspaceId);
+    useWorkspaceTabsStore.getState().actions.setActiveProjectTab(workspaceId);
     return true;
   }
 
@@ -234,14 +238,14 @@ export async function closeWorkspaceRuntime(
   }
   await dispose?.(tab.path);
 
-  workspaceTabs.removeProjectTab(workspaceId);
+  workspaceTabs.actions.removeProjectTab(workspaceId);
   workspaceRuntimeRegistry.removeWorkspace(workspaceId);
 
   if (!wasActive) {
     return true;
   }
 
-  const nextTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+  const nextTab = useWorkspaceTabsStore.getState().actions.getActiveProjectTab();
   if (nextTab) {
     return await switchTo(nextTab.id);
   }

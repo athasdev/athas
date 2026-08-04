@@ -44,7 +44,7 @@ export const EditorSettings = () => {
       wordWrap: state.settings.wordWrap,
     })),
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const languageOptions = useMemo(
     () => [
       { value: "auto", label: "Auto Detect" },

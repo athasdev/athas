@@ -25,7 +25,7 @@ interface SaveWorkspaceSessionInput {
 
 export const workspaceSessionRepository = {
   load(projectPath: string) {
-    const session = useSessionStore.getState().getSession(projectPath);
+    const session = useSessionStore.getState().actions.getSession(projectPath);
     return {
       session,
       terminals: isTerminalPersistenceEnabled()
@@ -49,7 +49,7 @@ export const workspaceSessionRepository = {
   }: SaveWorkspaceSessionInput) {
     useSessionStore
       .getState()
-      .saveSession(
+      .actions.saveSession(
         projectPath,
         buffers,
         activeBufferPath,
@@ -61,11 +61,11 @@ export const workspaceSessionRepository = {
   },
 
   loadUi(projectPath: string | undefined) {
-    return useSessionStore.getState().getUiState(projectPath ?? "");
+    return useSessionStore.getState().actions.getUiState(projectPath ?? "");
   },
 
   saveUi(projectPath: string, uiState: ProjectUiSession) {
-    useSessionStore.getState().saveUiState(projectPath, uiState);
+    useSessionStore.getState().actions.saveUiState(projectPath, uiState);
   },
 
   saveTerminals(projectPath: string, terminals: Terminal[]) {
@@ -73,10 +73,10 @@ export const workspaceSessionRepository = {
       return;
     }
 
-    const previous = useSessionStore.getState().getSession(projectPath);
+    const previous = useSessionStore.getState().actions.getSession(projectPath);
     useSessionStore
       .getState()
-      .saveSession(
+      .actions.saveSession(
         projectPath,
         previous?.buffers ?? [],
         previous?.activeBufferPath ?? null,

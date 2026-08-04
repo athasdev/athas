@@ -79,7 +79,7 @@ function RunActionSection({
 export default function RunActionsButton() {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
-  const allCustomActions = useRunActionsStore.use.actions();
+  const allCustomActions = useRunActionsStore.use.runActions();
   const activeFilePath = useBufferStore((state) => {
     const activeBuffer = getBufferById(state.buffers, state.activeBufferId);
     return activeBuffer?.type === "editor" && !activeBuffer.isVirtual
@@ -96,7 +96,7 @@ export default function RunActionsButton() {
       state.isDatabaseConnectionVisible,
   );
   const { addAction, updateAction, deleteAction, getActionsForWorkspace } =
-    useRunActionsStore.getState().storeActions;
+    useRunActionsStore.getState().actions;
   const activeProject = projectTabs.find((tab) => tab.isActive);
   const workspacePath = activeProject?.path || rootFolderPath || undefined;
   const workspaceLabel = getWorkspaceLabel(workspacePath, activeProject?.name);

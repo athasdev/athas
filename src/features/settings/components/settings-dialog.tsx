@@ -43,17 +43,17 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   const { settingsInitialTab, setSettingsInitialTab } = useUIState();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const lastSettingsTab = useSettingsStore((state) => state.settings.lastSettingsTab);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const subscription = useAuthStore((state) => state.subscription);
   const settingsAccess = resolveSettingsAccess(subscription);
   const { canShowEnterpriseSettings, canShowCollaborationSettings } = settingsAccess;
 
-  const clearSearch = useSettingsStore((state) => state.clearSearch);
+  const clearSearch = useSettingsStore((state) => state.actions.clearSearch);
   const searchQuery = useSettingsStore((state) => state.search.query);
   const searchResults = useSettingsStore((state) => state.search.results);
   const selectedResultId = useSettingsStore((state) => state.search.selectedResultId);
-  const selectSearchResult = useSettingsStore((state) => state.selectSearchResult);
-  const setSearchQuery = useSettingsStore((state) => state.setSearchQuery);
+  const selectSearchResult = useSettingsStore((state) => state.actions.selectSearchResult);
+  const setSearchQuery = useSettingsStore((state) => state.actions.setSearchQuery);
   const contentRef = useRef<HTMLDivElement>(null);
   const searchInputAnchorRef = useRef<HTMLDivElement>(null);
   const tabDropdownRef = useRef<HTMLButtonElement>(null);

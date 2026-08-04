@@ -172,7 +172,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   const semanticTokens = useSettingsStore((state) => state.settings.semanticTokens);
   const vimMode = useSettingsStore((state) => state.settings.vimMode);
   const enableInlineGitBlame = useSettingsStore((state) => state.settings.enableInlineGitBlame);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const minimapShortcut = useCommandShortcut("workbench.toggleMinimap");
   const lspStatus = useLspStore.use.lspStatus();
   const [isLspOpen, setIsLspOpen] = useState(false);

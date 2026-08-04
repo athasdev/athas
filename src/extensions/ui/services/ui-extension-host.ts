@@ -36,8 +36,8 @@ class UIExtensionHost {
     const extensionId = manifest.id;
     if (this.loaded.has(extensionId)) return;
 
-    const store = useUIExtensionStore.getState();
-    store.registerExtension({ extensionId, manifestId: extensionId, state: "loading" });
+    const actions = useUIExtensionStore.getState().actions;
+    actions.registerExtension({ extensionId, manifestId: extensionId, state: "loading" });
 
     const loaded: LoadedExtension = {
       extensionId,
@@ -49,7 +49,7 @@ class UIExtensionHost {
 
     try {
       if (!manifest.main) {
-        store.updateExtensionState(extensionId, "active");
+        actions.updateExtensionState(extensionId, "active");
         return;
       }
 
@@ -67,7 +67,7 @@ class UIExtensionHost {
         void this.handleMessage(loaded, event.data);
       });
       worker.addEventListener("error", (event) => {
-        store.updateExtensionState(extensionId, "error", event.message);
+        actions.updateExtensionState(extensionId, "error", event.message);
       });
       worker.postMessage({ type: "activate", entryPointUrl: loaded.entryPointUrl });
 
@@ -97,10 +97,10 @@ class UIExtensionHost {
         worker.addEventListener("message", onReady);
         worker.addEventListener("error", onError);
       });
-      store.updateExtensionState(extensionId, "active");
+      actions.updateExtensionState(extensionId, "active");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      store.updateExtensionState(extensionId, "error", message);
+      actions.updateExtensionState(extensionId, "error", message);
       this.disposeWorker(loaded);
       this.loaded.delete(extensionId);
       throw error;
@@ -138,10 +138,10 @@ class UIExtensionHost {
     }
 
     const payload = message.payload ?? {};
-    const store = useUIExtensionStore.getState();
+    const actions = useUIExtensionStore.getState().actions;
     if (message.event === "sidebar.registerView") {
       const id = assertNamespaced(loaded.extensionId, payload.id);
-      store.registerSidebarView({
+      actions.registerSidebarView({
         id,
         extensionId: loaded.extensionId,
         title: String(payload.title ?? id),
@@ -152,7 +152,7 @@ class UIExtensionHost {
       });
     } else if (message.event === "commands.register") {
       const id = assertNamespaced(loaded.extensionId, payload.id);
-      store.registerCommand({
+      actions.registerCommand({
         id,
         extensionId: loaded.extensionId,
         title: String(payload.title ?? id),
@@ -160,7 +160,7 @@ class UIExtensionHost {
         execute: (...args) => this.executeCommand(loaded.extensionId, id, args),
       });
     } else if (message.event === "views.invalidate") {
-      store.invalidateSidebarView(assertNamespaced(loaded.extensionId, payload.viewId));
+      actions.invalidateSidebarView(assertNamespaced(loaded.extensionId, payload.viewId));
     }
   }
 
@@ -197,7 +197,7 @@ class UIExtensionHost {
       await this.request(extensionId, "deactivate", []).catch(() => undefined);
     }
     this.disposeWorker(loaded);
-    useUIExtensionStore.getState().cleanupExtension(extensionId);
+    useUIExtensionStore.getState().actions.cleanupExtension(extensionId);
     this.loaded.delete(extensionId);
   }
 

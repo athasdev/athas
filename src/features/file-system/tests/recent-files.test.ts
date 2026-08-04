@@ -36,7 +36,7 @@ describe("recent files store", () => {
   it("stores workspace scope metadata for external files", async () => {
     const useRecentFilesStore = await loadRecentFilesStore();
 
-    useRecentFilesStore.getState().addOrUpdateRecentFile("/outside/notes.md", "notes.md", {
+    useRecentFilesStore.getState().actions.addOrUpdateRecentFile("/outside/notes.md", "notes.md", {
       workspacePath: "/workspace",
       external: true,
     });
@@ -51,11 +51,11 @@ describe("recent files store", () => {
   it("preserves existing metadata when the caller does not provide new values", async () => {
     const useRecentFilesStore = await loadRecentFilesStore();
     const store = useRecentFilesStore.getState();
-    store.addOrUpdateRecentFile("/outside/notes.md", "notes.md", {
+    store.actions.addOrUpdateRecentFile("/outside/notes.md", "notes.md", {
       workspacePath: "/workspace",
       external: true,
     });
-    store.addOrUpdateRecentFile("/outside/notes.md", "notes.md");
+    store.actions.addOrUpdateRecentFile("/outside/notes.md", "notes.md");
 
     expect(useRecentFilesStore.getState().recentFiles[0]).toMatchObject({
       workspacePath: "/workspace",

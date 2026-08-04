@@ -6,76 +6,83 @@ import {
   resolveOnboardingContext,
   type OnboardingContext,
 } from "@/features/onboarding/lib/onboarding-state";
+import { createSelectors } from "@/utils/zustand-selectors";
 
 interface OnboardingStoreState {
   initialized: boolean;
   isOpen: boolean;
   context: OnboardingContext | null;
-  initialize: () => Promise<void>;
-  consumeOpenRequest: () => void;
-  dismiss: () => Promise<void>;
-  complete: () => Promise<void>;
-  openPreview: () => Promise<void>;
+  actions: {
+    initialize: () => Promise<void>;
+    consumeOpenRequest: () => void;
+    dismiss: () => Promise<void>;
+    complete: () => Promise<void>;
+    openPreview: () => Promise<void>;
+  };
 }
 
-export const useOnboardingStore = create<OnboardingStoreState>()((set, get) => ({
+const useOnboardingStoreBase = create<OnboardingStoreState>()((set, get) => ({
   initialized: false,
   isOpen: false,
   context: null,
 
-  initialize: async () => {
-    if (get().initialized) {
-      return;
-    }
+  actions: {
+    initialize: async () => {
+      if (get().initialized) {
+        return;
+      }
 
-    const context = await resolveOnboardingContext();
+      const context = await resolveOnboardingContext();
 
-    set({
-      initialized: true,
-      isOpen: context !== null,
-      context,
-    });
-  },
+      set({
+        initialized: true,
+        isOpen: context !== null,
+        context,
+      });
+    },
 
-  consumeOpenRequest: () => {
-    set({
-      isOpen: false,
-    });
-  },
+    consumeOpenRequest: () => {
+      set({
+        isOpen: false,
+      });
+    },
 
-  dismiss: async () => {
-    const context = get().context;
-    if (context && context.mode !== "preview") {
-      await markOnboardingSeen(context.currentVersion);
-    }
+    dismiss: async () => {
+      const context = get().context;
+      if (context && context.mode !== "preview") {
+        await markOnboardingSeen(context.currentVersion);
+      }
 
-    set({
-      isOpen: false,
-      context: null,
-    });
-  },
+      set({
+        isOpen: false,
+        context: null,
+      });
+    },
 
-  complete: async () => {
-    const context = get().context;
-    if (context && context.mode !== "preview") {
-      await markOnboardingCompleted(context.currentVersion);
-    }
+    complete: async () => {
+      const context = get().context;
+      if (context && context.mode !== "preview") {
+        await markOnboardingCompleted(context.currentVersion);
+      }
 
-    set({
-      isOpen: false,
-      context: null,
-    });
-  },
+      set({
+        isOpen: false,
+        context: null,
+      });
+    },
 
-  openPreview: async () => {
-    const currentVersion = await getVersion();
-    set({
-      initialized: true,
-      isOpen: true,
-      context: {
-        mode: "preview",
-        currentVersion,
-      },
-    });
+    openPreview: async () => {
+      const currentVersion = await getVersion();
+      set({
+        initialized: true,
+        isOpen: true,
+        context: {
+          mode: "preview",
+          currentVersion,
+        },
+      });
+    },
   },
 }));
+
+export const useOnboardingStore = createSelectors(useOnboardingStoreBase);

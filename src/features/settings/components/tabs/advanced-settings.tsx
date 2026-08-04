@@ -27,8 +27,8 @@ const telemetryLearnMoreUrl = getServiceUrls().telemetryDocsUrl;
 export const AdvancedSettings = () => {
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const telemetry = useSettingsStore((state) => state.settings.telemetry);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
-  const resetToDefaults = useSettingsStore((state) => state.resetToDefaults);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
+  const resetToDefaults = useSettingsStore((state) => state.actions.resetToDefaults);
   const { showToast } = useToast();
   const [showTelemetryLog, setShowTelemetryLog] = useState(false);
   const [telemetryLog, setTelemetryLog] = useState<TelemetryLogEntry[]>([]);
@@ -112,7 +112,7 @@ export const AdvancedSettings = () => {
 
       try {
         const text = await file.text();
-        const imported = useSettingsStore.getState().updateSettingsFromJSON(text);
+        const imported = useSettingsStore.getState().actions.updateSettingsFromJSON(text);
 
         if (!imported) {
           showToast({ message: "Invalid settings file format", type: "error" });

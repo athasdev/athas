@@ -39,7 +39,7 @@ function delay(ms: number, signal: AbortSignal): Promise<void> {
 export function useCollaborationPresence() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const collaboration = useAuthStore((state) => state.subscription?.collaboration);
-  const setCollaborationSnapshot = useAuthStore((state) => state.setCollaborationSnapshot);
+  const setCollaborationSnapshot = useAuthStore((state) => state.actions.setCollaborationSnapshot);
   const collaborationEnabled = Boolean(collaboration?.enabled);
   const presenceEnabled = collaboration?.settings?.sharedSettings.presenceEnabled !== false;
   const realtimeDocumentsEnabled = Boolean(collaboration?.capabilities.realtimeDocuments);

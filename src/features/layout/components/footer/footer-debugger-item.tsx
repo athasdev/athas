@@ -25,7 +25,7 @@ export function useFooterDebuggerItem(
   enabled: boolean,
   configuredOrder: FooterLeadingItemId[],
 ): ChromeItem<FooterLeadingItemId> | null {
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);

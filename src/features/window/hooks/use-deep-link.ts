@@ -182,7 +182,9 @@ async function openExtensionsTabFromDeepLink(extensionsCategory?: Settings["exte
   ]);
 
   if (extensionsCategory) {
-    void useSettingsStore.getState().updateSetting("extensionsActiveTab", extensionsCategory);
+    void useSettingsStore
+      .getState()
+      .actions.updateSetting("extensionsActiveTab", extensionsCategory);
   }
 
   useBufferStore.getState().actions.openExtensionsBuffer();

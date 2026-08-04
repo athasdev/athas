@@ -26,7 +26,7 @@ export const FileTreeSettings = () => {
       showIndentGuidesInFileTree: state.settings.showIndentGuidesInFileTree,
     })),
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
 
   const [filePatternsInput, setFilePatternsInput] = useState(
     settings.hiddenFilePatterns.join(", "),

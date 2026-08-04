@@ -61,7 +61,6 @@ import {
   getFolderName,
   joinPath,
 } from "@/utils/path-helpers";
-import { createSelectors } from "@/utils/zustand-selectors";
 import type { FileEntry } from "../types/app.types";
 import type { FsActions, FsState } from "../types/interface.types";
 import {
@@ -91,6 +90,7 @@ import { useFileWatcherStore } from "../stores/file-watcher.store";
 import { fffListFiles, fffTrackAccess } from "@/features/file-search/lib/file-search-api";
 import { canUseNativeFileSearch } from "@/features/file-search/utils/file-search-paths";
 import { ensureWorkspaceFileSearch } from "@/features/file-search/services/workspace-file-search";
+import { cancelFileWatcherRefreshes } from "../services/file-watcher-refresh-scheduler";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
 import { useRecentFilesStore } from "../stores/recent-files.store";
@@ -296,7 +296,7 @@ const recordLocalFileAccess = (
     requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
   };
   const recordAccess = () => {
-    useRecentFilesStore.getState().addOrUpdateRecentFile(path, name, {
+    useRecentFilesStore.getState().actions.addOrUpdateRecentFile(path, name, {
       workspacePath: workspaceRootPath ?? null,
       external: !isLocalFileInWorkspace(path, workspaceRootPath, workspaceFolderPaths),
     });
@@ -465,7 +465,7 @@ const initializeLocalWorkspaceInBackground = (
 
       const watcherStartedAt = performance.now();
       logWorkspaceOpenStep("start", "setProjectRoot", path);
-      await useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot(path);
+      await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot(path);
       logWorkspaceOpenStep("end", "setProjectRoot", path, watcherStartedAt);
 
       await waitForWorkspaceIdle();
@@ -574,12 +574,13 @@ const openLocalWorkspace = async (
     const wrappedFileTree = wrapWithRootFolder(fileTree, path, projectName);
 
     if (treeState === "expand-root") {
-      fileTreeStore.getState().setExpandedPaths(new Set([path]));
+      fileTreeStore.getState().actions.setExpandedPaths(new Set([path]));
     } else {
-      fileTreeStore.getState().collapseAll();
+      fileTreeStore.getState().actions.collapseAll();
     }
 
-    const { setRootFolderPath, setProjectName, setActiveProjectId } = projectStore.getState();
+    const { setRootFolderPath, setProjectName, setActiveProjectId } =
+      projectStore.getState().actions;
     setRootFolderPath(path);
     setProjectName(projectName);
 
@@ -592,7 +593,7 @@ const openLocalWorkspace = async (
       .projectTabs.find((projectTab) => projectTab.id === workspaceId);
     setActiveProjectId(workspaceId);
     if (!prewarm) {
-      useRecentFoldersStore.getState().addToRecents(path, {
+      useRecentFoldersStore.getState().actions.addToRecents(path, {
         activeProjectTabId: workspaceId,
         customIcon: workspaceTab?.customIcon,
         missing: false,
@@ -649,7 +650,7 @@ const initializeRemoteWorkspaceSession = async (
   remotePath: string,
   get: FileSystemGet,
 ) => {
-  await useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot("");
+  await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
   useGitStore.getStore(workspaceId).getState().actions.setWorkspaceGitStatus(null, null);
 
   try {
@@ -673,7 +674,7 @@ const initializeWslWorkspaceSession = async (
   wslPath: string,
   get: FileSystemGet,
 ) => {
-  await useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot("");
+  await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
   useGitStore.getStore(workspaceId).getState().actions.setWorkspaceGitStatus(null, null);
 
   try {
@@ -812,12 +813,12 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         });
 
         // Clear tree UI state
-        useFileTreeStore.getStore(workspaceId).getState().collapseAll();
+        useFileTreeStore.getStore(workspaceId).getState().actions.collapseAll();
 
         // Reset project store
         const { setRootFolderPath, setProjectName } = useProjectStore
           .getStore(workspaceId)
-          .getState();
+          .getState().actions;
         setRootFolderPath("");
         setProjectName("");
 
@@ -826,7 +827,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         buffers.forEach((buffer) => bufferActions.closeBuffer(buffer.id));
 
         // Stop file watching
-        await useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot("");
+        await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
 
         // Reset git store completely
         const { actions: gitActions } = useGitStore.getStore(workspaceId).getState();
@@ -895,7 +896,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           void syncFffWorkspace(get);
         }
 
-        useTerminalTabsStore.getStore(workspaceId).getState().dispatch({
+        useTerminalTabsStore.getStore(workspaceId).getState().actions.dispatch({
           type: "RESTORE_TERMINALS",
           payload: { terminals },
         });
@@ -1139,7 +1140,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
       closeFolder: async () => {
         // Find the active project tab
-        const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+        const activeTab = useWorkspaceTabsStore.getState().actions.getActiveProjectTab();
 
         if (activeTab) {
           // If we have an active tab, close it properly via closeProject
@@ -1230,10 +1231,10 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           void syncFffWorkspace(get);
 
           const fileTreeStore = useFileTreeStore.getStore(workspaceId);
-          const expandedPaths = new Set(fileTreeStore.getState().getExpandedPaths());
+          const expandedPaths = new Set(fileTreeStore.getState().actions.getExpandedPaths());
           expandedPaths.add(selectedPath);
-          fileTreeStore.getState().setExpandedPaths(expandedPaths);
-          useRecentFoldersStore.getState().addToRecents(selectedPath, {
+          fileTreeStore.getState().actions.setExpandedPaths(expandedPaths);
+          useRecentFoldersStore.getState().actions.addToRecents(selectedPath, {
             missing: false,
           });
           get().persistActiveProjectSession();
@@ -1279,7 +1280,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         });
         void syncFffWorkspace(get);
 
-        useFileTreeStore.getStore(workspaceId).getState().collapsePath(folder.path);
+        useFileTreeStore.getStore(workspaceId).getState().actions.collapsePath(folder.path);
         get().persistActiveProjectSession();
         toast.success(`Removed "${folder.name}" from workspace.`);
         return true;
@@ -1299,7 +1300,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           resume: async (workspaceId) => {
             getScopedFileSystemStore(workspaceId).getState().resumeWorkspaceSession();
             workspaceServiceActivationVersion++;
-            void useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot("");
+            void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
           },
         });
       },
@@ -1327,19 +1328,19 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           );
 
           // Add project to workspace tabs
-          useWorkspaceTabsStore.getState().addProjectTab(remotePath, connection.name);
-          const activeProjectTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+          useWorkspaceTabsStore.getState().actions.addProjectTab(remotePath, connection.name);
+          const activeProjectTab = useWorkspaceTabsStore.getState().actions.getActiveProjectTab();
 
           // Initialize tree UI state: expand remote root
           useFileTreeStore
             .getStore(workspaceId)
             .getState()
-            .setExpandedPaths(new Set([remotePath]));
+            .actions.setExpandedPaths(new Set([remotePath]));
 
           // Update project store
           const { setRootFolderPath, setProjectName, setActiveProjectId } = useProjectStore
             .getStore(workspaceId)
-            .getState();
+            .getState().actions;
           setRootFolderPath(remotePath);
           setProjectName(connection.name);
           setActiveProjectId(activeProjectTab?.id);
@@ -1383,7 +1384,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           resume: async (workspaceId) => {
             getScopedFileSystemStore(workspaceId).getState().resumeWorkspaceSession();
             workspaceServiceActivationVersion++;
-            void useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot("");
+            void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
           },
         });
       },
@@ -1408,16 +1409,16 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           );
           const projectName = getWslProjectName(distro, normalizedLinuxPath);
 
-          useWorkspaceTabsStore.getState().addProjectTab(wslPath, projectName);
-          const activeProjectTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+          useWorkspaceTabsStore.getState().actions.addProjectTab(wslPath, projectName);
+          const activeProjectTab = useWorkspaceTabsStore.getState().actions.getActiveProjectTab();
           useFileTreeStore
             .getStore(workspaceId)
             .getState()
-            .setExpandedPaths(new Set([wslPath]));
+            .actions.setExpandedPaths(new Set([wslPath]));
 
           const { setRootFolderPath, setProjectName, setActiveProjectId } = useProjectStore
             .getStore(workspaceId)
-            .getState();
+            .getState().actions;
           setRootFolderPath(wslPath);
           setProjectName(projectName);
           setActiveProjectId(activeProjectTab?.id);
@@ -1432,7 +1433,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             state.projectFilesCache = undefined;
           });
 
-          useRecentFoldersStore.getState().addToRecents(wslPath, {
+          useRecentFoldersStore.getState().actions.addToRecents(wslPath, {
             activeProjectTabId: activeProjectTab?.id,
             missing: false,
           });
@@ -1888,8 +1889,8 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         const folder = findFileInTree(get().files, path);
         if (!folder || !folder.isDir) return;
 
-        const uiStore = useFileTreeStore.getStore(workspaceId).getState();
-        const isCurrentlyExpanded = uiStore.isExpanded(path);
+        const uiActions = useFileTreeStore.getStore(workspaceId).getState().actions;
+        const isCurrentlyExpanded = uiActions.isExpanded(path);
 
         if (!isCurrentlyExpanded) {
           // Expand: load children if not present
@@ -1909,14 +1910,14 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               state.filesVersion++;
             });
           }
-          uiStore.toggleFolder(path);
+          uiActions.toggleFolder(path);
           // Preload deeper children in background for snappier navigation
           get()
             .preloadSubtree(path, 2, 80)
             .catch(() => {});
         } else {
           // Collapse: only toggle UI state; keep children cached
-          uiStore.toggleFolder(path);
+          uiActions.toggleFolder(path);
         }
       },
 
@@ -1924,8 +1925,8 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         const revealRequestId = ++latestTreeRevealRequestId;
         const { rootFolderPath } = get();
         const ancestorPaths = getAncestorDirectoryPaths(targetPath, rootFolderPath);
-        const fileTreeStore = useFileTreeStore.getStore(workspaceId).getState();
-        const expandedPaths = new Set(fileTreeStore.getExpandedPaths());
+        const fileTreeActions = useFileTreeStore.getStore(workspaceId).getState().actions;
+        const expandedPaths = new Set(fileTreeActions.getExpandedPaths());
         const loadedChildren = new Map<string, FileEntry[]>();
         let nextFiles = get().files;
         let expandedPathsChanged = false;
@@ -1973,7 +1974,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         }
 
         if (expandedPathsChanged) {
-          fileTreeStore.setExpandedPaths(expandedPaths);
+          fileTreeActions.setExpandedPaths(expandedPaths);
         }
       },
 
@@ -2219,7 +2220,8 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         // Root folder is always considered expanded since it's always visible
         const isRoot = directoryPath === get().rootFolderPath;
         const isExpanded =
-          isRoot || useFileTreeStore.getStore(workspaceId).getState().isExpanded(directoryPath);
+          isRoot ||
+          useFileTreeStore.getStore(workspaceId).getState().actions.isExpanded(directoryPath);
 
         if (!isExpanded && !options?.force) {
           return;
@@ -2246,7 +2248,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
       handleCollapseAllFolders: async () => {
         // Only collapse UI, do not mutate file data
-        useFileTreeStore.getStore(workspaceId).getState().collapseAll();
+        useFileTreeStore.getStore(workspaceId).getState().actions.collapseAll();
       },
 
       handleFileMove: async (oldPath: string, newPath: string) => {
@@ -2839,10 +2841,12 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             const projectTheme = targetProject?.theme ?? previousTheme;
 
             if (targetProject && !targetProject.theme) {
-              useWorkspaceTabsStore.getState().setProjectTheme(targetProject.id, projectTheme);
+              useWorkspaceTabsStore
+                .getState()
+                .actions.setProjectTheme(targetProject.id, projectTheme);
             }
             if (settingsStore.settings.theme !== projectTheme) {
-              void settingsStore.updateSetting("theme", projectTheme);
+              void settingsStore.actions.updateSetting("theme", projectTheme);
             }
           },
           initialize: async (workspaceId, path, name) => {
@@ -2863,12 +2867,12 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           resume: async (workspaceId, path) => {
             const targetStore = getScopedFileSystemStore(workspaceId).getState();
             const projectStore = useProjectStore.getStore(workspaceId).getState();
-            projectStore.setActiveProjectId(workspaceId);
+            projectStore.actions.setActiveProjectId(workspaceId);
             targetStore.resumeWorkspaceSession();
 
             if (parseRemotePath(path) || parseWslPath(path)) {
               workspaceServiceActivationVersion++;
-              void useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot("");
+              void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
             } else {
               initializeLocalWorkspaceInBackground(
                 workspaceId,
@@ -2896,7 +2900,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         if (!switched) {
           const settingsStore = useSettingsStore.getState();
           if (settingsStore.settings.theme !== previousTheme) {
-            await settingsStore.updateSetting("theme", previousTheme);
+            await settingsStore.actions.updateSetting("theme", previousTheme);
           }
           toast.error("Failed to switch project.");
           return switched;
@@ -2938,6 +2942,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           persist: () =>
             getScopedFileSystemStore(projectId).getState().persistActiveProjectSession(),
           dispose: async (path) => {
+            cancelFileWatcherRefreshes(projectId);
             const terminalSessions = useTerminalStore.getStore(projectId).getState().sessions;
             await Promise.all(
               [...terminalSessions.values()].map(async (session) => {
@@ -2970,9 +2975,9 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           },
           switchTo: (nextWorkspaceId) => get().switchToProject(nextWorkspaceId),
           showWelcome: async () => {
-            await useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot("");
-            useProjectStore.getStore(workspaceId).getState().setRootFolderPath(undefined);
-            useProjectStore.getStore(workspaceId).getState().setProjectName("Files");
+            await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
+            useProjectStore.getStore(workspaceId).getState().actions.setRootFolderPath(undefined);
+            useProjectStore.getStore(workspaceId).getState().actions.setProjectName("Files");
             restoreProjectUiState(undefined, workspaceId);
           },
         });
@@ -2986,4 +2991,4 @@ scopedFileSystemStore = createWorkspaceScopedStore<ScopedFileSystemStoreState>(
   createFileSystemStore,
 );
 
-export const useFileSystemStore = createSelectors(scopedFileSystemStore);
+export const useFileSystemStore = scopedFileSystemStore;

@@ -106,8 +106,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
   const contentError = useGitHubStore.use.contentError();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
   const openGitHubFormBuffer = useBufferStore.use.actions().openGitHubFormBuffer;
-  const { selectPR, fetchPRContent, openPRInBrowser, checkoutPR } =
-    useGitHubStore.use.actions();
+  const { selectPR, fetchPRContent, openPRInBrowser, checkoutPR } = useGitHubStore.use.actions();
   const repoPath = prBuffer?.repoPath ?? selectedRepoPath ?? rootFolderPath;
 
   const [activeTab, setActiveTab] = useState<TabType>(() =>

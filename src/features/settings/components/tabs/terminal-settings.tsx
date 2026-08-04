@@ -26,7 +26,7 @@ const FONT_HELP_TEXT =
 
 export const TerminalSettings = () => {
   const settings = useSettingsStore((state) => state.settings);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const monospaceFonts = useFontStore.use.monospaceFonts();
   const { loadMonospaceFonts } = useFontStore.use.actions();
   const profiles = useTerminalProfilesStore.use.profiles();

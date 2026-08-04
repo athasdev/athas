@@ -82,7 +82,7 @@ export const AISettings = () => {
       ollamaBaseUrl: state.settings.ollamaBaseUrl,
     })),
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const subscription = useAuthStore((state) => state.subscription);
   const { showToast } = useToast();

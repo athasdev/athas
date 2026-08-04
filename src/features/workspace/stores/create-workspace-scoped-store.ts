@@ -2,10 +2,13 @@ import { createContext, useContext, useMemo, useSyncExternalStore } from "react"
 import type { StoreApi, UseBoundStore } from "zustand";
 import { useStoreWithEqualityFn } from "zustand/traditional";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { createSelectors, type WithSelectors } from "@/utils/zustand-selectors";
 
-export type WorkspaceScopedStore<T> = UseBoundStore<StoreApi<T>> & {
+type WorkspaceStoreHook<T> = UseBoundStore<StoreApi<T>> & {
   getStore: (workspaceId: string) => StoreApi<T>;
 };
+
+export type WorkspaceScopedStore<T extends object> = WithSelectors<WorkspaceStoreHook<T>>;
 
 type EqualityFn = (left: unknown, right: unknown) => boolean;
 const subscribeToNothing = () => () => {};
@@ -24,7 +27,7 @@ export function useActiveWorkspaceId() {
   );
 }
 
-export function createWorkspaceScopedStore<T>(
+export function createWorkspaceScopedStore<T extends object>(
   key: string,
   factory: (workspaceId: string) => StoreApi<T>,
   equalityFn?: EqualityFn,
@@ -48,7 +51,7 @@ export function createWorkspaceScopedStore<T>(
       selector ?? ((state: T) => state as unknown as U),
       equalityFn,
     );
-  }) as WorkspaceScopedStore<T>;
+  }) as WorkspaceStoreHook<T>;
 
   useWorkspaceStore.getState = () => workspaceRuntimeRegistry.getStore<T>(key).getState();
   useWorkspaceStore.getInitialState = () =>
@@ -58,7 +61,7 @@ export function createWorkspaceScopedStore<T>(
       ...setStateArgs: unknown[]
     ) => void;
     setState(...args);
-  }) as WorkspaceScopedStore<T>["setState"];
+  }) as WorkspaceStoreHook<T>["setState"];
   useWorkspaceStore.subscribe = ((listener: (state: T, previousState: T) => void) => {
     let store = workspaceRuntimeRegistry.getStore<T>(key);
     let currentState = store.getState();
@@ -88,9 +91,9 @@ export function createWorkspaceScopedStore<T>(
       unsubscribeStore();
       unsubscribeRegistry();
     };
-  }) as WorkspaceScopedStore<T>["subscribe"];
+  }) as WorkspaceStoreHook<T>["subscribe"];
   useWorkspaceStore.getStore = (workspaceId) =>
     workspaceRuntimeRegistry.getStore<T>(key, workspaceId);
 
-  return useWorkspaceStore;
+  return createSelectors(useWorkspaceStore) as WorkspaceScopedStore<T>;
 }

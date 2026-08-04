@@ -21,7 +21,7 @@ export const GitSettings = () => {
       showUntrackedFiles: state.settings.showUntrackedFiles,
     })),
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
 
   const handleGitFeatureToggle = (enabled: boolean) => {
     updateSetting("coreFeatures", {

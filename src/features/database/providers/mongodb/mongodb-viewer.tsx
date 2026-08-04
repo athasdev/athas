@@ -26,14 +26,15 @@ import {
   databasePanelClassName,
 } from "../../components/database-surface";
 import { getMongoDocumentDisplayIndex } from "./mongodb-pagination";
-import { useMongoDbStore } from "./stores/mongodb.store";
+import { createMongoDbStore } from "./stores/mongodb.store";
 
 interface MongoDBViewerProps {
   connectionId: string;
 }
 
 export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
-  const store = useMongoDbStore();
+  const [useStore] = useState(() => createMongoDbStore());
+  const store = useStore();
   const { actions } = store;
   const [filterInput, setFilterInput] = useState("{}");
   const [sortInput, setSortInput] = useState("{}");

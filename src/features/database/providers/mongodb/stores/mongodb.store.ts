@@ -160,161 +160,143 @@ function normalizeMongoDocumentResult(value: unknown): {
   };
 }
 
-const useMongoDbStoreBase = create<MongoDbState & { actions: MongoDbActions }>()(
-  immer((set, get) => {
-    let initRequestId = 0;
-    let refreshRequestId = 0;
+export function createMongoDbStore() {
+  const useMongoDbStoreBase = create<MongoDbState & { actions: MongoDbActions }>()(
+    immer((set, get) => {
+      let initRequestId = 0;
+      let refreshRequestId = 0;
 
-    return {
-      ...initialState,
+      return {
+        ...initialState,
 
-      actions: {
-        init: async (connectionId: string) => {
-          const requestId = ++initRequestId;
-          refreshRequestId += 1;
-          set({
-            connectionId,
-            fileName: connectionId,
-            databases: [],
-            selectedDatabase: null,
-            collections: [],
-            selectedCollection: null,
-            documents: [],
-            totalCount: 0,
-            totalPages: 1,
-            currentPage: 1,
-            filterJson: "{}",
-            sortJson: "{}",
-            isLoading: true,
-            error: null,
-          });
+        actions: {
+          init: async (connectionId: string) => {
+            const requestId = ++initRequestId;
+            refreshRequestId += 1;
+            set({
+              connectionId,
+              fileName: connectionId,
+              databases: [],
+              selectedDatabase: null,
+              collections: [],
+              selectedCollection: null,
+              documents: [],
+              totalCount: 0,
+              totalPages: 1,
+              currentPage: 1,
+              filterJson: "{}",
+              sortJson: "{}",
+              isLoading: true,
+              error: null,
+            });
 
-          try {
-            const databases = normalizeMongoStringList(
-              await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.getDatabases, {
-                connectionId,
-              }),
-            );
-            if (requestId !== initRequestId) return;
-            set({ databases });
+            try {
+              const databases = normalizeMongoStringList(
+                await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.getDatabases, {
+                  connectionId,
+                }),
+              );
+              if (requestId !== initRequestId) return;
+              set({ databases });
 
-            if (databases.length > 0) {
-              await get().actions.selectDatabase(databases[0]);
+              if (databases.length > 0) {
+                await get().actions.selectDatabase(databases[0]);
+              }
+            } catch (err) {
+              if (requestId !== initRequestId) return;
+              set({ error: formatDatabaseError("Failed to load databases", err) });
+            } finally {
+              if (requestId === initRequestId) {
+                set({ isLoading: false });
+              }
             }
-          } catch (err) {
-            if (requestId !== initRequestId) return;
-            set({ error: formatDatabaseError("Failed to load databases", err) });
-          } finally {
-            if (requestId === initRequestId) {
-              set({ isLoading: false });
+          },
+
+          reset: () => {
+            initRequestId += 1;
+            refreshRequestId += 1;
+            set(initialState);
+          },
+
+          selectDatabase: async (dbName: string) => {
+            const databaseName = normalizeMongoName(dbName);
+            if (!databaseName) return;
+            const { connectionId } = get();
+            if (!connectionId) return;
+            const requestId = ++refreshRequestId;
+
+            set({
+              selectedDatabase: databaseName,
+              selectedCollection: null,
+              collections: [],
+              documents: [],
+              totalCount: 0,
+              totalPages: 1,
+              currentPage: 1,
+              filterJson: "{}",
+              sortJson: "{}",
+              isLoading: true,
+              error: null,
+            });
+
+            try {
+              const collections = normalizeMongoCollections(
+                await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.getCollections, {
+                  connectionId,
+                  database: databaseName,
+                }),
+              );
+
+              if (requestId !== refreshRequestId) return;
+
+              set({ collections });
+
+              if (collections.length > 0) {
+                await get().actions.selectCollection(collections[0].name);
+              }
+            } catch (err) {
+              if (requestId !== refreshRequestId) return;
+              set({ error: formatDatabaseError("Failed to load collections", err) });
+            } finally {
+              if (requestId === refreshRequestId) {
+                set({ isLoading: false });
+              }
             }
-          }
-        },
+          },
 
-        reset: () => {
-          initRequestId += 1;
-          refreshRequestId += 1;
-          set(initialState);
-        },
+          selectCollection: async (collectionName: string) => {
+            const normalizedCollectionName = normalizeMongoName(collectionName);
+            if (!normalizedCollectionName) return;
+            set({
+              selectedCollection: normalizedCollectionName,
+              documents: [],
+              totalCount: 0,
+              totalPages: 1,
+              currentPage: 1,
+              filterJson: "{}",
+              sortJson: "{}",
+              error: null,
+            });
+            await get().actions.refresh();
+          },
 
-        selectDatabase: async (dbName: string) => {
-          const databaseName = normalizeMongoName(dbName);
-          if (!databaseName) return;
-          const { connectionId } = get();
-          if (!connectionId) return;
-          const requestId = ++refreshRequestId;
+          refresh: async () => {
+            const state = get();
+            if (!state.connectionId || !state.selectedDatabase || !state.selectedCollection) return;
+            const requestId = ++refreshRequestId;
+            const filterError = getMongoQueryJsonError(state.filterJson, "filter");
+            const sortError = getMongoQueryJsonError(state.sortJson, "sort");
 
-          set({
-            selectedDatabase: databaseName,
-            selectedCollection: null,
-            collections: [],
-            documents: [],
-            totalCount: 0,
-            totalPages: 1,
-            currentPage: 1,
-            filterJson: "{}",
-            sortJson: "{}",
-            isLoading: true,
-            error: null,
-          });
-
-          try {
-            const collections = normalizeMongoCollections(
-              await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.getCollections, {
-                connectionId,
-                database: databaseName,
-              }),
-            );
-
-            if (requestId !== refreshRequestId) return;
-
-            set({ collections });
-
-            if (collections.length > 0) {
-              await get().actions.selectCollection(collections[0].name);
+            if (filterError || sortError) {
+              set({ error: filterError ?? sortError, isLoading: false });
+              return;
             }
-          } catch (err) {
-            if (requestId !== refreshRequestId) return;
-            set({ error: formatDatabaseError("Failed to load collections", err) });
-          } finally {
-            if (requestId === refreshRequestId) {
-              set({ isLoading: false });
-            }
-          }
-        },
 
-        selectCollection: async (collectionName: string) => {
-          const normalizedCollectionName = normalizeMongoName(collectionName);
-          if (!normalizedCollectionName) return;
-          set({
-            selectedCollection: normalizedCollectionName,
-            documents: [],
-            totalCount: 0,
-            totalPages: 1,
-            currentPage: 1,
-            filterJson: "{}",
-            sortJson: "{}",
-            error: null,
-          });
-          await get().actions.refresh();
-        },
+            set({ isLoading: true, error: null });
 
-        refresh: async () => {
-          const state = get();
-          if (!state.connectionId || !state.selectedDatabase || !state.selectedCollection) return;
-          const requestId = ++refreshRequestId;
-          const filterError = getMongoQueryJsonError(state.filterJson, "filter");
-          const sortError = getMongoQueryJsonError(state.sortJson, "sort");
-
-          if (filterError || sortError) {
-            set({ error: filterError ?? sortError, isLoading: false });
-            return;
-          }
-
-          set({ isLoading: true, error: null });
-
-          try {
-            const offset = (state.currentPage - 1) * state.pageSize;
-            let result = normalizeMongoDocumentResult(
-              await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.queryDocuments, {
-                connectionId: state.connectionId,
-                database: state.selectedDatabase,
-                collection: state.selectedCollection,
-                filterJson: state.filterJson,
-                sortJson: state.sortJson,
-                limit: state.pageSize,
-                skip: offset,
-              }),
-            );
-
-            if (requestId !== refreshRequestId) return;
-
-            const totalCount = result.totalCount;
-            const totalPages = Math.max(1, Math.ceil(totalCount / state.pageSize));
-            const currentPage = clampPage(state.currentPage, totalPages);
-
-            if (currentPage !== state.currentPage && totalCount > 0) {
-              result = normalizeMongoDocumentResult(
+            try {
+              const offset = (state.currentPage - 1) * state.pageSize;
+              let result = normalizeMongoDocumentResult(
                 await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.queryDocuments, {
                   connectionId: state.connectionId,
                   database: state.selectedDatabase,
@@ -322,169 +304,189 @@ const useMongoDbStoreBase = create<MongoDbState & { actions: MongoDbActions }>()
                   filterJson: state.filterJson,
                   sortJson: state.sortJson,
                   limit: state.pageSize,
-                  skip: (currentPage - 1) * state.pageSize,
+                  skip: offset,
                 }),
               );
+
+              if (requestId !== refreshRequestId) return;
+
+              const totalCount = result.totalCount;
+              const totalPages = Math.max(1, Math.ceil(totalCount / state.pageSize));
+              const currentPage = clampPage(state.currentPage, totalPages);
+
+              if (currentPage !== state.currentPage && totalCount > 0) {
+                result = normalizeMongoDocumentResult(
+                  await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.queryDocuments, {
+                    connectionId: state.connectionId,
+                    database: state.selectedDatabase,
+                    collection: state.selectedCollection,
+                    filterJson: state.filterJson,
+                    sortJson: state.sortJson,
+                    limit: state.pageSize,
+                    skip: (currentPage - 1) * state.pageSize,
+                  }),
+                );
+              }
+
+              if (requestId !== refreshRequestId) return;
+
+              const nextTotalCount = result.totalCount;
+              set({
+                documents: result.documents,
+                totalCount: nextTotalCount,
+                currentPage,
+                totalPages: Math.max(1, Math.ceil(nextTotalCount / state.pageSize)),
+              });
+            } catch (err) {
+              if (requestId !== refreshRequestId) return;
+              set({ error: formatDatabaseError("Query failed", err) });
+            } finally {
+              if (requestId === refreshRequestId) {
+                set({ isLoading: false });
+              }
             }
+          },
 
-            if (requestId !== refreshRequestId) return;
+          setCurrentPage: (page: number) => {
+            set((state) => {
+              state.currentPage = clampPage(page, state.totalPages);
+            });
+            get().actions.refresh();
+          },
 
-            const nextTotalCount = result.totalCount;
+          setPageSize: (size: number) => {
+            set({ pageSize: normalizePageSize(size), currentPage: 1 });
+            get().actions.refresh();
+          },
+
+          setFilterJson: (filter: string) => {
+            set({ filterJson: normalizeMongoQueryJson(filter), currentPage: 1 });
+            get().actions.refresh();
+          },
+
+          setSortJson: (sort: string) => {
+            set({ sortJson: normalizeMongoQueryJson(sort), currentPage: 1 });
+            get().actions.refresh();
+          },
+
+          setQueryJson: (filter: string, sort: string) => {
             set({
-              documents: result.documents,
-              totalCount: nextTotalCount,
-              currentPage,
-              totalPages: Math.max(1, Math.ceil(nextTotalCount / state.pageSize)),
+              filterJson: normalizeMongoQueryJson(filter),
+              sortJson: normalizeMongoQueryJson(sort),
+              currentPage: 1,
             });
-          } catch (err) {
-            if (requestId !== refreshRequestId) return;
-            set({ error: formatDatabaseError("Query failed", err) });
-          } finally {
-            if (requestId === refreshRequestId) {
-              set({ isLoading: false });
+            get().actions.refresh();
+          },
+
+          insertDocument: async (document: Record<string, unknown>) => {
+            const { connectionId, selectedDatabase, selectedCollection } = get();
+            if (!connectionId || !selectedDatabase || !selectedCollection) return;
+
+            set({ isLoading: true, error: null });
+            try {
+              await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.insertDocument, {
+                connectionId,
+                database: selectedDatabase,
+                collection: selectedCollection,
+                documentJson: JSON.stringify(document),
+              });
+              const current = get();
+              if (
+                current.connectionId !== connectionId ||
+                current.selectedDatabase !== selectedDatabase ||
+                current.selectedCollection !== selectedCollection
+              ) {
+                return;
+              }
+              set({ error: null });
+              await get().actions.refresh();
+            } catch (err) {
+              const current = get();
+              if (
+                current.connectionId !== connectionId ||
+                current.selectedDatabase !== selectedDatabase ||
+                current.selectedCollection !== selectedCollection
+              ) {
+                return;
+              }
+              set({ error: formatDatabaseError("Insert failed", err), isLoading: false });
             }
-          }
-        },
+          },
 
-        setCurrentPage: (page: number) => {
-          set((state) => {
-            state.currentPage = clampPage(page, state.totalPages);
-          });
-          get().actions.refresh();
-        },
+          updateDocument: async (id: string, update: Record<string, unknown>) => {
+            const { connectionId, selectedDatabase, selectedCollection } = get();
+            if (!connectionId || !selectedDatabase || !selectedCollection) return;
 
-        setPageSize: (size: number) => {
-          set({ pageSize: normalizePageSize(size), currentPage: 1 });
-          get().actions.refresh();
-        },
-
-        setFilterJson: (filter: string) => {
-          set({ filterJson: normalizeMongoQueryJson(filter), currentPage: 1 });
-          get().actions.refresh();
-        },
-
-        setSortJson: (sort: string) => {
-          set({ sortJson: normalizeMongoQueryJson(sort), currentPage: 1 });
-          get().actions.refresh();
-        },
-
-        setQueryJson: (filter: string, sort: string) => {
-          set({
-            filterJson: normalizeMongoQueryJson(filter),
-            sortJson: normalizeMongoQueryJson(sort),
-            currentPage: 1,
-          });
-          get().actions.refresh();
-        },
-
-        insertDocument: async (document: Record<string, unknown>) => {
-          const { connectionId, selectedDatabase, selectedCollection } = get();
-          if (!connectionId || !selectedDatabase || !selectedCollection) return;
-
-          set({ isLoading: true, error: null });
-          try {
-            await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.insertDocument, {
-              connectionId,
-              database: selectedDatabase,
-              collection: selectedCollection,
-              documentJson: JSON.stringify(document),
-            });
-            const current = get();
-            if (
-              current.connectionId !== connectionId ||
-              current.selectedDatabase !== selectedDatabase ||
-              current.selectedCollection !== selectedCollection
-            ) {
-              return;
+            set({ isLoading: true, error: null });
+            try {
+              await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.updateDocument, {
+                connectionId,
+                database: selectedDatabase,
+                collection: selectedCollection,
+                filterJson: JSON.stringify({ _id: id }),
+                updateJson: JSON.stringify(update),
+              });
+              const current = get();
+              if (
+                current.connectionId !== connectionId ||
+                current.selectedDatabase !== selectedDatabase ||
+                current.selectedCollection !== selectedCollection
+              ) {
+                return;
+              }
+              set({ error: null });
+              await get().actions.refresh();
+            } catch (err) {
+              const current = get();
+              if (
+                current.connectionId !== connectionId ||
+                current.selectedDatabase !== selectedDatabase ||
+                current.selectedCollection !== selectedCollection
+              ) {
+                return;
+              }
+              set({ error: formatDatabaseError("Update failed", err), isLoading: false });
             }
-            set({ error: null });
-            await get().actions.refresh();
-          } catch (err) {
-            const current = get();
-            if (
-              current.connectionId !== connectionId ||
-              current.selectedDatabase !== selectedDatabase ||
-              current.selectedCollection !== selectedCollection
-            ) {
-              return;
+          },
+
+          deleteDocument: async (id: string) => {
+            const { connectionId, selectedDatabase, selectedCollection } = get();
+            if (!connectionId || !selectedDatabase || !selectedCollection) return;
+
+            set({ isLoading: true, error: null });
+            try {
+              await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.deleteDocument, {
+                connectionId,
+                database: selectedDatabase,
+                collection: selectedCollection,
+                filterJson: JSON.stringify({ _id: id }),
+              });
+              const current = get();
+              if (
+                current.connectionId !== connectionId ||
+                current.selectedDatabase !== selectedDatabase ||
+                current.selectedCollection !== selectedCollection
+              ) {
+                return;
+              }
+              set({ error: null });
+              await get().actions.refresh();
+            } catch (err) {
+              const current = get();
+              if (
+                current.connectionId !== connectionId ||
+                current.selectedDatabase !== selectedDatabase ||
+                current.selectedCollection !== selectedCollection
+              ) {
+                return;
+              }
+              set({ error: formatDatabaseError("Delete failed", err), isLoading: false });
             }
-            set({ error: formatDatabaseError("Insert failed", err), isLoading: false });
-          }
+          },
         },
+      };
+    }),
+  );
 
-        updateDocument: async (id: string, update: Record<string, unknown>) => {
-          const { connectionId, selectedDatabase, selectedCollection } = get();
-          if (!connectionId || !selectedDatabase || !selectedCollection) return;
-
-          set({ isLoading: true, error: null });
-          try {
-            await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.updateDocument, {
-              connectionId,
-              database: selectedDatabase,
-              collection: selectedCollection,
-              filterJson: JSON.stringify({ _id: id }),
-              updateJson: JSON.stringify(update),
-            });
-            const current = get();
-            if (
-              current.connectionId !== connectionId ||
-              current.selectedDatabase !== selectedDatabase ||
-              current.selectedCollection !== selectedCollection
-            ) {
-              return;
-            }
-            set({ error: null });
-            await get().actions.refresh();
-          } catch (err) {
-            const current = get();
-            if (
-              current.connectionId !== connectionId ||
-              current.selectedDatabase !== selectedDatabase ||
-              current.selectedCollection !== selectedCollection
-            ) {
-              return;
-            }
-            set({ error: formatDatabaseError("Update failed", err), isLoading: false });
-          }
-        },
-
-        deleteDocument: async (id: string) => {
-          const { connectionId, selectedDatabase, selectedCollection } = get();
-          if (!connectionId || !selectedDatabase || !selectedCollection) return;
-
-          set({ isLoading: true, error: null });
-          try {
-            await invokeDatabaseProvider(MONGODB_PROVIDER_COMMANDS.deleteDocument, {
-              connectionId,
-              database: selectedDatabase,
-              collection: selectedCollection,
-              filterJson: JSON.stringify({ _id: id }),
-            });
-            const current = get();
-            if (
-              current.connectionId !== connectionId ||
-              current.selectedDatabase !== selectedDatabase ||
-              current.selectedCollection !== selectedCollection
-            ) {
-              return;
-            }
-            set({ error: null });
-            await get().actions.refresh();
-          } catch (err) {
-            const current = get();
-            if (
-              current.connectionId !== connectionId ||
-              current.selectedDatabase !== selectedDatabase ||
-              current.selectedCollection !== selectedCollection
-            ) {
-              return;
-            }
-            set({ error: formatDatabaseError("Delete failed", err), isLoading: false });
-          }
-        },
-      },
-    };
-  }),
-);
-
-export const useMongoDbStore = createSelectors(useMongoDbStoreBase);
+  return createSelectors(useMongoDbStoreBase);
+}

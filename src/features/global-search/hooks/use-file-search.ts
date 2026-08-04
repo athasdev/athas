@@ -50,7 +50,7 @@ export const useFileSearch = (
     getOpenBufferSearchSnapshot(state.buffers, state.activeBufferId),
   );
   const getRecentFilesOrderedByFrecency = useRecentFilesStore(
-    (state) => state.getRecentFilesOrderedByFrecency,
+    (state) => state.actions.getRecentFilesOrderedByFrecency,
   );
 
   const categorizedFiles = useMemo((): CategorizedFiles => {

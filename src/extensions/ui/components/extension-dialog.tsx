@@ -7,7 +7,7 @@ import { ScrollArea } from "@/ui/scroll-area";
 
 export function ExtensionDialogs() {
   const activeDialogs = useUIExtensionStore.use.activeDialogs();
-  const closeDialog = useUIExtensionStore.use.closeDialog();
+  const closeDialog = useUIExtensionStore.use.actions().closeDialog;
 
   if (activeDialogs.length === 0) return null;
 

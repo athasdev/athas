@@ -10,15 +10,17 @@ import { workspaceSessionRepository } from "@/features/workspace/persistence/wor
 
 export const useTerminalTabs = () => {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const state = useTerminalTabsStore();
-  const dispatch = state.dispatch;
+  const terminals = useTerminalTabsStore((state) => state.terminals);
+  const activeTerminalId = useTerminalTabsStore((state) => state.activeTerminalId);
+  const hasHydrated = useTerminalTabsStore((state) => state.hasHydrated);
+  const dispatch = useTerminalTabsStore((state) => state.actions.dispatch);
 
   // Save terminals to storage whenever state changes
   useEffect(() => {
-    if (rootFolderPath && state.hasHydrated) {
-      workspaceSessionRepository.saveTerminals(rootFolderPath, state.terminals);
+    if (rootFolderPath && hasHydrated) {
+      workspaceSessionRepository.saveTerminals(rootFolderPath, terminals);
     }
-  }, [rootFolderPath, state.hasHydrated, state.terminals]);
+  }, [rootFolderPath, hasHydrated, terminals]);
 
   // Listen for global workspace reset event
   useEffect(() => {
@@ -120,36 +122,32 @@ export const useTerminalTabs = () => {
   );
 
   const getActiveTerminal = useCallback((): Terminal | null => {
-    return state.terminals.find((terminal) => terminal.id === state.activeTerminalId) || null;
-  }, [state.terminals, state.activeTerminalId]);
+    return terminals.find((terminal) => terminal.id === activeTerminalId) || null;
+  }, [terminals, activeTerminalId]);
 
   const switchToNextTerminal = useCallback(() => {
-    if (state.terminals.length <= 1) return;
+    if (terminals.length <= 1) return;
 
-    const currentIndex = state.terminals.findIndex(
-      (terminal) => terminal.id === state.activeTerminalId,
-    );
-    const nextIndex = (currentIndex + 1) % state.terminals.length;
-    const nextTerminal = state.terminals[nextIndex];
+    const currentIndex = terminals.findIndex((terminal) => terminal.id === activeTerminalId);
+    const nextIndex = (currentIndex + 1) % terminals.length;
+    const nextTerminal = terminals[nextIndex];
 
     if (nextTerminal) {
       setActiveTerminal(nextTerminal.id);
     }
-  }, [state.terminals, state.activeTerminalId, setActiveTerminal]);
+  }, [terminals, activeTerminalId, setActiveTerminal]);
 
   const switchToPrevTerminal = useCallback(() => {
-    if (state.terminals.length <= 1) return;
+    if (terminals.length <= 1) return;
 
-    const currentIndex = state.terminals.findIndex(
-      (terminal) => terminal.id === state.activeTerminalId,
-    );
-    const prevIndex = currentIndex === 0 ? state.terminals.length - 1 : currentIndex - 1;
-    const prevTerminal = state.terminals[prevIndex];
+    const currentIndex = terminals.findIndex((terminal) => terminal.id === activeTerminalId);
+    const prevIndex = currentIndex === 0 ? terminals.length - 1 : currentIndex - 1;
+    const prevTerminal = terminals[prevIndex];
 
     if (prevTerminal) {
       setActiveTerminal(prevTerminal.id);
     }
-  }, [state.terminals, state.activeTerminalId, setActiveTerminal]);
+  }, [terminals, activeTerminalId, setActiveTerminal]);
 
   const setTerminalSplitMode = useCallback(
     (id: string, splitMode: boolean, splitWithId?: string) => {
@@ -159,8 +157,8 @@ export const useTerminalTabs = () => {
   );
 
   return {
-    terminals: state.terminals,
-    activeTerminalId: state.activeTerminalId,
+    terminals,
+    activeTerminalId,
     createTerminal,
     closeTerminal,
     setActiveTerminal,

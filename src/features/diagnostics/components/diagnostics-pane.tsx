@@ -222,7 +222,7 @@ const DiagnosticsPane = ({
   const { showToast } = useToast();
   const lspClient = useMemo(() => LspClient.getInstance(), []);
   const widthMode = useTerminalStore((state) => state.widthMode);
-  const setWidthMode = useTerminalStore((state) => state.setWidthMode);
+  const setWidthMode = useTerminalStore((state) => state.actions.setWidthMode);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
 
   const diagnosticContextMenu = useDropdownMenu<Diagnostic>();

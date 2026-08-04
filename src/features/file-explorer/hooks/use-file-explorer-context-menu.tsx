@@ -251,7 +251,7 @@ export function useFileExplorerContextMenu({
           id: "collapse-all",
           label: "Collapse All",
           icon: <CaretDoubleUp />,
-          onClick: () => useFileTreeStore.getState().collapsePath(contextMenu.path),
+          onClick: () => useFileTreeStore.getState().actions.collapsePath(contextMenu.path),
         },
         {
           id: "open-terminal",

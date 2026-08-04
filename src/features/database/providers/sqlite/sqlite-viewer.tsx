@@ -1,4 +1,4 @@
 import { createFileSqlViewer } from "../sql/sql-provider-viewer";
-import { useSqliteStore } from "./stores/sqlite.store";
+import { createSqliteStore } from "./stores/sqlite.store";
 
-export default createFileSqlViewer("sqlite", useSqliteStore);
+export default createFileSqlViewer("sqlite", createSqliteStore);

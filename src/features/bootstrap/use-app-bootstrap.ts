@@ -8,7 +8,7 @@ import {
 import {
   cleanupFileWatcherListener,
   initializeFileWatcherListener,
-} from "@/features/file-system/stores/file-watcher.store";
+} from "@/features/file-system/services/file-watcher-listener";
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
 import { useLspInitialization } from "@/features/editor/hooks/use-lsp-initialization";
 import { useKeymapContext } from "@/features/keymaps/hooks/use-keymap-context";
@@ -28,8 +28,8 @@ import {
 } from "@/features/window/utils/window-open-request";
 
 export function useAppBootstrap() {
-  const initializeWhatsNew = useWhatsNewStore((state) => state.initialize);
-  const initializeOnboarding = useOnboardingStore((state) => state.initialize);
+  const initializeWhatsNew = useWhatsNewStore((state) => state.actions.initialize);
+  const initializeOnboarding = useOnboardingStore((state) => state.actions.initialize);
 
   usePlatformSetup();
   useSettingsSync();
@@ -50,7 +50,7 @@ export function useAppBootstrap() {
   }, []);
 
   useEffect(() => {
-    void useAuthStore.getState().initialize();
+    void useAuthStore.getState().actions.initialize();
   }, []);
 
   useEffect(() => {

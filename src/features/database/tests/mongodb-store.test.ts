@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { invokeDatabaseProvider } from "@/features/database/services/database-provider-sidecar";
-import { useMongoDbStore } from "@/features/database/providers/mongodb/stores/mongodb.store";
+import { createMongoDbStore } from "@/features/database/providers/mongodb/stores/mongodb.store";
 
 vi.mock("@/features/database/services/database-provider-sidecar", () => ({
   invokeDatabaseProvider: vi.fn(),
 }));
 
 const mockInvokeDatabaseProvider = vi.mocked(invokeDatabaseProvider);
+const useMongoDbStore = createMongoDbStore();
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

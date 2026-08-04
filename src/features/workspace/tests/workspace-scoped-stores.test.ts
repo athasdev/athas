@@ -16,10 +16,10 @@ describe("workspace-scoped stores", () => {
 
   it("restores project, tree, and terminal state from the live runtime", () => {
     workspaceRuntimeRegistry.activateWorkspace({ id: "workspace-a", name: "A", path: "/a" });
-    useProjectStore.getState().setRootFolderPath("/a");
-    useSidebarStore.getState().updateActivePath("/a/src/main.ts");
-    useFileTreeStore.getState().setExpandedPaths(new Set(["/a/src"]));
-    useTerminalTabsStore.getState().dispatch({
+    useProjectStore.getState().actions.setRootFolderPath("/a");
+    useSidebarStore.getState().actions.updateActivePath("/a/src/main.ts");
+    useFileTreeStore.getState().actions.setExpandedPaths(new Set(["/a/src"]));
+    useTerminalTabsStore.getState().actions.dispatch({
       type: "CREATE_TERMINAL",
       payload: { id: "terminal-a", name: "A", currentDirectory: "/a" },
     });
@@ -27,31 +27,31 @@ describe("workspace-scoped stores", () => {
     workspaceRuntimeRegistry.activateWorkspace({ id: "workspace-b", name: "B", path: "/b" });
     expect(useProjectStore.getState().rootFolderPath).toBeUndefined();
     expect(useSidebarStore.getState().activePath).toBeUndefined();
-    expect(useFileTreeStore.getState().getExpandedPaths()).toEqual(new Set());
+    expect(useFileTreeStore.getState().actions.getExpandedPaths()).toEqual(new Set());
     expect(useTerminalTabsStore.getState().terminals).toEqual([]);
 
-    useProjectStore.getState().setRootFolderPath("/b");
+    useProjectStore.getState().actions.setRootFolderPath("/b");
     workspaceRuntimeRegistry.activateWorkspace({ id: "workspace-a", name: "A", path: "/a" });
 
     expect(useProjectStore.getState().rootFolderPath).toBe("/a");
     expect(useSidebarStore.getState().activePath).toBe("/a/src/main.ts");
-    expect(useFileTreeStore.getState().getExpandedPaths()).toEqual(new Set(["/a/src"]));
+    expect(useFileTreeStore.getState().actions.getExpandedPaths()).toEqual(new Set(["/a/src"]));
     expect(useTerminalTabsStore.getState().activeTerminalId).toBe("terminal-a");
   });
 
   it("expands each workspace root once without overriding a later collapse", () => {
     workspaceRuntimeRegistry.activateWorkspace({ id: "workspace-a", name: "A", path: "/a" });
 
-    useFileTreeStore.getState().expandRootOnce("/a");
-    expect(useFileTreeStore.getState().isExpanded("/a")).toBe(true);
+    useFileTreeStore.getState().actions.expandRootOnce("/a");
+    expect(useFileTreeStore.getState().actions.isExpanded("/a")).toBe(true);
 
-    useFileTreeStore.getState().setExpandedPaths(new Set());
-    useFileTreeStore.getState().expandRootOnce("/a");
-    expect(useFileTreeStore.getState().isExpanded("/a")).toBe(false);
+    useFileTreeStore.getState().actions.setExpandedPaths(new Set());
+    useFileTreeStore.getState().actions.expandRootOnce("/a");
+    expect(useFileTreeStore.getState().actions.isExpanded("/a")).toBe(false);
 
     workspaceRuntimeRegistry.activateWorkspace({ id: "workspace-b", name: "B", path: "/b" });
-    useFileTreeStore.getState().expandRootOnce("/b");
-    expect(useFileTreeStore.getState().isExpanded("/b")).toBe(true);
+    useFileTreeStore.getState().actions.expandRootOnce("/b");
+    expect(useFileTreeStore.getState().actions.isExpanded("/b")).toBe(true);
   });
 
   it("keeps delayed buffer actions bound to their owning workspace panes", () => {

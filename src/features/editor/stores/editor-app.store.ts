@@ -34,8 +34,8 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
   const { buffers } = useBufferStore.getState();
   const { markBufferDirty, updateBufferContent, updateBufferPath } =
     useBufferStore.getState().actions;
-  const { updateSettingsFromJSON } = useSettingsStore.getState();
-  const { markPendingSave } = useFileWatcherStore.getState();
+  const { updateSettingsFromJSON } = useSettingsStore.getState().actions;
+  const { markPendingSave } = useFileWatcherStore.getState().actions;
   const activeBuffer = getBufferById(buffers, bufferId);
   if (!activeBuffer || !isEditorContent(activeBuffer)) return false;
   if (activeBuffer.readOnly) return false;
@@ -64,7 +64,7 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
     const { useAuthStore } = await import("@/features/window/stores/auth.store");
     const { updateCollaborationNoteFile } =
       await import("@/features/collaboration/lib/collaboration-sidebar-model");
-    const { subscription, setCollaborationSnapshot } = useAuthStore.getState();
+    const { subscription, actions } = useAuthStore.getState();
     const collaboration = subscription?.collaboration;
     const channelNote = collaboration?.channelNotes.find(
       (note) => note.channelId === collaborationNoteTarget.channelId,
@@ -83,7 +83,7 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
         fileContent: activeBuffer.content,
       }),
     });
-    setCollaborationSnapshot(nextCollaboration);
+    actions.setCollaborationSnapshot(nextCollaboration);
     markBufferDirty(activeBuffer.id, false);
     return true;
   }
@@ -247,7 +247,7 @@ export const useEditorAppStore = createSelectors(
           const { activeBufferId, buffers } = useBufferStore.getState();
           const { updateBufferContent, markBufferDirty } = useBufferStore.getState().actions;
           const { settings } = useSettingsStore.getState();
-          const { markPendingSave } = useFileWatcherStore.getState();
+          const { markPendingSave } = useFileWatcherStore.getState().actions;
           const contentAlreadyApplied = options?.contentAlreadyApplied === true;
 
           const activeBuffer = getBufferById(buffers, activeBufferId);
