@@ -127,6 +127,7 @@ fn main() {
          get_github_token,
          remove_github_token,
          github_check_auth,
+         github_list_notifications,
          github_list_prs,
          github_list_issues,
          github_list_workflow_runs,

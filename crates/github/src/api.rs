@@ -1,7 +1,8 @@
 use crate::models::{
-   IssueComment, IssueDetails, IssueListItem, Label, PullRequest, PullRequestAuthor,
-   PullRequestComment, PullRequestDetails, PullRequestFile, ReviewRequest, StatusCheck,
-   WorkflowListItem, WorkflowRunDetails, WorkflowRunJob, WorkflowRunListItem, WorkflowRunStep,
+   GitHubNotification, IssueComment, IssueDetails, IssueListItem, Label, PullRequest,
+   PullRequestAuthor, PullRequestComment, PullRequestDetails, PullRequestFile, ReviewRequest,
+   StatusCheck, WorkflowListItem, WorkflowRunDetails, WorkflowRunJob, WorkflowRunListItem,
+   WorkflowRunStep,
 };
 use git2::Repository;
 use reqwest::{
@@ -105,6 +106,31 @@ struct RestIssue {
    labels: Option<Vec<RestLabel>>,
    assignees: Option<Vec<RestUser>>,
    pull_request: Option<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+struct RestNotificationRepository {
+   full_name: Option<String>,
+   html_url: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct RestNotificationSubject {
+   title: Option<String>,
+   url: Option<String>,
+   #[serde(rename = "type")]
+   subject_type: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct RestNotification {
+   id: String,
+   unread: Option<bool>,
+   reason: Option<String>,
+   updated_at: Option<String>,
+   last_read_at: Option<String>,
+   repository: RestNotificationRepository,
+   subject: RestNotificationSubject,
 }
 
 #[derive(Deserialize)]
@@ -923,6 +949,72 @@ pub fn github_get_current_user(github_token: Option<String>) -> Result<String, S
    get_current_user(&api)
 }
 
+pub fn github_list_notifications(
+   github_token: Option<String>,
+) -> Result<Vec<GitHubNotification>, String> {
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let notifications: Vec<RestNotification> = api.get_json_with_query(
+      "/notifications",
+      &[
+         ("all", "false".to_string()),
+         ("participating", "false".to_string()),
+         ("per_page", "50".to_string()),
+      ],
+   )?;
+
+   Ok(notifications
+      .into_iter()
+      .map(notification_from_rest)
+      .collect())
+}
+
+fn notification_from_rest(notification: RestNotification) -> GitHubNotification {
+   let repository_url = notification.repository.html_url.unwrap_or_default();
+   let url = notification
+      .subject
+      .url
+      .as_deref()
+      .and_then(github_api_url_to_web_url)
+      .unwrap_or(repository_url);
+
+   GitHubNotification {
+      id: notification.id,
+      title: notification.subject.title.unwrap_or_default(),
+      subject_type: notification.subject.subject_type.unwrap_or_default(),
+      reason: notification.reason.unwrap_or_default(),
+      unread: notification.unread.unwrap_or(false),
+      updated_at: notification.updated_at.unwrap_or_default(),
+      last_read_at: notification.last_read_at,
+      repository_full_name: notification.repository.full_name.unwrap_or_default(),
+      url,
+   }
+}
+
+fn github_api_url_to_web_url(value: &str) -> Option<String> {
+   let path = value.strip_prefix("https://api.github.com/repos/")?;
+   let mut segments = path.split('/');
+   let owner = segments.next()?;
+   let repo = segments.next()?;
+   let resource = segments.next()?;
+   let id = segments.next()?;
+
+   if owner.is_empty() || repo.is_empty() || id.is_empty() {
+      return None;
+   }
+
+   let web_resource = match resource {
+      "pulls" => "pull",
+      "issues" => "issues",
+      "commits" => "commit",
+      "discussions" => "discussions",
+      _ => return None,
+   };
+
+   Some(format!(
+      "https://github.com/{owner}/{repo}/{web_resource}/{id}"
+   ))
+}
+
 pub fn github_list_issues(
    repo_path_value: String,
    state: String,
@@ -1508,8 +1600,8 @@ pub fn github_get_workflow_job_logs(
 #[cfg(test)]
 mod api_tests {
    use super::{
-      GITHUB_JSON_ACCEPT, GITHUB_WORKFLOW_JOB_LOGS_ACCEPT, GitHubApi, order_remote_names,
-      parse_github_remote_url,
+      GITHUB_JSON_ACCEPT, GITHUB_WORKFLOW_JOB_LOGS_ACCEPT, GitHubApi, github_api_url_to_web_url,
+      order_remote_names, parse_github_remote_url,
    };
 
    #[test]
@@ -1537,6 +1629,20 @@ mod api_tests {
    fn rejects_nested_or_invalid_remote_paths() {
       assert!(parse_github_remote_url("https://github.com/athasdev/athas/extra.git").is_none());
       assert!(parse_github_remote_url("https://github.com/athasdev/../athas.git").is_none());
+   }
+
+   #[test]
+   fn converts_notification_subject_api_urls_to_github_urls() {
+      assert_eq!(
+         github_api_url_to_web_url("https://api.github.com/repos/athasdev/athas/pulls/42")
+            .as_deref(),
+         Some("https://github.com/athasdev/athas/pull/42")
+      );
+      assert_eq!(
+         github_api_url_to_web_url("https://api.github.com/repos/athasdev/athas/issues/17")
+            .as_deref(),
+         Some("https://github.com/athasdev/athas/issues/17")
+      );
    }
 
    #[test]

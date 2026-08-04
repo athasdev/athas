@@ -64,6 +64,9 @@ describe("parseGitHubEntityLink", () => {
     expect(isGitHubEntityLinkForRepository(entityLink, "https://github.com/athasdev/www")).toBe(
       false,
     );
+    expect(isGitHubEntityLinkForRepository(entityLink, "git@github.com:athasdev/athas.git")).toBe(
+      true,
+    );
   });
 });
 

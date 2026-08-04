@@ -92,6 +92,18 @@ export interface IssueListItem {
   labels: Label[];
 }
 
+export interface GitHubNotification {
+  id: string;
+  title: string;
+  subjectType: string;
+  reason: string;
+  unread: boolean;
+  updatedAt: string;
+  lastReadAt: string | null;
+  repositoryFullName: string;
+  url: string;
+}
+
 interface IssueComment {
   author: PullRequestAuthor;
   body: string;

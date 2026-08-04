@@ -30,18 +30,24 @@ export function isGitHubEntityLinkForRepository(
 ): boolean {
   if (!repositoryUrl) return false;
 
-  try {
-    const url = new URL(repositoryUrl);
-    if (!isGitHubHost(url.hostname)) return false;
+  const repository = parseGitHubRepositoryUrl(repositoryUrl);
+  return (
+    repository?.owner.toLowerCase() === entityLink.owner.toLowerCase() &&
+    repository.repo.toLowerCase() === entityLink.repo.toLowerCase()
+  );
+}
 
-    const [owner, repo] = url.pathname.split("/").filter(Boolean);
-    return (
-      owner?.toLowerCase() === entityLink.owner.toLowerCase() &&
-      repo?.toLowerCase() === entityLink.repo.toLowerCase()
-    );
-  } catch {
-    return false;
-  }
+function parseGitHubRepositoryUrl(value: string): { owner: string; repo: string } | null {
+  const normalized = value.trim();
+  const httpsMatch = normalized.match(
+    /^https?:\/\/(?:www\.)?github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/i,
+  );
+  if (httpsMatch) return { owner: httpsMatch[1], repo: httpsMatch[2] };
+
+  const sshMatch = normalized.match(/^git@github\.com:([^/]+)\/(.+?)(?:\.git)?$/i);
+  if (sshMatch) return { owner: sshMatch[1], repo: sshMatch[2] };
+
+  return null;
 }
 
 export function parseGitHubEntityLink(value: string): GitHubEntityLink | null {

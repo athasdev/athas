@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { AppUpdateControl } from "@/features/layout/components/app-update-control";
+import { GitHubNotificationsMenu } from "@/features/github/components/github-notifications-menu";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import { orderChromeItems, type ChromeItem } from "@/features/layout/utils/chrome-items";
 import RunActionsButton from "@/features/run-actions/components/run-actions-button";
@@ -65,6 +66,7 @@ function placeAgentBeforeAccount(items: Array<ChromeItem<HeaderTrailingItemId>>)
 function TitleBarTrailingActions({ items }: { items: Array<ChromeItem<HeaderTrailingItemId>> }) {
   return (
     <ChromeGroup gap="tight">
+      <GitHubNotificationsMenu />
       <AppUpdateControl />
       {items.map((item) =>
         item.content ? (

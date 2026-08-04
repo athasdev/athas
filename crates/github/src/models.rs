@@ -88,6 +88,30 @@ pub struct Label {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GitHubNotification {
+   pub id: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub title: String,
+   #[serde(rename = "subjectType")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub subject_type: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub reason: String,
+   #[serde(default, deserialize_with = "deserialize_bool_or_default")]
+   pub unread: bool,
+   #[serde(rename = "updatedAt")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub updated_at: String,
+   #[serde(rename = "lastReadAt")]
+   pub last_read_at: Option<String>,
+   #[serde(rename = "repositoryFullName")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub repository_full_name: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PullRequestDetails {
    pub number: i64,
    #[serde(default, deserialize_with = "deserialize_string_or_default")]

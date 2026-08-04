@@ -1,7 +1,7 @@
 use crate::secure_storage::{get_secret, remove_secret, store_secret};
 pub use athas_github::{
-   IssueDetails, IssueListItem, Label, PullRequest, PullRequestComment, PullRequestDetails,
-   PullRequestFile, WorkflowListItem, WorkflowRunDetails, WorkflowRunListItem,
+   GitHubNotification, IssueDetails, IssueListItem, Label, PullRequest, PullRequestComment,
+   PullRequestDetails, PullRequestFile, WorkflowListItem, WorkflowRunDetails, WorkflowRunListItem,
 };
 
 async fn run_blocking<T, F>(operation: F) -> Result<T, String>
@@ -44,6 +44,14 @@ pub async fn github_list_prs(
 pub async fn github_get_current_user(app: crate::app_runtime::AppHandle) -> Result<String, String> {
    let github_token = get_stored_github_token(&app);
    run_blocking(move || athas_github::github_get_current_user(github_token)).await
+}
+
+#[tauri::command]
+pub async fn github_list_notifications(
+   app: crate::app_runtime::AppHandle,
+) -> Result<Vec<GitHubNotification>, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_list_notifications(github_token)).await
 }
 
 #[tauri::command]
