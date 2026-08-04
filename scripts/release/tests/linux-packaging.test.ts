@@ -35,8 +35,12 @@ describe("Linux release packaging", () => {
 
   it("builds Debian and RPM packages together in the release workflow", () => {
     const workflow = readRepoFile(".github/workflows/release.yml");
+    const linuxBuild = workflow.indexOf("cargo tauri build --no-bundle");
+    const nativePackages = workflow.indexOf("package-linux-native.sh packages");
 
-    expect(workflow).toContain("package-linux-native.sh packages");
+    expect(linuxBuild).toBeGreaterThan(-1);
+    expect(nativePackages).toBeGreaterThan(linuxBuild);
+    expect(workflow).toContain("--no-default-features --features linux");
     expect(workflow).toContain("release-dist/*.deb");
     expect(workflow).toContain("release-dist/*.rpm");
   });

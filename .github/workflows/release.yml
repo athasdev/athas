@@ -312,6 +312,16 @@ jobs:
         if: matrix.os == 'windows'
         run: node scripts/release/windows/prepare-tauri-signing.mjs
 
+      - name: Build Linux app
+        if: matrix.os == 'linux'
+        shell: bash
+        env:
+          CEF_PATH: ${{ github.workspace }}/.cache/tauri-cef
+          NO_STRIP: "true"
+          RUSTFLAGS: ${{ matrix.rustflags }}
+        run: |
+          cargo tauri build --no-bundle ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }} -- --no-default-features --features linux
+
       - name: Build Linux native packages
         if: matrix.os == 'linux'
         shell: bash
