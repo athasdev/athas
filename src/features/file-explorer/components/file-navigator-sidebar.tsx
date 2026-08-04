@@ -438,6 +438,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               { value: "tree", label: "File tree", icon: <TreeStructure /> },
             ]}
             iconOnly
+            variant="segmented"
             wrap={false}
             size="xs"
             className={cn("shrink-0", surface === "inset" && "bg-background")}
