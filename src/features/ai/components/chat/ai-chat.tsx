@@ -7,6 +7,7 @@ import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
+import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
 import {
   createToolCall,
   markToolCallComplete,
@@ -69,7 +70,6 @@ const AIChat = memo(function AIChat({
 
   const chatState = useChatState();
   const chatActions = useChatActions();
-  const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
   const { showToast } = useToast();
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -1023,7 +1023,7 @@ details: ${errorDetails || mainError}
       <ChatHeader
         chatId={effectiveChatId}
         onDeleteChat={handleDeleteChat}
-        onSwitchChat={chatId ? openAgentBuffer : chatActions.switchToChat}
+        onSwitchChat={chatId ? openAgentHistoryChat : chatActions.switchToChat}
         isMessageSearchOpen={isMessageSearchOpen}
         messageSearchQuery={messageSearchQuery}
         onToggleMessageSearch={() => {

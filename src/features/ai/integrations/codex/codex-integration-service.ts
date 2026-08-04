@@ -3,6 +3,8 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { runCodexDynamicTool } from "./codex-dynamic-tools";
 import type {
   CodexIntegrationStatus,
   CodexProtocolEvent,
@@ -53,6 +55,7 @@ export class CodexIntegrationService {
   private unlisten: UnlistenFn | null = null;
   private threadId: string | null = null;
   private turnId: string | null = null;
+  private projectRoot = ".";
 
   constructor(
     private handlers: CodexHandlers,
@@ -62,6 +65,7 @@ export class CodexIntegrationService {
   async start(message: string, context: ContextInfo) {
     CodexIntegrationService.active = this;
     const cwd = context.projectRoot?.trim() || ".";
+    this.projectRoot = cwd;
     this.unlisten = await listen<CodexProtocolEvent>("codex-event", ({ payload }) =>
       this.handleEvent(payload),
     );
@@ -92,6 +96,38 @@ export class CodexIntegrationService {
 
   private handleEvent(event: CodexProtocolEvent) {
     const { method, params } = event;
+    if (method === "thread/name/updated") {
+      const eventThreadId = String(params.threadId ?? "");
+      const threadName = typeof params.threadName === "string" ? params.threadName.trim() : "";
+      if (this.chatId && eventThreadId === this.threadId && threadName) {
+        useAIChatStore.getState().actions.updateChatTitle(this.chatId, threadName);
+      }
+      return;
+    }
+
+    if (method === "item/tool/call" && event.id != null) {
+      const toolName = String(params.tool ?? "");
+      const result = runCodexDynamicTool(toolName, params.arguments, {
+        projectRoot: this.projectRoot,
+        openPullRequest: useBufferStore.getState().actions.openPRBuffer,
+        openIssue: useBufferStore.getState().actions.openGitHubIssueBuffer,
+        setChatTitle: (title) => {
+          if (!this.chatId) return false;
+          const actions = useAIChatStore.getState().actions;
+          if (!actions.getChatById(this.chatId)) return false;
+          actions.updateChatTitle(this.chatId, title);
+          return true;
+        },
+      }) ?? {
+        contentItems: [{ type: "inputText" as const, text: `Unknown Athas tool: ${toolName}` }],
+        success: false,
+      };
+      void invoke("respond_codex_request", {
+        response: { requestId: event.id, decision: result },
+      }).catch((error) => this.handlers.onError(String(error), true));
+      return;
+    }
+
     if (method === "item/agentMessage/delta") {
       this.handlers.onChunk(String(params.delta ?? ""));
       return;

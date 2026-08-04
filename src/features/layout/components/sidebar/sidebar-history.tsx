@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, type MouseEvent as ReactMouseEvent } fr
 import { AgentSessionSidebarItem } from "@/features/ai/components/agent-session-sidebar-item";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
+import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
@@ -218,7 +219,6 @@ export function SidebarAgentHistory({
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
   const currentBranch = useGitStore((state) => state.gitStatus?.branch ?? null);
-  const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
   const { isCollapsed, toggleCollapsed } = useActivityRailSectionCollapse("agents");
   const [olderAgentsMenu, setOlderAgentsMenu] = useState({
     isOpen: false,
@@ -234,12 +234,9 @@ export function SidebarAgentHistory({
   const visibleChats = sortedChats.slice(0, AGENT_HISTORY_INLINE_LIMIT);
   const olderChats = sortedChats.slice(AGENT_HISTORY_INLINE_LIMIT);
 
-  const handleOpenChat = useCallback(
-    (chatId: string) => {
-      openAgentBuffer(chatId);
-    },
-    [openAgentBuffer],
-  );
+  const handleOpenChat = useCallback((chatId: string) => {
+    openAgentHistoryChat(chatId);
+  }, []);
 
   const handleShowMoreAgents = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -333,7 +330,6 @@ export function SidebarPinnedItems({
   const currentBranch = useGitStore((state) => state.gitStatus?.branch ?? null);
   const buffers = useBufferStore((state) => state.buffers);
   const activeBufferId = useBufferStore((state) => state.activeBufferId);
-  const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
   const setActiveBuffer = useBufferStore.use.actions().setActiveBuffer;
   const handleTabPin = useBufferStore.use.actions().handleTabPin;
   const panelTerminals = useTerminalTabsStore((state) => state.terminals);
@@ -395,7 +391,7 @@ export function SidebarPinnedItems({
           aiModelId={aiModelId}
           currentBranch={currentBranch}
           workspacePath={workspacePath}
-          onOpen={openAgentBuffer}
+          onOpen={openAgentHistoryChat}
           onUpdateTitle={updateChatTitle}
           onPinChange={setChatPinned}
           onArchive={(chatId) => setChatArchived(chatId, true)}
