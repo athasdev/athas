@@ -61,6 +61,7 @@ import {
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { AcpConfigSelector } from "../selectors/acp-config-selector";
+import { AgentSelector } from "../selectors/agent-selector";
 import { ModelSelector } from "../selectors/model-selector";
 import { ProviderSelector } from "../selectors/provider-selector";
 import { ModeSelector } from "../selectors/mode-selector";
@@ -85,6 +86,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
   onSetSelectedFilesPaths,
   isActiveSurface = true,
   presentation = "default",
+  autoFocus = false,
+  onAgentChange,
   onSendMessage,
   onStopStreaming,
 }: AIChatInputBarProps) {
@@ -1063,6 +1066,13 @@ const AIChatInputBar = memo(function AIChatInputBar({
         : "Ask anything... (@ to mention files)"
     : "Configure API key to enable Agent...";
 
+  useEffect(() => {
+    if (!autoFocus || !isActiveSurface) return;
+
+    const frame = window.requestAnimationFrame(() => inputRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [autoFocus, isActiveSurface]);
+
   return (
     <ChatComposer
       ref={aiChatContainerRef}
@@ -1301,10 +1311,19 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       <ChatComposerTools connected={isInitialPresentation}>
         {isAcpMetadataLoading ? (
-          <ChatLoadingIndicator label="Loading session…" compact />
+          <ChatLoadingIndicator label="Loading session…" state="connecting" compact />
         ) : (
           <>
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+              {onAgentChange ? (
+                <AgentSelector
+                  selectedAgentId={currentAgentId}
+                  onSelectAgent={onAgentChange}
+                  portalContainer={aiChatContainerRef.current}
+                  triggerClassName="max-w-[168px]"
+                />
+              ) : null}
+
               {acpInlineConfigOptions.map(({ option, category }) => {
                 const controlId = `config:${option.id}`;
                 return (

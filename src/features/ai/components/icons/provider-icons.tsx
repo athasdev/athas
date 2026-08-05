@@ -137,6 +137,7 @@ export function ProviderIcon({
 
   switch (providerId) {
     case "openai":
+    case "codex":
     case "codex-cli":
       return <OpenAIIcon {...props} />;
     case "anthropic":

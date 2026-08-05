@@ -1,5 +1,5 @@
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
-import { Spinner } from "@/ui/spinner";
+import { ThinkingOrb, type ThinkingOrbProps } from "@/ui/thinking-orb";
 import { cn } from "@/utils/cn";
 
 interface ChatLoadingIndicatorProps {
@@ -7,6 +7,7 @@ interface ChatLoadingIndicatorProps {
   showLabel?: boolean;
   compact?: boolean;
   className?: string;
+  state?: ThinkingOrbProps["state"];
 }
 
 export function ChatLoadingIndicator({
@@ -14,6 +15,7 @@ export function ChatLoadingIndicator({
   showLabel = true,
   compact = false,
   className,
+  state = "working",
 }: ChatLoadingIndicatorProps) {
   return (
     <Marker
@@ -21,8 +23,8 @@ export function ChatLoadingIndicator({
       aria-label={showLabel ? undefined : label}
       className={cn(compact && "w-fit", className)}
     >
-      <MarkerIcon className="text-primary">
-        <Spinner />
+      <MarkerIcon className="size-5">
+        <ThinkingOrb state={state} size={20} aria-hidden="true" />
       </MarkerIcon>
       {showLabel ? <MarkerContent className="ui-text-shimmer">{label}</MarkerContent> : null}
     </Marker>

@@ -105,6 +105,8 @@ export interface AIChatInputBarProps {
   onSetSelectedFilesPaths: (filePaths: Set<string>) => void;
   isActiveSurface?: boolean;
   presentation?: "default" | "initial";
+  autoFocus?: boolean;
+  onAgentChange?: (agentId: AgentType) => void;
   onSendMessage: (message: string) => Promise<void>;
   onStopStreaming: () => void;
 }

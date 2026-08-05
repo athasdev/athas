@@ -206,7 +206,7 @@ export const ChatMessage = memo(function ChatMessage({
     (!message.content || message.content.trim().length === 0) &&
     (!message.toolCalls || message.toolCalls.length === 0)
   ) {
-    return <ChatLoadingIndicator label="Thinking…" compact />;
+    return <ChatLoadingIndicator label="Thinking…" state="breathing" compact />;
   }
 
   return (

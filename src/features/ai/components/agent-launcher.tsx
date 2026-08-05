@@ -1,141 +1,123 @@
-import { PaperPlaneTiltIcon as Send } from "@/ui/icons";
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { AgentSelector } from "@/features/ai/components/selectors/agent-selector";
+import { useCallback, useEffect, useState } from "react";
+import AIChatInputBar from "@/features/ai/components/input/chat-input-bar";
 import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "@/features/ai/lib/claude-code";
 import { openClaudeCodeTerminal } from "@/features/ai/lib/claude-code-terminal";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import type { AgentType } from "@/features/ai/types/ai-chat.types";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { Button } from "@/ui/button";
 import Command from "@/ui/command";
-import { cn } from "@/utils/cn";
+
+const EMPTY_PROJECT_FILES: FileEntry[] = [];
 
 interface AgentLaunchInputProps {
   active?: boolean;
   autoFocus?: boolean;
-  className?: string;
   onRequestClose?: () => void;
+  surfaceId?: string;
 }
 
 export function AgentLaunchInput({
   active = true,
   autoFocus = false,
-  className,
   onRequestClose,
+  surfaceId = "agent-launcher",
 }: AgentLaunchInputProps) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const buffers = useBufferStore((state) => state.buffers);
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
+  const allProjectFiles = useFileSystemStore(
+    (state) => state.projectFilesCache?.files ?? EMPTY_PROJECT_FILES,
+  );
+  const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
   const createNewChat = useAIChatStore((state) => state.actions.createNewChat);
-  const getCurrentAgentId = useAIChatStore((state) => state.actions.getCurrentAgentId);
+  const setSelectedAgentId = useAIChatStore((state) => state.actions.setSelectedAgentId);
   const setPendingAgentLaunchRequest = useAIChatStore(
     (state) => state.actions.setPendingAgentLaunchRequest,
   );
-  const [prompt, setPrompt] = useState("");
-  const [selectedAgentId, setSelectedAgentId] = useState<AgentType>(getCurrentAgentId());
-
-  const reset = useCallback(() => {
-    setPrompt("");
-    setSelectedAgentId(getCurrentAgentId());
-  }, [getCurrentAgentId]);
+  const [selectedBufferIds, setSelectedBufferIds] = useState<Set<string>>(new Set());
+  const [selectedFilesPaths, setSelectedFilesPaths] = useState<Set<string>>(new Set());
 
   const close = useCallback(() => {
     onRequestClose?.();
-    reset();
-  }, [onRequestClose, reset]);
+  }, [onRequestClose]);
 
   useEffect(() => {
-    if (!active) {
-      reset();
-      return;
-    }
-    if (!autoFocus) return;
+    if (active) return;
+    setSelectedBufferIds(new Set());
+    setSelectedFilesPaths(new Set());
+  }, [active]);
 
-    const frame = window.requestAnimationFrame(() => inputRef.current?.focus());
-    return () => window.cancelAnimationFrame(frame);
-  }, [active, autoFocus, reset]);
-
-  const submit = useCallback(() => {
-    if (selectedAgentId === CLAUDE_CODE_TERMINAL_AGENT_ID) {
-      openClaudeCodeTerminal();
-      close();
-      return;
-    }
-
-    const nextPrompt = prompt.trim();
-    if (!nextPrompt) return;
-
-    const chatId = createNewChat(selectedAgentId, { activate: false });
-    setPendingAgentLaunchRequest({
-      chatId,
-      agentId: selectedAgentId,
-      prompt: nextPrompt,
-      selectedBufferIds: [],
-      selectedFilesPaths: [],
-    });
-    openAgentBuffer(chatId);
-    close();
-  }, [
-    close,
-    createNewChat,
-    openAgentBuffer,
-    prompt,
-    selectedAgentId,
-    setPendingAgentLaunchRequest,
-  ]);
-
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
+  const submit = useCallback(
+    async (prompt: string) => {
+      if (selectedAgentId === CLAUDE_CODE_TERMINAL_AGENT_ID) {
+        openClaudeCodeTerminal();
         close();
-      } else if (event.key === "Enter") {
-        event.preventDefault();
-        submit();
+        return;
       }
+
+      const nextPrompt = prompt.trim();
+      if (!nextPrompt) return;
+
+      const chatId = createNewChat(selectedAgentId, { activate: false });
+      setPendingAgentLaunchRequest({
+        chatId,
+        agentId: selectedAgentId,
+        prompt: nextPrompt,
+        selectedBufferIds: Array.from(selectedBufferIds),
+        selectedFilesPaths: Array.from(selectedFilesPaths),
+      });
+      openAgentBuffer(chatId);
+      close();
     },
-    [close, submit],
+    [
+      close,
+      createNewChat,
+      openAgentBuffer,
+      selectedAgentId,
+      selectedBufferIds,
+      selectedFilesPaths,
+      setPendingAgentLaunchRequest,
+    ],
   );
 
   return (
-    <div
-      ref={rootRef}
-      className={cn(
-        "flex w-full items-center gap-1 rounded-xl border border-border bg-surface p-1 shadow-sm",
-        className,
-      )}
-    >
-      <input
-        ref={inputRef}
-        type="text"
-        value={prompt}
-        onChange={(event) => setPrompt(event.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="What should the agent do?"
-        className="font-sans ui-text-base h-8 min-w-0 flex-1 bg-transparent px-2 text-foreground outline-none placeholder:text-subtle-foreground"
-        autoCapitalize="off"
-        autoCorrect="off"
-        spellCheck={false}
-      />
-      <AgentSelector
-        selectedAgentId={selectedAgentId}
-        onSelectAgent={setSelectedAgentId}
-        portalContainer={rootRef.current}
-      />
-      <Button
-        type="button"
-        onClick={submit}
-        disabled={selectedAgentId !== CLAUDE_CODE_TERMINAL_AGENT_ID && !prompt.trim()}
-        variant="default"
-        size="icon-sm"
-        tooltip="Start agent"
-        shortcut="enter"
-        aria-label="Start agent"
-      >
-        <Send />
-      </Button>
-    </div>
+    <AIChatInputBar
+      key={active ? "active" : "inactive"}
+      surfaceId={surfaceId}
+      buffers={buffers}
+      allProjectFiles={allProjectFiles}
+      currentAgentId={selectedAgentId}
+      isTyping={false}
+      streamingMessageId={null}
+      queueCount={0}
+      selectedBufferIds={selectedBufferIds}
+      selectedFilesPaths={selectedFilesPaths}
+      onToggleBufferSelection={(bufferId) =>
+        setSelectedBufferIds((current) => {
+          const next = new Set(current);
+          if (next.has(bufferId)) next.delete(bufferId);
+          else next.add(bufferId);
+          return next;
+        })
+      }
+      onToggleFileSelection={(filePath) =>
+        setSelectedFilesPaths((current) => {
+          const next = new Set(current);
+          if (next.has(filePath)) next.delete(filePath);
+          else next.add(filePath);
+          return next;
+        })
+      }
+      onSetSelectedBufferIds={setSelectedBufferIds}
+      onSetSelectedFilesPaths={setSelectedFilesPaths}
+      isActiveSurface={active}
+      presentation="initial"
+      autoFocus={autoFocus}
+      onAgentChange={setSelectedAgentId}
+      onSendMessage={submit}
+      onStopStreaming={() => {}}
+    />
   );
 }
 

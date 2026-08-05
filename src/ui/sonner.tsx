@@ -6,7 +6,7 @@ import {
   InfoIcon as Info,
   XIcon as X,
 } from "@/ui/icons";
-import { Spinner } from "@/ui/spinner";
+import { ThinkingOrb } from "@/ui/thinking-orb";
 
 function getToastTheme(): ToasterProps["theme"] {
   if (typeof document === "undefined") return "dark";
@@ -39,7 +39,7 @@ export function Toaster() {
         info: <Info size={18} />,
         warning: <AlertTriangle size={18} />,
         error: <AlertTriangle size={18} />,
-        loading: <Spinner label="Loading" compact />,
+        loading: <ThinkingOrb state="working" size={20} aria-label="Loading" />,
         close: <X size={14} />,
       }}
       toastOptions={{

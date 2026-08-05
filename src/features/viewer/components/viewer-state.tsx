@@ -1,7 +1,7 @@
 import { WarningCircleIcon as WarningCircle } from "@/ui/icons";
 import type { ComponentProps } from "react";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "@/ui/empty";
-import { Spinner } from "@/ui/spinner";
+import { ThinkingOrb } from "@/ui/thinking-orb";
 import { cn } from "@/utils/cn";
 
 interface ViewerLoadingStateProps extends Omit<ComponentProps<"div">, "children"> {
@@ -16,8 +16,9 @@ function ViewerLoadingState({ label, className, ...props }: ViewerLoadingStatePr
       className={cn("size-full rounded-none bg-background", className)}
       {...props}
     >
-      <EmptyDescription>
-        <Spinner label={label} showLabel />
+      <EmptyDescription role="status" className="flex items-center gap-2">
+        <ThinkingOrb state="working" size={20} aria-hidden="true" />
+        <span>{label}</span>
       </EmptyDescription>
     </Empty>
   );

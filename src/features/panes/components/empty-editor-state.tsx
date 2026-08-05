@@ -23,21 +23,20 @@ import {
   ContextMenuTrigger,
 } from "@/ui/context-menu";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/ui/empty";
+import { ThinkingOrb } from "@/ui/thinking-orb";
 
 interface ActionItem {
   id: string;
   label: string;
-  description: string;
   icon: React.ReactNode;
   action: () => void;
-  disabled?: boolean;
 }
 
 const quickActionCardClassName =
-  "h-20 min-w-0 w-full overflow-hidden flex-col items-start justify-between rounded-xl border border-border/65 bg-transparent p-3 text-left text-subtle-foreground hover:border-border-strong/75 hover:bg-accent/35 hover:text-foreground focus-visible:border-border-strong/80 disabled:opacity-45";
+  "h-9 min-w-0 w-full justify-start gap-2 overflow-hidden rounded-lg bg-accent/25 px-3 text-subtle-foreground hover:bg-accent/60 hover:text-foreground";
 
 const quickActionIconClassName =
-  "flex size-7 items-center justify-center rounded-md text-subtle-foreground group-hover:text-foreground";
+  "flex size-4 shrink-0 items-center justify-center text-subtle-foreground group-hover:text-foreground";
 
 export function EmptyEditorState() {
   const { openTerminalBuffer, openWebViewerBuffer, openBuffer } = useBufferStore.use.actions();
@@ -75,32 +74,27 @@ export function EmptyEditorState() {
   const quickActions: ActionItem[] = [
     {
       id: "new-file",
-      label: "Create",
-      description: "New file",
+      label: "New file",
       icon: <Plus />,
       action: handleNewFile,
     },
     {
       id: "find",
-      label: "Find",
-      description: "Open file",
+      label: "Open file",
       icon: <FileText />,
       action: handleOpenFile,
     },
     {
       id: "terminal",
-      label: "Run",
-      description: "New terminal",
+      label: "New terminal",
       icon: <Terminal />,
       action: handleOpenTerminal,
     },
     {
       id: "research",
-      label: "Research",
-      description: "Apps and web",
-      icon: <Globe />,
+      label: webViewerEnabled ? "Open URL" : "Open folder",
+      icon: webViewerEnabled ? <Globe /> : <FolderOpen />,
       action: webViewerEnabled ? handleOpenWebViewer : handleOpenFolder,
-      disabled: !webViewerEnabled,
     },
   ];
 
@@ -109,33 +103,25 @@ export function EmptyEditorState() {
       <ContextMenuTrigger className="flex h-full min-h-0 w-full overflow-auto">
         <Empty className="m-auto max-w-2xl gap-4 px-6 py-8">
           <EmptyHeader>
-            <EmptyMedia className="size-8 text-foreground">
-              <Sparkles className="size-5" weight="duotone" />
+            <EmptyMedia className="size-16">
+              <ThinkingOrb state="shaping" size={64} aria-hidden="true" />
             </EmptyMedia>
             <EmptyTitle className="ui-text-lg">Where should we begin?</EmptyTitle>
           </EmptyHeader>
 
-          <AgentLaunchInput active autoFocus />
+          <AgentLaunchInput active autoFocus surfaceId="empty-editor" />
 
-          <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
+          <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">
             {quickActions.map((item) => (
               <Button
                 key={item.id}
                 type="button"
                 onClick={item.action}
                 variant="ghost"
-                disabled={item.disabled}
                 className={`group ${quickActionCardClassName}`}
               >
                 <span className={quickActionIconClassName}>{item.icon}</span>
-                <span className="flex w-full min-w-0 flex-col gap-0.5">
-                  <span className="truncate font-medium text-foreground ui-text-sm">
-                    {item.label}
-                  </span>
-                  <span className="truncate text-subtle-foreground ui-text-sm">
-                    {item.description}
-                  </span>
-                </span>
+                <span className="min-w-0 truncate ui-text-sm">{item.label}</span>
               </Button>
             ))}
           </div>
