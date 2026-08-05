@@ -282,7 +282,6 @@ pub async fn github_unlock_issue(
 }
 
 #[tauri::command]
-#[allow(clippy::too_many_arguments)]
 pub async fn github_create_pull_request(
    app: crate::app_runtime::AppHandle,
    repo_path: String,
