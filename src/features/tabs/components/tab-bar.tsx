@@ -661,7 +661,7 @@ const TabBar = ({
         <TabBarSurface
           ref={tabBarRef}
           data-tab-bar-pane-id={paneId ?? ""}
-          className="group/tabbar scrollbar-hidden [overscroll-behavior-x:contain]"
+          className="group/tabbar scrollbar-hidden bg-background [overscroll-behavior-x:contain]"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}

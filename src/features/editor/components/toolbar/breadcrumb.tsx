@@ -204,7 +204,7 @@ export default function Breadcrumb({
 
   return (
     <>
-      <div className="flex min-h-7 select-none items-center justify-between bg-surface px-3 py-1">
+      <div className="flex min-h-7 select-none items-center justify-between bg-background px-3 py-1">
         <div className="font-sans flex min-w-0 items-center gap-2 text-subtle-foreground ui-text-sm">
           {showPath && showBreadcrumbPath ? (
             <>
