@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Commit } from "../types/github-pr-viewer.types";
 import { CommentItem } from "./comment-item";
 import { CommitItem } from "./commit-item";
-import GitHubMarkdown from "./github-markdown";
+import { GitHubInlineMarkdown } from "./github-inline-editors";
 import { GitHubViewerLoadingState, GitHubViewerState } from "./github-viewer-shell";
 
 interface ActivityItemComment {
@@ -31,6 +31,7 @@ interface PRActivityPanelProps {
   isLoadingContent: boolean;
   contentError: string | null;
   onRetry: () => void;
+  onBodySave: (body: string) => Promise<boolean>;
 }
 
 export function PRActivityPanel({
@@ -41,6 +42,7 @@ export function PRActivityPanel({
   isLoadingContent,
   contentError,
   onRetry,
+  onBodySave,
 }: PRActivityPanelProps) {
   const [visibleActivityCount, setVisibleActivityCount] = useState(12);
   const visibleActivityItems = useMemo(
@@ -86,19 +88,13 @@ export function PRActivityPanel({
     <div className="min-w-0 w-full space-y-8">
       <section className="space-y-3">
         <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">Description</h2>
-        {body ? (
-          <GitHubMarkdown
-            content={body}
-            className="github-markdown-pr w-full"
-            contentClassName="github-markdown-pr-content w-full max-w-none"
-            repositoryUrl={repositoryUrl}
-            repoPath={repoPath}
-          />
-        ) : (
-          <p className="font-sans ui-text-sm italic text-subtle-foreground">
-            No description provided
-          </p>
-        )}
+        <GitHubInlineMarkdown
+          value={body}
+          emptyLabel="No description provided"
+          repositoryUrl={repositoryUrl}
+          repoPath={repoPath}
+          onSave={onBodySave}
+        />
       </section>
 
       <section className="space-y-3">

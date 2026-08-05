@@ -23,7 +23,6 @@ interface GitHubPRViewerHeaderProps {
   onCopyPRLink: () => void;
   onCopyBranchName: () => void;
   onToggleFilesView: () => void;
-  onEdit: () => void;
   onComment: () => void;
   onApprove: () => void;
   onRequestChanges: () => void;
@@ -44,7 +43,6 @@ export function GitHubPRViewerHeader({
   onCopyPRLink,
   onCopyBranchName,
   onToggleFilesView,
-  onEdit,
   onComment,
   onApprove,
   onRequestChanges,
@@ -88,7 +86,6 @@ export function GitHubPRViewerHeader({
               {isRefreshingDetails ? "Refreshing..." : "Refresh"}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onCheckout}>Checkout branch</DropdownMenuItem>
-            <DropdownMenuItem onClick={onEdit}>Edit pull request</DropdownMenuItem>
             <DropdownMenuItem disabled={isClosed} onClick={onApprove}>
               Approve
             </DropdownMenuItem>

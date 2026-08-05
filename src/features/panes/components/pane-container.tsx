@@ -93,16 +93,6 @@ const GitHubCreateView = lazy(() =>
     default: module.GitHubCreateView,
   })),
 );
-const GitHubEditView = lazy(() =>
-  import("@/features/github/components/github-edit-view").then((module) => ({
-    default: module.GitHubEditView,
-  })),
-);
-const GitHubPRActionView = lazy(() =>
-  import("@/features/github/components/github-pr-action-view").then((module) => ({
-    default: module.GitHubPRActionView,
-  })),
-);
 const ImageViewer = lazy(() =>
   import("@/features/viewer/image/components/image-viewer").then((m) => ({
     default: m.ImageViewer,
@@ -971,13 +961,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           );
 
         case "githubForm":
-          return buffer.operation === "action" ? (
-            <GitHubPRActionView buffer={buffer} />
-          ) : buffer.operation === "edit" ? (
-            <GitHubEditView buffer={buffer} />
-          ) : (
-            <GitHubCreateView buffer={buffer} />
-          );
+          return <GitHubCreateView buffer={buffer} />;
 
         case "globalSearch":
           return <GlobalSearchBuffer />;

@@ -160,9 +160,6 @@ interface BufferActions {
   openGitHubFormBuffer: (options: {
     repoPath: string;
     formKind: "pull-request" | "issue" | "action";
-    operation?: "create" | "edit" | "action";
-    actionKind?: "comment" | "approve" | "request-changes" | "merge" | "close";
-    resourceNumber?: number;
     defaultHead?: string;
   }) => string;
   openTerminalBuffer: (options?: {
@@ -838,7 +835,7 @@ const createBufferStore = (workspaceId: string) => {
             }
 
             case "githubForm": {
-              const path = `github-form://${spec.operation}/${spec.formKind}/${spec.resourceNumber ?? "new"}/${spec.actionKind ?? "form"}/${encodeURIComponent(spec.repoPath)}`;
+              const path = `github-form://create/${spec.formKind}/${encodeURIComponent(spec.repoPath)}`;
               const existing = buffers.find(
                 (buffer) => buffer.type === "githubForm" && buffer.path === path,
               );
@@ -1151,22 +1148,13 @@ const createBufferStore = (workspaceId: string) => {
           });
         },
 
-        openGitHubFormBuffer: ({
-          repoPath,
-          formKind,
-          operation = "create",
-          resourceNumber,
-          defaultHead,
-          actionKind,
-        }): string => {
+        openGitHubFormBuffer: ({ repoPath, formKind, defaultHead }): string => {
           return get().actions.openContent({
             type: "githubForm",
             repoPath,
             formKind,
-            operation,
-            resourceNumber,
+            operation: "create",
             defaultHead,
-            actionKind,
           });
         },
 

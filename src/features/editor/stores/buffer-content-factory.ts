@@ -163,22 +163,13 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
       return {
         ...base,
         type: "githubForm",
-        path: `github-form://${spec.operation}/${spec.formKind}/${spec.resourceNumber ?? "new"}/${spec.actionKind ?? "form"}/${encodeURIComponent(spec.repoPath)}`,
-        name:
-          spec.operation === "edit"
-            ? `Edit ${resourceLabel} #${spec.resourceNumber}`
-            : spec.operation === "action"
-              ? `${spec.actionKind === "request-changes" ? "Request Changes" : `${spec.actionKind?.replace("-", " ") ?? "Action"}`} #${spec.resourceNumber}`
-              : spec.formKind === "action"
-                ? "Run Workflow"
-                : `New ${resourceLabel}`,
+        path: `github-form://create/${spec.formKind}/${encodeURIComponent(spec.repoPath)}`,
+        name: spec.formKind === "action" ? "Run Workflow" : `New ${resourceLabel}`,
         isPreview: false,
         repoPath: spec.repoPath,
         formKind: spec.formKind,
-        operation: spec.operation,
-        resourceNumber: spec.resourceNumber,
+        operation: "create",
         defaultHead: spec.defaultHead,
-        actionKind: spec.actionKind,
       };
     }
     case "markdownPreview":

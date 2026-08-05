@@ -145,9 +145,7 @@ export interface GitHubFormContent extends PaneContentBase {
   type: "githubForm";
   repoPath: string;
   formKind: "pull-request" | "issue" | "action";
-  operation: "create" | "edit" | "action";
-  actionKind?: "comment" | "approve" | "request-changes" | "merge" | "close";
-  resourceNumber?: number;
+  operation: "create";
   defaultHead?: string;
 }
 
@@ -365,9 +363,7 @@ export type OpenContentSpec =
       type: "githubForm";
       repoPath: string;
       formKind: "pull-request" | "issue" | "action";
-      operation: "create" | "edit" | "action";
-      actionKind?: "comment" | "approve" | "request-changes" | "merge" | "close";
-      resourceNumber?: number;
+      operation: "create";
       defaultHead?: string;
     }
   | {

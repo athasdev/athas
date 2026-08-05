@@ -25,28 +25,25 @@ describe("GitHub form buffers", () => {
       repoPath: "/workspace/athas",
       defaultHead: "feature/forms",
     });
-    expect(buffer.path).toContain("github-form://create/pull-request/new/");
+    expect(buffer.path).toContain("github-form://create/pull-request/");
   });
 
-  it("gives edit and action forms distinct tab identities", () => {
-    const edit = createPaneContent("edit", {
+  it("gives each creation form a distinct tab identity", () => {
+    const issue = createPaneContent("issue", {
       type: "githubForm",
       repoPath: "/workspace/athas",
       formKind: "issue",
-      operation: "edit",
-      resourceNumber: 42,
+      operation: "create",
     });
-    const review = createPaneContent("review", {
+    const workflow = createPaneContent("workflow", {
       type: "githubForm",
       repoPath: "/workspace/athas",
-      formKind: "pull-request",
-      operation: "action",
-      resourceNumber: 17,
-      actionKind: "request-changes",
+      formKind: "action",
+      operation: "create",
     });
 
-    expect(edit.name).toBe("Edit Issue #42");
-    expect(review.name).toBe("Request Changes #17");
-    expect(edit.path).not.toBe(review.path);
+    expect(issue.name).toBe("New Issue");
+    expect(workflow.name).toBe("Run Workflow");
+    expect(issue.path).not.toBe(workflow.path);
   });
 });

@@ -1,11 +1,12 @@
+import { invoke } from "@tauri-apps/api/core";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import type { GitDiff, GitDiffLine } from "@/features/git/types/git.types";
-import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import { Button } from "@/ui/button";
+import { showConfirmDialog } from "@/ui/dialog";
 import { toast } from "sonner";
+import type { Label, PullRequestDetails } from "../types/github.types";
 import type {
   Commit,
   FilePatchState,
@@ -31,56 +32,19 @@ import { PRActivityPanel } from "./pr-activity-panel";
 import { PRFilesPanel } from "./pr-files-panel";
 import { GitHubPRViewerHeader } from "./github-pr-viewer-header";
 import { GitHubPRSidebar } from "./github-pr-sidebar";
+import {
+  GitHubPRInlineAction,
+  type GitHubPRInlineActionKind,
+  type GitHubPRMergeMethod,
+} from "./github-pr-inline-action";
 import { GitHubAvatar } from "./github-avatar";
+import { GitHubInlineTitle } from "./github-inline-editors";
 import {
   GitHubDetailLayout,
   GitHubViewerHeader,
   GitHubViewerLoadingState,
   GitHubViewerShell,
 } from "./github-viewer-shell";
-
-function parsePatchLinesToGitDiffLines(patchLines: string[]): GitDiffLine[] {
-  const result: GitDiffLine[] = [];
-  let oldLine = 0;
-  let newLine = 0;
-
-  for (const line of patchLines) {
-    if (line.startsWith("@@")) {
-      const match = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
-      if (match) {
-        oldLine = Number.parseInt(match[1], 10);
-        newLine = Number.parseInt(match[2], 10);
-      }
-      result.push({ line_type: "header", content: line });
-    } else if (line.startsWith("+")) {
-      result.push({
-        line_type: "added",
-        content: line.slice(1),
-        new_line_number: newLine,
-      });
-      newLine++;
-    } else if (line.startsWith("-")) {
-      result.push({
-        line_type: "removed",
-        content: line.slice(1),
-        old_line_number: oldLine,
-      });
-      oldLine++;
-    } else {
-      const content = line.startsWith(" ") ? line.slice(1) : line;
-      result.push({
-        line_type: "context",
-        content,
-        old_line_number: oldLine,
-        new_line_number: newLine,
-      });
-      oldLine++;
-      newLine++;
-    }
-  }
-
-  return result;
-}
 
 interface GitHubPRViewerProps {
   prNumber: number;
@@ -109,8 +73,8 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   const detailsError = useGitHubStore.use.detailsError();
   const contentError = useGitHubStore.use.contentError();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
-  const openGitHubFormBuffer = useBufferStore.use.actions().openGitHubFormBuffer;
-  const { selectPR, fetchPRContent, openPRInBrowser, checkoutPR } = useGitHubStore.use.actions();
+  const { selectPR, fetchPRs, fetchPRContent, openPRInBrowser, checkoutPR } =
+    useGitHubStore.use.actions();
   const repoPath = prBuffer?.repoPath ?? selectedRepoPath ?? rootFolderPath;
 
   const [activeTab, setActiveTab] = useState<TabType>(() =>
@@ -123,12 +87,30 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   );
   const [isFileTreeVisible, setIsFileTreeVisible] = useState(true);
   const [filePatches, setFilePatches] = useState<Record<string, FilePatchState>>({});
+  const [labels, setLabels] = useState<Label[]>([]);
+  const [inlineAction, setInlineAction] = useState<GitHubPRInlineActionKind | null>(null);
+  const [mutationKey, setMutationKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (repoPath && prNumber) {
       void selectPR(repoPath, prNumber);
     }
   }, [repoPath, prNumber, selectPR]);
+
+  useEffect(() => {
+    if (!repoPath) return;
+    let cancelled = false;
+
+    void invoke<Label[]>("github_list_labels", { repoPath })
+      .catch(() => [])
+      .then((nextLabels) => {
+        if (!cancelled) setLabels(nextLabels);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repoPath]);
 
   useEffect(() => {
     const deepLinkedFilePath = parseSelectedFilePathFromPRBufferPath(prBuffer?.path ?? "");
@@ -319,6 +301,12 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     return [...commentItems, ...commitItems].sort((a, b) => a.createdAt - b.createdAt);
   }, [commits, selectedPRComments]);
 
+  const availableLabels = useMemo(() => {
+    const labelsByName = new Map(labels.map((label) => [label.name, label]));
+    for (const label of selectedPRDetails?.labels ?? []) labelsByName.set(label.name, label);
+    return Array.from(labelsByName.values());
+  }, [labels, selectedPRDetails?.labels]);
+
   const deferredFileQuery = useDeferredValue(fileQuery);
   const filteredDiff = useMemo(() => {
     const query = deferredFileQuery.trim().toLowerCase();
@@ -385,6 +373,118 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     }
   }, [activeTab, repoPath, prNumber, selectPR, fetchPRContent]);
 
+  const refreshPR = useCallback(
+    async (mode: "comments" | "full" = "full") => {
+      if (!repoPath) return;
+      await selectPR(repoPath, prNumber, { force: true });
+      void fetchPRs(repoPath, { force: true });
+      await fetchPRContent(repoPath, prNumber, { force: true, mode });
+    },
+    [fetchPRContent, fetchPRs, prNumber, repoPath, selectPR],
+  );
+
+  const updatePR = useCallback(
+    async (
+      changes: Partial<Pick<PullRequestDetails, "title" | "body" | "labels" | "assignees">>,
+    ) => {
+      if (!repoPath || !selectedPRDetails || mutationKey) return false;
+      const next = { ...selectedPRDetails, ...changes };
+      setMutationKey("edit");
+      try {
+        await invoke<PullRequestDetails>("github_update_pull_request", {
+          repoPath,
+          prNumber,
+          title: next.title,
+          body: next.body,
+          labels: next.labels.map((label) => label.name),
+          assignees: next.assignees.map((assignee) => assignee.login),
+        });
+        await refreshPR("comments");
+        toast.success("Pull request updated");
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to update pull request");
+        return false;
+      } finally {
+        setMutationKey(null);
+      }
+    },
+    [mutationKey, prNumber, refreshPR, repoPath, selectedPRDetails],
+  );
+
+  const openInlineAction = useCallback(
+    (kind: GitHubPRInlineActionKind) => {
+      if (prBuffer) {
+        updateBuffer({
+          ...prBuffer,
+          path: buildPRBufferPath(prNumber, null, "activity"),
+        });
+      }
+      setActiveTab("activity");
+      setInlineAction(kind);
+    },
+    [prBuffer, prNumber, updateBuffer],
+  );
+
+  const submitInlineAction = useCallback(
+    async (body: string, method: GitHubPRMergeMethod) => {
+      if (!repoPath || !inlineAction || mutationKey) return;
+      setMutationKey(inlineAction);
+      try {
+        if (inlineAction === "comment") {
+          await invoke("github_add_pr_comment", { repoPath, prNumber, body });
+        } else if (inlineAction === "approve" || inlineAction === "request-changes") {
+          await invoke("github_submit_pr_review", {
+            repoPath,
+            prNumber,
+            event: inlineAction === "approve" ? "APPROVE" : "REQUEST_CHANGES",
+            body,
+          });
+        } else {
+          await invoke("github_merge_pull_request", { repoPath, prNumber, method });
+        }
+
+        await refreshPR(inlineAction === "merge" ? "full" : "comments");
+        const completedAction = inlineAction;
+        setInlineAction(null);
+        toast.success(
+          completedAction === "comment"
+            ? "Comment added"
+            : completedAction === "approve"
+              ? "Pull request approved"
+              : completedAction === "request-changes"
+                ? "Changes requested"
+                : "Pull request merged",
+        );
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Pull request action failed");
+      } finally {
+        setMutationKey(null);
+      }
+    },
+    [inlineAction, mutationKey, prNumber, refreshPR, repoPath],
+  );
+
+  const closePullRequest = useCallback(async () => {
+    if (!repoPath || mutationKey) return;
+    const confirmed = await showConfirmDialog("Close this pull request without merging it?", {
+      title: "Close pull request",
+      confirmLabel: "Close PR",
+    });
+    if (!confirmed) return;
+
+    setMutationKey("close");
+    try {
+      await invoke("github_close_pull_request", { repoPath, prNumber });
+      await refreshPR("full");
+      toast.success("Pull request closed");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to close pull request");
+    } finally {
+      setMutationKey(null);
+    }
+  }, [mutationKey, prNumber, refreshPR, repoPath]);
+
   const handleCopyPRLink = useCallback(() => {
     if (!selectedPRDetails?.url) {
       toast.error("PR link is not available.");
@@ -402,65 +502,15 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   }, [selectedPRDetails?.headRef]);
 
   const handleToggleFilesView = useCallback(() => {
-    if (!selectedPRDiff || !selectedPRDetails) {
-      // Diff not loaded yet — fetch first, then open
-      if (repoPath) {
-        void fetchPRContent(repoPath, prNumber, { mode: "files" }).then(() => {
-          // Will be handled on next render when data is available
-        });
-      }
-      return;
-    }
-
-    const sectionIndex = buildDiffSectionIndex(selectedPRDiff);
-    const prFiles = selectedPRFiles.map(toFileDiffFromMetadata).filter((f) => f.path.length > 0);
-
-    const gitDiffs: GitDiff[] = [];
-    for (const file of prFiles) {
-      const patch = extractFilePatch(selectedPRDiff, file.path, sectionIndex);
-      const lines = patch?.lines ?? [];
-      const diffLines = parsePatchLinesToGitDiffLines(lines);
-
-      gitDiffs.push({
-        file_path: file.path,
-        old_path: file.oldPath,
-        new_path: file.path,
-        is_new: file.status === "added",
-        is_deleted: file.status === "deleted",
-        is_renamed: file.status === "renamed",
-        lines: diffLines,
+    const nextTab = activeTab === "files" ? "activity" : "files";
+    if (prBuffer) {
+      updateBuffer({
+        ...prBuffer,
+        path: buildPRBufferPath(prNumber, nextTab === "files" ? selectedFilePath : null, nextTab),
       });
     }
-
-    const totalAdditions =
-      selectedPRDetails.additions ?? prFiles.reduce((sum, f) => sum + f.additions, 0);
-    const totalDeletions =
-      selectedPRDetails.deletions ?? prFiles.reduce((sum, f) => sum + f.deletions, 0);
-
-    const multiDiff: MultiFileDiff = {
-      title: `PR #${prNumber}: ${selectedPRDetails.title}`,
-      commitHash: `pr-${prNumber}`,
-      files: gitDiffs,
-      totalFiles: gitDiffs.length,
-      totalAdditions,
-      totalDeletions,
-      isLoading: false,
-    };
-
-    const virtualPath = `diff://pr-${prNumber}/changes`;
-    useBufferStore
-      .getState()
-      .actions.openBuffer(
-        virtualPath,
-        `PR #${prNumber} Changes`,
-        "",
-        false,
-        undefined,
-        true,
-        true,
-        multiDiff,
-      );
-  }, [fetchPRContent, prNumber, repoPath, selectedPRDiff, selectedPRDetails, selectedPRFiles]);
+    setActiveTab(nextTab);
+  }, [activeTab, prBuffer, prNumber, selectedFilePath, updateBuffer]);
 
   const handleOpenChangedFile = useCallback(
     (relativePath: string) => {
@@ -553,70 +603,11 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
           onCopyPRLink={handleCopyPRLink}
           onCopyBranchName={handleCopyBranchName}
           onToggleFilesView={handleToggleFilesView}
-          onEdit={() => {
-            if (!repoPath) return;
-            openGitHubFormBuffer({
-              repoPath,
-              formKind: "pull-request",
-              operation: "edit",
-              resourceNumber: prNumber,
-            });
-          }}
-          onComment={() => {
-            if (repoPath) {
-              openGitHubFormBuffer({
-                repoPath,
-                formKind: "pull-request",
-                operation: "action",
-                resourceNumber: prNumber,
-                actionKind: "comment",
-              });
-            }
-          }}
-          onApprove={() => {
-            if (repoPath) {
-              openGitHubFormBuffer({
-                repoPath,
-                formKind: "pull-request",
-                operation: "action",
-                resourceNumber: prNumber,
-                actionKind: "approve",
-              });
-            }
-          }}
-          onRequestChanges={() => {
-            if (repoPath) {
-              openGitHubFormBuffer({
-                repoPath,
-                formKind: "pull-request",
-                operation: "action",
-                resourceNumber: prNumber,
-                actionKind: "request-changes",
-              });
-            }
-          }}
-          onMerge={() => {
-            if (repoPath) {
-              openGitHubFormBuffer({
-                repoPath,
-                formKind: "pull-request",
-                operation: "action",
-                resourceNumber: prNumber,
-                actionKind: "merge",
-              });
-            }
-          }}
-          onClosePR={() => {
-            if (repoPath) {
-              openGitHubFormBuffer({
-                repoPath,
-                formKind: "pull-request",
-                operation: "action",
-                resourceNumber: prNumber,
-                actionKind: "close",
-              });
-            }
-          }}
+          onComment={() => openInlineAction("comment")}
+          onApprove={() => openInlineAction("approve")}
+          onRequestChanges={() => openInlineAction("request-changes")}
+          onMerge={() => openInlineAction("merge")}
+          onClosePR={() => void closePullRequest()}
         />
       }
     >
@@ -643,14 +634,15 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
               checksSummary={checksSummary}
               reviewSummary={reviewSummary}
               onShowFiles={handleToggleFilesView}
+              availableLabels={availableLabels}
+              onLabelsChange={(nextLabels) => void updatePR({ labels: nextLabels })}
+              onAssigneesChange={(assignees) => void updatePR({ assignees })}
             />
           }
         >
           <div className="space-y-8">
             <section className="space-y-2">
-              <h1 className="font-sans text-2xl leading-tight font-semibold tracking-tight text-foreground">
-                {pr.title}
-              </h1>
+              <GitHubInlineTitle value={pr.title} onSave={(title) => updatePR({ title })} />
               <div className="font-sans ui-text-sm flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-subtle-foreground">
                 <GitHubAvatar
                   login={pr.author.login}
@@ -666,6 +658,15 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
               </div>
             </section>
 
+            {inlineAction ? (
+              <GitHubPRInlineAction
+                kind={inlineAction}
+                isSubmitting={mutationKey === inlineAction}
+                onCancel={() => setInlineAction(null)}
+                onSubmit={submitInlineAction}
+              />
+            ) : null}
+
             <PRActivityPanel
               body={pr.body}
               repositoryUrl={repositoryUrl}
@@ -674,6 +675,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
               isLoadingContent={isLoadingContent}
               contentError={contentError}
               onRetry={handleRefresh}
+              onBodySave={(body) => updatePR({ body })}
             />
           </div>
         </GitHubDetailLayout>

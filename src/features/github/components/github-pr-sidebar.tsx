@@ -1,7 +1,8 @@
 import { CheckCircleIcon as CheckCircle2, GitPullRequestIcon as GitPullRequest } from "@/ui/icons";
 import { Button } from "@/ui/button";
-import type { PullRequestDetails } from "../types/github.types";
+import type { Label, PullRequestDetails } from "../types/github.types";
 import { GitHubAvatar } from "./github-avatar";
+import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 import { GitHubDetailSection, GitHubDetailSidebar } from "./github-viewer-shell";
 import { CIStatusIndicator, LabelBadges, LinkedIssuesList, MergeStatusBadge } from "./pr-status";
 
@@ -11,6 +12,9 @@ interface GitHubPRSidebarProps {
   checksSummary: string;
   reviewSummary: string | null;
   onShowFiles: () => void;
+  availableLabels: Label[];
+  onLabelsChange: (labels: Label[]) => void;
+  onAssigneesChange: (assignees: PullRequestDetails["assignees"]) => void;
 }
 
 export function GitHubPRSidebar({
@@ -19,6 +23,9 @@ export function GitHubPRSidebar({
   checksSummary,
   reviewSummary,
   onShowFiles,
+  availableLabels,
+  onLabelsChange,
+  onAssigneesChange,
 }: GitHubPRSidebarProps) {
   const isClosed = pr.state === "closed";
 
@@ -87,8 +94,22 @@ export function GitHubPRSidebar({
         </Button>
       </GitHubDetailSection>
 
-      {pr.assignees.length > 0 ? (
-        <GitHubDetailSection label="Assignees">
+      <GitHubDetailSection
+        label="Assignees"
+        action={
+          <GitHubAssigneePicker
+            value={pr.assignees.map((assignee) => assignee.login)}
+            onChange={(usernames) => {
+              onAssigneesChange(
+                usernames.map(
+                  (login) => pr.assignees.find((assignee) => assignee.login === login) ?? { login },
+                ),
+              );
+            }}
+          />
+        }
+      >
+        {pr.assignees.length > 0 ? (
           <div className="space-y-2">
             {pr.assignees.map((assignee) => (
               <div key={assignee.login} className="flex min-w-0 items-center gap-2">
@@ -102,8 +123,10 @@ export function GitHubPRSidebar({
               </div>
             ))}
           </div>
-        </GitHubDetailSection>
-      ) : null}
+        ) : (
+          <span className="text-subtle-foreground">No assignees</span>
+        )}
+      </GitHubDetailSection>
 
       {pr.linkedIssues.length > 0 ? (
         <GitHubDetailSection label="Linked issues">
@@ -111,11 +134,24 @@ export function GitHubPRSidebar({
         </GitHubDetailSection>
       ) : null}
 
-      {pr.labels.length > 0 ? (
-        <GitHubDetailSection label="Labels">
+      <GitHubDetailSection
+        label="Labels"
+        action={
+          <GitHubLabelPicker
+            labels={availableLabels}
+            selectedNames={new Set(pr.labels.map((label) => label.name))}
+            onChange={(selectedNames) => {
+              onLabelsChange(availableLabels.filter((label) => selectedNames.has(label.name)));
+            }}
+          />
+        }
+      >
+        {pr.labels.length > 0 ? (
           <LabelBadges labels={pr.labels} />
-        </GitHubDetailSection>
-      ) : null}
+        ) : (
+          <span className="text-subtle-foreground">No labels</span>
+        )}
+      </GitHubDetailSection>
     </GitHubDetailSidebar>
   );
 }
