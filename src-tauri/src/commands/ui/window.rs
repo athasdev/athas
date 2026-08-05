@@ -750,7 +750,6 @@ fn build_webview_bridge_script(
 }
 
 #[command]
-#[allow(clippy::too_many_arguments)]
 pub async fn create_embedded_webview(
    app: tauri::AppHandle<AthasRuntime>,
    window: tauri::WebviewWindow<AthasRuntime>,

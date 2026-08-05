@@ -58,7 +58,6 @@ pub async fn get_mongo_collections(
    Ok(collections)
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn query_mongo_documents(
    connection_id: String,
    database: String,
