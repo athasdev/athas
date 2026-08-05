@@ -21,8 +21,15 @@ import {
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
 import Tooltip from "@/ui/tooltip";
+import Select from "@/ui/select";
 import { useGitHubStore } from "../stores/github.store";
-import type { IssueComment, IssueDetails } from "../types/github.types";
+import type {
+  IssueComment,
+  IssueDetails,
+  IssueMilestone,
+  IssueType,
+  Label,
+} from "../types/github.types";
 import {
   GITHUB_ISSUE_DETAILS_TTL_MS,
   githubIssueDetailsCache,
@@ -31,8 +38,9 @@ import {
 import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
 import { CommentItem } from "./comment-item";
 import { GitHubAvatar } from "./github-avatar";
-import GitHubMarkdown from "./github-markdown";
+import { GitHubInlineMarkdown, GitHubInlineTitle } from "./github-inline-editors";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
+import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 import { LabelBadges } from "./pr-status";
 import {
   GitHubDetailLayout,
@@ -52,7 +60,6 @@ interface GitHubIssueViewerProps {
 
 const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssueViewerProps) => {
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
-  const openGitHubFormBuffer = useBufferStore.use.actions().openGitHubFormBuffer;
   const buffer = useBufferStore((state) => state.buffers.find((item) => item.id === bufferId));
   const [details, setDetails] = useState<IssueDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,6 +67,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
   const [visibleCommentCount, setVisibleCommentCount] = useState(8);
   const [commentBody, setCommentBody] = useState("");
   const [mutationKey, setMutationKey] = useState<string | null>(null);
+  const [labels, setLabels] = useState<Label[]>([]);
+  const [milestones, setMilestones] = useState<IssueMilestone[]>([]);
+  const [issueTypes, setIssueTypes] = useState<IssueType[]>([]);
   const currentUser = useGitHubStore((state) => state.currentUser);
   const repositoryUrl = useMemo(
     () => details?.url.replace(/\/issues\/\d+$/, "") ?? undefined,
@@ -69,6 +79,11 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
     () => details?.comments.slice(0, visibleCommentCount) ?? [],
     [details?.comments, visibleCommentCount],
   );
+  const availableLabels = useMemo(() => {
+    const labelsByName = new Map(labels.map((label) => [label.name, label]));
+    for (const label of details?.labels ?? []) labelsByName.set(label.name, label);
+    return Array.from(labelsByName.values());
+  }, [details?.labels, labels]);
 
   const fetchIssue = useCallback(
     async (force = false) => {
@@ -119,6 +134,26 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
   useEffect(() => {
     void fetchIssue();
   }, [fetchIssue]);
+
+  useEffect(() => {
+    if (!repoPath) return;
+    let cancelled = false;
+
+    void Promise.all([
+      invoke<Label[]>("github_list_labels", { repoPath }).catch(() => []),
+      invoke<IssueMilestone[]>("github_list_milestones", { repoPath }).catch(() => []),
+      invoke<IssueType[]>("github_list_issue_types", { repoPath }).catch(() => []),
+    ]).then(([nextLabels, nextMilestones, nextIssueTypes]) => {
+      if (cancelled) return;
+      setLabels(nextLabels);
+      setMilestones(nextMilestones);
+      setIssueTypes(nextIssueTypes);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repoPath]);
 
   useEffect(() => {
     if (!details || !buffer || buffer.type !== "githubIssue") return;
@@ -243,6 +278,37 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
     [applyIssueDetails, issueNumber, repoPath, runMutation],
   );
 
+  const updateIssue = useCallback(
+    (
+      changes: Partial<
+        Pick<IssueDetails, "title" | "body" | "labels" | "assignees" | "milestone" | "issueType">
+      >,
+    ) => {
+      if (!repoPath || !details) return Promise.resolve(false);
+      const next = { ...details, ...changes };
+
+      return runMutation(
+        "edit",
+        () =>
+          invoke<IssueDetails>("github_update_issue", {
+            repoPath,
+            issueNumber,
+            title: next.title,
+            body: next.body,
+            labels: next.labels.map((label) => label.name),
+            assignees: next.assignees.map((assignee) => assignee.login),
+            milestone: next.milestone?.number ?? null,
+            issueType: next.issueType?.name ?? null,
+          }),
+        (nextDetails) => {
+          applyIssueDetails(nextDetails);
+          toast.success("Issue updated");
+        },
+      );
+    },
+    [applyIssueDetails, details, issueNumber, repoPath, runMutation],
+  );
+
   const updateLock = useCallback(
     async (lockReason?: "off-topic" | "too heated" | "resolved" | "spam") => {
       if (!repoPath || !details) return;
@@ -360,22 +426,6 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   Reopen
                 </Button>
               )}
-              <Button
-                onClick={() => {
-                  if (!repoPath || !details) return;
-                  openGitHubFormBuffer({
-                    repoPath,
-                    formKind: "issue",
-                    operation: "edit",
-                    resourceNumber: issueNumber,
-                  });
-                }}
-                disabled={!details}
-                variant="ghost"
-                size="xs"
-              >
-                Edit
-              </Button>
               <DropdownMenu>
                 <Tooltip content="Issue actions" side="bottom">
                   <DropdownMenuTrigger
@@ -494,18 +544,68 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               </GitHubDetailSection>
 
               <GitHubDetailSection label="Type">
-                <span className={details.issueType ? "text-foreground" : "text-subtle-foreground"}>
-                  {details.issueType?.name ?? "No type"}
-                </span>
+                <Select
+                  value={details.issueType?.name ?? "none"}
+                  options={[
+                    { value: "none", label: "No type" },
+                    ...issueTypes.map((issueType) => ({
+                      value: issueType.name,
+                      label: issueType.name,
+                    })),
+                  ]}
+                  onChange={(value) => {
+                    const issueType = issueTypes.find((item) => item.name === value) ?? null;
+                    void updateIssue({ issueType });
+                  }}
+                  size="xs"
+                  variant="ghost"
+                  className="w-full"
+                  triggerClassName="justify-start"
+                  aria-label="Issue type"
+                />
               </GitHubDetailSection>
 
               <GitHubDetailSection label="Milestone">
-                <span className={details.milestone ? "text-foreground" : "text-subtle-foreground"}>
-                  {details.milestone?.title ?? "No milestone"}
-                </span>
+                <Select
+                  value={details.milestone?.number.toString() ?? "none"}
+                  options={[
+                    { value: "none", label: "No milestone" },
+                    ...milestones.map((milestone) => ({
+                      value: milestone.number.toString(),
+                      label: milestone.title,
+                    })),
+                  ]}
+                  onChange={(value) => {
+                    const milestone =
+                      milestones.find((item) => item.number.toString() === value) ?? null;
+                    void updateIssue({ milestone });
+                  }}
+                  size="xs"
+                  variant="ghost"
+                  className="w-full"
+                  triggerClassName="justify-start"
+                  aria-label="Issue milestone"
+                />
               </GitHubDetailSection>
 
-              <GitHubDetailSection label="Assignees">
+              <GitHubDetailSection
+                label="Assignees"
+                action={
+                  <GitHubAssigneePicker
+                    value={details.assignees.map((assignee) => assignee.login)}
+                    onChange={(usernames) => {
+                      void updateIssue({
+                        assignees: usernames.map(
+                          (login) =>
+                            details.assignees.find((assignee) => assignee.login === login) ?? {
+                              login,
+                            },
+                        ),
+                      });
+                    }}
+                  />
+                }
+              >
                 {details.assignees.length > 0 ? (
                   <div className="space-y-2">
                     {details.assignees.map((assignee) => (
@@ -525,7 +625,20 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 )}
               </GitHubDetailSection>
 
-              <GitHubDetailSection label="Labels">
+              <GitHubDetailSection
+                label="Labels"
+                action={
+                  <GitHubLabelPicker
+                    labels={availableLabels}
+                    selectedNames={new Set(details.labels.map((label) => label.name))}
+                    onChange={(selectedNames) => {
+                      void updateIssue({
+                        labels: availableLabels.filter((label) => selectedNames.has(label.name)),
+                      });
+                    }}
+                  />
+                }
+              >
                 {details.labels.length > 0 ? (
                   <LabelBadges labels={details.labels} />
                 ) : (
@@ -547,9 +660,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
         >
           <div className="space-y-8">
             <section className="space-y-2">
-              <h1 className="font-sans text-2xl leading-tight font-semibold tracking-tight text-foreground">
-                {details.title}
-              </h1>
+              <GitHubInlineTitle value={details.title} onSave={(title) => updateIssue({ title })} />
               <div className="font-sans ui-text-sm flex items-center gap-2 text-subtle-foreground">
                 <GitHubAvatar
                   login={details.author.login}
@@ -567,19 +678,13 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">
                 Description
               </h2>
-              {details.body ? (
-                <GitHubMarkdown
-                  content={details.body}
-                  className="github-markdown-pr w-full"
-                  contentClassName="github-markdown-pr-content w-full max-w-none"
-                  repositoryUrl={repositoryUrl}
-                  repoPath={repoPath}
-                />
-              ) : (
-                <p className="font-sans ui-text-sm italic text-subtle-foreground">
-                  No description provided
-                </p>
-              )}
+              <GitHubInlineMarkdown
+                value={details.body}
+                emptyLabel="No description provided"
+                repositoryUrl={repositoryUrl}
+                repoPath={repoPath}
+                onSave={(body) => updateIssue({ body })}
+              />
             </section>
 
             <section className="space-y-3">
