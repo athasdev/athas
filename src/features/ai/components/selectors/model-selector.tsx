@@ -172,6 +172,7 @@ export function ModelSelector({
       aria-label="Select AI model"
       searchable
       searchableTrigger={isComposer ? "input" : "menu"}
+      openDirection={isComposer ? "up" : "down"}
       allowCustomValue={isCustomProvider}
       customValueLabel={(customValue) => `Use ${customValue}`}
       emptyLabel={isCustomProvider ? "Type a model name and press Enter" : "No models found"}

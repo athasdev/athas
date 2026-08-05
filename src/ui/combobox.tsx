@@ -26,7 +26,7 @@ const comboboxInputGroupVariants = cva(
   },
 );
 
-const comboboxInputPaddingVariants = cva("min-w-0 flex-1 bg-transparent outline-none", {
+const comboboxInputPaddingVariants = cva("min-w-0 flex-1 bg-transparent text-left outline-none", {
   variants: {
     size: {
       xs: "",
