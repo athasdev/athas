@@ -15,6 +15,8 @@ describe("Linux release packaging", () => {
 
     expect(window.transparent).toBe(false);
     expect(window.decorations).toBe(true);
+    expect(window.resizable).toBe(true);
+    expect(window.preventOverflow).toBe(true);
     expect(window).not.toHaveProperty("titleBarStyle");
   });
 

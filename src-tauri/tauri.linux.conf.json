@@ -13,6 +13,7 @@
         "resizable": true,
         "fullscreen": false,
         "center": true,
+        "preventOverflow": true,
         "minWidth": 400,
         "minHeight": 400,
         "shadow": true

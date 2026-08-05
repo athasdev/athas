@@ -250,6 +250,11 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
    {
       let _ = window.set_decorations(false);
    }
+
+   #[cfg(all(target_os = "linux", feature = "linux"))]
+   {
+      let _ = window.set_decorations(true);
+   }
 }
 
 #[cfg(target_os = "windows")]
@@ -471,6 +476,7 @@ fn create_labeled_app_window_internal(
       .inner_size(1200.0, 800.0)
       .min_inner_size(400.0, 400.0)
       .center()
+      .prevent_overflow()
       .decorations(true)
       .transparent(cfg!(any(target_os = "macos", target_os = "windows")))
       .resizable(true)
@@ -510,6 +516,8 @@ fn create_labeled_app_window_internal(
 
    let configure_started_at = Instant::now();
    configure_app_window(&window);
+   #[cfg(target_os = "linux")]
+   ensure_window_reachable(&window)?;
    log::info!(
       "[window-open:{label}] configure:end durationMs={} totalMs={}",
       configure_started_at.elapsed().as_millis(),
@@ -526,6 +534,83 @@ fn create_labeled_app_window_internal(
    );
 
    Ok(label)
+}
+
+#[cfg(target_os = "linux")]
+pub fn ensure_app_windows_reachable(app: &tauri::AppHandle<AthasRuntime>) {
+   for window in app.webview_windows().into_values() {
+      if let Err(error) = ensure_window_reachable(&window) {
+         log::warn!(
+            "Failed to fit window {} within the current monitor: {error}",
+            window.label()
+         );
+      }
+   }
+}
+
+#[cfg(target_os = "linux")]
+fn ensure_window_reachable(window: &tauri::WebviewWindow<AthasRuntime>) -> Result<(), String> {
+   if window.is_maximized().map_err(|error| error.to_string())?
+      || window.is_fullscreen().map_err(|error| error.to_string())?
+   {
+      return Ok(());
+   }
+
+   let monitor = window
+      .current_monitor()
+      .map_err(|error| error.to_string())?
+      .or(
+         window
+            .primary_monitor()
+            .map_err(|error| error.to_string())?,
+      );
+   let Some(monitor) = monitor else {
+      return Ok(());
+   };
+
+   let work_area = monitor.work_area();
+   let inner_size = window.inner_size().map_err(|error| error.to_string())?;
+   let outer_size = window.outer_size().map_err(|error| error.to_string())?;
+   let frame_width = outer_size.width.saturating_sub(inner_size.width);
+   let frame_height = outer_size.height.saturating_sub(inner_size.height);
+   let fitted_inner_size = tauri::PhysicalSize::new(
+      inner_size
+         .width
+         .min(work_area.size.width.saturating_sub(frame_width).max(1)),
+      inner_size
+         .height
+         .min(work_area.size.height.saturating_sub(frame_height).max(1)),
+   );
+
+   if fitted_inner_size != inner_size {
+      window
+         .set_size(fitted_inner_size)
+         .map_err(|error| error.to_string())?;
+   }
+
+   let fitted_outer_width = fitted_inner_size.width.saturating_add(frame_width);
+   let fitted_outer_height = fitted_inner_size.height.saturating_add(frame_height);
+   let position = window.outer_position().map_err(|error| error.to_string())?;
+   let min_x = work_area.position.x;
+   let min_y = work_area.position.y;
+   let available_x =
+      i32::try_from(work_area.size.width.saturating_sub(fitted_outer_width)).unwrap_or(i32::MAX);
+   let available_y =
+      i32::try_from(work_area.size.height.saturating_sub(fitted_outer_height)).unwrap_or(i32::MAX);
+   let max_x = min_x.saturating_add(available_x);
+   let max_y = min_y.saturating_add(available_y);
+   let fitted_position = tauri::PhysicalPosition::new(
+      position.x.clamp(min_x, max_x),
+      position.y.clamp(min_y, max_y),
+   );
+
+   if fitted_position != position {
+      window
+         .set_position(fitted_position)
+         .map_err(|error| error.to_string())?;
+   }
+
+   Ok(())
 }
 
 pub fn create_app_window_internal(
