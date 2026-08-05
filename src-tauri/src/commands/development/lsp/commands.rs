@@ -81,7 +81,6 @@ fn locations_from_goto_response(response: Option<GotoDefinitionResponse>) -> Opt
 }
 
 #[tauri::command]
-#[allow(clippy::too_many_arguments)]
 pub async fn lsp_start(
    app_handle: AppHandle,
    lsp_manager: State<'_, LspManager>,
@@ -123,7 +122,6 @@ pub fn lsp_stop(lsp_manager: State<'_, LspManager>, workspace_path: String) -> L
 }
 
 #[tauri::command]
-#[allow(clippy::too_many_arguments)]
 pub async fn lsp_start_for_file(
    app_handle: AppHandle,
    lsp_manager: State<'_, LspManager>,
