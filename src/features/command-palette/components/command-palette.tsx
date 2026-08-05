@@ -176,6 +176,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     reopenClosedTab,
     openWebViewerBuffer,
     openGitHubFormBuffer,
+    openContent,
   } = useBufferStore.use.actions();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
   const { openBuffer } = useBufferStore.use.actions();
@@ -309,6 +310,9 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       switchToNextBuffer,
       switchToPreviousBuffer,
       reopenClosedTab,
+      openMarkdownDocument: () => {
+        openContent({ type: "markdownDocument", documentId: crypto.randomUUID() });
+      },
       onClose,
     }),
     ...createGenerateActions({

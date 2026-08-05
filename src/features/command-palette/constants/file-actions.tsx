@@ -15,6 +15,7 @@ interface FileActionsParams {
   switchToNextBuffer: () => void;
   switchToPreviousBuffer: () => void;
   reopenClosedTab: () => Promise<void>;
+  openMarkdownDocument: () => void;
   onClose: () => void;
 }
 
@@ -32,6 +33,17 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       action: () => {
         onClose();
         void keymapRegistry.executeCommand("file.new");
+      },
+    },
+    {
+      id: "file-new-document",
+      label: "File: New Document",
+      description: "Open an untitled document in the rich Markdown editor",
+      icon: <FilePlus />,
+      category: "File",
+      action: () => {
+        onClose();
+        params.openMarkdownDocument();
       },
     },
     {

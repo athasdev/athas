@@ -172,6 +172,15 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         defaultHead: spec.defaultHead,
       };
     }
+    case "markdownDocument":
+      return {
+        ...base,
+        type: "markdownDocument",
+        path: `markdown-document://${spec.documentId}`,
+        name: "Untitled Document",
+        isPreview: false,
+        content: spec.content ?? "",
+      };
     case "markdownPreview":
       return {
         ...base,

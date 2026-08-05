@@ -93,6 +93,11 @@ const GitHubCreateView = lazy(() =>
     default: module.GitHubCreateView,
   })),
 );
+const MarkdownDocumentView = lazy(() =>
+  import("@/features/editor/markdown/markdown-document-view").then((module) => ({
+    default: module.MarkdownDocumentView,
+  })),
+);
 const ImageViewer = lazy(() =>
   import("@/features/viewer/image/components/image-viewer").then((m) => ({
     default: m.ImageViewer,
@@ -962,6 +967,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "githubForm":
           return <GitHubCreateView buffer={buffer} />;
+
+        case "markdownDocument":
+          return <MarkdownDocumentView bufferId={buffer.id} />;
 
         case "globalSearch":
           return <GlobalSearchBuffer />;

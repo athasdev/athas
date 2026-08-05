@@ -29,6 +29,7 @@ export type PaneContentType =
   | "githubIssue"
   | "githubAction"
   | "githubForm"
+  | "markdownDocument"
   | "markdownPreview"
   | "htmlPreview"
   | "csvPreview"
@@ -149,6 +150,11 @@ export interface GitHubFormContent extends PaneContentBase {
   defaultHead?: string;
 }
 
+export interface MarkdownDocumentContent extends PaneContentBase {
+  type: "markdownDocument";
+  content: string;
+}
+
 export interface MarkdownPreviewContent extends PaneContentBase {
   type: "markdownPreview";
   content: string;
@@ -212,6 +218,7 @@ export type PaneContent =
   | GitHubIssueContent
   | GitHubActionContent
   | GitHubFormContent
+  | MarkdownDocumentContent
   | MarkdownPreviewContent
   | HtmlPreviewContent
   | CsvPreviewContent
@@ -244,6 +251,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "githubIssue",
   "githubAction",
   "githubForm",
+  "markdownDocument",
   "globalSearch",
   "diagnostics",
   "references",
@@ -268,12 +276,14 @@ export function hasTextContent(
 ): c is
   | EditorContent
   | DiffContent
+  | MarkdownDocumentContent
   | MarkdownPreviewContent
   | HtmlPreviewContent
   | CsvPreviewContent {
   return (
     c.type === "editor" ||
     c.type === "diff" ||
+    c.type === "markdownDocument" ||
     c.type === "markdownPreview" ||
     c.type === "htmlPreview" ||
     c.type === "csvPreview"
@@ -365,6 +375,11 @@ export type OpenContentSpec =
       formKind: "pull-request" | "issue" | "action";
       operation: "create";
       defaultHead?: string;
+    }
+  | {
+      type: "markdownDocument";
+      documentId: string;
+      content?: string;
     }
   | {
       type: "markdownPreview";

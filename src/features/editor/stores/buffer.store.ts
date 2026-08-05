@@ -691,6 +691,23 @@ const createBufferStore = (workspaceId: string) => {
               return newBuffer.id;
             }
 
+            case "markdownDocument": {
+              const path = `markdown-document://${spec.documentId}`;
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
+
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
             case "pullRequest": {
               const path = spec.selectedFilePath
                 ? `pr://${spec.prNumber}?file=${encodeURIComponent(spec.selectedFilePath)}`
