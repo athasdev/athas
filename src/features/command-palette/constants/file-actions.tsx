@@ -1,9 +1,12 @@
 import {
   ClockCounterClockwiseIcon as ClockCounterClockwise,
   FilePlusIcon as FilePlus,
+  FloppyDiskIcon as Save,
+  FolderOpenIcon as FolderOpen,
 } from "@/ui/icons";
 import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
 import { createTabActions } from "@/features/tabs/constants/tab-actions";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import type { Action } from "../types/action.types";
 
 interface FileActionsParams {
@@ -20,6 +23,54 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
 
   const baseActions: Action[] = [
     {
+      id: "file-new",
+      label: "File: New File",
+      description: "Create a file in the current workspace",
+      icon: <FilePlus />,
+      category: "File",
+      commandId: "file.new",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("file.new");
+      },
+    },
+    {
+      id: "file-open-project",
+      label: "File: Open Project",
+      description: "Open a folder or project",
+      icon: <FolderOpen />,
+      category: "File",
+      commandId: "file.open",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("file.open");
+      },
+    },
+    {
+      id: "file-save",
+      label: "File: Save",
+      description: "Save the active file",
+      icon: <Save />,
+      category: "File",
+      commandId: "file.save",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("file.save");
+      },
+    },
+    {
+      id: "file-save-all",
+      label: "File: Save All",
+      description: "Save all modified files",
+      icon: <Save />,
+      category: "File",
+      commandId: "file.saveAll",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("file.saveAll");
+      },
+    },
+    {
       id: "file-save-as",
       label: "File: Save As",
       description: "Save current file with a new name",
@@ -28,7 +79,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       commandId: "file.saveAs",
       action: () => {
         onClose();
-        window.dispatchEvent(new CustomEvent("menu-save-as"));
+        void keymapRegistry.executeCommand("file.saveAs");
       },
     },
     {

@@ -3,6 +3,7 @@ import {
   buildPRBufferPath,
   isGitHubEntityLinkForRepository,
   isPRFilesViewPath,
+  parseGitHubCheckSuiteId,
   parseGitHubEntityLink,
 } from "../utils/github-link-utils";
 
@@ -38,6 +39,19 @@ describe("parseGitHubEntityLink", () => {
     });
   });
 
+  it("parses commit links", () => {
+    expect(
+      parseGitHubEntityLink(
+        "https://github.com/athasdev/athas/commit/a507c60d7efaf08ec9823e16cf937a731ed2756d",
+      ),
+    ).toMatchObject({
+      kind: "commit",
+      owner: "athasdev",
+      repo: "athas",
+      sha: "a507c60d7efaf08ec9823e16cf937a731ed2756d",
+    });
+  });
+
   it("accepts www.github.com links", () => {
     expect(parseGitHubEntityLink("https://www.github.com/athasdev/athas/pull/568")).toMatchObject({
       kind: "pullRequest",
@@ -67,6 +81,18 @@ describe("parseGitHubEntityLink", () => {
     expect(isGitHubEntityLinkForRepository(entityLink, "git@github.com:athasdev/athas.git")).toBe(
       true,
     );
+  });
+});
+
+describe("parseGitHubCheckSuiteId", () => {
+  it("reads check-suite notification API URLs", () => {
+    expect(
+      parseGitHubCheckSuiteId("https://api.github.com/repos/athasdev/athas/check-suites/501857806"),
+    ).toBe(501857806);
+  });
+
+  it("rejects unrelated URLs", () => {
+    expect(parseGitHubCheckSuiteId("https://github.com/athasdev/athas/actions")).toBeNull();
   });
 });
 

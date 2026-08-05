@@ -15,6 +15,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import { showPromptDialog } from "@/ui/dialog";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import type { Action } from "../types/action.types";
 
@@ -216,6 +217,30 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       action: () => {
         resetZoom("editor");
         onClose();
+      },
+    },
+    {
+      id: "terminal-new",
+      label: "Terminal: New Terminal",
+      description: "Create a new integrated terminal",
+      icon: <Terminal />,
+      category: "Terminal",
+      commandId: "terminal.new",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("terminal.new");
+      },
+    },
+    {
+      id: "terminal-find",
+      label: "Terminal: Find",
+      description: "Search in the active terminal",
+      icon: <Search />,
+      category: "Terminal",
+      commandId: "terminal.find",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("terminal.find");
       },
     },
     {

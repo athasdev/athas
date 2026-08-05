@@ -26,6 +26,7 @@ interface GitHubMarkdownEditorProps {
   placeholder?: string;
   autoFocus?: boolean;
   minHeight?: number;
+  disabled?: boolean;
 }
 
 export function GitHubMarkdownEditor({
@@ -34,6 +35,7 @@ export function GitHubMarkdownEditor({
   placeholder = "write a description…",
   autoFocus = false,
   minHeight = 224,
+  disabled = false,
 }: GitHubMarkdownEditorProps) {
   const editorRef = useRef<MDXEditorMethods>(null);
   const currentValueRef = useRef(value);
@@ -93,6 +95,7 @@ export function GitHubMarkdownEditor({
         } as CSSProperties
       }
       aria-label="Markdown editor"
+      aria-disabled={disabled}
     >
       {editorError ? (
         <div className="github-markdown-composer-error" role="alert">
@@ -109,6 +112,7 @@ export function GitHubMarkdownEditor({
         autoFocus={autoFocus}
         spellCheck
         trim={false}
+        readOnly={disabled}
         plugins={plugins}
         className="github-markdown-editor"
         contentEditableClassName="github-markdown-editor-content"

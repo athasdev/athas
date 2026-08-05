@@ -84,15 +84,19 @@ function parsePatchLinesToGitDiffLines(patchLines: string[]): GitDiffLine[] {
 
 interface GitHubPRViewerProps {
   prNumber: number;
+  bufferId: string;
 }
 
-const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
+const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const selectedRepoPath = useRepositoryStore.use.activeRepoPath();
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const prBuffer = useBufferStore((state) => {
     const buffer = state.buffers.find(
-      (candidate) => candidate.type === "pullRequest" && candidate.prNumber === prNumber,
+      (candidate) =>
+        candidate.id === bufferId &&
+        candidate.type === "pullRequest" &&
+        candidate.prNumber === prNumber,
     );
     return buffer?.type === "pullRequest" ? buffer : undefined;
   });

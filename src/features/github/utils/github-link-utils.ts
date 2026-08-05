@@ -22,7 +22,19 @@ interface GitHubActionRunLink {
   url: string;
 }
 
-export type GitHubEntityLink = GitHubPullRequestLink | GitHubIssueLink | GitHubActionRunLink;
+interface GitHubCommitLink {
+  kind: "commit";
+  owner: string;
+  repo: string;
+  sha: string;
+  url: string;
+}
+
+export type GitHubEntityLink =
+  | GitHubPullRequestLink
+  | GitHubIssueLink
+  | GitHubActionRunLink
+  | GitHubCommitLink;
 
 export function isGitHubEntityLinkForRepository(
   entityLink: GitHubEntityLink,
@@ -37,7 +49,7 @@ export function isGitHubEntityLinkForRepository(
   );
 }
 
-function parseGitHubRepositoryUrl(value: string): { owner: string; repo: string } | null {
+export function parseGitHubRepositoryUrl(value: string): { owner: string; repo: string } | null {
   const normalized = value.trim();
   const httpsMatch = normalized.match(
     /^https?:\/\/(?:www\.)?github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/i,
@@ -90,7 +102,27 @@ export function parseGitHubEntityLink(value: string): GitHubEntityLink | null {
       };
     }
 
+    if (section === "commit" && isCommitSha(id)) {
+      return {
+        kind: "commit",
+        owner,
+        repo,
+        sha: id,
+        url: url.toString(),
+      };
+    }
+
     return null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseGitHubCheckSuiteId(value: string): number | null {
+  try {
+    const url = new URL(value);
+    const match = url.pathname.match(/\/check-suites\/(\d+)(?:\/|$)/);
+    return match ? Number(match[1]) : null;
   } catch {
     return null;
   }
@@ -130,4 +162,8 @@ export function buildPRBufferPath(
 
 function isNumericId(value: string | undefined): value is string {
   return typeof value === "string" && /^\d+$/.test(value);
+}
+
+function isCommitSha(value: string | undefined): value is string {
+  return typeof value === "string" && /^[0-9a-f]{7,64}$/i.test(value);
 }

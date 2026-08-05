@@ -23,7 +23,14 @@ import Input from "@/ui/input";
 import Select from "@/ui/select";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
-import type { IssueListItem, Label, PullRequest, WorkflowListItem } from "../types/github.types";
+import type {
+  IssueListItem,
+  IssueMilestone,
+  IssueType,
+  Label,
+  PullRequest,
+  WorkflowListItem,
+} from "../types/github.types";
 import { useGitHubStore } from "../stores/github.store";
 import { githubActionListCache, githubIssueListCache } from "../utils/github-data-cache";
 import { getRepositoryDisplayName } from "../utils/github-viewer-utils";
@@ -146,6 +153,10 @@ function GitHubCreateViewContent({
   const [assignees, setAssignees] = useState<string[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
+  const [milestones, setMilestones] = useState<IssueMilestone[]>([]);
+  const [issueTypes, setIssueTypes] = useState<IssueType[]>([]);
+  const [milestone, setMilestone] = useState("none");
+  const [issueType, setIssueType] = useState("none");
   const [branches, setBranches] = useState<string[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [workflowId, setWorkflowId] = useState("");
@@ -163,15 +174,23 @@ function GitHubCreateViewContent({
     Promise.all([
       getBranches(repoPath),
       invoke<Label[]>("github_list_labels", { repoPath }).catch(() => []),
+      kind === "issue"
+        ? invoke<IssueMilestone[]>("github_list_milestones", { repoPath }).catch(() => [])
+        : Promise.resolve([]),
+      kind === "issue"
+        ? invoke<IssueType[]>("github_list_issue_types", { repoPath }).catch(() => [])
+        : Promise.resolve([]),
       kind === "action"
         ? invoke<WorkflowListItem[]>("github_list_workflows", { repoPath })
         : Promise.resolve([]),
     ])
-      .then(([nextBranches, nextLabels, nextWorkflows]) => {
+      .then(([nextBranches, nextLabels, nextMilestones, nextIssueTypes, nextWorkflows]) => {
         if (cancelled) return;
         const cleanBranches = nextBranches.filter(Boolean);
         setBranches(cleanBranches);
         setLabels(nextLabels);
+        setMilestones(nextMilestones);
+        setIssueTypes(nextIssueTypes);
         const activeWorkflows = nextWorkflows.filter((workflow) => workflow.state !== "deleted");
         setWorkflows(activeWorkflows);
         setWorkflowId((current) => current || activeWorkflows[0]?.id.toString() || "");
@@ -238,6 +257,8 @@ function GitHubCreateViewContent({
           body,
           labels: selectedLabelNames,
           assignees,
+          milestone: milestone === "none" ? null : Number(milestone),
+          issueType: issueType === "none" ? null : issueType,
         });
         onIssueCreated(issue);
         toast.success("Issue created", { description: `#${issue.number} ${issue.title}` });
@@ -552,6 +573,39 @@ ${statusSummary}`;
                   isLoading={isLoadingMetadata}
                 />
                 <GitHubAssigneePicker value={assignees} onChange={setAssignees} />
+                {kind === "issue" && milestones.length > 0 ? (
+                  <Select
+                    value={milestone}
+                    options={[
+                      { value: "none", label: "No milestone" },
+                      ...milestones.map((item) => ({
+                        value: item.number.toString(),
+                        label: item.title,
+                      })),
+                    ]}
+                    onChange={setMilestone}
+                    placeholder="Milestone"
+                    size="xs"
+                    className="w-40"
+                    searchable
+                    aria-label="Issue milestone"
+                  />
+                ) : null}
+                {kind === "issue" && issueTypes.length > 0 ? (
+                  <Select
+                    value={issueType}
+                    options={[
+                      { value: "none", label: "No type" },
+                      ...issueTypes.map((item) => ({ value: item.name, label: item.name })),
+                    ]}
+                    onChange={setIssueType}
+                    placeholder="Issue type"
+                    size="xs"
+                    className="w-40"
+                    searchable
+                    aria-label="Issue type"
+                  />
+                ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <Button

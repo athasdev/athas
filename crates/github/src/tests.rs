@@ -1,4 +1,4 @@
-use crate::{IssueDetails, PullRequest, PullRequestComment, PullRequestDetails};
+use crate::{IssueComment, IssueDetails, PullRequest, PullRequestComment, PullRequestDetails};
 use serde_json::json;
 
 #[test]
@@ -160,4 +160,28 @@ fn parses_issue_details_with_missing_nested_data() {
    assert!(issue.labels.is_empty());
    assert!(issue.assignees.is_empty());
    assert!(issue.comments.is_empty());
+   assert!(issue.state_reason.is_none());
+   assert!(!issue.locked);
+   assert!(issue.milestone.is_none());
+   assert!(issue.issue_type.is_none());
+}
+
+#[test]
+fn parses_issue_comment_identity_and_edit_metadata() {
+   let payload = json!({
+      "id": 123,
+      "author": { "login": "octocat" },
+      "body": "Updated comment",
+      "createdAt": "2026-08-01T10:00:00Z",
+      "updatedAt": "2026-08-02T10:00:00Z",
+      "url": "https://github.com/athasdev/athas/issues/1#issuecomment-123"
+   });
+
+   let comment: IssueComment =
+      serde_json::from_value(payload).expect("Issue comment should deserialize");
+
+   assert_eq!(comment.id, 123);
+   assert_eq!(comment.author.login, "octocat");
+   assert_eq!(comment.updated_at, "2026-08-02T10:00:00Z");
+   assert!(comment.url.ends_with("issuecomment-123"));
 }

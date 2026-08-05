@@ -950,7 +950,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           return <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />;
 
         case "pullRequest":
-          return <GitHubPRViewer prNumber={buffer.prNumber} />;
+          return <GitHubPRViewer prNumber={buffer.prNumber} bufferId={buffer.id} />;
 
         case "githubIssue":
           return (

@@ -24,6 +24,7 @@
 - Never change `AGENTS.md` unless the user explicitly asks.
 - Do not prefix unused variables with an underscore; delete them instead.
 - Do not use emojis in commit messages, logs, or documentation.
+- When adding a broadly useful user-facing action, add or update its command-palette entry; do not mirror low-level or context-only controls.
 - Validate the relevant checks after making changes instead of stopping at code edits.
 
 ## Branches And Releases

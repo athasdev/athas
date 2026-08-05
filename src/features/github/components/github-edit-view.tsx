@@ -71,11 +71,15 @@ export function GitHubEditView({ buffer }: { buffer: GitHubFormContent }) {
     body,
     labels,
     assignees,
+    milestone,
+    issueType,
   }: {
     title: string;
     body: string;
     labels: string[];
     assignees: string[];
+    milestone: number | null;
+    issueType: string | null;
   }) => {
     if (!number || isSubmitting) return;
     setIsSubmitting(true);
@@ -89,6 +93,8 @@ export function GitHubEditView({ buffer }: { buffer: GitHubFormContent }) {
           body,
           labels,
           assignees,
+          milestone,
+          issueType,
         });
         githubIssueDetailsCache.set(`${buffer.repoPath}::${number}`, details);
         githubIssueListCache.clear();
@@ -166,6 +172,10 @@ export function GitHubEditView({ buffer }: { buffer: GitHubFormContent }) {
           labels={resource.labels}
           initialLabelNames={resource.selectedLabelNames}
           initialAssignees={resource.assignees}
+          milestones={buffer.formKind === "issue" ? resource.milestones : undefined}
+          issueTypes={buffer.formKind === "issue" ? resource.issueTypes : undefined}
+          initialMilestone={buffer.formKind === "issue" ? resource.milestone : undefined}
+          initialIssueType={buffer.formKind === "issue" ? resource.issueType : undefined}
           titlePlaceholder={
             buffer.formKind === "pull-request" ? "Pull request title" : "Issue title"
           }

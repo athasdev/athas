@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
-import type { Label } from "../types/github.types";
+import Select from "@/ui/select";
+import type { IssueMilestone, IssueType, Label } from "../types/github.types";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 
@@ -15,10 +16,21 @@ interface GitHubTitleBodyFormProps {
   labels: Label[];
   initialLabelNames: string[];
   initialAssignees: string[];
+  milestones?: IssueMilestone[];
+  issueTypes?: IssueType[];
+  initialMilestone?: number | null;
+  initialIssueType?: string | null;
   submitLabel: string;
   isSubmitting?: boolean;
   onCancel: () => void;
-  onSubmit: (value: { title: string; body: string; labels: string[]; assignees: string[] }) => void;
+  onSubmit: (value: {
+    title: string;
+    body: string;
+    labels: string[];
+    assignees: string[];
+    milestone: number | null;
+    issueType: string | null;
+  }) => void;
 }
 
 export function GitHubTitleBodyForm({
@@ -29,6 +41,10 @@ export function GitHubTitleBodyForm({
   labels,
   initialLabelNames,
   initialAssignees,
+  milestones = [],
+  issueTypes = [],
+  initialMilestone = null,
+  initialIssueType = null,
   submitLabel,
   isSubmitting = false,
   onCancel,
@@ -38,6 +54,8 @@ export function GitHubTitleBodyForm({
   const [draftBody, setDraftBody] = useState(body);
   const [selectedLabels, setSelectedLabels] = useState(() => new Set(initialLabelNames));
   const [assignees, setAssignees] = useState(initialAssignees);
+  const [milestone, setMilestone] = useState(initialMilestone?.toString() ?? "none");
+  const [issueType, setIssueType] = useState(initialIssueType ?? "none");
   const canSubmit = draftTitle.trim().length > 0 && !isSubmitting;
 
   useEffect(() => {
@@ -45,7 +63,9 @@ export function GitHubTitleBodyForm({
     setDraftBody(body);
     setSelectedLabels(new Set(initialLabelNames));
     setAssignees(initialAssignees);
-  }, [body, initialAssignees, initialLabelNames, title]);
+    setMilestone(initialMilestone?.toString() ?? "none");
+    setIssueType(initialIssueType ?? "none");
+  }, [body, initialAssignees, initialIssueType, initialLabelNames, initialMilestone, title]);
 
   return (
     <form
@@ -58,6 +78,8 @@ export function GitHubTitleBodyForm({
           body: draftBody,
           labels: Array.from(selectedLabels),
           assignees,
+          milestone: milestone === "none" ? null : Number(milestone),
+          issueType: issueType === "none" ? null : issueType,
         });
       }}
     >
@@ -85,6 +107,39 @@ export function GitHubTitleBodyForm({
           onChange={setSelectedLabels}
         />
         <GitHubAssigneePicker value={assignees} onChange={setAssignees} />
+        {milestones.length > 0 ? (
+          <Select
+            value={milestone}
+            options={[
+              { value: "none", label: "No milestone" },
+              ...milestones.map((item) => ({
+                value: item.number.toString(),
+                label: item.title,
+              })),
+            ]}
+            onChange={setMilestone}
+            placeholder="Milestone"
+            size="xs"
+            className="w-40"
+            searchable
+            aria-label="Issue milestone"
+          />
+        ) : null}
+        {issueTypes.length > 0 ? (
+          <Select
+            value={issueType}
+            options={[
+              { value: "none", label: "No type" },
+              ...issueTypes.map((item) => ({ value: item.name, label: item.name })),
+            ]}
+            onChange={setIssueType}
+            placeholder="Issue type"
+            size="xs"
+            className="w-40"
+            searchable
+            aria-label="Issue type"
+          />
+        ) : null}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-border/60 border-t pt-3">
         <span className="font-sans ui-text-sm min-w-0 truncate text-subtle-foreground">

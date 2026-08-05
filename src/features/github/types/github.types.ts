@@ -102,12 +102,29 @@ export interface GitHubNotification {
   lastReadAt: string | null;
   repositoryFullName: string;
   url: string;
+  subjectUrl: string;
 }
 
-interface IssueComment {
+export interface IssueComment {
+  id: number;
   author: PullRequestAuthor;
   body: string;
   createdAt: string;
+  updatedAt: string;
+  url: string;
+}
+
+export interface IssueMilestone {
+  number: number;
+  title: string;
+  state: string;
+  dueOn: string | null;
+}
+
+export interface IssueType {
+  id: number;
+  name: string;
+  description: string | null;
 }
 
 export interface IssueDetails {
@@ -121,6 +138,13 @@ export interface IssueDetails {
   url: string;
   labels: Label[];
   assignees: PullRequestAuthor[];
+  stateReason: string | null;
+  locked: boolean;
+  activeLockReason: string | null;
+  milestone: IssueMilestone | null;
+  issueType: IssueType | null;
+  closedAt: string | null;
+  closedBy: PullRequestAuthor | null;
   comments: IssueComment[];
 }
 

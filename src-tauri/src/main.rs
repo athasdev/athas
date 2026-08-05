@@ -7,6 +7,7 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 use app_runtime::AthasRuntime;
 use app_setup::{configure_app, shutdown_background_services};
 use commands::*;
+use tauri_plugin_window_state::StateFlags;
 use terminal::{
    close_terminal, create_terminal, list_shells, terminal_resize, terminal_set_paused,
    terminal_write,
@@ -45,7 +46,11 @@ fn main() {
       .plugin(tauri_plugin_store::Builder::default().build())
       .plugin(tauri_plugin_clipboard_manager::init())
       .plugin(logger::init(log::LevelFilter::Info))
-      .plugin(tauri_plugin_window_state::Builder::new().build())
+      .plugin(
+         tauri_plugin_window_state::Builder::new()
+            .with_state_flags(window_state_flags())
+            .build(),
+      )
       .plugin(tauri_plugin_fs::init())
       .plugin(tauri_plugin_dialog::init())
       .plugin(tauri_plugin_shell::init())
@@ -128,13 +133,22 @@ fn main() {
          remove_github_token,
          github_check_auth,
          github_list_notifications,
+         github_resolve_notification_workflow_run,
          github_list_prs,
          github_list_issues,
          github_list_workflow_runs,
          github_list_workflows,
          github_list_labels,
+         github_list_milestones,
+         github_list_issue_types,
          github_create_issue,
          github_update_issue,
+         github_update_issue_state,
+         github_add_issue_comment,
+         github_update_issue_comment,
+         github_delete_issue_comment,
+         github_lock_issue,
+         github_unlock_issue,
          github_create_pull_request,
          github_update_pull_request,
          github_add_pr_comment,
@@ -413,9 +427,33 @@ fn main() {
       .build(tauri::generate_context!())
       .expect("error while building tauri application")
       .run(|app_handle, event| match event {
+         #[cfg(target_os = "linux")]
+         tauri::RunEvent::Ready => {
+            commands::ui::window::ensure_app_windows_reachable(app_handle);
+         }
          tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
             shutdown_background_services(app_handle);
          }
          _ => {}
       });
+}
+
+fn window_state_flags() -> StateFlags {
+   let mut flags = StateFlags::all();
+   flags.remove(StateFlags::DECORATIONS);
+   flags
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn window_state_does_not_override_platform_decorations() {
+      let flags = window_state_flags();
+
+      assert!(!flags.contains(StateFlags::DECORATIONS));
+      assert!(flags.contains(StateFlags::SIZE));
+      assert!(flags.contains(StateFlags::POSITION));
+   }
 }

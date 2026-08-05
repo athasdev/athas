@@ -175,6 +175,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     switchToPreviousBuffer,
     reopenClosedTab,
     openWebViewerBuffer,
+    openGitHubFormBuffer,
   } = useBufferStore.use.actions();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
   const { openBuffer } = useBufferStore.use.actions();
@@ -354,6 +355,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       onClose,
     }),
     ...createGitHubActions({
+      repoPath: activeRepoPath ?? rootFolderPath ?? null,
       setIsSidebarVisible,
       setActiveView,
       settings: {
@@ -367,6 +369,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       ) => void | Promise<void>,
       checkAuth: checkGitHubAuth,
       showToast,
+      openGitHubFormBuffer,
       onClose,
     }),
     ...createDatabaseActions({

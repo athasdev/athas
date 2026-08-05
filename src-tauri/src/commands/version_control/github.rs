@@ -1,7 +1,8 @@
 use crate::secure_storage::{get_secret, remove_secret, store_secret};
 pub use athas_github::{
-   GitHubNotification, IssueDetails, IssueListItem, Label, PullRequest, PullRequestComment,
-   PullRequestDetails, PullRequestFile, WorkflowListItem, WorkflowRunDetails, WorkflowRunListItem,
+   GitHubNotification, IssueComment, IssueDetails, IssueListItem, IssueMilestone, IssueType, Label,
+   PullRequest, PullRequestComment, PullRequestDetails, PullRequestFile, WorkflowListItem,
+   WorkflowRunDetails, WorkflowRunListItem,
 };
 
 async fn run_blocking<T, F>(operation: F) -> Result<T, String>
@@ -55,6 +56,27 @@ pub async fn github_list_notifications(
 }
 
 #[tauri::command]
+pub async fn github_resolve_notification_workflow_run(
+   app: crate::app_runtime::AppHandle,
+   repository_full_name: String,
+   check_suite_id: Option<i64>,
+   notification_title: String,
+   notification_updated_at: String,
+) -> Result<Option<WorkflowRunListItem>, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_resolve_notification_workflow_run(
+         repository_full_name,
+         check_suite_id,
+         notification_title,
+         notification_updated_at,
+         github_token,
+      )
+   })
+   .await
+}
+
+#[tauri::command]
 pub async fn github_list_issues(
    app: crate::app_runtime::AppHandle,
    repo_path: String,
@@ -99,6 +121,24 @@ pub async fn github_list_labels(
 }
 
 #[tauri::command]
+pub async fn github_list_milestones(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+) -> Result<Vec<IssueMilestone>, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_list_milestones(repo_path, github_token)).await
+}
+
+#[tauri::command]
+pub async fn github_list_issue_types(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+) -> Result<Vec<IssueType>, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_list_issue_types(repo_path, github_token)).await
+}
+
+#[tauri::command]
 pub async fn github_create_issue(
    app: crate::app_runtime::AppHandle,
    repo_path: String,
@@ -106,10 +146,21 @@ pub async fn github_create_issue(
    body: String,
    labels: Vec<String>,
    assignees: Vec<String>,
+   milestone: Option<i64>,
+   issue_type: Option<String>,
 ) -> Result<IssueListItem, String> {
    let github_token = get_stored_github_token(&app);
    run_blocking(move || {
-      athas_github::github_create_issue(repo_path, title, body, labels, assignees, github_token)
+      athas_github::github_create_issue(
+         repo_path,
+         title,
+         body,
+         labels,
+         assignees,
+         milestone,
+         issue_type,
+         github_token,
+      )
    })
    .await
 }
@@ -123,6 +174,8 @@ pub async fn github_update_issue(
    body: String,
    labels: Vec<String>,
    assignees: Vec<String>,
+   milestone: Option<i64>,
+   issue_type: Option<String>,
 ) -> Result<IssueDetails, String> {
    let github_token = get_stored_github_token(&app);
    run_blocking(move || {
@@ -133,10 +186,99 @@ pub async fn github_update_issue(
          body,
          labels,
          assignees,
+         milestone,
+         issue_type,
          github_token,
       )
    })
    .await
+}
+
+#[tauri::command]
+pub async fn github_update_issue_state(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   issue_number: i64,
+   state: String,
+   state_reason: Option<String>,
+) -> Result<IssueDetails, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_update_issue_state(
+         repo_path,
+         issue_number,
+         state,
+         state_reason,
+         github_token,
+      )
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_add_issue_comment(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   issue_number: i64,
+   body: String,
+) -> Result<IssueComment, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_add_issue_comment(repo_path, issue_number, body, github_token)
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_update_issue_comment(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   comment_id: i64,
+   body: String,
+) -> Result<IssueComment, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_update_issue_comment(repo_path, comment_id, body, github_token)
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_delete_issue_comment(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   comment_id: i64,
+) -> Result<(), String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_delete_issue_comment(repo_path, comment_id, github_token)
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_lock_issue(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   issue_number: i64,
+   lock_reason: Option<String>,
+) -> Result<(), String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_lock_issue(repo_path, issue_number, lock_reason, github_token)
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_unlock_issue(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   issue_number: i64,
+) -> Result<(), String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_unlock_issue(repo_path, issue_number, github_token))
+      .await
 }
 
 #[tauri::command]

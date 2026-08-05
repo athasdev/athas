@@ -140,14 +140,19 @@ const GitHubMarkdown = memo(
             return;
           }
 
-          startTransition(() => {
-            openGitHubActionBuffer({
-              runId: entityLink.runId,
-              repoPath,
-              title: `Run #${entityLink.runId}`,
-              url: entityLink.url,
+          if (entityLink.kind === "actionRun") {
+            startTransition(() => {
+              openGitHubActionBuffer({
+                runId: entityLink.runId,
+                repoPath,
+                title: `Run #${entityLink.runId}`,
+                url: entityLink.url,
+              });
             });
-          });
+            return;
+          }
+
+          void openUrl(entityLink.url);
           return;
         }
 

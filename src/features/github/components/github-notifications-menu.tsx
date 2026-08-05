@@ -1,15 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { getRemotes } from "@/features/git/api/git-remotes-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
+import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import {
-  ArrowClockwiseIcon as Refresh,
   BellIcon as Bell,
   ChatCircleTextIcon as MessageSquare,
   GitPullRequestIcon as GitPullRequest,
@@ -18,13 +17,19 @@ import {
 } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import Tooltip from "@/ui/tooltip";
+import { toast } from "sonner";
 import { useGitHubStore } from "../stores/github.store";
-import type { GitHubNotification } from "../types/github.types";
+import type { GitHubNotification, WorkflowRunListItem } from "../types/github.types";
 import {
   GITHUB_NOTIFICATION_LIST_TTL_MS,
   githubNotificationListCache,
 } from "../utils/github-data-cache";
-import { isGitHubEntityLinkForRepository, parseGitHubEntityLink } from "../utils/github-link-utils";
+import {
+  isGitHubEntityLinkForRepository,
+  parseGitHubCheckSuiteId,
+  parseGitHubEntityLink,
+} from "../utils/github-link-utils";
+import { resolveGitHubNotificationRepoPath } from "../utils/github-notification-routing";
 import { getTimeAgo } from "../utils/github-viewer-utils";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 
@@ -42,10 +47,11 @@ function NotificationIcon({ subjectType }: { subjectType: string }) {
 export function GitHubNotificationsMenu() {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
+  const availableRepoPaths = useRepositoryStore.use.availableRepoPaths();
   const repoPath = activeRepoPath ?? rootFolderPath ?? null;
   const isAuthenticated = useGitHubStore.use.isAuthenticated();
   const { checkAuth } = useGitHubStore.use.actions();
-  const { openPRBuffer, openGitHubIssueBuffer, openGitHubActionBuffer } =
+  const { openPRBuffer, openGitHubIssueBuffer, openGitHubActionBuffer, openWebViewerBuffer } =
     useBufferStore.use.actions();
   const hasBlockingModalOpen = useUIState(
     (state) =>
@@ -95,8 +101,29 @@ export function GitHubNotificationsMenu() {
   }, [checkAuth]);
 
   useEffect(() => {
-    if (isAuthenticated) void fetchNotifications();
+    if (!isAuthenticated) return;
+
+    void fetchNotifications();
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") void fetchNotifications(true);
+    }, GITHUB_NOTIFICATION_LIST_TTL_MS);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void fetchNotifications();
+    };
+
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, [fetchNotifications, isAuthenticated]);
+
+  useEffect(() => {
+    if (isOpen && isAuthenticated) void fetchNotifications();
+  }, [fetchNotifications, isAuthenticated, isOpen]);
 
   useEffect(() => {
     if (!isOpen || !hasBlockingModalOpen) return;
@@ -107,18 +134,22 @@ export function GitHubNotificationsMenu() {
     async (notification: GitHubNotification) => {
       setIsOpen(false);
       const link = parseGitHubEntityLink(notification.url);
-      const remotes = repoPath ? await getRemotes(repoPath) : [];
+      const repositoryUrl = `https://github.com/${notification.repositoryFullName}`;
+      const targetRepoPath = await resolveGitHubNotificationRepoPath(
+        notification.repositoryFullName,
+        repoPath ? [repoPath, ...availableRepoPaths] : availableRepoPaths,
+      );
       const canOpenNatively =
-        link && remotes.some((remote) => isGitHubEntityLinkForRepository(link, remote.url));
+        targetRepoPath && link && isGitHubEntityLinkForRepository(link, repositoryUrl);
 
       if (canOpenNatively && link?.kind === "pullRequest") {
-        openPRBuffer(link.number, { repoPath: repoPath ?? undefined, title: notification.title });
+        openPRBuffer(link.number, { repoPath: targetRepoPath, title: notification.title });
         return;
       }
       if (canOpenNatively && link?.kind === "issue") {
         openGitHubIssueBuffer({
           issueNumber: link.number,
-          repoPath: repoPath ?? undefined,
+          repoPath: targetRepoPath,
           title: notification.title,
           url: notification.url,
         });
@@ -127,15 +158,66 @@ export function GitHubNotificationsMenu() {
       if (canOpenNatively && link?.kind === "actionRun") {
         openGitHubActionBuffer({
           runId: link.runId,
-          repoPath: repoPath ?? undefined,
+          repoPath: targetRepoPath,
           title: notification.title,
           url: notification.url,
         });
         return;
       }
-      if (notification.url) await openUrl(notification.url);
+
+      if (canOpenNatively && link?.kind === "commit" && !targetRepoPath.startsWith("github://")) {
+        const bufferId = await openCommitDiffBuffer({
+          repoPath: targetRepoPath,
+          commitHash: link.sha,
+          message: notification.title,
+        });
+        if (bufferId) return;
+      }
+
+      const checkSuiteId = parseGitHubCheckSuiteId(notification.subjectUrl);
+      if (targetRepoPath && notification.subjectType === "CheckSuite") {
+        try {
+          const run = await invoke<WorkflowRunListItem | null>(
+            "github_resolve_notification_workflow_run",
+            {
+              repositoryFullName: notification.repositoryFullName,
+              checkSuiteId,
+              notificationTitle: notification.title,
+              notificationUpdatedAt: notification.updatedAt,
+            },
+          );
+          if (run) {
+            openGitHubActionBuffer({
+              runId: run.databaseId,
+              repoPath: targetRepoPath,
+              title: run.displayTitle || run.name || run.workflowName || notification.title,
+              url: run.url,
+            });
+            return;
+          }
+        } catch (nextError) {
+          toast.error(
+            nextError instanceof Error
+              ? nextError.message
+              : "Failed to resolve the GitHub Actions run",
+          );
+          return;
+        }
+
+        toast.error("Could not match this notification to a GitHub Actions run.");
+        return;
+      }
+
+      openWebViewerBuffer(notification.url || repositoryUrl);
     },
-    [openGitHubActionBuffer, openGitHubIssueBuffer, openPRBuffer, repoPath],
+    [
+      availableRepoPaths,
+      openGitHubActionBuffer,
+      openGitHubIssueBuffer,
+      openPRBuffer,
+      openWebViewerBuffer,
+      repoPath,
+    ],
   );
 
   const notificationCount = notifications.length;
@@ -169,27 +251,11 @@ export function GitHubNotificationsMenu() {
         onClose={() => setIsOpen(false)}
         className="w-[380px] overflow-hidden rounded-xl p-0"
       >
-        <div className="flex items-center justify-between border-border/70 border-b px-3 py-2">
-          <div className="min-w-0">
-            <div className="font-medium text-foreground ui-text-base">Notifications</div>
-            <div className="text-subtle-foreground ui-text-sm">
-              {notificationCount === 1
-                ? "1 unread notification"
-                : `${notificationCount} unread notifications`}
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            disabled={!isAuthenticated || isLoading}
-            onClick={() => void fetchNotifications(true)}
-            tooltip="Refresh notifications"
-            tooltipSide="left"
-            aria-label="Refresh notifications"
-          >
-            {isLoading ? <Spinner label="Refreshing notifications" compact /> : <Refresh />}
-          </Button>
+        <div className="flex items-center gap-2 border-border/70 border-b px-3 py-2">
+          <div className="font-medium text-foreground ui-text-base">Notifications</div>
+          <Badge variant="accent" size="compact" className="h-5 min-w-5 tabular-nums">
+            {notificationCount}
+          </Badge>
         </div>
 
         {!isAuthenticated ? (

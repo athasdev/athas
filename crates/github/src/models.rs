@@ -109,6 +109,9 @@ pub struct GitHubNotification {
    pub repository_full_name: String,
    #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub url: String,
+   #[serde(rename = "subjectUrl")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub subject_url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -218,6 +221,8 @@ pub struct IssueListItem {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IssueComment {
+   #[serde(default)]
+   pub id: i64,
    #[serde(default, deserialize_with = "deserialize_author_or_default")]
    pub author: PullRequestAuthor,
    #[serde(default, deserialize_with = "deserialize_string_or_default")]
@@ -225,6 +230,31 @@ pub struct IssueComment {
    #[serde(rename = "createdAt")]
    #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub created_at: String,
+   #[serde(rename = "updatedAt")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub updated_at: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct IssueMilestone {
+   pub number: i64,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub title: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub state: String,
+   #[serde(rename = "dueOn", default)]
+   pub due_on: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct IssueType {
+   pub id: i64,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub name: String,
+   #[serde(default)]
+   pub description: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -250,6 +280,20 @@ pub struct IssueDetails {
    pub labels: Vec<Label>,
    #[serde(default, deserialize_with = "deserialize_vec_or_default")]
    pub assignees: Vec<PullRequestAuthor>,
+   #[serde(rename = "stateReason", default)]
+   pub state_reason: Option<String>,
+   #[serde(default)]
+   pub locked: bool,
+   #[serde(rename = "activeLockReason", default)]
+   pub active_lock_reason: Option<String>,
+   #[serde(default)]
+   pub milestone: Option<IssueMilestone>,
+   #[serde(rename = "issueType", default)]
+   pub issue_type: Option<IssueType>,
+   #[serde(rename = "closedAt", default)]
+   pub closed_at: Option<String>,
+   #[serde(rename = "closedBy", default)]
+   pub closed_by: Option<PullRequestAuthor>,
    #[serde(default, deserialize_with = "deserialize_vec_or_default")]
    pub comments: Vec<IssueComment>,
 }

@@ -1,8 +1,8 @@
 use crate::models::{
-   GitHubNotification, IssueComment, IssueDetails, IssueListItem, Label, PullRequest,
-   PullRequestAuthor, PullRequestComment, PullRequestDetails, PullRequestFile, ReviewRequest,
-   StatusCheck, WorkflowListItem, WorkflowRunDetails, WorkflowRunJob, WorkflowRunListItem,
-   WorkflowRunStep,
+   GitHubNotification, IssueComment, IssueDetails, IssueListItem, IssueMilestone, IssueType, Label,
+   PullRequest, PullRequestAuthor, PullRequestComment, PullRequestDetails, PullRequestFile,
+   ReviewRequest, StatusCheck, WorkflowListItem, WorkflowRunDetails, WorkflowRunJob,
+   WorkflowRunListItem, WorkflowRunStep,
 };
 use git2::Repository;
 use reqwest::{
@@ -105,7 +105,30 @@ struct RestIssue {
    body: Option<String>,
    labels: Option<Vec<RestLabel>>,
    assignees: Option<Vec<RestUser>>,
+   state_reason: Option<String>,
+   locked: Option<bool>,
+   active_lock_reason: Option<String>,
+   milestone: Option<RestMilestone>,
+   #[serde(rename = "type")]
+   issue_type: Option<RestIssueType>,
+   closed_at: Option<String>,
+   closed_by: Option<RestUser>,
    pull_request: Option<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+struct RestMilestone {
+   number: i64,
+   title: Option<String>,
+   state: Option<String>,
+   due_on: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct RestIssueType {
+   id: i64,
+   name: Option<String>,
+   description: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -135,9 +158,12 @@ struct RestNotification {
 
 #[derive(Deserialize)]
 struct RestComment {
+   id: Option<i64>,
    user: Option<RestUser>,
    body: Option<String>,
    created_at: Option<String>,
+   updated_at: Option<String>,
+   html_url: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -211,9 +237,10 @@ struct RestCheckApp {
    name: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 struct RestWorkflowRun {
    id: i64,
+   check_suite_id: Option<i64>,
    name: Option<String>,
    display_title: Option<String>,
    event: Option<String>,
@@ -299,6 +326,27 @@ impl GitHubApi {
          .map_err(|e| format!("Failed to parse GitHub API response: {e}"))
    }
 
+   fn get_all_pages_json<T>(&self, path: &str) -> Result<Vec<T>, String>
+   where
+      T: for<'de> Deserialize<'de>,
+   {
+      let mut items = Vec::new();
+      let mut page = 1;
+
+      loop {
+         let page_items: Vec<T> = self.get_json_with_query(
+            path,
+            &[("per_page", "100".to_string()), ("page", page.to_string())],
+         )?;
+         let page_len = page_items.len();
+         items.extend(page_items);
+         if page_len < 100 {
+            return Ok(items);
+         }
+         page += 1;
+      }
+   }
+
    fn get_text(&self, path: &str, accept: &str) -> Result<String, String> {
       let response = send_github_request(self.get(path, accept))?;
       response
@@ -355,6 +403,29 @@ impl GitHubApi {
       response
          .json::<T>()
          .map_err(|e| format!("Failed to parse GitHub API response: {e}"))
+   }
+
+   fn put_empty<B>(&self, path: &str, body: &B) -> Result<(), String>
+   where
+      B: Serialize + ?Sized,
+   {
+      send_github_request(
+         self
+            .apply_headers(
+               self.client.put(format!("{GITHUB_API_BASE}{path}")),
+               GITHUB_JSON_ACCEPT,
+            )
+            .json(body),
+      )?;
+      Ok(())
+   }
+
+   fn delete_empty(&self, path: &str) -> Result<(), String> {
+      send_github_request(self.apply_headers(
+         self.client.delete(format!("{GITHUB_API_BASE}{path}")),
+         GITHUB_JSON_ACCEPT,
+      ))?;
+      Ok(())
    }
 
    fn patch_json<T, B>(&self, path: &str, body: &B) -> Result<T, String>
@@ -489,7 +560,26 @@ fn parse_github_error_message(body: &str) -> Option<String> {
 }
 
 fn resolve_repo_slug(repo_path: &str) -> Result<RepoSlug, String> {
-   resolve_repo_remote(repo_path).map(|remote| remote.slug)
+   parse_github_repository_ref(repo_path)
+      .map(Ok)
+      .unwrap_or_else(|| resolve_repo_remote(repo_path).map(|remote| remote.slug))
+}
+
+fn parse_github_repository_ref(value: &str) -> Option<RepoSlug> {
+   let path = value.strip_prefix("github://")?;
+   parse_github_repository_full_name(path)
+}
+
+fn parse_github_repository_full_name(value: &str) -> Option<RepoSlug> {
+   let mut parts = value.split('/');
+   let owner = parts.next()?.to_string();
+   let name = parts.next()?.to_string();
+
+   if parts.next().is_some() || !is_valid_repo_part(&owner) || !is_valid_repo_part(&name) {
+      return None;
+   }
+
+   Some(RepoSlug { owner, name })
 }
 
 fn resolve_repo_remote(repo_path: &str) -> Result<RepoRemote, String> {
@@ -579,6 +669,8 @@ fn parse_github_remote_url(url: &str) -> Option<RepoSlug> {
 
 fn is_valid_repo_part(value: &str) -> bool {
    !value.is_empty()
+      && value != "."
+      && value != ".."
       && value
          .bytes()
          .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
@@ -699,6 +791,22 @@ fn issue_details_from_rest(issue: RestIssue, comments: Vec<IssueComment>) -> Iss
       url: issue.html_url.unwrap_or_default(),
       labels: labels_from_rest(issue.labels),
       assignees: users_to_authors(issue.assignees),
+      state_reason: issue.state_reason,
+      locked: issue.locked.unwrap_or_default(),
+      active_lock_reason: issue.active_lock_reason,
+      milestone: issue.milestone.map(|milestone| IssueMilestone {
+         number: milestone.number,
+         title: milestone.title.unwrap_or_default(),
+         state: milestone.state.unwrap_or_default(),
+         due_on: milestone.due_on,
+      }),
+      issue_type: issue.issue_type.map(|issue_type| IssueType {
+         id: issue_type.id,
+         name: issue_type.name.unwrap_or_default(),
+         description: issue_type.description,
+      }),
+      closed_at: issue.closed_at,
+      closed_by: issue.closed_by.map(|user| user_to_author(Some(user))),
       comments,
    }
 }
@@ -721,10 +829,45 @@ fn pr_comment_from_rest(comment: RestComment) -> PullRequestComment {
 
 fn issue_comment_from_rest(comment: RestComment) -> IssueComment {
    IssueComment {
+      id: comment.id.unwrap_or_default(),
       author: user_to_author(comment.user),
       body: comment.body.unwrap_or_default(),
       created_at: comment.created_at.unwrap_or_default(),
+      updated_at: comment.updated_at.unwrap_or_default(),
+      url: comment.html_url.unwrap_or_default(),
    }
+}
+
+fn issue_milestone_from_rest(milestone: RestMilestone) -> IssueMilestone {
+   IssueMilestone {
+      number: milestone.number,
+      title: milestone.title.unwrap_or_default(),
+      state: milestone.state.unwrap_or_default(),
+      due_on: milestone.due_on,
+   }
+}
+
+fn issue_type_from_rest(issue_type: RestIssueType) -> IssueType {
+   IssueType {
+      id: issue_type.id,
+      name: issue_type.name.unwrap_or_default(),
+      description: issue_type.description,
+   }
+}
+
+fn load_issue_details(
+   api: &GitHubApi,
+   slug: &RepoSlug,
+   issue_number: i64,
+) -> Result<IssueDetails, String> {
+   let issue: RestIssue = api.get_json(&repo_path(slug, &format!("issues/{issue_number}")))?;
+   let comments: Vec<RestComment> =
+      api.get_all_pages_json(&repo_path(slug, &format!("issues/{issue_number}/comments")))?;
+
+   Ok(issue_details_from_rest(
+      issue,
+      comments.into_iter().map(issue_comment_from_rest).collect(),
+   ))
 }
 
 fn workflow_run_from_rest(run: RestWorkflowRun) -> WorkflowRunListItem {
@@ -970,12 +1113,8 @@ pub fn github_list_notifications(
 
 fn notification_from_rest(notification: RestNotification) -> GitHubNotification {
    let repository_url = notification.repository.html_url.unwrap_or_default();
-   let url = notification
-      .subject
-      .url
-      .as_deref()
-      .and_then(github_api_url_to_web_url)
-      .unwrap_or(repository_url);
+   let subject_url = notification.subject.url.unwrap_or_default();
+   let url = github_api_url_to_web_url(&subject_url).unwrap_or(repository_url);
 
    GitHubNotification {
       id: notification.id,
@@ -987,22 +1126,32 @@ fn notification_from_rest(notification: RestNotification) -> GitHubNotification 
       last_read_at: notification.last_read_at,
       repository_full_name: notification.repository.full_name.unwrap_or_default(),
       url,
+      subject_url,
    }
 }
 
 fn github_api_url_to_web_url(value: &str) -> Option<String> {
    let path = value.strip_prefix("https://api.github.com/repos/")?;
-   let mut segments = path.split('/');
-   let owner = segments.next()?;
-   let repo = segments.next()?;
-   let resource = segments.next()?;
-   let id = segments.next()?;
+   let segments = path.split('/').collect::<Vec<_>>();
+   let [owner, repo, resource, remaining @ ..] = segments.as_slice() else {
+      return None;
+   };
 
-   if owner.is_empty() || repo.is_empty() || id.is_empty() {
+   if owner.is_empty() || repo.is_empty() {
       return None;
    }
 
-   let web_resource = match resource {
+   if resource == &"actions"
+      && remaining.first() == Some(&"runs")
+      && let Some(run_id) = remaining.get(1).filter(|value| !value.is_empty())
+   {
+      return Some(format!(
+         "https://github.com/{owner}/{repo}/actions/runs/{run_id}"
+      ));
+   }
+
+   let id = remaining.first().filter(|value| !value.is_empty())?;
+   let web_resource = match *resource {
       "pulls" => "pull",
       "issues" => "issues",
       "commits" => "commit",
@@ -1013,6 +1162,103 @@ fn github_api_url_to_web_url(value: &str) -> Option<String> {
    Some(format!(
       "https://github.com/{owner}/{repo}/{web_resource}/{id}"
    ))
+}
+
+pub fn github_resolve_notification_workflow_run(
+   repository_full_name: String,
+   check_suite_id: Option<i64>,
+   notification_title: String,
+   notification_updated_at: String,
+   github_token: Option<String>,
+) -> Result<Option<WorkflowRunListItem>, String> {
+   let slug = parse_github_repository_full_name(&repository_full_name)
+      .ok_or_else(|| "Invalid GitHub repository name".to_string())?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let response: WorkflowRunsResponse = api.get_json_with_query(
+      &repo_path(&slug, "actions/runs"),
+      &[("per_page", "100".to_string())],
+   )?;
+
+   Ok(resolve_notification_workflow_run(
+      &response.workflow_runs,
+      check_suite_id,
+      &notification_title,
+      &notification_updated_at,
+   )
+   .cloned()
+   .map(workflow_run_from_rest))
+}
+
+fn resolve_notification_workflow_run<'a>(
+   runs: &'a [RestWorkflowRun],
+   check_suite_id: Option<i64>,
+   notification_title: &str,
+   notification_updated_at: &str,
+) -> Option<&'a RestWorkflowRun> {
+   if let Some(check_suite_id) = check_suite_id
+      && let Some(run) = runs
+         .iter()
+         .find(|run| run.check_suite_id == Some(check_suite_id))
+   {
+      return Some(run);
+   }
+
+   let (workflow_name, result, branch) = parse_workflow_notification_title(notification_title)?;
+   let mut matching_runs = runs.iter().filter(|run| {
+      run.name.as_deref().is_some_and(|name| {
+         name.eq_ignore_ascii_case(workflow_name)
+            && run
+               .head_branch
+               .as_deref()
+               .is_some_and(|head_branch| head_branch == branch)
+            && workflow_notification_result_matches(run, result)
+      })
+   });
+   let first_match = matching_runs.next()?;
+
+   if notification_updated_at.is_empty()
+      || first_match
+         .updated_at
+         .as_deref()
+         .is_some_and(|updated_at| updated_at <= notification_updated_at)
+   {
+      return Some(first_match);
+   }
+
+   matching_runs
+      .find(|run| {
+         run.updated_at
+            .as_deref()
+            .is_some_and(|updated_at| updated_at <= notification_updated_at)
+      })
+      .or(Some(first_match))
+}
+
+fn parse_workflow_notification_title(value: &str) -> Option<(&str, &str, &str)> {
+   let (workflow_name, remainder) = value.split_once(" workflow run ")?;
+   let (result, branch) = remainder.split_once(" for ")?;
+   let branch = branch.strip_suffix(" branch")?;
+
+   if workflow_name.is_empty() || result.is_empty() || branch.is_empty() {
+      return None;
+   }
+
+   Some((workflow_name, result, branch))
+}
+
+fn workflow_notification_result_matches(run: &RestWorkflowRun, result: &str) -> bool {
+   let expected = match result {
+      "succeeded" => "success",
+      "failed" => "failure",
+      "timed out" => "timed_out",
+      "in progress" => "in_progress",
+      other => other,
+   };
+
+   run.conclusion
+      .as_deref()
+      .or(run.status.as_deref())
+      .is_some_and(|actual| actual.replace(' ', "_").eq_ignore_ascii_case(expected))
 }
 
 pub fn github_list_issues(
@@ -1094,12 +1340,45 @@ pub fn github_list_labels(
    Ok(labels_from_rest(Some(labels)))
 }
 
+pub fn github_list_milestones(
+   repo_path_value: String,
+   github_token: Option<String>,
+) -> Result<Vec<IssueMilestone>, String> {
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let milestones: Vec<RestMilestone> = api.get_json_with_query(
+      &repo_path(&slug, "milestones"),
+      &[
+         ("state", "all".to_string()),
+         ("per_page", "100".to_string()),
+      ],
+   )?;
+
+   Ok(milestones
+      .into_iter()
+      .map(issue_milestone_from_rest)
+      .collect())
+}
+
+pub fn github_list_issue_types(
+   repo_path_value: String,
+   github_token: Option<String>,
+) -> Result<Vec<IssueType>, String> {
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let issue_types: Vec<RestIssueType> = api.get_json(&repo_path(&slug, "issue-types"))?;
+
+   Ok(issue_types.into_iter().map(issue_type_from_rest).collect())
+}
+
 pub fn github_create_issue(
    repo_path_value: String,
    title: String,
    body: String,
    labels: Vec<String>,
    assignees: Vec<String>,
+   milestone: Option<i64>,
+   issue_type: Option<String>,
    github_token: Option<String>,
 ) -> Result<IssueListItem, String> {
    let title = title.trim();
@@ -1109,15 +1388,19 @@ pub fn github_create_issue(
 
    let slug = resolve_repo_slug(&repo_path_value)?;
    let api = GitHubApi::new_authenticated(github_token)?;
-   let issue: RestIssue = api.post_json(
-      &repo_path(&slug, "issues"),
-      &serde_json::json!({
-         "title": title,
-         "body": body.trim(),
-         "labels": labels,
-         "assignees": assignees,
-      }),
-   )?;
+   let mut payload = serde_json::json!({
+      "title": title,
+      "body": body.trim(),
+      "labels": labels,
+      "assignees": assignees,
+   });
+   if let Some(milestone) = milestone {
+      payload["milestone"] = serde_json::json!(milestone);
+   }
+   if let Some(issue_type) = issue_type.filter(|value| !value.trim().is_empty()) {
+      payload["type"] = serde_json::json!(issue_type);
+   }
+   let issue: RestIssue = api.post_json(&repo_path(&slug, "issues"), &payload)?;
 
    Ok(issue_from_rest(issue))
 }
@@ -1129,6 +1412,8 @@ pub fn github_update_issue(
    body: String,
    labels: Vec<String>,
    assignees: Vec<String>,
+   milestone: Option<i64>,
+   issue_type: Option<String>,
    github_token: Option<String>,
 ) -> Result<IssueDetails, String> {
    let title = title.trim();
@@ -1138,24 +1423,132 @@ pub fn github_update_issue(
 
    let slug = resolve_repo_slug(&repo_path_value)?;
    let api = GitHubApi::new_authenticated(github_token)?;
-   let issue: RestIssue = api.patch_json(
+   let payload = serde_json::json!({
+      "title": title,
+      "body": body.trim(),
+      "labels": labels,
+      "assignees": assignees,
+      "milestone": milestone,
+      "type": issue_type.filter(|value| !value.trim().is_empty()),
+   });
+   let _: RestIssue = api.patch_json(
       &repo_path(&slug, &format!("issues/{issue_number}")),
-      &serde_json::json!({
-         "title": title,
-         "body": body.trim(),
-         "labels": labels,
-         "assignees": assignees,
-      }),
-   )?;
-   let comments: Vec<RestComment> = api.get_json_with_query(
-      &repo_path(&slug, &format!("issues/{issue_number}/comments")),
-      &[("per_page", "100".to_string())],
+      &payload,
    )?;
 
-   Ok(issue_details_from_rest(
-      issue,
-      comments.into_iter().map(issue_comment_from_rest).collect(),
-   ))
+   load_issue_details(&api, &slug, issue_number)
+}
+
+pub fn github_update_issue_state(
+   repo_path_value: String,
+   issue_number: i64,
+   state: String,
+   state_reason: Option<String>,
+   github_token: Option<String>,
+) -> Result<IssueDetails, String> {
+   let state = state.to_lowercase();
+   if state != "open" && state != "closed" {
+      return Err("Issue state must be open or closed.".to_string());
+   }
+   let state_reason = state_reason.map(|value| value.to_lowercase());
+   let valid_reason = match (state.as_str(), state_reason.as_deref()) {
+      ("open", None | Some("reopened")) => true,
+      ("closed", None | Some("completed") | Some("not_planned")) => true,
+      _ => false,
+   };
+   if !valid_reason {
+      return Err("Unsupported issue state reason.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let _: RestIssue = api.patch_json(
+      &repo_path(&slug, &format!("issues/{issue_number}")),
+      &serde_json::json!({ "state": state, "state_reason": state_reason }),
+   )?;
+   load_issue_details(&api, &slug, issue_number)
+}
+
+pub fn github_add_issue_comment(
+   repo_path_value: String,
+   issue_number: i64,
+   body: String,
+   github_token: Option<String>,
+) -> Result<IssueComment, String> {
+   let body = body.trim();
+   if body.is_empty() {
+      return Err("Comment body is required.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let comment: RestComment = api.post_json(
+      &repo_path(&slug, &format!("issues/{issue_number}/comments")),
+      &serde_json::json!({ "body": body }),
+   )?;
+   Ok(issue_comment_from_rest(comment))
+}
+
+pub fn github_update_issue_comment(
+   repo_path_value: String,
+   comment_id: i64,
+   body: String,
+   github_token: Option<String>,
+) -> Result<IssueComment, String> {
+   let body = body.trim();
+   if body.is_empty() {
+      return Err("Comment body is required.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let comment: RestComment = api.patch_json(
+      &repo_path(&slug, &format!("issues/comments/{comment_id}")),
+      &serde_json::json!({ "body": body }),
+   )?;
+   Ok(issue_comment_from_rest(comment))
+}
+
+pub fn github_delete_issue_comment(
+   repo_path_value: String,
+   comment_id: i64,
+   github_token: Option<String>,
+) -> Result<(), String> {
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   api.delete_empty(&repo_path(&slug, &format!("issues/comments/{comment_id}")))
+}
+
+pub fn github_lock_issue(
+   repo_path_value: String,
+   issue_number: i64,
+   lock_reason: Option<String>,
+   github_token: Option<String>,
+) -> Result<(), String> {
+   let reason = lock_reason.map(|value| value.to_lowercase());
+   if !matches!(
+      reason.as_deref(),
+      None | Some("off-topic") | Some("too heated") | Some("resolved") | Some("spam")
+   ) {
+      return Err("Unsupported issue lock reason.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   api.put_empty(
+      &repo_path(&slug, &format!("issues/{issue_number}/lock")),
+      &serde_json::json!({ "lock_reason": reason }),
+   )
+}
+
+pub fn github_unlock_issue(
+   repo_path_value: String,
+   issue_number: i64,
+   github_token: Option<String>,
+) -> Result<(), String> {
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   api.delete_empty(&repo_path(&slug, &format!("issues/{issue_number}/lock")))
 }
 
 pub fn github_create_pull_request(
@@ -1549,16 +1942,7 @@ pub fn github_get_issue_details(
 ) -> Result<IssueDetails, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
    let api = GitHubApi::new_authenticated(github_token)?;
-   let issue: RestIssue = api.get_json(&repo_path(&slug, &format!("issues/{issue_number}")))?;
-   let comments: Vec<RestComment> = api.get_json_with_query(
-      &repo_path(&slug, &format!("issues/{issue_number}/comments")),
-      &[("per_page", "100".to_string())],
-   )?;
-
-   Ok(issue_details_from_rest(
-      issue,
-      comments.into_iter().map(issue_comment_from_rest).collect(),
-   ))
+   load_issue_details(&api, &slug, issue_number)
 }
 
 pub fn github_get_workflow_run_details(
@@ -1601,8 +1985,33 @@ pub fn github_get_workflow_job_logs(
 mod api_tests {
    use super::{
       GITHUB_JSON_ACCEPT, GITHUB_WORKFLOW_JOB_LOGS_ACCEPT, GitHubApi, github_api_url_to_web_url,
-      order_remote_names, parse_github_remote_url,
+      order_remote_names, parse_github_remote_url, parse_github_repository_ref,
+      parse_workflow_notification_title, resolve_notification_workflow_run,
    };
+
+   fn workflow_run(
+      id: i64,
+      check_suite_id: i64,
+      name: &str,
+      branch: &str,
+      conclusion: &str,
+      updated_at: &str,
+   ) -> super::RestWorkflowRun {
+      super::RestWorkflowRun {
+         id,
+         check_suite_id: Some(check_suite_id),
+         name: Some(name.to_string()),
+         display_title: None,
+         event: Some("push".to_string()),
+         status: Some("completed".to_string()),
+         conclusion: Some(conclusion.to_string()),
+         created_at: None,
+         updated_at: Some(updated_at.to_string()),
+         html_url: None,
+         head_branch: Some(branch.to_string()),
+         head_sha: None,
+      }
+   }
 
    #[test]
    fn parses_https_github_remote() {
@@ -1643,6 +2052,68 @@ mod api_tests {
             .as_deref(),
          Some("https://github.com/athasdev/athas/issues/17")
       );
+      assert_eq!(
+         github_api_url_to_web_url(
+            "https://api.github.com/repos/athasdev/athas/actions/runs/30955072179"
+         )
+         .as_deref(),
+         Some("https://github.com/athasdev/athas/actions/runs/30955072179")
+      );
+   }
+
+   #[test]
+   fn parses_api_backed_github_repository_refs() {
+      let slug = parse_github_repository_ref("github://indent-com/neo").unwrap();
+
+      assert_eq!(slug.owner, "indent-com");
+      assert_eq!(slug.name, "neo");
+      assert!(parse_github_repository_ref("github://indent-com/neo/extra").is_none());
+      assert!(parse_github_repository_ref("github://../neo").is_none());
+   }
+
+   #[test]
+   fn parses_real_check_suite_notification_titles() {
+      assert_eq!(
+         parse_workflow_notification_title("CI workflow run succeeded for main branch"),
+         Some(("CI", "succeeded", "main"))
+      );
+      assert_eq!(
+         parse_workflow_notification_title(
+            "Check workflow run failed for mehmetozguldev/notification-routing branch"
+         ),
+         Some(("Check", "failed", "mehmetozguldev/notification-routing"))
+      );
+   }
+
+   #[test]
+   fn resolves_check_suite_notifications_to_the_matching_timed_workflow_run() {
+      let runs = vec![
+         workflow_run(30, 300, "CI", "main", "success", "2026-08-05T02:00:00Z"),
+         workflow_run(20, 200, "CI", "main", "success", "2026-08-04T23:47:00Z"),
+         workflow_run(10, 100, "CI", "main", "failure", "2026-08-04T22:00:00Z"),
+      ];
+
+      let run = resolve_notification_workflow_run(
+         &runs,
+         None,
+         "CI workflow run succeeded for main branch",
+         "2026-08-04T23:47:59Z",
+      )
+      .unwrap();
+
+      assert_eq!(run.id, 20);
+   }
+
+   #[test]
+   fn prefers_an_explicit_check_suite_id_when_available() {
+      let runs = vec![
+         workflow_run(30, 300, "CI", "main", "success", "2026-08-05T02:00:00Z"),
+         workflow_run(20, 200, "CI", "main", "success", "2026-08-04T23:47:00Z"),
+      ];
+
+      let run = resolve_notification_workflow_run(&runs, Some(300), "", "").unwrap();
+
+      assert_eq!(run.id, 30);
    }
 
    #[test]

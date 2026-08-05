@@ -2,8 +2,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   ChatCircleTextIcon as MessageSquare,
+  CheckCircleIcon as CheckCircle,
   DotOutlineIcon as CircleDot,
   DotsThreeIcon as MoreHorizontal,
+  LockIcon as Lock,
+  LockOpenIcon as LockOpen,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -18,12 +21,18 @@ import {
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
 import Tooltip from "@/ui/tooltip";
-import type { IssueDetails } from "../types/github.types";
-import { GITHUB_ISSUE_DETAILS_TTL_MS, githubIssueDetailsCache } from "../utils/github-data-cache";
+import { useGitHubStore } from "../stores/github.store";
+import type { IssueComment, IssueDetails } from "../types/github.types";
+import {
+  GITHUB_ISSUE_DETAILS_TTL_MS,
+  githubIssueDetailsCache,
+  githubIssueListCache,
+} from "../utils/github-data-cache";
 import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
 import { CommentItem } from "./comment-item";
 import { GitHubAvatar } from "./github-avatar";
 import GitHubMarkdown from "./github-markdown";
+import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { LabelBadges } from "./pr-status";
 import {
   GitHubDetailLayout,
@@ -49,6 +58,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [visibleCommentCount, setVisibleCommentCount] = useState(8);
+  const [commentBody, setCommentBody] = useState("");
+  const [mutationKey, setMutationKey] = useState<string | null>(null);
+  const currentUser = useGitHubStore((state) => state.currentUser);
   const repositoryUrl = useMemo(
     () => details?.url.replace(/\/issues\/\d+$/, "") ?? undefined,
     [details?.url],
@@ -182,6 +194,134 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
     void copyToClipboard(details.url, "Issue link copied");
   }, [details?.url]);
 
+  const applyIssueDetails = useCallback(
+    (nextDetails: IssueDetails) => {
+      if (!repoPath) return;
+      githubIssueDetailsCache.set(`${repoPath}::${issueNumber}`, nextDetails);
+      githubIssueListCache.clear();
+      setDetails(nextDetails);
+    },
+    [issueNumber, repoPath],
+  );
+
+  const runMutation = useCallback(
+    async <T,>(key: string, mutation: () => Promise<T>, onSuccess: (value: T) => void) => {
+      if (mutationKey) return false;
+      setMutationKey(key);
+      try {
+        const result = await mutation();
+        onSuccess(result);
+        return true;
+      } catch (nextError) {
+        toast.error(nextError instanceof Error ? nextError.message : String(nextError));
+        return false;
+      } finally {
+        setMutationKey(null);
+      }
+    },
+    [mutationKey],
+  );
+
+  const updateIssueState = useCallback(
+    async (state: "open" | "closed", stateReason: "reopened" | "completed" | "not_planned") => {
+      if (!repoPath) return;
+      await runMutation(
+        "state",
+        () =>
+          invoke<IssueDetails>("github_update_issue_state", {
+            repoPath,
+            issueNumber,
+            state,
+            stateReason,
+          }),
+        (nextDetails) => {
+          applyIssueDetails(nextDetails);
+          toast.success(state === "open" ? "Issue reopened" : "Issue closed");
+        },
+      );
+    },
+    [applyIssueDetails, issueNumber, repoPath, runMutation],
+  );
+
+  const updateLock = useCallback(
+    async (lockReason?: "off-topic" | "too heated" | "resolved" | "spam") => {
+      if (!repoPath || !details) return;
+      const shouldUnlock = details.locked;
+      await runMutation(
+        "lock",
+        () =>
+          shouldUnlock
+            ? invoke("github_unlock_issue", { repoPath, issueNumber })
+            : invoke("github_lock_issue", { repoPath, issueNumber, lockReason }),
+        () => {
+          githubIssueDetailsCache.clear(`${repoPath}::${issueNumber}`);
+          void fetchIssue(true);
+          toast.success(shouldUnlock ? "Issue unlocked" : "Issue locked");
+        },
+      );
+    },
+    [details, fetchIssue, issueNumber, repoPath, runMutation],
+  );
+
+  const addComment = useCallback(async () => {
+    if (!repoPath || !commentBody.trim()) return;
+    await runMutation(
+      "new-comment",
+      () =>
+        invoke<IssueComment>("github_add_issue_comment", {
+          repoPath,
+          issueNumber,
+          body: commentBody,
+        }),
+      (comment) => {
+        if (details) applyIssueDetails({ ...details, comments: [...details.comments, comment] });
+        setCommentBody("");
+        setVisibleCommentCount(Number.MAX_SAFE_INTEGER);
+        toast.success("Comment added");
+      },
+    );
+  }, [applyIssueDetails, commentBody, details, issueNumber, repoPath, runMutation]);
+
+  const editComment = useCallback(
+    (commentId: number, body: string) => {
+      if (!repoPath) return Promise.resolve(false);
+      return runMutation(
+        `comment-${commentId}`,
+        () => invoke<IssueComment>("github_update_issue_comment", { repoPath, commentId, body }),
+        (comment) => {
+          if (details) {
+            applyIssueDetails({
+              ...details,
+              comments: details.comments.map((item) => (item.id === commentId ? comment : item)),
+            });
+          }
+          toast.success("Comment updated");
+        },
+      );
+    },
+    [applyIssueDetails, details, repoPath, runMutation],
+  );
+
+  const deleteComment = useCallback(
+    async (commentId: number) => {
+      if (!repoPath) return;
+      await runMutation(
+        `comment-${commentId}`,
+        () => invoke("github_delete_issue_comment", { repoPath, commentId }),
+        () => {
+          if (details) {
+            applyIssueDetails({
+              ...details,
+              comments: details.comments.filter((item) => item.id !== commentId),
+            });
+          }
+          toast.success("Comment deleted");
+        },
+      );
+    },
+    [applyIssueDetails, details, repoPath, runMutation],
+  );
+
   return (
     <GitHubViewerShell
       header={
@@ -197,6 +337,29 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
           }
           actions={
             <>
+              {details?.state.toLowerCase() === "open" ? (
+                <Button
+                  type="button"
+                  onClick={() => void updateIssueState("closed", "completed")}
+                  disabled={Boolean(mutationKey)}
+                  variant="ghost"
+                  size="xs"
+                >
+                  {mutationKey === "state" ? <Spinner label="Closing" compact /> : <CheckCircle />}
+                  Close
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={() => void updateIssueState("open", "reopened")}
+                  disabled={!details || Boolean(mutationKey)}
+                  variant="ghost"
+                  size="xs"
+                >
+                  {mutationKey === "state" ? <Spinner label="Reopening" compact /> : <CircleDot />}
+                  Reopen
+                </Button>
+              )}
               <Button
                 onClick={() => {
                   if (!repoPath || !details) return;
@@ -229,6 +392,51 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   </DropdownMenuTrigger>
                 </Tooltip>
                 <DropdownMenuContent>
+                  {details?.state.toLowerCase() === "open" ? (
+                    <DropdownMenuItem
+                      disabled={Boolean(mutationKey)}
+                      onClick={() => void updateIssueState("closed", "not_planned")}
+                    >
+                      Close as not planned
+                    </DropdownMenuItem>
+                  ) : null}
+                  {details?.locked ? (
+                    <DropdownMenuItem
+                      disabled={Boolean(mutationKey)}
+                      onClick={() => void updateLock()}
+                    >
+                      <LockOpen />
+                      Unlock conversation
+                    </DropdownMenuItem>
+                  ) : (
+                    <>
+                      <DropdownMenuItem
+                        disabled={Boolean(mutationKey)}
+                        onClick={() => void updateLock("resolved")}
+                      >
+                        <Lock />
+                        Lock as resolved
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={Boolean(mutationKey)}
+                        onClick={() => void updateLock("off-topic")}
+                      >
+                        Lock as off-topic
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={Boolean(mutationKey)}
+                        onClick={() => void updateLock("too heated")}
+                      >
+                        Lock as too heated
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={Boolean(mutationKey)}
+                        onClick={() => void updateLock("spam")}
+                      >
+                        Lock as spam
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuItem
                     disabled={isLoading && Boolean(details)}
                     onClick={() => void fetchIssue(true)}
@@ -256,16 +464,45 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
           sidebar={
             <GitHubDetailSidebar>
               <GitHubDetailSection label="Status">
-                <div className="flex items-center gap-2">
-                  <CircleDot
-                    className={
-                      details.state.toLowerCase() === "open"
-                        ? "text-success"
-                        : "text-subtle-foreground"
-                    }
-                  />
-                  <span className="capitalize">{details.state.toLowerCase()}</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <CircleDot
+                      className={
+                        details.state.toLowerCase() === "open"
+                          ? "text-success"
+                          : "text-subtle-foreground"
+                      }
+                    />
+                    <span className="capitalize">{details.state.toLowerCase()}</span>
+                  </div>
+                  {details.stateReason ? (
+                    <p className="capitalize text-subtle-foreground">
+                      {details.stateReason.replace("_", " ")}
+                    </p>
+                  ) : null}
+                  {details.locked ? (
+                    <div className="flex items-center gap-2 text-subtle-foreground">
+                      <Lock />
+                      <span>
+                        {details.activeLockReason
+                          ? `Locked as ${details.activeLockReason}`
+                          : "Locked"}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
+              </GitHubDetailSection>
+
+              <GitHubDetailSection label="Type">
+                <span className={details.issueType ? "text-foreground" : "text-subtle-foreground"}>
+                  {details.issueType?.name ?? "No type"}
+                </span>
+              </GitHubDetailSection>
+
+              <GitHubDetailSection label="Milestone">
+                <span className={details.milestone ? "text-foreground" : "text-subtle-foreground"}>
+                  {details.milestone?.title ?? "No milestone"}
+                </span>
               </GitHubDetailSection>
 
               <GitHubDetailSection label="Assignees">
@@ -300,6 +537,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 <div className="space-y-1 text-subtle-foreground">
                   <p>{`${details.comments.length} comments`}</p>
                   <p>{`Opened ${getTimeAgo(details.createdAt)}`}</p>
+                  <p>{`Updated ${getTimeAgo(details.updatedAt)}`}</p>
+                  {details.closedAt ? <p>{`Closed ${getTimeAgo(details.closedAt)}`}</p> : null}
+                  {details.closedBy ? <p>{`Closed by ${details.closedBy.login}`}</p> : null}
                 </div>
               </GitHubDetailSection>
             </GitHubDetailSidebar>
@@ -348,10 +588,17 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 {details.comments.length > 0 ? (
                   visibleComments.map((comment, index) => (
                     <CommentItem
-                      key={`${comment.author.login}-${comment.createdAt}-${index}`}
+                      key={comment.id || `${comment.author.login}-${comment.createdAt}-${index}`}
                       comment={comment}
                       repositoryUrl={repositoryUrl}
                       repoPath={repoPath}
+                      canManage={
+                        Boolean(currentUser) &&
+                        currentUser?.toLowerCase() === comment.author.login.toLowerCase()
+                      }
+                      isBusy={mutationKey === `comment-${comment.id}`}
+                      onEdit={(body) => editComment(comment.id, body)}
+                      onDelete={() => deleteComment(comment.id)}
                     />
                   ))
                 ) : (
@@ -374,6 +621,35 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                     />
                   </div>
                 ) : null}
+                <div className="space-y-3 pt-2">
+                  <GitHubMarkdownEditor
+                    value={commentBody}
+                    onChange={setCommentBody}
+                    placeholder={
+                      details.locked ? "This conversation is locked" : "Leave a comment..."
+                    }
+                    minHeight={150}
+                    disabled={details.locked || Boolean(mutationKey)}
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="accent"
+                      size="xs"
+                      disabled={
+                        details.locked || !commentBody.trim() || mutationKey === "new-comment"
+                      }
+                      onClick={() => void addComment()}
+                    >
+                      {mutationKey === "new-comment" ? (
+                        <Spinner label="Commenting" compact />
+                      ) : (
+                        <MessageSquare />
+                      )}
+                      Comment
+                    </Button>
+                  </div>
+                </div>
               </div>
             </section>
           </div>

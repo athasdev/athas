@@ -15,6 +15,8 @@ function createInvoker(
   return async <T>(command: string, args?: Record<string, unknown>) => {
     calls.push({ command, args });
     if (command === "github_list_labels") return [repositoryLabel] as T;
+    if (command === "github_list_milestones") return [] as T;
+    if (command === "github_list_issue_types") return [] as T;
     return details as T;
   };
 }
@@ -44,6 +46,10 @@ describe("GitHub editable resource loading", () => {
       labels: [repositoryLabel, selectedLabel],
       selectedLabelNames: ["bug"],
       assignees: ["octocat"],
+      milestones: [],
+      issueTypes: [],
+      milestone: null,
+      issueType: null,
     });
   });
 

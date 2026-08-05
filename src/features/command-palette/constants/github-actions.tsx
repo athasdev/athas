@@ -1,6 +1,7 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   ArrowClockwiseIcon as RefreshCw,
+  ChatCircleTextIcon as Issue,
   GitPullRequestIcon as GitPullRequest,
   LightningIcon as Lightning,
   LinkIcon as Link,
@@ -13,12 +14,17 @@ import type { Action } from "../types/action.types";
 type GitHubSidebarSection = "pull-requests" | "issues" | "actions";
 
 interface GitHubActionsParams {
+  repoPath: string | null;
   setIsSidebarVisible: (v: boolean) => void;
   setActiveView: (view: "files" | "git" | "github-prs") => void;
   settings: Pick<Settings, "showGitHubPullRequests" | "showGitHubIssues" | "showGitHubActions">;
   updateSetting: (key: string, value: any) => void | Promise<void>;
   checkAuth: (options?: { force?: boolean }) => Promise<void>;
   showToast: (params: { message: string; type: "success" | "error" | "info" }) => void;
+  openGitHubFormBuffer: (options: {
+    repoPath: string;
+    formKind: "pull-request" | "issue" | "action";
+  }) => string;
   onClose: () => void;
 }
 
@@ -30,6 +36,8 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
     updateSetting,
     checkAuth,
     showToast,
+    repoPath,
+    openGitHubFormBuffer,
     onClose,
   } = params;
 
@@ -58,7 +66,40 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
     }, 0);
   };
 
+  const openGitHubForm = (formKind: "pull-request" | "issue" | "action") => {
+    onClose();
+    if (!repoPath) {
+      showToast({ message: "No repository open", type: "error" });
+      return;
+    }
+    openGitHubFormBuffer({ repoPath, formKind });
+  };
+
   return [
+    {
+      id: "github-new-issue",
+      label: "GitHub: New Issue",
+      description: "Create an issue in the active repository",
+      icon: <Issue />,
+      category: "GitHub",
+      action: () => openGitHubForm("issue"),
+    },
+    {
+      id: "github-new-pull-request",
+      label: "GitHub: New Pull Request",
+      description: "Create a pull request in the active repository",
+      icon: <GitPullRequest />,
+      category: "GitHub",
+      action: () => openGitHubForm("pull-request"),
+    },
+    {
+      id: "github-run-workflow",
+      label: "GitHub: Run Workflow",
+      description: "Dispatch a workflow in the active repository",
+      icon: <Lightning />,
+      category: "GitHub",
+      action: () => openGitHubForm("action"),
+    },
     {
       id: "github-show-pull-requests",
       label: "GitHub: Show Pull Requests",

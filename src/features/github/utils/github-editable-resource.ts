@@ -1,5 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { IssueDetails, Label, PullRequestDetails } from "../types/github.types";
+import type {
+  IssueDetails,
+  IssueMilestone,
+  IssueType,
+  Label,
+  PullRequestDetails,
+} from "../types/github.types";
 
 export type GitHubEditableResourceKind = "pull-request" | "issue";
 
@@ -9,6 +15,10 @@ export interface GitHubEditableResource {
   labels: Label[];
   selectedLabelNames: string[];
   assignees: string[];
+  milestones: IssueMilestone[];
+  issueTypes: IssueType[];
+  milestone: number | null;
+  issueType: string | null;
 }
 
 export type GitHubResourceInvoker = <T>(
@@ -45,7 +55,21 @@ export async function loadGitHubEditableResource(
           prNumber: resourceNumber,
         });
   const labelsPromise = invokeCommand<Label[]>("github_list_labels", { repoPath }).catch(() => []);
-  const [details, repositoryLabels] = await Promise.all([detailsPromise, labelsPromise]);
+  const milestonesPromise =
+    kind === "issue"
+      ? invokeCommand<IssueMilestone[]>("github_list_milestones", { repoPath }).catch(() => [])
+      : Promise.resolve([]);
+  const issueTypesPromise =
+    kind === "issue"
+      ? invokeCommand<IssueType[]>("github_list_issue_types", { repoPath }).catch(() => [])
+      : Promise.resolve([]);
+  const [details, repositoryLabels, milestones, issueTypes] = await Promise.all([
+    detailsPromise,
+    labelsPromise,
+    milestonesPromise,
+    issueTypesPromise,
+  ]);
+  const issueDetails = kind === "issue" ? (details as IssueDetails) : null;
 
   return {
     title: details.title,
@@ -53,5 +77,9 @@ export async function loadGitHubEditableResource(
     labels: mergeLabels(repositoryLabels, details.labels),
     selectedLabelNames: details.labels.map((label) => label.name),
     assignees: details.assignees.map((assignee) => assignee.login),
+    milestones,
+    issueTypes,
+    milestone: issueDetails?.milestone?.number ?? null,
+    issueType: issueDetails?.issueType?.name ?? null,
   };
 }

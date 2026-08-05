@@ -747,7 +747,10 @@ const createBufferStore = (workspaceId: string) => {
             case "githubIssue": {
               const path = spec.url ?? `github-issue://${spec.issueNumber}`;
               const existing = buffers.find(
-                (b) => b.type === "githubIssue" && b.issueNumber === spec.issueNumber,
+                (b) =>
+                  b.type === "githubIssue" &&
+                  b.issueNumber === spec.issueNumber &&
+                  (!spec.repoPath || !b.repoPath || b.repoPath === spec.repoPath),
               );
               if (existing) {
                 set((state) => {
@@ -791,7 +794,10 @@ const createBufferStore = (workspaceId: string) => {
             case "githubAction": {
               const path = spec.url ?? `github-action://${spec.runId}`;
               const existing = buffers.find(
-                (b) => b.type === "githubAction" && b.runId === spec.runId,
+                (b) =>
+                  b.type === "githubAction" &&
+                  b.runId === spec.runId &&
+                  (!spec.repoPath || !b.repoPath || b.repoPath === spec.repoPath),
               );
               if (existing) {
                 set((state) => {
