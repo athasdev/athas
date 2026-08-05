@@ -1252,6 +1252,20 @@ const createBufferStore = (workspaceId: string) => {
 
           const closedBuffer = buffers[bufferIndex];
 
+          if (closedBuffer.type === "onboarding") {
+            void import("@/features/onboarding/stores/onboarding.store").then(
+              ({ useOnboardingStore }) => {
+                const onboardingState = useOnboardingStore.getState();
+                if (
+                  onboardingState.context?.currentVersion === closedBuffer.currentVersion &&
+                  onboardingState.context.mode === closedBuffer.mode
+                ) {
+                  void onboardingState.actions.dismiss();
+                }
+              },
+            );
+          }
+
           // Close terminal connection for external editor buffers
           if (closedBuffer.type === "externalEditor") {
             invoke("close_terminal", { id: closedBuffer.terminalConnectionId }).catch((e) => {

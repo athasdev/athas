@@ -31,7 +31,7 @@ function escapeMarkdownLinkLabel(value: string): string {
   return value.replace(/\[/g, "\\[").replace(/\]/g, "\\]");
 }
 
-function normalizeReleaseNotes(body: string): string {
+export function normalizeReleaseNotes(body: string): string {
   return body
     .trim()
     .split("\n")
@@ -54,7 +54,7 @@ function normalizeReleaseNotes(body: string): string {
     .join("\n");
 }
 
-function formatReleaseDate(value: string): string {
+export function formatReleaseDate(value: string): string {
   const date = new Date(value.length === 10 ? `${value}T00:00:00Z` : value);
   if (Number.isNaN(date.getTime())) {
     return value;
@@ -68,8 +68,28 @@ function formatReleaseDate(value: string): string {
   }).format(date);
 }
 
-export function buildWhatsNewMarkdown(info: WhatsNewInfo): string {
+export function buildReleaseNotesMarkdown(info: WhatsNewInfo): string {
   const services = getServiceUrls();
+  const lines: string[] = [];
+
+  if (info.body?.trim()) {
+    lines.push(normalizeReleaseNotes(info.body), "");
+  } else {
+    lines.push("Release notes were not bundled with this update.", "");
+    lines.push(
+      "You can still review the GitHub release page for downloads and changelog notes.",
+      "",
+    );
+  }
+
+  lines.push(
+    `[View the full release on GitHub](${services.githubReleasesBaseUrl}/tag/v${info.version})`,
+  );
+
+  return lines.join("\n");
+}
+
+export function buildWhatsNewMarkdown(info: WhatsNewInfo): string {
   const lines = ["---", "title: What's New in Athas", `description: Version ${info.version}`];
 
   if (info.previousVersion) {
@@ -80,28 +100,7 @@ export function buildWhatsNewMarkdown(info: WhatsNewInfo): string {
     lines.push(`released: ${formatReleaseDate(info.date)}`);
   }
 
-  lines.push("---", "");
-
-  if (info.body?.trim()) {
-    const releaseNotes = normalizeReleaseNotes(info.body);
-    if (!/^#{1,6}\s/m.test(releaseNotes)) {
-      lines.push("## Changes", "");
-    }
-    lines.push(releaseNotes, "");
-  } else {
-    lines.push("## Release notes", "");
-    lines.push("Release notes were not bundled with this update.", "");
-    lines.push(
-      "You can still review the GitHub release page for downloads and changelog notes.",
-      "",
-    );
-  }
-
-  lines.push("---");
-  lines.push(
-    `[View the full release on GitHub](${services.githubReleasesBaseUrl}/tag/v${info.version})`,
-  );
-
+  lines.push("---", "", buildReleaseNotesMarkdown(info));
   return lines.join("\n");
 }
 
@@ -247,10 +246,7 @@ export function storeCurrentWhatsNew(info: WhatsNewInfo) {
   });
 }
 
-export function hydrateWhatsNew(currentVersion: string): {
-  info: WhatsNewInfo;
-  shouldAutoOpen: boolean;
-} {
+export function hydrateWhatsNew(currentVersion: string): WhatsNewInfo {
   const state = readState();
 
   if (state.pending?.version === currentVersion) {
@@ -259,17 +255,11 @@ export function hydrateWhatsNew(currentVersion: string): {
       current: info,
     });
 
-    return {
-      info,
-      shouldAutoOpen: true,
-    };
+    return info;
   }
 
   if (state.current?.version === currentVersion) {
-    return {
-      info: state.current,
-      shouldAutoOpen: false,
-    };
+    return state.current;
   }
 
   const info = { version: currentVersion };
@@ -278,8 +268,5 @@ export function hydrateWhatsNew(currentVersion: string): {
     current: info,
   });
 
-  return {
-    info,
-    shouldAutoOpen: false,
-  };
+  return info;
 }

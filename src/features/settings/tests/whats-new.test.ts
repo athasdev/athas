@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildWhatsNewMarkdown, resolveWhatsNewInfo } from "../lib/whats-new";
+import {
+  buildReleaseNotesMarkdown,
+  buildWhatsNewMarkdown,
+  resolveWhatsNewInfo,
+} from "../lib/whats-new";
 
 describe("buildWhatsNewMarkdown", () => {
   it("uses bundled release notes when available", () => {
@@ -14,7 +18,6 @@ describe("buildWhatsNewMarkdown", () => {
     expect(markdown).toContain("description: Version 1.2.0");
     expect(markdown).toContain("updated-from: 1.1.0");
     expect(markdown).toContain("released: July 17, 2026");
-    expect(markdown).toContain("## Changes");
     expect(markdown).toContain("Added workspace restore fixes.");
   });
 
@@ -41,6 +44,19 @@ describe("buildWhatsNewMarkdown", () => {
 
     expect(markdown).toContain("Release notes were not bundled with this update.");
     expect(markdown).toContain("review the GitHub release page");
+  });
+
+  it("builds embeddable release notes without duplicating the document header", () => {
+    const markdown = buildReleaseNotesMarkdown({
+      version: "1.2.0",
+      body: "Fixed the update experience.",
+    });
+
+    expect(markdown).toContain("Fixed the update experience.");
+    expect(markdown).not.toContain("title: What's New in Athas");
+    expect(markdown).not.toContain("description: Version 1.2.0");
+    expect(markdown).not.toContain("## Changes");
+    expect(markdown).not.toContain("---");
   });
 });
 

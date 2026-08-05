@@ -238,7 +238,10 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         ...base,
         type: "onboarding",
         path: `onboarding://${spec.context.mode}/${spec.context.currentVersion}`,
-        name: "Welcome",
+        name:
+          spec.context.mode === "updated" || spec.context.mode === "release-notes"
+            ? "What's New"
+            : "Welcome",
         isPreview: false,
         mode: spec.context.mode,
         currentVersion: spec.context.currentVersion,

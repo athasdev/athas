@@ -4,7 +4,6 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { UpdateInfo } from "../hooks/use-updater";
 import {
-  buildWhatsNewMarkdown,
   hydrateWhatsNew,
   queuePendingWhatsNew,
   resolveWhatsNewInfo,
@@ -23,14 +22,12 @@ interface WhatsNewState {
   };
 }
 
-function openWhatsNewBuffer(info: WhatsNewInfo) {
-  const path = `whats-new://v${info.version}`;
-  const name = "What's New";
-  const content = buildWhatsNewMarkdown(info);
-
-  useBufferStore
-    .getState()
-    .actions.openBuffer(path, name, content, false, undefined, false, true, undefined, true);
+function openWhatsNewSurface(info: WhatsNewInfo) {
+  useBufferStore.getState().actions.openOnboardingBuffer({
+    mode: "release-notes",
+    currentVersion: info.version,
+    previousVersion: info.previousVersion,
+  });
 }
 
 const useWhatsNewStoreBase = create<WhatsNewState>()((set, get) => ({
@@ -44,7 +41,7 @@ const useWhatsNewStoreBase = create<WhatsNewState>()((set, get) => ({
       }
 
       const currentVersion = await getVersion();
-      const { info, shouldAutoOpen } = hydrateWhatsNew(currentVersion);
+      const info = hydrateWhatsNew(currentVersion);
       const resolvedInfo = await resolveWhatsNewInfo(info);
       storeCurrentWhatsNew(resolvedInfo);
 
@@ -52,10 +49,6 @@ const useWhatsNewStoreBase = create<WhatsNewState>()((set, get) => ({
         initialized: true,
         info: resolvedInfo,
       });
-
-      if (shouldAutoOpen) {
-        openWhatsNewBuffer(resolvedInfo);
-      }
     },
 
     open: async () => {
@@ -71,12 +64,13 @@ const useWhatsNewStoreBase = create<WhatsNewState>()((set, get) => ({
       const resolvedInfo = await resolveWhatsNewInfo(info);
       storeCurrentWhatsNew(resolvedInfo);
       set({ info: resolvedInfo });
-      openWhatsNewBuffer(resolvedInfo);
+      openWhatsNewSurface(resolvedInfo);
     },
 
     openInfo: async (info) => {
       const resolvedInfo = await resolveWhatsNewInfo(info);
-      openWhatsNewBuffer(resolvedInfo);
+      set({ info: resolvedInfo });
+      openWhatsNewSurface(resolvedInfo);
     },
 
     queuePendingUpdate: (updateInfo) => {
