@@ -178,7 +178,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       clearSearchHighlights();
       section?.setAttribute("data-settings-search-section-active", "true");
       target.setAttribute("data-settings-search-active", "true");
-      target.scrollIntoView({ block: "center" });
+      target.scrollIntoView({ block: "center", inline: "nearest" });
       target.focus({ preventScroll: true });
     });
 
@@ -186,6 +186,11 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       window.cancelAnimationFrame(frameId);
     };
   }, [activeTab, isOpen, selectedResultId, visibleSearchResults]);
+
+  useEffect(() => {
+    if (!isOpen || !contentRef.current) return;
+    contentRef.current.scrollLeft = 0;
+  }, [activeTab, isOpen]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -295,11 +300,12 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
           <Card
             variant="elevated"
             size="flush"
-            className="mt-0 mr-2 mb-2 ml-0 min-w-0 flex-1 bg-background max-[720px]:ml-2"
+            className="@container/settings mt-0 mr-2 mb-2 ml-0 min-w-0 flex-1 bg-background max-[720px]:ml-2"
           >
             <ScrollArea
+              orientation="vertical"
               className="min-w-0 flex-1"
-              contentClassName="p-3 max-[720px]:p-2"
+              contentClassName="w-full max-w-full overflow-x-hidden p-3 max-[720px]:p-2"
               viewportProps={{
                 ref: contentRef,
                 id: activePanelId,
@@ -321,7 +327,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         anchorAlign="start"
         items={tabMenuItems}
         onClose={() => setIsTabDropdownOpen(false)}
-        className="w-fit min-w-44"
+        className="w-fit min-w-0"
       />
       <Dropdown
         isOpen={isSearchDropdownOpen && searchQuery.trim().length > 0}
@@ -330,8 +336,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         anchorAlign="end"
         onClose={() => setIsSearchDropdownOpen(false)}
         matchAnchorWidth
-        anchorMinWidth={260}
-        className="min-w-64"
+        className="min-w-0"
       >
         <div className="max-h-80 overflow-y-auto p-1">
           {visibleSearchDropdownResults.length > 0 ? (

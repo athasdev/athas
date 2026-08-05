@@ -194,14 +194,17 @@ export function SettingRow({
       data-setting-row-label={label}
       tabIndex={-1}
       className={cn(
-        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-[background-color,box-shadow] hover:bg-accent/40 focus-within:bg-accent/40 focus:outline-none data-[settings-search-active=true]:bg-primary/15 data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-primary/50 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2",
+        "flex w-full min-w-0 max-w-full items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-[background-color,box-shadow] hover:bg-accent/40 focus-within:bg-accent/40 focus:outline-none data-[settings-search-active=true]:bg-primary/15 data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-primary/50 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2 @max-[640px]/settings:flex-col @max-[640px]/settings:items-stretch @max-[640px]/settings:gap-2",
         className,
       )}
       onClick={activateOnClick ? handleRowClick : undefined}
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <div id={labelId} className="font-sans ui-text-base cursor-default text-foreground">
+          <div
+            id={labelId}
+            className="font-sans ui-text-base min-w-0 cursor-default break-words text-foreground"
+          >
             {label}
           </div>
           {labelAccessory}
@@ -233,7 +236,7 @@ export function SettingRow({
       </div>
       <div
         ref={controlRef}
-        className="font-sans ui-text-base shrink-0 select-auto max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full"
+        className="font-sans ui-text-base min-w-0 max-w-full shrink-0 select-auto max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>div]:flex-wrap max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full @max-[640px]/settings:w-full @max-[640px]/settings:shrink @max-[640px]/settings:[&>div]:flex-wrap @max-[640px]/settings:[&>input]:w-full @max-[640px]/settings:[&>textarea]:w-full"
       >
         {children}
       </div>

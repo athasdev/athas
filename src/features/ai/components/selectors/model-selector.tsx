@@ -171,20 +171,20 @@ export function ModelSelector({
       placeholder={currentModelName}
       aria-label="Select AI model"
       searchable
-      searchableTrigger="input"
+      searchableTrigger={isComposer ? "input" : "menu"}
       allowCustomValue={isCustomProvider}
       customValueLabel={(customValue) => `Use ${customValue}`}
       emptyLabel={isCustomProvider ? "Type a model name and press Enter" : "No models found"}
-      hideChevron
+      hideChevron={isComposer}
       size="xs"
       variant={isComposer ? "ghost" : "default"}
       disabled={disabled}
       open={open}
       onOpenChange={onOpenChange}
       tooltip={tooltip}
-      className={className}
-      triggerClassName={cn(isComposer ? "max-w-[176px]" : "w-[260px]", triggerClassName)}
-      menuClassName="min-w-0 p-0"
+      className={cn(!isComposer && "w-fit max-w-full", className)}
+      triggerClassName={cn(isComposer ? "max-w-[176px]" : "w-fit max-w-full", triggerClassName)}
+      menuClassName="w-fit min-w-0 max-w-[var(--available-width)] p-0"
       menuMinWidth={isComposer ? 260 : 0}
       menuAnimated={!isComposer}
       menuHeader={

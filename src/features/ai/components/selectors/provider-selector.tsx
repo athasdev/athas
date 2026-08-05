@@ -52,17 +52,20 @@ export function ProviderSelector({
       placeholder={currentProvider?.name || providerId || "Select provider"}
       aria-label="Select AI provider"
       searchable
-      searchableTrigger="input"
-      hideChevron
+      searchableTrigger={isComposer ? "input" : "menu"}
+      hideChevron={isComposer}
       size="xs"
       variant={isComposer ? "ghost" : "default"}
       disabled={disabled}
       open={open}
       onOpenChange={onOpenChange}
       tooltip={tooltip}
-      className={className}
-      triggerClassName={cn(isComposer ? "max-w-[128px]" : "w-[220px] gap-2", triggerClassName)}
-      menuClassName="min-w-0 p-0"
+      className={cn(!isComposer && "w-fit max-w-full", className)}
+      triggerClassName={cn(
+        isComposer ? "max-w-[128px]" : "w-fit max-w-full gap-2",
+        triggerClassName,
+      )}
+      menuClassName="w-fit min-w-0 max-w-[var(--available-width)] p-0"
       menuMinWidth={isComposer ? 220 : 0}
       menuAnimated={!isComposer}
     />

@@ -98,6 +98,18 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("sidebarWidth", 900)).toBe(600);
   });
 
+  it("preserves and canonicalizes custom Ollama LAN endpoints", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      ollamaBaseUrl: " ollama.lan:11434/ ",
+    });
+
+    expect(normalized.ollamaBaseUrl).toBe("http://ollama.lan:11434");
+    expect(normalizeSettingValue("ollamaBaseUrl", "http://192.168.1.24:11434/")).toBe(
+      "http://192.168.1.24:11434",
+    );
+  });
+
   it("normalizes hidden activity sidebar items", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),

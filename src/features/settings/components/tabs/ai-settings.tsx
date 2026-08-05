@@ -52,6 +52,7 @@ import {
   checkOllamaConnection,
   isOllamaCloudUrl,
 } from "@/features/ai/services/providers/ollama-provider";
+import { resolveOllamaBaseUrl } from "@/features/ai/lib/ollama-endpoint";
 import {
   getProviderApiToken,
   removeProviderApiToken,
@@ -117,6 +118,13 @@ export const AISettings = () => {
   const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL);
   const [ollamaStatus, setOllamaStatus] = useState<"idle" | "checking" | "ok" | "error">("idle");
   const ollamaDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const ollamaDraftDirtyRef = useRef(false);
+  const ollamaValidationIdRef = useRef(0);
+  const lastSelfHostedOllamaUrlRef = useRef(
+    isOllamaCloudUrl(settings.ollamaBaseUrl)
+      ? DEFAULT_OLLAMA_BASE_URL
+      : resolveOllamaBaseUrl(settings.ollamaBaseUrl) || DEFAULT_OLLAMA_BASE_URL,
+  );
 
   // Ollama API key state (used for Ollama Cloud; optional for local)
   const [ollamaApiKeyInput, setOllamaApiKeyInput] = useState("");
@@ -147,10 +155,22 @@ export const AISettings = () => {
     return unsubscribe;
   }, []);
 
-  // Sync Ollama base URL + API key on mount
+  // Keep the draft aligned with settings loaded after the dialog mounted.
   useEffect(() => {
-    const url = settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL;
+    const url = resolveOllamaBaseUrl(settings.ollamaBaseUrl) || DEFAULT_OLLAMA_BASE_URL;
     setOllamaBaseUrl(url);
+
+    if (!isOllamaCloudUrl(url)) {
+      lastSelfHostedOllamaUrlRef.current = url;
+    }
+
+    if (!ollamaDraftDirtyRef.current) {
+      if (ollamaDebounceRef.current) clearTimeout(ollamaDebounceRef.current);
+      setOllamaUrl(url);
+    }
+  }, [settings.ollamaBaseUrl]);
+
+  useEffect(() => {
     void (async () => {
       const token = await getProviderApiToken("ollama");
       setHasStoredOllamaKey(!!token);
@@ -158,8 +178,23 @@ export const AISettings = () => {
     })();
   }, []);
 
+  useEffect(
+    () => () => {
+      if (ollamaDebounceRef.current) clearTimeout(ollamaDebounceRef.current);
+      ollamaValidationIdRef.current += 1;
+    },
+    [],
+  );
+
   const validateOllamaConnection = useCallback(
     async (url: string, apiKey?: string | null) => {
+      const normalizedUrl = resolveOllamaBaseUrl(url);
+      const validationId = ++ollamaValidationIdRef.current;
+      if (!normalizedUrl) {
+        setOllamaStatus("error");
+        return;
+      }
+
       setOllamaStatus("checking");
       const keyToUse =
         apiKey !== undefined
@@ -167,37 +202,66 @@ export const AISettings = () => {
           : hasStoredOllamaKey
             ? await getProviderApiToken("ollama")
             : null;
-      const ok = await checkOllamaConnection(url, keyToUse);
-      setOllamaStatus(ok ? "ok" : "error");
+      const ok = await checkOllamaConnection(normalizedUrl, keyToUse);
+      if (validationId === ollamaValidationIdRef.current) {
+        setOllamaStatus(ok ? "ok" : "error");
+      }
     },
     [hasStoredOllamaKey],
   );
 
+  const commitOllamaUrl = useCallback(
+    (value: string) => {
+      if (ollamaDebounceRef.current) {
+        clearTimeout(ollamaDebounceRef.current);
+        ollamaDebounceRef.current = undefined;
+      }
+
+      const normalizedUrl = resolveOllamaBaseUrl(value);
+      if (!normalizedUrl) {
+        setOllamaStatus("error");
+        return;
+      }
+
+      ollamaDraftDirtyRef.current = false;
+      setOllamaUrl(normalizedUrl);
+      void updateSetting("ollamaBaseUrl", normalizedUrl);
+      setOllamaBaseUrl(normalizedUrl);
+      if (!isOllamaCloudUrl(normalizedUrl)) {
+        lastSelfHostedOllamaUrlRef.current = normalizedUrl;
+      }
+      void validateOllamaConnection(normalizedUrl);
+    },
+    [updateSetting, validateOllamaConnection],
+  );
+
   const handleOllamaUrlChange = (value: string) => {
+    ollamaDraftDirtyRef.current = true;
     setOllamaUrl(value);
     setOllamaStatus("idle");
 
     if (ollamaDebounceRef.current) clearTimeout(ollamaDebounceRef.current);
     ollamaDebounceRef.current = setTimeout(() => {
-      const trimmed = value.replace(/\/+$/, "") || DEFAULT_OLLAMA_BASE_URL;
-      updateSetting("ollamaBaseUrl", trimmed);
-      setOllamaBaseUrl(trimmed);
-      void validateOllamaConnection(trimmed);
+      ollamaDebounceRef.current = undefined;
+      void commitOllamaUrl(value);
     }, 600);
   };
 
   const handleResetOllamaUrl = () => {
-    setOllamaUrl(DEFAULT_OLLAMA_BASE_URL);
-    updateSetting("ollamaBaseUrl", DEFAULT_OLLAMA_BASE_URL);
-    setOllamaBaseUrl(DEFAULT_OLLAMA_BASE_URL);
-    void validateOllamaConnection(DEFAULT_OLLAMA_BASE_URL);
+    lastSelfHostedOllamaUrlRef.current = DEFAULT_OLLAMA_BASE_URL;
+    commitOllamaUrl(DEFAULT_OLLAMA_BASE_URL);
+  };
+
+  const handleUseSelfHostedOllama = () => {
+    commitOllamaUrl(lastSelfHostedOllamaUrlRef.current);
   };
 
   const handleUseOllamaCloud = () => {
-    setOllamaUrl(OLLAMA_CLOUD_BASE_URL);
-    updateSetting("ollamaBaseUrl", OLLAMA_CLOUD_BASE_URL);
-    setOllamaBaseUrl(OLLAMA_CLOUD_BASE_URL);
-    void validateOllamaConnection(OLLAMA_CLOUD_BASE_URL);
+    const currentUrl = resolveOllamaBaseUrl(ollamaUrl);
+    if (currentUrl && !isOllamaCloudUrl(currentUrl)) {
+      lastSelfHostedOllamaUrlRef.current = currentUrl;
+    }
+    commitOllamaUrl(OLLAMA_CLOUD_BASE_URL);
   };
 
   const handleSaveOllamaApiKey = async () => {
@@ -551,7 +615,7 @@ export const AISettings = () => {
               value={isOllamaCloud ? "cloud" : "local"}
               onValueChange={(nextValue) => {
                 if (nextValue === "local") {
-                  handleResetOllamaUrl();
+                  handleUseSelfHostedOllama();
                   return;
                 }
                 handleUseOllamaCloud();
@@ -574,6 +638,14 @@ export const AISettings = () => {
                 type="text"
                 value={ollamaUrl}
                 onChange={(e) => handleOllamaUrlChange(e.target.value)}
+                onBlur={(e) => {
+                  void commitOllamaUrl(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  e.currentTarget.blur();
+                }}
                 placeholder={DEFAULT_OLLAMA_BASE_URL}
                 spellCheck={false}
                 leftIcon={Globe}

@@ -1,4 +1,5 @@
 import { getProviderById } from "@/features/ai/types/providers.types";
+import { normalizeOllamaBaseUrl } from "@/features/ai/lib/ollama-endpoint";
 import { normalizeV0DesignSystems } from "@/extensions/v0/lib/v0-design-systems";
 import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
 import {
@@ -384,6 +385,7 @@ function normalizeAISettings(settings: Settings): Settings {
   const provider = requestedProviderId ? getProviderById(requestedProviderId) : undefined;
   normalizedSettings.aiCustomBaseUrl = normalizeBaseUrl(normalizedSettings.aiCustomBaseUrl);
   normalizedSettings.aiCustomModelId = normalizedSettings.aiCustomModelId?.trim() || "";
+  normalizedSettings.ollamaBaseUrl = normalizeOllamaBaseUrl(normalizedSettings.ollamaBaseUrl);
 
   if (!provider) {
     normalizedSettings.aiProviderId = requestedProviderId || DEFAULT_AI_PROVIDER_ID;
@@ -663,6 +665,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "aiCustomBaseUrl") {
     return normalizeBaseUrl(value as string) as Settings[K];
+  }
+
+  if (key === "ollamaBaseUrl") {
+    return normalizeOllamaBaseUrl(value as string) as Settings[K];
   }
 
   if (key === "aiCustomModelId") {

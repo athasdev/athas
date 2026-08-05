@@ -28,7 +28,7 @@ describe("Ollama HTTP scope", () => {
   it("allows user-configured local, LAN, and cloud Ollama endpoints", () => {
     const urls = getHttpScopeUrls();
 
-    expect(urls).toContain("http://*");
-    expect(urls).toContain("https://*");
+    expect(urls).toContain("http://*:*/**");
+    expect(urls).toContain("https://*:*/**");
   });
 });
