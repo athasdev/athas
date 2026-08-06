@@ -105,70 +105,97 @@ async function findDatabaseExtensionFolders(providerFilter?: string) {
 
 const platformArch = argValue("--platform") || process.env.PLATFORM_ARCH || currentPlatformArch();
 const shouldBuild = process.argv.includes("--build") || process.env.BUILD_DATABASE_SIDECARS === "1";
-const binDir = resolve(
-  argValue("--bin-dir") || process.env.ATHAS_DATABASE_SIDECAR_BIN_DIR || "target/release",
-);
+const requestedBinDir = argValue("--bin-dir") || process.env.ATHAS_DATABASE_SIDECAR_BIN_DIR;
+const requestedBuildTargetDir =
+  argValue("--target-dir") || process.env.ATHAS_DATABASE_SIDECAR_TARGET_DIR;
 const providerFilter = argValue("--provider");
 let packagedCount = 0;
 
+if (shouldBuild && requestedBinDir) {
+  throw new Error("--bin-dir cannot be used with --build. Use --target-dir instead.");
+}
+
+const temporaryBuildTargetDir =
+  shouldBuild && !requestedBuildTargetDir
+    ? await mkdtemp(join(tmpdir(), "athas-db-sidecars-"))
+    : undefined;
+const buildTargetDir = shouldBuild
+  ? requestedBuildTargetDir
+    ? resolve(ATHAS_ROOT, requestedBuildTargetDir)
+    : temporaryBuildTargetDir
+  : undefined;
+const binDir = buildTargetDir
+  ? join(buildTargetDir, "release")
+  : resolve(ATHAS_ROOT, requestedBinDir || "target/release");
+
 async function buildSidecar(providerId: string, binaryName: string) {
-  await $`cargo build -p athas-database --release --no-default-features --features ${providerId} --bin ${binaryName}`.cwd(
+  if (!buildTargetDir) {
+    throw new Error("Database sidecar build target is not configured.");
+  }
+
+  await $`cargo build -p athas-database --release --no-default-features --features ${providerId} --bin ${binaryName} --target-dir ${buildTargetDir}`.cwd(
     ATHAS_ROOT,
   );
 }
 
-for (const { folder, manifest, provider } of await findDatabaseExtensionFolders(providerFilter)) {
-  const extensionDir = getExtensionSourceDir(folder);
-  const manifestPath = join(extensionDir, "extension.json");
-  const sidecar = provider.sidecar as Record<string, string> | undefined;
-  const sidecarPath = sidecar?.[platformArch];
-  const providerId = String(provider.id);
+try {
+  for (const { folder, manifest, provider } of await findDatabaseExtensionFolders(providerFilter)) {
+    const extensionDir = getExtensionSourceDir(folder);
+    const manifestPath = join(extensionDir, "extension.json");
+    const sidecar = provider.sidecar as Record<string, string> | undefined;
+    const sidecarPath = sidecar?.[platformArch];
+    const providerId = String(provider.id);
 
-  if (!sidecarPath) {
-    throw new Error(`Database extension ${providerId} has no sidecar for ${platformArch}`);
-  }
+    if (!sidecarPath) {
+      throw new Error(`Database extension ${providerId} has no sidecar for ${platformArch}`);
+    }
 
-  const binaryPath = join(binDir, basename(sidecarPath));
-  if (shouldBuild) {
-    await buildSidecar(providerId, basename(sidecarPath));
-  }
+    const binaryPath = join(binDir, basename(sidecarPath));
+    if (shouldBuild) {
+      await buildSidecar(providerId, basename(sidecarPath));
+    }
 
-  if (
-    !(await stat(binaryPath)
-      .then((value) => value.isFile())
-      .catch(() => false))
-  ) {
-    throw new Error(
-      `Missing database sidecar binary for ${providerId}: ${binaryPath}. Run this script with --build, or build it from the Athas repo with: cargo build -p athas-database --release --no-default-features --features ${providerId} --bin ${basename(sidecarPath)}`,
+    if (
+      !(await stat(binaryPath)
+        .then((value) => value.isFile())
+        .catch(() => false))
+    ) {
+      throw new Error(
+        `Missing database sidecar binary for ${providerId}: ${binaryPath}. Run this script with --build, or build it from the Athas repo with: cargo build -p athas-database --release --no-default-features --features ${providerId} --bin ${basename(sidecarPath)}`,
+      );
+    }
+
+    const cdnPath = getExtensionCdnPath(folder, manifest);
+    const packagePath = getGeneratedCdnPath(join(cdnPath, `${platformArch}.tar.gz`));
+    await createPackage({ extensionDir, manifest, sidecarPath, binaryPath, packagePath });
+
+    const packageStats = await stat(packagePath);
+    const packageInfo = {
+      downloadUrl: `${cdnBaseUrl}/${cdnPath}/${platformArch}.tar.gz`,
+      size: packageStats.size,
+      checksum: await sha256(packagePath),
+    };
+
+    const installation = (manifest.installation ?? {}) as Record<string, unknown>;
+    const platformPackages = Object.fromEntries(
+      Object.entries((installation.platformArch ?? {}) as Record<string, unknown>).filter(
+        ([, value]) => hasCompletePackageInfo(value),
+      ),
     );
+    platformPackages[platformArch] = packageInfo;
+    installation.platformArch = platformPackages;
+    installation.downloadUrl = packageInfo.downloadUrl;
+    installation.size = packageInfo.size;
+    installation.checksum = packageInfo.checksum;
+    manifest.installation = installation;
+
+    await writeExtensionManifest(manifestPath, manifest);
+    packagedCount += 1;
   }
-
-  const cdnPath = getExtensionCdnPath(folder, manifest);
-  const packagePath = getGeneratedCdnPath(join(cdnPath, `${platformArch}.tar.gz`));
-  await createPackage({ extensionDir, manifest, sidecarPath, binaryPath, packagePath });
-
-  const packageStats = await stat(packagePath);
-  const packageInfo = {
-    downloadUrl: `${cdnBaseUrl}/${cdnPath}/${platformArch}.tar.gz`,
-    size: packageStats.size,
-    checksum: await sha256(packagePath),
-  };
-
-  const installation = (manifest.installation ?? {}) as Record<string, unknown>;
-  const platformPackages = Object.fromEntries(
-    Object.entries((installation.platformArch ?? {}) as Record<string, unknown>).filter(
-      ([, value]) => hasCompletePackageInfo(value),
-    ),
-  );
-  platformPackages[platformArch] = packageInfo;
-  installation.platformArch = platformPackages;
-  installation.downloadUrl = packageInfo.downloadUrl;
-  installation.size = packageInfo.size;
-  installation.checksum = packageInfo.checksum;
-  manifest.installation = installation;
-
-  await writeExtensionManifest(manifestPath, manifest);
-  packagedCount += 1;
+} finally {
+  if (temporaryBuildTargetDir) {
+    await rm(temporaryBuildTargetDir, { recursive: true, force: true });
+  }
 }
 
 console.log(`Packaged ${packagedCount} database sidecar extension(s) for ${platformArch}.`);
