@@ -540,7 +540,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
                     }}
                     onMouseEnter={() => setSelectedIndex(index)}
                     isSelected={index === selectedIndex}
-                    icon={isRecent ? <History className="text-subtle-foreground" /> : undefined}
+                    icon={isRecent ? <History /> : undefined}
                     title={action.label}
                     accessory={binding ? <Keybinding binding={binding} /> : undefined}
                   />

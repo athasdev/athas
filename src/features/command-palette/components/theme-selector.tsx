@@ -232,31 +232,28 @@ export const ThemeSelectorContent = ({
   return (
     <>
       <CommandHeader onClose={handleClose}>
-        <div className="flex w-full items-center gap-2">
-          <CommandHeaderAction type="button" onClick={handleBack} aria-label="Back to commands">
-            <CaretLeft />
-          </CommandHeaderAction>
-          <CommandInput
-            ref={inputRef}
-            value={query}
-            onChange={setQuery}
-            onKeyDown={handleKeyDown}
-            placeholder="Search themes..."
-            className="flex-1"
-          />
-          <CommandHeaderAction onClick={handleUploadTheme} aria-label="Upload theme">
-            <Upload />
-          </CommandHeaderAction>
-          <CommandHeaderAction
-            onClick={() => {
-              onClose();
-              useUIState.getState().openSettingsDialog("appearance");
-            }}
-            aria-label="Open appearance settings"
-          >
-            <Settings />
-          </CommandHeaderAction>
-        </div>
+        <CommandHeaderAction type="button" onClick={handleBack} aria-label="Back to commands">
+          <CaretLeft />
+        </CommandHeaderAction>
+        <CommandInput
+          ref={inputRef}
+          value={query}
+          onChange={setQuery}
+          onKeyDown={handleKeyDown}
+          placeholder="Search themes..."
+        />
+        <CommandHeaderAction onClick={handleUploadTheme} aria-label="Upload theme">
+          <Upload />
+        </CommandHeaderAction>
+        <CommandHeaderAction
+          onClick={() => {
+            onClose();
+            useUIState.getState().openSettingsDialog("appearance");
+          }}
+          aria-label="Open appearance settings"
+        >
+          <Settings />
+        </CommandHeaderAction>
       </CommandHeader>
 
       <CommandList ref={resultsRef}>
@@ -280,7 +277,7 @@ export const ThemeSelectorContent = ({
                   setSelectedIndex(index);
                 }}
                 isSelected={isSelected}
-                icon={<span className="text-subtle-foreground">{theme.icon || <Moon />}</span>}
+                icon={theme.icon || <Moon />}
                 title={theme.name}
                 accessory={isCurrent ? <CommandItemBadge>Current</CommandItemBadge> : undefined}
               />

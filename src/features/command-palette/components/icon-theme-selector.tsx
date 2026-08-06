@@ -169,19 +169,16 @@ export const IconThemeSelectorContent = ({
   return (
     <>
       <CommandHeader onClose={handleClose}>
-        <div className="flex w-full items-center gap-2">
-          <CommandHeaderAction type="button" onClick={handleBack} aria-label="Back to commands">
-            <CaretLeft />
-          </CommandHeaderAction>
-          <CommandInput
-            ref={inputRef}
-            value={query}
-            onChange={setQuery}
-            onKeyDown={handleKeyDown}
-            placeholder="Search icon themes..."
-            className="flex-1"
-          />
-        </div>
+        <CommandHeaderAction type="button" onClick={handleBack} aria-label="Back to commands">
+          <CaretLeft />
+        </CommandHeaderAction>
+        <CommandInput
+          ref={inputRef}
+          value={query}
+          onChange={setQuery}
+          onKeyDown={handleKeyDown}
+          placeholder="Search icon themes..."
+        />
       </CommandHeader>
 
       <CommandList ref={resultsRef}>
@@ -216,7 +213,7 @@ export const IconThemeSelectorContent = ({
                   }
                 }}
                 isSelected={isSelected}
-                icon={<span className="text-subtle-foreground">{theme.icon || <Palette />}</span>}
+                icon={theme.icon || <Palette />}
                 title={theme.name}
                 accessory={
                   isCurrent && !isPreviewing ? (
