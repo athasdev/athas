@@ -9,9 +9,11 @@ import {
   RocketLaunchIcon as RocketLaunch,
   WrenchIcon as Wrench,
 } from "@/ui/icons";
+import { Button } from "@/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
+import { Toggle } from "@/ui/toggle";
 import { EmojiPicker } from "./emoji-picker";
 import Tooltip from "@/ui/tooltip";
-import { cn } from "@/utils/cn";
 
 const CHANNEL_ICON_STORAGE_KEY = "athas.collaboration.channel-icons";
 
@@ -66,21 +68,12 @@ export function ChannelIconPicker({
 }) {
   return (
     <div className="w-60 p-1">
-      <div className="grid grid-cols-2 gap-1 rounded-lg bg-background/70 p-1">
-        {(["emoji", "icon"] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={cn(
-              "ui-text-sm h-7 rounded-md capitalize text-subtle-foreground hover:bg-accent hover:text-foreground",
-              activeTab === tab && "bg-accent text-foreground",
-            )}
-            onClick={() => onTabChange(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as "emoji" | "icon")}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="emoji">Emoji</TabsTrigger>
+          <TabsTrigger value="icon">Icon</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <div className="mt-2">
         {activeTab === "emoji" ? (
@@ -92,16 +85,15 @@ export function ChannelIconPicker({
               const value = `icon:${option.id}`;
               return (
                 <Tooltip key={option.id} content={option.label} side="top">
-                  <button
+                  <Toggle
                     type="button"
-                    className={cn(
-                      "flex size-8 items-center justify-center rounded-md text-subtle-foreground hover:bg-accent hover:text-foreground",
-                      selected === value && "bg-accent text-foreground",
-                    )}
-                    onClick={() => onSelect(value)}
+                    size="md"
+                    pressed={selected === value}
+                    onPressedChange={(pressed) => pressed && onSelect(value)}
+                    aria-label={`Select ${option.label} icon`}
                   >
                     <Icon className="size-4" weight="duotone" />
-                  </button>
+                  </Toggle>
                 </Tooltip>
               );
             })}
@@ -110,13 +102,9 @@ export function ChannelIconPicker({
       </div>
 
       {activeTab === "icon" ? (
-        <button
-          type="button"
-          className="ui-text-sm mt-2 h-7 w-full rounded-md text-center text-subtle-foreground hover:bg-accent hover:text-foreground"
-          onClick={onClear}
-        >
+        <Button type="button" variant="ghost" size="sm" className="mt-2 w-full" onClick={onClear}>
           Reset to default
-        </button>
+        </Button>
       ) : null}
     </div>
   );

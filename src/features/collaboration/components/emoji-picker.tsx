@@ -1,7 +1,9 @@
 import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 import { useMemo, useState } from "react";
+import { Button } from "@/ui/button";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
+import { Toggle } from "@/ui/toggle";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -158,19 +160,15 @@ export function EmojiPicker({
 
   const renderEmojiButton = (emoji: string) => (
     <Tooltip key={emoji} content={getEmojiLabel(emoji)} side="top">
-      <button
+      <Toggle
         type="button"
-        className={cn(
-          "flex size-8 items-center justify-center rounded-md border border-transparent ui-text-base hover:bg-accent",
-          "focus-visible:border-primary focus-visible:outline-none",
-          selected === emoji && "border-primary/50 bg-accent",
-        )}
-        onClick={() => handleSelect(emoji)}
+        size="md"
+        pressed={selected === emoji}
+        onPressedChange={(pressed) => pressed && handleSelect(emoji)}
         aria-label={`Select ${getEmojiLabel(emoji)}`}
-        aria-pressed={selected === emoji}
       >
         {emoji}
-      </button>
+      </Toggle>
     </Tooltip>
   );
 
@@ -205,22 +203,15 @@ export function EmojiPicker({
       </div>
 
       {filteredOptions.length === 0 ? (
-        <Empty
-          density="compact"
-          className="mt-2 min-h-0 flex-none border border-border/60 px-2 py-3"
-        >
+        <Empty density="compact" className="mt-2">
           <EmptyDescription>No matching emoji</EmptyDescription>
         </Empty>
       ) : null}
 
       {onClear ? (
-        <button
-          type="button"
-          className="mt-2 h-7 w-full rounded-md text-center ui-text-sm text-subtle-foreground hover:bg-accent hover:text-foreground"
-          onClick={onClear}
-        >
+        <Button type="button" variant="ghost" size="sm" className="mt-2 w-full" onClick={onClear}>
           {clearLabel}
-        </button>
+        </Button>
       ) : null}
     </div>
   );

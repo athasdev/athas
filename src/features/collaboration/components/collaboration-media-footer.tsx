@@ -26,13 +26,12 @@ export function CollaborationMediaFooter({
   onStopFollowing: () => void;
 }) {
   return (
-    <SidebarFooter variant="surface" className="mx-0 mb-0 pb-0">
+    <SidebarFooter variant="surface">
       <div className="flex min-w-0 items-center gap-1 px-1 py-1">
         <Button
           type="button"
-          variant="ghost"
+          variant={micState === "error" ? "danger" : "ghost"}
           active={micState === "active"}
-          className={micState === "error" ? "text-destructive hover:text-destructive" : undefined}
           tooltip={micState === "active" ? "Stop Mic" : "Start Mic"}
           tooltipSide="top"
           onClick={onToggleMic}
@@ -42,11 +41,8 @@ export function CollaborationMediaFooter({
         </Button>
         <Button
           type="button"
-          variant="ghost"
+          variant={screenState === "error" ? "danger" : "ghost"}
           active={screenState === "active"}
-          className={
-            screenState === "error" ? "text-destructive hover:text-destructive" : undefined
-          }
           tooltip={screenState === "active" ? "Stop Screen Share" : "Share Screen"}
           tooltipSide="top"
           onClick={onToggleScreenShare}
@@ -65,7 +61,8 @@ export function CollaborationMediaFooter({
           <Button
             type="button"
             variant="ghost"
-            className="ui-text-sm ml-auto h-6 px-2"
+            size="xs"
+            className="ml-auto"
             onClick={onStopFollowing}
           >
             Stop

@@ -1,4 +1,5 @@
 import { FilePlusIcon as FilePlus, PaperPlaneTiltIcon as PaperPlaneTilt } from "@/ui/icons";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
 import { SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";
@@ -28,8 +29,12 @@ export function CollaborationMessageComposer({
   const isSubmitDisabled = !value.trim() || disabled || isSending;
 
   return (
-    <SidebarFooter variant="surface" className="mx-0 mb-0">
-      {error ? <div className="ui-text-sm mb-1.5 px-1 text-destructive">{error}</div> : null}
+    <SidebarFooter variant="surface">
+      {error ? (
+        <Alert tone="error" className="mb-1.5">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
       <SidebarComposerBody variant="plain">
         <Textarea
           value={value}
@@ -43,7 +48,7 @@ export function CollaborationMessageComposer({
           }}
           placeholder={placeholder}
           disabled={disabled || isSending}
-          className="ui-text-sm max-h-24 min-h-12 resize-none px-2 py-1.5 leading-5"
+          className="max-h-24 min-h-12 resize-none"
         />
       </SidebarComposerBody>
       <div className="mt-1 flex items-center justify-between gap-2 px-1 pb-1">
@@ -65,7 +70,6 @@ export function CollaborationMessageComposer({
         <Button
           type="button"
           variant="accent"
-          className="rounded-md [&_svg]:size-3.5"
           disabled={isSubmitDisabled}
           tooltip={isSending ? "Sending" : "Send"}
           tooltipSide="top"

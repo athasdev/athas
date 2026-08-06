@@ -35,6 +35,7 @@ import {
 } from "@/features/window/services/auth-api";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
+import { Card, CardContent } from "@/ui/card";
 import {
   Dropdown,
   DropdownMenu,
@@ -62,7 +63,6 @@ import {
 } from "@/ui/sidebar";
 import { toast } from "sonner";
 import Tooltip from "@/ui/tooltip";
-import { cn } from "@/utils/cn";
 import { getBaseName } from "@/utils/path-helpers";
 import {
   ChannelIconPicker,
@@ -1079,45 +1079,54 @@ export function CollaborationSidebarView() {
               <>
                 {isCreatingChannel ? (
                   <form
-                    className="mb-1 flex h-8 items-center gap-1 rounded-sm bg-accent/70 px-1.5"
+                    className="mb-1"
                     onSubmit={(event) => {
                       event.preventDefault();
                       void createChannel(newChannelName);
                     }}
                   >
-                    <Hash className="size-3.5 shrink-0 text-subtle-foreground" weight="duotone" />
-                    <Input
-                      autoFocus
-                      value={newChannelName}
-                      variant="ghost"
-                      size="xs"
-                      placeholder="channel-name"
-                      disabled={isSending}
-                      className="h-6 min-w-0 bg-transparent ui-text-sm"
-                      onChange={(event) => setNewChannelName(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Escape") {
-                          event.preventDefault();
-                          setIsCreatingChannel(false);
-                          setNewChannelName("");
-                        }
-                      }}
-                    />
-                    <Button
-                      type="submit"
-                      variant="ghost"
-                      className="ui-text-sm h-6 px-2"
-                      disabled={!newChannelName.trim() || isSending}
+                    <SidebarListEditor
+                      leading={
+                        <Hash
+                          className="size-3.5 shrink-0 text-subtle-foreground"
+                          weight="duotone"
+                        />
+                      }
+                      trailing={
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="xs"
+                          disabled={!newChannelName.trim() || isSending}
+                        >
+                          Create
+                        </Button>
+                      }
                     >
-                      Create
-                    </Button>
+                      <Input
+                        autoFocus
+                        value={newChannelName}
+                        variant="ghost"
+                        size="xs"
+                        placeholder="channel-name"
+                        disabled={isSending}
+                        className="min-w-0"
+                        onChange={(event) => setNewChannelName(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Escape") {
+                            event.preventDefault();
+                            setIsCreatingChannel(false);
+                            setNewChannelName("");
+                          }
+                        }}
+                      />
+                    </SidebarListEditor>
                   </form>
                 ) : null}
                 {filteredChannels.map((channel) => (
                   <SidebarListItem
                     key={channel.id}
                     type="button"
-                    className={cn("min-h-8 py-1 ui-text-sm")}
                     active={selectedChannel?.id === channel.id}
                     onClick={() => openChannelChat(channel.id)}
                     onContextMenu={(event) => channelsContextMenu.open(event, channel)}
@@ -1157,7 +1166,6 @@ export function CollaborationSidebarView() {
                     <SidebarListItem
                       key={participant.id}
                       type="button"
-                      className="min-h-8 ui-text-sm"
                       onClick={() => openPrivateChat(participant.id)}
                       onContextMenu={(event) => participantContextMenu.open(event, participant)}
                       leading={<CollaborationAvatar name={participant.name} />}
@@ -1172,7 +1180,7 @@ export function CollaborationSidebarView() {
             {(channelSearch || channelFilter !== "all") &&
             filteredChannels.length === 0 &&
             filteredPrivateChatParticipants.length === 0 ? (
-              <SidebarEmptyActionState className="min-h-24" message="No matching channels." />
+              <SidebarEmptyActionState message="No matching channels." />
             ) : null}
           </div>
         </ScrollArea>
@@ -1183,7 +1191,6 @@ export function CollaborationSidebarView() {
             <Button
               type="button"
               variant="ghost"
-              className="rounded-md"
               tooltip="Back to Channels"
               tooltipSide="bottom"
               onClick={() => setOpenConversation(null)}
@@ -1198,7 +1205,8 @@ export function CollaborationSidebarView() {
                   type="button"
                   variant="ghost"
                   active={openChannel?.id === channel.id}
-                  className="h-7 max-w-[128px] rounded-md px-2 ui-text-sm"
+                  size="sm"
+                  className="max-w-32"
                   onClick={() => openChannelChat(channel.id)}
                   onContextMenu={(event) => channelsContextMenu.open(event, channel)}
                 >
@@ -1218,32 +1226,26 @@ export function CollaborationSidebarView() {
                     <CollaborationAvatar name={group.author} />
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="px-1 text-subtle-foreground ui-text-sm">{group.author}</div>
-                      <div className="space-y-px">
-                        {group.entries.map((entry, index) => (
-                          <div
-                            key={entry.id}
-                            className={cn(
-                              "border border-border/45 bg-surface/45 px-2.5 py-1.5 text-foreground ui-text-sm leading-5",
-                              index === 0 && "rounded-t-lg",
-                              index === group.entries.length - 1 && "rounded-b-lg",
-                              group.entries.length === 1 && "rounded-lg",
-                            )}
-                          >
-                            {entry.kind === "document" ? (
-                              <span className="mb-0.5 flex items-center gap-1.5 text-subtle-foreground ui-text-sm">
-                                <FileText className="size-3" weight="duotone" />
-                                Document
-                              </span>
-                            ) : null}
-                            {entry.body}
-                          </div>
+                      <div className="space-y-1">
+                        {group.entries.map((entry) => (
+                          <Card key={entry.id} size="flush">
+                            <CardContent className="px-2.5 py-1.5">
+                              {entry.kind === "document" ? (
+                                <span className="mb-0.5 flex items-center gap-1.5 text-subtle-foreground">
+                                  <FileText className="size-3" weight="duotone" />
+                                  Document
+                                </span>
+                              ) : null}
+                              {entry.body}
+                            </CardContent>
+                          </Card>
                         ))}
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <SidebarEmptyActionState className="min-h-24" message="No chats yet." />
+                <SidebarEmptyActionState message="No chats yet." />
               )}
             </div>
           </ScrollArea>
@@ -1269,7 +1271,6 @@ export function CollaborationSidebarView() {
             <Button
               type="button"
               variant="ghost"
-              className="rounded-md"
               tooltip="Back to Channels"
               tooltipSide="bottom"
               onClick={() => setOpenConversation(null)}
@@ -1303,15 +1304,15 @@ export function CollaborationSidebarView() {
                       <CollaborationAvatar name={authorName} />
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="px-1 text-subtle-foreground ui-text-sm">{authorName}</div>
-                        <div className="rounded-lg border border-border/45 bg-surface/45 px-2.5 py-1.5 text-foreground ui-text-sm leading-5">
-                          {entry.body}
-                        </div>
+                        <Card size="flush">
+                          <CardContent className="px-2.5 py-1.5">{entry.body}</CardContent>
+                        </Card>
                       </div>
                     </div>
                   );
                 })
               ) : (
-                <SidebarEmptyActionState className="min-h-24" message="No private messages yet." />
+                <SidebarEmptyActionState message="No private messages yet." />
               )}
             </div>
           </ScrollArea>
@@ -1382,7 +1383,6 @@ export function CollaborationSidebarView() {
           filteredParticipants.map((participant) => (
             <SidebarListItem
               key={participant.id}
-              className={cn("min-h-8 ui-text-sm", participant.online && "text-foreground")}
               active={presenceTarget.followingUserId === participant.followableUserId}
               onContextMenu={(event) => participantContextMenu.open(event, participant)}
               onClick={() =>
@@ -1401,7 +1401,7 @@ export function CollaborationSidebarView() {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-6 px-2 ui-text-sm"
+                      size="xs"
                       onClick={(event) => {
                         event.stopPropagation();
                         void openParticipantFile(participant.activeFilePath!);
@@ -1418,7 +1418,6 @@ export function CollaborationSidebarView() {
           ))
         ) : (
           <SidebarEmptyActionState
-            className="min-h-24"
             message={
               peopleSearch || peopleFilter !== "all" ? "No matching members." : "No members yet."
             }
@@ -1473,7 +1472,6 @@ export function CollaborationSidebarView() {
             return (
               <SidebarListEditor
                 key={`${item.type}:${item.path}`}
-                className="min-h-7"
                 leading={
                   item.type === "folder" ? (
                     <Folder className="size-3.5" weight="duotone" />
@@ -1504,7 +1502,6 @@ export function CollaborationSidebarView() {
             <SidebarListItem
               key={`${item.type}:${item.path}`}
               type="button"
-              className={cn("min-h-7 ui-text-sm")}
               active={
                 (item.type === "file" &&
                   selectedNoteItemType === "file" &&
@@ -1545,7 +1542,6 @@ export function CollaborationSidebarView() {
         })}
         {filteredNoteItems.length === 0 ? (
           <SidebarEmptyActionState
-            className="min-h-24"
             message={notesFilter === "secrets" ? "No secrets yet." : "No matching notes."}
             description={
               notesFilter === "secrets"

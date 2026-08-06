@@ -1,11 +1,11 @@
+import { Avatar } from "@/ui/avatar";
 import Tooltip from "@/ui/tooltip";
-import { getAvatarInitials } from "@/ui/avatar";
 import { cn } from "@/utils/cn";
 
 export function CollaborationAvatar({ name, online }: { name: string; online?: boolean }) {
   return (
-    <span className="ui-text-sm relative flex size-7 shrink-0 items-center justify-center rounded-full bg-surface font-medium text-foreground">
-      {getAvatarInitials(name)}
+    <span className="relative shrink-0">
+      <Avatar name={name} className="size-7" />
       {online !== undefined ? (
         <span
           className={cn(
