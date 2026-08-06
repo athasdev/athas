@@ -59,7 +59,6 @@ import Textarea from "@/ui/textarea";
 import {
   SidebarEmptyState,
   SidebarPanel,
-  SidebarSectionEmptyState,
   SidebarSectionHeader,
   SidebarSectionLabel,
   SidebarTabBar,
@@ -2064,22 +2063,20 @@ export function DockerSidebar() {
                     />
                   ))
                 ) : (
-                  <SidebarSectionEmptyState>No matching containers</SidebarSectionEmptyState>
+                  <SidebarEmptyState>No matching containers</SidebarEmptyState>
                 ),
                 filteredContainers.length,
               )}
               {renderSection(
                 "compose",
                 composeError ? (
-                  <SidebarSectionEmptyState tone="error">{composeError}</SidebarSectionEmptyState>
+                  <SidebarEmptyState tone="error">{composeError}</SidebarEmptyState>
                 ) : !rootFolderPath ? (
-                  <SidebarSectionEmptyState>
+                  <SidebarEmptyState>
                     Open a workspace to inspect Compose services
-                  </SidebarSectionEmptyState>
+                  </SidebarEmptyState>
                 ) : composeProject.files.length === 0 ? (
-                  <SidebarSectionEmptyState>
-                    No Compose files in this workspace
-                  </SidebarSectionEmptyState>
+                  <SidebarEmptyState>No Compose files in this workspace</SidebarEmptyState>
                 ) : (
                   <>
                     <DockerResourceRow
@@ -2136,11 +2133,11 @@ export function DockerSidebar() {
                         />
                       ))
                     ) : (
-                      <SidebarSectionEmptyState>
+                      <SidebarEmptyState>
                         {composeProject.services.length > 0
                           ? "No matching Compose services"
                           : "No Compose services found"}
-                      </SidebarSectionEmptyState>
+                      </SidebarEmptyState>
                     )}
                   </>
                 ),
@@ -2149,13 +2146,11 @@ export function DockerSidebar() {
               {renderSection(
                 "project",
                 !rootFolderPath ? (
-                  <SidebarSectionEmptyState>
-                    Open a workspace to manage Docker presets
-                  </SidebarSectionEmptyState>
+                  <SidebarEmptyState>Open a workspace to manage Docker presets</SidebarEmptyState>
                 ) : isProjectConfigLoading ? (
-                  <SidebarSectionEmptyState role="status" aria-live="polite">
+                  <SidebarEmptyState role="status" aria-live="polite">
                     Loading project Docker config...
-                  </SidebarSectionEmptyState>
+                  </SidebarEmptyState>
                 ) : (
                   <>
                     {projectConfigError ? (
@@ -2173,9 +2168,9 @@ export function DockerSidebar() {
                     ) : null}
                     {projectConfigItemCount === 0 ? (
                       <div className="space-y-1 px-2 py-1">
-                        <SidebarSectionEmptyState className="px-0">
+                        <SidebarEmptyState>
                           No env files or presets in this workspace
-                        </SidebarSectionEmptyState>
+                        </SidebarEmptyState>
                         <div className="flex flex-wrap items-center gap-1">
                           <Button
                             type="button"
@@ -2528,7 +2523,7 @@ export function DockerSidebar() {
                       />
                     ))
                   ) : (
-                    <SidebarSectionEmptyState>No matching images</SidebarSectionEmptyState>
+                    <SidebarEmptyState>No matching images</SidebarEmptyState>
                   )}
                 </>,
                 filteredImages.length,
@@ -2729,9 +2724,7 @@ export function DockerSidebar() {
                       />
                     ))
                   ) : (
-                    <SidebarSectionEmptyState>
-                      Search Docker Hub to find images
-                    </SidebarSectionEmptyState>
+                    <SidebarEmptyState>Search Docker Hub to find images</SidebarEmptyState>
                   )}
                 </>,
                 registryResults.length,
@@ -2773,7 +2766,7 @@ export function DockerSidebar() {
                 filteredVolumes.length > 0 ? (
                   filteredVolumes.map((volume) => <VolumeRow key={volume.name} volume={volume} />)
                 ) : (
-                  <SidebarSectionEmptyState>No matching volumes</SidebarSectionEmptyState>
+                  <SidebarEmptyState>No matching volumes</SidebarEmptyState>
                 ),
                 filteredVolumes.length,
               )}
@@ -2784,7 +2777,7 @@ export function DockerSidebar() {
                     <NetworkRow key={network.id} network={network} />
                   ))
                 ) : (
-                  <SidebarSectionEmptyState>No matching networks</SidebarSectionEmptyState>
+                  <SidebarEmptyState>No matching networks</SidebarEmptyState>
                 ),
                 filteredNetworks.length,
               )}
@@ -2988,7 +2981,7 @@ export function DockerSidebar() {
                           </div>
                         ))
                       ) : (
-                        <SidebarSectionEmptyState>No files found.</SidebarSectionEmptyState>
+                        <SidebarEmptyState>No files found.</SidebarEmptyState>
                       )}
                     </div>
                   </>

@@ -397,25 +397,6 @@ export function SidebarSectionLabel({
   );
 }
 
-export function SidebarSectionEmptyState({
-  children,
-  className,
-  ...props
-}: Omit<ComponentProps<typeof Empty>, "density"> & {
-  children: ReactNode;
-}) {
-  return (
-    <Empty
-      data-sidebar-state="section-empty"
-      density="compact"
-      className={cn("min-h-0 flex-none items-start rounded-none px-2 py-1.5 text-left", className)}
-      {...props}
-    >
-      <EmptyDescription className="leading-[1.35]">{children}</EmptyDescription>
-    </Empty>
-  );
-}
-
 export interface SidebarSectionSwitcherItem {
   id: string;
   label: string;
@@ -582,12 +563,27 @@ function SidebarSectionSwitcher({
 }
 
 export function SidebarEmptyState({
+  icon,
+  message,
+  description,
+  actionLabel,
+  onAction,
+  actionDisabled = false,
   children,
   className,
   ...props
-}: ComponentProps<"div"> & {
-  children: ReactNode;
+}: Omit<ComponentProps<typeof Empty>, "children" | "density"> & {
+  icon?: ReactNode;
+  message?: ReactNode;
+  description?: ReactNode;
+  actionLabel?: ReactNode;
+  onAction?: () => void;
+  actionDisabled?: boolean;
+  children?: ReactNode;
 }) {
+  const title = message ?? children;
+  const content = message ? children : null;
+
   return (
     <Empty
       data-sidebar-state="empty"
@@ -595,68 +591,27 @@ export function SidebarEmptyState({
       className={cn("min-h-24 select-none rounded-none px-3 py-6", className)}
       {...props}
     >
-      <EmptyDescription className="leading-[1.35]">{children}</EmptyDescription>
-    </Empty>
-  );
-}
-
-export function SidebarEmptyActionState({
-  icon,
-  message,
-  description,
-  actionLabel,
-  onAction,
-  actionDisabled = false,
-  className,
-  actionClassName,
-  tone = "neutral",
-  children,
-  ...props
-}: ComponentProps<"div"> & {
-  icon?: ReactNode;
-  message: ReactNode;
-  description?: ReactNode;
-  actionLabel?: ReactNode;
-  onAction?: () => void;
-  actionDisabled?: boolean;
-  actionClassName?: string;
-  tone?: "neutral" | "error" | "success";
-}) {
-  const emptyTone = tone === "neutral" ? "neutral" : tone;
-
-  return (
-    <Empty
-      data-sidebar-state="empty-action"
-      density="compact"
-      tone={emptyTone}
-      className={cn("min-h-24 select-none rounded-none px-3 py-6", className)}
-      {...props}
-    >
-      {icon ? <EmptyMedia className="mb-0 size-7 text-subtle-foreground">{icon}</EmptyMedia> : null}
-      <EmptyHeader className="gap-1">
-        <EmptyTitle className="ui-text-sm font-normal leading-[1.35]">{message}</EmptyTitle>
-        {description ? (
-          <EmptyDescription className="max-w-[24ch] leading-[1.35]">{description}</EmptyDescription>
-        ) : null}
+      {icon ? <EmptyMedia variant="icon">{icon}</EmptyMedia> : null}
+      <EmptyHeader>
+        {title ? <EmptyTitle>{title}</EmptyTitle> : null}
+        {description ? <EmptyDescription>{description}</EmptyDescription> : null}
       </EmptyHeader>
-      {actionLabel && onAction ? (
-        <EmptyContent className="gap-1.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            className={cn(
-              "ui-text-sm h-6 px-2 text-subtle-foreground hover:text-foreground",
-              actionClassName,
-            )}
-            disabled={actionDisabled}
-            onClick={onAction}
-          >
-            {actionLabel}
-          </Button>
+      {(actionLabel && onAction) || content ? (
+        <EmptyContent>
+          {actionLabel && onAction ? (
+            <Button
+              type="button"
+              variant="default"
+              size="xs"
+              disabled={actionDisabled}
+              onClick={onAction}
+            >
+              {actionLabel}
+            </Button>
+          ) : null}
+          {content}
         </EmptyContent>
       ) : null}
-      {children}
     </Empty>
   );
 }

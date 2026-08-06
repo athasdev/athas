@@ -36,7 +36,7 @@ import {
   SidebarHeaderIconButton,
   SidebarListEditor,
   SidebarListItem,
-  SidebarSectionEmptyState,
+  SidebarEmptyState,
   SidebarSectionHeader,
   SidebarSectionLabel,
 } from "@/ui/sidebar";
@@ -292,9 +292,7 @@ export function SidebarAgentHistory({
               More
             </SidebarListItem>
           ) : null}
-          {visibleChats.length === 0 ? (
-            <SidebarSectionEmptyState>No history yet</SidebarSectionEmptyState>
-          ) : null}
+          {visibleChats.length === 0 ? <SidebarEmptyState>No history yet</SidebarEmptyState> : null}
           <Dropdown
             isOpen={olderAgentsMenu.isOpen}
             point={olderAgentsMenu.position}
@@ -561,9 +559,7 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
               {terminal.name}
             </SidebarListItem>
           ))}
-          {terminalCount === 0 ? (
-            <SidebarSectionEmptyState>No terminals yet</SidebarSectionEmptyState>
-          ) : null}
+          {terminalCount === 0 ? <SidebarEmptyState>No terminals yet</SidebarEmptyState> : null}
         </>
       ) : null}
     </div>

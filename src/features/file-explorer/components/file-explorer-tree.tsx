@@ -50,7 +50,7 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import {
-  SidebarEmptyActionState,
+  SidebarEmptyState,
   SidebarHeaderIconButton,
   SidebarHeaderSearch,
   SidebarToolbar,
@@ -1305,17 +1305,15 @@ function FileExplorerTreeComponent({
       >
         {!rootFolderPath ? (
           <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
-            <SidebarEmptyActionState
+            <SidebarEmptyState
               message="No folder open"
               actionLabel="Open Folder"
               onAction={handleOpenFolder}
-              className="file-explorer-base-text"
-              actionClassName="ui-text-sm"
             />
           </div>
         ) : displayedFiles.length === 0 ? (
           <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
-            <SidebarEmptyActionState
+            <SidebarEmptyState
               message={
                 isTreeSearchSearching
                   ? "Searching files"
@@ -1323,7 +1321,6 @@ function FileExplorerTreeComponent({
                     ? "No matching files"
                     : "Folder is empty"
               }
-              className="file-explorer-base-text"
             />
           </div>
         ) : (

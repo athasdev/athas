@@ -41,7 +41,7 @@ import {
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
-  SidebarEmptyActionState,
+  SidebarEmptyState,
   SidebarHeaderIconButton,
   SidebarHeaderSearch,
   SidebarPanel,
@@ -726,7 +726,7 @@ const GitHubPRsView = memo(() => {
         }}
       >
         {availableSections.length === 0 ? (
-          <SidebarEmptyActionState
+          <SidebarEmptyState
             className="h-full"
             message="Enable GitHub sidebar sections in Settings -> Appearance."
           />

@@ -20,7 +20,6 @@ import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { showAlertDialog } from "@/ui/dialog";
 import {
-  SidebarEmptyActionState,
   SidebarEmptyState,
   SidebarFooter,
   SidebarHeaderIconButton,
@@ -717,12 +716,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <>
         <SidebarPanel>
           <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
-          <SidebarEmptyActionState className="h-full" message="No repository selected">
+          <SidebarEmptyState className="h-full" message="No repository selected">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
               <span className="ui-text-sm mt-1.5 text-destructive">{repoSelectionError}</span>
             ) : null}
-          </SidebarEmptyActionState>
+          </SidebarEmptyState>
         </SidebarPanel>
         {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
       </>
@@ -746,12 +745,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <>
         <SidebarPanel>
           <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
-          <SidebarEmptyActionState className="h-full" message="Not a Git repository">
+          <SidebarEmptyState className="h-full" message="Not a Git repository">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
               <span className="ui-text-sm mt-1.5 text-destructive">{repoSelectionError}</span>
             ) : null}
-          </SidebarEmptyActionState>
+          </SidebarEmptyState>
         </SidebarPanel>
         {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
       </>

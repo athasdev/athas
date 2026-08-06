@@ -21,7 +21,7 @@ import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { ScrollArea } from "@/ui/scroll-area";
 import { showConfirmDialog } from "@/ui/dialog";
 import {
-  SidebarEmptyActionState,
+  SidebarEmptyState,
   SidebarHeaderIconButton,
   SidebarSectionHeader,
   SidebarToolbar,
@@ -661,8 +661,8 @@ const GitStatusPanel = ({
           </ScrollArea>
         </>
       ) : (
-        <SidebarEmptyActionState
-          className="min-h-24 flex-1"
+        <SidebarEmptyState
+          className="flex-1"
           icon={<Check />}
           message="Working tree clean"
           tone="success"

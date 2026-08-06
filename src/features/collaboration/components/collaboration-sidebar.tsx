@@ -49,7 +49,7 @@ import {
 import Input, { InlineRenameInput } from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
-  SidebarEmptyActionState,
+  SidebarEmptyState,
   SidebarHeader,
   SidebarHeaderIconButton,
   SidebarHeaderSearch,
@@ -591,7 +591,7 @@ export function CollaborationSidebarView() {
     return (
       <SidebarPanel>
         <SidebarTitleBar title="Collaboration" />
-        <SidebarEmptyActionState
+        <SidebarEmptyState
           className="h-full"
           message="Teams workspace is not available for this account."
         />
@@ -1180,7 +1180,7 @@ export function CollaborationSidebarView() {
             {(channelSearch || channelFilter !== "all") &&
             filteredChannels.length === 0 &&
             filteredPrivateChatParticipants.length === 0 ? (
-              <SidebarEmptyActionState message="No matching channels." />
+              <SidebarEmptyState message="No matching channels." />
             ) : null}
           </div>
         </ScrollArea>
@@ -1245,7 +1245,7 @@ export function CollaborationSidebarView() {
                   </div>
                 ))
               ) : (
-                <SidebarEmptyActionState message="No chats yet." />
+                <SidebarEmptyState message="No chats yet." />
               )}
             </div>
           </ScrollArea>
@@ -1312,7 +1312,7 @@ export function CollaborationSidebarView() {
                   );
                 })
               ) : (
-                <SidebarEmptyActionState message="No private messages yet." />
+                <SidebarEmptyState message="No private messages yet." />
               )}
             </div>
           </ScrollArea>
@@ -1417,7 +1417,7 @@ export function CollaborationSidebarView() {
             </SidebarListItem>
           ))
         ) : (
-          <SidebarEmptyActionState
+          <SidebarEmptyState
             message={
               peopleSearch || peopleFilter !== "all" ? "No matching members." : "No members yet."
             }
@@ -1541,7 +1541,7 @@ export function CollaborationSidebarView() {
           );
         })}
         {filteredNoteItems.length === 0 ? (
-          <SidebarEmptyActionState
+          <SidebarEmptyState
             message={notesFilter === "secrets" ? "No secrets yet." : "No matching notes."}
             description={
               notesFilter === "secrets"

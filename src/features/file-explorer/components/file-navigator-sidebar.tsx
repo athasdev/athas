@@ -15,7 +15,7 @@ import {
   SidebarHeader,
   SidebarHeaderSearch,
   SidebarListItem,
-  SidebarSectionEmptyState,
+  SidebarEmptyState,
   SidebarSectionLabel,
 } from "@/ui/sidebar";
 import { ToggleGroup } from "@/ui/toggle-group";
@@ -453,7 +453,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
           </SidebarSectionLabel>
         ) : null}
         {filteredItems.length === 0 ? (
-          <SidebarSectionEmptyState>No files match</SidebarSectionEmptyState>
+          <SidebarEmptyState>No files match</SidebarEmptyState>
         ) : viewMode === "flat" ? (
           flatItems.map((item) => (
             <FileNavigatorFlatRow

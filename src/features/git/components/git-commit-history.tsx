@@ -13,7 +13,7 @@ import { Avatar } from "@/ui/avatar";
 import {
   SidebarHeaderIconButton,
   SidebarHeaderSearch,
-  SidebarSectionEmptyState,
+  SidebarEmptyState,
   SidebarToolbar,
 } from "@/ui/sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -310,9 +310,9 @@ const GitCommitHistory = ({
         ref={scrollContainerRef}
       >
         {!hasHistoryRows ? (
-          <SidebarSectionEmptyState>No commits</SidebarSectionEmptyState>
+          <SidebarEmptyState>No commits</SidebarEmptyState>
         ) : filteredCommits.length === 0 ? (
-          <SidebarSectionEmptyState>No commits match the current filters</SidebarSectionEmptyState>
+          <SidebarEmptyState>No commits match the current filters</SidebarEmptyState>
         ) : (
           <>
             {filteredCommits.map((commit) => (

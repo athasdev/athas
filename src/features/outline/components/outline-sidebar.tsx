@@ -30,7 +30,6 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
-  SidebarEmptyActionState,
   SidebarEmptyState,
   SidebarHeaderIconButton,
   SidebarHeaderSearch,
@@ -346,7 +345,7 @@ export function OutlineSidebar() {
         contentClassName="p-1"
       >
         {!isSupported ? (
-          <SidebarEmptyActionState
+          <SidebarEmptyState
             message={activeBuffer ? "No outline for the active file." : "No active file."}
             actionLabel="Open a File"
             onAction={() => void handleOpenFile()}

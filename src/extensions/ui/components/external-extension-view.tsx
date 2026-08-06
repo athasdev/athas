@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { SidebarEmptyActionState } from "@/ui/sidebar";
+import { SidebarEmptyState } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { uiExtensionHost } from "../services/ui-extension-host";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
@@ -40,7 +40,7 @@ export function ExternalExtensionView({ extensionId, viewId }: ExternalExtension
   );
 
   if (error) {
-    return <SidebarEmptyActionState tone="error" message="Extension error" description={error} />;
+    return <SidebarEmptyState tone="error" message="Extension error" description={error} />;
   }
   if (!node) {
     return <Spinner showLabel label="Loading extension" className="m-auto" />;

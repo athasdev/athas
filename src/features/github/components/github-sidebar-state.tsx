@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { SidebarEmptyActionState } from "@/ui/sidebar";
+import { SidebarEmptyState } from "@/ui/sidebar";
 
 interface GitHubSidebarStateProps {
   icon: ReactNode;
@@ -25,7 +25,7 @@ export function GitHubSidebarState({
   const isError = tone === "error";
 
   return (
-    <SidebarEmptyActionState
+    <SidebarEmptyState
       className={className}
       icon={icon}
       message={title}

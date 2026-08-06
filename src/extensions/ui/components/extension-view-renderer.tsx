@@ -4,7 +4,6 @@ import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
-  SidebarEmptyActionState,
   SidebarEmptyState,
   SidebarListItem,
   SidebarPanel,
@@ -170,7 +169,7 @@ function renderNode(
       );
     case "error":
       return (
-        <SidebarEmptyActionState
+        <SidebarEmptyState
           key={key}
           tone="error"
           message={node.message}
