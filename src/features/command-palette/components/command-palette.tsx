@@ -5,7 +5,6 @@ import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
 import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
-import { QuickQuestionCommandContent } from "@/features/ai/components/quick-question-command";
 import { DatabaseCommandContent } from "@/features/database/components/database-sidebar";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -165,9 +164,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = useBufferStore((state) =>
     activeBufferId ? (state.buffers.find((buffer) => buffer.id === activeBufferId) ?? null) : null,
-  );
-  const quickQuestionBuffers = useBufferStore((state) =>
-    currentView === "quick-question" ? state.buffers : [],
   );
   const {
     closeBuffer,
@@ -385,7 +381,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       vimCommands,
       setMode,
       openQuickEdit,
-      pushPaletteView: pushView,
       showToast,
       onClose,
     }),
@@ -455,15 +450,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
 
   return (
     <Command isVisible onClose={onClose}>
-      {currentView === "quick-question" ? (
-        <QuickQuestionCommandContent
-          onBack={popView}
-          onClose={onClose}
-          activeBuffer={activeBuffer}
-          buffers={quickQuestionBuffers}
-          projectRoot={rootFolderPath}
-        />
-      ) : currentView === "color-theme" ? (
+      {currentView === "color-theme" ? (
         <ThemeSelectorContent
           isActive={currentView === "color-theme"}
           onBack={popView}
