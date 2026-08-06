@@ -1,8 +1,0 @@
-.editor-container,
-.monaco-editor {
-  font-family: var(--editor-font-family);
-}
-
-.markdown-preview {
-  font-family: var(--app-font-family);
-}

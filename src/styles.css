@@ -11,7 +11,6 @@
 
 @import "./styles/theme.css";
 @import "./styles/base.css";
-@import "./styles/fonts.css";
 @import "./styles/scrollbars.css";
 @import "./styles/syntax-tokens.css";
 @import "./styles/rendered-code-tokens.css";
@@ -19,4 +18,3 @@
 @import "./styles/utilities.css";
 
 @import "tw-animate-css";
-@import "./styles/sonner.css";
