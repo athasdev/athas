@@ -43,6 +43,22 @@ export function useAppBootstrap() {
   useContextMenuPrevention();
   useLspInitialization();
 
+  useEffect(() => {
+    let timer: number | null = null;
+    const frame = window.requestAnimationFrame(() => {
+      timer = window.setTimeout(() => {
+        void invoke("warm_terminal_environment").catch((error) => {
+          console.warn("Failed to warm terminal environment:", error);
+        });
+      }, 0);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, []);
+
   useLayoutEffect(() => {
     void invoke("close_all_embedded_webviews").catch((error) => {
       console.warn("Failed to clean up stale embedded webviews:", error);

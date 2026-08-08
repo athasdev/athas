@@ -7,6 +7,11 @@ use std::sync::Arc;
 use tauri::{State, ipc::Channel};
 
 #[tauri::command]
+pub fn warm_terminal_environment(terminal_manager: State<'_, Arc<TerminalManager>>) {
+   terminal_manager.warm_user_environment();
+}
+
+#[tauri::command]
 pub async fn create_terminal(
    mut config: TerminalConfig,
    on_event: Channel<TerminalEvent>,

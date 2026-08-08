@@ -11,7 +11,7 @@ use tauri::Manager;
 use tauri_plugin_window_state::StateFlags;
 use terminal::{
    close_terminal, create_terminal, list_shells, terminal_resize, terminal_set_paused,
-   terminal_write,
+   terminal_write, warm_terminal_environment,
 };
 
 mod app_runtime;
@@ -215,6 +215,7 @@ fn main() {
          terminal_set_paused,
          close_terminal,
          list_shells,
+         warm_terminal_environment,
          // execute_shell,
          // SSH commands
          ssh_connect,

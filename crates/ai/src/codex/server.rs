@@ -18,7 +18,7 @@ use tauri::Emitter;
 use tokio::{
    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
    process::{Child, ChildStdin, Command},
-   sync::{Mutex, RwLock, oneshot},
+   sync::{Mutex, OnceCell, RwLock, oneshot},
    task::JoinHandle,
 };
 
@@ -36,35 +36,70 @@ struct CodexProcess {
 }
 
 #[derive(Clone)]
+struct CodexInstallation {
+   binary: PathBuf,
+   version: Option<String>,
+}
+
+#[derive(Clone)]
 pub struct CodexAppServer {
    app_handle: AppHandle,
    process: Arc<Mutex<Option<CodexProcess>>>,
    status: Arc<RwLock<CodexIntegrationStatus>>,
+   installation: Arc<OnceCell<Option<CodexInstallation>>>,
    start_lock: Arc<Mutex<()>>,
    next_request_id: Arc<AtomicU64>,
 }
 
 impl CodexAppServer {
    pub fn new(app_handle: AppHandle) -> Self {
-      let detected = detect_codex_binary();
-      let mut status = CodexIntegrationStatus::default();
-      if let Some(path) = detected.as_deref() {
-         status.installed = true;
-         status.version = read_codex_version(path);
-         status.state = "stopped".to_string();
-      }
-
       Self {
          app_handle,
          process: Arc::new(Mutex::new(None)),
-         status: Arc::new(RwLock::new(status)),
+         status: Arc::new(RwLock::new(CodexIntegrationStatus::default())),
+         installation: Arc::new(OnceCell::new()),
          start_lock: Arc::new(Mutex::new(())),
          next_request_id: Arc::new(AtomicU64::new(1)),
       }
    }
 
    pub async fn status(&self) -> CodexIntegrationStatus {
+      self.detect_installation().await;
+      self.status_snapshot().await
+   }
+
+   async fn status_snapshot(&self) -> CodexIntegrationStatus {
       self.status.read().await.clone()
+   }
+
+   async fn detect_installation(&self) -> Option<CodexInstallation> {
+      let installation = self
+         .installation
+         .get_or_init(|| async {
+            tokio::task::spawn_blocking(|| {
+               let binary = detect_codex_binary()?;
+               let version = read_codex_version(&binary);
+               Some(CodexInstallation { binary, version })
+            })
+            .await
+            .unwrap_or(None)
+         })
+         .await
+         .clone();
+
+      if let Some(installation) = installation.as_ref() {
+         self
+            .update_status(|status| {
+               status.installed = true;
+               status.version = installation.version.clone();
+               if !status.running && status.state == "unavailable" {
+                  status.state = "stopped".to_string();
+               }
+            })
+            .await;
+      }
+
+      installation
    }
 
    pub async fn start(&self, cwd: String) -> Result<CodexIntegrationStatus> {
@@ -75,14 +110,15 @@ impl CodexAppServer {
          return Ok(status.clone());
       }
 
-      let binary = detect_codex_binary().context(
+      let installation = self.detect_installation().await.context(
          "Codex CLI is not installed. Install the Codex integration before starting a session.",
       )?;
+      let CodexInstallation { binary, version } = installation;
 
       self
          .update_status(|status| {
             status.installed = true;
-            status.version = read_codex_version(&binary);
+            status.version = version;
             status.running = false;
             status.initialized = false;
             status.state = "starting".to_string();
@@ -685,7 +721,10 @@ impl CodexAppServer {
    }
 
    async fn emit_status(&self) {
-      if let Err(error) = self.app_handle.emit("codex-status", self.status().await) {
+      if let Err(error) = self
+         .app_handle
+         .emit("codex-status", self.status_snapshot().await)
+      {
          log::warn!("Failed to emit Codex status: {error}");
       }
    }

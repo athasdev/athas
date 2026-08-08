@@ -22,11 +22,13 @@ impl Default for TerminalManager {
 
 impl TerminalManager {
    pub fn new() -> Self {
-      TerminalConnection::warm_user_environment();
-
       Self {
          connections: Arc::new(Mutex::new(HashMap::new())),
       }
+   }
+
+   pub fn warm_user_environment(&self) {
+      TerminalConnection::warm_user_environment();
    }
 
    pub fn create_terminal(
