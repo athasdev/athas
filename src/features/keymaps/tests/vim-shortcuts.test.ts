@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
-import { isVimRedoShortcut } from "../utils/vim-shortcuts";
+import { isVimOwnedShortcut } from "../utils/vim-shortcuts";
 
 function keyboardEvent(
-  overrides: Partial<Parameters<typeof isVimRedoShortcut>[0]> = {},
-): Parameters<typeof isVimRedoShortcut>[0] {
+  overrides: Partial<Parameters<typeof isVimOwnedShortcut>[0]> = {},
+): Parameters<typeof isVimOwnedShortcut>[0] {
   return {
     key: "r",
     ctrlKey: false,
@@ -14,12 +14,13 @@ function keyboardEvent(
   };
 }
 
-describe("isVimRedoShortcut", () => {
-  it("recognizes Ctrl-R without treating neighboring shortcuts as Vim redo", () => {
-    expect(isVimRedoShortcut(keyboardEvent({ ctrlKey: true }))).toBe(true);
-    expect(isVimRedoShortcut(keyboardEvent({ key: "R", ctrlKey: true }))).toBe(true);
-    expect(isVimRedoShortcut(keyboardEvent({ metaKey: true }))).toBe(false);
-    expect(isVimRedoShortcut(keyboardEvent({ ctrlKey: true, shiftKey: true }))).toBe(false);
-    expect(isVimRedoShortcut(keyboardEvent({ key: "y", ctrlKey: true }))).toBe(false);
+describe("isVimOwnedShortcut", () => {
+  it("recognizes Vim control keys without capturing neighboring shortcuts", () => {
+    expect(isVimOwnedShortcut(keyboardEvent({ ctrlKey: true }))).toBe(true);
+    expect(isVimOwnedShortcut(keyboardEvent({ key: "R", ctrlKey: true }))).toBe(true);
+    expect(isVimOwnedShortcut(keyboardEvent({ key: "w", ctrlKey: true }))).toBe(true);
+    expect(isVimOwnedShortcut(keyboardEvent({ metaKey: true }))).toBe(false);
+    expect(isVimOwnedShortcut(keyboardEvent({ ctrlKey: true, shiftKey: true }))).toBe(false);
+    expect(isVimOwnedShortcut(keyboardEvent({ key: "y", ctrlKey: true }))).toBe(false);
   });
 });

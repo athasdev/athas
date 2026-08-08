@@ -24,7 +24,7 @@ import { isNativeMenuAccelerator } from "../utils/native-menu-accelerators";
 import { parseKeybinding } from "../utils/parser";
 import type { ParsedKey } from "../utils/parser";
 import { keymapRegistry } from "../utils/registry";
-import { isVimRedoShortcut } from "../utils/vim-shortcuts";
+import { isVimOwnedShortcut } from "../utils/vim-shortcuts";
 
 const CHORD_TIMEOUT = 1000; // 1 second to complete chord
 const CLOSE_TAB_CLOSE_REQUEST_WINDOW_MS = 1000;
@@ -106,6 +106,11 @@ export function useKeymaps() {
         return;
       }
 
+      const { settings } = useSettingsStore.getState();
+      if (settings.vimMode && isEditorTarget && isVimOwnedShortcut(e)) {
+        return;
+      }
+
       if (isCloseWindowShortcut(e)) {
         e.preventDefault();
         e.stopPropagation();
@@ -153,12 +158,7 @@ export function useKeymaps() {
       }
 
       // Vim mode bypass - let vim handle keys without modifiers
-      const { settings } = useSettingsStore.getState();
       const hasModifiers = e.metaKey || e.ctrlKey || e.altKey;
-
-      if (settings.vimMode && isEditorTarget && isVimRedoShortcut(e)) {
-        return;
-      }
 
       if (settings.vimMode && !hasModifiers && !e.shiftKey) {
         return;

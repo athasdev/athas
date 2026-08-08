@@ -1,11 +1,13 @@
 type VimKeyboardEvent = Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">;
 
-export function isVimRedoShortcut(event: VimKeyboardEvent): boolean {
+const VIM_CONTROL_KEYS = new Set(["r", "w"]);
+
+export function isVimOwnedShortcut(event: VimKeyboardEvent): boolean {
   return (
     event.ctrlKey &&
     !event.metaKey &&
     !event.altKey &&
     !event.shiftKey &&
-    event.key.toLowerCase() === "r"
+    VIM_CONTROL_KEYS.has(event.key.toLowerCase())
   );
 }
