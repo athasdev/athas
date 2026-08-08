@@ -78,10 +78,8 @@ fn read_log_tail(path: &Path) -> Result<(String, bool), String> {
       .read_to_end(&mut bytes)
       .map_err(|error| format!("Failed to read Athas log: {error}"))?;
 
-   if truncated {
-      if let Some(newline_index) = bytes.iter().position(|byte| *byte == b'\n') {
-         bytes.drain(..=newline_index);
-      }
+   if truncated && let Some(newline_index) = bytes.iter().position(|byte| *byte == b'\n') {
+      bytes.drain(..=newline_index);
    }
 
    Ok((String::from_utf8_lossy(&bytes).into_owned(), truncated))
