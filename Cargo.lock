@@ -668,6 +668,7 @@ dependencies = [
  "tokio-tungstenite",
  "tokio-util",
  "toml 0.8.2",
+ "ttf-parser",
  "unicode-width 0.2.2",
  "url",
  "uuid",
