@@ -105,6 +105,22 @@ describe("AcpStreamHandler", () => {
     expect(handlers.onChunk).toHaveBeenCalledWith("right chat");
   });
 
+  it("normalizes startup authentication errors for the login action", () => {
+    const handler = new AcpStreamHandler("gemini-cli", {
+      onChunk: vi.fn(),
+      onComplete: vi.fn(),
+      onError: vi.fn(),
+    }) as unknown as { formatStartupError: (error: unknown) => string };
+
+    expect(
+      handler.formatStartupError(
+        new Error("gemini-cli requires authentication before it can answer prompts."),
+      ),
+    ).toBe(
+      "Authentication required: gemini-cli must be authenticated before it can answer prompts.",
+    );
+  });
+
   it("waits for ACP prompt completion instead of completing after inactivity", () => {
     const { handler, handlers } = createHandler();
 

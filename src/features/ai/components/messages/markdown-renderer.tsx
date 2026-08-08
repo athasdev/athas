@@ -28,6 +28,7 @@ import { Button } from "@/ui/button";
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 function inferCodeLanguage(code: string): string {
   const trimmed = code.trim();
@@ -195,6 +196,7 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRestartingSession, setIsRestartingSession] = useState(false);
   const openTerminalBuffer = useBufferStore((state) => state.actions.openTerminalBuffer);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const setChatAcpSessionId = useAIChatStore((state) => state.actions.setChatAcpSessionId);
   const setAvailableSlashCommands = useAIChatStore(
     (state) => state.actions.setAvailableSlashCommands,
@@ -313,6 +315,7 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
                   openTerminalBuffer({
                     command: suggestedCommand,
                     name: suggestedCommand,
+                    workingDirectory: rootFolderPath ?? undefined,
                   })
                 }
                 className="h-auto gap-1.5"
@@ -324,7 +327,12 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
               <Button
                 type="button"
                 variant="default"
-                onClick={() => openTerminalBuffer({ name: "Agent authentication" })}
+                onClick={() =>
+                  openTerminalBuffer({
+                    name: "Agent authentication",
+                    workingDirectory: rootFolderPath ?? undefined,
+                  })
+                }
                 className="h-auto gap-1.5"
               >
                 <Terminal size={12} />

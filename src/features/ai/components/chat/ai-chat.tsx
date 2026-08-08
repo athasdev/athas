@@ -2,6 +2,7 @@ import { listen } from "@tauri-apps/api/event";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
+import { isAcpAuthenticationError } from "@/features/ai/lib/acp-authentication";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
@@ -645,9 +646,7 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
           }
 
           const isAcpAuthError =
-            isAcpAgent(currentAgentId) &&
-            (mainError.includes("Authentication required") ||
-              errorDetails.includes("Authentication required"));
+            isAcpAgent(currentAgentId) && isAcpAuthenticationError(mainError, errorDetails);
 
           if (isAcpAuthError) {
             errorTitle = "Authentication Required";

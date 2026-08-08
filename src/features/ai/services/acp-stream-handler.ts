@@ -12,6 +12,7 @@ import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { getAcpPathBaseName, toAcpFileUri } from "@/features/ai/lib/acp-file-uri";
+import { isAcpAuthenticationError } from "@/features/ai/lib/acp-authentication";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { normalizeAcpWorkspacePath } from "@/features/ai/lib/acp-workspace-path";
 import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
@@ -228,8 +229,8 @@ export class AcpStreamHandler {
     if (normalized.includes("install")) {
       return `${this.agentId} could not be installed automatically. Check network access and local tool permissions.`;
     }
-    if (normalized.includes("auth")) {
-      return `${this.agentId} requires authentication before it can answer prompts.`;
+    if (isAcpAuthenticationError(message) || normalized.includes("auth")) {
+      return `Authentication required: ${this.agentId} must be authenticated before it can answer prompts.`;
     }
     if (normalized.includes("timed out") || normalized.includes("in time")) {
       return `${this.agentId} did not respond during startup. Restart the agent session and try again.`;
