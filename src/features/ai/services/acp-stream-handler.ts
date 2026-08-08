@@ -12,7 +12,10 @@ import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { getAcpPathBaseName, toAcpFileUri } from "@/features/ai/lib/acp-file-uri";
-import { isAcpAuthenticationError } from "@/features/ai/lib/acp-authentication";
+import {
+  getAcpStartupErrorDetails,
+  isAcpAuthenticationError,
+} from "@/features/ai/lib/acp-authentication";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { normalizeAcpWorkspacePath } from "@/features/ai/lib/acp-workspace-path";
 import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
@@ -73,7 +76,7 @@ export class AcpStreamHandler {
     private chatId?: string,
   ) {}
 
-  static async warmup(agentId: string, chatId: string): Promise<void> {
+  static async warmup(agentId: string, chatId?: string): Promise<void> {
     const handler = new AcpStreamHandler(
       agentId,
       {
@@ -222,6 +225,7 @@ export class AcpStreamHandler {
   private formatStartupError(error: unknown): string {
     const message = error instanceof Error ? error.message : String(error);
     const normalized = message.toLowerCase();
+    const details = getAcpStartupErrorDetails(message);
 
     if (normalized.includes("runtime")) {
       return `${this.agentId} could not start because a required runtime is unavailable.`;
@@ -230,7 +234,8 @@ export class AcpStreamHandler {
       return `${this.agentId} could not be installed automatically. Check network access and local tool permissions.`;
     }
     if (isAcpAuthenticationError(message) || normalized.includes("auth")) {
-      return `Authentication required: ${this.agentId} must be authenticated before it can answer prompts.`;
+      const summary = `Authentication required: ${this.agentId} must be authenticated before it can answer prompts.`;
+      return details ? `${summary}|||${details}` : summary;
     }
     if (normalized.includes("timed out") || normalized.includes("in time")) {
       return `${this.agentId} did not respond during startup. Restart the agent session and try again.`;
@@ -672,6 +677,21 @@ export class AcpStreamHandler {
 
   static async logoutAgent(): Promise<void> {
     await invoke("logout_acp_agent");
+  }
+
+  static async restartAgent(agentId: string, chatId?: string | null): Promise<void> {
+    AcpStreamHandler.activeHandler?.forceStop();
+    await invoke("stop_acp_agent");
+
+    const actions = useAIChatStore.getState().actions;
+    if (chatId) {
+      actions.setChatAcpSessionId(chatId, null);
+    }
+    actions.setAvailableSlashCommands([]);
+    actions.setSessionModeState(null, []);
+    actions.setSessionConfigOptions([]);
+
+    await AcpStreamHandler.warmup(agentId, chatId ?? undefined);
   }
 
   // Static method to stop the current agent

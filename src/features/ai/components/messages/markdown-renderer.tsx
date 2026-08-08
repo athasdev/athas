@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import {
   CaretDownIcon as ChevronDown,
   CaretRightIcon as ChevronRight,
@@ -8,6 +7,9 @@ import {
 } from "@/ui/icons";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { getAcpAuthenticationCommand } from "@/features/ai/lib/acp-authentication";
+import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat.types";
 import {
   isExternalMarkdownLink,
@@ -195,14 +197,16 @@ function CodeBlock({
 function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string | null }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRestartingSession, setIsRestartingSession] = useState(false);
+  const [isOpeningTerminal, setIsOpeningTerminal] = useState(false);
   const openTerminalBuffer = useBufferStore((state) => state.actions.openTerminalBuffer);
+  const setActiveBuffer = useBufferStore((state) => state.actions.setActiveBuffer);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const setChatAcpSessionId = useAIChatStore((state) => state.actions.setChatAcpSessionId);
-  const setAvailableSlashCommands = useAIChatStore(
-    (state) => state.actions.setAvailableSlashCommands,
-  );
-  const setSessionModeState = useAIChatStore((state) => state.actions.setSessionModeState);
-  const setSessionConfigOptions = useAIChatStore((state) => state.actions.setSessionConfigOptions);
+  const agentId = useAIChatStore((state) => {
+    const chatAgentId = chatId
+      ? state.chats.find((chat) => chat.id === chatId)?.agentId
+      : undefined;
+    return chatAgentId ?? state.selectedAgentId;
+  });
 
   const lines = errorData.split("\n");
   const title =
@@ -228,46 +232,41 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
   const summary = title || message || "Error";
   const normalizedDetails = details && details !== message ? details : "";
   const isAuthRequired = code === "AUTH_REQUIRED";
-
-  const suggestedCommand = useMemo(() => {
-    const normalizedText = `${summary} ${message} ${normalizedDetails}`.toLowerCase();
-
-    if (normalizedText.includes("claude code")) {
-      return "claude auth login";
-    }
-    if (normalizedText.includes("codex")) {
-      return "codex";
-    }
-    if (normalizedText.includes("gemini")) {
-      return "gemini";
-    }
-    if (normalizedText.includes("opencode")) {
-      return "opencode";
-    }
-    if (normalizedText.includes("qwen")) {
-      return "qwen";
-    }
-    if (normalizedText.includes("kimi")) {
-      return "kimi";
-    }
-
-    return null;
-  }, [summary, message, normalizedDetails]);
+  const isConfigurationRequired = code === "CONFIG_REQUIRED";
+  const canRecoverAgent = isAuthRequired || isConfigurationRequired;
 
   const handleRestartAgentSession = async () => {
     setIsRestartingSession(true);
     try {
-      await invoke("stop_acp_agent");
-      if (chatId) {
-        setChatAcpSessionId(chatId, null);
-      }
-      setAvailableSlashCommands([]);
-      setSessionModeState(null, []);
-      setSessionConfigOptions([]);
+      await AcpStreamHandler.restartAgent(agentId, chatId);
+      toast.success("Agent session restarted");
     } catch (error) {
       console.error("Failed to restart ACP agent session:", error);
+      toast.error("Couldn't restart the agent session", {
+        description: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       setIsRestartingSession(false);
+    }
+  };
+
+  const handleOpenAuthenticationTerminal = async () => {
+    setIsOpeningTerminal(true);
+    try {
+      const agents = await AcpStreamHandler.getAvailableAgents().catch(() => []);
+      const command = getAcpAuthenticationCommand(agentId, agents);
+      const bufferId = openTerminalBuffer({
+        command: command ?? undefined,
+        name: command ?? "Agent setup",
+        workingDirectory: rootFolderPath ?? undefined,
+      });
+      setActiveBuffer(bufferId);
+    } catch (error) {
+      toast.error("Couldn't open the agent terminal", {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setIsOpeningTerminal(false);
     }
   };
 
@@ -295,7 +294,7 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
         {message && message !== summary ? (
           <span className="text-destructive/80">{message}</span>
         ) : null}
-        {isAuthRequired && (
+        {canRecoverAgent && (
           <span className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -307,40 +306,20 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
               <Terminal size={12} />
               {isRestartingSession ? "Restarting..." : "Restart Agent Session"}
             </Button>
-            {suggestedCommand ? (
-              <Button
-                type="button"
-                variant="default"
-                onClick={() =>
-                  openTerminalBuffer({
-                    command: suggestedCommand,
-                    name: suggestedCommand,
-                    workingDirectory: rootFolderPath ?? undefined,
-                  })
-                }
-                className="h-auto gap-1.5"
-              >
-                <Terminal size={12} />
-                Open Login Terminal
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="default"
-                onClick={() =>
-                  openTerminalBuffer({
-                    name: "Agent authentication",
-                    workingDirectory: rootFolderPath ?? undefined,
-                  })
-                }
-                className="h-auto gap-1.5"
-              >
-                <Terminal size={12} />
-                Open Terminal
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => void handleOpenAuthenticationTerminal()}
+              disabled={isOpeningTerminal}
+              className="h-auto gap-1.5"
+            >
+              <Terminal size={12} />
+              {isOpeningTerminal ? "Opening..." : "Open Agent Terminal"}
+            </Button>
             <span className="text-destructive/70">
-              Complete login in the agent CLI, then retry.
+              {isConfigurationRequired
+                ? "Finish the agent setup, then restart the session."
+                : "Complete login in the agent CLI, then restart the session."}
             </span>
           </span>
         )}

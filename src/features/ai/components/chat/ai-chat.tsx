@@ -2,7 +2,10 @@ import { listen } from "@tauri-apps/api/event";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
-import { isAcpAuthenticationError } from "@/features/ai/lib/acp-authentication";
+import {
+  isAcpAuthenticationError,
+  isAcpConfigurationError,
+} from "@/features/ai/lib/acp-authentication";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
@@ -645,10 +648,19 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
             }
           }
 
+          const isAcpConfigError =
+            isAcpAgent(currentAgentId) && isAcpConfigurationError(mainError, errorDetails);
           const isAcpAuthError =
-            isAcpAgent(currentAgentId) && isAcpAuthenticationError(mainError, errorDetails);
+            !isAcpConfigError &&
+            isAcpAgent(currentAgentId) &&
+            isAcpAuthenticationError(mainError, errorDetails);
 
-          if (isAcpAuthError) {
+          if (isAcpConfigError) {
+            errorTitle = "Agent Configuration Required";
+            errorCode = "CONFIG_REQUIRED";
+            errorMessage =
+              "The selected agent is authenticated, but its account configuration is incomplete.";
+          } else if (isAcpAuthError) {
             errorTitle = "Authentication Required";
             errorCode = "AUTH_REQUIRED";
             errorMessage =

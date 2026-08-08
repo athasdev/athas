@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
-import { isAcpAuthenticationError } from "@/features/ai/lib/acp-authentication";
+import {
+  getAcpAuthenticationCommand,
+  getAcpStartupErrorDetails,
+  isAcpAuthenticationError,
+  isAcpConfigurationError,
+} from "@/features/ai/lib/acp-authentication";
 
 describe("ACP authentication errors", () => {
   it("recognizes protocol and agent-authored authentication failures", () => {
@@ -12,5 +17,31 @@ describe("ACP authentication errors", () => {
 
   it("does not classify unrelated agent failures as authentication errors", () => {
     expect(isAcpAuthenticationError("The agent process exited unexpectedly")).toBe(false);
+  });
+
+  it("separates authenticated account configuration failures", () => {
+    expect(
+      isAcpConfigurationError(
+        "Authentication failed: This account requires setting the GOOGLE_CLOUD_PROJECT env var.",
+      ),
+    ).toBe(true);
+    expect(isAcpConfigurationError("Authentication required")).toBe(false);
+  });
+
+  it("uses the detected agent binary for the setup terminal", () => {
+    expect(
+      getAcpAuthenticationCommand("gemini-cli", [
+        { id: "gemini-cli", binaryName: "/managed/bin/gemini" },
+      ]),
+    ).toBe("/managed/bin/gemini");
+    expect(getAcpAuthenticationCommand("qwen-code", [])).toBe("qwen");
+  });
+
+  it("extracts the actionable ACP stderr from startup errors", () => {
+    expect(
+      getAcpStartupErrorDetails(
+        "ACP startup failed. Agent stderr: Authentication failed: GOOGLE_CLOUD_PROJECT is required",
+      ),
+    ).toBe("Authentication failed: GOOGLE_CLOUD_PROJECT is required");
   });
 });

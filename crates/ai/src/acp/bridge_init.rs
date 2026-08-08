@@ -14,6 +14,7 @@ use anyhow::{Result, bail};
 use athas_terminal::TerminalManager;
 use serde_json::json;
 use std::{
+   collections::VecDeque,
    path::{Path, PathBuf},
    process::Stdio,
    sync::Arc,
@@ -21,7 +22,7 @@ use std::{
 use tauri::Emitter;
 use tokio::{
    process::{Child, Command},
-   sync::mpsc,
+   sync::{Mutex, mpsc},
 };
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
@@ -37,6 +38,9 @@ pub(super) struct InitializedAcpWorker {
    pub permission_sender: mpsc::Sender<PermissionResponse>,
    pub workspace_path: Option<PathBuf>,
 }
+
+const MAX_RECENT_STDERR_LINES: usize = 20;
+type RecentAgentStderr = Arc<Mutex<VecDeque<String>>>;
 
 pub(super) async fn initialize_worker(
    config: &AgentConfig,
@@ -58,7 +62,7 @@ pub(super) async fn initialize_worker(
       .stdout
       .take()
       .ok_or_else(|| anyhow::anyhow!("Failed to get stdout"))?;
-   spawn_stderr_logger(&mut child, config.name.clone());
+   let recent_stderr = spawn_stderr_logger(&mut child, config.name.clone());
 
    let client = Arc::new(AthasAcpClient::new(
       app_handle.clone(),
@@ -148,7 +152,14 @@ pub(super) async fn initialize_worker(
          io_handle: &io_handle,
       },
    )
-   .await?;
+   .await;
+   let session_bootstrap = match session_bootstrap {
+      Ok(session) => session,
+      Err(error) => {
+         tokio::task::yield_now().await;
+         return Err(with_agent_stderr(error, &recent_stderr).await);
+      }
+   };
 
    emit_initial_session_state(
       &app_handle,
@@ -246,16 +257,52 @@ fn spawn_agent_process(
    Ok((cmd.spawn()?, uses_npx_codex_adapter))
 }
 
-fn spawn_stderr_logger(child: &mut Child, agent_name: String) {
+fn spawn_stderr_logger(child: &mut Child, agent_name: String) -> RecentAgentStderr {
+   let recent_stderr = Arc::new(Mutex::new(VecDeque::new()));
    if let Some(stderr) = child.stderr.take() {
+      let captured_stderr = recent_stderr.clone();
       tokio::task::spawn_local(async move {
          use tokio::io::{AsyncBufReadExt, BufReader};
          let mut lines = BufReader::new(stderr).lines();
          while let Ok(Some(line)) = lines.next_line().await {
             log::warn!("[{}] stderr: {}", agent_name, line);
+            let mut recent = captured_stderr.lock().await;
+            recent.push_back(line);
+            if recent.len() > MAX_RECENT_STDERR_LINES {
+               recent.pop_front();
+            }
          }
       });
    }
+   recent_stderr
+}
+
+async fn with_agent_stderr(
+   error: anyhow::Error,
+   recent_stderr: &RecentAgentStderr,
+) -> anyhow::Error {
+   let recent = recent_stderr.lock().await;
+   let Some(detail) = relevant_agent_stderr(&recent) else {
+      return error;
+   };
+
+   anyhow::anyhow!("{}. Agent stderr: {}", error, detail)
+}
+
+fn relevant_agent_stderr(lines: &VecDeque<String>) -> Option<String> {
+   let line = lines
+      .iter()
+      .rev()
+      .find(|line| {
+         let normalized = line.to_lowercase();
+         normalized.contains("authentication failed")
+            || normalized.contains("requires setting")
+            || normalized.contains("error:")
+      })
+      .or_else(|| lines.back())?;
+
+   let normalized = line.split_whitespace().collect::<Vec<_>>().join(" ");
+   (!normalized.is_empty()).then_some(normalized)
 }
 
 async fn initialize_connection(
@@ -610,5 +657,38 @@ fn emit_initial_session_state(
       )
    {
       log::warn!("Failed to emit initial session config options: {}", e);
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn prefers_actionable_authentication_stderr() {
+      let lines = VecDeque::from([
+         "Loaded cached credentials.".to_string(),
+         "Authentication failed: Error: This account requires setting the GOOGLE_CLOUD_PROJECT \
+          env var."
+            .to_string(),
+      ]);
+
+      assert_eq!(
+         relevant_agent_stderr(&lines).as_deref(),
+         Some(
+            "Authentication failed: Error: This account requires setting the GOOGLE_CLOUD_PROJECT \
+             env var."
+         )
+      );
+   }
+
+   #[test]
+   fn normalizes_multiline_spacing_in_stderr() {
+      let lines = VecDeque::from(["Error:   invalid\tconfiguration".to_string()]);
+
+      assert_eq!(
+         relevant_agent_stderr(&lines).as_deref(),
+         Some("Error: invalid configuration")
+      );
    }
 }

@@ -119,6 +119,16 @@ describe("AcpStreamHandler", () => {
     ).toBe(
       "Authentication required: gemini-cli must be authenticated before it can answer prompts.",
     );
+
+    expect(
+      handler.formatStartupError(
+        new Error(
+          "Authentication required. Agent stderr: Authentication failed: GOOGLE_CLOUD_PROJECT is required",
+        ),
+      ),
+    ).toBe(
+      "Authentication required: gemini-cli must be authenticated before it can answer prompts.|||Authentication failed: GOOGLE_CLOUD_PROJECT is required",
+    );
   });
 
   it("waits for ACP prompt completion instead of completing after inactivity", () => {
@@ -293,5 +303,41 @@ describe("AcpStreamHandler", () => {
       args: { sessionId: "session-a" },
     });
     expect(invoke).toHaveBeenCalledWith("logout_acp_agent");
+  });
+
+  it("stops and eagerly starts a fresh ACP session", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "get_acp_status") {
+        return Promise.resolve({
+          running: false,
+          initialized: false,
+          agentId: null,
+          sessionId: null,
+          workspacePath: null,
+        });
+      }
+      if (command === "start_acp_agent") {
+        return Promise.resolve({
+          running: true,
+          initialized: true,
+          agentId: "gemini-cli",
+          sessionId: "fresh-session",
+          workspacePath: "/workspace",
+        });
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const restart = AcpStreamHandler.restartAgent("gemini-cli", "chat-1");
+    await vi.advanceTimersByTimeAsync(1000);
+    await restart;
+
+    const commands = vi.mocked(invoke).mock.calls.map(([command]) => command);
+    expect(commands.indexOf("stop_acp_agent")).toBeLessThan(commands.indexOf("start_acp_agent"));
+    expect(invoke).toHaveBeenCalledWith("start_acp_agent", {
+      agentId: "gemini-cli",
+      sessionId: null,
+      workspacePath: "/workspace",
+    });
   });
 });
