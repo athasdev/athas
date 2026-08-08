@@ -68,6 +68,21 @@ describe("native menu accelerators", () => {
     ).toBe(true);
   });
 
+  it("identifies both native sidebar accelerators", () => {
+    for (const key of ["b", "e"]) {
+      expect(
+        isNativeMenuAccelerator(
+          keyboardEvent(
+            primaryModifierEvent({
+              code: `Key${key.toUpperCase()}`,
+              key,
+            }),
+          ),
+        ),
+      ).toBe(true);
+    }
+  });
+
   it("identifies native edit menu accelerators", () => {
     const editAccelerators: Array<Partial<KeyboardEvent>> = [
       primaryModifierEvent({ code: "KeyA", key: "a" }),

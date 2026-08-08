@@ -84,7 +84,11 @@ export const keybindingPresetDefinitions: Record<KeybindingPreset, KeybindingPre
   jetbrains: createPresetDefinition({
     label: "JetBrains",
     description: "Match common JetBrains IDE shortcuts.",
-    disabledCommands: ["workbench.newWindow"],
+    disabledCommands: [
+      "workbench.newWindow",
+      "workbench.toggleActivitySidebar",
+      "workbench.toggleSidebar",
+    ],
     overrides: [
       { key: "cmd+shift+a", command: "workbench.commandPalette", source: "preset" },
       { key: "cmd+shift+n", command: "file.quickOpen", source: "preset" },
@@ -152,6 +156,7 @@ export const keybindingPresetDefinitions: Record<KeybindingPreset, KeybindingPre
   zed: createPresetDefinition({
     label: "Zed",
     description: "Match common Zed shortcuts.",
+    disabledCommands: ["workbench.toggleActivitySidebar"],
     overrides: [
       { key: "cmd+shift+p", command: "workbench.commandPalette", source: "preset" },
       { key: "cmd+p", command: "file.quickOpen", source: "preset" },

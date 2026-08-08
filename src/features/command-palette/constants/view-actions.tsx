@@ -29,6 +29,7 @@ interface ViewActionsParams {
   bottomPaneActiveTab: BottomPaneTab;
   setBottomPaneActiveTab: (tab: BottomPaneTab) => void;
   settings: {
+    activityRailExpanded: boolean;
     isAIChatVisible: boolean;
     nativeMenuBar: boolean;
     compactMenuBar: boolean;
@@ -61,9 +62,27 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
 
   return [
     {
+      id: "toggle-activity-sidebar",
+      label: settings.activityRailExpanded
+        ? "View: Collapse Activity Sidebar"
+        : "View: Expand Activity Sidebar",
+      description: settings.activityRailExpanded
+        ? "Collapse the activity sidebar"
+        : "Expand the activity sidebar",
+      icon: <PanelLeft />,
+      category: "View",
+      commandId: "workbench.toggleActivitySidebar",
+      action: () => {
+        void keymapRegistry.executeCommand("workbench.toggleActivitySidebar");
+        onClose();
+      },
+    },
+    {
       id: "toggle-sidebar",
-      label: isSidebarVisible ? "View: Hide Sidebar" : "View: Show Sidebar",
-      description: isSidebarVisible ? "Hide the sidebar panel" : "Show the sidebar panel",
+      label: isSidebarVisible ? "View: Hide Secondary Sidebar" : "View: Show Secondary Sidebar",
+      description: isSidebarVisible
+        ? "Hide the secondary sidebar panel"
+        : "Show the secondary sidebar panel",
       icon: <PanelLeft />,
       category: "View",
       commandId: "workbench.toggleSidebar",

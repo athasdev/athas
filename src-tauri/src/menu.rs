@@ -366,10 +366,17 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    let view_menu = SubmenuBuilder::new(app, "View")
       .item(&MenuItem::with_id(
          app,
-         "toggle_sidebar",
-         "Toggle Sidebar",
+         "toggle_activity_sidebar",
+         "Toggle Activity Sidebar",
          true,
          Some("CmdOrCtrl+B"),
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "toggle_sidebar",
+         "Toggle Secondary Sidebar",
+         true,
+         Some("CmdOrCtrl+E"),
       )?)
       .item(&MenuItem::with_id(
          app,

@@ -41,6 +41,9 @@ async function setupMenuListeners(handlers: any) {
     currentWindow.listen("menu_find_replace", () => currentHandlers.current.onFindReplace()),
     currentWindow.listen("menu_toggle_comment", () => currentHandlers.current.onToggleComment()),
     currentWindow.listen("menu_command_palette", () => currentHandlers.current.onCommandPalette()),
+    currentWindow.listen("menu_toggle_activity_sidebar", () =>
+      currentHandlers.current.onToggleActivitySidebar(),
+    ),
     currentWindow.listen("menu_toggle_sidebar", () => currentHandlers.current.onToggleSidebar()),
     currentWindow.listen("menu_toggle_terminal", () => currentHandlers.current.onToggleTerminal()),
     currentWindow.listen("menu_toggle_ai_chat", () => currentHandlers.current.onToggleAiChat()),
@@ -87,6 +90,7 @@ interface UseMenuEventsProps {
   onFindReplace: () => void;
   onToggleComment: () => void;
   onCommandPalette: () => void;
+  onToggleActivitySidebar: () => void;
   onToggleSidebar: () => void;
   onToggleTerminal: () => void;
   onToggleAiChat: () => void;

@@ -32,6 +32,7 @@ interface EmbeddedWebviewShortcutEvent {
 const WEBVIEW_GLOBAL_SHORTCUT_COMMANDS: Record<string, string> = {
   "switch-tab": "workbench.nextTabCtrlTab",
   "toggle-terminal": "workbench.toggleTerminal",
+  "toggle-activity-sidebar": "workbench.toggleActivitySidebar",
   "toggle-sidebar": "workbench.toggleSidebar",
   "command-palette": "workbench.commandPalette",
   "quick-open": "file.quickOpen",
@@ -236,9 +237,11 @@ export function useMenuEventsWrapper() {
       void keymapRegistry.executeCommand("editor.toggleComment");
     },
     onCommandPalette: () => useUIState.getState().setIsCommandPaletteVisible(true),
+    onToggleActivitySidebar: () => {
+      void keymapRegistry.executeCommand("workbench.toggleActivitySidebar");
+    },
     onToggleSidebar: () => {
-      const { isSidebarVisible, setIsSidebarVisible } = useUIState.getState();
-      setIsSidebarVisible(!isSidebarVisible);
+      void keymapRegistry.executeCommand("workbench.toggleSidebar");
     },
     onToggleTerminal: () => {
       const uiState = useUIState.getState();

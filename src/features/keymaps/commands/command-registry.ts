@@ -94,6 +94,7 @@ import {
   showNotifications,
   showThemeSelector,
   showWhatsNew,
+  toggleActivitySidebar,
   toggleAgentLauncher,
   toggleAIChat,
   toggleFilesSidebar,
@@ -540,10 +541,17 @@ const editCommands: Command[] = [
 
 const viewCommands: Command[] = [
   {
-    id: "workbench.toggleSidebar",
-    title: "Toggle Sidebar",
+    id: "workbench.toggleActivitySidebar",
+    title: "Toggle Activity Sidebar",
     category: "View",
     keybinding: "cmd+b",
+    execute: toggleActivitySidebar,
+  },
+  {
+    id: "workbench.toggleSidebar",
+    title: "Toggle Secondary Sidebar",
+    category: "View",
+    keybinding: "cmd+e",
     execute: toggleSidebar,
   },
   {

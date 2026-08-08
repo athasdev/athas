@@ -322,6 +322,9 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                "command_palette" => {
                   emit_menu_event(&window, "menu_command_palette", ());
                }
+               "toggle_activity_sidebar" => {
+                  emit_menu_event(&window, "menu_toggle_activity_sidebar", ());
+               }
                "toggle_sidebar" => {
                   emit_menu_event(&window, "menu_toggle_sidebar", ());
                }

@@ -27,6 +27,7 @@ const NATIVE_MENU_ACCELERATORS = [
   // Command palette stays in the frontend pipeline so Ctrl+Shift+P can cancel
   // the webview print shortcut before any browser default handling runs.
   "cmd+b",
+  "cmd+e",
   "cmd+j",
   "cmd+shift+f",
   "cmd+shift+j",

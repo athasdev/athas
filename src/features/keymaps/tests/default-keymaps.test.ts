@@ -120,6 +120,8 @@ describe("default keymaps", () => {
 
   it("keeps chrome actions in the command registry", () => {
     expectKeybinding("workbench.openSettings", "cmd+,");
+    expectKeybinding("workbench.toggleActivitySidebar", "cmd+b");
+    expectKeybinding("workbench.toggleSidebar", "cmd+e");
     expectKeybinding("workbench.showFind", "cmd+f", "editorFocus");
     expectKeybinding("workbench.showFindReplace", "ctrl+h", "editorFocus");
     expectKeybinding("terminal.find", "cmd+f", "terminalFocus");
@@ -145,6 +147,18 @@ describe("default keymaps", () => {
     expectKeybinding("workbench.newWindow", "cmd+shift+n");
     expect(keymapRegistry.getCommand("workbench.newWindow")).toMatchObject({
       title: "New Window",
+    });
+  });
+
+  it("registers distinct activity and secondary sidebar commands", () => {
+    keymapRegistry.clear();
+    registerCommands();
+
+    expect(keymapRegistry.getCommand("workbench.toggleActivitySidebar")).toMatchObject({
+      title: "Toggle Activity Sidebar",
+    });
+    expect(keymapRegistry.getCommand("workbench.toggleSidebar")).toMatchObject({
+      title: "Toggle Secondary Sidebar",
     });
   });
 });

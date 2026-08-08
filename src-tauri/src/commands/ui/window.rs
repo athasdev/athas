@@ -758,6 +758,8 @@ fn build_webview_bridge_script(
     }} else if (isMod && !isShift && key === 'j') {{
       shortcut = 'global:toggle-terminal';
     }} else if (isMod && !isShift && key === 'b') {{
+      shortcut = 'global:toggle-activity-sidebar';
+    }} else if (isMod && !isShift && key === 'e') {{
       shortcut = 'global:toggle-sidebar';
     }} else if (isMod && isShift && key === 'p') {{
       shortcut = 'global:command-palette';

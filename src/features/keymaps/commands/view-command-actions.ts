@@ -22,6 +22,11 @@ export function toggleSidebar(): void {
   state.setIsSidebarVisible(!state.isSidebarVisible);
 }
 
+export function toggleActivitySidebar(): void {
+  const { settings, actions } = useSettingsStore.getState();
+  void actions.updateSetting("activityRailExpanded", !settings.activityRailExpanded);
+}
+
 export function toggleTerminalPane(): void {
   const state = useUIState.getState();
   if (state.isBottomPaneVisible && state.bottomPaneActiveTab === "terminal") {
