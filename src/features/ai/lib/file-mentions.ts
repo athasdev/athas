@@ -7,16 +7,21 @@ export interface MentionedFile {
   content: string;
 }
 
+export function extractFileMentionNames(message: string): string[] {
+  const mentionRegex = /@\[([^\]]+)\]|@(\S+)/g;
+  return [...message.matchAll(mentionRegex)]
+    .map((match) => match[1] ?? match[2])
+    .filter((fileName): fileName is string => Boolean(fileName));
+}
+
 export async function parseMentionsAndLoadFiles(
   message: string,
   allProjectFiles: FileEntry[],
 ): Promise<{ processedMessage: string; mentionedFiles: MentionedFile[] }> {
-  const mentionRegex = /@(\S+)/g;
-  const mentions = [...message.matchAll(mentionRegex)];
+  const mentionNames = extractFileMentionNames(message);
   const mentionedFiles = (
     await Promise.all(
-      mentions.map(async (match) => {
-        const fileName = match[1];
+      mentionNames.map(async (fileName) => {
         const file = allProjectFiles.find((f) => !f.isDir && f.name === fileName);
 
         if (!file) return null;

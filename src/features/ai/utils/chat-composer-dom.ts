@@ -8,45 +8,52 @@ export function isComposerTokenElement(node: Node | null): node is Element {
   );
 }
 
+interface ComposerTextSegment {
+  node: Node;
+  text: string;
+  atomic: boolean;
+}
+
+function getComposerTokenText(token: Element): string {
+  if (token.hasAttribute("data-mention")) {
+    const fileName = token.getAttribute("data-mention-name") || token.textContent?.trim();
+    return fileName ? `@[${fileName}]` : "";
+  }
+
+  if (token.hasAttribute("data-slash-command")) {
+    const commandName = token.getAttribute("data-slash-command-name") || token.textContent?.trim();
+    if (!commandName) return "";
+    return commandName.startsWith("/") ? commandName : `/${commandName}`;
+  }
+
+  return token.textContent || "";
+}
+
+function getComposerTextSegments(root: Node): ComposerTextSegment[] {
+  const segments: ComposerTextSegment[] = [];
+
+  const visit = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      segments.push({ node, text: node.textContent || "", atomic: false });
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    if (isComposerTokenElement(node)) {
+      segments.push({ node, text: getComposerTokenText(node), atomic: true });
+      return;
+    }
+    node.childNodes.forEach(visit);
+  };
+
+  root.childNodes.forEach(visit);
+  return segments;
+}
+
 export function getComposerText(element: HTMLDivElement | null): string {
   if (!element) return "";
-
-  const { childNodes } = element;
-  let hasComposerTokens = false;
-  for (let index = 0; index < childNodes.length; index++) {
-    if (isComposerTokenElement(childNodes[index])) {
-      hasComposerTokens = true;
-      break;
-    }
-  }
-
-  if (!hasComposerTokens) {
-    return element.textContent || "";
-  }
-
-  let text = "";
-  for (let index = 0; index < childNodes.length; index++) {
-    const node = childNodes[index];
-    if (node.nodeType === Node.TEXT_NODE) {
-      text += node.textContent || "";
-      continue;
-    }
-    if (node.nodeType !== Node.ELEMENT_NODE) continue;
-
-    const token = node as Element;
-    if (token.hasAttribute("data-mention")) {
-      const fileName = token.getAttribute("data-mention-name") || token.textContent?.trim();
-      if (fileName) text += `@[${fileName}]`;
-    } else if (token.hasAttribute("data-slash-command")) {
-      const commandName =
-        token.getAttribute("data-slash-command-name") || token.textContent?.trim();
-      if (commandName) text += commandName.startsWith("/") ? commandName : `/${commandName}`;
-    } else {
-      text += node.textContent || "";
-    }
-  }
-
-  return text;
+  return getComposerTextSegments(element)
+    .map((segment) => segment.text)
+    .join("");
 }
 
 export function getComposerTextBeforeCaret(element: HTMLDivElement | null): string {
@@ -61,7 +68,61 @@ export function getComposerTextBeforeCaret(element: HTMLDivElement | null): stri
   const preCaretRange = range.cloneRange();
   preCaretRange.selectNodeContents(element);
   preCaretRange.setEnd(range.startContainer, range.startOffset);
-  return preCaretRange.toString();
+  const preCaretContainer = document.createElement("div");
+  preCaretContainer.appendChild(preCaretRange.cloneContents());
+  return getComposerText(preCaretContainer);
+}
+
+function getNodeOffset(node: Node): number {
+  const parent = node.parentNode;
+  if (!parent) return 0;
+  return Array.prototype.indexOf.call(parent.childNodes, node) as number;
+}
+
+function getComposerDomPoint(
+  element: HTMLDivElement,
+  segments: ComposerTextSegment[],
+  textOffset: number,
+): { node: Node; offset: number } {
+  const targetOffset = Math.max(0, textOffset);
+  let consumed = 0;
+
+  for (const segment of segments) {
+    const nextOffset = consumed + segment.text.length;
+    if (!segment.atomic && targetOffset <= nextOffset) {
+      return {
+        node: segment.node,
+        offset: Math.max(0, Math.min(targetOffset - consumed, segment.text.length)),
+      };
+    }
+    if (segment.atomic && targetOffset <= nextOffset) {
+      const parent = segment.node.parentNode;
+      if (parent) {
+        const nodeOffset = getNodeOffset(segment.node);
+        return {
+          node: parent,
+          offset: targetOffset <= consumed ? nodeOffset : nodeOffset + 1,
+        };
+      }
+    }
+    consumed = nextOffset;
+  }
+
+  return { node: element, offset: element.childNodes.length };
+}
+
+export function getComposerTextRange(
+  element: HTMLDivElement,
+  startOffset: number,
+  endOffset: number,
+): Range {
+  const segments = getComposerTextSegments(element);
+  const start = getComposerDomPoint(element, segments, startOffset);
+  const end = getComposerDomPoint(element, segments, Math.max(startOffset, endOffset));
+  const range = document.createRange();
+  range.setStart(start.node, start.offset);
+  range.setEnd(end.node, end.offset);
+  return range;
 }
 
 export function getComposerDropdownPosition(

@@ -1,17 +1,14 @@
 import {
-  BookOpenIcon as BookOpen,
   CommandIcon,
   ArrowUpIcon as ArrowUp,
   DatabaseIcon as Database,
   FileTextIcon as FileText,
-  KeyIcon as Key,
   MicrophoneIcon as Mic,
   StopIcon as Stop,
   XIcon as X,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
-import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import {
   AI_CHAT_INSERT_SKILL_EVENT,
   type AIChatSkillInsertDetail,
@@ -22,6 +19,7 @@ import {
   getComposerDropdownPosition,
   getComposerText,
   getComposerTextBeforeCaret,
+  getComposerTextRange,
   isComposerTokenElement,
 } from "@/features/ai/utils/chat-composer-dom";
 import type { InlineDropdownPosition, PastedImage } from "@/features/ai/types/chat-composer.types";
@@ -56,19 +54,13 @@ import {
   ChatComposerBody,
   ChatComposerEditable,
   ChatComposerToolbar,
-  ChatComposerTools,
 } from "./chat-composer";
+import { ChatPreferencesMenu } from "./chat-preferences-menu";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
-import { AcpConfigSelector } from "../selectors/acp-config-selector";
-import { AgentSelector } from "../selectors/agent-selector";
-import { ModelSelector } from "../selectors/model-selector";
-import { ProviderSelector } from "../selectors/provider-selector";
-import { ModeSelector } from "../selectors/mode-selector";
 import { ContextSelector } from "../selectors/context-selector";
 import { ProviderApiKeyCommand } from "../provider-api-key-command";
 import { SkillsCommand } from "../skills/skills-command";
-import { ChatLoadingIndicator } from "../chat/chat-loading-indicator";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -101,7 +93,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // Local state for input emptiness check (to avoid subscribing to full input text)
   const [hasInputText, setHasInputText] = useState(false);
   const [isContextDragOver, setIsContextDragOver] = useState(false);
-  const [activeInlineControl, setActiveInlineControl] = useState<string | null>(null);
   const [isSkillsOpen, setIsSkillsOpen] = useState(false);
   const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
   const [isComposerFocused, setIsComposerFocused] = useState(false);
@@ -125,8 +116,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const hasApiKey = useAIChatStore((state) => state.hasApiKey);
   const sessionConfigOptions = useAIChatStore((state) => state.sessionConfigOptions);
-  const sessionModeState = useAIChatStore((state) => state.sessionModeState);
-  const acpStatus = useAIChatStore((state) => state.acpStatus);
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
   const aiCustomModelId = useSettingsStore((state) => state.settings.aiCustomModelId);
@@ -141,32 +130,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // ACP agents don't need API key (they handle their own auth)
   const isInputEnabled = isCustomAgent ? hasApiKey : true;
   const isStreaming = isTyping && !!streamingMessageId;
-  const acpInlineConfigOptions = useMemo(
-    () =>
-      isCustomAgent
-        ? []
-        : sessionConfigOptions
-            .map((option) => ({
-              option,
-              category: classifySessionConfigOption(option),
-            }))
-            .filter(
-              ({ option, category }) =>
-                option.kind.type === "select" &&
-                option.kind.options.length > 0 &&
-                (category === "model" || category === "mode" || category === "thought_level"),
-            )
-            .slice(0, 3),
-    [isCustomAgent, sessionConfigOptions],
-  );
-  const hasAcpLegacyModeOptions = !isCustomAgent && sessionModeState.availableModes.length > 0;
-  const hasAcpConfigModeOption = acpInlineConfigOptions.some(({ category }) => category === "mode");
-  const hasAcpConfigOptions = acpInlineConfigOptions.length > 0;
-  const isAcpMetadataLoading =
-    !isCustomAgent &&
-    isTyping &&
-    (!acpStatus?.initialized || (!hasAcpLegacyModeOptions && !hasAcpConfigOptions));
-
   const changeSessionConfigOption = useAIChatStore(
     (state) => state.actions.changeSessionConfigOption,
   );
@@ -285,7 +248,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   ]);
 
   const closeInlineMenus = useCallback(() => {
-    setActiveInlineControl(null);
     closeComposerPopovers();
   }, [closeComposerPopovers]);
 
@@ -669,13 +631,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
           startIndex,
           endIndex: textBeforeCaret.length,
         };
-        setActiveInlineControl("commands");
         if (isContextDropdownOpen) {
           setIsContextDropdownOpen(false);
         }
         showSlashCommands(getSlashDropdownPosition(), search);
       } else if (slashCommandState.active) {
-        setActiveInlineControl(null);
         hideSlashCommands();
       }
 
@@ -878,79 +838,43 @@ const AIChatInputBar = memo(function AIChatInputBar({
       if (!inputRef.current) return;
 
       isUpdatingContentRef.current = true;
-
-      const currentInput = inputValueRef.current;
-      const beforeMention = currentInput.slice(0, mentionState.startIndex);
-      const afterMention = currentInput.slice(
+      hideMention();
+      const mentionRange = getComposerTextRange(
+        inputRef.current,
+        mentionState.startIndex,
         mentionState.startIndex + mentionState.search.length + 1,
       );
-      const newInput = `${beforeMention}@[${file.name}] ${afterMention}`;
+      mentionRange.deleteContents();
 
-      // Update input state and hide mention dropdown
-      setInput(newInput);
-      hideMention();
+      const mentionSpan = document.createElement("span");
+      mentionSpan.setAttribute("data-mention", "true");
+      mentionSpan.setAttribute("data-mention-name", file.name);
+      mentionSpan.setAttribute("data-mention-path", file.path);
+      mentionSpan.setAttribute("contenteditable", "false");
+      mentionSpan.title = file.path;
+      mentionSpan.className =
+        "font-sans ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border-0 bg-primary/10 px-1.5 py-0.5 leading-row text-primary align-baseline select-none";
+      mentionSpan.textContent = file.name;
 
-      // Completely rebuild the DOM content to ensure clean structure
-      setTimeout(() => {
-        if (!inputRef.current) return;
+      const trailingSpace = document.createTextNode(" ");
+      const fragment = document.createDocumentFragment();
+      fragment.append(mentionSpan, trailingSpace);
+      mentionRange.insertNode(fragment);
 
-        // Clear all content
-        inputRef.current.innerHTML = "";
+      const selection = window.getSelection();
+      if (selection) {
+        const caretRange = document.createRange();
+        caretRange.setStart(trailingSpace, trailingSpace.length);
+        caretRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(caretRange);
+      }
 
-        // Build new content piece by piece
-        // Add text before mention if any
-        if (beforeMention) {
-          const beforeTextNode = document.createTextNode(beforeMention);
-          inputRef.current.appendChild(beforeTextNode);
-        }
-
-        // Add the mention badge
-        const mentionSpan = document.createElement("span");
-        mentionSpan.setAttribute("data-mention", "true");
-        mentionSpan.setAttribute("data-mention-name", file.name);
-        mentionSpan.setAttribute("data-mention-path", file.path);
-        mentionSpan.setAttribute("contenteditable", "false");
-        mentionSpan.title = file.path;
-        mentionSpan.className =
-          "font-sans ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border-0 bg-primary/10 px-1.5 py-0.5 leading-row text-primary align-baseline select-none";
-        mentionSpan.textContent = file.name;
-        inputRef.current.appendChild(mentionSpan);
-
-        // Always add a space and remaining text as separate text node
-        // Ensure there's always substantial content to prevent cursor from jumping to span
-        const remainingText = ` ${afterMention}${afterMention ? "" : " "}`;
-        const afterTextNode = document.createTextNode(remainingText);
-        inputRef.current.appendChild(afterTextNode);
-
-        // Add an invisible zero-width space to ensure cursor stays in text node
-        const separatorNode = document.createTextNode("\u200B"); // Zero-width space
-        inputRef.current.appendChild(separatorNode);
-
-        // Position cursor in the separator node to ensure it doesn't jump to span
-        const selection = window.getSelection();
-        if (selection) {
-          const range = document.createRange();
-          try {
-            // Position at the end of the separator node
-            range.setStart(separatorNode, 1);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          } catch {
-            // Fallback - position at end of input
-            range.selectNodeContents(inputRef.current);
-            range.collapse(false);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          }
-        }
-
-        inputRef.current.focus();
-        isUpdatingContentRef.current = false;
-        setHasInputText(true);
-      }, 0);
+      inputRef.current.focus();
+      syncInputFromEditable();
+      isUpdatingContentRef.current = false;
     },
-    [mentionState.startIndex, mentionState.search.length, setInput, hideMention],
+    [hideMention, mentionState.search.length, mentionState.startIndex, syncInputFromEditable],
   );
 
   // Handle slash command selection
@@ -959,68 +883,39 @@ const AIChatInputBar = memo(function AIChatInputBar({
       if (!inputRef.current) return;
 
       isUpdatingContentRef.current = true;
-
-      const currentInput = getPlainTextFromDiv();
       const { startIndex, endIndex } = slashCommandRangeRef.current;
-      const beforeCommand = currentInput.slice(0, startIndex);
-      const afterCommand = currentInput.slice(endIndex);
-      const normalizedAfterCommand = afterCommand.startsWith(" ")
-        ? afterCommand.slice(1)
-        : afterCommand;
-      const newInput = `${beforeCommand}/${command.name} ${normalizedAfterCommand}`;
-      setInput(newInput);
       hideSlashCommands();
+      const commandRange = getComposerTextRange(inputRef.current, startIndex, endIndex);
+      commandRange.deleteContents();
 
-      // Rebuild the DOM so the command behaves like an atomic composer token.
-      setTimeout(() => {
-        if (!inputRef.current) return;
+      const commandSpan = document.createElement("span");
+      commandSpan.setAttribute("data-slash-command", "true");
+      commandSpan.setAttribute("data-slash-command-name", command.name);
+      commandSpan.setAttribute("contenteditable", "false");
+      commandSpan.title = command.description || `/${command.name}`;
+      commandSpan.className =
+        "font-sans ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border-0 bg-accent/70 px-1.5 py-0.5 leading-row text-foreground align-baseline select-none";
+      commandSpan.textContent = `/${command.name}`;
 
-        inputRef.current.innerHTML = "";
+      const trailingSpace = document.createTextNode(" ");
+      const fragment = document.createDocumentFragment();
+      fragment.append(commandSpan, trailingSpace);
+      commandRange.insertNode(fragment);
 
-        if (beforeCommand) {
-          inputRef.current.appendChild(document.createTextNode(beforeCommand));
-        }
+      const selection = window.getSelection();
+      if (selection) {
+        const caretRange = document.createRange();
+        caretRange.setStart(trailingSpace, trailingSpace.length);
+        caretRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(caretRange);
+      }
 
-        const commandSpan = document.createElement("span");
-        commandSpan.setAttribute("data-slash-command", "true");
-        commandSpan.setAttribute("data-slash-command-name", command.name);
-        commandSpan.setAttribute("contenteditable", "false");
-        commandSpan.title = command.description || `/${command.name}`;
-        commandSpan.className =
-          "font-sans ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border-0 bg-accent/70 px-1.5 py-0.5 leading-row text-foreground align-baseline select-none";
-        commandSpan.textContent = `/${command.name}`;
-        inputRef.current.appendChild(commandSpan);
-
-        const afterTextNode = document.createTextNode(
-          ` ${normalizedAfterCommand}${normalizedAfterCommand ? "" : " "}`,
-        );
-        inputRef.current.appendChild(afterTextNode);
-
-        const separatorNode = document.createTextNode("\u200B");
-        inputRef.current.appendChild(separatorNode);
-
-        const selection = window.getSelection();
-        if (selection) {
-          const range = document.createRange();
-          try {
-            range.setStart(separatorNode, 1);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          } catch {
-            range.selectNodeContents(inputRef.current);
-            range.collapse(false);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          }
-        }
-
-        inputRef.current.focus();
-        isUpdatingContentRef.current = false;
-        setHasInputText(true);
-      }, 0);
+      inputRef.current.focus();
+      syncInputFromEditable();
+      isUpdatingContentRef.current = false;
     },
-    [getPlainTextFromDiv, setInput, hideSlashCommands],
+    [hideSlashCommands, syncInputFromEditable],
   );
 
   const handleSendMessage = async () => {
@@ -1159,6 +1054,63 @@ const AIChatInputBar = memo(function AIChatInputBar({
           )}
 
           <div className="flex shrink-0 items-center gap-1">
+            {hasSlashCommands && (
+              <Button
+                type="button"
+                onClick={() => {
+                  if (!inputRef.current || !isInputEnabled) return;
+                  if (slashCommandState.active) {
+                    hideSlashCommands();
+                    return;
+                  }
+                  closeInlineMenus();
+                  inputRef.current.textContent = "/";
+                  setInput("/");
+                  setHasInputText(true);
+                  inputRef.current.focus();
+                  const selection = window.getSelection();
+                  if (selection) {
+                    const range = document.createRange();
+                    range.selectNodeContents(inputRef.current);
+                    range.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                  }
+                  slashCommandRangeRef.current = { startIndex: 0, endIndex: 1 };
+                  showSlashCommands(getSlashDropdownPosition(), "");
+                }}
+                variant="ghost"
+                size="icon-sm"
+                active={slashCommandState.active}
+                tooltip="Show slash commands"
+                aria-label="Show slash commands"
+              >
+                <CommandIcon size={12} />
+              </Button>
+            )}
+
+            <ChatPreferencesMenu
+              currentAgentId={currentAgentId}
+              providerId={aiProviderId}
+              modelId={aiModelId}
+              sessionConfigOptions={sessionConfigOptions}
+              onAgentChange={onAgentChange}
+              onProviderChange={handleAthasProviderChange}
+              onModelChange={handleAthasModelChange}
+              onSessionConfigChange={(optionId, value) =>
+                void changeSessionConfigOption(optionId, value)
+              }
+              onManageApiKeys={() => {
+                closeInlineMenus();
+                setIsApiKeyManagerOpen(true);
+              }}
+              onManageSkills={() => {
+                closeInlineMenus();
+                setIsSkillsOpen(true);
+              }}
+              onBeforeOpen={closeInlineMenus}
+            />
+
             <Toggle
               type="button"
               disabled={!isInputEnabled || !isSpeechRecognitionSupported}
@@ -1309,169 +1261,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
         ) : null}
       </ChatComposerBody>
 
-      <ChatComposerTools connected={isInitialPresentation}>
-        {isAcpMetadataLoading ? (
-          <ChatLoadingIndicator label="Loading session…" state="connecting" compact />
-        ) : (
-          <>
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-              {onAgentChange ? (
-                <AgentSelector
-                  selectedAgentId={currentAgentId}
-                  onSelectAgent={onAgentChange}
-                  portalContainer={aiChatContainerRef.current}
-                  triggerClassName="max-w-[168px]"
-                />
-              ) : null}
-
-              {acpInlineConfigOptions.map(({ option, category }) => {
-                const controlId = `config:${option.id}`;
-                return (
-                  <AcpConfigSelector
-                    key={option.id}
-                    option={option}
-                    onChange={(value) => void changeSessionConfigOption(option.id, value)}
-                    open={activeInlineControl === controlId}
-                    onOpenChange={(open) => {
-                      if (open) {
-                        closeComposerPopovers();
-                        setActiveInlineControl(controlId);
-                        return;
-                      }
-                      setActiveInlineControl((current) => (current === controlId ? null : current));
-                    }}
-                    className={category === "model" ? "max-w-[220px]" : "max-w-[168px]"}
-                    menuClassName="max-w-[260px]"
-                    menuMinWidth={category === "model" ? 220 : 180}
-                  />
-                );
-              })}
-
-              {isCustomAgent && (
-                <>
-                  <ProviderSelector
-                    providerId={aiProviderId}
-                    onChange={handleAthasProviderChange}
-                    appearance="composer"
-                    open={activeInlineControl === "provider"}
-                    onOpenChange={(open) => {
-                      if (open) {
-                        closeComposerPopovers();
-                        setActiveInlineControl("provider");
-                        return;
-                      }
-                      setActiveInlineControl((current) =>
-                        current === "provider" ? null : current,
-                      );
-                    }}
-                    triggerClassName="max-w-[128px]"
-                    tooltip="Select provider"
-                  />
-                  <ModelSelector
-                    providerId={aiProviderId}
-                    modelId={aiModelId}
-                    onChange={handleAthasModelChange}
-                    appearance="composer"
-                    open={activeInlineControl === "model"}
-                    onOpenChange={(open) => {
-                      if (open) {
-                        closeComposerPopovers();
-                        setActiveInlineControl("model");
-                        return;
-                      }
-                      setActiveInlineControl((current) => (current === "model" ? null : current));
-                    }}
-                    triggerClassName="max-w-[176px]"
-                    tooltip="Select model"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    tooltip="API keys"
-                    aria-label="Manage API keys"
-                    onClick={() => {
-                      closeInlineMenus();
-                      setIsApiKeyManagerOpen(true);
-                    }}
-                    size="icon-sm"
-                  >
-                    <Key />
-                  </Button>
-                </>
-              )}
-
-              {(isCustomAgent || !hasAcpConfigModeOption) && (
-                <ModeSelector
-                  agentId={currentAgentId}
-                  open={activeInlineControl === "mode"}
-                  onOpenChange={(open) => {
-                    if (open) {
-                      closeComposerPopovers();
-                      setActiveInlineControl("mode");
-                      return;
-                    }
-                    setActiveInlineControl((current) => (current === "mode" ? null : current));
-                  }}
-                  iconOnly
-                />
-              )}
-
-              {hasSlashCommands && (
-                <Button
-                  onClick={() => {
-                    if (inputRef.current && isInputEnabled) {
-                      if (slashCommandState.active) {
-                        setActiveInlineControl(null);
-                        hideSlashCommands();
-                        return;
-                      }
-                      closeInlineMenus();
-                      inputRef.current.textContent = "/";
-                      setInput("/");
-                      setHasInputText(true);
-                      inputRef.current.focus();
-                      const selection = window.getSelection();
-                      if (selection) {
-                        const range = document.createRange();
-                        range.selectNodeContents(inputRef.current);
-                        range.collapse(false);
-                        selection.removeAllRanges();
-                        selection.addRange(range);
-                      }
-                      slashCommandRangeRef.current = { startIndex: 0, endIndex: 1 };
-                      setActiveInlineControl("commands");
-                      showSlashCommands(getSlashDropdownPosition(), "");
-                    }
-                  }}
-                  variant="ghost"
-                  size="icon-sm"
-                  active={slashCommandState.active}
-                  tooltip="Show slash commands"
-                  aria-label="Show slash commands"
-                >
-                  <CommandIcon size={12} />
-                </Button>
-              )}
-            </div>
-
-            <Button
-              type="button"
-              onClick={() => {
-                closeInlineMenus();
-                setIsSkillsOpen(true);
-              }}
-              variant="ghost"
-              size="icon-sm"
-              className="ml-auto shrink-0"
-              tooltip="Skills"
-              aria-label="Skills"
-            >
-              <BookOpen />
-            </Button>
-          </>
-        )}
-      </ChatComposerTools>
-
       {(isActiveSurface || isComposerFocused) && mentionState.active && (
         <FileMentionDropdown
           anchorRef={aiChatContainerRef}
@@ -1494,13 +1283,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
           filteredCommands={filteredSlashCommands}
           onSelectedIndexChange={setSlashCommandSelectedIndex}
           onSelect={(command) => {
-            setActiveInlineControl(null);
             handleSlashCommandSelect(command);
           }}
-          onClose={() => {
-            hideSlashCommands();
-            setActiveInlineControl(null);
-          }}
+          onClose={hideSlashCommands}
         />
       )}
 

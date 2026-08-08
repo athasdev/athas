@@ -102,23 +102,3 @@ export function ChatComposerToolbar({ className, ...props }: ComponentProps<"div
     />
   );
 }
-
-export function ChatComposerTools({
-  className,
-  connected = false,
-  ...props
-}: ComponentProps<"div"> & {
-  connected?: boolean;
-}) {
-  return (
-    <div
-      data-ai-element="prompt-input-tools"
-      className={cn(
-        "flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5 pb-0.5",
-        connected && "px-2.5 py-1.5",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
