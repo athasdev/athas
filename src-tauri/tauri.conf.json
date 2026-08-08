@@ -64,7 +64,14 @@
       "providerShortName": null,
       "entitlements": null
     },
-    "linux": {},
+    "linux": {
+      "deb": {
+        "desktopTemplate": "linux/athas.desktop"
+      },
+      "rpm": {
+        "desktopTemplate": "linux/athas.desktop"
+      }
+    },
     "windows": {
       "wix": {
         "version": "0.11.900"

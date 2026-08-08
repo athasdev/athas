@@ -139,7 +139,8 @@ Name=${product_name}
 Exec=athas %U
 Icon=athas
 Terminal=false
-Categories=Development;TextEditor;
+Categories=Utility;TextEditor;Development;
+Keywords=Code;Editor;Text;Development;Programming;
 MimeType=text/plain;
 StartupNotify=true
 EOF

@@ -43,6 +43,21 @@ describe("Linux release packaging", () => {
     expect(script).not.toContain("src/extensions/bundled");
   });
 
+  it("classifies Athas desktop entries for Linux application menus", () => {
+    const config = JSON.parse(readRepoFile("src-tauri/tauri.conf.json"));
+    const template = readRepoFile("src-tauri/linux/athas.desktop");
+    const tarball = readRepoFile("scripts/release/packaging/linux/tarball.sh");
+    const categories = "Categories=Utility;TextEditor;Development;";
+    const keywords = "Keywords=Code;Editor;Text;Development;Programming;";
+
+    expect(config.bundle.linux.deb.desktopTemplate).toBe("linux/athas.desktop");
+    expect(config.bundle.linux.rpm.desktopTemplate).toBe("linux/athas.desktop");
+    expect(template.split("\n")).toContain(categories);
+    expect(template.split("\n")).toContain(keywords);
+    expect(tarball).toContain(categories);
+    expect(tarball).toContain(keywords);
+  });
+
   it("builds Debian and RPM packages together in the release workflow", () => {
     const workflow = readRepoFile(".github/workflows/release.yml");
     const linuxBuild = workflow.indexOf("cargo tauri build --no-bundle");
