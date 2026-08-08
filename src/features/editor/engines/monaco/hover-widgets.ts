@@ -6,16 +6,7 @@ const MONACO_HOVER_MIN_HEIGHT = 48;
 
 function setStyleProperty(
   element: HTMLElement,
-  property:
-    | "background"
-    | "border"
-    | "boxShadow"
-    | "height"
-    | "left"
-    | "maxHeight"
-    | "maxWidth"
-    | "top"
-    | "width",
+  property: "background" | "border" | "boxShadow" | "maxHeight" | "maxWidth" | "width",
   value: string,
 ) {
   if (element.style[property] === value) return;
@@ -54,7 +45,6 @@ export function syncMonacoHoverBounds(container: HTMLElement) {
 export function clampMonacoHoverWidgets(container: HTMLElement) {
   syncMonacoHoverBounds(container);
 
-  const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
   const maxWidth = getMonacoHoverMaxWidth(container);
   const maxHeight = getMonacoHoverMaxHeight(container);
   const widgetNodes = container.querySelectorAll<HTMLElement>(
@@ -77,46 +67,6 @@ export function clampMonacoHoverWidgets(container: HTMLElement) {
       setStyleProperty(node, "maxWidth", `${maxWidth}px`);
       if (node.getBoundingClientRect().width !== nextWidth) {
         setStyleProperty(node, "width", `${nextWidth}px`);
-      }
-    }
-
-    const widgetRect = widgetNode.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    const currentLeft = widgetRect.left - containerRect.left;
-    let nextLeft = currentLeft;
-
-    if (currentLeft + nextWidth > container.clientWidth - margin) {
-      nextLeft = container.clientWidth - nextWidth - margin;
-    }
-    if (nextLeft < margin) {
-      nextLeft = margin;
-    }
-    if (nextLeft !== currentLeft) {
-      setStyleProperty(widgetNode, "left", `${nextLeft}px`);
-    }
-
-    const nextWidgetRect = widgetNode.getBoundingClientRect();
-    const currentTop = nextWidgetRect.top - containerRect.top;
-    const nextHeight = Math.min(
-      maxHeight,
-      Math.max(MONACO_HOVER_MIN_HEIGHT, nextWidgetRect.height),
-    );
-    let nextTop = currentTop;
-
-    if (currentTop + nextHeight > container.clientHeight - margin) {
-      nextTop = container.clientHeight - nextHeight - margin;
-    }
-    if (nextTop < margin) {
-      nextTop = margin;
-    }
-    if (nextTop !== currentTop) {
-      setStyleProperty(widgetNode, "top", `${nextTop}px`);
-    }
-
-    if (nextWidgetRect.height > maxHeight) {
-      for (const node of [widgetNode, hoverNode, scrollNode]) {
-        if (!node) continue;
-        setStyleProperty(node, "height", `${maxHeight}px`);
       }
     }
   }
