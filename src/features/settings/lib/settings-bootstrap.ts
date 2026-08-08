@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import isEqual from "fast-deep-equal";
 import { defaultSettings } from "@/features/settings/config/default-settings";
 import { applySettingsSideEffects } from "@/features/settings/lib/settings-effects";
 import { normalizeSettings } from "@/features/settings/lib/settings-normalization";
@@ -22,29 +23,38 @@ async function detectInitialTheme() {
   return detectedTheme;
 }
 
-async function resolveInitialSettings(): Promise<Settings> {
+async function resolveInitialSettings(): Promise<{
+  settings: Settings;
+  shouldPersist: boolean;
+}> {
   if (typeof window === "undefined") {
-    return defaultSettings;
+    return { settings: defaultSettings, shouldPersist: false };
   }
 
   const loadedSettings = await loadSettingsFromStore();
+  let detectedTheme = false;
 
   if (!loadedSettings.theme) {
     loadedSettings.theme = await detectInitialTheme();
+    detectedTheme = true;
   }
 
-  return normalizeSettings(loadedSettings);
+  const settings = normalizeSettings(loadedSettings);
+  return {
+    settings,
+    shouldPersist: detectedTheme || !isEqual(settings, loadedSettings),
+  };
 }
 
 export async function initializeSettingsState(
   applySettings: (settings: Settings) => void,
 ): Promise<Settings> {
   try {
-    const normalizedSettings = await resolveInitialSettings();
-    applySettingsSideEffects(normalizedSettings);
-    applySettings(normalizedSettings);
-    await saveSettingsToStore(normalizedSettings);
-    return normalizedSettings;
+    const { settings, shouldPersist } = await resolveInitialSettings();
+    applySettingsSideEffects(settings);
+    applySettings(settings);
+    if (shouldPersist) await saveSettingsToStore(settings);
+    return settings;
   } catch (error) {
     console.error("Failed to initialize settings:", error);
     return defaultSettings;
