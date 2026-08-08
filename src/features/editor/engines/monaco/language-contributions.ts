@@ -37,6 +37,7 @@ import "monaco-editor/esm/vs/language/css/monaco.contribution";
 import "monaco-editor/esm/vs/language/html/monaco.contribution";
 import "monaco-editor/esm/vs/language/json/monaco.contribution";
 import "monaco-editor/esm/vs/language/typescript/monaco.contribution";
+import { zigMonarchLanguage } from "./zig-language";
 
 const jsxCompilerOptions = {
   jsx: typescript.JsxEmit.Preserve,
@@ -241,38 +242,7 @@ languages.setMonarchTokensProvider("toml", {
 });
 
 ensureLanguage("zig", [".zig"], ["Zig", "zig"]);
-languages.setMonarchTokensProvider("zig", {
-  tokenizer: {
-    root: [
-      [/\/\/.*$/, "comment"],
-      [/\/\*/, "comment", "@comment"],
-      [/"([^"\\]|\\.)*$/, "string.invalid"],
-      [/"/, "string", "@string"],
-      [/'([^'\\]|\\.)*'/, "string"],
-      [
-        /\b(addrspace|align|allowzero|and|anyframe|anytype|asm|async|await|break|callconv|catch|comptime|const|continue|defer|else|enum|errdefer|error|export|extern|fn|for|if|inline|linksection|noalias|noinline|nosuspend|opaque|or|orelse|packed|pub|resume|return|struct|suspend|switch|test|threadlocal|try|union|unreachable|usingnamespace|var|volatile|while)\b/,
-        "keyword",
-      ],
-      [/\b(true|false|null|undefined)\b/, "constant"],
-      [
-        /\b[ui](8|16|32|64|128|size)\b|\b(f16|f32|f64|f80|f128|bool|void|noreturn|type|anyerror|comptime_int|comptime_float)\b/,
-        "type",
-      ],
-      [/@[A-Za-z_][\w]*/, "keyword"],
-      [/\b0x[0-9a-fA-F_]+\b|\b\d[\d_]*(\.\d[\d_]*)?\b/, "number"],
-    ],
-    comment: [
-      [/[^*/]+/, "comment"],
-      [/\*\//, "comment", "@pop"],
-      [/[*/]/, "comment"],
-    ],
-    string: [
-      [/[^\\"]+/, "string"],
-      [/\\./, "string.escape"],
-      [/"/, "string", "@pop"],
-    ],
-  },
-});
+languages.setMonarchTokensProvider("zig", zigMonarchLanguage);
 
 ensureLanguage("elm", [".elm"], ["Elm", "elm"]);
 languages.setMonarchTokensProvider("elm", {
