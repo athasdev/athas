@@ -17,6 +17,10 @@ import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import {
+  TERMINAL_FILE_DROP_EVENT,
+  type TerminalFileDropDetail,
+} from "@/features/file-system/utils/file-system-drop-controller";
 import { showConfirmDialog } from "@/ui/dialog";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 import { currentPlatform } from "@/utils/platform";
@@ -155,19 +159,40 @@ export const XtermTerminal = ({
     });
   }, [sendTerminalSize]);
 
-  const handleTerminalFileDrop = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
-      const paths = extractDroppedFilePaths(event.dataTransfer);
+  const insertDroppedPaths = useCallback(
+    (paths: string[]) => {
       const text = formatDroppedPathsForTerminal(paths);
-      if (!text) return;
+      if (!text) return false;
 
-      event.preventDefault();
-      event.stopPropagation();
       writeBuffered(text);
       requestAnimationFrame(() => xtermRef.current?.focus());
+      return true;
     },
     [writeBuffered],
   );
+
+  const handleTerminalFileDrop = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (!insertDroppedPaths(extractDroppedFilePaths(event.dataTransfer))) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    [insertDroppedPaths],
+  );
+
+  useEffect(() => {
+    const container = terminalContainerRef.current;
+    if (!container) return;
+
+    const handleNativeFileDrop = (event: Event) => {
+      const detail = (event as CustomEvent<TerminalFileDropDetail>).detail;
+      insertDroppedPaths(detail?.paths ?? []);
+    };
+
+    container.addEventListener(TERMINAL_FILE_DROP_EVENT, handleNativeFileDrop);
+    return () => container.removeEventListener(TERMINAL_FILE_DROP_EVENT, handleNativeFileDrop);
+  }, [insertDroppedPaths]);
 
   const handleTerminalDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     if (!Array.from(event.dataTransfer.types).includes("Files")) return;

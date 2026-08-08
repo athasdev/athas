@@ -1,5 +1,34 @@
 import { parseDroppedPaths } from "./file-system-dropped-paths";
 
+export const TERMINAL_FILE_DROP_EVENT = "athas-terminal-file-drop";
+
+export interface TerminalFileDropDetail {
+  paths: string[];
+}
+
+export function resolveDropClientPoint(
+  position: { x: number; y: number },
+  scaleFactor: number,
+  elementFromPoint: (x: number, y: number) => Element | null,
+) {
+  const effectiveScaleFactor = Number.isFinite(scaleFactor) && scaleFactor > 0 ? scaleFactor : 1;
+  const logicalPoint = {
+    x: position.x / effectiveScaleFactor,
+    y: position.y / effectiveScaleFactor,
+  };
+  const logicalElement = elementFromPoint(logicalPoint.x, logicalPoint.y);
+
+  if (logicalElement || effectiveScaleFactor === 1) {
+    return { point: logicalPoint, element: logicalElement };
+  }
+
+  const rawPoint = { x: position.x, y: position.y };
+  return {
+    point: rawPoint,
+    element: elementFromPoint(rawPoint.x, rawPoint.y),
+  };
+}
+
 export interface ExternalFileDropPayload {
   type: string;
   paths?: string[];
@@ -64,6 +93,22 @@ const LOCAL_DROP_TARGET_SELECTOR = [
   "[data-ai-context-drop-target]",
 ].join(",");
 const PANE_DROP_TARGET_SELECTOR = "[data-pane-container]";
+
+export function dispatchDroppedPathsToTerminal(
+  target: Pick<Element, "closest"> | null | undefined,
+  rawPaths: string[],
+): boolean {
+  const terminalTarget = target?.closest<HTMLElement>(TERMINAL_DROP_TARGET_SELECTOR);
+  const paths = parseDroppedPaths(rawPaths);
+  if (!terminalTarget || paths.length === 0) return false;
+
+  terminalTarget.dispatchEvent(
+    new CustomEvent<TerminalFileDropDetail>(TERMINAL_FILE_DROP_EVENT, {
+      detail: { paths },
+    }),
+  );
+  return true;
+}
 
 export function getExternalFileDropRoute(
   target: Pick<Element, "closest"> | null | undefined,

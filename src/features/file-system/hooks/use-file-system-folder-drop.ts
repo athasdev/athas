@@ -11,25 +11,18 @@ import {
 } from "@/features/tabs/utils/internal-tab-drag";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
+  dispatchDroppedPathsToTerminal,
   handleExternalFileDropPayload,
   getExternalFileDropRoute,
   isExternalFileDragTypeList,
+  resolveDropClientPoint,
+  type ExternalFileDropPayload,
 } from "../utils/file-system-drop-controller";
 
 function resolveClientPoint(position: { x: number; y: number }) {
-  const rawPoint = { x: position.x, y: position.y };
-  const scaledPoint = {
-    x: position.x / window.devicePixelRatio,
-    y: position.y / window.devicePixelRatio,
-  };
-
-  const rawElement = document.elementFromPoint(rawPoint.x, rawPoint.y);
-  if (rawElement) {
-    return { point: rawPoint, element: rawElement };
-  }
-
-  const scaledElement = document.elementFromPoint(scaledPoint.x, scaledPoint.y);
-  return { point: scaledPoint, element: scaledElement };
+  return resolveDropClientPoint(position, window.devicePixelRatio, (x, y) =>
+    document.elementFromPoint(x, y),
+  );
 }
 
 function routeInternalTabDrop(position: { x: number; y: number }) {
@@ -89,14 +82,6 @@ function isExternalFileDrag(event: DragEvent): boolean {
   return isExternalFileDragTypeList(event.dataTransfer?.types);
 }
 
-function getExternalFileDropRouteAtPosition(
-  position: { x: number; y: number } | undefined,
-  treatPaneDropAsGlobal: boolean,
-) {
-  if (!position) return "global";
-  return getExternalFileDropRoute(resolveClientPoint(position).element, treatPaneDropAsGlobal);
-}
-
 function isGlobalExternalFileDropEventTarget(
   event: DragEvent,
   treatPaneDropAsGlobal: boolean,
@@ -138,52 +123,50 @@ export const useFileSystemFolderDrop = (
     };
 
     const setupListener = async () => {
-      unlistenWindow = await currentWindow.onDragDropEvent(async (event) => {
+      const handleNativeDragDrop = async (payload: ExternalFileDropPayload) => {
         if (getInternalTabDragData()) {
           if (
-            event.payload.type === "drop" &&
-            "position" in event.payload &&
-            routeInternalTabDrop(event.payload.position)
+            payload.type === "drop" &&
+            payload.position &&
+            routeInternalTabDrop(payload.position)
           ) {
             setIsDraggingOver(false);
             return;
           }
-          if (event.payload.type === "leave" || event.payload.type === "drop") {
+          if (payload.type === "leave" || payload.type === "drop") {
             setIsDraggingOver(false);
           }
           return;
         }
-        const position = "position" in event.payload ? event.payload.position : undefined;
-        if (getExternalFileDropRouteAtPosition(position, treatPaneDropAsGlobal) !== "global") {
+
+        const position = payload.position;
+        const target = position ? resolveClientPoint(position).element : null;
+        const route = getExternalFileDropRoute(target, treatPaneDropAsGlobal);
+
+        if (route === "terminal") {
+          if (payload.type === "drop" && payload.paths) {
+            dispatchDroppedPathsToTerminal(target, payload.paths);
+          }
           setIsDraggingOver(false);
           return;
         }
-        await handleExternalPayload(event.payload);
-      });
+
+        if (route !== "global") {
+          setIsDraggingOver(false);
+          return;
+        }
+
+        await handleExternalPayload(payload);
+      };
+
+      unlistenWindow = await currentWindow.onDragDropEvent((event) =>
+        handleNativeDragDrop(event.payload),
+      );
 
       const currentWebview = getCurrentWebview();
-      unlistenWebview = await currentWebview.onDragDropEvent(async (event) => {
-        if (getInternalTabDragData()) {
-          if (
-            event.payload.type === "drop" &&
-            "position" in event.payload &&
-            routeInternalTabDrop(event.payload.position)
-          ) {
-            setIsDraggingOver(false);
-            return;
-          }
-          if (event.payload.type === "leave" || event.payload.type === "drop") {
-            setIsDraggingOver(false);
-          }
-          return;
-        }
-        const position = "position" in event.payload ? event.payload.position : undefined;
-        if (getExternalFileDropRouteAtPosition(position, treatPaneDropAsGlobal) !== "global") {
-          setIsDraggingOver(false);
-          return;
-        }
-        await handleExternalPayload(event.payload);
-      });
+      unlistenWebview = await currentWebview.onDragDropEvent((event) =>
+        handleNativeDragDrop(event.payload),
+      );
 
       const onDomDragOver = (event: DragEvent) => {
         if (getInternalTabDragData()) return;

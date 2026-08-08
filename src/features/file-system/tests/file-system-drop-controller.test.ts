@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  dispatchDroppedPathsToTerminal,
   handleDroppedExternalPaths,
   handleExternalFileDropPayload,
   getExternalFileDropRoute,
   isExternalFileDragTypeList,
+  resolveDropClientPoint,
+  TERMINAL_FILE_DROP_EVENT,
+  type TerminalFileDropDetail,
 } from "../utils/file-system-drop-controller";
 
 describe("file system drop controller", () => {
@@ -111,5 +115,60 @@ describe("file system drop controller", () => {
     expect(getExternalFileDropRoute(target("[data-ai-context-drop-target]"), true)).toBe("local");
     expect(getExternalFileDropRoute(target(null))).toBe("global");
     expect(getExternalFileDropRoute(null)).toBe("global");
+  });
+
+  it("resolves Tauri physical drop positions against logical DOM coordinates", () => {
+    const terminalElement = {} as Element;
+    const points: Array<[number, number]> = [];
+
+    const resolved = resolveDropClientPoint({ x: 240, y: 120 }, 2, (x, y) => {
+      points.push([x, y]);
+      return terminalElement;
+    });
+
+    expect(points).toEqual([[120, 60]]);
+    expect(resolved).toEqual({ point: { x: 120, y: 60 }, element: terminalElement });
+  });
+
+  it("falls back to raw drop coordinates when the logical point is outside the DOM", () => {
+    const rawElement = {} as Element;
+    const points: Array<[number, number]> = [];
+
+    const resolved = resolveDropClientPoint({ x: 240, y: 120 }, 2, (x, y) => {
+      points.push([x, y]);
+      return x === 240 && y === 120 ? rawElement : null;
+    });
+
+    expect(points).toEqual([
+      [120, 60],
+      [240, 120],
+    ]);
+    expect(resolved).toEqual({ point: { x: 240, y: 120 }, element: rawElement });
+  });
+
+  it("delivers parsed native paths to the targeted terminal surface", () => {
+    const events: Event[] = [];
+    const terminalTarget = {
+      dispatchEvent: (event: Event) => {
+        events.push(event);
+        return true;
+      },
+    } as Element;
+    const target = {
+      closest: (selector: string) =>
+        selector === "[data-terminal-drop-target]" ? terminalTarget : null,
+    } as Element;
+
+    expect(
+      dispatchDroppedPathsToTerminal(target, [
+        "file:///Users/test/My%20Image.png",
+        "/Users/test/My Image.png",
+      ]),
+    ).toBe(true);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.type).toBe(TERMINAL_FILE_DROP_EVENT);
+    expect((events[0] as CustomEvent<TerminalFileDropDetail>).detail).toEqual({
+      paths: ["/Users/test/My Image.png"],
+    });
   });
 });
