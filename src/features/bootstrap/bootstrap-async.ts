@@ -1,44 +1,68 @@
-import { extensionLoader } from "@/extensions/loader/extension-loader";
-import { initializeExtensionStore } from "@/extensions/registry/extension-store";
-import { initializeThemeSystem } from "@/extensions/themes/theme-initializer";
-import { initializeUIExtensions } from "@/extensions/ui/services/ui-extension-initializer";
-import { initializeWasmTokenizer } from "@/features/editor/lib/wasm-parser/wasm-parser-api";
-import { initializeSettingsStore } from "@/features/settings/stores/settings.store";
-import { initializeTelemetry } from "@/features/telemetry/services/telemetry";
 import { reportBootstrapResults } from "./bootstrap-errors";
 
 const asyncBootstrapSteps = [
   {
     name: "settings store",
-    run: () => initializeSettingsStore(),
+    run: async () => {
+      const { initializeSettingsStore } = await import("@/features/settings/stores/settings.store");
+      await initializeSettingsStore();
+    },
   },
   {
     name: "theme system",
-    run: () => initializeThemeSystem(),
+    run: async () => {
+      const { initializeThemeSystem } = await import("@/extensions/themes/theme-initializer");
+      await initializeThemeSystem();
+    },
   },
   {
     name: "wasm tokenizer",
-    run: () => initializeWasmTokenizer(),
+    run: async () => {
+      const { initializeWasmTokenizer } =
+        await import("@/features/editor/lib/wasm-parser/wasm-parser-api");
+      await initializeWasmTokenizer();
+    },
   },
   {
     name: "extension loader",
-    run: () => extensionLoader.initialize(),
+    run: async () => {
+      const { extensionLoader } = await import("@/extensions/loader/extension-loader");
+      await extensionLoader.initialize();
+    },
   },
   {
     name: "extension store",
-    run: () => initializeExtensionStore(),
+    run: async () => {
+      const { initializeExtensionStore } = await import("@/extensions/registry/extension-store");
+      await initializeExtensionStore();
+    },
   },
   {
     name: "telemetry",
-    run: () => initializeTelemetry(),
-  },
-  {
-    name: "ui extensions",
-    run: () => initializeUIExtensions(),
+    run: async () => {
+      const { initializeTelemetry } = await import("@/features/telemetry/services/telemetry");
+      await initializeTelemetry();
+    },
   },
 ] as const;
 
 export async function runAsyncBootstrapSteps(): Promise<void> {
   const results = await Promise.allSettled(asyncBootstrapSteps.map((step) => step.run()));
   reportBootstrapResults(asyncBootstrapSteps, results);
+
+  const extensionStoreResult = results[4];
+  if (extensionStoreResult.status === "rejected") return;
+
+  const uiExtensionSteps = [
+    {
+      name: "ui extensions",
+      run: async () => {
+        const { initializeUIExtensions } =
+          await import("@/extensions/ui/services/ui-extension-initializer");
+        await initializeUIExtensions();
+      },
+    },
+  ] as const;
+  const uiExtensionResults = await Promise.allSettled(uiExtensionSteps.map((step) => step.run()));
+  reportBootstrapResults(uiExtensionSteps, uiExtensionResults);
 }

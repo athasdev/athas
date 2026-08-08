@@ -186,6 +186,25 @@ export function buildInstalledExtensionsMap(params: {
 }
 
 let progressListenerInitialized = false;
+const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const INITIAL_UPDATE_CHECK_DELAY_MS = 5_000;
+
+function scheduleExtensionUpdateChecks(
+  loadAvailableExtensions: () => Promise<void>,
+  checkForUpdates: () => Promise<string[]>,
+) {
+  const check = async (refreshCatalog: boolean) => {
+    try {
+      if (refreshCatalog) await loadAvailableExtensions();
+      await checkForUpdates();
+    } catch (error) {
+      console.debug("Extension update check failed:", error);
+    }
+  };
+
+  setTimeout(() => void check(false), INITIAL_UPDATE_CHECK_DELAY_MS);
+  setInterval(() => void check(true), UPDATE_CHECK_INTERVAL_MS);
+}
 
 export async function initializeExtensionStoreBootstrap(params: {
   onProgress: (extensionId: string, progress: number, error?: string) => void;
@@ -219,16 +238,5 @@ export async function initializeExtensionStoreBootstrap(params: {
   await initializeLanguagePackager();
   await loadAvailableExtensions();
   await loadInstalledExtensions();
-  await checkForUpdates();
-
-  // Periodic update check (every 6 hours)
-  const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
-  setInterval(async () => {
-    try {
-      await loadAvailableExtensions();
-      await checkForUpdates();
-    } catch (error) {
-      console.debug("Periodic extension update check failed:", error);
-    }
-  }, CHECK_INTERVAL_MS);
+  scheduleExtensionUpdateChecks(loadAvailableExtensions, checkForUpdates);
 }

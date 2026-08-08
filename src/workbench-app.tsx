@@ -21,21 +21,6 @@ import { TooltipProvider } from "./ui/tooltip";
 import { WindowResizeBorder } from "./features/window/components/window-resize-border";
 import { DialogServiceProvider } from "@/ui/dialog";
 
-const bootstrapStartedAt = performance.now();
-void initializeAppBootstrap()
-  .then(() => {
-    recordStartupMilestone("bootstrap:complete");
-    traceWindowOpen("frontend:asyncBootstrap:end", {
-      durationMs: Math.round((performance.now() - bootstrapStartedAt) * 100) / 100,
-    });
-  })
-  .catch((error) => {
-    traceWindowOpen("frontend:asyncBootstrap:error", {
-      durationMs: Math.round((performance.now() - bootstrapStartedAt) * 100) / 100,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  });
-
 function WorkbenchApp() {
   useAppBootstrap();
   const reduceMotion = useSettingsStore((state) => state.settings.reduceMotion);
@@ -51,6 +36,33 @@ function WorkbenchApp() {
     return () => {
       cleanupTrace();
       cleanupStartupMilestone();
+    };
+  }, []);
+
+  useEffect(() => {
+    let timer: number | null = null;
+    const frame = window.requestAnimationFrame(() => {
+      timer = window.setTimeout(() => {
+        const bootstrapStartedAt = performance.now();
+        void initializeAppBootstrap()
+          .then(() => {
+            recordStartupMilestone("bootstrap:complete");
+            traceWindowOpen("frontend:asyncBootstrap:end", {
+              durationMs: Math.round((performance.now() - bootstrapStartedAt) * 100) / 100,
+            });
+          })
+          .catch((error) => {
+            traceWindowOpen("frontend:asyncBootstrap:error", {
+              durationMs: Math.round((performance.now() - bootstrapStartedAt) * 100) / 100,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+      }, 0);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (timer !== null) window.clearTimeout(timer);
     };
   }, []);
 

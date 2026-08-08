@@ -1,15 +1,20 @@
-import { runAsyncBootstrapSteps } from "./bootstrap-async";
-import { runSynchronousBootstrapSteps } from "./bootstrap-sync";
+import { enableMapSet } from "immer";
 
 let appBootstrapPromise: Promise<void> | null = null;
+
+enableMapSet();
 
 export function initializeAppBootstrap(): Promise<void> {
   if (appBootstrapPromise) {
     return appBootstrapPromise;
   }
 
-  runSynchronousBootstrapSteps();
-  appBootstrapPromise = runAsyncBootstrapSteps();
+  appBootstrapPromise = Promise.all([import("./bootstrap-sync"), import("./bootstrap-async")]).then(
+    async ([{ runSynchronousBootstrapSteps }, { runAsyncBootstrapSteps }]) => {
+      runSynchronousBootstrapSteps();
+      await runAsyncBootstrapSteps();
+    },
+  );
 
   return appBootstrapPromise;
 }
