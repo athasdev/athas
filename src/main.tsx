@@ -1,13 +1,12 @@
 import { createRoot } from "react-dom/client";
 import "./styles.css";
-import { scan } from "react-scan";
 import App from "./App.tsx";
 import { recordStartupMilestone } from "./features/bootstrap/startup-performance.ts";
 import { traceWindowOpen } from "./features/window/utils/window-open-diagnostics.ts";
 
-scan({
-  enabled: import.meta.env.VITE_REACT_SCAN === "true",
-});
+if (import.meta.env.VITE_REACT_SCAN === "true") {
+  void import("react-scan").then(({ scan }) => scan({ enabled: true }));
+}
 
 traceWindowOpen("frontend:entry");
 recordStartupMilestone("frontend:entry");
