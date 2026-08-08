@@ -76,6 +76,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
     return (
       <div
         className={cn("file-tree-item w-full", containerClassName)}
+        data-sidebar-tree-row=""
         data-active={active ? "true" : undefined}
         data-depth={depth}
       >

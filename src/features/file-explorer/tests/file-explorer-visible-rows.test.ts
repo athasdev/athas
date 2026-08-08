@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { isVirtualRowFullyVisible } from "../hooks/use-file-explorer-visible-rows";
+import { getVisibleFileTreeRowKey } from "../hooks/use-file-explorer-visible-rows";
 import { getFileTreeRowHeight } from "../lib/file-tree-row";
 
 describe("getFileTreeRowHeight", () => {
@@ -10,43 +10,15 @@ describe("getFileTreeRowHeight", () => {
   });
 });
 
-describe("isVirtualRowFullyVisible", () => {
-  test("returns true when the virtual row is inside the current viewport", () => {
-    expect(
-      isVirtualRowFullyVisible({
-        index: 2,
-        virtualRows: [
-          { index: 1, start: 24, end: 48 },
-          { index: 2, start: 48, end: 72 },
-        ],
-        scrollOffset: 24,
-        viewportHeight: 96,
-      }),
-    ).toBe(true);
-  });
+describe("getVisibleFileTreeRowKey", () => {
+  test("uses paths instead of changing indexes as virtual row keys", () => {
+    const rows = [
+      { file: { name: "a.ts", path: "/root/a.ts", isDir: false }, depth: 0, isExpanded: false },
+      { file: { name: "b.ts", path: "/root/b.ts", isDir: false }, depth: 0, isExpanded: false },
+    ];
 
-  test("returns false when an overscanned row is mounted outside the viewport", () => {
-    expect(
-      isVirtualRowFullyVisible({
-        index: 8,
-        virtualRows: [
-          { index: 7, start: 168, end: 192 },
-          { index: 8, start: 192, end: 216 },
-        ],
-        scrollOffset: 24,
-        viewportHeight: 96,
-      }),
-    ).toBe(false);
-  });
-
-  test("returns false when the row is not currently mounted", () => {
-    expect(
-      isVirtualRowFullyVisible({
-        index: 12,
-        virtualRows: [{ index: 4, start: 96, end: 120 }],
-        scrollOffset: 72,
-        viewportHeight: 96,
-      }),
-    ).toBe(false);
+    expect(getVisibleFileTreeRowKey(rows, 0)).toBe("/root/a.ts");
+    expect(getVisibleFileTreeRowKey(rows, 1)).toBe("/root/b.ts");
+    expect(getVisibleFileTreeRowKey(rows, 2)).toBe(2);
   });
 });

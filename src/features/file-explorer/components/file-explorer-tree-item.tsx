@@ -57,10 +57,7 @@ interface FileExplorerTreeItemProps {
   onCancel: (file: FileEntry) => void;
   getGitStatusDecoration: (file: FileEntry) => FileTreeGitStatusDecoration | null;
   searchQuery?: string;
-  isSearchMatch?: boolean;
   rowId?: string;
-  virtualIndex: number;
-  measureElement: React.RefCallback<HTMLDivElement>;
 }
 
 function renderHighlightedLabel(label: string, query: string | undefined) {
@@ -105,10 +102,7 @@ function FileExplorerTreeItemComponent({
   onCancel,
   getGitStatusDecoration,
   searchQuery,
-  isSearchMatch = false,
   rowId,
-  virtualIndex,
-  measureElement,
 }: FileExplorerTreeItemProps) {
   const paddingLeft = FILE_TREE_BASE_INDENT + depth * indentSize;
   const gitStatusDecoration = getGitStatusDecoration(file);
@@ -144,12 +138,7 @@ function FileExplorerTreeItemComponent({
 
   if (file.isEditing || file.isRenaming) {
     return (
-      <div
-        ref={measureElement}
-        className="file-tree-item w-full"
-        data-depth={depth}
-        data-index={virtualIndex}
-      >
+      <div className="file-tree-item w-full" data-depth={depth}>
         {renderTreeGuides()}
         <div
           className="file-tree-row flex w-full items-center rounded-lg gap-1.5 px-1.5 py-1 ui-text-sm leading-row"
@@ -197,13 +186,7 @@ function FileExplorerTreeItemComponent({
   }
 
   return (
-    <div
-      ref={measureElement}
-      className="file-tree-item w-full"
-      data-active={isActive ? "true" : undefined}
-      data-depth={depth}
-      data-index={virtualIndex}
-    >
+    <div className="file-tree-item w-full" data-depth={depth}>
       {renderTreeGuides()}
       <TreeRow
         id={rowId}
@@ -223,7 +206,6 @@ function FileExplorerTreeItemComponent({
           isDragging && "cursor-move",
           file.ignored && "opacity-50",
           isCut && "italic opacity-40",
-          isSearchMatch && "file-tree-search-match",
         )}
         active={isActive}
         baseIndent={FILE_TREE_BASE_INDENT}
@@ -275,8 +257,5 @@ export const FileExplorerTreeItem = memo(
     prev.onCancel === next.onCancel &&
     prev.getGitStatusDecoration === next.getGitStatusDecoration &&
     prev.searchQuery === next.searchQuery &&
-    prev.isSearchMatch === next.isSearchMatch &&
-    prev.rowId === next.rowId &&
-    prev.virtualIndex === next.virtualIndex &&
-    prev.measureElement === next.measureElement,
+    prev.rowId === next.rowId,
 );

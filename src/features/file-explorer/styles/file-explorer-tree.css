@@ -1,79 +1,90 @@
 .file-tree-container {
-  container-type: inline-size;
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  overflow-anchor: none;
+  scrollbar-gutter: stable;
+  scroll-behavior: auto;
   font-family: var(--app-font-family);
 }
 
-/* Ensure file tree content wrapper stretches to full scrollable area */
-.file-tree-container .file-tree-scroll-body {
-  width: max-content !important;
-  min-width: 100% !important;
+.file-tree-container .file-tree-virtual-canvas {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  contain: layout style;
+  overflow-anchor: none;
 }
 
-/* File tree item containers need to stretch full width */
-.file-tree-item {
+.file-tree-container .file-tree-virtual-row {
+  position: absolute;
+  right: 0;
+  left: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.file-tree-container .file-tree-item {
+  height: var(--file-tree-row-height);
   width: 100% !important;
-  min-width: 100% !important;
+  min-width: 0 !important;
 }
 
-/* All file tree items have same background behavior - ensure full width coverage */
 .file-tree-container .file-tree-item button {
   box-sizing: border-box !important;
   border: 1px solid transparent !important;
   border-radius: var(--radius-lg) !important;
-  background-color: transparent !important;
+  max-width: 100% !important;
   width: 100% !important;
-  min-width: 100% !important;
+  min-width: 0 !important;
+  height: 100%;
+  overflow: hidden;
   display: flex !important;
   justify-content: flex-start !important;
 }
 
 .file-tree-container .file-tree-item button:hover {
-  background-color: transparent !important;
+  background-color: var(--file-tree-hover-bg) !important;
 }
 
 .file-tree-container .file-tree-item button.bg-selected,
 .file-tree-container .file-tree-item button.bg-selected:hover {
-  border-color: transparent !important;
-  background-color: transparent !important;
+  border-color: color-mix(in srgb, var(--border) 78%, transparent) !important;
+  background-color: var(--selected) !important;
 }
 
 .file-tree-container .file-tree-item button:focus-visible {
   border-color: color-mix(in srgb, var(--primary) 42%, var(--border)) !important;
 }
 
-.file-tree-item {
+.file-tree-container .file-tree-item {
   position: relative;
   --file-tree-hover-bg: color-mix(in srgb, var(--accent) 68%, transparent);
   --file-tree-guide-icon-offset: 7px;
   --tree-guide-color: color-mix(in srgb, var(--subtle-foreground) 18%, transparent);
 }
 
-.file-tree-item::before {
-  position: sticky;
-  left: 4px;
-  display: block;
-  width: calc(100cqw - 8px);
-  height: var(--file-tree-row-height);
-  margin-bottom: calc(var(--file-tree-row-height) * -1);
-  z-index: 0;
-  border-radius: var(--radius-lg);
-  background-color: transparent;
-  content: "";
-  pointer-events: none;
-}
-
-.file-tree-item:hover::before {
-  background-color: var(--file-tree-hover-bg);
-}
-
-.file-tree-item[data-active="true"]::before {
-  background-color: var(--selected);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 78%, transparent);
-}
-
-.file-tree-row {
+.file-tree-container .file-tree-row {
   position: relative;
   z-index: 2;
+  box-sizing: border-box;
+  height: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.file-tree-container .file-tree-row > span:last-child {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-tree-container .file-tree-row input {
+  min-width: 0;
 }
 
 .file-explorer-base-text,
@@ -81,29 +92,21 @@
   font-size: var(--ui-text-sm);
 }
 
-.file-tree-row:hover {
-  background-color: transparent !important;
-}
-
-.file-tree-search-highlight {
+.file-tree-container .file-tree-search-highlight {
   border-radius: var(--radius-md);
   background-color: color-mix(in srgb, var(--primary) 30%, transparent);
   color: inherit;
   padding: 0 1px;
 }
 
-.file-tree-search-match:not(.bg-selected) {
-  background-color: color-mix(in srgb, var(--primary) 7%, transparent) !important;
-}
-
-.file-tree-guides {
+.file-tree-container .file-tree-guides {
   pointer-events: none;
   position: absolute;
   z-index: 1;
   inset: 0;
 }
 
-.file-tree-guide {
+.file-tree-container .file-tree-guide {
   position: absolute;
   width: 7px;
   opacity: 0.9;
@@ -111,7 +114,7 @@
   transform: translateX(-3px);
 }
 
-.file-tree-guide::before {
+.file-tree-container .file-tree-guide::before {
   position: absolute;
   top: 0;
   bottom: 0;

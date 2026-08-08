@@ -1,4 +1,4 @@
-.file-tree-item {
+[data-sidebar-tree-row] {
   position: relative;
   width: 100% !important;
   min-width: 100% !important;
@@ -7,7 +7,7 @@
   --tree-guide-color: color-mix(in srgb, var(--subtle-foreground) 18%, transparent);
 }
 
-.file-tree-item::before {
+[data-sidebar-tree-row]::before {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -17,31 +17,31 @@
   pointer-events: none;
 }
 
-.file-tree-item:hover::before {
+[data-sidebar-tree-row]:hover::before {
   background-color: var(--file-tree-hover-bg);
 }
 
-.file-tree-item[data-active="true"]::before {
+[data-sidebar-tree-row][data-active="true"]::before {
   background-color: var(--selected);
 }
 
-.file-tree-row {
+[data-sidebar-tree-row] .file-tree-row {
   position: relative;
   z-index: 2;
 }
 
-.file-tree-row:hover {
+[data-sidebar-tree-row] .file-tree-row:hover {
   background-color: transparent !important;
 }
 
-.file-tree-guides {
+[data-sidebar-tree-row] .file-tree-guides {
   pointer-events: none;
   position: absolute;
   z-index: 1;
   inset: 0;
 }
 
-.file-tree-guide {
+[data-sidebar-tree-row] .file-tree-guide {
   position: absolute;
   width: 7px;
   opacity: 0.9;
@@ -49,7 +49,7 @@
   transform: translateX(-3px);
 }
 
-.file-tree-guide::before {
+[data-sidebar-tree-row] .file-tree-guide::before {
   position: absolute;
   top: 0;
   bottom: 0;
