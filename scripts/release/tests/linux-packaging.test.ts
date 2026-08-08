@@ -13,11 +13,21 @@ describe("Linux release packaging", () => {
     const config = JSON.parse(readRepoFile("src-tauri/tauri.linux.conf.json"));
     const [window] = config.app.windows;
 
+    expect(window.create).toBe(false);
     expect(window.transparent).toBe(false);
     expect(window.decorations).toBe(true);
     expect(window.resizable).toBe(true);
     expect(window.preventOverflow).toBe(true);
     expect(window).not.toHaveProperty("titleBarStyle");
+  });
+
+  it("uses the app-owned CEF runtime style for Linux webviews", () => {
+    const appSetup = readRepoFile("src-tauri/src/app_setup.rs");
+    const windowCommands = readRepoFile("src-tauri/src/commands/ui/window.rs");
+    const alloyRuntime = "browser_runtime_style(tauri_runtime_cef::RuntimeStyle::Alloy)";
+
+    expect(appSetup).toContain(alloyRuntime);
+    expect(windowCommands.split(alloyRuntime)).toHaveLength(3);
   });
 
   it("does not ship an unusable setuid helper in per-user tarballs", () => {

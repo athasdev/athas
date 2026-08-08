@@ -492,6 +492,9 @@ fn create_labeled_app_window_internal(
          );
       });
 
+   #[cfg(all(target_os = "linux", feature = "linux"))]
+   let builder = builder.browser_runtime_style(tauri_runtime_cef::RuntimeStyle::Alloy);
+
    #[cfg(any(
       target_os = "windows",
       all(target_os = "linux", not(feature = "linux"))
@@ -865,6 +868,12 @@ pub async fn create_embedded_webview(
             .map_err(|e| format!("Invalid URL: {e}"))?,
       ),
    );
+
+   #[cfg(all(target_os = "linux", feature = "linux"))]
+   {
+      webview_builder =
+         webview_builder.browser_runtime_style(tauri_runtime_cef::RuntimeStyle::Alloy);
+   }
 
    #[cfg(all(target_os = "macos", not(feature = "linux")))]
    {

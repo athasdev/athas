@@ -21,6 +21,8 @@ use tokio::sync::Mutex;
 pub fn configure_app(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn std::error::Error>> {
    app.state::<commands::ui::StartupTiming>()
       .record("native:setup:start");
+   #[cfg(all(target_os = "linux", feature = "linux"))]
+   create_initial_linux_window(app)?;
    configure_menu(app)?;
    register_managed_state(app);
    emit_cli_open_requests(app);
@@ -32,6 +34,25 @@ pub fn configure_app(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn s
    app.on_menu_event(handle_menu_event);
    app.state::<commands::ui::StartupTiming>()
       .record("native:setup:complete");
+
+   Ok(())
+}
+
+#[cfg(all(target_os = "linux", feature = "linux"))]
+fn create_initial_linux_window(
+   app: &tauri::App<AthasRuntime>,
+) -> Result<(), Box<dyn std::error::Error>> {
+   let config = app
+      .config()
+      .app
+      .windows
+      .iter()
+      .find(|window| window.label == "main")
+      .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "main window config"))?;
+
+   tauri::WebviewWindowBuilder::from_config(app.handle(), config)?
+      .browser_runtime_style(tauri_runtime_cef::RuntimeStyle::Alloy)
+      .build()?;
 
    Ok(())
 }

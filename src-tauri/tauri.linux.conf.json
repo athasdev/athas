@@ -4,6 +4,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "Athas",
         "width": 1200,
         "height": 800,
