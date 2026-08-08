@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import type { Terminal } from "@/features/terminal/types/terminal.types";
+import type { Terminal, TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import {
   generateTerminalId,
@@ -150,8 +150,16 @@ export const useTerminalTabs = () => {
   }, [terminals, activeTerminalId, setActiveTerminal]);
 
   const setTerminalSplitMode = useCallback(
-    (id: string, splitMode: boolean, splitWithId?: string) => {
-      dispatch({ type: "SET_TERMINAL_SPLIT_MODE", payload: { id, splitMode, splitWithId } });
+    (
+      id: string,
+      splitMode: boolean,
+      splitWithId?: string,
+      splitDirection?: TerminalSplitDirection,
+    ) => {
+      dispatch({
+        type: "SET_TERMINAL_SPLIT_MODE",
+        payload: { id, splitMode, splitWithId, splitDirection },
+      });
     },
     [dispatch],
   );

@@ -116,6 +116,8 @@ describe("default keymaps", () => {
   it("keeps chrome actions in the command registry", () => {
     expectKeybinding("workbench.openSettings", "cmd+,");
     expectKeybinding("terminal.find", "cmd+f", "terminalFocus");
+    expectKeybinding("terminal.split", "cmd+d", "terminalFocus");
+    expectKeybinding("terminal.splitDown", "cmd+shift+d", "terminalFocus");
   });
 
   it("has registered commands for every default keybinding", () => {

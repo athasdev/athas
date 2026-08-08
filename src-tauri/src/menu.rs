@@ -514,7 +514,8 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    // Terminal menu
    let terminal_menu = SubmenuBuilder::new(app, "Terminal")
       .text("command_new_terminal", "New Terminal")
-      .text("command_split_terminal", "Split Terminal")
+      .text("command_split_terminal", "Split Terminal Right")
+      .text("command_split_terminal_down", "Split Terminal Down")
       .text("command_close_terminal", "Close Terminal")
       .build()?;
 

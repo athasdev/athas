@@ -391,7 +391,12 @@ const WindowMenuBar = ({
       Terminal: (
         <MenubarContent>
           <MenubarItem onClick={() => handleCommand("terminal.new")}>New Terminal</MenubarItem>
-          <MenubarItem onClick={() => handleCommand("terminal.split")}>Split Terminal</MenubarItem>
+          <MenubarItem shortcut="mod+d" onClick={() => handleCommand("terminal.split")}>
+            Split Terminal Right
+          </MenubarItem>
+          <MenubarItem shortcut="mod+shift+d" onClick={() => handleCommand("terminal.splitDown")}>
+            Split Terminal Down
+          </MenubarItem>
           <MenubarItem onClick={() => handleCommand("terminal.close")}>Close Terminal</MenubarItem>
         </MenubarContent>
       ),

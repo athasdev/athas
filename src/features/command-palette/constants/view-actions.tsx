@@ -1,8 +1,10 @@
 import {
   WarningCircleIcon as AlertCircle,
+  ColumnsIcon as Columns,
   GlobeHemisphereWestIcon as Globe,
   ListIcon as Menu,
   ChatCircleTextIcon as MessageSquare,
+  RowsIcon as Rows,
   SidebarSimpleIcon as PanelBottom,
   SidebarSimpleIcon as PanelLeft,
   ArrowCounterClockwiseIcon as RotateCcw,
@@ -241,6 +243,30 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       action: () => {
         onClose();
         void keymapRegistry.executeCommand("terminal.find");
+      },
+    },
+    {
+      id: "terminal-split-right",
+      label: "Terminal: Split Right",
+      description: "Open a terminal beside the active terminal",
+      icon: <Columns />,
+      category: "Terminal",
+      commandId: "terminal.split",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("terminal.split");
+      },
+    },
+    {
+      id: "terminal-split-down",
+      label: "Terminal: Split Down",
+      description: "Open a terminal below the active terminal",
+      icon: <Rows />,
+      category: "Terminal",
+      commandId: "terminal.splitDown",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("terminal.splitDown");
       },
     },
     {

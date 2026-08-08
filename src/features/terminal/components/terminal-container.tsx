@@ -7,6 +7,7 @@ import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
+import type { TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
 import {
   resolveTerminalLaunch,
   SYSTEM_DEFAULT_PROFILE_ID,
@@ -289,42 +290,44 @@ const TerminalContainer = ({
     [terminals, closeTerminal],
   );
 
-  const handleSplitView = useCallback(() => {
-    if (!activeTerminalId) return;
+  const handleSplitView = useCallback(
+    (direction: TerminalSplitDirection) => {
+      if (!activeTerminalId) return;
 
-    const activeTerminal = terminals.find((t) => t.id === activeTerminalId);
-    if (!activeTerminal) return;
+      const activeTerminal = terminals.find((t) => t.id === activeTerminalId);
+      if (!activeTerminal) return;
 
-    if (activeTerminal.splitMode) {
-      // Toggle off split view for this terminal
-      setTerminalSplitMode(activeTerminalId, false);
-      // Close the companion terminal if it exists
-      if (activeTerminal.splitWithId) {
-        closeTerminal(activeTerminal.splitWithId);
+      if (activeTerminal.splitMode) {
+        if (activeTerminal.splitWithId && activeTerminal.splitDirection !== direction) {
+          setTerminalSplitMode(activeTerminalId, true, activeTerminal.splitWithId, direction);
+          return;
+        }
+
+        setTerminalSplitMode(activeTerminalId, false);
+        if (activeTerminal.splitWithId) {
+          closeTerminal(activeTerminal.splitWithId);
+        }
+      } else {
+        const companionName = `${activeTerminal.name} (Split)`;
+        const companionId = createTerminal({
+          name: companionName,
+          currentDirectory: activeTerminal.currentDirectory,
+          shell: activeTerminal.shell,
+          profileId: activeTerminal.profileId,
+        });
+        setTerminalSplitMode(activeTerminalId, true, companionId, direction);
+        setActiveTerminal(activeTerminalId);
       }
-    } else {
-      // Create an actual companion terminal with independent session
-      const companionName = `${activeTerminal.name} (Split)`;
-      const companionId = createTerminal({
-        name: companionName,
-        currentDirectory: activeTerminal.currentDirectory,
-        shell: activeTerminal.shell,
-        profileId: activeTerminal.profileId,
-      });
-      setTerminalSplitMode(activeTerminalId, true, companionId);
-      // createTerminal switches active to the new companion; restore the
-      // initiating terminal as active so the split layout (which renders
-      // the companion only inside the initiator's iteration) stays visible.
-      setActiveTerminal(activeTerminalId);
-    }
-  }, [
-    activeTerminalId,
-    terminals,
-    setTerminalSplitMode,
-    createTerminal,
-    closeTerminal,
-    setActiveTerminal,
-  ]);
+    },
+    [
+      activeTerminalId,
+      terminals,
+      setTerminalSplitMode,
+      createTerminal,
+      closeTerminal,
+      setActiveTerminal,
+    ],
+  );
 
   const handleSearchTerminal = useCallback(() => {
     if (!activeTerminalId) return;
@@ -526,8 +529,9 @@ const TerminalContainer = ({
       focusActiveTerminal();
     };
 
-    const handleSplitTerminalEvent = () => {
-      handleSplitView();
+    const handleSplitTerminalEvent = (event: Event) => {
+      const direction = (event as CustomEvent<TerminalSplitDirection>).detail ?? "right";
+      handleSplitView(direction);
     };
 
     const handleActivateTerminalTab = (event: Event) => {
@@ -600,15 +604,22 @@ const TerminalContainer = ({
             {terminals.map((terminal) => (
               <div
                 key={terminal.id}
-                className="h-full min-h-0"
+                className={cn(
+                  "h-full min-h-0",
+                  terminal.splitDirection === "down" ? "flex-col" : "flex-row",
+                )}
                 style={{
                   display: terminal.id === activeTerminalId ? "flex" : "none",
                 }}
               >
                 <div
                   className={cn(
-                    "h-full min-h-0 w-full",
-                    terminal.splitMode && terminal.splitWithId && "w-1/2 border-border border-r",
+                    "min-h-0 min-w-0",
+                    terminal.splitMode && terminal.splitWithId
+                      ? terminal.splitDirection === "down"
+                        ? "h-1/2 w-full border-border border-b"
+                        : "h-full w-1/2 border-border border-r"
+                      : "h-full w-full",
                   )}
                 >
                   <TerminalSession
@@ -628,7 +639,12 @@ const TerminalContainer = ({
                     const companionTerminal = terminals.find((t) => t.id === terminal.splitWithId);
                     if (!companionTerminal) return null;
                     return (
-                      <div className="h-full min-h-0 w-1/2">
+                      <div
+                        className={cn(
+                          "min-h-0 min-w-0",
+                          terminal.splitDirection === "down" ? "h-1/2 w-full" : "h-full w-1/2",
+                        )}
+                      >
                         <TerminalSession
                           key={companionTerminal.id}
                           terminal={companionTerminal}

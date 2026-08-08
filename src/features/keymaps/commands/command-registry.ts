@@ -274,11 +274,20 @@ const terminalCommands: Command[] = [
   },
   {
     id: "terminal.split",
-    title: "Split Terminal",
+    title: "Split Terminal Right",
     category: "Terminal",
     keybinding: "cmd+d",
     execute: () => {
-      window.dispatchEvent(new CustomEvent("terminal-split"));
+      window.dispatchEvent(new CustomEvent("terminal-split", { detail: "right" }));
+    },
+  },
+  {
+    id: "terminal.splitDown",
+    title: "Split Terminal Down",
+    category: "Terminal",
+    keybinding: "cmd+shift+d",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-split", { detail: "down" }));
     },
   },
 ];

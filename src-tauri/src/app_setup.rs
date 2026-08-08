@@ -204,6 +204,7 @@ fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
       "command_rename_symbol" => Some("editor.renameSymbol"),
       "command_new_terminal" => Some("terminal.new"),
       "command_split_terminal" => Some("terminal.split"),
+      "command_split_terminal_down" => Some("terminal.splitDown"),
       "command_close_terminal" => Some("terminal.close"),
       "command_start_debugging" => Some("debug.start"),
       "command_stop_debugging" => Some("debug.stop"),

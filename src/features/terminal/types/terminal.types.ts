@@ -1,3 +1,5 @@
+export type TerminalSplitDirection = "right" | "down";
+
 export interface Terminal {
   id: string;
   name: string;
@@ -15,7 +17,8 @@ export interface Terminal {
   customName?: boolean;
   ref?: any;
   splitMode?: boolean;
-  splitWithId?: string; // ID of the terminal to split with
+  splitWithId?: string;
+  splitDirection?: TerminalSplitDirection;
   remoteConnectionId?: string;
 }
 
@@ -100,7 +103,12 @@ export type TerminalAction =
     }
   | {
       type: "SET_TERMINAL_SPLIT_MODE";
-      payload: { id: string; splitMode: boolean; splitWithId?: string };
+      payload: {
+        id: string;
+        splitMode: boolean;
+        splitWithId?: string;
+        splitDirection?: TerminalSplitDirection;
+      };
     }
   | { type: "RESET_TERMINALS"; payload: Record<string, never> }
   | { type: "RESTORE_TERMINALS"; payload: { terminals: PersistedTerminal[] } };

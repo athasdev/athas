@@ -94,6 +94,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
             ...terminal,
             splitMode: false,
             splitWithId: undefined,
+            splitDirection: undefined,
             isActive: terminal.id === newActiveTerminalId,
           };
         }
@@ -176,11 +177,11 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
     }
 
     case "SET_TERMINAL_SPLIT_MODE": {
-      const { id, splitMode, splitWithId } = action.payload;
+      const { id, splitMode, splitWithId, splitDirection } = action.payload;
       return {
         ...state,
         terminals: state.terminals.map((terminal) =>
-          terminal.id === id ? { ...terminal, splitMode, splitWithId } : terminal,
+          terminal.id === id ? { ...terminal, splitMode, splitWithId, splitDirection } : terminal,
         ),
       };
     }

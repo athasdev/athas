@@ -143,6 +143,12 @@ export const defaultKeymaps: Keybinding[] = [
     when: "terminalFocus",
   },
   {
+    key: "cmd+shift+d",
+    command: "terminal.splitDown",
+    source: "default",
+    when: "terminalFocus",
+  },
+  {
     key: "cmd+shift+k",
     command: "editor.deleteLine",
     source: "default",
