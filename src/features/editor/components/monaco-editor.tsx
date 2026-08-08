@@ -159,6 +159,7 @@ export function MonacoEditor({
     renderIndentGuides,
     highlightOccurrences,
     editorFontLigatures,
+    editorItalicComments,
     editorStickyScroll,
     editorBracketPairColorization,
     editorSmoothScrolling,
@@ -500,7 +501,7 @@ export function MonacoEditor({
       quickSuggestions: autoCompletion,
       suggestOnTriggerCharacters: autoCompletion,
       parameterHints: { enabled: parameterHints },
-      theme: defineMonacoTheme(themeId),
+      theme: defineMonacoTheme(themeId, editorItalicComments),
       cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : editorCursorStyle,
       cursorBlinking:
         vimModeEnabled && vimCurrentMode === "normal" ? "solid" : editorCursorBlinking,
@@ -770,6 +771,7 @@ export function MonacoEditor({
     editorCursorBlinking,
     editorCursorStyle,
     editorFontLigatures,
+    editorItalicComments,
     editorScrollBeyondLastLine,
     editorSmoothScrolling,
     editorStickyScroll,
@@ -1086,7 +1088,9 @@ export function MonacoEditor({
 
     const applyTheme = (nextThemeId?: string) => {
       monacoEditor.setTheme(
-        nextThemeId ? defineMonacoTheme(nextThemeId) : defineActiveMonacoTheme(themeId),
+        nextThemeId
+          ? defineMonacoTheme(nextThemeId, editorItalicComments)
+          : defineActiveMonacoTheme(themeId, editorItalicComments),
       );
     };
 
@@ -1142,6 +1146,7 @@ export function MonacoEditor({
     editorCursorBlinking,
     editorCursorStyle,
     editorFontLigatures,
+    editorItalicComments,
     editorScrollBeyondLastLine,
     editorSmoothScrolling,
     editorStickyScroll,

@@ -52,6 +52,7 @@ export interface Settings {
   highlightOccurrences: boolean;
   showMinimap: boolean;
   editorFontLigatures: boolean;
+  editorItalicComments: boolean;
   editorStickyScroll: boolean;
   editorBracketPairColorization: boolean;
   editorSmoothScrolling: boolean;

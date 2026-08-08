@@ -17,6 +17,7 @@ export function useMonacoEditorSettings() {
   const themeId = useEditorSettingsStore.use.theme();
   const {
     editorFontLigatures,
+    editorItalicComments,
     editorStickyScroll,
     editorBracketPairColorization,
     editorSmoothScrolling,
@@ -26,6 +27,7 @@ export function useMonacoEditorSettings() {
   } = useSettingsStore(
     useShallow((state) => ({
       editorFontLigatures: state.settings.editorFontLigatures,
+      editorItalicComments: state.settings.editorItalicComments,
       editorStickyScroll: state.settings.editorStickyScroll,
       editorBracketPairColorization: state.settings.editorBracketPairColorization,
       editorSmoothScrolling: state.settings.editorSmoothScrolling,
@@ -48,6 +50,7 @@ export function useMonacoEditorSettings() {
     renderIndentGuides,
     highlightOccurrences,
     editorFontLigatures,
+    editorItalicComments,
     editorStickyScroll,
     editorBracketPairColorization,
     editorSmoothScrolling,

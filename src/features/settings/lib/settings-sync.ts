@@ -29,6 +29,7 @@ type SyncableSettingsKey =
   | "highlightOccurrences"
   | "showMinimap"
   | "editorFontLigatures"
+  | "editorItalicComments"
   | "editorStickyScroll"
   | "editorBracketPairColorization"
   | "editorSmoothScrolling"
@@ -153,6 +154,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "highlightOccurrences",
   "showMinimap",
   "editorFontLigatures",
+  "editorItalicComments",
   "editorStickyScroll",
   "editorBracketPairColorization",
   "editorSmoothScrolling",

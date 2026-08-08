@@ -45,6 +45,7 @@ export function NotebookCodeCellEditor({
     renderIndentGuides,
     highlightOccurrences,
     editorFontLigatures,
+    editorItalicComments,
     editorStickyScroll,
     editorBracketPairColorization,
     editorSmoothScrolling,
@@ -102,7 +103,7 @@ export function NotebookCodeCellEditor({
       suggestOnTriggerCharacters: true,
       parameterHints: { enabled: true },
       contextmenu: true,
-      theme: defineActiveMonacoTheme(themeId),
+      theme: defineActiveMonacoTheme(themeId, editorItalicComments),
       fixedOverflowWidgets: true,
       scrollbar: {
         vertical: "hidden",
@@ -138,6 +139,7 @@ export function NotebookCodeCellEditor({
     editorCursorBlinking,
     editorCursorStyle,
     editorFontLigatures,
+    editorItalicComments,
     editorScrollBeyondLastLine,
     editorSmoothScrolling,
     editorStickyScroll,
@@ -191,7 +193,7 @@ export function NotebookCodeCellEditor({
       occurrencesHighlight: highlightOccurrences ? "singleFile" : "off",
       selectionHighlight: highlightOccurrences,
     });
-    monacoEditor.setTheme(defineActiveMonacoTheme(themeId));
+    monacoEditor.setTheme(defineActiveMonacoTheme(themeId, editorItalicComments));
     setHeight(editorHeight(editor, lineHeight));
   }, [
     fontFamily,
@@ -200,6 +202,7 @@ export function NotebookCodeCellEditor({
     editorCursorBlinking,
     editorCursorStyle,
     editorFontLigatures,
+    editorItalicComments,
     editorScrollBeyondLastLine,
     editorSmoothScrolling,
     editorStickyScroll,
@@ -217,7 +220,9 @@ export function NotebookCodeCellEditor({
   useEffect(() => {
     const applyTheme = (nextThemeId?: string) => {
       monacoEditor.setTheme(
-        nextThemeId ? defineMonacoTheme(nextThemeId) : defineActiveMonacoTheme(themeId),
+        nextThemeId
+          ? defineMonacoTheme(nextThemeId, editorItalicComments)
+          : defineActiveMonacoTheme(themeId, editorItalicComments),
       );
     };
 
@@ -232,7 +237,7 @@ export function NotebookCodeCellEditor({
       unsubscribeTheme();
       unsubscribeReady();
     };
-  }, [themeId]);
+  }, [editorItalicComments, themeId]);
 
   useEffect(() => {
     editorRef.current?.layout();

@@ -86,6 +86,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["font", "ligatures", "symbols", "typography", "code"],
   },
   {
+    id: "editor-italic-comments",
+    tab: "editor",
+    section: "Editor",
+    label: "Italic Comments",
+    description: "Render code comments in italics",
+    keywords: ["comments", "italic", "font", "style", "syntax", "code"],
+  },
+  {
     id: "editor-line-height",
     tab: "editor",
     section: "Typography",

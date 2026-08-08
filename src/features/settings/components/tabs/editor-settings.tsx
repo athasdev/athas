@@ -20,6 +20,7 @@ export const EditorSettings = () => {
       editorCursorBlinking: state.settings.editorCursorBlinking,
       editorCursorStyle: state.settings.editorCursorStyle,
       editorFontLigatures: state.settings.editorFontLigatures,
+      editorItalicComments: state.settings.editorItalicComments,
       editorLineHeight: state.settings.editorLineHeight,
       editorScrollBeyondLastLine: state.settings.editorScrollBeyondLastLine,
       editorSmoothScrolling: state.settings.editorSmoothScrolling,
@@ -105,6 +106,21 @@ export const EditorSettings = () => {
           <Switch
             checked={settings.editorFontLigatures}
             onChange={(checked) => updateSetting("editorFontLigatures", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Italic Comments"
+          description="Render code comments in italics"
+          onReset={() =>
+            updateSetting("editorItalicComments", getDefaultSetting("editorItalicComments"))
+          }
+          canReset={settings.editorItalicComments !== getDefaultSetting("editorItalicComments")}
+        >
+          <Switch
+            checked={settings.editorItalicComments}
+            onChange={(checked) => updateSetting("editorItalicComments", checked)}
             size="sm"
           />
         </SettingRow>

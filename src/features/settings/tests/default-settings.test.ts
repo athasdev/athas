@@ -14,6 +14,7 @@ describe("default settings", () => {
     const settings = getDefaultSettingsSnapshot();
 
     expect(settings.editorFontLigatures).toBe(false);
+    expect(settings.editorItalicComments).toBe(false);
     expect(settings.editorStickyScroll).toBe(false);
     expect(settings.editorBracketPairColorization).toBe(true);
     expect(settings.editorSmoothScrolling).toBe(false);

@@ -35,6 +35,7 @@ export const defaultSettings: Settings = {
   highlightOccurrences: true,
   showMinimap: false,
   editorFontLigatures: false,
+  editorItalicComments: false,
   editorStickyScroll: false,
   editorBracketPairColorization: true,
   editorSmoothScrolling: false,
