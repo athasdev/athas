@@ -5,7 +5,6 @@ import {
   PROVIDER_REGISTRY,
   type DatabaseViewerProps,
 } from "@/features/database/providers/provider-registry";
-import CodeEditor from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { Buffer } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
@@ -55,6 +54,7 @@ const AgentTab = lazy(() =>
     default: m.AgentTab,
   })),
 );
+const CodeEditor = lazy(() => import("@/features/editor/components/code-editor"));
 
 const databaseViewerCache = new Map<
   DatabaseType,
