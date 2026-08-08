@@ -86,7 +86,7 @@ const gitEmptyActionButtonClassName =
 type GitPaletteAction =
   | { type: "select-repository" }
   | { type: "show-tab"; tab: GitSidebarTab }
-  | { type: "manage-branches" }
+  | { type: "manage-branches"; tab?: "branches" | "worktrees" | "repositories" }
   | { type: "show-branch-diff" }
   | { type: "manage-remotes" }
   | { type: "manage-tags" }
@@ -384,9 +384,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     }
   }, [activeTab, rememberLastGitPanelMode, gitLastPanelMode, updateSetting]);
 
-  const handleOpenBranchManager = useCallback(() => {
-    window.dispatchEvent(new Event(GIT_VIEW_BRANCH_MANAGER_EVENT));
-  }, []);
+  const handleOpenBranchManager = useCallback(
+    (tab: "branches" | "worktrees" | "repositories" = "branches") => {
+      window.dispatchEvent(new CustomEvent(GIT_VIEW_BRANCH_MANAGER_EVENT, { detail: { tab } }));
+    },
+    [],
+  );
 
   const handleShowBranchDiffList = useCallback(async () => {
     setShowBranchDiffList(true);
@@ -424,7 +427,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       }
 
       if (detail.type === "manage-branches") {
-        handleOpenBranchManager();
+        handleOpenBranchManager(detail.tab);
         return;
       }
 

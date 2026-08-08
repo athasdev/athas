@@ -6,6 +6,7 @@ import {
   GitBranchIcon as GitBranch,
   GitCommitIcon as GitCommit,
   HardDrivesIcon as Server,
+  NodesIcon as Nodes,
   TagIcon as Tag,
   ArrowClockwiseIcon as RefreshCw,
 } from "@/ui/icons";
@@ -43,14 +44,14 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
   } = params;
   const repoPath = activeRepoPath ?? rootFolderPath;
 
-  const openBranchManager = () => {
+  const openBranchManager = (tab: "branches" | "worktrees" = "branches") => {
     setIsSidebarVisible(true);
     setActiveView("git");
     onClose();
     window.setTimeout(() => {
       window.dispatchEvent(
         new CustomEvent("athas:git-palette-action", {
-          detail: { type: "manage-branches" },
+          detail: { type: "manage-branches", tab },
         }),
       );
     }, 0);
@@ -88,6 +89,14 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       icon: <GitBranch />,
       category: "Git",
       action: openBranchManager,
+    },
+    {
+      id: "git-worktree-manager",
+      label: "Git: Manage Worktrees",
+      description: "Open the worktree manager",
+      icon: <Nodes />,
+      category: "Git",
+      action: () => openBranchManager("worktrees"),
     },
     {
       id: "git-create-branch",

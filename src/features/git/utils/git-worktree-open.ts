@@ -1,11 +1,16 @@
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
+import type { GitWorktree } from "@/features/git/types/git.types";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 
 type GitWorktreeOpenTarget = "current-window" | "new-window";
 
 interface OpenGitWorktreeOptions {
   target?: GitWorktreeOpenTarget;
+}
+
+export function isOpenableGitWorktree(worktree: GitWorktree): boolean {
+  return !worktree.prunable_reason?.trim();
 }
 
 export async function openGitWorktreeWorkspace(

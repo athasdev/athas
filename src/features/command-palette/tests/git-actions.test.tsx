@@ -37,6 +37,7 @@ describe("createGitActions", () => {
         "Git: Checkout Branch",
         "Git: Create Branch",
         "Git: Delete Branch",
+        "Git: Manage Worktrees",
         "Git: Show Branch Diff",
         "Git: Initialize Repository",
         "Git: Add Remote",
@@ -108,7 +109,39 @@ describe("createGitActions", () => {
     expect(params.onClose).toHaveBeenCalledOnce();
     expect(dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        detail: { type: "manage-branches" },
+        detail: { type: "manage-branches", tab: "branches" },
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("opens the worktree manager through the git sidebar", () => {
+    const params = createActions();
+    const dispatchEvent = vi.fn();
+    vi.stubGlobal("window", {
+      CustomEvent,
+      dispatchEvent,
+      setTimeout: (callback: () => void) => {
+        callback();
+        return 0;
+      },
+    });
+
+    const actions = createGitActions({
+      rootFolderPath: "/repo",
+      activeRepoPath: null,
+      ...params,
+    });
+
+    actions.find((action) => action.id === "git-worktree-manager")?.action();
+
+    expect(params.setIsSidebarVisible).toHaveBeenCalledWith(true);
+    expect(params.setActiveView).toHaveBeenCalledWith("git");
+    expect(params.onClose).toHaveBeenCalledOnce();
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: { type: "manage-branches", tab: "worktrees" },
       }),
     );
 

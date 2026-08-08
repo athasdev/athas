@@ -31,6 +31,7 @@ import { addWorktree, getWorktrees } from "../api/git-worktrees-api";
 import { useRepositoryStore } from "../stores/git-repository.store";
 import { useGitBlameStore } from "../stores/git-blame.store";
 import type { GitWorktree } from "../types/git.types";
+import { isOpenableGitWorktree } from "../utils/git-worktree-open";
 import GitCommandSurface from "./git-command-surface";
 
 interface GitBranchManagerProps {
@@ -76,7 +77,7 @@ function getBranchLabel(worktree: GitWorktree) {
 }
 
 function getFilteredWorktrees(worktrees: GitWorktree[], repoPath: string, query: string) {
-  const sorted = [...worktrees].sort((a, b) => {
+  const sorted = worktrees.filter(isOpenableGitWorktree).sort((a, b) => {
     if (a.path === repoPath) return -1;
     if (b.path === repoPath) return 1;
     return getFolderName(a.path).localeCompare(getFolderName(b.path));
@@ -236,9 +237,10 @@ const GitBranchManager = ({
   }, [repoPath, isDropdownOpen, loadBranches, loadWorktrees]);
 
   useEffect(() => {
-    const handleOpenFromPalette = () => {
+    const handleOpenFromPalette = (event: Event) => {
       if (!paletteTarget || !repoPath) return;
-      setActiveTab("branches");
+      const requestedTab = (event as CustomEvent<{ tab?: GitBranchManagerTab }>).detail?.tab;
+      setActiveTab(requestedTab ?? "branches");
       setIsDropdownOpen(true);
     };
 

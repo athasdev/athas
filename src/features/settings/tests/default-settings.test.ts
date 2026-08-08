@@ -40,6 +40,7 @@ describe("default settings", () => {
     expect(settings.showActivityRailProjectSwitcher).toBe(true);
     expect(settings.showActivityRailAgentHistory).toBe(true);
     expect(settings.showActivityRailTerminals).toBe(true);
+    expect(settings.showActivityRailWorktrees).toBe(true);
     expect(settings.showActivityRailProjectIcons).toBe(true);
     expect(settings.hiddenSidebarActivityItems).toEqual([]);
     expect(settings.collapsedActivityRailSections).toEqual([]);

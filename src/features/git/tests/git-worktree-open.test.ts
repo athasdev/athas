@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { openGitWorktreeWorkspace } from "../utils/git-worktree-open";
+import { isOpenableGitWorktree, openGitWorktreeWorkspace } from "../utils/git-worktree-open";
 
 const mocks = vi.hoisted(() => ({
   createAppWindow: vi.fn(),
@@ -30,6 +30,20 @@ vi.mock("@/features/window/utils/create-app-window", () => ({
 }));
 
 describe("openGitWorktreeWorkspace", () => {
+  it("rejects prunable worktrees from selectable worktree surfaces", () => {
+    const worktree = {
+      path: "/repo/missing-worktree",
+      head: "abc123",
+      is_bare: false,
+      is_detached: false,
+      is_current: false,
+      prunable_reason: "gitdir file points to non-existent location",
+    };
+
+    expect(isOpenableGitWorktree(worktree)).toBe(false);
+    expect(isOpenableGitWorktree({ ...worktree, prunable_reason: undefined })).toBe(true);
+  });
+
   beforeEach(() => {
     mocks.createAppWindow.mockReset();
     mocks.handleOpenFolderByPath.mockReset();

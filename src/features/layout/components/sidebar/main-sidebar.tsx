@@ -22,6 +22,7 @@ import {
   SidebarAgentHistory,
   SidebarPinnedItems,
   SidebarTerminalHistory,
+  SidebarWorktreeHistory,
 } from "@/features/layout/components/sidebar/sidebar-history";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import {
@@ -74,6 +75,7 @@ import {
   GitBranchIcon,
   GitPullRequestIcon,
   MagnifyingGlassIcon,
+  NodesIcon,
   SparkleIcon,
   TerminalIcon,
 } from "@/ui/icons";
@@ -119,6 +121,7 @@ const waitForProjectCarouselPaint = () =>
   });
 
 export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRailProps) => {
+  const { openSidebarView } = useSidebarPaneController();
   const isGitViewActive = useUIState((state) => state.isGitViewActive);
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
@@ -133,6 +136,16 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     uiState.setIsBottomPaneVisible(true);
     window.dispatchEvent(new CustomEvent("terminal-new"));
   }, []);
+  const handleNewWorktree = useCallback(() => {
+    openSidebarView("git");
+    window.setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent("athas:git-palette-action", {
+          detail: { type: "manage-branches", tab: "worktrees" },
+        }),
+      );
+    }, 0);
+  }, [openSidebarView]);
   const configuredActivityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const openFoldersInNewWindow = useSettingsStore((state) => state.settings.openFoldersInNewWindow);
   const hiddenSidebarActivityItems = useSettingsStore(
@@ -146,6 +159,9 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   );
   const showActivityRailTerminals = useSettingsStore(
     (state) => state.settings.showActivityRailTerminals,
+  );
+  const showActivityRailWorktrees = useSettingsStore(
+    (state) => state.settings.showActivityRailWorktrees,
   );
   const showActivityRailProjectIcons = useSettingsStore(
     (state) => state.settings.showActivityRailProjectIcons,
@@ -193,8 +209,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     projectCarouselDirection > 0 && carouselTargetProject ? carouselTargetProject : nextProject;
   const switchToProject = useFileSystemStore((state) => state.switchToProject);
   const isSwitchingProject = useFileSystemStore((state) => state.isSwitchingProject);
-  const { openSidebarView } = useSidebarPaneController();
-
   const handleSidebarViewChange = (view: typeof activeSidebarView) => {
     openSidebarView(view);
   };
@@ -279,6 +293,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     !showActivityRailProjectSwitcher ||
     !showActivityRailAgentHistory ||
     (coreFeatures.terminal && !showActivityRailTerminals) ||
+    (coreFeatures.git && !showActivityRailWorktrees) ||
     !showActivityRailProjectIcons;
 
   const showAllActivityRailItems = useCallback(() => {
@@ -286,6 +301,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     void updateSetting("showActivityRailProjectSwitcher", true);
     void updateSetting("showActivityRailAgentHistory", true);
     void updateSetting("showActivityRailTerminals", true);
+    void updateSetting("showActivityRailWorktrees", true);
     void updateSetting("showActivityRailProjectIcons", true);
   }, [updateSetting]);
 
@@ -719,6 +735,13 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
                 {coreFeatures.terminal && showActivityRailTerminals ? (
                   <SidebarTerminalHistory expanded={expanded} />
                 ) : null}
+                {coreFeatures.git && showActivityRailWorktrees ? (
+                  <SidebarWorktreeHistory
+                    expanded={expanded}
+                    repoPath={project?.path ?? null}
+                    onNewWorktree={handleNewWorktree}
+                  />
+                ) : null}
               </div>
             )}
           </>
@@ -793,6 +816,12 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
               New Terminal
             </ContextMenuItem>
           ) : null}
+          {coreFeatures.git ? (
+            <ContextMenuItem onClick={handleNewWorktree}>
+              <NodesIcon />
+              New Worktree
+            </ContextMenuItem>
+          ) : null}
           <ContextMenuItem onClick={() => setIsProjectPickerVisible(true)}>
             <FolderOpenIcon />
             Open Project…
@@ -852,6 +881,17 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
                 >
                   <TerminalIcon />
                   Terminals
+                </ContextMenuCheckboxItem>
+              ) : null}
+              {coreFeatures.git ? (
+                <ContextMenuCheckboxItem
+                  checked={showActivityRailWorktrees}
+                  onCheckedChange={(checked) =>
+                    void updateSetting("showActivityRailWorktrees", checked)
+                  }
+                >
+                  <NodesIcon />
+                  Worktrees
                 </ContextMenuCheckboxItem>
               ) : null}
               <ContextMenuCheckboxItem

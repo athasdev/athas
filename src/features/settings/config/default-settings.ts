@@ -107,6 +107,7 @@ export const defaultSettings: Settings = {
   showActivityRailProjectSwitcher: true,
   showActivityRailAgentHistory: true,
   showActivityRailTerminals: true,
+  showActivityRailWorktrees: true,
   showActivityRailProjectIcons: true,
   collapsedActivityRailSections: [],
   sidebarWidth: 220,

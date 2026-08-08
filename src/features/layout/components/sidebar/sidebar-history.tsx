@@ -1,4 +1,10 @@
-import { useCallback, useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import { AgentSessionSidebarItem } from "@/features/ai/components/agent-session-sidebar-item";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
@@ -8,7 +14,14 @@ import type { Chat } from "@/features/ai/types/ai-chat.types";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
+import { getWorktrees } from "@/features/git/api/git-worktrees-api";
+import { isGitChangeRelevant, subscribeToGitChanges } from "@/features/git/events/git-events";
 import { useGitStore } from "@/features/git/stores/git.store";
+import type { GitWorktree } from "@/features/git/types/git.types";
+import {
+  isOpenableGitWorktree,
+  openGitWorktreeWorkspace,
+} from "@/features/git/utils/git-worktree-open";
 import { getProjectNameFromPath } from "@/features/layout/components/sidebar/sidebar-projects";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
@@ -23,6 +36,7 @@ import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import {
   ArchiveIcon,
   DotsThreeIcon,
+  NodesIcon,
   OpenExternalIcon,
   PencilSimpleLineIcon,
   PlusIcon,
@@ -36,14 +50,14 @@ import {
   SidebarHeaderIconButton,
   SidebarListEditor,
   SidebarListItem,
-  SidebarEmptyState,
   SidebarSectionHeader,
   SidebarSectionLabel,
 } from "@/ui/sidebar";
+import { getFolderName } from "@/utils/path-helpers";
 
 const AGENT_HISTORY_INLINE_LIMIT = 5;
 
-function useActivityRailSectionCollapse(sectionId: "agents" | "terminals") {
+function useActivityRailSectionCollapse(sectionId: "agents" | "terminals" | "worktrees") {
   const collapsedSections = useSettingsStore(
     (state) => state.settings.collapsedActivityRailSections,
   );
@@ -64,31 +78,37 @@ function useActivityRailSectionCollapse(sectionId: "agents" | "terminals") {
 
 function SidebarNewAgentButton({
   onCreate,
-  iconOnlyRow = false,
+  iconOnly = false,
+  compact = false,
 }: {
   onCreate?: () => void;
-  iconOnlyRow?: boolean;
+  iconOnly?: boolean;
+  compact?: boolean;
 }) {
   const handleNewAgent = useNewAgentAction(onCreate);
 
-  return iconOnlyRow ? (
+  if (compact) {
+    return (
+      <SidebarHeaderIconButton
+        tooltip="New Agent"
+        tooltipSide="right"
+        aria-label="New Agent"
+        onClick={handleNewAgent}
+      >
+        <PlusIcon />
+      </SidebarHeaderIconButton>
+    );
+  }
+
+  return (
     <SidebarListItem
       leading={<PlusIcon className="size-4" />}
-      iconOnly
+      iconOnly={iconOnly}
       onClick={handleNewAgent}
       aria-label="New Agent"
     >
       New Agent
     </SidebarListItem>
-  ) : (
-    <SidebarHeaderIconButton
-      tooltip="New Agent"
-      tooltipSide="right"
-      aria-label="New Agent"
-      onClick={handleNewAgent}
-    >
-      <PlusIcon />
-    </SidebarHeaderIconButton>
   );
 }
 
@@ -254,20 +274,27 @@ export function SidebarAgentHistory({
     [handleOpenChat, olderChats],
   );
 
-  if (!expanded) return <SidebarNewAgentButton iconOnlyRow />;
+  if (!expanded) return <SidebarNewAgentButton iconOnly />;
 
   return (
     <div className="mt-3 w-full">
       <div className="relative">
-        <SidebarSectionHeader expanded={!isCollapsed} onToggle={toggleCollapsed} className="pr-8">
+        <SidebarSectionHeader
+          expanded={!isCollapsed}
+          onToggle={toggleCollapsed}
+          className={visibleChats.length > 0 ? "pr-8" : undefined}
+        >
           Agents
         </SidebarSectionHeader>
-        <span className="absolute top-0 right-1 flex h-(--athas-tab-height) items-center">
-          <SidebarNewAgentButton />
-        </span>
+        {visibleChats.length > 0 ? (
+          <span className="absolute top-0 right-1 flex h-(--athas-tab-height) items-center">
+            <SidebarNewAgentButton compact />
+          </span>
+        ) : null}
       </div>
       {!isCollapsed ? (
         <>
+          {visibleChats.length === 0 ? <SidebarNewAgentButton /> : null}
           {visibleChats.map((chat) => (
             <SidebarAgentHistoryRow
               key={chat.id}
@@ -292,7 +319,6 @@ export function SidebarAgentHistory({
               More
             </SidebarListItem>
           ) : null}
-          {visibleChats.length === 0 ? <SidebarEmptyState>No history yet</SidebarEmptyState> : null}
           <Dropdown
             isOpen={olderAgentsMenu.isOpen}
             point={olderAgentsMenu.position}
@@ -479,7 +505,6 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
     [panelTerminals],
   );
   const terminalCount = regularPanelTerminals.length + terminalBuffers.length;
-
   const showTerminalPanel = useCallback(() => {
     setBottomPaneActiveTab("terminal");
     setIsBottomPaneVisible(true);
@@ -518,23 +543,38 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
   return (
     <div className="mt-3 w-full">
       <div className="relative">
-        <SidebarSectionHeader expanded={!isCollapsed} onToggle={toggleCollapsed} className="pr-8">
+        <SidebarSectionHeader
+          expanded={!isCollapsed}
+          onToggle={toggleCollapsed}
+          className={terminalCount > 0 ? "pr-8" : undefined}
+        >
           Terminals
         </SidebarSectionHeader>
-        <span className="absolute top-0 right-1 flex h-(--athas-tab-height) items-center">
-          <SidebarHeaderIconButton
-            tooltip="New Terminal"
-            tooltipSide="right"
-            commandId="terminal.new"
-            aria-label="New Terminal"
-            onClick={handleNewTerminal}
-          >
-            <PlusIcon />
-          </SidebarHeaderIconButton>
-        </span>
+        {terminalCount > 0 ? (
+          <span className="absolute top-0 right-1 flex h-(--athas-tab-height) items-center">
+            <SidebarHeaderIconButton
+              tooltip="New Terminal"
+              tooltipSide="right"
+              commandId="terminal.new"
+              aria-label="New Terminal"
+              onClick={handleNewTerminal}
+            >
+              <PlusIcon />
+            </SidebarHeaderIconButton>
+          </span>
+        ) : null}
       </div>
       {!isCollapsed ? (
         <>
+          {terminalCount === 0 ? (
+            <SidebarListItem
+              leading={<PlusIcon className="size-4" />}
+              aria-label="New Terminal"
+              onClick={handleNewTerminal}
+            >
+              New Terminal
+            </SidebarListItem>
+          ) : null}
           {regularPanelTerminals.map((terminal) => (
             <SidebarListItem
               key={`panel-${terminal.id}`}
@@ -559,7 +599,110 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
               {terminal.name}
             </SidebarListItem>
           ))}
-          {terminalCount === 0 ? <SidebarEmptyState>No terminals yet</SidebarEmptyState> : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+export function SidebarWorktreeHistory({
+  expanded,
+  repoPath,
+  onNewWorktree,
+}: {
+  expanded: boolean;
+  repoPath: string | null;
+  onNewWorktree: () => void;
+}) {
+  const [worktrees, setWorktrees] = useState<GitWorktree[]>([]);
+  const { isCollapsed, toggleCollapsed } = useActivityRailSectionCollapse("worktrees");
+  const openableWorktrees = useMemo(() => worktrees.filter(isOpenableGitWorktree), [worktrees]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      if (!repoPath) {
+        if (!cancelled) setWorktrees([]);
+        return;
+      }
+
+      const nextWorktrees = await getWorktrees(repoPath);
+      if (!cancelled) setWorktrees(nextWorktrees);
+    };
+
+    void load();
+    const unsubscribe = subscribeToGitChanges((change) => {
+      if (isGitChangeRelevant(change, repoPath)) void load();
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [repoPath]);
+
+  if (!expanded) {
+    return (
+      <SidebarListItem
+        leading={<NodesIcon className="size-4" />}
+        iconOnly
+        onClick={onNewWorktree}
+        aria-label="Worktrees"
+      >
+        Worktrees
+      </SidebarListItem>
+    );
+  }
+
+  return (
+    <div className="mt-3 w-full">
+      <div className="relative">
+        <SidebarSectionHeader
+          expanded={!isCollapsed}
+          onToggle={toggleCollapsed}
+          className={openableWorktrees.length > 0 ? "pr-8" : undefined}
+        >
+          Worktrees
+        </SidebarSectionHeader>
+        {openableWorktrees.length > 0 ? (
+          <span className="absolute top-0 right-1 flex h-(--athas-tab-height) items-center">
+            <SidebarHeaderIconButton
+              tooltip="New Worktree"
+              tooltipSide="right"
+              aria-label="New Worktree"
+              onClick={onNewWorktree}
+            >
+              <PlusIcon />
+            </SidebarHeaderIconButton>
+          </span>
+        ) : null}
+      </div>
+      {!isCollapsed ? (
+        <>
+          {openableWorktrees.length === 0 ? (
+            <SidebarListItem
+              leading={<PlusIcon className="size-4" />}
+              onClick={onNewWorktree}
+              aria-label="New Worktree"
+            >
+              New Worktree
+            </SidebarListItem>
+          ) : null}
+          {openableWorktrees.map((worktree) => (
+            <SidebarListItem
+              key={worktree.path}
+              active={worktree.is_current}
+              leading={<NodesIcon className="size-4" />}
+              trailing={worktree.branch}
+              title={worktree.path}
+              onClick={() => {
+                if (!worktree.is_current) void openGitWorktreeWorkspace(worktree.path);
+              }}
+            >
+              {getFolderName(worktree.path)}
+            </SidebarListItem>
+          ))}
         </>
       ) : null}
     </div>
