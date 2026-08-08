@@ -188,7 +188,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
     switch (status) {
       case "connected":
         return {
-          icon: <Zap weight="duotone" />,
+          icon: <Zap className="[&_path]:fill-current" weight="fill" />,
           color: "text-success",
           title: "Language Servers Active",
         };
