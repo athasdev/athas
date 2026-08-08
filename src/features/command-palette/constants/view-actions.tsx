@@ -28,8 +28,6 @@ interface ViewActionsParams {
   setIsBottomPaneVisible: (v: boolean) => void;
   bottomPaneActiveTab: BottomPaneTab;
   setBottomPaneActiveTab: (tab: BottomPaneTab) => void;
-  isFindVisible: boolean;
-  setIsFindVisible: (v: boolean) => void;
   settings: {
     isAIChatVisible: boolean;
     nativeMenuBar: boolean;
@@ -52,8 +50,6 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
     setIsBottomPaneVisible,
     bottomPaneActiveTab,
     setBottomPaneActiveTab,
-    isFindVisible,
-    setIsFindVisible,
     settings,
     updateSetting,
     zoomIn,
@@ -134,13 +130,13 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
     },
     {
       id: "toggle-find-view",
-      label: isFindVisible ? "View: Hide Find" : "View: Show Find",
-      description: isFindVisible ? "Hide find in file" : "Show find in file",
+      label: "View: Find",
+      description: "Find in the active editor",
       icon: <Search />,
       category: "View",
       commandId: "workbench.showFind",
       action: () => {
-        setIsFindVisible(!isFindVisible);
+        void keymapRegistry.executeCommand("workbench.showFind");
         onClose();
       },
     },

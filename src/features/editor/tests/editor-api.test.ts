@@ -95,6 +95,7 @@ describe("editor API model operations", () => {
     onChange.mockReset();
     editorAPI.setTextareaRef?.(null);
     editorAPI.setActiveEditorAdapter(null);
+    editorAPI.setActiveFindAdapter(null);
     editorAPI.updateCursorAndSelection({ line: 0, column: 0, offset: 0 }, null);
 
     useBufferStore.setState({
@@ -124,6 +125,7 @@ describe("editor API model operations", () => {
     useHistoryStore?.getState().actions.clearAllHistories();
     useEditorSettingsStore?.setState({ theme: "athas-dark" });
     editorAPI?.setActiveEditorAdapter(null);
+    editorAPI?.setActiveFindAdapter(null);
     vi.unstubAllGlobals();
   });
 
@@ -206,6 +208,22 @@ describe("editor API model operations", () => {
     expect(undo).toHaveBeenCalledTimes(1);
     expect(redo).toHaveBeenCalledTimes(1);
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("delegates find and replace to the active find adapter", () => {
+    const openFind = vi.fn();
+    editorAPI.setActiveFindAdapter({ ownerId: "monaco-find-test", openFind });
+
+    expect(editorAPI.openFind()).toBe(true);
+    expect(editorAPI.openFind(true)).toBe(true);
+    expect(openFind).toHaveBeenNthCalledWith(1, false);
+    expect(openFind).toHaveBeenNthCalledWith(2, true);
+
+    editorAPI.clearActiveFindAdapter("another-editor");
+    expect(editorAPI.openFind()).toBe(true);
+
+    editorAPI.clearActiveFindAdapter("monaco-find-test");
+    expect(editorAPI.openFind()).toBe(false);
   });
 
   it("clears only the matching active editor adapter", () => {

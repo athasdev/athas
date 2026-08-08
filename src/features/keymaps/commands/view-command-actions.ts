@@ -1,5 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { editorAPI } from "@/features/editor/extensions/api";
 import { OPEN_NOTIFICATIONS_COMMAND_EVENT } from "@/features/notifications/constants/notifications-events";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
@@ -62,14 +62,24 @@ export function showFind(): void {
     window.dispatchEvent(new CustomEvent("terminal-open-search"));
     return;
   }
+
+  if (editorAPI.openFind()) {
+    useUIState.getState().setIsFindVisible(false);
+    return;
+  }
+
   const state = useUIState.getState();
   state.setIsFindVisible(!state.isFindVisible);
 }
 
 export function showFindReplace(): void {
+  if (editorAPI.openFind(true)) {
+    useUIState.getState().setIsFindVisible(false);
+    return;
+  }
+
   const state = useUIState.getState();
   state.setIsFindVisible(true);
-  useEditorUIStore.getState().actions.setIsReplaceVisible(true);
 }
 
 export function openGlobalSearchBuffer(): void {

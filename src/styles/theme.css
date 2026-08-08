@@ -126,6 +126,7 @@
     --app-ease-in-out: cubic-bezier(0.66, 0, 0.34, 1);
     --app-press-scale: 1;
     --border-strong: color-mix(in srgb, var(--border) 72%, var(--foreground) 28%);
+    --warning: var(--muted-foreground);
     --tab-bar-bg: color-mix(in srgb, var(--surface) 72%, var(--background));
     --tab-active-bg: var(--background);
     --tab-hover-bg: color-mix(in srgb, var(--accent) 72%, transparent);

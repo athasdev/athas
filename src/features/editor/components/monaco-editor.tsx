@@ -43,7 +43,6 @@ import { getRelativePath, pathStartsWithRoot } from "@/utils/path-helpers";
 import EditorContextMenu from "../context-menu/context-menu";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
-import { useEditorUIStore } from "../stores/ui.store";
 import type { Position, Range } from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
@@ -182,8 +181,6 @@ export function MonacoEditor({
   const selection = useEditorStateStore((state) => state.selection);
   const { setCursorPosition, setSelection, setScrollForBuffer, setViewportHeight } =
     useEditorStateStore.use.actions();
-  const searchMatches = useEditorUIStore.use.searchMatches();
-  const currentSearchMatchIndex = useEditorUIStore.use.currentMatchIndex();
   const { getBlameForLine } = useGitBlame(
     inlineGitBlameEnabled && filePath ? filePath : undefined,
     content,
@@ -813,6 +810,16 @@ export function MonacoEditor({
     const container = containerRef.current;
     editorAPI.setTextareaRef(null);
     if (container) editorAPI.setViewportRef(container);
+    editorAPI.setActiveFindAdapter({
+      ownerId: adapterOwnerId,
+      openFind: (replace) => {
+        editorRef.current?.trigger(
+          "athas-keybinding",
+          replace ? "editor.action.startFindReplaceAction" : "actions.find",
+          null,
+        );
+      },
+    });
 
     if (canEdit) {
       editorAPI.setActiveEditorAdapter({
@@ -938,6 +945,7 @@ export function MonacoEditor({
       if (focusTimerId !== null) window.clearTimeout(focusTimerId);
       if (benchmarkRafId !== null) cancelAnimationFrame(benchmarkRafId);
       if (benchmarkTimeoutId !== null) window.clearTimeout(benchmarkTimeoutId);
+      editorAPI.clearActiveFindAdapter(adapterOwnerId);
       if (canEdit) editorAPI.clearActiveEditorAdapter(adapterOwnerId);
       if (container && editorAPI.getViewportRef() === container) {
         editorAPI.setViewportRef(null);
@@ -1204,16 +1212,14 @@ export function MonacoEditor({
     const model = modelRef.current;
     if (!editor || !model) return;
 
-    const matches = highlightMatches ?? searchMatches;
-    const activeIndex = currentHighlightIndex ?? currentSearchMatchIndex;
-    const decorations = matches.map((match, index) => {
+    const decorations = (highlightMatches ?? []).map((match, index) => {
       const start = model.getPositionAt(match.start);
       const end = model.getPositionAt(match.end);
       return {
         range: new MonacoRange(start.lineNumber, start.column, end.lineNumber, end.column),
         options: {
           className:
-            index === activeIndex
+            index === currentHighlightIndex
               ? "monaco-search-match monaco-search-match-current"
               : "monaco-search-match",
           overviewRuler: undefined,
@@ -1222,7 +1228,7 @@ export function MonacoEditor({
     });
 
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, decorations);
-  }, [currentHighlightIndex, currentSearchMatchIndex, highlightMatches, searchMatches]);
+  }, [currentHighlightIndex, highlightMatches]);
 
   useEffect(() => {
     const editor = editorRef.current;

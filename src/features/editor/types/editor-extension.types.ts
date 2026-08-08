@@ -14,6 +14,7 @@ export interface EditorAPI {
   getCursorPosition: () => Position;
   setCursorPosition: (position: Position) => void;
   selectAll: () => void;
+  openFind: (replace?: boolean) => boolean;
   addSelectionToNextFindMatch: () => boolean;
   addSelectionToPreviousFindMatch: () => boolean;
   selectAllFindMatches: () => boolean;

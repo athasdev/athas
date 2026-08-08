@@ -328,6 +328,12 @@ export const defaultKeymaps: Keybinding[] = [
     when: "editorFocus",
   },
   {
+    key: "ctrl+h",
+    command: "workbench.showFindReplace",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
     key: "cmd+f",
     command: "workbench.showFind",
     source: "default",

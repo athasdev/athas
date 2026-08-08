@@ -65,6 +65,11 @@ interface ActiveEditorAdapter {
   redo: () => void;
 }
 
+interface ActiveFindAdapter {
+  ownerId: string;
+  openFind: (replace: boolean) => void;
+}
+
 function normalizeSelectionOffsets(selection?: Range | null): OffsetRange | null {
   if (!selection || selection.start.offset === selection.end.offset) return null;
   return selection.start.offset < selection.end.offset
@@ -87,6 +92,7 @@ class EditorAPIImpl implements EditorAPI {
   private textareaRef: HTMLTextAreaElement | null = null;
   private viewportRef: HTMLDivElement | null = null;
   private activeEditorAdapter: ActiveEditorAdapter | null = null;
+  private activeFindAdapter: ActiveFindAdapter | null = null;
   private smartSelectionHistory: OffsetRange[] = [];
 
   constructor() {
@@ -239,6 +245,13 @@ class EditorAPIImpl implements EditorAPI {
     }
 
     this.syncSelectionFromOffsets(content, 0, content.length);
+  }
+
+  openFind(replace = false): boolean {
+    if (!this.activeFindAdapter) return false;
+
+    this.activeFindAdapter.openFind(replace);
+    return true;
   }
 
   addSelectionToNextFindMatch(): boolean {
@@ -808,6 +821,16 @@ class EditorAPIImpl implements EditorAPI {
   clearActiveEditorAdapter(ownerId: string): void {
     if (this.activeEditorAdapter?.ownerId === ownerId) {
       this.activeEditorAdapter = null;
+    }
+  }
+
+  setActiveFindAdapter(adapter: ActiveFindAdapter | null): void {
+    this.activeFindAdapter = adapter;
+  }
+
+  clearActiveFindAdapter(ownerId: string): void {
+    if (this.activeFindAdapter?.ownerId === ownerId) {
+      this.activeFindAdapter = null;
     }
   }
 

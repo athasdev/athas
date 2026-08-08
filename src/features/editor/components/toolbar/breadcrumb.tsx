@@ -5,8 +5,8 @@ import { EditorStatusActions } from "@/features/editor/components/toolbar/editor
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
-import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
 import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-toolbar-action";
 import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
@@ -66,19 +66,13 @@ export default function Breadcrumb({
     }),
   );
   const showBreadcrumbPath = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
-  const { isFindVisible, setIsFindVisible } = useUIState(
-    useShallow((state) => ({
-      isFindVisible: state.isFindVisible,
-      setIsFindVisible: state.setIsFindVisible,
-    })),
-  );
   const inlineEditActions = useInlineEditToolbarStore.use.actions();
   const extensionActions = useExtensionActions();
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const actionsButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleSearchClick = () => {
-    setIsFindVisible(!isFindVisible);
+    void keymapRegistry.executeCommand("workbench.showFind");
   };
 
   const handleInlineEditClick = () => {

@@ -227,7 +227,7 @@ export function useMenuEventsWrapper() {
         return;
       }
 
-      useUIState.getState().setIsFindVisible(true);
+      void keymapRegistry.executeCommand("workbench.showFind");
     },
     onFindReplace: () => {
       void keymapRegistry.executeCommand("workbench.showFindReplace");

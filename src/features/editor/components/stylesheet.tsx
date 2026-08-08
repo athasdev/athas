@@ -22,34 +22,6 @@ export function EditorStylesheet() {
           -moz-user-select: none;
         }
 
-        /* Remove focus rings on all inputs in find bar */
-        input[type="text"]:focus {
-          outline: none !important;
-          box-shadow: none !important;
-          border: none !important;
-        }
-
-        /* Specifically target find bar input */
-        .find-bar input:focus {
-          outline: none !important;
-          box-shadow: none !important;
-          border: none !important;
-          ring: none !important;
-        }
-
-        /* Remove border radius from find bar */
-        .find-bar {
-          border-radius: 0 !important;
-        }
-
-        .find-bar input {
-          border-radius: 0 !important;
-        }
-
-        .find-bar button {
-          border-radius: 0 !important;
-        }
-
         body.selection-scope-active * {
           user-select: none !important;
           -webkit-user-select: none !important;

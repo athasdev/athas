@@ -72,8 +72,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
-  const isFindVisible = useUIState((state) => state.isFindVisible);
-  const setIsFindVisible = useUIState((state) => state.setIsFindVisible);
   const setActiveView = useUIState((state) => state.setActiveView);
   const setIsQuickOpenVisible = useUIState((state) => state.setIsQuickOpenVisible);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
@@ -251,8 +249,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       setIsBottomPaneVisible,
       bottomPaneActiveTab,
       setBottomPaneActiveTab,
-      isFindVisible,
-      setIsFindVisible,
       settings: {
         isAIChatVisible: commandSettings.isAIChatVisible,
         nativeMenuBar: commandSettings.nativeMenuBar,

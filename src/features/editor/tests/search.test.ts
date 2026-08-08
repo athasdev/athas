@@ -3,7 +3,6 @@ import {
   buildSearchRegex,
   findAllMatches,
   findLimitedMatches,
-  findLimitedMatchesCooperative,
   getSearchMatchesInOffsetRange,
   getSearchViewportOffsetRange,
   searchMatchOverlapsOffsetRange,
@@ -35,40 +34,6 @@ describe("editor search utilities", () => {
       ],
       limited: true,
     });
-  });
-
-  it("collects limited matches cooperatively", async () => {
-    const regex = buildSearchRegex("needle", {
-      caseSensitive: false,
-      wholeWord: false,
-      useRegex: false,
-    });
-
-    await expect(
-      findLimitedMatchesCooperative("needle\n".repeat(3), regex as RegExp, 2, {
-        yieldEveryMs: 0,
-      }),
-    ).resolves.toEqual({
-      matches: [
-        { start: 0, end: 6 },
-        { start: 7, end: 13 },
-      ],
-      limited: true,
-    });
-  });
-
-  it("cancels cooperative match collection", async () => {
-    const regex = buildSearchRegex("needle", {
-      caseSensitive: false,
-      wholeWord: false,
-      useRegex: false,
-    });
-
-    await expect(
-      findLimitedMatchesCooperative("needle\n".repeat(3), regex as RegExp, 20, {
-        shouldCancel: () => true,
-      }),
-    ).resolves.toBeNull();
   });
 
   it("checks whether a match overlaps a viewport offset range", () => {

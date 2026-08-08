@@ -19,11 +19,6 @@ export type SearchViewportOffsetRange = {
   endOffset: number;
 };
 
-export type CooperativeSearchOptions = {
-  shouldCancel?: () => boolean;
-  yieldEveryMs?: number;
-};
-
 /**
  * Builds a RegExp based on the search query and options.
  * Returns null if the query is empty or invalid regex when useRegex is true.
@@ -95,56 +90,6 @@ export function findLimitedMatches(
   const matches = findAllMatches(content, regex, sentinelLimit);
   const limited = matches.length >= sentinelLimit;
 
-  return {
-    matches: limited ? matches.slice(0, limitResultCount) : matches,
-    limited,
-  };
-}
-
-function yieldToEventLoop(): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
-}
-
-export async function findLimitedMatchesCooperative(
-  content: string,
-  regex: RegExp,
-  limitResultCount: number,
-  { shouldCancel, yieldEveryMs = 8 }: CooperativeSearchOptions = {},
-): Promise<LimitedSearchMatches | null> {
-  const sentinelLimit = Math.max(0, Math.floor(limitResultCount)) + 1;
-  const matches: SearchMatch[] = [];
-  let lastYieldAt = performance.now();
-
-  regex.lastIndex = 0;
-  let match = regex.exec(content);
-
-  while (match !== null && matches.length < sentinelLimit) {
-    if (shouldCancel?.()) return null;
-
-    matches.push({
-      start: match.index,
-      end: match.index + match[0].length,
-    });
-
-    if (match.index === regex.lastIndex) {
-      regex.lastIndex++;
-    }
-
-    const now = performance.now();
-    if (now - lastYieldAt >= yieldEveryMs) {
-      await yieldToEventLoop();
-      if (shouldCancel?.()) return null;
-      lastYieldAt = performance.now();
-    }
-
-    match = regex.exec(content);
-  }
-
-  if (shouldCancel?.()) return null;
-
-  const limited = matches.length >= sentinelLimit;
   return {
     matches: limited ? matches.slice(0, limitResultCount) : matches,
     limited,
