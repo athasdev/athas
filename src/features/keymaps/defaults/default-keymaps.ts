@@ -239,6 +239,18 @@ export const defaultKeymaps: Keybinding[] = [
     when: "editorFocus",
   },
   {
+    key: "ctrl+up",
+    command: "editor.insertCursorAbove",
+    source: "default",
+    when: "editorFocus && vimMode",
+  },
+  {
+    key: "ctrl+down",
+    command: "editor.insertCursorBelow",
+    source: "default",
+    when: "editorFocus && vimMode",
+  },
+  {
     key: "cmd+alt+up",
     command: "editor.insertCursorAbove",
     source: "default",

@@ -67,6 +67,7 @@ export const initializeThemeSystem = async () => {
       insertCursorAbove: () => {},
       insertCursorBelow: () => {},
       insertCursorsAtLineEnds: () => {},
+      removeSecondaryCursors: () => {},
       moveLineUp: () => {},
       moveLineDown: () => {},
       copyLineUp: () => {},

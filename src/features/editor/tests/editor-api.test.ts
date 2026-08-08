@@ -150,6 +150,10 @@ describe("editor API model operations", () => {
     const addSelectionToNextFindMatch = vi.fn();
     const addSelectionToPreviousFindMatch = vi.fn();
     const selectAllFindMatches = vi.fn();
+    const insertCursorAbove = vi.fn();
+    const insertCursorBelow = vi.fn();
+    const insertCursorsAtLineEnds = vi.fn();
+    const removeSecondaryCursors = vi.fn();
     const undo = vi.fn();
     const redo = vi.fn();
     const range = {
@@ -166,6 +170,10 @@ describe("editor API model operations", () => {
       addSelectionToNextFindMatch,
       addSelectionToPreviousFindMatch,
       selectAllFindMatches,
+      insertCursorAbove,
+      insertCursorBelow,
+      insertCursorsAtLineEnds,
+      removeSecondaryCursors,
       undo,
       redo,
     });
@@ -177,6 +185,10 @@ describe("editor API model operations", () => {
     expect(editorAPI.addSelectionToNextFindMatch()).toBe(true);
     expect(editorAPI.addSelectionToPreviousFindMatch()).toBe(true);
     expect(editorAPI.selectAllFindMatches()).toBe(true);
+    editorAPI.insertCursorAbove();
+    editorAPI.insertCursorBelow();
+    editorAPI.insertCursorsAtLineEnds();
+    editorAPI.removeSecondaryCursors();
     editorAPI.undo();
     editorAPI.redo();
 
@@ -187,6 +199,10 @@ describe("editor API model operations", () => {
     expect(addSelectionToNextFindMatch).toHaveBeenCalledTimes(1);
     expect(addSelectionToPreviousFindMatch).toHaveBeenCalledTimes(1);
     expect(selectAllFindMatches).toHaveBeenCalledTimes(1);
+    expect(insertCursorAbove).toHaveBeenCalledTimes(1);
+    expect(insertCursorBelow).toHaveBeenCalledTimes(1);
+    expect(insertCursorsAtLineEnds).toHaveBeenCalledTimes(1);
+    expect(removeSecondaryCursors).toHaveBeenCalledTimes(1);
     expect(undo).toHaveBeenCalledTimes(1);
     expect(redo).toHaveBeenCalledTimes(1);
     expect(onChange).not.toHaveBeenCalled();
@@ -403,6 +419,10 @@ describe("editor API model operations", () => {
     editorAPI.insertCursorAbove();
 
     expect(useEditorStateStore.getState().multiCursorState?.cursors).toHaveLength(3);
+
+    editorAPI.removeSecondaryCursors();
+
+    expect(useEditorStateStore.getState().multiCursorState?.cursors).toHaveLength(1);
   });
 
   it("adds cursors to selected line ends through the model API", () => {

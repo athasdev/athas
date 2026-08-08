@@ -45,6 +45,7 @@ function createDummyEditorAPI(): EditorAPI {
     insertCursorAbove: () => {},
     insertCursorBelow: () => {},
     insertCursorsAtLineEnds: () => {},
+    removeSecondaryCursors: () => {},
     moveLineUp: () => {},
     moveLineDown: () => {},
     copyLineUp: () => {},

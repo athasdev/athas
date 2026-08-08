@@ -113,6 +113,11 @@ describe("default keymaps", () => {
     expectKeybinding("editor.paste", "cmd+v", "editorFocus");
   });
 
+  it("adds vertical cursors with Ctrl+Up and Ctrl+Down in Vim mode", () => {
+    expectKeybinding("editor.insertCursorAbove", "ctrl+up", "editorFocus && vimMode");
+    expectKeybinding("editor.insertCursorBelow", "ctrl+down", "editorFocus && vimMode");
+  });
+
   it("keeps chrome actions in the command registry", () => {
     expectKeybinding("workbench.openSettings", "cmd+,");
     expectKeybinding("terminal.find", "cmd+f", "terminalFocus");

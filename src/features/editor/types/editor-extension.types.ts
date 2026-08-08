@@ -39,6 +39,7 @@ export interface EditorAPI {
   insertCursorAbove: () => void;
   insertCursorBelow: () => void;
   insertCursorsAtLineEnds: () => void;
+  removeSecondaryCursors: () => void;
   moveLineUp: () => void;
   moveLineDown: () => void;
   copyLineUp: () => void;

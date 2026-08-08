@@ -870,6 +870,11 @@ export function MonacoEditor({
         addSelectionToPreviousFindMatch: () =>
           runMonacoSelectionAction("editor.action.addSelectionToPreviousFindMatch"),
         selectAllFindMatches: () => runMonacoSelectionAction("editor.action.selectHighlights"),
+        insertCursorAbove: () => runMonacoSelectionAction("editor.action.insertCursorAbove"),
+        insertCursorBelow: () => runMonacoSelectionAction("editor.action.insertCursorBelow"),
+        insertCursorsAtLineEnds: () =>
+          runMonacoSelectionAction("editor.action.insertCursorAtEndOfEachLineSelected"),
+        removeSecondaryCursors: () => runMonacoSelectionAction("removeSecondaryCursors"),
         undo: () => {
           editorRef.current?.trigger("athas-api", "undo", null);
           syncCursorAndSelection();

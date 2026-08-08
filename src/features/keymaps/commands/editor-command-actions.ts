@@ -319,6 +319,10 @@ export function insertActiveEditorCursorsAtLineEnds(): void {
   editorAPI.insertCursorsAtLineEnds();
 }
 
+export function removeActiveEditorSecondaryCursors(): void {
+  editorAPI.removeSecondaryCursors();
+}
+
 export function triggerActiveEditorSuggest(): void {
   window.dispatchEvent(new CustomEvent("editor-trigger-suggest"));
 }

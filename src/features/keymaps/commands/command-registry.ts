@@ -54,6 +54,7 @@ import {
   pasteIntoActiveEditor,
   redoActiveEditor,
   removeActiveEditorBrackets,
+  removeActiveEditorSecondaryCursors,
   runQuickFixForActiveEditor,
   selectAllActiveEditor,
   selectAllEditorOccurrences,
@@ -471,6 +472,12 @@ const editCommands: Command[] = [
     category: "Edit",
     keybinding: "shift+alt+i",
     execute: insertActiveEditorCursorsAtLineEnds,
+  },
+  {
+    id: "editor.removeSecondaryCursors",
+    title: "Remove Secondary Cursors",
+    category: "Edit",
+    execute: removeActiveEditorSecondaryCursors,
   },
   {
     id: "editor.formatDocument",

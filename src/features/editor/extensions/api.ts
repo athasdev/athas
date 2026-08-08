@@ -57,6 +57,10 @@ interface ActiveEditorAdapter {
   addSelectionToNextFindMatch?: () => void;
   addSelectionToPreviousFindMatch?: () => void;
   selectAllFindMatches?: () => void;
+  insertCursorAbove?: () => void;
+  insertCursorBelow?: () => void;
+  insertCursorsAtLineEnds?: () => void;
+  removeSecondaryCursors?: () => void;
   undo: () => void;
   redo: () => void;
 }
@@ -457,14 +461,29 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   insertCursorAbove(): void {
+    if (this.activeEditorAdapter?.insertCursorAbove) {
+      this.activeEditorAdapter.insertCursorAbove();
+      return;
+    }
+
     this.insertCursorVertical(-1);
   }
 
   insertCursorBelow(): void {
+    if (this.activeEditorAdapter?.insertCursorBelow) {
+      this.activeEditorAdapter.insertCursorBelow();
+      return;
+    }
+
     this.insertCursorVertical(1);
   }
 
   insertCursorsAtLineEnds(): void {
+    if (this.activeEditorAdapter?.insertCursorsAtLineEnds) {
+      this.activeEditorAdapter.insertCursorsAtLineEnds();
+      return;
+    }
+
     const content = this.getContent();
     const editorState = useEditorStateStore.getState();
     const positions = resolveCursorPositionsAtLineEndsForSelection({
@@ -490,6 +509,15 @@ class EditorAPIImpl implements EditorAPI {
       this.textareaRef.selectionStart = firstPosition.offset;
       this.textareaRef.selectionEnd = firstPosition.offset;
     }
+  }
+
+  removeSecondaryCursors(): void {
+    if (this.activeEditorAdapter?.removeSecondaryCursors) {
+      this.activeEditorAdapter.removeSecondaryCursors();
+      return;
+    }
+
+    useEditorStateStore.getState().actions.clearSecondaryCursors();
   }
 
   moveLineUp(): void {
