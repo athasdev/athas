@@ -48,6 +48,23 @@ function tokenizeZig(source: string): HighlightToken[] {
 }
 
 describe("Zig Monaco highlighting", () => {
+  it("keeps keywords inside identifiers unstyled", () => {
+    const tokens = tokenizeZig(`var command: ?[]const u8 = null;
+const enabled = ready and valid;`);
+
+    expect(tokens).toEqual(
+      expect.arrayContaining([
+        { text: "command", type: "variable.parameter.zig" },
+        { text: "and", type: "keyword.zig" },
+        { text: "var", type: "keyword.zig" },
+        { text: "const", type: "keyword.zig" },
+      ]),
+    );
+    expect(
+      tokens.filter((token) => token.text === "and" && token.type === "keyword.zig"),
+    ).toHaveLength(1);
+  });
+
   it("distinguishes declarations, calls, fields, parameters, types, and builtins", () => {
     const tokens = tokenizeZig(`const std = @import("std");
 pub fn build(b: *std.Build) void {
