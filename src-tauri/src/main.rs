@@ -10,8 +10,8 @@ use commands::*;
 use tauri::Manager;
 use tauri_plugin_window_state::StateFlags;
 use terminal::{
-   close_terminal, create_terminal, list_shells, terminal_resize, terminal_set_paused,
-   terminal_write, warm_terminal_environment,
+   begin_frontend_terminal_session, close_terminal, create_terminal, list_shells, terminal_resize,
+   terminal_set_paused, terminal_write, warm_terminal_environment,
 };
 
 mod app_runtime;
@@ -209,6 +209,7 @@ fn main() {
          get_remote_credential,
          remove_remote_credential,
          // Terminal commands
+         begin_frontend_terminal_session,
          create_terminal,
          terminal_write,
          terminal_resize,

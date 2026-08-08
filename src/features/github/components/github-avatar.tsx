@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Avatar } from "@/ui/avatar";
+import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 
 interface GitHubAvatarProps {
   login?: string | null;
@@ -11,13 +12,10 @@ interface GitHubAvatarProps {
 
 export function GitHubAvatar({ login, name, avatarUrl, size = 32, className }: GitHubAvatarProps) {
   const label = (login || name || "GitHub user").trim();
-  const src = useMemo(() => {
-    if (avatarUrl?.trim()) return avatarUrl.trim();
-    if (login?.trim()) {
-      return `https://github.com/${encodeURIComponent(login.trim())}.png?size=${size}`;
-    }
-    return null;
-  }, [avatarUrl, login, size]);
+  const src = useMemo(
+    () => getGitHubAvatarUrl({ login, avatarUrl }, size),
+    [avatarUrl, login, size],
+  );
 
   return <Avatar name={label} src={src} className={className} />;
 }

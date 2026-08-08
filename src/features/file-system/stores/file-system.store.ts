@@ -42,6 +42,7 @@ import { serializeTerminals } from "@/features/terminal/lib/terminal-session-sto
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { createTerminalEventChannel } from "@/features/terminal/utils/terminal-protocol";
+import { getFrontendTerminalSessionArgs } from "@/features/terminal/utils/frontend-terminal-session";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { showAlertDialog, showPromptDialog } from "@/ui/dialog";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
@@ -1761,6 +1762,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
                   size: { rows: 24, cols: 80, pixelWidth: 0, pixelHeight: 0 },
                 },
                 onEvent: events.channel,
+                ...getFrontendTerminalSessionArgs(),
               });
               events.bind(connectionId);
 

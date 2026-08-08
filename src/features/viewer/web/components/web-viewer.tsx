@@ -15,7 +15,12 @@ import { writeClipboardText } from "@/utils/clipboard";
 import { useEmbeddedWebview } from "../hooks/use-embedded-webview";
 import { useWebViewerNavigationStore } from "../stores/web-viewer-navigation.store";
 import { getEmbeddedWebViewerUserAgent, getWebViewerProfileKey } from "../utils/web-viewer-profile";
-import { getWebViewerSecurity, normalizeWebViewerUrl } from "../utils/web-viewer-url";
+import { getWebViewerBufferStateUpdate } from "../utils/web-viewer-buffer-state";
+import {
+  getWebViewerSecurity,
+  normalizeWebViewerFaviconUrl,
+  normalizeWebViewerUrl,
+} from "../utils/web-viewer-url";
 import { WebViewerToolbar } from "./web-viewer-toolbar";
 
 export interface WebViewerProps {
@@ -295,33 +300,24 @@ export function WebViewer({
     };
   }, [replaceCurrentHistoryEntry, webviewLabel]);
 
-  // Set initial buffer title from hostname, then poll for real page metadata
   useEffect(() => {
     if (!currentUrl || !bufferId) return;
 
     if (!webViewerBuffer || webViewerBuffer.type !== "webViewer") return;
 
     try {
-      const urlObj = new URL(currentUrl);
-      const hostname = urlObj.hostname;
-      let title = hostname;
-      if (title.length > 30) {
-        title = `${title.substring(0, 27)}...`;
-      }
-      const faviconUrl = `${urlObj.origin}/favicon.ico`;
-
-      updateBuffer({
-        ...webViewerBuffer,
-        name: title,
-        title: hostname,
-        favicon: faviconUrl,
-        url: currentUrl,
+      const updatedBuffer = getWebViewerBufferStateUpdate(webViewerBuffer, {
+        currentUrl,
         profileKey,
-        history: [...historyRef.current],
+        history: historyRef.current,
         historyIndex: historyIndexRef.current,
       });
+
+      if (updatedBuffer) {
+        updateBuffer(updatedBuffer);
+      }
     } catch {
-      // Invalid URL, ignore
+      return;
     }
   }, [currentUrl, bufferId, profileKey, updateBuffer, webViewerBuffer]);
 
@@ -425,14 +421,16 @@ export function WebViewer({
             displayTitle = `${displayTitle.substring(0, 27)}...`;
           }
 
+          const favicon = normalizeWebViewerFaviconUrl(event.payload.favicon, buffer.url);
+
           updateBuffer({
             ...buffer,
             name: displayTitle,
             title: event.payload.title,
+            favicon: favicon ?? undefined,
             profileKey,
             history: [...historyRef.current],
             historyIndex: historyIndexRef.current,
-            ...(event.payload.favicon ? { favicon: event.payload.favicon } : {}),
           });
         },
       );

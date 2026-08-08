@@ -33,6 +33,7 @@ import type {
 } from "../types/github.types";
 import { useGitHubStore } from "../stores/github.store";
 import { githubActionListCache, githubIssueListCache } from "../utils/github-data-cache";
+import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { getRepositoryDisplayName } from "../utils/github-viewer-utils";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
@@ -101,9 +102,7 @@ export function GitHubCreateView({ buffer }: { buffer: GitHubFormContent }) {
           issueNumber: issue.number,
           repoPath: buffer.repoPath,
           title: issue.title,
-          authorAvatarUrl:
-            issue.author.avatarUrl ||
-            `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
+          authorAvatarUrl: getGitHubAvatarUrl(issue.author),
           url: issue.url,
         });
       }}
@@ -113,9 +112,7 @@ export function GitHubCreateView({ buffer }: { buffer: GitHubFormContent }) {
         openPullRequest(pullRequest.number, {
           title: pullRequest.title,
           repoPath: buffer.repoPath,
-          authorAvatarUrl:
-            pullRequest.author.avatarUrl ||
-            `https://github.com/${encodeURIComponent(pullRequest.author.login || "github")}.png?size=32`,
+          authorAvatarUrl: getGitHubAvatarUrl(pullRequest.author),
         });
       }}
       onWorkflowDispatched={() => {

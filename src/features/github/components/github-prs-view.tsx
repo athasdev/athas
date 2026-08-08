@@ -53,6 +53,7 @@ import {
 import { writeClipboardText } from "@/utils/clipboard";
 import { useGitHubStore } from "../stores/github.store";
 import { getTimeAgo } from "../utils/github-viewer-utils";
+import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { groupPullRequests } from "../utils/github-sidebar-groups";
 import type {
   IssueFilter,
@@ -159,9 +160,7 @@ const PRListItem = memo(
             repoPath: repoPath ?? undefined,
             number: pr.number,
             title: pr.title,
-            authorAvatarUrl:
-              pr.author.avatarUrl ||
-              `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=32`,
+            authorAvatarUrl: getGitHubAvatarUrl(pr.author),
             name: `PR #${pr.number}`,
           });
         }}
@@ -489,9 +488,7 @@ const GitHubPRsView = memo(() => {
         openPRBuffer(pr.number, {
           title: pr.title,
           repoPath: effectiveRepoPath ?? undefined,
-          authorAvatarUrl:
-            pr.author.avatarUrl ||
-            `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=32`,
+          authorAvatarUrl: getGitHubAvatarUrl(pr.author),
         });
       });
     },
@@ -504,9 +501,7 @@ const GitHubPRsView = memo(() => {
         openPRBuffer(pr.number, {
           title: pr.title,
           repoPath: effectiveRepoPath ?? undefined,
-          authorAvatarUrl:
-            pr.author.avatarUrl ||
-            `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=32`,
+          authorAvatarUrl: getGitHubAvatarUrl(pr.author),
           initialView: "files",
         });
       });

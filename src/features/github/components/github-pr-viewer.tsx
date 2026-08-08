@@ -27,6 +27,7 @@ import {
   toFileDiffFromMetadata,
 } from "../utils/github-pr-viewer-utils";
 import { copyToClipboard } from "../utils/github-viewer-utils";
+import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { useGitHubStore } from "../stores/github.store";
 import { PRActivityPanel } from "./pr-activity-panel";
 import { PRFilesPanel } from "./pr-files-panel";
@@ -172,9 +173,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   useEffect(() => {
     if (!selectedPRDetails || !prBuffer) return;
 
-    const authorAvatarUrl =
-      selectedPRDetails.author.avatarUrl ||
-      `https://github.com/${encodeURIComponent(selectedPRDetails.author.login || "github")}.png?size=32`;
+    const authorAvatarUrl = getGitHubAvatarUrl(selectedPRDetails.author);
 
     if (prBuffer.name === selectedPRDetails.title && prBuffer.authorAvatarUrl === authorAvatarUrl) {
       return;

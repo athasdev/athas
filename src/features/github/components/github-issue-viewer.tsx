@@ -36,6 +36,7 @@ import {
   githubIssueListCache,
 } from "../utils/github-data-cache";
 import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
+import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { CommentItem } from "./comment-item";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubInlineMarkdown, GitHubInlineTitle } from "./github-inline-editors";
@@ -158,9 +159,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
   useEffect(() => {
     if (!details || !buffer || buffer.type !== "githubIssue") return;
 
-    const authorAvatarUrl =
-      details.author.avatarUrl ||
-      `https://github.com/${encodeURIComponent(details.author.login || "github")}.png?size=32`;
+    const authorAvatarUrl = getGitHubAvatarUrl(details.author);
 
     if (
       buffer.name === details.title &&

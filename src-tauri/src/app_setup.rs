@@ -3,7 +3,7 @@ use crate::{
    commands::{self, FffSearchState, FileClipboard, ThemeCache},
    file_events::TauriFileChangeEmitter,
    menu,
-   terminal::ManagedTerminalManager as TerminalManager,
+   terminal::{FrontendTerminalSessions, ManagedTerminalManager as TerminalManager},
 };
 use athas_ai::{AcpAgentBridge, CodexAppServer};
 use athas_debugger::DebugManager;
@@ -96,6 +96,7 @@ fn register_managed_state(app: &mut tauri::App<AthasRuntime>) {
 
    let terminal_manager = Arc::new(TerminalManager::new());
    app.manage(terminal_manager.clone());
+   app.manage(FrontendTerminalSessions::default());
 
    let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(
       app.handle().clone(),

@@ -40,6 +40,7 @@ import { resolveTerminalFont } from "../utils/resolve-font";
 import { getTerminalKeyAction } from "../utils/terminal-keyboard";
 import { getTerminalCompatibilityOptions } from "../utils/terminal-options";
 import { createTerminalEventChannel, getTerminalSize } from "../utils/terminal-protocol";
+import { getFrontendTerminalSessionArgs } from "../utils/frontend-terminal-session";
 import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";
 import "@xterm/xterm/css/xterm.css";
 import "../styles/terminal.css";
@@ -380,6 +381,7 @@ export const XtermTerminal = ({
                 workingDirectory: remoteInfo?.remotePath || "/",
                 size,
                 onEvent: events.channel,
+                ...getFrontendTerminalSessionArgs(),
               });
             })()
           : await invoke<string>("create_terminal", {
@@ -394,6 +396,7 @@ export const XtermTerminal = ({
                 size,
               },
               onEvent: events.channel,
+              ...getFrontendTerminalSessionArgs(),
             });
 
         events.bind(activeConnectionId);

@@ -19,6 +19,7 @@ import { useGitHubStore } from "../stores/github.store";
 import type { IssueDetails, IssueFilter, IssueListItem } from "../types/github.types";
 import { groupIssues } from "../utils/github-sidebar-groups";
 import { getTimeAgo } from "../utils/github-viewer-utils";
+import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { GitHubSidebarSection } from "./github-sidebar-section";
@@ -68,9 +69,7 @@ const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: Issu
           repoPath: repoPath ?? undefined,
           number: issue.number,
           title: issue.title,
-          authorAvatarUrl:
-            issue.author.avatarUrl ||
-            `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
+          authorAvatarUrl: getGitHubAvatarUrl(issue.author),
           url: issue.url,
           name: `Issue #${issue.number}`,
         });
@@ -352,9 +351,7 @@ const GitHubIssuesView = memo(
                             issueNumber: issue.number,
                             repoPath: repoPath ?? undefined,
                             title: issue.title,
-                            authorAvatarUrl:
-                              issue.author.avatarUrl ||
-                              `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
+                            authorAvatarUrl: getGitHubAvatarUrl(issue.author),
                             url: issue.url,
                           });
                         })

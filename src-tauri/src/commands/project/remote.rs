@@ -1,3 +1,4 @@
+use crate::terminal::FrontendTerminalSessions;
 use athas_remote::{
    RemoteFileEntry, SshConnection, close_remote_terminal as remote_close_terminal,
    create_remote_terminal as remote_create_terminal,
@@ -12,7 +13,7 @@ use athas_remote::{
    ssh_rename_path as remote_ssh_rename_path, ssh_write_file as remote_ssh_write_file,
 };
 use athas_terminal::{TerminalEvent, TerminalInput, TerminalSize};
-use tauri::{Emitter, ipc::Channel};
+use tauri::{Emitter, State, ipc::Channel};
 
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
@@ -164,8 +165,11 @@ pub async fn create_remote_terminal(
    working_directory: Option<String>,
    size: TerminalSize,
    on_event: Channel<TerminalEvent>,
+   window_label: String,
+   frontend_session_id: String,
+   frontend_sessions: State<'_, FrontendTerminalSessions>,
 ) -> Result<String, String> {
-   remote_create_terminal(
+   let connection_id = remote_create_terminal(
       host,
       port,
       username,
@@ -176,7 +180,16 @@ pub async fn create_remote_terminal(
       app_handle.package_info().version.to_string(),
       on_event,
    )
-   .await
+   .await?;
+
+   if let Err(error) =
+      frontend_sessions.register_remote(&window_label, &frontend_session_id, connection_id.clone())
+   {
+      let _ = remote_close_terminal(connection_id).await;
+      return Err(error);
+   }
+
+   Ok(connection_id)
 }
 
 #[tauri::command]
@@ -195,6 +208,10 @@ pub async fn remote_terminal_set_paused(id: String, paused: bool) -> Result<(), 
 }
 
 #[tauri::command]
-pub async fn close_remote_terminal(id: String) -> Result<(), String> {
+pub async fn close_remote_terminal(
+   id: String,
+   frontend_sessions: State<'_, FrontendTerminalSessions>,
+) -> Result<(), String> {
+   frontend_sessions.unregister(&id);
    remote_close_terminal(id).await
 }

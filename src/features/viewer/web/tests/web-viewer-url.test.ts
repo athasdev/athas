@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { normalizeWebViewerUrl } from "../utils/web-viewer-url";
+import { normalizeWebViewerFaviconUrl, normalizeWebViewerUrl } from "../utils/web-viewer-url";
 
 describe("normalizeWebViewerUrl", () => {
   it("defaults localhost host-port input to http", () => {
@@ -16,5 +16,28 @@ describe("normalizeWebViewerUrl", () => {
 
   it("keeps unsupported protocol-like input invalid", () => {
     expect(normalizeWebViewerUrl("mailto:test@example.com")).toBe("");
+  });
+});
+
+describe("normalizeWebViewerFaviconUrl", () => {
+  it("resolves an HTTP favicon against the current page", () => {
+    expect(normalizeWebViewerFaviconUrl("/favicon.ico", "http://localhost:3000/docs")).toBe(
+      "http://localhost:3000/favicon.ico",
+    );
+  });
+
+  it("rejects local asset and file URLs", () => {
+    expect(
+      normalizeWebViewerFaviconUrl(
+        "asset://localhost/Users/example/project/favicon.ico",
+        "http://localhost:3000",
+      ),
+    ).toBeNull();
+    expect(
+      normalizeWebViewerFaviconUrl(
+        "file:///Users/example/project/favicon.ico",
+        "http://localhost:3000",
+      ),
+    ).toBeNull();
   });
 });

@@ -116,6 +116,29 @@ export function normalizeWebViewerUrl(url: string): string {
   return parsed.toString();
 }
 
+export function normalizeWebViewerFaviconUrl(
+  faviconUrl: string | null | undefined,
+  pageUrl: string,
+): string | null {
+  const value = faviconUrl?.trim();
+  if (!value) return null;
+
+  try {
+    const parsed = new URL(value, pageUrl);
+    if (
+      parsed.protocol === "http:" ||
+      parsed.protocol === "https:" ||
+      parsed.protocol === "data:"
+    ) {
+      return parsed.toString();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 export function getWebViewerSecurity(url: string): {
   isLocalhost: boolean;
   isSecure: boolean;
