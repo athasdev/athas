@@ -7,6 +7,7 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 use app_runtime::AthasRuntime;
 use app_setup::{configure_app, shutdown_background_services};
 use commands::*;
+use tauri::Manager;
 use tauri_plugin_window_state::StateFlags;
 use terminal::{
    close_terminal, create_terminal, list_shells, terminal_resize, terminal_set_paused,
@@ -26,6 +27,8 @@ mod terminal;
 
 #[cfg_attr(all(target_os = "linux", feature = "linux"), tauri::cef_entry_point)]
 fn main() {
+   let startup_timing = StartupTiming::new();
+
    let _ = rustls::crypto::ring::default_provider().install_default();
 
    #[cfg(target_os = "linux")]
@@ -40,6 +43,7 @@ fn main() {
    let builder = builder.command_line_args(bootstrap::linux::cef_command_line_args());
 
    builder
+      .manage(startup_timing)
       .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
          app_setup::handle_single_instance_open(app, args, cwd);
       }))
@@ -420,6 +424,7 @@ fn main() {
          get_tool_path,
          get_available_tools,
          frontend_trace,
+         record_startup_milestone,
          // Menu commands
          menu::toggle_menu_bar,
          menu::rebuild_menu_themes,
@@ -430,7 +435,10 @@ fn main() {
          #[cfg(target_os = "linux")]
          tauri::RunEvent::Ready => {
             commands::ui::window::ensure_app_windows_reachable(app_handle);
+            app_handle.state::<StartupTiming>().record("native:ready");
          }
+         #[cfg(not(target_os = "linux"))]
+         tauri::RunEvent::Ready => app_handle.state::<StartupTiming>().record("native:ready"),
          tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
             shutdown_background_services(app_handle);
          }

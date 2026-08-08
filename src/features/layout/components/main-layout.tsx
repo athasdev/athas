@@ -25,6 +25,7 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
+import { recordStartupMilestone } from "@/features/bootstrap/startup-performance";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import Footer from "./footer/footer";
@@ -244,14 +245,18 @@ export function MainLayout() {
           frontendTrace("info", "workspace-open", "startupRestore:end", {
             tabPath: activeTab.path,
           });
+          recordStartupMilestone("workspace:ready");
         } catch (error) {
           console.error("Failed to restore workspace:", error);
           frontendTrace("error", "workspace-open", "startupRestore:error", {
             tabPath: activeTab.path,
           });
+          recordStartupMilestone("workspace:error");
           // Make sure to clear the flag even if restoration fails
           setIsSwitchingProject(false);
         }
+      } else {
+        recordStartupMilestone("workspace:ready");
       }
     };
 

@@ -34,6 +34,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { recordStartupMilestone } from "@/features/bootstrap/startup-performance";
 import { useVimStore } from "@/features/vim/stores/vim.store";
 import { formatRelativeTime } from "@/utils/date";
 import { frontendTrace } from "@/utils/frontend-trace";
@@ -552,6 +553,7 @@ export function MonacoEditor({
         themeId,
         tokenTypes: benchmarkTokenTypes,
       });
+      recordStartupMilestone("editor:first-ready");
     };
     void languageTokenizerPromise.then((loaded) => {
       if (model.isDisposed()) return;
@@ -914,6 +916,7 @@ export function MonacoEditor({
           themeId,
           tokenTypes,
         });
+        recordStartupMilestone("editor:first-ready");
       };
 
       if (document.visibilityState === "visible") {

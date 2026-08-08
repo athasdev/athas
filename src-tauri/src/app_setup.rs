@@ -19,6 +19,8 @@ use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 
 pub fn configure_app(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn std::error::Error>> {
+   app.state::<commands::ui::StartupTiming>()
+      .record("native:setup:start");
    configure_menu(app)?;
    register_managed_state(app);
    emit_cli_open_requests(app);
@@ -28,6 +30,8 @@ pub fn configure_app(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn s
    commands::development::cli::auto_fix_cli_on_startup();
 
    app.on_menu_event(handle_menu_event);
+   app.state::<commands::ui::StartupTiming>()
+      .record("native:setup:complete");
 
    Ok(())
 }

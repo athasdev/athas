@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { recordStartupMilestoneAfterFrame } from "@/features/bootstrap/startup-performance";
 import {
   getWindowOpenDiagnostics,
   traceWindowOpen,
@@ -60,11 +61,17 @@ function App() {
   useEffect(() => {
     const mountedAt = performance.now();
     traceWindowOpen("app:mounted", { shell: true, blankWindowOpen });
-    return traceWindowOpenAfterFrame("app:firstFrame", () => ({
+    const cleanupTrace = traceWindowOpenAfterFrame("app:firstFrame", () => ({
       shell: true,
       blankWindowOpen,
       durationMs: Math.round((performance.now() - mountedAt) * 100) / 100,
     }));
+    const cleanupStartupMilestone = recordStartupMilestoneAfterFrame("app:first-frame");
+
+    return () => {
+      cleanupTrace();
+      cleanupStartupMilestone();
+    };
   }, [blankWindowOpen]);
 
   useEffect(() => {

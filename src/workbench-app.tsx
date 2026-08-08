@@ -2,6 +2,10 @@ import { useEffect } from "react";
 import { MotionConfig } from "motion/react";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
 import { initializeAppBootstrap } from "@/features/bootstrap/initialize-app-bootstrap";
+import {
+  recordStartupMilestone,
+  recordStartupMilestoneAfterFrame,
+} from "@/features/bootstrap/startup-performance";
 import { useAppBootstrap } from "@/features/bootstrap/use-app-bootstrap";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
@@ -20,6 +24,7 @@ import { DialogServiceProvider } from "@/ui/dialog";
 const bootstrapStartedAt = performance.now();
 void initializeAppBootstrap()
   .then(() => {
+    recordStartupMilestone("bootstrap:complete");
     traceWindowOpen("frontend:asyncBootstrap:end", {
       durationMs: Math.round((performance.now() - bootstrapStartedAt) * 100) / 100,
     });
@@ -38,9 +43,15 @@ function WorkbenchApp() {
   useEffect(() => {
     const mountedAt = performance.now();
     traceWindowOpen("workbench:mounted");
-    return traceWindowOpenAfterFrame("workbench:firstFrame", () => ({
+    const cleanupTrace = traceWindowOpenAfterFrame("workbench:firstFrame", () => ({
       durationMs: Math.round((performance.now() - mountedAt) * 100) / 100,
     }));
+    const cleanupStartupMilestone = recordStartupMilestoneAfterFrame("workbench:first-frame");
+
+    return () => {
+      cleanupTrace();
+      cleanupStartupMilestone();
+    };
   }, []);
 
   return (
