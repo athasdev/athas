@@ -4,17 +4,18 @@ import { Separator } from "@/ui/separator";
 import { cn } from "@/utils/cn";
 
 const buttonGroupVariants = cva(
-  "flex w-fit items-stretch [&>*]:focus-visible:relative [&>*]:focus-visible:z-10 [&>[data-slot=button]:not(:first-child)]:rounded-l-none [&>[data-slot=button]:not(:last-child)]:rounded-r-none",
+  "flex w-fit items-stretch [&>*]:focus-visible:relative [&>*]:focus-visible:z-10",
   {
     variants: {
       orientation: {
         horizontal:
-          "flex-row [&>[data-slot=button]:not(:first-child)]:border-l-0 [&>[data-slot=button-group-separator]]:h-auto",
+          "flex-row [&>[data-slot=button]:not(:first-child)]:rounded-l-none [&>[data-slot=button]:not(:last-child)]:rounded-r-none [&>[data-slot=button]:not(:first-child)]:border-l-0 [&>[data-slot=button-group-separator]]:h-auto",
         vertical:
           "flex-col [&>[data-slot=button]:not(:first-child)]:rounded-t-none [&>[data-slot=button]:not(:last-child)]:rounded-b-none [&>[data-slot=button]:not(:first-child)]:border-t-0",
       },
       variant: {
-        default: "",
+        default:
+          "rounded-md bg-accent [&>[data-slot=button]]:bg-transparent [&>[data-slot=button]]:hover:bg-selected",
         accent:
           "overflow-hidden rounded-md border border-primary/25 bg-primary/10 [&>[data-slot=button]]:text-primary [&>[data-slot=button]]:hover:bg-primary/10 [&>[data-slot=button-group-separator]]:bg-primary/25",
       },
