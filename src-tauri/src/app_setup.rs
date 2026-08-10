@@ -1,8 +1,9 @@
+#[cfg(not(target_os = "linux"))]
+use crate::menu;
 use crate::{
    app_runtime::AthasRuntime,
    commands::{self, FffSearchState, FileClipboard, ThemeCache},
    file_events::TauriFileChangeEmitter,
-   menu,
    terminal::{FrontendTerminalSessions, ManagedTerminalManager as TerminalManager},
 };
 use athas_ai::{AcpAgentBridge, CodexAppServer};
