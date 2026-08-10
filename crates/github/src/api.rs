@@ -1451,11 +1451,11 @@ pub fn github_update_issue_state(
       return Err("Issue state must be open or closed.".to_string());
    }
    let state_reason = state_reason.map(|value| value.to_lowercase());
-   let valid_reason = match (state.as_str(), state_reason.as_deref()) {
-      ("open", None | Some("reopened")) => true,
-      ("closed", None | Some("completed") | Some("not_planned")) => true,
-      _ => false,
-   };
+   let valid_reason = matches!(
+      (state.as_str(), state_reason.as_deref()),
+      ("open", None | Some("reopened"))
+         | ("closed", None | Some("completed") | Some("not_planned"))
+   );
    if !valid_reason {
       return Err("Unsupported issue state reason.".to_string());
    }
