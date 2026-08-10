@@ -45,6 +45,17 @@ describe("Linux release packaging", () => {
     expect(script).toContain("dpkg-deb --root-owner-group");
   });
 
+  it("loads CEF from stable and preview native package resource directories", () => {
+    const buildScript = readRepoFile("src-tauri/build.rs");
+    const packagingScript = readRepoFile("scripts/release/packaging/linux/native.sh");
+
+    expect(buildScript).toContain("$ORIGIN/../lib/Athas");
+    expect(buildScript).toContain("$ORIGIN/../lib/Athas Preview");
+    expect(packagingScript).toContain('product_name="Athas Preview"');
+    expect(packagingScript).toContain('patchelf --print-rpath "$release_binary"');
+    expect(packagingScript).toContain('expected_cef_rpath="\\$ORIGIN/../lib/${product_name}"');
+  });
+
   it("does not add bundled extensions twice to native packages", () => {
     const config = JSON.parse(readRepoFile("src-tauri/tauri.conf.json"));
     const script = readRepoFile("scripts/release/packaging/linux/native.sh");

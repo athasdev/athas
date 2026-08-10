@@ -56,7 +56,9 @@ case "$target" in
 esac
 
 config_args=()
+product_name="Athas"
 if [[ "$channel" == "--preview" ]]; then
+  product_name="Athas Preview"
   config_args+=(--config src-tauri/tauri.preview.conf.json)
 elif [[ -n "$channel" ]]; then
   echo "Unsupported option: $channel" >&2
@@ -201,6 +203,14 @@ cargo tauri build \
   -- \
   --no-default-features \
   --features linux
+
+release_binary="${CARGO_TARGET_DIR:-target}/release/athas"
+expected_cef_rpath="\$ORIGIN/../lib/${product_name}"
+actual_rpath="$(patchelf --print-rpath "$release_binary")"
+if [[ ":${actual_rpath}:" != *":${expected_cef_rpath}:"* ]]; then
+  echo "Release binary does not search the packaged CEF directory: ${expected_cef_rpath}" >&2
+  exit 1
+fi
 
 patch_deb_dependencies() {
   local depends="libgtk-3-0, libnss3, libnspr4, libasound2, libx11-6, libxcomposite1, libxdamage1, libxrandr2, libgbm1, libatk-bridge2.0-0, libxkbcommon0, libdrm2, libxcb1, libxfixes3, libxext6, libglib2.0-0, libpango-1.0-0, libcairo2, libgdk-pixbuf-2.0-0"

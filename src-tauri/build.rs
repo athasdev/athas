@@ -4,6 +4,7 @@ fn main() {
    {
       println!("cargo:rustc-link-arg-bin=athas=-Wl,-rpath,$ORIGIN");
       println!("cargo:rustc-link-arg-bin=athas=-Wl,-rpath,$ORIGIN/../lib/Athas");
+      println!("cargo:rustc-link-arg-bin=athas=-Wl,-rpath,$ORIGIN/../lib/Athas Preview");
    }
 
    tauri_build::build()
