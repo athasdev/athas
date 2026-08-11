@@ -20,6 +20,10 @@ export interface EditorTextChange {
   rangeOffset: number;
   rangeLength: number;
   text: string;
+  startLine?: number;
+  startColumn?: number;
+  endLine?: number;
+  endColumn?: number;
 }
 
 export interface EditorContentChangeOptions {

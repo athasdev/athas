@@ -19,6 +19,7 @@ import type { EditorContentChangeOptions, Position, Range } from "../types/edito
 import { getBufferById } from "../utils/buffer-index";
 import { trackBufferHistoryChange } from "./buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
+import { queueEditorViewContentChange } from "./view.store";
 
 async function recordLocalHistoryBeforeWrite(
   path: string,
@@ -252,6 +253,15 @@ export const useEditorAppStore = createSelectors(
           const activeBuffer = getBufferById(buffers, activeBufferId);
           if (!activeBuffer || !isEditorContent(activeBuffer)) return;
           const collaborationNoteTarget = parseCollaborationNoteBufferPath(activeBuffer.path);
+
+          if (!contentAlreadyApplied && activeBufferId && options?.contentChange) {
+            queueEditorViewContentChange(
+              activeBufferId,
+              activeBuffer.content,
+              content,
+              options.contentChange,
+            );
+          }
 
           if (activeBufferId) {
             trackBufferHistoryChange({

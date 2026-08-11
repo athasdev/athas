@@ -711,6 +711,10 @@ export function MonacoEditor({
                   rangeOffset: event.changes[0].rangeOffset,
                   rangeLength: event.changes[0].rangeLength,
                   text: event.changes[0].text,
+                  startLine: event.changes[0].range.startLineNumber - 1,
+                  startColumn: event.changes[0].range.startColumn - 1,
+                  endLine: event.changes[0].range.endLineNumber - 1,
+                  endColumn: event.changes[0].range.endColumn - 1,
                 },
               }
             : undefined,

@@ -125,4 +125,21 @@ describe("editor view store large files", () => {
       ).toEqual(nextContent.split("\n"));
     }
   });
+
+  it("applies Monaco line ranges without scanning the surrounding document", async () => {
+    const { applyEditorTextChangeToLines } = await import("../stores/view.store");
+    const previousLines = ["alpha", "beta", "gamma"];
+
+    expect(
+      applyEditorTextChangeToLines(previousLines, {
+        rangeOffset: 7,
+        rangeLength: 2,
+        text: "E\nnew",
+        startLine: 1,
+        startColumn: 1,
+        endLine: 1,
+        endColumn: 3,
+      }),
+    ).toEqual(["alpha", "bE", "newa", "gamma"]);
+  });
 });

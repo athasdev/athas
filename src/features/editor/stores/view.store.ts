@@ -2,6 +2,7 @@ import isEqual from "fast-deep-equal";
 import { createWithEqualityFn } from "zustand/traditional";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import { createSelectors } from "@/utils/zustand-selectors";
+import type { EditorTextChange } from "../types/editor.types";
 import { createSparseLineArray, getLargeEditorModeInfo } from "../utils/large-file";
 import { useBufferStore } from "./buffer.store";
 
@@ -148,6 +149,77 @@ export function applyIncrementalLineEdit(
   ];
 }
 
+export function applyEditorTextChangeToLines(
+  previousLines: string[],
+  change: EditorTextChange,
+): string[] | null {
+  if (isSparseLineArray(previousLines)) return null;
+
+  const { startLine, startColumn, endLine, endColumn } = change;
+  if (
+    startLine === undefined ||
+    startColumn === undefined ||
+    endLine === undefined ||
+    endColumn === undefined ||
+    startLine < 0 ||
+    endLine < startLine ||
+    endLine >= previousLines.length ||
+    Math.max(change.rangeLength, change.text.length) > INCREMENTAL_LINE_EDIT_THRESHOLD
+  ) {
+    return null;
+  }
+
+  const startLineText = previousLines[startLine] ?? "";
+  const endLineText = previousLines[endLine] ?? "";
+  if (
+    startColumn < 0 ||
+    startColumn > startLineText.length ||
+    endColumn < 0 ||
+    endColumn > endLineText.length
+  ) {
+    return null;
+  }
+
+  const insertedLines = change.text.split("\n");
+  const linePrefix = startLineText.slice(0, startColumn);
+  const lineSuffix = endLineText.slice(endColumn);
+  const replacement =
+    insertedLines.length === 1
+      ? [`${linePrefix}${insertedLines[0]}${lineSuffix}`]
+      : [
+          `${linePrefix}${insertedLines[0]}`,
+          ...insertedLines.slice(1, -1),
+          `${insertedLines[insertedLines.length - 1]}${lineSuffix}`,
+        ];
+
+  return [
+    ...previousLines.slice(0, startLine),
+    ...replacement,
+    ...previousLines.slice(endLine + 1),
+  ];
+}
+
+interface PendingEditorViewContentChange {
+  previousContent: string;
+  nextContent: string;
+  change: EditorTextChange;
+}
+
+const pendingEditorViewContentChanges = new Map<string, PendingEditorViewContentChange>();
+
+export function queueEditorViewContentChange(
+  bufferId: string,
+  previousContent: string,
+  nextContent: string,
+  change: EditorTextChange,
+): void {
+  pendingEditorViewContentChanges.set(bufferId, {
+    previousContent,
+    nextContent,
+    change,
+  });
+}
+
 // Subscribe to buffer changes and update computed values
 useBufferStore.subscribe((state) => {
   const activeBuffer = state.actions.getActiveBuffer();
@@ -178,13 +250,19 @@ useBufferStore.subscribe((state) => {
     }
 
     const previousLines = previousSnapshot?.id === activeBuffer.id ? previousSnapshot.lines : [""];
+    const pendingContentChange = pendingEditorViewContentChanges.get(activeBuffer.id);
+    pendingEditorViewContentChanges.delete(activeBuffer.id);
+    const changedLines =
+      previousSnapshot?.id === activeBuffer.id &&
+      pendingContentChange?.previousContent === previousSnapshot.content &&
+      pendingContentChange.nextContent === activeBuffer.content
+        ? applyEditorTextChangeToLines(previousLines, pendingContentChange.change)
+        : null;
     const lines =
       previousSnapshot?.id === activeBuffer.id
-        ? (applyIncrementalLineEdit(
-            previousSnapshot.content,
-            activeBuffer.content,
-            previousLines,
-          ) ?? activeBuffer.content.split("\n"))
+        ? (changedLines ??
+          applyIncrementalLineEdit(previousSnapshot.content, activeBuffer.content, previousLines) ??
+          activeBuffer.content.split("\n"))
         : activeBuffer.content.split("\n");
 
     previousActiveBufferSnapshot = {
