@@ -23,7 +23,7 @@ import { ScrollArea } from "@/ui/scroll-area";
 import { showConfirmDialog } from "@/ui/dialog";
 import { SidebarHeaderIconButton, SidebarSectionHeader, SidebarToolbar } from "@/ui/sidebar";
 import { SidebarTree, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
-import type { PathTreeNode } from "@/features/sidebar/lib/path-tree";
+import { compactPathTreeBranch, type PathTreeNode } from "@/features/sidebar/lib/path-tree";
 import { cn } from "@/utils/cn";
 import { createStash } from "../../api/git-stash-api";
 import {
@@ -431,9 +431,11 @@ const GitStatusPanel = ({
         );
       }
 
-      const collapseKey = `${section}:${node.path}`;
+      const compacted = compactPathTreeBranch(node);
+      const branch = compacted.branch;
+      const collapseKey = `${section}:${branch.path}`;
       const isCollapsed = collapsedFolders.has(collapseKey);
-      const folderState = tree.folderStateById.get(node.id);
+      const folderState = tree.folderStateById.get(branch.id);
       if (!folderState) return null;
 
       return (
@@ -441,12 +443,12 @@ const GitStatusPanel = ({
           <SidebarTreeRow
             depth={depth}
             expanded={!isCollapsed}
-            onToggle={() => toggleFolderCollapsed(section, node.path)}
-            onClick={() => toggleFolderCollapsed(section, node.path)}
-            label={node.name}
+            onToggle={() => toggleFolderCollapsed(section, branch.path)}
+            onClick={() => toggleFolderCollapsed(section, branch.path)}
+            label={compacted.label}
             leading={
               <ThemedFileIcon
-                fileName={node.name}
+                fileName={branch.name}
                 isDir
                 isExpanded={!isCollapsed}
                 className="shrink-0 text-subtle-foreground"
@@ -461,8 +463,8 @@ const GitStatusPanel = ({
                 disabled={isLoading || folderState.descendantFilePaths.length === 0}
                 aria-label={
                   folderState.areAllDescendantFilesStaged
-                    ? `Unstage folder ${node.name}`
-                    : `Stage folder ${node.name}`
+                    ? `Unstage folder ${compacted.label}`
+                    : `Stage folder ${compacted.label}`
                 }
               />
             }
@@ -471,14 +473,14 @@ const GitStatusPanel = ({
               if (!repoPath) return;
               writeSidebarResourceDragData(event.dataTransfer, {
                 type: "file",
-                path: `${repoPath}/${node.path}`,
-                name: node.name,
+                path: `${repoPath}/${branch.path}`,
+                name: branch.name,
                 isDir: true,
               });
             }}
-            title={node.path}
+            title={branch.path}
           />
-          {!isCollapsed ? node.children.map((child) => renderNode(child, depth + 1)) : null}
+          {!isCollapsed ? branch.children.map((child) => renderNode(child, depth + 1)) : null}
         </div>
       );
     };

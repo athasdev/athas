@@ -16,6 +16,11 @@ export interface PathTreeLeaf<T> extends PathTreeNodeBase<T> {
 
 export type PathTreeNode<T> = PathTreeBranch<T> | PathTreeLeaf<T>;
 
+export interface CompactPathTreeBranch<T> {
+  branch: PathTreeBranch<T>;
+  label: string;
+}
+
 interface PathTreeBuildNode<T> extends PathTreeBranch<T> {
   branches: Map<string, PathTreeBuildNode<T>>;
 }
@@ -88,4 +93,22 @@ export function buildPathTree<T>(
 
   sortPathTree(root.children);
   return root.children;
+}
+
+export function compactPathTreeBranch<T>(branch: PathTreeBranch<T>): CompactPathTreeBranch<T> {
+  const names = [branch.name];
+  let compactedBranch = branch;
+
+  while (compactedBranch.children.length === 1) {
+    const child = compactedBranch.children[0];
+    if (!child || child.type !== "branch") break;
+
+    compactedBranch = child;
+    names.push(child.name);
+  }
+
+  return {
+    branch: compactedBranch,
+    label: names.join("/"),
+  };
 }

@@ -211,7 +211,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
   ) {
     return (
       <div
-        className={cn("file-tree-item w-full", containerClassName)}
+        className={cn("file-tree-item flex w-full min-w-0 items-center", containerClassName)}
         data-sidebar-tree-row=""
         data-active={active ? "true" : undefined}
         data-depth={depth}
@@ -237,9 +237,9 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
           data-depth={depth}
           tabIndex={tabIndex}
           className={cn(
-            "file-tree-row font-sans ui-text-sm flex w-full min-w-0 select-none items-center whitespace-nowrap rounded-lg border border-transparent bg-transparent text-left text-foreground outline-none transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent focus-visible:border-primary/40 gap-1.5 px-1.5 py-1 leading-row",
+            "file-tree-row font-sans ui-text-sm flex w-full min-w-0 flex-1 select-none items-center whitespace-nowrap rounded-lg border border-transparent bg-transparent text-left text-foreground outline-none transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent focus-visible:border-primary/40 gap-1.5 px-1.5 py-1 leading-row",
             active && "bg-selected",
-            action && "pr-8",
+            action && "pr-0",
             className,
           )}
           style={{ paddingLeft: `${baseIndent + depth * indentSize}px`, ...style }}
@@ -266,15 +266,13 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
             children
           )}
           {trailing ? (
-            <span className="relative z-1 ml-auto flex min-w-0 shrink-0 items-center">
+            <span className="relative z-1 ml-auto flex min-w-0 shrink items-center overflow-hidden">
               {trailing}
             </span>
           ) : null}
         </button>
         {action ? (
-          <span className="absolute top-1/2 right-2 z-3 flex -translate-y-1/2 items-center">
-            {action}
-          </span>
+          <span className="relative z-3 flex shrink-0 items-center px-2">{action}</span>
         ) : null}
       </div>
     );

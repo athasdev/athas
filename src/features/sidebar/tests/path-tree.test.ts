@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import { buildPathTree } from "../lib/path-tree";
+import { buildPathTree, compactPathTreeBranch } from "../lib/path-tree";
 
 describe("buildPathTree", () => {
   test("builds one sorted hierarchy from mixed path separators", () => {
@@ -43,5 +43,36 @@ describe("buildPathTree", () => {
     );
 
     expect(tree[0].children.map((node) => node.id)).toEqual(["leaf:staged", "leaf:unstaged"]);
+  });
+});
+
+describe("compactPathTreeBranch", () => {
+  test("compacts single-child folder chains and stops before mixed children", () => {
+    const tree = buildPathTree(
+      [
+        { path: "src/features/editor/components/toolbar/breadcrumb.tsx" },
+        { path: "src/features/editor/monaco-editor.tsx" },
+      ],
+      {
+        getKey: (item) => item.path,
+        getPath: (item) => item.path,
+      },
+    );
+    const root = tree[0];
+
+    expect(root?.type).toBe("branch");
+    if (!root || root.type !== "branch") return;
+
+    const compactedRoot = compactPathTreeBranch(root);
+    expect(compactedRoot.label).toBe("src/features/editor");
+    expect(compactedRoot.branch.path).toBe("src/features/editor");
+
+    const components = compactedRoot.branch.children[0];
+    expect(components?.type).toBe("branch");
+    if (!components || components.type !== "branch") return;
+
+    const compactedComponents = compactPathTreeBranch(components);
+    expect(compactedComponents.label).toBe("components/toolbar");
+    expect(compactedComponents.branch.path).toBe("src/features/editor/components/toolbar");
   });
 });
