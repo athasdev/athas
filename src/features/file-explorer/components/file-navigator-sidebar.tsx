@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { cva } from "class-variance-authority";
@@ -25,15 +26,17 @@ import { cn } from "@/utils/cn";
 import { ScrollArea } from "@/ui/scroll-area";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import {
+  clampFileNavigatorWidth,
+  DEFAULT_FILE_NAVIGATOR_WIDTH,
+  getFileNavigatorLayout,
+} from "@/features/file-explorer/lib/file-navigator-layout";
 import "../styles/file-explorer-tree.css";
 
 export type FileNavigatorViewMode = "flat" | "tree";
 type FileNavigatorSearchMode = "substring" | "fuzzy";
 type FileNavigatorSurface = "sidebar" | "plain" | "inset" | "review";
 
-const DEFAULT_NAVIGATOR_WIDTH = 224;
-const MIN_NAVIGATOR_WIDTH = 176;
-const MAX_NAVIGATOR_WIDTH = 420;
 const RESIZE_STEP = 16;
 const MAX_NAVIGATOR_SYNC_ITEMS = 5_000;
 
@@ -64,7 +67,7 @@ interface FileNavigatorSidebarProps {
 }
 
 const fileNavigatorSurfaceVariants = cva(
-  "relative flex h-full min-h-0 shrink-0 flex-col overflow-hidden",
+  "relative flex h-full min-h-0 min-w-0 shrink flex-col overflow-hidden",
   {
     variants: {
       surface: {
@@ -79,10 +82,6 @@ const fileNavigatorSurfaceVariants = cva(
     },
   },
 );
-
-function clampNavigatorWidth(width: number) {
-  return Math.max(MIN_NAVIGATOR_WIDTH, Math.min(width, MAX_NAVIGATOR_WIDTH));
-}
 
 function getItemSearchText(item: FileNavigatorItem) {
   return [item.label, item.path, item.key, item.iconPath].filter(Boolean).join(" ").toLowerCase();
@@ -257,13 +256,27 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   searchResetKey,
 }: FileNavigatorSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [width, setWidth] = useState(DEFAULT_NAVIGATOR_WIDTH);
+  const navigatorRef = useRef<HTMLElement>(null);
+  const [preferredWidth, setPreferredWidth] = useState(DEFAULT_FILE_NAVIGATOR_WIDTH);
+  const [parentWidth, setParentWidth] = useState<number>();
   const [isResizing, setIsResizing] = useState(false);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     setSearchQuery("");
   }, [searchResetKey]);
+
+  useEffect(() => {
+    const parent = navigatorRef.current?.parentElement;
+    if (!parent || typeof ResizeObserver === "undefined") return;
+
+    const updateParentWidth = () => setParentWidth(parent.clientWidth);
+    const resizeObserver = new ResizeObserver(updateParentWidth);
+    resizeObserver.observe(parent);
+    updateParentWidth();
+
+    return () => resizeObserver.disconnect();
+  }, []);
 
   const searchableItems = useMemo(() => items.slice(0, MAX_NAVIGATOR_SYNC_ITEMS), [items]);
   const hiddenItemCount = Math.max(0, items.length - searchableItems.length);
@@ -308,8 +321,10 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       : [...filteredItems].sort((left, right) => left.path.localeCompare(right.path));
   }, [filteredItems, searchMode, searchQuery, viewMode]);
 
+  const navigatorLayout = getFileNavigatorLayout(preferredWidth, parentWidth);
+
   const resizeTo = useCallback((nextWidth: number) => {
-    setWidth(clampNavigatorWidth(nextWidth));
+    setPreferredWidth(clampFileNavigatorWidth(nextWidth));
   }, []);
 
   const handleToggleNode = useCallback((nodeId: string) => {
@@ -325,7 +340,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
     (event: PointerEvent<HTMLDivElement>) => {
       event.preventDefault();
       const startX = event.clientX;
-      const startWidth = width;
+      const startWidth = navigatorLayout.width;
       setIsResizing(true);
 
       const handlePointerMove = (moveEvent: globalThis.PointerEvent) => {
@@ -345,7 +360,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     },
-    [resizeTo, width],
+    [navigatorLayout.width, resizeTo],
   );
 
   const handleResizeKeyDown = useCallback(
@@ -353,15 +368,16 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
 
       event.preventDefault();
-      resizeTo(width + (event.key === "ArrowRight" ? RESIZE_STEP : -RESIZE_STEP));
+      resizeTo(navigatorLayout.width + (event.key === "ArrowRight" ? RESIZE_STEP : -RESIZE_STEP));
     },
-    [resizeTo, width],
+    [navigatorLayout.width, resizeTo],
   );
 
   return (
     <aside
+      ref={navigatorRef}
       className={cn(fileNavigatorSurfaceVariants({ surface }), className)}
-      style={{ width }}
+      style={{ width: navigatorLayout.width }}
       aria-label={ariaLabel}
     >
       {onViewModeChange ? (
@@ -430,9 +446,9 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize file navigator"
-        aria-valuemin={MIN_NAVIGATOR_WIDTH}
-        aria-valuemax={MAX_NAVIGATOR_WIDTH}
-        aria-valuenow={Math.round(width)}
+        aria-valuemin={navigatorLayout.minWidth}
+        aria-valuemax={navigatorLayout.maxWidth}
+        aria-valuenow={navigatorLayout.width}
         tabIndex={0}
       />
       {isResizing ? (
