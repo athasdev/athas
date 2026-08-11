@@ -111,7 +111,7 @@ export function AppUpdateControl() {
             variant="accent"
             className={
               updateError
-                ? "border-destructive/25 bg-destructive/10 [&>[data-slot=button-group-separator]]:bg-destructive/25"
+                ? "border-destructive/25 bg-destructive/10 *:data-[slot=button-group-separator]:bg-destructive/25"
                 : undefined
             }
           >

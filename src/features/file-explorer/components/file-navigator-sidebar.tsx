@@ -475,7 +475,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         )}
       </ScrollArea>
       <div
-        className="absolute top-0 right-[-4px] z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary/20"
+        className="absolute top-0 -right-1 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary/20"
         onPointerDown={handleResizeStart}
         onKeyDown={handleResizeKeyDown}
         role="separator"

@@ -266,7 +266,7 @@ export const SidebarPaneSelector = ({
         aria-label={item.ariaLabel}
         size={compact ? "xs" : "sm"}
         className={cn(
-          compact && "aspect-[7/6] flex-none px-0",
+          compact && "aspect-7/6 flex-none px-0",
           !compact && "flex-none",
           item.className,
         )}

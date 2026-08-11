@@ -5,7 +5,7 @@ import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 const attachmentVariants = cva(
-  "group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap rounded-xl border border-border bg-surface text-foreground outline-none transition-colors duration-[var(--app-duration-fast)] focus-within:ring-1 focus-within:ring-primary/35 focus-visible:ring-1 focus-visible:ring-primary/35 has-[>a,>button]:hover:bg-accent/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
+  "group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap rounded-xl border border-border bg-surface text-foreground outline-none transition-colors duration-(--app-duration-fast) focus-within:ring-1 focus-within:ring-primary/35 focus-visible:ring-1 focus-visible:ring-primary/35 has-[>a,>button]:hover:bg-accent/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
   {
     variants: {
       size: {

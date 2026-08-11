@@ -94,7 +94,7 @@ function SqlEditor({
           ref={highlightRef}
           aria-hidden="true"
           className={cn(
-            "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 py-2 font-mono ui-text-sm leading-5",
+            "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap wrap-break-word px-3 py-2 font-mono ui-text-sm leading-5",
             disabled && "opacity-60",
           )}
         >

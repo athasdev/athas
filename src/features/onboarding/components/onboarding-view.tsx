@@ -47,9 +47,7 @@ function SettingRow({
       <div className="min-w-0">
         <div className="font-sans ui-text-sm font-medium text-foreground">{title}</div>
         {description ? (
-          <p className="font-sans ui-text-sm mt-1 max-w-[560px] text-muted-foreground">
-            {description}
-          </p>
+          <p className="font-sans ui-text-sm mt-1 max-w-140 text-muted-foreground">{description}</p>
         ) : null}
       </div>
       <div className="shrink-0">{children}</div>
@@ -142,7 +140,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
 
   return (
     <ScrollArea className="h-full w-full bg-background">
-      <div className="mx-auto flex w-full max-w-[820px] flex-col px-8 py-10">
+      <div className="mx-auto flex w-full max-w-205 flex-col px-8 py-10">
         <div className={viewModel.showSettings ? "mb-7" : "mb-6"}>
           <h1 className="font-sans ui-text-base font-semibold text-foreground">
             {viewModel.title}

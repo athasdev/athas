@@ -127,7 +127,7 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
               <CardTitle>Hex Preview</CardTitle>
             </CardHeader>
             <CardContent className="overflow-auto py-4">
-              <pre className="ui-text-sm font-mono text-subtle-foreground leading-[18px]">
+              <pre className="ui-text-sm font-mono text-subtle-foreground leading-4.5">
                 {metadata.hexPreview}
               </pre>
             </CardContent>

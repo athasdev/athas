@@ -1559,7 +1559,7 @@ export function CollaborationSidebarView() {
     <SidebarPanel>
       <SidebarTitleBar title="Collaboration" />
       <SidebarTabBar
-        className="relative z-[10020]"
+        className="relative z-10020"
         items={COLLABORATION_TABS}
         value={activeTab}
         onChange={selectTab}

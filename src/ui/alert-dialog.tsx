@@ -20,7 +20,7 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 z-[9998] bg-black/20 transition-opacity duration-[var(--app-duration-fast)] data-[ending-style]:opacity-0 data-[starting-style]:opacity-0",
+        "fixed inset-0 z-9998 bg-black/20 transition-opacity duration-(--app-duration-fast) data-ending-style:opacity-0 data-starting-style:opacity-0",
         className,
       )}
       {...props}
@@ -40,7 +40,7 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "group/alert-dialog-content fixed top-1/2 left-1/2 z-[9999] grid w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-border bg-background p-4 text-foreground shadow-[var(--shadow-dialog)] outline-none transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[size=sm]:max-w-xs",
+          "group/alert-dialog-content fixed top-1/2 left-1/2 z-9999 grid w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-border bg-background p-4 text-foreground shadow-(--shadow-dialog) outline-none transition-[opacity,transform,filter] duration-(--app-duration-fast) ease-(--app-ease-smooth) data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 data-[size=sm]:max-w-xs",
           className,
         )}
         {...props}

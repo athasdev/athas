@@ -757,7 +757,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         className={cn(
           "athas-sidebar-rail relative flex h-full shrink-0 overflow-hidden",
           !isActivityRailResizing &&
-            "transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]",
+            "transition-[width] duration-(--app-duration-normal) ease-(--app-ease-smooth)",
         )}
         style={{
           width: renderedRailWidth,
@@ -769,7 +769,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
           className={cn(
             "absolute inset-y-0 left-0 shrink-0 will-change-transform",
             !isActivityRailResizing &&
-              "transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]",
+              "transition-[width] duration-(--app-duration-normal) ease-(--app-ease-smooth)",
           )}
           style={{
             width: expanded
@@ -795,10 +795,10 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             role="separator"
             aria-label="Resize activity rail"
             aria-orientation="vertical"
-            className="group absolute top-0 right-0 z-20 flex h-full w-[var(--athas-workbench-gap)] cursor-col-resize items-center justify-center hover:bg-primary/8"
+            className="group absolute top-0 right-0 z-20 flex h-full w-(--athas-workbench-gap) cursor-col-resize items-center justify-center hover:bg-primary/8"
             onMouseDown={handleResizeMouseDown}
           >
-            <div className="h-full w-px bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-primary" />
+            <div className="h-full w-px bg-transparent transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) group-hover:bg-primary" />
           </div>
         ) : null}
         {isActivityRailResizing ? <div className="fixed inset-0 z-40 cursor-col-resize" /> : null}

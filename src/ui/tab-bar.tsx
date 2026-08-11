@@ -167,13 +167,13 @@ export interface TabBarTabProps extends Omit<TabProps, "variant"> {
 }
 
 const tabVariants = cva(
-  "group/tab ui-text-chrome relative flex min-h-(--athas-chrome-control-height) shrink-0 cursor-pointer select-none items-center gap-(--athas-chrome-gap-loose) whitespace-nowrap rounded-[var(--athas-chrome-radius)] px-2 text-subtle-foreground outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent/70 hover:text-foreground active:scale-[var(--app-press-scale)] focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-1 focus-visible:ring-offset-tab-bar",
+  "group/tab ui-text-chrome relative flex min-h-(--athas-chrome-control-height) shrink-0 cursor-pointer select-none items-center gap-(--athas-chrome-gap-loose) whitespace-nowrap rounded-(--athas-chrome-radius) px-2 text-subtle-foreground outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent/70 hover:text-foreground active:scale-(--app-press-scale) focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-1 focus-visible:ring-offset-tab-bar",
   {
     variants: {
       variant: {
         default: "border border-transparent",
         connected:
-          "min-h-(--athas-tab-height) rounded-[var(--athas-chrome-radius)] border-0 active:scale-100",
+          "min-h-(--athas-tab-height) rounded-(--athas-chrome-radius) border-0 active:scale-100",
       },
       active: {
         true: "",

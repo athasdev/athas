@@ -197,7 +197,7 @@ const ToolbarContextMenu = ({
   ];
 
   return (
-    <Dropdown isOpen={isOpen} point={position} onClose={onClose} className="min-w-[180px]">
+    <Dropdown isOpen={isOpen} point={position} onClose={onClose} className="min-w-45">
       <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">Terminal Width</div>
       <MenuItemsList items={modeItems} onItemSelect={onClose} />
       <div className="my-0.5 border-border/70 border-t" />
@@ -710,7 +710,7 @@ const TerminalTabBar = ({
             <Button
               onClick={onNewTerminal}
               variant="ghost"
-              className="rounded-[var(--athas-chrome-radius)] text-subtle-foreground"
+              className="rounded-(--athas-chrome-radius) text-subtle-foreground"
               size="icon-xs"
               commandId="terminal.new"
               tooltip="New Terminal"
@@ -752,7 +752,7 @@ const TerminalTabBar = ({
           orientation={orientation}
           className={cn(
             orientation === "vertical" ? "" : "justify-between",
-            "scrollbar-hidden [overscroll-behavior-x:contain]",
+            "scrollbar-hidden overscroll-x-contain",
           )}
           style={orientation === "vertical" ? { width: tabSidebarWidth } : undefined}
           role="tablist"
@@ -1011,7 +1011,7 @@ const TerminalTabBar = ({
             isOpen={profileMenu.isOpen}
             point={profileMenu.position}
             onClose={closeProfileMenu}
-            className="w-[220px]"
+            className="w-55"
           >
             <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">
               New Terminal

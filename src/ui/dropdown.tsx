@@ -191,9 +191,7 @@ export function MenuItemsList({
               <span
                 className={cn(
                   "grid shrink-0 place-items-center [&>svg]:block",
-                  density === "compact"
-                    ? "size-4 [&>svg]:size-4"
-                    : "size-[1.125rem] [&>svg]:size-[1.125rem]",
+                  density === "compact" ? "size-4 [&>svg]:size-4" : "size-4.5 [&>svg]:size-4.5",
                 )}
               >
                 {item.icon}
@@ -739,12 +737,12 @@ function DropdownMenuContent({
         side={side}
         sideOffset={sideOffset}
         collisionPadding={collisionPadding}
-        className="isolate z-[10070] outline-none"
+        className="isolate z-10070 outline-none"
       >
         <DropdownMenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn(
-            "z-[10070] max-h-(--available-height) min-w-44 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-surface p-1 font-sans ui-text-sm text-foreground shadow-[var(--shadow-popover)] ring-1 ring-border/70 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            "z-10070 max-h-(--available-height) min-w-44 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-surface p-1 font-sans ui-text-sm text-foreground shadow-(--shadow-popover) ring-1 ring-border/70 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             className,
           )}
           {...props}
@@ -908,7 +906,7 @@ function DropdownMenuSubContent(props: DropdownMenuContentProps) {
     <DropdownMenuContent
       data-slot="dropdown-menu-sub-content"
       side="right"
-      className="shadow-[var(--shadow-popover)]"
+      className="shadow-(--shadow-popover)"
       {...props}
     />
   );

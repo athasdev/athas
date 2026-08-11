@@ -211,7 +211,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 <div className="space-y-2">
                   {Object.entries(store.serverInfo).map(([key, value]) => (
                     <div key={key} className="flex gap-2 ui-text-sm">
-                      <span className="font-sans min-w-[140px] text-subtle-foreground">{key}</span>
+                      <span className="font-sans min-w-35 text-subtle-foreground">{key}</span>
                       <span className="font-sans">{value}</span>
                     </div>
                   ))}

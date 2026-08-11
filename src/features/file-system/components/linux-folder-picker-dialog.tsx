@@ -158,7 +158,7 @@ export default function LinuxFolderPickerDialog() {
         </>
       }
       classNames={{
-        modal: "max-w-[640px] rounded-xl",
+        modal: "max-w-160 rounded-xl",
         content: "p-0",
       }}
     >
@@ -206,7 +206,7 @@ export default function LinuxFolderPickerDialog() {
         </div>
       </div>
 
-      <div className="flex min-h-[300px] flex-col">
+      <div className="flex min-h-75 flex-col">
         <div className="flex min-h-8 items-center border-border border-b px-3">
           <span className="ui-text-sm truncate font-medium text-foreground">{title}</span>
           <span className="ui-text-sm ml-auto truncate font-mono text-subtle-foreground">
@@ -233,7 +233,7 @@ export default function LinuxFolderPickerDialog() {
         ) : entries.length === 0 ? (
           <EmptyState message="No folders" />
         ) : (
-          <div className="max-h-[320px] overflow-y-auto py-1">
+          <div className="max-h-80 overflow-y-auto py-1">
             {entries.map((entry) => (
               <Button
                 key={entry.path}

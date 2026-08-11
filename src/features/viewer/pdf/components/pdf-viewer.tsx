@@ -196,7 +196,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
       {/* Main Content */}
       <div
         ref={containerRef}
-        className="absolute inset-x-0 top-10 bottom-9 flex justify-center overflow-auto bg-[var(--editor-bg)] p-8"
+        className="absolute inset-x-0 top-10 bottom-9 flex justify-center overflow-auto bg-(--editor-bg) p-8"
         onClick={handleLinkClick}
       >
         {error ? (
@@ -221,7 +221,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
             {Array.from({ length: numPages }, (_el, index) => (
               <div
                 key={`page_${index + 1}`}
-                className="pdf-page-container bg-white shadow-[var(--shadow-card)]"
+                className="pdf-page-container bg-white shadow-(--shadow-card)"
                 data-page-number={index + 1}
               >
                 <Page

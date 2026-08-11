@@ -51,8 +51,8 @@ interface DialogProps {
 
 const dialogContentVariants = cva(
   [
-    "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-[9999]",
-    "flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-dialog)]",
+    "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-9999",
+    "flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-(--shadow-dialog)",
     "focus:outline-none",
   ],
   {
@@ -90,7 +90,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 z-[9998] bg-black/20 transition-opacity duration-[var(--app-duration-fast)] data-[ending-style]:opacity-0 data-[starting-style]:opacity-0",
+        "fixed inset-0 z-9998 bg-black/20 transition-opacity duration-(--app-duration-fast) data-ending-style:opacity-0 data-starting-style:opacity-0",
         className,
       )}
       {...props}
@@ -115,7 +115,7 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           dialogContentVariants({ size }),
-          "transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
+          "transition-[opacity,transform,filter] duration-(--app-duration-fast) ease-(--app-ease-smooth) data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
           className,
         )}
         {...props}
@@ -235,7 +235,7 @@ const AppDialog = ({
               transition={prefersReducedMotion ? instantTransition : quickTransition}
             />
           }
-          className={cn("fixed inset-0 z-[9998] bg-black/20", classNames?.backdrop)}
+          className={cn("fixed inset-0 z-9998 bg-black/20", classNames?.backdrop)}
         />
 
         <DialogPrimitive.Popup
@@ -267,7 +267,7 @@ const AppDialog = ({
             <div className={cn("flex items-center gap-1", classNames?.headerActions)}>
               {headerActions}
               <DialogPrimitive.Close
-                className="flex size-6 shrink-0 items-center justify-center rounded-md border border-transparent text-subtle-foreground transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-accent hover:text-foreground active:scale-[var(--app-press-scale)]"
+                className="flex size-6 shrink-0 items-center justify-center rounded-md border border-transparent text-subtle-foreground transition-[transform,background-color,border-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:border-border/70 hover:bg-accent hover:text-foreground active:scale-(--app-press-scale)"
                 aria-label="Close dialog"
               >
                 <X />

@@ -140,7 +140,7 @@ export function ChatHeader({
   }, [isMessageSearchOpen]);
 
   return (
-    <div className="relative z-[10020] bg-background">
+    <div className="relative z-10020 bg-background">
       <div className={paneHeaderClassName()}>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">

@@ -847,7 +847,7 @@ export const XtermTerminal = ({
         currentMatch={searchResults.current}
         totalMatches={searchResults.total}
       />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col pl-[16px]">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col pl-4">
         <div
           ref={terminalContainerRef}
           id={`terminal-${sessionId}`}

@@ -1065,7 +1065,7 @@ details: ${errorDetails || mainError}
         <>
           {useInitialComposer ? (
             <div className="flex min-h-0 flex-1 items-center justify-center px-8 py-10">
-              <div className="flex w-full max-w-[720px] flex-col gap-4">
+              <div className="flex w-full max-w-180 flex-col gap-4">
                 <AgentShortcuts surfaceId={surfaceId} />
                 <AIChatInputBar
                   key={effectiveChatId ?? "new-session"}

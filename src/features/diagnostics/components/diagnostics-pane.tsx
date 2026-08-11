@@ -1105,7 +1105,7 @@ const DiagnosticsPane = ({
                                   className={cn(
                                     "font-sans ui-text-sm min-w-0 flex-1",
                                     preferences.wrapMessages
-                                      ? "whitespace-pre-wrap break-words leading-snug"
+                                      ? "whitespace-pre-wrap wrap-break-word leading-snug"
                                       : "truncate",
                                     diagnostic.severity === "error" && "text-destructive",
                                     diagnostic.severity === "warning" && "text-warning",
@@ -1126,7 +1126,7 @@ const DiagnosticsPane = ({
                                     className={cn(
                                       "ui-text-sm mb-1 text-subtle-foreground/90 leading-snug",
                                       preferences.wrapMessages
-                                        ? "whitespace-pre-wrap break-words"
+                                        ? "whitespace-pre-wrap wrap-break-word"
                                         : "truncate",
                                     )}
                                   >
@@ -1135,7 +1135,7 @@ const DiagnosticsPane = ({
                                 )}
 
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="ui-text-sm max-w-[420px] truncate text-subtle-foreground/75">
+                                  <span className="ui-text-sm max-w-105 truncate text-subtle-foreground/75">
                                     {diagnostic.filePath}
                                   </span>
 

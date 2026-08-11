@@ -4,7 +4,7 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 const toggleVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-transparent font-sans font-medium text-subtle-foreground outline-none transition-[transform,background-color,border-color,color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent hover:text-foreground active:scale-[var(--app-press-scale)] focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 data-pressed:bg-selected data-pressed:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-transparent font-sans font-medium text-subtle-foreground outline-none transition-[transform,background-color,border-color,color,box-shadow] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent hover:text-foreground active:scale-(--app-press-scale) focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 data-pressed:bg-selected data-pressed:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       variant: {

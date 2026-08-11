@@ -164,7 +164,7 @@ export function SidebarProjectSwitcher({
             </SidebarListItem>
           }
         />
-        <DropdownMenuContent align="start" className="w-[var(--anchor-width)]">
+        <DropdownMenuContent align="start" className="w-(--anchor-width)">
           {projects.length > 0 ? (
             <>
               <DropdownMenuRadioGroup
@@ -225,7 +225,7 @@ export function SidebarProjectDots({
 
   return (
     <>
-      <div className="scrollbar-hidden pointer-events-none absolute right-[var(--athas-workbench-gap)] bottom-1.5 left-0 z-20 flex items-center justify-center overflow-x-auto px-2">
+      <div className="scrollbar-hidden pointer-events-none absolute right-(--athas-workbench-gap) bottom-1.5 left-0 z-20 flex items-center justify-center overflow-x-auto px-2">
         {projects.map((project) => {
           const isRemote = isRemoteProjectPath(project.path);
           const isActive = project.id === activeProjectId;
@@ -255,7 +255,7 @@ export function SidebarProjectDots({
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "size-1.5 rounded-full bg-foreground transition-[opacity,transform] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
+                    "size-1.5 rounded-full bg-foreground transition-[opacity,transform] duration-(--app-duration-fast) ease-(--app-ease-smooth)",
                     isActive
                       ? "scale-100 opacity-100"
                       : "scale-75 opacity-25 group-hover:scale-100 group-hover:opacity-50",

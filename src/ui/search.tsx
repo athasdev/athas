@@ -68,7 +68,7 @@ export const SearchField = forwardRef<
 });
 
 const searchSurfaceClass =
-  "w-[320px] rounded-xl border border-border/70 bg-background/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm";
+  "w-[320px] rounded-xl border border-border/70 bg-background/95 p-1.5 shadow-(--shadow-popover) backdrop-blur-sm";
 
 export function SearchPopover({
   value,

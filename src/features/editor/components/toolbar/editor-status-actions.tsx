@@ -513,14 +513,14 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               inputClassName="truncate ui-text-sm text-subtle-foreground group-hover/combobox-input:text-foreground"
               className={cn(
                 statusChipClass,
-                "h-5 w-fit max-w-[240px] bg-transparent px-0 focus-within:bg-accent focus-within:text-foreground",
+                "h-5 w-fit max-w-60 bg-transparent px-0 focus-within:bg-accent focus-within:text-foreground",
               )}
               inputStyle={{
                 width: `${Math.min((currentFileDisplayName?.length ?? 10) + 2, 28)}ch`,
               }}
             />
-            <ComboboxContent align="end" className="w-[220px] min-w-[220px]">
-              <ComboboxList className="max-h-[220px] p-1.5">
+            <ComboboxContent align="end" className="w-55 min-w-55">
+              <ComboboxList className="max-h-55 p-1.5">
                 {allLanguages.map((lang) => (
                   <ComboboxItem
                     key={lang.id}
@@ -566,7 +566,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           anchorSide="bottom"
           anchorAlign="end"
           onClose={() => setIsLspOpen(false)}
-          className="w-[260px] p-2"
+          className="w-65 p-2"
         >
           <div className="space-y-2">
             <div className="px-1">
@@ -716,7 +716,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           anchorSide="bottom"
           anchorAlign="end"
           onClose={() => setIsViewMenuOpen(false)}
-          className="w-[220px] p-1.5"
+          className="w-55 p-1.5"
         >
           <div className="space-y-0.5">
             {displayOptions.slice(0, 2).map((option) => (

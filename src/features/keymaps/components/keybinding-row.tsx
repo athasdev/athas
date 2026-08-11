@@ -12,7 +12,7 @@ import { useKeymapStore } from "../stores/keymaps.store";
 import type { Command, Keybinding } from "../types/keymaps.types";
 import { KeybindingInput } from "./keybinding-input";
 
-export const keybindingTableMinWidth = cva("min-w-[700px]");
+export const keybindingTableMinWidth = cva("min-w-175");
 
 interface KeybindingRowProps {
   command: Command;
@@ -111,7 +111,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
           <Badge
             variant={isUserOverride ? "accent" : "default"}
             size="compact"
-            className="h-6 min-w-[68px] px-2"
+            className="h-6 min-w-17 px-2"
           >
             {sourceLabel}
           </Badge>

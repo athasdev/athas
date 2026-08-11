@@ -420,7 +420,7 @@ export function ExtensionGenerationCommand() {
       isVisible={isVisible}
       onClose={close}
       title="Generate extension"
-      className="w-[560px] max-w-[calc(100vw-2rem)]"
+      className="w-140 max-w-[calc(100vw-2rem)]"
     >
       {locked ? (
         <>

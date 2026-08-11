@@ -525,9 +525,11 @@ export function useFileExplorerContextMenu({
           <Dialog title="Properties" icon={Info} onClose={() => setPropertiesDialog(null)}>
             <dl className="grid grid-cols-[72px_1fr] gap-x-3 gap-y-2 font-sans ui-text-base">
               <dt className="text-subtle-foreground">File</dt>
-              <dd className="min-w-0 break-words text-foreground">{propertiesDialog.fileName}</dd>
+              <dd className="min-w-0 wrap-break-word text-foreground">
+                {propertiesDialog.fileName}
+              </dd>
               <dt className="text-subtle-foreground">Path</dt>
-              <dd className="min-w-0 break-words text-foreground">{propertiesDialog.path}</dd>
+              <dd className="min-w-0 wrap-break-word text-foreground">{propertiesDialog.path}</dd>
               <dt className="text-subtle-foreground">Size</dt>
               <dd className="text-foreground">{propertiesDialog.size}</dd>
               <dt className="text-subtle-foreground">Type</dt>

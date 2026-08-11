@@ -43,7 +43,7 @@ export default function CellRenderer({
           onClick={() => setExpanded(!expanded)}
           variant="ghost"
           size="xs"
-          className="block h-auto max-w-[280px] truncate p-0 text-left font-sans font-normal text-primary"
+          className="block h-auto max-w-70 truncate p-0 text-left font-sans font-normal text-primary"
           tooltip="Click to expand JSON"
         >
           {expanded ? value : truncateText(value, 50)}
@@ -111,7 +111,7 @@ export default function CellRenderer({
           variant="ghost"
           size="xs"
           className={cn(
-            "block h-auto max-w-[280px] p-0 text-left font-normal",
+            "block h-auto max-w-70 p-0 text-left font-normal",
             expanded ? "whitespace-pre-wrap" : "truncate",
             isPrimaryKey && "text-foreground",
           )}

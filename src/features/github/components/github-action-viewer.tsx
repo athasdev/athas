@@ -818,7 +818,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               </Button>
                             </div>
                           ) : filteredStepLogs ? (
-                            <pre className="ui-text-sm whitespace-pre-wrap break-words font-mono leading-5 text-muted-foreground">
+                            <pre className="ui-text-sm whitespace-pre-wrap wrap-break-word font-mono leading-5 text-muted-foreground">
                               {filteredStepLogs.split(/\r?\n/).map((line, lineIndex, lines) => (
                                 <span key={`${lineIndex}-${line}`}>
                                   {getLogLineSegments(line, logSearchQuery).map(

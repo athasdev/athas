@@ -65,8 +65,8 @@ export function ModelSelector({
       onOpenChange={onOpenChange}
       tooltip={tooltip}
       className={cn(!isComposer && "w-fit max-w-full", className)}
-      triggerClassName={cn(isComposer ? "max-w-[176px]" : "w-fit max-w-full", triggerClassName)}
-      menuClassName="w-fit min-w-0 max-w-[var(--available-width)] p-0"
+      triggerClassName={cn(isComposer ? "max-w-44" : "w-fit max-w-full", triggerClassName)}
+      menuClassName="w-fit min-w-0 max-w-(--available-width) p-0"
       menuMinWidth={isComposer ? 260 : 0}
       menuAnimated={!isComposer}
       menuHeader={

@@ -95,7 +95,7 @@ export const FileDiffView = memo(
         )}
         {isExpanded && (
           <div className="bg-background">
-            <div className="max-h-[540px] overflow-auto">
+            <div className="max-h-135 overflow-auto">
               {isLoadingPatch ? (
                 <Empty className="min-h-0 flex-none rounded-none py-6">
                   <EmptyDescription>

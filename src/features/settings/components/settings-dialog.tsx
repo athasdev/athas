@@ -280,7 +280,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         }
         classNames={{
           modal:
-            "h-[74vh] max-h-[820px] w-[90vw] max-w-[1120px] min-w-0 border-0 bg-surface max-[720px]:h-[86vh] max-[720px]:w-[calc(100vw-32px)] [&>div:first-child]:border-b-0",
+            "h-[74vh] max-h-205 w-[90vw] max-w-280 min-w-0 border-0 bg-surface max-[720px]:h-[86vh] max-[720px]:w-[calc(100vw-32px)] [&>div:first-child]:border-b-0",
           header:
             "bg-surface max-[720px]:grid max-[720px]:grid-cols-[minmax(0,1fr)_auto] max-[720px]:gap-2",
           title: "max-[720px]:min-w-0",

@@ -224,7 +224,7 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
           ))}
         </div>
         <div className="min-h-0 flex-1 overflow-hidden p-4">
-          <pre className="h-full overflow-hidden whitespace-pre-wrap break-words ui-text-sm leading-5 text-subtle-foreground">
+          <pre className="h-full overflow-hidden whitespace-pre-wrap wrap-break-word ui-text-sm leading-5 text-subtle-foreground">
             {summary}
           </pre>
         </div>
@@ -253,7 +253,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
       <div className="shrink-0 bg-surface/60 px-3 py-3">
         <div className="flex min-w-0 items-start gap-2">
-          <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-success/80" />
+          <div className="mt-0.5 size-4 shrink-0 rounded-lg bg-success/80" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <Badge size="compact" className="font-mono">
@@ -1096,7 +1096,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           {shouldRenderCarousel ? (
             <div
               ref={carouselViewportRef}
-              className="scrollbar-hidden flex h-full items-stretch gap-4 overflow-x-auto overflow-y-hidden px-4 py-4 [overscroll-behavior-x:contain]"
+              className="scrollbar-hidden flex h-full items-stretch gap-4 overflow-x-auto overflow-y-hidden px-4 py-4 overscroll-x-contain"
               onWheelCapture={handleCarouselWheel}
             >
               {paneBuffers.map((buffer) => {
@@ -1111,7 +1111,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     key={buffer.id}
                     data-buffer-card-id={buffer.id}
                     className={cn(
-                      "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]",
+                      "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-(--app-duration-normal) ease-(--app-ease-smooth)",
                       isActiveBuffer
                         ? "border-primary/50 bg-background shadow-[0_0_0_1px_rgba(99,102,241,0.15)]"
                         : "border-border/70 bg-background hover:border-border/90",

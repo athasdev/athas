@@ -61,11 +61,8 @@ export function ProviderSelector({
       onOpenChange={onOpenChange}
       tooltip={tooltip}
       className={cn(!isComposer && "w-fit max-w-full", className)}
-      triggerClassName={cn(
-        isComposer ? "max-w-[128px]" : "w-fit max-w-full gap-2",
-        triggerClassName,
-      )}
-      menuClassName="w-fit min-w-0 max-w-[var(--available-width)] p-0"
+      triggerClassName={cn(isComposer ? "max-w-32" : "w-fit max-w-full gap-2", triggerClassName)}
+      menuClassName="w-fit min-w-0 max-w-(--available-width) p-0"
       menuMinWidth={isComposer ? 220 : 0}
       menuAnimated={!isComposer}
     />

@@ -94,7 +94,7 @@ describe("settings UI contract", () => {
 
       expect(source, fileName).toContain('!isComposer && "w-fit max-w-full"');
       expect(source, fileName).toContain(
-        'menuClassName="w-fit min-w-0 max-w-[var(--available-width)] p-0"',
+        'menuClassName="w-fit min-w-0 max-w-(--available-width) p-0"',
       );
     }
   });

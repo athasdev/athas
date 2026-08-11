@@ -10,7 +10,7 @@ interface DiffLineBackgroundLayerProps {
 
 function DiffLineBackgroundLayerComponent({ lineKinds, lineHeight }: DiffLineBackgroundLayerProps) {
   return (
-    <div className="pointer-events-none absolute inset-0 z-[1]">
+    <div className="pointer-events-none absolute inset-0 z-1">
       {lineKinds.map((lineKind, index) => {
         if (lineKind === "context" || lineKind === "spacer") return null;
 

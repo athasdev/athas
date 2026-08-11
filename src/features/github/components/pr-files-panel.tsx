@@ -124,7 +124,7 @@ export const PRFilesPanel = memo(
     }
 
     return (
-      <div className="flex min-h-[560px] min-w-0 items-stretch overflow-hidden bg-background">
+      <div className="flex min-h-140 min-w-0 items-stretch overflow-hidden bg-background">
         {isFileTreeVisible ? (
           <FileNavigatorSidebar
             items={fileTreeItems}
@@ -185,7 +185,7 @@ export const PRFilesPanel = memo(
             </div>
           </div>
 
-          <div className="min-h-[560px] min-w-0 overflow-hidden bg-background">
+          <div className="min-h-140 min-w-0 overflow-hidden bg-background">
             {selectedDiffFile ? (
               <FileDiffView
                 file={selectedDiffFile}

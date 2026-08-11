@@ -249,7 +249,7 @@ export function GitHubNotificationsMenu() {
         anchorRef={buttonRef}
         anchorAlign="end"
         onClose={() => setIsOpen(false)}
-        className="w-[380px] overflow-hidden rounded-xl p-0"
+        className="w-95 overflow-hidden rounded-xl p-0"
       >
         <div className="flex items-center gap-2 border-border/70 border-b px-3 py-2">
           <div className="font-medium text-foreground ui-text-base">Notifications</div>
@@ -266,7 +266,9 @@ export function GitHubNotificationsMenu() {
               <AlertCircle className="mt-0.5 size-4 shrink-0" />
               <div className="min-w-0">
                 <div className="font-medium ui-text-sm">Could not load notifications</div>
-                <div className="mt-1 break-words text-subtle-foreground ui-text-sm">{error}</div>
+                <div className="mt-1 wrap-break-word text-subtle-foreground ui-text-sm">
+                  {error}
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -288,7 +290,7 @@ export function GitHubNotificationsMenu() {
             No unread notifications.
           </div>
         ) : (
-          <div className="max-h-[360px] overflow-y-auto p-1">
+          <div className="max-h-90 overflow-y-auto p-1">
             {notifications.map((notification) => {
               const reason = notificationReasonLabel(notification.reason);
               return (

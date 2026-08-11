@@ -10,7 +10,7 @@ const cardVariants = cva(
         default: "border border-border/70 bg-surface/45",
         muted: "bg-surface/55",
         outline: "border border-border/70 bg-transparent",
-        elevated: "bg-surface/65 shadow-[var(--shadow-card)]",
+        elevated: "bg-surface/65 shadow-(--shadow-card)",
       },
       size: {
         flush: "gap-0 py-0 [--card-spacing:0rem]",
@@ -47,7 +47,7 @@ function CardHeader({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="card-header"
       className={cn(
-        "grid auto-rows-min items-start gap-1 px-[var(--card-spacing)] has-data-[slot=card-action]:grid-cols-[1fr_auto]",
+        "grid auto-rows-min items-start gap-1 px-(--card-spacing) has-data-[slot=card-action]:grid-cols-[1fr_auto]",
         className,
       )}
       {...props}
@@ -87,11 +87,7 @@ function CardAction({ className, ...props }: ComponentProps<"div">) {
 
 function CardContent({ className, ...props }: ComponentProps<"div">) {
   return (
-    <div
-      data-slot="card-content"
-      className={cn("px-[var(--card-spacing)]", className)}
-      {...props}
-    />
+    <div data-slot="card-content" className={cn("px-(--card-spacing)", className)} {...props} />
   );
 }
 
@@ -100,7 +96,7 @@ function CardFooter({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="card-footer"
       className={cn(
-        "flex items-center border-border/70 border-t bg-surface/55 px-[var(--card-spacing)] pt-[var(--card-spacing)]",
+        "flex items-center border-border/70 border-t bg-surface/55 px-(--card-spacing) pt-(--card-spacing)",
         className,
       )}
       {...props}

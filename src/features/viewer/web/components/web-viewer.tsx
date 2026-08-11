@@ -862,7 +862,7 @@ export function WebViewer({
       )}
 
       <div className="min-h-0 flex-1 bg-background p-1.5">
-        <div className="relative h-full overflow-hidden rounded-lg border border-border/70 bg-background shadow-[var(--shadow-card)]">
+        <div className="relative h-full overflow-hidden rounded-lg border border-border/70 bg-background shadow-(--shadow-card)">
           <div ref={containerRef} className="absolute inset-px overflow-hidden rounded-[7px]">
             {!currentUrl && !isLoading && (
               <Empty className="absolute inset-0 bg-background px-6">

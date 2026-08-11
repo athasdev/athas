@@ -592,7 +592,7 @@ const GitStatusPanel = ({
                 anchorAlign="start"
                 onClose={() => setIsDiffMenuOpen(false)}
                 items={diffMenuItems}
-                className="min-w-[150px]"
+                className="min-w-37.5"
               />
               {renderDiffStatsBadge(allDiffStats, "shrink-0")}
             </div>

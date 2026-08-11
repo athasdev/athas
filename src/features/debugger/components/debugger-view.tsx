@@ -506,7 +506,7 @@ export default function DebuggerView() {
                   <div
                     key={`${output.sessionId}-${index}`}
                     className={cn(
-                      "whitespace-pre-wrap break-words px-3 py-1 font-mono ui-text-sm",
+                      "whitespace-pre-wrap wrap-break-word px-3 py-1 font-mono ui-text-sm",
                       output.stream === "stderr" ? "text-destructive" : "text-subtle-foreground",
                     )}
                   >

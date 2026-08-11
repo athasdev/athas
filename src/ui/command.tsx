@@ -25,7 +25,7 @@ interface CommandProps {
 const commandInputSelector = "[data-command-input]";
 
 const commandContentVariants = cva(
-  "relative z-10 flex max-h-[min(68vh,32rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-dialog)] focus:outline-none",
+  "relative z-10 flex max-h-[min(68vh,32rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-(--shadow-dialog) focus:outline-none",
 );
 
 const commandItemVariants = cva(
@@ -37,7 +37,7 @@ const commandItemVariants = cva(
         false: "bg-transparent text-foreground hover:bg-accent",
       },
       density: {
-        default: "ui-text-base mb-1 min-h-8 gap-2.5 rounded-lg px-2.5 py-2 leading-[1.35]",
+        default: "ui-text-base mb-1 min-h-8 gap-2.5 rounded-lg px-2.5 py-2 leading-row",
         compact: "ui-text-sm mb-0.5 min-h-7 gap-1.5 rounded-md px-2 py-1 leading-normal",
       },
     },
@@ -55,7 +55,7 @@ const commandInputClassName = cva(
 );
 
 const commandItemActionVariants = cva(
-  "shrink-0 transition-[opacity,background-color,color] duration-[var(--app-duration-fast)]",
+  "shrink-0 transition-[opacity,background-color,color] duration-(--app-duration-fast)",
   {
     variants: {
       visibility: {
@@ -88,7 +88,7 @@ type CommandHeaderBadgeProps = React.ComponentProps<typeof Badge>;
 export const CommandHeaderBadge = ({ className, ...props }: CommandHeaderBadgeProps) => (
   <Badge
     className={cn(
-      "h-auto min-h-7 max-w-40 shrink-0 bg-surface/70 px-2 leading-[1.35] text-subtle-foreground ui-text-base",
+      "h-auto min-h-7 max-w-40 shrink-0 bg-surface/70 px-2 leading-row text-subtle-foreground ui-text-base",
       className,
     )}
     {...props}
@@ -138,7 +138,7 @@ const Command = ({
         <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
           <DialogPrimitive.Portal>
             <div
-              className="fixed inset-0 z-[10060] flex items-start justify-center pt-16"
+              className="fixed inset-0 z-10060 flex items-start justify-center pt-16"
               onMouseDown={(event) => {
                 if (event.target !== event.currentTarget) return;
                 event.preventDefault();
@@ -712,7 +712,7 @@ CommandFooterAction.displayName = "CommandFooterAction";
 export const CommandEmpty = ({ className, ...props }: React.ComponentProps<"div">) => (
   <div
     data-slot="command-empty"
-    className={cn("ui-text-base p-3 text-center leading-[1.35] text-subtle-foreground", className)}
+    className={cn("ui-text-base p-3 text-center leading-row text-subtle-foreground", className)}
     {...props}
   />
 );

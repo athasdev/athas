@@ -823,7 +823,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 anchorAlign="end"
                 onClose={() => setIsSyncMenuOpen(false)}
                 items={syncMenuItems}
-                className="min-w-[132px]"
+                className="min-w-33"
               />
             </div>
           </SidebarToolbar>

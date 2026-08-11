@@ -76,7 +76,7 @@ const inlineRenameInputVariants = cva("font-sans ui-text-sm", {
     },
     width: {
       full: "w-full",
-      content: "w-auto min-w-[1ch] max-w-full [field-sizing:content]",
+      content: "w-auto min-w-[1ch] max-w-full field-sizing-content",
     },
   },
   defaultVariants: {

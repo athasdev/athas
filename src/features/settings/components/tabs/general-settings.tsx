@@ -340,7 +340,7 @@ function ReportBugCommandDialog({
   };
 
   return (
-    <Command isVisible onClose={onClose} title="Report a Bug" className="w-[520px]">
+    <Command isVisible onClose={onClose} title="Report a Bug" className="w-130">
       <CommandHeader onClose={onClose}>
         <CommandInput
           ref={inputRef}

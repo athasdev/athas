@@ -26,7 +26,7 @@ export const ChatComposer = forwardRef<
         ref={ref}
         data-ai-element="prompt-input"
         className={cn(
-          "rounded-2xl bg-surface/55 shadow-[var(--shadow-card)] transition-[border-radius,background-color,box-shadow]",
+          "rounded-2xl bg-surface/55 shadow-(--shadow-card) transition-[border-radius,background-color,box-shadow]",
           rootClassName,
         )}
         {...props}
@@ -53,7 +53,7 @@ export function ChatComposerBody({
       data-ai-element="prompt-input-body"
       variant={variant === "prominent" ? "plain" : "surface"}
       className={cn(
-        "transition-[border-color,background-color,box-shadow] duration-[var(--app-duration-fast)]",
+        "transition-[border-color,background-color,box-shadow] duration-(--app-duration-fast)",
         variant === "prominent" && "rounded-2xl bg-background",
         connected && "rounded-t-none",
         className,
@@ -74,7 +74,7 @@ export const ChatComposerEditable = forwardRef<
       ref={ref}
       data-ai-element="prompt-input-editable"
       className={cn(
-        "max-h-[140px] min-h-[64px] w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent",
+        "max-h-35 min-h-16 w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent",
         "font-sans ui-text-sm px-3 pt-3 pb-2 text-foreground placeholder:text-subtle-foreground",
         "whitespace-pre-wrap text-left focus:outline-none",
         enabled ? "cursor-text" : "cursor-not-allowed opacity-50",

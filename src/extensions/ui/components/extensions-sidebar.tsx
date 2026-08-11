@@ -1584,7 +1584,7 @@ export const ExtensionsSidebar = () => {
             </div>
           </div>
 
-          <div className="flex min-w-[260px] flex-1 items-center justify-end gap-2 sm:flex-none">
+          <div className="flex min-w-65 flex-1 items-center justify-end gap-2 sm:flex-none">
             <SearchField
               ref={searchInputRef}
               autoFocus

@@ -20,14 +20,14 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
     if (!state.inlineEditVisible || !state.popoverPosition) return null;
 
     return (
-      <div ref={ref} className="pointer-events-none absolute inset-0 z-[200]">
+      <div ref={ref} className="pointer-events-none absolute inset-0 z-200">
         <div
           ref={state.inlineEditPopoverRef}
           role="dialog"
           aria-modal="false"
           aria-labelledby="inline-edit-title"
           aria-describedby="inline-edit-description"
-          className="pointer-events-auto absolute overflow-hidden rounded-md border border-border/70 bg-background shadow-[var(--shadow-popover)]"
+          className="pointer-events-auto absolute overflow-hidden rounded-md border border-border/70 bg-background shadow-(--shadow-popover)"
           style={{
             top: `${zoneTop ?? state.popoverPosition.top}px`,
             left: `${state.popoverPosition.left}px`,

@@ -23,7 +23,7 @@ interface GlobalSearchStateProps {
 
 function SearchIntroduction({ title, description }: { title: string; description: string }) {
   return (
-    <Empty className="h-full min-h-[320px] px-6">
+    <Empty className="h-full min-h-80 px-6">
       <EmptyHeader>
         <EmptyMedia variant="icon" className="size-11 border border-border bg-surface">
           <MagnifyingGlass className="size-6" weight="duotone" />
@@ -56,7 +56,7 @@ export function GlobalSearchState({
 
   if (availability === "unsupported") {
     return (
-      <Empty className="min-h-[240px] px-6">
+      <Empty className="min-h-60 px-6">
         <EmptyDescription className="ui-text-base">
           Global search is not available for this workspace type.
         </EmptyDescription>
@@ -75,7 +75,7 @@ export function GlobalSearchState({
 
   if (showBusy && busyLabel) {
     return (
-      <Empty className="min-h-[240px]" role="status" aria-live="polite">
+      <Empty className="min-h-60" role="status" aria-live="polite">
         <EmptyDescription className="ui-text-base">{busyLabel}</EmptyDescription>
       </Empty>
     );
@@ -83,7 +83,7 @@ export function GlobalSearchState({
 
   if (error) {
     return (
-      <Empty className="min-h-[240px] px-6" role="alert">
+      <Empty className="min-h-60 px-6" role="alert">
         <EmptyHeader>
           <EmptyTitle>Search failed</EmptyTitle>
           <EmptyDescription className="ui-text-base text-destructive">{error}</EmptyDescription>
@@ -99,7 +99,7 @@ export function GlobalSearchState({
 
   if (debouncedQuery.trim()) {
     return (
-      <Empty className="min-h-[240px]" role="status">
+      <Empty className="min-h-60" role="status">
         <EmptyHeader>
           <EmptyTitle>No results found</EmptyTitle>
           <EmptyDescription className="ui-text-base">

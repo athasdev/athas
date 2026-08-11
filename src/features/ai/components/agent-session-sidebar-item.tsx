@@ -128,7 +128,7 @@ export function AgentSessionSidebarItem({
         align="start"
         sideOffset={10}
         collisionPadding={10}
-        className="z-[10080] w-72 overflow-hidden p-0"
+        className="z-10080 w-72 overflow-hidden p-0"
       >
         <div className="border-border/70 border-b p-3">
           <div className="flex min-w-0 items-start gap-2.5">

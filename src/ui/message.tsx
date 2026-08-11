@@ -49,7 +49,7 @@ function MessageContent({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="message-content"
       className={cn(
-        "flex w-full min-w-0 flex-col gap-1 break-words group-data-[align=end]/message:*:data-slot:self-end",
+        "flex w-full min-w-0 flex-col gap-1 wrap-break-word group-data-[align=end]/message:*:data-slot:self-end",
         className,
       )}
       {...props}
@@ -88,7 +88,7 @@ function MessageResponse({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="message-response"
       className={cn(
-        "select-text pr-1 leading-relaxed text-foreground [overflow-wrap:anywhere] *:select-text [&_.select-none]:!select-none [&_[aria-label]]:!select-none [&_[role=button]]:!select-none [&_button]:!select-none",
+        "select-text pr-1 leading-relaxed text-foreground wrap-anywhere *:select-text [&_.select-none]:select-none! **:aria-[label]:select-none! **:[[role=button]]:select-none! [&_button]:select-none!",
         className,
       )}
       {...props}

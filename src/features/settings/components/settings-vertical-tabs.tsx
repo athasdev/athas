@@ -157,7 +157,7 @@ export const SettingsVerticalTabs = ({
                         : "text-foreground hover:bg-accent",
                     )}
                   >
-                    <Icon className="size-[18px] shrink-0 text-current" weight="duotone" />
+                    <Icon className="size-4.5 shrink-0 text-current" weight="duotone" />
                     <span className="truncate">{item.label}</span>
                   </TabsTrigger>
                 );

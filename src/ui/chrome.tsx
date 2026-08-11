@@ -8,12 +8,12 @@ export const chromeBarVariants = cva(
     variants: {
       region: {
         title:
-          "h-[var(--athas-title-bar-height)] gap-[var(--athas-chrome-gap)] bg-transparent px-[var(--athas-chrome-padding-inline)]",
+          "h-(--athas-title-bar-height) gap-(--athas-chrome-gap) bg-transparent px-(--athas-chrome-padding-inline)",
         footer:
-          "h-[var(--athas-footer-height)] gap-[var(--athas-chrome-gap)] bg-transparent px-[var(--athas-chrome-padding-inline)]",
-        tabs: "h-[var(--athas-tab-bar-height)] min-h-[var(--athas-tab-bar-height)] gap-[var(--athas-chrome-gap)] bg-tab-bar px-[var(--athas-chrome-padding-inline)]",
+          "h-(--athas-footer-height) gap-(--athas-chrome-gap) bg-transparent px-(--athas-chrome-padding-inline)",
+        tabs: "h-(--athas-tab-bar-height) min-h-(--athas-tab-bar-height) gap-(--athas-chrome-gap) bg-tab-bar px-(--athas-chrome-padding-inline)",
         sidebar:
-          "min-h-[var(--athas-sidebar-header-height)] gap-[var(--athas-chrome-gap)] bg-background/92 px-[var(--athas-chrome-padding-inline)]",
+          "min-h-(--athas-sidebar-header-height) gap-(--athas-chrome-gap) bg-background/92 px-(--athas-chrome-padding-inline)",
       },
       emphasis: {
         supporting: "text-subtle-foreground",
@@ -36,9 +36,9 @@ export const chromeGroupVariants = cva("flex min-w-0 items-center", {
   variants: {
     gap: {
       none: "gap-0",
-      tight: "gap-[var(--athas-chrome-gap-tight)]",
-      default: "gap-[var(--athas-chrome-gap)]",
-      loose: "gap-[var(--athas-chrome-gap-loose)]",
+      tight: "gap-(--athas-chrome-gap-tight)",
+      default: "gap-(--athas-chrome-gap)",
+      loose: "gap-(--athas-chrome-gap-loose)",
     },
     grow: {
       true: "flex-1",
@@ -58,22 +58,19 @@ export const chromeGroupVariants = cva("flex min-w-0 items-center", {
   },
 });
 
-export const chromeLabelVariants = cva(
-  "min-w-0 truncate leading-[var(--athas-chrome-line-height)]",
-  {
-    variants: {
-      tone: {
-        muted: "text-subtle-foreground",
-        default: "text-muted-foreground",
-        strong: "font-medium text-foreground",
-        accent: "font-medium text-primary",
-      },
-    },
-    defaultVariants: {
-      tone: "default",
+export const chromeLabelVariants = cva("min-w-0 truncate leading-(--athas-chrome-line-height)", {
+  variants: {
+    tone: {
+      muted: "text-subtle-foreground",
+      default: "text-muted-foreground",
+      strong: "font-medium text-foreground",
+      accent: "font-medium text-primary",
     },
   },
-);
+  defaultVariants: {
+    tone: "default",
+  },
+});
 
 export function ChromeBar({
   className,

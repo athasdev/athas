@@ -63,10 +63,10 @@ export interface SelectProps {
 }
 
 const selectItemClassName =
-  "font-sans ui-text-sm relative flex min-h-7 w-full cursor-default select-none items-center gap-2 rounded-lg px-2 py-1.5 text-left text-foreground outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[highlighted]:bg-accent data-[selected]:bg-selected/70 disabled:pointer-events-none disabled:opacity-50";
+  "font-sans ui-text-sm relative flex min-h-7 w-full cursor-default select-none items-center gap-2 rounded-lg px-2 py-1.5 text-left text-foreground outline-none transition-[transform,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) data-highlighted:bg-accent data-selected:bg-selected/70 disabled:pointer-events-none disabled:opacity-50";
 
 const selectPopupClassName =
-  "max-h-[var(--available-height)] w-[var(--anchor-width)] max-w-[var(--available-width)] min-w-36 origin-[var(--transform-origin)] overflow-hidden rounded-xl border border-border bg-surface/95 text-foreground shadow-[var(--shadow-popover)] backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] [filter:blur(0)] data-[ending-style]:opacity-0 data-[ending-style]:[filter:blur(2px)] data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0 data-[starting-style]:[filter:blur(2px)]";
+  "max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-36 origin-(--transform-origin) overflow-hidden rounded-xl border border-border bg-surface/95 text-foreground shadow-(--shadow-popover) backdrop-blur-sm transition-[opacity,transform,filter] duration-(--app-duration-fast) ease-(--app-ease-smooth) filter-[blur(0)] data-ending-style:opacity-0 data-ending-style:filter-[blur(2px)] data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-starting-style:filter-[blur(2px)]";
 
 const selectTriggerSizeClassName = {
   xs: "ui-text-sm",
@@ -239,14 +239,14 @@ function PlainSelect({
             align="start"
             alignItemWithTrigger={false}
             collisionPadding={8}
-            className="isolate z-[10070]"
+            className="isolate z-10070"
           >
             <SelectPrimitive.Popup
               data-prevent-dialog-escape="true"
               style={popupStyle}
               className={cn(
                 selectPopupClassName,
-                !menuAnimated && "duration-0 data-[ending-style]:transform-none",
+                !menuAnimated && "duration-0 data-ending-style:transform-none",
                 menuClassName,
               )}
             >
@@ -447,8 +447,8 @@ function SearchableSelect({
         data-prevent-dialog-escape="true"
         style={popupStyle}
         className={cn(
-          "z-[10070]",
-          !menuAnimated && "duration-0 data-[ending-style]:transform-none",
+          "z-10070",
+          !menuAnimated && "duration-0 data-ending-style:transform-none",
           menuClassName,
         )}
       >

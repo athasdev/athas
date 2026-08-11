@@ -303,7 +303,7 @@ export function MainLayout() {
 
       <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden">
         <div
-          className="flex flex-1 flex-row overflow-hidden pr-[var(--athas-workbench-gap)]"
+          className="flex flex-1 flex-row overflow-hidden pr-(--athas-workbench-gap)"
           style={{ minHeight: 0 }}
         >
           <SidebarActivityRail expanded={activityRailExpanded} />
@@ -369,7 +369,7 @@ export function MainLayout() {
         </div>
 
         {terminalWidthMode === "full" && deferredSurfacesReady && (
-          <div className="px-[var(--athas-workbench-gap)]">
+          <div className="px-(--athas-workbench-gap)">
             <Suspense fallback={null}>
               <BottomPane />
             </Suspense>

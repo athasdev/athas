@@ -174,7 +174,7 @@ const GitHubMarkdown = memo(
           {renderedHtml !== null ? (
             <div dangerouslySetInnerHTML={{ __html: renderedHtml }} />
           ) : (
-            <div className="whitespace-pre-wrap break-words">{normalizedContent}</div>
+            <div className="whitespace-pre-wrap wrap-break-word">{normalizedContent}</div>
           )}
         </div>
       </div>

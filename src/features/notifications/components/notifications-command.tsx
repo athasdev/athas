@@ -462,7 +462,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
         anchorAlign="end"
         items={filterMenuItems}
         onClose={() => setIsFilterMenuOpen(false)}
-        className="z-[10070] w-fit min-w-fit"
+        className="z-10070 w-fit min-w-fit"
       />
       <Command
         isVisible={activeNotification !== null}
@@ -499,7 +499,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
             <CommandList>
               {activeNotification.description ? (
                 <div className="border-border/70 border-b px-3 py-2">
-                  <pre className="font-sans ui-text-base max-h-40 overflow-auto whitespace-pre-wrap break-words text-muted-foreground">
+                  <pre className="font-sans ui-text-base max-h-40 overflow-auto whitespace-pre-wrap wrap-break-word text-muted-foreground">
                     {activeNotification.description}
                   </pre>
                 </div>

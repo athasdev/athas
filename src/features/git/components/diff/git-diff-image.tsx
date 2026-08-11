@@ -28,7 +28,7 @@ const ImageContainer = memo(({ label, labelColor, base64, alt, zoom }: ImageCont
       {label === "Removed" ? <Minus /> : <Plus />}
       {label}
     </div>
-    <div className="flex flex-1 items-center justify-center overflow-auto bg-[length:16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
+    <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
       {base64 ? (
         <img
           src={getImgSrc(base64)}
@@ -108,7 +108,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
               <Plus />
               New Image
             </div>
-            <div className="flex flex-1 items-center justify-center overflow-auto bg-[length:16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
+            <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
               <img
                 src={getImgSrc(diff.new_blob_base64)}
                 alt={fileName}
@@ -123,7 +123,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
               <Minus />
               Removed Image
             </div>
-            <div className="flex flex-1 items-center justify-center overflow-auto bg-[length:16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
+            <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
               <img
                 src={getImgSrc(diff.old_blob_base64)}
                 alt={fileName}

@@ -489,7 +489,7 @@ const GitCommitPanel = ({
             anchorAlign="end"
             onClose={() => setIsGenerateModeMenuOpen(false)}
             items={generateModeItems}
-            className="min-w-[150px]"
+            className="min-w-37.5"
           />
 
           <Button

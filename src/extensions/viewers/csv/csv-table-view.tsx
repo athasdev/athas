@@ -94,7 +94,7 @@ export function TableView({
                     <div
                       key={cIndex}
                       className={cn(
-                        "ui-text-sm max-w-[360px] border-border border-b px-2",
+                        "ui-text-sm max-w-90 border-border border-b px-2",
                         cIndex > 0 && "border-border border-l",
                         dense ? "py-1" : "py-2",
                       )}
@@ -125,7 +125,7 @@ export function TableView({
                   <div
                     key={cIndex}
                     className={cn(
-                      "ui-text-sm max-w-[360px] border-border border-b px-2",
+                      "ui-text-sm max-w-90 border-border border-b px-2",
                       cIndex > 0 && "border-border border-l",
                       dense ? "py-1" : "py-2",
                     )}

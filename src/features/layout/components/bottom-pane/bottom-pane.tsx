@@ -195,8 +195,8 @@ const BottomPane = () => {
     <div
       onMouseDown={handleMouseDown}
       className={cn(
-        "group relative flex h-[var(--athas-workbench-gap)] w-full shrink-0 cursor-ns-resize items-center justify-center",
-        "transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-primary/8",
+        "group relative flex h-(--athas-workbench-gap) w-full shrink-0 cursor-ns-resize items-center justify-center",
+        "transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-primary/8",
         isResizing && "bg-primary/8",
       )}
       role="separator"
@@ -205,7 +205,7 @@ const BottomPane = () => {
     >
       <div
         className={cn(
-          "h-px w-full bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-primary",
+          "h-px w-full bg-transparent transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) group-hover:bg-primary",
           isResizing && "bg-primary",
         )}
       />

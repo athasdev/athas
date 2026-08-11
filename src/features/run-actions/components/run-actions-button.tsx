@@ -247,7 +247,7 @@ export default function RunActionsButton() {
         anchorAlign="end"
         onClose={closeMenu}
         closeOnSelect={false}
-        className="w-[360px] max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl p-0"
+        className="w-90 max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl p-0"
       >
         <div className="border-border/70 border-b bg-surface/35 px-3 pt-2.5 pb-2">
           <div className="mb-2 flex items-center justify-between gap-2">

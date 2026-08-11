@@ -12,7 +12,7 @@ import { instantTransition, overlayEntrance } from "@/utils/motion";
 import { cn } from "@/utils/cn";
 
 const popoverContentVariants = cva(
-  "pointer-events-auto fixed z-[10070] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-surface/95 p-1 shadow-[var(--shadow-popover)] backdrop-blur-sm [overscroll-behavior:contain]",
+  "pointer-events-auto fixed z-10070 min-w-60 max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-surface/95 p-1 shadow-(--shadow-popover) backdrop-blur-sm overscroll-contain",
 );
 
 function containScrollChain(event: ReactWheelEvent<HTMLDivElement>) {
@@ -131,12 +131,12 @@ function PopoverContent({
         side={side}
         sideOffset={sideOffset}
         collisionPadding={collisionPadding}
-        className="isolate z-[10070]"
+        className="isolate z-10070"
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "z-[10070] flex w-72 origin-[var(--transform-origin)] flex-col gap-2.5 rounded-xl border border-border bg-surface/95 p-2.5 font-sans ui-text-sm text-foreground shadow-[var(--shadow-popover)] outline-none backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
+            "z-10070 flex w-72 origin-(--transform-origin) flex-col gap-2.5 rounded-xl border border-border bg-surface/95 p-2.5 font-sans ui-text-sm text-foreground shadow-(--shadow-popover) outline-none backdrop-blur-sm transition-[opacity,transform,filter] duration-(--app-duration-fast) ease-(--app-ease-smooth) data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
             className,
           )}
           {...props}

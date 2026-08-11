@@ -183,7 +183,7 @@ export const InlineEditModelSelector = ({
         size="xs"
         onClick={openSelector}
         disabled={disabled}
-        className="max-w-[144px] justify-start px-1.5 text-foreground"
+        className="max-w-36 justify-start px-1.5 text-foreground"
         tooltip="Inline edit model"
       >
         <span className="truncate ui-text-base">
@@ -194,7 +194,7 @@ export const InlineEditModelSelector = ({
       <Command
         isVisible={isOpen}
         onClose={closeSelector}
-        className="inline-edit-model-command max-h-[420px] w-[480px]"
+        className="inline-edit-model-command max-h-105 w-120"
         title="Inline edit model"
       >
         <CommandHeader onClose={closeSelector}>

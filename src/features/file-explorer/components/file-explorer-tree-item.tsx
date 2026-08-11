@@ -151,7 +151,7 @@ function FileExplorerTreeItemComponent({
               fileName={file.isDir ? "folder" : "file"}
               isDir={file.isDir}
               isExpanded={false}
-              className="relative z-[1] shrink-0 text-subtle-foreground"
+              className="relative z-1 shrink-0 text-subtle-foreground"
             />
           ) : null}
           <InlineRenameInput
@@ -202,7 +202,7 @@ function FileExplorerTreeItemComponent({
           file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
         }
         className={cn(
-          isDragOver && "!border-2 !border-dashed !border-primary !bg-primary !bg-opacity-20",
+          isDragOver && "border-2! border-dashed! border-primary! bg-primary! bg-opacity-20!",
           isDragging && "cursor-move",
           file.ignored && "opacity-50",
           isCut && "italic opacity-40",

@@ -254,7 +254,7 @@ function ContextSelectorDropdownContent({
           emptyLabel="No matching context found"
           compact
           showSearchInput={false}
-          listClassName="max-h-[264px]"
+          listClassName="max-h-66"
           leadingContent={
             filteredContextBuffers.length > 0 ? (
               <>

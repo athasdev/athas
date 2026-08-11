@@ -52,7 +52,7 @@ export function ProviderApiKeyCommand({
   initialProviderId,
 }: ProviderApiKeyCommandProps) {
   return (
-    <Command isVisible={isOpen} onClose={onClose} className="max-h-[430px] w-[560px]">
+    <Command isVisible={isOpen} onClose={onClose} className="max-h-107.5 w-140">
       {isOpen ? (
         <ProviderApiKeyCommandContent
           key={initialProviderId ?? "default"}

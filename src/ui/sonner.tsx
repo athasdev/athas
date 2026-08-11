@@ -31,7 +31,7 @@ export function Toaster() {
 
   return (
     <SonnerToaster
-      className="!font-sans"
+      className="font-sans!"
       position="bottom-right"
       expand
       theme={theme}
@@ -45,15 +45,15 @@ export function Toaster() {
       }}
       toastOptions={{
         closeButton: true,
-        className: "group !font-sans !font-normal",
-        descriptionClassName: "!font-sans !font-normal",
+        className: "group font-sans! font-normal!",
+        descriptionClassName: "font-sans! font-normal!",
         classNames: {
           toast:
-            "group !rounded-xl !border-border !bg-background !font-sans !font-normal !text-foreground !shadow-[var(--shadow-popover)] backdrop-blur-sm",
+            "group rounded-xl! border-border! bg-background! font-sans! font-normal! text-foreground! shadow-(--shadow-popover)! backdrop-blur-sm",
           content: "pr-8",
-          title: "ui-text-sm !font-sans !font-normal !leading-5 !tracking-normal !text-foreground",
+          title: "ui-text-sm font-sans! font-normal! leading-5! tracking-normal! text-foreground!",
           description:
-            "ui-text-sm !font-sans !font-normal !leading-5 !tracking-normal !text-muted-foreground",
+            "ui-text-sm font-sans! font-normal! leading-5! tracking-normal! text-muted-foreground!",
           icon: "mt-0.5",
           success: "border-border",
           info: "border-border",
@@ -61,7 +61,7 @@ export function Toaster() {
           error: "border-border",
           loading: "border-border",
           closeButton:
-            "absolute !top-2 !right-2 !left-auto !m-0 !size-[18px] !transform-none !rounded-md !border-transparent !bg-transparent !text-subtle-foreground !shadow-none opacity-0 transition-[transform,opacity,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:opacity-100 hover:!bg-accent hover:!text-foreground active:scale-[var(--app-press-scale)] rtl:!right-auto rtl:!left-2",
+            "absolute top-2! right-2! left-auto! m-0! size-4.5! transform-none! rounded-md! border-transparent! bg-transparent! text-subtle-foreground! shadow-none! opacity-0 transition-[transform,opacity,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) group-hover:opacity-100 hover:bg-accent! hover:text-foreground! active:scale-(--app-press-scale) rtl:right-auto! rtl:left-2!",
           actionButton: "font-sans border-none bg-accent text-foreground hover:bg-border",
           cancelButton: "font-sans border-none bg-accent text-foreground hover:bg-border",
         },

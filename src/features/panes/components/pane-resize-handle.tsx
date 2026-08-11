@@ -142,8 +142,8 @@ export function PaneResizeHandle({
       ref={containerRef}
       className={`group relative flex shrink-0 items-center justify-center ${
         isHorizontal
-          ? "h-full w-[var(--athas-workbench-gap)] cursor-col-resize"
-          : "h-[var(--athas-workbench-gap)] w-full cursor-row-resize"
+          ? "h-full w-(--athas-workbench-gap) cursor-col-resize"
+          : "h-(--athas-workbench-gap) w-full cursor-row-resize"
       }`}
       onDoubleClick={onReset}
       onMouseDown={handleMouseDown}

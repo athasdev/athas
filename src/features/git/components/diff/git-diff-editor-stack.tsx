@@ -473,7 +473,7 @@ const LazyDiffSectionBody = memo(function LazyDiffSectionBody({
 
   return (
     <div ref={bodyRef} style={{ contentVisibility: "auto", containIntrinsicSize: "960px" }}>
-      {shouldMount ? children : <div className="h-[320px] bg-background" />}
+      {shouldMount ? children : <div className="h-80 bg-background" />}
     </div>
   );
 });

@@ -551,11 +551,11 @@ export default function DataGrid({
                       <td
                         key={ci}
                         className={cn(
-                          "max-w-[300px] border-border/50 border-b px-2 py-1.5 font-normal text-foreground",
+                          "max-w-75 border-border/50 border-b px-2 py-1.5 font-normal text-foreground",
                           canEditCells && !isPK && "cursor-pointer hover:bg-accent",
                           isPK && "bg-accent/55",
                           isSelected && "bg-primary/10",
-                          isActive && "outline outline-1 outline-primary/70 outline-offset-[-1px]",
+                          isActive && "outline outline-1 outline-primary/70 -outline-offset-1",
                         )}
                         style={{ width: getColumnWidth(col), minWidth: 60 }}
                         onClick={(event) => {

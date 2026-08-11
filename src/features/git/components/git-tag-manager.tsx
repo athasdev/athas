@@ -572,7 +572,7 @@ const GitTagManager = ({
                           <span className="ui-text-base w-14 shrink-0 text-subtle-foreground">
                             Message
                           </span>
-                          <span className="ui-text-base min-w-0 break-words text-foreground">
+                          <span className="ui-text-base min-w-0 wrap-break-word text-foreground">
                             {tag.message}
                           </span>
                         </div>

@@ -524,7 +524,7 @@ const WindowMenuBar = ({
   return (
     <div
       className={cn(
-        "z-[100000] flex flex-col",
+        "z-100000 flex flex-col",
         compactMenuBar && compactFloating && "absolute top-full left-0 mt-1",
         compactMenuBar && !compactFloating && "absolute inset-0",
       )}
@@ -535,7 +535,7 @@ const WindowMenuBar = ({
         className={cn(
           compactMenuBar &&
             compactFloating &&
-            "rounded-2xl border border-border bg-background/95 px-1 py-1 shadow-[var(--shadow-popover)] backdrop-blur-sm",
+            "rounded-2xl border border-border bg-background/95 px-1 py-1 shadow-(--shadow-popover) backdrop-blur-sm",
           compactMenuBar &&
             !compactFloating &&
             "h-full rounded-none border-none bg-transparent px-2 py-0",

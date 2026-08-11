@@ -160,7 +160,7 @@ export const ChatMessage = memo(function ChatMessage({
                   </div>
                 </form>
               ) : (
-                <div className="select-text whitespace-pre-wrap break-words">
+                <div className="select-text whitespace-pre-wrap wrap-break-word">
                   <HighlightedPlainText text={message.content} query={searchQuery} />
                 </div>
               )}

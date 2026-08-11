@@ -291,7 +291,7 @@ function DockerInlineError({
   return (
     <Alert tone="error" className={cn("min-w-0", className)}>
       <AlertTitle>{title}</AlertTitle>
-      <AlertDescription className="min-w-0 select-text whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+      <AlertDescription className="min-w-0 select-text whitespace-pre-wrap wrap-break-word wrap-anywhere">
         {error}
       </AlertDescription>
       <AlertAction>
@@ -2855,7 +2855,7 @@ export function DockerSidebar() {
                           <div
                             key={entry.id}
                             className={cn(
-                              "whitespace-pre-wrap break-words",
+                              "whitespace-pre-wrap wrap-break-word",
                               entry.stream === "stderr"
                                 ? "text-destructive"
                                 : "text-subtle-foreground",
