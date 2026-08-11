@@ -142,4 +142,41 @@ describe("findSymbolPathAtPosition", () => {
   it("returns an empty array without throwing when symbols is empty", () => {
     expect(findSymbolPathAtPosition([], 0, 0)).toEqual([]);
   });
+
+  it("indexes providers that return hierarchy order instead of document order", () => {
+    const symbols = normalizeOutlineSymbols(
+      [
+        {
+          name: "Widget",
+          kind: "class",
+          line: 1,
+          character: 0,
+          endLine: 20,
+          endCharacter: 0,
+        },
+        {
+          name: "method",
+          kind: "method",
+          line: 5,
+          character: 2,
+          endLine: 10,
+          endCharacter: 3,
+        },
+        {
+          name: "helper",
+          kind: "function",
+          line: 30,
+          character: 0,
+          endLine: 35,
+          endCharacter: 0,
+        },
+      ],
+      "/workspace/src/widget.ts",
+    ).reverse();
+
+    expect(findSymbolPathAtPosition(symbols, 7, 4).map((symbol) => symbol.name)).toEqual([
+      "Widget",
+      "method",
+    ]);
+  });
 });
