@@ -754,11 +754,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     <ContextMenu>
       <ContextMenuTrigger
         ref={railRef}
-        className={cn(
-          "athas-sidebar-rail relative flex h-full shrink-0 overflow-hidden",
-          !isActivityRailResizing &&
-            "transition-[width] duration-(--app-duration-normal) ease-(--app-ease-smooth)",
-        )}
+        className="athas-sidebar-rail relative flex h-full shrink-0 overflow-hidden"
         style={{
           width: renderedRailWidth,
         }}
@@ -766,11 +762,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         <motion.div
           ref={railContentRef}
           onWheel={projectCarouselEnabled ? handleProjectWheel : undefined}
-          className={cn(
-            "absolute inset-y-0 left-0 shrink-0 will-change-transform",
-            !isActivityRailResizing &&
-              "transition-[width] duration-(--app-duration-normal) ease-(--app-ease-smooth)",
-          )}
+          className="absolute inset-y-0 left-0 shrink-0 will-change-transform"
           style={{
             width: expanded
               ? railPanelWidth
