@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { WarningCircleIcon as AlertCircle, ChatCircleTextIcon as MessageSquare } from "@/ui/icons";
+import { ChatCircleTextIcon as MessageSquare } from "@/ui/icons";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
-import { GitHubSidebarState } from "./github-sidebar-state";
 import {
   memo,
   startTransition,
@@ -30,6 +29,7 @@ import {
   githubIssueListCache,
 } from "../utils/github-data-cache";
 import { Spinner } from "@/ui/spinner";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { ScrollArea } from "@/ui/scroll-area";
 
 interface IssueListItemProps {
@@ -306,23 +306,21 @@ const GitHubIssuesView = memo(
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
           {error ? (
-            <GitHubSidebarState
-              icon={<AlertCircle className="size-4" />}
-              title={error}
-              tone="error"
-            />
+            <Empty density="compact" tone="error" role="alert">
+              <EmptyDescription>{error}</EmptyDescription>
+            </Empty>
           ) : isLoading && deferredIssues.length === 0 ? (
-            <GitHubSidebarState
-              icon={<Spinner label="Loading issues" compact />}
-              title="Loading issues"
-            />
+            <div className="flex items-center justify-center py-8">
+              <Spinner label="Loading issues" showLabel compact />
+            </div>
           ) : deferredIssues.length === 0 ? (
-            <GitHubSidebarState icon={<MessageSquare className="size-4" />} title="No issues" />
+            <Empty density="compact">
+              <EmptyDescription>No issues</EmptyDescription>
+            </Empty>
           ) : filteredIssues.length === 0 ? (
-            <GitHubSidebarState
-              icon={<MessageSquare className="size-4" />}
-              title="No matching issues"
-            />
+            <Empty density="compact">
+              <EmptyDescription>No matching issues</EmptyDescription>
+            </Empty>
           ) : (
             <div className="space-y-1 overflow-x-hidden">
               {isLoading ? (

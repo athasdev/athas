@@ -17,10 +17,10 @@ import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { showAlertDialog } from "@/ui/dialog";
 import {
-  SidebarEmptyState,
   SidebarFooter,
   SidebarHeaderIconButton,
   SidebarPanel,
@@ -79,9 +79,6 @@ const REMOTE_ACTION_LABELS: Record<GitRemoteAction, { present: string; past: str
   pull: { present: "Pulling", past: "Pulled" },
   fetch: { present: "Fetching", past: "Fetched" },
 };
-
-const gitEmptyActionButtonClassName =
-  "h-6 border border-border/70 bg-surface/60 px-2 text-subtle-foreground ui-text-sm hover:bg-accent hover:text-foreground";
 
 type GitPaletteAction =
   | { type: "select-repository" }
@@ -584,7 +581,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         disabled={!canInitializeRepository || isInitializingRepo}
         variant="ghost"
         size="xs"
-        className={gitEmptyActionButtonClassName}
         tooltip={
           canInitializeRepository
             ? "Initialize Git repository"
@@ -598,12 +594,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   };
 
   const renderRepositoryEmptyActions = () => (
-    <div className="mt-1.5 flex items-center justify-center gap-1.5">
+    <>
       <Button
         type="button"
-        variant="ghost"
+        variant="default"
         size="xs"
-        className={gitEmptyActionButtonClassName}
         disabled={isSelectingRepo}
         onClick={() => void handleSelectRepository()}
       >
@@ -611,7 +606,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         {isSelectingRepo ? "Selecting..." : "Browse"}
       </Button>
       {renderInitializeRepositoryButton()}
-    </div>
+    </>
   );
 
   const renderGitActionsMenu = ({
@@ -719,12 +714,17 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <>
         <SidebarPanel>
           <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
-          <SidebarEmptyState className="h-full" message="No repository selected">
-            {renderRepositoryEmptyActions()}
-            {repoSelectionError ? (
-              <span className="ui-text-sm mt-1.5 text-destructive">{repoSelectionError}</span>
-            ) : null}
-          </SidebarEmptyState>
+          <Empty density="compact" className="h-full">
+            <EmptyHeader>
+              <EmptyTitle>No repository selected</EmptyTitle>
+              {repoSelectionError ? (
+                <EmptyDescription className="text-destructive">
+                  {repoSelectionError}
+                </EmptyDescription>
+              ) : null}
+            </EmptyHeader>
+            <EmptyContent className="flex-row">{renderRepositoryEmptyActions()}</EmptyContent>
+          </Empty>
         </SidebarPanel>
         {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
       </>
@@ -736,7 +736,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <>
         <SidebarPanel>
           <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
-          <SidebarEmptyState className="h-full">Loading Git status...</SidebarEmptyState>
+          <Spinner label="Loading Git status" showLabel compact className="m-auto" />
         </SidebarPanel>
         {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
       </>
@@ -748,12 +748,17 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <>
         <SidebarPanel>
           <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
-          <SidebarEmptyState className="h-full" message="Not a Git repository">
-            {renderRepositoryEmptyActions()}
-            {repoSelectionError ? (
-              <span className="ui-text-sm mt-1.5 text-destructive">{repoSelectionError}</span>
-            ) : null}
-          </SidebarEmptyState>
+          <Empty density="compact" className="h-full">
+            <EmptyHeader>
+              <EmptyTitle>Not a Git repository</EmptyTitle>
+              {repoSelectionError ? (
+                <EmptyDescription className="text-destructive">
+                  {repoSelectionError}
+                </EmptyDescription>
+              ) : null}
+            </EmptyHeader>
+            <EmptyContent className="flex-row">{renderRepositoryEmptyActions()}</EmptyContent>
+          </Empty>
         </SidebarPanel>
         {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
       </>

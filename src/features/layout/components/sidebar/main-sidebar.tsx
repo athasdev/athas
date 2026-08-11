@@ -50,7 +50,7 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
-import { SidebarEmptyState, SidebarPanel } from "@/ui/sidebar";
+import { SidebarPanel } from "@/ui/sidebar";
 import {
   ContextMenu,
   ContextMenuCheckboxItem,
@@ -700,13 +700,13 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
               />
             ) : null}
             {isLoadingProject ? (
-              <SidebarEmptyState className="min-h-0 flex-1 self-stretch">
+              <div className="flex min-h-0 flex-1 self-stretch items-center justify-center">
                 <Spinner
                   label={`Opening ${project?.name ?? "project"}`}
                   showLabel={expanded}
                   compact={!expanded}
                 />
-              </SidebarEmptyState>
+              </div>
             ) : (
               <div className="scrollbar-hidden min-h-0 w-full flex-1 overflow-y-auto">
                 <SidebarPaneSelector

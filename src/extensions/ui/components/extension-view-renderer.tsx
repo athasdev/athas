@@ -1,15 +1,10 @@
 import { Fragment } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
-import {
-  SidebarEmptyState,
-  SidebarListItem,
-  SidebarPanel,
-  SidebarSectionLabel,
-  SidebarTitleBar,
-} from "@/ui/sidebar";
+import { SidebarListItem, SidebarPanel, SidebarSectionLabel, SidebarTitleBar } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { DynamicIcon } from "./dynamic-icon";
 import type {
@@ -152,10 +147,12 @@ function renderNode(
       );
     case "empty":
       return (
-        <SidebarEmptyState key={key}>
-          {node.message}
-          {node.description ? ` ${node.description}` : ""}
-        </SidebarEmptyState>
+        <Empty key={key} density="compact">
+          <EmptyHeader>
+            <EmptyTitle>{node.message}</EmptyTitle>
+            {node.description ? <EmptyDescription>{node.description}</EmptyDescription> : null}
+          </EmptyHeader>
+        </Empty>
       );
     case "loading":
       return (
@@ -169,12 +166,12 @@ function renderNode(
       );
     case "error":
       return (
-        <SidebarEmptyState
-          key={key}
-          tone="error"
-          message={node.message}
-          description={node.description}
-        />
+        <Empty key={key} density="compact" tone="error" role="alert">
+          <EmptyHeader>
+            <EmptyTitle>{node.message}</EmptyTitle>
+            {node.description ? <EmptyDescription>{node.description}</EmptyDescription> : null}
+          </EmptyHeader>
+        </Empty>
       );
     case "divider":
       return <div key={key} className="h-px bg-border/70" />;

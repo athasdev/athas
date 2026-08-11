@@ -48,6 +48,7 @@ import { useGitStore } from "@/features/git/stores/git.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
+import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from "@/ui/empty";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -60,12 +61,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import {
-  SidebarEmptyState,
-  SidebarHeader,
-  SidebarHeaderIconButton,
-  SidebarSearchPopover,
-} from "@/ui/sidebar";
+import { SidebarHeader, SidebarHeaderIconButton, SidebarSearchPopover } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import {
@@ -1485,23 +1481,26 @@ function FileExplorerTreeComponent({
         emptyState={
           !rootFolderPath ? (
             <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
-              <SidebarEmptyState
-                message="No folder open"
-                actionLabel="Open Folder"
-                onAction={handleOpenFolder}
-              />
+              <Empty density="compact">
+                <EmptyTitle>No folder open</EmptyTitle>
+                <EmptyContent>
+                  <Button type="button" variant="default" size="xs" onClick={handleOpenFolder}>
+                    Open Folder
+                  </Button>
+                </EmptyContent>
+              </Empty>
             </div>
           ) : displayedFiles.length === 0 ? (
             <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
-              <SidebarEmptyState
-                message={
-                  isTreeSearchSearching
+              <Empty density="compact">
+                <EmptyDescription>
+                  {isTreeSearchSearching
                     ? "Searching files"
                     : isTreeSearchActive
                       ? "No matching files"
-                      : "Folder is empty"
-                }
-              />
+                      : "Folder is empty"}
+                </EmptyDescription>
+              </Empty>
             </div>
           ) : null
         }

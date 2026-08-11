@@ -11,11 +11,11 @@ import {
 } from "react";
 import { cva } from "class-variance-authority";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import {
   SidebarHeader,
   SidebarSearchPopover,
   SidebarListItem,
-  SidebarEmptyState,
   SidebarSectionLabel,
 } from "@/ui/sidebar";
 import { ToggleGroup } from "@/ui/toggle-group";
@@ -450,7 +450,9 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
           </SidebarSectionLabel>
         ) : null}
         {filteredItems.length === 0 ? (
-          <SidebarEmptyState>No files match</SidebarEmptyState>
+          <Empty density="compact">
+            <EmptyDescription>No files match</EmptyDescription>
+          </Empty>
         ) : viewMode === "flat" ? (
           flatItems.map((item) => (
             <FileNavigatorFlatRow

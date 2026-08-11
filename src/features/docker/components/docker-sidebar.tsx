@@ -56,7 +56,6 @@ import Dialog, { showPromptDialog } from "@/ui/dialog";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
 import {
-  SidebarEmptyState,
   SidebarPanel,
   SidebarSearchPopover,
   SidebarSectionHeader,
@@ -2001,7 +2000,9 @@ export function DockerSidebar() {
             onRetry={() => void loadInventory()}
           />
         ) : activeTab === "resources" && isLoading ? (
-          <SidebarEmptyState className="flex-1">Loading Docker resources...</SidebarEmptyState>
+          <div className="flex flex-1 items-center justify-center">
+            <Spinner label="Loading Docker resources" showLabel compact />
+          </div>
         ) : activeTab === "compose" && composeError ? (
           <DockerUnavailableState
             error={composeError}
@@ -2017,7 +2018,9 @@ export function DockerSidebar() {
             onRetry={() => void loadComposeProject()}
           />
         ) : activeTab === "compose" && isComposeLoading ? (
-          <SidebarEmptyState className="flex-1">Loading Docker Compose...</SidebarEmptyState>
+          <div className="flex flex-1 items-center justify-center">
+            <Spinner label="Loading Docker Compose" showLabel compact />
+          </div>
         ) : (
           <>
             <ScrollArea className="min-h-0 flex-1" contentClassName="space-y-2 px-2 py-2">
@@ -2038,20 +2041,28 @@ export function DockerSidebar() {
                     />
                   ))
                 ) : (
-                  <SidebarEmptyState>No matching containers</SidebarEmptyState>
+                  <Empty density="compact">
+                    <EmptyDescription>No matching containers</EmptyDescription>
+                  </Empty>
                 ),
                 filteredContainers.length,
               )}
               {renderSection(
                 "compose",
                 composeError ? (
-                  <SidebarEmptyState tone="error">{composeError}</SidebarEmptyState>
+                  <Empty density="compact" tone="error" role="alert">
+                    <EmptyDescription>{composeError}</EmptyDescription>
+                  </Empty>
                 ) : !rootFolderPath ? (
-                  <SidebarEmptyState>
-                    Open a workspace to inspect Compose services
-                  </SidebarEmptyState>
+                  <Empty density="compact">
+                    <EmptyDescription>
+                      Open a workspace to inspect Compose services
+                    </EmptyDescription>
+                  </Empty>
                 ) : composeProject.files.length === 0 ? (
-                  <SidebarEmptyState>No Compose files in this workspace</SidebarEmptyState>
+                  <Empty density="compact">
+                    <EmptyDescription>No Compose files in this workspace</EmptyDescription>
+                  </Empty>
                 ) : (
                   <>
                     <DockerResourceRow
@@ -2108,11 +2119,13 @@ export function DockerSidebar() {
                         />
                       ))
                     ) : (
-                      <SidebarEmptyState>
-                        {composeProject.services.length > 0
-                          ? "No matching Compose services"
-                          : "No Compose services found"}
-                      </SidebarEmptyState>
+                      <Empty density="compact">
+                        <EmptyDescription>
+                          {composeProject.services.length > 0
+                            ? "No matching Compose services"
+                            : "No Compose services found"}
+                        </EmptyDescription>
+                      </Empty>
                     )}
                   </>
                 ),
@@ -2121,11 +2134,17 @@ export function DockerSidebar() {
               {renderSection(
                 "project",
                 !rootFolderPath ? (
-                  <SidebarEmptyState>Open a workspace to manage Docker presets</SidebarEmptyState>
+                  <Empty density="compact">
+                    <EmptyDescription>Open a workspace to manage Docker presets</EmptyDescription>
+                  </Empty>
                 ) : isProjectConfigLoading ? (
-                  <SidebarEmptyState role="status" aria-live="polite">
-                    Loading project Docker config...
-                  </SidebarEmptyState>
+                  <div
+                    className="flex items-center justify-center py-8"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <Spinner label="Loading project Docker config" showLabel compact />
+                  </div>
                 ) : (
                   <>
                     {projectConfigError ? (
@@ -2143,9 +2162,11 @@ export function DockerSidebar() {
                     ) : null}
                     {projectConfigItemCount === 0 ? (
                       <div className="space-y-1 px-2 py-1">
-                        <SidebarEmptyState>
-                          No env files or presets in this workspace
-                        </SidebarEmptyState>
+                        <Empty density="compact">
+                          <EmptyDescription>
+                            No env files or presets in this workspace
+                          </EmptyDescription>
+                        </Empty>
                         <div className="flex flex-wrap items-center gap-1">
                           <Button
                             type="button"
@@ -2498,7 +2519,9 @@ export function DockerSidebar() {
                       />
                     ))
                   ) : (
-                    <SidebarEmptyState>No matching images</SidebarEmptyState>
+                    <Empty density="compact">
+                      <EmptyDescription>No matching images</EmptyDescription>
+                    </Empty>
                   )}
                 </>,
                 filteredImages.length,
@@ -2699,7 +2722,9 @@ export function DockerSidebar() {
                       />
                     ))
                   ) : (
-                    <SidebarEmptyState>Search Docker Hub to find images</SidebarEmptyState>
+                    <Empty density="compact">
+                      <EmptyDescription>Search Docker Hub to find images</EmptyDescription>
+                    </Empty>
                   )}
                 </>,
                 registryResults.length,
@@ -2741,7 +2766,9 @@ export function DockerSidebar() {
                 filteredVolumes.length > 0 ? (
                   filteredVolumes.map((volume) => <VolumeRow key={volume.name} volume={volume} />)
                 ) : (
-                  <SidebarEmptyState>No matching volumes</SidebarEmptyState>
+                  <Empty density="compact">
+                    <EmptyDescription>No matching volumes</EmptyDescription>
+                  </Empty>
                 ),
                 filteredVolumes.length,
               )}
@@ -2752,7 +2779,9 @@ export function DockerSidebar() {
                     <NetworkRow key={network.id} network={network} />
                   ))
                 ) : (
-                  <SidebarEmptyState>No matching networks</SidebarEmptyState>
+                  <Empty density="compact">
+                    <EmptyDescription>No matching networks</EmptyDescription>
+                  </Empty>
                 ),
                 filteredNetworks.length,
               )}
@@ -2956,7 +2985,9 @@ export function DockerSidebar() {
                           </div>
                         ))
                       ) : (
-                        <SidebarEmptyState>No files found.</SidebarEmptyState>
+                        <Empty density="compact">
+                          <EmptyDescription>No files found.</EmptyDescription>
+                        </Empty>
                       )}
                     </div>
                   </>

@@ -5,14 +5,6 @@ import { Button, type ButtonProps } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { SearchField } from "@/ui/search";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/ui/empty";
 import { cn } from "@/utils/cn";
 
 export function SidebarPanel({
@@ -449,59 +441,5 @@ export function SidebarTabPanels<TValue extends string>({
         </TabsContent>
       ))}
     </>
-  );
-}
-
-export function SidebarEmptyState({
-  icon,
-  message,
-  description,
-  actionLabel,
-  onAction,
-  actionDisabled = false,
-  children,
-  className,
-  ...props
-}: Omit<ComponentProps<typeof Empty>, "children" | "density"> & {
-  icon?: ReactNode;
-  message?: ReactNode;
-  description?: ReactNode;
-  actionLabel?: ReactNode;
-  onAction?: () => void;
-  actionDisabled?: boolean;
-  children?: ReactNode;
-}) {
-  const title = message ?? children;
-  const content = message ? children : null;
-
-  return (
-    <Empty
-      data-sidebar-state="empty"
-      density="compact"
-      className={cn("min-h-24 select-none rounded-none px-3 py-6", className)}
-      {...props}
-    >
-      {icon ? <EmptyMedia variant="icon">{icon}</EmptyMedia> : null}
-      <EmptyHeader>
-        {title ? <EmptyTitle>{title}</EmptyTitle> : null}
-        {description ? <EmptyDescription>{description}</EmptyDescription> : null}
-      </EmptyHeader>
-      {(actionLabel && onAction) || content ? (
-        <EmptyContent>
-          {actionLabel && onAction ? (
-            <Button
-              type="button"
-              variant="default"
-              size="xs"
-              disabled={actionDisabled}
-              onClick={onAction}
-            >
-              {actionLabel}
-            </Button>
-          ) : null}
-          {content}
-        </EmptyContent>
-      ) : null}
-    </Empty>
   );
 }

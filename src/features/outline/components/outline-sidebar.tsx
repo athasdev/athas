@@ -29,14 +29,16 @@ import { writeClipboardText } from "@/utils/clipboard";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { Button } from "@/ui/button";
+import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from "@/ui/empty";
 import {
-  SidebarEmptyState,
   SidebarHeader,
   SidebarHeaderIconButton,
   SidebarSearchPopover,
   SidebarPanel,
 } from "@/ui/sidebar";
 import { ScrollArea } from "@/ui/scroll-area";
+import { Spinner } from "@/ui/spinner";
 import { useDocumentOutline } from "../hooks/use-document-outline";
 import { getOutlineRevealScrollTop } from "../utils/outline-scroll";
 import { getVisibleOutlineSymbols, openOutlineSymbol } from "../utils/outline-symbols";
@@ -343,15 +345,29 @@ export function OutlineSidebar() {
         contentClassName="p-1"
       >
         {!isSupported ? (
-          <SidebarEmptyState
-            message={activeBuffer ? "No outline for the active file." : "No active file."}
-            actionLabel="Open a File"
-            onAction={() => void handleOpenFile()}
-          />
+          <Empty density="compact">
+            <EmptyTitle>
+              {activeBuffer ? "No outline for the active file." : "No active file."}
+            </EmptyTitle>
+            <EmptyContent>
+              <Button
+                type="button"
+                variant="default"
+                size="xs"
+                onClick={() => void handleOpenFile()}
+              >
+                Open a File
+              </Button>
+            </EmptyContent>
+          </Empty>
         ) : isLoading ? (
-          <SidebarEmptyState>Loading outline...</SidebarEmptyState>
+          <div className="flex items-center justify-center py-8">
+            <Spinner label="Loading outline" showLabel compact />
+          </div>
         ) : visibleSymbols.length === 0 ? (
-          <SidebarEmptyState>No symbols found.</SidebarEmptyState>
+          <Empty density="compact">
+            <EmptyDescription>No symbols found.</EmptyDescription>
+          </Empty>
         ) : (
           visibleSymbols.map((symbol) => (
             <ContextMenu key={symbol.id}>

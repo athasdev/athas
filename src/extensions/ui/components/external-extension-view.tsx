@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { SidebarEmptyState } from "@/ui/sidebar";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { uiExtensionHost } from "../services/ui-extension-host";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
@@ -40,7 +40,14 @@ export function ExternalExtensionView({ extensionId, viewId }: ExternalExtension
   );
 
   if (error) {
-    return <SidebarEmptyState tone="error" message="Extension error" description={error} />;
+    return (
+      <Empty density="compact" tone="error" role="alert">
+        <EmptyHeader>
+          <EmptyTitle>Extension error</EmptyTitle>
+          <EmptyDescription>{error}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
   }
   if (!node) {
     return <Spinner showLabel label="Loading extension" className="m-auto" />;

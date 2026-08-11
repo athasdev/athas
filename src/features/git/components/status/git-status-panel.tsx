@@ -18,14 +18,10 @@ import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { Checkbox } from "@/ui/checkbox";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
+import { Empty, EmptyMedia, EmptyTitle } from "@/ui/empty";
 import { ScrollArea } from "@/ui/scroll-area";
 import { showConfirmDialog } from "@/ui/dialog";
-import {
-  SidebarEmptyState,
-  SidebarHeaderIconButton,
-  SidebarSectionHeader,
-  SidebarToolbar,
-} from "@/ui/sidebar";
+import { SidebarHeaderIconButton, SidebarSectionHeader, SidebarToolbar } from "@/ui/sidebar";
 import { SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { cn } from "@/utils/cn";
 import { createStash } from "../../api/git-stash-api";
@@ -661,12 +657,12 @@ const GitStatusPanel = ({
           </ScrollArea>
         </>
       ) : (
-        <SidebarEmptyState
-          className="flex-1"
-          icon={<Check />}
-          message="Working tree clean"
-          tone="success"
-        />
+        <Empty density="compact" className="flex-1" tone="success">
+          <EmptyMedia variant="icon">
+            <Check />
+          </EmptyMedia>
+          <EmptyTitle>Working tree clean</EmptyTitle>
+        </Empty>
       )}
 
       <Dropdown

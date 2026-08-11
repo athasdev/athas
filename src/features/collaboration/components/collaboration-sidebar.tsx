@@ -36,6 +36,7 @@ import {
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import { Card, CardContent } from "@/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   Dropdown,
   DropdownMenu,
@@ -49,7 +50,6 @@ import {
 import Input, { InlineRenameInput } from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
-  SidebarEmptyState,
   SidebarHeader,
   SidebarHeaderIconButton,
   SidebarSearchPopover,
@@ -591,10 +591,9 @@ export function CollaborationSidebarView() {
     return (
       <SidebarPanel>
         <SidebarTitleBar title="Collaboration" />
-        <SidebarEmptyState
-          className="h-full"
-          message="Teams workspace is not available for this account."
-        />
+        <Empty density="compact" className="h-full">
+          <EmptyDescription>Teams workspace is not available for this account.</EmptyDescription>
+        </Empty>
       </SidebarPanel>
     );
   }
@@ -1180,7 +1179,9 @@ export function CollaborationSidebarView() {
             {(channelSearch || channelFilter !== "all") &&
             filteredChannels.length === 0 &&
             filteredPrivateChatParticipants.length === 0 ? (
-              <SidebarEmptyState message="No matching channels." />
+              <Empty density="compact">
+                <EmptyDescription>No matching channels.</EmptyDescription>
+              </Empty>
             ) : null}
           </div>
         </ScrollArea>
@@ -1245,7 +1246,9 @@ export function CollaborationSidebarView() {
                   </div>
                 ))
               ) : (
-                <SidebarEmptyState message="No chats yet." />
+                <Empty density="compact">
+                  <EmptyDescription>No chats yet.</EmptyDescription>
+                </Empty>
               )}
             </div>
           </ScrollArea>
@@ -1312,7 +1315,9 @@ export function CollaborationSidebarView() {
                   );
                 })
               ) : (
-                <SidebarEmptyState message="No private messages yet." />
+                <Empty density="compact">
+                  <EmptyDescription>No private messages yet.</EmptyDescription>
+                </Empty>
               )}
             </div>
           </ScrollArea>
@@ -1417,11 +1422,11 @@ export function CollaborationSidebarView() {
             </SidebarListItem>
           ))
         ) : (
-          <SidebarEmptyState
-            message={
-              peopleSearch || peopleFilter !== "all" ? "No matching members." : "No members yet."
-            }
-          />
+          <Empty density="compact">
+            <EmptyDescription>
+              {peopleSearch || peopleFilter !== "all" ? "No matching members." : "No members yet."}
+            </EmptyDescription>
+          </Empty>
         )}
       </div>
     </ScrollArea>
@@ -1541,14 +1546,18 @@ export function CollaborationSidebarView() {
           );
         })}
         {filteredNoteItems.length === 0 ? (
-          <SidebarEmptyState
-            message={notesFilter === "secrets" ? "No secrets yet." : "No matching notes."}
-            description={
-              notesFilter === "secrets"
-                ? "Shared environment files will appear here when they are added."
-                : undefined
-            }
-          />
+          <Empty density="compact">
+            <EmptyHeader>
+              <EmptyTitle>
+                {notesFilter === "secrets" ? "No secrets yet." : "No matching notes."}
+              </EmptyTitle>
+              {notesFilter === "secrets" ? (
+                <EmptyDescription>
+                  Shared environment files will appear here when they are added.
+                </EmptyDescription>
+              ) : null}
+            </EmptyHeader>
+          </Empty>
         ) : null}
       </div>
     </ScrollArea>

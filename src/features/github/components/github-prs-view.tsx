@@ -9,7 +9,7 @@ import {
   GitPullRequestIcon as GitPullRequest,
   PlusIcon as Plus,
 } from "@/ui/icons";
-import { WarningCircleIcon as AlertCircle, ArrowClockwiseIcon as RefreshCw } from "@/ui/icons";
+import { ArrowClockwiseIcon as RefreshCw } from "@/ui/icons";
 import {
   memo,
   startTransition,
@@ -28,6 +28,7 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { Button } from "@/ui/button";
 import {
   Dropdown,
   DropdownMenu,
@@ -38,10 +39,10 @@ import {
   useDropdownMenu,
   type MenuItem,
 } from "@/ui/dropdown";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
-  SidebarEmptyState,
   SidebarHeaderIconButton,
   SidebarSearchPopover,
   SidebarPanel,
@@ -67,7 +68,6 @@ import { GitHubAvatar } from "./github-avatar";
 import GitHubIssuesView from "./github-issues-view";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { GitHubSidebarSection as GitHubSidebarListSection } from "./github-sidebar-section";
-import { GitHubSidebarState } from "./github-sidebar-state";
 import {
   GITHUB_ACTION_LIST_TTL_MS,
   GITHUB_ISSUE_LIST_TTL_MS,
@@ -718,10 +718,11 @@ const GitHubPRsView = memo(() => {
         }}
       >
         {availableSections.length === 0 ? (
-          <SidebarEmptyState
-            className="h-full"
-            message="Enable GitHub sidebar sections in Settings -> Appearance."
-          />
+          <Empty density="compact" className="h-full">
+            <EmptyDescription>
+              Enable GitHub sidebar sections in Settings -&gt; Appearance.
+            </EmptyDescription>
+          </Empty>
         ) : (
           <>
             <SidebarTitleBar
@@ -798,50 +799,66 @@ const GitHubPRsView = memo(() => {
                       <div className="flex h-full min-h-0 flex-col overflow-hidden">
                         <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
                           {!effectiveRepoPath ? (
-                            <GitHubSidebarState
-                              icon={<GitBranch className="size-4" />}
-                              title="No repository selected"
-                              actionLabel={isSelectingRepo ? "Selecting..." : "Browse Repository"}
-                              onAction={() => void handleSelectRepository()}
-                              isActionDisabled={isSelectingRepo}
-                            />
+                            <Empty density="compact">
+                              <EmptyTitle>No repository selected</EmptyTitle>
+                              <EmptyContent>
+                                <Button
+                                  type="button"
+                                  variant="default"
+                                  size="xs"
+                                  disabled={isSelectingRepo}
+                                  onClick={() => void handleSelectRepository()}
+                                >
+                                  {isSelectingRepo ? "Selecting..." : "Browse Repository"}
+                                </Button>
+                              </EmptyContent>
+                            </Empty>
                           ) : error ? (
-                            <GitHubSidebarState
-                              icon={<AlertCircle className="size-4" />}
-                              title={isRepoError ? "Repository is not a Git repository" : error}
-                              description={
-                                isRepoError
-                                  ? "Select another folder that contains a `.git` repository."
-                                  : repoSelectionError || undefined
-                              }
-                              actionLabel={
-                                isRepoError
-                                  ? isSelectingRepo
-                                    ? "Selecting..."
-                                    : "Browse Repository"
-                                  : "Try again"
-                              }
-                              onAction={
-                                isRepoError ? () => void handleSelectRepository() : handleRefresh
-                              }
-                              isActionDisabled={isSelectingRepo}
-                              tone="error"
-                            />
+                            <Empty density="compact" tone="error" role="alert">
+                              <EmptyHeader>
+                                <EmptyTitle>
+                                  {isRepoError ? "Repository is not a Git repository" : error}
+                                </EmptyTitle>
+                                {isRepoError || repoSelectionError ? (
+                                  <EmptyDescription>
+                                    {isRepoError
+                                      ? "Select another folder that contains a `.git` repository."
+                                      : repoSelectionError}
+                                  </EmptyDescription>
+                                ) : null}
+                              </EmptyHeader>
+                              <EmptyContent>
+                                <Button
+                                  type="button"
+                                  variant="default"
+                                  size="xs"
+                                  disabled={isSelectingRepo}
+                                  onClick={
+                                    isRepoError
+                                      ? () => void handleSelectRepository()
+                                      : handleRefresh
+                                  }
+                                >
+                                  {isRepoError
+                                    ? isSelectingRepo
+                                      ? "Selecting..."
+                                      : "Browse Repository"
+                                    : "Try again"}
+                                </Button>
+                              </EmptyContent>
+                            </Empty>
                           ) : isLoading && deferredPrs.length === 0 ? (
-                            <GitHubSidebarState
-                              icon={<Spinner label="Loading pull requests" compact />}
-                              title="Loading pull requests"
-                            />
+                            <div className="flex items-center justify-center py-8">
+                              <Spinner label="Loading pull requests" showLabel compact />
+                            </div>
                           ) : deferredPrs.length === 0 ? (
-                            <GitHubSidebarState
-                              icon={<GitPullRequest className="size-4" />}
-                              title="No pull requests"
-                            />
+                            <Empty density="compact">
+                              <EmptyDescription>No pull requests</EmptyDescription>
+                            </Empty>
                           ) : filteredPrs.length === 0 ? (
-                            <GitHubSidebarState
-                              icon={<GitPullRequest className="size-4" />}
-                              title="No matching pull requests"
-                            />
+                            <Empty density="compact">
+                              <EmptyDescription>No matching pull requests</EmptyDescription>
+                            </Empty>
                           ) : (
                             <div className="space-y-1 overflow-x-hidden">
                               {isLoading ? (
