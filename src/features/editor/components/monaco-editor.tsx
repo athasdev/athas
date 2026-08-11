@@ -30,6 +30,7 @@ import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.s
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
 import { InlineEditPopover } from "@/features/editor/inline-edit/inline-edit-popover";
 import { useInlineEdit } from "@/features/editor/inline-edit/use-inline-edit";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
@@ -141,6 +142,9 @@ export function MonacoEditor({
   const pendingLocalContentSnapshotsRef = useRef<string[]>([]);
   const decorationsRef = useRef<string[]>([]);
   const gitBlameDecorationRef = useRef<string[]>([]);
+  const gitBlameRenderFrameRef = useRef<number | null>(null);
+  const renderedGitBlameKeyRef = useRef<string | null>(null);
+  const renderInlineGitBlameRef = useRef<() => void>(() => {});
   const latestContentChangeRef = useRef(onContentChange);
   const isActiveSurfaceRef = useRef(isActiveSurface);
   const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
@@ -183,10 +187,15 @@ export function MonacoEditor({
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const vimCurrentMode = useVimStore.use.mode();
+  const inlineEditRequested = useInlineEditToolbarStore.use.isVisible();
   const cursorPosition = useEditorStateStore((state) =>
-    isActiveSurface ? state.cursorPosition : INACTIVE_CURSOR_POSITION,
+    isActiveSurface && vimModeEnabled && vimRelativeLineNumbers
+      ? state.cursorPosition
+      : INACTIVE_CURSOR_POSITION,
   );
-  const selection = useEditorStateStore((state) => (isActiveSurface ? state.selection : undefined));
+  const selection = useEditorStateStore((state) =>
+    isActiveSurface && inlineEditRequested ? state.selection : undefined,
+  );
   const {
     setCursorPosition,
     setSelection,
@@ -198,6 +207,67 @@ export function MonacoEditor({
     isActiveSurface && inlineGitBlameEnabled && filePath ? filePath : undefined,
     content,
   );
+
+  const renderInlineGitBlame = useCallback(() => {
+    const editor = editorRef.current;
+    const model = modelRef.current;
+    if (!editor || !model || model.isDisposed()) return;
+
+    const clearDecoration = () => {
+      renderedGitBlameKeyRef.current = null;
+      if (gitBlameDecorationRef.current.length === 0) return;
+      gitBlameDecorationRef.current = editor.deltaDecorations(gitBlameDecorationRef.current, []);
+    };
+
+    if (!inlineGitBlameEnabled || !isActiveSurface || !filePath) {
+      clearDecoration();
+      return;
+    }
+
+    const position = editor.getPosition();
+    const lineNumber = position?.lineNumber ?? 0;
+    if (lineNumber < 1 || lineNumber > model.getLineCount()) {
+      clearDecoration();
+      return;
+    }
+
+    const blameLine = getBlameForLine(lineNumber - 1);
+    if (!blameLine) {
+      clearDecoration();
+      return;
+    }
+
+    const content = blameLine.is_uncommitted
+      ? "  Uncommitted changes"
+      : `  ${blameLine.author}, ${formatRelativeTime(blameLine.time)}`;
+    const decorationKey = `${filePath}:${lineNumber}:${blameLine.commit_hash}:${content}`;
+    if (renderedGitBlameKeyRef.current === decorationKey) return;
+
+    const column = model.getLineMaxColumn(lineNumber);
+    gitBlameDecorationRef.current = editor.deltaDecorations(gitBlameDecorationRef.current, [
+      {
+        range: new MonacoRange(lineNumber, column, lineNumber, column),
+        options: {
+          after: {
+            content,
+            inlineClassName: "monaco-inline-git-blame",
+            cursorStops: monacoEditor.InjectedTextCursorStops.None,
+          },
+          showIfCollapsed: false,
+        },
+      },
+    ]);
+    renderedGitBlameKeyRef.current = decorationKey;
+  }, [filePath, getBlameForLine, inlineGitBlameEnabled, isActiveSurface]);
+  renderInlineGitBlameRef.current = renderInlineGitBlame;
+
+  const scheduleInlineGitBlameRender = useCallback(() => {
+    if (gitBlameRenderFrameRef.current !== null) return;
+    gitBlameRenderFrameRef.current = requestAnimationFrame(() => {
+      gitBlameRenderFrameRef.current = null;
+      renderInlineGitBlameRef.current();
+    });
+  }, []);
   const diagnosticsForFile = useDiagnosticsStore((state) =>
     filePath ? (state.diagnosticsByFile.get(filePath) ?? EMPTY_DIAGNOSTICS) : EMPTY_DIAGNOSTICS,
   );
@@ -721,7 +791,10 @@ export function MonacoEditor({
         );
         syncCursorAndSelection();
       }),
-      editor.onDidChangeCursorSelection(syncCursorAndSelection),
+      editor.onDidChangeCursorSelection(() => {
+        syncCursorAndSelection();
+        scheduleInlineGitBlameRender();
+      }),
       editor.onDidScrollChange((event) => {
         const viewKey = viewStateKey ?? activeBufferId ?? null;
         setScrollForBuffer(viewKey, event.scrollTop, event.scrollLeft);
@@ -760,6 +833,7 @@ export function MonacoEditor({
         }
       }
     });
+    scheduleInlineGitBlameRender();
 
     return () => {
       if (benchmarkRafId !== null) cancelAnimationFrame(benchmarkRafId);
@@ -779,6 +853,12 @@ export function MonacoEditor({
       if (hoverClampRaf !== null) {
         cancelAnimationFrame(hoverClampRaf);
       }
+      if (gitBlameRenderFrameRef.current !== null) {
+        cancelAnimationFrame(gitBlameRenderFrameRef.current);
+        gitBlameRenderFrameRef.current = null;
+      }
+      gitBlameDecorationRef.current = [];
+      renderedGitBlameKeyRef.current = null;
       createdEditorDisposable.dispose();
       if (editorRef.current === editor) editorRef.current = null;
       if (modelRef.current === model) modelRef.current = null;
@@ -814,6 +894,7 @@ export function MonacoEditor({
     renderIndentGuides,
     renderWhitespace,
     scrollable,
+    scheduleInlineGitBlameRender,
     selectEntireModel,
     semanticTokens,
     setScrollForBuffer,
@@ -1259,49 +1340,8 @@ export function MonacoEditor({
   }, [currentHighlightIndex, highlightMatches]);
 
   useEffect(() => {
-    const editor = editorRef.current;
-    const model = modelRef.current;
-    if (!editor || !model) return;
-
-    const clearDecoration = () => {
-      gitBlameDecorationRef.current = editor.deltaDecorations(gitBlameDecorationRef.current, []);
-    };
-
-    if (!inlineGitBlameEnabled || !isActiveSurface || !filePath) {
-      clearDecoration();
-      return;
-    }
-
-    const lineIndex = cursorPosition.line;
-    const lineNumber = lineIndex + 1;
-    if (lineNumber < 1 || lineNumber > model.getLineCount()) {
-      clearDecoration();
-      return;
-    }
-
-    const blameLine = getBlameForLine(lineIndex);
-    if (!blameLine) {
-      clearDecoration();
-      return;
-    }
-
-    const column = model.getLineMaxColumn(lineNumber);
-    gitBlameDecorationRef.current = editor.deltaDecorations(gitBlameDecorationRef.current, [
-      {
-        range: new MonacoRange(lineNumber, column, lineNumber, column),
-        options: {
-          after: {
-            content: blameLine.is_uncommitted
-              ? "  Uncommitted changes"
-              : `  ${blameLine.author}, ${formatRelativeTime(blameLine.time)}`,
-            inlineClassName: "monaco-inline-git-blame",
-            cursorStops: monacoEditor.InjectedTextCursorStops.None,
-          },
-          showIfCollapsed: false,
-        },
-      },
-    ]);
-  }, [cursorPosition.line, filePath, getBlameForLine, inlineGitBlameEnabled, isActiveSurface]);
+    scheduleInlineGitBlameRender();
+  }, [renderInlineGitBlame, scheduleInlineGitBlameRender]);
 
   useEffect(() => {
     const editor = editorRef.current;

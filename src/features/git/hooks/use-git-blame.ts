@@ -3,6 +3,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { isGitChangeRelevant, subscribeToGitChanges } from "../events/git-events";
 import { getGitBlameCacheKey, useGitBlameStore } from "../stores/git-blame.store";
 import type { GitBlameLine } from "../types/git.types";
+import { findGitBlameLine } from "../utils/git-blame-lines";
 
 const BLAME_REFRESH_DELAY_MS = 500;
 
@@ -42,14 +43,7 @@ export function useGitBlame(filePath: string | undefined, content: string) {
   const getBlameForLine = useCallback(
     (lineNumber: number): GitBlameLine | null => {
       if (!filePath || !blameData) return null;
-
-      const currentLine = lineNumber + 1;
-      const blameLine = blameData.lines.find((line) => {
-        const hunkStart = line.line_number;
-        const hunkEnd = line.line_number + line.total_lines - 1;
-        return currentLine >= hunkStart && currentLine <= hunkEnd;
-      });
-      return blameLine || null;
+      return findGitBlameLine(blameData.lines, lineNumber + 1);
     },
     [filePath, blameData],
   );

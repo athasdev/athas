@@ -2,6 +2,7 @@ import { createStore } from "zustand/vanilla";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { getResolvedGitBlame } from "../api/git-blame-api";
 import type { GitBlame, GitBlameLine } from "../types/git.types";
+import { findGitBlameLine } from "../utils/git-blame-lines";
 
 interface GitBlameState {
   blameData: Map<string, GitBlame>;
@@ -156,15 +157,7 @@ export const createGitBlameStore = () =>
 
         if (!blame) return null;
 
-        for (const line of blame.lines) {
-          const start = line.line_number;
-          const end = start + line.total_lines - 1;
-          if (lineNumber >= start && lineNumber <= end) {
-            return line;
-          }
-        }
-
-        return null;
+        return findGitBlameLine(blame.lines, lineNumber);
       },
 
       getRepoPath: (filePath: string) => {
