@@ -58,6 +58,14 @@ function ScrollArea({
             orientation !== "vertical" && "w-max",
             contentClassName,
           )}
+          style={
+            orientation === "vertical"
+              ? {
+                  minWidth: "100%",
+                  width: "100%",
+                }
+              : undefined
+          }
         >
           {children}
         </ScrollAreaPrimitive.Content>
