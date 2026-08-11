@@ -15,6 +15,7 @@ import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import { EmptyState } from "@/ui/empty";
 import {
   SidebarHeader,
+  SidebarHeaderIconButton,
   SidebarSearchPopover,
   SidebarListItem,
   SidebarSectionLabel,
@@ -25,7 +26,6 @@ import {
   compactPathTreeBranch,
   type PathTreeNode,
 } from "@/features/sidebar/lib/path-tree";
-import { ToggleGroup } from "@/ui/toggle-group";
 import { cn } from "@/utils/cn";
 import { ScrollArea } from "@/ui/scroll-area";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
@@ -394,20 +394,30 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
             onChange={setSearchQuery}
             aria-label="Search files"
           />
-          <ToggleGroup
-            value={viewMode}
-            onValueChange={onViewModeChange}
-            ariaLabel="File navigator view"
-            options={[
-              { value: "flat", label: "Flat list", icon: <ListBullets /> },
-              { value: "tree", label: "File tree", icon: <TreeStructure /> },
-            ]}
-            iconOnly
-            variant="segmented"
-            wrap={false}
-            size="xs"
-            className={cn("shrink-0", surface === "inset" && "bg-background")}
-          />
+          <div
+            className="ml-auto flex shrink-0 items-center gap-(--athas-chrome-gap)"
+            role="group"
+            aria-label="File navigator view"
+          >
+            <SidebarHeaderIconButton
+              active={viewMode === "flat"}
+              onClick={() => onViewModeChange("flat")}
+              tooltip="Flat list"
+              tooltipSide="bottom"
+              aria-label="Flat list"
+            >
+              <ListBullets />
+            </SidebarHeaderIconButton>
+            <SidebarHeaderIconButton
+              active={viewMode === "tree"}
+              onClick={() => onViewModeChange("tree")}
+              tooltip="File tree"
+              tooltipSide="bottom"
+              aria-label="File tree"
+            >
+              <TreeStructure />
+            </SidebarHeaderIconButton>
+          </div>
         </SidebarHeader>
       ) : null}
 

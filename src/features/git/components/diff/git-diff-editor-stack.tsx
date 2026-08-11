@@ -627,6 +627,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const isActiveMultiDiff = activeBuffer?.type === "diff" && activeBuffer.diffData === multiDiff;
   const isRefreshingRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const diffStackScrollRef = useRef<HTMLDivElement>(null);
   const sectionElementsRef = useRef(new Map<string, HTMLDivElement>());
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOptions, setSearchOptions] = useState<SearchOptions>({
@@ -736,8 +737,14 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
     });
 
     window.requestAnimationFrame(() => {
-      sectionElementsRef.current.get(sectionKey)?.scrollIntoView({
-        block: "start",
+      const scrollContainer = diffStackScrollRef.current;
+      const section = sectionElementsRef.current.get(sectionKey);
+      if (!scrollContainer || !section) return;
+
+      const scrollContainerRect = scrollContainer.getBoundingClientRect();
+      const sectionRect = section.getBoundingClientRect();
+      scrollContainer.scrollTo({
+        top: scrollContainer.scrollTop + sectionRect.top - scrollContainerRect.top,
       });
     });
   }, []);
@@ -1136,6 +1143,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
           ) : null}
 
           <div
+            ref={diffStackScrollRef}
             className="min-h-0 flex-1 overflow-auto"
             style={{ overflowAnchor: "none" }}
             data-diff-stack-scroll-container

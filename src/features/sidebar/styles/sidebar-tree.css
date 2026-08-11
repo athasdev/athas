@@ -21,10 +21,6 @@
   background-color: var(--file-tree-hover-bg);
 }
 
-[data-sidebar-tree-row][data-active="true"]::before {
-  background-color: var(--selected);
-}
-
 [data-sidebar-tree-row] .file-tree-row {
   position: relative;
   z-index: 2;
@@ -32,6 +28,10 @@
 
 [data-sidebar-tree-row] .file-tree-row:hover {
   background-color: transparent !important;
+}
+
+[data-sidebar-tree-row][data-active="true"] .file-tree-row {
+  background-color: var(--selected) !important;
 }
 
 [data-sidebar-tree-row] .file-tree-guides {
