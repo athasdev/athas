@@ -30,11 +30,6 @@ body {
   * {
     border-color: var(--border);
   }
-
-  button:not(:disabled),
-  [role="button"]:not(:disabled) {
-    cursor: pointer;
-  }
 }
 
 input,
