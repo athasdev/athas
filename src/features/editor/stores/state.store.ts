@@ -226,6 +226,7 @@ interface EditorStateActions {
   // Cursor actions
   setCursorPosition: (position: Position, options?: { ensureVisible?: boolean }) => void;
   setSelection: (selection?: Range) => void;
+  setCursorAndSelection: (position: Position, selection?: Range) => void;
   setDesiredColumn: (column?: number) => void;
   setCursorVisibility: (visible: boolean) => void;
   getCachedPosition: (bufferId: string) => Position | null;
@@ -320,6 +321,22 @@ export const useEditorStateStore = createSelectors(
           }
           if (!rangesEqual(currentState.selection, selection)) {
             set({ selection });
+          }
+        },
+        setCursorAndSelection: (position, selection) => {
+          const currentState = useEditorStateStore.getState();
+          const { activeBufferId } = useBufferStore.getState();
+          const viewKey = currentState.activeEditorViewKey ?? activeBufferId;
+          if (viewKey) {
+            viewStateCache.setCursor(viewKey, position);
+            viewStateCache.setSelection(viewKey, selection);
+          }
+
+          if (
+            !positionsEqual(currentState.cursorPosition, position) ||
+            !rangesEqual(currentState.selection, selection)
+          ) {
+            set({ cursorPosition: position, selection });
           }
         },
         setDesiredColumn: (column) => {

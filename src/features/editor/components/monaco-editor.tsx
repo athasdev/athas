@@ -79,6 +79,7 @@ registerMonacoLspProviders();
 registerMonacoCodeLensProvider();
 
 const EMPTY_DIAGNOSTICS: Diagnostic[] = [];
+const INACTIVE_CURSOR_POSITION: Position = { line: 0, column: 0, offset: 0 };
 
 interface MonacoEditorProps {
   bufferId?: string;
@@ -182,12 +183,19 @@ export function MonacoEditor({
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const vimCurrentMode = useVimStore.use.mode();
-  const cursorPosition = useEditorStateStore.use.cursorPosition();
-  const selection = useEditorStateStore((state) => state.selection);
-  const { setCursorPosition, setSelection, setScrollForBuffer, setViewportHeight } =
-    useEditorStateStore.use.actions();
+  const cursorPosition = useEditorStateStore((state) =>
+    isActiveSurface ? state.cursorPosition : INACTIVE_CURSOR_POSITION,
+  );
+  const selection = useEditorStateStore((state) => (isActiveSurface ? state.selection : undefined));
+  const {
+    setCursorPosition,
+    setSelection,
+    setCursorAndSelection,
+    setScrollForBuffer,
+    setViewportHeight,
+  } = useEditorStateStore.use.actions();
   const { getBlameForLine } = useGitBlame(
-    inlineGitBlameEnabled && filePath ? filePath : undefined,
+    isActiveSurface && inlineGitBlameEnabled && filePath ? filePath : undefined,
     content,
   );
   const diagnosticsForFile = useDiagnosticsStore((state) =>
@@ -228,14 +236,13 @@ export function MonacoEditor({
     if (!editor || !model) return;
 
     const position = editor.getPosition();
-    if (position) {
-      setCursorPosition(toEditorPosition(model, position), {
-        ensureVisible: false,
-      });
-    }
+    if (!position) return;
     const selection = editor.getSelection();
-    setSelection(selection ? toEditorRange(model, selection) : undefined);
-  }, [setCursorPosition, setSelection]);
+    setCursorAndSelection(
+      toEditorPosition(model, position),
+      selection ? toEditorRange(model, selection) : undefined,
+    );
+  }, [setCursorAndSelection]);
 
   const lines = useMemo(() => content.split(/\r?\n/), [content]);
   const lineOffsets = useMemo(() => buildLineOffsets(content), [content]);
