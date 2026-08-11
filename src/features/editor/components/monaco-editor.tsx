@@ -58,6 +58,7 @@ import {
 import { clampMonacoHoverWidgets, syncMonacoHoverBounds } from "../engines/monaco/hover-widgets";
 import { toMonacoLanguageId } from "../engines/monaco/language";
 import { ensureMonacoLanguageTokenizer } from "../engines/monaco/language-contributions";
+import { acquireMonacoModel } from "../engines/monaco/model-lifecycle";
 import { getEditorBottomScrollPadding } from "../engines/monaco/scroll-padding";
 import {
   buildLineOffsets,
@@ -474,7 +475,8 @@ export function MonacoEditor({
       },
     );
 
-    const model = monacoEditor.createModel(content, monacoLanguageId, modelUri);
+    const acquiredModel = acquireMonacoModel(content, monacoLanguageId, modelUri);
+    const model = acquiredModel.model;
     const editor = monacoEditor.create(container, {
       model,
       automaticLayout: true,
@@ -766,7 +768,7 @@ export function MonacoEditor({
       if (editorRef.current === editor) editorRef.current = null;
       if (modelRef.current === model) modelRef.current = null;
       editor.dispose();
-      model.dispose();
+      acquiredModel.release();
     };
   }, [
     activeBufferId,
