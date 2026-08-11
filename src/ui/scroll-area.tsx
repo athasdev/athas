@@ -6,6 +6,7 @@ type ScrollAreaOrientation = "vertical" | "horizontal" | "both";
 
 type ScrollAreaProps = React.ComponentProps<typeof ScrollAreaPrimitive.Root> & {
   orientation?: ScrollAreaOrientation;
+  reserveScrollbarGutter?: boolean;
   viewportClassName?: string;
   viewportProps?: Omit<
     React.ComponentProps<typeof ScrollAreaPrimitive.Viewport>,
@@ -20,6 +21,7 @@ function ScrollArea({
   className,
   children,
   orientation = "vertical",
+  reserveScrollbarGutter = false,
   viewportClassName,
   viewportProps,
   contentClassName,
@@ -38,6 +40,8 @@ function ScrollArea({
         data-slot="scroll-area-viewport"
         className={cn(
           "size-full min-h-0 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+          reserveScrollbarGutter && orientation !== "horizontal" && "pr-2.5",
+          reserveScrollbarGutter && orientation !== "vertical" && "pb-2.5",
           viewportClassName,
         )}
         style={{

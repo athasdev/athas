@@ -636,7 +636,11 @@ const GitStatusPanel = ({
               )}
             </div>
           </SidebarToolbar>
-          <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
+          <ScrollArea
+            className="min-h-0 flex-1"
+            contentClassName="px-2 py-2"
+            reserveScrollbarGutter
+          >
             {trackedFiles.length > 0 && (
               <section className="space-y-0.5">
                 {renderSectionHeader("tracked", SECTION_LABELS.tracked, trackedFiles.length)}
