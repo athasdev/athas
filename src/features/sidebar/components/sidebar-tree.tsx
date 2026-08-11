@@ -171,6 +171,7 @@ type SidebarTreeRowProps = Omit<React.ComponentPropsWithoutRef<"button">, "child
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
   action?: React.ReactNode;
+  guides?: React.ReactNode;
   description?: React.ReactNode;
   onToggle?: (event: React.MouseEvent<HTMLSpanElement>) => void;
   reserveDisclosureSpace?: boolean;
@@ -194,6 +195,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
       leading,
       trailing,
       action,
+      guides,
       description,
       onToggle,
       reserveDisclosureSpace = false,
@@ -214,7 +216,9 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
         data-active={active ? "true" : undefined}
         data-depth={depth}
       >
-        {showGuides ? (
+        {guides !== undefined ? (
+          guides
+        ) : showGuides ? (
           <SidebarTreeGuides
             depth={depth}
             baseIndent={baseIndent}

@@ -3,7 +3,7 @@ import { memo } from "react";
 import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/file-tree-git-status";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { InlineRenameInput } from "@/ui/input";
-import { TreeRow } from "@/features/sidebar/components/tree-row";
+import { SidebarTreeDisclosure, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { cn } from "@/utils/cn";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 
@@ -146,6 +146,7 @@ function FileExplorerTreeItemComponent({
             paddingLeft: `${paddingLeft}px`,
           }}
         >
+          <SidebarTreeDisclosure visible={false} />
           {showIcon ? (
             <ThemedFileIcon
               fileName={file.isDir ? "folder" : "file"}
@@ -186,33 +187,31 @@ function FileExplorerTreeItemComponent({
   }
 
   return (
-    <div className="file-tree-item w-full" data-depth={depth}>
-      {renderTreeGuides()}
-      <TreeRow
-        id={rowId}
-        role="treeitem"
-        aria-level={depth + 1}
-        aria-selected={isActive}
-        aria-expanded={file.isDir ? isExpanded : undefined}
-        data-file-path={file.path}
-        data-is-dir={file.isDir}
-        data-path={file.path}
-        data-depth={depth}
-        title={
-          file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
-        }
-        className={cn(
-          isDragOver && "border-2! border-dashed! border-primary! bg-primary! bg-opacity-20!",
-          isDragging && "cursor-move",
-          file.ignored && "opacity-50",
-          isCut && "italic opacity-40",
-        )}
-        active={isActive}
-        baseIndent={FILE_TREE_BASE_INDENT}
-        depth={depth}
-        indentSize={indentSize}
-      >
-        {showIcon ? (
+    <SidebarTreeRow
+      id={rowId}
+      active={isActive}
+      depth={depth}
+      indentSize={indentSize}
+      baseIndent={FILE_TREE_BASE_INDENT}
+      previousDepth={previousDepth}
+      nextDepth={nextDepth}
+      expanded={file.isDir ? isExpanded : undefined}
+      showDisclosure={file.isDir}
+      reserveDisclosureSpace={!file.isDir}
+      guides={renderTreeGuides()}
+      data-file-path={file.path}
+      data-is-dir={file.isDir}
+      data-path={file.path}
+      title={file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined}
+      className={cn(
+        "min-w-max",
+        isDragOver && "border-2! border-dashed! border-primary! bg-primary! bg-opacity-20!",
+        isDragging && "cursor-move",
+        file.ignored && "opacity-50",
+        isCut && "italic opacity-40",
+      )}
+      leading={
+        showIcon ? (
           <ThemedFileIcon
             fileName={file.name}
             isDir={file.isDir}
@@ -220,17 +219,14 @@ function FileExplorerTreeItemComponent({
             isSymlink={file.isSymlink}
             className="relative z-1 shrink-0 text-subtle-foreground"
           />
-        ) : null}
-        <span
-          className={cn(
-            "relative z-1 select-none whitespace-nowrap",
-            gitStatusDecoration?.colorClassName,
-          )}
-        >
+        ) : null
+      }
+      label={
+        <span className={cn("select-none whitespace-nowrap", gitStatusDecoration?.colorClassName)}>
           {renderHighlightedLabel(displayName ?? file.name, searchQuery)}
         </span>
-      </TreeRow>
-    </div>
+      }
+    />
   );
 }
 
