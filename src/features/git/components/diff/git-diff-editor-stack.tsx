@@ -478,6 +478,75 @@ const LazyDiffSectionBody = memo(function LazyDiffSectionBody({
   );
 });
 
+const DiffFileBody = memo(function DiffFileBody({
+  diff,
+  sectionKey,
+  viewMode,
+  showWhitespace,
+  searchMatches,
+  currentSearchMatch,
+  searchQuery,
+  searchOptions,
+}: {
+  diff: GitDiff;
+  sectionKey: string;
+  viewMode: "unified" | "split";
+  showWhitespace: boolean;
+  searchMatches: MultiDiffSearchMatch[];
+  currentSearchMatch: MultiDiffSearchMatch | null;
+  searchQuery: string;
+  searchOptions: SearchOptions;
+}) {
+  const filePath = diff.new_path || diff.old_path || diff.file_path;
+  const fileName = filePath.split("/").pop() || filePath;
+  const shouldUseInlineTextDiff =
+    !shouldUseScrollableDiffEditor(diff) && diff.lines.length <= DIFF_INLINE_RENDER_LINE_THRESHOLD;
+  const searchHighlights = useMemo(() => {
+    const highlights = new Map<number, Array<{ start: number; end: number; isCurrent: boolean }>>();
+
+    for (const match of searchMatches) {
+      const lineHighlights = highlights.get(match.lineIndex) ?? [];
+      lineHighlights.push({
+        start: match.start,
+        end: match.end,
+        isCurrent: match === currentSearchMatch,
+      });
+      highlights.set(match.lineIndex, lineHighlights);
+    }
+
+    return highlights;
+  }, [currentSearchMatch, searchMatches]);
+
+  if (diff.is_image) {
+    return <ImageDiffViewer diff={diff} fileName={fileName} onClose={() => {}} />;
+  }
+
+  if (diff.is_binary) {
+    return <BinaryDiffViewer fileName={fileName} />;
+  }
+
+  return shouldUseInlineTextDiff ? (
+    <TextDiffViewer
+      diff={diff}
+      isStaged={sectionKey.startsWith("staged:")}
+      viewMode={viewMode}
+      showWhitespace={showWhitespace}
+      isEmbeddedInScrollView={true}
+      searchHighlights={searchHighlights}
+    />
+  ) : (
+    <DiffSectionEditor
+      diff={diff}
+      cacheKey={sectionKey}
+      viewMode={viewMode}
+      searchQuery={searchQuery}
+      searchOptions={searchOptions}
+      searchMatches={searchMatches}
+      currentSearchMatch={currentSearchMatch}
+    />
+  );
+});
+
 const DiffFileSection = memo(function DiffFileSection({
   diff,
   sectionKey,
@@ -515,23 +584,6 @@ const DiffFileSection = memo(function DiffFileSection({
   const handleOpenFile = useCallback(() => {
     void onOpenFile(filePath);
   }, [filePath, onOpenFile]);
-  const shouldUseInlineTextDiff =
-    !shouldUseScrollableDiffEditor(diff) && diff.lines.length <= DIFF_INLINE_RENDER_LINE_THRESHOLD;
-  const searchHighlights = useMemo(() => {
-    const highlights = new Map<number, Array<{ start: number; end: number; isCurrent: boolean }>>();
-
-    for (const match of searchMatches) {
-      const lineHighlights = highlights.get(match.lineIndex) ?? [];
-      lineHighlights.push({
-        start: match.start,
-        end: match.end,
-        isCurrent: match === currentSearchMatch,
-      });
-      highlights.set(match.lineIndex, lineHighlights);
-    }
-
-    return highlights;
-  }, [currentSearchMatch, searchMatches]);
 
   return (
     <section
@@ -558,44 +610,20 @@ const DiffFileSection = memo(function DiffFileSection({
       />
 
       {expanded ? (
-        diff.is_image ? (
-          <div className="min-w-0 max-w-full overflow-hidden">
-            <LazyDiffSectionBody expanded={expanded}>
-              <ImageDiffViewer diff={diff} fileName={fileName} onClose={() => {}} />
-            </LazyDiffSectionBody>
-          </div>
-        ) : diff.is_binary ? (
-          <div className="min-w-0 max-w-full overflow-hidden">
-            <LazyDiffSectionBody expanded={expanded}>
-              <BinaryDiffViewer fileName={fileName} />
-            </LazyDiffSectionBody>
-          </div>
-        ) : (
-          <div className="min-w-0 max-w-full overflow-hidden">
-            <LazyDiffSectionBody expanded={expanded}>
-              {shouldUseInlineTextDiff ? (
-                <TextDiffViewer
-                  diff={diff}
-                  isStaged={sectionKey.startsWith("staged:")}
-                  viewMode={viewMode}
-                  showWhitespace={showWhitespace}
-                  isEmbeddedInScrollView={true}
-                  searchHighlights={searchHighlights}
-                />
-              ) : (
-                <DiffSectionEditor
-                  diff={diff}
-                  cacheKey={sectionKey}
-                  viewMode={viewMode}
-                  searchQuery={searchQuery}
-                  searchOptions={searchOptions}
-                  searchMatches={searchMatches}
-                  currentSearchMatch={currentSearchMatch}
-                />
-              )}
-            </LazyDiffSectionBody>
-          </div>
-        )
+        <div className="min-w-0 max-w-full overflow-hidden">
+          <LazyDiffSectionBody expanded={expanded}>
+            <DiffFileBody
+              diff={diff}
+              sectionKey={sectionKey}
+              viewMode={viewMode}
+              showWhitespace={showWhitespace}
+              searchMatches={searchMatches}
+              currentSearchMatch={currentSearchMatch}
+              searchQuery={searchQuery}
+              searchOptions={searchOptions}
+            />
+          </LazyDiffSectionBody>
+        </div>
       ) : null}
     </section>
   );
@@ -701,6 +729,19 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       }),
     [multiDiff],
   );
+  const selectedDiffFile = useMemo(() => {
+    if (!selectedFileKey) return null;
+
+    const index = multiDiff.files.findIndex(
+      (diff, fileIndex) => getMultiDiffSectionKey(multiDiff, diff, fileIndex) === selectedFileKey,
+    );
+    if (index < 0) return null;
+
+    return {
+      diff: multiDiff.files[index],
+      sectionKey: selectedFileKey,
+    };
+  }, [multiDiff, selectedFileKey]);
   const handleToggleSection = useCallback((sectionKey: string) => {
     setExpandedFiles((prev) => {
       const next = new Set(prev);
@@ -727,27 +768,38 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
 
     sectionElementsRef.current.delete(sectionKey);
   }, []);
-  const handleSelectFileFromTree = useCallback((sectionKey: string) => {
-    setSelectedFileKey(sectionKey);
-    setExpandedFiles((prev) => {
-      if (prev.has(sectionKey)) return prev;
-      const next = new Set(prev);
-      next.add(sectionKey);
-      return next;
-    });
+  const handleSelectFileFromTree = useCallback(
+    (sectionKey: string) => {
+      setSelectedFileKey(sectionKey);
 
-    window.requestAnimationFrame(() => {
-      const scrollContainer = diffStackScrollRef.current;
-      const section = sectionElementsRef.current.get(sectionKey);
-      if (!scrollContainer || !section) return;
+      if (isWorkingTree) {
+        window.requestAnimationFrame(() => {
+          diffStackScrollRef.current?.scrollTo({ top: 0, left: 0 });
+        });
+        return;
+      }
 
-      const scrollContainerRect = scrollContainer.getBoundingClientRect();
-      const sectionRect = section.getBoundingClientRect();
-      scrollContainer.scrollTo({
-        top: scrollContainer.scrollTop + sectionRect.top - scrollContainerRect.top,
+      setExpandedFiles((prev) => {
+        if (prev.has(sectionKey)) return prev;
+        const next = new Set(prev);
+        next.add(sectionKey);
+        return next;
       });
-    });
-  }, []);
+
+      window.requestAnimationFrame(() => {
+        const scrollContainer = diffStackScrollRef.current;
+        const section = sectionElementsRef.current.get(sectionKey);
+        if (!scrollContainer || !section) return;
+
+        const scrollContainerRect = scrollContainer.getBoundingClientRect();
+        const sectionRect = section.getBoundingClientRect();
+        scrollContainer.scrollTo({
+          top: scrollContainer.scrollTop + sectionRect.top - scrollContainerRect.top,
+        });
+      });
+    },
+    [isWorkingTree],
+  );
   useEffect(() => {
     const nextKeys = new Set(
       multiDiff.files.map((diff, index) => getMultiDiffSectionKey(multiDiff, diff, index)),
@@ -794,25 +846,36 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
     if (!currentSearchMatch) return;
 
     setSelectedFileKey(currentSearchMatch.sectionKey);
-    setExpandedFiles((previous) => {
-      if (previous.has(currentSearchMatch.sectionKey)) return previous;
-      const next = new Set(previous);
-      next.add(currentSearchMatch.sectionKey);
-      return next;
+    if (!isWorkingTree) {
+      setExpandedFiles((previous) => {
+        if (previous.has(currentSearchMatch.sectionKey)) return previous;
+        const next = new Set(previous);
+        next.add(currentSearchMatch.sectionKey);
+        return next;
+      });
+    }
+
+    let revealTimer: number | null = null;
+    const revealFrame = window.requestAnimationFrame(() => {
+      const section = sectionElementsRef.current.get(currentSearchMatch.sectionKey);
+      if (!isWorkingTree) {
+        section?.scrollIntoView({ block: "center" });
+      }
+
+      revealTimer = window.setTimeout(() => {
+        const currentSection = sectionElementsRef.current.get(currentSearchMatch.sectionKey);
+        const line = currentSection?.querySelector(
+          `[data-diff-search-line="${currentSearchMatch.lineIndex}"]`,
+        );
+        line?.scrollIntoView({ block: "center", inline: "nearest" });
+      }, 50);
     });
 
-    const section = sectionElementsRef.current.get(currentSearchMatch.sectionKey);
-    section?.scrollIntoView({ block: "center" });
-
-    const revealTimer = window.setTimeout(() => {
-      const line = section?.querySelector(
-        `[data-diff-search-line="${currentSearchMatch.lineIndex}"]`,
-      );
-      line?.scrollIntoView({ block: "center", inline: "nearest" });
-    }, 50);
-
-    return () => window.clearTimeout(revealTimer);
-  }, [currentSearchMatch]);
+    return () => {
+      window.cancelAnimationFrame(revealFrame);
+      if (revealTimer !== null) window.clearTimeout(revealTimer);
+    };
+  }, [currentSearchMatch, isWorkingTree]);
 
   useEffect(() => {
     if (!isActiveMultiDiff) return;
@@ -1148,32 +1211,63 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
             style={{ overflowAnchor: "none" }}
             data-diff-stack-scroll-container
           >
-            <div className="flex min-w-0 max-w-full flex-col">
-              {multiDiff.files.map((diff, index) => {
-                const sectionKey = getMultiDiffSectionKey(multiDiff, diff, index);
-                const sectionSearchMatches = searchMatches.filter(
-                  (match) => match.sectionKey === sectionKey,
-                );
+            {isWorkingTree ? (
+              selectedDiffFile ? (
+                <div
+                  key={selectedDiffFile.sectionKey}
+                  ref={(node) => registerSectionElement(selectedDiffFile.sectionKey, node)}
+                  className="min-w-0 max-w-full overflow-hidden bg-background"
+                >
+                  <DiffFileBody
+                    diff={selectedDiffFile.diff}
+                    sectionKey={selectedDiffFile.sectionKey}
+                    viewMode={viewMode}
+                    showWhitespace={showWhitespace}
+                    searchMatches={
+                      isFindVisible
+                        ? searchMatches.filter(
+                            (match) => match.sectionKey === selectedDiffFile.sectionKey,
+                          )
+                        : []
+                    }
+                    currentSearchMatch={isFindVisible ? currentSearchMatch : null}
+                    searchQuery={isFindVisible ? searchQuery : ""}
+                    searchOptions={searchOptions}
+                  />
+                </div>
+              ) : (
+                <Empty className="h-full rounded-none bg-background">
+                  <EmptyDescription>No changed file selected</EmptyDescription>
+                </Empty>
+              )
+            ) : (
+              <div className="flex min-w-0 max-w-full flex-col">
+                {multiDiff.files.map((diff, index) => {
+                  const sectionKey = getMultiDiffSectionKey(multiDiff, diff, index);
+                  const sectionSearchMatches = searchMatches.filter(
+                    (match) => match.sectionKey === sectionKey,
+                  );
 
-                return (
-                  <div key={sectionKey} ref={(node) => registerSectionElement(sectionKey, node)}>
-                    <DiffFileSection
-                      diff={diff}
-                      sectionKey={sectionKey}
-                      expanded={expandedFiles.has(sectionKey)}
-                      viewMode={viewMode}
-                      showWhitespace={showWhitespace}
-                      searchMatches={isFindVisible ? sectionSearchMatches : []}
-                      currentSearchMatch={isFindVisible ? currentSearchMatch : null}
-                      searchQuery={isFindVisible ? searchQuery : ""}
-                      searchOptions={searchOptions}
-                      onToggle={handleToggleSection}
-                      onOpenFile={handleOpenFile}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+                  return (
+                    <div key={sectionKey} ref={(node) => registerSectionElement(sectionKey, node)}>
+                      <DiffFileSection
+                        diff={diff}
+                        sectionKey={sectionKey}
+                        expanded={expandedFiles.has(sectionKey)}
+                        viewMode={viewMode}
+                        showWhitespace={showWhitespace}
+                        searchMatches={isFindVisible ? sectionSearchMatches : []}
+                        currentSearchMatch={isFindVisible ? currentSearchMatch : null}
+                        searchQuery={isFindVisible ? searchQuery : ""}
+                        searchOptions={searchOptions}
+                        onToggle={handleToggleSection}
+                        onOpenFile={handleOpenFile}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
