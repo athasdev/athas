@@ -323,11 +323,6 @@ const GitHubIssuesView = memo(
             </Empty>
           ) : (
             <div className="space-y-1 overflow-x-hidden">
-              {isLoading ? (
-                <div className="flex items-center px-2 py-1.5">
-                  <Spinner label="Refreshing" compact />
-                </div>
-              ) : null}
               {groupedIssues.map((group) => (
                 <GitHubSidebarSection
                   key={group.id}
