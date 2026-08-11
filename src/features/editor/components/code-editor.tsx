@@ -28,11 +28,9 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { editorAPI } from "../extensions/api";
 import CodeLensOverlay from "../lsp/code-lens-overlay";
-import { LspClient } from "../lsp/lsp-client";
 import RenameInput from "../lsp/rename-input";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
 import type { CodeLensItem } from "../lsp/use-code-lens";
-import { useCodeLens } from "../lsp/use-code-lens";
 import { useRename } from "../lsp/use-rename";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { NotebookEditor } from "../notebook/notebook-editor";
@@ -163,7 +161,6 @@ const CodeEditor = ({
   const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
   const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
   const codeLensEnabled = useSettingsStore((state) => state.settings.codeLens);
-  const lspClient = useMemo(() => LspClient.getInstance(), []);
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
   const zoomedFontSize = editorFontSize * zoomLevel;
@@ -303,9 +300,6 @@ const CodeEditor = ({
   // Rename symbol support
   const rename = useRename(enableRichEditorServices ? filePath : undefined);
 
-  const lspCodeLenses = useCodeLens(enableCodeLens ? filePath : undefined, enableCodeLens);
-
-  // Inline lenses are reserved for editor actions that do not require LSP layout support.
   const pythonScriptCells = useMemo(
     () =>
       enableInteractiveServices && isPythonScriptFile(filePath) ? getPythonScriptCells(value) : [],
@@ -335,10 +329,9 @@ const CodeEditor = ({
       })),
     [rMarkdownChunks],
   );
-  const visibleCodeLenses = useMemo(
-    () =>
-      codeLensEnabled ? [...lspCodeLenses, ...pythonScriptCellLenses, ...rMarkdownChunkLenses] : [],
-    [codeLensEnabled, lspCodeLenses, pythonScriptCellLenses, rMarkdownChunkLenses],
+  const inlineCodeLenses = useMemo(
+    () => (codeLensEnabled ? [...pythonScriptCellLenses, ...rMarkdownChunkLenses] : []),
+    [codeLensEnabled, pythonScriptCellLenses, rMarkdownChunkLenses],
   );
 
   const handleCodeLensExecute = useCallback(
@@ -443,14 +436,8 @@ const CodeEditor = ({
           });
         return;
       }
-
-      void lspClient.applyCodeAction(filePath, {
-        title: lens.title,
-        command: lens.command,
-        arguments: lens.arguments ?? [],
-      });
     },
-    [filePath, lspClient, onChange, pythonScriptCells, rMarkdownChunks],
+    [filePath, onChange, pythonScriptCells, rMarkdownChunks],
   );
 
   // Keep app-owned overlays aligned with Monaco's scroll position.
@@ -541,10 +528,10 @@ const CodeEditor = ({
           }}
         >
           {/* Code Lens */}
-          {enableCodeLens && visibleCodeLenses.length > 0 && (
+          {enableCodeLens && inlineCodeLenses.length > 0 && (
             <CodeLensOverlay
               ref={codeLensRef}
-              lenses={visibleCodeLenses}
+              lenses={inlineCodeLenses}
               fontSize={zoomedFontSize}
               lineHeight={zoomedLineHeight}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}

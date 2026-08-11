@@ -72,8 +72,10 @@ import { defineActiveMonacoTheme, defineMonacoTheme } from "../engines/monaco/th
 import { useMonacoEditorSettings } from "../engines/monaco/use-monaco-editor-settings";
 import { registerMonacoVimCommands, toEditorVimMode } from "../engines/monaco/vim-commands";
 import { registerMonacoLspProviders } from "../engines/monaco/lsp-providers";
+import { registerMonacoCodeLensProvider } from "../engines/monaco/code-lens-provider";
 
 registerMonacoLspProviders();
+registerMonacoCodeLensProvider();
 
 const EMPTY_DIAGNOSTICS: Diagnostic[] = [];
 
@@ -171,6 +173,7 @@ export function MonacoEditor({
   const minimapEnabled = useSettingsStore((state) => state.settings.showMinimap);
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
+  const codeLens = useSettingsStore((state) => state.settings.codeLens);
   const semanticTokens = useSettingsStore((state) => state.settings.semanticTokens);
   const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
@@ -501,6 +504,7 @@ export function MonacoEditor({
       quickSuggestions: autoCompletion,
       suggestOnTriggerCharacters: autoCompletion,
       parameterHints: { enabled: parameterHints },
+      codeLens,
       theme: defineMonacoTheme(themeId, editorItalicComments),
       cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : editorCursorStyle,
       cursorBlinking:
@@ -1118,6 +1122,7 @@ export function MonacoEditor({
       quickSuggestions: autoCompletion,
       suggestOnTriggerCharacters: autoCompletion,
       parameterHints: { enabled: parameterHints },
+      codeLens,
       cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : editorCursorStyle,
       cursorBlinking:
         vimModeEnabled && vimCurrentMode === "normal" ? "solid" : editorCursorBlinking,
@@ -1142,6 +1147,7 @@ export function MonacoEditor({
     };
   }, [
     autoCompletion,
+    codeLens,
     editorBracketPairColorization,
     editorCursorBlinking,
     editorCursorStyle,

@@ -105,7 +105,7 @@ const CodeLensOverlay = forwardRef(
       <div
         ref={ref}
         className="pointer-events-none absolute inset-0 overflow-hidden"
-        style={{ zIndex: 4 }}
+        style={{ zIndex: 20 }}
       >
         {Array.from(visibleGroups.entries()).map(([line, items]) => {
           const position = getLensPosition(line);
