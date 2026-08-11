@@ -62,9 +62,9 @@ import {
 } from "@/ui/dropdown";
 import {
   SidebarEmptyState,
+  SidebarHeader,
   SidebarHeaderIconButton,
-  SidebarHeaderSearch,
-  SidebarToolbar,
+  SidebarSearchPopover,
 } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
@@ -1263,14 +1263,17 @@ function FileExplorerTreeComponent({
       onMouseUp={handleContainerMouseUp}
       onMouseLeave={handleContainerMouseLeave}
     >
-      <SidebarToolbar
+      <SidebarHeader
+        className="px-3"
         onClick={(event) => event.stopPropagation()}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <SidebarHeaderSearch
+        <SidebarSearchPopover
           ref={searchInputRef}
           value={treeSearchQuery}
           onChange={setTreeSearchQuery}
+          open={treeSearchOpen}
+          onOpenChange={setTreeSearchOpen}
           aria-label="Search files"
           aria-controls="file-tree-results"
           autoCapitalize="none"
@@ -1466,7 +1469,7 @@ function FileExplorerTreeComponent({
             </DropdownMenuCheckboxItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </SidebarToolbar>
+      </SidebarHeader>
       <FileExplorerViewport
         ref={viewportRef}
         id="file-tree-results"

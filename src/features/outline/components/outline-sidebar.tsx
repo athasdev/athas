@@ -31,10 +31,10 @@ import { openFile } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   SidebarEmptyState,
+  SidebarHeader,
   SidebarHeaderIconButton,
-  SidebarHeaderSearch,
+  SidebarSearchPopover,
   SidebarPanel,
-  SidebarToolbar,
 } from "@/ui/sidebar";
 import { ScrollArea } from "@/ui/scroll-area";
 import { useDocumentOutline } from "../hooks/use-document-outline";
@@ -77,10 +77,10 @@ function matchesOutlineFilter(kind: string, selectedFilters: Set<OutlineFilter>)
 
 export function OutlineSidebar() {
   const [query, setQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<Set<OutlineFilter>>(
     () => new Set(OUTLINE_FILTER_OPTIONS.map((option) => option.id)),
   );
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [focusedSymbolId, setFocusedSymbolId] = useState<string | null>(null);
@@ -193,10 +193,7 @@ export function OutlineSidebar() {
   };
 
   const focusSearch = () => {
-    requestAnimationFrame(() => {
-      searchInputRef.current?.focus();
-      searchInputRef.current?.select();
-    });
+    setIsSearchOpen(true);
   };
 
   const handleSidebarKeyDown = (event: React.KeyboardEvent) => {
@@ -280,11 +277,12 @@ export function OutlineSidebar() {
 
   return (
     <SidebarPanel onKeyDownCapture={handleSidebarKeyDown}>
-      <SidebarToolbar>
-        <SidebarHeaderSearch
-          ref={searchInputRef}
+      <SidebarHeader className="px-3">
+        <SidebarSearchPopover
           value={query}
           onChange={setQuery}
+          open={isSearchOpen}
+          onOpenChange={setIsSearchOpen}
           aria-label="Search outline"
           onKeyDown={(event) => {
             if (event.key === "ArrowDown" && visibleSymbols.length > 0) {
@@ -329,7 +327,7 @@ export function OutlineSidebar() {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-      </SidebarToolbar>
+      </SidebarHeader>
 
       <ScrollArea
         className="min-h-0 min-w-0 flex-1"

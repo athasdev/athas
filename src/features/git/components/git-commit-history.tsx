@@ -12,9 +12,9 @@ import { Spinner } from "@/ui/spinner";
 import { Avatar } from "@/ui/avatar";
 import {
   SidebarHeaderIconButton,
-  SidebarHeaderSearch,
+  SidebarHeader,
+  SidebarSearchPopover,
   SidebarEmptyState,
-  SidebarToolbar,
 } from "@/ui/sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { AuthUser } from "@/features/window/services/auth-api";
@@ -253,8 +253,8 @@ const GitCommitHistory = ({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden select-none">
-      <SidebarToolbar>
-        <SidebarHeaderSearch
+      <SidebarHeader className="px-3">
+        <SidebarSearchPopover
           value={historySearchQuery}
           onChange={setHistorySearchQuery}
           placeholder="Search history"
@@ -286,7 +286,7 @@ const GitCommitHistory = ({
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-      </SidebarToolbar>
+      </SidebarHeader>
 
       {(ahead > 0 || behind > 0) && (
         <div className="space-y-1 px-2 pb-1">

@@ -13,7 +13,7 @@ import { cva } from "class-variance-authority";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import {
   SidebarHeader,
-  SidebarHeaderSearch,
+  SidebarSearchPopover,
   SidebarListItem,
   SidebarEmptyState,
   SidebarSectionLabel,
@@ -420,8 +420,8 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       aria-label={ariaLabel}
     >
       {onViewModeChange ? (
-        <SidebarHeader className={cn(surface === "plain" ? "px-1" : "border-border/60 border-b")}>
-          <SidebarHeaderSearch
+        <SidebarHeader className={surface === "plain" ? "px-1" : undefined}>
+          <SidebarSearchPopover
             value={searchQuery}
             onChange={setSearchQuery}
             aria-label="Search files"

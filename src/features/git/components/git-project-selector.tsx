@@ -126,21 +126,20 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
       <div className={cn("min-w-0 max-w-full", className)}>
         <Button
           type="button"
-          variant="ghost"
-          size="xs"
-          className={cn(
-            "h-7 w-fit max-w-full min-w-0 justify-start gap-1.5 px-2.5 text-left text-primary/80 hover:text-primary focus-visible:text-primary",
-          )}
+          variant="default"
+          size="sm"
+          className="w-fit max-w-full min-w-0 justify-start text-left"
           aria-haspopup="dialog"
           aria-expanded={isOpen}
           title={activeRepoTitle ?? undefined}
           onClick={() => setIsOpen((open) => !open)}
         >
+          <FolderOpen />
           <span className="ui-text-sm min-w-0 flex-1 truncate font-medium">{activeRepoLabel}</span>
           <CaretDown
             className={cn(
-              "size-3.5 shrink-0 text-primary/65 transition-transform",
-              isOpen && "rotate-180 text-primary",
+              "size-3.5 shrink-0 text-subtle-foreground transition-transform",
+              isOpen && "rotate-180 text-foreground",
             )}
           />
         </Button>

@@ -1,7 +1,8 @@
 import { CaretDownIcon as CaretDown, MagnifyingGlassIcon as Search } from "@/ui/icons";
-import { forwardRef, type ComponentProps, type ReactNode } from "react";
+import { forwardRef, type ComponentProps, type ReactNode, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { SearchField } from "@/ui/search";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import {
@@ -41,7 +42,7 @@ export function SidebarTitleBar({
   return (
     <div
       className={cn(
-        "font-sans flex h-(--athas-pane-header-height) min-w-0 shrink-0 select-none items-center gap-2 overflow-hidden border-border/70 border-b px-3",
+        "font-sans flex h-(--athas-pane-header-height) min-w-0 shrink-0 select-none items-center gap-2 overflow-hidden px-3",
         className,
       )}
       {...props}
@@ -130,32 +131,6 @@ export function SidebarComposerBody({
   );
 }
 
-export const SidebarHeaderSearch = forwardRef<
-  HTMLInputElement,
-  Omit<
-    ComponentProps<typeof SearchField>,
-    "className" | "containerClassName" | "leftIcon" | "onChange" | "size" | "value" | "variant"
-  > & {
-    value: string;
-    onChange: (value: string) => void;
-  }
->(function SidebarHeaderSearch({ value, onChange, placeholder = "Search", ...props }, ref) {
-  return (
-    <SearchField
-      ref={ref}
-      value={value}
-      onChange={onChange}
-      leftIcon={Search}
-      variant="ghost"
-      size="xs"
-      placeholder={placeholder}
-      className="h-6 rounded-md border-transparent bg-transparent select-text"
-      containerClassName="ui-text-chrome min-w-0 flex-1"
-      {...props}
-    />
-  );
-});
-
 export const SidebarHeaderIconButton = forwardRef<
   HTMLButtonElement,
   Omit<ButtonProps, "variant" | "size">
@@ -169,6 +144,78 @@ export const SidebarHeaderIconButton = forwardRef<
       className={cn("rounded-md", className)}
       {...props}
     />
+  );
+});
+
+export const SidebarSearchPopover = forwardRef<
+  HTMLInputElement,
+  Omit<
+    ComponentProps<typeof SearchField>,
+    | "autoFocus"
+    | "className"
+    | "containerClassName"
+    | "leftIcon"
+    | "onChange"
+    | "size"
+    | "value"
+    | "variant"
+  > & {
+    value: string;
+    onChange: (value: string) => void;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+  }
+>(function SidebarSearchPopover(
+  {
+    value,
+    onChange,
+    open,
+    onOpenChange,
+    placeholder = "Search",
+    "aria-label": ariaLabel,
+    ...props
+  },
+  ref,
+) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isOpen = open ?? uncontrolledOpen;
+  const label = ariaLabel ?? placeholder;
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (open === undefined) {
+      setUncontrolledOpen(nextOpen);
+    }
+    onOpenChange?.(nextOpen);
+  };
+
+  return (
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
+      <PopoverTrigger
+        render={
+          <SidebarHeaderIconButton
+            active={isOpen || value.length > 0}
+            tooltip={label}
+            tooltipSide="bottom"
+            aria-label={label}
+          />
+        }
+      >
+        <Search />
+      </PopoverTrigger>
+      <PopoverContent align="end" className="p-1.5">
+        <SearchField
+          ref={ref}
+          value={value}
+          onChange={onChange}
+          leftIcon={Search}
+          size="sm"
+          placeholder={placeholder}
+          aria-label={ariaLabel}
+          autoFocus
+          {...props}
+        />
+      </PopoverContent>
+    </Popover>
   );
 });
 

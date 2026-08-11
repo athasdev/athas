@@ -7,7 +7,6 @@ import {
   DotsThreeIcon as More,
   FileIcon,
   FolderIcon,
-  FunnelIcon as Filter,
   MagnifyingGlassIcon as Search,
   PauseIcon as Pause,
   PlayIcon as Play,
@@ -59,11 +58,11 @@ import Textarea from "@/ui/textarea";
 import {
   SidebarEmptyState,
   SidebarPanel,
+  SidebarSearchPopover,
   SidebarSectionHeader,
   SidebarSectionLabel,
   SidebarTabBar,
   SidebarTitleBar,
-  SidebarToolbar,
 } from "@/ui/sidebar";
 import { SearchField } from "@/ui/search";
 import { cn } from "@/utils/cn";
@@ -860,7 +859,6 @@ export function DockerSidebar() {
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState<DockerTab>("resources");
   const [containerFilter, setContainerFilter] = useState<DockerContainerFilter>("all");
-  const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Set<DockerSection>>(() => new Set());
   const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
   const [logLines, setLogLines] = useState<DockerLogLine[]>([]);
@@ -1938,18 +1936,12 @@ export function DockerSidebar() {
     <>
       <SidebarPanel className="font-sans select-none">
         <SidebarTitleBar title="Docker">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            active={isFilterVisible || query.length > 0}
-            tooltip="Search and filter"
-            tooltipSide="bottom"
+          <SidebarSearchPopover
+            value={query}
+            onChange={setQuery}
+            placeholder="Search Docker"
             aria-label="Search Docker resources"
-            onClick={() => setIsFilterVisible((visible) => !visible)}
-          >
-            <Filter />
-          </Button>
+          />
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -1992,18 +1984,6 @@ export function DockerSidebar() {
         </SidebarTitleBar>
 
         <SidebarTabBar items={dockerTabs} value={activeTab} onChange={setActiveTab} />
-        {isFilterVisible || query.length > 0 ? (
-          <SidebarToolbar>
-            <SearchField
-              autoFocus
-              value={query}
-              onChange={setQuery}
-              placeholder="Search Docker"
-              aria-label="Search Docker"
-              className="h-8 rounded-lg bg-surface/45"
-            />
-          </SidebarToolbar>
-        ) : null}
 
         {activeTab === "resources" && error && !connectionError ? (
           <DockerInlineError

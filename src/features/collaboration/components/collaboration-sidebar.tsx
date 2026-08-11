@@ -52,7 +52,7 @@ import {
   SidebarEmptyState,
   SidebarHeader,
   SidebarHeaderIconButton,
-  SidebarHeaderSearch,
+  SidebarSearchPopover,
   SidebarListEditor,
   SidebarListItem,
   SidebarPanel,
@@ -1034,7 +1034,7 @@ export function CollaborationSidebarView() {
           viewportProps={{ onContextMenu: (event) => channelsContextMenu.open(event) }}
         >
           <SidebarHeader>
-            <SidebarHeaderSearch
+            <SidebarSearchPopover
               value={channelSearchQuery}
               onChange={setChannelSearchQuery}
               aria-label="Search channels"
@@ -1338,7 +1338,7 @@ export function CollaborationSidebarView() {
   const peopleContent = (
     <ScrollArea className="h-full" contentClassName="px-1 py-1">
       <SidebarHeader>
-        <SidebarHeaderSearch
+        <SidebarSearchPopover
           value={peopleSearchQuery}
           onChange={setPeopleSearchQuery}
           aria-label="Search people"
@@ -1434,7 +1434,7 @@ export function CollaborationSidebarView() {
       viewportProps={{ onContextMenu: (event) => notesContextMenu.open(event) }}
     >
       <SidebarHeader>
-        <SidebarHeaderSearch
+        <SidebarSearchPopover
           value={notesSearchQuery}
           onChange={setNotesSearchQuery}
           aria-label="Search notes"

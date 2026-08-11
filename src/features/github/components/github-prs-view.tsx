@@ -43,12 +43,11 @@ import { ScrollArea } from "@/ui/scroll-area";
 import {
   SidebarEmptyState,
   SidebarHeaderIconButton,
-  SidebarHeaderSearch,
+  SidebarSearchPopover,
   SidebarPanel,
   SidebarTabPanels,
   SidebarTabBar,
   SidebarTitleBar,
-  SidebarToolbar,
 } from "@/ui/sidebar";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useGitHubStore } from "../stores/github.store";
@@ -609,8 +608,6 @@ const GitHubPRsView = memo(() => {
   }, [githubSidebarSectionOrder]);
 
   const sectionTabs = allSectionTabs.filter((tab) => availableSections.includes(tab.id));
-  const activeSectionTitle =
-    sectionTabs.find((section) => section.id === activeSection)?.label ?? "GitHub";
   const activeFilterLabel =
     activeSection === "pull-requests"
       ? filterLabels[currentFilter]
@@ -727,7 +724,14 @@ const GitHubPRsView = memo(() => {
           />
         ) : (
           <>
-            <SidebarTitleBar title={activeSectionTitle}>
+            <SidebarTitleBar
+              title={<GitProjectSelector onRepositoryChange={() => setRepoSelectionError(null)} />}
+            >
+              <SidebarSearchPopover
+                value={searchQuery}
+                onChange={setSearchQuery}
+                aria-label="Search GitHub"
+              />
               <SidebarHeaderIconButton
                 disabled={!effectiveRepoPath}
                 tooltip={
@@ -785,18 +789,6 @@ const GitHubPRsView = memo(() => {
             </SidebarTitleBar>
 
             <SidebarTabBar items={sectionTabs} value={activeSection} onChange={setActiveSection}>
-              <SidebarToolbar>
-                <GitProjectSelector
-                  className="min-w-0 max-w-[34%] shrink-0"
-                  onRepositoryChange={() => setRepoSelectionError(null)}
-                />
-                <SidebarHeaderSearch
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  aria-label="Search GitHub"
-                />
-              </SidebarToolbar>
-
               <SidebarTabPanels
                 className="flex-1"
                 items={[
