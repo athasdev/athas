@@ -239,7 +239,7 @@ export const SidebarPaneSelector = ({
 
   if (isVertical) {
     return (
-      <>
+      <nav aria-label="Activity views" className="flex w-full flex-col gap-1">
         {visibleItems.map((item) => (
           <SidebarListItem
             key={item.id}
@@ -255,7 +255,7 @@ export const SidebarPaneSelector = ({
             {item.label ?? item.tooltip?.content ?? item.ariaLabel ?? item.id}
           </SidebarListItem>
         ))}
-      </>
+      </nav>
     );
   }
 

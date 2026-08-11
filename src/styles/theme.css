@@ -156,6 +156,11 @@
     --athas-title-bar-height: 2.25rem;
   }
 
+  .athas-sidebar-rail {
+    --athas-sidebar-rail-foreground: var(--foreground);
+    --subtle-foreground: var(--athas-sidebar-rail-foreground);
+  }
+
   :root[data-window-chrome-density="comfortable"] {
     --ui-text-caption: 13px;
     --ui-text-chrome: 14px;

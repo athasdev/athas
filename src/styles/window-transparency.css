@@ -35,16 +35,6 @@ html:is(.platform-macos, .platform-windows):not(
   --athas-chrome-control-hover-bg: color-mix(in srgb, var(--background) 62%, transparent);
 }
 
-html.platform-macos:not([data-window-transparency="disabled"])[data-theme-type="dark"]
-  .athas-sidebar-rail {
-  --athas-sidebar-rail-muted-text: color-mix(
-    in srgb,
-    var(--muted-foreground) 90%,
-    var(--foreground) 10%
-  );
-  --subtle-foreground: var(--athas-sidebar-rail-muted-text);
-}
-
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
   .window-container {
   background: transparent !important;

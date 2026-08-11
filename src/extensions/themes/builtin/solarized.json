@@ -11,7 +11,7 @@
       "colors": {
         "background": "#fdf6e3",
         "surface": "#eee8d5",
-        "foreground": "#657b83",
+        "foreground": "#586e75",
         "muted-foreground": "#839496",
         "subtle-foreground": "#93a1a1",
         "border": "#eee8d5",
