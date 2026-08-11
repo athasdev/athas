@@ -1991,12 +1991,7 @@ export function DockerSidebar() {
           </DropdownMenu>
         </SidebarTitleBar>
 
-        <SidebarTabBar
-          items={dockerTabs}
-          value={activeTab}
-          onChange={(tab) => setActiveTab(tab as DockerTab)}
-        />
-
+        <SidebarTabBar items={dockerTabs} value={activeTab} onChange={setActiveTab} />
         {isFilterVisible || query.length > 0 ? (
           <SidebarToolbar>
             <SearchField

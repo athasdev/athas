@@ -57,7 +57,7 @@ import {
   SidebarListItem,
   SidebarPanel,
   SidebarSectionHeader,
-  SidebarSectionPager,
+  SidebarTabPanels,
   SidebarTabBar,
   SidebarTitleBar,
 } from "@/ui/sidebar";
@@ -1033,7 +1033,7 @@ export function CollaborationSidebarView() {
           contentClassName="px-1 py-1"
           viewportProps={{ onContextMenu: (event) => channelsContextMenu.open(event) }}
         >
-          <SidebarHeader variant="search">
+          <SidebarHeader>
             <SidebarHeaderSearch
               value={channelSearchQuery}
               onChange={setChannelSearchQuery}
@@ -1337,7 +1337,7 @@ export function CollaborationSidebarView() {
 
   const peopleContent = (
     <ScrollArea className="h-full" contentClassName="px-1 py-1">
-      <SidebarHeader variant="search">
+      <SidebarHeader>
         <SidebarHeaderSearch
           value={peopleSearchQuery}
           onChange={setPeopleSearchQuery}
@@ -1433,7 +1433,7 @@ export function CollaborationSidebarView() {
       contentClassName="px-1 py-1"
       viewportProps={{ onContextMenu: (event) => notesContextMenu.open(event) }}
     >
-      <SidebarHeader variant="search">
+      <SidebarHeader>
         <SidebarHeaderSearch
           value={notesSearchQuery}
           onChange={setNotesSearchQuery}
@@ -1561,31 +1561,29 @@ export function CollaborationSidebarView() {
         className="relative z-[10020]"
         items={COLLABORATION_TABS}
         value={activeTab}
-        onChange={(tab) => selectTab(tab as CollaborationSidebarTab)}
-      />
+        onChange={selectTab}
+      >
+        <SidebarTabPanels
+          className="flex-1"
+          items={[
+            { id: "channels", content: channelsContent },
+            { id: "people", content: peopleContent },
+            { id: "notes", content: notesContent },
+          ]}
+        />
 
-      <SidebarSectionPager
-        className="flex-1"
-        items={[
-          { id: "channels", content: channelsContent },
-          { id: "people", content: peopleContent },
-          { id: "notes", content: notesContent },
-        ]}
-        value={activeTab}
-        onChange={(tab) => selectTab(tab as CollaborationSidebarTab)}
-      />
-
-      <CollaborationMediaFooter
-        workspaceName={model.workspaceName}
-        micState={micState}
-        screenState={screenState}
-        onlineCount={model.onlineCount}
-        streamStatus={activeDocumentStream.status}
-        isFollowing={Boolean(presenceTarget.followingUserId)}
-        onToggleMic={() => void toggleMic()}
-        onToggleScreenShare={() => void toggleScreenShare()}
-        onStopFollowing={() => collaborationActions.setFollowingUser(null)}
-      />
+        <CollaborationMediaFooter
+          workspaceName={model.workspaceName}
+          micState={micState}
+          screenState={screenState}
+          onlineCount={model.onlineCount}
+          streamStatus={activeDocumentStream.status}
+          isFollowing={Boolean(presenceTarget.followingUserId)}
+          onToggleMic={() => void toggleMic()}
+          onToggleScreenShare={() => void toggleScreenShare()}
+          onStopFollowing={() => collaborationActions.setFollowingUser(null)}
+        />
+      </SidebarTabBar>
 
       <Dropdown
         isOpen={channelsContextMenu.isOpen}

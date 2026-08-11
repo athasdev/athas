@@ -420,10 +420,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       aria-label={ariaLabel}
     >
       {onViewModeChange ? (
-        <SidebarHeader
-          variant="search"
-          className={cn(surface === "plain" ? "px-1" : "border-border/60 border-b")}
-        >
+        <SidebarHeader className={cn(surface === "plain" ? "px-1" : "border-border/60 border-b")}>
           <SidebarHeaderSearch
             value={searchQuery}
             onChange={setSearchQuery}

@@ -24,7 +24,7 @@ import {
   SidebarFooter,
   SidebarHeaderIconButton,
   SidebarPanel,
-  SidebarSectionPager,
+  SidebarTabPanels,
   SidebarTabBar,
   SidebarTitleBar,
   SidebarToolbar,
@@ -770,113 +770,108 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           {renderRefreshButton()}
           {renderActionsButton()}
         </SidebarTitleBar>
-        <SidebarTabBar
-          items={gitTabs}
-          value={activeTab}
-          onChange={(tab) => setActiveTab(tab as GitSidebarTab)}
-        />
-        <SidebarToolbar className="overflow-hidden">
-          <div className="flex min-w-0 flex-1">
-            <GitBranchManager
+        <SidebarTabBar items={gitTabs} value={activeTab} onChange={setActiveTab}>
+          <SidebarToolbar className="overflow-hidden">
+            <div className="flex min-w-0 flex-1">
+              <GitBranchManager
+                currentBranch={gitStatus.branch}
+                repoPath={activeRepoPath}
+                paletteTarget
+                openEventName={GIT_VIEW_BRANCH_MANAGER_EVENT}
+                onBranchChange={() => void handleManualRefresh()}
+                onWorktreeChange={(worktreePath) => void handleGitViewWorktreeChange(worktreePath)}
+                onRepositoryChange={() => setRepoSelectionError(null)}
+              />
+            </div>
+
+            <div className="ml-auto flex min-w-0 max-w-[45%] shrink-0 items-center">
+              <ButtonGroup ref={syncMenuAnchorRef} className="min-w-0 max-w-full">
+                <Button
+                  type="button"
+                  variant="default"
+                  size="xs"
+                  className="min-w-0 flex-1"
+                  onClick={() => void handleRemoteAction(primaryRemoteAction)}
+                  disabled={!activeRepoPath || isRemoteActionLoading}
+                  aria-label={`${syncActionLabel} remote changes`}
+                >
+                  <span className="min-w-0 truncate whitespace-nowrap">{syncActionLabel}</span>
+                </Button>
+                <ButtonGroupSeparator />
+                <Button
+                  type="button"
+                  variant="default"
+                  size="icon-xs"
+                  onClick={() => setIsSyncMenuOpen((open) => !open)}
+                  disabled={!activeRepoPath || isRemoteActionLoading}
+                  active={isSyncMenuOpen}
+                  aria-label="Choose remote action"
+                  aria-haspopup="menu"
+                  aria-expanded={isSyncMenuOpen}
+                >
+                  <CaretDown className="size-3" />
+                </Button>
+              </ButtonGroup>
+              <Dropdown
+                isOpen={isSyncMenuOpen}
+                anchorRef={syncMenuAnchorRef}
+                anchorAlign="end"
+                onClose={() => setIsSyncMenuOpen(false)}
+                items={syncMenuItems}
+                className="min-w-[132px]"
+              />
+            </div>
+          </SidebarToolbar>
+
+          <SidebarTabPanels
+            className="flex-1"
+            items={[
+              {
+                id: "changes",
+                content: (
+                  <GitStatusPanel
+                    files={visibleGitFiles}
+                    fileDiffStats={fileDiffStats}
+                    onFileSelect={handleGitFileClick}
+                    onOpenFile={handleOpenOriginalFile}
+                    onViewDiff={(scope) => void handleViewWorkingTreeDiff(scope)}
+                    onShowCommitDiffPicker={handleShowCommitDiffList}
+                    onShowBranchDiffPicker={() => void handleShowBranchDiffList()}
+                    onShowStashDiffPicker={() => {
+                      setShowStashList(true);
+                      setStashSearchQuery("");
+                    }}
+                    onRefresh={refreshAfterAction}
+                    repoPath={activeRepoPath}
+                  />
+                ),
+              },
+              {
+                id: "history",
+                content: (
+                  <GitCommitHistory
+                    onViewCommitDiff={handleViewCommitDiff}
+                    repoPath={activeRepoPath}
+                    ahead={gitStatus.ahead}
+                    behind={gitStatus.behind}
+                  />
+                ),
+              },
+            ].filter((item) => gitTabs.some((tab) => tab.id === item.id))}
+          />
+
+          <SidebarFooter>
+            <GitCommitPanel
+              stagedFilesCount={stagedFiles.length}
+              stagedFiles={stagedFiles}
               currentBranch={gitStatus.branch}
               repoPath={activeRepoPath}
-              paletteTarget
-              openEventName={GIT_VIEW_BRANCH_MANAGER_EVENT}
-              onBranchChange={() => void handleManualRefresh()}
-              onWorktreeChange={(worktreePath) => void handleGitViewWorktreeChange(worktreePath)}
-              onRepositoryChange={() => setRepoSelectionError(null)}
+              ahead={gitStatus.ahead}
+              behind={gitStatus.behind}
+              onCommitSuccess={refreshAfterAction}
             />
-          </div>
-
-          <div className="ml-auto flex min-w-0 max-w-[45%] shrink-0 items-center">
-            <ButtonGroup ref={syncMenuAnchorRef} className="min-w-0 max-w-full">
-              <Button
-                type="button"
-                variant="default"
-                size="xs"
-                className="min-w-0 flex-1"
-                onClick={() => void handleRemoteAction(primaryRemoteAction)}
-                disabled={!activeRepoPath || isRemoteActionLoading}
-                aria-label={`${syncActionLabel} remote changes`}
-              >
-                <span className="min-w-0 truncate whitespace-nowrap">{syncActionLabel}</span>
-              </Button>
-              <ButtonGroupSeparator />
-              <Button
-                type="button"
-                variant="default"
-                size="icon-xs"
-                onClick={() => setIsSyncMenuOpen((open) => !open)}
-                disabled={!activeRepoPath || isRemoteActionLoading}
-                active={isSyncMenuOpen}
-                aria-label="Choose remote action"
-                aria-haspopup="menu"
-                aria-expanded={isSyncMenuOpen}
-              >
-                <CaretDown className="size-3" />
-              </Button>
-            </ButtonGroup>
-            <Dropdown
-              isOpen={isSyncMenuOpen}
-              anchorRef={syncMenuAnchorRef}
-              anchorAlign="end"
-              onClose={() => setIsSyncMenuOpen(false)}
-              items={syncMenuItems}
-              className="min-w-[132px]"
-            />
-          </div>
-        </SidebarToolbar>
-
-        <SidebarSectionPager
-          className="flex-1"
-          items={[
-            {
-              id: "changes",
-              content: (
-                <GitStatusPanel
-                  files={visibleGitFiles}
-                  fileDiffStats={fileDiffStats}
-                  onFileSelect={handleGitFileClick}
-                  onOpenFile={handleOpenOriginalFile}
-                  onViewDiff={(scope) => void handleViewWorkingTreeDiff(scope)}
-                  onShowCommitDiffPicker={handleShowCommitDiffList}
-                  onShowBranchDiffPicker={() => void handleShowBranchDiffList()}
-                  onShowStashDiffPicker={() => {
-                    setShowStashList(true);
-                    setStashSearchQuery("");
-                  }}
-                  onRefresh={refreshAfterAction}
-                  repoPath={activeRepoPath}
-                />
-              ),
-            },
-            {
-              id: "history",
-              content: (
-                <GitCommitHistory
-                  onViewCommitDiff={handleViewCommitDiff}
-                  repoPath={activeRepoPath}
-                  ahead={gitStatus.ahead}
-                  behind={gitStatus.behind}
-                />
-              ),
-            },
-          ].filter((item) => gitTabs.some((tab) => tab.id === item.id))}
-          value={activeTab}
-          onChange={(tab) => setActiveTab(tab as GitSidebarTab)}
-        />
-
-        <SidebarFooter variant="surface">
-          <GitCommitPanel
-            stagedFilesCount={stagedFiles.length}
-            stagedFiles={stagedFiles}
-            currentBranch={gitStatus.branch}
-            repoPath={activeRepoPath}
-            ahead={gitStatus.ahead}
-            behind={gitStatus.behind}
-            onCommitSuccess={refreshAfterAction}
-          />
-        </SidebarFooter>
+          </SidebarFooter>
+        </SidebarTabBar>
       </SidebarPanel>
 
       {renderGitActionsMenu({ hasGitRepo: !!gitStatus, onRefresh: refreshAfterAction })}

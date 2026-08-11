@@ -29,7 +29,7 @@ export function CollaborationMessageComposer({
   const isSubmitDisabled = !value.trim() || disabled || isSending;
 
   return (
-    <SidebarFooter variant="surface">
+    <SidebarFooter>
       {error ? (
         <Alert tone="error" className="mb-1.5">
           <AlertDescription>{error}</AlertDescription>

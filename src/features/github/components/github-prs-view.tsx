@@ -45,7 +45,7 @@ import {
   SidebarHeaderIconButton,
   SidebarHeaderSearch,
   SidebarPanel,
-  SidebarSectionPager,
+  SidebarTabPanels,
   SidebarTabBar,
   SidebarTitleBar,
   SidebarToolbar,
@@ -784,136 +784,130 @@ const GitHubPRsView = memo(() => {
               </DropdownMenu>
             </SidebarTitleBar>
 
-            <SidebarTabBar
-              items={sectionTabs}
-              value={activeSection}
-              onChange={(section) => setActiveSection(section as GitHubSidebarSection)}
-            />
+            <SidebarTabBar items={sectionTabs} value={activeSection} onChange={setActiveSection}>
+              <SidebarToolbar>
+                <GitProjectSelector
+                  className="min-w-0 max-w-[34%] shrink-0"
+                  onRepositoryChange={() => setRepoSelectionError(null)}
+                />
+                <SidebarHeaderSearch
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  aria-label="Search GitHub"
+                />
+              </SidebarToolbar>
 
-            <SidebarToolbar>
-              <GitProjectSelector
-                className="min-w-0 max-w-[34%] shrink-0"
-                onRepositoryChange={() => setRepoSelectionError(null)}
+              <SidebarTabPanels
+                className="flex-1"
+                items={[
+                  {
+                    id: "pull-requests",
+                    content: (
+                      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+                        <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
+                          {!effectiveRepoPath ? (
+                            <GitHubSidebarState
+                              icon={<GitBranch className="size-4" />}
+                              title="No repository selected"
+                              actionLabel={isSelectingRepo ? "Selecting..." : "Browse Repository"}
+                              onAction={() => void handleSelectRepository()}
+                              isActionDisabled={isSelectingRepo}
+                            />
+                          ) : error ? (
+                            <GitHubSidebarState
+                              icon={<AlertCircle className="size-4" />}
+                              title={isRepoError ? "Repository is not a Git repository" : error}
+                              description={
+                                isRepoError
+                                  ? "Select another folder that contains a `.git` repository."
+                                  : repoSelectionError || undefined
+                              }
+                              actionLabel={
+                                isRepoError
+                                  ? isSelectingRepo
+                                    ? "Selecting..."
+                                    : "Browse Repository"
+                                  : "Try again"
+                              }
+                              onAction={
+                                isRepoError ? () => void handleSelectRepository() : handleRefresh
+                              }
+                              isActionDisabled={isSelectingRepo}
+                              tone="error"
+                            />
+                          ) : isLoading && deferredPrs.length === 0 ? (
+                            <GitHubSidebarState
+                              icon={<Spinner label="Loading pull requests" compact />}
+                              title="Loading pull requests"
+                            />
+                          ) : deferredPrs.length === 0 ? (
+                            <GitHubSidebarState
+                              icon={<GitPullRequest className="size-4" />}
+                              title="No pull requests"
+                            />
+                          ) : filteredPrs.length === 0 ? (
+                            <GitHubSidebarState
+                              icon={<GitPullRequest className="size-4" />}
+                              title="No matching pull requests"
+                            />
+                          ) : (
+                            <div className="space-y-1 overflow-x-hidden">
+                              {isLoading ? (
+                                <div className="flex items-center px-2 py-1.5">
+                                  <Spinner label="Refreshing" compact />
+                                </div>
+                              ) : null}
+                              {groupedPrs.map((group) => (
+                                <GitHubSidebarListSection
+                                  key={group.id}
+                                  title={group.title}
+                                  count={group.items.length}
+                                  defaultExpanded={group.defaultExpanded}
+                                  forceExpanded={forceListSectionsExpanded}
+                                >
+                                  {group.items.map((pr) => (
+                                    <PRListItem
+                                      key={pr.number}
+                                      pr={pr}
+                                      isActive={activePRNumber === pr.number}
+                                      onSelect={() => handleSelectPR(pr)}
+                                      onSelectChanges={() => handleSelectPRChanges(pr)}
+                                      onPrefetch={() => handlePrefetchPR(pr)}
+                                      onContextMenu={handlePRContextMenu}
+                                      repoPath={effectiveRepoPath}
+                                    />
+                                  ))}
+                                </GitHubSidebarListSection>
+                              ))}
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </div>
+                    ),
+                  },
+                  {
+                    id: "issues",
+                    content: (
+                      <GitHubIssuesView
+                        refreshNonce={sectionRefreshNonce}
+                        searchQuery={searchQuery}
+                        filter={issueFilter}
+                      />
+                    ),
+                  },
+                  {
+                    id: "actions",
+                    content: (
+                      <GitHubActionsView
+                        refreshNonce={sectionRefreshNonce}
+                        searchQuery={searchQuery}
+                        filter={actionFilter}
+                      />
+                    ),
+                  },
+                ].filter((item) => sectionTabs.some((tab) => tab.id === item.id))}
               />
-              <SidebarHeaderSearch
-                value={searchQuery}
-                onChange={setSearchQuery}
-                aria-label="Search GitHub"
-              />
-            </SidebarToolbar>
-
-            <SidebarSectionPager
-              className="flex-1"
-              items={[
-                {
-                  id: "pull-requests",
-                  content: (
-                    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-                      <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
-                        {!effectiveRepoPath ? (
-                          <GitHubSidebarState
-                            icon={<GitBranch className="size-4" />}
-                            title="No repository selected"
-                            actionLabel={isSelectingRepo ? "Selecting..." : "Browse Repository"}
-                            onAction={() => void handleSelectRepository()}
-                            isActionDisabled={isSelectingRepo}
-                          />
-                        ) : error ? (
-                          <GitHubSidebarState
-                            icon={<AlertCircle className="size-4" />}
-                            title={isRepoError ? "Repository is not a Git repository" : error}
-                            description={
-                              isRepoError
-                                ? "Select another folder that contains a `.git` repository."
-                                : repoSelectionError || undefined
-                            }
-                            actionLabel={
-                              isRepoError
-                                ? isSelectingRepo
-                                  ? "Selecting..."
-                                  : "Browse Repository"
-                                : "Try again"
-                            }
-                            onAction={
-                              isRepoError ? () => void handleSelectRepository() : handleRefresh
-                            }
-                            isActionDisabled={isSelectingRepo}
-                            tone="error"
-                          />
-                        ) : isLoading && deferredPrs.length === 0 ? (
-                          <GitHubSidebarState
-                            icon={<Spinner label="Loading pull requests" compact />}
-                            title="Loading pull requests"
-                          />
-                        ) : deferredPrs.length === 0 ? (
-                          <GitHubSidebarState
-                            icon={<GitPullRequest className="size-4" />}
-                            title="No pull requests"
-                          />
-                        ) : filteredPrs.length === 0 ? (
-                          <GitHubSidebarState
-                            icon={<GitPullRequest className="size-4" />}
-                            title="No matching pull requests"
-                          />
-                        ) : (
-                          <div className="space-y-1 overflow-x-hidden">
-                            {isLoading ? (
-                              <div className="flex items-center px-2 py-1.5">
-                                <Spinner label="Refreshing" compact />
-                              </div>
-                            ) : null}
-                            {groupedPrs.map((group) => (
-                              <GitHubSidebarListSection
-                                key={group.id}
-                                title={group.title}
-                                count={group.items.length}
-                                defaultExpanded={group.defaultExpanded}
-                                forceExpanded={forceListSectionsExpanded}
-                              >
-                                {group.items.map((pr) => (
-                                  <PRListItem
-                                    key={pr.number}
-                                    pr={pr}
-                                    isActive={activePRNumber === pr.number}
-                                    onSelect={() => handleSelectPR(pr)}
-                                    onSelectChanges={() => handleSelectPRChanges(pr)}
-                                    onPrefetch={() => handlePrefetchPR(pr)}
-                                    onContextMenu={handlePRContextMenu}
-                                    repoPath={effectiveRepoPath}
-                                  />
-                                ))}
-                              </GitHubSidebarListSection>
-                            ))}
-                          </div>
-                        )}
-                      </ScrollArea>
-                    </div>
-                  ),
-                },
-                {
-                  id: "issues",
-                  content: (
-                    <GitHubIssuesView
-                      refreshNonce={sectionRefreshNonce}
-                      searchQuery={searchQuery}
-                      filter={issueFilter}
-                    />
-                  ),
-                },
-                {
-                  id: "actions",
-                  content: (
-                    <GitHubActionsView
-                      refreshNonce={sectionRefreshNonce}
-                      searchQuery={searchQuery}
-                      filter={actionFilter}
-                    />
-                  ),
-                },
-              ].filter((item) => sectionTabs.some((tab) => tab.id === item.id))}
-              value={activeSection}
-              onChange={(section) => setActiveSection(section as GitHubSidebarSection)}
-            />
+            </SidebarTabBar>
           </>
         )}
         <Dropdown

@@ -26,7 +26,7 @@ export function CollaborationMediaFooter({
   onStopFollowing: () => void;
 }) {
   return (
-    <SidebarFooter variant="surface">
+    <SidebarFooter>
       <div className="flex min-w-0 items-center gap-1 px-1 py-1">
         <Button
           type="button"

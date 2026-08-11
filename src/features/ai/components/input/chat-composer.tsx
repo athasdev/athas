@@ -1,10 +1,10 @@
 import { forwardRef, type ComponentProps } from "react";
-import { SidebarComposer, SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";
+import { SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
 export const ChatComposer = forwardRef<
   HTMLDivElement,
-  Omit<ComponentProps<typeof SidebarFooter>, "variant"> & {
+  ComponentProps<typeof SidebarFooter> & {
     dragActive?: boolean;
     standalone?: boolean;
     connected?: boolean;
@@ -22,40 +22,39 @@ export const ChatComposer = forwardRef<
 
   if (standalone) {
     return (
-      <SidebarComposer
+      <div
         ref={ref}
-        variant="prominent"
-        elevation="raised"
         data-ai-element="prompt-input"
-        className={rootClassName}
+        className={cn(
+          "rounded-2xl bg-surface/55 shadow-[var(--shadow-card)] transition-[border-radius,background-color,box-shadow]",
+          rootClassName,
+        )}
         {...props}
       />
     );
   }
 
   return (
-    <SidebarFooter
-      ref={ref}
-      variant="surface"
-      data-ai-element="prompt-input"
-      className={rootClassName}
-      {...props}
-    />
+    <SidebarFooter ref={ref} data-ai-element="prompt-input" className={rootClassName} {...props} />
   );
 });
 
 export function ChatComposerBody({
   className,
   connected = false,
+  variant = "surface",
   ...props
-}: ComponentProps<typeof SidebarComposerBody> & {
+}: Omit<ComponentProps<typeof SidebarComposerBody>, "variant"> & {
   connected?: boolean;
+  variant?: "surface" | "prominent";
 }) {
   return (
     <SidebarComposerBody
       data-ai-element="prompt-input-body"
+      variant={variant === "prominent" ? "plain" : "surface"}
       className={cn(
         "transition-[border-color,background-color,box-shadow] duration-[var(--app-duration-fast)]",
+        variant === "prominent" && "rounded-2xl bg-background",
         connected && "rounded-t-none",
         className,
       )}
