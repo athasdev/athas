@@ -621,7 +621,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const [viewMode, setViewMode] = useState<"unified" | "split">("unified");
   const [showWhitespace, setShowWhitespace] = useState(false);
   const [isFileTreeVisible, setIsFileTreeVisible] = useState(true);
-  const [fileNavigatorViewMode, setFileNavigatorViewMode] = useState<FileNavigatorViewMode>("flat");
+  const [fileNavigatorViewMode, setFileNavigatorViewMode] = useState<FileNavigatorViewMode>("tree");
   const isWorkingTree = multiDiff.commitHash === "working-tree";
   const isWorkingTreeBuffer = activeBuffer?.path === "diff://working-tree/all-files";
   const isActiveMultiDiff = activeBuffer?.type === "diff" && activeBuffer.diffData === multiDiff;

@@ -20,7 +20,11 @@ import {
   SidebarSectionLabel,
 } from "@/ui/sidebar";
 import { SidebarTree, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
-import { buildPathTree, type PathTreeNode } from "@/features/sidebar/lib/path-tree";
+import {
+  buildPathTree,
+  compactPathTreeBranch,
+  type PathTreeNode,
+} from "@/features/sidebar/lib/path-tree";
 import { ToggleGroup } from "@/ui/toggle-group";
 import { cn } from "@/utils/cn";
 import { ScrollArea } from "@/ui/scroll-area";
@@ -180,28 +184,31 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
   compactRows?: boolean;
 }) {
   if (node.type === "branch") {
-    const expanded = !collapsedNodeIds.has(node.id);
+    const compacted = compactPathTreeBranch(node);
+    const branch = compacted.branch;
+    const expanded = !collapsedNodeIds.has(branch.id);
 
     return (
       <div>
         <SidebarTreeRow
           depth={depth}
           expanded={expanded}
-          onToggle={() => onToggle(node.id)}
-          onClick={() => onToggle(node.id)}
-          label={node.name}
+          onToggle={() => onToggle(branch.id)}
+          onClick={() => onToggle(branch.id)}
+          label={compacted.label}
           leading={
             <ThemedFileIcon
-              fileName={node.name}
+              fileName={branch.name}
               isDir
+              isExpanded={expanded}
               className="shrink-0 text-subtle-foreground"
             />
           }
-          title={node.path}
+          title={branch.path}
           className={cn(compactRows && "py-1")}
         />
         {expanded
-          ? node.children.map((child) => (
+          ? branch.children.map((child) => (
               <FileNavigatorNodeRow
                 key={child.id}
                 node={child}
@@ -404,7 +411,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         </SidebarHeader>
       ) : null}
 
-      <ScrollArea className="min-h-0 flex-1" contentClassName="p-1" orientation="both">
+      <ScrollArea className="min-h-0 flex-1" contentClassName="p-1" reserveScrollbarGutter>
         {hiddenItemCount > 0 ? (
           <SidebarSectionLabel>
             Showing {searchableItems.length.toLocaleString()} of {items.length.toLocaleString()}
