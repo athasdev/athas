@@ -170,6 +170,7 @@ type SidebarTreeRowProps = Omit<React.ComponentPropsWithoutRef<"button">, "child
   label?: React.ReactNode;
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
+  action?: React.ReactNode;
   description?: React.ReactNode;
   onToggle?: (event: React.MouseEvent<HTMLSpanElement>) => void;
   reserveDisclosureSpace?: boolean;
@@ -192,6 +193,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
       label,
       leading,
       trailing,
+      action,
       description,
       onToggle,
       reserveDisclosureSpace = false,
@@ -233,6 +235,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
           className={cn(
             "file-tree-row font-sans ui-text-sm flex w-full min-w-0 cursor-pointer select-none items-center whitespace-nowrap rounded-lg border border-transparent bg-transparent text-left text-foreground outline-none transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent focus-visible:border-primary/40 gap-1.5 px-1.5 py-1 leading-row",
             active && "bg-selected",
+            action && "pr-8",
             className,
           )}
           style={{ paddingLeft: `${baseIndent + depth * indentSize}px`, ...style }}
@@ -264,6 +267,11 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
             </span>
           ) : null}
         </button>
+        {action ? (
+          <span className="absolute top-1/2 right-2 z-3 flex -translate-y-1/2 items-center">
+            {action}
+          </span>
+        ) : null}
       </div>
     );
   },

@@ -9,7 +9,7 @@ import {
   TrashIcon as Trash2,
 } from "@/ui/icons";
 import type React from "react";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -22,7 +22,8 @@ import { Empty, EmptyMedia, EmptyTitle } from "@/ui/empty";
 import { ScrollArea } from "@/ui/scroll-area";
 import { showConfirmDialog } from "@/ui/dialog";
 import { SidebarHeaderIconButton, SidebarSectionHeader, SidebarToolbar } from "@/ui/sidebar";
-import { SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
+import { SidebarTree, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
+import type { PathTreeNode } from "@/features/sidebar/lib/path-tree";
 import { cn } from "@/utils/cn";
 import { createStash } from "../../api/git-stash-api";
 import {
@@ -38,7 +39,7 @@ import {
   buildGitFolderTree,
   buildGitStatusPresentation,
   GIT_STATUS_ORDER,
-  type GitFolderNode,
+  type GitFolderTree,
   type GitStatusGroup,
 } from "../../utils/git-status-model";
 import { StashMessageModal } from "../stash/git-stash-modal";
@@ -407,84 +408,82 @@ const GitStatusPanel = ({
     </SidebarSectionHeader>
   );
 
-  const renderFolderTree = (rootNode: GitFolderNode, section: "changes") => {
-    const renderNode = (node: GitFolderNode, depth: number): React.ReactNode => {
-      const folderRows = node.sortedFolders.map((folderNode) => {
-        const collapseKey = `${section}:${folderNode.fullPath}`;
-        const isCollapsed = collapsedFolders.has(collapseKey);
-
+  const renderFolderTree = (tree: GitFolderTree, section: "changes") => {
+    const renderNode = (node: PathTreeNode<GitFile>, depth: number): React.ReactNode => {
+      if (node.type === "leaf") {
+        const file = node.item;
         return (
-          <Fragment key={folderNode.fullPath}>
-            <SidebarTreeRow
-              depth={depth}
-              onClick={() => toggleFolderCollapsed(section, folderNode.fullPath)}
-              className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center overflow-hidden leading-row"
-              draggable={!!repoPath}
-              onDragStart={(event) => {
-                if (!repoPath) return;
-                writeSidebarResourceDragData(event.dataTransfer, {
-                  type: "file",
-                  path: `${repoPath}/${folderNode.fullPath}`,
-                  name: folderNode.name,
-                  isDir: true,
-                });
-              }}
-            >
-              <ThemedFileIcon
-                fileName={folderNode.name}
-                isDir
-                isExpanded={!isCollapsed}
-                className="relative z-1 shrink-0 text-subtle-foreground"
-              />
-              <span className="relative z-1 block min-w-0 truncate whitespace-nowrap leading-row">
-                {folderNode.name}
-              </span>
-              <div className="relative z-1 ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
-                <Checkbox
-                  checked={folderNode.areAllDescendantFilesStaged}
-                  onCheckedChange={(checked) =>
-                    void handleSetFilesStaged(folderNode.descendantFilePaths, checked)
-                  }
-                  disabled={isLoading || folderNode.descendantFilePaths.length === 0}
-                  aria-label={
-                    folderNode.areAllDescendantFilesStaged
-                      ? `Unstage folder ${folderNode.name}`
-                      : `Stage folder ${folderNode.name}`
-                  }
-                />
-              </div>
-            </SidebarTreeRow>
-            {!isCollapsed ? renderNode(folderNode, depth + 1) : null}
-          </Fragment>
+          <GitFileItem
+            key={node.id}
+            file={file}
+            diffStats={getDiffStats(file)}
+            onClick={() => onFileSelect?.(file.path, file.staged)}
+            onContextMenu={(e) => handleContextMenu(e, file.path, file.staged)}
+            onStage={() => handleStageFile(file.path)}
+            onUnstage={() => handleUnstageFile(file.path)}
+            disabled={isLoading}
+            showDirectory={false}
+            showFileIcon
+            indentLevel={depth}
+            reserveDisclosureSpace
+            repoPath={repoPath}
+          />
         );
-      });
+      }
 
-      const fileRows = node.sortedFiles.map((file) => (
-        <GitFileItem
-          key={`${section}:${file.path}:${file.staged ? "staged" : "unstaged"}:${file.status}`}
-          file={file}
-          diffStats={getDiffStats(file)}
-          onClick={() => onFileSelect?.(file.path, file.staged)}
-          onContextMenu={(e) => handleContextMenu(e, file.path, file.staged)}
-          onStage={() => handleStageFile(file.path)}
-          onUnstage={() => handleUnstageFile(file.path)}
-          disabled={isLoading}
-          showDirectory={false}
-          showFileIcon
-          indentLevel={depth}
-          repoPath={repoPath}
-        />
-      ));
+      const collapseKey = `${section}:${node.path}`;
+      const isCollapsed = collapsedFolders.has(collapseKey);
+      const folderState = tree.folderStateById.get(node.id);
+      if (!folderState) return null;
 
       return (
-        <>
-          {folderRows}
-          {fileRows}
-        </>
+        <div key={node.id}>
+          <SidebarTreeRow
+            depth={depth}
+            expanded={!isCollapsed}
+            onToggle={() => toggleFolderCollapsed(section, node.path)}
+            onClick={() => toggleFolderCollapsed(section, node.path)}
+            label={node.name}
+            leading={
+              <ThemedFileIcon
+                fileName={node.name}
+                isDir
+                isExpanded={!isCollapsed}
+                className="shrink-0 text-subtle-foreground"
+              />
+            }
+            action={
+              <Checkbox
+                checked={folderState.areAllDescendantFilesStaged}
+                onCheckedChange={(checked) =>
+                  void handleSetFilesStaged(folderState.descendantFilePaths, checked)
+                }
+                disabled={isLoading || folderState.descendantFilePaths.length === 0}
+                aria-label={
+                  folderState.areAllDescendantFilesStaged
+                    ? `Unstage folder ${node.name}`
+                    : `Stage folder ${node.name}`
+                }
+              />
+            }
+            draggable={!!repoPath}
+            onDragStart={(event) => {
+              if (!repoPath) return;
+              writeSidebarResourceDragData(event.dataTransfer, {
+                type: "file",
+                path: `${repoPath}/${node.path}`,
+                name: node.name,
+                isDir: true,
+              });
+            }}
+            title={node.path}
+          />
+          {!isCollapsed ? node.children.map((child) => renderNode(child, depth + 1)) : null}
+        </div>
       );
     };
 
-    return renderNode(rootNode, 0);
+    return tree.nodes.map((node) => renderNode(node, 0));
   };
 
   const hasFiles = visibleFiles.length > 0;
@@ -639,19 +638,25 @@ const GitStatusPanel = ({
             {trackedFiles.length > 0 && (
               <section className="space-y-0.5">
                 {renderSectionHeader("tracked", SECTION_LABELS.tracked, trackedFiles.length)}
-                {!collapsedSections.has("tracked") &&
-                  (gitChangesFolderView
-                    ? trackedFolderTree && renderFolderTree(trackedFolderTree, "changes")
-                    : renderFlatFileList(groupedTrackedFiles))}
+                {!collapsedSections.has("tracked") ? (
+                  <SidebarTree label="Tracked files">
+                    {gitChangesFolderView
+                      ? trackedFolderTree && renderFolderTree(trackedFolderTree, "changes")
+                      : renderFlatFileList(groupedTrackedFiles)}
+                  </SidebarTree>
+                ) : null}
               </section>
             )}
             {untrackedFiles.length > 0 && (
               <section className="space-y-0.5 pt-2">
                 {renderSectionHeader("untracked", SECTION_LABELS.untracked, untrackedFiles.length)}
-                {!collapsedSections.has("untracked") &&
-                  (gitChangesFolderView
-                    ? untrackedFolderTree && renderFolderTree(untrackedFolderTree, "changes")
-                    : renderFlatFileList(groupedUntrackedFiles))}
+                {!collapsedSections.has("untracked") ? (
+                  <SidebarTree label="Untracked files">
+                    {gitChangesFolderView
+                      ? untrackedFolderTree && renderFolderTree(untrackedFolderTree, "changes")
+                      : renderFlatFileList(groupedUntrackedFiles)}
+                  </SidebarTree>
+                ) : null}
               </section>
             )}
           </ScrollArea>

@@ -28,12 +28,12 @@ describe("git status model", () => {
       file("docs/readme.md", "modified"),
     ]);
 
-    expect(tree.sortedFolders.map((folder) => folder.fullPath)).toEqual(["docs", "src"]);
-    expect(tree.folders.get("src")?.areAllDescendantFilesStaged).toBe(true);
-    expect(tree.folders.get("docs")?.areAllDescendantFilesStaged).toBe(false);
-    expect(tree.folders.get("src")?.descendantFilePaths).toEqual([
-      "src/z.ts",
+    expect(tree.nodes.map((node) => node.path)).toEqual(["docs", "src"]);
+    expect(tree.folderStateById.get("branch:src")?.areAllDescendantFilesStaged).toBe(true);
+    expect(tree.folderStateById.get("branch:docs")?.areAllDescendantFilesStaged).toBe(false);
+    expect(tree.folderStateById.get("branch:src")?.descendantFilePaths).toEqual([
       "src/components/a.ts",
+      "src/z.ts",
     ]);
   });
 });

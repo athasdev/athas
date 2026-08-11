@@ -1,3 +1,4 @@
+import { buildPathTree, type PathTreeNode } from "@/features/sidebar/lib/path-tree";
 import type { GitFile } from "../types/git.types";
 
 export type GitStatusGroup = "added" | "modified" | "deleted" | "renamed" | "untracked";
@@ -10,16 +11,14 @@ export const GIT_STATUS_ORDER: GitStatusGroup[] = [
   "untracked",
 ];
 
-export interface GitFolderNode {
-  name: string;
-  fullPath: string;
-  folders: Map<string, GitFolderNode>;
-  files: GitFile[];
-  descendantFiles: GitFile[];
-  sortedFolders: GitFolderNode[];
-  sortedFiles: GitFile[];
+export interface GitFolderState {
   descendantFilePaths: string[];
   areAllDescendantFilesStaged: boolean;
+}
+
+export interface GitFolderTree {
+  nodes: PathTreeNode<GitFile>[];
+  folderStateById: Map<string, GitFolderState>;
 }
 
 export interface GitStatusPresentation {
@@ -43,66 +42,27 @@ const createEmptyGitStatusGroups = (): Record<GitStatusGroup, GitFile[]> => ({
   untracked: [],
 });
 
-const createFolderNode = (name: string, fullPath: string): GitFolderNode => ({
-  name,
-  fullPath,
-  folders: new Map<string, GitFolderNode>(),
-  files: [],
-  descendantFiles: [],
-  sortedFolders: [],
-  sortedFiles: [],
-  descendantFilePaths: [],
-  areAllDescendantFilesStaged: false,
-});
+export function buildGitFolderTree(fileList: GitFile[]): GitFolderTree {
+  const nodes = buildPathTree(fileList, {
+    getKey: (file) => `${file.path}:${file.staged ? "staged" : "unstaged"}:${file.status}`,
+    getPath: (file) => file.path,
+  });
+  const folderStateById = new Map<string, GitFolderState>();
 
-const normalizePathSegments = (path: string): string[] =>
-  path
-    .replace(/\\/g, "/")
-    .split("/")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
+  const collectDescendantFiles = (node: PathTreeNode<GitFile>): GitFile[] => {
+    if (node.type === "leaf") return [node.item];
 
-function finalizeGitFolderTree(node: GitFolderNode): void {
-  for (const folderNode of node.folders.values()) {
-    finalizeGitFolderTree(folderNode);
-  }
+    const descendantFiles = node.children.flatMap(collectDescendantFiles);
+    folderStateById.set(node.id, {
+      descendantFilePaths: descendantFiles.map((file) => file.path),
+      areAllDescendantFilesStaged:
+        descendantFiles.length > 0 && descendantFiles.every((file) => file.staged),
+    });
+    return descendantFiles;
+  };
 
-  node.sortedFolders = Array.from(node.folders.values()).sort((left, right) =>
-    left.name.localeCompare(right.name),
-  );
-  node.sortedFiles = [...node.files].sort((left, right) => left.path.localeCompare(right.path));
-  node.descendantFilePaths = node.descendantFiles.map((file) => file.path);
-  node.areAllDescendantFilesStaged =
-    node.descendantFiles.length > 0 && node.descendantFiles.every((file) => file.staged);
-}
-
-export function buildGitFolderTree(fileList: GitFile[]): GitFolderNode {
-  const root = createFolderNode("", "");
-
-  for (const file of fileList) {
-    const segments = normalizePathSegments(file.path);
-    if (segments.length === 0) continue;
-
-    let currentNode = root;
-    currentNode.descendantFiles.push(file);
-    let currentPath = "";
-
-    for (const segment of segments.slice(0, -1)) {
-      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
-      let folder = currentNode.folders.get(segment);
-      if (!folder) {
-        folder = createFolderNode(segment, currentPath);
-        currentNode.folders.set(segment, folder);
-      }
-      currentNode = folder;
-      currentNode.descendantFiles.push(file);
-    }
-
-    currentNode.files.push(file);
-  }
-
-  finalizeGitFolderTree(root);
-  return root;
+  for (const node of nodes) collectDescendantFiles(node);
+  return { nodes, folderStateById };
 }
 
 export function buildGitStatusPresentation(files: GitFile[]): GitStatusPresentation {
