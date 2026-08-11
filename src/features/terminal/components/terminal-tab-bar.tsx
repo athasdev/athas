@@ -40,6 +40,7 @@ import {
 } from "@/features/terminal/stores/terminal.store";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
+import { normalizeTerminalTitle } from "@/features/terminal/utils/terminal-title";
 import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
 import { Button } from "@/ui/button";
 import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
@@ -517,25 +518,18 @@ const TerminalTabBar = ({
   };
   const isUsefulTerminalTitle = (title?: string) => {
     if (!title) return false;
-    const trimmed = title.trim();
-    if (!trimmed || trimmed === "Default Terminal") return false;
-    if (trimmed.length > 28) return false;
-    if (trimmed.includes("@")) return false;
-    if (trimmed.includes("/") || trimmed.includes("\\")) return false;
-    for (const char of trimmed) {
-      const code = char.charCodeAt(0);
-      if ((code >= 0 && code <= 31) || code === 127 || code === 155) {
-        return false;
-      }
-    }
+    if (title === "Default Terminal") return false;
+    if (title.length > 28) return false;
+    if (title.includes("@")) return false;
+    if (title.includes("/") || title.includes("\\")) return false;
     return true;
   };
   const getTerminalDisplayName = (terminal: Terminal) => {
     if (terminal.customName && terminal.name.trim()) return terminal.name;
 
     const session = sessions.get(terminal.id);
-    const title = session?.title?.trim();
-    if (isUsefulTerminalTitle(title)) return title!;
+    const title = normalizeTerminalTitle(session?.title ?? "");
+    if (title && isUsefulTerminalTitle(title)) return title;
     const commandLabel = getCommandLabel(terminal.initialCommand);
     if (commandLabel) return commandLabel;
     const dirLabel = getDirectoryLabel(session?.currentDirectory || terminal.currentDirectory);

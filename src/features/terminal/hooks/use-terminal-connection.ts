@@ -3,7 +3,7 @@ import type { IDisposable, Terminal as XtermTerminal } from "@xterm/xterm";
 import { useCallback, useEffect, useRef } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { TerminalInput, TerminalSize } from "../types/terminal.types";
-import { parseOSC7 } from "../utils/osc-parser";
+import { TerminalOscStream } from "../utils/terminal-osc-stream";
 import {
   getTerminalOutputFlowAction,
   getTerminalSize,
@@ -12,53 +12,6 @@ import {
   terminalSizesEqual,
 } from "../utils/terminal-protocol";
 import { useTerminalWriteBuffer } from "./use-terminal-write-buffer";
-
-const ESCAPE_CODE = 27;
-const BEL_CODE = 7;
-const DELETE_CODE = 127;
-const C1_ESCAPE_CODE = 155;
-const OSC_SCAN_BUFFER_LIMIT = 8192;
-
-const isAsciiLetter = (charCode: number) =>
-  (charCode >= 65 && charCode <= 90) || (charCode >= 97 && charCode <= 122);
-
-const stripTerminalControlSequences = (rawTitle: string) => {
-  let title = "";
-
-  for (let index = 0; index < rawTitle.length; index += 1) {
-    const charCode = rawTitle.charCodeAt(index);
-
-    if (charCode === ESCAPE_CODE) {
-      const nextChar = rawTitle[index + 1];
-
-      if (nextChar === "[") {
-        index += 2;
-        while (index < rawTitle.length && !isAsciiLetter(rawTitle.charCodeAt(index))) {
-          index += 1;
-        }
-        continue;
-      }
-
-      if (nextChar === "]") {
-        index += 2;
-        while (index < rawTitle.length && rawTitle.charCodeAt(index) !== BEL_CODE) {
-          index += 1;
-        }
-        continue;
-      }
-
-      continue;
-    }
-
-    if (charCode <= 31 || charCode === DELETE_CODE || charCode === C1_ESCAPE_CODE) {
-      continue;
-    }
-
-    title += rawTitle[index];
-  }
-
-  return title.trim();
-};
 
 interface UseTerminalConnectionOptions {
   connectionId?: string;
@@ -100,7 +53,7 @@ export function useTerminalConnection({
   const queuedOutputBytesRef = useRef(0);
   const outputPausedRef = useRef(false);
   const outputDecoderRef = useRef(new TextDecoder());
-  const oscScanBufferRef = useRef("");
+  const oscStreamRef = useRef(new TerminalOscStream());
 
   const writeInput = useCallback(
     async (activeConnectionId: string, input: TerminalInput) => {
@@ -179,9 +132,10 @@ export function useTerminalConnection({
     queuedOutputBytesRef.current = 0;
     outputPausedRef.current = false;
     outputDecoderRef.current = new TextDecoder();
-    oscScanBufferRef.current = "";
+    oscStreamRef.current.reset();
+    if (connectionId) updateSession(sessionId, { title: "" });
     void flush();
-  }, [connectionId, flush]);
+  }, [connectionId, flush, sessionId, updateSession]);
 
   useEffect(() => {
     if (!terminal || !isInitialized || !connectionId) return;
@@ -197,13 +151,6 @@ export function useTerminalConnection({
         if (selection) updateSession(sessionId, { selection });
       }),
     );
-    disposables.push(
-      terminal.onTitleChange((rawTitle) => {
-        const title = stripTerminalControlSequences(rawTitle);
-        if (title) updateSession(sessionId, { title });
-      }),
-    );
-
     const unlistenThemeChange = themeRegistry.onThemeChange(() => {
       terminal.options.theme = getTerminalTheme();
     });
@@ -221,11 +168,10 @@ export function useTerminalConnection({
         }
 
         const decoded = outputDecoderRef.current.decode(bytes, { stream: true });
-        oscScanBufferRef.current = (oscScanBufferRef.current + decoded).slice(
-          -OSC_SCAN_BUFFER_LIMIT,
-        );
-        const newDirectory = parseOSC7(oscScanBufferRef.current);
-        if (newDirectory) updateSession(sessionId, { currentDirectory: newDirectory });
+        const oscUpdates = oscStreamRef.current.feed(decoded);
+        if (oscUpdates.title !== undefined || oscUpdates.currentDirectory !== undefined) {
+          updateSession(sessionId, oscUpdates);
+        }
 
         terminal.write(bytes, () => {
           queuedOutputBytesRef.current = Math.max(

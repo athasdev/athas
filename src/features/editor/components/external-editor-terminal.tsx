@@ -15,6 +15,7 @@ import type { TerminalSize } from "@/features/terminal/types/terminal.types";
 import { buildTerminalFontFamily } from "@/features/terminal/utils/resolve-font";
 import { getTerminalKeyAction } from "@/features/terminal/utils/terminal-keyboard";
 import { getTerminalCompatibilityOptions } from "@/features/terminal/utils/terminal-options";
+import { TerminalOscStream } from "@/features/terminal/utils/terminal-osc-stream";
 import {
   getTerminalOutputFlowAction,
   getTerminalSize,
@@ -36,22 +37,6 @@ interface ExternalEditorTerminalProps {
   onEditorExit?: () => void;
 }
 
-function sanitizeTerminalTitle(rawTitle: string): string {
-  let result = "";
-
-  for (const char of rawTitle) {
-    const code = char.charCodeAt(0);
-
-    if ((code >= 0 && code <= 31) || code === 127 || code === 155) {
-      continue;
-    }
-
-    result += char;
-  }
-
-  return result.trim();
-}
-
 export const ExternalEditorTerminal = ({
   filePath,
   fileName,
@@ -67,6 +52,8 @@ export const ExternalEditorTerminal = ({
   const lastSizeRef = useRef<TerminalSize | null>(null);
   const queuedOutputBytesRef = useRef(0);
   const outputPausedRef = useRef(false);
+  const outputDecoderRef = useRef(new TextDecoder());
+  const oscStreamRef = useRef(new TerminalOscStream());
 
   const editorFontSize = useEditorSettingsStore.use.fontSize();
   const editorFontFamily = useEditorSettingsStore.use.fontFamily();
@@ -197,13 +184,6 @@ export const ExternalEditorTerminal = ({
       writeBinary(Array.from(data, (character) => character.charCodeAt(0) & 0xff));
     });
 
-    terminal.onTitleChange((rawTitle) => {
-      const title = sanitizeTerminalTitle(rawTitle);
-
-      if (!title || title === fileName) return;
-      updateExternalEditorBufferTitle(title);
-    });
-
     terminal.attachCustomKeyEventHandler((event) => {
       const action = getTerminalKeyAction(event, currentPlatform);
       if (action.type === "write") {
@@ -247,6 +227,9 @@ export const ExternalEditorTerminal = ({
     const unsubscribeEvents = subscribeToTerminalEvents(terminalConnectionId, (event) => {
       if (event.event === "output") {
         const bytes = Uint8Array.from(event.data);
+        const decoded = outputDecoderRef.current.decode(bytes, { stream: true });
+        const title = oscStreamRef.current.feed(decoded).title;
+        if (title && title !== fileName) updateExternalEditorBufferTitle(title);
         queuedOutputBytesRef.current += bytes.byteLength;
         if (
           getTerminalOutputFlowAction(queuedOutputBytesRef.current, outputPausedRef.current) ===
