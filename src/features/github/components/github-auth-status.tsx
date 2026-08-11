@@ -30,12 +30,7 @@ function GitHubAuthState({
   tone?: "neutral" | "error";
 }) {
   return (
-    <Empty
-      density="compact"
-      tone={tone}
-      className="rounded-none p-4"
-      role={tone === "error" ? "alert" : undefined}
-    >
+    <Empty tone={tone} className="rounded-none p-4" role={tone === "error" ? "alert" : undefined}>
       <EmptyHeader>
         <EmptyMedia>
           <AlertCircle />
@@ -70,7 +65,7 @@ export function GitHubAuthStatusMessage() {
     (isAthasAuthenticated && githubAccountStatus === "unknown")
   ) {
     return (
-      <Empty density="compact" className="rounded-none p-4">
+      <Empty className="rounded-none p-4">
         <EmptyDescription>
           <Spinner label="Checking GitHub account" showLabel compact />
         </EmptyDescription>

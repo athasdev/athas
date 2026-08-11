@@ -11,7 +11,7 @@ import {
 } from "react";
 import { cva } from "class-variance-authority";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
-import { Empty, EmptyDescription } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import {
   SidebarHeader,
   SidebarSearchPopover,
@@ -450,9 +450,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
           </SidebarSectionLabel>
         ) : null}
         {filteredItems.length === 0 ? (
-          <Empty density="compact">
-            <EmptyDescription>No files match</EmptyDescription>
-          </Empty>
+          <EmptyState message="No files match" />
         ) : viewMode === "flat" ? (
           flatItems.map((item) => (
             <FileNavigatorFlatRow

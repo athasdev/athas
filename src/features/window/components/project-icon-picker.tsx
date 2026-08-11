@@ -89,13 +89,13 @@ const ProjectIconPicker = memo(
         }}
       >
         {loading ? (
-          <Empty density="compact" className="min-h-0 flex-none py-6">
+          <Empty className="min-h-0 flex-none py-6">
             <EmptyDescription>
               <Spinner label="Scanning for icons" showLabel compact />
             </EmptyDescription>
           </Empty>
         ) : icons.length === 0 ? (
-          <Empty density="compact" className="min-h-0 flex-none py-6">
+          <Empty className="min-h-0 flex-none py-6">
             <EmptyHeader>
               <EmptyTitle>No icon files found in this project</EmptyTitle>
               <EmptyDescription>

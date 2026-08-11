@@ -658,17 +658,13 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 )}
               </div>
             ) : lspStatus.status === "connecting" ? (
-              <Empty
-                density="compact"
-                className="min-h-0 flex-none items-start rounded-lg px-2 py-2 text-left"
-              >
+              <Empty className="min-h-0 flex-none items-start rounded-lg px-2 py-2 text-left">
                 <EmptyDescription>
                   <Spinner label="Connecting" showLabel compact />
                 </EmptyDescription>
               </Empty>
             ) : lspStatus.status === "error" ? (
               <Empty
-                density="compact"
                 tone="error"
                 role="alert"
                 className="min-h-0 flex-none items-start rounded-lg px-2 py-2 text-left"
@@ -685,10 +681,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 </EmptyHeader>
               </Empty>
             ) : (
-              <Empty
-                density="compact"
-                className="min-h-0 flex-none items-start rounded-lg px-2 py-2 text-left"
-              >
+              <Empty className="min-h-0 flex-none items-start rounded-lg px-2 py-2 text-left">
                 <EmptyDescription className="flex items-center gap-2">
                   <ZapOff className="opacity-50" weight="duotone" />
                   No active language servers

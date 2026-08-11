@@ -34,7 +34,7 @@ import {
   githubActionListCache,
 } from "../utils/github-data-cache";
 import { Spinner } from "@/ui/spinner";
-import { Empty, EmptyDescription } from "@/ui/empty";
+import { Empty, EmptyDescription, EmptyState } from "@/ui/empty";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
@@ -437,7 +437,7 @@ const GitHubActionsView = memo(
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
           {error ? (
-            <Empty density="compact" tone="error" role="alert">
+            <Empty tone="error" role="alert">
               <EmptyDescription>{error}</EmptyDescription>
             </Empty>
           ) : isLoading && deferredRuns.length === 0 ? (
@@ -445,13 +445,9 @@ const GitHubActionsView = memo(
               <Spinner label="Loading workflow runs" showLabel compact />
             </div>
           ) : deferredRuns.length === 0 ? (
-            <Empty density="compact">
-              <EmptyDescription>No workflow runs</EmptyDescription>
-            </Empty>
+            <EmptyState message="No workflow runs" />
           ) : filteredRuns.length === 0 ? (
-            <Empty density="compact">
-              <EmptyDescription>No matching workflow runs</EmptyDescription>
-            </Empty>
+            <EmptyState message="No matching workflow runs" />
           ) : (
             <div className="space-y-1 overflow-x-hidden">
               {groupedRuns.map((group) => (

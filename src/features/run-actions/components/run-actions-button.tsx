@@ -303,7 +303,7 @@ export default function RunActionsButton() {
             />
 
             {!hasVisibleActions && isDiscovering ? (
-              <Empty density="compact" className="min-h-0 flex-none rounded-none px-6 py-8">
+              <Empty className="min-h-0 flex-none rounded-none px-6 py-8">
                 <EmptyDescription>
                   <Spinner label="Scanning project actions" showLabel compact />
                 </EmptyDescription>
@@ -311,7 +311,7 @@ export default function RunActionsButton() {
             ) : null}
 
             {!hasVisibleActions && !isDiscovering ? (
-              <Empty density="compact" className="min-h-0 flex-none rounded-none px-6 py-8">
+              <Empty className="min-h-0 flex-none rounded-none px-6 py-8">
                 <EmptyHeader>
                   <EmptyTitle>
                     {query ? "No matching actions" : "No runnable actions found"}

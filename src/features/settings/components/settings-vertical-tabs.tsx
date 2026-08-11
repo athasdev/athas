@@ -163,7 +163,7 @@ export const SettingsVerticalTabs = ({
                 );
               })
             ) : (
-              <Empty density="compact" className="min-h-0 flex-none rounded-none p-2">
+              <Empty className="min-h-0 flex-none rounded-none p-2">
                 <EmptyDescription>No matching settings</EmptyDescription>
               </Empty>
             )}

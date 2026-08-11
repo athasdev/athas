@@ -10,7 +10,7 @@ import {
 } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { Avatar } from "@/ui/avatar";
-import { Empty, EmptyDescription } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import { SidebarHeaderIconButton, SidebarHeader, SidebarSearchPopover } from "@/ui/sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { AuthUser } from "@/features/window/services/auth-api";
@@ -306,13 +306,9 @@ const GitCommitHistory = ({
         ref={scrollContainerRef}
       >
         {!hasHistoryRows ? (
-          <Empty density="compact">
-            <EmptyDescription>No commits</EmptyDescription>
-          </Empty>
+          <EmptyState message="No commits" />
         ) : filteredCommits.length === 0 ? (
-          <Empty density="compact">
-            <EmptyDescription>No commits match the current filters</EmptyDescription>
-          </Empty>
+          <EmptyState message="No commits match the current filters" />
         ) : (
           <>
             {filteredCommits.map((commit) => (

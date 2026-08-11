@@ -203,7 +203,7 @@ export function EmojiPicker({
       </div>
 
       {filteredOptions.length === 0 ? (
-        <Empty density="compact" className="mt-2">
+        <Empty className="mt-2">
           <EmptyDescription>No matching emoji</EmptyDescription>
         </Empty>
       ) : null}

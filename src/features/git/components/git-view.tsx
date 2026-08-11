@@ -714,7 +714,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <>
         <SidebarPanel>
           <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
-          <Empty density="compact" className="h-full">
+          <Empty className="h-full">
             <EmptyHeader>
               <EmptyTitle>No repository selected</EmptyTitle>
               {repoSelectionError ? (
@@ -748,7 +748,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <>
         <SidebarPanel>
           <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
-          <Empty density="compact" className="h-full">
+          <Empty className="h-full">
             <EmptyHeader>
               <EmptyTitle>Not a Git repository</EmptyTitle>
               {repoSelectionError ? (

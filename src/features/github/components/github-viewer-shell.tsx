@@ -120,7 +120,7 @@ interface GitHubViewerLoadingStateProps {
 
 export function GitHubViewerLoadingState({ label, className }: GitHubViewerLoadingStateProps) {
   return (
-    <Empty density="compact" className={cn("min-h-32 rounded-none p-8", className)}>
+    <Empty className={cn("min-h-32 rounded-none p-8", className)}>
       <EmptyDescription>
         <Spinner label={label} showLabel compact />
       </EmptyDescription>
@@ -147,7 +147,6 @@ export function GitHubViewerState({
 }: GitHubViewerStateProps) {
   return (
     <Empty
-      density="compact"
       tone={tone}
       className={cn("min-h-32 rounded-none p-8", className)}
       role={tone === "error" ? "alert" : "status"}

@@ -97,14 +97,13 @@ export const FileDiffView = memo(
           <div className="bg-background">
             <div className="max-h-[540px] overflow-auto">
               {isLoadingPatch ? (
-                <Empty density="compact" className="min-h-0 flex-none rounded-none py-6">
+                <Empty className="min-h-0 flex-none rounded-none py-6">
                   <EmptyDescription>
                     <Spinner label="Loading file diff" showLabel compact />
                   </EmptyDescription>
                 </Empty>
               ) : patchError ? (
                 <Empty
-                  density="compact"
                   className="min-h-0 flex-none rounded-none px-3 py-4"
                   tone="error"
                   role="alert"
@@ -112,7 +111,7 @@ export const FileDiffView = memo(
                   <EmptyDescription>{patchError}</EmptyDescription>
                 </Empty>
               ) : fileLines.length === 0 ? (
-                <Empty density="compact" className="min-h-0 flex-none rounded-none px-3 py-4">
+                <Empty className="min-h-0 flex-none rounded-none px-3 py-4">
                   <EmptyDescription>No diff hunks available for this file.</EmptyDescription>
                 </Empty>
               ) : (

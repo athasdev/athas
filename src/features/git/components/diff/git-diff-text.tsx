@@ -148,7 +148,7 @@ const TextDiffViewer = memo(
 
     if (diff.lines.length === 0) {
       return (
-        <Empty density="compact" className="min-h-0 flex-none rounded-none py-8">
+        <Empty className="min-h-0 flex-none rounded-none py-8">
           <EmptyDescription>No changes in this file</EmptyDescription>
         </Empty>
       );

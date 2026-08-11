@@ -83,7 +83,7 @@ export function DebugSection({
 
 export function DebugEmptyState({ children }: { children: ReactNode }) {
   return (
-    <Empty density="compact" className="min-h-0 flex-none rounded-none px-3 py-6">
+    <Empty className="min-h-0 flex-none rounded-none px-3 py-6">
       <EmptyDescription>{children}</EmptyDescription>
     </Empty>
   );

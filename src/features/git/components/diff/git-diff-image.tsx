@@ -37,7 +37,7 @@ const ImageContainer = memo(({ label, labelColor, base64, alt, zoom }: ImageCont
           style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
         />
       ) : (
-        <Empty density="compact" className="bg-transparent p-0">
+        <Empty className="bg-transparent p-0">
           <EmptyDescription className="italic">No image</EmptyDescription>
         </Empty>
       )}

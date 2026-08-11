@@ -218,10 +218,7 @@ export const AdvancedSettings = () => {
         {showTelemetryLog && (
           <div className="rounded-lg border border-border/70 bg-background/50">
             {telemetryLog.length === 0 ? (
-              <Empty
-                density="compact"
-                className="min-h-0 flex-none items-start rounded-none px-3 py-2 text-left"
-              >
+              <Empty className="min-h-0 flex-none items-start rounded-none px-3 py-2 text-left">
                 <EmptyDescription>No telemetry entries yet.</EmptyDescription>
               </Empty>
             ) : (

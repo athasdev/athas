@@ -657,7 +657,7 @@ const GitStatusPanel = ({
           </ScrollArea>
         </>
       ) : (
-        <Empty density="compact" className="flex-1" tone="success">
+        <Empty className="flex-1" tone="success">
           <EmptyMedia variant="icon">
             <Check />
           </EmptyMedia>

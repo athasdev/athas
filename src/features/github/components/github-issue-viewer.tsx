@@ -706,10 +706,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                     />
                   ))
                 ) : (
-                  <Empty
-                    density="compact"
-                    className="min-h-0 flex-none items-start rounded-lg border border-border/60 bg-surface/25 px-3 py-4 text-left"
-                  >
+                  <Empty className="min-h-0 flex-none items-start rounded-lg border border-border/60 bg-surface/25 px-3 py-4 text-left">
                     <EmptyDescription className="flex items-center gap-2">
                       <MessageSquare className="size-4" />
                       No comments yet

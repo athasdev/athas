@@ -10,7 +10,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLinuxFolderPickerStore } from "@/features/file-system/stores/linux-folder-picker.store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyState,
+  EmptyTitle,
+} from "@/ui/empty";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
@@ -218,15 +225,13 @@ export default function LinuxFolderPickerDialog() {
             </EmptyHeader>
           </Empty>
         ) : isLoading ? (
-          <Empty density="compact" className="rounded-none">
+          <Empty className="rounded-none">
             <EmptyDescription>
               <Spinner label="Loading folders" showLabel compact />
             </EmptyDescription>
           </Empty>
         ) : entries.length === 0 ? (
-          <Empty density="compact" className="rounded-none">
-            <EmptyDescription>No folders</EmptyDescription>
-          </Empty>
+          <EmptyState message="No folders" />
         ) : (
           <div className="max-h-[320px] overflow-y-auto py-1">
             {entries.map((entry) => (

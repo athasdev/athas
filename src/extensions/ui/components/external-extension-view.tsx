@@ -41,7 +41,7 @@ export function ExternalExtensionView({ extensionId, viewId }: ExternalExtension
 
   if (error) {
     return (
-      <Empty density="compact" tone="error" role="alert">
+      <Empty tone="error" role="alert">
         <EmptyHeader>
           <EmptyTitle>Extension error</EmptyTitle>
           <EmptyDescription>{error}</EmptyDescription>

@@ -59,7 +59,7 @@ import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
-import { Empty, EmptyDescription } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { SearchField } from "@/ui/search";
 import { ScrollArea } from "@/ui/scroll-area";
@@ -1654,9 +1654,7 @@ export const ExtensionsSidebar = () => {
           ) : null}
 
           {filteredExtensions.length === 0 ? (
-            <Empty density="compact">
-              <EmptyDescription>No extensions found.</EmptyDescription>
-            </Empty>
+            <EmptyState message="No extensions found." />
           ) : (
             <div className="grid grid-cols-1 gap-1 xl:grid-cols-2 xl:gap-x-8 xl:gap-y-2">
               {filteredExtensions.map((extension) => {
@@ -1908,9 +1906,7 @@ export const ExtensionsSidebar = () => {
               </div>
             </div>
           ) : (
-            <Empty density="compact">
-              <EmptyDescription>No extension selected.</EmptyDescription>
-            </Empty>
+            <EmptyState message="No extension selected." />
           )}
         </ScrollArea>
       </div>

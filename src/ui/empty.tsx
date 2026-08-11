@@ -1,41 +1,23 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
-const emptyVariants = cva(
-  "group/empty flex min-h-0 w-full min-w-0 flex-1 flex-col items-center justify-center border-dashed text-center",
-  {
-    variants: {
-      density: {
-        default: "gap-4 rounded-xl p-6",
-        compact: "gap-2 rounded-lg p-3",
-      },
-      tone: {
-        neutral: "",
-        error: "",
-        warning: "",
-        success: "",
-      },
-    },
-    defaultVariants: {
-      density: "default",
-      tone: "neutral",
-    },
-  },
-);
+type EmptyTone = "neutral" | "error" | "warning" | "success";
 
 function Empty({
   className,
-  density = "default",
   tone = "neutral",
   ...props
-}: ComponentProps<"div"> & VariantProps<typeof emptyVariants>) {
+}: ComponentProps<"div"> & { tone?: EmptyTone }) {
   return (
     <div
       data-slot="empty"
-      data-density={density}
       data-tone={tone}
-      className={cn(emptyVariants({ density, tone }), className)}
+      className={cn(
+        "group/empty flex min-h-0 w-full min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-lg border-dashed p-3 text-center",
+        className,
+      )}
       {...props}
     />
   );
@@ -120,4 +102,31 @@ function EmptyContent({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-export { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle };
+interface EmptyStateAction {
+  label: ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
+function EmptyState({ message, action }: { message: ReactNode; action?: EmptyStateAction }) {
+  return (
+    <Empty>
+      <EmptyDescription>{message}</EmptyDescription>
+      {action ? (
+        <EmptyContent>
+          <Button
+            type="button"
+            variant="default"
+            size="xs"
+            disabled={action.disabled}
+            onClick={action.onClick}
+          >
+            {action.label}
+          </Button>
+        </EmptyContent>
+      ) : null}
+    </Empty>
+  );
+}
+
+export { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyState, EmptyTitle };

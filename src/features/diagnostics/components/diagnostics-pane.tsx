@@ -33,7 +33,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
-import { Empty, EmptyContent, EmptyDescription } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import {
   PaneChip,
   PaneIconButton,
@@ -113,9 +113,6 @@ const SEVERITY_TEXT_CLASS: Record<Diagnostic["severity"], string> = {
   warning: "text-warning",
   info: "text-info",
 };
-
-const CONTROL_PILL_BASE =
-  "font-sans ui-text-sm inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-background px-2.5 text-subtle-foreground transition-colors hover:bg-accent hover:text-foreground";
 
 const getSeverityIcon = (severity: Diagnostic["severity"], size = 11) => {
   switch (severity) {
@@ -1030,26 +1027,12 @@ const DiagnosticsPane = ({
 
         <ScrollArea className="min-h-0 flex-1" contentClassName="px-1.5 py-1.5">
           {diagnostics.length === 0 ? (
-            <Empty density="compact" className="h-full rounded-none">
-              <EmptyDescription>No problems detected</EmptyDescription>
-            </Empty>
+            <EmptyState message="No problems detected" />
           ) : filteredDiagnostics.length === 0 ? (
-            <Empty density="compact" className="h-full rounded-none">
-              <EmptyDescription>No problems match the current filters</EmptyDescription>
-              {hasFilters && (
-                <EmptyContent>
-                  <Button
-                    type="button"
-                    onClick={resetFilters}
-                    variant="ghost"
-                    className={CONTROL_PILL_BASE}
-                    size="xs"
-                  >
-                    Reset filters
-                  </Button>
-                </EmptyContent>
-              )}
-            </Empty>
+            <EmptyState
+              message="No problems match the current filters"
+              action={hasFilters ? { label: "Reset filters", onClick: resetFilters } : undefined}
+            />
           ) : (
             <div className="space-y-1.5">
               {groupedDiagnostics.map((group) => {

@@ -12,7 +12,6 @@ function ViewerLoadingState({ label, className, ...props }: ViewerLoadingStatePr
   return (
     <Empty
       data-viewer-state="loading"
-      density="compact"
       className={cn("size-full rounded-none bg-background", className)}
       {...props}
     >

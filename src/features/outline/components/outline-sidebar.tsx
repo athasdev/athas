@@ -29,8 +29,7 @@ import { writeClipboardText } from "@/utils/clipboard";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { Button } from "@/ui/button";
-import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import {
   SidebarHeader,
   SidebarHeaderIconButton,
@@ -345,29 +344,16 @@ export function OutlineSidebar() {
         contentClassName="p-1"
       >
         {!isSupported ? (
-          <Empty density="compact">
-            <EmptyTitle>
-              {activeBuffer ? "No outline for the active file." : "No active file."}
-            </EmptyTitle>
-            <EmptyContent>
-              <Button
-                type="button"
-                variant="default"
-                size="xs"
-                onClick={() => void handleOpenFile()}
-              >
-                Open a File
-              </Button>
-            </EmptyContent>
-          </Empty>
+          <EmptyState
+            message={activeBuffer ? "No outline for the active file." : "No active file."}
+            action={{ label: "Open a File", onClick: () => void handleOpenFile() }}
+          />
         ) : isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Spinner label="Loading outline" showLabel compact />
           </div>
         ) : visibleSymbols.length === 0 ? (
-          <Empty density="compact">
-            <EmptyDescription>No symbols found.</EmptyDescription>
-          </Empty>
+          <EmptyState message="No symbols found." />
         ) : (
           visibleSymbols.map((symbol) => (
             <ContextMenu key={symbol.id}>

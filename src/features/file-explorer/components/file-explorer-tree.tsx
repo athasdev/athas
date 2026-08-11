@@ -48,7 +48,7 @@ import { useGitStore } from "@/features/git/stores/git.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
-import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -1481,26 +1481,22 @@ function FileExplorerTreeComponent({
         emptyState={
           !rootFolderPath ? (
             <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
-              <Empty density="compact">
-                <EmptyTitle>No folder open</EmptyTitle>
-                <EmptyContent>
-                  <Button type="button" variant="default" size="xs" onClick={handleOpenFolder}>
-                    Open Folder
-                  </Button>
-                </EmptyContent>
-              </Empty>
+              <EmptyState
+                message="No folder open"
+                action={{ label: "Open Folder", onClick: handleOpenFolder }}
+              />
             </div>
           ) : displayedFiles.length === 0 ? (
             <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
-              <Empty density="compact">
-                <EmptyDescription>
-                  {isTreeSearchSearching
+              <EmptyState
+                message={
+                  isTreeSearchSearching
                     ? "Searching files"
                     : isTreeSearchActive
                       ? "No matching files"
-                      : "Folder is empty"}
-                </EmptyDescription>
-              </Empty>
+                      : "Folder is empty"
+                }
+              />
             </div>
           ) : null
         }

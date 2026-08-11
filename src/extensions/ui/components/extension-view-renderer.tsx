@@ -147,7 +147,7 @@ function renderNode(
       );
     case "empty":
       return (
-        <Empty key={key} density="compact">
+        <Empty key={key}>
           <EmptyHeader>
             <EmptyTitle>{node.message}</EmptyTitle>
             {node.description ? <EmptyDescription>{node.description}</EmptyDescription> : null}
@@ -166,7 +166,7 @@ function renderNode(
       );
     case "error":
       return (
-        <Empty key={key} density="compact" tone="error" role="alert">
+        <Empty key={key} tone="error" role="alert">
           <EmptyHeader>
             <EmptyTitle>{node.message}</EmptyTitle>
             {node.description ? <EmptyDescription>{node.description}</EmptyDescription> : null}

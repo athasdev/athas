@@ -727,10 +727,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                             </Button>
                           ))
                         ) : (
-                          <Empty
-                            density="compact"
-                            className="min-h-0 flex-none items-start rounded-none px-2 py-2 text-left"
-                          >
+                          <Empty className="min-h-0 flex-none items-start rounded-none px-2 py-2 text-left">
                             <EmptyDescription>No steps reported.</EmptyDescription>
                           </Empty>
                         )}
@@ -842,17 +839,11 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               ))}
                             </pre>
                           ) : hasLogSearchQuery && selectedStepLogs ? (
-                            <Empty
-                              density="compact"
-                              className="min-h-0 items-start rounded-none p-0 text-left"
-                            >
+                            <Empty className="min-h-0 items-start rounded-none p-0 text-left">
                               <EmptyDescription>No log lines match this search.</EmptyDescription>
                             </Empty>
                           ) : (
-                            <Empty
-                              density="compact"
-                              className="min-h-0 items-start rounded-none p-0 text-left"
-                            >
+                            <Empty className="min-h-0 items-start rounded-none p-0 text-left">
                               <EmptyDescription>No logs available for this step.</EmptyDescription>
                             </Empty>
                           )}

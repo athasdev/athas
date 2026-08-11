@@ -39,7 +39,14 @@ import {
   useDropdownMenu,
   type MenuItem,
 } from "@/ui/dropdown";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyState,
+  EmptyTitle,
+} from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
@@ -718,11 +725,7 @@ const GitHubPRsView = memo(() => {
         }}
       >
         {availableSections.length === 0 ? (
-          <Empty density="compact" className="h-full">
-            <EmptyDescription>
-              Enable GitHub sidebar sections in Settings -&gt; Appearance.
-            </EmptyDescription>
-          </Empty>
+          <EmptyState message="Enable GitHub sidebar sections in Settings -> Appearance." />
         ) : (
           <>
             <SidebarTitleBar
@@ -799,22 +802,16 @@ const GitHubPRsView = memo(() => {
                       <div className="flex h-full min-h-0 flex-col overflow-hidden">
                         <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
                           {!effectiveRepoPath ? (
-                            <Empty density="compact">
-                              <EmptyTitle>No repository selected</EmptyTitle>
-                              <EmptyContent>
-                                <Button
-                                  type="button"
-                                  variant="default"
-                                  size="xs"
-                                  disabled={isSelectingRepo}
-                                  onClick={() => void handleSelectRepository()}
-                                >
-                                  {isSelectingRepo ? "Selecting..." : "Browse Repository"}
-                                </Button>
-                              </EmptyContent>
-                            </Empty>
+                            <EmptyState
+                              message="No repository selected"
+                              action={{
+                                label: isSelectingRepo ? "Selecting..." : "Browse Repository",
+                                onClick: () => void handleSelectRepository(),
+                                disabled: isSelectingRepo,
+                              }}
+                            />
                           ) : error ? (
-                            <Empty density="compact" tone="error" role="alert">
+                            <Empty tone="error" role="alert">
                               <EmptyHeader>
                                 <EmptyTitle>
                                   {isRepoError ? "Repository is not a Git repository" : error}
@@ -852,13 +849,9 @@ const GitHubPRsView = memo(() => {
                               <Spinner label="Loading pull requests" showLabel compact />
                             </div>
                           ) : deferredPrs.length === 0 ? (
-                            <Empty density="compact">
-                              <EmptyDescription>No pull requests</EmptyDescription>
-                            </Empty>
+                            <EmptyState message="No pull requests" />
                           ) : filteredPrs.length === 0 ? (
-                            <Empty density="compact">
-                              <EmptyDescription>No matching pull requests</EmptyDescription>
-                            </Empty>
+                            <EmptyState message="No matching pull requests" />
                           ) : (
                             <div className="space-y-1 overflow-x-hidden">
                               {groupedPrs.map((group) => (

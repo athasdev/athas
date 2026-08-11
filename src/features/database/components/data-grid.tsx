@@ -15,7 +15,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import { Empty, EmptyDescription } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { useCellCopy } from "../hooks/use-cell-copy";
@@ -390,11 +390,7 @@ export default function DataGrid({
   const tableColumnSpan = queryResult.columns.length + 1;
 
   if (queryResult.rows.length === 0) {
-    return (
-      <Empty density="compact" className="rounded-none">
-        <EmptyDescription>No data</EmptyDescription>
-      </Empty>
-    );
+    return <EmptyState message="No data" />;
   }
 
   return (

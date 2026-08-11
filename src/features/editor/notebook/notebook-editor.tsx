@@ -777,7 +777,6 @@ export function NotebookEditor() {
     return (
       <Empty
         data-notebook-editor
-        density="compact"
         tone="error"
         role="alert"
         className="h-full overflow-auto rounded-none bg-background px-[22px] py-[18px] pb-[calc(2rem+env(safe-area-inset-bottom))]"

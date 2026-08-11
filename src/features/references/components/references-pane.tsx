@@ -99,19 +99,13 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
       {/* Content */}
       <ScrollArea className="flex-1">
         {isLoading ? (
-          <Empty
-            density="compact"
-            className="min-h-0 flex-none items-start rounded-none px-3 py-4 text-left"
-          >
+          <Empty className="min-h-0 flex-none items-start rounded-none px-3 py-4 text-left">
             <EmptyDescription>
               <Spinner label="Finding references" showLabel compact />
             </EmptyDescription>
           </Empty>
         ) : references.length === 0 ? (
-          <Empty
-            density="compact"
-            className="min-h-0 flex-none items-start rounded-none px-3 py-4 text-left"
-          >
+          <Empty className="min-h-0 flex-none items-start rounded-none px-3 py-4 text-left">
             <EmptyDescription>
               {query ? "No references found" : "Use Shift+F12 to find references"}
             </EmptyDescription>
