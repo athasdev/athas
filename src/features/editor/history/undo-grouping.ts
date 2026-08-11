@@ -78,46 +78,21 @@ export interface UndoEditDelta extends ContentDelta {
   endOffset: number;
 }
 
-export function getUndoEditDelta(
-  previousContent: string,
-  nextContent: string,
-  previousOperation: UndoEditOperation = "other",
-): UndoEditDelta {
-  const delta = getContentDelta(previousContent, nextContent);
-  const operation = classifyUndoEdit(previousContent, nextContent, previousOperation);
-
-  return {
-    ...delta,
-    operation,
-    endOffset: delta.startOffset + delta.insertedLength,
-  };
+export interface UndoTextChange {
+  rangeOffset: number;
+  rangeLength: number;
+  text: string;
 }
 
-export function classifyUndoEdit(
-  previousContent: string,
-  nextContent: string,
-  previousOperation: UndoEditOperation = "other",
+function classifyContentDelta(
+  delta: Pick<ContentDelta, "insertedText" | "insertedLength" | "removedLength">,
+  previousOperation: UndoEditOperation,
 ): UndoEditOperation {
-  if (previousContent === nextContent) {
-    return "other";
-  }
+  const { insertedText, insertedLength, removedLength } = delta;
 
-  const { insertedText, insertedLength, removedLength } = getContentDelta(
-    previousContent,
-    nextContent,
-  );
-
-  if (insertedLength > 0 && removedLength > 0) {
-    return "replace";
-  }
-
-  if (removedLength > 0) {
-    return "delete";
-  }
-
-  if (insertedText === "\n") {
-    return "typing.line-break";
-  }
+  if (insertedLength > 0 && removedLength > 0) return "replace";
+  if (removedLength > 0) return "delete";
+  if (insertedText === "\n") return "typing.line-break";
 
   if (insertedText === " ") {
     return previousOperation === "typing.first-space" ||
@@ -136,6 +111,62 @@ export function classifyUndoEdit(
   }
 
   return "other";
+}
+
+export function getUndoEditDelta(
+  previousContent: string,
+  nextContent: string,
+  previousOperation: UndoEditOperation = "other",
+): UndoEditDelta {
+  const delta = getContentDelta(previousContent, nextContent);
+  const operation = classifyContentDelta(delta, previousOperation);
+
+  return {
+    ...delta,
+    operation,
+    endOffset: delta.startOffset + delta.insertedLength,
+  };
+}
+
+export function getUndoEditDeltaFromChange(
+  previousContent: string,
+  change: UndoTextChange,
+  previousOperation: UndoEditOperation = "other",
+): UndoEditDelta {
+  const startOffset = Math.max(0, Math.min(change.rangeOffset, previousContent.length));
+  const removedLength = Math.max(
+    0,
+    Math.min(change.rangeLength, previousContent.length - startOffset),
+  );
+  const insertedLength = change.text.length;
+  const delta: ContentDelta = {
+    startOffset,
+    insertedText: insertedLength > LARGE_UNDO_DELTA_TEXT_THRESHOLD ? "" : change.text,
+    removedText:
+      removedLength > LARGE_UNDO_DELTA_TEXT_THRESHOLD
+        ? ""
+        : previousContent.slice(startOffset, startOffset + removedLength),
+    insertedLength,
+    removedLength,
+  };
+
+  return {
+    ...delta,
+    operation: classifyContentDelta(delta, previousOperation),
+    endOffset: startOffset + insertedLength,
+  };
+}
+
+export function classifyUndoEdit(
+  previousContent: string,
+  nextContent: string,
+  previousOperation: UndoEditOperation = "other",
+): UndoEditOperation {
+  if (previousContent === nextContent) {
+    return "other";
+  }
+
+  return classifyContentDelta(getContentDelta(previousContent, nextContent), previousOperation);
 }
 
 export function shouldStartNewUndoGroup(

@@ -43,7 +43,7 @@ import { getRelativePath, pathStartsWithRoot } from "@/utils/path-helpers";
 import EditorContextMenu from "../context-menu/context-menu";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
-import type { Position, Range } from "../types/editor.types";
+import type { EditorContentChangeOptions, Position, Range } from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { getLanguageIdFromPath } from "../utils/language-id";
@@ -61,7 +61,6 @@ import { ensureMonacoLanguageTokenizer } from "../engines/monaco/language-contri
 import { acquireMonacoModel } from "../engines/monaco/model-lifecycle";
 import { getEditorBottomScrollPadding } from "../engines/monaco/scroll-padding";
 import {
-  buildLineOffsets,
   clampMonacoPosition,
   createModelUri,
   toClampedMonacoPosition,
@@ -99,6 +98,7 @@ interface MonacoEditorProps {
     previousContent?: string,
     previousCursorPosition?: Position,
     previousSelection?: Range,
+    options?: EditorContentChangeOptions,
   ) => void;
   onScrollOffsetChange?: (scrollTop: number, scrollLeft: number) => void;
   onModelPositionResolverChange?: (resolver: EditorModelPositionResolver | null) => void;
@@ -244,9 +244,6 @@ export function MonacoEditor({
     );
   }, [setCursorAndSelection]);
 
-  const lines = useMemo(() => content.split(/\r?\n/), [content]);
-  const lineOffsets = useMemo(() => buildLineOffsets(content), [content]);
-
   const getMonacoCursorOffset = useCallback(() => {
     const editor = editorRef.current;
     const model = modelRef.current;
@@ -319,8 +316,6 @@ export function MonacoEditor({
         }
       : undefined,
     selection,
-    lines,
-    lineOffsets,
     fontSize,
     fontFamily,
     lineHeight,
@@ -698,7 +693,7 @@ export function MonacoEditor({
         event.stopPropagation();
         selectEntireModel();
       }),
-      editor.onDidChangeModelContent(() => {
+      editor.onDidChangeModelContent((event) => {
         if (applyingExternalChangeRef.current) return;
         const nextContent = model.getValue();
         const previousContent = previousContentRef.current;
@@ -710,6 +705,15 @@ export function MonacoEditor({
           previousContent,
           editorState.cursorPosition,
           editorState.selection,
+          event.changes.length === 1
+            ? {
+                contentChange: {
+                  rangeOffset: event.changes[0].rangeOffset,
+                  rangeLength: event.changes[0].rangeLength,
+                  text: event.changes[0].text,
+                },
+              }
+            : undefined,
         );
         syncCursorAndSelection();
       }),

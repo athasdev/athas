@@ -1,5 +1,5 @@
 import { EditorUndoGroupTracker } from "@/features/editor/history/undo-group-tracker";
-import type { Position, Range } from "@/features/editor/types/editor.types";
+import type { EditorTextChange, Position, Range } from "@/features/editor/types/editor.types";
 import { useHistoryStore } from "@/features/editor/stores/history.store";
 
 const undoGroupTracker = new EditorUndoGroupTracker();
@@ -58,6 +58,7 @@ export function trackBufferHistoryChange({
   previousCursorPosition,
   previousSelection,
   skipUndoGrouping,
+  contentChange,
 }: {
   bufferId: string;
   currentContent: string;
@@ -66,6 +67,7 @@ export function trackBufferHistoryChange({
   previousCursorPosition?: Position;
   previousSelection?: Range;
   skipUndoGrouping?: boolean;
+  contentChange?: EditorTextChange;
 }): void {
   if (skipUndoGrouping) {
     trackImmediateBufferHistoryChange({
@@ -88,6 +90,7 @@ export function trackBufferHistoryChange({
   const historyEntries = undoGroupTracker.track(bufferId, contentBeforeChange, nextContent, {
     previousCursorPosition,
     previousSelection,
+    contentChange,
   });
   const { pushHistory } = useHistoryStore.getState().actions;
   for (const entry of historyEntries) {

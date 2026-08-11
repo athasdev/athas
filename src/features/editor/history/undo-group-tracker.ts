@@ -1,11 +1,12 @@
 import {
   getUndoEditDelta,
+  getUndoEditDeltaFromChange,
   shouldStartNewUndoGroupForDelta,
   type UndoEditDelta,
   type UndoEditOperation,
 } from "./undo-grouping";
 import type { HistoryEntry } from "../types/history.types";
-import type { Position, Range } from "../types/editor.types";
+import type { EditorTextChange, Position, Range } from "../types/editor.types";
 
 interface PendingUndoGroup {
   baseEntry: HistoryEntry;
@@ -17,6 +18,7 @@ interface PendingUndoGroup {
 export interface UndoTrackOptions {
   previousCursorPosition?: Position;
   previousSelection?: Range;
+  contentChange?: EditorTextChange;
 }
 
 function clonePosition(position?: Position): Position | undefined {
@@ -60,7 +62,9 @@ export class EditorUndoGroupTracker {
     const entries: HistoryEntry[] = [];
     const pendingGroup = this.pendingUndoGroups.get(bufferId);
     const previousOperation = pendingGroup?.operation ?? "other";
-    const delta = getUndoEditDelta(previousContent, nextContent, previousOperation);
+    const delta = options.contentChange
+      ? getUndoEditDeltaFromChange(previousContent, options.contentChange, previousOperation)
+      : getUndoEditDelta(previousContent, nextContent, previousOperation);
     const operation = delta.operation;
     const baseEntry: HistoryEntry = {
       content: previousContent,

@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { parseCollaborationNoteBufferPath } from "@/features/collaboration/lib/collaboration-sidebar-model";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
 import { emitGitChanged } from "@/features/git/events/git-events";
@@ -14,7 +15,7 @@ import {
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "@/features/file-system/controllers/platform";
-import type { Position, Range } from "../types/editor.types";
+import type { EditorContentChangeOptions, Position, Range } from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
 import { trackBufferHistoryChange } from "./buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
@@ -40,8 +41,6 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
   if (!activeBuffer || !isEditorContent(activeBuffer)) return false;
   if (activeBuffer.readOnly) return false;
 
-  const { parseCollaborationNoteBufferPath } =
-    await import("@/features/collaboration/lib/collaboration-sidebar-model");
   const collaborationNoteTarget = parseCollaborationNoteBufferPath(activeBuffer.path);
 
   if (activeBuffer.path.startsWith("untitled:")) {
@@ -214,7 +213,7 @@ interface AppActions {
     previousContent?: string,
     previousCursorPosition?: Position,
     previousSelection?: Range,
-    options?: { contentAlreadyApplied?: boolean; skipUndoGrouping?: boolean },
+    options?: EditorContentChangeOptions,
   ) => Promise<void>;
   handleSave: () => Promise<void>;
   handleSaveAll: () => Promise<number>;
@@ -242,7 +241,7 @@ export const useEditorAppStore = createSelectors(
           previousContent?: string,
           previousCursorPosition?: Position,
           previousSelection?: Range,
-          options?: { contentAlreadyApplied?: boolean; skipUndoGrouping?: boolean },
+          options?: EditorContentChangeOptions,
         ) => {
           const { activeBufferId, buffers } = useBufferStore.getState();
           const { updateBufferContent, markBufferDirty } = useBufferStore.getState().actions;
@@ -252,8 +251,6 @@ export const useEditorAppStore = createSelectors(
 
           const activeBuffer = getBufferById(buffers, activeBufferId);
           if (!activeBuffer || !isEditorContent(activeBuffer)) return;
-          const { parseCollaborationNoteBufferPath } =
-            await import("@/features/collaboration/lib/collaboration-sidebar-model");
           const collaborationNoteTarget = parseCollaborationNoteBufferPath(activeBuffer.path);
 
           if (activeBufferId) {
@@ -265,6 +262,7 @@ export const useEditorAppStore = createSelectors(
               previousCursorPosition,
               previousSelection,
               skipUndoGrouping: options?.skipUndoGrouping,
+              contentChange: options?.contentChange,
             });
           }
 

@@ -4,6 +4,7 @@ import { subscribeWithSelector } from "zustand/middleware";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import type {
   Cursor,
+  EditorContentChangeOptions,
   MultiCursorState,
   Position,
   Range,
@@ -210,7 +211,7 @@ interface EditorState {
     previousValue?: string,
     previousCursorPosition?: Position,
     previousSelection?: Range,
-    options?: { contentAlreadyApplied?: boolean; skipUndoGrouping?: boolean },
+    options?: EditorContentChangeOptions,
   ) => void;
   filePath: string;
   editorRef: RefObject<HTMLDivElement | null> | null;
@@ -258,7 +259,7 @@ interface EditorStateActions {
       previousValue?: string,
       previousCursorPosition?: Position,
       previousSelection?: Range,
-      options?: { contentAlreadyApplied?: boolean; skipUndoGrouping?: boolean },
+      options?: EditorContentChangeOptions,
     ) => void,
   ) => void;
   setFileInfo: (filePath: string) => void;

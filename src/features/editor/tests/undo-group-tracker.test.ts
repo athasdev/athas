@@ -45,4 +45,20 @@ describe("editor undo group tracker", () => {
     ]);
     expect(tracker.flush("buffer-1", "xasd")?.content).toBe("asd");
   });
+
+  it("groups incremental Monaco changes without scanning for their offsets", () => {
+    const tracker = new EditorUndoGroupTracker();
+
+    expect(
+      tracker.track("buffer-1", "", "a", {
+        contentChange: { rangeOffset: 0, rangeLength: 0, text: "a" },
+      }),
+    ).toEqual([]);
+    expect(
+      tracker.track("buffer-1", "a", "ab", {
+        contentChange: { rangeOffset: 1, rangeLength: 0, text: "b" },
+      }),
+    ).toEqual([]);
+    expect(tracker.flush("buffer-1", "ab")?.content).toBe("");
+  });
 });

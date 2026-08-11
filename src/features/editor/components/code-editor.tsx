@@ -44,7 +44,7 @@ import {
   rMarkdownChunkShouldPersistOutput,
   updateRMarkdownChunkOutput,
 } from "../notebook/rmarkdown-chunks";
-import type { Position, Range } from "../types/editor.types";
+import type { EditorContentChangeOptions, Position, Range } from "../types/editor.types";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
 import { MonacoEditor } from "./monaco-editor";
@@ -75,6 +75,7 @@ interface CodeEditorProps {
     previousContent?: string,
     previousCursorPosition?: Position,
     previousSelection?: Range,
+    options?: EditorContentChangeOptions,
   ) => void;
 }
 

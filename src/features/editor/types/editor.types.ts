@@ -16,6 +16,18 @@ export interface Range {
   end: Position;
 }
 
+export interface EditorTextChange {
+  rangeOffset: number;
+  rangeLength: number;
+  text: string;
+}
+
+export interface EditorContentChangeOptions {
+  contentAlreadyApplied?: boolean;
+  skipUndoGrouping?: boolean;
+  contentChange?: EditorTextChange;
+}
+
 export interface Cursor {
   position: Position;
   selection?: Range;

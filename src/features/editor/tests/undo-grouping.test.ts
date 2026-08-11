@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   classifyUndoEdit,
   getUndoEditDelta,
+  getUndoEditDeltaFromChange,
   shouldStartNewUndoGroupForDelta,
   shouldStartNewUndoGroup,
   type UndoEditDelta,
@@ -123,5 +124,35 @@ describe("undo grouping", () => {
     expect(delta.insertedText).toBe("");
     expect(delta.insertedLength).toBe(pastedText.length);
     expect(delta.endOffset).toBe(pastedText.length);
+  });
+
+  it.each([
+    {
+      name: "insertion",
+      previousContent: "alpha gamma",
+      nextContent: "alpha beta gamma",
+      change: { rangeOffset: 6, rangeLength: 0, text: "beta " },
+    },
+    {
+      name: "deletion",
+      previousContent: "alpha beta gamma",
+      nextContent: "alpha gamma",
+      change: { rangeOffset: 6, rangeLength: 5, text: "" },
+    },
+    {
+      name: "replacement",
+      previousContent: "alpha beta gamma",
+      nextContent: "alpha delta gamma",
+      change: { rangeOffset: 6, rangeLength: 4, text: "delta" },
+    },
+  ])("matches full-content classification for an incremental $name", (testCase) => {
+    const incrementalDelta = getUndoEditDeltaFromChange(testCase.previousContent, testCase.change);
+    const fullContentDelta = getUndoEditDelta(testCase.previousContent, testCase.nextContent);
+
+    expect(incrementalDelta.operation).toBe(fullContentDelta.operation);
+    expect(incrementalDelta.startOffset).toBe(testCase.change.rangeOffset);
+    expect(
+      `${testCase.previousContent.slice(0, testCase.change.rangeOffset)}${testCase.change.text}${testCase.previousContent.slice(testCase.change.rangeOffset + testCase.change.rangeLength)}`,
+    ).toBe(testCase.nextContent);
   });
 });
