@@ -37,6 +37,18 @@ describe("ACP authentication errors", () => {
     expect(getAcpAuthenticationCommand("qwen-code", [])).toBe("qwen");
   });
 
+  it("opens Claude Agent's Anthropic Console login through its managed wrapper", () => {
+    expect(
+      getAcpAuthenticationCommand("claude-acp", [
+        {
+          id: "claude-acp",
+          binaryName: "claude-agent-acp",
+          binaryPath: "/managed/bin/claude-agent-acp",
+        },
+      ]),
+    ).toBe("/managed/bin/claude-agent-acp --cli auth login --console");
+  });
+
   it("extracts the actionable ACP stderr from startup errors", () => {
     expect(
       getAcpStartupErrorDetails(

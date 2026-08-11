@@ -17,6 +17,10 @@ pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
 const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
 const NON_ACP_AGENT_IDS: &[&str] = &["claude-code", "codex-cli", "codex"];
 
+fn is_acp_agent_id(agent_id: &str) -> bool {
+   !NON_ACP_AGENT_IDS.contains(&agent_id)
+}
+
 #[derive(Deserialize)]
 pub struct PermissionResponseArgs {
    #[serde(alias = "requestId")]
@@ -261,7 +265,7 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
             manifests
                .into_values()
                .flat_map(|manifest| manifest.agents)
-               .filter(|agent| !NON_ACP_AGENT_IDS.contains(&agent.id.as_str()))
+               .filter(|agent| is_acp_agent_id(&agent.id))
                .map(to_agent_config)
                .collect::<Vec<_>>()
          })
@@ -586,4 +590,20 @@ fn make_wrapper_executable(path: &PathBuf) -> Result<(), String> {
    }
 
    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+   use super::is_acp_agent_id;
+
+   #[test]
+   fn keeps_terminal_integrations_out_of_the_acp_catalog() {
+      assert!(!is_acp_agent_id("claude-code"));
+      assert!(!is_acp_agent_id("codex"));
+   }
+
+   #[test]
+   fn accepts_the_claude_agent_adapter() {
+      assert!(is_acp_agent_id("claude-acp"));
+   }
 }

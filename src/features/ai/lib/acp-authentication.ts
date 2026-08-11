@@ -1,3 +1,5 @@
+import { IS_WINDOWS } from "@/utils/platform";
+
 const AUTHENTICATION_ERROR_PATTERNS = [
   "authentication required",
   "requires authentication",
@@ -22,14 +24,24 @@ export function isAcpConfigurationError(...messages: Array<string | undefined>):
 
 export function getAcpAuthenticationCommand(
   agentId: string | null | undefined,
-  agents: Array<{ id: string; binaryName: string }>,
+  agents: Array<{ id: string; binaryName: string; binaryPath?: string | null }>,
 ): string | null {
   if (!agentId) return null;
 
-  const binaryName = agents.find((agent) => agent.id === agentId)?.binaryName.trim();
-  if (binaryName) return binaryName;
+  const agent = agents.find((candidate) => candidate.id === agentId);
+  const command = agent?.binaryPath?.trim() || agent?.binaryName.trim();
+  if (command) {
+    const quotedCommand = /^[A-Za-z0-9_@%+=:,./\\-]+$/.test(command)
+      ? command
+      : IS_WINDOWS
+        ? `"${command.replace(/"/g, '""')}"`
+        : `'${command.replace(/'/g, "'\\''")}'`;
+
+    return agentId === "claude-acp" ? `${quotedCommand} --cli auth login --console` : quotedCommand;
+  }
 
   const fallbackCommands: Record<string, string> = {
+    "claude-acp": "claude-agent-acp --cli auth login --console",
     "gemini-cli": "gemini",
     "kimi-cli": "kimi",
     opencode: "opencode",

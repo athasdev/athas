@@ -138,6 +138,7 @@ const SIMPLE_ICON_SLUGS: Record<string, string> = {
   alibabacloud: "alibabacloud",
   anthropic: "anthropic",
   claude: "claude",
+  "claude-acp": "claude",
   "claude-code": "claude",
   duckdb: "duckdb",
   gemini: "googlegemini",
