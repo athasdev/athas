@@ -237,7 +237,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
           data-depth={depth}
           tabIndex={tabIndex}
           className={cn(
-            "file-tree-row font-sans ui-text-sm flex w-full min-w-0 cursor-pointer select-none items-center whitespace-nowrap rounded-lg border border-transparent bg-transparent text-left text-foreground outline-none transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent focus-visible:border-primary/40 gap-1.5 px-1.5 py-1 leading-row",
+            "file-tree-row font-sans ui-text-sm flex w-full min-w-0 select-none items-center whitespace-nowrap rounded-lg border border-transparent bg-transparent text-left text-foreground outline-none transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent focus-visible:border-primary/40 gap-1.5 px-1.5 py-1 leading-row",
             active && "bg-selected",
             action && "pr-8",
             className,
