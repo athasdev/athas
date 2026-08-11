@@ -1,10 +1,9 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getFileDiff } from "@/features/git/api/git-diff-api";
-import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
-import { countDiffStats } from "@/features/git/utils/git-diff-helpers";
 import { openGitWorktreeWorkspace } from "@/features/git/utils/git-worktree-open";
 import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
+import { createSingleFileWorkingTreeDiff } from "@/features/git/utils/working-tree-multi-diff";
 import { getFolderName } from "@/utils/path-helpers";
 import type { SidebarDragResource } from "./sidebar-resource-drag";
 
@@ -43,19 +42,12 @@ const openWorkingTreeDiffBuffer = async (
     return useBufferStore.getState().activeBufferId;
   }
 
-  const { additions, deletions } = countDiffStats([diff]);
   const fileKey = `${resource.staged ? "staged" : "unstaged"}:${actualFilePath}`;
-  const multiDiff: MultiFileDiff = {
-    title: "Uncommitted Changes",
+  const multiDiff = createSingleFileWorkingTreeDiff({
     repoPath: resource.repoPath,
-    commitHash: "working-tree",
-    files: [diff],
-    totalFiles: 1,
-    totalAdditions: additions,
-    totalDeletions: deletions,
-    fileKeys: [fileKey],
-    initiallyExpandedFileKey: fileKey,
-  };
+    fileKey,
+    diff,
+  });
 
   const encodedPath = encodeURIComponent(actualFilePath);
   const virtualPath = `diff://working-tree/${resource.staged ? "staged" : "unstaged"}/${encodedPath}`;

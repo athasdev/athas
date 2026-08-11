@@ -24,6 +24,33 @@ const parseWorkingTreeFileKey = (fileKey: string): { path: string; staged: boole
   };
 };
 
+export const createSingleFileWorkingTreeDiff = ({
+  repoPath,
+  fileKey,
+  diff,
+  title = WORKING_TREE_TITLE,
+}: {
+  repoPath: string;
+  fileKey: string;
+  diff: GitDiff;
+  title?: string;
+}): MultiFileDiff => {
+  const stats = countDiffStats([diff]);
+
+  return {
+    title,
+    repoPath,
+    commitHash: "working-tree",
+    files: [diff],
+    totalFiles: 1,
+    totalAdditions: stats.additions,
+    totalDeletions: stats.deletions,
+    fileKeys: [fileKey],
+    initiallyExpandedFileKey: fileKey,
+    isLoading: false,
+  };
+};
+
 export const getDiffableWorkingTreeFiles = (status: GitStatus | null): GitFile[] => {
   if (!status) return [];
 

@@ -10,6 +10,7 @@ import {
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitCommit, GitDiff, GitFile } from "../types/git.types";
 import { countDiffStats } from "../utils/git-diff-helpers";
+import { createSingleFileWorkingTreeDiff } from "../utils/working-tree-multi-diff";
 
 const WORKING_TREE_TITLES: Record<WorkingTreeDiffScope, string> = {
   all: "Uncommitted Changes",
@@ -126,49 +127,20 @@ export function useGitDiffActions({
           return;
         }
 
-        const selectedFileKey = `${staged ? "staged" : "unstaged"}:${actualFilePath}`;
-        const initialMultiDiff = createMultiFileDiff({
-          title: WORKING_TREE_TITLES.all,
+        const fileKey = `${staged ? "staged" : "unstaged"}:${actualFilePath}`;
+        const selectedDiff = createSingleFileWorkingTreeDiff({
           repoPath: activeRepoPath,
-          commitHash: "working-tree",
-          diffs: [diff],
+          fileKey,
+          diff,
         });
-        initialMultiDiff.fileKeys = [selectedFileKey];
-        initialMultiDiff.initiallyExpandedFileKey = selectedFileKey;
-        initialMultiDiff.isLoading = true;
 
-        const bufferId = openDiffBuffer(
-          "diff://working-tree/all-files",
-          WORKING_TREE_TITLES.all,
-          initialMultiDiff,
-        );
-        const remainingEntries = workingTreeDiffEntriesByScope.all.filter(
-          ([fileKey]) => fileKey !== selectedFileKey,
-        );
-
-        if (remainingEntries.length > 0) {
-          void loadWorkingTreeDiffsProgressively({
-            repoPath: activeRepoPath,
-            bufferId,
-            title: WORKING_TREE_TITLES.all,
-            diffEntries: remainingEntries,
-            initialDiffs: [{ fileKey: selectedFileKey, diff }],
-            initialProcessed: 1,
-            initiallyExpandedFileKey: selectedFileKey,
-          });
-          return;
-        }
-
-        useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {
-          ...initialMultiDiff,
-          isLoading: false,
-        });
+        openDiffBuffer("diff://working-tree/all-files", WORKING_TREE_TITLES.all, selectedDiff);
       } catch (error) {
         console.error("Error getting file diff:", error);
         await showAlertDialog(`Failed to get diff for ${filePath}:\n${error}`, "Git Diff");
       }
     },
-    [activeRepoPath, gitFileByPath, openOriginalFile, workingTreeDiffEntriesByScope],
+    [activeRepoPath, gitFileByPath, openOriginalFile],
   );
 
   const viewWorkingTreeDiff = useCallback(
