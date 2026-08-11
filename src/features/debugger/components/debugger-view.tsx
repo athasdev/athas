@@ -70,7 +70,6 @@ function DebugStatusBadge({ status }: { status: "idle" | "running" | "paused" })
 export default function DebuggerView() {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const activeFile = useBufferStore(getActiveDebuggableFile);
-  const cursorPosition = useEditorStateStore.use.cursorPosition();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const breakpoints = useDebuggerStore.use.breakpoints();
   const watchExpressions = useDebuggerStore.use.watchExpressions();
@@ -281,7 +280,8 @@ export default function DebuggerView() {
 
   const toggleCurrentLineBreakpoint = () => {
     if (!activeFile) return;
-    debuggerActions.toggleBreakpoint(activeFile.path, cursorPosition.line);
+    const cursorLine = useEditorStateStore.getState().cursorPosition.line;
+    debuggerActions.toggleBreakpoint(activeFile.path, cursorLine);
   };
 
   const selectStackFrame = async (frameId: number, sourcePath?: string, line?: number) => {

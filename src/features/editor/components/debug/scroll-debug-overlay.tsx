@@ -3,7 +3,7 @@
  * Enable by setting localStorage.setItem('debug-scroll', 'true')
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEditorSettingsStore } from "../../stores/settings.store";
 import { useEditorStateStore } from "../../stores/state.store";
 import { getLineHeight } from "../../utils/position";
@@ -15,11 +15,11 @@ interface ScrollMetrics {
   visibleStartLine: number;
   visibleEndLine: number;
   fps: number;
-  lastUpdate: number;
 }
 
 export function ScrollDebugOverlay() {
   const [enabled, setEnabled] = useState(false);
+  const lastUpdateRef = useRef(Date.now());
   const [metrics, setMetrics] = useState<ScrollMetrics>({
     scrollTop: 0,
     scrollLeft: 0,
@@ -27,12 +27,11 @@ export function ScrollDebugOverlay() {
     visibleStartLine: 0,
     visibleEndLine: 0,
     fps: 0,
-    lastUpdate: Date.now(),
   });
 
-  const scrollTop = useEditorStateStore.use.scrollTop();
-  const scrollLeft = useEditorStateStore.use.scrollLeft();
-  const viewportHeight = useEditorStateStore.use.viewportHeight();
+  const scrollTop = useEditorStateStore((state) => (enabled ? state.scrollTop : 0));
+  const scrollLeft = useEditorStateStore((state) => (enabled ? state.scrollLeft : 0));
+  const viewportHeight = useEditorStateStore((state) => (enabled ? state.viewportHeight : 0));
   const fontSize = useEditorSettingsStore.use.fontSize();
   const editorLineHeight = useEditorSettingsStore.use.lineHeight();
 
@@ -59,8 +58,9 @@ export function ScrollDebugOverlay() {
 
     const lineHeight = getLineHeight(fontSize, editorLineHeight);
     const now = Date.now();
-    const timeDelta = now - metrics.lastUpdate;
+    const timeDelta = now - lastUpdateRef.current;
     const fps = timeDelta > 0 ? Math.round(1000 / timeDelta) : 0;
+    lastUpdateRef.current = now;
 
     setMetrics({
       scrollTop,
@@ -69,17 +69,8 @@ export function ScrollDebugOverlay() {
       visibleStartLine: Math.floor(scrollTop / lineHeight),
       visibleEndLine: Math.floor((scrollTop + viewportHeight) / lineHeight),
       fps,
-      lastUpdate: now,
     });
-  }, [
-    enabled,
-    scrollTop,
-    scrollLeft,
-    viewportHeight,
-    fontSize,
-    editorLineHeight,
-    metrics.lastUpdate,
-  ]);
+  }, [enabled, scrollTop, scrollLeft, viewportHeight, fontSize, editorLineHeight]);
 
   if (!enabled) return null;
 
