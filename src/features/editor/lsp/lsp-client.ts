@@ -19,6 +19,7 @@ import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useBufferStore } from "../stores/buffer.store";
 import { getSourceEditorBufferByPath } from "../utils/buffer-index";
 import { logger } from "../utils/logger";
+import type { LspSemanticTokensResponse } from "./semantic-token-types";
 import { useLspStore } from "./stores/lsp.store";
 import {
   applyWorkspaceEdit,
@@ -931,22 +932,13 @@ export class LspClient {
     );
   }
 
-  async getSemanticTokens(filePath: string): Promise<
-    {
-      line: number;
-      startChar: number;
-      length: number;
-      tokenType: number;
-      tokenTypeName?: string;
-      tokenModifiers: number;
-    }[]
-  > {
+  async getSemanticTokens(filePath: string): Promise<LspSemanticTokensResponse | null> {
     try {
-      return await invoke("lsp_get_semantic_tokens", { filePath });
+      return await invoke<LspSemanticTokensResponse>("lsp_get_semantic_tokens", { filePath });
     } catch (error) {
-      if (isCanceledLspRequest(error)) return [];
+      if (isCanceledLspRequest(error)) return null;
       logger.error("LSPClient", "LSP semantic tokens error:", error);
-      return [];
+      return null;
     }
   }
 

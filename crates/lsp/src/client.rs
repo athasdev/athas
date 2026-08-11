@@ -839,13 +839,13 @@ impl LspClient {
          .await
    }
 
-   pub fn semantic_token_type_names(&self) -> Vec<String> {
+   pub fn semantic_token_legend(&self) -> (Vec<String>, Vec<String>) {
       let capabilities = self.capabilities.lock().unwrap();
       let Some(provider) = capabilities
          .as_ref()
          .and_then(|capabilities| capabilities.semantic_tokens_provider.as_ref())
       else {
-         return Vec::new();
+         return (Vec::new(), Vec::new());
       };
 
       let legend = match provider {
@@ -855,11 +855,18 @@ impl LspClient {
          }
       };
 
-      legend
+      let token_types = legend
          .token_types
          .iter()
          .map(|token_type| token_type.as_str().to_string())
-         .collect()
+         .collect();
+      let token_modifiers = legend
+         .token_modifiers
+         .iter()
+         .map(|modifier| modifier.as_str().to_string())
+         .collect();
+
+      (token_types, token_modifiers)
    }
 
    pub async fn text_document_inlay_hint(

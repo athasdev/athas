@@ -1,11 +1,13 @@
 import { editor as monacoEditor } from "monaco-editor";
+import type * as Monaco from "monaco-editor";
 import {
   getRequiredAthasDefaultColor,
   type AthasDefaultThemeType,
 } from "@/extensions/themes/default-theme";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/theme.types";
-import { createMonacoTokenThemeRules } from "./token-theme-rules";
+import { toMonacoColor } from "./color";
+import { createMonacoTokenThemeRules, MONACO_TOKEN_THEME_INHERITS_BASE } from "./token-theme-rules";
 
 function getThemeId(theme: string): string {
   return theme.includes("light") ? "vs" : "vs-dark";
@@ -29,39 +31,15 @@ function colorValue(theme: ThemeDefinition, name: string): string {
   );
 }
 
-function toHexByte(value: number): string {
-  return Math.max(0, Math.min(255, Math.round(value)))
-    .toString(16)
-    .padStart(2, "0");
-}
-
-function toMonacoColor(value: string, fallback: string): string {
-  const normalized = value.trim();
-  if (/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(normalized)) return normalized;
-  if (/^#[0-9a-fA-F]{3}$/.test(normalized)) {
-    const [, r, g, b] = normalized;
-    return `#${r}${r}${g}${g}${b}${b}`;
-  }
-
-  const rgbaMatch = normalized.match(
-    /^rgba?\(\s*([.\d]+)\s*,\s*([.\d]+)\s*,\s*([.\d]+)(?:\s*,\s*([.\d]+)\s*)?\)$/i,
-  );
-  if (!rgbaMatch) return fallback;
-
-  const [, red, green, blue, alpha = "1"] = rgbaMatch;
-  const alphaByte = toHexByte(Number(alpha) * 255);
-  return `#${toHexByte(Number(red))}${toHexByte(Number(green))}${toHexByte(Number(blue))}${alphaByte}`;
-}
-
 function toMonacoThemeName(themeId: string, italicComments: boolean): string {
   const suffix = italicComments ? "-italic-comments" : "";
   return `athas-${themeId.replace(/[^a-zA-Z0-9_-]/g, "-")}${suffix}`;
 }
 
-export function defineMonacoTheme(themeId: string, italicComments = false): string {
-  const theme = themeRegistry.getTheme(themeId);
-  if (!theme) return getThemeId(themeId);
-
+function createMonacoThemeData(
+  theme: ThemeDefinition,
+  italicComments = false,
+): Monaco.editor.IStandaloneThemeData {
   const rules = createMonacoTokenThemeRules(theme, italicComments);
 
   const background = toMonacoColor(
@@ -89,10 +67,9 @@ export function defineMonacoTheme(themeId: string, italicComments = false): stri
   const accent = toMonacoColor(colorValue(theme, "primary"), fallbackColor(theme, "primary"));
   const cursor = toMonacoColor(colorValue(theme, "cursor"), foreground);
 
-  const monacoThemeId = toMonacoThemeName(theme.id, italicComments);
-  monacoEditor.defineTheme(monacoThemeId, {
+  return {
     base: theme.isDark ? "vs-dark" : "vs",
-    inherit: true,
+    inherit: MONACO_TOKEN_THEME_INHERITS_BASE,
     rules,
     colors: {
       "editor.background": background,
@@ -144,7 +121,15 @@ export function defineMonacoTheme(themeId: string, italicComments = false): stri
       "sash.hoverBorder": accent,
       focusBorder: accent,
     },
-  });
+  };
+}
+
+export function defineMonacoTheme(themeId: string, italicComments = false): string {
+  const theme = themeRegistry.getTheme(themeId);
+  if (!theme) return getThemeId(themeId);
+
+  const monacoThemeId = toMonacoThemeName(theme.id, italicComments);
+  monacoEditor.defineTheme(monacoThemeId, createMonacoThemeData(theme, italicComments));
 
   return monacoThemeId;
 }

@@ -1,8 +1,9 @@
-import { languages, Range as MonacoRange, Uri } from "monaco-editor";
+import { Emitter, languages, Range as MonacoRange, Uri } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
 import type { CompletionItem, Hover } from "vscode-languageserver-protocol";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { formatHoverContents } from "@/features/editor/lsp/hover-content";
+import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import {
   collectWorkspaceTextEdits,
   filePathFromUri,
@@ -12,6 +13,7 @@ import {
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { MONACO_HIGHLIGHT_LANGUAGE_IDS } from "./language";
 import { filePathFromAthasModelUri } from "./model-uri";
+import { createMonacoSemanticTokenProvider } from "./semantic-token-provider";
 
 let providersRegistered = false;
 
@@ -188,6 +190,27 @@ export function registerMonacoLspProviders() {
 
   const selector = Array.from(MONACO_HIGHLIGHT_LANGUAGE_IDS);
   const lspClient = LspClient.getInstance();
+  const semanticTokensChanged = new Emitter<void>();
+  useLspStore.subscribe((state, previousState) => {
+    const currentStatus = state.lspStatus;
+    const previousStatus = previousState.lspStatus;
+    if (
+      currentStatus.status !== previousStatus.status ||
+      currentStatus.documentRevision !== previousStatus.documentRevision
+    ) {
+      semanticTokensChanged.fire();
+    }
+  });
+
+  languages.registerDocumentSemanticTokensProvider(
+    selector,
+    createMonacoSemanticTokenProvider({
+      client: lspClient,
+      filePathFromModel,
+      isLspModel,
+      onDidChange: semanticTokensChanged.event,
+    }),
+  );
 
   languages.registerCompletionItemProvider(selector, {
     triggerCharacters: [".", ":", "<", '"', "'", "/", "@", "#"],

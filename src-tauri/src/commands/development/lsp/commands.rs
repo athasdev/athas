@@ -6,7 +6,7 @@ use super::{
    types::{
       FlatCodeLens, FlatInlayHint, FlatSemanticToken, FlatSymbol, FlatTextEdit,
       FlatTextEditPosition, FlatTextEditRange, FlatWorkspaceSymbol, LspApplyCodeActionResult,
-      LspCodeActionItem, LspDiagnosticContext,
+      LspCodeActionItem, LspDiagnosticContext, LspSemanticTokensResponse,
    },
 };
 use crate::app_runtime::AppHandle;
@@ -332,7 +332,7 @@ pub async fn lsp_apply_code_action(
 pub async fn lsp_get_semantic_tokens(
    lsp_manager: State<'_, LspManager>,
    file_path: String,
-) -> LspResult<Vec<FlatSemanticToken>> {
+) -> LspResult<LspSemanticTokensResponse> {
    let response = lsp_manager
       .get_semantic_tokens(&file_path)
       .await
@@ -344,11 +344,17 @@ pub async fn lsp_get_semantic_tokens(
    let data = match response {
       Some(SemanticTokensResult::Tokens(tokens)) => tokens.data,
       Some(SemanticTokensResult::Partial(partial)) => partial.data,
-      None => return Ok(vec![]),
+      None => {
+         return Ok(LspSemanticTokensResponse {
+            tokens: Vec::new(),
+            token_types: Vec::new(),
+            token_modifiers: Vec::new(),
+         });
+      }
    };
-   let token_type_names = lsp_manager.get_semantic_token_type_names(&file_path);
+   let (token_types, token_modifiers) = lsp_manager.semantic_token_legend(&file_path);
 
-   let mut result = Vec::with_capacity(data.len());
+   let mut tokens = Vec::with_capacity(data.len());
    let mut current_line: u32 = 0;
    let mut current_char: u32 = 0;
 
@@ -360,17 +366,20 @@ pub async fn lsp_get_semantic_tokens(
          current_char += token.delta_start;
       }
 
-      result.push(FlatSemanticToken {
+      tokens.push(FlatSemanticToken {
          line: current_line,
          start_char: current_char,
          length: token.length,
          token_type: token.token_type,
-         token_type_name: token_type_names.get(token.token_type as usize).cloned(),
          token_modifiers: token.token_modifiers_bitset,
       });
    }
 
-   Ok(result)
+   Ok(LspSemanticTokensResponse {
+      tokens,
+      token_types,
+      token_modifiers,
+   })
 }
 
 #[tauri::command]

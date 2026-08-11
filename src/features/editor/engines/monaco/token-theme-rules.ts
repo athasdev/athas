@@ -1,5 +1,9 @@
 import type * as Monaco from "monaco-editor";
 import type { ThemeDefinition } from "@/extensions/themes/theme.types";
+import { toMonacoTokenForeground } from "./color";
+import { MONACO_SEMANTIC_TOKEN_TYPES } from "./semantic-tokens";
+
+export const MONACO_TOKEN_THEME_INHERITS_BASE = false;
 
 const TOKEN_SYNTAX_MAP: Array<[string, string]> = [
   ["comment", "comment"],
@@ -13,6 +17,8 @@ const TOKEN_SYNTAX_MAP: Array<[string, string]> = [
   ["string.escape", "string"],
   ["string.regexp", "regex"],
   ["string.regex", "regex"],
+  ["string.value", "string"],
+  ["string.key", "property"],
   ["number", "number"],
   ["number.float", "number"],
   ["number.hex", "number"],
@@ -38,7 +44,9 @@ const TOKEN_SYNTAX_MAP: Array<[string, string]> = [
   ["constant.builtin", "constant"],
   ["enumMember", "constant"],
   ["boolean", "boolean"],
+  ["null", "null"],
   ["keyword.other", "keyword"],
+  ["modifier", "keyword"],
   ["type", "type"],
   ["typeParameter", "type"],
   ["class", "type"],
@@ -49,24 +57,38 @@ const TOKEN_SYNTAX_MAP: Array<[string, string]> = [
   ["module", "type"],
   ["module.builtin", "type"],
   ["property", "property"],
+  ["property.readonly", "constant"],
   ["key", "property"],
-  ["string.key", "property"],
   ["support.type.property-name", "property"],
   ["decorator", "attribute"],
   ["annotation", "attribute"],
   ["attribute", "attribute"],
+  ["attribute.value", "string"],
+  ["attribute.value.number", "number"],
+  ["attribute.value.unit", "number"],
+  ["attribute.value.hex", "number"],
   ["tag", "tag"],
+  ["metatag", "tag"],
+  ["metatag.content", "string"],
   ["attribute.name", "attribute"],
-  ["delimiter.html", "punctuation"],
   ["delimiter", "punctuation"],
   ["delimiter.bracket", "punctuation"],
   ["bracket", "punctuation"],
   ["punctuation", "punctuation"],
   ["operator", "operator"],
   ["keyword.operator", "operator"],
-  ["keyword.json", "property"],
+  ["predefined", "constant"],
+  ["constructor", "function"],
+  ["event", "function"],
+  ["label", "variable"],
+  ["parameter.readonly", "constant"],
+  ["string.value.json", "string"],
   ["string.key.json", "property"],
+  ["number.json", "number"],
+  ["keyword.json", "boolean"],
 ];
+
+const INVALID_TOKEN_NAMES = ["invalid", "string.invalid", "number.invalid"];
 
 function syntaxTokenColor(theme: ThemeDefinition, token: string): string | undefined {
   return (
@@ -77,23 +99,50 @@ function syntaxTokenColor(theme: ThemeDefinition, token: string): string | undef
   );
 }
 
+function themeColor(theme: ThemeDefinition, token: string): string | undefined {
+  return (
+    theme.cssVariables[`--color-${token}`] ??
+    theme.cssVariables[`--${token}`] ??
+    syntaxTokenColor(theme, token)
+  );
+}
+
 export function createMonacoTokenThemeRules(
   theme: ThemeDefinition,
   italicComments: boolean,
 ): Monaco.editor.ITokenThemeRule[] {
-  return TOKEN_SYNTAX_MAP.flatMap(([token, syntaxName]) => {
-    const foreground = syntaxTokenColor(theme, syntaxName);
+  const syntaxRules = TOKEN_SYNTAX_MAP.flatMap(([token, syntaxName]) => {
+    const foreground = toMonacoTokenForeground(syntaxTokenColor(theme, syntaxName));
     const italicComment = italicComments && syntaxName === "comment";
     if (!foreground && !italicComment) return [];
 
     return [
       {
         token,
-        ...(foreground
-          ? { foreground: foreground.startsWith("#") ? foreground.slice(1) : foreground }
-          : {}),
+        ...(foreground ? { foreground } : {}),
         ...(italicComment ? { fontStyle: "italic" } : {}),
       },
     ];
   });
+
+  const invalidForeground = toMonacoTokenForeground(themeColor(theme, "destructive"));
+  const invalidRules = invalidForeground
+    ? INVALID_TOKEN_NAMES.map((token) => ({ token, foreground: invalidForeground }))
+    : [];
+  const deprecatedRules = MONACO_SEMANTIC_TOKEN_TYPES.flatMap((token) => {
+    const fontStyle =
+      token === "comment" && italicComments ? "italic strikethrough" : "strikethrough";
+    return [
+      { token: `${token}.deprecated`, fontStyle },
+      { token: `${token}.readonly.deprecated`, fontStyle },
+    ];
+  });
+
+  return [
+    ...syntaxRules,
+    ...invalidRules,
+    { token: "emphasis", fontStyle: "italic" },
+    { token: "strong", fontStyle: "bold" },
+    ...deprecatedRules,
+  ];
 }
