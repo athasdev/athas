@@ -3,6 +3,27 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 const MONACO_HOVER_MIN_WIDTH = 120;
 const MONACO_HOVER_MAX_WIDTH = 720;
 const MONACO_HOVER_MIN_HEIGHT = 48;
+const MONACO_HOVER_WIDGET_SELECTOR =
+  '[widgetid="editor.contrib.resizableContentHoverWidget"], [widgetid="editor.contrib.modesGlyphHoverWidget"]';
+
+function isWithinMonacoHoverWidget(node: Node): boolean {
+  if (!(node instanceof Element)) return false;
+  return (
+    node.matches(MONACO_HOVER_WIDGET_SELECTOR) ||
+    node.closest(MONACO_HOVER_WIDGET_SELECTOR) !== null
+  );
+}
+
+export function mutationsContainMonacoHoverWidget(mutations: readonly MutationRecord[]): boolean {
+  return mutations.some((mutation) => {
+    if (isWithinMonacoHoverWidget(mutation.target)) return true;
+    return Array.from(mutation.addedNodes).some(
+      (node) =>
+        isWithinMonacoHoverWidget(node) ||
+        (node instanceof Element && node.querySelector(MONACO_HOVER_WIDGET_SELECTOR) !== null),
+    );
+  });
+}
 
 function setStyleProperty(
   element: HTMLElement,
@@ -47,9 +68,7 @@ export function clampMonacoHoverWidgets(container: HTMLElement) {
 
   const maxWidth = getMonacoHoverMaxWidth(container);
   const maxHeight = getMonacoHoverMaxHeight(container);
-  const widgetNodes = container.querySelectorAll<HTMLElement>(
-    '[widgetid="editor.contrib.resizableContentHoverWidget"], [widgetid="editor.contrib.modesGlyphHoverWidget"]',
-  );
+  const widgetNodes = container.querySelectorAll<HTMLElement>(MONACO_HOVER_WIDGET_SELECTOR);
 
   for (const widgetNode of widgetNodes) {
     const hoverNode = widgetNode.querySelector<HTMLElement>(".monaco-hover") ?? widgetNode;

@@ -56,7 +56,11 @@ import {
   consumeLocalContentSnapshot,
   rememberLocalContentSnapshot,
 } from "../engines/monaco/content-sync";
-import { clampMonacoHoverWidgets, syncMonacoHoverBounds } from "../engines/monaco/hover-widgets";
+import {
+  clampMonacoHoverWidgets,
+  mutationsContainMonacoHoverWidget,
+  syncMonacoHoverBounds,
+} from "../engines/monaco/hover-widgets";
 import { toMonacoLanguageId } from "../engines/monaco/language";
 import { ensureMonacoLanguageTokenizer } from "../engines/monaco/language-contributions";
 import { acquireMonacoModel } from "../engines/monaco/model-lifecycle";
@@ -662,10 +666,10 @@ export function MonacoEditor({
         clampMonacoHoverWidgets(container);
       });
     };
-    const hoverMutationObserver = new MutationObserver(scheduleMonacoHoverClamp);
+    const hoverMutationObserver = new MutationObserver((mutations) => {
+      if (mutationsContainMonacoHoverWidget(mutations)) scheduleMonacoHoverClamp();
+    });
     hoverMutationObserver.observe(container, {
-      attributes: true,
-      attributeFilter: ["class", "style"],
       childList: true,
       subtree: true,
     });
@@ -799,14 +803,12 @@ export function MonacoEditor({
         const viewKey = viewStateKey ?? activeBufferId ?? null;
         setScrollForBuffer(viewKey, event.scrollTop, event.scrollLeft);
         onScrollOffsetChange?.(event.scrollTop, event.scrollLeft);
-        scheduleMonacoHoverClamp();
       }),
       editor.onDidLayoutChange((info) => {
         setViewportHeight(info.height);
         syncBottomScrollPadding(info.height);
         scheduleMonacoHoverClamp();
       }),
-      editor.onMouseMove(scheduleMonacoHoverClamp),
     ];
 
     const unsubscribeCursor = editorAPI.on("cursorChange", (position) => {
