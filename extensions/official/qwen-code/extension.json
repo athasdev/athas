@@ -13,7 +13,7 @@
       "name": "Qwen Code",
       "binaryName": "qwen",
       "description": "Alibaba Qwen Code agent with native ACP support.",
-      "args": ["--acp"],
+      "args": ["--acp", "--experimental-skills"],
       "install": {
         "runtime": "node",
         "package": "@qwen-code/qwen-code",

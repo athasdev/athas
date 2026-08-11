@@ -35,4 +35,74 @@ describe("agent extension manifests", () => {
     expect(CLAUDE_CODE_TERMINAL_AGENT_ID).toBe("claude-code");
     expect(manifest.agents?.[0]?.id).not.toBe(CLAUDE_CODE_TERMINAL_AGENT_ID);
   });
+
+  it("installs the current Kimi CLI release on every supported desktop target", async () => {
+    const manifest = await readOfficialManifest("kimi-cli");
+    const install = manifest.agents?.[0]?.install;
+
+    expect(manifest).toMatchObject({
+      id: "athas.agent.kimi-cli",
+      name: "Kimi CLI",
+    });
+    expect(manifest.agents?.[0]).toMatchObject({
+      args: ["acp"],
+      binaryName: "kimi",
+    });
+    expect(install).toMatchObject({
+      runtime: "binary",
+      command: "kimi",
+      downloadUrls: {
+        "darwin-arm64": expect.stringContaining("/1.49.0/kimi-1.49.0-aarch64-apple-darwin"),
+        "darwin-x64": expect.stringContaining("/1.49.0/kimi-1.49.0-x86_64-apple-darwin"),
+        "linux-arm64": expect.stringContaining("/1.49.0/kimi-1.49.0-aarch64-unknown-linux-gnu"),
+        "linux-x64": expect.stringContaining("/1.49.0/kimi-1.49.0-x86_64-unknown-linux-gnu"),
+        "win32-arm64": expect.stringContaining("/1.49.0/kimi-1.49.0-aarch64-pc-windows-msvc"),
+        "win32-x64": expect.stringContaining("/1.49.0/kimi-1.49.0-x86_64-pc-windows-msvc"),
+      },
+    });
+  });
+
+  it("installs GitHub Copilot through its native ACP server", async () => {
+    const manifest = await readOfficialManifest("github-copilot");
+
+    expect(manifest).toMatchObject({
+      id: "athas.agent.github-copilot",
+      name: "GitHub Copilot",
+      publisher: "GitHub",
+    });
+    expect(manifest.agents).toEqual([
+      expect.objectContaining({
+        id: "github-copilot-cli",
+        binaryName: "copilot",
+        args: ["--acp"],
+        install: expect.objectContaining({
+          runtime: "node",
+          package: "@github/copilot",
+          command: "copilot",
+        }),
+      }),
+    ]);
+  });
+
+  it("keeps Gemini CLI for supported enterprise and API-key access", async () => {
+    const manifest = await readOfficialManifest("gemini-cli");
+
+    expect(manifest).toMatchObject({
+      id: "athas.agent.gemini-cli",
+      name: "Gemini CLI",
+      publisher: "Google",
+    });
+    expect(manifest.agents).toEqual([
+      expect.objectContaining({
+        id: "gemini-cli",
+        binaryName: "gemini",
+        args: ["--acp"],
+        install: expect.objectContaining({
+          runtime: "node",
+          package: "@google/gemini-cli",
+          command: "gemini",
+        }),
+      }),
+    ]);
+  });
 });

@@ -3,11 +3,12 @@
  */
 
 import { createHash } from "node:crypto";
-import { readFile, stat } from "node:fs/promises";
-import { isAbsolute, join } from "node:path";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { isAbsolute, join, relative } from "node:path";
 import {
   GENERATED_CDN_DIR,
   getContributionArray,
+  getExtensionCdnPath,
   getExtensionSourceDir,
   getReservedBuiltInThemeContribution,
   listExtensionFolders,
@@ -19,6 +20,7 @@ interface ValidationError {
 }
 
 const verifyLocalPackages = process.argv.includes("--verify-local-packages");
+const verifyAgentRegistry = process.argv.includes("--verify-agent-registry");
 const errors: ValidationError[] = [];
 const warnings: ValidationError[] = [];
 const validToolRuntimes = new Set([
@@ -53,6 +55,11 @@ const knownRuntimeRewriteTools = new Set([
   "solargraph",
   "solidity-language-server",
 ]);
+const ACP_REGISTRY_URL = "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
+const ACP_REGISTRY_AGENT_ALIASES: Record<string, string> = {
+  "gemini-cli": "gemini",
+  "kimi-cli": "kimi",
+};
 
 function error(extension: string, message: string) {
   errors.push({ extension, message });
@@ -434,12 +441,144 @@ async function validateJsonFile(name: string, expectedShape: "array" | "object")
   }
 }
 
+async function listGeneratedExtensionManifests(directory: string): Promise<string[]> {
+  if (!(await fileExists(directory))) return [];
+
+  const manifests: string[] = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const entryPath = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      manifests.push(...(await listGeneratedExtensionManifests(entryPath)));
+    } else if (entry.isFile() && entry.name === "extension.json") {
+      manifests.push(relative(GENERATED_CDN_DIR, entryPath));
+    }
+  }
+
+  return manifests;
+}
+
+async function validateGeneratedExtensionPaths(extensionFolders: string[]): Promise<void> {
+  const expectedPaths = new Set<string>();
+
+  for (const folder of extensionFolders) {
+    const manifestPath = join(getExtensionSourceDir(folder), "extension.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as Record<string, unknown>;
+    expectedPaths.add(join(getExtensionCdnPath(folder, manifest), "extension.json"));
+  }
+
+  const generatedPaths = new Set(await listGeneratedExtensionManifests(GENERATED_CDN_DIR));
+  for (const generatedPath of generatedPaths) {
+    if (!expectedPaths.has(generatedPath)) {
+      error("generated CDN", `Orphaned extension manifest '${generatedPath}'`);
+    }
+  }
+
+  for (const expectedPath of expectedPaths) {
+    if (!generatedPaths.has(expectedPath)) {
+      error("generated CDN", `Missing extension manifest '${expectedPath}'`);
+    }
+  }
+}
+
+function packageIdentity(packageSpec: string): string {
+  const versionSeparator = packageSpec.lastIndexOf("@");
+  return versionSeparator > 0 ? packageSpec.slice(0, versionSeparator) : packageSpec;
+}
+
+async function validateAgentsAgainstAcpRegistry(extensionFolders: string[]): Promise<void> {
+  try {
+    const response = await fetch(ACP_REGISTRY_URL);
+    if (!response.ok) {
+      error("ACP Registry", `Registry request failed with HTTP ${response.status}`);
+      return;
+    }
+
+    const registry = (await response.json()) as {
+      agents?: Array<{
+        id: string;
+        version: string;
+        distribution?: {
+          npx?: { package?: string; args?: string[] };
+          binary?: Record<string, { args?: string[] }>;
+        };
+      }>;
+    };
+    const registryAgents = new Map((registry.agents ?? []).map((agent) => [agent.id, agent]));
+
+    for (const folder of extensionFolders) {
+      const manifestPath = join(getExtensionSourceDir(folder), "extension.json");
+      const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as Record<string, unknown>;
+
+      for (const agent of getContributionArray(manifest, "agents")) {
+        const agentId = String(agent.id);
+        const registryId = ACP_REGISTRY_AGENT_ALIASES[agentId] ?? agentId;
+        const registryAgent = registryAgents.get(registryId);
+        if (!registryAgent) {
+          error(folder, `Agent '${agentId}' is not present in the official ACP Registry`);
+          continue;
+        }
+
+        const install = agent.install as Record<string, unknown> | undefined;
+        const packageName = typeof install?.package === "string" ? install.package : undefined;
+        const registryPackage = registryAgent.distribution?.npx?.package;
+        if (
+          packageName &&
+          registryPackage &&
+          packageIdentity(packageName) !== packageIdentity(registryPackage)
+        ) {
+          error(
+            folder,
+            `Agent '${agentId}' installs '${packageName}', but the ACP Registry uses '${registryPackage}'`,
+          );
+        }
+
+        const configuredArgs = Array.isArray(agent.args) ? agent.args : [];
+        const registryArgs =
+          registryAgent.distribution?.npx?.args ??
+          Object.values(registryAgent.distribution?.binary ?? {}).find((entry) => entry.args)
+            ?.args ??
+          [];
+        if (JSON.stringify(configuredArgs) !== JSON.stringify(registryArgs)) {
+          error(
+            folder,
+            `Agent '${agentId}' uses args ${JSON.stringify(configuredArgs)}, but the ACP Registry uses ${JSON.stringify(registryArgs)}`,
+          );
+        }
+
+        if (install?.runtime === "binary") {
+          const downloadUrls = Object.values(
+            (install.downloadUrls as Record<string, unknown> | undefined) ?? {},
+          ).filter((url): url is string => typeof url === "string");
+          if (
+            downloadUrls.length === 0 ||
+            downloadUrls.some((url) => !url.includes(`/${registryAgent.version}/`))
+          ) {
+            error(
+              folder,
+              `Agent '${agentId}' binary URLs do not use ACP Registry version ${registryAgent.version}`,
+            );
+          }
+        }
+      }
+    }
+  } catch (registryError) {
+    error(
+      "ACP Registry",
+      registryError instanceof Error ? registryError.message : String(registryError),
+    );
+  }
+}
+
 console.log("Validating extensions...\n");
 
 const extensionFolders = await listExtensionFolders();
 console.log(`Found ${extensionFolders.length} extensions\n`);
 
 await Promise.all(extensionFolders.map(validateExtension));
+await validateGeneratedExtensionPaths(extensionFolders);
+if (verifyAgentRegistry) {
+  await validateAgentsAgainstAcpRegistry(extensionFolders);
+}
 await validateJsonFile("registry.json", "object");
 await validateJsonFile("index.json", "array");
 await validateJsonFile("manifests.json", "object");

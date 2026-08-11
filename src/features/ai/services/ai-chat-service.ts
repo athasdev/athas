@@ -31,18 +31,14 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { getApiBase } from "@/utils/api-base";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
-import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "../lib/claude-code";
+import { isTerminalAgent } from "../lib/terminal-agents";
 import { setCustomProviderBaseUrl } from "./providers/ai-provider-registry";
 import { CODEX_INTEGRATION_ID } from "../integrations/integration-registry";
 import { CodexIntegrationService } from "../integrations/codex/codex-integration-service";
 
 // Check if an agent uses ACP (CLI-based) vs HTTP API
 export const isAcpAgent = (agentId: AgentType): boolean => {
-  return (
-    agentId !== "custom" &&
-    agentId !== CODEX_INTEGRATION_ID &&
-    agentId !== CLAUDE_CODE_TERMINAL_AGENT_ID
-  );
+  return agentId !== "custom" && agentId !== CODEX_INTEGRATION_ID && !isTerminalAgent(agentId);
 };
 
 function resolveProviderModelPair(providerId: string, modelId: string) {

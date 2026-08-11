@@ -1,11 +1,14 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import { CLAUDE_CODE_TERMINAL_COMMAND } from "./claude-code";
+import { getTerminalAgent } from "./terminal-agents";
 
-export function openClaudeCodeTerminal(): string {
+export function openTerminalAgent(agentId: string): string | null {
+  const agent = getTerminalAgent(agentId);
+  if (!agent) return null;
+
   return useBufferStore.getState().actions.openTerminalBuffer({
-    name: "Claude Code",
-    command: CLAUDE_CODE_TERMINAL_COMMAND,
+    name: agent.name,
+    command: agent.command,
     workingDirectory: useProjectStore.getState().rootFolderPath || undefined,
   });
 }

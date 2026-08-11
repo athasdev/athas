@@ -5,10 +5,7 @@ import {
   BUILT_IN_AI_INTEGRATIONS,
   CODEX_INTEGRATION_ID,
 } from "@/features/ai/integrations/integration-registry";
-import {
-  CLAUDE_CODE_TERMINAL_AGENT_ID,
-  CLAUDE_CODE_TERMINAL_OPTION,
-} from "@/features/ai/lib/claude-code";
+import { isTerminalAgent, TERMINAL_AGENT_OPTIONS } from "@/features/ai/lib/terminal-agents";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import { toast } from "sonner";
@@ -61,7 +58,7 @@ export function useAgentOptions(currentAgentId: AgentType) {
     const availableAgents = [
       ATHAS_AGENT_OPTION,
       ...BUILT_IN_AI_INTEGRATIONS,
-      CLAUDE_CODE_TERMINAL_OPTION,
+      ...TERMINAL_AGENT_OPTIONS,
       ...registryAgents,
     ];
 
@@ -69,17 +66,17 @@ export function useAgentOptions(currentAgentId: AgentType) {
       const agentId = agent.id as AgentType;
       const isInstalled = installedAgents.has(agent.id);
       const agentConfig = agentConfigs.get(agent.id);
-      const isClaudeCodeTerminal = agent.id === CLAUDE_CODE_TERMINAL_AGENT_ID;
+      const isTerminal = isTerminalAgent(agent.id);
       const isIntegration = agent.id === CODEX_INTEGRATION_ID;
 
       return {
         id: agentId,
         name: agent.name,
         description: agentConfig?.description ?? agent.description ?? "ACP-compatible coding agent",
-        isInstalled: isClaudeCodeTerminal || isInstalled,
+        isInstalled: isTerminal || isInstalled,
         isCurrent: agent.id === currentAgentId,
         canInstall:
-          agent.id === "custom" || isClaudeCodeTerminal || isIntegration
+          agent.id === "custom" || isTerminal || isIntegration
             ? false
             : (agentConfig?.canInstall ?? true),
         isInstalling: installingAgentId === agent.id,

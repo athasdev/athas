@@ -20,7 +20,7 @@ console.log(`Source: ${GENERATED_CDN_DIR}/`);
 console.log(`Target: ${targetDir}/`);
 
 await $`mkdir -p ${targetDir}`;
-await $`rsync -az ${GENERATED_CDN_DIR}/ ${targetDir}/`;
+await $`rsync -az --delete ${GENERATED_CDN_DIR}/ ${targetDir}/`;
 
 type InstallablePackage = {
   url: string;

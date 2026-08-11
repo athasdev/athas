@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import AIChatInputBar from "@/features/ai/components/input/chat-input-bar";
-import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "@/features/ai/lib/claude-code";
-import { openClaudeCodeTerminal } from "@/features/ai/lib/claude-code-terminal";
+import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
+import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -50,8 +50,8 @@ export function AgentLaunchInput({
 
   const submit = useCallback(
     async (prompt: string) => {
-      if (selectedAgentId === CLAUDE_CODE_TERMINAL_AGENT_ID) {
-        openClaudeCodeTerminal();
+      if (isTerminalAgent(selectedAgentId)) {
+        openTerminalAgent(selectedAgentId);
         close();
         return;
       }

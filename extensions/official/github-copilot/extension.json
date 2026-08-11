@@ -1,0 +1,24 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.agent.github-copilot",
+  "name": "GitHub Copilot",
+  "displayName": "GitHub Copilot",
+  "description": "GitHub's command-line coding agent with native ACP support.",
+  "version": "1.0.0",
+  "publisher": "GitHub",
+  "categories": ["Agent"],
+  "agents": [
+    {
+      "id": "github-copilot-cli",
+      "name": "GitHub Copilot",
+      "binaryName": "copilot",
+      "description": "GitHub's command-line coding agent with native ACP support.",
+      "args": ["--acp"],
+      "install": {
+        "runtime": "node",
+        "package": "@github/copilot",
+        "command": "copilot"
+      }
+    }
+  ]
+}

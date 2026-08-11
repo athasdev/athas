@@ -13,6 +13,8 @@ on:
       - "src/extensions/**"
       - ".github/workflows/extensions.yml"
   workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * *"
 
 jobs:
   validate:
@@ -30,6 +32,9 @@ jobs:
 
       - name: Validate extensions
         run: bun run extensions:validate
+
+      - name: Verify agent registry freshness
+        run: bun run extensions:validate:agents
 
       - name: Check generated source changes
         run: |
@@ -55,7 +60,7 @@ jobs:
       - name: Deploy extensions CDN
         uses: burnett01/rsync-deployments@7.0.2
         with:
-          switches: -avz
+          switches: -avz --delete
           path: extensions/generated/cdn/
           remote_path: ${{ secrets.EXTENSIONS_CDN_ROOT }}/
           remote_host: ${{ secrets.VPS_HOST }}
