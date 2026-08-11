@@ -1,9 +1,8 @@
 import "@/features/sidebar/styles/sidebar-tree.css";
 import { ChevronDownIcon as ChevronDown, ChevronRightIcon as ChevronRight } from "@/ui/icons";
 import type React from "react";
-import { forwardRef } from "react";
+import { forwardRef, useCallback } from "react";
 import { cn } from "@/utils/cn";
-import { TreeRow } from "./tree-row";
 
 const SIDEBAR_TREE_BASE_INDENT = 10;
 const SIDEBAR_TREE_INDENT_SIZE = 14;
@@ -47,7 +46,119 @@ function SidebarTreeGuides({
   );
 }
 
-type SidebarTreeRowProps = React.ComponentPropsWithoutRef<"button"> & {
+interface SidebarTreeProps extends React.ComponentPropsWithoutRef<"div"> {
+  label: string;
+}
+
+function getTreeItems(tree: HTMLElement): HTMLButtonElement[] {
+  return Array.from(
+    tree.querySelectorAll<HTMLButtonElement>("[role=treeitem]:not(:disabled)"),
+  ).filter((item) => item.offsetParent !== null);
+}
+
+function getTreeItemDepth(item: HTMLElement): number {
+  return Number(item.dataset.depth ?? 0);
+}
+
+export const SidebarTree = forwardRef<HTMLDivElement, SidebarTreeProps>(function SidebarTree(
+  { label, className, onFocus, onKeyDown, ...props },
+  ref,
+) {
+  const handleFocus = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      onFocus?.(event);
+      if (event.defaultPrevented || event.target !== event.currentTarget) return;
+
+      const items = getTreeItems(event.currentTarget);
+      const selectedItem = items.find((item) => item.getAttribute("aria-selected") === "true");
+      (selectedItem ?? items[0])?.focus();
+    },
+    [onFocus],
+  );
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      onKeyDown?.(event);
+      if (event.defaultPrevented) return;
+
+      const currentItem = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
+        "[role=treeitem]",
+      );
+      if (!currentItem || !event.currentTarget.contains(currentItem)) return;
+
+      const items = getTreeItems(event.currentTarget);
+      const currentIndex = items.indexOf(currentItem);
+      if (currentIndex < 0) return;
+
+      const focusItem = (item: HTMLButtonElement | undefined) => {
+        if (!item) return;
+        event.preventDefault();
+        item.focus();
+      };
+      const disclosure = currentItem.querySelector<HTMLElement>("[data-sidebar-tree-disclosure]");
+      const expanded = currentItem.getAttribute("aria-expanded");
+      const currentDepth = getTreeItemDepth(currentItem);
+
+      switch (event.key) {
+        case "ArrowDown":
+          focusItem(items[currentIndex + 1]);
+          break;
+        case "ArrowUp":
+          focusItem(items[currentIndex - 1]);
+          break;
+        case "Home":
+          focusItem(items[0]);
+          break;
+        case "End":
+          focusItem(items[items.length - 1]);
+          break;
+        case "ArrowRight":
+          if (expanded === "false" && disclosure) {
+            event.preventDefault();
+            disclosure.click();
+            break;
+          }
+          if (expanded === "true") {
+            const child = items
+              .slice(currentIndex + 1)
+              .find((item) => getTreeItemDepth(item) === currentDepth + 1);
+            focusItem(child);
+          }
+          break;
+        case "ArrowLeft":
+          if (expanded === "true" && disclosure) {
+            event.preventDefault();
+            disclosure.click();
+            break;
+          }
+          for (let index = currentIndex - 1; index >= 0; index -= 1) {
+            const candidate = items[index];
+            if (candidate && getTreeItemDepth(candidate) < currentDepth) {
+              focusItem(candidate);
+              break;
+            }
+          }
+          break;
+      }
+    },
+    [onKeyDown],
+  );
+
+  return (
+    <div
+      ref={ref}
+      role="tree"
+      aria-label={label}
+      tabIndex={0}
+      className={cn("outline-none", className)}
+      onFocus={handleFocus}
+      onKeyDown={handleKeyDown}
+      {...props}
+    />
+  );
+});
+
+type SidebarTreeRowProps = Omit<React.ComponentPropsWithoutRef<"button">, "children"> & {
   active?: boolean;
   depth?: number;
   indentSize?: number;
@@ -55,6 +166,16 @@ type SidebarTreeRowProps = React.ComponentPropsWithoutRef<"button"> & {
   previousDepth?: number;
   nextDepth?: number;
   containerClassName?: string;
+  expanded?: boolean;
+  label?: React.ReactNode;
+  leading?: React.ReactNode;
+  trailing?: React.ReactNode;
+  description?: React.ReactNode;
+  onToggle?: (event: React.MouseEvent<HTMLSpanElement>) => void;
+  reserveDisclosureSpace?: boolean;
+  showDisclosure?: boolean;
+  showGuides?: boolean;
+  children?: React.ReactNode;
 };
 
 export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>(
@@ -67,8 +188,19 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
       previousDepth = depth,
       nextDepth = depth,
       containerClassName,
+      expanded,
+      label,
+      leading,
+      trailing,
+      description,
+      onToggle,
+      reserveDisclosureSpace = false,
+      showDisclosure = expanded !== undefined,
+      showGuides = true,
       className,
       children,
+      style,
+      tabIndex = -1,
       ...props
     },
     ref,
@@ -80,24 +212,58 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
         data-active={active ? "true" : undefined}
         data-depth={depth}
       >
-        <SidebarTreeGuides
-          depth={depth}
-          baseIndent={baseIndent}
-          indentSize={indentSize}
-          previousDepth={previousDepth}
-          nextDepth={nextDepth}
-        />
-        <TreeRow
+        {showGuides ? (
+          <SidebarTreeGuides
+            depth={depth}
+            baseIndent={baseIndent}
+            indentSize={indentSize}
+            previousDepth={previousDepth}
+            nextDepth={nextDepth}
+          />
+        ) : null}
+        <button
           ref={ref}
-          active={false}
-          depth={depth}
-          indentSize={indentSize}
-          baseIndent={baseIndent}
-          className={cn("border border-transparent", className)}
+          type="button"
+          role="treeitem"
+          aria-level={depth + 1}
+          aria-selected={active}
+          aria-expanded={expanded}
+          data-depth={depth}
+          tabIndex={tabIndex}
+          className={cn(
+            "file-tree-row font-sans ui-text-sm flex w-full min-w-0 cursor-pointer select-none items-center whitespace-nowrap rounded-lg border border-transparent bg-transparent text-left text-foreground outline-none transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent focus-visible:border-primary/40 gap-1.5 px-1.5 py-1 leading-row",
+            active && "bg-selected",
+            className,
+          )}
+          style={{ paddingLeft: `${baseIndent + depth * indentSize}px`, ...style }}
           {...props}
         >
-          {children}
-        </TreeRow>
+          {showDisclosure || reserveDisclosureSpace ? (
+            <SidebarTreeDisclosure
+              visible={showDisclosure}
+              expanded={expanded}
+              onClick={onToggle}
+            />
+          ) : null}
+          {leading ? <SidebarTreeIcon icon={leading} /> : null}
+          {label !== undefined ? (
+            <span className="relative z-1 flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden">
+              <span className="min-w-0 truncate">{label}</span>
+              {description ? (
+                <span className="min-w-0 flex-1 truncate text-subtle-foreground/80">
+                  {description}
+                </span>
+              ) : null}
+            </span>
+          ) : (
+            children
+          )}
+          {trailing ? (
+            <span className="relative z-1 ml-auto flex min-w-0 shrink-0 items-center">
+              {trailing}
+            </span>
+          ) : null}
+        </button>
       </div>
     );
   },
@@ -118,12 +284,19 @@ export function SidebarTreeDisclosure({
 }: SidebarTreeDisclosureProps) {
   return (
     <span
+      data-sidebar-tree-disclosure=""
+      aria-hidden="true"
       className={cn(
         "mr-0.5 flex size-4 shrink-0 items-center justify-center rounded text-subtle-foreground transition-colors",
         visible ? "hover:text-foreground" : "pointer-events-none text-transparent",
         className,
       )}
-      onClick={onClick}
+      onClick={(event) => {
+        if (!onClick) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onClick(event);
+      }}
     >
       {visible ? (
         expanded ? (

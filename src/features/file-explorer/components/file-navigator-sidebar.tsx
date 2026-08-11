@@ -18,6 +18,8 @@ import {
   SidebarListItem,
   SidebarSectionLabel,
 } from "@/ui/sidebar";
+import { SidebarTree, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
+import { buildPathTree, type PathTreeNode } from "@/features/sidebar/lib/path-tree";
 import { ToggleGroup } from "@/ui/toggle-group";
 import { cn } from "@/utils/cn";
 import { ScrollArea } from "@/ui/scroll-area";
@@ -45,19 +47,6 @@ export interface FileNavigatorItem {
     label: ReactNode;
     className?: string;
   }>;
-}
-
-interface FileNavigatorNode {
-  id: string;
-  name: string;
-  path: string;
-  isDir: boolean;
-  children: FileNavigatorNode[];
-  item?: FileNavigatorItem;
-}
-
-interface FileNavigatorBuildNode extends FileNavigatorNode {
-  childDirectories: Map<string, FileNavigatorBuildNode>;
 }
 
 interface FileNavigatorSidebarProps {
@@ -91,16 +80,6 @@ const fileNavigatorSurfaceVariants = cva(
   },
 );
 
-function createDirectoryNode(name: string, path: string): FileNavigatorNode {
-  return {
-    id: `dir:${path}`,
-    name,
-    path,
-    isDir: true,
-    children: [],
-  };
-}
-
 function clampNavigatorWidth(width: number) {
   return Math.max(MIN_NAVIGATOR_WIDTH, Math.min(width, MAX_NAVIGATOR_WIDTH));
 }
@@ -128,67 +107,6 @@ function getFlatItemParts(item: FileNavigatorItem) {
     directoryPath,
     title: directoryPath ? `${fileName} - ${directoryPath}` : fileName,
   };
-}
-
-function buildFileTree(items: FileNavigatorItem[]): FileNavigatorNode[] {
-  const createBuildDirectoryNode = (name: string, path: string): FileNavigatorBuildNode => ({
-    ...createDirectoryNode(name, path),
-    children: [],
-    childDirectories: new Map(),
-  });
-
-  const root = createBuildDirectoryNode("", "");
-
-  for (const item of items) {
-    const segments = item.path.split(/[\\/]/);
-    let fileNameIndex = -1;
-    for (let index = segments.length - 1; index >= 0; index--) {
-      if (segments[index]) {
-        fileNameIndex = index;
-        break;
-      }
-    }
-    if (fileNameIndex < 0) continue;
-
-    let current = root;
-    let currentPath = "";
-
-    for (let index = 0; index < fileNameIndex; index++) {
-      const segment = segments[index];
-      if (!segment) continue;
-
-      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
-      let child = current.childDirectories.get(segment);
-
-      if (!child) {
-        child = createBuildDirectoryNode(segment, currentPath);
-        current.childDirectories.set(segment, child);
-        current.children.push(child);
-      }
-
-      current = child;
-    }
-
-    current.children.push({
-      id: `file:${item.key}`,
-      name: segments[fileNameIndex],
-      path: item.path,
-      isDir: false,
-      children: [],
-      item,
-    });
-  }
-
-  const sortNodes = (nodes: FileNavigatorNode[]) => {
-    nodes.sort((a, b) => {
-      if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
-    for (const node of nodes) sortNodes(node.children);
-  };
-
-  sortNodes(root.children);
-  return root.children;
 }
 
 const FileNavigatorMetadata = memo(function FileNavigatorMetadata({
@@ -250,19 +168,29 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
   depth,
   selectedKey,
   onSelect,
+  collapsedNodeIds,
+  onToggle,
   compactRows,
 }: {
-  node: FileNavigatorNode;
+  node: PathTreeNode<FileNavigatorItem>;
   depth: number;
   selectedKey: string | null;
   onSelect: (key: string) => void;
+  collapsedNodeIds: ReadonlySet<string>;
+  onToggle: (nodeId: string) => void;
   compactRows?: boolean;
 }) {
-  if (node.isDir) {
+  if (node.type === "branch") {
+    const expanded = !collapsedNodeIds.has(node.id);
+
     return (
       <div>
-        <SidebarSectionLabel
-          style={{ paddingLeft: 8 + depth * 12 }}
+        <SidebarTreeRow
+          depth={depth}
+          expanded={expanded}
+          onToggle={() => onToggle(node.id)}
+          onClick={() => onToggle(node.id)}
+          label={node.name}
           leading={
             <ThemedFileIcon
               fileName={node.name}
@@ -270,35 +198,38 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
               className="shrink-0 text-subtle-foreground"
             />
           }
-        >
-          {node.name}
-        </SidebarSectionLabel>
-        {node.children.map((child) => (
-          <FileNavigatorNodeRow
-            key={child.id}
-            node={child}
-            depth={depth + 1}
-            selectedKey={selectedKey}
-            onSelect={onSelect}
-            compactRows={compactRows}
-          />
-        ))}
+          title={node.path}
+          className={cn(compactRows && "py-1")}
+        />
+        {expanded
+          ? node.children.map((child) => (
+              <FileNavigatorNodeRow
+                key={child.id}
+                node={child}
+                depth={depth + 1}
+                selectedKey={selectedKey}
+                onSelect={onSelect}
+                collapsedNodeIds={collapsedNodeIds}
+                onToggle={onToggle}
+                compactRows={compactRows}
+              />
+            ))
+          : null}
       </div>
     );
   }
 
   const item = node.item;
-  if (!item) return null;
-
   const isSelected = selectedKey === item.key;
 
   return (
-    <SidebarListItem
-      style={{ paddingLeft: 8 + depth * 12 }}
+    <SidebarTreeRow
+      depth={depth}
       onClick={() => onSelect(item.key)}
-      aria-current={isSelected ? "true" : undefined}
       active={isSelected}
       title={item.path}
+      reserveDisclosureSpace
+      label={node.name}
       leading={
         <ThemedFileIcon
           fileName={item.iconPath ?? node.name}
@@ -307,10 +238,8 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
         />
       }
       trailing={<FileNavigatorMetadata item={item} />}
-      className={cn(compactRows && "py-1 ui-text-sm")}
-    >
-      {node.name}
-    </SidebarListItem>
+      className={cn(compactRows && "py-1")}
+    />
   );
 });
 
@@ -330,6 +259,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [width, setWidth] = useState(DEFAULT_NAVIGATOR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
+  const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     setSearchQuery("");
@@ -362,7 +292,13 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
     return searchableItems.filter((item) => getItemSearchText(item).includes(query));
   }, [searchableItems, searchMode, searchQuery]);
   const tree = useMemo(
-    () => (viewMode === "tree" ? buildFileTree(filteredItems) : []),
+    () =>
+      viewMode === "tree"
+        ? buildPathTree(filteredItems, {
+            getPath: (item) => item.path,
+            getKey: (item) => item.key,
+          })
+        : [],
     [filteredItems, viewMode],
   );
   const flatItems = useMemo(() => {
@@ -374,6 +310,15 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
 
   const resizeTo = useCallback((nextWidth: number) => {
     setWidth(clampNavigatorWidth(nextWidth));
+  }, []);
+
+  const handleToggleNode = useCallback((nodeId: string) => {
+    setCollapsedNodeIds((current) => {
+      const next = new Set(current);
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
+      return next;
+    });
   }, []);
 
   const handleResizeStart = useCallback(
@@ -462,16 +407,20 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
             />
           ))
         ) : (
-          tree.map((node) => (
-            <FileNavigatorNodeRow
-              key={node.id}
-              node={node}
-              depth={0}
-              selectedKey={selectedKey}
-              onSelect={onSelect}
-              compactRows={compactRows}
-            />
-          ))
+          <SidebarTree label={ariaLabel}>
+            {tree.map((node) => (
+              <FileNavigatorNodeRow
+                key={node.id}
+                node={node}
+                depth={0}
+                selectedKey={selectedKey}
+                onSelect={onSelect}
+                collapsedNodeIds={collapsedNodeIds}
+                onToggle={handleToggleNode}
+                compactRows={compactRows}
+              />
+            ))}
+          </SidebarTree>
         )}
       </ScrollArea>
       <div
