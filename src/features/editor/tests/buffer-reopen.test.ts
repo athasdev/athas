@@ -6,8 +6,6 @@ import { usePaneStore } from "@/features/panes/stores/pane.store";
 const mocks = vi.hoisted(() => ({
   handleFileSelect: vi.fn(),
   stopForFile: vi.fn().mockResolvedValue(undefined),
-  toastError: vi.fn(),
-  toastInfo: vi.fn(),
 }));
 
 vi.mock("@/features/file-system/stores/file-system.store", () => {
@@ -30,13 +28,6 @@ vi.mock("@/features/editor/lsp/lsp-client", () => ({
     getInstance: () => ({
       stopForFile: mocks.stopForFile,
     }),
-  },
-}));
-
-vi.mock("@/ui/toast", () => ({
-  toast: {
-    error: mocks.toastError,
-    info: mocks.toastInfo,
   },
 }));
 
@@ -138,8 +129,6 @@ describe("reopen closed tab", () => {
     ({ useBufferStore } = await import("@/features/editor/stores/buffer.store"));
     mocks.handleFileSelect.mockReset();
     mocks.stopForFile.mockClear();
-    mocks.toastError.mockClear();
-    mocks.toastInfo.mockClear();
   });
 
   afterEach(() => {
