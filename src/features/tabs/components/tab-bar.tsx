@@ -36,7 +36,6 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
-import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import {
@@ -661,7 +660,7 @@ const TabBar = ({
         <TabBarSurface
           ref={tabBarRef}
           data-tab-bar-pane-id={paneId ?? ""}
-          className="group/tabbar scrollbar-hidden bg-background overscroll-x-contain"
+          className="scrollbar-hidden bg-background overscroll-x-contain"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
@@ -803,11 +802,6 @@ const TabBar = ({
                 onClick={handleShowNewTab}
                 variant="ghost"
                 size="icon-xs"
-                className={cn(
-                  "opacity-0 transition-opacity",
-                  "pointer-events-none group-focus-within/tabbar:pointer-events-auto group-hover/tabbar:pointer-events-auto",
-                  "group-focus-within/tabbar:opacity-100 group-hover/tabbar:opacity-100 focus-visible:opacity-100",
-                )}
                 tooltip="New Tab"
                 tooltipSide="bottom"
                 aria-label="New tab"
@@ -833,11 +827,6 @@ const TabBar = ({
                 type="button"
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
-                className={cn(
-                  "opacity-0 transition-opacity",
-                  "pointer-events-none group-focus-within/tabbar:pointer-events-auto group-hover/tabbar:pointer-events-auto",
-                  "group-focus-within/tabbar:opacity-100 group-hover/tabbar:opacity-100 focus-visible:opacity-100",
-                )}
                 tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
                 tooltipSide="bottom"
                 aria-label="Toggle editor full screen"
