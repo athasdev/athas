@@ -18,11 +18,9 @@ import { getWorktrees } from "@/features/git/api/git-worktrees-api";
 import { isGitChangeRelevant, subscribeToGitChanges } from "@/features/git/events/git-events";
 import { useGitStore } from "@/features/git/stores/git.store";
 import type { GitWorktree } from "@/features/git/types/git.types";
-import {
-  isOpenableGitWorktree,
-  openGitWorktreeWorkspace,
-} from "@/features/git/utils/git-worktree-open";
+import { isOpenableGitWorktree } from "@/features/git/utils/git-worktree-open";
 import { getProjectNameFromPath } from "@/features/layout/components/sidebar/sidebar-projects";
+import { SidebarWorktreeHistoryRow } from "@/features/layout/components/sidebar/sidebar-worktree-history-row";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -53,7 +51,6 @@ import {
   SidebarSectionHeader,
   SidebarSectionLabel,
 } from "@/ui/sidebar";
-import { getFolderName } from "@/utils/path-helpers";
 
 const AGENT_HISTORY_INLINE_LIMIT = 5;
 
@@ -689,20 +686,15 @@ export function SidebarWorktreeHistory({
               New Worktree
             </SidebarListItem>
           ) : null}
-          {openableWorktrees.map((worktree) => (
-            <SidebarListItem
-              key={worktree.path}
-              active={worktree.is_current}
-              leading={<NodesIcon className="size-4" />}
-              trailing={worktree.branch}
-              title={worktree.path}
-              onClick={() => {
-                if (!worktree.is_current) void openGitWorktreeWorkspace(worktree.path);
-              }}
-            >
-              {getFolderName(worktree.path)}
-            </SidebarListItem>
-          ))}
+          {repoPath
+            ? openableWorktrees.map((worktree) => (
+                <SidebarWorktreeHistoryRow
+                  key={worktree.path}
+                  repoPath={repoPath}
+                  worktree={worktree}
+                />
+              ))
+            : null}
         </>
       ) : null}
     </div>
