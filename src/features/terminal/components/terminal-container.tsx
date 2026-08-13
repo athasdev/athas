@@ -690,8 +690,8 @@ const TerminalContainer = ({
             "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background",
             isVertical &&
               (tabSidebarPosition === "left"
-                ? "rounded-tl-lg border-border/60 border-t border-l"
-                : "rounded-tr-lg border-border/60 border-t border-r"),
+                ? "border-border/60 border-l"
+                : "border-border/60 border-r"),
           )}
         >
           {terminalSessions}
