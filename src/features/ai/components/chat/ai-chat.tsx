@@ -1,5 +1,4 @@
 import { listen } from "@tauri-apps/api/event";
-import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import {
@@ -227,8 +226,7 @@ const AIChat = memo(function AIChat({
 
   // Agent availability is handled dynamically by the agent selector.
 
-  const handleDeleteChat = (chatId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
+  const handleDeleteChat = (chatId: string) => {
     chatActions.deleteChat(chatId);
   };
 

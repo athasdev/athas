@@ -19,6 +19,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSearch,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -32,12 +33,10 @@ import {
   FadersHorizontalIcon as Preferences,
   KeyIcon as Key,
   LockIcon as Lock,
-  MagnifyingGlassIcon as Search,
   PlusIcon as Plus,
   SlidersHorizontalIcon as Sliders,
   SparkleIcon as Sparkles,
 } from "@/ui/icons";
-import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import { matchesSearchQuery } from "@/utils/search-match";
 import type { SkillsView } from "../skills/skills-command";
@@ -64,15 +63,10 @@ function MenuSearchInput({
   placeholder: string;
 }) {
   return (
-    <Input
+    <DropdownMenuSearch
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      onKeyDown={(event) => event.stopPropagation()}
       placeholder={placeholder}
-      aria-label={placeholder}
-      leftIcon={Search}
-      variant="ghost"
-      size="xs"
       autoFocus
     />
   );

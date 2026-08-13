@@ -1,7 +1,6 @@
 import {
   ArrowDownIcon as ArrowDown,
   ArrowUpIcon as ArrowUp,
-  ClockCounterClockwiseIcon as History,
   MagnifyingGlassIcon as Search,
   PlusIcon as Plus,
   XIcon as X,
@@ -78,7 +77,7 @@ function EditableChatTitle({
 
 interface ChatHeaderProps {
   chatId?: string | null;
-  onDeleteChat?: (chatId: string, event: React.MouseEvent) => void;
+  onDeleteChat?: (chatId: string) => void;
   onSwitchChat: (chatId: string) => void;
   isMessageSearchOpen: boolean;
   messageSearchQuery: string;
@@ -109,7 +108,6 @@ export function ChatHeader({
   const chats = useAIChatStore((state) => state.chats);
   const workspacePath = useProjectStore((state) => state.rootFolderPath || null);
   const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
-  const [isChatHistoryVisible, setIsChatHistoryVisible] = useState(false);
   const updateChatTitle = useAIChatStore((state) => state.actions.updateChatTitle);
   const setChatArchived = useAIChatStore((state) => state.actions.setChatArchived);
 
@@ -118,7 +116,6 @@ export function ChatHeader({
   const currentChat = chats.find((chat) => chat.id === effectiveChatId);
   const currentAgentId = currentChat?.agentId ?? selectedAgentId;
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
-  const historyButtonRef = useRef<HTMLButtonElement>(null);
   const messageSearchInputRef = useRef<HTMLInputElement>(null);
   const currentHeaderIconId = currentAgentId === "custom" ? aiProviderId : currentAgentId;
   const workspaceChats = useMemo(
@@ -172,18 +169,13 @@ export function ChatHeader({
             <Search />
           </Button>
 
-          <Button
-            type="button"
-            ref={historyButtonRef}
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-            tooltip="Agent History"
-            tooltipSide="bottom"
-            aria-label="Toggle agent history"
-          >
-            <History />
-          </Button>
+          <ChatHistoryDropdown
+            chats={workspaceChats}
+            currentChatId={effectiveChatId}
+            onSwitchToChat={onSwitchChat}
+            onSetChatArchived={setChatArchived}
+            onDeleteChat={onDeleteChat ?? (() => {})}
+          />
 
           <Button
             type="button"
@@ -266,20 +258,6 @@ export function ChatHeader({
           </Button>
         </div>
       ) : null}
-
-      <ChatHistoryDropdown
-        isOpen={isChatHistoryVisible}
-        onClose={() => setIsChatHistoryVisible(false)}
-        chats={workspaceChats}
-        currentChatId={effectiveChatId}
-        onSwitchToChat={(nextChatId) => {
-          setIsChatHistoryVisible(false);
-          onSwitchChat(nextChatId);
-        }}
-        onSetChatArchived={setChatArchived}
-        onDeleteChat={onDeleteChat ?? (() => {})}
-        triggerRef={historyButtonRef}
-      />
     </div>
   );
 }

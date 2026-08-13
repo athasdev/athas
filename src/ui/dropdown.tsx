@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import Input from "@/ui/input";
+import Input, { type InputProps } from "@/ui/input";
 import { quickTransition } from "@/utils/motion";
 import { FloatingPopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
@@ -739,6 +739,29 @@ function DropdownMenuTrigger(props: DropdownMenuPrimitive.Trigger.Props) {
   return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
 }
 
+function DropdownMenuSearch({
+  onKeyDown,
+  leftIcon = Search,
+  size = "xs",
+  variant = "ghost",
+  ...props
+}: InputProps) {
+  return (
+    <Input
+      data-slot="dropdown-menu-search"
+      leftIcon={leftIcon}
+      size={size}
+      variant={variant}
+      aria-label={props["aria-label"] ?? props.placeholder ?? "Search menu"}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        onKeyDown?.(event);
+      }}
+      {...props}
+    />
+  );
+}
+
 type DropdownMenuContentProps = DropdownMenuPrimitive.Popup.Props &
   Pick<
     DropdownMenuPrimitive.Positioner.Props,
@@ -934,6 +957,7 @@ export {
   DropdownMenuPortal,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSearch,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,

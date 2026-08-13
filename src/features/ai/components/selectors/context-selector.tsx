@@ -8,6 +8,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSearch,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -19,12 +20,10 @@ import {
   FilesIcon as Files,
   GitPullRequestIcon as GitPullRequest,
   GlobeIcon as Globe,
-  MagnifyingGlassIcon as Search,
   PlayCircleIcon as PlayCircle,
   PlusIcon as Plus,
   TerminalWindowIcon as TerminalWindow,
 } from "@/ui/icons";
-import Input from "@/ui/input";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { AIFileSelector } from "../mentions/ai-file-selector";
 
@@ -130,15 +129,10 @@ export function ContextSelector({
             </span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="max-h-80 min-w-72">
-            <Input
+            <DropdownMenuSearch
               value={bufferQuery}
               onChange={(event) => setBufferQuery(event.target.value)}
-              onKeyDown={(event) => event.stopPropagation()}
               placeholder="Search open tabs..."
-              aria-label="Search open tabs"
-              leftIcon={Search}
-              variant="ghost"
-              size="xs"
               autoFocus
             />
             {filteredBuffers.length > 0 ? (

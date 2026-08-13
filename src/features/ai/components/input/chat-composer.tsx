@@ -1,10 +1,10 @@
 import { forwardRef, type ComponentProps } from "react";
-import { SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";
+import { SidebarComposerBody } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
 export const ChatComposer = forwardRef<
   HTMLDivElement,
-  ComponentProps<typeof SidebarFooter> & {
+  ComponentProps<"div"> & {
     dragActive?: boolean;
     standalone?: boolean;
     connected?: boolean;
@@ -35,7 +35,12 @@ export const ChatComposer = forwardRef<
   }
 
   return (
-    <SidebarFooter ref={ref} data-ai-element="prompt-input" className={rootClassName} {...props} />
+    <div
+      ref={ref}
+      data-ai-element="prompt-input"
+      className={cn("mx-2 mb-2 shrink-0", rootClassName)}
+      {...props}
+    />
   );
 });
 
