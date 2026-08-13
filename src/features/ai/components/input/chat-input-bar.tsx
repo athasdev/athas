@@ -60,7 +60,7 @@ import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ContextSelector } from "../selectors/context-selector";
 import { ProviderApiKeyCommand } from "../provider-api-key-command";
-import { SkillsCommand } from "../skills/skills-command";
+import { SkillsCommand, type SkillsView } from "../skills/skills-command";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -84,7 +84,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   onStopStreaming,
 }: AIChatInputBarProps) {
   const inputRef = useRef<HTMLDivElement>(null);
-  const contextDropdownRef = useRef<HTMLDivElement>(null);
+  const contextTriggerRef = useRef<HTMLButtonElement>(null);
   const aiChatContainerRef = useRef<HTMLDivElement>(null);
   const isUpdatingContentRef = useRef(false);
   const visibleMentionFilesRef = useRef<FileEntry[]>([]);
@@ -93,7 +93,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // Local state for input emptiness check (to avoid subscribing to full input text)
   const [hasInputText, setHasInputText] = useState(false);
   const [isContextDragOver, setIsContextDragOver] = useState(false);
-  const [isSkillsOpen, setIsSkillsOpen] = useState(false);
+  const [isSkillsManagerOpen, setIsSkillsManagerOpen] = useState(false);
+  const [skillsManagerView, setSkillsManagerView] = useState<SkillsView>("list");
   const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
   const [isComposerFocused, setIsComposerFocused] = useState(false);
   const inputValueRef = useRef("");
@@ -234,8 +235,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
     if (mentionState.active) {
       hideMention();
     }
-    if (isSkillsOpen) {
-      setIsSkillsOpen(false);
+    if (isSkillsManagerOpen) {
+      setIsSkillsManagerOpen(false);
     }
   }, [
     slashCommandState.active,
@@ -244,7 +245,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     setIsContextDropdownOpen,
     mentionState.active,
     hideMention,
-    isSkillsOpen,
+    isSkillsManagerOpen,
   ]);
 
   const closeInlineMenus = useCallback(() => {
@@ -950,8 +951,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   });
 
   const hasSlashCommands = availableSlashCommands.length > 0;
-  const hasAttachedComposerDropdown =
-    mentionState.active || slashCommandState.active || isContextDropdownOpen || isSkillsOpen;
+  const hasAttachedComposerDropdown = mentionState.active || slashCommandState.active;
   const isInitialPresentation = presentation === "initial";
   const inputPlaceholder = isInputEnabled
     ? isInitialPresentation
@@ -1029,19 +1029,19 @@ const AIChatInputBar = memo(function AIChatInputBar({
         />
 
         <ChatComposerToolbar className={cn(isInitialPresentation && "items-center px-3 pb-3 pt-0")}>
-          <div ref={contextDropdownRef} className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1">
             <ContextSelector
               buffers={buffers}
               selectedBufferIds={selectedBufferIds}
               onToggleBuffer={toggleBufferSelection}
               onToggleFile={toggleFileSelection}
               isOpen={isContextDropdownOpen}
-              anchorRef={aiChatContainerRef}
-              onToggleOpen={() => {
-                if (!isContextDropdownOpen) {
+              triggerRef={contextTriggerRef}
+              onOpenChange={(open) => {
+                if (open) {
                   closeInlineMenus();
                 }
-                setIsContextDropdownOpen(!isContextDropdownOpen);
+                setIsContextDropdownOpen(open);
               }}
             />
           </div>
@@ -1104,10 +1104,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 closeInlineMenus();
                 setIsApiKeyManagerOpen(true);
               }}
-              onManageSkills={() => {
+              onManageSkills={(view) => {
                 closeInlineMenus();
-                setIsSkillsOpen(true);
+                setSkillsManagerView(view);
+                setIsSkillsManagerOpen(true);
               }}
+              onSelectSkill={insertSkillAtCursor}
               onBeforeOpen={closeInlineMenus}
             />
 
@@ -1214,9 +1216,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                         nextChip.focus();
                         return;
                       }
-                      contextDropdownRef.current
-                        ?.querySelector<HTMLButtonElement>("button")
-                        ?.focus();
+                      contextTriggerRef.current?.focus();
                     });
                   }
                 }}
@@ -1290,10 +1290,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
       )}
 
       <SkillsCommand
-        anchorRef={aiChatContainerRef}
-        isOpen={isSkillsOpen}
-        onClose={() => setIsSkillsOpen(false)}
+        isOpen={isSkillsManagerOpen}
+        onClose={() => setIsSkillsManagerOpen(false)}
         onSelectSkill={insertSkillAtCursor}
+        initialView={skillsManagerView}
       />
 
       <ProviderApiKeyCommand

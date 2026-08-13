@@ -8,15 +8,7 @@ import {
   PlusIcon as Plus,
   TrashIcon as Trash,
 } from "@/ui/icons";
-import {
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type RefObject,
-} from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   createSkillFromMarketplace,
   hasSkillLocalOverride,
@@ -43,17 +35,15 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import Textarea from "@/ui/textarea";
-import { ComposerAttachedPanel } from "../input/composer-attached-panel";
 
 interface SkillsCommandProps {
-  anchorRef?: RefObject<HTMLElement | null>;
   isOpen: boolean;
   onClose: () => void;
   onSelectSkill: (skill: AIChatSkill) => void;
   initialView?: SkillsView;
 }
 
-type SkillsView = "list" | "browse" | "editor";
+export type SkillsView = "list" | "browse" | "editor";
 
 function createSkillId() {
   return `skill-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -73,7 +63,6 @@ function getSyncIcon(enabled: boolean, status: string) {
 }
 
 export function SkillsCommand({
-  anchorRef,
   isOpen,
   onClose,
   onSelectSkill,
@@ -341,7 +330,6 @@ export function SkillsCommand({
 
   const canSave = title.trim().length > 0;
   const SyncIcon = getSyncIcon(syncEnabled, syncStatus);
-  const isComposerAttached = Boolean(anchorRef);
 
   const panelContent =
     view === "list" || view === "browse" ? (
@@ -370,7 +358,7 @@ export function SkillsCommand({
           </CommandHeaderAction>
         </CommandHeader>
 
-        <CommandList ref={resultsRef} contentClassName={isComposerAttached ? "p-1.5" : undefined}>
+        <CommandList ref={resultsRef}>
           {view === "browse" ? (
             isLoadingMarketplace ? (
               <CommandEmpty>Loading available skills...</CommandEmpty>
@@ -400,7 +388,6 @@ export function SkillsCommand({
                     }
                     onMouseEnter={() => setSelectedIndex(index)}
                     className="group"
-                    density={isComposerAttached ? "compact" : "default"}
                     title={skill.title}
                     description={
                       <>
@@ -408,13 +395,13 @@ export function SkillsCommand({
                         {skill.author ? <span>by {skill.author}</span> : null}
                       </>
                     }
-                    contentLayout={isComposerAttached ? "inline" : "stacked"}
+                    contentLayout="stacked"
                     accessory={
                       <>
                         {skill.version ? (
                           <CommandItemBadge>v{skill.version}</CommandItemBadge>
                         ) : null}
-                        {skill.tags.slice(0, isComposerAttached ? 1 : 3).map((tag) => (
+                        {skill.tags.slice(0, 3).map((tag) => (
                           <CommandItemBadge key={tag}>{tag}</CommandItemBadge>
                         ))}
                       </>
@@ -422,9 +409,8 @@ export function SkillsCommand({
                     action={
                       <Button
                         type="button"
-                        variant={isInstalled ? "default" : "default"}
+                        variant="default"
                         disabled={isInstalled}
-                        size={isComposerAttached ? "xs" : undefined}
                         onClick={(event) => {
                           event.stopPropagation();
                           if (!isInstalled) {
@@ -457,10 +443,9 @@ export function SkillsCommand({
                   onClick={() => handleSelectSkill(skill)}
                   onMouseEnter={() => setSelectedIndex(index)}
                   className="group"
-                  density={isComposerAttached ? "compact" : "default"}
                   title={skill.title}
                   description={preview}
-                  contentLayout={isComposerAttached ? "inline" : "stacked"}
+                  contentLayout="stacked"
                   accessory={
                     <>
                       {skill.source === "marketplace" ? (
@@ -483,21 +468,21 @@ export function SkillsCommand({
                         className="opacity-0 focus:opacity-100 group-hover:opacity-100"
                         tooltip="Edit skill"
                         aria-label={`Edit ${skill.title}`}
-                        size={isComposerAttached ? "icon-xs" : "icon"}
+                        size="icon"
                       >
                         <PencilSimple size={13} />
                       </Button>
                       <Button
                         type="button"
-                        variant="ghost"
+                        variant="danger"
                         onClick={(event) => {
                           event.stopPropagation();
                           void handleDelete(skill.id);
                         }}
-                        className="opacity-0 hover:bg-destructive/10 hover:text-destructive focus:opacity-100 group-hover:opacity-100"
+                        className="opacity-0 focus:opacity-100 group-hover:opacity-100"
                         tooltip="Delete skill"
                         aria-label={`Delete ${skill.title}`}
-                        size={isComposerAttached ? "icon-xs" : "icon"}
+                        size="icon"
                       >
                         <Trash size={13} />
                       </Button>
@@ -584,20 +569,6 @@ export function SkillsCommand({
         </CommandFooter>
       </>
     );
-
-  if (anchorRef) {
-    return (
-      <ComposerAttachedPanel
-        open={isOpen}
-        anchorRef={anchorRef}
-        onClose={handleClose}
-        ariaLabel="Skills"
-        maxHeight={view === "editor" ? 440 : 320}
-      >
-        {panelContent}
-      </ComposerAttachedPanel>
-    );
-  }
 
   return (
     <Command isVisible={isOpen} onClose={handleClose} title="Skills">

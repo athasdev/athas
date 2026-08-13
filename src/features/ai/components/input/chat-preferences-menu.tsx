@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ProBadge } from "@/extensions/ui/components/pro-badge";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
@@ -6,7 +6,9 @@ import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
 import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
 import type { SessionConfigOption } from "@/features/ai/types/acp.types";
 import type { AgentType, ChatMode } from "@/features/ai/types/ai-chat.types";
+import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import {
@@ -26,13 +28,19 @@ import {
 import {
   BookOpenIcon as BookOpen,
   BrainIcon as Brain,
+  CloudArrowDownIcon as CloudArrowDown,
   FadersHorizontalIcon as Preferences,
   KeyIcon as Key,
   LockIcon as Lock,
+  MagnifyingGlassIcon as Search,
+  PlusIcon as Plus,
   SlidersHorizontalIcon as Sliders,
   SparkleIcon as Sparkles,
 } from "@/ui/icons";
+import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
+import { matchesSearchQuery } from "@/utils/search-match";
+import type { SkillsView } from "../skills/skills-command";
 import { getChatPreferencesModel } from "./chat-preferences-model";
 
 const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
@@ -46,6 +54,30 @@ function CurrentValue({ children }: { children: string }) {
   );
 }
 
+function MenuSearchInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <Input
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      onKeyDown={(event) => event.stopPropagation()}
+      placeholder={placeholder}
+      aria-label={placeholder}
+      leftIcon={Search}
+      variant="ghost"
+      size="xs"
+      autoFocus
+    />
+  );
+}
+
 function AgentPreferencesSubmenu({
   currentAgentId,
   onAgentChange,
@@ -54,7 +86,11 @@ function AgentPreferencesSubmenu({
   onAgentChange: (agentId: AgentType) => void;
 }) {
   const { options, installAgent } = useAgentOptions(currentAgentId);
+  const [query, setQuery] = useState("");
   const currentAgentName = options.find((option) => option.isCurrent)?.name ?? "Agent";
+  const filteredOptions = options.filter((option) =>
+    matchesSearchQuery(query, [option.name, option.description ?? "", option.id]),
+  );
 
   return (
     <DropdownMenuSub>
@@ -64,6 +100,7 @@ function AgentPreferencesSubmenu({
         <CurrentValue>{currentAgentName}</CurrentValue>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="min-w-56">
+        <MenuSearchInput value={query} onChange={setQuery} placeholder="Search agents..." />
         <DropdownMenuRadioGroup
           value={currentAgentId}
           onValueChange={(agentId) => {
@@ -76,7 +113,7 @@ function AgentPreferencesSubmenu({
             if (option.canInstall) void installAgent(option.id, option.name);
           }}
         >
-          {options.map((option) => (
+          {filteredOptions.map((option) => (
             <DropdownMenuRadioItem
               key={option.id}
               value={option.id}
@@ -94,6 +131,9 @@ function AgentPreferencesSubmenu({
               ) : null}
             </DropdownMenuRadioItem>
           ))}
+          {filteredOptions.length === 0 ? (
+            <DropdownMenuItem disabled>No matching agents</DropdownMenuItem>
+          ) : null}
         </DropdownMenuRadioGroup>
       </DropdownMenuSubContent>
     </DropdownMenuSub>
@@ -158,12 +198,20 @@ function AthasAgentPreferences({
   onModelChange: (modelId: string) => void;
   onManageApiKeys: () => void;
 }) {
+  const [providerQuery, setProviderQuery] = useState("");
+  const [modelQuery, setModelQuery] = useState("");
   const providers = useAvailableProviders();
   const currentProvider = providers.find((provider) => provider.id === providerId);
   const { availableModels, currentModelName, hasHostedAi, modelFetchError } = useAIModelOptions(
     providerId,
     modelId,
     onModelChange,
+  );
+  const filteredProviders = providers.filter((provider) =>
+    matchesSearchQuery(providerQuery, [provider.name, provider.id]),
+  );
+  const filteredModels = availableModels.filter((model) =>
+    matchesSearchQuery(modelQuery, [model.name, model.id]),
   );
 
   return (
@@ -175,13 +223,21 @@ function AthasAgentPreferences({
           <CurrentValue>{currentProvider?.name ?? providerId}</CurrentValue>
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent className="min-w-48">
+          <MenuSearchInput
+            value={providerQuery}
+            onChange={setProviderQuery}
+            placeholder="Search providers..."
+          />
           <DropdownMenuRadioGroup value={providerId} onValueChange={onProviderChange}>
-            {providers.map((provider) => (
+            {filteredProviders.map((provider) => (
               <DropdownMenuRadioItem key={provider.id} value={provider.id}>
                 <ProviderIcon providerId={provider.id} size={14} />
                 {provider.name}
               </DropdownMenuRadioItem>
             ))}
+            {filteredProviders.length === 0 ? (
+              <DropdownMenuItem disabled>No matching providers</DropdownMenuItem>
+            ) : null}
           </DropdownMenuRadioGroup>
         </DropdownMenuSubContent>
       </DropdownMenuSub>
@@ -193,6 +249,11 @@ function AthasAgentPreferences({
           <CurrentValue>{currentModelName}</CurrentValue>
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent className="max-h-80 min-w-64 overflow-y-auto">
+          <MenuSearchInput
+            value={modelQuery}
+            onChange={setModelQuery}
+            placeholder="Search models..."
+          />
           {modelFetchError ? (
             <DropdownMenuGroup>
               <DropdownMenuLabel className="max-w-64 text-warning">
@@ -201,7 +262,7 @@ function AthasAgentPreferences({
             </DropdownMenuGroup>
           ) : null}
           <DropdownMenuRadioGroup value={modelId} onValueChange={onModelChange}>
-            {availableModels.map((model) => {
+            {filteredModels.map((model) => {
               const locked = Boolean(model.proOnly && !hasHostedAi);
               return (
                 <DropdownMenuRadioItem key={model.id} value={model.id} disabled={locked}>
@@ -213,6 +274,9 @@ function AthasAgentPreferences({
                 </DropdownMenuRadioItem>
               );
             })}
+            {filteredModels.length === 0 ? (
+              <DropdownMenuItem disabled>No matching models</DropdownMenuItem>
+            ) : null}
           </DropdownMenuRadioGroup>
           {providerId === "custom" ? (
             <>
@@ -230,6 +294,62 @@ function AthasAgentPreferences({
         API Keys
       </DropdownMenuItem>
     </>
+  );
+}
+
+function SkillsPreferencesSubmenu({
+  onSelectSkill,
+  onManageSkills,
+}: {
+  onSelectSkill: (skill: AIChatSkill) => void;
+  onManageSkills: (view: SkillsView) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const skills = useSettingsStore((state) => state.settings.aiSkills);
+  const filteredSkills = skills.filter((skill) =>
+    matchesSearchQuery(query, [skill.title, skill.description ?? "", skill.content]),
+  );
+
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <BookOpen />
+        Skills
+        <CurrentValue>{skills.length.toString()}</CurrentValue>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-80 min-w-64 overflow-y-auto">
+        <MenuSearchInput value={query} onChange={setQuery} placeholder="Search skills..." />
+        {filteredSkills.map((skill) => (
+          <DropdownMenuItem key={skill.id} onClick={() => onSelectSkill(skill)}>
+            <BookOpen />
+            <span className="min-w-0 flex-1 truncate">{skill.title}</span>
+          </DropdownMenuItem>
+        ))}
+        {filteredSkills.length === 0 ? (
+          <DropdownMenuItem disabled>
+            {skills.length === 0 ? "No skills yet" : "No matching skills"}
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Manage skills</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuItem onClick={() => onManageSkills("list")}>
+              <BookOpen />
+              My skills…
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onManageSkills("browse")}>
+              <CloudArrowDown />
+              Browse skills…
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onManageSkills("editor")}>
+              <Plus />
+              New skill…
+            </DropdownMenuItem>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }
 
@@ -280,7 +400,8 @@ interface ChatPreferencesMenuProps {
   onModelChange: (modelId: string) => void;
   onSessionConfigChange: (optionId: string, value: string) => void;
   onManageApiKeys: () => void;
-  onManageSkills: () => void;
+  onManageSkills: (view: SkillsView) => void;
+  onSelectSkill: (skill: AIChatSkill) => void;
   onBeforeOpen: () => void;
 }
 
@@ -295,6 +416,7 @@ export function ChatPreferencesMenu({
   onSessionConfigChange,
   onManageApiKeys,
   onManageSkills,
+  onSelectSkill,
   onBeforeOpen,
 }: ChatPreferencesMenuProps) {
   const preferences = useMemo(
@@ -322,7 +444,7 @@ export function ChatPreferencesMenu({
       >
         <Preferences />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" side="top" className="min-w-60">
+      <DropdownMenuContent align="end" className="min-w-60">
         <DropdownMenuGroup>
           {preferences.showAgentPreference && onAgentChange ? (
             <AgentPreferencesSubmenu
@@ -350,10 +472,7 @@ export function ChatPreferencesMenu({
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={onManageSkills}>
-            <BookOpen />
-            Skills
-          </DropdownMenuItem>
+          <SkillsPreferencesSubmenu onSelectSkill={onSelectSkill} onManageSkills={onManageSkills} />
           <DropdownMenuItem onClick={() => useUIState.getState().openSettingsDialog("ai")}>
             <Preferences />
             Settings
