@@ -619,21 +619,21 @@ export function Dropdown(props: DropdownProps) {
       isOpen={isOpen}
       contentRef={menuRef}
       portalContainer={portalContainer}
-      className={className}
+      className={cn(menuSurfaceVariants({ density }), className)}
       style={{ transformOrigin, visibility: isPositioned ? "visible" : "hidden", ...style }}
       animated={animated}
       initial={{
         opacity: 0,
-        scale: 0.98,
-        y: resolvedSide === "top" ? 4 : -4,
-        filter: "blur(2px)",
+        scale: 1,
+        y: 0,
+        filter: "blur(0px)",
       }}
       animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
       exit={{
         opacity: 0,
-        scale: 0.98,
-        y: resolvedSide === "top" ? 4 : -4,
-        filter: "blur(2px)",
+        scale: 1,
+        y: 0,
+        filter: "blur(0px)",
       }}
       transition={quickTransition}
     >
@@ -749,7 +749,7 @@ function DropdownMenuContent({
           data-slot="dropdown-menu-content"
           className={cn(
             menuSurfaceVariants({ density: "compact" }),
-            "z-10070 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            "z-10070 duration-75 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
             className,
           )}
           {...props}
