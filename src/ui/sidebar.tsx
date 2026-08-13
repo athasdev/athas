@@ -234,7 +234,7 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) px-2 py-1 text-left text-subtle-foreground transition-[background-color,color]",
+        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-full px-2 py-1 text-left text-subtle-foreground transition-[background-color,color]",
         "hover:bg-accent/70 hover:text-foreground focus-visible:bg-accent/70 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
         active && "bg-accent/80 text-foreground",
         iconOnly && "justify-center gap-0 px-0",
@@ -282,7 +282,7 @@ export function SidebarListEditor({
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) bg-accent/80 px-2 py-1 text-foreground",
+        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-full bg-accent/80 px-2 py-1 text-foreground",
         className,
       )}
       {...props}
