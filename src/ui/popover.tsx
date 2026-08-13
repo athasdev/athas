@@ -1,3 +1,4 @@
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import { AnimatePresence, motion, useReducedMotionConfig, type Transition } from "motion/react";
 import {
   type CSSProperties,
@@ -7,11 +8,9 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { floatingSurface } from "@/design-system/overlay";
 import { instantTransition, overlayEntrance } from "@/utils/motion";
 import { cn } from "@/utils/cn";
-
-const popoverSurfaceClassName =
-  "rounded-lg bg-surface/98 font-sans ui-text-chrome text-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm";
 
 function containScrollChain(event: ReactWheelEvent<HTMLDivElement>) {
   const root = event.currentTarget;
@@ -86,7 +85,7 @@ export function FloatingPopoverContent({
       exit={shouldAnimate ? exit : { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
       transition={shouldAnimate ? transition : instantTransition}
       className={cn(
-        popoverSurfaceClassName,
+        floatingSurface(),
         "pointer-events-auto fixed z-10070 min-w-60 max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto p-1 overscroll-contain",
         className,
       )}
@@ -138,7 +137,7 @@ function PopoverContent({
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            popoverSurfaceClassName,
+            floatingSurface(),
             "z-10070 flex w-72 origin-(--transform-origin) flex-col gap-2 p-2 transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
             className,
           )}
@@ -180,4 +179,3 @@ function PopoverDescription({ className, ...props }: PopoverPrimitive.Descriptio
 }
 
 export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger };
-import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
