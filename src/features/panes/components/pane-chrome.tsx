@@ -26,7 +26,7 @@ export function paneTitleClassName(className?: string) {
 }
 
 function paneIconButtonClassName(className?: string) {
-  return cn("shrink-0 rounded-md text-subtle-foreground", className);
+  return cn("shrink-0 text-subtle-foreground", className);
 }
 
 type PaneIconButtonProps = Omit<ButtonProps, "variant" | "size">;

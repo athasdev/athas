@@ -6,7 +6,7 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 export const buttonVariants = cva(
-  "font-sans ui-text-sm inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full leading-row transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-(--app-duration-fast) ease-(--app-ease-smooth) select-none outline-none active:scale-(--app-press-scale) focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "font-sans ui-text-sm inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap leading-row transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-(--app-duration-fast) ease-(--app-ease-smooth) select-none outline-none active:scale-(--app-press-scale) focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -19,13 +19,13 @@ export const buttonVariants = cva(
           "border-0 bg-transparent text-foreground hover:bg-destructive/10 hover:text-destructive data-[active=true]:bg-destructive/12 data-[active=true]:text-destructive",
       },
       size: {
-        default: "h-8 px-3",
-        xs: "h-6 gap-1 px-1.5",
-        sm: "h-7 px-2.5",
-        lg: "h-9 px-4",
-        icon: "size-8 p-0",
-        "icon-xs": "size-6 p-0",
-        "icon-sm": "size-7 p-0",
+        default: "h-8 rounded-(--athas-chrome-radius) px-3",
+        xs: "h-6 gap-1 rounded-(--athas-chrome-radius) px-1.5",
+        sm: "h-7 rounded-(--athas-chrome-radius) px-2.5",
+        lg: "h-9 rounded-(--athas-chrome-radius) px-4",
+        icon: "size-8 rounded-full p-0",
+        "icon-xs": "size-6 rounded-full p-0",
+        "icon-sm": "size-7 rounded-full p-0",
       },
     },
     defaultVariants: {

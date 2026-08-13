@@ -133,7 +133,7 @@ export const SidebarHeaderIconButton = forwardRef<
       type="button"
       variant="ghost"
       size="icon-xs"
-      className={cn("rounded-md", className)}
+      className={className}
       {...props}
     />
   );
