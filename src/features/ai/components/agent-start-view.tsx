@@ -1,13 +1,4 @@
-import {
-  FileTextIcon as FileText,
-  FolderOpenIcon as FolderOpen,
-  GlobeHemisphereWestIcon as Globe,
-  PlusIcon as Plus,
-  SparkleIcon as Sparkles,
-  TerminalWindowIcon as Terminal,
-} from "@/ui/icons";
-import { useCallback } from "react";
-import { AgentLaunchInput } from "@/features/ai/components/agent-launcher";
+import { useCallback, type ReactNode } from "react";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -23,31 +14,36 @@ import {
   ContextMenuTrigger,
 } from "@/ui/context-menu";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/ui/empty";
+import {
+  FileTextIcon as FileText,
+  FolderOpenIcon as FolderOpen,
+  GlobeHemisphereWestIcon as Globe,
+  PlusIcon as Plus,
+  SparkleIcon as Sparkles,
+  TerminalWindowIcon as Terminal,
+} from "@/ui/icons";
 import { ThinkingOrb } from "@/ui/thinking-orb";
+
+interface AgentStartViewProps {
+  children: ReactNode;
+}
 
 interface ActionItem {
   id: string;
   label: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   action: () => void;
 }
 
-const quickActionCardClassName =
-  "h-9 min-w-0 w-full justify-start gap-2 overflow-hidden rounded-lg bg-accent/25 px-3 text-subtle-foreground hover:bg-accent/60 hover:text-foreground";
-
-const quickActionIconClassName =
-  "flex size-4 shrink-0 items-center justify-center text-subtle-foreground group-hover:text-foreground";
-
-export function EmptyEditorState() {
+export function AgentStartView({ children }: AgentStartViewProps) {
   const { openTerminalBuffer, openWebViewerBuffer, openBuffer } = useBufferStore.use.actions();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const webViewerEnabled = useSettingsStore((state) => state.settings.coreFeatures.webViewer);
+  const handleOpenAgent = useNewAgentAction();
 
   const handleOpenTerminal = useCallback(() => {
     openTerminalBuffer();
   }, [openTerminalBuffer]);
-
-  const handleOpenAgent = useNewAgentAction();
 
   const handleOpenWebViewer = useCallback(() => {
     openWebViewerBuffer("https://");
@@ -100,8 +96,8 @@ export function EmptyEditorState() {
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger className="flex h-full min-h-0 w-full overflow-auto">
-        <Empty className="m-auto max-w-2xl gap-4 px-6 py-8">
+      <ContextMenuTrigger className="flex h-full min-h-0 w-full flex-1 overflow-auto">
+        <Empty className="m-auto max-w-2xl gap-4 px-6 py-8" data-slot="agent-start-view">
           <EmptyHeader>
             <EmptyMedia className="size-16">
               <ThinkingOrb state="shaping" size={64} aria-hidden="true" />
@@ -109,7 +105,7 @@ export function EmptyEditorState() {
             <EmptyTitle className="ui-text-lg">Where should we begin?</EmptyTitle>
           </EmptyHeader>
 
-          <AgentLaunchInput active autoFocus surfaceId="empty-editor" />
+          {children}
 
           <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">
             {quickActions.map((item) => (
@@ -117,11 +113,11 @@ export function EmptyEditorState() {
                 key={item.id}
                 type="button"
                 onClick={item.action}
-                variant="ghost"
-                className={`group ${quickActionCardClassName}`}
+                variant="default"
+                className="w-full min-w-0 justify-start overflow-hidden"
               >
-                <span className={quickActionIconClassName}>{item.icon}</span>
-                <span className="min-w-0 truncate ui-text-sm">{item.label}</span>
+                {item.icon}
+                <span className="min-w-0 truncate">{item.label}</span>
               </Button>
             ))}
           </div>
@@ -149,12 +145,12 @@ export function EmptyEditorState() {
           <Sparkles />
           New Agent
         </ContextMenuItem>
-        {webViewerEnabled && (
+        {webViewerEnabled ? (
           <ContextMenuItem onClick={handleOpenWebViewer}>
             <Globe />
             Open URL
           </ContextMenuItem>
-        )}
+        ) : null}
       </ContextMenuContent>
     </ContextMenu>
   );

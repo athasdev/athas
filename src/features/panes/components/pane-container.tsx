@@ -1,5 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { AgentLaunchInput } from "@/features/ai/components/agent-launcher";
+import { AgentStartView } from "@/features/ai/components/agent-start-view";
 import type { DatabaseType } from "@/features/database/types/provider.types";
 import {
   PROVIDER_REGISTRY,
@@ -37,7 +39,6 @@ import {
 } from "@/features/tabs/utils/internal-tab-drag";
 import { cn } from "@/utils/cn";
 import { activateBufferInPaneAndSync, activatePaneAndSyncBuffer } from "../utils/pane-activation";
-import { EmptyEditorState } from "./empty-editor-state";
 import { BOTTOM_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
 import type { PaneGroup } from "../types/pane.types";
@@ -1090,7 +1091,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         disablePaneActions={pane.id === BOTTOM_PANE_ID}
       />
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {!activeBuffer && !shouldRenderCarousel && <EmptyEditorState />}
+        {!activeBuffer && !shouldRenderCarousel ? (
+          <AgentStartView>
+            <AgentLaunchInput active autoFocus surfaceId="empty-editor" />
+          </AgentStartView>
+        ) : null}
 
         <Suspense fallback={null}>
           {shouldRenderCarousel ? (

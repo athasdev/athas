@@ -46,10 +46,10 @@ import {
   MessageScrollerViewport,
 } from "@/ui/message-scroller";
 import { cn } from "@/utils/cn";
+import { AgentStartView } from "../agent-start-view";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import AIChatInputBar from "../input/chat-input-bar";
 import { AcpPermissionPrompt, type AcpPermissionRequest } from "./acp-permission-prompt";
-import { AgentShortcuts } from "./agent-shortcuts";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
 
@@ -1064,45 +1064,42 @@ details: ${errorDetails || mainError}
       ) : (
         <>
           {useInitialComposer ? (
-            <div className="flex min-h-0 flex-1 items-center justify-center px-8 py-10">
-              <div className="flex w-full max-w-180 flex-col gap-4">
-                <AgentShortcuts surfaceId={surfaceId} />
-                <AIChatInputBar
-                  key={effectiveChatId ?? "new-session"}
-                  surfaceId={surfaceId}
-                  buffers={buffers}
-                  allProjectFiles={allProjectFiles}
-                  currentAgentId={currentAgentId}
-                  isTyping={isSurfaceTyping}
-                  streamingMessageId={surfaceStreamingMessageId}
-                  queueCount={queueCount}
-                  selectedBufferIds={selectedBufferIds}
-                  selectedFilesPaths={selectedFilesPaths}
-                  onToggleBufferSelection={(bufferId) =>
-                    setSelectedBufferIds((current) => {
-                      const next = new Set(current);
-                      if (next.has(bufferId)) next.delete(bufferId);
-                      else next.add(bufferId);
-                      return next;
-                    })
-                  }
-                  onToggleFileSelection={(filePath) =>
-                    setSelectedFilesPaths((current) => {
-                      const next = new Set(current);
-                      if (next.has(filePath)) next.delete(filePath);
-                      else next.add(filePath);
-                      return next;
-                    })
-                  }
-                  onSetSelectedBufferIds={setSelectedBufferIds}
-                  onSetSelectedFilesPaths={setSelectedFilesPaths}
-                  isActiveSurface={isActiveSurface}
-                  presentation="initial"
-                  onSendMessage={handleSendMessage}
-                  onStopStreaming={stopStreaming}
-                />
-              </div>
-            </div>
+            <AgentStartView>
+              <AIChatInputBar
+                key={effectiveChatId ?? "new-session"}
+                surfaceId={surfaceId}
+                buffers={buffers}
+                allProjectFiles={allProjectFiles}
+                currentAgentId={currentAgentId}
+                isTyping={isSurfaceTyping}
+                streamingMessageId={surfaceStreamingMessageId}
+                queueCount={queueCount}
+                selectedBufferIds={selectedBufferIds}
+                selectedFilesPaths={selectedFilesPaths}
+                onToggleBufferSelection={(bufferId) =>
+                  setSelectedBufferIds((current) => {
+                    const next = new Set(current);
+                    if (next.has(bufferId)) next.delete(bufferId);
+                    else next.add(bufferId);
+                    return next;
+                  })
+                }
+                onToggleFileSelection={(filePath) =>
+                  setSelectedFilesPaths((current) => {
+                    const next = new Set(current);
+                    if (next.has(filePath)) next.delete(filePath);
+                    else next.add(filePath);
+                    return next;
+                  })
+                }
+                onSetSelectedBufferIds={setSelectedBufferIds}
+                onSetSelectedFilesPaths={setSelectedFilesPaths}
+                isActiveSurface={isActiveSurface}
+                presentation="initial"
+                onSendMessage={handleSendMessage}
+                onStopStreaming={stopStreaming}
+              />
+            </AgentStartView>
           ) : (
             <MessageScrollerProvider autoScroll defaultScrollPosition="last-anchor">
               <MessageScroller>
