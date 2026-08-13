@@ -1,10 +1,9 @@
 import type { RefObject } from "react";
+import { FileResultsWorkspace } from "@/features/file-explorer/components/file-results-workspace";
 import {
-  FileNavigatorSidebar,
   type FileNavigatorItem,
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
-import { ScrollArea } from "@/ui/scroll-area";
 import type { SearchExcerpt } from "../utils/search-excerpts";
 import { SearchExcerptResults } from "./search-excerpt-results";
 
@@ -52,50 +51,34 @@ export function GlobalSearchResults({
   hasMoreResults,
 }: GlobalSearchResultsProps) {
   return (
-    <div className="flex h-full min-h-0 overflow-hidden">
-      <FileNavigatorSidebar
-        items={fileNavigatorItems}
-        selectedKey={selectedFileNavigatorKey}
-        onSelect={onFileNavigatorSelect}
-        ariaLabel="Search result files"
-        viewMode={fileNavigatorViewMode}
-        onViewModeChange={onFileNavigatorViewModeChange}
-        surface="inset"
-        searchMode="fuzzy"
-        compactRows
-        searchResetKey={navigatorSearchResetKey}
-        className="my-2 ml-2 h-auto self-stretch"
-      />
-      <ScrollArea
-        className="min-h-0 flex-1 bg-background"
-        contentClassName="px-2 pb-2"
-        orientation="both"
-        viewportProps={{
-          ref: scrollContainerRef,
-          style: { overflowAnchor: "none" },
-        }}
-      >
-        <div className="min-w-0 max-w-full">
-          <SearchExcerptResults
-            excerpts={excerpts}
-            selectedItemKey={selectedItemKey}
-            onOpen={onOpen}
-            onExpandContext={onExpandContext}
-            onCollapseContext={onCollapseContext}
-            isContextExpanded={isContextExpanded}
-          />
+    <FileResultsWorkspace
+      items={fileNavigatorItems}
+      selectedKey={selectedFileNavigatorKey}
+      onSelect={onFileNavigatorSelect}
+      ariaLabel="Search result files"
+      viewMode={fileNavigatorViewMode}
+      onViewModeChange={onFileNavigatorViewModeChange}
+      navigatorSearchResetKey={navigatorSearchResetKey}
+      scrollContainerRef={scrollContainerRef}
+      orientation="both"
+    >
+      <div className="min-w-0 max-w-full">
+        <SearchExcerptResults
+          excerpts={excerpts}
+          selectedItemKey={selectedItemKey}
+          onOpen={onOpen}
+          onExpandContext={onExpandContext}
+          onCollapseContext={onCollapseContext}
+          isContextExpanded={isContextExpanded}
+        />
+      </div>
+      {hasMore ? (
+        <div ref={loadMoreRef} className="ui-text-sm px-3 py-3 text-center text-subtle-foreground">
+          {isLoadingMore
+            ? "Loading more results"
+            : `Showing ${displayedCount} of ${hasMoreResults ? `${totalMatches}+` : totalMatches} results`}
         </div>
-        {hasMore ? (
-          <div
-            ref={loadMoreRef}
-            className="ui-text-sm px-3 py-3 text-center text-subtle-foreground"
-          >
-            {isLoadingMore
-              ? "Loading more results"
-              : `Showing ${displayedCount} of ${hasMoreResults ? `${totalMatches}+` : totalMatches} results`}
-          </div>
-        ) : null}
-      </ScrollArea>
-    </div>
+      ) : null}
+    </FileResultsWorkspace>
   );
 }

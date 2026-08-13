@@ -3,8 +3,6 @@ import {
   WarningIcon as AlertTriangle,
   TextAlignCenterIcon as AlignCenter,
   CheckIcon as Check,
-  CaretDownIcon as ChevronDown,
-  CaretRightIcon as ChevronRight,
   CopyIcon as Copy,
   FunnelIcon as Filter,
   InfoIcon as Info,
@@ -19,26 +17,37 @@ import {
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { FileResultsWorkspace } from "@/features/file-explorer/components/file-results-workspace";
 import {
-  FileNavigatorSidebar,
   type FileNavigatorItem,
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { writeClipboardText } from "@/utils/clipboard";
-import { ScrollArea } from "@/ui/scroll-area";
 import type { TerminalWidthMode } from "@/features/terminal/stores/terminal.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
-import { Button } from "@/ui/button";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
-import { EmptyState } from "@/ui/empty";
 import {
-  PaneChip,
-  PaneIconButton,
-  paneHeaderClassName,
-} from "@/features/panes/components/pane-chrome";
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyState,
+  EmptyTitle,
+} from "@/ui/empty";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/ui/item";
+import { PaneIconButton } from "@/features/panes/components/pane-chrome";
 import { SearchPopover } from "@/ui/search";
 import { cn } from "@/utils/cn";
 import { getBaseName, getRelativePath, normalizePath } from "@/utils/path-helpers";
@@ -403,6 +412,11 @@ const DiagnosticsPane = ({
       }));
   }, [filteredDiagnostics, preferences.groupBy]);
 
+  const expandedGroupIds = useMemo(
+    () => groupedDiagnostics.filter((group) => !collapsedGroups[group.id]).map((group) => group.id),
+    [collapsedGroups, groupedDiagnostics],
+  );
+
   const totalBySeverity = useMemo(() => {
     return diagnostics.reduce(
       (acc, diagnostic) => {
@@ -513,12 +527,15 @@ const DiagnosticsPane = ({
     }));
   }, []);
 
-  const toggleGroupCollapse = useCallback((groupId: string) => {
-    setCollapsedGroups((prev) => ({
-      ...prev,
-      [groupId]: !prev[groupId],
-    }));
-  }, []);
+  const setExpandedGroupIds = useCallback(
+    (expandedIds: string[]) => {
+      const expanded = new Set(expandedIds);
+      setCollapsedGroups(
+        Object.fromEntries(groupedDiagnostics.map((group) => [group.id, !expanded.has(group.id)])),
+      );
+    },
+    [groupedDiagnostics],
+  );
 
   const selectDiagnosticFile = useCallback(
     (filePath: string) => {
@@ -736,15 +753,6 @@ const DiagnosticsPane = ({
   const hasSearch = Boolean(searchQuery.trim());
   const visibleProblemCount = filteredDiagnostics.length;
   const hasDiagnosticFiles = diagnosticFileItems.length > 0;
-  const problemSummary = `${visibleProblemCount} problem${visibleProblemCount === 1 ? "" : "s"}`;
-  const problemSummaryTone =
-    visibleBySeverity.error > 0
-      ? "text-destructive"
-      : visibleBySeverity.warning > 0
-        ? "text-warning"
-        : visibleBySeverity.info > 0
-          ? "text-info"
-          : "text-subtle-foreground";
 
   const filterContextMenuItems = useMemo<MenuItem[]>(() => {
     if (!filterContextMenu.data) return [];
@@ -868,26 +876,116 @@ const DiagnosticsPane = ({
 
   if (!isVisible) return null;
 
+  const renderDiagnosticItems = (items: Diagnostic[]) => (
+    <ItemGroup className="gap-0.5">
+      {items.map((diagnostic) => {
+        const rowKey = buildDiagnosticKey(diagnostic);
+        const { summary, description } = splitDiagnosticMessage(diagnostic.message);
+        const displayPath = getDiagnosticNavigatorPath(diagnostic.filePath, rootFolderPath);
+
+        return (
+          <Item
+            key={rowKey}
+            render={<button type="button" />}
+            size="sm"
+            onClick={() => onDiagnosticClick?.(diagnostic)}
+            onContextMenu={(event) => {
+              diagnosticContextMenu.open(event, diagnostic);
+            }}
+            className="flex-nowrap cursor-pointer text-left hover:bg-accent/60"
+          >
+            <ItemMedia variant="icon" className="self-start pt-0.5">
+              {getSeverityIcon(diagnostic.severity, 13)}
+            </ItemMedia>
+
+            <ItemContent>
+              <ItemTitle
+                className={cn(
+                  "w-full",
+                  preferences.wrapMessages
+                    ? "line-clamp-none whitespace-pre-wrap wrap-break-word"
+                    : "block truncate",
+                  diagnostic.severity === "error" && "text-destructive",
+                  diagnostic.severity === "warning" && "text-warning",
+                  diagnostic.severity === "info" && "text-info",
+                )}
+              >
+                {summary}
+              </ItemTitle>
+
+              {description ? (
+                <ItemDescription
+                  className={cn(
+                    preferences.wrapMessages
+                      ? "line-clamp-none whitespace-pre-wrap wrap-break-word"
+                      : "truncate",
+                  )}
+                >
+                  {description}
+                </ItemDescription>
+              ) : null}
+
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <span className="ui-text-sm max-w-full truncate text-subtle-foreground">
+                  {displayPath}
+                </span>
+                {diagnostic.source ? (
+                  <Badge variant="muted" size="compact">
+                    {diagnostic.source}
+                  </Badge>
+                ) : null}
+                {diagnostic.code ? (
+                  <Badge variant="muted" size="compact">
+                    {diagnostic.code}
+                  </Badge>
+                ) : null}
+              </div>
+            </ItemContent>
+
+            <ItemActions className="self-start">
+              <Badge variant="default" size="compact" className="tabular-nums">
+                {diagnostic.line + 1}:{diagnostic.column + 1}
+              </Badge>
+            </ItemActions>
+          </Item>
+        );
+      })}
+    </ItemGroup>
+  );
+
   const content = (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <div
-        className={paneHeaderClassName()}
+        className="flex min-h-(--athas-pane-header-height) items-center gap-2 border-border/70 border-b bg-surface/55 px-3 py-2"
         onContextMenu={(e) => {
           e.preventDefault();
           headerContextMenu.open(e, "header");
         }}
       >
-        <div className="relative flex min-h-7 w-full items-center gap-1.5">
-          <span className={cn("font-sans ui-text-sm", problemSummaryTone)}>{problemSummary}</span>
+        <div className="relative flex min-h-7 w-full min-w-0 items-center gap-1.5">
+          <span className="font-sans ui-text-sm shrink-0 font-medium text-foreground">
+            Problems
+          </span>
+          <Badge variant="muted" size="compact" className="tabular-nums">
+            {visibleProblemCount}
+          </Badge>
+          {visibleBySeverity.error > 0 ? (
+            <Badge variant="error" size="compact" className="tabular-nums">
+              {visibleBySeverity.error} errors
+            </Badge>
+          ) : null}
+          {visibleBySeverity.warning > 0 ? (
+            <Badge variant="warning" size="compact" className="tabular-nums">
+              {visibleBySeverity.warning} warnings
+            </Badge>
+          ) : null}
 
           <div className="ml-auto flex items-center gap-1">
             {hasDiagnosticFiles && (
               <PaneIconButton
                 type="button"
                 onClick={() => setIsFileNavigatorVisible((visible) => !visible)}
-                className={cn(
-                  isFileNavigatorVisible && "border-border/70 bg-accent text-foreground",
-                )}
+                active={isFileNavigatorVisible}
                 tooltip={isFileNavigatorVisible ? "Hide files" : "Show files"}
                 aria-label={isFileNavigatorVisible ? "Hide files" : "Show files"}
               >
@@ -905,9 +1003,7 @@ const DiagnosticsPane = ({
                   return true;
                 });
               }}
-              className={cn(
-                (isSearchVisible || hasSearch) && "border-border/70 bg-accent text-foreground",
-              )}
+              active={isSearchVisible || hasSearch}
               tooltip="Search problems"
             >
               <Search />
@@ -1002,153 +1098,66 @@ const DiagnosticsPane = ({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        {isFileNavigatorVisible && hasDiagnosticFiles ? (
-          <FileNavigatorSidebar
-            items={diagnosticFileItems}
-            selectedKey={selectedFileNavigatorKey}
-            onSelect={selectDiagnosticFile}
-            ariaLabel="Diagnostic files"
-            viewMode={preferences.fileNavigatorViewMode}
-            onViewModeChange={(fileNavigatorViewMode) =>
-              setPreferences((prev) => ({
-                ...prev,
-                fileNavigatorViewMode,
-              }))
-            }
-          />
-        ) : null}
-
-        <ScrollArea className="min-h-0 flex-1" contentClassName="px-1.5 py-1.5">
+      <div className="min-h-0 flex-1">
+        <FileResultsWorkspace
+          items={diagnosticFileItems}
+          selectedKey={selectedFileNavigatorKey}
+          onSelect={selectDiagnosticFile}
+          ariaLabel="Diagnostic files"
+          viewMode={preferences.fileNavigatorViewMode}
+          onViewModeChange={(fileNavigatorViewMode) =>
+            setPreferences((prev) => ({
+              ...prev,
+              fileNavigatorViewMode,
+            }))
+          }
+          showNavigator={isFileNavigatorVisible && hasDiagnosticFiles}
+        >
           {diagnostics.length === 0 ? (
-            <EmptyState message="No problems detected" />
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Check />
+                </EmptyMedia>
+                <EmptyTitle>No problems detected</EmptyTitle>
+                <EmptyDescription>
+                  Diagnostics will appear here when a language service finds an issue.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : filteredDiagnostics.length === 0 ? (
             <EmptyState
               message="No problems match the current filters"
               action={hasFilters ? { label: "Reset filters", onClick: resetFilters } : undefined}
             />
+          ) : preferences.groupBy === "none" ? (
+            renderDiagnosticItems(groupedDiagnostics[0]?.items ?? [])
           ) : (
-            <div className="space-y-1.5">
-              {groupedDiagnostics.map((group) => {
-                const isCollapsed = collapsedGroups[group.id] ?? false;
-                const hasGroupHeader = preferences.groupBy !== "none";
-
-                return (
-                  <section
-                    key={group.id}
-                    className="overflow-hidden rounded-xl border border-border/60 bg-surface/40"
-                  >
-                    {hasGroupHeader && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => toggleGroupCollapse(group.id)}
-                        className="h-auto w-full justify-start gap-1.5 rounded-none border-border/60 border-b bg-background/70 px-2 py-1 text-left hover:bg-accent"
-                      >
-                        {isCollapsed ? (
-                          <ChevronRight className="text-subtle-foreground" />
-                        ) : (
-                          <ChevronDown className="text-subtle-foreground" />
-                        )}
-
-                        {group.severity ? (
-                          getSeverityIcon(group.severity)
-                        ) : (
-                          <Info className="text-subtle-foreground" />
-                        )}
-
-                        <span className="font-sans ui-text-sm flex-1 truncate font-medium text-foreground">
-                          {preferences.groupBy === "file" ? getFileName(group.label) : group.label}
-                        </span>
-
-                        <PaneChip>{group.items.length}</PaneChip>
-                      </Button>
-                    )}
-
-                    {!isCollapsed && (
-                      <div className="divide-y divide-border/40">
-                        {group.items.map((diagnostic) => {
-                          const rowKey = buildDiagnosticKey(diagnostic);
-                          const { summary, description } = splitDiagnosticMessage(
-                            diagnostic.message,
-                          );
-
-                          return (
-                            <div
-                              key={rowKey}
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => onDiagnosticClick?.(diagnostic)}
-                              onContextMenu={(event) => {
-                                diagnosticContextMenu.open(event, diagnostic);
-                              }}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter" || event.key === " ") {
-                                  event.preventDefault();
-                                  onDiagnosticClick?.(diagnostic);
-                                }
-                              }}
-                              className="group cursor-pointer px-2 py-1.5 transition-colors hover:bg-accent"
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <span className="shrink-0">
-                                  {getSeverityIcon(diagnostic.severity, 11)}
-                                </span>
-
-                                <span
-                                  className={cn(
-                                    "font-sans ui-text-sm min-w-0 flex-1",
-                                    preferences.wrapMessages
-                                      ? "whitespace-pre-wrap wrap-break-word leading-snug"
-                                      : "truncate",
-                                    diagnostic.severity === "error" && "text-destructive",
-                                    diagnostic.severity === "warning" && "text-warning",
-                                    diagnostic.severity === "info" && "text-info",
-                                  )}
-                                >
-                                  {summary}
-                                </span>
-
-                                <PaneChip>
-                                  {diagnostic.line + 1}:{diagnostic.column + 1}
-                                </PaneChip>
-                              </div>
-
-                              <div className="mt-1 pl-5">
-                                {description && (
-                                  <div
-                                    className={cn(
-                                      "ui-text-sm mb-1 text-subtle-foreground/90 leading-snug",
-                                      preferences.wrapMessages
-                                        ? "whitespace-pre-wrap wrap-break-word"
-                                        : "truncate",
-                                    )}
-                                  >
-                                    {description}
-                                  </div>
-                                )}
-
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="ui-text-sm max-w-105 truncate text-subtle-foreground/75">
-                                    {diagnostic.filePath}
-                                  </span>
-
-                                  {diagnostic.source && <PaneChip>{diagnostic.source}</PaneChip>}
-
-                                  {diagnostic.code && <PaneChip>{diagnostic.code}</PaneChip>}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </section>
-                );
-              })}
-            </div>
+            <Accordion
+              multiple
+              value={expandedGroupIds}
+              onValueChange={(value) => setExpandedGroupIds(value)}
+              className="gap-2 pt-2"
+            >
+              {groupedDiagnostics.map((group) => (
+                <AccordionItem key={group.id} value={group.id}>
+                  <AccordionTrigger>
+                    <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                      {group.severity ? getSeverityIcon(group.severity, 13) : null}
+                      <span className="min-w-0 flex-1 truncate">
+                        {preferences.groupBy === "file" ? getFileName(group.label) : group.label}
+                      </span>
+                      <Badge variant="muted" size="compact" className="shrink-0">
+                        {group.items.length}
+                      </Badge>
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent>{renderDiagnosticItems(group.items)}</AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           )}
-        </ScrollArea>
+        </FileResultsWorkspace>
       </div>
 
       <Dropdown

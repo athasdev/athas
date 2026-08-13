@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { buildDiagnosticsFooterStatus } from "@/features/diagnostics/lib/diagnostics-footer-status";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -78,6 +79,7 @@ const Footer = () => {
     (total, diagnostics) => total + diagnostics.length,
     0,
   );
+  const diagnosticsStatus = buildDiagnosticsFooterStatus(diagnosticsEnabled, diagnosticsCount);
   const footerLeadingItemsSource: Array<ChromeItem<FooterLeadingItemId> | null> = [
     branchItem,
     terminalEnabled
@@ -101,24 +103,20 @@ const Footer = () => {
         }
       : null,
     debuggerItem,
-    diagnosticsEnabled
+    diagnosticsStatus
       ? {
           id: "diagnostics",
           label: "Diagnostics",
           content: (
             <FooterTabControl
-              tooltip={
-                diagnosticsCount > 0
-                  ? `${diagnosticsCount} diagnostic${diagnosticsCount === 1 ? "" : "s"}`
-                  : "Open Diagnostics"
-              }
+              tooltip={diagnosticsStatus.tooltip}
               active={isDiagnosticsBufferActive}
-              tone={!isDiagnosticsBufferActive && diagnosticsCount > 0 ? "warning" : "default"}
+              tone={!isDiagnosticsBufferActive ? "warning" : "default"}
               commandId="workbench.toggleDiagnostics"
               onClick={() => openDiagnosticsBuffer()}
             >
               <WarningIcon />
-              {diagnosticsCount > 0 && <span className="tabular-nums">{diagnosticsCount}</span>}
+              <span className="tabular-nums">{diagnosticsStatus.count}</span>
             </FooterTabControl>
           ),
         }
