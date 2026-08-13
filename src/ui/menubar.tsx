@@ -1,7 +1,8 @@
 import { Menu, Menubar as BaseMenubar } from "@base-ui/react";
-import { CaretRightIcon } from "@/ui/icons";
 import { createContext, useContext, useMemo, type ComponentProps } from "react";
+import { menuItemVariants, menuSeparatorVariants, menuSurfaceVariants } from "@/design-system/menu";
 import Keybinding from "@/features/keymaps/components/keybinding";
+import { CaretRightIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
 interface MenubarContextValue {
@@ -33,7 +34,7 @@ function Menubar({ className, value = "", onValueChange, ...props }: MenubarProp
       <BaseMenubar
         data-slot="menubar"
         className={cn(
-          "flex h-6 items-center gap-0.5 rounded-full border border-border/70 bg-background/65 px-0.5 py-0.5",
+          "flex h-6 items-center gap-0.5 rounded-(--athas-chrome-radius) bg-background/65 p-0.5 ring-1 ring-border/70",
           className,
         )}
         {...props}
@@ -83,7 +84,7 @@ function MenubarTrigger({ className, ...props }: ComponentProps<typeof Menu.Trig
       data-slot="menubar-trigger"
       openOnHover
       className={cn(
-        "font-sans ui-text-sm flex h-5 select-none items-center rounded-md px-1.5 text-subtle-foreground outline-none transition-[transform,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent/50 hover:text-foreground active:scale-(--app-press-scale) focus:bg-accent/50 focus:text-foreground data-popup-open:bg-accent/80 data-popup-open:text-foreground",
+        "flex h-5 select-none items-center rounded-(--athas-chrome-radius) px-1.5 font-sans ui-text-chrome text-subtle-foreground outline-none transition-colors hover:bg-accent/50 hover:text-foreground focus:bg-accent/50 focus:text-foreground data-popup-open:bg-accent/80 data-popup-open:text-foreground",
         className,
       )}
       {...props}
@@ -123,8 +124,8 @@ function MenubarContent({
         <Menu.Popup
           data-slot="menubar-content"
           className={cn(
-            "z-10031 w-max min-w-60 max-w-[min(480px,calc(100vw-16px))] rounded-xl border border-border bg-surface/95 p-1 shadow-(--shadow-popover) backdrop-blur-sm",
-            "transition-[opacity,transform,filter] duration-(--app-duration-fast) ease-(--app-ease-smooth) filter-[blur(0)] data-ending-style:opacity-0 data-ending-style:filter-[blur(2px)] data-[side=bottom]:data-starting-style:-translate-y-1 data-[side=bottom]:data-starting-style:opacity-0 data-[side=bottom]:data-starting-style:filter-[blur(2px)] data-[side=left]:data-starting-style:translate-x-1 data-[side=left]:data-starting-style:opacity-0 data-[side=left]:data-starting-style:filter-[blur(2px)] data-[side=right]:data-starting-style:-translate-x-1 data-[side=right]:data-starting-style:opacity-0 data-[side=right]:data-starting-style:filter-[blur(2px)] data-[side=top]:data-starting-style:translate-y-1 data-[side=top]:data-starting-style:opacity-0 data-[side=top]:data-starting-style:filter-[blur(2px)]",
+            menuSurfaceVariants(),
+            "z-10031 w-max min-w-60 max-w-[min(480px,calc(100vw-16px))] transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
             className,
           )}
           {...props}
@@ -143,10 +144,7 @@ function MenubarItem({ className, shortcut, onClick, children, ...props }: Menub
   return (
     <Menu.Item
       data-slot="menubar-item"
-      className={cn(
-        "font-sans ui-text-sm flex min-h-7 cursor-default select-none items-center justify-between gap-6 rounded-lg px-2.5 py-1.5 text-foreground outline-none transition-[background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) focus:bg-accent focus:text-foreground data-highlighted:bg-accent data-disabled:pointer-events-none data-disabled:opacity-50",
-        className,
-      )}
+      className={cn(menuItemVariants(), "justify-between", className)}
       {...props}
       onClick={(event) => {
         if (event.defaultPrevented) return;
@@ -163,7 +161,7 @@ function MenubarSeparator({ className, ...props }: ComponentProps<typeof Menu.Se
   return (
     <Menu.Separator
       data-slot="menubar-separator"
-      className={cn("-mx-1 my-1 h-px bg-border", className)}
+      className={cn(menuSeparatorVariants(), className)}
       {...props}
     />
   );
@@ -190,10 +188,7 @@ function MenubarSubTrigger({
     <Menu.SubmenuTrigger
       data-slot="menubar-sub-trigger"
       openOnHover
-      className={cn(
-        "font-sans ui-text-sm flex min-h-7 cursor-default select-none items-center rounded-lg px-2.5 py-1.5 text-foreground outline-none transition-[background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) focus:bg-accent focus:text-foreground data-highlighted:bg-accent data-disabled:pointer-events-none data-disabled:opacity-50",
-        className,
-      )}
+      className={cn(menuItemVariants(), className)}
       {...props}
     >
       <span className="min-w-0 flex-1 truncate whitespace-nowrap">{children}</span>
@@ -225,8 +220,8 @@ function MenubarSubContent({
         <Menu.Popup
           data-slot="menubar-sub-content"
           className={cn(
-            "z-10050 w-max min-w-60 max-w-[min(480px,calc(100vw-16px))] rounded-xl border border-border bg-surface/95 p-1 shadow-(--shadow-popover) backdrop-blur-sm",
-            "transition-[opacity,transform,filter] duration-(--app-duration-fast) ease-(--app-ease-smooth) filter-[blur(0)] data-ending-style:opacity-0 data-ending-style:filter-[blur(2px)] data-[side=left]:data-starting-style:translate-x-1 data-[side=left]:data-starting-style:opacity-0 data-[side=left]:data-starting-style:filter-[blur(2px)] data-[side=right]:data-starting-style:-translate-x-1 data-[side=right]:data-starting-style:opacity-0 data-[side=right]:data-starting-style:filter-[blur(2px)]",
+            menuSurfaceVariants(),
+            "z-10050 w-max min-w-60 max-w-[min(480px,calc(100vw-16px))] transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
             className,
           )}
           {...props}
