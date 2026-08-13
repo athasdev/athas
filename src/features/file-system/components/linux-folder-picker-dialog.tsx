@@ -146,7 +146,6 @@ export default function LinuxFolderPickerDialog() {
       title="Open Folder"
       onClose={() => resolve(null)}
       size="lg"
-      headerBorder={false}
       footer={
         <>
           <Button type="button" variant="ghost" onClick={() => resolve(null)}>

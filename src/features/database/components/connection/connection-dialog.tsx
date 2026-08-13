@@ -205,8 +205,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
     <Dialog
       onClose={onClose}
       title="Connect to Database"
-      headerBorder={false}
-      footerBorder={false}
       classNames={{
         backdrop: "bg-black/40 backdrop-blur-[2px]",
         modal: "max-w-md",

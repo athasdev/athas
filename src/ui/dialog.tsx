@@ -38,8 +38,6 @@ interface DialogProps {
   headerActions?: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
-  headerBorder?: boolean;
-  footerBorder?: boolean;
   classNames?: Partial<{
     backdrop: string;
     modal: string;
@@ -268,7 +266,7 @@ const AppDialog = ({
             <div className={cn("flex items-center gap-1", classNames?.headerActions)}>
               {headerActions}
               <DialogPrimitive.Close
-                className="flex size-6 shrink-0 items-center justify-center rounded-md border border-transparent text-subtle-foreground transition-[transform,background-color,border-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:border-border/70 hover:bg-accent hover:text-foreground active:scale-(--app-press-scale)"
+                render={<Button variant="ghost" size="icon-xs" />}
                 aria-label="Close dialog"
               >
                 <X />

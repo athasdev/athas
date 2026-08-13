@@ -68,7 +68,6 @@ const ProjectIconPicker = memo(
         title="Select project icon"
         onClose={onClose}
         size="sm"
-        headerBorder={false}
         headerActions={
           currentIcon ? (
             <Tooltip content="Remove icon" side="bottom">
