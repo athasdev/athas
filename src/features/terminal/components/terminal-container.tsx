@@ -12,6 +12,7 @@ import {
   resolveTerminalLaunch,
   SYSTEM_DEFAULT_PROFILE_ID,
 } from "@/features/terminal/utils/terminal-profiles";
+import { shouldCloseTerminalPane } from "@/features/terminal/utils/terminal-pane-lifecycle";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { cn } from "@/utils/cn";
 import TerminalSession from "./terminal-session";
@@ -85,8 +86,8 @@ const TerminalContainer = ({
     [originalCloseTerminal],
   );
 
-  const hasInitializedRef = useRef(false);
   const wasVisibleRef = useRef(false);
+  const previousTerminalCountRef = useRef(terminals.length);
   const workspaceDirectoryRef = useRef(currentDirectory);
   const terminalSessionRefs = useRef<Map<string, { focus: () => void; showSearch: () => void }>>(
     new Map(),
@@ -99,7 +100,7 @@ const TerminalContainer = ({
     }
 
     workspaceDirectoryRef.current = currentDirectory;
-    hasInitializedRef.current = terminals.length > 0;
+    previousTerminalCountRef.current = terminals.length;
     wasVisibleRef.current = false;
   }, [currentDirectory, terminals.length]);
   const registerTerminalFocus = useUIState((state) => state.registerTerminalFocus);
@@ -190,12 +191,19 @@ const TerminalContainer = ({
     };
   }, []);
 
-  // Auto-close bottom pane when all terminals are closed
+  // Auto-close the terminal pane when its final terminal is closed
   useEffect(() => {
-    if (terminals.length === 0 && hasInitializedRef.current) {
+    const shouldClose = shouldCloseTerminalPane({
+      previousTerminalCount: previousTerminalCountRef.current,
+      terminalCount: terminals.length,
+      isTerminalPaneVisible,
+    });
+    previousTerminalCountRef.current = terminals.length;
+
+    if (shouldClose) {
       setIsBottomPaneVisible(false);
     }
-  }, [terminals.length, setIsBottomPaneVisible]);
+  }, [isTerminalPaneVisible, terminals.length, setIsBottomPaneVisible]);
 
   const handleTabClick = useCallback(
     (terminalId: string) => {
@@ -521,7 +529,6 @@ const TerminalContainer = ({
 
     const handleEnsureTerminalSession = () => {
       if (terminals.length === 0) {
-        hasInitializedRef.current = true;
         handleNewTerminal();
         return;
       }
@@ -568,7 +575,6 @@ const TerminalContainer = ({
     const justBecameVisible = isTerminalVisible && !wasVisibleRef.current;
 
     if (justBecameVisible && terminals.length === 0) {
-      hasInitializedRef.current = true;
       handleNewTerminal();
     }
 
