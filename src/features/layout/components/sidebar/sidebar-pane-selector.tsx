@@ -30,7 +30,6 @@ interface SidebarPaneItem {
     content: string;
     shortcut?: string;
     side?: "top" | "bottom" | "left" | "right";
-    className?: string;
   };
 }
 
@@ -284,7 +283,6 @@ export const SidebarPaneSelector = ({
           content={item.tooltip.content}
           shortcut={item.tooltip.shortcut}
           side={item.tooltip.side}
-          className={item.tooltip.className}
         >
           {tabNode}
         </Tooltip>

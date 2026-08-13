@@ -3,8 +3,6 @@ import { buildEditorContextMenuItems } from "../context-menu/editor-context-menu
 
 const baseOptions = {
   hasSelection: true,
-  modifierKey: "Cmd",
-  altKey: "Option",
 };
 
 function getItem(id: string, handlers = {}) {
@@ -35,6 +33,12 @@ describe("buildEditorContextMenuItems", () => {
     ).toBe(false);
     expect(getItem("go-to-definition", { onGoToDefinition: vi.fn() }).disabled).toBe(false);
     expect(getItem("trigger-suggest", { onTriggerSuggest: vi.fn() }).disabled).toBe(false);
+  });
+
+  it("describes shortcuts with canonical keybinding strings", () => {
+    expect(getItem("copy").shortcut).toBe("cmd+c");
+    expect(getItem("format").shortcut).toBe("shift+alt+f");
+    expect(getItem("format-selection").shortcut).toBe("cmd+k cmd+f");
   });
 
   it("keeps selection-only commands disabled without a selection", () => {

@@ -1,7 +1,6 @@
 import { Menu as DropdownMenuPrimitive } from "@base-ui/react/menu";
 import { cva } from "class-variance-authority";
 import {
-  type ComponentProps,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
@@ -19,6 +18,7 @@ import { FloatingPopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { CaretRightIcon, CheckIcon, MagnifyingGlassIcon as Search } from "@/ui/icons";
+import Keybinding from "@/features/keymaps/components/keybinding";
 
 export const DROPDOWN_TRIGGER_BASE = cn(
   buttonVariants({
@@ -84,7 +84,8 @@ export interface MenuItem {
   onClick: () => void;
   disabled?: boolean;
   separator?: boolean;
-  keybinding?: ReactNode;
+  shortcut?: string;
+  trailing?: ReactNode;
   className?: string;
 }
 
@@ -198,16 +199,7 @@ export function MenuItemsList({
               </span>
             )}
             <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.label}</span>
-            {item.keybinding && (
-              <span
-                className={cn(
-                  "ui-text-sm shrink-0 whitespace-nowrap text-subtle-foreground",
-                  density === "compact" ? "ml-5" : "ml-8",
-                )}
-              >
-                {item.keybinding}
-              </span>
-            )}
+            {item.shortcut ? <Keybinding binding={item.shortcut} /> : item.trailing}
           </button>
         );
       })}
@@ -862,19 +854,6 @@ function DropdownMenuSeparator({ className, ...props }: DropdownMenuPrimitive.Se
   );
 }
 
-function DropdownMenuShortcut({ className, ...props }: ComponentProps<"span">) {
-  return (
-    <span
-      data-slot="dropdown-menu-shortcut"
-      className={cn(
-        "ml-auto tracking-widest text-subtle-foreground group-focus/dropdown-menu-item:text-foreground",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
 function DropdownMenuSub(props: DropdownMenuPrimitive.SubmenuRoot.Props) {
   return <DropdownMenuPrimitive.SubmenuRoot data-slot="dropdown-menu-sub" {...props} />;
 }
@@ -923,7 +902,6 @@ export {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,

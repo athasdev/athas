@@ -24,8 +24,6 @@ import {
 import type { MenuItem } from "@/ui/dropdown";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
-import Keybinding from "@/features/keymaps/components/keybinding";
-import { IS_MAC } from "@/utils/platform";
 
 interface TabContextMenuProps {
   buffer: PaneContent;
@@ -64,7 +62,6 @@ const TabContextMenu = ({
   isPaneLocked = false,
   onTogglePaneLocked,
 }: TabContextMenuProps) => {
-  const closeKeys = [IS_MAC ? "Cmd" : "Ctrl", "W"];
   const items: MenuItem[] = [
     {
       id: "pin",
@@ -179,7 +176,7 @@ const TabContextMenu = ({
       id: "close",
       label: "Close",
       icon: <X />,
-      keybinding: <Keybinding keys={closeKeys} className="opacity-60" />,
+      shortcut: "cmd+w",
       onClick: () => onCloseTab(buffer.id),
     },
     {
@@ -208,7 +205,7 @@ const TabContextMenu = ({
           <ContextMenuItem key={item.id} disabled={item.disabled} onClick={item.onClick}>
             {item.icon}
             {item.label}
-            {item.keybinding && <ContextMenuShortcut>{item.keybinding}</ContextMenuShortcut>}
+            {item.shortcut && <ContextMenuShortcut shortcut={item.shortcut} />}
           </ContextMenuItem>
         ),
       )}

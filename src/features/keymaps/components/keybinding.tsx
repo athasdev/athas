@@ -1,6 +1,5 @@
 import { Fragment } from "react";
 import { Kbd, KbdGroup } from "@/ui/kbd";
-import { IS_MAC } from "@/utils/platform";
 import { keybindingToDisplayParts, keysToDisplayParts } from "../utils/keybinding-display";
 
 interface KeybindingProps {
@@ -22,16 +21,9 @@ export default function Keybinding({ keys, binding, className }: KeybindingProps
       {chords.map((chord, chordIndex) => (
         <Fragment key={`${chord.join("-")}-${chordIndex}`}>
           {chordIndex > 0 ? <span className="text-subtle-foreground/75">then</span> : null}
-          {IS_MAC ? (
-            <Kbd>{chord.join("")}</Kbd>
-          ) : (
-            chord.map((key, keyIndex) => (
-              <Fragment key={`${key}-${keyIndex}`}>
-                {keyIndex > 0 ? <span className="text-subtle-foreground/75">+</span> : null}
-                <Kbd>{key}</Kbd>
-              </Fragment>
-            ))
-          )}
+          {chord.map((key, keyIndex) => (
+            <Kbd key={`${key}-${keyIndex}`}>{key}</Kbd>
+          ))}
         </Fragment>
       ))}
     </KbdGroup>

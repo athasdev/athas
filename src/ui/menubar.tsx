@@ -154,7 +154,7 @@ function MenubarItem({ className, shortcut, onClick, children, ...props }: Menub
       }}
     >
       <span className="min-w-0 truncate whitespace-nowrap">{children}</span>
-      {shortcut ? <MenubarShortcut>{shortcut}</MenubarShortcut> : null}
+      {shortcut ? <MenubarShortcut shortcut={shortcut} /> : null}
     </Menu.Item>
   );
 }
@@ -169,14 +169,10 @@ function MenubarSeparator({ className, ...props }: ComponentProps<typeof Menu.Se
   );
 }
 
-function MenubarShortcut({ className, children, ...props }: ComponentProps<"span">) {
+function MenubarShortcut({ shortcut }: { shortcut: string }) {
   return (
-    <span
-      data-slot="menubar-shortcut"
-      className={cn("font-mono ml-auto shrink-0 text-subtle-foreground/75 ui-text-sm", className)}
-      {...props}
-    >
-      {typeof children === "string" ? <Keybinding binding={children} /> : children}
+    <span data-slot="menubar-shortcut" className="ml-auto shrink-0">
+      <Keybinding binding={shortcut} />
     </span>
   );
 }

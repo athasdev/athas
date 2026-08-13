@@ -1,6 +1,7 @@
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu";
 import type { ComponentProps } from "react";
 import { CaretRightIcon, CheckIcon } from "@/ui/icons";
+import Keybinding from "@/features/keymaps/components/keybinding";
 import { cn } from "@/utils/cn";
 
 function ContextMenu(props: ContextMenuPrimitive.Root.Props) {
@@ -199,16 +200,11 @@ function ContextMenuSeparator({ className, ...props }: ContextMenuPrimitive.Sepa
   );
 }
 
-function ContextMenuShortcut({ className, ...props }: ComponentProps<"span">) {
+function ContextMenuShortcut({ shortcut }: { shortcut: string }) {
   return (
-    <span
-      data-slot="context-menu-shortcut"
-      className={cn(
-        "ml-auto tracking-widest text-subtle-foreground group-focus/context-menu-item:text-foreground",
-        className,
-      )}
-      {...props}
-    />
+    <span data-slot="context-menu-shortcut" className="ml-auto">
+      <Keybinding binding={shortcut} />
+    </span>
   );
 }
 

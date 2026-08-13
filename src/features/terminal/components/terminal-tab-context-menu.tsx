@@ -9,8 +9,6 @@ import {
 } from "@/ui/icons";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import Keybinding from "@/features/keymaps/components/keybinding";
-import { IS_MAC } from "@/utils/platform";
 
 interface TerminalTabContextMenuProps {
   isOpen: boolean;
@@ -43,8 +41,6 @@ const TerminalTabContextMenu = ({
   onRename,
   onExport,
 }: TerminalTabContextMenuProps) => {
-  const modKey = IS_MAC ? "Cmd" : "Ctrl";
-
   const items: MenuItem[] = terminal
     ? [
         {
@@ -70,7 +66,7 @@ const TerminalTabContextMenu = ({
           id: "rename",
           label: "Rename Terminal",
           icon: <Edit />,
-          keybinding: <Keybinding keys={["F2"]} />,
+          shortcut: "f2",
           onClick: () => onRename(terminal.id),
         },
         {
@@ -84,7 +80,7 @@ const TerminalTabContextMenu = ({
           id: "close",
           label: "Close Terminal",
           icon: <X />,
-          keybinding: <Keybinding keys={[modKey, "W"]} />,
+          shortcut: "cmd+w",
           onClick: () => onCloseTab(terminal.id),
         },
         {

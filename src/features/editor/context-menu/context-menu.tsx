@@ -1,7 +1,6 @@
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { Dropdown } from "@/ui/dropdown";
-import { IS_MAC } from "@/utils/platform";
 import {
   buildEditorContextMenuItems,
   type EditorContextMenuHandlers,
@@ -19,15 +18,10 @@ const EditorContextMenu = ({ isOpen, position, onClose, ...handlers }: EditorCon
     const selection = useEditorStateStore.getState().selection;
     return Boolean(selection && selection.start.offset !== selection.end.offset);
   })();
-  const modifierKey = IS_MAC ? "Cmd" : "Ctrl";
-  const altKey = IS_MAC ? "Option" : "Alt";
-
   if (!isOpen) return null;
 
   const items = buildEditorContextMenuItems({
     hasSelection,
-    modifierKey,
-    altKey,
     ...handlers,
   });
 
