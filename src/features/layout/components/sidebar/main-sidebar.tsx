@@ -672,7 +672,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         aria-hidden={position === "current" ? undefined : true}
         inert={position === "current" ? undefined : true}
         className={cn(
-          "absolute inset-y-0 left-0 flex w-full flex-col items-start gap-1 overflow-hidden pt-1.5",
+          "absolute inset-y-0 left-0 flex w-full flex-col items-start gap-2 overflow-hidden pt-2",
           expanded && projectCarouselEnabled && showActivityRailProjectIcons ? "pb-7" : "pb-1.5",
           position !== "current" && "pointer-events-none",
         )}

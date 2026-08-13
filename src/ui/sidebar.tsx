@@ -234,9 +234,9 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-full px-2 py-1 text-left font-normal text-subtle-foreground transition-[background-color,color]",
-        "hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
-        active && "bg-accent/70 text-foreground",
+        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) px-2 py-1 text-left font-normal text-subtle-foreground transition-[background-color,color]",
+        "hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+        active && "bg-selected font-medium text-foreground",
         iconOnly && "justify-center gap-0 rounded-full px-0",
         className,
       )}
@@ -284,7 +284,7 @@ export function SidebarListEditor({
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) bg-accent/70 px-2 py-1 font-normal text-foreground",
+        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) bg-selected px-2 py-1 font-medium text-foreground",
         className,
       )}
       {...props}
