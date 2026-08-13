@@ -6,7 +6,7 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 export const buttonVariants = cva(
-  "font-sans ui-text-sm inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md leading-row transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-(--app-duration-fast) ease-(--app-ease-smooth) select-none outline-none active:scale-(--app-press-scale) focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "font-sans ui-text-sm inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full leading-row transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-(--app-duration-fast) ease-(--app-ease-smooth) select-none outline-none active:scale-(--app-press-scale) focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
