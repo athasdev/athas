@@ -113,7 +113,7 @@ function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Tr
     <ComboboxPrimitive.Trigger
       data-slot="combobox-trigger"
       className={cn(
-        "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-subtle-foreground transition-[transform,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent hover:text-foreground active:scale-(--app-press-scale) disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex size-6 shrink-0 items-center justify-center rounded-full text-subtle-foreground transition-[transform,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent hover:text-foreground active:scale-(--app-press-scale) disabled:pointer-events-none disabled:opacity-50",
         className,
       )}
       {...props}
@@ -128,7 +128,7 @@ function ComboboxClear({ className, children, ...props }: ComboboxPrimitive.Clea
     <ComboboxPrimitive.Clear
       data-slot="combobox-clear"
       className={cn(
-        "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-subtle-foreground transition-[transform,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent hover:text-foreground active:scale-(--app-press-scale) disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex size-6 shrink-0 items-center justify-center rounded-full text-subtle-foreground transition-[transform,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent hover:text-foreground active:scale-(--app-press-scale) disabled:pointer-events-none disabled:opacity-50",
         className,
       )}
       {...props}
@@ -385,7 +385,7 @@ function ComboboxChip({
       {showRemove ? (
         <ComboboxPrimitive.ChipRemove
           data-slot="combobox-chip-remove"
-          className="-mr-1 inline-flex size-4 items-center justify-center rounded-md text-subtle-foreground opacity-70 transition-opacity hover:bg-selected hover:text-foreground hover:opacity-100"
+          className="-mr-1 inline-flex size-4 items-center justify-center rounded-full text-subtle-foreground opacity-70 transition-opacity hover:bg-selected hover:text-foreground hover:opacity-100"
         >
           <X className="pointer-events-none size-3" />
         </ComboboxPrimitive.ChipRemove>

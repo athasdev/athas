@@ -15,9 +15,9 @@ const buttonGroupVariants = cva(
       },
       variant: {
         default:
-          "rounded-md bg-accent *:data-[slot=button]:bg-transparent *:data-[slot=button]:hover:bg-selected",
+          "rounded-full bg-accent *:data-[slot=button]:bg-transparent *:data-[slot=button]:hover:bg-selected",
         accent:
-          "overflow-hidden rounded-md border border-primary/25 bg-primary/10 *:data-[slot=button]:text-primary *:data-[slot=button]:hover:bg-primary/10 *:data-[slot=button-group-separator]:bg-primary/25",
+          "overflow-hidden rounded-full border border-primary/25 bg-primary/10 *:data-[slot=button]:text-primary *:data-[slot=button]:hover:bg-primary/10 *:data-[slot=button-group-separator]:bg-primary/25",
       },
     },
     defaultVariants: {
@@ -50,7 +50,7 @@ function ButtonGroupText({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="button-group-text"
       className={cn(
-        "flex items-center gap-2 rounded-md bg-accent px-3 font-medium text-foreground [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-3.5",
+        "flex items-center gap-2 rounded-full bg-accent px-3 font-medium text-foreground [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-3.5",
         className,
       )}
       {...props}

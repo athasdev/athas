@@ -234,7 +234,7 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) px-2 py-1 text-left font-normal text-subtle-foreground transition-[background-color,color]",
+        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-full px-2 py-1 text-left font-normal text-subtle-foreground transition-[background-color,color]",
         "hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
         active && "bg-accent/70 text-foreground",
         iconOnly && "justify-center gap-0 rounded-full px-0",
