@@ -167,7 +167,7 @@ export interface TabBarTabProps extends Omit<TabProps, "variant"> {
 }
 
 const tabVariants = cva(
-  "group/tab ui-text-chrome relative flex min-h-(--athas-chrome-control-height) shrink-0 select-none items-center gap-(--athas-chrome-gap-loose) whitespace-nowrap rounded-(--athas-chrome-radius) px-2 text-subtle-foreground outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent/70 hover:text-foreground active:scale-(--app-press-scale) focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-1 focus-visible:ring-offset-tab-bar",
+  "group/tab ui-text-chrome relative flex min-h-(--athas-chrome-control-height) shrink-0 select-none items-center gap-(--athas-chrome-gap-loose) whitespace-nowrap rounded-(--athas-chrome-radius) px-2 text-subtle-foreground outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent/70 hover:text-foreground active:scale-(--app-press-scale) focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
   {
     variants: {
       variant: {
@@ -242,8 +242,8 @@ const tabBarSurfaceVariants = cva("relative flex overflow-hidden", {
   variants: {
     orientation: {
       horizontal:
-        "h-(--athas-tab-bar-height) min-h-(--athas-tab-bar-height) shrink-0 items-center gap-(--athas-chrome-gap) bg-tab-bar px-(--athas-chrome-padding-inline)",
-      vertical: "h-full min-h-0 flex-col bg-tab-bar py-(--athas-chrome-gap)",
+        "h-(--athas-tab-bar-height) min-h-(--athas-tab-bar-height) shrink-0 items-center gap-(--athas-chrome-gap) bg-background px-(--athas-chrome-padding-inline)",
+      vertical: "h-full min-h-0 flex-col bg-background py-(--athas-chrome-gap)",
     },
   },
   defaultVariants: {
@@ -255,7 +255,7 @@ const tabBarTabVariants = cva("ui-text-chrome", {
   variants: {
     orientation: {
       horizontal: "h-(--athas-tab-height) min-w-20 max-w-(--athas-tab-max-width) w-fit pl-2 pr-6",
-      vertical: "min-h-(--athas-tab-height) w-full max-w-none justify-start rounded-md pl-2 pr-6",
+      vertical: "min-h-(--athas-tab-height) w-full max-w-none justify-start pl-2 pr-6",
     },
   },
   defaultVariants: {

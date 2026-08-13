@@ -22,8 +22,6 @@
   --color-selected: var(--selected);
   --color-selection: var(--selection);
 
-  --color-tab-bar: var(--tab-bar-bg);
-  --color-tab-active: var(--tab-active-bg);
   --color-tab-hover: var(--tab-hover-bg);
 
   --color-primary: var(--primary);
@@ -128,8 +126,6 @@
     --border-strong: color-mix(in srgb, var(--border) 72%, var(--foreground) 28%);
     --success: var(--primary);
     --warning: var(--muted-foreground);
-    --tab-bar-bg: color-mix(in srgb, var(--surface) 72%, var(--background));
-    --tab-active-bg: var(--background);
     --tab-hover-bg: color-mix(in srgb, var(--accent) 72%, transparent);
     --shadow-card:
       0 1px 2px rgb(0 0 0 / 0.05), 0 2px 4px rgb(0 0 0 / 0.02), 0 0 0 0.5px rgb(0 0 0 / 0.08);

@@ -11,7 +11,7 @@ export const chromeBarVariants = cva(
           "h-(--athas-title-bar-height) gap-(--athas-chrome-gap) bg-transparent px-(--athas-chrome-padding-inline)",
         footer:
           "h-(--athas-footer-height) gap-(--athas-chrome-gap) bg-transparent px-(--athas-chrome-padding-inline)",
-        tabs: "h-(--athas-tab-bar-height) min-h-(--athas-tab-bar-height) gap-(--athas-chrome-gap) bg-tab-bar px-(--athas-chrome-padding-inline)",
+        tabs: "h-(--athas-tab-bar-height) min-h-(--athas-tab-bar-height) gap-(--athas-chrome-gap) bg-background px-(--athas-chrome-padding-inline)",
         sidebar:
           "min-h-(--athas-sidebar-header-height) gap-(--athas-chrome-gap) bg-background/92 px-(--athas-chrome-padding-inline)",
       },

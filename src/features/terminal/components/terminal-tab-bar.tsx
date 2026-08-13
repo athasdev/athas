@@ -52,7 +52,6 @@ import {
   setInternalTabDragData,
 } from "@/features/tabs/utils/internal-tab-drag";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import Tooltip from "../../../ui/tooltip";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
 import TerminalTabContextMenu from "./terminal-tab-context-menu";
 
@@ -481,16 +480,17 @@ const TerminalTabBar = ({
           <Plus />
         </Button>
         {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
-          <Tooltip content="Choose Terminal Profile" side="bottom">
-            <Button
-              ref={profileMenuButtonRef}
-              onClick={openProfileMenu}
-              variant="ghost"
-              size="icon-xs"
-            >
-              <ChevronDown />
-            </Button>
-          </Tooltip>
+          <Button
+            ref={profileMenuButtonRef}
+            onClick={openProfileMenu}
+            variant="ghost"
+            size="icon-xs"
+            tooltip="Choose Terminal Profile"
+            tooltipSide="bottom"
+            aria-label="Choose terminal profile"
+          >
+            <ChevronDown />
+          </Button>
         )}
       </div>
       {onFullScreen && (
@@ -693,51 +693,6 @@ const TerminalTabBar = ({
     }
   }, [editingTerminalId, sortedTerminals]);
 
-  if (terminals.length === 0) {
-    return (
-      <div
-        className={cn(
-          "flex min-h-8 items-center justify-between",
-          "border-border border-b bg-surface px-2 py-1.5",
-        )}
-      >
-        <div className="flex items-center gap-1.5">
-          <TerminalIcon className="text-subtle-foreground" />
-          <span className="font-sans ui-text-sm text-subtle-foreground">No terminals</span>
-        </div>
-        {onNewTerminal && (
-          <div className="flex items-center gap-0.5">
-            <Button
-              onClick={onNewTerminal}
-              variant="ghost"
-              className="rounded-(--athas-chrome-radius) text-subtle-foreground"
-              size="icon-xs"
-              commandId="terminal.new"
-              tooltip="New Terminal"
-              tooltipSide="bottom"
-              aria-label="New Terminal"
-            >
-              <Plus />
-            </Button>
-            {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
-              <Tooltip content="Choose Terminal Profile" side="bottom">
-                <Button
-                  ref={profileMenuButtonRef}
-                  onClick={openProfileMenu}
-                  variant="ghost"
-                  className="rounded-lg text-subtle-foreground"
-                  size="icon-xs"
-                >
-                  <ChevronDown />
-                </Button>
-              </Tooltip>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-
   return (
     <>
       <TabDndContext
@@ -771,6 +726,12 @@ const TerminalTabBar = ({
                   : "flex items-center gap-0.5",
               )}
             >
+              {terminals.length === 0 && (
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <TerminalIcon className="text-subtle-foreground" />
+                  <span className="font-sans ui-text-sm text-subtle-foreground">No terminals</span>
+                </div>
+              )}
               {pinnedTerminals.length > 0 && (
                 <div
                   className={cn(
