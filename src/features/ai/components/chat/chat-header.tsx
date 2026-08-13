@@ -111,10 +111,10 @@ export function ChatHeader({
   const updateChatTitle = useAIChatStore((state) => state.actions.updateChatTitle);
   const setChatArchived = useAIChatStore((state) => state.actions.setChatArchived);
 
-  const handleNewAgent = useNewAgentAction();
   const effectiveChatId = chatId ?? currentChatId;
   const currentChat = chats.find((chat) => chat.id === effectiveChatId);
   const currentAgentId = currentChat?.agentId ?? selectedAgentId;
+  const handleNewAgent = useNewAgentAction({ agentId: currentAgentId });
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const messageSearchInputRef = useRef<HTMLInputElement>(null);
   const currentHeaderIconId = currentAgentId === "custom" ? aiProviderId : currentAgentId;

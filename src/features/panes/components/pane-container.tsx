@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { AgentLaunchInput } from "@/features/ai/components/agent-launcher";
+import { AgentLaunchInput } from "@/features/ai/components/agent-launch-input";
 import { AgentStartView } from "@/features/ai/components/agent-start-view";
 import type { DatabaseType } from "@/features/database/types/provider.types";
 import {
@@ -1093,7 +1093,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {!activeBuffer && !shouldRenderCarousel ? (
           <AgentStartView showQuickActions>
-            <AgentLaunchInput active autoFocus surfaceId="empty-editor" />
+            <AgentLaunchInput autoFocus surfaceId="empty-editor" />
           </AgentStartView>
         ) : null}
 

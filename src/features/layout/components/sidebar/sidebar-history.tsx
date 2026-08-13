@@ -82,7 +82,7 @@ function SidebarNewAgentButton({
   iconOnly?: boolean;
   compact?: boolean;
 }) {
-  const handleNewAgent = useNewAgentAction(onCreate);
+  const handleNewAgent = useNewAgentAction({ onOpen: onCreate });
 
   if (compact) {
     return (

@@ -1,4 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { OPEN_NOTIFICATIONS_COMMAND_EVENT } from "@/features/notifications/constants/notifications-events";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -51,9 +52,8 @@ export function showNotifications(): void {
   window.dispatchEvent(new CustomEvent(OPEN_NOTIFICATIONS_COMMAND_EVENT));
 }
 
-export function toggleAgentLauncher(): void {
-  const state = useUIState.getState();
-  state.setIsAgentLauncherVisible(!state.isAgentLauncherVisible);
+export function openNewAgentSession(): void {
+  openNewAgentChat();
 }
 
 export function showFind(): void {

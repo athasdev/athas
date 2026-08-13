@@ -1,11 +1,15 @@
 import { useCallback } from "react";
-import { useUIState } from "@/features/window/stores/ui-state.store";
+import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import type { AgentType } from "@/features/ai/types/ai-chat.types";
 
-export function useNewAgentAction(onOpen?: () => void) {
-  const setIsVisible = useUIState((state) => state.setIsAgentLauncherVisible);
+interface NewAgentActionOptions {
+  agentId?: AgentType;
+  onOpen?: () => void;
+}
 
+export function useNewAgentAction(options: NewAgentActionOptions = {}) {
   return useCallback(() => {
-    onOpen?.();
-    setIsVisible(true);
-  }, [onOpen, setIsVisible]);
+    options.onOpen?.();
+    openNewAgentChat(options.agentId);
+  }, [options.agentId, options.onOpen]);
 }

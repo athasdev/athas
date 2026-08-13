@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import {
   ArrowClockwiseIcon as RefreshCw,
   SparkleIcon as Sparkles,
@@ -10,7 +11,6 @@ import {
   stopAllLanguageServers,
 } from "@/features/keymaps/commands/lsp-command-actions";
 import { openAthasLogBuffer } from "@/features/settings/services/athas-log-service";
-import { useUIState } from "@/features/window/stores/ui-state.store";
 import { showAlertDialog } from "@/ui/dialog";
 import type { Action } from "../types/action.types";
 
@@ -39,12 +39,12 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
     {
       id: "ai-new-agent",
       label: "AI: New Agent",
-      description: "Open the unified agent launcher",
+      description: "Open a new agent chat",
       icon: <Sparkles />,
       category: "AI",
       commandId: "workbench.agentLauncher",
       action: () => {
-        useUIState.getState().setIsAgentLauncherVisible(true);
+        openNewAgentChat();
         onClose();
       },
     },

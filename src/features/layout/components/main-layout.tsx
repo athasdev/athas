@@ -37,11 +37,6 @@ import {
 } from "./sidebar/main-sidebar";
 
 const AIChat = lazy(() => import("@/features/ai/components/chat/ai-chat"));
-const AgentLauncher = lazy(() =>
-  import("@/features/ai/components/agent-launcher").then((module) => ({
-    default: module.AgentLauncher,
-  })),
-);
 const CommandPalette = lazy(() => import("@/features/command-palette/components/command-palette"));
 const ConnectionDialog = lazy(() =>
   import("@/features/database/components/connection/connection-dialog").then((module) => ({
@@ -385,7 +380,6 @@ export function MainLayout() {
           <QuickOpen />
           <CommandPalette />
           <ExtensionGenerationCommand />
-          <AgentLauncher />
           <ProjectNameMenu />
 
           <ConnectionDialog

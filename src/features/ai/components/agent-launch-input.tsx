@@ -1,28 +1,22 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import AIChatInputBar from "@/features/ai/components/input/chat-input-bar";
-import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
+import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import Command from "@/ui/command";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 
 const EMPTY_PROJECT_FILES: FileEntry[] = [];
 
 interface AgentLaunchInputProps {
-  active?: boolean;
   autoFocus?: boolean;
-  onRequestClose?: () => void;
   surfaceId?: string;
 }
 
 export function AgentLaunchInput({
-  active = true,
   autoFocus = false,
-  onRequestClose,
-  surfaceId = "agent-launcher",
+  surfaceId = "agent-launch-input",
 }: AgentLaunchInputProps) {
   const buffers = useBufferStore((state) => state.buffers);
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
@@ -38,21 +32,10 @@ export function AgentLaunchInput({
   const [selectedBufferIds, setSelectedBufferIds] = useState<Set<string>>(new Set());
   const [selectedFilesPaths, setSelectedFilesPaths] = useState<Set<string>>(new Set());
 
-  const close = useCallback(() => {
-    onRequestClose?.();
-  }, [onRequestClose]);
-
-  useEffect(() => {
-    if (active) return;
-    setSelectedBufferIds(new Set());
-    setSelectedFilesPaths(new Set());
-  }, [active]);
-
   const submit = useCallback(
     async (prompt: string) => {
       if (isTerminalAgent(selectedAgentId)) {
         openTerminalAgent(selectedAgentId);
-        close();
         return;
       }
 
@@ -68,10 +51,8 @@ export function AgentLaunchInput({
         selectedFilesPaths: Array.from(selectedFilesPaths),
       });
       openAgentBuffer(chatId);
-      close();
     },
     [
-      close,
       createNewChat,
       openAgentBuffer,
       selectedAgentId,
@@ -83,7 +64,6 @@ export function AgentLaunchInput({
 
   return (
     <AIChatInputBar
-      key={active ? "active" : "inactive"}
       surfaceId={surfaceId}
       buffers={buffers}
       allProjectFiles={allProjectFiles}
@@ -111,28 +91,12 @@ export function AgentLaunchInput({
       }
       onSetSelectedBufferIds={setSelectedBufferIds}
       onSetSelectedFilesPaths={setSelectedFilesPaths}
-      isActiveSurface={active}
+      isActiveSurface
       presentation="initial"
       autoFocus={autoFocus}
       onAgentChange={setSelectedAgentId}
       onSendMessage={submit}
       onStopStreaming={() => {}}
     />
-  );
-}
-
-export function AgentLauncher() {
-  const isVisible = useUIState((state) => state.isAgentLauncherVisible);
-  const setIsVisible = useUIState((state) => state.setIsAgentLauncherVisible);
-  const close = useCallback(() => setIsVisible(false), [setIsVisible]);
-
-  return (
-    <Command
-      isVisible={isVisible}
-      onClose={close}
-      className="w-[min(680px,calc(100vw-24px))] overflow-visible border-0 bg-transparent p-0 shadow-none"
-    >
-      <AgentLaunchInput active={isVisible} autoFocus onRequestClose={close} />
-    </Command>
   );
 }
