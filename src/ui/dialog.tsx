@@ -2,6 +2,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { motion, useReducedMotionConfig } from "motion/react";
 import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
+import { overlaySurface } from "@/design-system/overlay";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,9 +52,9 @@ interface DialogProps {
 
 const dialogContentVariants = cva(
   [
+    overlaySurface(),
     "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-9999",
-    "flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-(--shadow-dialog)",
-    "focus:outline-none",
+    "flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col overflow-hidden",
   ],
   {
     variants: {

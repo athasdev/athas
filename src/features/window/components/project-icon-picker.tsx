@@ -84,7 +84,7 @@ const ProjectIconPicker = memo(
           ) : undefined
         }
         classNames={{
-          modal: "max-w-90 rounded-xl",
+          modal: "max-w-90",
           content: "p-3",
         }}
       >

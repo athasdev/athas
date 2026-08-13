@@ -5,6 +5,7 @@ import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type React from "react";
+import { overlaySurface } from "@/design-system/overlay";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
@@ -25,7 +26,7 @@ interface CommandProps {
 const commandInputSelector = "[data-command-input]";
 
 const commandContentVariants = cva(
-  "relative z-10 flex max-h-[min(68vh,32rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-(--shadow-dialog) focus:outline-none",
+  "relative z-10 flex max-h-[min(68vh,32rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden",
 );
 
 const commandItemVariants = cva(
@@ -166,7 +167,12 @@ const Command = ({
                     transition={prefersReducedMotion ? instantTransition : quickTransition}
                   />
                 }
-                className={cn(commandContentVariants(), "pointer-events-auto", className)}
+                className={cn(
+                  overlaySurface(),
+                  commandContentVariants(),
+                  "pointer-events-auto",
+                  className,
+                )}
                 data-command-surface=""
               >
                 <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>

@@ -158,7 +158,7 @@ export default function LinuxFolderPickerDialog() {
         </>
       }
       classNames={{
-        modal: "max-w-160 rounded-xl",
+        modal: "max-w-160",
         content: "p-0",
       }}
     >
