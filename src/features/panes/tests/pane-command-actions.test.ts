@@ -185,6 +185,19 @@ describe("pane command actions", () => {
     expect(nextRoot.children[1].sizes).toEqual([50, 50]);
   });
 
+  it("toggles full screen for the active pane", async () => {
+    const { toggleActivePaneFullscreen } = await import("../utils/pane-command-actions");
+    const paneActions = usePaneStore.getState().actions;
+
+    paneActions.setActivePane(ROOT_PANE_ID);
+
+    expect(toggleActivePaneFullscreen()).toBe(true);
+    expect(usePaneStore.getState().fullscreenPaneId).toBe(ROOT_PANE_ID);
+
+    expect(toggleActivePaneFullscreen()).toBe(true);
+    expect(usePaneStore.getState().fullscreenPaneId).toBeNull();
+  });
+
   it("moves the active editor into the next and previous editor group", async () => {
     const { moveActiveEditorToAdjacentGroup } = await import("../utils/pane-command-actions");
     const paneActions = usePaneStore.getState().actions;

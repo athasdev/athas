@@ -1,6 +1,7 @@
 import {
   ArrowLeftIcon as ArrowLeft,
   ArrowRightIcon as ArrowRight,
+  ArrowsOutIcon as Maximize,
   ColumnsIcon as Columns,
   LockIcon as Lock,
   RowsIcon as Rows,
@@ -13,6 +14,7 @@ import {
   resetEditorGroupSizes,
   splitActiveEditorGroup,
   toggleActiveEditorGroupLock,
+  toggleActivePaneFullscreen,
 } from "@/features/panes/utils/pane-command-actions";
 import type { Action } from "../types/action.types";
 
@@ -21,6 +23,18 @@ interface PaneActionsParams {
 }
 
 export const createPaneActions = ({ onClose }: PaneActionsParams): Action[] => [
+  {
+    id: "pane-toggle-fullscreen",
+    label: "View: Toggle Active Pane Full Screen",
+    description: "Expand the active pane or return it to the workbench layout",
+    icon: <Maximize />,
+    category: "View",
+    commandId: "workbench.toggleActivePaneFullscreen",
+    action: () => {
+      onClose();
+      toggleActivePaneFullscreen();
+    },
+  },
   {
     id: "pane-split-editor-right",
     label: "View: Split Editor Right",

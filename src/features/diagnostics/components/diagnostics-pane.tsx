@@ -1034,6 +1034,7 @@ const DiagnosticsPane = ({
                 type="button"
                 onClick={onFullScreen}
                 tooltip={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+                commandId="workbench.toggleActivePaneFullscreen"
                 tooltipSide="bottom"
                 aria-label={isFullScreen ? "Exit full screen" : "Full screen"}
               >

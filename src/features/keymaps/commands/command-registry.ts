@@ -6,6 +6,7 @@ import {
   resetEditorGroupSizes,
   splitActiveEditorGroup,
   toggleActiveEditorGroupLock,
+  toggleActivePaneFullscreen,
 } from "@/features/panes/utils/pane-command-actions";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
@@ -934,6 +935,15 @@ const navigationCommands: Command[] = [
 ];
 
 const paneCommands: Command[] = [
+  {
+    id: "workbench.toggleActivePaneFullscreen",
+    title: "Toggle Active Pane Full Screen",
+    category: "View",
+    keybinding: "cmd+k z",
+    execute: () => {
+      toggleActivePaneFullscreen();
+    },
+  },
   {
     id: "workbench.splitEditorRight",
     title: "Split Editor Right",

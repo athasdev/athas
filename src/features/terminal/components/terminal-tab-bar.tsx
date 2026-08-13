@@ -494,11 +494,17 @@ const TerminalTabBar = ({
         )}
       </div>
       {onFullScreen && (
-        <Tooltip content={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"} side="bottom">
-          <Button onClick={onFullScreen} variant="ghost" size="icon-xs">
-            {isFullScreen ? <Minimize2 /> : <Maximize2 />}
-          </Button>
-        </Tooltip>
+        <Button
+          onClick={onFullScreen}
+          variant="ghost"
+          size="icon-xs"
+          tooltip={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
+          commandId="workbench.toggleActivePaneFullscreen"
+          tooltipSide="bottom"
+          aria-label={isFullScreen ? "Exit full screen terminal" : "Full screen terminal"}
+        >
+          {isFullScreen ? <Minimize2 /> : <Maximize2 />}
+        </Button>
       )}
     </div>
   );

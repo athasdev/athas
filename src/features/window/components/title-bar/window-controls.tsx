@@ -52,6 +52,7 @@ export function WindowControls({
         className="pointer-events-auto"
         size="icon-xs"
         tooltip="Minimize"
+        commandId="window.minimize.alt"
         tooltipSide="bottom"
         aria-label="Minimize"
       >
@@ -63,6 +64,7 @@ export function WindowControls({
         className="pointer-events-auto"
         size="icon-xs"
         tooltip={isMaximized ? "Restore" : "Maximize"}
+        commandId="window.maximize"
         tooltipSide="bottom"
         aria-label={isMaximized ? "Restore" : "Maximize"}
       >
@@ -74,6 +76,7 @@ export function WindowControls({
         className="pointer-events-auto group hover:text-white"
         size="icon-xs"
         tooltip="Close"
+        commandId="workbench.closeWindow"
         tooltipSide="bottom"
         aria-label="Close"
       >

@@ -50,6 +50,17 @@ export function toggleActiveEditorGroupLock(): boolean {
   return true;
 }
 
+export function toggleActivePaneFullscreen(): boolean {
+  const paneStore = usePaneStore.getState();
+  const activePane = paneStore.actions.getActivePane();
+  if (!activePane) {
+    return false;
+  }
+
+  paneStore.actions.togglePaneFullscreen(activePane.id);
+  return true;
+}
+
 export function splitActiveEditorGroup(direction: "horizontal" | "vertical"): boolean {
   const activePane = getActiveEditorPane();
   if (!activePane) {

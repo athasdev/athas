@@ -803,6 +803,7 @@ const TabBar = ({
                 variant="ghost"
                 size="icon-xs"
                 tooltip="New Tab"
+                commandId="workbench.newTab"
                 tooltipSide="bottom"
                 aria-label="New tab"
               >
@@ -828,6 +829,7 @@ const TabBar = ({
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
                 tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
+                commandId="workbench.toggleActivePaneFullscreen"
                 tooltipSide="bottom"
                 aria-label="Toggle editor full screen"
                 size="icon-xs"

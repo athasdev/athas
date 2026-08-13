@@ -317,6 +317,7 @@ export default function DebuggerView() {
         <Button
           variant="ghost"
           tooltip="Toggle breakpoint on current line"
+          commandId="debug.toggleBreakpoint"
           onClick={toggleCurrentLineBreakpoint}
           disabled={!activeFile}
           size="icon-xs"

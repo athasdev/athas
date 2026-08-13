@@ -83,6 +83,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
             <PaneIconButton
               onClick={onFullScreen}
               tooltip={isFullScreen ? "Exit fullscreen" : "Fullscreen"}
+              commandId="workbench.toggleActivePaneFullscreen"
             >
               {isFullScreen ? <Minimize2 /> : <Maximize2 />}
             </PaneIconButton>

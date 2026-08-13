@@ -478,6 +478,11 @@ export const defaultKeymaps: Keybinding[] = [
     command: "workbench.openKeyboardShortcuts",
     source: "default",
   },
+  {
+    key: "cmd+k z",
+    command: "workbench.toggleActivePaneFullscreen",
+    source: "default",
+  },
 
   // Window Operations
   { key: "cmd+,", command: "workbench.openSettings", source: "default" },
