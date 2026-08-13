@@ -157,7 +157,7 @@
   }
 
   .athas-sidebar-rail {
-    --athas-sidebar-rail-foreground: var(--foreground);
+    --athas-sidebar-rail-foreground: var(--muted-foreground);
     --subtle-foreground: var(--athas-sidebar-rail-foreground);
   }
 

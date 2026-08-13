@@ -39,7 +39,7 @@ export function SidebarTitleBar({
       )}
       {...props}
     >
-      <h2 className="min-w-0 flex-1 truncate pl-2 font-medium text-foreground ui-text-lg">
+      <h2 className="min-w-0 flex-1 truncate pl-2 font-medium text-foreground ui-text-base">
         {title}
       </h2>
       {children ? (
@@ -234,10 +234,10 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-full px-2 py-1 text-left text-subtle-foreground transition-[background-color,color]",
-        "hover:bg-accent/70 hover:text-foreground focus-visible:bg-accent/70 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
-        active && "bg-accent/80 text-foreground",
-        iconOnly && "justify-center gap-0 px-0",
+        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) px-2 py-1 text-left font-normal text-subtle-foreground transition-[background-color,color]",
+        "hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+        active && "bg-accent/70 text-foreground",
+        iconOnly && "justify-center gap-0 rounded-full px-0",
         className,
       )}
       {...props}
@@ -256,11 +256,13 @@ export function SidebarListItem({
       >
         <span className="block max-w-full truncate">{children}</span>
         {description ? (
-          <span className="block max-w-full truncate text-subtle-foreground">{description}</span>
+          <span className="block max-w-full truncate text-subtle-foreground/80 ui-text-caption">
+            {description}
+          </span>
         ) : null}
       </span>
       {trailing && !iconOnly ? (
-        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-subtle-foreground">
+        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-subtle-foreground/80 ui-text-caption">
           {trailing}
         </span>
       ) : null}
@@ -282,7 +284,7 @@ export function SidebarListEditor({
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-full bg-accent/80 px-2 py-1 text-foreground",
+        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) bg-accent/70 px-2 py-1 font-normal text-foreground",
         className,
       )}
       {...props}
@@ -319,7 +321,7 @@ export function SidebarSectionHeader({
     <button
       type="button"
       className={cn(
-        "font-sans ui-text-chrome flex h-(--athas-tab-height) w-full select-none items-center gap-1 rounded-(--athas-chrome-radius) px-2 text-left font-medium text-subtle-foreground transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/60 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+        "font-sans ui-text-caption flex h-(--athas-tab-height) w-full select-none items-center gap-1 rounded-(--athas-chrome-radius) px-2 text-left font-normal text-subtle-foreground/80 transition-colors hover:bg-accent/40 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
         variant === "surface" &&
           "h-8 rounded-lg bg-accent/80 px-2.5 hover:bg-accent focus-visible:bg-accent",
         className,
@@ -359,7 +361,7 @@ export function SidebarSectionLabel({
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex h-(--athas-chrome-control-height) min-w-0 select-none items-center gap-(--athas-chrome-gap-loose) px-2 text-subtle-foreground",
+        "font-sans ui-text-caption flex h-(--athas-chrome-control-height) min-w-0 select-none items-center gap-(--athas-chrome-gap-loose) px-2 font-normal text-subtle-foreground/80",
         className,
       )}
       {...props}
@@ -368,7 +370,7 @@ export function SidebarSectionLabel({
         <span className="flex shrink-0 items-center justify-center">{leading}</span>
       ) : null}
       <span className="min-w-0 flex-1 truncate">{children}</span>
-      {trailing ? <span className="shrink-0 text-subtle-foreground">{trailing}</span> : null}
+      {trailing ? <span className="shrink-0 text-subtle-foreground/80">{trailing}</span> : null}
     </div>
   );
 }
