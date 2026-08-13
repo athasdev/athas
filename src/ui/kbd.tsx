@@ -6,7 +6,7 @@ function Kbd({ className, ...props }: ComponentProps<"kbd">) {
     <kbd
       data-slot="kbd"
       className={cn(
-        "pointer-events-none inline-flex h-5 w-fit min-w-5 items-center justify-center px-1 font-sans ui-text-sm font-normal leading-none text-subtle-foreground select-none [&_svg:not([class*='size-'])]:size-3",
+        "pointer-events-none inline-flex h-4 w-fit min-w-4 items-center justify-center px-0.5 font-sans ui-text-caption font-normal leading-none text-subtle-foreground select-none [&_svg:not([class*='size-'])]:size-3",
         className,
       )}
       {...props}

@@ -13,7 +13,7 @@ interface TooltipProps {
 }
 
 const tooltipContentVariants = cva(
-  "ui-text-sm pointer-events-none z-99999 whitespace-nowrap rounded-lg border border-border/70 bg-surface/95 px-2 py-1 text-foreground shadow-(--shadow-card) backdrop-blur-sm transition-[opacity,transform,filter] duration-(--app-duration-fast) ease-(--app-ease-smooth) filter-[blur(0)] data-ending-style:opacity-0 data-ending-style:filter-[blur(2px)] data-[side=bottom]:data-ending-style:-translate-y-1 data-[side=bottom]:data-starting-style:-translate-y-1 data-[side=bottom]:data-starting-style:opacity-0 data-[side=bottom]:data-starting-style:filter-[blur(2px)] data-[side=left]:data-ending-style:translate-x-1 data-[side=left]:data-starting-style:translate-x-1 data-[side=left]:data-starting-style:opacity-0 data-[side=left]:data-starting-style:filter-[blur(2px)] data-[side=right]:data-ending-style:-translate-x-1 data-[side=right]:data-starting-style:-translate-x-1 data-[side=right]:data-starting-style:opacity-0 data-[side=right]:data-starting-style:filter-[blur(2px)] data-[side=top]:data-ending-style:translate-y-1 data-[side=top]:data-starting-style:translate-y-1 data-[side=top]:data-starting-style:opacity-0 data-[side=top]:data-starting-style:filter-[blur(2px)]",
+  "ui-text-chrome pointer-events-none z-99999 whitespace-nowrap rounded-(--athas-chrome-radius) border border-border/60 bg-surface/95 px-2 py-1 text-foreground shadow-(--shadow-card) backdrop-blur-sm transition-[opacity,transform] duration-(--app-duration-fast) ease-(--app-ease-smooth) data-ending-style:opacity-0 data-[side=bottom]:data-ending-style:-translate-y-0.5 data-[side=bottom]:data-starting-style:-translate-y-0.5 data-[side=bottom]:data-starting-style:opacity-0 data-[side=left]:data-ending-style:translate-x-0.5 data-[side=left]:data-starting-style:translate-x-0.5 data-[side=left]:data-starting-style:opacity-0 data-[side=right]:data-ending-style:-translate-x-0.5 data-[side=right]:data-starting-style:-translate-x-0.5 data-[side=right]:data-starting-style:opacity-0 data-[side=top]:data-ending-style:translate-y-0.5 data-[side=top]:data-starting-style:translate-y-0.5 data-[side=top]:data-starting-style:opacity-0",
 );
 
 export function TooltipProvider({ children }: { children: React.ReactNode }) {
@@ -46,7 +46,7 @@ export default function Tooltip({
           className="z-99999"
         >
           <TooltipPrimitive.Popup
-            className={cn(tooltipContentVariants(), shortcut && "flex items-center gap-1.5")}
+            className={cn(tooltipContentVariants(), shortcut && "flex items-center gap-2")}
           >
             {content}
             {shortcut && <Keybinding binding={shortcut} />}
