@@ -16,11 +16,11 @@ import type { FileStatusFilter } from "../types/github-pr-viewer.types";
 import { FileDiffView } from "./file-diff-view";
 import { GitHubViewerLoadingState, GitHubViewerState } from "./github-viewer-shell";
 
-const statusClass: Record<DiffFileItem["status"], string> = {
-  added: "text-git-added",
-  deleted: "text-git-deleted",
-  modified: "text-git-modified",
-  renamed: "text-git-renamed",
+const statusTone: Record<DiffFileItem["status"], NonNullable<FileNavigatorItem["iconTone"]>> = {
+  added: "added",
+  deleted: "deleted",
+  modified: "modified",
+  renamed: "renamed",
 };
 
 interface DiffFileItem {
@@ -86,13 +86,13 @@ export const PRFilesPanel = memo(
         filteredDiff.map((file) => ({
           key: file.path,
           path: file.path,
-          iconClassName: statusClass[file.status],
+          iconTone: statusTone[file.status],
           metadata: [
             ...(file.additions > 0
-              ? [{ label: `+${file.additions}`, className: "text-git-added" }]
+              ? [{ label: `+${file.additions}`, tone: "added" as const }]
               : []),
             ...(file.deletions > 0
-              ? [{ label: `-${file.deletions}`, className: "text-git-deleted" }]
+              ? [{ label: `-${file.deletions}`, tone: "deleted" as const }]
               : []),
           ],
         })),

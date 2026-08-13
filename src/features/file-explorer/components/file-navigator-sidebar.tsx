@@ -3,7 +3,6 @@ import {
   memo,
   type KeyboardEvent,
   type PointerEvent,
-  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -40,6 +39,16 @@ import "../styles/file-explorer-tree.css";
 export type FileNavigatorViewMode = "flat" | "tree";
 type FileNavigatorSearchMode = "substring" | "fuzzy";
 type FileNavigatorSurface = "sidebar" | "plain" | "inset" | "review";
+export type FileNavigatorTone =
+  | "neutral"
+  | "subtle"
+  | "added"
+  | "deleted"
+  | "modified"
+  | "renamed"
+  | "error"
+  | "info"
+  | "warning";
 
 const RESIZE_STEP = 16;
 const MAX_NAVIGATOR_SYNC_ITEMS = 5_000;
@@ -49,12 +58,24 @@ export interface FileNavigatorItem {
   path: string;
   label?: string;
   iconPath?: string;
-  iconClassName?: string;
+  iconTone?: FileNavigatorTone;
   metadata?: Array<{
-    label: ReactNode;
-    className?: string;
+    label: string | number;
+    tone?: FileNavigatorTone;
   }>;
 }
+
+const fileNavigatorToneClass: Record<FileNavigatorTone, string> = {
+  neutral: "text-foreground",
+  subtle: "text-subtle-foreground",
+  added: "text-git-added",
+  deleted: "text-git-deleted",
+  modified: "text-git-modified",
+  renamed: "text-git-renamed",
+  error: "text-destructive",
+  info: "text-info",
+  warning: "text-warning",
+};
 
 interface FileNavigatorSidebarProps {
   items: FileNavigatorItem[];
@@ -122,7 +143,7 @@ const FileNavigatorMetadata = memo(function FileNavigatorMetadata({
   return (
     <span className="flex shrink-0 items-center gap-1 tabular-nums">
       {item.metadata.map((metadata, index) => (
-        <span key={index} className={metadata.className}>
+        <span key={index} className={fileNavigatorToneClass[metadata.tone ?? "neutral"]}>
           {metadata.label}
         </span>
       ))}
@@ -154,7 +175,7 @@ const FileNavigatorFlatRow = memo(function FileNavigatorFlatRow({
         <ThemedFileIcon
           fileName={item.iconPath ?? item.path}
           isDir={false}
-          className={cn("shrink-0", item.iconClassName)}
+          className={cn("shrink-0", fileNavigatorToneClass[item.iconTone ?? "neutral"])}
         />
       }
       trailing={<FileNavigatorMetadata item={item} />}
@@ -240,7 +261,7 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
         <ThemedFileIcon
           fileName={item.iconPath ?? node.name}
           isDir={false}
-          className={cn("shrink-0", item.iconClassName)}
+          className={cn("shrink-0", fileNavigatorToneClass[item.iconTone ?? "neutral"])}
         />
       }
       trailing={<FileNavigatorMetadata item={item} />}

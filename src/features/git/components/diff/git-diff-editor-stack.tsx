@@ -96,11 +96,11 @@ function hasRenderableDiff(diff: GitDiff | null): diff is GitDiff {
   return !!diff && (diff.lines.length > 0 || diff.is_image === true || diff.is_binary === true);
 }
 
-const statusTextClass: Record<string, string> = {
-  added: "text-git-added",
-  deleted: "text-git-deleted",
-  modified: "text-git-modified",
-  renamed: "text-git-renamed",
+const statusTone: Record<string, NonNullable<FileNavigatorItem["iconTone"]>> = {
+  added: "added",
+  deleted: "deleted",
+  modified: "modified",
+  renamed: "renamed",
 };
 
 function parseGitHubRemoteSlug(remoteUrl: string): { owner: string; repo: string } | null {
@@ -724,10 +724,10 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         return {
           key: getMultiDiffSectionKey(multiDiff, diff, index),
           path: filePath,
-          iconClassName: statusTextClass[status],
+          iconTone: statusTone[status] ?? "neutral",
           metadata: [
-            ...(additions > 0 ? [{ label: `+${additions}`, className: "text-git-added" }] : []),
-            ...(deletions > 0 ? [{ label: `-${deletions}`, className: "text-git-deleted" }] : []),
+            ...(additions > 0 ? [{ label: `+${additions}`, tone: "added" as const }] : []),
+            ...(deletions > 0 ? [{ label: `-${deletions}`, tone: "deleted" as const }] : []),
           ],
         };
       }),

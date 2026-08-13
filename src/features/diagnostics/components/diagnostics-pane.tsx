@@ -108,12 +108,6 @@ const SEVERITY_LABEL: Record<Diagnostic["severity"], string> = {
   info: "Info",
 };
 
-const SEVERITY_TEXT_CLASS: Record<Diagnostic["severity"], string> = {
-  error: "text-destructive",
-  warning: "text-warning",
-  info: "text-info",
-};
-
 const getSeverityIcon = (severity: Diagnostic["severity"], size = 11) => {
   switch (severity) {
     case "error":
@@ -465,11 +459,11 @@ const DiagnosticsPane = ({
           path: navigatorPath,
           label: navigatorPath,
           iconPath: filePath,
-          iconClassName: SEVERITY_TEXT_CLASS[severity],
+          iconTone: severity,
           metadata: [
             {
               label: summary.total,
-              className: SEVERITY_TEXT_CLASS[severity],
+              tone: severity,
             },
           ],
         };

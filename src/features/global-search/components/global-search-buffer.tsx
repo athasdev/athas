@@ -148,7 +148,7 @@ const GlobalSearchBuffer = () => {
         metadata: [
           {
             label: result.total_matches,
-            className: "text-subtle-foreground",
+            tone: "subtle",
           },
         ],
       });
