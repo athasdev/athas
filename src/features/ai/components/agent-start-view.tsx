@@ -26,6 +26,7 @@ import { ThinkingOrb } from "@/ui/thinking-orb";
 
 interface AgentStartViewProps {
   children: ReactNode;
+  showQuickActions?: boolean;
 }
 
 interface ActionItem {
@@ -35,7 +36,7 @@ interface ActionItem {
   action: () => void;
 }
 
-export function AgentStartView({ children }: AgentStartViewProps) {
+export function AgentStartView({ children, showQuickActions = false }: AgentStartViewProps) {
   const { openTerminalBuffer, openWebViewerBuffer, openBuffer } = useBufferStore.use.actions();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const webViewerEnabled = useSettingsStore((state) => state.settings.coreFeatures.webViewer);
@@ -107,20 +108,22 @@ export function AgentStartView({ children }: AgentStartViewProps) {
 
           {children}
 
-          <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">
-            {quickActions.map((item) => (
-              <Button
-                key={item.id}
-                type="button"
-                onClick={item.action}
-                variant="default"
-                className="w-full min-w-0 justify-start overflow-hidden"
-              >
-                {item.icon}
-                <span className="min-w-0 truncate">{item.label}</span>
-              </Button>
-            ))}
-          </div>
+          {showQuickActions ? (
+            <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">
+              {quickActions.map((item) => (
+                <Button
+                  key={item.id}
+                  type="button"
+                  onClick={item.action}
+                  variant="default"
+                  className="w-full min-w-0 justify-start overflow-hidden"
+                >
+                  {item.icon}
+                  <span className="min-w-0 truncate">{item.label}</span>
+                </Button>
+              ))}
+            </div>
+          ) : null}
         </Empty>
       </ContextMenuTrigger>
       <ContextMenuContent>

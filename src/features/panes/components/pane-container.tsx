@@ -1092,7 +1092,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       />
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {!activeBuffer && !shouldRenderCarousel ? (
-          <AgentStartView>
+          <AgentStartView showQuickActions>
             <AgentLaunchInput active autoFocus surfaceId="empty-editor" />
           </AgentStartView>
         ) : null}
