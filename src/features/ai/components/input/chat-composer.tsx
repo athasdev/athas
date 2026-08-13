@@ -21,17 +21,7 @@ export const ChatComposer = forwardRef<
   );
 
   if (standalone) {
-    return (
-      <div
-        ref={ref}
-        data-ai-element="prompt-input"
-        className={cn(
-          "rounded-2xl bg-surface/55 shadow-(--shadow-card) transition-[border-radius,background-color,box-shadow]",
-          rootClassName,
-        )}
-        {...props}
-      />
-    );
+    return <div ref={ref} data-ai-element="prompt-input" className={rootClassName} {...props} />;
   }
 
   return (
@@ -47,19 +37,15 @@ export const ChatComposer = forwardRef<
 export function ChatComposerBody({
   className,
   connected = false,
-  variant = "surface",
   ...props
 }: Omit<ComponentProps<typeof SidebarComposerBody>, "variant"> & {
   connected?: boolean;
-  variant?: "surface" | "prominent";
 }) {
   return (
     <SidebarComposerBody
       data-ai-element="prompt-input-body"
-      variant={variant === "prominent" ? "plain" : "surface"}
       className={cn(
         "transition-[border-color,background-color,box-shadow] duration-(--app-duration-fast)",
-        variant === "prominent" && "rounded-2xl bg-background",
         connected && "rounded-t-none",
         className,
       )}

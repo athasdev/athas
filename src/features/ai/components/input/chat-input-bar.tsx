@@ -980,10 +980,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       dragActive={isContextDragOver}
       className={cn(isInitialPresentation && "w-full")}
     >
-      <ChatComposerBody
-        variant={isInitialPresentation ? "prominent" : "surface"}
-        connected={hasAttachedComposerDropdown}
-      >
+      <ChatComposerBody connected={hasAttachedComposerDropdown}>
         {pastedImages.length > 0 && (
           <AttachmentGroup className={cn("px-3 pt-3", isInitialPresentation && "px-4 pt-4")}>
             {pastedImages.map((image) => (
