@@ -1,6 +1,6 @@
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog";
 import type { ComponentProps } from "react";
-import { overlaySurface } from "@/design-system/overlay";
+import { overlayBackdrop, overlaySurface } from "@/design-system/overlay";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
@@ -21,7 +21,8 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 z-9998 bg-black/20 transition-opacity duration-(--app-duration-fast) data-ending-style:opacity-0 data-starting-style:opacity-0",
+        overlayBackdrop(),
+        "z-9998 transition-opacity duration-(--app-duration-fast) data-ending-style:opacity-0 data-starting-style:opacity-0",
         className,
       )}
       {...props}

@@ -206,7 +206,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       onClose={onClose}
       title="Connect to Database"
       classNames={{
-        backdrop: "bg-black/40 backdrop-blur-[2px]",
         modal: "max-w-md",
         content: "space-y-4",
       }}

@@ -2,7 +2,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { motion, useReducedMotionConfig } from "motion/react";
 import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
-import { overlaySurface } from "@/design-system/overlay";
+import { overlayBackdrop, overlaySurface } from "@/design-system/overlay";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,7 +39,6 @@ interface DialogProps {
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
   classNames?: Partial<{
-    backdrop: string;
     modal: string;
     header: string;
     title: string;
@@ -89,7 +88,8 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 z-9998 bg-black/20 transition-opacity duration-(--app-duration-fast) data-ending-style:opacity-0 data-starting-style:opacity-0",
+        overlayBackdrop(),
+        "z-9998 transition-opacity duration-(--app-duration-fast) data-ending-style:opacity-0 data-starting-style:opacity-0",
         className,
       )}
       {...props}
@@ -234,7 +234,7 @@ const AppDialog = ({
               transition={prefersReducedMotion ? instantTransition : quickTransition}
             />
           }
-          className={cn("fixed inset-0 z-9998 bg-black/20", classNames?.backdrop)}
+          className={cn(overlayBackdrop(), "z-9998")}
         />
 
         <DialogPrimitive.Popup
