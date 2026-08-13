@@ -183,6 +183,7 @@ export function ChatHeader({
             size="icon-xs"
             onClick={handleNewAgent}
             tooltip="New Agent"
+            commandId="workbench.agentLauncher"
             tooltipSide="bottom"
             aria-label="New Agent"
           >
