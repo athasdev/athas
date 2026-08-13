@@ -1,6 +1,6 @@
 import { PencilSimpleIcon as EditIcon, PlusIcon, TrashIcon } from "@/ui/icons";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { Dropdown, menuSeparator, type MenuItem } from "@/ui/dropdown";
 import type { DatabaseRow } from "../types/common.types";
 
 export const SqlTableMenu = ({
@@ -33,7 +33,7 @@ export const SqlTableMenu = ({
                 icon: <PlusIcon />,
                 onClick: () => onCreateRow(databaseTableMenu.tableName),
               },
-              { id: "separator", label: "", separator: true, onClick: () => {} },
+              menuSeparator("separator"),
             ]
           : []),
         {

@@ -49,7 +49,7 @@ const TerminalTabContextMenu = ({
           icon: terminal.isPinned ? <PinOff /> : <Pin />,
           onClick: () => onPin(terminal.id),
         },
-        { id: "sep-1", label: "", separator: true, onClick: () => {} },
+        { id: "sep-1", separator: true },
         {
           id: "duplicate",
           label: "Duplicate Terminal",
@@ -75,7 +75,7 @@ const TerminalTabContextMenu = ({
           icon: <Download weight="fill" />,
           onClick: () => onExport(terminal.id),
         },
-        { id: "sep-2", label: "", separator: true, onClick: () => {} },
+        { id: "sep-2", separator: true },
         {
           id: "close",
           label: "Close Terminal",

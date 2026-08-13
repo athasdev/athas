@@ -9,8 +9,7 @@ import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { Button } from "@/ui/button";
-import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
+import { Dropdown, menuSeparator, type MenuItem } from "@/ui/dropdown";
 import { getBaseName, getRelativePath, joinPath, normalizePath } from "@/utils/path-helpers";
 import { PathBreadcrumb } from "./path-breadcrumb";
 
@@ -123,6 +122,30 @@ export function FilePathBreadcrumb({
     }
   };
 
+  const handleDropdownItemSelect = async (item: FileEntry) => {
+    if (item.isDir) {
+      try {
+        const items = await loadDirectoryEntries(item.path);
+        setDropdown((prev) =>
+          prev
+            ? {
+                ...prev,
+                items,
+                currentPath: item.path,
+                navigationStack: [...prev.navigationStack, prev.currentPath],
+              }
+            : null,
+        );
+      } catch (error) {
+        logger.error("Editor", "Failed to load folder contents:", error);
+      }
+      return;
+    }
+
+    await handleNavigate(item.path);
+    setDropdown(null);
+  };
+
   const handleSegmentClick = async (
     segmentIndex: number,
     event: React.MouseEvent<HTMLButtonElement>,
@@ -172,6 +195,35 @@ export function FilePathBreadcrumb({
     }
   };
 
+  const dropdownItems: MenuItem[] = dropdown
+    ? [
+        ...(dropdown.navigationStack.length > 0
+          ? [
+              {
+                id: "go-back",
+                label: "Go back",
+                icon: <ChevronLeft className="text-subtle-foreground" weight="duotone" />,
+                onClick: () => void handleGoBack(),
+              },
+              menuSeparator("go-back-separator"),
+            ]
+          : []),
+        ...dropdown.items.map((item) => ({
+          id: item.path,
+          label: item.name,
+          icon: (
+            <ThemedFileIcon
+              fileName={item.name}
+              isDir={item.isDir}
+              isExpanded={false}
+              className="text-subtle-foreground"
+            />
+          ),
+          onClick: () => void handleDropdownItemSelect(item),
+        })),
+      ]
+    : [];
+
   if (segments.length === 0) return null;
 
   return (
@@ -195,70 +247,15 @@ export function FilePathBreadcrumb({
           isOpen={Boolean(dropdown)}
           point={{ x: dropdown.x, y: dropdown.y }}
           onClose={() => setDropdown(null)}
+          items={dropdownItems}
+          closeOnSelect={false}
           className="breadcrumb-dropdown min-w-0"
           style={{
             zIndex: EDITOR_CONSTANTS.Z_INDEX.DROPDOWN,
             maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
             minWidth: `${EDITOR_CONSTANTS.DROPDOWN_MIN_WIDTH}px`,
           }}
-        >
-          {dropdown.navigationStack.length > 0 && (
-            <div className="border-border/70 border-b pb-0.5">
-              <Button
-                onClick={handleGoBack}
-                variant="ghost"
-                className={dropdownItemClassName("justify-start gap-2 font-normal")}
-                size="xs"
-              >
-                <ChevronLeft className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
-                <span className="min-w-0 flex-1 truncate text-left ui-text-sm font-normal">
-                  Go back
-                </span>
-              </Button>
-            </div>
-          )}
-
-          {dropdown.items.map((item) => (
-            <Button
-              key={item.path}
-              onClick={async () => {
-                if (item.isDir) {
-                  try {
-                    const items = await loadDirectoryEntries(item.path);
-                    setDropdown((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            items,
-                            currentPath: item.path,
-                            navigationStack: [...prev.navigationStack, prev.currentPath],
-                          }
-                        : null,
-                    );
-                  } catch (error) {
-                    logger.error("Editor", "Failed to load folder contents:", error);
-                  }
-                } else {
-                  await handleNavigate(item.path);
-                  setDropdown(null);
-                }
-              }}
-              variant="ghost"
-              size="xs"
-              className={dropdownItemClassName("justify-start gap-2 font-normal")}
-            >
-              <ThemedFileIcon
-                fileName={item.name}
-                isDir={item.isDir}
-                isExpanded={false}
-                className="shrink-0 text-subtle-foreground"
-              />
-              <span className="min-w-0 flex-1 truncate text-left ui-text-sm font-normal">
-                {item.name}
-              </span>
-            </Button>
-          ))}
-        </Dropdown>
+        />
       )}
     </>
   );

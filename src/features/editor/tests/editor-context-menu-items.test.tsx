@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
+import { isMenuActionItem } from "@/ui/dropdown";
 import { buildEditorContextMenuItems } from "../context-menu/editor-context-menu-items";
 
 const baseOptions = {
@@ -11,7 +12,7 @@ function getItem(id: string, handlers = {}) {
     ...handlers,
   }).find((entry) => entry.id === id);
 
-  if (!item) throw new Error(`Missing menu item ${id}`);
+  if (!item || !isMenuActionItem(item)) throw new Error(`Missing menu item ${id}`);
   return item;
 }
 
@@ -42,19 +43,15 @@ describe("buildEditorContextMenuItems", () => {
   });
 
   it("keeps selection-only commands disabled without a selection", () => {
-    const [copy, toggleCase, formatSelection] = ["copy", "toggle-case", "format-selection"].map(
-      (id) =>
-        buildEditorContextMenuItems({
-          ...baseOptions,
-          hasSelection: false,
-          onCopy: vi.fn(),
-          onFormatSelection: vi.fn(),
-          onToggleCase: vi.fn(),
-        }).find((entry) => entry.id === id),
-    );
+    const handlers = {
+      hasSelection: false,
+      onCopy: vi.fn(),
+      onFormatSelection: vi.fn(),
+      onToggleCase: vi.fn(),
+    };
 
-    expect(copy?.disabled).toBe(true);
-    expect(toggleCase?.disabled).toBe(true);
-    expect(formatSelection?.disabled).toBe(true);
+    expect(getItem("copy", handlers).disabled).toBe(true);
+    expect(getItem("toggle-case", handlers).disabled).toBe(true);
+    expect(getItem("format-selection", handlers).disabled).toBe(true);
   });
 });

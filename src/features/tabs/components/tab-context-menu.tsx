@@ -21,7 +21,7 @@ import {
   ContextMenuSeparator,
   ContextMenuShortcut,
 } from "@/ui/context-menu";
-import type { MenuItem } from "@/ui/dropdown";
+import { menuSeparator, type MenuItem } from "@/ui/dropdown";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 
@@ -79,7 +79,7 @@ const TabContextMenu = ({
           },
         ]
       : []),
-    { id: "sep-1", label: "", separator: true, onClick: () => {} },
+    menuSeparator("sep-1"),
     ...(paneId && onSplitRight
       ? [
           {
@@ -100,9 +100,7 @@ const TabContextMenu = ({
           },
         ]
       : []),
-    ...(paneId && (onSplitRight || onSplitDown)
-      ? [{ id: "sep-2", label: "", separator: true, onClick: () => {} }]
-      : []),
+    ...(paneId && (onSplitRight || onSplitDown) ? [menuSeparator("sep-2")] : []),
     ...(onTogglePaneLocked
       ? [
           {
@@ -111,7 +109,7 @@ const TabContextMenu = ({
             icon: isPaneLocked ? <LockOpen /> : <Lock />,
             onClick: onTogglePaneLocked,
           },
-          { id: "sep-lock", label: "", separator: true, onClick: () => {} },
+          menuSeparator("sep-lock"),
         ]
       : []),
     {
@@ -171,7 +169,7 @@ const TabContextMenu = ({
           },
         ]
       : []),
-    { id: "sep-3", label: "", separator: true, onClick: () => {} },
+    menuSeparator("sep-3"),
     {
       id: "close",
       label: "Close",

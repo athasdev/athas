@@ -120,14 +120,14 @@ const ToolbarContextMenu = ({
     label: mode.label,
     icon: mode.icon,
     onClick: () => onModeChange(mode.value),
-    className: currentMode === mode.value ? "bg-selected" : undefined,
+    selected: currentMode === mode.value,
   }));
   const layoutItems: MenuItem[] = layouts.map((layout) => ({
     id: `layout-${layout.value}`,
     label: layout.label,
     icon: layout.icon,
     onClick: () => onLayoutChange(layout.value),
-    className: currentLayout === layout.value ? "bg-selected" : undefined,
+    selected: currentLayout === layout.value,
   }));
   const sidebarPositions: {
     value: TerminalTabSidebarPosition;
@@ -142,7 +142,7 @@ const ToolbarContextMenu = ({
     label: pos.label,
     icon: pos.icon,
     onClick: () => onSidebarPositionChange(pos.value),
-    className: currentSidebarPosition === pos.value ? "bg-selected" : undefined,
+    selected: currentSidebarPosition === pos.value,
   }));
   const actionItems: MenuItem[] = [
     ...(onNewTerminal

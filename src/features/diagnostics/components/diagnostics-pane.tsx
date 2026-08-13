@@ -640,7 +640,7 @@ const DiagnosticsPane = ({
       });
     }
 
-    items.push({ id: "sep-actions", label: "", separator: true, onClick: () => {} });
+    items.push({ id: "sep-actions", separator: true });
 
     items.push(
       {
@@ -693,7 +693,7 @@ const DiagnosticsPane = ({
       }
     }
 
-    items.push({ id: "sep-view", label: "", separator: true, onClick: () => {} });
+    items.push({ id: "sep-view", separator: true });
 
     items.push({
       id: "toggle-wrap",
@@ -771,7 +771,7 @@ const DiagnosticsPane = ({
       })),
     );
 
-    items.push({ id: "sep-group", label: "", separator: true, onClick: () => {} });
+    items.push({ id: "sep-group", separator: true });
 
     items.push(
       ...SORT_OPTIONS.map((option) => ({
@@ -787,7 +787,7 @@ const DiagnosticsPane = ({
       })),
     );
 
-    items.push({ id: "sep-sort", label: "", separator: true, onClick: () => {} });
+    items.push({ id: "sep-sort", separator: true });
 
     for (const severity of ["error", "warning", "info"] as Diagnostic["severity"][]) {
       items.push({
@@ -816,7 +816,7 @@ const DiagnosticsPane = ({
     }
 
     if (hasFilters) {
-      items.push({ id: "sep-reset", label: "", separator: true, onClick: () => {} });
+      items.push({ id: "sep-reset", separator: true });
       items.push({
         id: "reset-filters",
         label: "Reset All Filters",
@@ -854,12 +854,12 @@ const DiagnosticsPane = ({
       label: mode.label,
       icon: mode.icon,
       onClick: () => setWidthMode(mode.value),
-      className: widthMode === mode.value ? "bg-selected" : undefined,
+      selected: widthMode === mode.value,
     }));
 
     if (onFullScreen) {
       items.push(
-        { id: "sep-fullscreen", label: "", separator: true, onClick: () => {} },
+        { id: "sep-fullscreen", separator: true },
         {
           id: "toggle-fullscreen",
           label: isFullScreen ? "Exit Full Screen" : "Full Screen",

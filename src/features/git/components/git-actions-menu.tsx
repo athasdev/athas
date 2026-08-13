@@ -206,7 +206,7 @@ const GitActionsMenu = ({
           disabled: isSelectingRepository,
           onClick: () => void handleSelectRepository(),
         },
-        { id: "sep-1", label: "", separator: true, onClick: () => {} },
+        { id: "sep-1", separator: true },
         {
           id: "manage-branches",
           label: "Manage Branches",
@@ -219,7 +219,7 @@ const GitActionsMenu = ({
           icon: <GitPullRequest />,
           onClick: handleShowBranchDiff,
         },
-        { id: "sep-branches", label: "", separator: true, onClick: () => {} },
+        { id: "sep-branches", separator: true },
         {
           id: "push",
           label: "Push Changes",
@@ -227,7 +227,7 @@ const GitActionsMenu = ({
           disabled: isLoading,
           onClick: handlePush,
         },
-        { id: "sep-2", label: "", separator: true, onClick: () => {} },
+        { id: "sep-2", separator: true },
         {
           id: "pull",
           label: "Pull Changes",
@@ -242,7 +242,7 @@ const GitActionsMenu = ({
           disabled: isLoading,
           onClick: handleFetch,
         },
-        { id: "sep-3", label: "", separator: true, onClick: () => {} },
+        { id: "sep-3", separator: true },
         {
           id: "manage-remotes",
           label: "Manage Remotes",
@@ -261,7 +261,7 @@ const GitActionsMenu = ({
           icon: <Archive />,
           onClick: handleViewStashes,
         },
-        { id: "sep-4", label: "", separator: true, onClick: () => {} },
+        { id: "sep-4", separator: true },
         {
           id: "refresh",
           label: "Refresh Status",
@@ -269,13 +269,13 @@ const GitActionsMenu = ({
           disabled: isRefreshing,
           onClick: () => void handleRefresh(),
         },
-        { id: "sep-5", label: "", separator: true, onClick: () => {} },
+        { id: "sep-5", separator: true },
         {
           id: "discard-all",
           label: "Discard All Changes",
           icon: <RotateCcw />,
           disabled: isLoading,
-          className: "text-destructive",
+          tone: "destructive",
           onClick: () => void handleDiscardAllChanges(),
         },
       ]
@@ -287,7 +287,7 @@ const GitActionsMenu = ({
           disabled: isLoading || isInitializingRepository,
           onClick: handleInitRepository,
         },
-        { id: "sep-1", label: "", separator: true, onClick: () => {} },
+        { id: "sep-1", separator: true },
         {
           id: "refresh",
           label: "Refresh Status",

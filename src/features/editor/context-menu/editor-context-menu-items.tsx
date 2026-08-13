@@ -17,7 +17,7 @@ import {
   TrashIcon as Trash2,
   TextTIcon as Type,
 } from "@/ui/icons";
-import type { MenuItem } from "@/ui/dropdown";
+import { menuSeparator, type MenuItem } from "@/ui/dropdown";
 
 export interface EditorContextMenuHandlers {
   onCopy?: () => void;
@@ -50,12 +50,6 @@ export interface EditorContextMenuHandlers {
 
 export interface EditorContextMenuItemOptions extends EditorContextMenuHandlers {
   hasSelection: boolean;
-}
-
-const noop = () => {};
-
-function separator(id: string): MenuItem {
-  return { id, label: "", separator: true, onClick: noop };
 }
 
 function isDisabled(handler: (() => void) | undefined, disabled = false): boolean {
@@ -98,7 +92,7 @@ export function buildEditorContextMenuItems({
       icon: <Copy />,
       shortcut: "cmd+c",
       disabled: isDisabled(onCopy, !hasSelection),
-      onClick: onCopy ?? noop,
+      onClick: onCopy,
     },
     {
       id: "cut",
@@ -106,7 +100,7 @@ export function buildEditorContextMenuItems({
       icon: <Scissors />,
       shortcut: "cmd+x",
       disabled: isDisabled(onCut, !hasSelection),
-      onClick: onCut ?? noop,
+      onClick: onCut,
     },
     {
       id: "paste",
@@ -114,7 +108,7 @@ export function buildEditorContextMenuItems({
       icon: <ClipboardPaste />,
       shortcut: "cmd+v",
       disabled: isDisabled(onPaste),
-      onClick: onPaste ?? noop,
+      onClick: onPaste,
     },
     {
       id: "delete",
@@ -122,23 +116,23 @@ export function buildEditorContextMenuItems({
       icon: <Trash2 />,
       shortcut: "delete",
       disabled: isDisabled(onDelete, !hasSelection),
-      onClick: onDelete ?? noop,
+      onClick: onDelete,
     },
-    separator("sep-1"),
+    menuSeparator("sep-1"),
     {
       id: "select-all",
       label: "Select All",
       icon: <Type />,
       shortcut: "cmd+a",
       disabled: isDisabled(onSelectAll),
-      onClick: onSelectAll ?? noop,
+      onClick: onSelectAll,
     },
     {
       id: "duplicate",
       label: "Duplicate Line",
       icon: <FileText />,
       disabled: isDisabled(onDuplicate),
-      onClick: onDuplicate ?? noop,
+      onClick: onDuplicate,
     },
     {
       id: "select-next-occurrence",
@@ -146,7 +140,7 @@ export function buildEditorContextMenuItems({
       icon: <Search />,
       shortcut: "cmd+d",
       disabled: isDisabled(onSelectNextOccurrence),
-      onClick: onSelectNextOccurrence ?? noop,
+      onClick: onSelectNextOccurrence,
     },
     {
       id: "select-all-occurrences",
@@ -154,16 +148,16 @@ export function buildEditorContextMenuItems({
       icon: <Search />,
       shortcut: "cmd+shift+l",
       disabled: isDisabled(onSelectAllOccurrences),
-      onClick: onSelectAllOccurrences ?? noop,
+      onClick: onSelectAllOccurrences,
     },
-    separator("sep-2"),
+    menuSeparator("sep-2"),
     {
       id: "toggle-comment",
       label: "Toggle Comment",
       icon: <Code />,
       shortcut: "cmd+/",
       disabled: isDisabled(onToggleComment),
-      onClick: onToggleComment ?? noop,
+      onClick: onToggleComment,
     },
     {
       id: "indent",
@@ -171,7 +165,7 @@ export function buildEditorContextMenuItems({
       icon: <Indent />,
       shortcut: "tab",
       disabled: isDisabled(onIndent),
-      onClick: onIndent ?? noop,
+      onClick: onIndent,
     },
     {
       id: "outdent",
@@ -179,7 +173,7 @@ export function buildEditorContextMenuItems({
       icon: <Outdent />,
       shortcut: "shift+tab",
       disabled: isDisabled(onOutdent),
-      onClick: onOutdent ?? noop,
+      onClick: onOutdent,
     },
     {
       id: "format",
@@ -187,7 +181,7 @@ export function buildEditorContextMenuItems({
       icon: <AlignLeft />,
       shortcut: "shift+alt+f",
       disabled: isDisabled(onFormat),
-      onClick: onFormat ?? noop,
+      onClick: onFormat,
     },
     {
       id: "format-selection",
@@ -195,16 +189,16 @@ export function buildEditorContextMenuItems({
       icon: <AlignLeft />,
       shortcut: "cmd+k cmd+f",
       disabled: isDisabled(onFormatSelection, !hasSelection),
-      onClick: onFormatSelection ?? noop,
+      onClick: onFormatSelection,
     },
-    separator("sep-3"),
+    menuSeparator("sep-3"),
     {
       id: "move-up",
       label: "Move Line Up",
       icon: <ChevronUp />,
       shortcut: "alt+up",
       disabled: isDisabled(onMoveLineUp),
-      onClick: onMoveLineUp ?? noop,
+      onClick: onMoveLineUp,
     },
     {
       id: "move-down",
@@ -212,23 +206,23 @@ export function buildEditorContextMenuItems({
       icon: <ChevronDown />,
       shortcut: "alt+down",
       disabled: isDisabled(onMoveLineDown),
-      onClick: onMoveLineDown ?? noop,
+      onClick: onMoveLineDown,
     },
     {
       id: "toggle-case",
       label: "Toggle Case",
       icon: <CaseSensitive />,
       disabled: isDisabled(onToggleCase, !hasSelection),
-      onClick: onToggleCase ?? noop,
+      onClick: onToggleCase,
     },
-    separator("sep-4"),
+    menuSeparator("sep-4"),
     {
       id: "go-to-definition",
       label: "Go to Definition",
       icon: <Code />,
       shortcut: "f12",
       disabled: isDisabled(onGoToDefinition),
-      onClick: onGoToDefinition ?? noop,
+      onClick: onGoToDefinition,
     },
     {
       id: "find-references",
@@ -236,14 +230,14 @@ export function buildEditorContextMenuItems({
       icon: <Search />,
       shortcut: "shift+f12",
       disabled: isDisabled(onFindReferences),
-      onClick: onFindReferences ?? noop,
+      onClick: onFindReferences,
     },
     {
       id: "go-to-type-definition",
       label: "Go to Type Definition",
       icon: <Code />,
       disabled: isDisabled(onGoToTypeDefinition),
-      onClick: onGoToTypeDefinition ?? noop,
+      onClick: onGoToTypeDefinition,
     },
     {
       id: "rename-symbol",
@@ -251,7 +245,7 @@ export function buildEditorContextMenuItems({
       icon: <PenLine />,
       shortcut: "f2",
       disabled: isDisabled(onRenameSymbol),
-      onClick: onRenameSymbol ?? noop,
+      onClick: onRenameSymbol,
     },
     {
       id: "quick-fix",
@@ -259,7 +253,7 @@ export function buildEditorContextMenuItems({
       icon: <PenLine />,
       shortcut: "cmd+.",
       disabled: isDisabled(onQuickFix),
-      onClick: onQuickFix ?? noop,
+      onClick: onQuickFix,
     },
     {
       id: "show-hover",
@@ -267,7 +261,7 @@ export function buildEditorContextMenuItems({
       icon: <Code />,
       shortcut: "cmd+k cmd+i",
       disabled: isDisabled(onShowHover),
-      onClick: onShowHover ?? noop,
+      onClick: onShowHover,
     },
     {
       id: "trigger-suggest",
@@ -275,16 +269,16 @@ export function buildEditorContextMenuItems({
       icon: <Code />,
       shortcut: "ctrl+space",
       disabled: isDisabled(onTriggerSuggest),
-      onClick: onTriggerSuggest ?? noop,
+      onClick: onTriggerSuggest,
     },
-    separator("sep-5"),
+    menuSeparator("sep-5"),
     {
       id: "find",
       label: "Find",
       icon: <Search />,
       shortcut: "cmd+f",
       disabled: isDisabled(onFind),
-      onClick: onFind ?? noop,
+      onClick: onFind,
     },
     {
       id: "go-to-line",
@@ -292,7 +286,7 @@ export function buildEditorContextMenuItems({
       icon: <RotateCcw />,
       shortcut: "cmd+g",
       disabled: isDisabled(onGoToLine),
-      onClick: onGoToLine ?? noop,
+      onClick: onGoToLine,
     },
     {
       id: "bookmark",
@@ -300,7 +294,7 @@ export function buildEditorContextMenuItems({
       icon: <Bookmark />,
       shortcut: "cmd+k cmd+k",
       disabled: isDisabled(onToggleBookmark),
-      onClick: onToggleBookmark ?? noop,
+      onClick: onToggleBookmark,
     },
   ];
 }

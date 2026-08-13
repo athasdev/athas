@@ -1451,7 +1451,7 @@ export const ExtensionsSidebar = () => {
 
         if (appearanceOptions.length > 0) {
           if (items.length > 0) {
-            items.push({ id: "sep-appearance", label: "", separator: true, onClick: () => {} });
+            items.push({ id: "sep-appearance", separator: true });
           }
 
           for (const option of appearanceOptions) {
@@ -1521,7 +1521,7 @@ export const ExtensionsSidebar = () => {
     }
 
     if (items.length > 0) {
-      items.push({ id: "sep-primary-action", label: "", separator: true, onClick: () => {} });
+      items.push({ id: "sep-primary-action", separator: true });
     }
 
     if (!extension.isInstalled) {
@@ -1540,7 +1540,7 @@ export const ExtensionsSidebar = () => {
         label: primaryActionLabel,
         icon: <Trash className="size-3.5" weight="duotone" />,
         disabled: isInstalling,
-        className: "text-destructive hover:text-destructive",
+        tone: "destructive",
         onClick: () => {
           void handleToggle(extension);
         },
@@ -1551,7 +1551,7 @@ export const ExtensionsSidebar = () => {
         label: "Uninstall",
         icon: <Trash className="size-3.5" weight="duotone" />,
         disabled: isInstalling,
-        className: "text-destructive hover:text-destructive",
+        tone: "destructive",
         onClick: () => {
           void handleUninstall(extension);
         },

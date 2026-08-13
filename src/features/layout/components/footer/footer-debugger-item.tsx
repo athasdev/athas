@@ -78,7 +78,7 @@ export function useFooterDebuggerItem(
         icon: <BugIcon />,
         onClick: togglePane,
       },
-      { id: "debugger-actions-separator", label: "", onClick: () => {}, separator: true },
+      { id: "debugger-actions-separator", separator: true },
       {
         id: "clear-breakpoints",
         label: "Clear Breakpoints",
@@ -100,7 +100,7 @@ export function useFooterDebuggerItem(
         disabled: transcriptCount === 0,
         onClick: actions.clearAdapterTranscript,
       },
-      { id: "debugger-footer-separator", label: "", onClick: () => {}, separator: true },
+      { id: "debugger-footer-separator", separator: true },
       {
         id: "move-debugger-left",
         label: "Move Left",

@@ -122,7 +122,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       id: tab.id,
       label: tab.label,
       icon: <Icon className="size-4" weight="duotone" />,
-      className: tab.id === activeTab ? "bg-accent text-foreground" : undefined,
+      selected: tab.id === activeTab,
       onClick: () => handleTabChange(tab.id),
     };
   });

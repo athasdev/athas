@@ -118,9 +118,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     },
     {
       id: "settings-separator",
-      label: "",
       separator: true,
-      onClick: () => {},
     },
     {
       id: "sign-in",
@@ -145,9 +143,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     },
     {
       id: "plan-separator",
-      label: "",
       separator: true,
-      onClick: () => {},
     },
     {
       id: "subscription",
@@ -185,9 +181,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     },
     {
       id: "sign-out-separator",
-      label: "",
       separator: true,
-      onClick: () => {},
     },
     {
       id: "sign-out",

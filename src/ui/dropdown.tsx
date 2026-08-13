@@ -11,7 +11,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
 import { quickTransition } from "@/utils/motion";
 import { FloatingPopoverContent } from "@/ui/popover";
@@ -19,14 +18,6 @@ import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { CaretRightIcon, CheckIcon, MagnifyingGlassIcon as Search } from "@/ui/icons";
 import Keybinding from "@/features/keymaps/components/keybinding";
-
-export const DROPDOWN_TRIGGER_BASE = cn(
-  buttonVariants({
-    variant: "default",
-    size: "xs",
-  }),
-  "min-w-0 gap-1 rounded-md px-2 text-subtle-foreground",
-);
 
 export type DropdownDensity = "default" | "compact";
 
@@ -46,11 +37,22 @@ const dropdownItemVariants = cva(
         true: "bg-accent",
         false: "",
       },
+      selected: {
+        true: "bg-selected",
+        false: "",
+      },
+      tone: {
+        default: "",
+        accent: "text-primary",
+        destructive: "text-destructive hover:text-destructive",
+      },
     },
     defaultVariants: {
       density: "default",
       disabled: false,
       focused: false,
+      selected: false,
+      tone: "default",
     },
   },
 );
@@ -67,26 +69,40 @@ const dropdownSectionLabelVariants = cva("font-sans ui-text-sm text-subtle-foreg
   },
 });
 
-export const DROPDOWN_ITEM_BASE = dropdownItemVariants();
+export type MenuItemTone = "default" | "accent" | "destructive";
 
-export function dropdownTriggerClassName(className?: string) {
-  return cn(DROPDOWN_TRIGGER_BASE, className);
-}
+type MenuItemEnd =
+  | { shortcut?: string; trailing?: never }
+  | {
+      shortcut?: never;
+      trailing?: "disclosure" | { type: "text"; label: string };
+    };
 
-export function dropdownItemClassName(className?: string) {
-  return cn(DROPDOWN_ITEM_BASE, className);
-}
-
-export interface MenuItem {
+export type MenuActionItem = MenuItemEnd & {
   id: string;
   label: string;
   icon?: ReactNode;
-  onClick: () => void;
+  onClick?: () => void;
   disabled?: boolean;
-  separator?: boolean;
-  shortcut?: string;
-  trailing?: ReactNode;
-  className?: string;
+  separator?: false;
+  checked?: boolean;
+  selected?: boolean;
+  tone?: MenuItemTone;
+};
+
+interface MenuSeparatorItem {
+  id: string;
+  separator: true;
+}
+
+export type MenuItem = MenuActionItem | MenuSeparatorItem;
+
+export function menuSeparator(id: string): MenuItem {
+  return { id, separator: true };
+}
+
+export function isMenuActionItem(item: MenuItem): item is MenuActionItem {
+  return item.separator !== true;
 }
 
 interface DropdownMenuState<T> {
@@ -127,7 +143,6 @@ interface MenuItemsListProps {
   items: MenuItem[];
   onItemSelect?: () => void;
   className?: string;
-  itemClassName?: string;
   focusIndex?: number;
   density?: DropdownDensity;
   showIcons?: boolean;
@@ -137,7 +152,6 @@ export function MenuItemsList({
   items,
   onItemSelect,
   className,
-  itemClassName,
   focusIndex = -1,
   density = "default",
   showIcons = true,
@@ -161,32 +175,35 @@ export function MenuItemsList({
 
         selectableIdx++;
         const isFocused = selectableIdx === focusIndex;
+        const isDisabled = item.disabled || !item.onClick;
 
         return (
           <button
             key={item.id}
             ref={(el) => {
-              if (!item.disabled) {
+              if (!isDisabled) {
                 itemRefs.current[selectableIdx] = el;
               }
             }}
             type="button"
-            role="menuitem"
+            role={item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
+            aria-checked={item.checked}
             onClick={() => {
-              if (item.disabled) return;
-              item.onClick();
+              if (isDisabled) return;
+              item.onClick?.();
               onItemSelect?.();
             }}
-            disabled={item.disabled}
+            disabled={isDisabled}
             className={cn(
               dropdownItemVariants({
                 density,
-                disabled: item.disabled,
+                disabled: isDisabled,
                 focused: isFocused,
+                selected: item.selected,
+                tone: item.tone,
               }),
-              itemClassName,
-              item.className,
             )}
+            aria-current={item.selected ? "true" : undefined}
           >
             {showIcons && item.icon && (
               <span
@@ -199,7 +216,19 @@ export function MenuItemsList({
               </span>
             )}
             <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.label}</span>
-            {item.shortcut ? <Keybinding binding={item.shortcut} /> : item.trailing}
+            <span className="ml-auto flex shrink-0 items-center gap-2">
+              {item.shortcut ? <Keybinding binding={item.shortcut} /> : null}
+              {item.trailing === "disclosure" ? (
+                <CaretRightIcon className="size-3 text-subtle-foreground" />
+              ) : item.trailing?.type === "text" ? (
+                <span className="text-subtle-foreground tabular-nums">{item.trailing.label}</span>
+              ) : null}
+              {item.checked !== undefined ? (
+                <span className="flex size-4 items-center justify-center">
+                  {item.checked ? <CheckIcon className="text-primary" weight="duotone" /> : null}
+                </span>
+              ) : null}
+            </span>
           </button>
         );
       })}
@@ -354,7 +383,9 @@ export function Dropdown(props: DropdownProps) {
   const getFilteredItems = useCallback((): MenuItem[] => {
     const all = getAllItems();
     if (!searchQuery.trim()) return all;
-    return all.filter((item) => !item.separator && matchesSearchQuery(searchQuery, [item.label]));
+    return all
+      .filter(isMenuActionItem)
+      .filter((item) => matchesSearchQuery(searchQuery, [item.label]));
   }, [getAllItems, searchQuery]);
 
   const getFilteredSections = useCallback((): DropdownSection[] => {
@@ -363,9 +394,9 @@ export function Dropdown(props: DropdownProps) {
     return props
       .sections!.map((section) => ({
         ...section,
-        items: section.items.filter(
-          (item) => !item.separator && matchesSearchQuery(searchQuery, [item.label]),
-        ),
+        items: section.items
+          .filter(isMenuActionItem)
+          .filter((item) => matchesSearchQuery(searchQuery, [item.label])),
       }))
       .filter((section) => section.items.length > 0);
   }, [hasSections, searchQuery, props]);
@@ -573,7 +604,9 @@ export function Dropdown(props: DropdownProps) {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      const items = getFilteredItems().filter((item) => !item.separator && !item.disabled);
+      const items = getFilteredItems()
+        .filter(isMenuActionItem)
+        .filter((item) => !item.disabled && item.onClick);
       if (items.length === 0) return;
 
       switch (e.key) {
@@ -600,7 +633,7 @@ export function Dropdown(props: DropdownProps) {
         case "Enter": {
           e.preventDefault();
           if (focusIndex >= 0 && focusIndex < items.length) {
-            items[focusIndex].onClick();
+            items[focusIndex].onClick?.();
             if (closeOnSelect) {
               onClose();
             }

@@ -35,7 +35,7 @@ import { useFileClipboardStore } from "@/features/file-explorer/stores/file-expl
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
 import type { ContextMenuState } from "@/features/file-system/types/app.types";
 import { Button } from "@/ui/button";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { Dropdown, menuSeparator, type MenuItem } from "@/ui/dropdown";
 import Dialog from "@/ui/dialog";
 import { toast } from "sonner";
 import { getBaseName, getDirName, getRelativePath, joinPath } from "@/utils/path-helpers";
@@ -283,7 +283,7 @@ export function useFileExplorerContextMenu({
         });
       }
 
-      items.push({ id: "sep-dir", label: "", separator: true, onClick: () => {} });
+      items.push({ id: "sep-dir", separator: true });
     } else {
       const fileName = getBaseName(contextMenu.path, "");
       const canCreateEnvTemplate =
@@ -324,7 +324,7 @@ export function useFileExplorerContextMenu({
         },
         ...(canCreateEnvTemplate
           ? [
-              { id: "sep-env-template", label: "", separator: true, onClick: () => {} },
+              menuSeparator("sep-env-template"),
               ...ENV_TEMPLATE_TARGETS.map((target, index) => ({
                 id: target.id,
                 label: target.label,
@@ -355,7 +355,7 @@ export function useFileExplorerContextMenu({
             });
           },
         },
-        { id: "sep-file", label: "", separator: true, onClick: () => {} },
+        { id: "sep-file", separator: true },
       );
     }
 
@@ -434,12 +434,12 @@ export function useFileExplorerContextMenu({
             }
           },
         },
-        { id: "sep-end", label: "", separator: true, onClick: () => {} },
+        { id: "sep-end", separator: true },
         {
           id: "delete",
           label: "Delete",
           icon: <Trash />,
-          className: "text-destructive",
+          tone: "destructive",
           onClick: () => onDeleteRequested({ path: contextMenu.path, isDir: contextMenu.isDir }),
         },
       );

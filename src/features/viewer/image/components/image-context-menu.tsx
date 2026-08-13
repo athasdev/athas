@@ -109,7 +109,7 @@ export function ImageContextMenu({
       disabled: isProcessing,
       onClick: onRotate180,
     },
-    { id: "sep-1", label: "", separator: true, onClick: () => {} },
+    { id: "sep-1", separator: true },
     {
       id: "flip-horizontal",
       label: "Flip Horizontal",
@@ -131,7 +131,7 @@ export function ImageContextMenu({
       disabled: isProcessing,
       onClick: onResize,
     },
-    { id: "sep-2", label: "", separator: true, onClick: () => {} },
+    { id: "sep-2", separator: true },
     {
       id: "convert-png",
       label: "Convert to PNG...",
@@ -160,7 +160,7 @@ export function ImageContextMenu({
       disabled: isProcessing,
       onClick: () => handleFormatSelect("avif"),
     },
-    { id: "sep-3", label: "", separator: true, onClick: () => {} },
+    { id: "sep-3", separator: true },
     {
       id: "undo",
       label: "Undo",
@@ -175,12 +175,12 @@ export function ImageContextMenu({
             label: "Save",
             icon: <Save />,
             disabled: isProcessing,
-            className: "text-primary",
+            tone: "accent" as const,
             onClick: onSave,
           },
         ]
       : []),
-    { id: "sep-4", label: "", separator: true, onClick: () => {} },
+    { id: "sep-4", separator: true },
     {
       id: "reveal",
       label: "Show in Finder",

@@ -15,7 +15,7 @@ import {
 } from "@/ui/icons";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Button } from "@/ui/button";
-import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
+import { Dropdown } from "@/ui/dropdown";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/ui/input-group";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 
@@ -216,51 +216,30 @@ export function WebViewerToolbar({
           anchorSide="bottom"
           anchorAlign="end"
           onClose={() => setShowZoomPopover(false)}
-          className="w-36 overflow-hidden rounded-lg p-1.5"
-        >
-          <div className="space-y-1">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                onZoomIn();
-                setShowZoomPopover(false);
-              }}
-              disabled={zoomLevel >= 3}
-              className={dropdownItemClassName("justify-between")}
-            >
-              <span>Zoom in</span>
-              <Plus className="size-3.5" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                onZoomOut();
-                setShowZoomPopover(false);
-              }}
-              disabled={zoomLevel <= 0.25}
-              className={dropdownItemClassName("justify-between")}
-            >
-              <span>Zoom out</span>
-              <Minus className="size-3.5" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                onResetZoom();
-                setShowZoomPopover(false);
-              }}
-              className={dropdownItemClassName("justify-between")}
-            >
-              <span>Reset zoom</span>
-              <span className="text-subtle-foreground ui-text-sm">
-                {Math.round(zoomLevel * 100)}%
-              </span>
-            </Button>
-          </div>
-        </Dropdown>
+          className="w-36"
+          items={[
+            {
+              id: "zoom-in",
+              label: "Zoom in",
+              icon: <Plus />,
+              disabled: zoomLevel >= 3,
+              onClick: onZoomIn,
+            },
+            {
+              id: "zoom-out",
+              label: "Zoom out",
+              icon: <Minus />,
+              disabled: zoomLevel <= 0.25,
+              onClick: onZoomOut,
+            },
+            {
+              id: "reset-zoom",
+              label: "Reset zoom",
+              trailing: { type: "text", label: `${Math.round(zoomLevel * 100)}%` },
+              onClick: onResetZoom,
+            },
+          ]}
+        />
         <Button
           variant="ghost"
           onClick={onClearBrowsingData}

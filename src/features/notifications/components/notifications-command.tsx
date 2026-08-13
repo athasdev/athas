@@ -127,7 +127,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
         icon: <ClipboardText />,
         onClick: () => void copyText(formatNotificationText(notification)),
       },
-      { id: "sep-delete", label: "", separator: true, onClick: () => {} },
+      { id: "sep-delete", separator: true },
       {
         id: "delete-notification",
         label: "Delete",
@@ -176,7 +176,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
         label: item.label,
         icon: item.icon,
         onClick: () => setNotificationFilter(item.value as NotificationFilter),
-        className: notificationFilter === item.value ? "bg-accent text-foreground" : undefined,
+        selected: notificationFilter === item.value,
       })),
     [notificationFilter],
   );

@@ -1,6 +1,5 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import {
-  CheckIcon as Check,
   SlidersHorizontalIcon as SlidersHorizontal,
   SquareIcon as Square,
   LightningIcon as Zap,
@@ -36,8 +35,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/ui/combobox";
-import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
-import Keybinding from "@/features/keymaps/components/keybinding";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
@@ -45,8 +43,6 @@ import { getFilenameFromPath } from "@/features/file-system/controllers/file-uti
 
 const statusChipClass =
   "font-sans inline-flex h-5 items-center self-center rounded-full border-0 px-1.5 ui-text-sm leading-none text-subtle-foreground transition-colors hover:bg-accent hover:text-foreground";
-
-const editorMenuItemClass = dropdownItemClassName("min-h-7");
 
 const editorMenuActionButtonClass = "min-h-6 px-2 ui-text-sm text-subtle-foreground";
 
@@ -483,6 +479,23 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       disabled: false,
     },
   ];
+  const viewMenuItems: MenuItem[] = [];
+  for (const [index, option] of displayOptions.entries()) {
+    if (index === 2 || index === 6) {
+      viewMenuItems.push({
+        id: `display-separator-${index}`,
+        separator: true,
+      });
+    }
+    viewMenuItems.push({
+      id: option.id,
+      label: option.label,
+      checked: option.checked,
+      shortcut: option.shortcut ?? undefined,
+      disabled: option.disabled,
+      onClick: () => void option.onToggle(),
+    });
+  }
 
   return (
     <>
@@ -716,66 +729,9 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           anchorSide="bottom"
           anchorAlign="end"
           onClose={() => setIsViewMenuOpen(false)}
-          className="w-55 p-1.5"
-        >
-          <div className="space-y-0.5">
-            {displayOptions.slice(0, 2).map((option) => (
-              <Button
-                key={option.id}
-                type="button"
-                onClick={() => !option.disabled && void option.onToggle()}
-                variant="ghost"
-                size="xs"
-                className={editorMenuItemClass}
-                disabled={option.disabled}
-              >
-                <span>{option.label}</span>
-                <span className="flex items-center gap-2">
-                  {option.shortcut ? (
-                    <Keybinding binding={option.shortcut} className="shrink-0" />
-                  ) : null}
-                  <span className="flex size-4 items-center justify-center">
-                    {option.checked ? <Check className="text-primary" weight="duotone" /> : null}
-                  </span>
-                </span>
-              </Button>
-            ))}
-            <div className="my-1 border-t border-border/70" />
-            {displayOptions.slice(2, 6).map((option) => (
-              <Button
-                key={option.id}
-                type="button"
-                onClick={() => !option.disabled && void option.onToggle()}
-                variant="ghost"
-                size="xs"
-                className={editorMenuItemClass}
-                disabled={option.disabled}
-              >
-                <span>{option.label}</span>
-                <span className="flex size-4 items-center justify-center">
-                  {option.checked ? <Check className="text-primary" weight="duotone" /> : null}
-                </span>
-              </Button>
-            ))}
-            <div className="my-1 border-t border-border/70" />
-            {displayOptions.slice(6).map((option) => (
-              <Button
-                key={option.id}
-                type="button"
-                onClick={() => !option.disabled && void option.onToggle()}
-                variant="ghost"
-                size="xs"
-                className={editorMenuItemClass}
-                disabled={option.disabled}
-              >
-                <span>{option.label}</span>
-                <span className="flex size-4 items-center justify-center">
-                  {option.checked ? <Check className="text-primary" weight="duotone" /> : null}
-                </span>
-              </Button>
-            ))}
-          </div>
-        </Dropdown>
+          className="w-55"
+          items={viewMenuItems}
+        />
       </div>
     </>
   );

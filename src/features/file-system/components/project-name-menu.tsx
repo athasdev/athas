@@ -58,11 +58,7 @@ export const ProjectNameMenu = () => {
         onClick: () => openRecentFolder(folder.path),
       }));
 
-    return [
-      ...baseItems,
-      { id: "sep-recent", label: "", separator: true, onClick: () => {} },
-      ...recentItems,
-    ];
+    return [...baseItems, { id: "sep-recent", separator: true }, ...recentItems];
   }, [
     addFolderToWorkspace,
     handleCollapseAllFolders,
