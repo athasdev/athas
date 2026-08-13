@@ -10,7 +10,7 @@ import {
   PushPinIcon,
   SparkleIcon,
 } from "@/ui/icons";
-import { cn } from "@/utils/cn";
+import { SidebarListItem } from "@/ui/sidebar";
 
 export interface AgentSessionSidebarItemProps {
   title: string;
@@ -62,32 +62,21 @@ export function AgentSessionSidebarItem({
 
   return (
     <HoverCard>
-      <div
-        className={cn(
-          "group/agent-session relative flex min-h-6 w-full min-w-0 items-center rounded-md",
-          active && "bg-accent text-foreground",
-        )}
-      >
+      <div className="group/agent-session relative flex w-full min-w-0 items-center">
         <HoverCardTrigger
           delay={320}
           closeDelay={140}
           onClick={onOpen}
           render={
-            <button
-              type="button"
-              className={cn(
-                "flex min-h-6 w-full min-w-0 items-center gap-2 rounded-md py-1 pr-12 pl-2 text-left text-subtle-foreground ui-text-sm transition-colors",
-                "hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none",
-                active && "text-foreground",
-              )}
-            />
+            <SidebarListItem
+              active={active}
+              leading={<ProviderIcon providerId={providerIconId} size={16} />}
+              className="pr-12"
+            >
+              {title}
+            </SidebarListItem>
           }
-        >
-          <span className="flex size-4 shrink-0 items-center justify-center">
-            <ProviderIcon providerId={providerIconId} size={16} />
-          </span>
-          <span className="min-w-0 flex-1 truncate">{title}</span>
-        </HoverCardTrigger>
+        />
 
         <span className="pointer-events-none absolute right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/agent-session:pointer-events-auto group-hover/agent-session:opacity-100 group-focus-within/agent-session:pointer-events-auto group-focus-within/agent-session:opacity-100">
           <Button
@@ -95,7 +84,6 @@ export function AgentSessionSidebarItem({
             variant="ghost"
             size="icon-xs"
             active={pinned}
-            className="size-5"
             aria-pressed={pinned}
             tooltip={pinned ? "Unpin session" : "Pin session"}
             tooltipSide="top"
@@ -110,7 +98,7 @@ export function AgentSessionSidebarItem({
             type="button"
             variant="ghost"
             size="icon-xs"
-            className="size-5 hover:text-destructive"
+            className="hover:text-destructive"
             tooltip="Archive session"
             tooltipSide="top"
             onClick={(event) => {

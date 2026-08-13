@@ -234,16 +234,20 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) px-2 py-1 text-left font-normal text-subtle-foreground transition-[background-color,color]",
+        "athas-chrome-control font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) px-2 py-1 text-left font-normal text-subtle-foreground transition-[background-color,color]",
         "hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
         active && "bg-selected font-medium text-foreground",
+        description && "min-h-11 items-start py-1.5",
         iconOnly && "justify-center gap-0 rounded-full px-0",
         className,
       )}
+      data-active={active}
       {...props}
     >
       {leading ? (
-        <span className="flex shrink-0 items-center justify-center">{leading}</span>
+        <span className={cn("flex shrink-0 items-center justify-center", description && "mt-0.5")}>
+          {leading}
+        </span>
       ) : null}
       <span
         aria-hidden={iconOnly ? true : undefined}
@@ -254,14 +258,23 @@ export function SidebarListItem({
           contentClassName,
         )}
       >
-        <span className="block max-w-full truncate">{children}</span>
+        <span
+          className={cn("block max-w-full truncate", description && "font-medium text-foreground")}
+        >
+          {children}
+        </span>
         {description ? (
-          <span className="block max-w-full truncate text-subtle-foreground/80 ui-text-caption">
-            {description}
+          <span className="mt-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden font-normal leading-4 text-subtle-foreground/80 ui-text-caption">
+            <span className="min-w-0 flex-1 truncate">{description}</span>
+            {trailing ? (
+              <span className="ml-auto max-w-[45%] shrink-0 truncate whitespace-nowrap text-right">
+                {trailing}
+              </span>
+            ) : null}
           </span>
         ) : null}
       </span>
-      {trailing && !iconOnly ? (
+      {trailing && !iconOnly && !description ? (
         <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-subtle-foreground/80 ui-text-caption">
           {trailing}
         </span>
@@ -284,9 +297,10 @@ export function SidebarListEditor({
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) bg-selected px-2 py-1 font-medium text-foreground",
+        "athas-chrome-control font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) bg-selected px-2 py-1 font-medium text-foreground",
         className,
       )}
+      data-active="true"
       {...props}
     >
       {leading ? (

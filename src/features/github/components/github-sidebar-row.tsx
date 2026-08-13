@@ -1,5 +1,6 @@
 import { type DragEventHandler, type MouseEventHandler, type ReactNode, useCallback } from "react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
+import { SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
 type PreviewBadgeTone = "default" | "accent" | "success" | "warning" | "error" | "muted";
@@ -80,71 +81,36 @@ export function GitHubSidebarRow({
     [onPrefetch],
   );
 
-  const rowClassName = cn(
-    "font-sans group/github-row flex min-h-12 w-full min-w-0 max-w-full cursor-pointer items-start gap-2 overflow-hidden rounded-lg px-2 py-1.5 text-left text-subtle-foreground transition-[background-color,color]",
-    "hover:bg-accent/70 hover:text-foreground focus-visible:bg-accent/70 focus-visible:text-foreground focus-visible:outline-none",
-    active && "bg-accent/80 text-foreground",
-    className,
-  );
-  const rowContent = (
-    <>
-      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center overflow-hidden">
-        {leading}
-      </span>
-      <span className="w-0 min-w-0 flex-1 overflow-hidden">
-        <span className="ui-text-base block w-full truncate whitespace-nowrap font-medium leading-5 text-foreground">
-          {title}
+  const row = (
+    <SidebarListItem
+      active={active}
+      leading={
+        <span className="flex size-5 shrink-0 items-center justify-center overflow-hidden">
+          {leading}
         </span>
-        {description || trailing ? (
-          <span className="ui-text-sm mt-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden leading-4 text-subtle-foreground">
-            <span className="min-w-0 flex-1 overflow-hidden truncate whitespace-nowrap">
-              {description}
-            </span>
-            {trailing ? (
-              <span className="ml-auto flex min-w-0 max-w-[45%] shrink-0 items-center justify-end gap-1.5 overflow-hidden whitespace-nowrap text-right">
-                {trailing}
-              </span>
-            ) : null}
-          </span>
-        ) : null}
-      </span>
-    </>
+      }
+      description={description}
+      trailing={trailing}
+      className={cn("group/github-row", className)}
+      draggable={draggable}
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+      onDragStart={onDragStart}
+      onFocus={onPrefetch}
+      onMouseEnter={onPrefetch}
+      onPointerDown={onPrefetch}
+    >
+      {title}
+    </SidebarListItem>
   );
 
   if (!preview) {
-    return (
-      <button
-        type="button"
-        className={rowClassName}
-        draggable={draggable}
-        onClick={onClick}
-        onContextMenu={onContextMenu}
-        onDragStart={onDragStart}
-        onFocus={onPrefetch}
-        onMouseEnter={onPrefetch}
-        onPointerDown={onPrefetch}
-      >
-        {rowContent}
-      </button>
-    );
+    return row;
   }
 
   return (
     <HoverCard onOpenChange={handleOpenChange}>
-      <HoverCardTrigger
-        delay={360}
-        closeDelay={120}
-        draggable={draggable}
-        onClick={onClick}
-        onContextMenu={onContextMenu}
-        onDragStart={onDragStart}
-        onFocus={onPrefetch}
-        onMouseEnter={onPrefetch}
-        onPointerDown={onPrefetch}
-        render={<button type="button" className={rowClassName} />}
-      >
-        {rowContent}
-      </HoverCardTrigger>
+      <HoverCardTrigger delay={360} closeDelay={120} render={row} />
       <HoverCardContent
         side="right"
         align="start"
