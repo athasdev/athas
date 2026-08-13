@@ -77,5 +77,3 @@ export const menuSeparatorVariants = cva("-mx-1 h-px bg-border", {
     density: "compact",
   },
 });
-
-export const menuTriggerVariants = cva("rounded-full outline-none");

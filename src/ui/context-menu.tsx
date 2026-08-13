@@ -7,7 +7,6 @@ import {
   menuLabelVariants,
   menuSeparatorVariants,
   menuSurfaceVariants,
-  menuTriggerVariants,
 } from "@/design-system/menu";
 import { cn } from "@/utils/cn";
 
@@ -23,7 +22,7 @@ function ContextMenuTrigger({ className, ...props }: ContextMenuPrimitive.Trigge
   return (
     <ContextMenuPrimitive.Trigger
       data-slot="context-menu-trigger"
-      className={cn(menuTriggerVariants(), className)}
+      className={className}
       {...props}
     />
   );

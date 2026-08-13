@@ -23,7 +23,6 @@ import {
   menuLabelVariants,
   menuSeparatorVariants,
   menuSurfaceVariants,
-  menuTriggerVariants,
 } from "@/design-system/menu";
 
 export type DropdownDensity = MenuDensity;
@@ -694,14 +693,8 @@ function DropdownMenuPortal(props: DropdownMenuPrimitive.Portal.Props) {
   return <DropdownMenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />;
 }
 
-function DropdownMenuTrigger({ className, ...props }: DropdownMenuPrimitive.Trigger.Props) {
-  return (
-    <DropdownMenuPrimitive.Trigger
-      data-slot="dropdown-menu-trigger"
-      className={cn(menuTriggerVariants(), className)}
-      {...props}
-    />
-  );
+function DropdownMenuTrigger(props: DropdownMenuPrimitive.Trigger.Props) {
+  return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
 }
 
 function DropdownMenuSearch({
