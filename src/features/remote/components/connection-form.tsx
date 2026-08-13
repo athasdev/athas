@@ -32,7 +32,6 @@ interface ConnectionFormProps {
   idPrefix: string;
   formId?: string;
   nameInputRef?: Ref<HTMLInputElement>;
-  selectMenuClassName?: string;
   onSubmit?: () => void;
 }
 
@@ -50,7 +49,6 @@ export default function ConnectionForm({
   idPrefix,
   formId,
   nameInputRef,
-  selectMenuClassName,
   onSubmit,
 }: ConnectionFormProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -117,7 +115,6 @@ export default function ConnectionForm({
           options={connectionTypeOptions}
           onChange={(value) => onChange({ type: value as RemoteConnectionFormData["type"] })}
           className="ui-text-sm"
-          menuClassName={selectMenuClassName}
         />
       </Field>
 

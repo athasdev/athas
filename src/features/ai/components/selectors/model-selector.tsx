@@ -12,7 +12,6 @@ interface ModelSelectorProps {
   appearance?: "settings" | "composer";
   disabled?: boolean;
   className?: string;
-  triggerClassName?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   tooltip?: string;
@@ -25,7 +24,6 @@ export function ModelSelector({
   appearance = "settings",
   disabled,
   className,
-  triggerClassName,
   open,
   onOpenChange,
   tooltip,
@@ -64,9 +62,8 @@ export function ModelSelector({
       open={open}
       onOpenChange={onOpenChange}
       tooltip={tooltip}
-      className={cn(!isComposer && "w-fit max-w-full", className)}
-      triggerClassName={cn(isComposer ? "max-w-44" : "w-fit max-w-full", triggerClassName)}
-      menuClassName="w-fit min-w-0 max-w-(--available-width) p-0"
+      className={cn(isComposer ? "w-fit max-w-44" : "w-fit max-w-full", className)}
+      menuWidth="content"
       menuMinWidth={isComposer ? 260 : 0}
       menuAnimated={!isComposer}
       menuHeader={

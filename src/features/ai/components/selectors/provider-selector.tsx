@@ -12,7 +12,6 @@ interface ProviderSelectorProps {
   appearance?: "settings" | "composer";
   disabled?: boolean;
   className?: string;
-  triggerClassName?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   tooltip?: string;
@@ -24,7 +23,6 @@ export function ProviderSelector({
   appearance = "settings",
   disabled,
   className,
-  triggerClassName,
   open,
   onOpenChange,
   tooltip,
@@ -60,9 +58,8 @@ export function ProviderSelector({
       open={open}
       onOpenChange={onOpenChange}
       tooltip={tooltip}
-      className={cn(!isComposer && "w-fit max-w-full", className)}
-      triggerClassName={cn(isComposer ? "max-w-32" : "w-fit max-w-full gap-2", triggerClassName)}
-      menuClassName="w-fit min-w-0 max-w-(--available-width) p-0"
+      className={cn(isComposer ? "w-fit max-w-32" : "w-fit max-w-full", className)}
+      menuWidth="content"
       menuMinWidth={isComposer ? 220 : 0}
       menuAnimated={!isComposer}
     />

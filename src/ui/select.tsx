@@ -37,14 +37,14 @@ export interface SelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
-  triggerClassName?: string;
-  menuClassName?: string;
+  menuWidth?: "anchor" | "content";
   menuHeader?: ReactNode;
   menuMinWidth?: number;
   menuAnimated?: boolean;
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
   variant?: "default" | "ghost";
+  align?: "default" | "start";
   searchable?: boolean;
   searchableTrigger?: "menu" | "input";
   allowCustomValue?: boolean;
@@ -163,14 +163,14 @@ function PlainSelect({
   onChange,
   placeholder,
   className,
-  triggerClassName,
-  menuClassName,
+  menuWidth,
   menuHeader,
   menuMinWidth,
   menuAnimated,
   disabled,
   size,
   variant,
+  align,
   openDirection,
   leftIcon,
   id,
@@ -219,7 +219,7 @@ function PlainSelect({
             !iconOnly &&
               "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
             !iconOnly && selectTriggerSizeClassName[size],
-            triggerClassName,
+            align === "start" && "justify-start",
           )}
         >
           <SelectTriggerContent
@@ -247,7 +247,7 @@ function PlainSelect({
               className={cn(
                 selectPopupClassName,
                 !menuAnimated && "duration-0 data-ending-style:transform-none",
-                menuClassName,
+                menuWidth === "content" && "w-fit min-w-0 max-w-(--available-width)",
               )}
             >
               {menuHeader}
@@ -289,14 +289,14 @@ function SearchableSelect({
   onChange,
   placeholder,
   className,
-  triggerClassName,
-  menuClassName,
+  menuWidth,
   menuHeader,
   menuMinWidth,
   menuAnimated,
   disabled,
   size,
   variant,
+  align,
   searchableTrigger,
   openDirection,
   leftIcon,
@@ -406,7 +406,7 @@ function SearchableSelect({
             leftIcon={componentIcon}
             size={size}
             variant={variant}
-            className={cn("w-full", triggerClassName)}
+            className="w-full"
             inputClassName="font-normal"
             showTrigger={!hideChevron}
           />
@@ -424,7 +424,7 @@ function SearchableSelect({
               !iconOnly &&
                 "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
               !iconOnly && selectTriggerSizeClassName[size],
-              triggerClassName,
+              align === "start" && "justify-start",
             )}
           >
             <SelectTriggerContent
@@ -449,7 +449,7 @@ function SearchableSelect({
         className={cn(
           "z-10070",
           !menuAnimated && "duration-0 data-ending-style:transform-none",
-          menuClassName,
+          menuWidth === "content" && "w-fit min-w-0 max-w-(--available-width)",
         )}
       >
         {searchableTrigger === "menu" ? (
@@ -478,14 +478,14 @@ function SearchableSelect({
 export default function Select({
   placeholder = "Select...",
   className = "",
-  triggerClassName = "",
-  menuClassName = "",
+  menuWidth = "anchor",
   menuHeader,
   menuMinWidth = 0,
   menuAnimated = true,
   disabled = false,
   size = "sm",
   variant = "ghost",
+  align = "default",
   searchable = false,
   searchableTrigger = "menu",
   allowCustomValue = false,
@@ -512,14 +512,14 @@ export default function Select({
     ...props,
     placeholder,
     className,
-    triggerClassName,
-    menuClassName,
+    menuWidth,
     menuHeader,
     menuMinWidth,
     menuAnimated,
     disabled,
     size,
     variant,
+    align,
     searchableTrigger,
     allowCustomValue,
     customValueLabel,

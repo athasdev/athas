@@ -92,10 +92,9 @@ describe("settings UI contract", () => {
     for (const fileName of ["provider-selector.tsx", "model-selector.tsx"]) {
       const source = readFileSync(`${aiSelectorsDirectory}/${fileName}`, "utf8");
 
-      expect(source, fileName).toContain('!isComposer && "w-fit max-w-full"');
-      expect(source, fileName).toContain(
-        'menuClassName="w-fit min-w-0 max-w-(--available-width) p-0"',
-      );
+      expect(source, fileName).toContain('isComposer ? "w-fit max-w-');
+      expect(source, fileName).toContain(': "w-fit max-w-full"');
+      expect(source, fileName).toContain('menuWidth="content"');
     }
   });
 });

@@ -437,8 +437,9 @@ ${statusSummary}`;
                   placeholder={isLoadingMetadata ? "Loading..." : "Choose workflow"}
                   searchable
                   size="sm"
+                  variant="ghost"
+                  align="start"
                   className="min-w-0 flex-1"
-                  triggerClassName="justify-start bg-transparent"
                   menuMinWidth={280}
                   aria-label="Choose workflow"
                 />
@@ -453,8 +454,9 @@ ${statusSummary}`;
                   searchable
                   allowCustomValue
                   size="sm"
+                  variant="ghost"
+                  align="start"
                   className="min-w-0 flex-1"
-                  triggerClassName="justify-start bg-transparent"
                   menuMinWidth={240}
                   aria-label="Choose workflow ref"
                 />
@@ -515,8 +517,9 @@ ${statusSummary}`;
                   searchable
                   allowCustomValue
                   size="xs"
+                  variant="ghost"
+                  align="start"
                   className="w-52"
-                  triggerClassName="justify-start bg-transparent"
                   menuMinWidth={240}
                   aria-label="Choose head branch"
                 />
@@ -530,8 +533,9 @@ ${statusSummary}`;
                   searchable
                   allowCustomValue
                   size="xs"
+                  variant="ghost"
+                  align="start"
                   className="w-52"
-                  triggerClassName="justify-start bg-transparent"
                   menuMinWidth={240}
                   aria-label="Choose base branch"
                 />

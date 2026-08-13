@@ -559,7 +559,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   size="xs"
                   variant="ghost"
                   className="w-full"
-                  triggerClassName="justify-start"
+                  align="start"
                   aria-label="Issue type"
                 />
               </GitHubDetailSection>
@@ -582,7 +582,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   size="xs"
                   variant="ghost"
                   className="w-full"
-                  triggerClassName="justify-start"
+                  align="start"
                   aria-label="Issue milestone"
                 />
               </GitHubDetailSection>

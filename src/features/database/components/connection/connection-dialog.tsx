@@ -257,7 +257,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
         }))}
         variant="default"
         className="w-full"
-        menuClassName="z-10040"
       />
 
       <Tabs value={mode} onValueChange={(value) => handleModeChange(value as "form" | "string")}>
