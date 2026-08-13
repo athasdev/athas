@@ -11,6 +11,7 @@ import {
   type Icon as AppIcon,
 } from "@/ui/icons";
 import { forwardRef, type ComponentProps, type ReactNode, type RefObject } from "react";
+import { menuSurfaceVariants } from "@/design-system/menu";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { Toggle } from "@/ui/toggle";
@@ -67,9 +68,6 @@ export const SearchField = forwardRef<
   );
 });
 
-const searchSurfaceClass =
-  "w-[320px] rounded-xl border border-border/70 bg-background/95 p-1.5 shadow-(--shadow-popover) backdrop-blur-sm";
-
 export function SearchPopover({
   value,
   onChange,
@@ -89,12 +87,11 @@ export function SearchPopover({
   className,
 }: SearchPopoverProps) {
   return (
-    <div className={cn(searchSurfaceClass, className)}>
+    <div className={cn(menuSurfaceVariants({ density: "compact" }), "w-80", className)}>
       <div className="flex items-center gap-1.5">
         {leadingControl}
 
         <div className="relative min-w-0 flex-1">
-          <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-subtle-foreground" />
           <Input
             ref={inputRef}
             type="text"
@@ -102,7 +99,9 @@ export function SearchPopover({
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={onKeyDown}
             placeholder={placeholder}
-            className="ui-text-sm h-8 rounded-lg border-border/80 bg-background py-1 pr-8 pl-8"
+            leftIcon={Search}
+            size="md"
+            className="pr-8"
           />
           {value && (
             <Button
@@ -247,7 +246,7 @@ export function SearchReplaceRow({
 }) {
   return (
     <div className="flex items-center gap-1.5 border-border/60 border-t pt-1.5">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background text-subtle-foreground">
+      <span className="flex size-8 shrink-0 items-center justify-center text-subtle-foreground">
         <Replace />
       </span>
 
@@ -258,7 +257,8 @@ export function SearchReplaceRow({
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
         placeholder="Replace with..."
-        className="ui-text-sm h-8 flex-1 rounded-lg border-border/80 bg-background py-1"
+        size="md"
+        className="flex-1"
       />
 
       <Button type="button" onClick={onReplace} disabled={!canReplace} variant="ghost">
@@ -303,7 +303,6 @@ export function SearchInput({
   return (
     <div className={cn("flex min-w-0 flex-1 items-center gap-1.5", className)}>
       <div className="relative min-w-0 flex-1">
-        <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-subtle-foreground" />
         <Input
           ref={inputRef}
           type="text"
@@ -311,7 +310,9 @@ export function SearchInput({
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className="ui-text-sm h-8 rounded-lg border-border/80 bg-background py-1 pr-8 pl-8"
+          leftIcon={Search}
+          size="md"
+          className="pr-8"
         />
         {value && (
           <Button

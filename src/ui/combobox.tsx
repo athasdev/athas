@@ -3,6 +3,12 @@ import type { Icon as AppIcon } from "@/ui/icons";
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { forwardRef, useRef, type ButtonHTMLAttributes, type CSSProperties } from "react";
+import {
+  menuItemVariants,
+  menuLabelVariants,
+  menuSeparatorVariants,
+  menuSurfaceVariants,
+} from "@/design-system/menu";
 import { controlIconSizes, controlSizeVariants } from "@/utils/control-variants";
 import { cn } from "@/utils/cn";
 
@@ -75,31 +81,6 @@ const comboboxIconPositionVariants = cva(
     },
     defaultVariants: {
       size: "sm",
-    },
-  },
-);
-
-const comboboxItemVariants = cva(
-  "font-sans ui-text-sm flex min-h-7 w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-foreground outline-none transition-[transform,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50",
-  {
-    variants: {
-      highlighted: {
-        true: "data-highlighted:bg-accent",
-        false: "",
-      },
-      selected: {
-        true: "data-selected:bg-selected/70",
-        false: "",
-      },
-      indicator: {
-        true: "relative pr-8",
-        false: "",
-      },
-    },
-    defaultVariants: {
-      highlighted: true,
-      selected: true,
-      indicator: true,
     },
   },
 );
@@ -241,8 +222,8 @@ function ComboboxContent({
           data-slot="combobox-content"
           data-chips={Boolean(anchor)}
           className={cn(
-            "group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-60 origin-(--transform-origin) overflow-hidden rounded-xl border border-border bg-surface/95 text-foreground shadow-(--shadow-popover) backdrop-blur-sm",
-            "transition-[opacity,transform,filter] duration-(--app-duration-fast) ease-(--app-ease-smooth) filter-[blur(0)] data-ending-style:opacity-0 data-ending-style:filter-[blur(2px)] data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-starting-style:filter-[blur(2px)]",
+            menuSurfaceVariants({ density: "compact" }),
+            "group/combobox-content relative w-(--anchor-width) max-w-(--available-width) min-w-60 overflow-hidden text-foreground duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
             className,
           )}
           {...props}
@@ -275,7 +256,7 @@ function ComboboxActionItem({
       data-slot="combobox-action-item"
       type={type}
       className={cn(
-        comboboxItemVariants({ indicator: false }),
+        menuItemVariants({ density: "compact" }),
         "cursor-pointer hover:bg-accent active:scale-(--app-press-scale)",
         className,
       )}
@@ -295,7 +276,7 @@ function ComboboxItem({
   return (
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
-      className={cn(comboboxItemVariants({ indicator: showIndicator }), className)}
+      className={cn(menuItemVariants({ density: "compact" }), showIndicator && "pr-8", className)}
       {...props}
     >
       {children}
@@ -318,7 +299,7 @@ function ComboboxLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Pro
   return (
     <ComboboxPrimitive.GroupLabel
       data-slot="combobox-label"
-      className={cn("font-sans ui-text-sm px-2 py-1 text-subtle-foreground", className)}
+      className={cn(menuLabelVariants({ density: "compact" }), className)}
       {...props}
     />
   );
@@ -345,7 +326,7 @@ function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.
   return (
     <ComboboxPrimitive.Separator
       data-slot="combobox-separator"
-      className={cn("-mx-1 my-1 h-px bg-border", className)}
+      className={cn(menuSeparatorVariants({ density: "compact" }), className)}
       {...props}
     />
   );

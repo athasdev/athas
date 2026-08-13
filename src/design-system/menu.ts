@@ -18,7 +18,7 @@ export const menuSurfaceVariants = cva(
 );
 
 export const menuItemVariants = cva(
-  "font-sans ui-text-chrome relative flex w-full cursor-default items-center justify-between whitespace-nowrap rounded-md text-left text-subtle-foreground outline-hidden select-none transition-colors focus:bg-accent/70 focus:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "font-sans ui-text-chrome relative flex w-full cursor-default items-center justify-between whitespace-nowrap rounded-md text-left text-subtle-foreground outline-hidden select-none transition-colors focus:bg-accent/70 focus:text-foreground data-highlighted:bg-accent/70 data-highlighted:text-foreground data-selected:bg-selected disabled:pointer-events-none disabled:opacity-50 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       density: {

@@ -2,6 +2,7 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import type { ComponentType, CSSProperties, ReactElement, ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
+import { menuItemVariants, menuSurfaceVariants } from "@/design-system/menu";
 import { buttonVariants } from "@/ui/button";
 import {
   Combobox,
@@ -61,12 +62,6 @@ export interface SelectProps {
   onOpenChange?: (open: boolean) => void;
   "aria-label"?: string;
 }
-
-const selectItemClassName =
-  "font-sans ui-text-sm relative flex min-h-7 w-full cursor-default select-none items-center gap-2 rounded-lg px-2 py-1.5 text-left text-foreground outline-none transition-[transform,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) data-highlighted:bg-accent data-selected:bg-selected/70 disabled:pointer-events-none disabled:opacity-50";
-
-const selectPopupClassName =
-  "max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-36 origin-(--transform-origin) overflow-hidden rounded-xl border border-border bg-surface/95 text-foreground shadow-(--shadow-popover) backdrop-blur-sm transition-[opacity,transform,filter] duration-(--app-duration-fast) ease-(--app-ease-smooth) filter-[blur(0)] data-ending-style:opacity-0 data-ending-style:filter-[blur(2px)] data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-starting-style:filter-[blur(2px)]";
 
 const selectTriggerSizeClassName = {
   xs: "ui-text-sm",
@@ -245,20 +240,21 @@ function PlainSelect({
               data-prevent-dialog-escape="true"
               style={popupStyle}
               className={cn(
-                selectPopupClassName,
+                menuSurfaceVariants({ density: "compact" }),
+                "w-(--anchor-width) max-w-(--available-width) min-w-36 overflow-hidden text-foreground duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
                 !menuAnimated && "duration-0 data-ending-style:transform-none",
                 menuWidth === "content" && "w-fit min-w-0 max-w-(--available-width)",
               )}
             >
               {menuHeader}
-              <SelectPrimitive.List className="custom-scrollbar-thin max-h-96 overflow-y-auto overscroll-contain p-1">
+              <SelectPrimitive.List className="custom-scrollbar-thin max-h-96 overflow-y-auto overscroll-contain">
                 {options.map((option) => (
                   <SelectPrimitive.Item
                     key={option.value}
                     value={option.value}
                     label={option.label}
                     disabled={option.disabled}
-                    className={selectItemClassName}
+                    className={menuItemVariants({ density: "compact" })}
                   >
                     {option.icon ? (
                       <span className="size-3 shrink-0 text-subtle-foreground">{option.icon}</span>
