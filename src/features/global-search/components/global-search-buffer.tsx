@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefCallback } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { toast } from "sonner";
 import type {
   FileNavigatorItem,
@@ -14,11 +15,13 @@ import {
 } from "../constants/limits";
 import { useContentSearch } from "../hooks/use-content-search";
 import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
+import { useGlobalSearchSessionStore } from "../stores/global-search-session.store";
 import { buildSearchExcerpts } from "../utils/search-excerpts";
 import { replaceAllInSources, replaceNextInSource } from "../utils/source-replace";
 import { GlobalSearchResults } from "./global-search-results";
 import { GlobalSearchState } from "./global-search-state";
 import { GlobalSearchToolbar } from "./global-search-toolbar";
+import type { SearchExcerptScroller } from "./search-excerpt-results";
 
 const DEFAULT_CONTEXT_LINES = 2;
 const EXPANDED_CONTEXT_LINES = 7;
@@ -52,15 +55,23 @@ const GlobalSearchBuffer = () => {
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const pendingFileNavigatorPathRef = useRef<string | null>(null);
+  const scrollToExcerptRef = useRef<SearchExcerptScroller | null>(null);
   const [isReplaceVisible, setIsReplaceVisible] = useState(false);
-  const [replaceQuery, setReplaceQuery] = useState("");
+  const { replaceQuery, setReplaceQuery } = useGlobalSearchSessionStore(
+    useShallow((state) => ({
+      replaceQuery: state.replaceQuery,
+      setReplaceQuery: state.actions.setReplaceQuery,
+    })),
+  );
   const [visibleMatchLimit, setVisibleMatchLimit] = useState(CONTENT_SEARCH_INITIAL_RENDER_LIMIT);
-  const [fileNavigatorViewMode, setFileNavigatorViewMode] = useState<FileNavigatorViewMode>("tree");
+  const [fileNavigatorViewMode, setFileNavigatorViewMode] = useState<FileNavigatorViewMode>("flat");
+  const [isFileNavigatorVisible, setIsFileNavigatorVisible] = useState(false);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [prioritizedFilePath, setPrioritizedFilePath] = useState<string | null>(null);
   const [contextLinesByFile, setContextLinesByFile] = useState<Record<string, number>>({});
   const [sourceContentByPath, setSourceContentByPath] = useState<Record<string, string>>({});
   const [replaceOperation, setReplaceOperation] = useState<"next" | "all" | null>(null);
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
   const sourceContentByPathRef = useRef(sourceContentByPath);
   const activeSearchKeyRef = useRef("");
   sourceContentByPathRef.current = sourceContentByPath;
@@ -203,20 +214,19 @@ const GlobalSearchBuffer = () => {
     scrollToIndex: (index) => {
       const itemKey = navigationItems[index]?.path;
       const match = itemKey ? matchIndex.get(itemKey) : null;
-      const container = scrollContainerRef.current;
-      if (!match || !container) return;
-
-      const selectedElement = container.querySelector(
-        `[data-excerpt-index="${match.excerptIndex}"]`,
-      ) as HTMLElement | null;
-      selectedElement?.scrollIntoView({
-        behavior: "auto",
-        block: "nearest",
-      });
+      if (!match) return;
+      scrollToExcerptRef.current?.(match.excerptIndex, "auto");
     },
     listenGlobally: false,
     resetKey: searchKey,
   });
+  const setScrollContainer = useCallback<RefCallback<HTMLDivElement>>(
+    (element) => {
+      scrollContainerRef.current = element;
+      setScrollElement((current) => (current === element ? current : element));
+    },
+    [scrollContainerRef],
+  );
 
   const selectedItemKey =
     selectedIndex >= 0 && selectedIndex < navigationItems.length
@@ -239,15 +249,9 @@ const GlobalSearchBuffer = () => {
 
       pendingFileNavigatorPathRef.current = null;
 
-      const selectedElement = scrollContainerRef.current?.querySelector(
-        `[data-excerpt-index="${excerptIndex}"]`,
-      ) as HTMLElement | null;
-      selectedElement?.scrollIntoView({
-        behavior: "auto",
-        block: "start",
-      });
+      scrollToExcerptRef.current?.(excerptIndex, "start");
     },
-    [excerptIndexByFilePath, scrollContainerRef],
+    [excerptIndexByFilePath],
   );
 
   useEffect(() => {
@@ -259,14 +263,11 @@ const GlobalSearchBuffer = () => {
 
     pendingFileNavigatorPathRef.current = null;
     const frame = requestAnimationFrame(() => {
-      const selectedElement = scrollContainerRef.current?.querySelector(
-        `[data-excerpt-index="${excerptIndex}"]`,
-      ) as HTMLElement | null;
-      selectedElement?.scrollIntoView({ behavior: "auto", block: "start" });
+      scrollToExcerptRef.current?.(excerptIndex, "start");
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [excerptIndexByFilePath, scrollContainerRef]);
+  }, [excerptIndexByFilePath]);
 
   const filePathsWithResults = useMemo(() => {
     const paths = new Set<string>();
@@ -402,7 +403,8 @@ const GlobalSearchBuffer = () => {
     setContextLinesByFile({});
     setSourceContentByPath({});
     sourceContentByPathRef.current = {};
-  }, [searchKey]);
+    scrollElement?.scrollTo({ top: 0, behavior: "auto" });
+  }, [scrollElement, searchKey]);
 
   useEffect(() => {
     if (!selectedMatch?.filePath) return;
@@ -481,7 +483,9 @@ const GlobalSearchBuffer = () => {
   const resultLabel =
     busyLabel ??
     (trimmedDebouncedQuery && !showBusy
-      ? `${displayedCount} ${displayedCount === 1 ? "result" : "results"}${hasMore ? ` (${hasMoreResults ? `${totalMatches}+` : totalMatches} total)` : ""}`
+      ? hasMore
+        ? `${displayedCount} of ${hasMoreResults ? `${totalMatches}+` : totalMatches} results`
+        : `${displayedCount} ${displayedCount === 1 ? "result" : "results"}`
       : null);
   const canReplace = Boolean(
     debouncedQuery && displayedCount > 0 && !searchWarning && !replaceOperation && !showInitialBusy,
@@ -490,7 +494,7 @@ const GlobalSearchBuffer = () => {
 
   useEffect(() => {
     const sentinel = loadMoreRef.current;
-    const scrollContainer = scrollContainerRef.current;
+    const scrollContainer = scrollElement;
     if (!sentinel || !scrollContainer || !hasMore || showBusy) return;
 
     const observer = new IntersectionObserver(
@@ -507,7 +511,7 @@ const GlobalSearchBuffer = () => {
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, loadMoreResults, scrollContainerRef, showBusy]);
+  }, [hasMore, loadMoreResults, scrollElement, showBusy]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -536,12 +540,17 @@ const GlobalSearchBuffer = () => {
         onIncludeQueryChange={setIncludeQuery}
         excludeQuery={excludeQuery}
         onExcludeQueryChange={setExcludeQuery}
+        fileNavigatorAvailable={fileNavigatorItems.length > 0}
+        fileNavigatorVisible={isFileNavigatorVisible}
+        onFileNavigatorVisibleChange={setIsFileNavigatorVisible}
       />
 
       <div className="relative min-h-0 flex-1 overflow-hidden bg-background">
         {hasResults && !showInitialBusy ? (
           <GlobalSearchResults
-            scrollContainerRef={scrollContainerRef}
+            scrollContainerRef={setScrollContainer}
+            scrollElement={scrollElement}
+            scrollToExcerptRef={scrollToExcerptRef}
             loadMoreRef={loadMoreRef}
             fileNavigatorItems={fileNavigatorItems}
             selectedFileNavigatorKey={selectedFileNavigatorKey}
@@ -549,6 +558,7 @@ const GlobalSearchBuffer = () => {
             fileNavigatorViewMode={fileNavigatorViewMode}
             onFileNavigatorViewModeChange={setFileNavigatorViewMode}
             navigatorSearchResetKey={searchKey}
+            showFileNavigator={isFileNavigatorVisible}
             excerpts={excerpts}
             selectedItemKey={selectedItemKey}
             onOpen={handleFileClick}
@@ -562,7 +572,7 @@ const GlobalSearchBuffer = () => {
             hasMoreResults={hasMoreResults}
           />
         ) : (
-          <ScrollArea className="h-full bg-background" viewportProps={{ ref: scrollContainerRef }}>
+          <ScrollArea className="h-full bg-background" viewportProps={{ ref: setScrollContainer }}>
             <GlobalSearchState
               availability={availability}
               query={query}

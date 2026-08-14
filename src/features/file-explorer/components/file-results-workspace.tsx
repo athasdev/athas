@@ -1,4 +1,4 @@
-import type { ReactNode, RefObject } from "react";
+import type { ReactNode, Ref } from "react";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
   FileNavigatorSidebar,
@@ -17,7 +17,7 @@ interface FileResultsWorkspaceProps {
   onViewModeChange: (viewMode: FileNavigatorViewMode) => void;
   showNavigator?: boolean;
   navigatorSearchResetKey?: string;
-  scrollContainerRef?: RefObject<HTMLDivElement | null>;
+  scrollContainerRef?: Ref<HTMLDivElement>;
   orientation?: "vertical" | "both";
   navigatorPosition?: "left" | "right";
   navigatorResponsiveOverlay?: boolean;

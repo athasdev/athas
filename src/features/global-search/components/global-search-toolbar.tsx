@@ -1,9 +1,10 @@
 import { memo, type KeyboardEventHandler, type RefObject } from "react";
-import { MagnifyingGlassIcon as MagnifyingGlass, XIcon as X } from "@/ui/icons";
+import { FilesIcon as Files, MagnifyingGlassIcon as MagnifyingGlass, XIcon as X } from "@/ui/icons";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { CommandInput } from "@/ui/command";
 import { SEARCH_TOGGLE_ICONS, SearchReplaceRow, SearchReplaceToggle } from "@/ui/search";
+import { Toggle } from "@/ui/toggle";
 import { ToggleGroup, type ToggleGroupOption } from "@/ui/toggle-group";
 import type { ContentSearchOptions } from "../types/global-search.types";
 import {
@@ -38,6 +39,9 @@ interface GlobalSearchToolbarProps {
   onIncludeQueryChange: (query: string) => void;
   excludeQuery: string;
   onExcludeQueryChange: (query: string) => void;
+  fileNavigatorAvailable: boolean;
+  fileNavigatorVisible: boolean;
+  onFileNavigatorVisibleChange: (visible: boolean) => void;
 }
 
 export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
@@ -63,6 +67,9 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
   onIncludeQueryChange,
   excludeQuery,
   onExcludeQueryChange,
+  fileNavigatorAvailable,
+  fileNavigatorVisible,
+  onFileNavigatorVisibleChange,
 }: GlobalSearchToolbarProps) {
   const searchOptionButtons: ToggleGroupOption<SearchOptionValue>[] = [
     {
@@ -84,75 +91,91 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
   const activeSearchOptions = toSearchOptionValues(searchOptions);
 
   return (
-    <div className="border-border/70 border-b bg-surface/55 px-3 py-2">
-      <div className="flex min-w-0 items-center gap-2">
-        <SearchReplaceToggle
-          isExpanded={detailsVisible}
-          onToggle={() => onDetailsVisibleChange(!detailsVisible)}
-          expandedLabel="Hide details"
-          collapsedLabel="Show details"
-        />
-        <div className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border/70 bg-background/65 px-2">
-          <MagnifyingGlass className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
-          <CommandInput
-            ref={inputRef}
-            value={query}
-            onChange={onQueryChange}
-            onKeyDown={onSearchKeyDown}
-            placeholder="Search in files..."
-            className="font-sans min-w-0"
-            aria-label="Search in files"
-            autoComplete="off"
-            spellCheck={false}
+    <div className="@container/search-toolbar border-border/70 border-b px-3 py-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
+        <div className="flex min-w-48 basis-64 flex-1 items-center gap-2">
+          <SearchReplaceToggle
+            isExpanded={detailsVisible}
+            onToggle={() => onDetailsVisibleChange(!detailsVisible)}
+            expandedLabel="Hide details"
+            collapsedLabel="Show details"
           />
-          {query ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => {
-                onQueryChange("");
-                inputRef.current?.focus();
-              }}
-              aria-label="Clear search"
-              className="shrink-0 text-subtle-foreground"
+          <div className="flex h-7 min-w-0 flex-1 items-center gap-2">
+            <MagnifyingGlass className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
+            <CommandInput
+              ref={inputRef}
+              value={query}
+              onChange={onQueryChange}
+              onKeyDown={onSearchKeyDown}
+              placeholder="Search in files..."
+              className="font-sans min-w-0"
+              aria-label="Search in files"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {query ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => {
+                  onQueryChange("");
+                  inputRef.current?.focus();
+                }}
+                aria-label="Clear search"
+                className="shrink-0 text-subtle-foreground"
+              >
+                <X />
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
+          <ToggleGroup<SearchOptionValue>
+            type="multiple"
+            value={activeSearchOptions}
+            options={searchOptionButtons}
+            onValueChange={(nextValues) => {
+              const next = fromSearchOptionValues(nextValues);
+              setSearchOption("caseSensitive", next.caseSensitive);
+              setSearchOption("wholeWord", next.wholeWord);
+              setSearchOption("useRegex", next.useRegex);
+            }}
+            ariaLabel="Search options"
+            variant="segmented"
+            size="xs"
+            wrap={false}
+            iconOnly
+            className="shrink-0"
+          />
+          {searchWarning ? (
+            <Badge
+              variant="warning"
+              className="max-w-64 shrink truncate"
+              title={searchWarning}
+              role="status"
+              aria-live="polite"
             >
-              <X />
-            </Button>
+              {searchWarning}
+            </Badge>
+          ) : resultLabel ? (
+            <Badge className="max-w-56 shrink truncate" title={resultLabel} role="status">
+              {resultLabel}
+            </Badge>
+          ) : null}
+          {fileNavigatorAvailable ? (
+            <Toggle
+              pressed={fileNavigatorVisible}
+              onPressedChange={onFileNavigatorVisibleChange}
+              size="xs"
+              tooltip={fileNavigatorVisible ? "Hide result files" : "Show result files"}
+              tooltipSide="bottom"
+            >
+              <Files />
+            </Toggle>
           ) : null}
         </div>
-        <ToggleGroup<SearchOptionValue>
-          type="multiple"
-          value={activeSearchOptions}
-          options={searchOptionButtons}
-          onValueChange={(nextValues) => {
-            const next = fromSearchOptionValues(nextValues);
-            setSearchOption("caseSensitive", next.caseSensitive);
-            setSearchOption("wholeWord", next.wholeWord);
-            setSearchOption("useRegex", next.useRegex);
-          }}
-          ariaLabel="Search options"
-          variant="segmented"
-          size="xs"
-          wrap={false}
-          iconOnly
-          className="shrink-0"
-        />
-        {searchWarning ? (
-          <Badge
-            variant="warning"
-            className="max-w-64 shrink-0 truncate"
-            title={searchWarning}
-            role="status"
-            aria-live="polite"
-          >
-            {searchWarning}
-          </Badge>
-        ) : resultLabel ? (
-          <Badge className="max-w-56 shrink-0 truncate" title={resultLabel} role="status">
-            {resultLabel}
-          </Badge>
-        ) : null}
       </div>
       {detailsVisible ? (
         <div className="mt-2 space-y-2">

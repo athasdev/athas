@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
+import { useShallow } from "zustand/react/shallow";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import type {
   FileSearchResult,
@@ -15,7 +16,7 @@ import { CONTENT_SEARCH_PAGE_SIZE, SEARCH_DEBOUNCE_DELAY } from "../constants/li
 import { mergeSearchResults } from "../utils/content-search-results";
 import { createPathFilterPredicate } from "../utils/path-filters";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import type { ContentSearchOptions } from "../types/global-search.types";
+import { useGlobalSearchSessionStore } from "../stores/global-search-session.store";
 
 export type { ContentSearchOptions } from "../types/global-search.types";
 
@@ -91,7 +92,27 @@ export const useContentSearch = () => {
     () => getNativeWorkspaceRootPaths(rootFolderPath, workspaceFolders),
     [rootFolderPath, workspaceFolders],
   );
-  const [query, setQuery] = useState("");
+  const {
+    query,
+    includeQuery,
+    excludeQuery,
+    searchOptions,
+    setQuery,
+    setIncludeQuery,
+    setExcludeQuery,
+    setSearchOption,
+  } = useGlobalSearchSessionStore(
+    useShallow((state) => ({
+      query: state.query,
+      includeQuery: state.includeQuery,
+      excludeQuery: state.excludeQuery,
+      searchOptions: state.searchOptions,
+      setQuery: state.actions.setQuery,
+      setIncludeQuery: state.actions.setIncludeQuery,
+      setExcludeQuery: state.actions.setExcludeQuery,
+      setSearchOption: state.actions.setSearchOption,
+    })),
+  );
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
   const [rawResults, setRawResults] = useState<FileSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -105,15 +126,8 @@ export const useContentSearch = () => {
   const [isIndexing, setIsIndexing] = useState(false);
   const [indexedFiles, setIndexedFiles] = useState(0);
   const [scannedFiles, setScannedFiles] = useState(0);
-  const [includeQuery, setIncludeQuery] = useState("");
-  const [excludeQuery, setExcludeQuery] = useState("");
   const [debouncedIncludeQuery] = useDebounce(includeQuery, SEARCH_DEBOUNCE_DELAY);
   const [debouncedExcludeQuery] = useDebounce(excludeQuery, SEARCH_DEBOUNCE_DELAY);
-  const [searchOptions, setSearchOptions] = useState<ContentSearchOptions>({
-    caseSensitive: false,
-    wholeWord: false,
-    useRegex: false,
-  });
   const [resultsSearchKey, setResultsSearchKey] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const providerFileCacheRef = useRef<ProviderFileCache | null>(null);
@@ -146,13 +160,6 @@ export const useContentSearch = () => {
     includeQuery !== debouncedIncludeQuery ||
     excludeQuery !== debouncedExcludeQuery ||
     (Boolean(debouncedQuery.trim()) && availability === "ready" && resultsSearchKey !== searchKey);
-
-  const setSearchOption = useCallback(
-    <K extends keyof ContentSearchOptions>(key: K, value: ContentSearchOptions[K]) => {
-      setSearchOptions((previous) => ({ ...previous, [key]: value }));
-    },
-    [],
-  );
 
   const getProviderFiles = useCallback(
     (rootPath: string, currentSearchKey: string, fileOffset: number) => {

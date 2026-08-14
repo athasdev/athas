@@ -1,5 +1,6 @@
 import { MinusIcon as Minus, PlusIcon as Plus } from "@/ui/icons";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { MultibufferFileHeader } from "@/features/editor/components/multibuffer/multibuffer-file-header";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
@@ -7,16 +8,27 @@ import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { Button } from "@/ui/button";
 import type { SearchExcerpt } from "../utils/search-excerpts";
+import {
+  estimateSearchExcerptHeight,
+  shouldVirtualizeSearchExcerpts,
+} from "../utils/search-excerpt-virtualization";
 import { SearchExcerptCode, type SearchExcerptTypography } from "./search-excerpt-code";
 
 interface SearchExcerptResultsProps {
   excerpts: SearchExcerpt[];
+  scrollElement: HTMLDivElement | null;
+  scrollToExcerptRef: RefObject<SearchExcerptScroller | null>;
   selectedItemKey: string | null;
   onOpen: (filePath: string, lineNumber?: number, columnNumber?: number) => void;
   onExpandContext?: (filePath: string) => void;
   onCollapseContext?: (filePath: string) => void;
   isContextExpanded?: (filePath: string) => boolean;
 }
+
+export type SearchExcerptScroller = (
+  index: number,
+  align?: "auto" | "start" | "center" | "end",
+) => void;
 
 interface SearchExcerptItemProps {
   excerpt: SearchExcerpt;
@@ -31,6 +43,7 @@ interface SearchExcerptItemProps {
 
 const SYNTAX_PREFETCH_MARGIN = "240px 0px";
 const INITIAL_SYNTAX_HIGHLIGHT_COUNT = 1;
+const VIRTUALIZATION_OVERSCAN = 4;
 
 function SearchExcerptItemComponent({
   excerpt,
@@ -106,12 +119,13 @@ function SearchExcerptItemComponent({
     <section
       ref={sectionRef}
       data-excerpt-index={index}
-      className="relative isolate min-w-0 max-w-full rounded-xl bg-background"
+      className="relative isolate min-w-0 max-w-full border-border/60 border-b bg-background"
     >
       <MultibufferFileHeader
         filePath={excerpt.filePath}
         fileName={excerpt.fileName}
         directoryPath={excerpt.directoryPath}
+        surface="section"
         onOpen={openTarget}
         trailing={
           <>
@@ -137,7 +151,7 @@ function SearchExcerptItemComponent({
           ) : null
         }
       />
-      <div className="-mt-px min-w-0 max-w-full overflow-hidden rounded-b-xl border-border/70 border-x border-b">
+      <div className="min-w-0 max-w-full overflow-hidden">
         <SearchExcerptCode
           excerpt={excerpt}
           selectedHighlightIndexes={selectedHighlightIndexes}
@@ -165,6 +179,8 @@ const SearchExcerptItem = memo(SearchExcerptItemComponent, (previous, next) => {
 
 export const SearchExcerptResults = memo(function SearchExcerptResults({
   excerpts,
+  scrollElement,
+  scrollToExcerptRef,
   selectedItemKey,
   onOpen,
   onExpandContext,
@@ -202,22 +218,90 @@ export const SearchExcerptResults = memo(function SearchExcerptResults({
 
     return null;
   }, [excerpts, selectedItemKey]);
+  const shouldVirtualize = shouldVirtualizeSearchExcerpts(excerpts);
+  const estimateExcerptSize = useCallback(
+    (index: number) => estimateSearchExcerptHeight(excerpts[index], typography.lineHeight),
+    [excerpts, typography.lineHeight],
+  );
+  const excerptVirtualizer = useVirtualizer({
+    count: excerpts.length,
+    enabled: shouldVirtualize,
+    getScrollElement: () => scrollElement,
+    getItemKey: (index) => excerpts[index]?.id ?? index,
+    estimateSize: estimateExcerptSize,
+    overscan: VIRTUALIZATION_OVERSCAN,
+  });
+  const scrollToExcerpt = useCallback<SearchExcerptScroller>(
+    (index, align = "auto") => {
+      if (index < 0 || index >= excerpts.length) return;
 
+      if (shouldVirtualize) {
+        excerptVirtualizer.scrollToIndex(index, { align, behavior: "auto" });
+        return;
+      }
+
+      const excerptElement = scrollElement?.querySelector<HTMLElement>(
+        `[data-excerpt-index="${index}"]`,
+      );
+      excerptElement?.scrollIntoView({
+        behavior: "auto",
+        block: align === "auto" ? "nearest" : align,
+      });
+    },
+    [excerptVirtualizer, excerpts.length, scrollElement, shouldVirtualize],
+  );
+
+  useEffect(() => {
+    scrollToExcerptRef.current = scrollToExcerpt;
+    return () => {
+      if (scrollToExcerptRef.current === scrollToExcerpt) {
+        scrollToExcerptRef.current = null;
+      }
+    };
+  }, [scrollToExcerpt, scrollToExcerptRef]);
+
+  const renderExcerpt = (excerpt: SearchExcerpt, index: number) => (
+    <SearchExcerptItem
+      key={excerpt.id}
+      excerpt={excerpt}
+      index={index}
+      selectedItemKey={excerpt.id === selectedExcerptId ? selectedItemKey : null}
+      onOpen={onOpen}
+      onExpandContext={onExpandContext}
+      onCollapseContext={onCollapseContext}
+      isContextExpanded={isContextExpanded}
+      typography={typography}
+    />
+  );
+
+  if (!shouldVirtualize) {
+    return <div className="min-w-0 max-w-full">{excerpts.map(renderExcerpt)}</div>;
+  }
+
+  const virtualItems = excerptVirtualizer.getVirtualItems();
   return (
-    <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-xl">
-      {excerpts.map((excerpt, index) => (
-        <SearchExcerptItem
-          key={excerpt.id}
-          excerpt={excerpt}
-          index={index}
-          selectedItemKey={excerpt.id === selectedExcerptId ? selectedItemKey : null}
-          onOpen={onOpen}
-          onExpandContext={onExpandContext}
-          onCollapseContext={onCollapseContext}
-          isContextExpanded={isContextExpanded}
-          typography={typography}
-        />
-      ))}
+    <div
+      className="relative min-w-0 max-w-full"
+      style={{ height: excerptVirtualizer.getTotalSize() }}
+      data-virtualized-search-results=""
+    >
+      {virtualItems.map((virtualItem) => {
+        const excerpt = excerpts[virtualItem.index];
+        if (!excerpt) return null;
+
+        return (
+          <div
+            key={virtualItem.key}
+            className="absolute inset-x-0 top-0 min-w-0"
+            style={{
+              height: virtualItem.size,
+              transform: `translateY(${virtualItem.start}px)`,
+            }}
+          >
+            {renderExcerpt(excerpt, virtualItem.index)}
+          </div>
+        );
+      })}
     </div>
   );
 });

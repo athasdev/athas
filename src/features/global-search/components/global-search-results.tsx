@@ -1,14 +1,16 @@
-import type { RefObject } from "react";
+import type { RefCallback, RefObject } from "react";
 import { FileResultsWorkspace } from "@/features/file-explorer/components/file-results-workspace";
 import {
   type FileNavigatorItem,
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import type { SearchExcerpt } from "../utils/search-excerpts";
-import { SearchExcerptResults } from "./search-excerpt-results";
+import { SearchExcerptResults, type SearchExcerptScroller } from "./search-excerpt-results";
 
 interface GlobalSearchResultsProps {
-  scrollContainerRef: RefObject<HTMLDivElement | null>;
+  scrollContainerRef: RefCallback<HTMLDivElement>;
+  scrollElement: HTMLDivElement | null;
+  scrollToExcerptRef: RefObject<SearchExcerptScroller | null>;
   loadMoreRef: RefObject<HTMLDivElement | null>;
   fileNavigatorItems: FileNavigatorItem[];
   selectedFileNavigatorKey: string | null;
@@ -16,6 +18,7 @@ interface GlobalSearchResultsProps {
   fileNavigatorViewMode: FileNavigatorViewMode;
   onFileNavigatorViewModeChange: (viewMode: FileNavigatorViewMode) => void;
   navigatorSearchResetKey: string;
+  showFileNavigator: boolean;
   excerpts: SearchExcerpt[];
   selectedItemKey: string | null;
   onOpen: (filePath: string, lineNumber?: number, columnNumber?: number) => void;
@@ -31,6 +34,8 @@ interface GlobalSearchResultsProps {
 
 export function GlobalSearchResults({
   scrollContainerRef,
+  scrollElement,
+  scrollToExcerptRef,
   loadMoreRef,
   fileNavigatorItems,
   selectedFileNavigatorKey,
@@ -38,6 +43,7 @@ export function GlobalSearchResults({
   fileNavigatorViewMode,
   onFileNavigatorViewModeChange,
   navigatorSearchResetKey,
+  showFileNavigator,
   excerpts,
   selectedItemKey,
   onOpen,
@@ -58,13 +64,21 @@ export function GlobalSearchResults({
       ariaLabel="Search result files"
       viewMode={fileNavigatorViewMode}
       onViewModeChange={onFileNavigatorViewModeChange}
+      showNavigator={showFileNavigator}
       navigatorSearchResetKey={navigatorSearchResetKey}
       scrollContainerRef={scrollContainerRef}
-      orientation="both"
+      navigatorPosition="right"
+      navigatorResponsiveOverlay
+      navigatorAppearance="panel"
+      contentInset={false}
+      scrollbarVisibility="always"
+      reserveScrollbarGutter
     >
       <div className="min-w-0 max-w-full">
         <SearchExcerptResults
           excerpts={excerpts}
+          scrollElement={scrollElement}
+          scrollToExcerptRef={scrollToExcerptRef}
           selectedItemKey={selectedItemKey}
           onOpen={onOpen}
           onExpandContext={onExpandContext}
