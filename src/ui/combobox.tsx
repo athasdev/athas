@@ -9,6 +9,7 @@ import {
   menuSeparatorVariants,
   menuSurfaceVariants,
 } from "@/design-system/menu";
+import { Button } from "@/ui/button";
 import { controlIconSizes, controlSizeVariants } from "@/utils/control-variants";
 import { cn } from "@/utils/cn";
 
@@ -89,31 +90,25 @@ function ComboboxValue(props: ComboboxPrimitive.Value.Props) {
   return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />;
 }
 
-function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Trigger.Props) {
+function ComboboxTrigger({
+  children,
+  render = <Button variant="ghost" size="icon-xs" />,
+  ...props
+}: ComboboxPrimitive.Trigger.Props) {
   return (
-    <ComboboxPrimitive.Trigger
-      data-slot="combobox-trigger"
-      className={cn(
-        "inline-flex size-6 shrink-0 items-center justify-center rounded-full text-subtle-foreground transition-[transform,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent hover:text-foreground active:scale-(--app-press-scale) disabled:pointer-events-none disabled:opacity-50",
-        className,
-      )}
-      {...props}
-    >
+    <ComboboxPrimitive.Trigger data-slot="combobox-trigger" render={render} {...props}>
       {children ?? <ChevronDown className="pointer-events-none size-3.5" />}
     </ComboboxPrimitive.Trigger>
   );
 }
 
-function ComboboxClear({ className, children, ...props }: ComboboxPrimitive.Clear.Props) {
+function ComboboxClear({
+  children,
+  render = <Button variant="ghost" size="icon-xs" />,
+  ...props
+}: ComboboxPrimitive.Clear.Props) {
   return (
-    <ComboboxPrimitive.Clear
-      data-slot="combobox-clear"
-      className={cn(
-        "inline-flex size-6 shrink-0 items-center justify-center rounded-full text-subtle-foreground transition-[transform,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent hover:text-foreground active:scale-(--app-press-scale) disabled:pointer-events-none disabled:opacity-50",
-        className,
-      )}
-      {...props}
-    >
+    <ComboboxPrimitive.Clear data-slot="combobox-clear" render={render} {...props}>
       {children ?? <X className="pointer-events-none size-3.5" />}
     </ComboboxPrimitive.Clear>
   );
