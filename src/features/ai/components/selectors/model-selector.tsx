@@ -1,6 +1,6 @@
 import { LockIcon as Lock, WarningCircleIcon as WarningCircle } from "@/ui/icons";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
-import { ProBadge } from "@/extensions/ui/components/pro-badge";
+import { ProBadge } from "@/features/window/components/pro-badge";
 import { Alert, AlertDescription } from "@/ui/alert";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";

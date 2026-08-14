@@ -8,7 +8,7 @@ import {
   syncSettingsNow,
 } from "@/features/settings/lib/settings-sync";
 import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync.store";
-import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
+import { useProFeature } from "@/features/window/hooks/use-pro-feature";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import {
   extractAutocompleteUsage,

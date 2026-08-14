@@ -19,7 +19,7 @@ import { resolveSettingsAccess } from "@/features/settings/lib/settings-access";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { SettingsTab } from "@/features/window/stores/ui-state.store";
-import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
+import { useProFeature } from "@/features/window/hooks/use-pro-feature";
 import { Button } from "@/ui/button";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import { ScrollArea } from "@/ui/scroll-area";

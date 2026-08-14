@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
+import { useProFeature } from "@/features/window/hooks/use-pro-feature";
 import { useProviderById } from "@/features/ai/hooks/use-available-providers";
 import { getCustomModelOptions } from "@/features/ai/lib/custom-model-options";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";

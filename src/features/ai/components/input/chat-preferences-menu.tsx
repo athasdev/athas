@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ProBadge } from "@/extensions/ui/components/pro-badge";
+import { ProBadge } from "@/features/window/components/pro-badge";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";

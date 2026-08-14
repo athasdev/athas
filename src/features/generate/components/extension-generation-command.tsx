@@ -15,7 +15,7 @@ import {
   type UIExtensionGenerationResult,
 } from "@/extensions/ui/services/ui-extension-generation-service";
 import { installGeneratedUIExtension } from "@/extensions/ui/services/generated/generated-ui-extension-installer";
-import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
+import { useProFeature } from "@/features/window/hooks/use-pro-feature";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useGenerateStore } from "@/features/generate/stores/generate.store";
