@@ -1,5 +1,3 @@
-import type { EditorAPI } from "@/features/editor/types/editor-extension.types";
-import { BaseThemeExtension } from "./base-theme-extension";
 // Import all theme JSON files
 import ayuThemes from "./builtin/ayu.json";
 import athasThemes from "./builtin/athas.json";
@@ -17,13 +15,18 @@ import tokyoNightThemes from "./builtin/tokyo-night.json";
 import vitesseThemes from "./builtin/vitesse.json";
 import type { ThemeDefinition } from "./theme.types";
 
-class ThemeLoader extends BaseThemeExtension {
-  readonly name = "Theme Loader";
-  readonly version = "1.0.0";
-  readonly description = "Loads themes from JSON configuration files";
+class ThemeLoader {
   themes: ThemeDefinition[] = [];
+  private initializationPromise: Promise<void> | null = null;
 
-  async onInitialize(_editor: EditorAPI): Promise<void> {
+  initialize(): Promise<void> {
+    if (!this.initializationPromise) {
+      this.initializationPromise = this.loadBundledThemes();
+    }
+    return this.initializationPromise;
+  }
+
+  private async loadBundledThemes(): Promise<void> {
     try {
       // Combine all theme files
       const allThemeFiles: ThemeFile[] = [
@@ -73,8 +76,7 @@ class ThemeLoader extends BaseThemeExtension {
     }
   }
 
-  async getCachedThemes(): Promise<ThemeDefinition[]> {
-    // Since themes are now loaded directly via imports, just return the loaded themes
+  getCachedThemes(): ThemeDefinition[] {
     return this.themes;
   }
 }

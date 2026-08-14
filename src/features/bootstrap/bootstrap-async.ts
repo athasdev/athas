@@ -1,6 +1,6 @@
 import { reportBootstrapResults } from "./bootstrap-errors";
 
-const asyncBootstrapSteps = [
+const foundationalBootstrapSteps = [
   {
     name: "settings store",
     run: async () => {
@@ -24,20 +24,6 @@ const asyncBootstrapSteps = [
     },
   },
   {
-    name: "extension loader",
-    run: async () => {
-      const { extensionLoader } = await import("@/extensions/loader/extension-loader");
-      await extensionLoader.initialize();
-    },
-  },
-  {
-    name: "extension store",
-    run: async () => {
-      const { initializeExtensionStore } = await import("@/extensions/registry/extension-store");
-      await initializeExtensionStore();
-    },
-  },
-  {
     name: "telemetry",
     run: async () => {
       const { initializeTelemetry } = await import("@/features/telemetry/services/telemetry");
@@ -46,23 +32,24 @@ const asyncBootstrapSteps = [
   },
 ] as const;
 
-export async function runAsyncBootstrapSteps(): Promise<void> {
-  const results = await Promise.allSettled(asyncBootstrapSteps.map((step) => step.run()));
-  reportBootstrapResults(asyncBootstrapSteps, results);
-
-  const extensionStoreResult = results[4];
-  if (extensionStoreResult.status === "rejected") return;
-
-  const uiExtensionSteps = [
-    {
-      name: "ui extensions",
-      run: async () => {
-        const { initializeUIExtensions } =
-          await import("@/extensions/ui/services/ui-extension-initializer");
-        await initializeUIExtensions();
-      },
+const extensionBootstrapSteps = [
+  {
+    name: "extension runtime",
+    run: async () => {
+      const { initializeExtensionRuntime } = await import("@/extensions/runtime/extension-runtime");
+      await initializeExtensionRuntime();
     },
-  ] as const;
-  const uiExtensionResults = await Promise.allSettled(uiExtensionSteps.map((step) => step.run()));
-  reportBootstrapResults(uiExtensionSteps, uiExtensionResults);
+  },
+] as const;
+
+export async function runAsyncBootstrapSteps(): Promise<void> {
+  const foundationalResults = await Promise.allSettled(
+    foundationalBootstrapSteps.map((step) => step.run()),
+  );
+  reportBootstrapResults(foundationalBootstrapSteps, foundationalResults);
+
+  const extensionResults = await Promise.allSettled(
+    extensionBootstrapSteps.map((step) => step.run()),
+  );
+  reportBootstrapResults(extensionBootstrapSteps, extensionResults);
 }

@@ -10,7 +10,6 @@ import { extensionInstaller } from "../installer/extension-installer";
 import { getFullExtensions } from "../languages/full-extensions";
 import { getPackagedLanguageExtensions } from "../languages/language-packager";
 import { loadMarketplaceContributionExtensions } from "../marketplace/marketplace-extensions";
-import { activateExtensionContributions } from "../runtime/extension-contribution-runtime";
 import { extensionRegistry } from "./extension-registry";
 import {
   findExtensionForFile,
@@ -178,15 +177,6 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             bundledContributionInstalled,
             availableExtensions,
           });
-
-          await Promise.all(
-            Array.from(installedExtensions.entries()).map(async ([extensionId, metadata]) => {
-              if (metadata.enabled === false) return;
-              const extension = availableExtensions.get(extensionId);
-              if (!extension) return;
-              await activateExtensionContributions(extensionId, extension.manifest);
-            }),
-          );
 
           set((state) => {
             state.installedExtensions = installedExtensions;

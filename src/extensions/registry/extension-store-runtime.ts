@@ -584,45 +584,25 @@ export function buildRuntimeManifest(
 export async function registerLanguageProvider(params: {
   extensionId: string;
   languageId: string;
-  displayName: string;
-  version: string;
   extensions: string[];
   aliases?: string[];
 }): Promise<void> {
-  const { extensionId, languageId, displayName, version, extensions, aliases } = params;
-  const { extensionManager } = await import("@/features/editor/extensions/manager");
+  const { extensionId, languageId, extensions, aliases } = params;
+  const { languageProviderRegistry } =
+    await import("@/extensions/languages/language-provider-registry");
   const runtimeExtensionId = `${extensionId}:${languageId}`;
 
-  if (extensionManager.isExtensionLoaded(runtimeExtensionId)) {
+  if (languageProviderRegistry.has(runtimeExtensionId)) {
     return;
   }
 
   const { tokenizeCode, convertToEditorTokens } =
     await import("@/features/editor/lib/wasm-parser/wasm-parser-api");
 
-  const languageExtension = {
-    id: runtimeExtensionId,
-    displayName,
-    version,
-    category: "language",
-    languageId,
+  languageProviderRegistry.register(runtimeExtensionId, {
+    id: languageId,
     extensions,
     aliases,
-
-    activate: async (context: {
-      registerLanguage: (lang: { id: string; extensions: string[]; aliases?: string[] }) => void;
-    }) => {
-      context.registerLanguage({
-        id: languageId,
-        extensions,
-        aliases,
-      });
-    },
-
-    deactivate: async () => {
-      // Cleanup if needed
-    },
-
     getTokens: async (content: string) => {
       const wasmPath = getWasmUrlForLanguage(languageId);
       const highlightQueryUrl = getHighlightQueryUrl(languageId);
@@ -633,9 +613,7 @@ export async function registerLanguageProvider(params: {
       });
       return convertToEditorTokens(highlightTokens);
     },
-  };
-
-  await extensionManager.loadLanguageExtension(languageExtension);
+  });
 }
 
 export async function installLanguageExtensionManifest(

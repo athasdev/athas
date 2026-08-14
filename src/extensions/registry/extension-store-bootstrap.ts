@@ -82,8 +82,6 @@ export async function loadInstalledExtensionsSnapshot(
         await registerLanguageProvider({
           extensionId,
           languageId,
-          displayName: extension?.displayName || languageId,
-          version: installed.version,
           extensions: languageExtensions,
           aliases,
         });

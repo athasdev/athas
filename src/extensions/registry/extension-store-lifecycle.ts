@@ -54,20 +54,14 @@ async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExte
 }
 
 async function unloadLanguageProviders(extensionId: string, languageIds: string[]) {
-  const { extensionManager } = await import("@/features/editor/extensions/manager");
+  const { languageProviderRegistry } =
+    await import("@/extensions/languages/language-provider-registry");
 
-  try {
-    await Promise.all(
-      languageIds.map((languageId) =>
-        extensionManager.unloadLanguageExtension(`${extensionId}:${languageId}`),
-      ),
-    );
-
-    // Backward compatibility for previously loaded single-id providers.
-    await extensionManager.unloadLanguageExtension(extensionId);
-  } catch (error) {
-    console.warn(`Failed to unload language extension ${extensionId}:`, error);
+  for (const languageId of languageIds) {
+    languageProviderRegistry.unregister(`${extensionId}:${languageId}`);
   }
+
+  languageProviderRegistry.unregister(extensionId);
 }
 
 async function uninstallLanguageArtifacts(languageIds: string[]) {
@@ -189,8 +183,6 @@ export async function installExtensionLifecycle(params: {
         registerLanguageProvider({
           extensionId,
           languageId: languageConfig.id,
-          displayName: extension.manifest.displayName,
-          version: extension.manifest.version,
           extensions: languageConfig.extensions,
           aliases: languageConfig.aliases,
         }),
@@ -300,8 +292,6 @@ export async function enableExtensionLifecycle(params: {
         registerLanguageProvider({
           extensionId,
           languageId: languageConfig.id,
-          displayName: extension.manifest.displayName,
-          version: extension.manifest.version,
           extensions: languageConfig.extensions,
           aliases: languageConfig.aliases,
         }),

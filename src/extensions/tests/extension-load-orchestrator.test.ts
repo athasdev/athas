@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { ExtensionLoadError, runExtensionLoadBatch } from "../loader/extension-load-orchestrator";
+import { ExtensionLoadError, runExtensionLoadBatch } from "../runtime/extension-activation-batch";
 
 const extension = (id: string) => ({
   manifest: {

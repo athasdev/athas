@@ -3,13 +3,13 @@
  * Converts WASM tokens to editor Token format
  */
 
-import type { Token } from "../../types/editor-extension.types";
+import type { LanguageToken } from "@/extensions/languages/language-provider-registry";
 import type { HighlightToken } from "../../types/wasm-parser/wasm-parser.types";
 
 /**
  * Convert WASM HighlightToken to editor Token format
  */
-function convertToEditorToken(highlightToken: HighlightToken): Token {
+function convertToEditorToken(highlightToken: HighlightToken): LanguageToken {
   return {
     start: highlightToken.startIndex,
     end: highlightToken.endIndex,
@@ -21,6 +21,6 @@ function convertToEditorToken(highlightToken: HighlightToken): Token {
 /**
  * Convert array of WASM tokens to editor tokens
  */
-export function convertToEditorTokens(highlightTokens: HighlightToken[]): Token[] {
+export function convertToEditorTokens(highlightTokens: HighlightToken[]): LanguageToken[] {
   return highlightTokens.map(convertToEditorToken);
 }

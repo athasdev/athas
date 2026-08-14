@@ -16,6 +16,9 @@ import {
   deactivateBundledContributionModule,
 } from "../bundled/bundled-contribution-modules";
 
+const activeExtensionIds = new Set<string>();
+const activationPromises = new Map<string, Promise<void>>();
+
 function getThemeContributions(manifest: ExtensionManifest): ThemeContribution[] {
   return [...(manifest.themes ?? []), ...(manifest.contributes?.themes ?? [])];
 }
@@ -192,10 +195,26 @@ export async function activateExtensionContributions(
   manifest: ExtensionManifest,
   extensionPath?: string,
 ): Promise<void> {
-  if (isRetiredExtensionId(extensionId)) {
-    return;
-  }
+  if (isRetiredExtensionId(extensionId) || activeExtensionIds.has(extensionId)) return;
+  const existingActivation = activationPromises.get(extensionId);
+  if (existingActivation) return existingActivation;
 
+  const activation = activateExtensionContributionsOnce(extensionId, manifest, extensionPath);
+  activationPromises.set(extensionId, activation);
+
+  try {
+    await activation;
+    activeExtensionIds.add(extensionId);
+  } finally {
+    activationPromises.delete(extensionId);
+  }
+}
+
+async function activateExtensionContributionsOnce(
+  extensionId: string,
+  manifest: ExtensionManifest,
+  extensionPath?: string,
+): Promise<void> {
   const iconThemes = getIconThemeContributions(manifest);
   const resolvedExtensionPath = await resolveContributionExtensionPath(
     extensionId,
@@ -203,22 +222,32 @@ export async function activateExtensionContributions(
     extensionPath,
   );
 
-  for (const theme of getThemeContributions(manifest)) {
-    themeRegistry.registerTheme(toThemeDefinition(theme), { extensionId });
-  }
+  try {
+    for (const theme of getThemeContributions(manifest)) {
+      themeRegistry.registerTheme(toThemeDefinition(theme), { extensionId });
+    }
 
-  for (const iconTheme of iconThemes) {
-    iconThemeRegistry.registerTheme(
-      toIconThemeDefinition(extensionId, iconTheme, resolvedExtensionPath),
-      {
-        extensionId,
-      },
-    );
-  }
+    for (const iconTheme of iconThemes) {
+      iconThemeRegistry.registerTheme(
+        toIconThemeDefinition(extensionId, iconTheme, resolvedExtensionPath),
+        {
+          extensionId,
+        },
+      );
+    }
 
-  await activateBundledContributionModule(extensionId, manifest);
-  if (manifest.main) {
-    await uiExtensionHost.loadExtension(manifest, resolvedExtensionPath);
+    await activateBundledContributionModule(extensionId, manifest);
+    if (manifest.main) {
+      await uiExtensionHost.loadExtension(manifest, resolvedExtensionPath);
+    }
+  } catch (error) {
+    await Promise.allSettled([
+      uiExtensionHost.unloadExtension(extensionId),
+      deactivateBundledContributionModule(extensionId, manifest),
+    ]);
+    themeRegistry.unregisterThemesByExtension(extensionId);
+    iconThemeRegistry.unregisterThemesByExtension(extensionId);
+    throw error;
   }
 }
 
@@ -226,10 +255,21 @@ export async function deactivateExtensionContributions(
   extensionId: string,
   manifest: ExtensionManifest,
 ): Promise<void> {
-  await uiExtensionHost.unloadExtension(extensionId);
-  await deactivateBundledContributionModule(extensionId, manifest);
-  fallbackThemeIfNeeded(getThemeContributions(manifest));
-  fallbackIconThemeIfNeeded(getIconThemeContributions(manifest));
-  themeRegistry.unregisterThemesByExtension(extensionId);
-  iconThemeRegistry.unregisterThemesByExtension(extensionId);
+  await activationPromises.get(extensionId)?.catch(() => undefined);
+
+  try {
+    await uiExtensionHost.unloadExtension(extensionId);
+    await deactivateBundledContributionModule(extensionId, manifest);
+    fallbackThemeIfNeeded(getThemeContributions(manifest));
+    fallbackIconThemeIfNeeded(getIconThemeContributions(manifest));
+    themeRegistry.unregisterThemesByExtension(extensionId);
+    iconThemeRegistry.unregisterThemesByExtension(extensionId);
+  } finally {
+    activeExtensionIds.delete(extensionId);
+    activationPromises.delete(extensionId);
+  }
+}
+
+export function isExtensionContributionActive(extensionId: string): boolean {
+  return activeExtensionIds.has(extensionId);
 }

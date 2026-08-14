@@ -386,16 +386,10 @@ const buildClosedBufferHistoryEntry = (buffer: PaneContent): ClosedBuffer | null
  */
 const checkExtensionSupport = (path: string) => {
   logger.debug("BufferStore", `Checking extension support for ${path}`);
-  import("@/extensions/loader/extension-loader")
-    .then(({ extensionLoader }) => {
-      logger.debug("BufferStore", "Waiting for extension loader initialization...");
-      return extensionLoader.waitForInitialization();
-    })
-    .then(() => {
-      logger.debug("BufferStore", "Extension loader initialized, waiting for extension store...");
-      return import("@/extensions/registry/extension-store").then(
-        ({ waitForExtensionStoreInitialization }) => waitForExtensionStoreInitialization(),
-      );
+  import("@/extensions/runtime/extension-runtime")
+    .then(({ waitForExtensionRuntimeInitialization }) => {
+      logger.debug("BufferStore", "Waiting for extension runtime initialization...");
+      return waitForExtensionRuntimeInitialization();
     })
     .then(() => {
       return import("@/extensions/registry/extension-store");
