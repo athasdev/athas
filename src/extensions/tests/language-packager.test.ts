@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  getPackagedLanguageExtensions,
   getHighlightQueryUrl,
   getWasmUrlForLanguage,
   resolveLanguageAssetUrl,
 } from "@/extensions/languages/language-packager";
 
 describe("language-packager asset URL resolution", () => {
+  it("builds the offline catalog from official extension manifests", () => {
+    const manifests = getPackagedLanguageExtensions();
+
+    expect(manifests.length).toBeGreaterThan(40);
+    expect(manifests.some((manifest) => manifest.id === "athas.rust")).toBe(true);
+    expect(manifests.some((manifest) => manifest.id === "athas.html")).toBe(true);
+  });
+
   it("resolves missing grammar assets to bundled parser paths", () => {
     expect(resolveLanguageAssetUrl("c", undefined, "parser.wasm")).toBe(
       "/tree-sitter/parsers/c/parser.wasm",

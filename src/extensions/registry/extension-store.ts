@@ -7,7 +7,6 @@ import {
 } from "../bundled/bundled-contribution-extensions";
 import { getDatabaseProviderExtensions } from "../database/database-provider-extensions";
 import { extensionInstaller } from "../installer/extension-installer";
-import { getFullExtensions } from "../languages/full-extensions";
 import { getPackagedLanguageExtensions } from "../languages/language-packager";
 import { loadMarketplaceContributionExtensions } from "../marketplace/marketplace-extensions";
 import { extensionRegistry } from "./extension-registry";
@@ -85,10 +84,8 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
         try {
           // Load language extensions from packager (all installable from server)
-          const packagedExtensions = getPackagedLanguageExtensions();
-          const fallbackExtensions = getFullExtensions();
           const languageExtensions: ExtensionManifest[] = mergeMarketplaceLanguageExtensions(
-            packagedExtensions.length > 0 ? packagedExtensions : fallbackExtensions,
+            getPackagedLanguageExtensions(),
           );
           const bundledContributionExtensions = getBundledContributionExtensions();
           const marketplaceExtensions = await loadMarketplaceContributionExtensions();

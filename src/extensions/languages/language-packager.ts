@@ -63,6 +63,11 @@ interface ExternalLanguageManifest {
   };
 }
 
+const BUNDLED_LANGUAGE_MANIFESTS = import.meta.glob<ExternalLanguageManifest>(
+  "../../../extensions/official/*/extension.json",
+  { eager: true, import: "default" },
+);
+
 type PackagedLanguageEntry = {
   manifest: ExtensionManifest;
   languageIds: string[];
@@ -184,7 +189,7 @@ function convertLanguageManifest(
   path: string,
   manifest: ExternalLanguageManifest,
 ): PackagedLanguageEntry {
-  const folderMatch = path.match(/\/extensions\/([^/]+)\/extension\.json$/);
+  const folderMatch = path.match(/(?:^|\/)([^/]+)\/extension\.json$/);
   const folder = folderMatch?.[1];
 
   if (!folder) {
@@ -262,21 +267,26 @@ let packagedExtensions: ExtensionManifest[] = [];
 let initialized = false;
 let initPromise: Promise<void> | null = null;
 
-function processManifests(manifests: Record<string, ExternalLanguageManifest>) {
+function processManifests(
+  manifests: Record<string, ExternalLanguageManifest>,
+  markInitialized = true,
+) {
   packagedEntries = [];
   manifestByLanguageId.clear();
   wasmUrlByLanguageId.clear();
   highlightUrlByLanguageId.clear();
   highlightUrlByExtensionId.clear();
 
-  for (const [folder, manifest] of Object.entries(manifests)) {
+  for (const [pathOrFolder, manifest] of Object.entries(manifests)) {
     try {
       if (getExternalLanguages(manifest).length === 0) {
         continue;
       }
 
-      const syntheticPath = `/extensions/${folder}/extension.json`;
-      const entry = convertLanguageManifest(syntheticPath, manifest);
+      const manifestPath = pathOrFolder.endsWith("/extension.json")
+        ? pathOrFolder
+        : `/extensions/${pathOrFolder}/extension.json`;
+      const entry = convertLanguageManifest(manifestPath, manifest);
       packagedEntries.push(entry);
 
       highlightUrlByExtensionId.set(entry.manifest.id, entry.highlightQueryUrl);
@@ -291,13 +301,15 @@ function processManifests(manifests: Record<string, ExternalLanguageManifest>) {
         });
       }
     } catch (error) {
-      console.error(`Failed to convert language manifest for ${folder}:`, error);
+      console.error(`Failed to convert language manifest for ${pathOrFolder}:`, error);
     }
   }
 
   packagedExtensions = packagedEntries.map((entry) => entry.manifest);
-  initialized = true;
+  initialized = markInitialized;
 }
+
+processManifests(BUNDLED_LANGUAGE_MANIFESTS, false);
 
 /**
  * Initialize the language packager by fetching manifests from the CDN.
@@ -317,7 +329,6 @@ export async function initializeLanguagePackager(): Promise<void> {
       processManifests(manifests);
     } catch (error) {
       console.warn("Failed to load extension manifests from CDN:", error);
-      // Initialize with empty state so the editor can still function
       initialized = true;
     }
   })();
