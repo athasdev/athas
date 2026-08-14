@@ -11,6 +11,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
@@ -449,7 +450,9 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                     variant="ghost"
                     size="xs"
                     onClick={() => {
-                      useBufferStore.getState().actions.openExtensionsBuffer();
+                      const uiState = useUIState.getState();
+                      uiState.setActiveView("extensions");
+                      uiState.setIsSidebarVisible(true);
                     }}
                   >
                     Open Extensions

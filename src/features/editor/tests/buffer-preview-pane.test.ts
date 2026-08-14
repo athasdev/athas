@@ -200,4 +200,38 @@ describe("buffer preview pane integration", () => {
       ]),
     );
   });
+
+  it("opens singular extension pages as reusable tabs", async () => {
+    const { useBufferStore } = await import("../stores/buffer.store");
+    const bufferActions = useBufferStore.getState().actions;
+
+    const typescriptId = bufferActions.openExtensionBuffer("athas.typescript", "TypeScript");
+    const rustId = bufferActions.openExtensionBuffer("athas.rust", "Rust");
+    const reopenedTypescriptId = bufferActions.openExtensionBuffer(
+      "athas.typescript",
+      "TypeScript Language Support",
+    );
+
+    expect(reopenedTypescriptId).toBe(typescriptId);
+    expect(rustId).not.toBe(typescriptId);
+    expect(useBufferStore.getState().activeBufferId).toBe(typescriptId);
+    expect(useBufferStore.getState().buffers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: typescriptId,
+          type: "extension",
+          extensionId: "athas.typescript",
+          name: "TypeScript Language Support",
+          path: "extension://athas.typescript",
+        }),
+        expect.objectContaining({
+          id: rustId,
+          type: "extension",
+          extensionId: "athas.rust",
+          name: "Rust",
+          path: "extension://athas.rust",
+        }),
+      ]),
+    );
+  });
 });

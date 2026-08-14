@@ -749,7 +749,7 @@ const TabBar = ({
                         onCopyRelativePath={handleCopyRelativePath}
                         onReload={(bufferId) => {
                           const targetBuffer = bufferById.get(bufferId);
-                          if (targetBuffer && targetBuffer.path !== "extensions://marketplace") {
+                          if (targetBuffer && targetBuffer.type !== "extension") {
                             const { closeBuffer, openBuffer } = useBufferStore.getState().actions;
                             closeBuffer(bufferId);
                             setTimeout(async () => {

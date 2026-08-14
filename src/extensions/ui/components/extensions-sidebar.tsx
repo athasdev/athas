@@ -10,7 +10,6 @@ import {
   PlugsConnectedIcon as PlugsConnected,
   PlusIcon as Plus,
   RobotIcon as Robot,
-  MagnifyingGlassIcon as Search,
   SparkleIcon as Sparkles,
   TextTIcon as TextT,
   TrashIcon as Trash,
@@ -19,15 +18,7 @@ import {
 } from "@/ui/icons";
 import { invoke } from "@tauri-apps/api/core";
 import { getVisibleIconThemes } from "@/extensions/icon-themes/icon-theme-normalization";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -42,6 +33,8 @@ import {
   getManifestThemeContributions,
 } from "@/extensions/types/extension-contributions";
 import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useGenerateStore } from "@/features/generate/stores/generate.store";
 import {
   createSkillFromMarketplace,
   hasMarketplaceSkillUpdate,
@@ -58,11 +51,27 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
+import {
+  Dropdown,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  useDropdownMenu,
+  type MenuItem,
+} from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
-import { SearchField } from "@/ui/search";
 import { ScrollArea } from "@/ui/scroll-area";
+import {
+  SidebarHeaderIconButton,
+  SidebarListItem,
+  SidebarPanel,
+  SidebarSearchPopover,
+  SidebarSection,
+  SidebarTitleBar,
+} from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { PLATFORM_ARCH } from "@/utils/platform";
 
@@ -105,20 +114,17 @@ interface AppearanceOption {
   description?: string;
 }
 
-const FILTER_TABS = [
-  { id: "all", label: "All" },
-  { id: "language", label: "Languages", icon: TextT },
-  { id: "theme", label: "Themes", icon: PaintBrush },
-  { id: "icon-theme", label: "Icon Themes", icon: Package },
-  { id: "database", label: "Databases", icon: Database },
-  { id: "ai", label: "AI", icon: Sparkles },
-  { id: "integration", label: "Integrations", icon: PlugsConnected },
-  { id: "skill", label: "Skills", icon: Brain },
-  { id: "agent", label: "Agents", icon: Robot },
+const EXTENSION_CATEGORIES = [
+  { id: "language", label: "Languages" },
+  { id: "theme", label: "Themes" },
+  { id: "icon-theme", label: "Icon Themes" },
+  { id: "database", label: "Databases" },
+  { id: "ai", label: "AI" },
+  { id: "integration", label: "Integrations" },
+  { id: "skill", label: "Skills" },
+  { id: "agent", label: "Agents" },
 ] as const;
 
-type ExtensionTabId = (typeof FILTER_TABS)[number]["id"];
-const FILTER_TAB_IDS = new Set<string>(FILTER_TABS.map((tab) => tab.id));
 const LOCAL_FILE_ICON_MODULES = import.meta.glob(
   "../../../extensions/bundled/icon-themes/athas/icons/files/*.svg",
   { eager: true, import: "default", query: "?url" },
@@ -401,7 +407,13 @@ function isNamedIcon(icon: string): boolean {
   return !icon.includes("/") && !/\.(?:svg|png|jpe?g|webp)(?:[?#].*)?$/i.test(icon);
 }
 
-function ExtensionIcon({ extension }: { extension: UnifiedExtension }) {
+function ExtensionIcon({
+  extension,
+  compact = false,
+}: {
+  extension: UnifiedExtension;
+  compact?: boolean;
+}) {
   const [failedImageIcon, setFailedImageIcon] = useState(false);
   const icon = extension.icon?.trim();
   const showImageIcon = Boolean(icon && isImageIcon(icon) && !failedImageIcon);
@@ -414,20 +426,24 @@ function ExtensionIcon({ extension }: { extension: UnifiedExtension }) {
   return (
     <span
       className={cn(
-        "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border/60",
+        "flex shrink-0 items-center justify-center rounded-lg border border-border/60",
+        compact ? "size-7 rounded-md" : "size-12",
         showImageIcon ? "bg-white/95" : "bg-background",
       )}
     >
       {showImageIcon ? (
         <img
           alt=""
-          className="size-7 object-contain"
+          className={cn("object-contain", compact ? "size-4" : "size-7")}
           draggable={false}
           src={icon}
           onError={() => setFailedImageIcon(true)}
         />
       ) : showNamedIcon && icon ? (
-        <DynamicIcon name={icon} className="size-5 text-subtle-foreground" />
+        <DynamicIcon
+          name={icon}
+          className={cn("text-subtle-foreground", compact ? "size-4" : "size-5")}
+        />
       ) : (
         getCategoryIcon(extension.category)
       )}
@@ -437,8 +453,6 @@ function ExtensionIcon({ extension }: { extension: UnifiedExtension }) {
 
 const ExtensionRow = ({
   extension,
-  onToggle,
-  onUpdate,
   onContextMenu,
   onSelect,
   selected,
@@ -447,117 +461,81 @@ const ExtensionRow = ({
   hasRuntimeIssue,
 }: {
   extension: UnifiedExtension;
-  onToggle: () => void;
-  onUpdate?: () => void;
-  onContextMenu: (event: MouseEvent<HTMLDivElement>, extension: UnifiedExtension) => void;
+  onContextMenu: (event: MouseEvent<HTMLElement>, extension: UnifiedExtension) => void;
   onSelect: () => void;
   selected?: boolean;
   isInstalling?: boolean;
   hasUpdate?: boolean;
   hasRuntimeIssue?: boolean;
 }) => {
-  const primaryActionLabel = getPrimaryActionLabel(extension);
   const isUnavailableAgent =
     extension.category === "agent" && !extension.isInstalled && extension.canInstall === false;
   const actionContent = isInstalling ? (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center text-primary">
+    <span className="flex size-5 shrink-0 items-center justify-center text-primary">
       <Spinner label="Installing" compact />
     </span>
-  ) : hasRuntimeIssue && onUpdate ? (
-    <Button
-      onClick={(event) => {
-        event.stopPropagation();
-        onUpdate();
-      }}
-      variant="default"
-      tooltip="Reinstall"
-      size="icon"
-      className="text-destructive"
+  ) : hasRuntimeIssue ? (
+    <span
+      className="flex size-5 shrink-0 items-center justify-center text-destructive"
+      aria-label="Reinstall required"
     >
       <WarningCircle className="size-4" weight="duotone" />
-    </Button>
-  ) : hasUpdate && onUpdate ? (
-    <Button
-      onClick={(event) => {
-        event.stopPropagation();
-        onUpdate();
-      }}
-      variant="default"
-      tooltip="Update"
-      size="icon"
+    </span>
+  ) : hasUpdate ? (
+    <span
+      className="flex size-5 shrink-0 items-center justify-center text-primary"
+      aria-label="Update available"
     >
       <RefreshCw className="size-4" weight="duotone" />
-    </Button>
+    </span>
   ) : isUnavailableAgent ? (
-    <Button disabled variant="ghost" tooltip="Unavailable" size="icon">
+    <span
+      className="flex size-5 shrink-0 items-center justify-center text-subtle-foreground"
+      aria-label="Unavailable"
+    >
       <XCircle className="size-4" weight="duotone" />
-    </Button>
+    </span>
   ) : extension.isInstalled ? (
     <span
-      className="flex h-8 w-8 shrink-0 items-center justify-center text-subtle-foreground"
+      className="flex size-5 shrink-0 items-center justify-center text-subtle-foreground"
       aria-label={extension.isBundled ? "Built-in" : "Installed"}
     >
       <Check className="size-4" weight="bold" />
     </span>
   ) : (
-    <Button
-      onClick={(event) => {
-        event.stopPropagation();
-        onToggle();
-      }}
-      variant="default"
-      tooltip={primaryActionLabel}
-      size="icon"
+    <span
+      className="flex size-5 shrink-0 items-center justify-center text-subtle-foreground"
+      aria-label="Available"
     >
-      <Plus className="size-4" weight="bold" />
-    </Button>
+      <Plus className="size-4" />
+    </span>
   );
 
   return (
-    <div
-      className={cn(
-        "group flex min-h-16 min-w-0 items-center gap-3 rounded-lg px-2.5 py-2 text-left text-subtle-foreground transition-colors",
-        "hover:bg-accent/70 hover:text-foreground focus-within:bg-accent/70",
-        selected && "bg-accent/80 text-foreground",
-      )}
+    <SidebarListItem
+      active={selected}
+      leading={<ExtensionIcon extension={extension} compact />}
+      description={extension.description}
+      trailing={actionContent}
       onClick={onSelect}
       onContextMenu={(event) => onContextMenu(event, extension)}
-      role="button"
-      tabIndex={0}
-      aria-pressed={selected}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelect();
-        }
-      }}
     >
-      <ExtensionIcon extension={extension} />
-      <div className="min-w-0 flex-1">
-        <div className="truncate font-medium text-foreground ui-text-sm">{extension.name}</div>
-        {extension.description ? (
-          <div className="mt-0.5 truncate text-subtle-foreground ui-text-sm">
-            {extension.description}
-          </div>
-        ) : null}
-      </div>
-      <div className="ml-auto flex shrink-0 items-center justify-center">{actionContent}</div>
-    </div>
+      {extension.name}
+    </SidebarListItem>
   );
 };
 
-export const ExtensionsSidebar = () => {
+const ExtensionsView = ({ extensionId }: { extensionId?: string }) => {
   const settings = useSettingsStore(
     useShallow((state) => ({
       aiSkills: state.settings.aiSkills,
-      extensionsActiveTab: state.settings.extensionsActiveTab,
       iconTheme: state.settings.iconTheme,
       theme: state.settings.theme,
     })),
   );
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const [searchQuery, setSearchQuery] = useState("");
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [extensions, setExtensions] = useState<UnifiedExtension[]>([]);
   const [marketplaceSkills, setMarketplaceSkills] = useState<MarketplaceSkill[]>([]);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
@@ -565,7 +543,6 @@ export const ExtensionsSidebar = () => {
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [installingAgentIds, setInstallingAgentIds] = useState<Set<string>>(new Set());
   const [isSkillsCommandOpen, setIsSkillsCommandOpen] = useState(false);
-  const [selectedExtensionId, setSelectedExtensionId] = useState<string | null>(null);
   const { showToast } = useToast();
   const extensionContextMenu = useDropdownMenu<UnifiedExtension>();
 
@@ -578,16 +555,11 @@ export const ExtensionsSidebar = () => {
     disableExtension,
     updateExtension,
   } = useExtensionStore.use.actions();
-
-  useEffect(() => {
-    if (!FILTER_TAB_IDS.has(settings.extensionsActiveTab)) {
-      void updateSetting("extensionsActiveTab", "all");
-    }
-  }, [settings.extensionsActiveTab, updateSetting]);
-
-  useEffect(() => {
-    searchInputRef.current?.focus();
-  }, []);
+  const openExtensionBuffer = useBufferStore.use.actions().openExtensionBuffer;
+  const activeExtensionId = useBufferStore((state) => {
+    const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
+    return activeBuffer?.type === "extension" ? activeBuffer.extensionId : null;
+  });
 
   const loadAgents = useCallback(async () => {
     setIsLoadingAgents(true);
@@ -1334,40 +1306,14 @@ export const ExtensionsSidebar = () => {
       );
     return matchesSearch;
   });
-  const filterCounts = FILTER_TABS.reduce(
-    (counts, tab) => {
-      counts[tab.id] =
-        tab.id === "all"
-          ? searchMatchedExtensions.length
-          : searchMatchedExtensions.filter((extension) => extension.category === tab.id).length;
-      return counts;
-    },
-    {} as Record<ExtensionTabId, number>,
-  );
-  const filteredExtensions = searchMatchedExtensions.filter((extension) => {
-    const matchesTab =
-      settings.extensionsActiveTab === "all" || extension.category === settings.extensionsActiveTab;
-    return matchesTab;
-  });
-  const selectedExtension =
-    filteredExtensions.find((extension) => extension.id === selectedExtensionId) ??
-    filteredExtensions[0] ??
-    null;
+  const categorySections = EXTENSION_CATEGORIES.map((category) => ({
+    ...category,
+    extensions: searchMatchedExtensions.filter((extension) => extension.category === category.id),
+  })).filter((section) => section.extensions.length > 0);
+  const selectedExtension = extensionId
+    ? (extensions.find((extension) => extension.id === extensionId) ?? null)
+    : null;
   const installedCount = extensions.filter((extension) => extension.isInstalled).length;
-
-  useEffect(() => {
-    if (filteredExtensions.length === 0) {
-      if (selectedExtensionId !== null) setSelectedExtensionId(null);
-      return;
-    }
-
-    if (
-      !selectedExtensionId ||
-      !filteredExtensions.some((item) => item.id === selectedExtensionId)
-    ) {
-      setSelectedExtensionId(filteredExtensions[0]?.id ?? null);
-    }
-  }, [filteredExtensions, selectedExtensionId]);
 
   const isExtensionInstalling = (extension: UnifiedExtension) =>
     Boolean(
@@ -1386,7 +1332,7 @@ export const ExtensionsSidebar = () => {
   const updateCount = extensions.filter((extension) => hasExtensionUpdate(extension)).length;
 
   const handleExtensionContextMenu = useCallback(
-    (event: MouseEvent<HTMLDivElement>, extension: UnifiedExtension) => {
+    (event: MouseEvent<HTMLElement>, extension: UnifiedExtension) => {
       extensionContextMenu.open(event, extension);
     },
     [extensionContextMenu],
@@ -1561,370 +1507,339 @@ export const ExtensionsSidebar = () => {
     return items;
   }, [extensionContextMenu.data, extensionsWithUpdates, installingAgentIds, availableExtensions]);
 
-  return (
-    <div className="font-sans flex h-full min-h-0 flex-col bg-background">
-      <div className="shrink-0 border-border/70 border-b px-5 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <Package className="size-5 text-subtle-foreground" weight="duotone" />
-              <h1 className="font-semibold text-foreground ui-text-lg">Extensions</h1>
-            </div>
-            <div className="mt-1 flex flex-wrap items-center gap-2 ui-text-sm text-subtle-foreground">
-              <span>{extensions.length} available</span>
-              <span>·</span>
-              <span>{installedCount} installed</span>
-              {updateCount > 0 ? (
-                <>
-                  <span>·</span>
-                  <span className="text-primary">
-                    {updateCount} update{updateCount === 1 ? "" : "s"}
-                  </span>
-                </>
-              ) : null}
-            </div>
+  const extensionDetail = selectedExtension ? (
+    <div className="mx-auto w-full max-w-3xl space-y-6 px-6 py-8">
+      <div className="flex items-start gap-4">
+        <ExtensionIcon extension={selectedExtension} />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate font-semibold text-foreground ui-text-2xl">
+            {selectedExtension.name}
+          </h1>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-subtle-foreground ui-text-sm">
+            {selectedExtension.publisher ? <span>By {selectedExtension.publisher}</span> : null}
+            {selectedExtension.version ? <span>v{selectedExtension.version}</span> : null}
           </div>
-
-          <div className="flex min-w-65 flex-1 items-center justify-end gap-2 sm:flex-none">
-            <SearchField
-              ref={searchInputRef}
-              autoFocus
-              value={searchQuery}
-              onChange={setSearchQuery}
-              leftIcon={Search}
-              placeholder="Search extensions"
-              size="md"
-              containerClassName="min-w-0 flex-1 sm:w-80 sm:flex-none"
-              className="h-9 bg-surface/45"
-            />
-            {settings.extensionsActiveTab === "skill" ? (
-              <Button variant="default" size="xs" onClick={() => setIsSkillsCommandOpen(true)}>
-                <Plus />
-                New Skill
-              </Button>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="custom-scrollbar-thin mt-4 flex gap-1 overflow-x-auto">
-          {FILTER_TABS.map((tab) => {
-            const Icon = "icon" in tab ? tab.icon : undefined;
-            const active = settings.extensionsActiveTab === tab.id;
-            const count = filterCounts[tab.id] ?? 0;
-
-            return (
-              <Button
-                key={tab.id}
-                type="button"
-                variant={active ? "default" : "ghost"}
-                active={active}
-                size="xs"
-                className={cn(
-                  "group h-8 shrink-0 gap-1.5 px-2.5",
-                  active ? "bg-selected text-foreground" : "text-subtle-foreground",
-                )}
-                onClick={() => void updateSetting("extensionsActiveTab", tab.id as ExtensionTabId)}
-              >
-                {Icon ? <Icon className="size-3.5" weight={active ? "fill" : "duotone"} /> : null}
-                {tab.label}
-                <Badge
-                  variant={active ? "accent" : "default"}
-                  size="compact"
-                  className="h-4 min-w-4 px-1"
-                >
-                  {count}
-                </Badge>
-              </Button>
-            );
-          })}
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(380px,1fr)_minmax(340px,440px)]">
-        <ScrollArea className="min-h-0 border-border/70 border-r" contentClassName="p-5">
-          {settings.extensionsActiveTab === "skill" && isLoadingSkills ? (
-            <div className="mb-3">
-              <Spinner label="Loading skills" showLabel compact />
-            </div>
-          ) : null}
+      <div className="flex flex-wrap gap-1.5">
+        <Badge variant="default" size="compact">
+          {getCategoryLabel(selectedExtension.category)}
+        </Badge>
+        {selectedExtension.isInstalled ? (
+          <Badge variant="accent" size="compact">
+            Installed
+          </Badge>
+        ) : null}
+        {selectedExtension.isInstalled && !selectedExtension.isEnabled ? (
+          <Badge variant="default" size="compact">
+            Disabled
+          </Badge>
+        ) : null}
+        {hasExtensionUpdate(selectedExtension) ? (
+          <Badge variant="accent" size="compact">
+            Update
+          </Badge>
+        ) : null}
+        {selectedExtension.isActive ? (
+          <Badge variant="accent" size="compact">
+            Active
+          </Badge>
+        ) : null}
+        {selectedExtension.isBundled ? (
+          <Badge variant="accent" size="compact">
+            Built-in
+          </Badge>
+        ) : null}
+      </div>
 
-          {settings.extensionsActiveTab === "agent" && isLoadingAgents ? (
-            <div className="mb-3">
-              <Spinner label="Loading agents" showLabel compact />
-            </div>
-          ) : null}
+      {selectedExtension.description ? (
+        <p className="leading-6 text-subtle-foreground ui-text-base">
+          {selectedExtension.description}
+        </p>
+      ) : null}
 
-          {filteredExtensions.length === 0 ? (
-            <EmptyState message="No extensions found." />
-          ) : (
-            <div className="grid grid-cols-1 gap-1 xl:grid-cols-2 xl:gap-x-8 xl:gap-y-2">
-              {filteredExtensions.map((extension) => {
-                const isInstalling = isExtensionInstalling(extension);
-                const hasUpdate = hasExtensionUpdate(extension);
-                const hasRuntimeIssue = Boolean(extension.runtimeIssues?.length);
+      {selectedExtension.runtimeIssues?.length ? (
+        <Alert tone="error">
+          <AlertDescription>{selectedExtension.runtimeIssues[0]?.message}</AlertDescription>
+        </Alert>
+      ) : null}
 
-                return (
-                  <ExtensionRow
-                    key={extension.id}
-                    extension={extension}
-                    selected={selectedExtension?.id === extension.id}
-                    onSelect={() => setSelectedExtensionId(extension.id)}
-                    onToggle={() => handleToggle(extension)}
-                    onUpdate={() => handleUpdate(extension)}
-                    onContextMenu={handleExtensionContextMenu}
-                    isInstalling={isInstalling}
-                    hasUpdate={hasUpdate}
-                    hasRuntimeIssue={hasRuntimeIssue}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </ScrollArea>
+      {isAppearanceExtension(selectedExtension) && selectedExtension.appearanceOptions?.length ? (
+        <div className="border-border/70 border-t pt-5">
+          <div className="mb-2 font-medium text-foreground ui-text-sm">
+            {selectedExtension.category === "theme" ? "Themes" : "Icon themes"}
+          </div>
+          <div className="space-y-2">
+            {selectedExtension.appearanceOptions.map((option) => {
+              const currentSelection =
+                selectedExtension.category === "theme" ? settings.theme : settings.iconTheme;
+              const isCurrent = currentSelection === option.id;
 
-        <ScrollArea
-          className="hidden min-h-0 bg-surface/25 lg:block"
-          contentClassName="p-5"
-          render={<aside />}
-        >
-          {selectedExtension ? (
-            <div className="space-y-5">
-              <div className="flex items-start gap-3">
-                <ExtensionIcon extension={selectedExtension} />
-                <div className="min-w-0 flex-1">
-                  <h2 className="truncate font-semibold text-foreground ui-text-xl">
-                    {selectedExtension.name}
-                  </h2>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-subtle-foreground ui-text-sm">
-                    {selectedExtension.publisher ? (
-                      <span>By {selectedExtension.publisher}</span>
+              return (
+                <div
+                  key={option.id}
+                  className="flex min-w-0 items-center gap-3 rounded-lg border border-border/65 bg-background px-3 py-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium text-foreground ui-text-sm">
+                      {option.name}
+                    </div>
+                    {option.description ? (
+                      <div className="mt-0.5 line-clamp-1 text-subtle-foreground ui-text-sm">
+                        {option.description}
+                      </div>
                     ) : null}
-                    {selectedExtension.version ? <span>v{selectedExtension.version}</span> : null}
                   </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-1.5">
-                <Badge variant="default" size="compact">
-                  {getCategoryLabel(selectedExtension.category)}
-                </Badge>
-                {selectedExtension.isInstalled ? (
-                  <Badge variant="accent" size="compact">
-                    Installed
-                  </Badge>
-                ) : null}
-                {selectedExtension.isInstalled && !selectedExtension.isEnabled ? (
-                  <Badge variant="default" size="compact">
-                    Disabled
-                  </Badge>
-                ) : null}
-                {hasExtensionUpdate(selectedExtension) ? (
-                  <Badge variant="accent" size="compact">
-                    Update
-                  </Badge>
-                ) : null}
-                {selectedExtension.isActive ? (
-                  <Badge variant="accent" size="compact">
-                    Active
-                  </Badge>
-                ) : null}
-                {selectedExtension.isBundled ? (
-                  <Badge variant="accent" size="compact">
-                    Built-in
-                  </Badge>
-                ) : null}
-              </div>
-
-              {selectedExtension.description ? (
-                <p className="leading-6 text-subtle-foreground ui-text-base">
-                  {selectedExtension.description}
-                </p>
-              ) : null}
-
-              {selectedExtension.runtimeIssues?.length ? (
-                <Alert tone="error">
-                  <AlertDescription>{selectedExtension.runtimeIssues[0]?.message}</AlertDescription>
-                </Alert>
-              ) : null}
-
-              {isAppearanceExtension(selectedExtension) &&
-              selectedExtension.appearanceOptions?.length ? (
-                <div className="border-border/70 border-t pt-4">
-                  <div className="mb-2 font-medium text-foreground ui-text-sm">
-                    {selectedExtension.category === "theme" ? "Themes" : "Icon themes"}
-                  </div>
-                  <div className="space-y-2">
-                    {selectedExtension.appearanceOptions.map((option) => {
-                      const currentSelection =
-                        selectedExtension.category === "theme"
-                          ? settings.theme
-                          : settings.iconTheme;
-                      const isCurrent = currentSelection === option.id;
-
-                      return (
-                        <div
-                          key={option.id}
-                          className="flex min-w-0 items-center gap-3 rounded-lg border border-border/65 bg-background px-3 py-2"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium text-foreground ui-text-sm">
-                              {option.name}
-                            </div>
-                            {option.description ? (
-                              <div className="mt-0.5 line-clamp-1 text-subtle-foreground ui-text-sm">
-                                {option.description}
-                              </div>
-                            ) : null}
-                          </div>
-                          <Button
-                            variant={isCurrent ? "default" : "accent"}
-                            size="xs"
-                            active={isCurrent}
-                            disabled={!selectedExtension.isInstalled || isCurrent}
-                            onClick={() => void handleUseAppearance(selectedExtension, option.id)}
-                          >
-                            <Check />
-                            {isCurrent
-                              ? "Current"
-                              : selectedExtension.isEnabled
-                                ? "Use"
-                                : "Activate and use"}
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="flex flex-wrap gap-2">
-                {!selectedExtension.isBundled ? (
                   <Button
-                    variant={
-                      isAppearanceExtension(selectedExtension) && selectedExtension.isActive
-                        ? "default"
-                        : isAppearanceExtension(selectedExtension) && selectedExtension.isInstalled
-                          ? "accent"
-                          : selectedExtension.isInstalled &&
-                              (selectedExtension.category === "agent" ||
-                                selectedExtension.category === "skill")
-                            ? "ghost"
-                            : selectedExtension.isInstalled && selectedExtension.isEnabled
-                              ? "default"
-                              : "accent"
-                    }
-                    className={
-                      selectedExtension.isInstalled &&
+                    variant={isCurrent ? "default" : "accent"}
+                    size="xs"
+                    active={isCurrent}
+                    disabled={!selectedExtension.isInstalled || isCurrent}
+                    onClick={() => void handleUseAppearance(selectedExtension, option.id)}
+                  >
+                    <Check />
+                    {isCurrent
+                      ? "Current"
+                      : selectedExtension.isEnabled
+                        ? "Use"
+                        : "Activate and use"}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        {!selectedExtension.isBundled ? (
+          <Button
+            variant={
+              isAppearanceExtension(selectedExtension) && selectedExtension.isActive
+                ? "default"
+                : isAppearanceExtension(selectedExtension) && selectedExtension.isInstalled
+                  ? "accent"
+                  : selectedExtension.isInstalled &&
                       (selectedExtension.category === "agent" ||
                         selectedExtension.category === "skill")
-                        ? "text-subtle-foreground hover:text-destructive"
-                        : undefined
-                    }
-                    onClick={() => void handleToggle(selectedExtension)}
-                    disabled={
-                      (isAppearanceExtension(selectedExtension) && selectedExtension.isActive) ||
-                      isExtensionInstalling(selectedExtension) ||
-                      (selectedExtension.category === "agent" &&
-                        !selectedExtension.isInstalled &&
-                        selectedExtension.canInstall === false)
-                    }
-                  >
-                    {isAppearanceExtension(selectedExtension) && selectedExtension.isInstalled ? (
-                      <Check />
-                    ) : selectedExtension.isInstalled &&
-                      (selectedExtension.category === "agent" ||
-                        selectedExtension.category === "skill") ? (
-                      <Trash />
-                    ) : selectedExtension.isInstalled && selectedExtension.isEnabled ? (
-                      <XCircle />
-                    ) : selectedExtension.isInstalled ? (
-                      <Check />
-                    ) : (
-                      <Download weight="fill" />
-                    )}
-                    {getPrimaryActionLabel(selectedExtension)}
-                  </Button>
-                ) : null}
-                {selectedExtension.isMarketplace &&
-                selectedExtension.isInstalled &&
-                selectedExtension.category !== "agent" &&
-                selectedExtension.category !== "skill" ? (
-                  <Button
-                    variant="ghost"
-                    className="text-subtle-foreground hover:text-destructive"
-                    onClick={() => void handleUninstall(selectedExtension)}
-                    disabled={isExtensionInstalling(selectedExtension)}
-                  >
-                    <Trash />
-                    Uninstall
-                  </Button>
-                ) : null}
-                {hasExtensionUpdate(selectedExtension) && selectedExtension.isInstalled ? (
-                  <Button
-                    variant="default"
-                    onClick={() => void handleUpdate(selectedExtension)}
-                    disabled={isExtensionInstalling(selectedExtension)}
-                  >
-                    <RefreshCw />
-                    Update
-                  </Button>
-                ) : null}
-                {canDeactivateAppearanceExtension(selectedExtension) ? (
-                  <Button
-                    variant="ghost"
-                    className="text-subtle-foreground"
-                    onClick={() => void handleDeactivateExtension(selectedExtension)}
-                  >
-                    <XCircle />
-                    Deactivate
-                  </Button>
-                ) : null}
-                {selectedExtension.skill && hasSkillLocalOverride(selectedExtension.skill) ? (
-                  <Button
-                    variant="default"
-                    onClick={() => void handleResetSkillOverride(selectedExtension)}
-                  >
-                    <Reset />
-                    Reset
-                  </Button>
-                ) : null}
-              </div>
-
-              <div className="border-border/70 border-t pt-4">
-                <div className="mb-2 font-medium text-foreground ui-text-sm">Contributions</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {(selectedExtension.contributionSummary?.length
-                    ? selectedExtension.contributionSummary
-                    : selectedExtension.extensions
-                      ? selectedExtension.extensions
-                      : [getCategoryLabel(selectedExtension.category)]
-                  ).map((item) => (
-                    <Badge key={item} variant="default">
-                      {item}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <EmptyState message="No extension selected." />
-          )}
-        </ScrollArea>
+                    ? "ghost"
+                    : selectedExtension.isInstalled && selectedExtension.isEnabled
+                      ? "default"
+                      : "accent"
+            }
+            className={
+              selectedExtension.isInstalled &&
+              (selectedExtension.category === "agent" || selectedExtension.category === "skill")
+                ? "text-subtle-foreground hover:text-destructive"
+                : undefined
+            }
+            onClick={() => void handleToggle(selectedExtension)}
+            disabled={
+              (isAppearanceExtension(selectedExtension) && selectedExtension.isActive) ||
+              isExtensionInstalling(selectedExtension) ||
+              (selectedExtension.category === "agent" &&
+                !selectedExtension.isInstalled &&
+                selectedExtension.canInstall === false)
+            }
+          >
+            {isAppearanceExtension(selectedExtension) && selectedExtension.isInstalled ? (
+              <Check />
+            ) : selectedExtension.isInstalled &&
+              (selectedExtension.category === "agent" || selectedExtension.category === "skill") ? (
+              <Trash />
+            ) : selectedExtension.isInstalled && selectedExtension.isEnabled ? (
+              <XCircle />
+            ) : selectedExtension.isInstalled ? (
+              <Check />
+            ) : (
+              <Download weight="fill" />
+            )}
+            {getPrimaryActionLabel(selectedExtension)}
+          </Button>
+        ) : null}
+        {selectedExtension.isMarketplace &&
+        selectedExtension.isInstalled &&
+        selectedExtension.category !== "agent" &&
+        selectedExtension.category !== "skill" ? (
+          <Button
+            variant="ghost"
+            className="text-subtle-foreground hover:text-destructive"
+            onClick={() => void handleUninstall(selectedExtension)}
+            disabled={isExtensionInstalling(selectedExtension)}
+          >
+            <Trash />
+            Uninstall
+          </Button>
+        ) : null}
+        {hasExtensionUpdate(selectedExtension) && selectedExtension.isInstalled ? (
+          <Button
+            variant="default"
+            onClick={() => void handleUpdate(selectedExtension)}
+            disabled={isExtensionInstalling(selectedExtension)}
+          >
+            <RefreshCw />
+            Update
+          </Button>
+        ) : null}
+        {canDeactivateAppearanceExtension(selectedExtension) ? (
+          <Button
+            variant="ghost"
+            className="text-subtle-foreground"
+            onClick={() => void handleDeactivateExtension(selectedExtension)}
+          >
+            <XCircle />
+            Deactivate
+          </Button>
+        ) : null}
+        {selectedExtension.skill && hasSkillLocalOverride(selectedExtension.skill) ? (
+          <Button
+            variant="default"
+            onClick={() => void handleResetSkillOverride(selectedExtension)}
+          >
+            <Reset />
+            Reset
+          </Button>
+        ) : null}
       </div>
 
+      <div className="border-border/70 border-t pt-5">
+        <div className="mb-2 font-medium text-foreground ui-text-sm">Contributions</div>
+        <div className="flex flex-wrap gap-1.5">
+          {(selectedExtension.contributionSummary?.length
+            ? selectedExtension.contributionSummary
+            : selectedExtension.extensions
+              ? selectedExtension.extensions
+              : [getCategoryLabel(selectedExtension.category)]
+          ).map((item) => (
+            <Badge key={item} variant="default">
+              {item}
+            </Badge>
+          ))}
+        </div>
+      </div>
+    </div>
+  ) : (
+    <EmptyState layout="sidebar" message="Extension not found." />
+  );
+
+  const overlays = (
+    <>
       <SkillsCommand
         isOpen={isSkillsCommandOpen}
         initialView="editor"
         onClose={() => setIsSkillsCommandOpen(false)}
         onSelectSkill={() => setIsSkillsCommandOpen(false)}
       />
-
       <Dropdown
         isOpen={extensionContextMenu.isOpen}
         point={extensionContextMenu.position}
         items={extensionContextMenuItems}
         onClose={extensionContextMenu.close}
       />
-    </div>
+    </>
+  );
+
+  if (extensionId) {
+    return (
+      <div className="font-sans flex h-full min-h-0 flex-col bg-background">
+        <ScrollArea className="min-h-0 flex-1">{extensionDetail}</ScrollArea>
+        {overlays}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <SidebarPanel className="font-sans select-none">
+        <SidebarTitleBar title="Extensions">
+          <SidebarSearchPopover
+            value={searchQuery}
+            onChange={setSearchQuery}
+            open={isSearchOpen}
+            onOpenChange={setIsSearchOpen}
+            aria-label="Search extensions"
+          />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <SidebarHeaderIconButton tooltip="Add" tooltipSide="bottom" aria-label="Add" />
+              }
+            >
+              <Plus />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setIsSearchOpen(true)}>
+                <Package />
+                Add Extension
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsSkillsCommandOpen(true)}>
+                <Brain />
+                Add Skill
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => useGenerateStore.getState().actions.openExtensionGeneration()}
+              >
+                <Sparkles />
+                Generate Extension
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarTitleBar>
+
+        <div className="px-4 pb-1 text-subtle-foreground ui-text-sm">
+          {searchMatchedExtensions.length} extension
+          {searchMatchedExtensions.length === 1 ? "" : "s"}
+          {updateCount > 0
+            ? ` · ${updateCount} update${updateCount === 1 ? "" : "s"}`
+            : installedCount > 0
+              ? ` · ${installedCount} installed`
+              : ""}
+        </div>
+
+        <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
+          {isLoadingSkills || isLoadingAgents ? (
+            <EmptyState
+              layout="sidebar"
+              message={<Spinner label="Loading extensions" showLabel compact />}
+            />
+          ) : searchMatchedExtensions.length === 0 ? (
+            <EmptyState layout="sidebar" message="No extensions found." />
+          ) : (
+            <div className="overflow-x-hidden">
+              {categorySections.map((section) => (
+                <SidebarSection
+                  key={section.id}
+                  title={section.label}
+                  count={section.extensions.length}
+                  forceExpanded={normalizedSearchQuery.length > 0}
+                >
+                  {section.extensions.map((extension) => (
+                    <ExtensionRow
+                      key={extension.id}
+                      extension={extension}
+                      selected={activeExtensionId === extension.id}
+                      onSelect={() => openExtensionBuffer(extension.id, extension.name)}
+                      onContextMenu={handleExtensionContextMenu}
+                      isInstalling={isExtensionInstalling(extension)}
+                      hasUpdate={hasExtensionUpdate(extension)}
+                      hasRuntimeIssue={Boolean(extension.runtimeIssues?.length)}
+                    />
+                  ))}
+                </SidebarSection>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </SidebarPanel>
+      {overlays}
+    </>
   );
 };
+
+export const ExtensionsSidebar = () => <ExtensionsView />;
+
+export const ExtensionDetails = ({ extensionId }: { extensionId: string }) => (
+  <ExtensionsView extensionId={extensionId} />
+);

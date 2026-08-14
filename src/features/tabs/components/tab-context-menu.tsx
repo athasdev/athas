@@ -159,7 +159,7 @@ const TabContextMenu = ({
           },
         ]
       : []),
-    ...(buffer.path !== "extensions://marketplace"
+    ...(buffer.type !== "extension"
       ? [
           {
             id: "reload",

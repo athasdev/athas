@@ -30,3 +30,37 @@ describe("createPaneContent onboarding surfaces", () => {
     }
   });
 });
+
+describe("createPaneContent extension surfaces", () => {
+  it("creates a tab-addressable page for one extension", () => {
+    const content = createPaneContent("extension", {
+      type: "extension",
+      extensionId: "athas.typescript",
+      name: "TypeScript",
+    });
+
+    expect(content).toMatchObject({
+      type: "extension",
+      extensionId: "athas.typescript",
+      name: "TypeScript",
+      path: "extension://athas.typescript",
+      isPreview: false,
+    });
+  });
+});
+
+describe("createPaneContent web viewer surfaces", () => {
+  it("preserves explicit access when the general web viewer feature is disabled", () => {
+    const content = createPaneContent("github-notification", {
+      type: "webViewer",
+      url: "https://github.com/athasdev/athas/actions",
+      allowWhenDisabled: true,
+    });
+
+    expect(content).toMatchObject({
+      type: "webViewer",
+      url: "https://github.com/athasdev/athas/actions",
+      allowWhenDisabled: true,
+    });
+  });
+});

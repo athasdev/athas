@@ -41,7 +41,7 @@ function handleDeepLink(url: string) {
     } else if (action.type === "extensionInstall") {
       installExtensionFromDeepLink(action.extensionId);
     } else if (action.type === "extensions") {
-      void openExtensionsTabFromDeepLink(action.extensionsCategory);
+      void openExtensionsSidebarFromDeepLink(action.extensionsCategory);
     } else {
       void openSettingsFromDeepLink(action.tab, action.extensionsCategory);
     }
@@ -175,10 +175,12 @@ async function openSettingsFromDeepLink(
   useUIState.getState().openSettingsDialog(tab);
 }
 
-async function openExtensionsTabFromDeepLink(extensionsCategory?: Settings["extensionsActiveTab"]) {
-  const [{ useSettingsStore }, { useBufferStore }] = await Promise.all([
+async function openExtensionsSidebarFromDeepLink(
+  extensionsCategory?: Settings["extensionsActiveTab"],
+) {
+  const [{ useSettingsStore }, { useUIState }] = await Promise.all([
     import("@/features/settings/stores/settings.store"),
-    import("@/features/editor/stores/buffer.store"),
+    import("@/features/window/stores/ui-state.store"),
   ]);
 
   if (extensionsCategory) {
@@ -187,7 +189,9 @@ async function openExtensionsTabFromDeepLink(extensionsCategory?: Settings["exte
       .actions.updateSetting("extensionsActiveTab", extensionsCategory);
   }
 
-  useBufferStore.getState().actions.openExtensionsBuffer();
+  const uiState = useUIState.getState();
+  uiState.setActiveView("extensions");
+  uiState.setIsSidebarVisible(true);
 }
 
 async function installExtensionFromDeepLink(extensionId: string) {

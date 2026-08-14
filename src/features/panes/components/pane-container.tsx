@@ -80,9 +80,9 @@ const DiagnosticsBuffer = lazy(
   () => import("@/features/diagnostics/components/diagnostics-buffer"),
 );
 const ReferencesBuffer = lazy(() => import("@/features/references/components/references-buffer"));
-const ExtensionsBuffer = lazy(() =>
+const ExtensionDetails = lazy(() =>
   import("@/extensions/ui/components/extensions-sidebar").then((m) => ({
-    default: m.ExtensionsSidebar,
+    default: m.ExtensionDetails,
   })),
 );
 const OnboardingView = lazy(() => import("@/features/onboarding/components/onboarding-view"));
@@ -982,8 +982,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         case "references":
           return <ReferencesBuffer />;
 
-        case "extensions":
-          return <ExtensionsBuffer />;
+        case "extension":
+          return <ExtensionDetails extensionId={buffer.extensionId} />;
 
         case "onboarding":
           return (

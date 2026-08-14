@@ -176,7 +176,7 @@ interface BufferActions {
   openGlobalSearchBuffer: () => string;
   openDiagnosticsBuffer: () => string;
   openReferencesBuffer: () => string;
-  openExtensionsBuffer: () => string;
+  openExtensionBuffer: (extensionId: string, name: string) => string;
   openOnboardingBuffer: (
     context: import("@/features/onboarding/lib/onboarding-state").OnboardingContext,
   ) => string;
@@ -879,6 +879,37 @@ const createBufferStore = (workspaceId: string) => {
               return newBuffer.id;
             }
 
+            case "extension": {
+              const path = `extension://${encodeURIComponent(spec.extensionId)}`;
+              const existing = buffers.find(
+                (buffer) => buffer.type === "extension" && buffer.extensionId === spec.extensionId,
+              );
+              if (existing) {
+                set((state) => {
+                  state.activeBufferId = existing.id;
+                  state.buffers = state.buffers.map((buffer) =>
+                    buffer.id === existing.id && buffer.type === "extension"
+                      ? { ...buffer, name: spec.name, isActive: true }
+                      : { ...buffer, isActive: buffer.id === existing.id },
+                  );
+                });
+                syncBufferToPane(existing.id);
+                return existing.id;
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
+                state.activeBufferId = newBuffer.id;
+              });
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
             case "externalEditor": {
               const existing = getBufferByPath(buffers, spec.path);
               if (existing) {
@@ -919,8 +950,7 @@ const createBufferStore = (workspaceId: string) => {
 
             case "globalSearch":
             case "diagnostics":
-            case "references":
-            case "extensions": {
+            case "references": {
               const existing = buffers.find((b) => b.type === spec.type);
               if (existing) {
                 set((state) => {
@@ -1217,8 +1247,8 @@ const createBufferStore = (workspaceId: string) => {
           return get().actions.openContent({ type: "references" });
         },
 
-        openExtensionsBuffer: (): string => {
-          return get().actions.openContent({ type: "extensions" });
+        openExtensionBuffer: (extensionId, name): string => {
+          return get().actions.openContent({ type: "extension", extensionId, name });
         },
 
         openOnboardingBuffer: (context): string => {

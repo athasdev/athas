@@ -227,8 +227,7 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
       };
     case "globalSearch":
     case "diagnostics":
-    case "references":
-    case "extensions": {
+    case "references": {
       const metadata = SINGLETON_TOOL_BUFFER_METADATA[spec.type];
       return {
         ...base,
@@ -238,6 +237,15 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         isPreview: false,
       };
     }
+    case "extension":
+      return {
+        ...base,
+        type: "extension",
+        path: `extension://${encodeURIComponent(spec.extensionId)}`,
+        name: spec.name,
+        isPreview: false,
+        extensionId: spec.extensionId,
+      };
     case "onboarding":
       return {
         ...base,

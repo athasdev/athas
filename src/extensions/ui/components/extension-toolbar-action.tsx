@@ -17,7 +17,7 @@ export function ExtensionToolbarAction({ action }: ExtensionToolbarActionProps) 
       <Button
         onClick={action.onClick}
         variant="ghost"
-        className="rounded text-subtle-foreground"
+        className="text-subtle-foreground"
         aria-label={action.title}
         size="icon-xs"
       >

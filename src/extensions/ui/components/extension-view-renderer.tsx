@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import { SidebarListItem, SidebarPanel, SidebarSectionLabel, SidebarTitleBar } from "@/ui/sidebar";
@@ -147,31 +147,26 @@ function renderNode(
       );
     case "empty":
       return (
-        <Empty key={key}>
-          <EmptyHeader>
-            <EmptyTitle>{node.message}</EmptyTitle>
-            {node.description ? <EmptyDescription>{node.description}</EmptyDescription> : null}
-          </EmptyHeader>
-        </Empty>
+        <EmptyState key={key} layout="sidebar" title={node.message} message={node.description} />
       );
     case "loading":
       return (
-        <div
+        <EmptyState
           key={key}
-          className="flex items-center justify-center gap-2 py-8 ui-text-sm text-subtle-foreground"
-        >
-          <Spinner compact />
-          {node.message ?? "Loading"}
-        </div>
+          layout="sidebar"
+          message={<Spinner label={node.message ?? "Loading"} showLabel compact />}
+        />
       );
     case "error":
       return (
-        <Empty key={key} tone="error" role="alert">
-          <EmptyHeader>
-            <EmptyTitle>{node.message}</EmptyTitle>
-            {node.description ? <EmptyDescription>{node.description}</EmptyDescription> : null}
-          </EmptyHeader>
-        </Empty>
+        <EmptyState
+          key={key}
+          layout="sidebar"
+          title={node.message}
+          message={node.description}
+          tone="error"
+          role="alert"
+        />
       );
     case "divider":
       return <div key={key} className="h-px bg-border/70" />;

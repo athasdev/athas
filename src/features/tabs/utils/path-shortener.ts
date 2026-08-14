@@ -40,7 +40,7 @@ export function calculateDisplayNames(
     { items: Array<{ buffer: PaneContent; segments: string[] }>; maxSegments: number }
   >();
   for (const buffer of buffers) {
-    if (isVirtualContent(buffer) || buffer.path === "extensions://marketplace") {
+    if (isVirtualContent(buffer)) {
       continue;
     }
 
