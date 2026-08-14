@@ -862,6 +862,33 @@ pub fn git_commit_diff(
    )
 }
 
+pub fn git_file_at_commit(
+   repo_path: String,
+   commit_hash: String,
+   file_path: String,
+) -> Result<String, String> {
+   let repo =
+      Repository::open(&repo_path).map_err(|e| format!("Failed to open repository: {e}"))?;
+   let commit = repo
+      .revparse_single(&commit_hash)
+      .and_then(|object| object.peel_to_commit())
+      .map_err(|e| format!("Commit not found: {e}"))?;
+   let tree = commit
+      .tree()
+      .map_err(|e| format!("Failed to get commit tree: {e}"))?;
+   let entry = tree
+      .get_path(Path::new(&file_path))
+      .map_err(|e| format!("File not found at {commit_hash}: {e}"))?;
+   let blob = entry
+      .to_object(&repo)
+      .and_then(|object| object.peel_to_blob())
+      .map_err(|e| format!("Failed to read file at {commit_hash}: {e}"))?;
+
+   std::str::from_utf8(blob.content())
+      .map(str::to_owned)
+      .map_err(|_| format!("File is not valid UTF-8 at {commit_hash}: {file_path}"))
+}
+
 pub fn git_ref_diff(
    repo_path: String,
    base_ref: String,
@@ -1130,5 +1157,34 @@ mod tests {
 
       assert!(diff.is_new);
       assert_eq!(diff.additions, Some(1));
+   }
+
+   #[test]
+   fn reads_file_content_from_a_specific_commit() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let repo = Repository::init(temp_dir.path()).expect("repo init");
+      fs::write(temp_dir.path().join("example.rs"), "fn first() {}\n").expect("write file");
+      let mut index = repo.index().expect("index");
+      index
+         .add_all(["example.rs"], IndexAddOption::DEFAULT, None)
+         .expect("stage file");
+      index.write().expect("write index");
+      let tree_id = index.write_tree().expect("write tree");
+      let tree = repo.find_tree(tree_id).expect("find tree");
+      let signature = git2::Signature::now("Athas", "athas@example.com").expect("signature");
+      let commit_id = repo
+         .commit(Some("HEAD"), &signature, &signature, "first", &tree, &[])
+         .expect("commit");
+
+      fs::write(temp_dir.path().join("example.rs"), "fn changed() {}\n").expect("change file");
+
+      let content = git_file_at_commit(
+         temp_dir.path().to_string_lossy().into_owned(),
+         commit_id.to_string(),
+         "example.rs".to_string(),
+      )
+      .expect("file at commit");
+
+      assert_eq!(content, "fn first() {}\n");
    }
 }

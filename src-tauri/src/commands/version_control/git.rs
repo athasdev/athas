@@ -135,6 +135,16 @@ pub async fn git_commit_diff(
 }
 
 #[tauri::command]
+pub async fn git_file_at_commit(
+   repo_path: String,
+   commit_hash: String,
+   file_path: String,
+) -> Result<String, String> {
+   let repo_path = resolve_backend_path(repo_path);
+   run_blocking(move || git_backend::git_file_at_commit(repo_path, commit_hash, file_path)).await
+}
+
+#[tauri::command]
 pub async fn git_ref_diff(
    repo_path: String,
    base_ref: String,
