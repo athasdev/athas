@@ -7,6 +7,36 @@ export interface MentionedFile {
   content: string;
 }
 
+export function appendReferencedFiles(message: string, files: MentionedFile[]) {
+  if (files.length === 0) return message;
+
+  let processedMessage = `${message}\n\n--- Referenced Files ---\n`;
+  for (const file of files) {
+    processedMessage += `\n### ${file.name} (${file.path})\n\`\`\`\n${file.content}\n\`\`\`\n`;
+  }
+  return processedMessage;
+}
+
+export async function loadFilesByPaths(filePaths: string[]): Promise<MentionedFile[]> {
+  return (
+    await Promise.all(
+      filePaths.map(async (path) => {
+        try {
+          const content = await invoke<string>("read_file_custom", { path });
+          return {
+            name: path.split(/[/\\]/).pop() || path,
+            path,
+            content,
+          } satisfies MentionedFile;
+        } catch (error) {
+          console.error(`Error reading file ${path}:`, error);
+          return null;
+        }
+      }),
+    )
+  ).filter((file): file is MentionedFile => file !== null);
+}
+
 export function extractFileMentionNames(message: string): string[] {
   const mentionRegex = /@\[([^\]]+)\]|@(\S+)/g;
   return [...message.matchAll(mentionRegex)]
@@ -19,37 +49,14 @@ export async function parseMentionsAndLoadFiles(
   allProjectFiles: FileEntry[],
 ): Promise<{ processedMessage: string; mentionedFiles: MentionedFile[] }> {
   const mentionNames = extractFileMentionNames(message);
-  const mentionedFiles = (
-    await Promise.all(
-      mentionNames.map(async (fileName) => {
-        const file = allProjectFiles.find((f) => !f.isDir && f.name === fileName);
+  const mentionedPaths = new Set(
+    mentionNames
+      .map(
+        (fileName) => allProjectFiles.find((file) => !file.isDir && file.name === fileName)?.path,
+      )
+      .filter((path): path is string => Boolean(path)),
+  );
+  const mentionedFiles = await loadFilesByPaths(Array.from(mentionedPaths));
 
-        if (!file) return null;
-
-        try {
-          const content = await invoke<string>("read_file_custom", { path: file.path });
-          return {
-            name: file.name,
-            path: file.path,
-            content,
-          } satisfies MentionedFile;
-        } catch (error) {
-          console.error(`Error reading file ${file.path}:`, error);
-          return null;
-        }
-      }),
-    )
-  ).filter((file): file is MentionedFile => file !== null);
-
-  // Create a processed message with file contents appended
-  let processedMessage = message;
-
-  if (mentionedFiles.length > 0) {
-    processedMessage += "\n\n--- Referenced Files ---\n";
-    for (const file of mentionedFiles) {
-      processedMessage += `\n### ${file.name} (${file.path})\n\`\`\`\n${file.content}\n\`\`\`\n`;
-    }
-  }
-
-  return { processedMessage, mentionedFiles };
+  return { processedMessage: appendReferencedFiles(message, mentionedFiles), mentionedFiles };
 }

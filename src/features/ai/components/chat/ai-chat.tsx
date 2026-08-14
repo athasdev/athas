@@ -7,7 +7,11 @@ import {
 } from "@/features/ai/lib/acp-authentication";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
-import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
+import {
+  appendReferencedFiles,
+  loadFilesByPaths,
+  parseMentionsAndLoadFiles,
+} from "@/features/ai/lib/file-mentions";
 import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
@@ -476,13 +480,19 @@ const AIChat = memo(function AIChat({
     let acpCommandResultLabel: string | null = null;
 
     try {
-      const { processedMessage, mentionedFiles } = await parseMentionsAndLoadFiles(
+      const { mentionedFiles } = await parseMentionsAndLoadFiles(
         trimmedMessageContent,
         allProjectFiles,
       );
+      const mentionedPaths = new Set(mentionedFiles.map((file) => file.path));
+      const attachedFiles = isAcp
+        ? []
+        : await loadFilesByPaths(
+            Array.from(selectedFilesPaths).filter((path) => !mentionedPaths.has(path)),
+          );
       const latestSettings = useSettingsStore.getState().settings;
       const context = await buildContext(currentAgentId, latestSettings.aiProviderId);
-      context.mentionedFiles = mentionedFiles;
+      context.mentionedFiles = [...mentionedFiles, ...attachedFiles];
 
       // Handle direct ACP UI intents locally so they are always reliable.
       if (isAcp) {
@@ -524,7 +534,9 @@ const AIChat = memo(function AIChat({
         }
       }
 
-      const enhancedMessage = isAcp ? trimmedMessageContent : processedMessage;
+      const enhancedMessage = isAcp
+        ? trimmedMessageContent
+        : appendReferencedFiles(trimmedMessageContent, [...mentionedFiles, ...attachedFiles]);
       if (isAcp) {
         setAcpEvents([]);
       }

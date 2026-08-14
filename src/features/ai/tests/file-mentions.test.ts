@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { extractFileMentionNames } from "../lib/file-mentions";
+import { appendReferencedFiles, extractFileMentionNames } from "../lib/file-mentions";
 
 describe("file mentions", () => {
   it("extracts multiple composer tokens without merging adjacent context", () => {
@@ -14,5 +14,17 @@ describe("file mentions", () => {
       "release notes.md",
       "README.md",
     ]);
+  });
+
+  it("appends selected file contents to provider messages", () => {
+    expect(
+      appendReferencedFiles("Review this", [
+        {
+          name: "app.ts",
+          path: "/workspace/app.ts",
+          content: "export const ready = true;",
+        },
+      ]),
+    ).toContain("### app.ts (/workspace/app.ts)\n```\nexport const ready = true;\n```");
   });
 });
