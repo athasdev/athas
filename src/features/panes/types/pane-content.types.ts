@@ -83,6 +83,7 @@ export interface AgentContent extends PaneContentBase {
 export interface WebViewerContent extends PaneContentBase {
   type: "webViewer";
   url: string;
+  allowWhenDisabled?: boolean;
   title?: string;
   favicon?: string;
   zoomLevel?: number;
@@ -322,6 +323,7 @@ export type OpenContentSpec =
   | {
       type: "webViewer";
       url: string;
+      allowWhenDisabled?: boolean;
       zoomLevel?: number;
       profileKey?: string;
       history?: string[];

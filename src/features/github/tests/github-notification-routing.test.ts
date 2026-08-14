@@ -1,42 +1,39 @@
-import { describe, expect, it, vi } from "vite-plus/test";
+import { describe, expect, it } from "vite-plus/test";
 import {
   buildGitHubRepositoryRef,
-  resolveGitHubNotificationRepoPath,
+  getGitHubNotificationFallbackUrl,
 } from "../utils/github-notification-routing";
 
 describe("GitHub notification repository routing", () => {
-  it("uses the matching local workspace repository", async () => {
-    const loadRemotes = vi.fn(async (repoPath: string) => [
-      {
-        name: "origin",
-        url:
-          repoPath === "/workspace/www"
-            ? "git@github.com:athasdev/www.git"
-            : "https://github.com/athasdev/athas.git",
-      },
-    ]);
-
-    await expect(
-      resolveGitHubNotificationRepoPath(
-        "athasdev/www",
-        ["/workspace/athas", "/workspace/www"],
-        loadRemotes,
-      ),
-    ).resolves.toBe("/workspace/www");
-  });
-
-  it("uses an API-backed repository reference when the repo is not local", async () => {
-    const loadRemotes = vi.fn(async () => [
-      { name: "origin", url: "https://github.com/athasdev/athas.git" },
-    ]);
-
-    await expect(
-      resolveGitHubNotificationRepoPath("indent-com/neo", ["/workspace/athas"], loadRemotes),
-    ).resolves.toBe("github://indent-com/neo");
-  });
-
-  it("rejects malformed repository names", async () => {
+  it("rejects malformed repository names", () => {
     expect(buildGitHubRepositoryRef("athasdev/athas/extra")).toBeNull();
-    await expect(resolveGitHubNotificationRepoPath("../athas", [], vi.fn())).resolves.toBeNull();
+    expect(buildGitHubRepositoryRef("../athas")).toBeNull();
+  });
+
+  it("routes workflow and release fallbacks to their GitHub surfaces", () => {
+    expect(
+      getGitHubNotificationFallbackUrl({
+        repositoryFullName: "athasdev/athas",
+        subjectType: "CheckSuite",
+        url: "https://github.com/athasdev/athas",
+      }),
+    ).toBe("https://github.com/athasdev/athas/actions");
+    expect(
+      getGitHubNotificationFallbackUrl({
+        repositoryFullName: "athasdev/athas",
+        subjectType: "Release",
+        url: "https://github.com/athasdev/athas",
+      }),
+    ).toBe("https://github.com/athasdev/athas/releases");
+  });
+
+  it("preserves specific notification URLs", () => {
+    expect(
+      getGitHubNotificationFallbackUrl({
+        repositoryFullName: "athasdev/athas",
+        subjectType: "Discussion",
+        url: "https://github.com/athasdev/athas/discussions/42",
+      }),
+    ).toBe("https://github.com/athasdev/athas/discussions/42");
   });
 });

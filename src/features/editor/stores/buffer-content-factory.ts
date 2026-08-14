@@ -57,6 +57,7 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         name: "Web Viewer",
         isPreview: false,
         url: spec.url,
+        allowWhenDisabled: spec.allowWhenDisabled,
         zoomLevel: spec.zoomLevel,
         profileKey: spec.profileKey,
         history: spec.history,

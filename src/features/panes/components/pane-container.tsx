@@ -933,7 +933,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           );
 
         case "webViewer":
-          if (!webViewerEnabled) {
+          if (!webViewerEnabled && !buffer.allowWhenDisabled) {
             return <WebViewerDisabledState />;
           }
 
