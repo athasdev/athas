@@ -62,6 +62,30 @@ const summaryStepTransition = {
   transition: quickTransition,
 };
 
+const importIssueLabels = {
+  "invalid-entry": "invalid entries",
+  "empty-command": "empty commands",
+  "unknown-command": "unknown command entries",
+  "unsupported-key": "unsupported key entries",
+  "unsupported-when": "unsupported condition entries",
+  "unsupported-arguments": "unsupported argument entries",
+} as const;
+
+function getImportIssueDescription(
+  issues: Array<{ reason: keyof typeof importIssueLabels }>,
+): string | undefined {
+  if (issues.length === 0) return undefined;
+
+  const counts = new Map<keyof typeof importIssueLabels, number>();
+  for (const issue of issues) {
+    counts.set(issue.reason, (counts.get(issue.reason) ?? 0) + 1);
+  }
+
+  return `Skipped ${[...counts]
+    .map(([reason, count]) => `${count} ${importIssueLabels[reason]}`)
+    .join(", ")}.`;
+}
+
 export const KeyboardSettings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
@@ -185,37 +209,48 @@ export const KeyboardSettings = () => {
   const handleImport = () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "application/json";
+    input.accept = ".json,.jsonc,application/json";
     input.onchange = async (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       try {
         const text = await file.text();
-        const imported = parseKeybindingsImportJson(text);
+        const imported = parseKeybindingsImportJson(text, {
+          commandIds: keymapRegistry.getAllCommands().map((command) => command.id),
+        });
 
         if (!imported) {
           showToast({ message: "Invalid keybindings file format", type: "error" });
           return;
         }
 
-        if (imported.keybindingPreset) {
-          await updateSetting("keybindingPreset", imported.keybindingPreset);
+        const importedPreset =
+          imported.keybindingPreset ?? (imported.format === "vscode" ? "vscode" : undefined);
+
+        if (importedPreset) {
+          await updateSetting("keybindingPreset", importedPreset);
         }
 
-        const { addKeybinding } = useKeymapStore.getState().actions;
-        for (const binding of imported.keybindings) {
-          addKeybinding(binding);
-        }
+        useKeymapStore.getState().actions.importKeybindings(imported.keybindings);
+
+        const issueDescription = getImportIssueDescription(imported.issues);
+        const importedLabel = imported.format === "vscode" ? "VS Code " : "";
+        const presetLabel = importedPreset ? " and preset" : "";
+        const keybindingLabel = imported.keybindings.length === 1 ? "keybinding" : "keybindings";
+        const message =
+          imported.format === "vscode" && imported.keybindings.length === 0
+            ? "Applied VS Code keybinding preset"
+            : `Imported ${imported.keybindings.length} ${importedLabel}${keybindingLabel}${presetLabel}`;
 
         showToast({
-          message: `Imported ${imported.keybindings.length} keybindings${
-            imported.keybindingPreset ? " and preset" : ""
-          }`,
-          type: "success",
+          message,
+          description: issueDescription,
+          type: imported.issues.length > 0 ? "warning" : "success",
         });
       } catch (error) {
-        showToast({ message: `Failed to import keybindings: ${error}`, type: "error" });
+        const message = error instanceof Error ? error.message : String(error);
+        showToast({ message: `Failed to import keybindings: ${message}`, type: "error" });
       }
     };
     input.click();

@@ -3,6 +3,14 @@ import {
   type KeybindingPreset,
 } from "@/features/keymaps/defaults/keybinding-presets";
 import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
+import { currentPlatform } from "@/utils/platform";
+import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
+import {
+  getDefaultImportCommandIds,
+  importVsCodeKeybindings,
+  type KeybindingImportIssue,
+  type KeybindingImportPlatform,
+} from "./vscode-keybinding-import";
 
 const KEYBINDINGS_EXPORT_FORMAT = "athas.keybindings";
 const KEYBINDINGS_EXPORT_VERSION = 1;
@@ -16,8 +24,15 @@ export interface KeybindingsExportPayload {
 }
 
 export interface KeybindingsImport {
+  format: "athas" | "vscode";
   keybindingPreset?: KeybindingPreset;
   keybindings: Keybinding[];
+  issues: KeybindingImportIssue[];
+}
+
+export interface KeybindingsImportOptions {
+  commandIds?: Iterable<string>;
+  platform?: KeybindingImportPlatform;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -77,6 +92,10 @@ export function normalizeUserKeybinding(value: unknown): Keybinding | null {
     keybinding.args = value.args;
   }
 
+  if (value.replaceDefaults === false) {
+    keybinding.replaceDefaults = false;
+  }
+
   return keybinding;
 }
 
@@ -84,6 +103,21 @@ export function getExportableUserKeybindings(keybindings: Keybinding[]): Keybind
   return keybindings
     .map((keybinding) => normalizeUserKeybinding(keybinding))
     .filter((keybinding): keybinding is Keybinding => keybinding !== null);
+}
+
+export function mergeImportedUserKeybindings(
+  currentKeybindings: Keybinding[],
+  importedKeybindings: Keybinding[],
+): Keybinding[] {
+  const imported = getExportableUserKeybindings(importedKeybindings);
+  const importedCommandIds = new Set(imported.map((keybinding) => keybinding.command));
+
+  return [
+    ...imported,
+    ...getExportableUserKeybindings(currentKeybindings).filter(
+      (keybinding) => !importedCommandIds.has(keybinding.command),
+    ),
+  ];
 }
 
 export function createKeybindingsExportPayload({
@@ -102,18 +136,69 @@ export function createKeybindingsExportPayload({
   };
 }
 
-export function parseKeybindingsImportJson(jsonString: string): KeybindingsImport | null {
-  const parsed = JSON.parse(jsonString);
+function getCurrentImportPlatform(): KeybindingImportPlatform {
+  if (currentPlatform === "macos" || currentPlatform === "windows") return currentPlatform;
+  return "linux";
+}
+
+function parseJsonWithComments(jsonString: string): unknown {
+  const errors: ParseError[] = [];
+  const parsed = parse(jsonString.replace(/^\uFEFF/, ""), errors, {
+    allowTrailingComma: true,
+    disallowComments: false,
+  });
+
+  if (errors.length > 0) {
+    const firstError = errors[0];
+    throw new SyntaxError(
+      `${printParseErrorCode(firstError.error)} at offset ${firstError.offset}`,
+    );
+  }
+
+  return parsed;
+}
+
+export function parseKeybindingsImportJson(
+  jsonString: string,
+  options: KeybindingsImportOptions = {},
+): KeybindingsImport | null {
+  const parsed = parseJsonWithComments(jsonString);
   const candidate = getKeybindingsCandidate(parsed);
 
   if (!candidate) {
     return null;
   }
 
+  if (!Array.isArray(parsed)) {
+    const keybindings: Keybinding[] = [];
+    const issues: KeybindingImportIssue[] = [];
+
+    candidate.keybindings.forEach((value, index) => {
+      const keybinding = normalizeUserKeybinding(value);
+      if (keybinding) {
+        keybindings.push(keybinding);
+      } else {
+        issues.push({ index, reason: "invalid-entry" });
+      }
+    });
+
+    return {
+      format: "athas",
+      keybindingPreset: candidate.keybindingPreset,
+      keybindings,
+      issues,
+    };
+  }
+
+  const commandIds = new Set(options.commandIds ?? getDefaultImportCommandIds());
+  const imported = importVsCodeKeybindings(candidate.keybindings, {
+    commandIds,
+    platform: options.platform ?? getCurrentImportPlatform(),
+  });
+
   return {
-    keybindingPreset: candidate.keybindingPreset,
-    keybindings: candidate.keybindings
-      .map((keybinding) => normalizeUserKeybinding(keybinding))
-      .filter((keybinding): keybinding is Keybinding => keybinding !== null),
+    format: imported.format,
+    keybindings: imported.keybindings,
+    issues: imported.issues,
   };
 }

@@ -21,29 +21,23 @@ interface KeybindingRowProps {
 
 export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const { addKeybinding, updateKeybinding, removeKeybinding } = useKeymapStore.use.actions();
+  const { addKeybinding, removeKeybinding } = useKeymapStore.use.actions();
+  const displayedKey = keybinding?.enabled === false ? undefined : keybinding?.key;
   const { hasConflict, conflictingCommands } = useKeybindingConflicts(
-    keybinding?.key || "",
+    displayedKey || "",
     command.id,
     keybinding?.when,
   );
 
   const handleSave = (newKey: string) => {
-    if (keybinding?.source === "user") {
-      // Update existing user keybinding
-      updateKeybinding(command.id, { key: newKey });
-    } else {
-      // Remove any existing user override first, then add new one
-      // This handles both "no keybinding" and "default/extension keybinding" cases
-      removeKeybinding(command.id);
-      addKeybinding({
-        key: newKey,
-        command: command.id,
-        source: "user",
-        enabled: true,
-        when: keybinding?.when,
-      });
-    }
+    removeKeybinding(command.id);
+    addKeybinding({
+      key: newKey,
+      command: command.id,
+      source: "user",
+      enabled: true,
+      when: keybinding?.when,
+    });
     setIsEditing(false);
   };
 
@@ -81,7 +75,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
           {isEditing ? (
             <KeybindingInput
               commandId={command.id}
-              value={keybinding?.key}
+              value={displayedKey}
               onSave={handleSave}
               onCancel={() => setIsEditing(false)}
             />
@@ -94,8 +88,8 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
               className="ui-text-sm flex h-7 w-full items-center justify-start px-1.5 hover:border hover:border-primary"
               aria-label={`Edit keybinding for ${command.title}`}
             >
-              {keybinding?.key ? (
-                <KeybindingDisplay binding={keybinding.key} />
+              {displayedKey ? (
+                <KeybindingDisplay binding={displayedKey} />
               ) : (
                 <span className="text-subtle-foreground">Not assigned</span>
               )}

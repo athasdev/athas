@@ -9,6 +9,7 @@ export interface Keybinding {
   args?: unknown;
   source: "user" | "extension" | "default" | "preset";
   enabled?: boolean;
+  replaceDefaults?: boolean;
 }
 
 export interface Command {

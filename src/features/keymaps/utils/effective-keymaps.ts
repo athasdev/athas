@@ -1,11 +1,18 @@
 import { getKeybindingPresetDefinition } from "@/features/keymaps/defaults/keybinding-presets";
 import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
 import type { Settings } from "@/features/settings/types/settings.types";
+import { parseKeybinding } from "./parser";
 
 interface EffectiveKeybindingsInput {
   preset: Settings["keybindingPreset"];
   registryKeybindings: Keybinding[];
   userKeybindings: Keybinding[];
+}
+
+function normalizeKeybindingForComparison(keybinding: string): string {
+  return parseKeybinding(keybinding)
+    .parts.map((part) => `${part.modifiers.join("+")}+${part.key.toLowerCase()}`)
+    .join(" ");
 }
 
 function getBaseKeybindingsForPreset(
@@ -35,11 +42,32 @@ export function getEffectiveKeybindings({
   userKeybindings,
 }: EffectiveKeybindingsInput): Keybinding[] {
   const baseKeybindings = getBaseKeybindingsForPreset(preset, registryKeybindings);
-  const userCommandIds = new Set(userKeybindings.map((binding) => binding.command));
+  const replacedCommandIds = new Set(
+    userKeybindings
+      .filter((binding) => binding.replaceDefaults !== false)
+      .map((binding) => binding.command),
+  );
+  const removalRules = userKeybindings
+    .filter((binding) => binding.enabled === false && binding.replaceDefaults === false)
+    .map((binding) => ({
+      binding,
+      normalizedKey: normalizeKeybindingForComparison(binding.key),
+    }));
 
   return [
     ...userKeybindings,
-    ...baseKeybindings.filter((binding) => !userCommandIds.has(binding.command)),
+    ...baseKeybindings.filter((binding) => {
+      if (replacedCommandIds.has(binding.command)) return false;
+      if (removalRules.length === 0) return true;
+
+      const normalizedKey = normalizeKeybindingForComparison(binding.key);
+      return !removalRules.some(
+        (removal) =>
+          removal.binding.command === binding.command &&
+          removal.normalizedKey === normalizedKey &&
+          (!removal.binding.when || removal.binding.when === binding.when),
+      );
+    }),
   ];
 }
 
@@ -49,9 +77,11 @@ export function getEffectiveKeybindingForCommand({
   registryKeybindings,
   userKeybindings,
 }: EffectiveKeybindingsInput & { commandId: string }): Keybinding | undefined {
-  return getEffectiveKeybindings({
+  const matchingKeybindings = getEffectiveKeybindings({
     preset,
     registryKeybindings,
     userKeybindings,
-  }).find((binding) => binding.command === commandId);
+  }).filter((binding) => binding.command === commandId);
+
+  return matchingKeybindings.find((binding) => binding.enabled !== false) ?? matchingKeybindings[0];
 }
