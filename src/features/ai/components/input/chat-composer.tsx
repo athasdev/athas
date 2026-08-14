@@ -7,16 +7,11 @@ export const ChatComposer = forwardRef<
   ComponentProps<"div"> & {
     dragActive?: boolean;
     standalone?: boolean;
-    connected?: boolean;
   }
->(function ChatComposer(
-  { className, dragActive, standalone = false, connected = false, ...props },
-  ref,
-) {
+>(function ChatComposer({ className, dragActive, standalone = false, ...props }, ref) {
   const rootClassName = cn(
     "ai-chat-container relative z-20 overflow-visible",
     dragActive && "border-primary bg-primary/5 shadow-[0_0_0_1px_var(--primary)]",
-    connected && "rounded-t-none",
     className,
   );
 
@@ -36,17 +31,13 @@ export const ChatComposer = forwardRef<
 
 export function ChatComposerBody({
   className,
-  connected = false,
   ...props
-}: Omit<ComponentProps<typeof SidebarComposerBody>, "variant"> & {
-  connected?: boolean;
-}) {
+}: Omit<ComponentProps<typeof SidebarComposerBody>, "variant">) {
   return (
     <SidebarComposerBody
       data-ai-element="prompt-input-body"
       className={cn(
         "transition-[border-color,background-color,box-shadow] duration-(--app-duration-fast)",
-        connected && "rounded-t-none",
         className,
       )}
       {...props}

@@ -1,10 +1,11 @@
-import type { ReactNode, RefObject } from "react";
-import { Popover, PopoverContent } from "@/ui/popover";
+import { useMemo, type ReactNode } from "react";
+import type { InlineDropdownPosition } from "@/features/ai/types/chat-composer.types";
+import { Popover, PopoverListContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 
 interface ComposerAttachedPanelProps {
   open: boolean;
-  anchorRef: RefObject<HTMLElement | null>;
+  position: InlineDropdownPosition;
   onClose: () => void;
   children: ReactNode;
   ariaLabel: string;
@@ -14,13 +15,21 @@ interface ComposerAttachedPanelProps {
 
 export function ComposerAttachedPanel({
   open,
-  anchorRef,
+  position,
   onClose,
   children,
   ariaLabel,
   className,
   maxHeight = 320,
 }: ComposerAttachedPanelProps) {
+  const anchor = useMemo(
+    () => ({
+      getBoundingClientRect: () =>
+        new DOMRect(position.left, position.top, 0, Math.max(position.bottom - position.top, 1)),
+    }),
+    [position.bottom, position.left, position.top],
+  );
+
   return (
     <Popover
       open={open}
@@ -29,26 +38,24 @@ export function ComposerAttachedPanel({
       }}
       modal={false}
     >
-      <PopoverContent
-        anchor={anchorRef}
+      <PopoverListContent
+        anchor={anchor}
         side="top"
         align="start"
-        sideOffset={-1}
+        sideOffset={6}
         collisionPadding={8}
         initialFocus={false}
         role="dialog"
         aria-label={ariaLabel}
         data-prevent-dialog-escape="true"
-        className={cn(
-          "flex min-h-0 w-(--anchor-width) max-w-[calc(100vw-16px)] select-auto flex-col gap-0 overflow-hidden rounded-t-2xl rounded-b-none border border-border/70 border-b-0 bg-background p-0 shadow-(--shadow-card)",
-          className,
-        )}
+        className={cn("min-h-0 select-auto", className)}
         style={{
+          width: position.width,
           maxHeight: `min(${maxHeight}px, var(--available-height))`,
         }}
       >
         {children}
-      </PopoverContent>
+      </PopoverListContent>
     </Popover>
   );
 }

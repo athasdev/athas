@@ -951,7 +951,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   });
 
   const hasSlashCommands = availableSlashCommands.length > 0;
-  const hasAttachedComposerDropdown = mentionState.active || slashCommandState.active;
   const isInitialPresentation = presentation === "initial";
   const inputPlaceholder = isInputEnabled
     ? isInitialPresentation
@@ -972,7 +971,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
     <ChatComposer
       ref={aiChatContainerRef}
       standalone={isInitialPresentation}
-      connected={hasAttachedComposerDropdown}
       data-ai-context-drop-target
       onDragOver={handleContextDragOver}
       onDragLeave={handleContextDragLeave}
@@ -980,7 +978,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       dragActive={isContextDragOver}
       className={cn(isInitialPresentation && "w-full")}
     >
-      <ChatComposerBody connected={hasAttachedComposerDropdown}>
+      <ChatComposerBody>
         {pastedImages.length > 0 && (
           <AttachmentGroup className={cn("px-3 pt-3", isInitialPresentation && "px-4 pt-4")}>
             {pastedImages.map((image) => (
@@ -1016,7 +1014,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
           onPaste={handlePaste}
           data-placeholder={inputPlaceholder}
           className={cn(
-            hasAttachedComposerDropdown && "border-none",
             isInitialPresentation && "max-h-48 min-h-28 overflow-y-auto px-4 py-4 ui-text-base",
           )}
           role="textbox"
@@ -1261,7 +1258,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       {(isActiveSurface || isComposerFocused) && mentionState.active && (
         <FileMentionDropdown
-          anchorRef={aiChatContainerRef}
           files={mentionableFiles}
           mentionState={mentionState}
           onClose={hideMention}
@@ -1275,7 +1271,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       {slashCommandState.active && (
         <SlashCommandDropdown
-          anchorRef={aiChatContainerRef}
           slashCommandState={slashCommandState}
           availableSlashCommands={availableSlashCommands}
           filteredCommands={filteredSlashCommands}

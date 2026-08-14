@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { MentionState } from "@/features/ai/types/chat-composer.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
@@ -9,7 +9,6 @@ import { ComposerAttachedPanel } from "../input/composer-attached-panel";
 import { AIFileSelector } from "./ai-file-selector";
 
 interface FileMentionDropdownProps {
-  anchorRef: RefObject<HTMLElement | null>;
   files: FileEntry[];
   onSelect: (file: FileEntry) => void;
   onVisibleFilesChange?: (files: FileEntry[]) => void;
@@ -19,7 +18,6 @@ interface FileMentionDropdownProps {
 }
 
 export const FileMentionDropdown = React.memo(function FileMentionDropdown({
-  anchorRef,
   files,
   onSelect,
   onVisibleFilesChange,
@@ -91,7 +89,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   return (
     <ComposerAttachedPanel
       open={mentionState.active}
-      anchorRef={anchorRef}
+      position={mentionState.position}
       onClose={onClose}
       ariaLabel="File suggestions"
       maxHeight={240}
@@ -106,7 +104,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
           onSelectedIndexChange={onSelectedIndexChange}
           onResultsChange={handleResultsChange}
           showSearchInput={false}
-          listClassName="max-h-full bg-background"
+          listClassName="max-h-full"
           compact
         />
       </div>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, type RefObject } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import type { SlashCommand } from "@/features/ai/types/acp.types";
 import type { SlashCommandState } from "@/features/ai/types/chat-composer.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -12,7 +12,6 @@ import {
 import { ComposerAttachedPanel } from "../input/composer-attached-panel";
 
 interface SlashCommandDropdownProps {
-  anchorRef: RefObject<HTMLElement | null>;
   onSelect: (command: SlashCommand) => void;
   onClose?: () => void;
   slashCommandState: SlashCommandState;
@@ -22,7 +21,6 @@ interface SlashCommandDropdownProps {
 }
 
 export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
-  anchorRef,
   onSelect,
   onClose,
   slashCommandState,
@@ -81,7 +79,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
   return (
     <ComposerAttachedPanel
       open={slashCommandState.active}
-      anchorRef={anchorRef}
+      position={slashCommandState.position}
       onClose={closeSlashCommands}
       ariaLabel="Slash command suggestions"
       maxHeight={240}

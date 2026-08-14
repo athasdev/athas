@@ -148,6 +148,16 @@ function PopoverContent({
   );
 }
 
+function PopoverListContent({ className, ...props }: ComponentProps<typeof PopoverContent>) {
+  return (
+    <PopoverContent
+      data-slot="popover-list-content"
+      className={cn("gap-0 overflow-hidden p-0", className)}
+      {...props}
+    />
+  );
+}
+
 function PopoverHeader({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
@@ -178,4 +188,12 @@ function PopoverDescription({ className, ...props }: PopoverPrimitive.Descriptio
   );
 }
 
-export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger };
+export {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverListContent,
+  PopoverTitle,
+  PopoverTrigger,
+};
