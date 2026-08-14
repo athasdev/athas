@@ -153,7 +153,6 @@ export function SearchPopover({
                 tooltip={option.label}
                 aria-label={option.label}
                 size="xs"
-                className="size-6 min-h-0 min-w-0 p-0"
               >
                 {option.icon}
               </Toggle>
@@ -339,7 +338,6 @@ export function SearchInput({
               tooltip={option.label}
               aria-label={option.label}
               size="xs"
-              className="size-6 min-h-0 min-w-0 p-0"
             >
               {option.icon}
             </Toggle>
