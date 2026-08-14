@@ -937,7 +937,7 @@ export class LspClient {
       return await invoke<LspSemanticTokensResponse>("lsp_get_semantic_tokens", { filePath });
     } catch (error) {
       if (isCanceledLspRequest(error)) return null;
-      logger.error("LSPClient", "LSP semantic tokens error:", error);
+      logger.warn("LSPClient", `LSP semantic tokens unavailable: ${stringifyLspError(error)}`);
       return null;
     }
   }

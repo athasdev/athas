@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { LspSemanticTokensResponse } from "../lsp/semantic-token-types";
 import { createMonacoSemanticTokenProvider } from "../engines/monaco/semantic-token-provider";
 
@@ -26,7 +26,11 @@ function model() {
   };
 }
 
-function setup(getSemanticTokens = vi.fn(async () => response)) {
+function setup(
+  getSemanticTokens: (filePath: string) => Promise<LspSemanticTokensResponse | null> = vi.fn(
+    async () => response,
+  ),
+) {
   const client = {
     getActiveServerEntryForFile: vi.fn(() => ({ key: "server" })),
     getSemanticTokens,
@@ -42,6 +46,10 @@ function setup(getSemanticTokens = vi.fn(async () => response)) {
 }
 
 describe("Monaco semantic token provider", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("returns translated semantic tokens for an open LSP document", async () => {
     const { client, provider } = setup();
     const textModel = model();
@@ -131,5 +139,45 @@ describe("Monaco semantic token provider", () => {
     });
 
     expect(result).toBeNull();
+  });
+
+  it("deduplicates failed requests and backs off for the same model version", async () => {
+    vi.useFakeTimers();
+    let resolveTokens: (value: null) => void = () => {};
+    const pendingTokens = new Promise<null>((resolve) => {
+      resolveTokens = resolve;
+    });
+    const getSemanticTokens = vi.fn(() => pendingTokens);
+    const { provider } = setup(getSemanticTokens);
+    const textModel = model();
+    const cancellationToken = {
+      isCancellationRequested: false,
+      onCancellationRequested: vi.fn(),
+    };
+
+    const first = provider.provideDocumentSemanticTokens(
+      textModel as never,
+      null,
+      cancellationToken,
+    );
+    const second = provider.provideDocumentSemanticTokens(
+      textModel as never,
+      null,
+      cancellationToken,
+    );
+
+    expect(getSemanticTokens).toHaveBeenCalledTimes(1);
+    resolveTokens(null);
+    await expect(first).resolves.toBeNull();
+    await expect(second).resolves.toBeNull();
+
+    await expect(
+      provider.provideDocumentSemanticTokens(textModel as never, null, cancellationToken),
+    ).resolves.toBeNull();
+    expect(getSemanticTokens).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(15_000);
+    await provider.provideDocumentSemanticTokens(textModel as never, null, cancellationToken);
+    expect(getSemanticTokens).toHaveBeenCalledTimes(2);
   });
 });

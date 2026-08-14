@@ -15,12 +15,17 @@ interface SemanticTokenProviderOptions {
   onDidChange?: Monaco.Emitter<void>["event"];
 }
 
+const SEMANTIC_TOKEN_RETRY_DELAY_MS = 15_000;
+
 export function createMonacoSemanticTokenProvider({
   client,
   filePathFromModel,
   isLspModel,
   onDidChange,
 }: SemanticTokenProviderOptions): Monaco.languages.DocumentSemanticTokensProvider {
+  const pendingRequests = new Map<string, Promise<LspSemanticTokensResponse | null>>();
+  const retryAfterByFile = new Map<string, { modelVersion: number; retryAfter: number }>();
+
   return {
     onDidChange,
     getLegend() {
@@ -35,16 +40,38 @@ export function createMonacoSemanticTokenProvider({
       }
 
       const modelVersion = model.getVersionId();
-      const response = await client.getSemanticTokens(filePath);
+      const failedRequest = retryAfterByFile.get(filePath);
+      if (failedRequest?.modelVersion === modelVersion && failedRequest.retryAfter > Date.now()) {
+        return null;
+      }
+
+      const requestKey = `${filePath}:${modelVersion}`;
+      let pendingRequest = pendingRequests.get(requestKey);
+      if (!pendingRequest) {
+        pendingRequest = client.getSemanticTokens(filePath).catch(() => null);
+        pendingRequests.set(requestKey, pendingRequest);
+        void pendingRequest.finally(() => pendingRequests.delete(requestKey));
+      }
+
+      const response = await pendingRequest;
       if (
         cancellationToken.isCancellationRequested ||
         model.isDisposed() ||
-        model.getVersionId() !== modelVersion ||
-        !response ||
-        response.tokenTypes.length === 0
+        model.getVersionId() !== modelVersion
       ) {
         return null;
       }
+
+      if (!response) {
+        retryAfterByFile.set(filePath, {
+          modelVersion,
+          retryAfter: Date.now() + SEMANTIC_TOKEN_RETRY_DELAY_MS,
+        });
+        return null;
+      }
+
+      retryAfterByFile.delete(filePath);
+      if (response.tokenTypes.length === 0) return null;
 
       const data = encodeMonacoSemanticTokens(response, model);
       if (response.tokens.length > 0 && data.length === 0) return null;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 import {
   fetchHighlightQuery,
@@ -157,42 +157,71 @@ interface DiffTokenState {
   tokenMap: Map<number, HighlightToken[]>;
 }
 
+interface DiffHighlightInput {
+  key: string;
+  languageId: string | null;
+  oldContent: ReconstructedContent;
+  newContent: ReconstructedContent;
+  fallbackTokenMap: Map<number, HighlightToken[]>;
+}
+
+function appendHighlightHash(hash: number, value: string) {
+  let nextHash = hash;
+  for (let index = 0; index < value.length; index++) {
+    nextHash = Math.imul(nextHash ^ value.charCodeAt(index), 16_777_619);
+  }
+  return nextHash >>> 0;
+}
+
+export function createDiffHighlightKey(lines: GitDiffLine[], filePath: string) {
+  let hash = appendHighlightHash(2_166_136_261, filePath);
+
+  for (const line of lines) {
+    hash = appendHighlightHash(hash, line.line_type);
+    hash = appendHighlightHash(hash, line.content);
+    hash = appendHighlightHash(hash, String(line.old_line_number ?? ""));
+    hash = appendHighlightHash(hash, String(line.new_line_number ?? ""));
+  }
+
+  return `${filePath}:${lines.length}:${hash.toString(16)}`;
+}
+
+function createDiffHighlightInput(lines: GitDiffLine[], filePath: string): DiffHighlightInput {
+  return {
+    key: createDiffHighlightKey(lines, filePath),
+    languageId: getLanguageId(filePath),
+    oldContent: reconstructContent(lines, "old"),
+    newContent: reconstructContent(lines, "new"),
+    fallbackTokenMap: createLineBasedDiffTokenMap(lines, filePath),
+  };
+}
+
 export function useDiffHighlighting(
   lines: GitDiffLine[],
   filePath: string,
 ): Map<number, HighlightToken[]> {
-  const languageId = useMemo(() => getLanguageId(filePath), [filePath]);
-  const highlightKey = useMemo(
-    () =>
-      `${filePath}:${languageId ?? ""}:${lines.length}:${lines[0]?.content ?? ""}:${
-        lines[lines.length - 1]?.content ?? ""
-      }`,
-    [filePath, languageId, lines],
-  );
+  const nextInput = useMemo(() => createDiffHighlightInput(lines, filePath), [filePath, lines]);
+  const inputRef = useRef(nextInput);
+  if (inputRef.current.key !== nextInput.key) {
+    inputRef.current = nextInput;
+  }
 
-  const { oldContent, newContent } = useMemo(() => {
-    const old = reconstructContent(lines, "old");
-    const newC = reconstructContent(lines, "new");
-    return { oldContent: old, newContent: newC };
-  }, [lines]);
-  const fallbackTokenMap = useMemo(
-    () => createLineBasedDiffTokenMap(lines, filePath),
-    [lines, filePath],
-  );
+  const input = inputRef.current;
   const [tokenState, setTokenState] = useState<DiffTokenState>({
     key: "",
     tokenMap: new Map(),
   });
 
   useEffect(() => {
+    const { key, languageId, oldContent, newContent, fallbackTokenMap } = input;
     if (!languageId) {
-      setTokenState({ key: highlightKey, tokenMap: new Map() });
+      setTokenState({ key, tokenMap: new Map() });
       return;
     }
 
     const lang = languageId;
     let cancelled = false;
-    setTokenState({ key: highlightKey, tokenMap: fallbackTokenMap });
+    setTokenState({ key, tokenMap: fallbackTokenMap });
 
     async function tokenize() {
       try {
@@ -244,11 +273,11 @@ export function useDiffHighlighting(
         }
 
         setTokenState({
-          key: highlightKey,
+          key,
           tokenMap: merged.size > 0 ? merged : fallbackTokenMap,
         });
       } catch {
-        setTokenState({ key: highlightKey, tokenMap: fallbackTokenMap });
+        setTokenState({ key, tokenMap: fallbackTokenMap });
       }
     }
 
@@ -257,7 +286,7 @@ export function useDiffHighlighting(
     return () => {
       cancelled = true;
     };
-  }, [fallbackTokenMap, highlightKey, languageId, oldContent, newContent]);
+  }, [input]);
 
-  return tokenState.key === highlightKey ? tokenState.tokenMap : fallbackTokenMap;
+  return tokenState.key === input.key ? tokenState.tokenMap : input.fallbackTokenMap;
 }
