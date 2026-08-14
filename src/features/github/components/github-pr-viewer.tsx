@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
@@ -8,12 +8,7 @@ import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
 import { toast } from "sonner";
 import type { Label, PullRequestDetails } from "../types/github.types";
-import type {
-  Commit,
-  FilePatchState,
-  FileStatusFilter,
-  TabType,
-} from "../types/github-pr-viewer.types";
+import type { Commit, FilePatchState, TabType } from "../types/github-pr-viewer.types";
 import {
   buildPRBufferPath,
   isPRFilesViewPath,
@@ -62,6 +57,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     return buffer?.type === "pullRequest" ? buffer : undefined;
   });
   const selectedPRDetails = useGitHubStore.use.selectedPRDetails();
+  const isActiveBuffer = useBufferStore((state) => state.activeBufferId === bufferId);
   const selectedPRDiff = useGitHubStore.use.selectedPRDiff();
   const selectedPRFiles = useGitHubStore.use.selectedPRFiles();
   const selectedPRComments = useGitHubStore.use.selectedPRComments();
@@ -77,12 +73,9 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   const [activeTab, setActiveTab] = useState<TabType>(() =>
     isPRFilesViewPath(prBuffer?.path ?? "") ? "files" : "activity",
   );
-  const [fileQuery, setFileQuery] = useState("");
-  const [fileStatusFilter, setFileStatusFilter] = useState<FileStatusFilter>("all");
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(
     () => parseSelectedFilePathFromPRBufferPath(prBuffer?.path ?? "") ?? null,
   );
-  const [isFileTreeVisible, setIsFileTreeVisible] = useState(true);
   const [filePatches, setFilePatches] = useState<Record<string, FilePatchState>>({});
   const [labels, setLabels] = useState<Label[]>([]);
   const [inlineAction, setInlineAction] = useState<GitHubPRInlineActionKind | null>(null);
@@ -112,8 +105,6 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   useEffect(() => {
     const deepLinkedFilePath = parseSelectedFilePathFromPRBufferPath(prBuffer?.path ?? "");
     setActiveTab(isPRFilesViewPath(prBuffer?.path ?? "") ? "files" : "activity");
-    setFileQuery("");
-    setFileStatusFilter("all");
     setSelectedFilePath(deepLinkedFilePath ?? null);
     setFilePatches({});
   }, [prNumber, repoPath]);
@@ -206,13 +197,6 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     return buildDiffSectionIndex(selectedPRDiff ?? "");
   }, [selectedPRDiff]);
 
-  const diffDebugSummary = useMemo(() => {
-    const patchStates = Object.values(filePatches);
-    return {
-      errorCount: patchStates.filter((patch) => patch.error).length,
-    };
-  }, [filePatches]);
-
   const diffFiles = useMemo(() => {
     return baseDiffFiles.map((file) => {
       const patch = filePatches[file.path];
@@ -291,39 +275,25 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     return Array.from(labelsByName.values());
   }, [labels, selectedPRDetails?.labels]);
 
-  const deferredFileQuery = useDeferredValue(fileQuery);
-  const filteredDiff = useMemo(() => {
-    const query = deferredFileQuery.trim().toLowerCase();
-    return diffFiles.filter((file) => {
-      if (fileStatusFilter !== "all" && file.status !== fileStatusFilter) return false;
-      if (!query) return true;
-      return (
-        file.path.toLowerCase().includes(query) ||
-        file.oldPath?.toLowerCase().includes(query) ||
-        false
-      );
-    });
-  }, [diffFiles, deferredFileQuery, fileStatusFilter]);
-
   const selectedDiffFile = useMemo(() => {
-    if (filteredDiff.length === 0) return null;
-    return filteredDiff.find((file) => file.path === selectedFilePath) ?? filteredDiff[0] ?? null;
-  }, [filteredDiff, selectedFilePath]);
+    if (diffFiles.length === 0) return null;
+    return diffFiles.find((file) => file.path === selectedFilePath) ?? diffFiles[0] ?? null;
+  }, [diffFiles, selectedFilePath]);
 
   useEffect(() => {
     if (activeTab !== "files") return;
-    if (filteredDiff.length === 0) {
+    if (diffFiles.length === 0) {
       setSelectedFilePath(null);
       return;
     }
 
     setSelectedFilePath((current) => {
-      if (current && filteredDiff.some((file) => file.path === current)) {
+      if (current && diffFiles.some((file) => file.path === current)) {
         return current;
       }
-      return filteredDiff[0]?.path ?? null;
+      return diffFiles[0]?.path ?? null;
     });
-  }, [activeTab, filteredDiff]);
+  }, [activeTab, diffFiles]);
 
   const handleOpenInBrowser = useCallback(() => {
     if (repoPath) {
@@ -582,7 +552,10 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   const repositoryUrl = pr.url.replace(/\/pull\/\d+$/, "");
   return (
     <GitHubViewerShell
-      contentClassName={activeTab === "files" ? "px-0 pb-0 sm:px-0" : undefined}
+      scrollMode={activeTab === "files" ? "workspace" : "content"}
+      contentClassName={
+        activeTab === "files" ? "flex min-h-0 flex-1 flex-col px-0 pb-0 sm:px-0" : undefined
+      }
       header={
         <GitHubPRViewerHeader
           pr={pr}
@@ -676,24 +649,17 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       )}
 
       {activeTab === "files" && (
-        <div className="min-w-0 space-y-3 pt-1">
+        <div className="min-h-0 min-w-0 flex-1">
           <PRFilesPanel
             selectedPRDiff={selectedPRDiff}
             isLoadingContent={isLoadingContent}
             contentError={contentError}
             diffFiles={diffFiles}
-            filteredDiff={filteredDiff}
             selectedDiffFile={selectedDiffFile}
-            fileQuery={fileQuery}
-            fileStatusFilter={fileStatusFilter}
             selectedFilePath={selectedFilePath}
-            isFileTreeVisible={isFileTreeVisible}
-            diffDebugSummary={diffDebugSummary}
+            isActive={isActiveBuffer}
             patchError={selectedDiffFile ? filePatches[selectedDiffFile.path]?.error : undefined}
             onRetry={handleRefresh}
-            onToggleFileTree={() => setIsFileTreeVisible((current) => !current)}
-            onFileQueryChange={setFileQuery}
-            onFileStatusFilterChange={setFileStatusFilter}
             onSelectFile={setSelectedFilePath}
             onOpenChangedFile={handleOpenChangedFile}
           />

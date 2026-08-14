@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ChatCircleTextIcon as MessageSquare } from "@/ui/icons";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import {
   memo,
@@ -21,7 +20,7 @@ import { getTimeAgo } from "../utils/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
-import { GitHubSidebarSection } from "./github-sidebar-section";
+import { SidebarScrollArea, SidebarSection } from "@/ui/sidebar";
 import {
   GITHUB_ISSUE_DETAILS_TTL_MS,
   GITHUB_ISSUE_LIST_TTL_MS,
@@ -29,8 +28,7 @@ import {
   githubIssueListCache,
 } from "../utils/github-data-cache";
 import { Spinner } from "@/ui/spinner";
-import { Empty, EmptyDescription, EmptyState } from "@/ui/empty";
-import { ScrollArea } from "@/ui/scroll-area";
+import { EmptyState } from "@/ui/empty";
 
 interface IssueListItemProps {
   issue: IssueListItem;
@@ -75,11 +73,7 @@ const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: Issu
         });
       }}
       active={isActive}
-      leading={
-        <MessageSquare
-          className={isOpen ? "size-4 text-success" : "size-4 text-subtle-foreground"}
-        />
-      }
+      leading={authorAvatar}
       description={
         <span className="flex min-w-0 items-center gap-1.5 capitalize">
           <span className="font-mono">#{issue.number}</span>
@@ -93,17 +87,7 @@ const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: Issu
           ) : null}
         </span>
       }
-      trailing={
-        <>
-          <GitHubAvatar
-            login={issue.author.login}
-            avatarUrl={issue.author.avatarUrl}
-            size={24}
-            className="size-4"
-          />
-          <span>{updatedLabel}</span>
-        </>
-      }
+      trailing={updatedLabel}
       preview={{
         title: issue.title,
         subtitle: `#${issue.number} by ${issue.author.login}`,
@@ -295,32 +279,27 @@ const GitHubIssuesView = memo(
     }, [filteredIssues, isAuthenticated, prefetchIssue, repoPath]);
 
     if (!isAuthenticated) {
-      return (
-        <div className="flex h-full items-center justify-center p-4">
-          <GitHubAuthStatusMessage />
-        </div>
-      );
+      return <GitHubAuthStatusMessage layout="sidebar" />;
     }
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
+        <SidebarScrollArea className="min-h-0 flex-1">
           {error ? (
-            <Empty tone="error" role="alert">
-              <EmptyDescription>{error}</EmptyDescription>
-            </Empty>
+            <EmptyState layout="sidebar" message={error} tone="error" role="alert" />
           ) : isLoading && deferredIssues.length === 0 ? (
-            <div className="flex items-center justify-center py-8">
-              <Spinner label="Loading issues" showLabel compact />
-            </div>
+            <EmptyState
+              layout="sidebar"
+              message={<Spinner label="Loading issues" showLabel compact />}
+            />
           ) : deferredIssues.length === 0 ? (
-            <EmptyState message="No issues" />
+            <EmptyState layout="sidebar" message="No issues" />
           ) : filteredIssues.length === 0 ? (
-            <EmptyState message="No matching issues" />
+            <EmptyState layout="sidebar" message="No matching issues" />
           ) : (
             <div className="space-y-1 overflow-x-hidden">
               {groupedIssues.map((group) => (
-                <GitHubSidebarSection
+                <SidebarSection
                   key={group.id}
                   title={group.title}
                   count={group.items.length}
@@ -347,11 +326,11 @@ const GitHubIssuesView = memo(
                       }
                     />
                   ))}
-                </GitHubSidebarSection>
+                </SidebarSection>
               ))}
             </div>
           )}
-        </ScrollArea>
+        </SidebarScrollArea>
       </div>
     );
   },

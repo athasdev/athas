@@ -1,6 +1,3 @@
-import type { ReactNode } from "react";
-import { createElement } from "react";
-import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
 import type {
   Commit,
   DiffSectionRef,
@@ -207,53 +204,4 @@ export function normalizeCommit(raw: unknown, index: number): Commit | null {
     url: asNonEmptyString(record.url) ?? undefined,
     authors: normalizedAuthors,
   };
-}
-
-export function renderTokenizedContent(content: string, tokens: HighlightToken[]): ReactNode[] {
-  if (!content || tokens.length === 0) {
-    return [content];
-  }
-
-  const sortedTokens = [...tokens].sort((a, b) => {
-    const startDiff = a.startPosition.column - b.startPosition.column;
-    if (startDiff !== 0) return startDiff;
-    const aSize = a.endPosition.column - a.startPosition.column;
-    const bSize = b.endPosition.column - b.startPosition.column;
-    return aSize - bSize;
-  });
-
-  const result: ReactNode[] = [];
-  let currentPos = 0;
-
-  for (const token of sortedTokens) {
-    const start = token.startPosition.column;
-    const end = token.endPosition.column;
-
-    if (start >= content.length) continue;
-    if (start < currentPos) continue;
-
-    if (start > currentPos) {
-      result.push(content.slice(currentPos, start));
-    }
-
-    const tokenEnd = Math.min(end, content.length);
-    if (tokenEnd > start) {
-      const tokenText = content.slice(start, tokenEnd);
-      if (token.type === "token-text") {
-        result.push(tokenText);
-      } else {
-        result.push(
-          createElement("span", { key: `${start}-${tokenEnd}`, className: token.type }, tokenText),
-        );
-      }
-    }
-
-    currentPos = Math.max(currentPos, tokenEnd);
-  }
-
-  if (currentPos < content.length) {
-    result.push(content.slice(currentPos));
-  }
-
-  return result;
 }

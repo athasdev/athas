@@ -1,12 +1,15 @@
 import { CaretDownIcon as ChevronDown, CaretRightIcon as ChevronRight } from "@/ui/icons";
-import { memo } from "react";
+import { memo, useMemo } from "react";
+import {
+  ViewerErrorState,
+  ViewerLoadingState,
+  ViewerState,
+} from "@/features/viewer/components/viewer-state";
+import { DiffFileContent } from "@/features/git/components/diff/diff-file-content";
 import { Button } from "@/ui/button";
-import { Empty, EmptyDescription } from "@/ui/empty";
-import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
-import { usePRDiffHighlighting } from "../hooks/use-pr-diff-highlighting";
+import { parseGitPatchLines } from "@/features/git/utils/git-diff-parser";
 import type { FileDiff } from "../types/github-pr-viewer.types";
-import { DiffLineDisplay } from "./diff-line-display";
 
 interface FileDiffViewProps {
   file: FileDiff;
@@ -16,6 +19,7 @@ interface FileDiffViewProps {
   isLoadingPatch: boolean;
   patchError?: string;
   isStatic?: boolean;
+  showHeader?: boolean;
 }
 
 const statusColors: Record<FileDiff["status"], string> = {
@@ -34,13 +38,28 @@ export const FileDiffView = memo(
     isLoadingPatch,
     patchError,
     isStatic = false,
+    showHeader = true,
   }: FileDiffViewProps) => {
     const fileLines = file.lines ?? [];
-    const tokenMap = usePRDiffHighlighting(isExpanded ? fileLines : [], file.path);
+    const diff = useMemo(() => {
+      const parsed = parseGitPatchLines(fileLines, file.path);
+
+      return {
+        ...parsed,
+        file_path: file.path,
+        old_path: file.oldPath,
+        new_path: file.path,
+        is_new: file.status === "added",
+        is_deleted: file.status === "deleted",
+        is_renamed: file.status === "renamed",
+        additions: file.additions,
+        deletions: file.deletions,
+      };
+    }, [file.additions, file.deletions, file.oldPath, file.path, file.status, fileLines]);
 
     return (
       <div className="min-w-0 overflow-hidden bg-background">
-        {isStatic ? (
+        {showHeader && isStatic ? (
           <div className="flex min-h-9 items-center gap-2 border-border/60 border-b px-3 py-1.5">
             <div className="min-w-0 flex-1">
               <div className="ui-text-sm truncate text-foreground">{file.path}</div>
@@ -64,7 +83,7 @@ export const FileDiffView = memo(
               Open
             </Button>
           </div>
-        ) : (
+        ) : showHeader ? (
           <Button
             type="button"
             variant="ghost"
@@ -92,37 +111,30 @@ export const FileDiffView = memo(
             <span className="ui-text-sm shrink-0 text-git-added">+{file.additions}</span>
             <span className="ui-text-sm shrink-0 text-git-deleted">-{file.deletions}</span>
           </Button>
-        )}
+        ) : null}
         {isExpanded && (
           <div className="bg-background">
-            <div className="max-h-135 overflow-auto">
+            <div className={showHeader ? "max-h-135 overflow-auto" : "overflow-hidden"}>
               {isLoadingPatch ? (
-                <Empty className="min-h-0 flex-none rounded-none py-6">
-                  <EmptyDescription>
-                    <Spinner label="Loading file diff" showLabel compact />
-                  </EmptyDescription>
-                </Empty>
+                <ViewerLoadingState
+                  label="Loading file diff"
+                  layout="section"
+                  className="min-h-0 flex-none py-6"
+                />
               ) : patchError ? (
-                <Empty
-                  className="min-h-0 flex-none rounded-none px-3 py-4"
-                  tone="error"
-                  role="alert"
-                >
-                  <EmptyDescription>{patchError}</EmptyDescription>
-                </Empty>
+                <ViewerErrorState
+                  message={patchError}
+                  layout="section"
+                  className="min-h-0 flex-none px-3 py-4"
+                />
               ) : fileLines.length === 0 ? (
-                <Empty className="min-h-0 flex-none rounded-none px-3 py-4">
-                  <EmptyDescription>No diff hunks available for this file.</EmptyDescription>
-                </Empty>
+                <ViewerState
+                  description="No diff hunks available for this file."
+                  layout="section"
+                  className="min-h-0 flex-none px-3 py-4"
+                />
               ) : (
-                fileLines.map((line, index) => (
-                  <DiffLineDisplay
-                    key={index}
-                    line={line}
-                    index={index}
-                    tokens={tokenMap.get(index)}
-                  />
-                ))
+                <DiffFileContent key={file.path} diff={diff} sectionKey={file.path} />
               )}
             </div>
           </div>

@@ -28,7 +28,6 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { Button } from "@/ui/button";
 import {
   Dropdown,
   DropdownMenu,
@@ -39,23 +38,16 @@ import {
   useDropdownMenu,
   type MenuItem,
 } from "@/ui/dropdown";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyState,
-  EmptyTitle,
-} from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
-import { ScrollArea } from "@/ui/scroll-area";
 import {
   SidebarHeaderIconButton,
   SidebarSearchPopover,
-  SidebarPanel,
+  SidebarScrollArea,
+  SidebarSection,
   SidebarTabPanels,
   SidebarTabBar,
-  SidebarTitleBar,
+  SidebarWorkspace,
 } from "@/ui/sidebar";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useGitHubStore } from "../stores/github.store";
@@ -74,7 +66,6 @@ import GitHubActionsView from "./github-actions-view";
 import { GitHubAvatar } from "./github-avatar";
 import GitHubIssuesView from "./github-issues-view";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
-import { GitHubSidebarSection as GitHubSidebarListSection } from "./github-sidebar-section";
 import {
   GITHUB_ACTION_LIST_TTL_MS,
   GITHUB_ISSUE_LIST_TTL_MS,
@@ -171,11 +162,7 @@ const PRListItem = memo(
           });
         }}
         active={isActive}
-        leading={
-          <GitPullRequest
-            className={pr.isDraft ? "size-4 text-subtle-foreground" : "size-4 text-primary"}
-          />
-        }
+        leading={authorAvatar}
         description={
           <span className="flex min-w-0 items-center gap-1.5 capitalize">
             <span className="font-mono">#{pr.number}</span>
@@ -183,17 +170,7 @@ const PRListItem = memo(
             <span className="truncate">{stateLabel}</span>
           </span>
         }
-        trailing={
-          <>
-            <GitHubAvatar
-              login={pr.author.login}
-              avatarUrl={pr.author.avatarUrl}
-              size={24}
-              className="size-4"
-            />
-            <span>{updatedLabel}</span>
-          </>
-        }
+        trailing={updatedLabel}
         preview={{
           title: pr.title,
           subtitle: `#${pr.number} by ${pr.author.login}`,
@@ -709,28 +686,25 @@ const GitHubPRsView = memo(() => {
 
   if (!isAuthenticated) {
     return (
-      <SidebarPanel>
-        <SidebarTitleBar title="GitHub" />
-        <GitHubAuthStatusMessage />
-      </SidebarPanel>
+      <SidebarWorkspace title="GitHub">
+        <GitHubAuthStatusMessage layout="sidebar" />
+      </SidebarWorkspace>
     );
   }
 
   return (
     <>
-      <SidebarPanel
-        className="font-sans select-none"
-        onContextMenu={(event) => {
-          sectionContextMenu.open(event, null);
-        }}
-      >
-        {availableSections.length === 0 ? (
-          <EmptyState message="Enable GitHub sidebar sections in Settings -> Appearance." />
-        ) : (
-          <>
-            <SidebarTitleBar
-              title={<GitProjectSelector onRepositoryChange={() => setRepoSelectionError(null)} />}
-            >
+      <SidebarWorkspace
+        title={
+          availableSections.length > 0 ? (
+            <GitProjectSelector onRepositoryChange={() => setRepoSelectionError(null)} />
+          ) : (
+            "GitHub"
+          )
+        }
+        actions={
+          availableSections.length > 0 ? (
+            <>
               <SidebarSearchPopover
                 value={searchQuery}
                 onChange={setSearchQuery}
@@ -790,8 +764,21 @@ const GitHubPRsView = memo(() => {
                   </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </SidebarTitleBar>
-
+            </>
+          ) : undefined
+        }
+        className="font-sans select-none"
+        onContextMenu={(event) => {
+          sectionContextMenu.open(event, null);
+        }}
+      >
+        {availableSections.length === 0 ? (
+          <EmptyState
+            layout="sidebar"
+            message="Enable GitHub sidebar sections in Settings -> Appearance."
+          />
+        ) : (
+          <>
             <SidebarTabBar items={sectionTabs} value={activeSection} onChange={setActiveSection}>
               <SidebarTabPanels
                 className="flex-1"
@@ -800,9 +787,10 @@ const GitHubPRsView = memo(() => {
                     id: "pull-requests",
                     content: (
                       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-                        <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
+                        <SidebarScrollArea className="min-h-0 flex-1">
                           {!effectiveRepoPath ? (
                             <EmptyState
+                              layout="sidebar"
                               message="No repository selected"
                               action={{
                                 label: isSelectingRepo ? "Selecting..." : "Browse Repository",
@@ -811,51 +799,41 @@ const GitHubPRsView = memo(() => {
                               }}
                             />
                           ) : error ? (
-                            <Empty tone="error" role="alert">
-                              <EmptyHeader>
-                                <EmptyTitle>
-                                  {isRepoError ? "Repository is not a Git repository" : error}
-                                </EmptyTitle>
-                                {isRepoError || repoSelectionError ? (
-                                  <EmptyDescription>
-                                    {isRepoError
-                                      ? "Select another folder that contains a `.git` repository."
-                                      : repoSelectionError}
-                                  </EmptyDescription>
-                                ) : null}
-                              </EmptyHeader>
-                              <EmptyContent>
-                                <Button
-                                  type="button"
-                                  variant="default"
-                                  size="xs"
-                                  disabled={isSelectingRepo}
-                                  onClick={
-                                    isRepoError
-                                      ? () => void handleSelectRepository()
-                                      : handleRefresh
-                                  }
-                                >
-                                  {isRepoError
-                                    ? isSelectingRepo
-                                      ? "Selecting..."
-                                      : "Browse Repository"
-                                    : "Try again"}
-                                </Button>
-                              </EmptyContent>
-                            </Empty>
+                            <EmptyState
+                              layout="sidebar"
+                              title={isRepoError ? "Repository is not a Git repository" : error}
+                              message={
+                                isRepoError
+                                  ? "Select another folder that contains a `.git` repository."
+                                  : repoSelectionError
+                              }
+                              tone="error"
+                              role="alert"
+                              action={{
+                                label: isRepoError
+                                  ? isSelectingRepo
+                                    ? "Selecting..."
+                                    : "Browse Repository"
+                                  : "Try again",
+                                disabled: isSelectingRepo,
+                                onClick: isRepoError
+                                  ? () => void handleSelectRepository()
+                                  : handleRefresh,
+                              }}
+                            />
                           ) : isLoading && deferredPrs.length === 0 ? (
-                            <div className="flex items-center justify-center py-8">
-                              <Spinner label="Loading pull requests" showLabel compact />
-                            </div>
+                            <EmptyState
+                              layout="sidebar"
+                              message={<Spinner label="Loading pull requests" showLabel compact />}
+                            />
                           ) : deferredPrs.length === 0 ? (
-                            <EmptyState message="No pull requests" />
+                            <EmptyState layout="sidebar" message="No pull requests" />
                           ) : filteredPrs.length === 0 ? (
-                            <EmptyState message="No matching pull requests" />
+                            <EmptyState layout="sidebar" message="No matching pull requests" />
                           ) : (
                             <div className="space-y-1 overflow-x-hidden">
                               {groupedPrs.map((group) => (
-                                <GitHubSidebarListSection
+                                <SidebarSection
                                   key={group.id}
                                   title={group.title}
                                   count={group.items.length}
@@ -874,11 +852,11 @@ const GitHubPRsView = memo(() => {
                                       repoPath={effectiveRepoPath}
                                     />
                                   ))}
-                                </GitHubSidebarListSection>
+                                </SidebarSection>
                               ))}
                             </div>
                           )}
-                        </ScrollArea>
+                        </SidebarScrollArea>
                       </div>
                     ),
                   },
@@ -919,7 +897,7 @@ const GitHubPRsView = memo(() => {
           items={sectionContextMenuItems}
           onClose={sectionContextMenu.close}
         />
-      </SidebarPanel>
+      </SidebarWorkspace>
     </>
   );
 });

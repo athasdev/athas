@@ -34,11 +34,10 @@ import {
   githubActionListCache,
 } from "../utils/github-data-cache";
 import { Spinner } from "@/ui/spinner";
-import { Empty, EmptyDescription, EmptyState } from "@/ui/empty";
-import { ScrollArea } from "@/ui/scroll-area";
+import { EmptyState } from "@/ui/empty";
+import { SidebarScrollArea, SidebarSection } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
-import { GitHubSidebarSection } from "./github-sidebar-section";
 
 const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null) => {
   const normalizedStatus = status?.toLowerCase() ?? "";
@@ -426,32 +425,27 @@ const GitHubActionsView = memo(
     }, [filteredRuns, isAuthenticated, prefetchWorkflowRun, repoPath]);
 
     if (!isAuthenticated) {
-      return (
-        <div className="flex h-full items-center justify-center p-4">
-          <GitHubAuthStatusMessage />
-        </div>
-      );
+      return <GitHubAuthStatusMessage layout="sidebar" />;
     }
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
+        <SidebarScrollArea className="min-h-0 flex-1">
           {error ? (
-            <Empty tone="error" role="alert">
-              <EmptyDescription>{error}</EmptyDescription>
-            </Empty>
+            <EmptyState layout="sidebar" message={error} tone="error" role="alert" />
           ) : isLoading && deferredRuns.length === 0 ? (
-            <div className="flex items-center justify-center py-8">
-              <Spinner label="Loading workflow runs" showLabel compact />
-            </div>
+            <EmptyState
+              layout="sidebar"
+              message={<Spinner label="Loading workflow runs" showLabel compact />}
+            />
           ) : deferredRuns.length === 0 ? (
-            <EmptyState message="No workflow runs" />
+            <EmptyState layout="sidebar" message="No workflow runs" />
           ) : filteredRuns.length === 0 ? (
-            <EmptyState message="No matching workflow runs" />
+            <EmptyState layout="sidebar" message="No matching workflow runs" />
           ) : (
             <div className="space-y-1 overflow-x-hidden">
               {groupedRuns.map((group) => (
-                <GitHubSidebarSection
+                <SidebarSection
                   key={group.id}
                   title={group.title}
                   count={group.items.length}
@@ -481,11 +475,11 @@ const GitHubActionsView = memo(
                       }
                     />
                   ))}
-                </GitHubSidebarSection>
+                </SidebarSection>
               ))}
             </div>
           )}
-        </ScrollArea>
+        </SidebarScrollArea>
       </div>
     );
   },
