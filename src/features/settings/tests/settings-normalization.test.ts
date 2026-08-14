@@ -172,6 +172,7 @@ describe("settings normalization", () => {
     });
 
     expect(normalized.coreFeatures.webViewer).toBe(false);
+    expect(normalized.coreFeatures.ghosttyTerminal).toBe(false);
   });
 
   it("migrates legacy icon theme aliases", () => {

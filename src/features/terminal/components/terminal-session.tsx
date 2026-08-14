@@ -39,7 +39,14 @@ const TerminalSession = ({
 
       requestAnimationFrame(() => {
         const textarea = ref.terminal?.textarea;
-        if (textarea && document.activeElement !== textarea) {
+        const terminalElement = ref.terminal?.element;
+        const activeElement = document.activeElement;
+        const hasTerminalFocus =
+          activeElement === textarea ||
+          activeElement === terminalElement ||
+          terminalElement?.contains(activeElement);
+
+        if (textarea && !hasTerminalFocus) {
           tryFocus();
         }
       });

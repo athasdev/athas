@@ -1,8 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { IDisposable, Terminal as XtermTerminal } from "@xterm/xterm";
 import { useCallback, useEffect, useRef } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
+import type { TerminalDisposable, TerminalFrontend } from "../types/terminal-frontend.types";
 import type { TerminalInput, TerminalSize } from "../types/terminal.types";
+import type { TerminalTheme } from "./use-terminal-theme";
 import { TerminalOscStream } from "../utils/terminal-osc-stream";
 import {
   getTerminalOutputFlowAction,
@@ -14,15 +15,16 @@ import {
 import { useTerminalWriteBuffer } from "./use-terminal-write-buffer";
 
 interface UseTerminalConnectionOptions {
+  applyTerminalTheme: (theme: TerminalTheme) => void;
   connectionId?: string;
-  getTerminalTheme: () => NonNullable<XtermTerminal["options"]["theme"]>;
+  getTerminalTheme: () => TerminalTheme;
   initialCommand?: string;
   isInitialized: boolean;
   onTerminalExit?: (sessionId: string) => void;
   remoteConnectionId?: string;
   reuseExistingConnection?: boolean;
   sessionId: string;
-  terminal: XtermTerminal | null;
+  terminal: TerminalFrontend | null;
   updateSession: (
     sessionId: string,
     updates: {
@@ -34,6 +36,7 @@ interface UseTerminalConnectionOptions {
 }
 
 export function useTerminalConnection({
+  applyTerminalTheme,
   connectionId,
   getTerminalTheme,
   initialCommand,
@@ -103,7 +106,7 @@ export function useTerminalConnection({
   );
 
   const sendTerminalSize = useCallback(
-    (activeTerminal: XtermTerminal) => {
+    (activeTerminal: TerminalFrontend) => {
       const activeConnectionId = currentConnectionIdRef.current;
       if (!activeConnectionId) return;
 
@@ -140,10 +143,10 @@ export function useTerminalConnection({
   useEffect(() => {
     if (!terminal || !isInitialized || !connectionId) return;
 
-    const disposables: IDisposable[] = [];
+    const disposables: TerminalDisposable[] = [];
 
     disposables.push(terminal.onData(write));
-    disposables.push(terminal.onBinary(writeBinary));
+    if (terminal.onBinary) disposables.push(terminal.onBinary(writeBinary));
     disposables.push(terminal.onResize(() => sendTerminalSize(terminal)));
     disposables.push(
       terminal.onSelectionChange(() => {
@@ -152,7 +155,7 @@ export function useTerminalConnection({
       }),
     );
     const unlistenThemeChange = themeRegistry.onThemeChange(() => {
-      terminal.options.theme = getTerminalTheme();
+      applyTerminalTheme(getTerminalTheme());
     });
 
     const unsubscribeEvents = subscribeToTerminalEvents(connectionId, (event) => {
@@ -230,6 +233,7 @@ export function useTerminalConnection({
       unsubscribeEvents();
     };
   }, [
+    applyTerminalTheme,
     connectionId,
     flush,
     getTerminalTheme,

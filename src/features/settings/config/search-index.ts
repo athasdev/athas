@@ -892,6 +892,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["terminal", "command", "line", "shell"],
   },
   {
+    id: "features-ghostty-terminal",
+    tab: "advanced",
+    section: "Features",
+    label: "Ghostty Terminal Engine",
+    description: "Use Ghostty's WebAssembly terminal engine for new terminal sessions",
+    keywords: ["terminal", "ghostty", "wasm", "experimental", "xterm", "renderer"],
+  },
+  {
     id: "features-search",
     tab: "advanced",
     section: "Features",

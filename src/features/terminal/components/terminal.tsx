@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ISearchOptions } from "@xterm/addon-search";
-import { Terminal } from "@xterm/xterm";
+import { Terminal as XtermInstance } from "@xterm/xterm";
 import {
   useCallback,
   useEffect,
@@ -22,7 +22,9 @@ import {
   type TerminalFileDropDetail,
 } from "@/features/file-system/utils/file-system-drop-controller";
 import { showConfirmDialog } from "@/ui/dialog";
+import { useToast } from "@/features/layout/contexts/toast-context";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
+import { frontendTrace } from "@/utils/frontend-trace";
 import { currentPlatform } from "@/utils/platform";
 import {
   createTerminalAddons,
@@ -30,11 +32,16 @@ import {
   loadWebLinksAddon,
   registerFileLinksProvider,
   removeLinkStyles,
-  type TerminalAddons,
 } from "../hooks/use-terminal-addons";
 import { useTerminalConnection } from "../hooks/use-terminal-connection";
-import { useTerminalTheme } from "../hooks/use-terminal-theme";
+import { useTerminalTheme, type TerminalTheme } from "../hooks/use-terminal-theme";
+import { createGhosttyTerminalRuntime } from "../lib/ghostty-terminal-runtime";
 import { useTerminalStore } from "../stores/terminal.store";
+import type {
+  TerminalEngine,
+  TerminalFrontend,
+  TerminalRuntimeAddons,
+} from "../types/terminal-frontend.types";
 import { formatDroppedPathsForTerminal } from "../utils/terminal-file-drop";
 import { resolveTerminalFont } from "../utils/resolve-font";
 import { getTerminalKeyAction } from "../utils/terminal-keyboard";
@@ -48,12 +55,17 @@ import "../styles/terminal.css";
 const MULTILINE_PASTE_LINE_THRESHOLD = 5;
 const LARGE_PASTE_CHAR_THRESHOLD = 1000;
 
-interface XtermTerminalProps {
+interface TerminalEmulatorProps {
+  engine: TerminalEngine;
   sessionId: string;
   isActive: boolean;
   isVisible?: boolean;
   onReady?: () => void;
-  onTerminalRef?: (ref: { focus: () => void; showSearch: () => void; terminal: Terminal }) => void;
+  onTerminalRef?: (ref: {
+    focus: () => void;
+    showSearch: () => void;
+    terminal: TerminalFrontend;
+  }) => void;
   onTerminalExit?: (sessionId: string) => void;
   shell?: string;
   initialCommand?: string;
@@ -61,7 +73,8 @@ interface XtermTerminalProps {
   remoteConnectionId?: string;
 }
 
-export const XtermTerminal = ({
+export const TerminalEmulator = ({
+  engine,
   sessionId,
   isActive,
   isVisible = true,
@@ -72,15 +85,17 @@ export const XtermTerminal = ({
   initialCommand,
   workingDirectory,
   remoteConnectionId,
-}: XtermTerminalProps) => {
+}: TerminalEmulatorProps) => {
   const terminalContainerRef = useRef<HTMLDivElement>(null);
-  const xtermRef = useRef<Terminal | null>(null);
-  const addonsRef = useRef<TerminalAddons | null>(null);
+  const terminalRef = useRef<TerminalFrontend | null>(null);
+  const addonsRef = useRef<TerminalRuntimeAddons | null>(null);
+  const activeEngineRef = useRef<TerminalEngine>(engine);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchResults, setSearchResults] = useState({ current: 0, total: 0 });
   const isInitializingRef = useRef(false);
   const fitFrameRef = useRef<number | null>(null);
+  const { showToast } = useToast();
 
   const updateSession = useTerminalStore((state) => state.actions.updateSession);
   const getSession = useTerminalStore((state) => state.actions.getSession);
@@ -126,7 +141,25 @@ export const XtermTerminal = ({
     workspaceRootRef.current = rootFolderPath;
   }, [rootFolderPath]);
 
+  const applyTerminalTheme = useCallback((theme: TerminalTheme) => {
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+
+    if (activeEngineRef.current === "ghostty") {
+      const ghosttyRenderer = (
+        terminal as TerminalFrontend & {
+          renderer?: { setTheme: (nextTheme: TerminalTheme) => void };
+        }
+      ).renderer;
+      ghosttyRenderer?.setTheme(theme);
+      return;
+    }
+
+    (terminal as XtermInstance).options.theme = theme;
+  }, []);
+
   const { currentConnectionIdRef, sendTerminalSize, writeBuffered } = useTerminalConnection({
+    applyTerminalTheme,
     connectionId,
     getTerminalTheme,
     initialCommand,
@@ -135,7 +168,7 @@ export const XtermTerminal = ({
     remoteConnectionId,
     reuseExistingConnection: hadExistingConnectionOnMountRef.current,
     sessionId,
-    terminal: xtermRef.current,
+    terminal: terminalRef.current,
     updateSession,
   });
 
@@ -146,7 +179,7 @@ export const XtermTerminal = ({
       fitFrameRef.current = null;
       const container = terminalContainerRef.current;
       const addons = addonsRef.current;
-      const terminal = xtermRef.current;
+      const terminal = terminalRef.current;
       if (!container || !addons || !terminal) return;
 
       const rect = container.getBoundingClientRect();
@@ -156,7 +189,7 @@ export const XtermTerminal = ({
 
       addons.fitAddon.fit();
       sendTerminalSize(terminal);
-      terminal.refresh(0, terminal.rows - 1);
+      terminal.refresh?.(0, terminal.rows - 1);
     });
   }, [sendTerminalSize]);
 
@@ -166,7 +199,7 @@ export const XtermTerminal = ({
       if (!text) return false;
 
       writeBuffered(text);
-      requestAnimationFrame(() => xtermRef.current?.focus());
+      requestAnimationFrame(() => terminalRef.current?.focus());
       return true;
     },
     [writeBuffered],
@@ -202,7 +235,7 @@ export const XtermTerminal = ({
     event.dataTransfer.dropEffect = "copy";
   }, []);
 
-  const pasteIntoTerminal = useCallback(async (terminal: Terminal, text: string) => {
+  const pasteIntoTerminal = useCallback(async (terminal: TerminalFrontend, text: string) => {
     if (!text) return;
 
     const lineCount = text.replace(/\r\n/g, "\n").split("\n").length;
@@ -231,6 +264,7 @@ export const XtermTerminal = ({
     if (rect.width <= 0 || rect.height <= 0 || !isContainerVisible) return;
 
     isInitializingRef.current = true;
+    const initializationStartedAt = performance.now();
     const resolved = await resolveTerminalFont(terminalFontFamily, effectiveTerminalFontSize);
 
     if (!terminalContainerRef.current) {
@@ -239,30 +273,68 @@ export const XtermTerminal = ({
     }
 
     try {
-      const terminal = new Terminal({
-        fontFamily: resolved.fontFamily,
-        fontSize: effectiveTerminalFontSize,
-        lineHeight: terminalLineHeight,
-        letterSpacing: effectiveTerminalLetterSpacing,
-        cursorBlink: terminalCursorBlink,
-        cursorStyle: terminalCursorStyle,
-        cursorWidth: effectiveTerminalCursorWidth,
-        cursorInactiveStyle: terminalCursorInactiveStyle,
-        altClickMovesCursor: terminalAltClickMovesCursor,
-        allowProposedApi: true,
-        theme: getTerminalTheme(),
-        scrollback: terminalScrollback,
-        convertEol: false,
-        macOptionIsMeta: terminalMacOptionIsMeta,
-        rightClickSelectsWord: terminalRightClickSelectsWord,
-        ...getTerminalCompatibilityOptions({ isRemote: terminalIsRemote }),
-      });
+      let activeEngine = engine;
+      let terminal: TerminalFrontend | null = null;
+      let addons: TerminalRuntimeAddons | null = null;
 
-      terminal.open(terminalContainerRef.current);
-      const addons = createTerminalAddons(terminal, {
-        onRendererFallback: fitTerminal,
-      });
-      terminal.attachCustomKeyEventHandler((event) => {
+      if (activeEngine === "ghostty") {
+        try {
+          const runtime = await createGhosttyTerminalRuntime({
+            fontFamily: resolved.fontFamily,
+            fontSize: effectiveTerminalFontSize,
+            cursorBlink: terminalCursorBlink,
+            cursorStyle: terminalCursorStyle,
+            theme: getTerminalTheme(),
+            scrollback: terminalScrollback,
+            convertEol: false,
+            smoothScrollDuration: 0,
+          });
+          terminal = runtime.terminal;
+          addons = runtime.addons;
+          terminal.open(terminalContainerRef.current);
+        } catch (error) {
+          console.error("Failed to initialize the experimental Ghostty terminal:", error);
+          showToast({
+            message: "Ghostty could not start. This terminal is using xterm instead.",
+            type: "error",
+          });
+          activeEngine = "xterm";
+        }
+      }
+
+      if (activeEngine === "xterm") {
+        const xterm = new XtermInstance({
+          fontFamily: resolved.fontFamily,
+          fontSize: effectiveTerminalFontSize,
+          lineHeight: terminalLineHeight,
+          letterSpacing: effectiveTerminalLetterSpacing,
+          cursorBlink: terminalCursorBlink,
+          cursorStyle: terminalCursorStyle,
+          cursorWidth: effectiveTerminalCursorWidth,
+          cursorInactiveStyle: terminalCursorInactiveStyle,
+          altClickMovesCursor: terminalAltClickMovesCursor,
+          allowProposedApi: true,
+          theme: getTerminalTheme(),
+          scrollback: terminalScrollback,
+          convertEol: false,
+          macOptionIsMeta: terminalMacOptionIsMeta,
+          rightClickSelectsWord: terminalRightClickSelectsWord,
+          ...getTerminalCompatibilityOptions({ isRemote: terminalIsRemote }),
+        });
+
+        xterm.open(terminalContainerRef.current);
+        terminal = xterm;
+        addons = createTerminalAddons(xterm, {
+          onRendererFallback: fitTerminal,
+        });
+      }
+
+      if (!terminal || !addons) {
+        throw new Error("No terminal frontend was created.");
+      }
+
+      activeEngineRef.current = activeEngine;
+      const handleCustomKeyEvent = (event: KeyboardEvent) => {
         const action = getTerminalKeyAction(event, currentPlatform);
         if (action.type === "switchTab") {
           event.preventDefault();
@@ -300,6 +372,10 @@ export const XtermTerminal = ({
         }
 
         return action.type === "passthrough";
+      };
+      terminal.attachCustomKeyEventHandler((event) => {
+        const shouldProcess = handleCustomKeyEvent(event);
+        return activeEngine === "ghostty" ? !shouldProcess : shouldProcess;
       });
 
       if (terminal.textarea) {
@@ -328,20 +404,32 @@ export const XtermTerminal = ({
         );
       }
 
-      loadWebLinksAddon(terminal);
-      registerFileLinksProvider(terminal, {
-        getWorkspaceRoot: () => workspaceRootRef.current,
-        openFile: async (link) => {
-          await useFileSystemStore
-            .getState()
-            .handleFileSelect(link.path, false, link.line, link.column);
-        },
-      });
-      terminal.unicode.activeVersion = "11";
-      injectLinkStyles(sessionId, terminalContainerRef.current.id || `terminal-${sessionId}`);
+      if (activeEngine === "xterm") {
+        const xterm = terminal as XtermInstance;
+        loadWebLinksAddon(xterm);
+        registerFileLinksProvider(xterm, {
+          getWorkspaceRoot: () => workspaceRootRef.current,
+          openFile: async (link) => {
+            await useFileSystemStore
+              .getState()
+              .handleFileSelect(link.path, false, link.line, link.column);
+          },
+        });
+        xterm.unicode.activeVersion = "11";
+        injectLinkStyles(sessionId, terminalContainerRef.current.id || `terminal-${sessionId}`);
+      }
 
-      xtermRef.current = terminal;
+      terminalRef.current = terminal;
       addonsRef.current = addons;
+      const engineTraceMessage =
+        activeEngine === engine
+          ? `${activeEngine}:ready`
+          : `${activeEngine}:fallback-from-${engine}`;
+      frontendTrace("info", "bench:terminal-engine", engineTraceMessage, {
+        durationMs: Math.round(performance.now() - initializationStartedAt),
+        engine: activeEngine,
+        requestedEngine: engine,
+      });
 
       // Fit synchronously after open so terminal.rows/cols reflect the actual container size
       // before we create the PTY with those dimensions
@@ -439,6 +527,7 @@ export const XtermTerminal = ({
     }
   }, [
     currentConnectionIdRef,
+    engine,
     fitTerminal,
     getSession,
     getTerminalTheme,
@@ -450,6 +539,7 @@ export const XtermTerminal = ({
     remoteConnectionId,
     shell,
     sessionId,
+    showToast,
     terminalCursorBlink,
     terminalCursorInactiveStyle,
     terminalCursorStyle,
@@ -470,32 +560,53 @@ export const XtermTerminal = ({
   ]);
 
   useEffect(() => {
-    if (!xtermRef.current) return;
-    xtermRef.current.options.theme = getTerminalTheme();
+    if (!terminalRef.current) return;
+    applyTerminalTheme(getTerminalTheme());
     fitTerminal();
-  }, [terminalThemeId, getTerminalTheme, fitTerminal]);
+  }, [applyTerminalTheme, terminalThemeId, getTerminalTheme, fitTerminal]);
 
   useEffect(() => {
-    if (!xtermRef.current || !addonsRef.current) return;
+    if (!terminalRef.current || !addonsRef.current) return;
 
     let cancelled = false;
 
     const applyFontChange = async () => {
       const resolved = await resolveTerminalFont(terminalFontFamily, effectiveTerminalFontSize);
-      if (cancelled || !xtermRef.current || !addonsRef.current) return;
+      const terminal = terminalRef.current;
+      if (cancelled || !terminal || !addonsRef.current) return;
 
-      xtermRef.current.options.fontFamily = resolved.fontFamily;
-      xtermRef.current.options.fontSize = effectiveTerminalFontSize;
-      xtermRef.current.options.lineHeight = terminalLineHeight;
-      xtermRef.current.options.letterSpacing = effectiveTerminalLetterSpacing;
-      xtermRef.current.options.scrollback = terminalScrollback;
-      xtermRef.current.options.cursorBlink = terminalCursorBlink;
-      xtermRef.current.options.cursorStyle = terminalCursorStyle;
-      xtermRef.current.options.cursorWidth = effectiveTerminalCursorWidth;
-      xtermRef.current.options.cursorInactiveStyle = terminalCursorInactiveStyle;
-      xtermRef.current.options.altClickMovesCursor = terminalAltClickMovesCursor;
-      xtermRef.current.options.macOptionIsMeta = terminalMacOptionIsMeta;
-      xtermRef.current.options.rightClickSelectsWord = terminalRightClickSelectsWord;
+      if (activeEngineRef.current === "ghostty") {
+        const options = (
+          terminal as TerminalFrontend & {
+            options: {
+              cursorBlink: boolean;
+              cursorStyle: "block" | "underline" | "bar";
+              fontFamily: string;
+              fontSize: number;
+              scrollback: number;
+            };
+          }
+        ).options;
+        options.fontFamily = resolved.fontFamily;
+        options.fontSize = effectiveTerminalFontSize;
+        options.scrollback = terminalScrollback;
+        options.cursorBlink = terminalCursorBlink;
+        options.cursorStyle = terminalCursorStyle;
+      } else {
+        const options = (terminal as XtermInstance).options;
+        options.fontFamily = resolved.fontFamily;
+        options.fontSize = effectiveTerminalFontSize;
+        options.lineHeight = terminalLineHeight;
+        options.letterSpacing = effectiveTerminalLetterSpacing;
+        options.scrollback = terminalScrollback;
+        options.cursorBlink = terminalCursorBlink;
+        options.cursorStyle = terminalCursorStyle;
+        options.cursorWidth = effectiveTerminalCursorWidth;
+        options.cursorInactiveStyle = terminalCursorInactiveStyle;
+        options.altClickMovesCursor = terminalAltClickMovesCursor;
+        options.macOptionIsMeta = terminalMacOptionIsMeta;
+        options.rightClickSelectsWord = terminalRightClickSelectsWord;
+      }
 
       fitTerminal();
     };
@@ -564,7 +675,7 @@ export const XtermTerminal = ({
     };
   }, [initializeTerminal, isInitialized, isVisible]);
 
-  // Dispose only the xterm UI on unmount. The PTY process is owned by
+  // Dispose only the terminal frontend on unmount. The PTY process is owned by
   // the buffer store and killed in closeBufferForce when the user actually
   // closes the tab — NOT here. This prevents pane splits, tab moves, and
   // other layout changes from killing running terminal processes.
@@ -574,19 +685,19 @@ export const XtermTerminal = ({
         cancelAnimationFrame(fitFrameRef.current);
         fitFrameRef.current = null;
       }
-      if (xtermRef.current) {
-        xtermRef.current.dispose();
-        xtermRef.current = null;
+      if (terminalRef.current) {
+        terminalRef.current.dispose();
+        terminalRef.current = null;
         addonsRef.current = null;
       }
     };
   }, []);
 
-  // XtermTerminal stays mounted while slots move between panes. When a new
+  // The terminal frontend stays mounted while slots move between panes. When a new
   // slot owner provides a fresh ref callback, hand the live terminal handle to
   // it even though initialization does not re-run.
   useEffect(() => {
-    const terminal = xtermRef.current;
+    const terminal = terminalRef.current;
     if (!isInitialized || !terminal || !onTerminalRef) return;
 
     onTerminalRef({
@@ -597,7 +708,7 @@ export const XtermTerminal = ({
   }, [isInitialized, onTerminalRef]);
 
   // Listen for portal-target changes from TerminalHost; force a fit + repaint
-  // so PTY/xterm dims match the new slot before any TUI relies on them.
+  // so PTY/frontend dims match the new slot before any TUI relies on them.
   useEffect(() => {
     if (!isInitialized) return;
     const handler = (event: Event) => {
@@ -631,7 +742,7 @@ export const XtermTerminal = ({
   }, [fitTerminal, isInitialized]);
 
   useEffect(() => {
-    if (!isActive || !isVisible || !xtermRef.current || !isInitialized) return;
+    if (!isActive || !isVisible || !terminalRef.current || !isInitialized) return;
 
     let cancelled = false;
 
@@ -640,15 +751,21 @@ export const XtermTerminal = ({
 
     // Focus with verified retry — wait for layout to fully settle after tab switch
     const ensureFocus = (attempt: number) => {
-      if (cancelled || !xtermRef.current || attempt >= 8) return;
+      if (cancelled || !terminalRef.current || attempt >= 8) return;
 
-      xtermRef.current.focus();
+      terminalRef.current.focus();
 
-      // Verify the textarea actually received focus
       requestAnimationFrame(() => {
-        if (cancelled || !xtermRef.current) return;
-        const textarea = xtermRef.current.textarea;
-        if (textarea && document.activeElement !== textarea) {
+        if (cancelled || !terminalRef.current) return;
+        const textarea = terminalRef.current.textarea;
+        const terminalElement = terminalRef.current.element;
+        const activeElement = document.activeElement;
+        const hasTerminalFocus =
+          activeElement === textarea ||
+          activeElement === terminalElement ||
+          terminalElement?.contains(activeElement);
+
+        if (textarea && !hasTerminalFocus) {
           ensureFocus(attempt + 1);
         }
       });
@@ -685,8 +802,14 @@ export const XtermTerminal = ({
     (delta: number) => {
       const newSize = Math.min(Math.max(terminalFontSize + delta, 8), 32);
       useSettingsStore.getState().actions.updateSetting("terminalFontSize", newSize);
-      if (xtermRef.current) {
-        xtermRef.current.options.fontSize = newSize;
+      if (terminalRef.current) {
+        if (activeEngineRef.current === "ghostty") {
+          (
+            terminalRef.current as TerminalFrontend & { options: { fontSize: number } }
+          ).options.fontSize = newSize;
+        } else {
+          (terminalRef.current as XtermInstance).options.fontSize = newSize;
+        }
         fitTerminal();
       }
     },
@@ -695,8 +818,14 @@ export const XtermTerminal = ({
 
   const handleZoomReset = useCallback(() => {
     useSettingsStore.getState().actions.updateSetting("terminalFontSize", 14);
-    if (xtermRef.current) {
-      xtermRef.current.options.fontSize = 14;
+    if (terminalRef.current) {
+      if (activeEngineRef.current === "ghostty") {
+        (
+          terminalRef.current as TerminalFrontend & { options: { fontSize: number } }
+        ).options.fontSize = 14;
+      } else {
+        (terminalRef.current as XtermInstance).options.fontSize = 14;
+      }
       fitTerminal();
     }
   }, [fitTerminal]);
@@ -724,7 +853,7 @@ export const XtermTerminal = ({
 
   const clearSearch = useCallback(() => {
     addonsRef.current?.searchAddon.clearDecorations();
-    xtermRef.current?.clearSelection();
+    terminalRef.current?.clearSelection();
     setSearchResults({ current: 0, total: 0 });
   }, []);
 
@@ -751,7 +880,7 @@ export const XtermTerminal = ({
         event.preventDefault();
         setIsSearchVisible(false);
         clearSearch();
-        xtermRef.current?.focus();
+        terminalRef.current?.focus();
       }
 
       if (isTerminalFocused && (event.ctrlKey || event.metaKey)) {
@@ -810,27 +939,27 @@ export const XtermTerminal = ({
   const handleSearchClose = useCallback(() => {
     setIsSearchVisible(false);
     clearSearch();
-    xtermRef.current?.focus();
+    terminalRef.current?.focus();
   }, [clearSearch]);
 
   useImperativeHandle(
     getSession(sessionId)?.ref,
     () => ({
-      terminal: xtermRef.current,
+      terminal: terminalRef.current,
       searchAddon: addonsRef.current?.searchAddon,
-      focus: () => xtermRef.current?.focus(),
+      focus: () => terminalRef.current?.focus(),
       showSearch: () => setIsSearchVisible(true),
-      blur: () => xtermRef.current?.blur(),
-      clear: () => xtermRef.current?.clear(),
-      selectAll: () => xtermRef.current?.selectAll(),
-      clearSelection: () => xtermRef.current?.clearSelection(),
-      getSelection: () => xtermRef.current?.getSelection() || "",
-      paste: (text: string) => xtermRef.current?.paste(text),
-      scrollToTop: () => xtermRef.current?.scrollToTop(),
-      scrollToBottom: () => xtermRef.current?.scrollToBottom(),
+      blur: () => terminalRef.current?.blur(),
+      clear: () => terminalRef.current?.clear(),
+      selectAll: () => terminalRef.current?.selectAll(),
+      clearSelection: () => terminalRef.current?.clearSelection(),
+      getSelection: () => terminalRef.current?.getSelection() || "",
+      paste: (text: string) => terminalRef.current?.paste(text),
+      scrollToTop: () => terminalRef.current?.scrollToTop(),
+      scrollToBottom: () => terminalRef.current?.scrollToBottom(),
       findNext: (term: string) => addonsRef.current?.searchAddon.findNext(term),
       findPrevious: (term: string) => addonsRef.current?.searchAddon.findPrevious(term),
-      serialize: () => (xtermRef.current ? addonsRef.current?.serializeAddon.serialize() : ""),
+      serialize: () => (terminalRef.current ? addonsRef.current?.serializeAddon.serialize() : ""),
       resize: () => fitTerminal(),
     }),
     [fitTerminal, getSession, isInitialized, sessionId],
@@ -853,11 +982,12 @@ export const XtermTerminal = ({
           id={`terminal-${sessionId}`}
           data-terminal-drop-target
           data-terminal-session-id={sessionId}
+          data-terminal-engine={activeEngineRef.current}
           className={`xterm-container flex h-full min-h-0 min-w-0 flex-1 text-foreground ${!isActive ? "opacity-60" : ""}`}
           onDragOver={handleTerminalDragOver}
           onDrop={handleTerminalFileDrop}
           onMouseDown={() => {
-            requestAnimationFrame(() => xtermRef.current?.focus());
+            requestAnimationFrame(() => terminalRef.current?.focus());
           }}
         />
       </div>

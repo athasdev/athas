@@ -14,6 +14,7 @@ export interface CoreFeaturesState {
   github: boolean;
   remote: boolean;
   terminal: boolean;
+  ghosttyTerminal: boolean;
   search: boolean;
   diagnostics: boolean;
   debugger: boolean;

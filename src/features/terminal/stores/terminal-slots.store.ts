@@ -1,5 +1,5 @@
-import type { Terminal as XtermInstance } from "@xterm/xterm";
 import { create } from "zustand";
+import type { TerminalFrontend } from "../types/terminal-frontend.types";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 export interface TerminalSlotProps {
@@ -14,7 +14,7 @@ export interface TerminalSlotProps {
   onTerminalRef?: (ref: {
     focus: () => void;
     showSearch: () => void;
-    terminal: XtermInstance;
+    terminal: TerminalFrontend;
   }) => void;
   onReady?: () => void;
   // Fired when the user mouses down inside the terminal — owners use this to

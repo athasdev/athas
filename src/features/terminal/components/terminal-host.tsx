@@ -4,13 +4,15 @@ import { useShallow } from "zustand/react/shallow";
 import { useTerminalSlotsStore } from "../stores/terminal-slots.store";
 import { type TerminalStore, useTerminalStore } from "../stores/terminal.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
-import { XtermTerminal } from "./terminal";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import type { TerminalEngine } from "../types/terminal-frontend.types";
+import { TerminalEmulator } from "./terminal";
 
-// Renders all live xterm instances at app root. Each session owns a stable
+// Renders all live terminal frontends at app root. Each session owns a stable
 // wrapper <div> that's reparented (via raw appendChild) into whichever slot
-// is currently displaying it. React always portals XtermTerminal into the
+// is currently displaying it. React always portals TerminalEmulator into the
 // wrapper — only the wrapper's DOM parent changes. Pane moves never unmount
-// xterm; PTY listeners + scrollback survive.
+// the frontend; PTY listeners + scrollback survive.
 export function TerminalHost() {
   const [, refreshWorkspaceSessions] = useReducer((version) => version + 1, 0);
   const slotIds = useTerminalSlotsStore(useShallow((state) => Array.from(state.slots.keys())));
@@ -55,17 +57,20 @@ export function TerminalHost() {
   return (
     <>
       {liveIds.map((sessionId) => (
-        <XtermPortal key={sessionId} sessionId={sessionId} />
+        <TerminalPortal key={sessionId} sessionId={sessionId} />
       ))}
     </>
   );
 }
 
-function XtermPortal({ sessionId }: { sessionId: string }) {
+function TerminalPortal({ sessionId }: { sessionId: string }) {
+  const engineRef = useRef<TerminalEngine>(
+    useSettingsStore.getState().settings.coreFeatures.ghosttyTerminal ? "ghostty" : "xterm",
+  );
   const slotEl = useTerminalSlotsStore((state) => state.slots.get(sessionId)?.el);
   const slot = useTerminalSlotsStore((state) => state.slots.get(sessionId));
 
-  // Stable wrapper that hosts the xterm DOM for the lifetime of this session.
+  // Stable wrapper that hosts the terminal DOM for the lifetime of this session.
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   if (!wrapperRef.current && typeof document !== "undefined") {
     const wrapper = document.createElement("div");
@@ -80,7 +85,7 @@ function XtermPortal({ sessionId }: { sessionId: string }) {
   }
 
   // Reparent the wrapper into the active slot whenever the slot changes.
-  // When no slot exists, park it offscreen so xterm stays mounted + sized.
+  // When no slot exists, park it offscreen so the terminal stays mounted + sized.
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -118,7 +123,7 @@ function XtermPortal({ sessionId }: { sessionId: string }) {
     };
   }, []);
 
-  // After slot swap, kick xterm to refit + repaint — TUIs (CC etc.) need
+  // After slot swap, kick the frontend to refit + repaint — TUIs (CC etc.) need
   // a SIGWINCH-like nudge to redraw at the new column count.
   useEffect(() => {
     if (!slotEl) return;
@@ -131,7 +136,8 @@ function XtermPortal({ sessionId }: { sessionId: string }) {
   if (!wrapperRef.current) return null;
 
   return createPortal(
-    <XtermTerminal
+    <TerminalEmulator
+      engine={engineRef.current}
       sessionId={sessionId}
       isActive={slot?.isActive ?? false}
       isVisible={slot?.isVisible ?? true}

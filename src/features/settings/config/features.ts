@@ -45,6 +45,14 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     enabled: coreFeatures.terminal,
   },
   {
+    id: "ghosttyTerminal",
+    name: "Ghostty Terminal Engine",
+    description: "Use Ghostty's WebAssembly terminal engine for new terminal sessions",
+    icon: TerminalIcon,
+    enabled: coreFeatures.ghosttyTerminal,
+    status: "experimental",
+  },
+  {
     id: "search",
     name: "Global Search",
     description: "Search across files and folders in workspace",
