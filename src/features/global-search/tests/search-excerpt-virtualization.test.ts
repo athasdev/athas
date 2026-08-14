@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import type { SearchExcerpt } from "../utils/search-excerpts";
 import {
   estimateSearchExcerptHeight,
+  getStickySearchExcerptIndex,
   shouldVirtualizeSearchExcerpts,
 } from "../utils/search-excerpt-virtualization";
 
@@ -38,5 +39,17 @@ describe("search excerpt virtualization", () => {
   it("calculates a stable height from the editor line height and section chrome", () => {
     expect(estimateSearchExcerptHeight(createExcerpt("file.ts", 5), 20)).toBe(146);
     expect(estimateSearchExcerptHeight(createExcerpt("file.ts", 5), 24)).toBe(166);
+  });
+
+  it("finds the file header that owns the current virtual scroll offset", () => {
+    const virtualItems = [
+      { index: 2, start: 200 },
+      { index: 3, start: 300 },
+      { index: 4, start: 400 },
+    ];
+
+    expect(getStickySearchExcerptIndex(virtualItems, 250)).toBe(2);
+    expect(getStickySearchExcerptIndex(virtualItems, 300)).toBe(3);
+    expect(getStickySearchExcerptIndex(virtualItems, 450)).toBe(4);
   });
 });

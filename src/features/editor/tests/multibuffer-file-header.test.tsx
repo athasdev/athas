@@ -18,5 +18,19 @@ describe("MultibufferFileHeader", () => {
     expect(markup).not.toContain("font-mono");
     expect(markup).not.toContain("font-family");
     expect(markup).toContain("file.ts");
+    expect(markup).toContain("sticky top-0");
+  });
+
+  it("can delegate sticky positioning to a virtualized owner", () => {
+    const markup = renderToStaticMarkup(
+      <MultibufferFileHeader
+        filePath="src/file.ts"
+        fileName="file.ts"
+        onOpen={vi.fn()}
+        sticky={false}
+      />,
+    );
+
+    expect(markup).not.toContain("sticky top-0");
   });
 });

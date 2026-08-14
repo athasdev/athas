@@ -10,6 +10,7 @@ import { Button } from "@/ui/button";
 import type { SearchExcerpt } from "../utils/search-excerpts";
 import {
   estimateSearchExcerptHeight,
+  getStickySearchExcerptIndex,
   shouldVirtualizeSearchExcerpts,
 } from "../utils/search-excerpt-virtualization";
 import { SearchExcerptCode, type SearchExcerptTypography } from "./search-excerpt-code";
@@ -39,11 +40,89 @@ interface SearchExcerptItemProps {
   onCollapseContext?: (filePath: string) => void;
   isContextExpanded?: (filePath: string) => boolean;
   typography: SearchExcerptTypography;
+  stickyHeader: boolean;
+}
+
+interface SearchExcerptFileHeaderProps {
+  excerpt: SearchExcerpt;
+  selectedItemKey: string | null;
+  onOpen: (filePath: string, lineNumber?: number, columnNumber?: number) => void;
+  onExpandContext?: (filePath: string) => void;
+  onCollapseContext?: (filePath: string) => void;
+  isContextExpanded?: (filePath: string) => boolean;
+  sticky: boolean;
 }
 
 const SYNTAX_PREFETCH_MARGIN = "240px 0px";
 const INITIAL_SYNTAX_HIGHLIGHT_COUNT = 1;
 const VIRTUALIZATION_OVERSCAN = 4;
+
+function SearchExcerptFileHeader({
+  excerpt,
+  selectedItemKey,
+  onOpen,
+  onExpandContext,
+  onCollapseContext,
+  isContextExpanded,
+  sticky,
+}: SearchExcerptFileHeaderProps) {
+  const selectedMatch =
+    (selectedItemKey
+      ? excerpt.matches.find((match) => match.itemKey === selectedItemKey)
+      : undefined) ?? excerpt.matches[0];
+  const isExpanded = isContextExpanded?.(excerpt.filePath) ?? false;
+
+  const openTarget = useCallback(() => {
+    if (!selectedMatch) return;
+    onOpen(excerpt.filePath, selectedMatch.targetLine, selectedMatch.targetColumn);
+  }, [excerpt.filePath, onOpen, selectedMatch]);
+
+  const handleContextToggle = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      if (isExpanded) {
+        onCollapseContext?.(excerpt.filePath);
+      } else {
+        onExpandContext?.(excerpt.filePath);
+      }
+    },
+    [excerpt.filePath, isExpanded, onCollapseContext, onExpandContext],
+  );
+
+  return (
+    <MultibufferFileHeader
+      filePath={excerpt.filePath}
+      fileName={excerpt.fileName}
+      directoryPath={excerpt.directoryPath}
+      surface="section"
+      sticky={sticky}
+      onOpen={openTarget}
+      trailing={
+        <>
+          {selectedMatch ? <span>:{selectedMatch.targetLine}</span> : null}
+          <span>
+            {excerpt.matchCount} {excerpt.matchCount === 1 ? "match" : "matches"}
+          </span>
+        </>
+      }
+      actions={
+        onExpandContext || onCollapseContext ? (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleContextToggle}
+            tooltip={isExpanded ? "Collapse context" : "Expand context"}
+            aria-label={isExpanded ? "Collapse context" : "Expand context"}
+            className="shrink-0 text-subtle-foreground"
+            size="icon-xs"
+          >
+            {isExpanded ? <Minus size={14} /> : <Plus size={14} />}
+          </Button>
+        ) : null
+      }
+    />
+  );
+}
 
 function SearchExcerptItemComponent({
   excerpt,
@@ -54,6 +133,7 @@ function SearchExcerptItemComponent({
   onCollapseContext,
   isContextExpanded,
   typography,
+  stickyHeader,
 }: SearchExcerptItemProps) {
   const sectionRef = useRef<HTMLElement | null>(null);
   const [shouldHighlightSyntax, setShouldHighlightSyntax] = useState(
@@ -65,13 +145,6 @@ function SearchExcerptItemComponent({
       : undefined) ?? excerpt.matches[0];
   const selectedHighlightIndexes =
     selectedMatch?.itemKey === selectedItemKey ? selectedMatch.highlightIndexes : [];
-  const isExpanded = isContextExpanded?.(excerpt.filePath) ?? false;
-
-  const openTarget = useCallback(() => {
-    if (!selectedMatch) return;
-    onOpen(excerpt.filePath, selectedMatch.targetLine, selectedMatch.targetColumn);
-  }, [excerpt.filePath, onOpen, selectedMatch]);
-
   const openReadonlyLocation = useCallback(
     ({ line, column }: { line: number; column: number }) => {
       const mappedLine = excerpt.lineNumberMap[line];
@@ -103,53 +176,20 @@ function SearchExcerptItemComponent({
     return () => observer.disconnect();
   }, [shouldHighlightSyntax]);
 
-  const handleContextToggle = useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
-      event.stopPropagation();
-      if (isExpanded) {
-        onCollapseContext?.(excerpt.filePath);
-      } else {
-        onExpandContext?.(excerpt.filePath);
-      }
-    },
-    [excerpt.filePath, isExpanded, onCollapseContext, onExpandContext],
-  );
-
   return (
     <section
       ref={sectionRef}
       data-excerpt-index={index}
       className="relative isolate min-w-0 max-w-full border-border/60 border-b bg-background"
     >
-      <MultibufferFileHeader
-        filePath={excerpt.filePath}
-        fileName={excerpt.fileName}
-        directoryPath={excerpt.directoryPath}
-        surface="section"
-        onOpen={openTarget}
-        trailing={
-          <>
-            {selectedMatch ? <span>:{selectedMatch.targetLine}</span> : null}
-            <span>
-              {excerpt.matchCount} {excerpt.matchCount === 1 ? "match" : "matches"}
-            </span>
-          </>
-        }
-        actions={
-          onExpandContext || onCollapseContext ? (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleContextToggle}
-              tooltip={isExpanded ? "Collapse context" : "Expand context"}
-              aria-label={isExpanded ? "Collapse context" : "Expand context"}
-              className="shrink-0 text-subtle-foreground"
-              size="icon-xs"
-            >
-              {isExpanded ? <Minus size={14} /> : <Plus size={14} />}
-            </Button>
-          ) : null
-        }
+      <SearchExcerptFileHeader
+        excerpt={excerpt}
+        selectedItemKey={selectedItemKey}
+        onOpen={onOpen}
+        onExpandContext={onExpandContext}
+        onCollapseContext={onCollapseContext}
+        isContextExpanded={isContextExpanded}
+        sticky={stickyHeader}
       />
       <div className="min-w-0 max-w-full overflow-hidden">
         <SearchExcerptCode
@@ -173,7 +213,8 @@ const SearchExcerptItem = memo(SearchExcerptItemComponent, (previous, next) => {
     previous.onExpandContext === next.onExpandContext &&
     previous.onCollapseContext === next.onCollapseContext &&
     previous.isContextExpanded === next.isContextExpanded &&
-    previous.typography === next.typography
+    previous.typography === next.typography &&
+    previous.stickyHeader === next.stickyHeader
   );
 });
 
@@ -260,7 +301,7 @@ export const SearchExcerptResults = memo(function SearchExcerptResults({
     };
   }, [scrollToExcerpt, scrollToExcerptRef]);
 
-  const renderExcerpt = (excerpt: SearchExcerpt, index: number) => (
+  const renderExcerpt = (excerpt: SearchExcerpt, index: number, stickyHeader: boolean) => (
     <SearchExcerptItem
       key={excerpt.id}
       excerpt={excerpt}
@@ -271,20 +312,45 @@ export const SearchExcerptResults = memo(function SearchExcerptResults({
       onCollapseContext={onCollapseContext}
       isContextExpanded={isContextExpanded}
       typography={typography}
+      stickyHeader={stickyHeader}
     />
   );
 
   if (!shouldVirtualize) {
-    return <div className="min-w-0 max-w-full">{excerpts.map(renderExcerpt)}</div>;
+    return (
+      <div className="min-w-0 max-w-full">
+        {excerpts.map((excerpt, index) => renderExcerpt(excerpt, index, true))}
+      </div>
+    );
   }
 
   const virtualItems = excerptVirtualizer.getVirtualItems();
+  const stickyExcerptIndex = getStickySearchExcerptIndex(
+    virtualItems,
+    excerptVirtualizer.scrollOffset ?? scrollElement?.scrollTop ?? 0,
+  );
+  const stickyExcerpt = excerpts[stickyExcerptIndex];
   return (
     <div
       className="relative min-w-0 max-w-full"
       style={{ height: excerptVirtualizer.getTotalSize() }}
       data-virtualized-search-results=""
     >
+      {stickyExcerpt ? (
+        <div className="pointer-events-none sticky top-0 z-50 h-0 min-w-0 max-w-full">
+          <div className="pointer-events-auto">
+            <SearchExcerptFileHeader
+              excerpt={stickyExcerpt}
+              selectedItemKey={stickyExcerpt.id === selectedExcerptId ? selectedItemKey : null}
+              onOpen={onOpen}
+              onExpandContext={onExpandContext}
+              onCollapseContext={onCollapseContext}
+              isContextExpanded={isContextExpanded}
+              sticky={false}
+            />
+          </div>
+        </div>
+      ) : null}
       {virtualItems.map((virtualItem) => {
         const excerpt = excerpts[virtualItem.index];
         if (!excerpt) return null;
@@ -298,7 +364,7 @@ export const SearchExcerptResults = memo(function SearchExcerptResults({
               transform: `translateY(${virtualItem.start}px)`,
             }}
           >
-            {renderExcerpt(excerpt, virtualItem.index)}
+            {renderExcerpt(excerpt, virtualItem.index, false)}
           </div>
         );
       })}

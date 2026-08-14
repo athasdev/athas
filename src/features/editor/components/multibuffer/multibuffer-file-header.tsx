@@ -17,6 +17,7 @@ interface MultibufferFileHeaderProps {
   actions?: ReactNode;
   surface?: "card" | "section";
   showFileIcon?: boolean;
+  sticky?: boolean;
 }
 
 const multibufferFileHeaderSurfaceVariants = cva(
@@ -56,9 +57,10 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
   actions,
   surface = "card",
   showFileIcon = true,
+  sticky = true,
 }: MultibufferFileHeaderProps) {
   return (
-    <div className="sticky top-0 z-50 min-w-0 max-w-full bg-background">
+    <div className={cn("min-w-0 max-w-full bg-background", sticky && "sticky top-0 z-50")}>
       <div className={multibufferFileHeaderSurfaceVariants({ surface, expanded })}>
         <div className="font-sans ui-text-sm flex min-w-0 items-center">
           {onToggle ? (

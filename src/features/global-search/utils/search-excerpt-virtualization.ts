@@ -27,3 +27,17 @@ export function estimateSearchExcerptHeight(
     FILE_HEADER_HEIGHT + CODE_VERTICAL_PADDING + SECTION_DIVIDER_HEIGHT + lineCount * lineHeight
   );
 }
+
+export function getStickySearchExcerptIndex(
+  virtualItems: readonly { index: number; start: number }[],
+  scrollOffset: number,
+) {
+  let activeIndex = virtualItems[0]?.index ?? -1;
+
+  for (const item of virtualItems) {
+    if (item.start > scrollOffset) break;
+    activeIndex = item.index;
+  }
+
+  return activeIndex;
+}
