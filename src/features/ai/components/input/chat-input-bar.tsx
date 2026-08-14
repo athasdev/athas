@@ -1030,6 +1030,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             <ContextSelector
               buffers={buffers}
               selectedBufferIds={selectedBufferIds}
+              selectedFilesPaths={selectedFilesPaths}
               onToggleBuffer={toggleBufferSelection}
               onToggleFile={toggleFileSelection}
               isOpen={isContextDropdownOpen}

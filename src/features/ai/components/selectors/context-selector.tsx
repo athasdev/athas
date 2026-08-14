@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState, type RefObject } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import { openFiles } from "@/features/file-system/controllers/platform";
+import { useGitStore } from "@/features/git/stores/git.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
@@ -18,14 +20,18 @@ import {
   DatabaseIcon as Database,
   FileTextIcon as FileText,
   FilesIcon as Files,
+  GitBranchIcon as GitBranch,
+  GithubLogoIcon as GithubLogo,
   GitPullRequestIcon as GitPullRequest,
   GlobeIcon as Globe,
   PlayCircleIcon as PlayCircle,
   PlusIcon as Plus,
   TerminalWindowIcon as TerminalWindow,
+  UploadIcon as Upload,
 } from "@/ui/icons";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { AIFileSelector } from "../mentions/ai-file-selector";
+import { getGitContextFiles, groupContextBuffers } from "./context-selector-model";
 
 function getBufferContextDescription(buffer: PaneContent) {
   if (buffer.type === "webViewer") return buffer.url;
@@ -50,6 +56,7 @@ function getBufferContextIcon(buffer: PaneContent) {
 interface ContextSelectorProps {
   buffers: PaneContent[];
   selectedBufferIds: Set<string>;
+  selectedFilesPaths: Set<string>;
   onToggleBuffer: (bufferId: string) => void;
   onToggleFile: (filePath: string) => void;
   isOpen: boolean;
@@ -60,6 +67,7 @@ interface ContextSelectorProps {
 export function ContextSelector({
   buffers,
   selectedBufferIds,
+  selectedFilesPaths,
   onToggleBuffer,
   onToggleFile,
   isOpen,
@@ -67,18 +75,21 @@ export function ContextSelector({
   triggerRef,
 }: ContextSelectorProps) {
   const [bufferQuery, setBufferQuery] = useState("");
+  const [githubQuery, setGithubQuery] = useState("");
   const [fileQuery, setFileQuery] = useState("");
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const fileSearchInputRef = useRef<HTMLInputElement>(null);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
+  const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
 
-  const selectableBuffers = useMemo(
-    () => buffers.filter((buffer) => buffer.type !== "agent" && buffer.type !== "newTab"),
+  const { github: githubBuffers, openTabs } = useMemo(
+    () => groupContextBuffers(buffers),
     [buffers],
   );
   const filteredBuffers = useMemo(
     () =>
-      selectableBuffers.filter((buffer) =>
+      openTabs.filter((buffer) =>
         matchesSearchQuery(bufferQuery, [
           buffer.name,
           buffer.path,
@@ -86,12 +97,59 @@ export function ContextSelector({
           getBufferContextDescription(buffer),
         ]),
       ),
-    [bufferQuery, selectableBuffers],
+    [bufferQuery, openTabs],
+  );
+  const filteredGithubBuffers = useMemo(
+    () =>
+      githubBuffers.filter((buffer) =>
+        matchesSearchQuery(githubQuery, [
+          buffer.name,
+          buffer.path,
+          getBufferContextDescription(buffer),
+        ]),
+      ),
+    [githubBuffers, githubQuery],
+  );
+  const selectableBuffers = useMemo(
+    () => [...openTabs, ...githubBuffers],
+    [githubBuffers, openTabs],
   );
   const bufferByPath = useMemo(
     () => new Map(selectableBuffers.map((buffer) => [buffer.path, buffer])),
     [selectableBuffers],
   );
+  const gitContextFiles = useMemo(
+    () =>
+      getGitContextFiles(workspaceGitStatus, currentWorkspaceRepoPath ?? rootFolderPath ?? null),
+    [currentWorkspaceRepoPath, rootFolderPath, workspaceGitStatus],
+  );
+
+  const handleAttachFiles = async () => {
+    const selectedPaths = await openFiles();
+    for (const path of selectedPaths) {
+      if (!selectedFilesPaths.has(path)) onToggleFile(path);
+    }
+  };
+
+  const renderBufferOptions = (options: PaneContent[], emptyLabel: string) =>
+    options.length > 0 ? (
+      options.map((buffer) => (
+        <DropdownMenuCheckboxItem
+          key={buffer.id}
+          checked={selectedBufferIds.has(buffer.id)}
+          closeOnClick={false}
+          onCheckedChange={() => onToggleBuffer(buffer.id)}
+        >
+          {getBufferContextIcon(buffer)}
+          <span className="min-w-0 flex-1 truncate">{buffer.name}</span>
+          <span className="max-w-36 truncate text-subtle-foreground">
+            {getBufferContextDescription(buffer)}
+          </span>
+        </DropdownMenuCheckboxItem>
+      ))
+    ) : (
+      <DropdownMenuItem disabled>{emptyLabel}</DropdownMenuItem>
+    );
 
   return (
     <DropdownMenu
@@ -99,6 +157,7 @@ export function ContextSelector({
       onOpenChange={(open) => {
         if (!open) {
           setBufferQuery("");
+          setGithubQuery("");
           setFileQuery("");
           setSelectedFileIndex(0);
         }
@@ -120,46 +179,15 @@ export function ContextSelector({
         <Plus />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-52">
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <Files />
-            Open tabs
-            <span className="ml-auto text-subtle-foreground tabular-nums">
-              {selectableBuffers.length}
-            </span>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="max-h-80 min-w-72">
-            <DropdownMenuSearch
-              value={bufferQuery}
-              onChange={(event) => setBufferQuery(event.target.value)}
-              placeholder="Search open tabs..."
-              autoFocus
-            />
-            {filteredBuffers.length > 0 ? (
-              filteredBuffers.map((buffer) => (
-                <DropdownMenuCheckboxItem
-                  key={buffer.id}
-                  checked={selectedBufferIds.has(buffer.id)}
-                  closeOnClick={false}
-                  onCheckedChange={() => onToggleBuffer(buffer.id)}
-                >
-                  {getBufferContextIcon(buffer)}
-                  <span className="min-w-0 flex-1 truncate">{buffer.name}</span>
-                  <span className="max-w-36 truncate text-subtle-foreground">
-                    {getBufferContextDescription(buffer)}
-                  </span>
-                </DropdownMenuCheckboxItem>
-              ))
-            ) : (
-              <DropdownMenuItem disabled>No matching open tabs</DropdownMenuItem>
-            )}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        <DropdownMenuItem onClick={() => void handleAttachFiles()}>
+          <Upload />
+          Attach files…
+        </DropdownMenuItem>
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <FileText />
-            Files
+            Project files
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             className="h-80 min-w-80"
@@ -187,6 +215,72 @@ export function ContextSelector({
               autoFocusSearchInput
               listClassName="max-h-66"
             />
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <GitBranch />
+            Git changes
+            <span className="ml-auto text-subtle-foreground tabular-nums">
+              {gitContextFiles.length}
+            </span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="max-h-80 min-w-72">
+            {gitContextFiles.length > 0 ? (
+              gitContextFiles.map((file) => (
+                <DropdownMenuCheckboxItem
+                  key={file.absolutePath}
+                  checked={selectedFilesPaths.has(file.absolutePath)}
+                  closeOnClick={false}
+                  onCheckedChange={() => onToggleFile(file.absolutePath)}
+                >
+                  <ThemedFileIcon fileName={file.path} isDir={false} />
+                  <span className="min-w-0 flex-1 truncate">{file.path}</span>
+                  <span className="text-subtle-foreground">
+                    {file.staged ? "Staged" : file.status}
+                  </span>
+                </DropdownMenuCheckboxItem>
+              ))
+            ) : (
+              <DropdownMenuItem disabled>No attachable Git changes</DropdownMenuItem>
+            )}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <GithubLogo />
+            GitHub
+            <span className="ml-auto text-subtle-foreground tabular-nums">
+              {githubBuffers.length}
+            </span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="max-h-80 min-w-72">
+            <DropdownMenuSearch
+              value={githubQuery}
+              onChange={(event) => setGithubQuery(event.target.value)}
+              placeholder="Search GitHub tabs..."
+              autoFocus
+            />
+            {renderBufferOptions(filteredGithubBuffers, "No open GitHub tabs")}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Files />
+            Open tabs
+            <span className="ml-auto text-subtle-foreground tabular-nums">{openTabs.length}</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="max-h-80 min-w-72">
+            <DropdownMenuSearch
+              value={bufferQuery}
+              onChange={(event) => setBufferQuery(event.target.value)}
+              placeholder="Search open tabs..."
+              autoFocus
+            />
+            {renderBufferOptions(filteredBuffers, "No matching open tabs")}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
       </DropdownMenuContent>

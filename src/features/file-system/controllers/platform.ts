@@ -148,6 +148,24 @@ export async function openFile(): Promise<string | null> {
 }
 
 /**
+ * Open a file selection dialog that allows selecting multiple files.
+ */
+export async function openFiles(): Promise<string[]> {
+  if (IS_LINUX) {
+    const selected = await promptForPath("File path");
+    return selected ? [selected] : [];
+  }
+
+  const selected = await open({
+    directory: false,
+    multiple: true,
+  });
+
+  if (!selected) return [];
+  return Array.isArray(selected) ? selected : [selected];
+}
+
+/**
  * Read the contents of a directory
  * @param path The directory path to read
  */
