@@ -1,6 +1,7 @@
 import { Button } from "@/ui/button";
 import { DropdownMenuItem } from "@/ui/dropdown";
-import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
+import { FilesIcon, InfoIcon } from "@/ui/icons";
+import type { Commit } from "../types/github-pr-viewer.types";
 import type { PullRequestDetails } from "../types/github.types";
 import { getTimeAgo } from "../utils/github-viewer-utils";
 import {
@@ -8,11 +9,14 @@ import {
   GitHubViewerHeader,
   GitHubViewerTitle,
 } from "./github-viewer-shell";
+import { PRCommitsDropdown } from "./pr-commits-dropdown";
 
 interface GitHubPRViewerHeaderProps {
   pr: PullRequestDetails;
   activeView: "activity" | "files";
   changedFilesCount: number;
+  commits: Commit[];
+  repoPath?: string;
   additions: number;
   deletions: number;
   isRefreshingDetails: boolean;
@@ -21,7 +25,8 @@ interface GitHubPRViewerHeaderProps {
   onOpenInBrowser: () => void;
   onCopyPRLink: () => void;
   onCopyBranchName: () => void;
-  onToggleFilesView: () => void;
+  onShowOverview: () => void;
+  onShowFiles: () => void;
   onComment: () => void;
   onApprove: () => void;
   onRequestChanges: () => void;
@@ -33,6 +38,8 @@ export function GitHubPRViewerHeader({
   pr,
   activeView,
   changedFilesCount,
+  commits,
+  repoPath,
   additions,
   deletions,
   isRefreshingDetails,
@@ -41,7 +48,8 @@ export function GitHubPRViewerHeader({
   onOpenInBrowser,
   onCopyPRLink,
   onCopyBranchName,
-  onToggleFilesView,
+  onShowOverview,
+  onShowFiles,
   onComment,
   onApprove,
   onRequestChanges,
@@ -97,24 +105,38 @@ export function GitHubPRViewerHeader({
       }
     >
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <Tabs
-          value={activeView}
-          onValueChange={(value) => {
-            if (value !== activeView) onToggleFilesView();
-          }}
-        >
-          <TabsList variant="bare">
-            <TabsTrigger value="activity" size="xs">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="files" size="xs">{`Files ${changedFilesCount}`}</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex min-w-0 items-center gap-(--athas-chrome-gap)">
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            shape="pill"
+            active={activeView === "activity"}
+            aria-pressed={activeView === "activity"}
+            onClick={onShowOverview}
+          >
+            <InfoIcon />
+            Overview
+          </Button>
+          <PRCommitsDropdown commits={commits} repoPath={repoPath} />
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            shape="pill"
+            active={activeView === "files"}
+            aria-pressed={activeView === "files"}
+            onClick={onShowFiles}
+          >
+            <FilesIcon />
+            {`Files ${changedFilesCount}`}
+          </Button>
+        </div>
         <div className="flex items-center gap-1">
-          <Button onClick={onComment} disabled={isClosed} variant="ghost" size="xs">
+          <Button onClick={onComment} disabled={isClosed} variant="ghost" size="xs" shape="pill">
             Comment
           </Button>
-          <Button onClick={onMerge} disabled={!canMerge} variant="accent" size="xs">
+          <Button onClick={onMerge} disabled={!canMerge} variant="accent" size="xs" shape="pill">
             Merge
           </Button>
         </div>

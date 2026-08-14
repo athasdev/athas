@@ -1,5 +1,9 @@
-import { CheckCircleIcon as CheckCircle2, GitPullRequestIcon as GitPullRequest } from "@/ui/icons";
-import { Item, ItemContent, ItemTitle } from "@/ui/item";
+import {
+  CaretRightIcon as ChevronRight,
+  CheckCircleIcon as CheckCircle2,
+  GitPullRequestIcon as GitPullRequest,
+} from "@/ui/icons";
+import { Button } from "@/ui/button";
 import type { Label, PullRequestDetails } from "../types/github.types";
 import { getTimeAgo } from "../utils/github-viewer-utils";
 import { GitHubAvatar } from "./github-avatar";
@@ -83,23 +87,27 @@ export function GitHubPRSidebar({
         )}
       </GitHubDetailSection>
 
-      <GitHubDetailSection label="Changes">
-        <Item
-          render={<button type="button" />}
-          size="xs"
-          onClick={onShowFiles}
-          className="min-w-0 flex-nowrap text-left"
-        >
-          <ItemContent>
-            <ItemTitle className="w-full justify-between font-normal">
-              <span>{`${changedFilesCount} files changed`}</span>
-              <span className="flex shrink-0 items-center gap-1.5 font-mono">
-                <span className="text-git-added">+{pr.additions}</span>
-                <span className="text-git-deleted">-{pr.deletions}</span>
-              </span>
-            </ItemTitle>
-          </ItemContent>
-        </Item>
+      <GitHubDetailSection
+        label="Changes"
+        action={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            onClick={onShowFiles}
+            tooltip="Show changed files"
+          >
+            <ChevronRight />
+          </Button>
+        }
+      >
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <span>{`${changedFilesCount} files changed`}</span>
+          <span className="flex shrink-0 items-center gap-1.5 font-mono">
+            <span className="text-git-added">+{pr.additions}</span>
+            <span className="text-git-deleted">-{pr.deletions}</span>
+          </span>
+        </div>
       </GitHubDetailSection>
 
       <GitHubDetailSection label="Activity">

@@ -4,16 +4,12 @@ import {
   ViewerLoadingState,
   ViewerState,
 } from "@/features/viewer/components/viewer-state";
-import type { Commit } from "../types/github-pr-viewer.types";
 import { CommentItem } from "./comment-item";
-import { CommitItem } from "./commit-item";
 import { GitHubContentSection } from "./github-viewer-shell";
 import { GitHubInlineMarkdown } from "./github-inline-editors";
 
 interface ActivityItemComment {
   id: string;
-  type: "comment";
-  createdAt: number;
   comment: {
     author: { login: string };
     body: string;
@@ -21,18 +17,11 @@ interface ActivityItemComment {
   };
 }
 
-interface ActivityItemCommit {
-  id: string;
-  type: "commit";
-  createdAt: number;
-  commit: Commit;
-}
-
 interface PRActivityPanelProps {
   body: string;
   repositoryUrl: string;
   repoPath?: string;
-  activityItems: Array<ActivityItemComment | ActivityItemCommit>;
+  activityItems: ActivityItemComment[];
   isLoadingContent: boolean;
   contentError: string | null;
   onRetry: () => void;
@@ -116,18 +105,14 @@ export function PRActivityPanel({
           <ViewerState description="No activity" layout="section" className="min-h-0" />
         ) : (
           <div className="w-full space-y-3">
-            {visibleActivityItems.map((item) =>
-              item.type === "comment" ? (
-                <CommentItem
-                  key={item.id}
-                  comment={item.comment}
-                  repositoryUrl={repositoryUrl}
-                  repoPath={repoPath}
-                />
-              ) : (
-                <CommitItem key={item.id} commit={item.commit} repoPath={repoPath} />
-              ),
-            )}
+            {visibleActivityItems.map((item) => (
+              <CommentItem
+                key={item.id}
+                comment={item.comment}
+                repositoryUrl={repositoryUrl}
+                repoPath={repoPath}
+              />
+            ))}
             {activityItems.length > visibleActivityItems.length ? (
               <div className="font-sans ui-text-sm px-1 py-2 text-subtle-foreground">
                 {`Loading ${activityItems.length - visibleActivityItems.length} more activity items...`}

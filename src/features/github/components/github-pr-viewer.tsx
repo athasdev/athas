@@ -279,22 +279,11 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   }, [selectedPRDetails?.statusChecks]);
 
   const activityItems = useMemo(() => {
-    const commentItems = selectedPRComments.map((comment, index) => ({
+    return selectedPRComments.map((comment, index) => ({
       id: getCommentKey(comment) || `comment-${index}`,
-      createdAt: new Date(comment.createdAt).getTime(),
-      type: "comment" as const,
       comment,
     }));
-
-    const commitItems = commits.map((commit) => ({
-      id: commit.oid,
-      createdAt: new Date(commit.authoredDate).getTime(),
-      type: "commit" as const,
-      commit,
-    }));
-
-    return [...commentItems, ...commitItems].sort((a, b) => a.createdAt - b.createdAt);
-  }, [commits, selectedPRComments]);
+  }, [selectedPRComments]);
 
   const availableLabels = useMemo(() => {
     const labelsByName = new Map(labels.map((label) => [label.name, label]));
@@ -496,16 +485,28 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     void copyToClipboard(selectedPRDetails.headRef, "Branch name copied");
   }, [selectedPRDetails?.headRef]);
 
-  const handleToggleFilesView = useCallback(() => {
-    const nextTab = activeTab === "files" ? "activity" : "files";
-    if (prBuffer) {
-      updateBuffer({
-        ...prBuffer,
-        path: buildPRBufferPath(prNumber, nextTab === "files" ? selectedFilePath : null, nextTab),
-      });
-    }
-    setActiveTab(nextTab);
-  }, [activeTab, prBuffer, prNumber, selectedFilePath, updateBuffer]);
+  const handleShowView = useCallback(
+    (nextTab: TabType) => {
+      if (nextTab === activeTab) return;
+
+      if (prBuffer) {
+        updateBuffer({
+          ...prBuffer,
+          path: buildPRBufferPath(prNumber, nextTab === "files" ? selectedFilePath : null, nextTab),
+        });
+      }
+      setActiveTab(nextTab);
+    },
+    [activeTab, prBuffer, prNumber, selectedFilePath, updateBuffer],
+  );
+
+  const handleShowOverview = useCallback(() => {
+    handleShowView("activity");
+  }, [handleShowView]);
+
+  const handleShowFiles = useCallback(() => {
+    handleShowView("files");
+  }, [handleShowView]);
 
   const handleOpenChangedFile = useCallback(
     (relativePath: string) => {
@@ -587,6 +588,8 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
           pr={pr}
           activeView={activeTab}
           changedFilesCount={changedFilesCount}
+          commits={commits}
+          repoPath={repoPath ?? undefined}
           additions={pr.additions}
           deletions={pr.deletions}
           isRefreshingDetails={isRefreshingDetails}
@@ -597,7 +600,8 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
           onOpenInBrowser={handleOpenInBrowser}
           onCopyPRLink={handleCopyPRLink}
           onCopyBranchName={handleCopyBranchName}
-          onToggleFilesView={handleToggleFilesView}
+          onShowOverview={handleShowOverview}
+          onShowFiles={handleShowFiles}
           onComment={() => openInlineAction("comment")}
           onApprove={() => openInlineAction("approve")}
           onRequestChanges={() => openInlineAction("request-changes")}
@@ -625,7 +629,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
               checksSummary={checksSummary}
               reviewSummary={reviewSummary}
               commentCount={selectedPRComments.length}
-              onShowFiles={handleToggleFilesView}
+              onShowFiles={handleShowFiles}
               availableLabels={availableLabels}
               onLabelsChange={(nextLabels) => void updatePR({ labels: nextLabels })}
               onAssigneesChange={(assignees) => void updatePR({ assignees })}

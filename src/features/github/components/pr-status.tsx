@@ -92,12 +92,13 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
             type="button"
             variant="ghost"
             size="xs"
-            className="h-auto min-w-0 px-1.5 py-1 text-left ui-text-sm"
+            shape="pill"
+            className="-ml-1.5 min-w-0 text-left"
           />
         }
       >
         {summary.icon}
-        <span className={cn("font-sans ui-text-sm", summary.tone)}>{summary.label}</span>
+        <span className={cn("font-sans", summary.tone)}>{summary.label}</span>
         {isExpanded ? (
           <ChevronDown className="text-subtle-foreground" />
         ) : (

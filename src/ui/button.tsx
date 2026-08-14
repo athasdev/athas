@@ -27,10 +27,15 @@ export const buttonVariants = cva(
         "icon-xs": "size-6 rounded-full p-0",
         "icon-sm": "size-7 rounded-full p-0",
       },
+      shape: {
+        default: "",
+        pill: "rounded-full",
+      },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      shape: "default",
     },
   },
 );
@@ -51,6 +56,7 @@ export function Button({
   className,
   variant = "default",
   size = "default",
+  shape = "default",
   active,
   render,
   ref,
@@ -73,7 +79,7 @@ export function Button({
       "data-variant": variant,
       "data-size": size,
       "data-active": active,
-      className: cn(buttonVariants({ variant, size }), className),
+      className: cn(buttonVariants({ variant, size, shape }), className),
       "aria-label": ariaLabel ?? (tooltip ? tooltip : undefined),
       ...props,
     },
