@@ -59,7 +59,8 @@
     "extensions:validate:agents": "bun extensions/tooling/validate.ts --verify-agent-registry",
     "extensions:index:check": "bun extensions/tooling/build-extensions-index.ts --check",
     "extensions:verify-cdn": "bun extensions/tooling/verify-installable-packages.ts",
-    "extensions:deploy": "bun extensions/tooling/deploy-extensions-cdn.ts"
+    "extensions:deploy": "bun extensions/tooling/deploy-extensions-cdn.ts",
+    "extensions:icons:generate": "bun extensions/tooling/generate-athas-icons.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

@@ -1,6 +1,6 @@
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
 
-export const vercelThemeManifest: ExtensionManifest = {
+export const vercelThemeManifest = {
   id: "athas.theme.vercel",
   name: "vercel",
   displayName: "Vercel Theme",
@@ -105,4 +105,4 @@ export const vercelThemeManifest: ExtensionManifest = {
       },
     },
   ],
-};
+} satisfies ExtensionManifest;

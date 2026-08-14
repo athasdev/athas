@@ -1,42 +1,6 @@
 import { $ } from "bun";
 import { existsSync } from "node:fs";
 
-const BUNDLED_EXTENSIONS_DIR = "src/extensions/bundled";
-
-async function installBundledLspDependencies() {
-  console.log("Installing bundled extension LSP dependencies...");
-
-  const bundledDir = `${process.cwd()}/${BUNDLED_EXTENSIONS_DIR}`;
-
-  if (!(await Bun.file(bundledDir).exists())) {
-    console.log("No bundled extensions directory found, skipping.");
-    return;
-  }
-
-  const directories = (await $`find ${bundledDir} -mindepth 1 -maxdepth 1 -type d`.text())
-    .split("\n")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-  for (const extDir of directories) {
-    const extName = extDir.split("/").pop() || extDir;
-    const lspDir = `${extDir}/lsp`;
-    const packageJson = `${lspDir}/package.json`;
-
-    if (await Bun.file(packageJson).exists()) {
-      console.log(`  Installing LSP for ${extName}...`);
-      try {
-        await $`cd ${lspDir} && bun install`.quiet();
-        console.log(`  Installed ${extName} LSP dependencies`);
-      } catch (error) {
-        console.error(`  Failed to install ${extName} LSP:`, error);
-      }
-    }
-  }
-
-  console.log("Bundled LSP installation complete.\n");
-}
-
 const PARSERS_DIR = `${process.cwd()}/public/tree-sitter/parsers`;
 
 interface ParserSource {
@@ -155,5 +119,4 @@ async function setupTreeSitterParsers() {
   );
 }
 
-await installBundledLspDependencies();
 await setupTreeSitterParsers();

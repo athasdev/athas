@@ -88,7 +88,10 @@ interface FolderIcon {
   isOpen: boolean;
 }
 
-const root = dirname(fileURLToPath(import.meta.url));
+const root = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../src/extensions/bundled/icon-themes/athas",
+);
 
 interface ThemeVariant {
   id: string;

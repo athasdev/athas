@@ -60,7 +60,9 @@ describe("Linux release packaging", () => {
     const config = JSON.parse(readRepoFile("src-tauri/tauri.conf.json"));
     const script = readRepoFile("scripts/release/packaging/linux/native.sh");
 
-    expect(config.bundle.resources["../src/extensions/bundled"]).toBe("bundled");
+    expect(config.bundle.resources["../src/extensions/bundled/icon-themes"]).toBe(
+      "bundled/icon-themes",
+    );
     expect(script).not.toContain("src/extensions/bundled");
   });
 

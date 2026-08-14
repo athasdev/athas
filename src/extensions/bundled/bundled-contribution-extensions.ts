@@ -1,4 +1,4 @@
-import { vercelThemeManifest } from "./themes/vercel/manifest";
+import { vercelThemeManifest } from "./vercel-theme-manifest";
 import { v0ExtensionManifest } from "./v0-extension-manifest";
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
 

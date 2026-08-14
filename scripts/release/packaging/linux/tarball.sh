@@ -84,7 +84,8 @@ exec "${bin_dir}/../libexec/athas" \
 EOF
 chmod 755 "${bin_dir}/athas"
 
-cp -R src/extensions/bundled "${resource_dir}/bundled"
+mkdir -p "${resource_dir}/bundled"
+cp -R src/extensions/bundled/icon-themes "${resource_dir}/bundled/icon-themes"
 
 cef_files=(
   libcef.so
