@@ -1026,7 +1026,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         />
 
         <ChatComposerToolbar className={cn(isInitialPresentation && "items-center px-3 pb-3 pt-0")}>
-          <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 items-center">
             <ContextSelector
               buffers={buffers}
               selectedBufferIds={selectedBufferIds}
