@@ -3,13 +3,15 @@ import { tokenizerWorkerClient } from "@/features/editor/lib/wasm-parser/tokeniz
 import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import {
   hasLineBasedSyntaxFallback,
+  hasLineBasedSyntaxHighlighter,
   tokenizeLineBasedSyntax,
 } from "@/features/editor/utils/line-based-syntax";
 import type { Token } from "@/features/editor/utils/html";
 
 const MAX_TOKEN_CACHE_ENTRIES = 200;
 const EMPTY_TOKENS: Token[] = [];
-const tokenCache = new Map<string, Token[]>();
+const parserTokenCache = new Map<string, Token[]>();
+const fallbackTokenCache = new Map<string, Token[]>();
 const pendingTokenizations = new Map<string, Promise<Token[]>>();
 
 export interface SearchExcerptTokenSnapshot {
@@ -32,23 +34,23 @@ function getWorkerBufferId(languageId: string, content: string) {
   return `search-preview:${languageId}:${content.length}:${(hash >>> 0).toString(36)}`;
 }
 
-function getCachedTokens(key: string) {
-  const cached = tokenCache.get(key);
-  if (!cached) return null;
+function getCachedTokens(cache: Map<string, Token[]>, key: string) {
+  const cached = cache.get(key);
+  if (cached === undefined) return null;
 
-  tokenCache.delete(key);
-  tokenCache.set(key, cached);
+  cache.delete(key);
+  cache.set(key, cached);
   return cached;
 }
 
-function cacheTokens(key: string, tokens: Token[]) {
-  tokenCache.delete(key);
-  tokenCache.set(key, tokens);
+function cacheTokens(cache: Map<string, Token[]>, key: string, tokens: Token[]) {
+  cache.delete(key);
+  cache.set(key, tokens);
 
-  while (tokenCache.size > MAX_TOKEN_CACHE_ENTRIES) {
-    const oldestKey = tokenCache.keys().next().value;
+  while (cache.size > MAX_TOKEN_CACHE_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
     if (typeof oldestKey !== "string") break;
-    tokenCache.delete(oldestKey);
+    cache.delete(oldestKey);
   }
 
   return tokens;
@@ -70,14 +72,17 @@ export function getSearchExcerptTokenSnapshot(
   }
 
   const key = getTokenCacheKey(languageId, content);
-  const cached = getCachedTokens(key);
-  if (cached) {
-    return { key, tokens: cached, complete: true };
+  const parserTokens = getCachedTokens(parserTokenCache, key);
+  if (parserTokens) {
+    return { key, tokens: parserTokens, complete: true };
   }
 
   if (hasLineBasedSyntaxFallback(languageId)) {
-    const tokens = cacheTokens(key, tokenizeLineBasedSyntax(content, languageId));
-    return { key, tokens, complete: true };
+    const cachedFallback = getCachedTokens(fallbackTokenCache, key);
+    const tokens =
+      cachedFallback ??
+      cacheTokens(fallbackTokenCache, key, tokenizeLineBasedSyntax(content, languageId));
+    return { key, tokens, complete: hasLineBasedSyntaxHighlighter(languageId) };
   }
 
   return { key, tokens: EMPTY_TOKENS, complete: false };
@@ -110,8 +115,13 @@ export async function loadSearchExcerptTokens(filePath: string, content: string)
         class_name: token.type,
       })),
     )
-    .catch(() => EMPTY_TOKENS)
-    .then((tokens) => cacheTokens(snapshot.key, tokens))
+    .then((tokens) =>
+      cacheTokens(
+        parserTokenCache,
+        snapshot.key,
+        tokens.length > 0 || snapshot.tokens.length === 0 ? tokens : snapshot.tokens,
+      ),
+    )
     .finally(() => pendingTokenizations.delete(snapshot.key));
 
   pendingTokenizations.set(snapshot.key, tokenization);

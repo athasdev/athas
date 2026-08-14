@@ -150,7 +150,6 @@ export const SearchExcerptCode = memo(function SearchExcerptCode({
   }, [excerpt.lineNumberMap, lines.length]);
   const surfaceStyle = useMemo(
     () => ({
-      minHeight: "104px",
       fontSize: `${fontSize}px`,
       fontFamily,
       lineHeight: `${lineHeight}px`,
@@ -161,7 +160,7 @@ export const SearchExcerptCode = memo(function SearchExcerptCode({
 
   return (
     <div
-      className="font-mono code-editor-font-override overflow-hidden border-border border-t bg-background py-2"
+      className="font-mono code-editor-font-override overflow-hidden bg-background py-2"
       style={surfaceStyle}
     >
       {lines.map((line, lineIndex) => (

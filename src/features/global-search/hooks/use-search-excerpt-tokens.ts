@@ -6,6 +6,8 @@ import {
 } from "../services/search-excerpt-syntax";
 
 const TOKENIZATION_DELAY_MS = 80;
+const TOKENIZATION_RETRY_DELAY_MS = 500;
+const MAX_TOKENIZATION_ATTEMPTS = 2;
 const EMPTY_TOKENS: Token[] = [];
 const DISABLED_SNAPSHOT = { key: "disabled", tokens: EMPTY_TOKENS, complete: false };
 
@@ -35,20 +37,29 @@ export function useSearchExcerptTokens({
 
     let cancelled = false;
     let idleId: number | null = null;
+    let retryId: ReturnType<typeof globalThis.setTimeout> | null = null;
     const scheduler = globalThis as typeof globalThis & IdleScheduler;
-    const run = () => {
-      void loadSearchExcerptTokens(filePath, content).then((nextTokens) => {
-        if (cancelled) return;
-        startTransition(() => {
-          setLoadedSnapshot({ key: snapshot.key, tokens: nextTokens, complete: true });
+    const run = (attempt: number) => {
+      void loadSearchExcerptTokens(filePath, content)
+        .then((nextTokens) => {
+          if (cancelled) return;
+          startTransition(() => {
+            setLoadedSnapshot({ key: snapshot.key, tokens: nextTokens, complete: true });
+          });
+        })
+        .catch(() => {
+          if (cancelled || attempt + 1 >= MAX_TOKENIZATION_ATTEMPTS) return;
+          retryId = globalThis.setTimeout(() => {
+            retryId = null;
+            run(attempt + 1);
+          }, TOKENIZATION_RETRY_DELAY_MS);
         });
-      });
     };
     const delayId = globalThis.setTimeout(() => {
       if (scheduler.requestIdleCallback) {
-        idleId = scheduler.requestIdleCallback(run, { timeout: 400 });
+        idleId = scheduler.requestIdleCallback(() => run(0), { timeout: 400 });
       } else {
-        run();
+        run(0);
       }
     }, TOKENIZATION_DELAY_MS);
 
@@ -56,6 +67,7 @@ export function useSearchExcerptTokens({
       cancelled = true;
       globalThis.clearTimeout(delayId);
       if (idleId !== null) scheduler.cancelIdleCallback?.(idleId);
+      if (retryId !== null) globalThis.clearTimeout(retryId);
     };
   }, [content, enabled, filePath, snapshot.complete, snapshot.key]);
 
