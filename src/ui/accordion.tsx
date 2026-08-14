@@ -1,7 +1,14 @@
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
+import { cva } from "class-variance-authority";
+import type { ReactNode } from "react";
 
+import Badge from "@/ui/badge";
+import { CaretDownIcon as CaretDown } from "@/ui/icons";
 import { cn } from "@/utils/cn";
-import { ChevronDownIcon, ChevronUpIcon } from "@/ui/icons";
+
+const accordionTriggerVariants = cva(
+  "athas-chrome-control font-sans ui-text-caption group/accordion-trigger inline-flex h-(--athas-tab-height) w-fit max-w-full select-none items-center gap-(--athas-chrome-gap-tight) rounded-(--athas-chrome-radius) px-2 text-left font-normal text-subtle-foreground/80 transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+);
 
 function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
   return (
@@ -17,33 +24,48 @@ function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn("not-last:border-b", className)}
+      className={cn("min-w-0 space-y-1", className)}
       {...props}
     />
   );
 }
 
-function AccordionTrigger({ className, children, ...props }: AccordionPrimitive.Trigger.Props) {
+function AccordionTrigger({
+  className,
+  children,
+  count,
+  action,
+  sticky = false,
+  ...props
+}: AccordionPrimitive.Trigger.Props & {
+  count?: ReactNode;
+  action?: ReactNode;
+  sticky?: boolean;
+}) {
   return (
-    <AccordionPrimitive.Header className="flex">
+    <AccordionPrimitive.Header
+      className={cn(
+        "flex w-full min-w-0 items-center justify-between gap-(--athas-chrome-gap-tight)",
+        sticky && "sticky top-2 z-10 bg-background",
+      )}
+    >
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
-        className={cn(
-          "group/accordion-trigger relative flex flex-1 items-start justify-between rounded-(--athas-chrome-radius) border border-transparent py-2.5 text-left font-normal text-subtle-foreground ui-text-caption transition-all outline-none hover:underline focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:after:border-ring aria-disabled:pointer-events-none aria-disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4 **:data-[slot=accordion-trigger-icon]:text-muted-foreground",
-          className,
-        )}
+        className={cn(accordionTriggerVariants(), className)}
         {...props}
       >
-        {children}
-        <ChevronDownIcon
+        <span className="min-w-0 truncate">{children}</span>
+        <CaretDown
           data-slot="accordion-trigger-icon"
-          className="pointer-events-none shrink-0 group-aria-expanded/accordion-trigger:hidden"
+          className="pointer-events-none size-3 shrink-0 -rotate-90 text-subtle-foreground transition-transform group-aria-expanded/accordion-trigger:rotate-0"
         />
-        <ChevronUpIcon
-          data-slot="accordion-trigger-icon"
-          className="pointer-events-none hidden shrink-0 group-aria-expanded/accordion-trigger:inline"
-        />
+        {count !== undefined ? (
+          <Badge variant="muted" size="compact" className="shrink-0">
+            {count}
+          </Badge>
+        ) : null}
       </AccordionPrimitive.Trigger>
+      {action ? <span className="flex shrink-0 items-center">{action}</span> : null}
     </AccordionPrimitive.Header>
   );
 }
@@ -57,7 +79,7 @@ function AccordionContent({ className, children, ...props }: AccordionPrimitive.
     >
       <div
         className={cn(
-          "h-(--accordion-panel-height) pt-0 pb-2.5 data-ending-style:h-0 data-starting-style:h-0 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
+          "flex h-(--accordion-panel-height) flex-col gap-1 pt-0 data-ending-style:h-0 data-starting-style:h-0",
           className,
         )}
       >
@@ -67,4 +89,4 @@ function AccordionContent({ className, children, ...props }: AccordionPrimitive.
   );
 }
 
-export { Accordion, AccordionItem, AccordionTrigger, AccordionContent };
+export { Accordion, AccordionItem, AccordionTrigger, AccordionContent, accordionTriggerVariants };

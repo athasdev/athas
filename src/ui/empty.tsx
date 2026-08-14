@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps, ReactNode } from "react";
-import { Button } from "@/ui/button";
+import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 type EmptyTone = "neutral" | "error" | "warning" | "success";
@@ -106,23 +106,65 @@ interface EmptyStateAction {
   label: ReactNode;
   onClick: () => void;
   disabled?: boolean;
+  icon?: ReactNode;
+  tooltip?: string;
+  variant?: ButtonProps["variant"];
 }
 
-function EmptyState({ message, action }: { message: ReactNode; action?: EmptyStateAction }) {
+interface EmptyStateProps extends Omit<ComponentProps<typeof Empty>, "children" | "title"> {
+  title?: ReactNode;
+  message?: ReactNode;
+  icon?: ReactNode;
+  action?: EmptyStateAction;
+  secondaryAction?: EmptyStateAction;
+  layout?: "default" | "sidebar";
+}
+
+function EmptyState({
+  title,
+  message,
+  icon,
+  action,
+  secondaryAction,
+  layout = "default",
+  className,
+  ...props
+}: EmptyStateProps) {
+  const renderAction = (item: EmptyStateAction) => (
+    <Button
+      type="button"
+      variant={item.variant ?? "default"}
+      size="xs"
+      disabled={item.disabled}
+      tooltip={item.tooltip}
+      onClick={item.onClick}
+    >
+      {item.icon}
+      {item.label}
+    </Button>
+  );
+
   return (
-    <Empty>
-      <EmptyDescription>{message}</EmptyDescription>
-      {action ? (
-        <EmptyContent>
-          <Button
-            type="button"
-            variant="default"
-            size="xs"
-            disabled={action.disabled}
-            onClick={action.onClick}
-          >
-            {action.label}
-          </Button>
+    <Empty
+      className={cn(
+        layout === "sidebar" && "min-h-24 select-none rounded-none px-3 py-6",
+        className,
+      )}
+      {...props}
+    >
+      {icon ? <EmptyMedia variant="icon">{icon}</EmptyMedia> : null}
+      {title ? (
+        <EmptyHeader>
+          <EmptyTitle>{title}</EmptyTitle>
+          {message ? <EmptyDescription>{message}</EmptyDescription> : null}
+        </EmptyHeader>
+      ) : message ? (
+        <EmptyDescription>{message}</EmptyDescription>
+      ) : null}
+      {action || secondaryAction ? (
+        <EmptyContent className="flex-row justify-center">
+          {action ? renderAction(action) : null}
+          {secondaryAction ? renderAction(secondaryAction) : null}
         </EmptyContent>
       ) : null}
     </Empty>

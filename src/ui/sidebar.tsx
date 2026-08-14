@@ -1,9 +1,22 @@
-import { CaretDownIcon as CaretDown, MagnifyingGlassIcon as Search } from "@/ui/icons";
-import { forwardRef, type ComponentProps, type ReactNode, useState } from "react";
+import {
+  CaretDownIcon as CaretDown,
+  CaretRightIcon as CaretRight,
+  MagnifyingGlassIcon as Search,
+} from "@/ui/icons";
+import { forwardRef, type ComponentProps, type ReactNode, useEffect, useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  accordionTriggerVariants,
+} from "@/ui/accordion";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { SearchField } from "@/ui/search";
+import { ScrollArea } from "@/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
@@ -22,6 +35,38 @@ export function SidebarPanel({
   );
 }
 
+export function SidebarWorkspace({
+  title,
+  actions,
+  children,
+  className,
+  ...props
+}: Omit<ComponentProps<"div">, "title"> & {
+  title: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <SidebarPanel className={className} {...props}>
+      <SidebarTitleBar title={title}>{actions}</SidebarTitleBar>
+      {children}
+    </SidebarPanel>
+  );
+}
+
+export function SidebarScrollArea({
+  className,
+  ...props
+}: Omit<ComponentProps<typeof ScrollArea>, "contentClassName">) {
+  return (
+    <ScrollArea
+      className={className}
+      contentClassName="px-(--athas-chrome-padding-inline) py-2"
+      {...props}
+    />
+  );
+}
+
 export function SidebarTitleBar({
   title,
   children,
@@ -31,17 +76,21 @@ export function SidebarTitleBar({
   title: ReactNode;
   children?: ReactNode;
 }) {
+  const titleClassName = "min-w-0 flex-1 truncate font-medium text-foreground ui-text-base";
+
   return (
     <div
       className={cn(
-        "font-sans flex h-(--athas-pane-header-height) min-w-0 shrink-0 select-none items-center gap-2 overflow-hidden px-3",
+        "font-sans flex h-(--athas-pane-header-height) min-w-0 shrink-0 select-none items-center gap-(--athas-chrome-gap-loose) overflow-hidden px-(--athas-chrome-padding-inline)",
         className,
       )}
       {...props}
     >
-      <h2 className="min-w-0 flex-1 truncate pl-2 font-medium text-foreground ui-text-base">
-        {title}
-      </h2>
+      {typeof title === "string" ? (
+        <h2 className={cn(titleClassName, "pl-(--athas-chrome-padding-inline)")}>{title}</h2>
+      ) : (
+        <div className={titleClassName}>{title}</div>
+      )}
       {children ? (
         <div className="flex max-w-[50%] shrink-0 items-center gap-1">{children}</div>
       ) : null}
@@ -53,7 +102,7 @@ export function SidebarToolbar({ children, className, ...props }: ComponentProps
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex h-(--athas-pane-header-height) min-w-0 shrink-0 select-none items-center gap-(--athas-chrome-gap) border-border/70 border-b px-3",
+        "font-sans ui-text-chrome flex h-(--athas-pane-header-height) min-w-0 shrink-0 select-none items-center gap-(--athas-chrome-gap) border-border/70 border-b px-(--athas-chrome-padding-inline)",
         className,
       )}
       {...props}
@@ -283,6 +332,87 @@ export function SidebarListItem({
   );
 }
 
+export function SidebarMenuContent({
+  className,
+  ...props
+}: Omit<ComponentProps<typeof DropdownMenuContent>, "align" | "side">) {
+  return <DropdownMenuContent {...props} side="right" align="start" className={className} />;
+}
+
+export function SidebarListMenuItem({
+  children,
+  leading,
+  menu,
+  menuLabel,
+  active = false,
+  iconOnly = false,
+  className,
+  onClick,
+  ...props
+}: ComponentProps<typeof SidebarListItem> & {
+  menu: ReactNode;
+  menuLabel: string;
+}) {
+  if (iconOnly) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <SidebarListItem
+              {...props}
+              active={active}
+              iconOnly
+              leading={leading}
+              className={className}
+              aria-label={menuLabel}
+            >
+              {children}
+            </SidebarListItem>
+          }
+        />
+        <SidebarMenuContent>{menu}</SidebarMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  return (
+    <div
+      role="group"
+      data-active={active}
+      className={cn(
+        "flex w-full min-w-0 rounded-(--athas-chrome-radius)",
+        active && "bg-selected text-foreground",
+      )}
+    >
+      <SidebarListItem
+        active={false}
+        leading={leading}
+        onClick={onClick}
+        className={cn("rounded-r-none bg-transparent", className)}
+        {...props}
+      >
+        {children}
+      </SidebarListItem>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <SidebarListItem
+              active={false}
+              iconOnly
+              leading={<CaretRight />}
+              aria-label={menuLabel}
+              className="w-(--athas-tab-height) flex-none bg-transparent px-0"
+            >
+              {menuLabel}
+            </SidebarListItem>
+          }
+        />
+        <SidebarMenuContent>{menu}</SidebarMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 export function SidebarListEditor({
   children,
   leading,
@@ -316,8 +446,13 @@ export function SidebarListEditor({
   );
 }
 
+export function SidebarSectionStack({ className, ...props }: ComponentProps<"div">) {
+  return <div className={cn("mt-4 flex w-full flex-col gap-0.5", className)} {...props} />;
+}
+
 export function SidebarSectionHeader({
   children,
+  action,
   count,
   expanded = true,
   onToggle,
@@ -326,38 +461,82 @@ export function SidebarSectionHeader({
   ...props
 }: Omit<ComponentProps<"button">, "children"> & {
   children: ReactNode;
+  action?: ReactNode;
   count?: ReactNode;
   expanded?: boolean;
   onToggle?: () => void;
   variant?: "plain" | "surface";
 }) {
   return (
-    <button
-      type="button"
-      className={cn(
-        "font-sans ui-text-caption flex h-(--athas-tab-height) w-full select-none items-center gap-1 rounded-(--athas-chrome-radius) px-2 text-left font-normal text-subtle-foreground/80 transition-colors hover:bg-accent/40 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
-        variant === "surface" &&
-          "h-8 rounded-lg bg-accent/80 px-2.5 hover:bg-accent focus-visible:bg-accent",
-        className,
-      )}
-      aria-expanded={expanded}
-      onClick={onToggle}
-      {...props}
-    >
-      <span className="min-w-0 truncate">{children}</span>
-      <CaretDown
+    <div className="flex h-(--athas-tab-height) w-full min-w-0 items-center justify-between gap-(--athas-chrome-gap-tight)">
+      <button
+        type="button"
         className={cn(
-          "size-3 shrink-0 text-subtle-foreground transition-transform",
-          !expanded && "-rotate-90",
+          accordionTriggerVariants(),
+          "w-full",
+          variant === "surface" &&
+            "h-8 rounded-lg bg-accent/80 px-2.5 hover:bg-accent focus-visible:bg-accent",
+          className,
         )}
-      />
-      <span className="min-w-0 flex-1" aria-hidden="true" />
-      {count !== undefined ? (
-        <Badge variant="muted" size="compact" className="shrink-0">
-          {count}
-        </Badge>
-      ) : null}
-    </button>
+        aria-expanded={expanded}
+        onClick={onToggle}
+        {...props}
+      >
+        <span className="min-w-0 truncate">{children}</span>
+        <CaretDown
+          className={cn(
+            "size-3 shrink-0 text-subtle-foreground transition-transform",
+            !expanded && "-rotate-90",
+          )}
+        />
+        {count !== undefined ? (
+          <Badge variant="muted" size="compact" className="shrink-0">
+            {count}
+          </Badge>
+        ) : null}
+      </button>
+      {action ? <span className="flex shrink-0 items-center">{action}</span> : null}
+    </div>
+  );
+}
+
+export function SidebarSection({
+  title,
+  count,
+  action,
+  children,
+  defaultExpanded = true,
+  forceExpanded = false,
+}: {
+  title: ReactNode;
+  count?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  defaultExpanded?: boolean;
+  forceExpanded?: boolean;
+}) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const expanded = forceExpanded || isExpanded;
+
+  useEffect(() => {
+    setIsExpanded(defaultExpanded);
+  }, [defaultExpanded]);
+
+  return (
+    <Accordion
+      value={expanded ? ["section"] : []}
+      onValueChange={(value) => {
+        if (!forceExpanded) setIsExpanded(value.includes("section"));
+      }}
+      className="pt-2 first:pt-0"
+    >
+      <AccordionItem value="section">
+        <AccordionTrigger count={count} action={action}>
+          {title}
+        </AccordionTrigger>
+        <AccordionContent>{children}</AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
 
@@ -422,7 +601,7 @@ export function SidebarTabBar<TValue extends string>({
     >
       <div
         className={cn(
-          "flex h-(--athas-pane-header-height) shrink-0 items-center overflow-hidden px-3",
+          "flex h-(--athas-pane-header-height) shrink-0 items-center overflow-hidden px-(--athas-chrome-padding-inline)",
           className,
         )}
       >
