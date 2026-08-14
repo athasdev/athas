@@ -2,7 +2,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { motion, useReducedMotionConfig } from "motion/react";
 import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
-import { overlayBackdrop, overlaySurface } from "@/design-system/overlay";
+import { overlayBackdrop, overlaySurface, overlaySurfaceTransition } from "@/design-system/overlay";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -87,11 +87,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
-      className={cn(
-        overlayBackdrop(),
-        "z-9998 transition-opacity duration-(--app-duration-fast) data-ending-style:opacity-0 data-starting-style:opacity-0",
-        className,
-      )}
+      className={cn(overlayBackdrop(), "z-9998", className)}
       {...props}
     />
   );
@@ -112,11 +108,7 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
-        className={cn(
-          dialogContentVariants({ size }),
-          "transition-[opacity,transform,filter] duration-(--app-duration-fast) ease-(--app-ease-smooth) data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
-          className,
-        )}
+        className={cn(dialogContentVariants({ size }), overlaySurfaceTransition(), className)}
         {...props}
       >
         {children}

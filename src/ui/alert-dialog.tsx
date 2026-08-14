@@ -1,6 +1,6 @@
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog";
 import type { ComponentProps } from "react";
-import { overlayBackdrop, overlaySurface } from "@/design-system/overlay";
+import { overlayBackdrop, overlaySurface, overlaySurfaceTransition } from "@/design-system/overlay";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
@@ -20,11 +20,7 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
   return (
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
-      className={cn(
-        overlayBackdrop(),
-        "z-9998 transition-opacity duration-(--app-duration-fast) data-ending-style:opacity-0 data-starting-style:opacity-0",
-        className,
-      )}
+      className={cn(overlayBackdrop(), "z-9998", className)}
       {...props}
     />
   );
@@ -43,7 +39,8 @@ function AlertDialogContent({
         data-size={size}
         className={cn(
           overlaySurface(),
-          "group/alert-dialog-content fixed top-1/2 left-1/2 z-9999 grid w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 p-4 transition-[opacity,transform,filter] duration-(--app-duration-fast) ease-(--app-ease-smooth) data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 data-[size=sm]:max-w-xs",
+          overlaySurfaceTransition(),
+          "group/alert-dialog-content fixed top-1/2 left-1/2 z-9999 grid w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 p-4 data-[size=sm]:max-w-xs",
           className,
         )}
         {...props}
