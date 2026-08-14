@@ -1,5 +1,6 @@
 import { getVisibleIconThemes } from "@/extensions/icon-themes/icon-theme-normalization";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
+import { bundledExtensionManifests } from "@/extensions/bundled/bundled-extension-manifests";
 import type { AvailableExtension } from "@/extensions/registry/extension-store-types";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import {
@@ -283,8 +284,65 @@ export function buildExtensionCatalog({
     });
   });
 
+  const catalogedIconThemeIds = new Set(
+    allExtensions
+      .filter((extension) => extension.category === "icon-theme")
+      .flatMap(
+        (extension) =>
+          extension.appearanceOptions?.map((option) => option.id) ??
+          (extension.selectionId ? [extension.selectionId] : []),
+      ),
+  );
+
+  for (const { manifest } of bundledExtensionManifests) {
+    const iconContributions = getManifestIconContributions(manifest).filter(
+      (contribution) =>
+        iconThemeRegistry.getTheme(contribution.id) && !catalogedIconThemeIds.has(contribution.id),
+    );
+    if (iconContributions.length === 0) {
+      continue;
+    }
+
+    const activeIconThemeId = iconContributions.find(
+      (contribution) => contribution.id === selectedIconThemeId,
+    )?.id;
+    const extensionIconThemeId = activeIconThemeId ?? iconContributions[0]?.id ?? manifest.id;
+
+    allExtensions.push({
+      id: manifest.id,
+      name: manifest.displayName,
+      description: manifest.description,
+      category: "icon-theme",
+      isInstalled: true,
+      isActive: Boolean(activeIconThemeId),
+      isEnabled: true,
+      version: manifest.version,
+      publisher: manifest.publisher,
+      isMarketplace: false,
+      isBundled: true,
+      icon: resolveManifestIcon(
+        manifest.icon,
+        iconContributions[0]?.id,
+        iconContributions[0]?.name,
+        manifest.displayName,
+        "icon-theme",
+      ),
+      selectionId: extensionIconThemeId,
+      appearanceOptions: iconContributions.map((theme) => ({
+        id: theme.id,
+        name: theme.name,
+        description: theme.description,
+      })),
+      contributionSummary: iconContributions.map((theme) => `icon:${theme.id}`),
+    });
+
+    for (const contribution of iconContributions) {
+      catalogedIconThemeIds.add(contribution.id);
+    }
+  }
+
   getVisibleIconThemes(iconThemeRegistry.getAllThemes()).forEach((iconTheme) => {
-    if (iconThemeRegistry.getThemeSource(iconTheme.id)) {
+    if (catalogedIconThemeIds.has(iconTheme.id) || iconThemeRegistry.getThemeSource(iconTheme.id)) {
       return;
     }
 
