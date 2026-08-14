@@ -38,6 +38,7 @@ export type PaneContentType =
   | "globalSearch"
   | "diagnostics"
   | "references"
+  | "extensions"
   | "extension"
   | "onboarding";
 
@@ -197,6 +198,10 @@ interface ReferencesContent extends PaneContentBase {
   type: "references";
 }
 
+export interface ExtensionsContent extends PaneContentBase {
+  type: "extensions";
+}
+
 export interface ExtensionContent extends PaneContentBase {
   type: "extension";
   extensionId: string;
@@ -234,6 +239,7 @@ export type PaneContent =
   | GlobalSearchContent
   | DiagnosticsContent
   | ReferencesContent
+  | ExtensionsContent
   | ExtensionContent
   | OnboardingContent;
 
@@ -263,6 +269,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "globalSearch",
   "diagnostics",
   "references",
+  "extensions",
   "extension",
   "onboarding",
 ]);
@@ -424,6 +431,9 @@ export type OpenContentSpec =
     }
   | {
       type: "references";
+    }
+  | {
+      type: "extensions";
     }
   | {
       type: "extension";

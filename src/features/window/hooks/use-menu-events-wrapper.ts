@@ -342,9 +342,7 @@ export function useMenuEventsWrapper() {
       useUIState.getState().openSettingsDialog("general");
     },
     onOpenExtensions: () => {
-      const uiState = useUIState.getState();
-      uiState.setActiveView("extensions");
-      uiState.setIsSidebarVisible(true);
+      useBufferStore.getState().actions.openExtensionsBuffer();
     },
     onToggleMenuBar: async () => {
       try {

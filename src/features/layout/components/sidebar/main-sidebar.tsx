@@ -1,8 +1,6 @@
 import { animate, motion, useMotionValue, useReducedMotionConfig } from "motion/react";
 import {
   memo,
-  lazy,
-  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -52,7 +50,6 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
-import { EmptyState } from "@/ui/empty";
 import { SidebarPanel } from "@/ui/sidebar";
 import {
   ContextMenu,
@@ -123,12 +120,6 @@ const waitForProjectCarouselPaint = () =>
     });
   });
 
-const ExtensionsSidebar = lazy(() =>
-  import("@/extensions/ui/components/extensions-sidebar").then((module) => ({
-    default: module.ExtensionsSidebar,
-  })),
-);
-
 export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRailProps) => {
   const { openSidebarView } = useSidebarPaneController();
   const isGitViewActive = useUIState((state) => state.isGitViewActive);
@@ -137,6 +128,11 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   const activeSidebarView = useUIState((state) => state.activeSidebarView);
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
+  const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
+  const isExtensionsBufferActive = useBufferStore((state) => {
+    const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
+    return activeBuffer?.type === "extensions" || activeBuffer?.type === "extension";
+  });
   const handleNewAgent = useNewAgentAction();
   const handleNewTerminal = useCallback(() => {
     const uiState = useUIState.getState();
@@ -721,8 +717,8 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
                   coreFeatures={coreFeatures}
                   onViewChange={handleSidebarViewChange}
                   onSearchClick={() => openGlobalSearchBuffer()}
-                  onExtensionsClick={() => openSidebarView("extensions")}
-                  isExtensionsActive={isSidebarVisible && activeSidebarView === "extensions"}
+                  onExtensionsClick={() => openExtensionsBuffer()}
+                  isExtensionsActive={isExtensionsBufferActive}
                   compact={!expanded}
                   showLabels={expanded}
                   orientation="vertical"
@@ -826,7 +822,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             <MagnifyingGlassIcon />
             Search
           </ContextMenuItem>
-          <ContextMenuItem onClick={() => openSidebarView("extensions")}>
+          <ContextMenuItem onClick={() => openExtensionsBuffer()}>
             <ExtensionsIcon />
             Extensions
           </ContextMenuItem>
@@ -975,21 +971,6 @@ export const MainSidebar = memo(
       {
         id: "files",
         content: <FileExplorerPane />,
-      },
-      {
-        id: "extensions",
-        content: (
-          <Suspense
-            fallback={
-              <EmptyState
-                layout="sidebar"
-                message={<Spinner label="Loading extensions" showLabel compact />}
-              />
-            }
-          >
-            <ExtensionsSidebar />
-          </Suspense>
-        ),
       },
       ...(isOutlineFeatureEnabled
         ? [

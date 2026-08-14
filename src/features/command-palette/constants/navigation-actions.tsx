@@ -126,13 +126,12 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     {
       id: "view-show-extensions",
       label: "View: Show Extensions",
-      description: "Open the extensions sidebar",
+      description: "Open the extensions tab",
       icon: <Package />,
       category: "Navigation",
       action: () => {
-        setIsSidebarVisible(true);
-        setActiveView("extensions");
         onClose();
+        useBufferStore.getState().actions.openExtensionsBuffer();
       },
     },
     {

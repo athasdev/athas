@@ -18,6 +18,7 @@ import { installGeneratedUIExtension } from "@/extensions/ui/services/generated/
 import { useProFeature } from "@/features/window/hooks/use-pro-feature";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useGenerateStore } from "@/features/generate/stores/generate.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { getServiceUrls } from "@/config/services";
@@ -364,8 +365,7 @@ export function ExtensionGenerationCommand() {
 
   const openExtensions = () => {
     close();
-    setActiveView("extensions");
-    setIsSidebarVisible(true);
+    useBufferStore.getState().actions.openExtensionsBuffer();
   };
 
   const moveSelection = (delta: number) => {

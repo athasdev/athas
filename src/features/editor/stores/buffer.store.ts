@@ -176,6 +176,7 @@ interface BufferActions {
   openGlobalSearchBuffer: () => string;
   openDiagnosticsBuffer: () => string;
   openReferencesBuffer: () => string;
+  openExtensionsBuffer: () => string;
   openExtensionBuffer: (extensionId: string, name: string) => string;
   openOnboardingBuffer: (
     context: import("@/features/onboarding/lib/onboarding-state").OnboardingContext,
@@ -950,7 +951,8 @@ const createBufferStore = (workspaceId: string) => {
 
             case "globalSearch":
             case "diagnostics":
-            case "references": {
+            case "references":
+            case "extensions": {
               const existing = buffers.find((b) => b.type === spec.type);
               if (existing) {
                 set((state) => {
@@ -1245,6 +1247,10 @@ const createBufferStore = (workspaceId: string) => {
 
         openReferencesBuffer: (): string => {
           return get().actions.openContent({ type: "references" });
+        },
+
+        openExtensionsBuffer: (): string => {
+          return get().actions.openContent({ type: "extensions" });
         },
 
         openExtensionBuffer: (extensionId, name): string => {

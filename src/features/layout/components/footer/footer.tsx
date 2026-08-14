@@ -42,8 +42,6 @@ const Footer = () => {
   const footerTrailingItemsOrder = useSettingsStore(
     (state) => state.settings.footerTrailingItemsOrder,
   );
-  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
-  const activeSidebarView = useUIState((state) => state.activeSidebarView);
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
   const isCommandPaletteVisible = useUIState((state) => state.isCommandPaletteVisible);
@@ -65,7 +63,11 @@ const Footer = () => {
     );
   });
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
-  const isExtensionsSidebarActive = isSidebarVisible && activeSidebarView === "extensions";
+  const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
+  const isExtensionsBufferActive = useBufferStore((state) => {
+    const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
+    return activeBuffer?.type === "extensions" || activeBuffer?.type === "extension";
+  });
   const branchItem = useFooterGitBranchItem();
 
   const debuggerItem = useFooterDebuggerItem(debuggerEnabled, footerLeadingItemsOrder);
@@ -124,9 +126,9 @@ const Footer = () => {
           content: (
             <FooterTabControl
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
-              active={isExtensionsSidebarActive}
+              active={isExtensionsBufferActive}
               tone="accent"
-              onClick={() => openSidebarView("extensions")}
+              onClick={() => openExtensionsBuffer()}
             >
               <ExtensionsIcon />
               <FooterControlBadge>

@@ -32,6 +32,17 @@ describe("createPaneContent onboarding surfaces", () => {
 });
 
 describe("createPaneContent extension surfaces", () => {
+  it("creates the singleton extension catalog tab", () => {
+    const content = createPaneContent("extensions", { type: "extensions" });
+
+    expect(content).toMatchObject({
+      type: "extensions",
+      name: "Extensions",
+      path: "extensions://marketplace",
+      isPreview: false,
+    });
+  });
+
   it("creates a tab-addressable page for one extension", () => {
     const content = createPaneContent("extension", {
       type: "extension",
