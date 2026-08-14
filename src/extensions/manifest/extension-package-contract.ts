@@ -141,6 +141,13 @@ export function validateExtensionPackageContract(value: unknown): ExtensionPacka
     }
   }
 
+  if (isRecord(value.installation) && "platforms" in value.installation) {
+    issues.push({
+      path: "installation.platforms",
+      message: "Use platformArch packages instead of the retired platform-only map",
+    });
+  }
+
   return issues;
 }
 

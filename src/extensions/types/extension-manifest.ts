@@ -450,13 +450,6 @@ interface InstallationMetadata {
   // Maximum editor version supported
   maxEditorVersion?: string;
 
-  // Platform-specific packages (legacy, platform-only)
-  platforms?: {
-    darwin?: PlatformPackage;
-    linux?: PlatformPackage;
-    win32?: PlatformPackage;
-  };
-
   // Platform+arch specific packages (for extensions with native binaries)
   platformArch?: Partial<Record<PlatformArch, PlatformPackage>>;
 }

@@ -40,6 +40,26 @@ describe("extension package contract", () => {
     );
   });
 
+  it("rejects the retired platform-only installation map", () => {
+    expect(
+      validateExtensionPackageContract({
+        ...validManifest,
+        installation: {
+          platforms: {
+            darwin: {
+              downloadUrl: "https://example.com/extension.tar.gz",
+              size: 42,
+              checksum: "checksum",
+            },
+          },
+        },
+      }),
+    ).toContainEqual({
+      path: "installation.platforms",
+      message: "Use platformArch packages instead of the retired platform-only map",
+    });
+  });
+
   it("normalizes categories through one shared mapping", () => {
     expect(normalizeExtensionCategories(["language", "icon-theme", "unknown"])).toEqual([
       "Language",

@@ -523,12 +523,6 @@
         "maxEditorVersion": {
           "type": "string"
         },
-        "platforms": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/package"
-          }
-        },
         "platformArch": {
           "type": "object",
           "additionalProperties": {
