@@ -215,7 +215,7 @@ export async function installExtensionLifecycle(params: {
 
   const extensionPackage = resolveExtensionPackage(extension);
 
-  await invoke("install_extension_from_url", {
+  await invoke("install_extension", {
     extensionId,
     url: extensionPackage.downloadUrl,
     checksum: extensionPackage.checksum,
@@ -270,7 +270,7 @@ export async function uninstallExtensionLifecycle(params: {
   }
 
   await deactivateExtensionContributions(extensionId, extension.manifest);
-  await invoke("uninstall_extension_new", { extensionId });
+  await invoke("uninstall_extension", { extensionId });
   await reloadInstalledExtensions();
   onNonLanguageUninstalled();
 }

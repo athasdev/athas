@@ -39,9 +39,7 @@ export async function loadInstalledExtensionsSnapshot(
   const runtimeIssues = new Map<string, ExtensionRuntimeIssue[]>();
 
   try {
-    backendInstalled = await invoke<ExtensionInstallationMetadata[]>(
-      "list_installed_extensions_new",
-    );
+    backendInstalled = await invoke<ExtensionInstallationMetadata[]>("list_installed_extensions");
   } catch {
     // Backend command may not exist yet, continue with IndexedDB check.
   }

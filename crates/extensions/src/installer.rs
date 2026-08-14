@@ -22,7 +22,7 @@ struct InstalledManifest {
    version: String,
 }
 
-fn validate_extension_id(extension_id: &str) -> Result<()> {
+pub fn validate_extension_id(extension_id: &str) -> Result<()> {
    if extension_id.is_empty() || extension_id.len() > 128 {
       anyhow::bail!("Invalid extension id length");
    }
