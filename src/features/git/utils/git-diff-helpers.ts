@@ -60,8 +60,33 @@ export const createGitHunk = (
   lines: [hunk.header, ...hunk.lines],
 });
 
-export const getImgSrc = (base64: string | undefined) =>
-  base64 ? `data:image/*;base64,${base64}` : undefined;
+export function getImageMimeType(filePath: string): string {
+  const extension = filePath.toLowerCase().split(".").pop();
+  const mimeTypes: Record<string, string> = {
+    apng: "image/apng",
+    avif: "image/avif",
+    bmp: "image/bmp",
+    gif: "image/gif",
+    heic: "image/heic",
+    heif: "image/heif",
+    ico: "image/x-icon",
+    jfif: "image/jpeg",
+    jpeg: "image/jpeg",
+    jpg: "image/jpeg",
+    pjpeg: "image/jpeg",
+    pjp: "image/jpeg",
+    png: "image/png",
+    svg: "image/svg+xml",
+    tif: "image/tiff",
+    tiff: "image/tiff",
+    webp: "image/webp",
+  };
+
+  return extension ? (mimeTypes[extension] ?? "image/png") : "image/png";
+}
+
+export const getImgSrc = (base64: string | undefined, filePath: string) =>
+  base64 ? `data:${getImageMimeType(filePath)};base64,${base64}` : undefined;
 
 export function getFileStatus(diff: GitDiff): string {
   if (diff.is_new) return "added";

@@ -187,6 +187,10 @@ function parseDiffSection(lines: string[], fallbackFilePath: string): GitDiff {
   };
 }
 
+export function parseGitPatchLines(lines: string[], filePath: string): GitDiff {
+  return parseDiffSection(lines, filePath);
+}
+
 export function parseRawDiffContent(content: string, filePath: string): GitDiff | MultiFileDiff {
   const lines = content.split("\n");
   const fallbackFilePath = getFilenameFromPath(filePath).replace(/\.(diff|patch)$/i, "");

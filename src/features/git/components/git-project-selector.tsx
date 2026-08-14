@@ -9,6 +9,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
@@ -111,7 +112,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
           render={
             <Button
               type="button"
-              variant="default"
+              variant="ghost"
               size="sm"
               className="w-fit max-w-full min-w-0 justify-start text-left"
               title={activeRepoTitle ?? undefined}
@@ -128,7 +129,6 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
           />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-72">
-          <DropdownMenuLabel>Repositories</DropdownMenuLabel>
           {isDiscovering && availableRepoPaths.length === 0 ? (
             <DropdownMenuItem disabled>
               <Spinner compact />
@@ -144,6 +144,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
             value={activeRepoPath ?? ""}
             onValueChange={handleSelectRepositoryPath}
           >
+            <DropdownMenuLabel>Repositories</DropdownMenuLabel>
             {sortedRepoPaths.map((repoPath) => {
               const relativePath = workspaceRootPath
                 ? getRelativePath(repoPath, workspaceRootPath)
@@ -194,9 +195,11 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
             <DropdownMenuItem onClick={handleClearAddedRepositories}>Clear Added</DropdownMenuItem>
           ) : null}
           {selectionError ? (
-            <DropdownMenuLabel className="whitespace-normal text-destructive" role="alert">
-              {selectionError}
-            </DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="whitespace-normal text-destructive" role="alert">
+                {selectionError}
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>

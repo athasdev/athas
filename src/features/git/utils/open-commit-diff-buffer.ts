@@ -9,6 +9,7 @@ interface OpenCommitDiffBufferOptions {
   message?: string;
   description?: string;
   author?: string;
+  email?: string;
   date?: string;
 }
 
@@ -18,6 +19,7 @@ export const openCommitDiffBuffer = async ({
   message,
   description,
   author,
+  email,
   date,
 }: OpenCommitDiffBufferOptions): Promise<string | null> => {
   const diffs = await getCommitDiff(repoPath, commitHash);
@@ -34,6 +36,7 @@ export const openCommitDiffBuffer = async ({
     commitMessage: message,
     commitDescription: description,
     commitAuthor: author,
+    commitEmail: email,
     commitDate: date,
     files: diffs,
     totalFiles: diffs.length,

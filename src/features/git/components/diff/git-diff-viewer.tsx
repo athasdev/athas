@@ -1,7 +1,10 @@
 import { memo, useMemo } from "react";
 import { useDiffData } from "../../hooks/use-git-diff-data";
-import { Empty, EmptyDescription } from "@/ui/empty";
-import { Spinner } from "@/ui/spinner";
+import {
+  ViewerErrorState,
+  ViewerLoadingState,
+  ViewerState,
+} from "@/features/viewer/components/viewer-state";
 import type { DiffViewerProps, MultiFileDiff } from "../../types/git-diff.types";
 import GitDiffEditorStack from "./git-diff-editor-stack";
 import GitDiffEditorSurface from "./git-diff-editor-surface";
@@ -27,29 +30,15 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
   }
 
   if (isLoading) {
-    return (
-      <Empty className="h-full rounded-none bg-background">
-        <EmptyDescription>
-          <Spinner label="Loading diff" showLabel />
-        </EmptyDescription>
-      </Empty>
-    );
+    return <ViewerLoadingState label="Loading diff" />;
   }
 
   if (error) {
-    return (
-      <Empty className="h-full rounded-none bg-background" tone="error" role="alert">
-        <EmptyDescription>{error}</EmptyDescription>
-      </Empty>
-    );
+    return <ViewerErrorState message={error} />;
   }
 
   if (!diff || !filePath) {
-    return (
-      <Empty className="h-full rounded-none bg-background">
-        <EmptyDescription>No diff data available</EmptyDescription>
-      </Empty>
-    );
+    return <ViewerState description="No diff data available" />;
   }
 
   const fileName = filePath.split("/").pop() || filePath;

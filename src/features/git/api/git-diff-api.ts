@@ -286,6 +286,25 @@ export const getCommitDiff = async (
   }
 };
 
+export const getCommitFileContent = async (
+  repoPath: string,
+  commitHash: string,
+  filePath: string,
+): Promise<string> => {
+  const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+  if (!resolvedRepoPath) {
+    throw new Error("Repository not found");
+  }
+
+  return runGitRead(resolvedRepoPath, `commit-file:${commitHash}:${filePath}`, () =>
+    tauriInvoke<string>("git_file_at_commit", {
+      repoPath: resolvedRepoPath,
+      commitHash,
+      filePath,
+    }),
+  );
+};
+
 export const getRefDiff = async (
   repoPath: string,
   baseRef: string,

@@ -1,5 +1,4 @@
 import {
-  ArrowsInLineVerticalIcon as ArrowsInLineVertical,
   CaretDownIcon as ChevronDown,
   CaretRightIcon as ChevronRight,
   MinusIcon as Minus,
@@ -10,6 +9,7 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings.store"
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { stageHunk, unstageHunk } from "../../api/git-status-api";
 import type { DiffHunkHeaderProps } from "../../types/git-diff.types";
@@ -25,7 +25,7 @@ const DiffHunkHeader = memo(
     filePath,
     onStageHunk,
     onUnstageHunk,
-    isInMultiFileView = false,
+    canStageHunks = false,
   }: DiffHunkHeaderProps) => {
     const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
     const editorFontSize = useEditorSettingsStore.use.fontSize();
@@ -75,65 +75,67 @@ const DiffHunkHeader = memo(
 
     const headerInfo = parseDiffHunkRange(hunk.header.content);
 
-    const canStage = !isInMultiFileView && rootFolderPath && filePath;
-    const hiddenLabel =
-      typeof hiddenLineCount === "number"
-        ? `${hiddenLineCount} unchanged line${hiddenLineCount === 1 ? "" : "s"}`
-        : "Changed lines";
+    const canStage = canStageHunks && rootFolderPath && filePath;
+    const rangeLabel = headerInfo
+      ? `-${headerInfo.oldStart} +${headerInfo.newStart}`
+      : hunk.header.content;
 
     return (
       <div
-        className={cn(
-          "group grid cursor-pointer select-none grid-cols-[2.75rem_minmax(0,1fr)] items-center",
-          "font-mono code-editor-font-override border-border/70 border-b bg-background text-subtle-foreground",
-        )}
+        className="flex min-w-full w-fit select-none items-stretch border-border/70 border-b bg-surface/40 font-mono code-editor-font-override text-subtle-foreground"
         data-selection-scope-exclude="true"
         style={headerStyle}
-        onClick={onToggleCollapse}
       >
-        <div className="flex items-center justify-center border-border border-r text-subtle-foreground">
-          <ArrowsInLineVertical size={iconSize} />
-        </div>
-
-        <div className="flex min-w-0 items-center gap-1.5 px-2">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <span className="flex size-4 items-center justify-center text-subtle-foreground">
+        <button
+          type="button"
+          className="grid min-h-8 min-w-0 flex-1 cursor-pointer grid-cols-[2.75rem_minmax(0,1fr)] items-stretch text-left outline-none transition-colors hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/20"
+          onClick={onToggleCollapse}
+          aria-expanded={!isCollapsed}
+          aria-label={`${isCollapsed ? "Expand" : "Collapse"} diff hunk ${rangeLabel}`}
+          title={hunk.header.content}
+        >
+          <span className="flex items-center justify-center border-border border-r text-subtle-foreground">
+            <span className="flex size-4 items-center justify-center">
               {isCollapsed ? <ChevronRight size={iconSize} /> : <ChevronDown size={iconSize} />}
             </span>
-            <span className="shrink-0 whitespace-nowrap font-medium text-muted-foreground">
-              {hiddenLabel}
-            </span>
-            {headerInfo?.context ? (
-              <span className="min-w-0 truncate text-subtle-foreground">{headerInfo.context}</span>
+          </span>
+
+          <span className="flex min-w-0 items-center gap-2 px-2.5">
+            {typeof hiddenLineCount === "number" ? (
+              <span className="shrink-0 rounded-md bg-accent/70 px-1.5 text-muted-foreground tabular-nums">
+                {hiddenLineCount} hidden
+              </span>
             ) : null}
-          </div>
-
-          <div className="h-px min-w-8 flex-1 bg-border/70" />
-
-          <div className="flex shrink-0 items-center gap-1.5">
-            <div className="flex items-center gap-1">
+            <span className="shrink-0 text-subtle-foreground tabular-nums">{rangeLabel}</span>
+            {headerInfo?.context ? (
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                {headerInfo.context}
+              </span>
+            ) : (
+              <span className="min-w-0 flex-1" />
+            )}
+            <span className="flex shrink-0 items-center gap-1.5 tabular-nums">
               {additions > 0 && <span className="text-git-added">+{additions}</span>}
               {deletions > 0 && <span className="text-git-deleted">-{deletions}</span>}
-            </div>
+            </span>
+          </span>
+        </button>
 
-            {canStage && (
-              <button
-                onClick={handleStageHunk}
-                className={cn(
-                  "flex items-center gap-1 rounded-md px-1 py-0 opacity-0 group-hover:opacity-100",
-                  isStaged
-                    ? "bg-git-deleted/20 text-git-deleted hover:bg-git-deleted/30"
-                    : "bg-git-added/20 text-git-added hover:bg-git-added/30",
-                )}
-                title={isStaged ? "Unstage hunk" : "Stage hunk"}
-                aria-label={isStaged ? "Unstage hunk" : "Stage hunk"}
-              >
-                {isStaged ? <Minus size={iconSize} /> : <Plus size={iconSize} />}
-                <span>{isStaged ? "Unstage" : "Stage"}</span>
-              </button>
-            )}
-          </div>
-        </div>
+        {canStage ? (
+          <span className="flex shrink-0 items-center border-border border-l px-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={handleStageHunk}
+              className={cn(isStaged ? "text-git-deleted" : "text-git-added")}
+              tooltip={isStaged ? "Unstage hunk" : "Stage hunk"}
+            >
+              {isStaged ? <Minus size={iconSize} /> : <Plus size={iconSize} />}
+              {isStaged ? "Unstage" : "Stage"}
+            </Button>
+          </span>
+        ) : null}
       </div>
     );
   },

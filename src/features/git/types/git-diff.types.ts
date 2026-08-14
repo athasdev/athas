@@ -21,6 +21,7 @@ export interface ImageContainerProps {
   labelColor: string;
   base64?: string;
   alt: string;
+  filePath: string;
   zoom: number;
 }
 
@@ -51,7 +52,7 @@ export interface DiffHunkHeaderProps {
   filePath: string;
   onStageHunk?: (hunk: GitHunk) => void;
   onUnstageHunk?: (hunk: GitHunk) => void;
-  isInMultiFileView?: boolean;
+  canStageHunks?: boolean;
 }
 
 export interface DiffLineProps {
@@ -81,7 +82,7 @@ export interface TextDiffViewerProps {
   showWhitespace: boolean;
   onStageHunk?: (hunk: GitHunk) => void;
   onUnstageHunk?: (hunk: GitHunk) => void;
-  isInMultiFileView?: boolean;
+  canStageHunks?: boolean;
   isEmbeddedInScrollView?: boolean;
   searchHighlights?: Map<number, DiffSearchHighlight[]>;
 }
@@ -100,6 +101,7 @@ export interface MultiFileDiff {
   commitMessage?: string;
   commitDescription?: string;
   commitAuthor?: string;
+  commitEmail?: string;
   commitDate?: string;
   files: GitDiff[];
   totalFiles: number;
@@ -107,6 +109,9 @@ export interface MultiFileDiff {
   totalDeletions: number;
   fileKeys?: string[];
   initiallyExpandedFileKey?: string;
+  selectedFileKey?: string;
+  selectedFilePath?: string;
+  fileNavigation?: "embedded" | "external";
   isLoading?: boolean;
   indexingProgress?: {
     processed: number;

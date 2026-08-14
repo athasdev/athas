@@ -40,6 +40,9 @@ function createMultiFileDiff({
   commitHash,
   diffs,
   metadata,
+  initiallyExpandedFileKey,
+  selectedFilePath,
+  fileNavigation,
 }: {
   title?: string;
   repoPath: string;
@@ -47,8 +50,11 @@ function createMultiFileDiff({
   diffs: GitDiff[];
   metadata?: Pick<
     MultiFileDiff,
-    "commitMessage" | "commitDescription" | "commitAuthor" | "commitDate"
+    "commitMessage" | "commitDescription" | "commitAuthor" | "commitEmail" | "commitDate"
   >;
+  initiallyExpandedFileKey?: string;
+  selectedFilePath?: string;
+  fileNavigation?: "embedded" | "external";
 }): MultiFileDiff {
   const { additions, deletions } = countDiffStats(diffs);
   return {
@@ -56,6 +62,11 @@ function createMultiFileDiff({
     repoPath,
     commitHash,
     files: diffs,
+    fileKeys: diffs.map((diff) => diff.file_path),
+    initiallyExpandedFileKey,
+    selectedFileKey: initiallyExpandedFileKey,
+    selectedFilePath,
+    fileNavigation,
     totalFiles: diffs.length,
     totalAdditions: additions,
     totalDeletions: deletions,
@@ -188,8 +199,12 @@ export function useGitDiffActions({
   );
 
   const viewCommitDiff = useCallback(
-    async (commitHash: string, filePath?: string) => {
-      if (!activeRepoPath) return;
+    async (
+      commitHash: string,
+      filePath?: string,
+      options?: { fileNavigation?: "embedded" | "external" },
+    ) => {
+      if (!activeRepoPath) return null;
 
       setIsLoadingCommitDiff(true);
       try {
@@ -199,27 +214,34 @@ export function useGitDiffActions({
             `No changes in this commit${filePath ? ` for file ${filePath}` : ""}.`,
             "Git Diff",
           );
-          return;
-        }
-
-        if (filePath) {
-          const diff = diffs.find((item) => item.file_path === filePath) ?? diffs[0];
-          const diffFileName = `${diff.file_path.split("/").pop()}.diff`;
-          openDiffBuffer(`diff://commit/${commitHash}/${diffFileName}`, diffFileName, diff);
-          return;
+          return null;
         }
 
         const commit = commitByHash.get(commitHash);
         const title = `Commit ${commitHash.substring(0, 7)}`;
+        const selectedDiff = filePath
+          ? diffs.find(
+              (diff) =>
+                diff.file_path === filePath ||
+                diff.new_path === filePath ||
+                diff.old_path === filePath,
+            )
+          : undefined;
         const multiDiff = createMultiFileDiff({
           title,
           repoPath: activeRepoPath,
           commitHash,
           diffs,
+          initiallyExpandedFileKey: selectedDiff?.file_path,
+          selectedFilePath: selectedDiff
+            ? selectedDiff.new_path || selectedDiff.old_path || selectedDiff.file_path
+            : undefined,
+          fileNavigation: options?.fileNavigation,
           metadata: {
             commitMessage: commit?.message,
             commitDescription: commit?.description,
             commitAuthor: commit?.author,
+            commitEmail: commit?.email,
             commitDate: commit?.date,
           },
         });
@@ -228,9 +250,11 @@ export function useGitDiffActions({
           `${title} (${diffs.length} files)`,
           multiDiff,
         );
+        return diffs;
       } catch (error) {
         console.error("Error getting commit diff:", error);
         await showAlertDialog(`Failed to get diff for commit ${commitHash}:\n${error}`, "Git Diff");
+        return null;
       } finally {
         setIsLoadingCommitDiff(false);
       }

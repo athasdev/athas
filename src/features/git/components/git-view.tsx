@@ -12,12 +12,14 @@ import {
   UploadIcon as Upload,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { showAlertDialog } from "@/ui/dialog";
 import {
@@ -26,8 +28,7 @@ import {
   SidebarPanel,
   SidebarTabPanels,
   SidebarTabBar,
-  SidebarTitleBar,
-  SidebarToolbar,
+  SidebarWorkspace,
 } from "@/ui/sidebar";
 import { toast } from "sonner";
 import { formatRelativeDate } from "@/utils/date";
@@ -42,7 +43,7 @@ import { useGitDataController } from "../hooks/use-git-data-controller";
 import { useGitDiffActions } from "../hooks/use-git-diff-actions";
 import { useRepositoryStore } from "../stores/git-repository.store";
 import { useGitStore } from "../stores/git.store";
-import type { GitFile } from "../types/git.types";
+import type { GitCommit, GitDiff, GitFile } from "../types/git.types";
 import {
   type WorkingTreeDiffEntry,
   type WorkingTreeDiffScope,
@@ -50,10 +51,18 @@ import {
 import type { GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";
 import { openGitWorktreeWorkspace } from "../utils/git-worktree-open";
+import {
+  resolveMultiDiffSelection,
+  selectMultiDiffFileByPath,
+} from "../utils/multi-diff-selection";
 import GitActionsMenu from "./git-actions-menu";
 import GitBranchManager from "./git-branch-manager";
-import GitCommitHistory from "./git-commit-history";
-import GitCommitPanel from "./git-commit-panel";
+import GitCommitHistory, {
+  GitCommitHistoryControls,
+  type HistorySearchScope,
+} from "./git-commit-history";
+import { GitCommitFilesPanel } from "./git-commit-files-panel";
+import GitCommitPanel from "../commit-composer/components/git-commit-panel";
 import GitCommandSurface from "./git-command-surface";
 import GitRemoteManager from "./git-remote-manager";
 import GitTagManager from "./git-tag-manager";
@@ -92,9 +101,12 @@ type GitPaletteAction =
   | { type: "refresh" };
 
 const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
+  const activeBuffer = useBufferStore((state) =>
+    getBufferById(state.buffers, state.activeBufferId),
+  );
+  const updateBufferContent = useBufferStore.use.actions().updateBufferContent;
   const gitStatus = useGitStore((state) => state.gitStatus);
   const isLoadingGitData = useGitStore((state) => state.isLoadingGitData);
-  const isRefreshing = useGitStore((state) => state.isRefreshing);
   const actions = useGitStore((state) => state.actions);
   const commits = useGitStore((state) => state.commits);
   const branches = useGitStore((state) => state.branches);
@@ -127,6 +139,13 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const openDiffOnClick = useSettingsStore((state) => state.settings.openDiffOnClick);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const [activeTab, setActiveTab] = useState<GitSidebarTab>("changes");
+  const [historySearchQuery, setHistorySearchQuery] = useState("");
+  const [historySearchScope, setHistorySearchScope] = useState<HistorySearchScope>("all");
+  const [selectedHistoryCommit, setSelectedHistoryCommit] = useState<GitCommit | null>(null);
+  const [selectedHistoryCommitFiles, setSelectedHistoryCommitFiles] = useState<GitDiff[]>([]);
+  const [selectedHistoryFilePath, setSelectedHistoryFilePath] = useState<string | null>(null);
+  const [isLoadingHistoryCommitFiles, setIsLoadingHistoryCommitFiles] = useState(false);
+  const historyCommitRequestRef = useRef(0);
   const [fileDiffStats, setFileDiffStats] = useState<Record<string, GitFileDiffStats>>({});
 
   const [showCommitDiffList, setShowCommitDiffList] = useState(false);
@@ -216,6 +235,76 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     currentBranch: gitStatus?.branch,
     onBranchDiffOpened: handleBranchDiffOpened,
   });
+  const handleBackFromHistoryCommit = useCallback(() => {
+    historyCommitRequestRef.current += 1;
+    setSelectedHistoryCommit(null);
+    setSelectedHistoryCommitFiles([]);
+    setSelectedHistoryFilePath(null);
+    setIsLoadingHistoryCommitFiles(false);
+  }, []);
+  const handleSelectHistoryCommit = useCallback(
+    async (commit: GitCommit) => {
+      const requestId = historyCommitRequestRef.current + 1;
+      historyCommitRequestRef.current = requestId;
+      setSelectedHistoryCommit(commit);
+      setSelectedHistoryCommitFiles([]);
+      setSelectedHistoryFilePath(null);
+      setIsLoadingHistoryCommitFiles(true);
+
+      const diffs = await handleViewCommitDiff(commit.hash, undefined, {
+        fileNavigation: "external",
+      });
+      if (historyCommitRequestRef.current !== requestId) return;
+
+      const files = diffs ?? [];
+      const firstFile = files[0];
+      setSelectedHistoryCommitFiles(files);
+      setSelectedHistoryFilePath(
+        firstFile ? firstFile.new_path || firstFile.old_path || firstFile.file_path : null,
+      );
+      setIsLoadingHistoryCommitFiles(false);
+    },
+    [handleViewCommitDiff],
+  );
+  const handleSelectHistoryCommitFile = useCallback(
+    (filePath: string) => {
+      if (!selectedHistoryCommit) return;
+      setSelectedHistoryFilePath(filePath);
+
+      if (
+        activeBuffer?.type === "diff" &&
+        activeBuffer.diffData &&
+        "files" in activeBuffer.diffData &&
+        activeBuffer.diffData.commitHash === selectedHistoryCommit.hash
+      ) {
+        const nextMultiDiff = selectMultiDiffFileByPath(activeBuffer.diffData, filePath);
+        if (nextMultiDiff !== activeBuffer.diffData) {
+          updateBufferContent(activeBuffer.id, activeBuffer.content, false, nextMultiDiff);
+        }
+        return;
+      }
+
+      void handleViewCommitDiff(selectedHistoryCommit.hash, filePath, {
+        fileNavigation: "external",
+      });
+    },
+    [activeBuffer, handleViewCommitDiff, selectedHistoryCommit, updateBufferContent],
+  );
+
+  useEffect(() => {
+    if (
+      !selectedHistoryCommit ||
+      activeBuffer?.type !== "diff" ||
+      !activeBuffer.diffData ||
+      !("files" in activeBuffer.diffData) ||
+      activeBuffer.diffData.commitHash !== selectedHistoryCommit.hash
+    ) {
+      return;
+    }
+
+    const selection = resolveMultiDiffSelection(activeBuffer.diffData);
+    setSelectedHistoryFilePath(selection?.path ?? null);
+  }, [activeBuffer, selectedHistoryCommit]);
 
   const handleSelectRepository = useCallback(async () => {
     setIsSelectingRepo(true);
@@ -367,7 +456,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   useEffect(() => {
     setRepoSelectionError(null);
-  }, [repoPath]);
+    handleBackFromHistoryCommit();
+  }, [activeRepoPath, handleBackFromHistoryCommit, repoPath]);
 
   useEffect(() => {
     if (!rememberLastGitPanelMode) return;
@@ -419,6 +509,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       }
 
       if (detail.type === "show-tab") {
+        handleBackFromHistoryCommit();
         setActiveTab(detail.tab);
         return;
       }
@@ -463,6 +554,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return () => window.removeEventListener("athas:git-palette-action", handlePaletteAction);
   }, [
     handleInitializeRepository,
+    handleBackFromHistoryCommit,
     handleManualRefresh,
     handleOpenBranchManager,
     handleSelectRepository,
@@ -555,58 +647,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     >
       <MoreHorizontal />
     </SidebarHeaderIconButton>
-  );
-
-  const renderRefreshButton = () => (
-    <SidebarHeaderIconButton
-      onClick={handleManualRefresh}
-      disabled={isLoadingGitData || isRefreshing}
-      tooltip="Refresh"
-      aria-label="Refresh git status"
-    >
-      {isLoadingGitData || isRefreshing ? (
-        <Spinner label="Refreshing git status" compact />
-      ) : (
-        <RefreshCw />
-      )}
-    </SidebarHeaderIconButton>
-  );
-
-  const renderInitializeRepositoryButton = () => {
-    const canInitializeRepository = Boolean(repoPath);
-
-    return (
-      <Button
-        onClick={() => void handleInitializeRepository()}
-        disabled={!canInitializeRepository || isInitializingRepo}
-        variant="ghost"
-        size="xs"
-        tooltip={
-          canInitializeRepository
-            ? "Initialize Git repository"
-            : "Open a folder before initializing Git"
-        }
-      >
-        <GitBranch weight="duotone" />
-        {isInitializingRepo ? "Initializing..." : "Initialize"}
-      </Button>
-    );
-  };
-
-  const renderRepositoryEmptyActions = () => (
-    <>
-      <Button
-        type="button"
-        variant="default"
-        size="xs"
-        disabled={isSelectingRepo}
-        onClick={() => void handleSelectRepository()}
-      >
-        <FolderSimpleStar weight="duotone" />
-        {isSelectingRepo ? "Selecting..." : "Browse"}
-      </Button>
-      {renderInitializeRepositoryButton()}
-    </>
   );
 
   const renderGitActionsMenu = ({
@@ -712,20 +752,29 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   if (!activeRepoPath) {
     return (
       <>
-        <SidebarPanel>
-          <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
-          <Empty className="h-full">
-            <EmptyHeader>
-              <EmptyTitle>No repository selected</EmptyTitle>
-              {repoSelectionError ? (
-                <EmptyDescription className="text-destructive">
-                  {repoSelectionError}
-                </EmptyDescription>
-              ) : null}
-            </EmptyHeader>
-            <EmptyContent className="flex-row">{renderRepositoryEmptyActions()}</EmptyContent>
-          </Empty>
-        </SidebarPanel>
+        <SidebarWorkspace title="Source Control" actions={renderActionsButton()}>
+          <EmptyState
+            layout="sidebar"
+            title="No repository selected"
+            message={repoSelectionError}
+            action={{
+              label: isSelectingRepo ? "Selecting..." : "Browse",
+              icon: <FolderSimpleStar weight="duotone" />,
+              disabled: isSelectingRepo,
+              onClick: () => void handleSelectRepository(),
+            }}
+            secondaryAction={{
+              label: isInitializingRepo ? "Initializing..." : "Initialize",
+              icon: <GitBranch weight="duotone" />,
+              variant: "ghost",
+              disabled: !repoPath || isInitializingRepo,
+              tooltip: repoPath
+                ? "Initialize Git repository"
+                : "Open a folder before initializing Git",
+              onClick: () => void handleInitializeRepository(),
+            }}
+          />
+        </SidebarWorkspace>
         {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
       </>
     );
@@ -734,10 +783,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   if (isLoadingGitData && !gitStatus) {
     return (
       <>
-        <SidebarPanel>
-          <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
-          <Spinner label="Loading Git status" showLabel compact className="m-auto" />
-        </SidebarPanel>
+        <SidebarWorkspace title="Source Control" actions={renderActionsButton()}>
+          <EmptyState
+            layout="sidebar"
+            message={<Spinner label="Loading Git status" showLabel compact />}
+          />
+        </SidebarWorkspace>
         {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
       </>
     );
@@ -746,20 +797,29 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   if (!gitStatus) {
     return (
       <>
-        <SidebarPanel>
-          <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
-          <Empty className="h-full">
-            <EmptyHeader>
-              <EmptyTitle>Not a Git repository</EmptyTitle>
-              {repoSelectionError ? (
-                <EmptyDescription className="text-destructive">
-                  {repoSelectionError}
-                </EmptyDescription>
-              ) : null}
-            </EmptyHeader>
-            <EmptyContent className="flex-row">{renderRepositoryEmptyActions()}</EmptyContent>
-          </Empty>
-        </SidebarPanel>
+        <SidebarWorkspace title="Source Control" actions={renderActionsButton()}>
+          <EmptyState
+            layout="sidebar"
+            title="Not a Git repository"
+            message={repoSelectionError}
+            action={{
+              label: isSelectingRepo ? "Selecting..." : "Browse",
+              icon: <FolderSimpleStar weight="duotone" />,
+              disabled: isSelectingRepo,
+              onClick: () => void handleSelectRepository(),
+            }}
+            secondaryAction={{
+              label: isInitializingRepo ? "Initializing..." : "Initialize",
+              icon: <GitBranch weight="duotone" />,
+              variant: "ghost",
+              disabled: !repoPath || isInitializingRepo,
+              tooltip: repoPath
+                ? "Initialize Git repository"
+                : "Open a folder before initializing Git",
+              onClick: () => void handleInitializeRepository(),
+            }}
+          />
+        </SidebarWorkspace>
         {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
       </>
     );
@@ -768,66 +828,86 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const refreshAfterAction = handleManualRefresh;
   const handleGitFileClick = openDiffOnClick ? handleViewFileDiff : handleOpenOriginalFile;
 
+  if (selectedHistoryCommit) {
+    return (
+      <SidebarPanel className="font-sans ui-text-sm select-none">
+        <GitCommitFilesPanel
+          commit={selectedHistoryCommit}
+          files={selectedHistoryCommitFiles}
+          selectedFilePath={selectedHistoryFilePath}
+          isLoading={isLoadingHistoryCommitFiles}
+          onBack={handleBackFromHistoryCommit}
+          onSelectFile={handleSelectHistoryCommitFile}
+        />
+      </SidebarPanel>
+    );
+  }
+
   return (
     <>
-      <SidebarPanel className="font-sans ui-text-sm select-none">
-        <SidebarTitleBar title="Source Control">
-          {renderRefreshButton()}
-          {renderActionsButton()}
-        </SidebarTitleBar>
+      <SidebarWorkspace
+        title={
+          <GitBranchManager
+            currentBranch={gitStatus.branch}
+            repoPath={activeRepoPath}
+            paletteTarget
+            openEventName={GIT_VIEW_BRANCH_MANAGER_EVENT}
+            onBranchChange={() => void handleManualRefresh()}
+            onWorktreeChange={(worktreePath) => void handleGitViewWorktreeChange(worktreePath)}
+            onRepositoryChange={() => setRepoSelectionError(null)}
+          />
+        }
+        actions={
+          <>
+            {activeTab === "history" ? (
+              <GitCommitHistoryControls
+                searchQuery={historySearchQuery}
+                searchScope={historySearchScope}
+                onSearchQueryChange={setHistorySearchQuery}
+                onSearchScopeChange={setHistorySearchScope}
+              />
+            ) : null}
+            <ButtonGroup ref={syncMenuAnchorRef} className="min-w-0 max-w-full">
+              <Button
+                type="button"
+                variant="default"
+                size="xs"
+                className="min-w-0 flex-1"
+                onClick={() => void handleRemoteAction(primaryRemoteAction)}
+                disabled={!activeRepoPath || isRemoteActionLoading}
+                aria-label={`${syncActionLabel} remote changes`}
+              >
+                <span className="min-w-0 truncate whitespace-nowrap">{syncActionLabel}</span>
+              </Button>
+              <ButtonGroupSeparator />
+              <Button
+                type="button"
+                variant="default"
+                size="icon-xs"
+                onClick={() => setIsSyncMenuOpen((open) => !open)}
+                disabled={!activeRepoPath || isRemoteActionLoading}
+                active={isSyncMenuOpen}
+                aria-label="Choose remote action"
+                aria-haspopup="menu"
+                aria-expanded={isSyncMenuOpen}
+              >
+                <CaretDown className="size-3" />
+              </Button>
+            </ButtonGroup>
+            <Dropdown
+              isOpen={isSyncMenuOpen}
+              anchorRef={syncMenuAnchorRef}
+              anchorAlign="end"
+              onClose={() => setIsSyncMenuOpen(false)}
+              items={syncMenuItems}
+              className="min-w-33"
+            />
+            {renderActionsButton()}
+          </>
+        }
+        className="font-sans ui-text-sm select-none"
+      >
         <SidebarTabBar items={gitTabs} value={activeTab} onChange={setActiveTab}>
-          <SidebarToolbar className="overflow-hidden">
-            <div className="flex min-w-0 flex-1">
-              <GitBranchManager
-                currentBranch={gitStatus.branch}
-                repoPath={activeRepoPath}
-                paletteTarget
-                openEventName={GIT_VIEW_BRANCH_MANAGER_EVENT}
-                onBranchChange={() => void handleManualRefresh()}
-                onWorktreeChange={(worktreePath) => void handleGitViewWorktreeChange(worktreePath)}
-                onRepositoryChange={() => setRepoSelectionError(null)}
-              />
-            </div>
-
-            <div className="ml-auto flex min-w-0 max-w-[45%] shrink-0 items-center">
-              <ButtonGroup ref={syncMenuAnchorRef} className="min-w-0 max-w-full">
-                <Button
-                  type="button"
-                  variant="default"
-                  size="xs"
-                  className="min-w-0 flex-1"
-                  onClick={() => void handleRemoteAction(primaryRemoteAction)}
-                  disabled={!activeRepoPath || isRemoteActionLoading}
-                  aria-label={`${syncActionLabel} remote changes`}
-                >
-                  <span className="min-w-0 truncate whitespace-nowrap">{syncActionLabel}</span>
-                </Button>
-                <ButtonGroupSeparator />
-                <Button
-                  type="button"
-                  variant="default"
-                  size="icon-xs"
-                  onClick={() => setIsSyncMenuOpen((open) => !open)}
-                  disabled={!activeRepoPath || isRemoteActionLoading}
-                  active={isSyncMenuOpen}
-                  aria-label="Choose remote action"
-                  aria-haspopup="menu"
-                  aria-expanded={isSyncMenuOpen}
-                >
-                  <CaretDown className="size-3" />
-                </Button>
-              </ButtonGroup>
-              <Dropdown
-                isOpen={isSyncMenuOpen}
-                anchorRef={syncMenuAnchorRef}
-                anchorAlign="end"
-                onClose={() => setIsSyncMenuOpen(false)}
-                items={syncMenuItems}
-                className="min-w-33"
-              />
-            </div>
-          </SidebarToolbar>
-
           <SidebarTabPanels
             className="flex-1"
             items={[
@@ -855,10 +935,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 id: "history",
                 content: (
                   <GitCommitHistory
-                    onViewCommitDiff={handleViewCommitDiff}
+                    onSelectCommit={(commit) => void handleSelectHistoryCommit(commit)}
                     repoPath={activeRepoPath}
                     ahead={gitStatus.ahead}
                     behind={gitStatus.behind}
+                    searchQuery={historySearchQuery}
+                    searchScope={historySearchScope}
                   />
                 ),
               },
@@ -877,7 +959,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             />
           </SidebarFooter>
         </SidebarTabBar>
-      </SidebarPanel>
+      </SidebarWorkspace>
 
       {renderGitActionsMenu({ hasGitRepo: !!gitStatus, onRefresh: refreshAfterAction })}
       <GitCommandSurface
@@ -1012,7 +1094,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         disabled={isActionLoading}
                         variant="ghost"
                         size="icon-xs"
-                        className="rounded-md text-subtle-foreground disabled:opacity-50"
+                        className="text-subtle-foreground disabled:opacity-50"
                         tooltip="Apply stash"
                       >
                         <Download weight="fill" />
@@ -1030,7 +1112,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         disabled={isActionLoading}
                         variant="ghost"
                         size="icon-xs"
-                        className="rounded-md text-subtle-foreground disabled:opacity-50"
+                        className="text-subtle-foreground disabled:opacity-50"
                         tooltip="Pop stash"
                       >
                         <Upload />
@@ -1048,7 +1130,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         disabled={isActionLoading}
                         variant="ghost"
                         size="icon-xs"
-                        className="rounded-md text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                         tooltip="Drop stash"
                       >
                         <Trash2 />

@@ -74,8 +74,14 @@ export async function loadWorkingTreeDiffsProgressively({
       return false;
     }
 
+    const bufferState = useBufferStore.getState();
+    const currentBuffer = getBufferById(bufferState.buffers, bufferId);
+    const currentMultiDiff =
+      currentBuffer?.type === "diff" && currentBuffer.diffData && "files" in currentBuffer.diffData
+        ? currentBuffer.diffData
+        : null;
     const stats = countDiffStats(loadedDiffs.map((item) => item.diff));
-    useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {
+    bufferState.actions.updateBufferContent(bufferId, "", false, {
       title,
       repoPath,
       commitHash: "working-tree",
@@ -85,6 +91,9 @@ export async function loadWorkingTreeDiffsProgressively({
       totalDeletions: stats.deletions,
       fileKeys: loadedDiffs.map((item) => item.fileKey),
       initiallyExpandedFileKey: initiallyExpandedFileKey ?? loadedDiffs[0]?.fileKey,
+      selectedFileKey: currentMultiDiff?.selectedFileKey,
+      selectedFilePath: currentMultiDiff?.selectedFilePath,
+      fileNavigation: currentMultiDiff?.fileNavigation,
       isLoading,
       indexingProgress: {
         processed,

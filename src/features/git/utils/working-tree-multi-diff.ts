@@ -47,6 +47,8 @@ export const createSingleFileWorkingTreeDiff = ({
     totalDeletions: stats.deletions,
     fileKeys: [fileKey],
     initiallyExpandedFileKey: fileKey,
+    selectedFileKey: fileKey,
+    selectedFilePath: diff.new_path || diff.old_path || diff.file_path,
     isLoading: false,
   };
 };
@@ -174,6 +176,12 @@ export const buildWorkingTreeMultiDiff = async ({
     totalDeletions: stats.deletions,
     fileKeys: resolvedDiffs.map((entry) => entry.fileKey),
     initiallyExpandedFileKey: resolvedDiffs[0]?.fileKey,
+    selectedFileKey: resolvedDiffs[0]?.fileKey,
+    selectedFilePath: resolvedDiffs[0]
+      ? resolvedDiffs[0].diff.new_path ||
+        resolvedDiffs[0].diff.old_path ||
+        resolvedDiffs[0].diff.file_path
+      : undefined,
     isLoading: false,
     indexingProgress: {
       processed: filesToLoad.length,

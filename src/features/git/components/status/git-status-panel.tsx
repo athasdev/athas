@@ -12,15 +12,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { Checkbox } from "@/ui/checkbox";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
-import { Empty, EmptyMedia, EmptyTitle } from "@/ui/empty";
-import { ScrollArea } from "@/ui/scroll-area";
+import { EmptyState } from "@/ui/empty";
 import { showConfirmDialog } from "@/ui/dialog";
-import { SidebarHeaderIconButton, SidebarSectionHeader, SidebarToolbar } from "@/ui/sidebar";
+import { SidebarHeaderIconButton, SidebarToolbar } from "@/ui/sidebar";
 import { SidebarTree, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { compactPathTreeBranch, type PathTreeNode } from "@/features/sidebar/lib/path-tree";
 import { cn } from "@/utils/cn";
@@ -96,7 +96,10 @@ const GitStatusPanel = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isDiffMenuOpen, setIsDiffMenuOpen] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
-  const [collapsedSections, setCollapsedSections] = useState<Set<StatusSection>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<StatusSection[]>([
+    "tracked",
+    "untracked",
+  ]);
   const [optimisticStageMap, setOptimisticStageMap] = useState<Record<string, boolean>>({});
 
   const [stashModal, setStashModal] = useState<{
@@ -347,18 +350,6 @@ const GitStatusPanel = ({
     });
   };
 
-  const toggleSectionCollapsed = (section: StatusSection) => {
-    setCollapsedSections((previous) => {
-      const next = new Set(previous);
-      if (next.has(section)) {
-        next.delete(section);
-      } else {
-        next.add(section);
-      }
-      return next;
-    });
-  };
-
   const renderFlatFileList = (groupedFiles: Record<GitStatusGroup, GitFile[]>) => {
     return GIT_STATUS_ORDER.map((status) => {
       const statusFiles = groupedFiles[status];
@@ -394,17 +385,6 @@ const GitStatusPanel = ({
       <span className="text-git-added">+{stats.additions}</span>
       <span className="text-git-deleted">-{stats.deletions}</span>
     </Badge>
-  );
-
-  const renderSectionHeader = (section: StatusSection, title: string, count: number) => (
-    <SidebarSectionHeader
-      variant="surface"
-      count={count}
-      expanded={!collapsedSections.has(section)}
-      onToggle={() => toggleSectionCollapsed(section)}
-    >
-      {title}
-    </SidebarSectionHeader>
   );
 
   const renderFolderTree = (tree: GitFolderTree, section: "changes") => {
@@ -635,44 +615,48 @@ const GitStatusPanel = ({
               )}
             </div>
           </SidebarToolbar>
-          <ScrollArea
-            className="min-h-0 flex-1"
-            contentClassName="px-2 py-2"
-            reserveScrollbarGutter
-          >
-            {trackedFiles.length > 0 && (
-              <section className="space-y-0.5">
-                {renderSectionHeader("tracked", SECTION_LABELS.tracked, trackedFiles.length)}
-                {!collapsedSections.has("tracked") ? (
-                  <SidebarTree label="Tracked files">
-                    {gitChangesFolderView
-                      ? trackedFolderTree && renderFolderTree(trackedFolderTree, "changes")
-                      : renderFlatFileList(groupedTrackedFiles)}
-                  </SidebarTree>
+          <div className="custom-scrollbar-auto min-h-0 flex-1 overflow-y-auto pr-2.5 [scrollbar-gutter:stable]">
+            <div className="px-2 py-2">
+              <Accordion
+                multiple
+                value={expandedSections}
+                onValueChange={(value) => setExpandedSections(value as StatusSection[])}
+                className="gap-2"
+              >
+                {trackedFiles.length > 0 ? (
+                  <AccordionItem value="tracked">
+                    <AccordionTrigger count={trackedFiles.length} sticky>
+                      {SECTION_LABELS.tracked}
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <SidebarTree label="Tracked files">
+                        {gitChangesFolderView
+                          ? trackedFolderTree && renderFolderTree(trackedFolderTree, "changes")
+                          : renderFlatFileList(groupedTrackedFiles)}
+                      </SidebarTree>
+                    </AccordionContent>
+                  </AccordionItem>
                 ) : null}
-              </section>
-            )}
-            {untrackedFiles.length > 0 && (
-              <section className="space-y-0.5 pt-2">
-                {renderSectionHeader("untracked", SECTION_LABELS.untracked, untrackedFiles.length)}
-                {!collapsedSections.has("untracked") ? (
-                  <SidebarTree label="Untracked files">
-                    {gitChangesFolderView
-                      ? untrackedFolderTree && renderFolderTree(untrackedFolderTree, "changes")
-                      : renderFlatFileList(groupedUntrackedFiles)}
-                  </SidebarTree>
+                {untrackedFiles.length > 0 ? (
+                  <AccordionItem value="untracked">
+                    <AccordionTrigger count={untrackedFiles.length} sticky>
+                      {SECTION_LABELS.untracked}
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <SidebarTree label="Untracked files">
+                        {gitChangesFolderView
+                          ? untrackedFolderTree && renderFolderTree(untrackedFolderTree, "changes")
+                          : renderFlatFileList(groupedUntrackedFiles)}
+                      </SidebarTree>
+                    </AccordionContent>
+                  </AccordionItem>
                 ) : null}
-              </section>
-            )}
-          </ScrollArea>
+              </Accordion>
+            </div>
+          </div>
         </>
       ) : (
-        <Empty className="flex-1" tone="success">
-          <EmptyMedia variant="icon">
-            <Check />
-          </EmptyMedia>
-          <EmptyTitle>Working tree clean</EmptyTitle>
-        </Empty>
+        <EmptyState layout="sidebar" tone="success" icon={<Check />} title="Working tree clean" />
       )}
 
       <Dropdown

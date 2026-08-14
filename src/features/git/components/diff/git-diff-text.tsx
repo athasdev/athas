@@ -111,7 +111,7 @@ const TextDiffViewer = memo(
     showWhitespace,
     onStageHunk,
     onUnstageHunk,
-    isInMultiFileView = false,
+    canStageHunks = false,
     isEmbeddedInScrollView = false,
     searchHighlights,
   }: TextDiffViewerProps) => {
@@ -180,7 +180,7 @@ const TextDiffViewer = memo(
                   filePath={diff.file_path}
                   onStageHunk={onStageHunk}
                   onUnstageHunk={onUnstageHunk}
-                  isInMultiFileView={isInMultiFileView}
+                  canStageHunks={canStageHunks}
                 />
                 {!isCollapsed && (
                   <div className="flex min-w-0">
@@ -255,7 +255,7 @@ const TextDiffViewer = memo(
                   filePath={diff.file_path}
                   onStageHunk={onStageHunk}
                   onUnstageHunk={onUnstageHunk}
-                  isInMultiFileView={isInMultiFileView}
+                  canStageHunks={canStageHunks}
                 />
                 {!isCollapsed &&
                   hunk.lines.map((line, lineIndex) => (
