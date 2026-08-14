@@ -1,5 +1,6 @@
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle";
 import { cva, type VariantProps } from "class-variance-authority";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -31,6 +32,7 @@ function Toggle({
   tooltip,
   tooltipSide,
   shortcut,
+  commandId,
   "aria-label": ariaLabel,
   ...props
 }: TogglePrimitive.Props &
@@ -38,7 +40,10 @@ function Toggle({
     tooltip?: string;
     tooltipSide?: "top" | "bottom" | "left" | "right";
     shortcut?: string;
+    commandId?: string;
   }) {
+  const commandShortcut = useCommandShortcut(commandId);
+  const effectiveShortcut = commandId ? commandShortcut : shortcut;
   const element = (
     <TogglePrimitive
       data-slot="toggle"
@@ -51,7 +56,7 @@ function Toggle({
   if (!tooltip) return element;
 
   return (
-    <Tooltip content={tooltip} shortcut={shortcut} side={tooltipSide}>
+    <Tooltip content={tooltip} shortcut={effectiveShortcut} side={tooltipSide}>
       {element}
     </Tooltip>
   );

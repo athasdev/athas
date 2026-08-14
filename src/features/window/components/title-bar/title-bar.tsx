@@ -272,6 +272,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
       type="button"
       pressed={activityRailExpanded}
       tooltip={activityRailExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
+      commandId="workbench.toggleActivitySidebar"
       tooltipSide="bottom"
       onPressedChange={(pressed) => void updateSetting("activityRailExpanded", pressed)}
       aria-label={activityRailExpanded ? "Collapse activity bar" : "Expand activity bar"}
