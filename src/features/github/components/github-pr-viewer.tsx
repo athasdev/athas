@@ -41,11 +41,7 @@ import {
 } from "./github-pr-inline-action";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubInlineTitle } from "./github-inline-editors";
-import {
-  GitHubDetailLayout,
-  GitHubViewerHeader,
-  GitHubViewerShell,
-} from "./github-viewer-shell";
+import { GitHubDetailLayout, GitHubViewerHeader, GitHubViewerShell } from "./github-viewer-shell";
 
 interface GitHubPRViewerProps {
   prNumber: number;
