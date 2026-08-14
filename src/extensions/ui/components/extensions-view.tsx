@@ -58,6 +58,9 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
 
   const availableExtensions = useExtensionStore.use.availableExtensions();
   const extensionsWithUpdates = useExtensionStore.use.extensionsWithUpdates();
+  const selectedExtensionEnabled = useExtensionStore((state) =>
+    extensionId ? state.availableExtensions.get(extensionId)?.isEnabled : undefined,
+  );
   const openExtensionBuffer = useBufferStore.use.actions().openExtensionBuffer;
 
   const {
@@ -116,9 +119,13 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
       );
     return matchesCategory && matchesSearch;
   });
-  const selectedExtension = extensionId
+  const catalogExtension = extensionId
     ? (extensions.find((extension) => extension.id === extensionId) ?? null)
     : null;
+  const selectedExtension =
+    catalogExtension && selectedExtensionEnabled !== undefined
+      ? { ...catalogExtension, isEnabled: selectedExtensionEnabled }
+      : catalogExtension;
   const installedCount = extensions.filter((extension) => extension.isInstalled).length;
 
   const isExtensionInstalling = (extension: UnifiedExtension) =>
