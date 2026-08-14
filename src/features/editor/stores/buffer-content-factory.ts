@@ -147,11 +147,15 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
       return {
         ...base,
         type: "githubAction",
-        path: spec.url ?? `github-action://${spec.runId}`,
+        path:
+          spec.runId !== undefined
+            ? (spec.url ?? `github-action://${spec.runId}`)
+            : `github-action-notification://${spec.notification?.id ?? id}`,
         name: spec.name ?? "Action",
         isPreview: false,
         repoPath: spec.repoPath,
         runId: spec.runId,
+        notification: spec.notification,
         url: spec.url,
       };
     case "githubForm": {

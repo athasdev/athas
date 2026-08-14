@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -29,11 +30,7 @@ import {
   GITHUB_NOTIFICATION_LIST_TTL_MS,
   githubNotificationListCache,
 } from "../utils/github-data-cache";
-import { isGitHubEntityLinkForRepository, parseGitHubEntityLink } from "../utils/github-link-utils";
-import {
-  buildGitHubRepositoryRef,
-  getGitHubNotificationFallbackUrl,
-} from "../utils/github-notification-routing";
+import { getGitHubNotificationTarget } from "../utils/github-notification-routing";
 import {
   filterGitHubNotifications,
   GITHUB_NOTIFICATION_PAGE_SIZE,
@@ -59,7 +56,7 @@ function NotificationIcon({ subjectType }: { subjectType: string }) {
 export function GitHubNotificationsMenu() {
   const isAuthenticated = useGitHubStore.use.isAuthenticated();
   const { checkAuth } = useGitHubStore.use.actions();
-  const { openContent, openPRBuffer, openGitHubIssueBuffer, openGitHubActionBuffer } =
+  const { openPRBuffer, openGitHubIssueBuffer, openGitHubActionBuffer } =
     useBufferStore.use.actions();
   const hasBlockingModalOpen = useUIState(
     (state) =>
@@ -160,41 +157,35 @@ export function GitHubNotificationsMenu() {
   const handleSelectNotification = useCallback(
     (notification: GitHubNotification) => {
       setIsOpen(false);
-      const link = parseGitHubEntityLink(notification.url);
-      const repositoryUrl = `https://github.com/${notification.repositoryFullName}`;
-      const fallbackUrl = getGitHubNotificationFallbackUrl(notification);
-      const targetRepoPath = buildGitHubRepositoryRef(notification.repositoryFullName);
-      const canOpenNatively =
-        targetRepoPath && link && isGitHubEntityLinkForRepository(link, repositoryUrl);
-      const openFallback = () =>
-        openContent({ type: "webViewer", url: fallbackUrl, allowWhenDisabled: true });
+      const target = getGitHubNotificationTarget(notification);
 
-      if (canOpenNatively && link?.kind === "pullRequest") {
-        openPRBuffer(link.number, { repoPath: targetRepoPath, title: notification.title });
-        return;
-      }
-      if (canOpenNatively && link?.kind === "issue") {
+      if (target.type === "pullRequest") {
+        openPRBuffer(target.number, { repoPath: target.repoPath, title: notification.title });
+      } else if (target.type === "issue") {
         openGitHubIssueBuffer({
-          issueNumber: link.number,
-          repoPath: targetRepoPath,
+          issueNumber: target.number,
+          repoPath: target.repoPath,
           title: notification.title,
           url: notification.url,
         });
-        return;
-      }
-      if (canOpenNatively && link?.kind === "actionRun") {
+      } else if (target.type === "action") {
         openGitHubActionBuffer({
-          runId: link.runId,
-          repoPath: targetRepoPath,
+          runId: target.runId,
+          repoPath: target.repoPath,
           title: notification.title,
           url: notification.url,
         });
-        return;
+      } else if (target.type === "actionNotification") {
+        openGitHubActionBuffer({
+          notification: target.notification,
+          repoPath: target.repoPath,
+          title: notification.title,
+        });
+      } else {
+        void openUrl(target.url);
       }
-
-      openFallback();
     },
-    [openContent, openGitHubActionBuffer, openGitHubIssueBuffer, openPRBuffer],
+    [openGitHubActionBuffer, openGitHubIssueBuffer, openPRBuffer],
   );
 
   const notificationCount = notifications.length;

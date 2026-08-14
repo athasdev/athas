@@ -37,6 +37,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { cleanupBufferHistoryTracking } from "@/features/editor/stores/buffer-history-tracking";
 import type {
   EditorContent,
+  GitHubActionOpenTarget,
   OpenContentSpec,
   PaneContent,
   TerminalContent,
@@ -151,12 +152,13 @@ interface BufferActions {
     authorAvatarUrl?: string;
     url?: string;
   }) => string;
-  openGitHubActionBuffer: (options: {
-    runId: number;
-    repoPath?: string;
-    title?: string;
-    url?: string;
-  }) => string;
+  openGitHubActionBuffer: (
+    options: GitHubActionOpenTarget & {
+      repoPath?: string;
+      title?: string;
+      url?: string;
+    },
+  ) => string;
   openGitHubFormBuffer: (options: {
     repoPath: string;
     formKind: "pull-request" | "issue" | "action";
@@ -800,11 +802,15 @@ const createBufferStore = (workspaceId: string) => {
             }
 
             case "githubAction": {
-              const path = spec.url ?? `github-action://${spec.runId}`;
+              const path =
+                spec.runId !== undefined
+                  ? (spec.url ?? `github-action://${spec.runId}`)
+                  : `github-action-notification://${spec.notification?.id ?? "pending"}`;
               const existing = buffers.find(
                 (b) =>
                   b.type === "githubAction" &&
-                  b.runId === spec.runId &&
+                  ((spec.runId !== undefined && b.runId === spec.runId) ||
+                    (spec.notification && b.notification?.id === spec.notification.id)) &&
                   (!spec.repoPath || !b.repoPath || b.repoPath === spec.repoPath),
               );
               if (existing) {
@@ -817,6 +823,8 @@ const createBufferStore = (workspaceId: string) => {
                           path,
                           name: spec.name ?? b.name,
                           repoPath: spec.repoPath ?? b.repoPath,
+                          runId: spec.runId ?? b.runId,
+                          notification: spec.notification ?? b.notification,
                           url: spec.url ?? b.url,
                           isActive: true,
                         }
@@ -1149,14 +1157,19 @@ const createBufferStore = (workspaceId: string) => {
           });
         },
 
-        openGitHubActionBuffer: ({ runId, repoPath, title, url }): string => {
-          return get().actions.openContent({
-            type: "githubAction",
-            runId,
-            repoPath,
-            name: title,
-            url,
-          });
+        openGitHubActionBuffer: (options): string => {
+          const common = {
+            type: "githubAction" as const,
+            repoPath: options.repoPath,
+            name: options.title,
+            url: options.url,
+          };
+
+          if (options.runId !== undefined) {
+            return get().actions.openContent({ ...common, runId: options.runId });
+          }
+
+          return get().actions.openContent({ ...common, notification: options.notification });
         },
 
         openGitHubFormBuffer: ({ repoPath, formKind, defaultHead }): string => {

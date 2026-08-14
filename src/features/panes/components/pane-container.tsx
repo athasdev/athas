@@ -961,6 +961,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           return (
             <GitHubActionViewer
               runId={buffer.runId}
+              notification={buffer.notification}
               repoPath={buffer.repoPath}
               bufferId={buffer.id}
             />

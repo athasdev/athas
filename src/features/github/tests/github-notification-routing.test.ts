@@ -2,7 +2,21 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   buildGitHubRepositoryRef,
   getGitHubNotificationFallbackUrl,
+  getGitHubNotificationTarget,
 } from "../utils/github-notification-routing";
+
+const workflowNotification = {
+  id: "notification-1",
+  title: "CI workflow run",
+  subjectType: "CheckSuite",
+  reason: "ci_activity",
+  unread: true,
+  updatedAt: "2026-08-14T12:00:00Z",
+  lastReadAt: null,
+  repositoryFullName: "athasdev/athas",
+  url: "https://github.com/athasdev/athas",
+  subjectUrl: "https://api.github.com/repos/athasdev/athas/check-suites/501857806",
+};
 
 describe("GitHub notification repository routing", () => {
   it("rejects malformed repository names", () => {
@@ -25,6 +39,20 @@ describe("GitHub notification repository routing", () => {
         url: "https://github.com/athasdev/athas",
       }),
     ).toBe("https://github.com/athasdev/athas/releases");
+  });
+
+  it("routes unresolved workflow notifications to the native action viewer", () => {
+    expect(getGitHubNotificationTarget(workflowNotification)).toEqual({
+      type: "actionNotification",
+      repoPath: "github://athasdev/athas",
+      notification: {
+        id: "notification-1",
+        repositoryFullName: "athasdev/athas",
+        checkSuiteId: 501857806,
+        title: "CI workflow run",
+        updatedAt: "2026-08-14T12:00:00Z",
+      },
+    });
   });
 
   it("preserves specific notification URLs", () => {

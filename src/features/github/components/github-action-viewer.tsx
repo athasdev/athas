@@ -12,6 +12,7 @@ import {
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Empty, EmptyDescription } from "@/ui/empty";
@@ -27,18 +28,20 @@ import { ScrollArea } from "@/ui/scroll-area";
 import { toast } from "sonner";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-import type { WorkflowRunDetails, WorkflowRunJob, WorkflowRunStep } from "../types/github.types";
+import type {
+  GitHubActionNotificationTarget,
+  WorkflowRunDetails,
+  WorkflowRunJob,
+  WorkflowRunListItem,
+  WorkflowRunStep,
+} from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
 import { copyToClipboard } from "../utils/github-viewer-utils";
-import {
-  GitHubViewerHeader,
-  GitHubViewerLoadingState,
-  GitHubViewerShell,
-  GitHubViewerState,
-} from "./github-viewer-shell";
+import { GitHubViewerHeader, GitHubViewerShell } from "./github-viewer-shell";
 
 interface GitHubActionViewerProps {
-  runId: number;
+  runId?: number;
+  notification?: GitHubActionNotificationTarget;
   repoPath?: string;
   bufferId: string;
 }
@@ -274,9 +277,11 @@ const getLogLineSegments = (line: string, query: string) => {
   return segments.length > 0 ? segments : [{ text: line, isMatch: false }];
 };
 
-const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionViewerProps) => {
+const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
+  const { runId, notification, repoPath, bufferId } = props;
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
   const buffer = useBufferStore((state) => state.buffers.find((item) => item.id === bufferId));
+  const [resolvedRunId, setResolvedRunId] = useState<number | null>(runId ?? null);
   const [details, setDetails] = useState<WorkflowRunDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -301,15 +306,61 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
     [selectedJob],
   );
 
+  useEffect(() => {
+    if (runId !== undefined) setResolvedRunId(runId);
+  }, [runId]);
+
+  const resolveNotification = useCallback(async () => {
+    if (!notification || !repoPath) return;
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const run = await invoke<WorkflowRunListItem | null>(
+        "github_resolve_notification_workflow_run",
+        {
+          repositoryFullName: notification.repositoryFullName,
+          checkSuiteId: notification.checkSuiteId,
+          notificationTitle: notification.title,
+          notificationUpdatedAt: notification.updatedAt,
+        },
+      );
+      if (!run) {
+        setError("Could not match this notification to a GitHub Actions run.");
+        return;
+      }
+
+      setResolvedRunId(run.databaseId);
+      if (buffer?.type === "githubAction") {
+        updateBuffer({
+          ...buffer,
+          runId: run.databaseId,
+          name: run.displayTitle || run.name || run.workflowName || notification.title,
+          url: run.url,
+        });
+      }
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [buffer, notification, repoPath, updateBuffer]);
+
+  useEffect(() => {
+    if (resolvedRunId !== null || !notification) return;
+    void resolveNotification();
+  }, [notification, resolveNotification, resolvedRunId]);
+
   const fetchWorkflowRun = useCallback(
     async (force = false) => {
+      if (resolvedRunId === null) return;
       if (!repoPath) {
         setError("No repository selected.");
         setIsLoading(false);
         return;
       }
 
-      const cacheKey = `${repoPath}::${runId}`;
+      const cacheKey = `${repoPath}::${resolvedRunId}`;
       const cached = githubActionDetailsCache.getFreshValue(cacheKey, GITHUB_ACTION_DETAILS_TTL_MS);
       if (cached && !force) {
         setDetails(cached);
@@ -332,7 +383,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
           () =>
             invoke<WorkflowRunDetails>("github_get_workflow_run_details", {
               repoPath,
-              runId,
+              runId: resolvedRunId,
             }),
           { force, ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
         );
@@ -344,7 +395,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
         setIsLoading(false);
       }
     },
-    [repoPath, runId],
+    [repoPath, resolvedRunId],
   );
 
   useEffect(() => {
@@ -355,7 +406,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
     if (!details || !buffer || buffer.type !== "githubAction") return;
 
     const nextName =
-      details.displayTitle || details.name || details.workflowName || `Run #${runId}`;
+      details.displayTitle || details.name || details.workflowName || `Run #${resolvedRunId}`;
     if (buffer.name === nextName && buffer.url === details.url) return;
 
     updateBuffer({
@@ -363,7 +414,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
       name: nextName,
       url: details.url,
     });
-  }, [buffer, details, runId, updateBuffer]);
+  }, [buffer, details, resolvedRunId, updateBuffer]);
 
   useEffect(() => {
     setVisibleJobCount(10);
@@ -486,8 +537,8 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
       details?.name ||
       details?.workflowName ||
       buffer?.name ||
-      `Run #${runId}`,
-    [buffer?.name, details?.displayTitle, details?.name, details?.workflowName, runId],
+      (resolvedRunId === null ? "Resolving action run" : `Run #${resolvedRunId}`),
+    [buffer?.name, details?.displayTitle, details?.name, details?.workflowName, resolvedRunId],
   );
   const runStatus = useMemo(
     () => getWorkflowRunStatus(details?.status, details?.conclusion),
@@ -603,7 +654,9 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
               <DropdownMenuContent>
                 <DropdownMenuItem
                   disabled={isLoading && Boolean(details)}
-                  onClick={() => void fetchWorkflowRun(true)}
+                  onClick={() =>
+                    void (resolvedRunId === null ? resolveNotification() : fetchWorkflowRun(true))
+                  }
                 >
                   {isLoading && details ? "Refreshing..." : "Refresh"}
                 </DropdownMenuItem>
@@ -616,11 +669,13 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
       }
     >
       {error ? (
-        <GitHubViewerState
-          description={error}
+        <ViewerErrorState
+          message={error}
           actionLabel="Retry"
-          onAction={() => void fetchWorkflowRun(true)}
-          tone="error"
+          onAction={() =>
+            void (resolvedRunId === null ? resolveNotification() : fetchWorkflowRun(true))
+          }
+          layout="section"
         />
       ) : details ? (
         <div className="space-y-4">
@@ -866,7 +921,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
           </div>
         </div>
       ) : (
-        <GitHubViewerLoadingState label="Loading action run" />
+        <ViewerLoadingState label="Loading action run" layout="section" />
       )}
     </GitHubViewerShell>
   );

@@ -2,6 +2,7 @@ import type { DatabaseType } from "@/features/database/types/provider.types";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
 import type { OnboardingMode } from "@/features/onboarding/lib/onboarding-state";
+import type { GitHubActionNotificationTarget } from "@/features/github/types/github.types";
 
 // ── Token entry for syntax highlighting cache ───────────────────────
 
@@ -139,9 +140,14 @@ interface GitHubIssueContent extends PaneContentBase {
 interface GitHubActionContent extends PaneContentBase {
   type: "githubAction";
   repoPath?: string;
-  runId: number;
+  runId?: number;
+  notification?: GitHubActionNotificationTarget;
   url?: string;
 }
+
+export type GitHubActionOpenTarget =
+  | { runId: number; notification?: never }
+  | { runId?: never; notification: GitHubActionNotificationTarget };
 
 export interface GitHubFormContent extends PaneContentBase {
   type: "githubForm";
@@ -364,13 +370,12 @@ export type OpenContentSpec =
       name?: string;
       url?: string;
     }
-  | {
+  | ({
       type: "githubAction";
-      runId: number;
       repoPath?: string;
       name?: string;
       url?: string;
-    }
+    } & GitHubActionOpenTarget)
   | {
       type: "githubForm";
       repoPath: string;

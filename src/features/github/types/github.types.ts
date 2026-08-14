@@ -105,6 +105,14 @@ export interface GitHubNotification {
   subjectUrl: string;
 }
 
+export interface GitHubActionNotificationTarget {
+  id: string;
+  repositoryFullName: string;
+  checkSuiteId: number | null;
+  title: string;
+  updatedAt: string;
+}
+
 export interface IssueComment {
   id: number;
   author: PullRequestAuthor;
