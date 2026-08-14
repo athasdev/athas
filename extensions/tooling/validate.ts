@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
-import { validateExtensionPackageContract } from "../manifest/extension-package-contract";
+import { validateExtensionPackageContract } from "@/extensions/manifest/extension-package-contract";
 import {
   GENERATED_CDN_DIR,
   getContributionArray,

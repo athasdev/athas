@@ -3,12 +3,11 @@ import { basename, join, relative, resolve } from "node:path";
 
 export type ExtensionManifestRecord = Record<string, unknown>;
 
-const EXTENSION_DOMAIN_ROOT = resolve(import.meta.dirname, "..");
-export const ATHAS_ROOT = resolve(EXTENSION_DOMAIN_ROOT, "../..");
+export const ATHAS_ROOT = resolve(import.meta.dirname, "../..");
 export const EXTENSIONS_ROOT = join(ATHAS_ROOT, "extensions");
 export const GENERATED_CDN_DIR = join(EXTENSIONS_ROOT, "generated", "cdn");
 export const EXTENSION_ARTIFACTS_PATH = join(EXTENSIONS_ROOT, "artifacts.json");
-export const CATALOG_DIR = join(EXTENSION_DOMAIN_ROOT, "catalog");
+export const CATALOG_DIR = join(import.meta.dirname, "catalog");
 const OFFICIAL_EXTENSIONS_DIR = join(EXTENSIONS_ROOT, "official");
 const COMMUNITY_EXTENSIONS_DIR = join(EXTENSIONS_ROOT, "community");
 const BUILD_ONLY_PACKAGE_ENTRIES = new Set([

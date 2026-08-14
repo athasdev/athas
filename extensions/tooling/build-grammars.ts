@@ -5,9 +5,9 @@
  * Each entry maps a language ID to a GitHub repository and optional subdirectory.
  *
  * Usage:
- *   bun run scripts/build-grammars.ts                    # Build all missing
- *   bun run scripts/build-grammars.ts --languages sql,xml # Build specific languages
- *   bun run scripts/build-grammars.ts --all               # Rebuild everything
+ *   bun extensions/tooling/build-grammars.ts                    # Build all missing
+ *   bun extensions/tooling/build-grammars.ts --languages sql,xml # Build specific languages
+ *   bun extensions/tooling/build-grammars.ts --all               # Rebuild everything
  */
 
 import { existsSync } from "node:fs";

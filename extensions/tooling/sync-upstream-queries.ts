@@ -2,8 +2,8 @@
  * Sync highlight queries from pinned upstream tree-sitter repos.
  *
  * Usage:
- *   bun run scripts/sync-upstream-queries.ts
- *   bun run scripts/sync-upstream-queries.ts --check
+ *   bun extensions/tooling/sync-upstream-queries.ts
+ *   bun extensions/tooling/sync-upstream-queries.ts --check
  */
 
 import { readFile, writeFile } from "node:fs/promises";

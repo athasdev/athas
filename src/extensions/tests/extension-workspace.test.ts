@@ -3,7 +3,7 @@ import {
   createDeployableExtensionManifest,
   getReservedBuiltInThemeContribution,
   inspectExtensionPackageLayout,
-} from "@/extensions/tooling/extension-workspace";
+} from "../../../extensions/tooling/extension-workspace";
 
 describe("extension workspace theme ownership", () => {
   it("reserves Athas default theme identities for built-in themes", () => {

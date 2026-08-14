@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
-import { ATHAS_ROOT } from "@/extensions/tooling/extension-workspace";
+import { ATHAS_ROOT } from "../../../extensions/tooling/extension-workspace";
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
 import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "@/features/ai/lib/claude-code";
 

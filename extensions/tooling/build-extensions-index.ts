@@ -231,7 +231,7 @@ if (checkOnly) {
 
   if (currentRegistry !== registryOutput || currentIndex !== indexOutput) {
     console.error(
-      "Extensions catalog is out of date. Run `bun src/extensions/tooling/build-extensions-index.ts`.",
+      "Extensions catalog is out of date. Run `bun extensions/tooling/build-extensions-index.ts`.",
     );
     process.exit(1);
   }
