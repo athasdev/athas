@@ -1,5 +1,6 @@
 import type { DatabaseType } from "@/features/database/types/provider.types";
 import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
+import { isSupportedImageFile } from "@/utils/image-file-types";
 import { getBaseName } from "@/utils/path-helpers";
 
 /**
@@ -33,26 +34,7 @@ export const getDatabaseTypeFromPath = (path: string): DatabaseType | null => {
  * Check if a file is an image based on its extension
  */
 export const isImageFile = (path: string): boolean => {
-  const lowerPath = path.toLowerCase();
-  return (
-    lowerPath.endsWith(".png") ||
-    lowerPath.endsWith(".jpg") ||
-    lowerPath.endsWith(".jpeg") ||
-    lowerPath.endsWith(".gif") ||
-    lowerPath.endsWith(".bmp") ||
-    lowerPath.endsWith(".svg") ||
-    lowerPath.endsWith(".webp") ||
-    lowerPath.endsWith(".ico") ||
-    lowerPath.endsWith(".tiff") ||
-    lowerPath.endsWith(".tif") ||
-    lowerPath.endsWith(".avif") ||
-    lowerPath.endsWith(".heic") ||
-    lowerPath.endsWith(".heif") ||
-    lowerPath.endsWith(".jfif") ||
-    lowerPath.endsWith(".pjpeg") ||
-    lowerPath.endsWith(".pjp") ||
-    lowerPath.endsWith(".apng")
-  );
+  return isSupportedImageFile(path);
 };
 
 /**

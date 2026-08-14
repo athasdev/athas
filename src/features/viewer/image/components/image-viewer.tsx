@@ -16,7 +16,10 @@ import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { ImageEditorToolbar } from "@/features/viewer/image/editor/components/image-editor-toolbar";
 import { ImageResizeDialog } from "@/features/viewer/image/editor/components/image-resize-dialog";
 import { useImageOperations } from "@/features/viewer/image/editor/hooks/use-image-operations";
-import { getImageDimensions } from "@/features/viewer/image/editor/utils/canvas-utils";
+import {
+  blobToDataURL,
+  getImageDimensions,
+} from "@/features/viewer/image/editor/utils/canvas-utils";
 import {
   getDataURLSize,
   saveImageToFile,
@@ -27,6 +30,7 @@ import { Button } from "@/ui/button";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";
 import { formatFileSize } from "@/utils/format-file-size";
+import { getImageMimeType } from "@/utils/image-file-types";
 import { getRelativePath } from "@/utils/path-helpers";
 import { ImageContextMenu } from "./image-context-menu";
 
@@ -59,47 +63,30 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
 
   useEffect(() => {
     const loadImageSrc = async () => {
+      let fileSize = 0;
+
+      const applyImageSource = async (src: string) => {
+        const dims = await getImageDimensions(src);
+        setInitialImageSrc(src);
+        setImageDimensions(dims);
+        setOriginalSize(fileSize || getDataURLSize(src));
+        setCurrentSize(fileSize || getDataURLSize(src));
+      };
+
       try {
-        // Load the image file as binary data and convert to data URL
-        // This avoids CORS issues with Tauri's file protocol
         const { readFile } = await import("@tauri-apps/plugin-fs");
         const contents = await readFile(filePath);
+        fileSize = contents.byteLength;
+        const mimeType = getImageMimeType(filePath);
 
-        // Determine MIME type from file extension
-        const ext = filePath.split(".").pop()?.toLowerCase();
-        const mimeTypes: Record<string, string> = {
-          jpg: "image/jpeg",
-          jpeg: "image/jpeg",
-          png: "image/png",
-          gif: "image/gif",
-          webp: "image/webp",
-          avif: "image/avif",
-          bmp: "image/bmp",
-        };
-        const mimeType = mimeTypes[ext || ""] || "image/png";
+        if (!mimeType) throw new Error(`Unsupported image type: ${filePath}`);
 
-        // Convert to base64 data URL
-        const base64 = btoa(String.fromCharCode(...contents));
-        const dataURL = `data:${mimeType};base64,${base64}`;
-
-        setInitialImageSrc(dataURL);
-
-        // Get initial dimensions and size
-        const dims = await getImageDimensions(dataURL);
-        setImageDimensions(dims);
-
-        // Initial zoom calculation will be handled by the effect below
-        // once container dimensions and image dimensions are both available
-
-        const size = getDataURLSize(dataURL);
-        setOriginalSize(size);
-        setCurrentSize(size);
+        const dataURL = await blobToDataURL(new Blob([contents], { type: mimeType }));
+        await applyImageSource(dataURL);
       } catch (error) {
         console.error("Failed to load image:", error);
-        // Fallback to convertFileSrc
         try {
-          const src = await convertFileSrc(filePath);
-          setInitialImageSrc(src);
+          await applyImageSource(convertFileSrc(filePath));
         } catch (fallbackError) {
           console.error("Fallback also failed:", fallbackError);
         }

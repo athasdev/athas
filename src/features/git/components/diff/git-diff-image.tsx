@@ -16,34 +16,36 @@ const ZOOM_STEP = 0.25;
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;
 
-const ImageContainer = memo(({ label, labelColor, base64, alt, zoom }: ImageContainerProps) => (
-  <div className="flex flex-1 flex-col">
-    <div
-      className={cn(
-        "flex items-center justify-center gap-1 py-1 ui-text-sm",
-        "border-border border-b font-medium",
-        labelColor,
-      )}
-    >
-      {label === "Removed" ? <Minus /> : <Plus />}
-      {label}
+const ImageContainer = memo(
+  ({ label, labelColor, base64, alt, filePath, zoom }: ImageContainerProps) => (
+    <div className="flex flex-1 flex-col">
+      <div
+        className={cn(
+          "flex items-center justify-center gap-1 py-1 ui-text-sm",
+          "border-border border-b font-medium",
+          labelColor,
+        )}
+      >
+        {label === "Removed" ? <Minus /> : <Plus />}
+        {label}
+      </div>
+      <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
+        {base64 ? (
+          <img
+            src={getImgSrc(base64, filePath)}
+            alt={alt}
+            className="max-h-full max-w-full object-contain"
+            style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
+          />
+        ) : (
+          <Empty className="bg-transparent p-0">
+            <EmptyDescription className="italic">No image</EmptyDescription>
+          </Empty>
+        )}
+      </div>
     </div>
-    <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
-      {base64 ? (
-        <img
-          src={getImgSrc(base64)}
-          alt={alt}
-          className="max-h-full max-w-full object-contain"
-          style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
-        />
-      ) : (
-        <Empty className="bg-transparent p-0">
-          <EmptyDescription className="italic">No image</EmptyDescription>
-        </Empty>
-      )}
-    </div>
-  </div>
-));
+  ),
+);
 
 ImageContainer.displayName = "ImageContainer";
 
@@ -110,7 +112,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
             </div>
             <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
               <img
-                src={getImgSrc(diff.new_blob_base64)}
+                src={getImgSrc(diff.new_blob_base64, fileName)}
                 alt={fileName}
                 className="max-h-full max-w-full object-contain"
                 style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
@@ -125,7 +127,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
             </div>
             <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
               <img
-                src={getImgSrc(diff.old_blob_base64)}
+                src={getImgSrc(diff.old_blob_base64, fileName)}
                 alt={fileName}
                 className="max-h-full max-w-full object-contain"
                 style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
@@ -140,6 +142,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
                 labelColor="bg-git-deleted/20 text-git-deleted"
                 base64={diff.old_blob_base64}
                 alt={`${fileName} (old)`}
+                filePath={fileName}
                 zoom={zoom}
               />
             )}
@@ -150,6 +153,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
                 labelColor="bg-git-added/20 text-git-added"
                 base64={diff.new_blob_base64}
                 alt={`${fileName} (new)`}
+                filePath={fileName}
                 zoom={zoom}
               />
             )}
