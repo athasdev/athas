@@ -1,21 +1,10 @@
 import { createElement, type ReactNode } from "react";
-import { Button } from "@/ui/button";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useUIExtensionStore } from "../stores/ui-extension-store";
-import type { Disposable, UIExtensionRegistration } from "../types/ui-extension";
-
-type GeneratedContributionType = NonNullable<UIExtensionRegistration["contributionType"]>;
-
-export interface GeneratedUIExtension {
-  id: string;
-  name: string;
-  description: string;
-  contributionType: GeneratedContributionType;
-  code: string;
-}
+import { Button } from "@/ui/button";
+import { useUIExtensionStore } from "../../stores/ui-extension-store";
+import type { Disposable } from "../../types/ui-extension";
 
 type UIStyle = Record<string, unknown>;
-const GENERATED_EXTENSIONS_STORAGE_KEY = "athas.generated-ui-extensions";
 const GENERATED_UI_FONT_SIZE = "var(--ui-text-sm)";
 
 function toChildrenArray(children: unknown[] | unknown): ReactNode[] {
@@ -24,50 +13,7 @@ function toChildrenArray(children: unknown[] | unknown): ReactNode[] {
   ) as ReactNode[];
 }
 
-function normalizeGeneratedExtensionId(id: string) {
-  const normalized = id
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9.-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return `generated.${normalized || Date.now().toString(36)}`;
-}
-
-function readStoredGeneratedExtensions(): GeneratedUIExtension[] {
-  const raw = localStorage.getItem(GENERATED_EXTENSIONS_STORAGE_KEY);
-  if (!raw) return [];
-
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter(
-      (extension): extension is GeneratedUIExtension =>
-        extension &&
-        typeof extension === "object" &&
-        typeof extension.id === "string" &&
-        typeof extension.name === "string" &&
-        typeof extension.description === "string" &&
-        typeof extension.code === "string" &&
-        ["sidebar", "toolbar", "command"].includes(extension.contributionType),
-    );
-  } catch {
-    return [];
-  }
-}
-
-function storeGeneratedExtension(extension: GeneratedUIExtension) {
-  const storedExtensions = readStoredGeneratedExtensions();
-  const nextExtensions = [
-    ...storedExtensions.filter((storedExtension) => storedExtension.id !== extension.id),
-    extension,
-  ];
-
-  localStorage.setItem(GENERATED_EXTENSIONS_STORAGE_KEY, JSON.stringify(nextExtensions));
-}
-
-function createGeneratedExtensionAPI(extensionId: string) {
+export function createGeneratedExtensionAPI(extensionId: string) {
   const actions = useUIExtensionStore.getState().actions;
   const storagePrefix = `ui-ext-${extensionId}-`;
 
@@ -559,53 +505,4 @@ function createGeneratedExtensionAPI(extensionId: string) {
       },
     },
   };
-}
-
-export function installGeneratedUIExtension(
-  extension: GeneratedUIExtension,
-  options: { persist?: boolean } = {},
-) {
-  const store = useUIExtensionStore.getState();
-  const { actions } = store;
-  const extensionId = normalizeGeneratedExtensionId(extension.id);
-
-  if (store.extensions.has(extensionId)) {
-    actions.cleanupExtension(extensionId);
-  }
-
-  actions.registerExtension({
-    extensionId,
-    manifestId: extensionId,
-    name: extension.name,
-    description: extension.description,
-    contributionType: extension.contributionType,
-    state: "loading",
-  });
-
-  try {
-    const api = createGeneratedExtensionAPI(extensionId);
-    const activate = Function("api", `"use strict";\n${extension.code}`);
-    activate(api);
-    actions.updateExtensionState(extensionId, "active");
-    if (options.persist !== false) {
-      storeGeneratedExtension(extension);
-    }
-    return { extensionId };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Install failed";
-    actions.updateExtensionState(extensionId, "error", message);
-    throw new Error(message);
-  }
-}
-
-export function initializeGeneratedUIExtensions() {
-  const storedExtensions = readStoredGeneratedExtensions();
-
-  for (const extension of storedExtensions) {
-    try {
-      installGeneratedUIExtension(extension, { persist: false });
-    } catch (error) {
-      console.error("Failed to initialize generated UI extension:", error);
-    }
-  }
 }

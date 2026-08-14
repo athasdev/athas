@@ -1,7 +1,7 @@
 import { logger } from "@/features/editor/utils/logger";
 import { initializeExtensionStore, useExtensionStore } from "../registry/extension-store";
 import { extensionRegistry } from "../registry/extension-registry";
-import { initializeGeneratedUIExtensions } from "../ui/services/generated-ui-extension-installer";
+import { initializeGeneratedUIExtensions } from "../ui/services/generated/generated-ui-extension-installer";
 import { runExtensionLoadBatch } from "./extension-activation-batch";
 import { activateExtensionContributions } from "./extension-contribution-runtime";
 
