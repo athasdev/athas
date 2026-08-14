@@ -1,6 +1,7 @@
 import { CheckCircleIcon as CheckCircle2, GitPullRequestIcon as GitPullRequest } from "@/ui/icons";
-import { Button } from "@/ui/button";
+import { Item, ItemContent, ItemTitle } from "@/ui/item";
 import type { Label, PullRequestDetails } from "../types/github.types";
+import { getTimeAgo } from "../utils/github-viewer-utils";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 import { GitHubDetailSection, GitHubDetailSidebar } from "./github-viewer-shell";
@@ -11,6 +12,7 @@ interface GitHubPRSidebarProps {
   changedFilesCount: number;
   checksSummary: string;
   reviewSummary: string | null;
+  commentCount: number;
   onShowFiles: () => void;
   availableLabels: Label[];
   onLabelsChange: (labels: Label[]) => void;
@@ -22,6 +24,7 @@ export function GitHubPRSidebar({
   changedFilesCount,
   checksSummary,
   reviewSummary,
+  commentCount,
   onShowFiles,
   availableLabels,
   onLabelsChange,
@@ -81,17 +84,31 @@ export function GitHubPRSidebar({
       </GitHubDetailSection>
 
       <GitHubDetailSection label="Changes">
-        <Button
-          type="button"
-          variant="ghost"
+        <Item
+          render={<button type="button" />}
           size="xs"
           onClick={onShowFiles}
-          className="-ml-1.5 h-auto min-w-0 justify-start py-1"
+          className="min-w-0 flex-nowrap text-left"
         >
-          <span>{`${changedFilesCount} files changed`}</span>
-          <span className="text-git-added">+{pr.additions}</span>
-          <span className="text-git-deleted">-{pr.deletions}</span>
-        </Button>
+          <ItemContent>
+            <ItemTitle className="w-full justify-between font-normal">
+              <span>{`${changedFilesCount} files changed`}</span>
+              <span className="flex shrink-0 items-center gap-1.5 font-mono">
+                <span className="text-git-added">+{pr.additions}</span>
+                <span className="text-git-deleted">-{pr.deletions}</span>
+              </span>
+            </ItemTitle>
+          </ItemContent>
+        </Item>
+      </GitHubDetailSection>
+
+      <GitHubDetailSection label="Activity">
+        <div className="space-y-1 text-subtle-foreground">
+          <p>{`${pr.commits.length} commits`}</p>
+          <p>{`${commentCount} comments`}</p>
+          <p>{`Opened ${getTimeAgo(pr.createdAt)}`}</p>
+          <p>{`Updated ${getTimeAgo(pr.updatedAt)}`}</p>
+        </div>
       </GitHubDetailSection>
 
       <GitHubDetailSection

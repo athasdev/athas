@@ -4,23 +4,20 @@ import {
   ChatCircleTextIcon as MessageSquare,
   CheckCircleIcon as CheckCircle,
   DotOutlineIcon as CircleDot,
-  DotsThreeIcon as MoreHorizontal,
   LockIcon as Lock,
   LockOpenIcon as LockOpen,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { Button } from "@/ui/button";
-import { Empty, EmptyDescription } from "@/ui/empty";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/ui/dropdown";
+  ViewerErrorState,
+  ViewerLoadingState,
+  ViewerState,
+} from "@/features/viewer/components/viewer-state";
+import { Button } from "@/ui/button";
+import { DropdownMenuItem } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
-import Tooltip from "@/ui/tooltip";
 import Select from "@/ui/select";
 import { useGitHubStore } from "../stores/github.store";
 import type {
@@ -44,13 +41,14 @@ import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 import { LabelBadges } from "./pr-status";
 import {
+  GitHubContentSection,
   GitHubDetailLayout,
   GitHubDetailSection,
   GitHubDetailSidebar,
+  GitHubViewerActionsMenu,
   GitHubViewerHeader,
-  GitHubViewerLoadingState,
   GitHubViewerShell,
-  GitHubViewerState,
+  GitHubViewerTitle,
 } from "./github-viewer-shell";
 
 interface GitHubIssueViewerProps {
@@ -392,13 +390,22 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       header={
         <GitHubViewerHeader
           title={
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="shrink-0 text-subtle-foreground">{`Issue #${issueNumber}`}</span>
-              <span className="text-subtle-foreground/60">&rsaquo;</span>
-              <span className="min-w-0 truncate">
-                {details?.title ?? buffer?.name ?? "Loading issue"}
-              </span>
-            </span>
+            <GitHubViewerTitle
+              kind="Issue"
+              number={issueNumber}
+              title={details?.title ?? buffer?.name ?? "Loading issue"}
+            />
+          }
+          meta={
+            details ? (
+              <>
+                <span>{details.author.login}</span>
+                <span>&middot;</span>
+                <span>{`Updated ${getTimeAgo(details.updatedAt)}`}</span>
+                <span>&middot;</span>
+                <span className="capitalize">{details.state.toLowerCase()}</span>
+              </>
+            ) : null
           }
           actions={
             <>
@@ -425,88 +432,72 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   Reopen
                 </Button>
               )}
-              <DropdownMenu>
-                <Tooltip content="Issue actions" side="bottom">
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-label="Issue actions"
-                      />
-                    }
-                  >
-                    <MoreHorizontal />
-                  </DropdownMenuTrigger>
-                </Tooltip>
-                <DropdownMenuContent>
-                  {details?.state.toLowerCase() === "open" ? (
-                    <DropdownMenuItem
-                      disabled={Boolean(mutationKey)}
-                      onClick={() => void updateIssueState("closed", "not_planned")}
-                    >
-                      Close as not planned
-                    </DropdownMenuItem>
-                  ) : null}
-                  {details?.locked ? (
-                    <DropdownMenuItem
-                      disabled={Boolean(mutationKey)}
-                      onClick={() => void updateLock()}
-                    >
-                      <LockOpen />
-                      Unlock conversation
-                    </DropdownMenuItem>
-                  ) : (
-                    <>
-                      <DropdownMenuItem
-                        disabled={Boolean(mutationKey)}
-                        onClick={() => void updateLock("resolved")}
-                      >
-                        <Lock />
-                        Lock as resolved
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={Boolean(mutationKey)}
-                        onClick={() => void updateLock("off-topic")}
-                      >
-                        Lock as off-topic
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={Boolean(mutationKey)}
-                        onClick={() => void updateLock("too heated")}
-                      >
-                        Lock as too heated
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={Boolean(mutationKey)}
-                        onClick={() => void updateLock("spam")}
-                      >
-                        Lock as spam
-                      </DropdownMenuItem>
-                    </>
-                  )}
+              <GitHubViewerActionsMenu label="Issue actions">
+                {details?.state.toLowerCase() === "open" ? (
                   <DropdownMenuItem
-                    disabled={isLoading && Boolean(details)}
-                    onClick={() => void fetchIssue(true)}
+                    disabled={Boolean(mutationKey)}
+                    onClick={() => void updateIssueState("closed", "not_planned")}
                   >
-                    {isLoading && details ? "Refreshing..." : "Refresh"}
+                    Close as not planned
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleCopyIssueLink}>Copy link</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                ) : null}
+                {details?.locked ? (
+                  <DropdownMenuItem
+                    disabled={Boolean(mutationKey)}
+                    onClick={() => void updateLock()}
+                  >
+                    <LockOpen />
+                    Unlock conversation
+                  </DropdownMenuItem>
+                ) : (
+                  <>
+                    <DropdownMenuItem
+                      disabled={Boolean(mutationKey)}
+                      onClick={() => void updateLock("resolved")}
+                    >
+                      <Lock />
+                      Lock as resolved
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={Boolean(mutationKey)}
+                      onClick={() => void updateLock("off-topic")}
+                    >
+                      Lock as off-topic
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={Boolean(mutationKey)}
+                      onClick={() => void updateLock("too heated")}
+                    >
+                      Lock as too heated
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={Boolean(mutationKey)}
+                      onClick={() => void updateLock("spam")}
+                    >
+                      Lock as spam
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuItem
+                  disabled={isLoading && Boolean(details)}
+                  onClick={() => void fetchIssue(true)}
+                >
+                  {isLoading && details ? "Refreshing..." : "Refresh"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyIssueLink}>Copy link</DropdownMenuItem>
+              </GitHubViewerActionsMenu>
             </>
           }
         />
       }
     >
       {error ? (
-        <GitHubViewerState
-          description={error}
+        <ViewerErrorState
+          message={error}
           actionLabel="Retry"
           onAction={() => void fetchIssue(true)}
-          tone="error"
+          layout="section"
         />
       ) : details ? (
         <GitHubDetailLayout
@@ -673,10 +664,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               </div>
             </section>
 
-            <section className="space-y-3">
-              <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">
-                Description
-              </h2>
+            <GitHubContentSection title="Description">
               <GitHubInlineMarkdown
                 value={details.body}
                 emptyLabel="No description provided"
@@ -684,10 +672,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 repoPath={repoPath}
                 onSave={(body) => updateIssue({ body })}
               />
-            </section>
+            </GitHubContentSection>
 
-            <section className="space-y-3">
-              <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">Activity</h2>
+            <GitHubContentSection title="Activity">
               <div className="w-full space-y-3">
                 {details.comments.length > 0 ? (
                   visibleComments.map((comment, index) => (
@@ -706,12 +693,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                     />
                   ))
                 ) : (
-                  <Empty className="min-h-0 flex-none items-start rounded-lg border border-border/60 bg-surface/25 px-3 py-4 text-left">
-                    <EmptyDescription className="flex items-center gap-2">
-                      <MessageSquare className="size-4" />
-                      No comments yet
-                    </EmptyDescription>
-                  </Empty>
+                  <ViewerState description="No comments yet" layout="section" className="min-h-0" />
                 )}
                 {details.comments.length > visibleComments.length ? (
                   <div className="px-1 py-2">
@@ -752,11 +734,11 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   </div>
                 </div>
               </div>
-            </section>
+            </GitHubContentSection>
           </div>
         </GitHubDetailLayout>
       ) : (
-        <GitHubViewerLoadingState label="Loading issue" />
+        <ViewerLoadingState label="Loading issue" layout="section" />
       )}
     </GitHubViewerShell>
   );

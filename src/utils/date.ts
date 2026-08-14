@@ -37,6 +37,7 @@ interface CompactRelativeDateOptions {
   fallback?: string;
   capitalizeJustNow?: boolean;
   justNowLabel?: string;
+  includeAgo?: boolean;
 }
 
 function toDate(value: DateInput): Date {
@@ -63,13 +64,14 @@ export const formatCompactRelativeDate = (
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
   const justNow = options.justNowLabel ?? (options.capitalizeJustNow ? "Just now" : "just now");
+  const ago = options.includeAgo === false ? "" : " ago";
 
   if (diffMins < 1) return justNow;
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffMins < 60) return `${diffMins}m${ago}`;
+  if (diffHours < 24) return `${diffHours}h${ago}`;
   if (diffDays === 1 && options.afterWeek !== "days") return "yesterday";
-  if (diffDays < 7 || options.afterWeek === "days") return `${diffDays}d ago`;
-  if (options.afterWeek === "weeks") return `${Math.floor(diffDays / 7)}w ago`;
+  if (diffDays < 7 || options.afterWeek === "days") return `${diffDays}d${ago}`;
+  if (options.afterWeek === "weeks") return `${Math.floor(diffDays / 7)}w${ago}`;
 
   return new Intl.DateTimeFormat("en-US").format(date);
 };

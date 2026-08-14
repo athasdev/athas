@@ -3,6 +3,7 @@ import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } fro
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
+import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
 import { toast } from "sonner";
@@ -26,7 +27,7 @@ import {
   resolveSafeRepoFilePath,
   toFileDiffFromMetadata,
 } from "../utils/github-pr-viewer-utils";
-import { copyToClipboard } from "../utils/github-viewer-utils";
+import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { useGitHubStore } from "../stores/github.store";
 import { PRActivityPanel } from "./pr-activity-panel";
@@ -43,7 +44,6 @@ import { GitHubInlineTitle } from "./github-inline-editors";
 import {
   GitHubDetailLayout,
   GitHubViewerHeader,
-  GitHubViewerLoadingState,
   GitHubViewerShell,
 } from "./github-viewer-shell";
 
@@ -561,7 +561,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
         }
       >
         {detailsError && !isLoadingDetails ? null : (
-          <GitHubViewerLoadingState label={`Loading PR #${prNumber}`} />
+          <ViewerLoadingState label={`Loading PR #${prNumber}`} layout="section" />
         )}
       </GitHubViewerShell>
     );
@@ -611,17 +611,13 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       }
     >
       {detailsError && (
-        <div className="mb-3 flex shrink-0 items-center justify-between gap-2 bg-destructive/8 px-1 py-2">
-          <p className="font-sans ui-text-sm truncate text-destructive/90">{detailsError}</p>
-          <Button
-            onClick={handleRefresh}
-            variant="default"
-            className="shrink-0 border border-destructive/40 text-destructive/90 hover:bg-destructive/10"
-            size="xs"
-          >
-            Retry
-          </Button>
-        </div>
+        <ViewerErrorState
+          message={detailsError}
+          actionLabel="Retry"
+          onAction={handleRefresh}
+          layout="section"
+          className="mb-3 min-h-0 shrink-0"
+        />
       )}
 
       {activeTab === "activity" && (
@@ -632,6 +628,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
               changedFilesCount={changedFilesCount}
               checksSummary={checksSummary}
               reviewSummary={reviewSummary}
+              commentCount={selectedPRComments.length}
               onShowFiles={handleToggleFilesView}
               availableLabels={availableLabels}
               onLabelsChange={(nextLabels) => void updatePR({ labels: nextLabels })}
@@ -651,9 +648,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
                 />
                 <span className="text-foreground">{pr.author.login}</span>
                 <span>&middot;</span>
-                <span className="font-mono">{pr.baseRef}</span>
-                <span>&larr;</span>
-                <span className="min-w-0 truncate font-mono">{pr.headRef}</span>
+                <span>{`Opened ${getTimeAgo(pr.createdAt)}`}</span>
               </div>
             </section>
 

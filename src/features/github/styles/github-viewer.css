@@ -14,9 +14,6 @@
 
 .github-detail-grid {
   display: grid;
-  width: 100%;
-  max-width: 72rem;
-  margin-inline: auto;
   gap: 2rem;
 }
 

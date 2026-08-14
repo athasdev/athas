@@ -1,16 +1,23 @@
 import "../styles/github-viewer.css";
 import type { ReactNode } from "react";
+import { DotsThreeIcon as MoreHorizontal } from "@/ui/icons";
 import { Button } from "@/ui/button";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
-import { Spinner } from "@/ui/spinner";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { ScrollArea } from "@/ui/scroll-area";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
+
+export {
+  ViewerLoadingState as GitHubViewerLoadingState,
+  ViewerState as GitHubViewerState,
+} from "@/features/viewer/components/viewer-state";
 
 interface GitHubViewerShellProps {
   header: ReactNode;
   children: ReactNode;
   className?: string;
   contentClassName?: string;
+  scrollMode?: "content" | "workspace";
 }
 
 export function GitHubViewerShell({
@@ -18,9 +25,28 @@ export function GitHubViewerShell({
   children,
   className,
   contentClassName,
+  scrollMode = "content",
 }: GitHubViewerShellProps) {
+  if (scrollMode === "workspace") {
+    return (
+      <div
+        className={cn(
+          "github-viewer flex h-full min-h-0 flex-col overflow-hidden bg-background",
+          className,
+        )}
+        data-github-viewer-scroll-mode="workspace"
+      >
+        {header}
+        <div className={cn("min-h-0 min-w-0 flex-1", contentClassName)}>{children}</div>
+      </div>
+    );
+  }
+
   return (
-    <ScrollArea className={cn("github-viewer h-full bg-background", className)}>
+    <ScrollArea
+      className={cn("github-viewer h-full bg-background", className)}
+      data-github-viewer-scroll-mode="content"
+    >
       <div className="flex min-h-full flex-col">
         {header}
         <div className={cn("min-w-0 px-4 pb-8 sm:px-6", contentClassName)}>{children}</div>
@@ -53,7 +79,7 @@ export function GitHubViewerHeader({
         className,
       )}
     >
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-3 py-2 sm:px-4">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-2 sm:px-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-1 items-start gap-3">
             {leading ? <div className="mt-0.5 shrink-0">{leading}</div> : null}
@@ -76,6 +102,102 @@ export function GitHubViewerHeader({
   );
 }
 
+interface GitHubViewerTitleProps {
+  kind: ReactNode;
+  number?: number;
+  title: ReactNode;
+  stats?: ReactNode;
+}
+
+export function GitHubViewerTitle({ kind, number, title, stats }: GitHubViewerTitleProps) {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span className="shrink-0 text-subtle-foreground">
+        {kind}
+        {number !== undefined ? ` #${number}` : null}
+      </span>
+      <span className="text-subtle-foreground/60">&rsaquo;</span>
+      <span className="min-w-0 truncate">{title}</span>
+      {stats ? (
+        <span className="ml-1 hidden shrink-0 items-center gap-1.5 sm:inline-flex">{stats}</span>
+      ) : null}
+    </span>
+  );
+}
+
+export function GitHubViewerActionsMenu({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <DropdownMenu>
+      <Tooltip content={label} side="bottom">
+        <DropdownMenuTrigger
+          render={<Button type="button" variant="ghost" size="icon-xs" aria-label={label} />}
+        >
+          <MoreHorizontal />
+        </DropdownMenuTrigger>
+      </Tooltip>
+      <DropdownMenuContent>{children}</DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function GitHubViewerBody({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("mx-auto w-full min-w-0 max-w-6xl pt-6", className)}>{children}</div>;
+}
+
+export function GitHubContentSection({
+  title,
+  children,
+  className,
+}: {
+  title: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={cn("min-w-0 space-y-3", className)}>
+      <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+export function GitHubMetadataList({ children }: { children: ReactNode }) {
+  return (
+    <dl className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-1 border-border/70 border-b pb-3">
+      {children}
+    </dl>
+  );
+}
+
+export function GitHubMetadataItem({
+  label,
+  children,
+  mono,
+}: {
+  label: ReactNode;
+  children: ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <div className="ui-text-sm flex min-w-0 items-baseline gap-1.5">
+      <dt className="shrink-0 text-subtle-foreground">{label}</dt>
+      <dd className={cn("min-w-0 truncate text-foreground", mono && "font-mono")}>{children}</dd>
+    </div>
+  );
+}
+
 interface GitHubDetailLayoutProps {
   children: ReactNode;
   sidebar?: ReactNode;
@@ -84,10 +206,10 @@ interface GitHubDetailLayoutProps {
 
 export function GitHubDetailLayout({ children, sidebar, className }: GitHubDetailLayoutProps) {
   return (
-    <div className={cn("github-detail-grid pt-6", className)}>
+    <GitHubViewerBody className={cn("github-detail-grid", className)}>
       <main className="min-w-0">{children}</main>
       {sidebar ? <aside className="github-detail-sidebar min-w-0">{sidebar}</aside> : null}
-    </div>
+    </GitHubViewerBody>
   );
 }
 
@@ -110,58 +232,5 @@ export function GitHubDetailSection({ label, children, action }: GitHubDetailSec
       </div>
       <div className="font-sans ui-text-sm min-w-0 text-foreground">{children}</div>
     </section>
-  );
-}
-
-interface GitHubViewerLoadingStateProps {
-  label: string;
-  className?: string;
-}
-
-export function GitHubViewerLoadingState({ label, className }: GitHubViewerLoadingStateProps) {
-  return (
-    <Empty className={cn("min-h-32 rounded-none p-8", className)}>
-      <EmptyDescription>
-        <Spinner label={label} showLabel compact />
-      </EmptyDescription>
-    </Empty>
-  );
-}
-
-interface GitHubViewerStateProps {
-  title?: ReactNode;
-  description?: ReactNode;
-  actionLabel?: ReactNode;
-  onAction?: () => void;
-  tone?: "neutral" | "error";
-  className?: string;
-}
-
-export function GitHubViewerState({
-  title,
-  description,
-  actionLabel,
-  onAction,
-  tone = "neutral",
-  className,
-}: GitHubViewerStateProps) {
-  return (
-    <Empty
-      tone={tone}
-      className={cn("min-h-32 rounded-none p-8", className)}
-      role={tone === "error" ? "alert" : "status"}
-    >
-      <EmptyHeader>
-        {title ? <EmptyTitle>{title}</EmptyTitle> : null}
-        {description ? <EmptyDescription>{description}</EmptyDescription> : null}
-      </EmptyHeader>
-      {actionLabel && onAction ? (
-        <EmptyContent>
-          <Button type="button" variant="default" size="xs" onClick={onAction}>
-            {actionLabel}
-          </Button>
-        </EmptyContent>
-      ) : null}
-    </Empty>
   );
 }

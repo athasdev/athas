@@ -2,8 +2,11 @@ import { toast } from "sonner";
 import { formatCompactRelativeDate } from "@/utils/date";
 import { writeClipboardText } from "@/utils/clipboard";
 
-export function getTimeAgo(dateString: string): string {
-  return formatCompactRelativeDate(dateString, { afterWeek: "weeks" });
+export function getTimeAgo(dateString: string, options: { includeAgo?: boolean } = {}): string {
+  return formatCompactRelativeDate(dateString, {
+    afterWeek: "weeks",
+    includeAgo: options.includeAgo,
+  });
 }
 
 export function getRepositoryDisplayName(repoPath: string): string {

@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  ViewerErrorState,
+  ViewerLoadingState,
+  ViewerState,
+} from "@/features/viewer/components/viewer-state";
 import type { Commit } from "../types/github-pr-viewer.types";
 import { CommentItem } from "./comment-item";
 import { CommitItem } from "./commit-item";
+import { GitHubContentSection } from "./github-viewer-shell";
 import { GitHubInlineMarkdown } from "./github-inline-editors";
-import { GitHubViewerLoadingState, GitHubViewerState } from "./github-viewer-shell";
 
 interface ActivityItemComment {
   id: string;
@@ -85,9 +90,8 @@ export function PRActivityPanel({
   }, [activityItems.length, visibleActivityCount]);
 
   return (
-    <div className="min-w-0 w-full space-y-8">
-      <section className="space-y-3">
-        <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">Description</h2>
+    <div className="w-full min-w-0 space-y-8">
+      <GitHubContentSection title="Description">
         <GitHubInlineMarkdown
           value={body}
           emptyLabel="No description provided"
@@ -95,22 +99,21 @@ export function PRActivityPanel({
           repoPath={repoPath}
           onSave={onBodySave}
         />
-      </section>
+      </GitHubContentSection>
 
-      <section className="space-y-3">
-        <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">Activity</h2>
+      <GitHubContentSection title="Activity">
         {isLoadingContent && activityItems.length === 0 ? (
-          <GitHubViewerLoadingState label="Loading activity" className="min-h-0" />
+          <ViewerLoadingState label="Loading activity" layout="section" className="min-h-0" />
         ) : contentError ? (
-          <GitHubViewerState
-            description={contentError}
+          <ViewerErrorState
+            message={contentError}
             actionLabel="Retry"
             onAction={onRetry}
-            tone="error"
+            layout="section"
             className="min-h-0"
           />
         ) : activityItems.length === 0 ? (
-          <GitHubViewerState description="No activity" className="min-h-0" />
+          <ViewerState description="No activity" layout="section" className="min-h-0" />
         ) : (
           <div className="w-full space-y-3">
             {visibleActivityItems.map((item) =>
@@ -132,7 +135,7 @@ export function PRActivityPanel({
             ) : null}
           </div>
         )}
-      </section>
+      </GitHubContentSection>
     </div>
   );
 }

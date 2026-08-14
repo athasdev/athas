@@ -5,7 +5,6 @@ import {
   ClockIcon as Clock,
   PulseIcon as Activity,
   CopyIcon as Copy,
-  DotsThreeIcon as MoreHorizontal,
   MagnifyingGlassIcon as Search,
   ArrowClockwiseIcon as RefreshCw,
   XCircleIcon as XCircle,
@@ -13,20 +12,14 @@ import {
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
-import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Empty, EmptyDescription } from "@/ui/empty";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/ui/dropdown";
+import { DropdownMenuItem } from "@/ui/dropdown";
 import Input from "@/ui/input";
+import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import { toast } from "sonner";
-import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import type {
   GitHubActionNotificationTarget,
@@ -37,7 +30,15 @@ import type {
 } from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
 import { copyToClipboard } from "../utils/github-viewer-utils";
-import { GitHubViewerHeader, GitHubViewerShell } from "./github-viewer-shell";
+import {
+  GitHubMetadataItem,
+  GitHubMetadataList,
+  GitHubViewerActionsMenu,
+  GitHubViewerBody,
+  GitHubViewerHeader,
+  GitHubViewerShell,
+  GitHubViewerTitle,
+} from "./github-viewer-shell";
 
 interface GitHubActionViewerProps {
   runId?: number;
@@ -607,16 +608,20 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
       header={
         <GitHubViewerHeader
           title={
-            <span className="flex min-w-0 items-center gap-2">
-              {details ? (
-                <WorkflowStatusIcon
-                  status={details.status}
-                  conclusion={details.conclusion}
-                  className="shrink-0"
-                />
-              ) : null}
-              <span className="min-w-0 truncate">{runTitle}</span>
-            </span>
+            <GitHubViewerTitle
+              kind="Workflow run"
+              number={resolvedRunId ?? undefined}
+              title={runTitle}
+              stats={
+                details ? (
+                  <WorkflowStatusIcon
+                    status={details.status}
+                    conclusion={details.conclusion}
+                    className="shrink-0"
+                  />
+                ) : null
+              }
+            />
           }
           meta={
             <>
@@ -636,34 +641,18 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
             </>
           }
           actions={
-            <DropdownMenu>
-              <Tooltip content="Action run actions" side="bottom">
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label="Action run actions"
-                    />
-                  }
-                >
-                  <MoreHorizontal />
-                </DropdownMenuTrigger>
-              </Tooltip>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  disabled={isLoading && Boolean(details)}
-                  onClick={() =>
-                    void (resolvedRunId === null ? resolveNotification() : fetchWorkflowRun(true))
-                  }
-                >
-                  {isLoading && details ? "Refreshing..." : "Refresh"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCopyRunLink}>Copy link</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <GitHubViewerActionsMenu label="Action run actions">
+              <DropdownMenuItem
+                disabled={isLoading && Boolean(details)}
+                onClick={() =>
+                  void (resolvedRunId === null ? resolveNotification() : fetchWorkflowRun(true))
+                }
+              >
+                {isLoading && details ? "Refreshing..." : "Refresh"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleCopyRunLink}>Copy link</DropdownMenuItem>
+            </GitHubViewerActionsMenu>
           }
         />
       }
@@ -678,80 +667,51 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
           layout="section"
         />
       ) : details ? (
-        <div className="space-y-4">
-          <dl className="flex flex-wrap items-center gap-x-5 gap-y-1 border-border/70 border-b pb-3">
+        <GitHubViewerBody className="space-y-4">
+          <GitHubMetadataList>
             {runSummaryItems.map((item) => (
-              <div key={item.label} className="ui-text-sm flex min-w-0 items-baseline gap-1.5">
-                <dt className="shrink-0 text-subtle-foreground">{item.label}</dt>
-                <dd
-                  className={cn(
-                    "min-w-0 truncate text-foreground",
-                    item.mono ? "font-mono ui-text-sm" : "ui-text-sm",
-                  )}
-                >
-                  {item.value}
-                </dd>
-              </div>
+              <GitHubMetadataItem key={item.label} label={item.label} mono={item.mono}>
+                {item.value}
+              </GitHubMetadataItem>
             ))}
-          </dl>
+          </GitHubMetadataList>
 
           <div className="space-y-2">
             {visibleJobs.map((job) => {
               const isSelectedJob = job.id != null && selectedJobId === job.id;
+              const jobMeta = [
+                formatDuration(job.startedAt, job.completedAt),
+                job.startedAt ? formatRunTime(job.startedAt) : null,
+                job.runnerName,
+                job.labels.length > 0 ? job.labels.join(", ") : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
 
               return (
-                <section
-                  key={`${job.id ?? job.name}-${job.startedAt ?? ""}`}
-                  className={cn(
-                    "rounded-xl border border-transparent bg-surface/20 transition-[background-color,border-color]",
-                    isSelectedJob && "border-border/80 bg-accent/40",
-                  )}
-                >
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
+                <section key={`${job.id ?? job.name}-${job.startedAt ?? ""}`}>
+                  <Item
+                    render={<button type="button" />}
+                    variant={isSelectedJob ? "muted" : "default"}
+                    size="sm"
                     onClick={() => handleSelectJob(job)}
-                    className={cn(
-                      "h-auto w-full justify-start rounded-xl px-3 py-2 text-left",
-                      "hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/70",
-                    )}
+                    className="min-w-0 flex-nowrap text-left"
                   >
-                    <div className="flex min-w-0 items-start gap-2">
-                      <WorkflowStatusIcon
-                        status={job.status}
-                        conclusion={job.conclusion}
-                        className="mt-0.5 shrink-0"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="ui-text-sm min-w-0 truncate text-foreground">
-                            {job.name}
-                          </span>
-                          <span className="ui-text-sm text-subtle-foreground">
-                            {getWorkflowRunStatus(job.status, job.conclusion).label}
-                          </span>
-                        </div>
-                        <div className="ui-text-sm mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-subtle-foreground">
-                          {formatDuration(job.startedAt, job.completedAt) ? (
-                            <span>{formatDuration(job.startedAt, job.completedAt)}</span>
-                          ) : null}
-                          {job.startedAt ? <span>{formatRunTime(job.startedAt)}</span> : null}
-                          {job.runnerName ? <span>{job.runnerName}</span> : null}
-                          {(job.labels ?? []).slice(0, 3).map((label) => (
-                            <Badge
-                              key={label}
-                              variant="default"
-                              size="compact"
-                              className="bg-surface/80"
-                            >
-                              {label}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </Button>
+                    <ItemMedia variant="icon">
+                      <WorkflowStatusIcon status={job.status} conclusion={job.conclusion} />
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemTitle className="w-full">
+                        <span className="min-w-0 flex-1 truncate">{job.name}</span>
+                        <span className="shrink-0 font-normal text-subtle-foreground">
+                          {getWorkflowRunStatus(job.status, job.conclusion).label}
+                        </span>
+                      </ItemTitle>
+                      {jobMeta ? (
+                        <ItemDescription className="line-clamp-1">{jobMeta}</ItemDescription>
+                      ) : null}
+                    </ItemContent>
+                  </Item>
 
                   {isSelectedJob ? (
                     <div className="mx-2 mb-2 flex min-h-64 overflow-hidden rounded-xl border border-border/70 bg-background">
@@ -762,24 +722,24 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
                       >
                         {job.steps.length > 0 ? (
                           job.steps.map((step, index) => (
-                            <Button
-                              type="button"
+                            <Item
+                              render={<button type="button" />}
                               key={`${job.name}-${step.name}-${index}`}
-                              variant="ghost"
+                              variant={selectedStepIndex === index ? "muted" : "default"}
                               size="xs"
                               onClick={() => setSelectedStepIndex(index)}
-                              className={cn(
-                                "h-auto w-full min-w-0 justify-start gap-2 rounded-lg px-2 py-1.5 text-left ui-text-sm text-subtle-foreground hover:bg-accent/50 hover:text-foreground",
-                                selectedStepIndex === index && "bg-selected text-foreground",
-                              )}
+                              className="min-w-0 flex-nowrap text-left"
                             >
-                              <WorkflowStatusIcon
-                                status={step.status}
-                                conclusion={step.conclusion}
-                                className="shrink-0"
-                              />
-                              <span className="min-w-0 flex-1 truncate">{step.name}</span>
-                            </Button>
+                              <ItemMedia variant="icon">
+                                <WorkflowStatusIcon
+                                  status={step.status}
+                                  conclusion={step.conclusion}
+                                />
+                              </ItemMedia>
+                              <ItemContent>
+                                <ItemTitle className="w-full font-normal">{step.name}</ItemTitle>
+                              </ItemContent>
+                            </Item>
                           ))
                         ) : (
                           <Empty className="min-h-0 flex-none items-start rounded-none px-2 py-2 text-left">
@@ -919,7 +879,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
               </div>
             ) : null}
           </div>
-        </div>
+        </GitHubViewerBody>
       ) : (
         <ViewerLoadingState label="Loading action run" layout="section" />
       )}
