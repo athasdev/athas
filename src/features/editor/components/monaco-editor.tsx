@@ -596,6 +596,7 @@ export function MonacoEditor({
         horizontal: scrollable ? "auto" : "hidden",
         handleMouseWheel: scrollable,
         alwaysConsumeMouseWheel: scrollable,
+        useShadows: false,
       },
     });
 
@@ -1231,6 +1232,7 @@ export function MonacoEditor({
         horizontal: scrollable ? "auto" : "hidden",
         handleMouseWheel: scrollable,
         alwaysConsumeMouseWheel: scrollable,
+        useShadows: false,
       },
     });
     if (container) syncContainedEditorFontOptions(container, fontOptions);
