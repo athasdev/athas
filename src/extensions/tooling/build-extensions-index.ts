@@ -5,9 +5,10 @@ import {
   GENERATED_CDN_DIR,
   getContributionArray,
   getExtensionCdnPath,
-  getExtensionSourceDir,
   getReservedBuiltInThemeContribution,
   listExtensionFolders,
+  readDeployableExtensionManifest,
+  readExtensionArtifacts,
 } from "./extension-workspace";
 
 type ExtensionManifest = {
@@ -106,12 +107,16 @@ function withTrailingNewline(json: unknown): string {
 
 async function buildCatalog() {
   const folders = await listExtensionFolders();
+  const artifacts = await readExtensionArtifacts();
   const registryEntries: RegistryEntry[] = [];
   const languageOwners = new Map<string, string>();
 
   for (const folder of folders) {
-    const manifestPath = join(getExtensionSourceDir(folder), "extension.json");
-    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as ExtensionManifest;
+    const manifest = (await readDeployableExtensionManifest(
+      folder,
+      artifacts,
+    )) as ExtensionManifest;
+    const manifestPath = `extensions/${folder}/extension.json`;
 
     if (!manifest.id) {
       throw new Error(`Missing id in ${manifestPath}`);

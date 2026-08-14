@@ -8,18 +8,6 @@
   "publisher": "Athas",
   "categories": ["Database"],
   "activationEvents": ["onDatabase:redis"],
-  "installation": {
-    "downloadUrl": "https://athas.dev/extensions/database/redis/darwin-arm64.tar.gz",
-    "size": 746802,
-    "checksum": "5e1e770dd25b49651453e4e022cab8e403849b9b68e793df3a7ddb66a98415f5",
-    "platformArch": {
-      "darwin-arm64": {
-        "downloadUrl": "https://athas.dev/extensions/database/redis/darwin-arm64.tar.gz",
-        "size": 746802,
-        "checksum": "5e1e770dd25b49651453e4e022cab8e403849b9b68e793df3a7ddb66a98415f5"
-      }
-    }
-  },
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -7,7 +7,20 @@ const EXTENSION_DOMAIN_ROOT = resolve(import.meta.dirname, "..");
 export const ATHAS_ROOT = resolve(EXTENSION_DOMAIN_ROOT, "../..");
 export const EXTENSIONS_ROOT = join(ATHAS_ROOT, "extensions");
 export const GENERATED_CDN_DIR = join(EXTENSIONS_ROOT, "generated", "cdn");
+export const EXTENSION_ARTIFACTS_PATH = join(EXTENSIONS_ROOT, "artifacts.json");
 export const CATALOG_DIR = join(EXTENSION_DOMAIN_ROOT, "catalog");
+const OFFICIAL_EXTENSIONS_DIR = join(EXTENSIONS_ROOT, "official");
+const COMMUNITY_EXTENSIONS_DIR = join(EXTENSIONS_ROOT, "community");
+
+export interface ExtensionArtifactsFile {
+  version: 1;
+  installations: Record<string, ExtensionManifestRecord>;
+}
+
+export interface ExtensionPackageLayoutIssue {
+  folder: string;
+  message: string;
+}
 
 const CONTRIBUTION_ALIASES: Record<string, string[]> = {
   databases: ["databases", "databaseProviders"],
@@ -76,23 +89,123 @@ export async function listExtensionFolders(): Promise<string[]> {
 
     await Promise.all(
       entries
-        .filter(
-          (entry) =>
-            entry.isDirectory() &&
-            entry.name !== "generated" &&
-            entry.name !== "node_modules" &&
-            entry.name !== "packages",
-        )
+        .filter((entry) => entry.isDirectory())
         .map((entry) => walk(join(directory, entry.name))),
     );
   }
 
-  await walk(EXTENSIONS_ROOT);
+  await Promise.all([walk(OFFICIAL_EXTENSIONS_DIR), walk(COMMUNITY_EXTENSIONS_DIR)]);
   return folders.sort((a, b) => a.localeCompare(b));
+}
+
+function isKebabCase(value: string): boolean {
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
+}
+
+async function inspectPackageDirectories(
+  root: string,
+  depth: number,
+): Promise<ExtensionPackageLayoutIssue[]> {
+  const issues: ExtensionPackageLayoutIssue[] = [];
+
+  async function walk(directory: string, remainingDepth: number) {
+    const entries = await readdir(directory, { withFileTypes: true });
+    const relativeFolder = relative(EXTENSIONS_ROOT, directory);
+
+    if (remainingDepth === 0) {
+      if (!entries.some((entry) => entry.isFile() && entry.name === "extension.json")) {
+        issues.push({
+          folder: relativeFolder,
+          message: "Package folder is missing extension.json",
+        });
+      }
+      if (!isKebabCase(basename(directory))) {
+        issues.push({ folder: relativeFolder, message: "Package folder must use kebab-case" });
+      }
+      return;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (remainingDepth > 1 && !isKebabCase(entry.name)) {
+        issues.push({
+          folder: relative(EXTENSIONS_ROOT, join(directory, entry.name)),
+          message: "Publisher folder must use kebab-case",
+        });
+      }
+      await walk(join(directory, entry.name), remainingDepth - 1);
+    }
+  }
+
+  await walk(root, depth);
+  return issues;
+}
+
+export async function inspectExtensionPackageLayout(): Promise<ExtensionPackageLayoutIssue[]> {
+  const issues = await Promise.all([
+    inspectPackageDirectories(OFFICIAL_EXTENSIONS_DIR, 1),
+    inspectPackageDirectories(COMMUNITY_EXTENSIONS_DIR, 2),
+  ]);
+  return issues.flat();
 }
 
 export function getExtensionSourceDir(folder: string): string {
   return join(EXTENSIONS_ROOT, folder);
+}
+
+export async function readExtensionSourceManifest(
+  folder: string,
+): Promise<ExtensionManifestRecord> {
+  return JSON.parse(
+    await readFile(join(getExtensionSourceDir(folder), "extension.json"), "utf8"),
+  ) as ExtensionManifestRecord;
+}
+
+export async function readExtensionArtifacts(): Promise<ExtensionArtifactsFile> {
+  try {
+    const value = JSON.parse(
+      await readFile(EXTENSION_ARTIFACTS_PATH, "utf8"),
+    ) as Partial<ExtensionArtifactsFile>;
+    return {
+      version: 1,
+      installations: value.installations ?? {},
+    };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return { version: 1, installations: {} };
+    }
+    throw error;
+  }
+}
+
+export async function writeExtensionArtifacts(artifacts: ExtensionArtifactsFile): Promise<void> {
+  const installations = Object.fromEntries(
+    Object.entries(artifacts.installations).sort(([left], [right]) => left.localeCompare(right)),
+  );
+  await writeFile(
+    EXTENSION_ARTIFACTS_PATH,
+    `${JSON.stringify({ version: 1, installations }, null, 2)}\n`,
+  );
+}
+
+export function createDeployableExtensionManifest(
+  manifest: ExtensionManifestRecord,
+  artifacts: ExtensionArtifactsFile,
+): ExtensionManifestRecord {
+  const installation =
+    typeof manifest.id === "string" ? artifacts.installations[manifest.id] : null;
+  if (!installation) return { ...manifest };
+  return { ...manifest, installation };
+}
+
+export async function readDeployableExtensionManifest(
+  folder: string,
+  artifacts?: ExtensionArtifactsFile,
+): Promise<ExtensionManifestRecord> {
+  return createDeployableExtensionManifest(
+    await readExtensionSourceManifest(folder),
+    artifacts ?? (await readExtensionArtifacts()),
+  );
 }
 
 export function getExtensionCdnPath(folder: string, manifest: ExtensionManifestRecord): string {

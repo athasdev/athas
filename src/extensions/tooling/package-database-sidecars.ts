@@ -13,7 +13,9 @@ import {
   getExtensionSourceDir,
   getGeneratedCdnPath,
   listExtensionFolders,
-  writeExtensionManifest,
+  readExtensionArtifacts,
+  readExtensionSourceManifest,
+  writeExtensionArtifacts,
   writeStableTarGz,
 } from "./extension-workspace";
 
@@ -88,8 +90,7 @@ async function findDatabaseExtensionFolders(providerFilter?: string) {
   }> = [];
 
   for (const folder of await listExtensionFolders()) {
-    const manifestPath = join(getExtensionSourceDir(folder), "extension.json");
-    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as Record<string, unknown>;
+    const manifest = await readExtensionSourceManifest(folder);
     const provider = getContributionArray(manifest, "databases")[0];
     if (!provider) continue;
     if (providerFilter && provider.id !== providerFilter) continue;
@@ -110,6 +111,7 @@ const requestedBuildTargetDir =
   argValue("--target-dir") || process.env.ATHAS_DATABASE_SIDECAR_TARGET_DIR;
 const providerFilter = argValue("--provider");
 let packagedCount = 0;
+const artifacts = await readExtensionArtifacts();
 
 if (shouldBuild && requestedBinDir) {
   throw new Error("--bin-dir cannot be used with --build. Use --target-dir instead.");
@@ -141,7 +143,6 @@ async function buildSidecar(providerId: string, binaryName: string) {
 try {
   for (const { folder, manifest, provider } of await findDatabaseExtensionFolders(providerFilter)) {
     const extensionDir = getExtensionSourceDir(folder);
-    const manifestPath = join(extensionDir, "extension.json");
     const sidecar = provider.sidecar as Record<string, string> | undefined;
     const sidecarPath = sidecar?.[platformArch];
     const providerId = String(provider.id);
@@ -176,7 +177,8 @@ try {
       checksum: await sha256(packagePath),
     };
 
-    const installation = (manifest.installation ?? {}) as Record<string, unknown>;
+    const extensionId = String(manifest.id);
+    const installation = (artifacts.installations[extensionId] ?? {}) as Record<string, unknown>;
     const platformPackages = Object.fromEntries(
       Object.entries((installation.platformArch ?? {}) as Record<string, unknown>).filter(
         ([, value]) => hasCompletePackageInfo(value),
@@ -187,9 +189,7 @@ try {
     installation.downloadUrl = packageInfo.downloadUrl;
     installation.size = packageInfo.size;
     installation.checksum = packageInfo.checksum;
-    manifest.installation = installation;
-
-    await writeExtensionManifest(manifestPath, manifest);
+    artifacts.installations[extensionId] = installation;
     packagedCount += 1;
   }
 } finally {
@@ -197,5 +197,7 @@ try {
     await rm(temporaryBuildTargetDir, { recursive: true, force: true });
   }
 }
+
+await writeExtensionArtifacts(artifacts);
 
 console.log(`Packaged ${packagedCount} database sidecar extension(s) for ${platformArch}.`);

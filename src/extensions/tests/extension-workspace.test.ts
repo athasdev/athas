@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getReservedBuiltInThemeContribution } from "@/extensions/tooling/extension-workspace";
+import {
+  createDeployableExtensionManifest,
+  getReservedBuiltInThemeContribution,
+  inspectExtensionPackageLayout,
+} from "@/extensions/tooling/extension-workspace";
 
 describe("extension workspace theme ownership", () => {
   it("reserves Athas default theme identities for built-in themes", () => {
@@ -25,5 +29,30 @@ describe("extension workspace theme ownership", () => {
         name: "Vercel Light",
       }),
     ).toBeNull();
+  });
+});
+
+describe("extension artifact metadata", () => {
+  it("adds installation metadata without mutating the source manifest", () => {
+    const source = { id: "athas.example", name: "Example" };
+    const installation = {
+      downloadUrl: "https://athas.dev/extensions/example.tar.gz",
+      size: 42,
+      checksum: "checksum",
+    };
+
+    expect(
+      createDeployableExtensionManifest(source, {
+        version: 1,
+        installations: { "athas.example": installation },
+      }),
+    ).toEqual({ ...source, installation });
+    expect(source).toEqual({ id: "athas.example", name: "Example" });
+  });
+});
+
+describe("extension package layout", () => {
+  it("keeps every package in a declared kebab-case folder", async () => {
+    await expect(inspectExtensionPackageLayout()).resolves.toEqual([]);
   });
 });

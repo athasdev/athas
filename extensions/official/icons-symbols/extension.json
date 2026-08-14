@@ -1584,10 +1584,5 @@
       "defaultFolder": "folder",
       "defaultFolderOpen": "folder-open"
     }
-  ],
-  "installation": {
-    "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/symbols/athas.icon-theme.symbols.tar.gz",
-    "size": 4759935,
-    "checksum": "6dd85ca53be39b77cc51cd16085bd188e7b9cf2ba3adbc91bcc7d91c77c21c5b"
-  }
+  ]
 }

@@ -12,7 +12,9 @@ import {
   getExtensionSourceDir,
   getGeneratedCdnPath,
   listExtensionFolders,
-  writeExtensionManifest,
+  readExtensionArtifacts,
+  readExtensionSourceManifest,
+  writeExtensionArtifacts,
   writeStableTarGz,
 } from "./extension-workspace";
 
@@ -59,12 +61,12 @@ async function createStablePackage(
 }
 
 const folders = await listExtensionFolders();
+const artifacts = await readExtensionArtifacts();
 let packagedCount = 0;
 
 for (const folder of folders) {
   const extensionDir = getExtensionSourceDir(folder);
-  const manifestPath = join(extensionDir, "extension.json");
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as Record<string, unknown>;
+  const manifest = await readExtensionSourceManifest(folder);
 
   if (!shouldPackage(manifest)) {
     continue;
@@ -77,14 +79,15 @@ for (const folder of folders) {
   await createStablePackage(extensionDir, manifest, packagePath);
 
   const packageStats = await stat(packagePath);
-  manifest.installation = {
+  artifacts.installations[extensionId] = {
     downloadUrl: `${cdnBaseUrl}/packages/${cdnPath}/${extensionId}.tar.gz`,
     size: packageStats.size,
     checksum: await sha256(packagePath),
   };
 
-  await writeExtensionManifest(manifestPath, manifest);
   packagedCount += 1;
 }
+
+await writeExtensionArtifacts(artifacts);
 
 console.log(`Packaged ${packagedCount} extension(s).`);

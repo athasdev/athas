@@ -8,18 +8,6 @@
   "publisher": "Athas",
   "categories": ["Database"],
   "activationEvents": ["onDatabase:sqlite"],
-  "installation": {
-    "downloadUrl": "https://athas.dev/extensions/database/sqlite/darwin-arm64.tar.gz",
-    "size": 1238311,
-    "checksum": "16b0b2618818afc091471e97ee9ba7dc25eee69f2e663155f2127fb54e4177b0",
-    "platformArch": {
-      "darwin-arm64": {
-        "downloadUrl": "https://athas.dev/extensions/database/sqlite/darwin-arm64.tar.gz",
-        "size": 1238311,
-        "checksum": "16b0b2618818afc091471e97ee9ba7dc25eee69f2e663155f2127fb54e4177b0"
-      }
-    }
-  },
   "license": "MIT",
   "repository": {
     "type": "git",

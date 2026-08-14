@@ -2,23 +2,24 @@
  * Generate the extension CDN manifest from source extension folders.
  */
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   GENERATED_CDN_DIR,
   getContributionArray,
   getExtensionCdnPath,
-  getExtensionSourceDir,
   getReservedBuiltInThemeContribution,
   listExtensionFolders,
+  readDeployableExtensionManifest,
+  readExtensionArtifacts,
 } from "./extension-workspace";
 
 const folders = await listExtensionFolders();
+const artifacts = await readExtensionArtifacts();
 const manifests: Record<string, unknown> = {};
 
 for (const folder of folders) {
-  const manifestPath = join(getExtensionSourceDir(folder), "extension.json");
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as Record<string, unknown>;
+  const manifest = await readDeployableExtensionManifest(folder, artifacts);
   const reservedTheme = getContributionArray(manifest, "themes").find(
     getReservedBuiltInThemeContribution,
   );

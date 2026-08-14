@@ -28,10 +28,5 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/athasdev/athas"
-  },
-  "installation": {
-    "downloadUrl": "https://athas.dev/extensions/packages/integration/gitlab/athas.gitlab.tar.gz",
-    "size": 11799,
-    "checksum": "29bbc0c5964335fe500df35288b138b1155b1553df8e3e600c1ac373610d1411"
   }
 }

@@ -8,11 +8,6 @@
   "publisher": "Athas",
   "categories": ["Icon Theme"],
   "activationEvents": ["onIconTheme:market-icons"],
-  "installation": {
-    "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/market/athas.icon-theme.market.tar.gz",
-    "size": 5655,
-    "checksum": "01d9b43fe9840d7edd39f127ee30074bfb2c05109c540d5d4f415c02062ff22b"
-  },
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -12,7 +12,11 @@ import {
   getExtensionCdnPath,
   getExtensionSourceDir,
   getReservedBuiltInThemeContribution,
+  inspectExtensionPackageLayout,
   listExtensionFolders,
+  readDeployableExtensionManifest,
+  readExtensionArtifacts,
+  readExtensionSourceManifest,
 } from "./extension-workspace";
 
 interface ValidationError {
@@ -398,7 +402,9 @@ async function validateExtension(folder: string): Promise<void> {
     }
   }
 
-  await validateInstallPackage(folder, manifest);
+  if (manifest.installation !== undefined) {
+    error(folder, "Source manifest must keep installation metadata in extensions/artifacts.json");
+  }
   validateLanguageToolConfigs(folder, manifest);
 
   const capabilities = manifest.capabilities as Record<string, unknown> | undefined;
@@ -454,11 +460,28 @@ async function listGeneratedExtensionManifests(directory: string): Promise<strin
 
 async function validateGeneratedExtensionPaths(extensionFolders: string[]): Promise<void> {
   const expectedPaths = new Set<string>();
+  const artifacts = await readExtensionArtifacts();
 
   for (const folder of extensionFolders) {
-    const manifestPath = join(getExtensionSourceDir(folder), "extension.json");
-    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as Record<string, unknown>;
+    const sourceManifest = await readExtensionSourceManifest(folder);
+    const manifest = await readDeployableExtensionManifest(folder, artifacts);
     expectedPaths.add(join(getExtensionCdnPath(folder, manifest), "extension.json"));
+    await validateInstallPackage(folder, manifest);
+
+    const generatedManifestPath = join(
+      GENERATED_CDN_DIR,
+      getExtensionCdnPath(folder, sourceManifest),
+      "extension.json",
+    );
+    if (await fileExists(generatedManifestPath)) {
+      const generatedManifest = JSON.parse(await readFile(generatedManifestPath, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      if (JSON.stringify(generatedManifest) !== JSON.stringify(manifest)) {
+        error(folder, "Generated manifest is out of date with source manifest and artifacts");
+      }
+    }
   }
 
   const generatedPaths = new Set(await listGeneratedExtensionManifests(GENERATED_CDN_DIR));
@@ -565,6 +588,10 @@ async function validateAgentsAgainstAcpRegistry(extensionFolders: string[]): Pro
 }
 
 console.log("Validating extensions...\n");
+
+for (const issue of await inspectExtensionPackageLayout()) {
+  error(issue.folder, issue.message);
+}
 
 const extensionFolders = await listExtensionFolders();
 console.log(`Found ${extensionFolders.length} extensions\n`);
