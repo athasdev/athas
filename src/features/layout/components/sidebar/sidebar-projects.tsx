@@ -14,7 +14,6 @@ import {
 } from "@/ui/context-menu";
 import {
   DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -22,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import {
-  ChevronExpandYIcon,
+  CaretRightIcon,
   CopyIcon,
   FolderIcon,
   FolderOpenIcon,
@@ -33,7 +32,7 @@ import {
   TrashIcon,
   WindowExpandIcon,
 } from "@/ui/icons";
-import { SidebarListItem } from "@/ui/sidebar";
+import { SidebarListItem, SidebarMenuContent } from "@/ui/sidebar";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 
@@ -156,7 +155,7 @@ export function SidebarProjectSwitcher({
                 )
               }
               iconOnly={!expanded}
-              trailing={expanded ? <ChevronExpandYIcon className="size-3.5" /> : undefined}
+              trailing={expanded ? <CaretRightIcon className="size-3.5" /> : undefined}
               aria-label="Switch project"
               title={expanded ? undefined : projectName}
             >
@@ -164,7 +163,7 @@ export function SidebarProjectSwitcher({
             </SidebarListItem>
           }
         />
-        <DropdownMenuContent align="start" className="w-(--anchor-width)">
+        <SidebarMenuContent>
           {projects.length > 0 ? (
             <>
               <DropdownMenuRadioGroup
@@ -193,7 +192,7 @@ export function SidebarProjectSwitcher({
             <FolderOpenIcon />
             Open project…
           </DropdownMenuItem>
-        </DropdownMenuContent>
+        </SidebarMenuContent>
       </DropdownMenu>
       {iconPickerProject ? (
         <ProjectIconPicker

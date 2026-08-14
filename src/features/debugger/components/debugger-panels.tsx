@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { Empty, EmptyDescription } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
@@ -81,14 +81,6 @@ export function DebugSection({
   );
 }
 
-export function DebugEmptyState({ children }: { children: ReactNode }) {
-  return (
-    <Empty className="min-h-0 flex-none rounded-none px-3 py-6">
-      <EmptyDescription>{children}</EmptyDescription>
-    </Empty>
-  );
-}
-
 export function DebugSessionStatusIcon({ status }: { status: "idle" | "running" | "paused" }) {
   if (status === "running") {
     return <Spinner label="Running" compact />;
@@ -111,7 +103,7 @@ export function DebugStackFrames({
   onSelect: (frameId: number, sourcePath?: string, line?: number) => Promise<void>;
 }) {
   if (frames.length === 0) {
-    return <DebugEmptyState>{EMPTY_DEBUG_SECTION_MESSAGES.stack}</DebugEmptyState>;
+    return <EmptyState layout="sidebar" message={EMPTY_DEBUG_SECTION_MESSAGES.stack} />;
   }
 
   return (
@@ -156,7 +148,7 @@ export function DebugBreakpointsList({
   onRemove: (breakpoint: DebugBreakpoint) => void;
 }) {
   if (breakpoints.length === 0) {
-    return <DebugEmptyState>{EMPTY_DEBUG_SECTION_MESSAGES.breakpoints}</DebugEmptyState>;
+    return <EmptyState layout="sidebar" message={EMPTY_DEBUG_SECTION_MESSAGES.breakpoints} />;
   }
 
   return (

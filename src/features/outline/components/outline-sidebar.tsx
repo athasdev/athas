@@ -345,15 +345,17 @@ export function OutlineSidebar() {
       >
         {!isSupported ? (
           <EmptyState
+            layout="sidebar"
             message={activeBuffer ? "No outline for the active file." : "No active file."}
             action={{ label: "Open a File", onClick: () => void handleOpenFile() }}
           />
         ) : isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Spinner label="Loading outline" showLabel compact />
-          </div>
+          <EmptyState
+            layout="sidebar"
+            message={<Spinner label="Loading outline" showLabel compact />}
+          />
         ) : visibleSymbols.length === 0 ? (
-          <EmptyState message="No symbols found." />
+          <EmptyState layout="sidebar" message="No symbols found." />
         ) : (
           visibleSymbols.map((symbol) => (
             <ContextMenu key={symbol.id}>

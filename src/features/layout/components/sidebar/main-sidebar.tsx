@@ -57,7 +57,6 @@ import {
   ContextMenuContent,
   ContextMenuGroup,
   ContextMenuItem,
-  ContextMenuLabel,
   ContextMenuSeparator,
   ContextMenuSub,
   ContextMenuSubContent,
@@ -73,7 +72,7 @@ import {
   FolderIcon,
   FolderOpenIcon,
   GitBranchIcon,
-  GitPullRequestIcon,
+  GithubLogoIcon,
   MagnifyingGlassIcon,
   NodesIcon,
   SparkleIcon,
@@ -243,7 +242,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             {
               id: "github-prs",
               label: "Pull Requests",
-              icon: <GitPullRequestIcon />,
+              icon: <GithubLogoIcon />,
             },
           ]
         : []),
@@ -679,7 +678,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         style={{
           boxSizing: "border-box",
           paddingLeft: ACTIVITY_RAIL_HORIZONTAL_GUTTER,
-          paddingRight: ACTIVITY_RAIL_HORIZONTAL_GUTTER,
+          paddingRight: expanded ? 0 : ACTIVITY_RAIL_HORIZONTAL_GUTTER,
           transform:
             position === "previous"
               ? "translateX(-100%)"
@@ -797,7 +796,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       </ContextMenuTrigger>
       <ContextMenuContent className="min-w-56">
         <ContextMenuGroup>
-          <ContextMenuLabel>Actions</ContextMenuLabel>
           <ContextMenuItem onClick={handleNewAgent}>
             <SparkleIcon />
             New Agent
@@ -831,11 +829,10 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         <ContextMenuSub>
           <ContextMenuSubTrigger>
             <EyeIcon />
-            Show in Activity Sidebar
+            Visible Items
           </ContextMenuSubTrigger>
           <ContextMenuSubContent className="min-w-56">
             <ContextMenuGroup>
-              <ContextMenuLabel>Show in Activity Sidebar</ContextMenuLabel>
               <ContextMenuCheckboxItem
                 checked={showActivityRailProjectSwitcher}
                 onCheckedChange={(checked) =>

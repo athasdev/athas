@@ -22,8 +22,13 @@ import { isOpenableGitWorktree } from "@/features/git/utils/git-worktree-open";
 import { getProjectNameFromPath } from "@/features/layout/components/sidebar/sidebar-projects";
 import { SidebarWorktreeHistoryRow } from "@/features/layout/components/sidebar/sidebar-worktree-history-row";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import {
+  CLOSE_TERMINAL_EVENT,
+  RENAME_TERMINAL_EVENT,
+} from "@/features/terminal/constants/terminal-events";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { Button } from "@/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -42,6 +47,7 @@ import {
   PushPinSlashIcon,
   TerminalIcon,
   TrashIcon,
+  XIcon,
 } from "@/ui/icons";
 import { InlineRenameInput } from "@/ui/input";
 import {
@@ -50,6 +56,7 @@ import {
   SidebarListItem,
   SidebarSectionHeader,
   SidebarSectionLabel,
+  SidebarSectionStack,
 } from "@/ui/sidebar";
 
 const AGENT_HISTORY_INLINE_LIMIT = 5;
@@ -220,6 +227,138 @@ function SidebarAgentHistoryRow({
   );
 }
 
+interface SidebarTerminalHistoryRowProps {
+  name: string;
+  active: boolean;
+  pinned: boolean;
+  onOpen: () => void;
+  onRename: (name: string) => void;
+  onPinChange: () => void;
+  onClose: () => void;
+}
+
+function SidebarTerminalHistoryRow({
+  name,
+  active,
+  pinned,
+  onOpen,
+  onRename,
+  onPinChange,
+  onClose,
+}: SidebarTerminalHistoryRowProps) {
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(name);
+
+  if (isRenaming) {
+    return (
+      <SidebarListEditor leading={<TerminalIcon className="size-4" />}>
+        <InlineRenameInput
+          value={renameValue}
+          onValueChange={setRenameValue}
+          onSubmit={(nextName) => {
+            if (nextName !== name) onRename(nextName);
+            setIsRenaming(false);
+          }}
+          onCancel={() => setIsRenaming(false)}
+          aria-label={`Rename ${name}`}
+        />
+      </SidebarListEditor>
+    );
+  }
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger className="block" onContextMenu={(event) => event.stopPropagation()}>
+        <div className="group/sidebar-terminal relative flex w-full min-w-0 items-center">
+          <SidebarListItem
+            active={active}
+            leading={<TerminalIcon className="size-4" />}
+            className="pr-12"
+            onClick={onOpen}
+          >
+            {name}
+          </SidebarListItem>
+          <span className="pointer-events-none absolute right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/sidebar-terminal:pointer-events-auto group-hover/sidebar-terminal:opacity-100 group-focus-within/sidebar-terminal:pointer-events-auto group-focus-within/sidebar-terminal:opacity-100">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              active={pinned}
+              className="size-5"
+              aria-pressed={pinned}
+              tooltip={pinned ? "Unpin terminal" : "Pin terminal"}
+              tooltipSide="right"
+              onClick={(event) => {
+                event.stopPropagation();
+                onPinChange();
+              }}
+            >
+              {pinned ? (
+                <PushPinSlashIcon className="size-3" />
+              ) : (
+                <PushPinIcon className="size-3" />
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              className="size-5 hover:text-destructive"
+              tooltip="Close terminal"
+              tooltipSide="right"
+              onClick={(event) => {
+                event.stopPropagation();
+                onClose();
+              }}
+            >
+              <XIcon className="size-3" />
+            </Button>
+          </span>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onClick={onOpen}>
+          <OpenExternalIcon />
+          Open
+        </ContextMenuItem>
+        <ContextMenuItem
+          onClick={() => {
+            setRenameValue(name);
+            setIsRenaming(true);
+          }}
+        >
+          <PencilSimpleLineIcon />
+          Rename
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onPinChange}>
+          {pinned ? <PushPinSlashIcon /> : <PushPinIcon />}
+          {pinned ? "Unpin" : "Pin"}
+        </ContextMenuItem>
+        <ContextMenuItem variant="destructive" onClick={onClose}>
+          <XIcon />
+          Close
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  );
+}
+
+function closePanelTerminal(terminalId: string) {
+  window.dispatchEvent(
+    new CustomEvent(CLOSE_TERMINAL_EVENT, {
+      detail: { terminalId },
+    }),
+  );
+}
+
+function renameTerminal(terminalId: string, name: string) {
+  window.dispatchEvent(
+    new CustomEvent(RENAME_TERMINAL_EVENT, {
+      detail: { terminalId, name },
+    }),
+  );
+}
+
 export function SidebarAgentHistory({
   expanded,
   workspacePath,
@@ -274,21 +413,14 @@ export function SidebarAgentHistory({
   if (!expanded) return <SidebarNewAgentButton iconOnly />;
 
   return (
-    <div className="mt-3 w-full">
-      <div className="relative">
-        <SidebarSectionHeader
-          expanded={!isCollapsed}
-          onToggle={toggleCollapsed}
-          className={visibleChats.length > 0 ? "pr-8" : undefined}
-        >
-          Agents
-        </SidebarSectionHeader>
-        {visibleChats.length > 0 ? (
-          <span className="absolute top-0 right-1 flex h-(--athas-tab-height) items-center">
-            <SidebarNewAgentButton compact />
-          </span>
-        ) : null}
-      </div>
+    <SidebarSectionStack>
+      <SidebarSectionHeader
+        expanded={!isCollapsed}
+        onToggle={toggleCollapsed}
+        action={visibleChats.length > 0 ? <SidebarNewAgentButton compact /> : undefined}
+      >
+        Agents
+      </SidebarSectionHeader>
       {!isCollapsed ? (
         <>
           {visibleChats.length === 0 ? <SidebarNewAgentButton /> : null}
@@ -325,7 +457,7 @@ export function SidebarAgentHistory({
           />
         </>
       ) : null}
-    </div>
+    </SidebarSectionStack>
   );
 }
 
@@ -353,6 +485,7 @@ export function SidebarPinnedItems({
   const activeBufferId = useBufferStore((state) => state.activeBufferId);
   const setActiveBuffer = useBufferStore.use.actions().setActiveBuffer;
   const handleTabPin = useBufferStore.use.actions().handleTabPin;
+  const handleTabClose = useBufferStore.use.actions().handleTabClose;
   const panelTerminals = useTerminalTabsStore((state) => state.terminals);
   const activePanelTerminalId = useTerminalTabsStore((state) => state.activeTerminalId);
   const dispatchTerminalAction = useTerminalTabsStore((state) => state.actions.dispatch);
@@ -401,7 +534,7 @@ export function SidebarPinnedItems({
   }
 
   return (
-    <div className="mt-3 w-full">
+    <SidebarSectionStack>
       <SidebarSectionLabel>Pinned</SidebarSectionLabel>
       {pinnedChats.map((chat) => (
         <SidebarAgentHistoryRow
@@ -420,63 +553,41 @@ export function SidebarPinnedItems({
         />
       ))}
       {pinnedPanelTerminals.map((terminal) => (
-        <ContextMenu key={`panel-${terminal.id}`}>
-          <ContextMenuTrigger className="block" onContextMenu={(event) => event.stopPropagation()}>
-            <SidebarListItem
-              active={
-                isBottomPaneVisible &&
-                bottomPaneActiveTab === "terminal" &&
-                terminal.id === activePanelTerminalId
-              }
-              leading={<TerminalIcon className="size-4" />}
-              onClick={() => handleOpenPanelTerminal(terminal.id)}
-            >
-              {terminal.name}
-            </SidebarListItem>
-          </ContextMenuTrigger>
-          <ContextMenuContent>
-            <ContextMenuItem onClick={() => handleOpenPanelTerminal(terminal.id)}>
-              <OpenExternalIcon />
-              Open
-            </ContextMenuItem>
-            <ContextMenuItem
-              onClick={() =>
-                dispatchTerminalAction({
-                  type: "PIN_TERMINAL",
-                  payload: { id: terminal.id, isPinned: false },
-                })
-              }
-            >
-              <PushPinSlashIcon />
-              Unpin
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
+        <SidebarTerminalHistoryRow
+          key={`panel-${terminal.id}`}
+          name={terminal.name}
+          active={
+            isBottomPaneVisible &&
+            bottomPaneActiveTab === "terminal" &&
+            terminal.id === activePanelTerminalId
+          }
+          pinned
+          onOpen={() => handleOpenPanelTerminal(terminal.id)}
+          onRename={(name) => renameTerminal(terminal.id, name)}
+          onPinChange={() =>
+            dispatchTerminalAction({
+              type: "PIN_TERMINAL",
+              payload: { id: terminal.id, isPinned: false },
+            })
+          }
+          onClose={() => closePanelTerminal(terminal.id)}
+        />
       ))}
       {pinnedTerminalBuffers.map((terminal) => (
-        <ContextMenu key={`buffer-${terminal.id}`}>
-          <ContextMenuTrigger className="block" onContextMenu={(event) => event.stopPropagation()}>
-            <SidebarListItem
-              active={terminal.id === activeBufferId}
-              leading={<TerminalIcon className="size-4" />}
-              onClick={() => setActiveBuffer(terminal.id)}
-            >
-              {terminal.name}
-            </SidebarListItem>
-          </ContextMenuTrigger>
-          <ContextMenuContent>
-            <ContextMenuItem onClick={() => setActiveBuffer(terminal.id)}>
-              <OpenExternalIcon />
-              Open
-            </ContextMenuItem>
-            <ContextMenuItem onClick={() => handleTabPin(terminal.id)}>
-              <PushPinSlashIcon />
-              Unpin
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
+        <SidebarTerminalHistoryRow
+          key={`buffer-${terminal.id}`}
+          name={terminal.name}
+          active={terminal.id === activeBufferId}
+          pinned
+          onOpen={() => setActiveBuffer(terminal.id)}
+          onRename={(name) => {
+            if (terminal.type === "terminal") renameTerminal(terminal.sessionId, name);
+          }}
+          onPinChange={() => handleTabPin(terminal.id)}
+          onClose={() => handleTabClose(terminal.id)}
+        />
       ))}
-    </div>
+    </SidebarSectionStack>
   );
 }
 
@@ -484,6 +595,8 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
   const buffers = useBufferStore((state) => state.buffers);
   const activeBufferId = useBufferStore((state) => state.activeBufferId);
   const setActiveBuffer = useBufferStore.use.actions().setActiveBuffer;
+  const handleTabPin = useBufferStore.use.actions().handleTabPin;
+  const handleTabClose = useBufferStore.use.actions().handleTabClose;
   const panelTerminals = useTerminalTabsStore((state) => state.terminals);
   const activePanelTerminalId = useTerminalTabsStore((state) => state.activeTerminalId);
   const dispatchTerminalAction = useTerminalTabsStore((state) => state.actions.dispatch);
@@ -538,17 +651,12 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
   }
 
   return (
-    <div className="mt-3 w-full">
-      <div className="relative">
-        <SidebarSectionHeader
-          expanded={!isCollapsed}
-          onToggle={toggleCollapsed}
-          className={terminalCount > 0 ? "pr-8" : undefined}
-        >
-          Terminals
-        </SidebarSectionHeader>
-        {terminalCount > 0 ? (
-          <span className="absolute top-0 right-1 flex h-(--athas-tab-height) items-center">
+    <SidebarSectionStack>
+      <SidebarSectionHeader
+        expanded={!isCollapsed}
+        onToggle={toggleCollapsed}
+        action={
+          terminalCount > 0 ? (
             <SidebarHeaderIconButton
               tooltip="New Terminal"
               tooltipSide="right"
@@ -558,9 +666,11 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
             >
               <PlusIcon />
             </SidebarHeaderIconButton>
-          </span>
-        ) : null}
-      </div>
+          ) : undefined
+        }
+      >
+        Terminals
+      </SidebarSectionHeader>
       {!isCollapsed ? (
         <>
           {terminalCount === 0 ? (
@@ -573,32 +683,43 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
             </SidebarListItem>
           ) : null}
           {regularPanelTerminals.map((terminal) => (
-            <SidebarListItem
+            <SidebarTerminalHistoryRow
               key={`panel-${terminal.id}`}
+              name={terminal.name}
               active={
                 isBottomPaneVisible &&
                 bottomPaneActiveTab === "terminal" &&
                 terminal.id === activePanelTerminalId
               }
-              leading={<TerminalIcon className="size-4" />}
-              onClick={() => handleOpenPanelTerminal(terminal.id)}
-            >
-              {terminal.name}
-            </SidebarListItem>
+              pinned={false}
+              onOpen={() => handleOpenPanelTerminal(terminal.id)}
+              onRename={(name) => renameTerminal(terminal.id, name)}
+              onPinChange={() =>
+                dispatchTerminalAction({
+                  type: "PIN_TERMINAL",
+                  payload: { id: terminal.id, isPinned: true },
+                })
+              }
+              onClose={() => closePanelTerminal(terminal.id)}
+            />
           ))}
           {terminalBuffers.map((terminal) => (
-            <SidebarListItem
+            <SidebarTerminalHistoryRow
               key={`buffer-${terminal.id}`}
+              name={terminal.name}
               active={terminal.id === activeBufferId}
-              leading={<TerminalIcon className="size-4" />}
-              onClick={() => setActiveBuffer(terminal.id)}
-            >
-              {terminal.name}
-            </SidebarListItem>
+              pinned={false}
+              onOpen={() => setActiveBuffer(terminal.id)}
+              onRename={(name) => {
+                if (terminal.type === "terminal") renameTerminal(terminal.sessionId, name);
+              }}
+              onPinChange={() => handleTabPin(terminal.id)}
+              onClose={() => handleTabClose(terminal.id)}
+            />
           ))}
         </>
       ) : null}
-    </div>
+    </SidebarSectionStack>
   );
 }
 
@@ -653,17 +774,12 @@ export function SidebarWorktreeHistory({
   }
 
   return (
-    <div className="mt-3 w-full">
-      <div className="relative">
-        <SidebarSectionHeader
-          expanded={!isCollapsed}
-          onToggle={toggleCollapsed}
-          className={openableWorktrees.length > 0 ? "pr-8" : undefined}
-        >
-          Worktrees
-        </SidebarSectionHeader>
-        {openableWorktrees.length > 0 ? (
-          <span className="absolute top-0 right-1 flex h-(--athas-tab-height) items-center">
+    <SidebarSectionStack>
+      <SidebarSectionHeader
+        expanded={!isCollapsed}
+        onToggle={toggleCollapsed}
+        action={
+          openableWorktrees.length > 0 ? (
             <SidebarHeaderIconButton
               tooltip="New Worktree"
               tooltipSide="right"
@@ -672,9 +788,11 @@ export function SidebarWorktreeHistory({
             >
               <PlusIcon />
             </SidebarHeaderIconButton>
-          </span>
-        ) : null}
-      </div>
+          ) : undefined
+        }
+      >
+        Worktrees
+      </SidebarSectionHeader>
       {!isCollapsed ? (
         <>
           {openableWorktrees.length === 0 ? (
@@ -697,6 +815,6 @@ export function SidebarWorktreeHistory({
             : null}
         </>
       ) : null}
-    </div>
+    </SidebarSectionStack>
   );
 }

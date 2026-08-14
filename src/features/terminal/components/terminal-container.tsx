@@ -3,6 +3,10 @@ import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import {
+  CLOSE_TERMINAL_EVENT,
+  RENAME_TERMINAL_EVENT,
+} from "@/features/terminal/constants/terminal-events";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
@@ -410,6 +414,27 @@ const TerminalContainer = ({
     window.addEventListener("close-active-terminal", handleCloseActiveTerminal);
     return () => window.removeEventListener("close-active-terminal", handleCloseActiveTerminal);
   }, [activeTerminalId, terminals, closeTerminal, focusNewTerminal]);
+
+  useEffect(() => {
+    const handleCloseTerminal = (event: Event) => {
+      const terminalId = (event as CustomEvent<{ terminalId?: string }>).detail?.terminalId;
+      if (terminalId) handleTabClose(terminalId);
+    };
+
+    window.addEventListener(CLOSE_TERMINAL_EVENT, handleCloseTerminal);
+    return () => window.removeEventListener(CLOSE_TERMINAL_EVENT, handleCloseTerminal);
+  }, [handleTabClose]);
+
+  useEffect(() => {
+    const handleRenameTerminal = (event: Event) => {
+      const { terminalId, name } = (event as CustomEvent<{ terminalId?: string; name?: string }>)
+        .detail;
+      if (terminalId && name) handleTabRename(terminalId, name);
+    };
+
+    window.addEventListener(RENAME_TERMINAL_EVENT, handleRenameTerminal);
+    return () => window.removeEventListener(RENAME_TERMINAL_EVENT, handleRenameTerminal);
+  }, [handleTabRename]);
 
   // Store pending commands for terminals that are initializing
   const pendingCommandsRef = useRef<Map<string, string>>(new Map());

@@ -1,18 +1,26 @@
-import { useMemo, type ReactNode } from "react";
+import { Fragment, useCallback, useMemo, type ReactNode } from "react";
 import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
 import { normalizeItemOrder } from "@/features/layout/config/item-order";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { SidebarListItem } from "@/ui/sidebar";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/ui/dropdown";
+import { SidebarListItem, SidebarListMenuItem } from "@/ui/sidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import {
   BoxIcon,
+  ChatCircleTextIcon,
+  ClockCounterClockwiseIcon,
+  FolderOpenIcon,
   GitBranchIcon,
+  GitDiffIcon,
+  GitPullRequestIcon,
   ExtensionsIcon,
   FilesIcon,
-  GitPullRequestIcon,
+  GithubLogoIcon,
+  LightningIcon,
   MagnifyingGlassIcon,
+  NodesIcon,
 } from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -26,6 +34,13 @@ interface SidebarPaneItem {
   onClick?: () => void;
   ariaLabel?: string;
   className?: string;
+  submenuItems?: Array<{
+    id: string;
+    label: string;
+    icon?: ReactNode;
+    separatorBefore?: boolean;
+    onClick: () => void;
+  }>;
   tooltip?: {
     content: string;
     shortcut?: string;
@@ -51,9 +66,9 @@ interface SidebarPaneSelectorProps {
   coreFeatures: CoreFeaturesState;
   onViewChange: (view: SidebarView) => void;
   onSearchClick?: () => void;
-  onExtensionsClick?: () => void;
   isSearchActive?: boolean;
-  isExtensionsActive?: boolean;
+  onExtensionsClick: () => void;
+  isExtensionsActive: boolean;
   compact?: boolean;
   showLabels?: boolean;
   orientation?: "horizontal" | "vertical";
@@ -67,8 +82,8 @@ export const SidebarPaneSelector = ({
   coreFeatures,
   onViewChange,
   onSearchClick,
-  onExtensionsClick,
   isSearchActive = false,
+  onExtensionsClick,
   isExtensionsActive = false,
   compact = false,
   showLabels = false,
@@ -90,6 +105,43 @@ export const SidebarPaneSelector = ({
   );
   const hiddenSidebarActivityItems = useSettingsStore(
     (state) => state.settings.hiddenSidebarActivityItems,
+  );
+
+  const openGitSubview = useCallback(
+    (detail: unknown) => {
+      onViewChange("git");
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("athas:git-palette-action", { detail }));
+      }, 0);
+    },
+    [onViewChange],
+  );
+
+  const openGitHubSubview = useCallback(
+    (section: "pull-requests" | "issues" | "actions") => {
+      const settingBySection = {
+        "pull-requests": "showGitHubPullRequests",
+        issues: "showGitHubIssues",
+        actions: "showGitHubActions",
+      } as const;
+
+      onViewChange("github-prs");
+      void (async () => {
+        const settingKey = settingBySection[section];
+        const settingsStore = useSettingsStore.getState();
+        if (!settingsStore.settings[settingKey]) {
+          await settingsStore.actions.updateSetting(settingKey, true);
+        }
+        window.setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent("athas:github-palette-action", {
+              detail: { type: "show-section", section },
+            }),
+          );
+        }, 0);
+      })();
+    },
+    [onViewChange],
   );
 
   const items = useMemo<SidebarPaneItem[]>(
@@ -132,6 +184,39 @@ export const SidebarPaneSelector = ({
               icon: <GitBranchIcon className={iconClassName} />,
               isActive: isPrimarySidebarItemActive && isGitViewActive,
               onClick: () => onViewChange("git"),
+              submenuItems: [
+                {
+                  id: "changes",
+                  label: "Changes",
+                  icon: <GitDiffIcon />,
+                  onClick: () => openGitSubview({ type: "show-tab", tab: "changes" }),
+                },
+                {
+                  id: "history",
+                  label: "History",
+                  icon: <ClockCounterClockwiseIcon />,
+                  onClick: () => openGitSubview({ type: "show-tab", tab: "history" }),
+                },
+                {
+                  id: "repositories",
+                  label: "Repositories",
+                  icon: <FolderOpenIcon />,
+                  separatorBefore: true,
+                  onClick: () => openGitSubview({ type: "manage-branches", tab: "repositories" }),
+                },
+                {
+                  id: "branches",
+                  label: "Branches",
+                  icon: <GitBranchIcon />,
+                  onClick: () => openGitSubview({ type: "manage-branches", tab: "branches" }),
+                },
+                {
+                  id: "worktrees",
+                  label: "Worktrees",
+                  icon: <NodesIcon />,
+                  onClick: () => openGitSubview({ type: "manage-branches", tab: "worktrees" }),
+                },
+              ],
               ariaLabel: "Git Source Control",
               tooltip: {
                 content: "Source Control",
@@ -146,9 +231,29 @@ export const SidebarPaneSelector = ({
             {
               id: "github-prs",
               label: showLabels ? "Pull Requests" : undefined,
-              icon: <GitPullRequestIcon className={iconClassName} />,
+              icon: <GithubLogoIcon className={iconClassName} />,
               isActive: isPrimarySidebarItemActive && isGitHubPRsViewActive,
               onClick: () => onViewChange("github-prs"),
+              submenuItems: [
+                {
+                  id: "pull-requests",
+                  label: "Pull Requests",
+                  icon: <GitPullRequestIcon />,
+                  onClick: () => openGitHubSubview("pull-requests"),
+                },
+                {
+                  id: "issues",
+                  label: "Issues",
+                  icon: <ChatCircleTextIcon />,
+                  onClick: () => openGitHubSubview("issues"),
+                },
+                {
+                  id: "actions",
+                  label: "Actions",
+                  icon: <LightningIcon />,
+                  onClick: () => openGitHubSubview("actions"),
+                },
+              ],
               ariaLabel: "GitHub Pull Requests",
               tooltip: {
                 content: "Pull Requests",
@@ -178,7 +283,7 @@ export const SidebarPaneSelector = ({
         label: showLabels ? "Extensions" : undefined,
         icon: <ExtensionsIcon className={iconClassName} />,
         isActive: isExtensionsActive,
-        onClick: onExtensionsClick ?? (() => onViewChange("extensions")),
+        onClick: onExtensionsClick,
         ariaLabel: "Extensions",
         tooltip: {
           content: "Extensions",
@@ -216,8 +321,10 @@ export const SidebarPaneSelector = ({
       isSearchActive,
       isExtensionsActive,
       isSidebarVisible,
-      onExtensionsClick,
+      openGitHubSubview,
+      openGitSubview,
       onSearchClick,
+      onExtensionsClick,
       onViewChange,
       showLabels,
       tooltipSide,
@@ -239,21 +346,53 @@ export const SidebarPaneSelector = ({
   if (isVertical) {
     return (
       <nav aria-label="Activity views" className="flex w-full flex-col gap-0.5">
-        {visibleItems.map((item) => (
-          <SidebarListItem
-            key={item.id}
-            active={!!item.isActive}
-            leading={item.icon}
-            iconOnly={!showLabels}
-            onClick={item.onClick}
-            aria-label={item.ariaLabel}
-            aria-current={item.isActive ? "page" : undefined}
-            title={!showLabels ? (item.tooltip?.content ?? item.ariaLabel ?? item.id) : undefined}
-            className="ui-text-sm min-h-6 py-1"
-          >
-            {item.label ?? item.tooltip?.content ?? item.ariaLabel ?? item.id}
-          </SidebarListItem>
-        ))}
+        {visibleItems.map((item) => {
+          const label = item.label ?? item.tooltip?.content ?? item.ariaLabel ?? item.id;
+
+          if (item.submenuItems?.length) {
+            return (
+              <SidebarListMenuItem
+                key={item.id}
+                active={!!item.isActive}
+                leading={item.icon}
+                iconOnly={!showLabels}
+                onClick={item.onClick}
+                aria-label={item.ariaLabel}
+                aria-current={item.isActive ? "page" : undefined}
+                title={
+                  !showLabels ? (item.tooltip?.content ?? item.ariaLabel ?? item.id) : undefined
+                }
+                menuLabel={`Choose ${item.tooltip?.content ?? label} view`}
+                menu={item.submenuItems.map((submenuItem) => (
+                  <Fragment key={submenuItem.id}>
+                    {submenuItem.separatorBefore ? <DropdownMenuSeparator /> : null}
+                    <DropdownMenuItem onClick={submenuItem.onClick}>
+                      {submenuItem.icon}
+                      {submenuItem.label}
+                    </DropdownMenuItem>
+                  </Fragment>
+                ))}
+              >
+                {label}
+              </SidebarListMenuItem>
+            );
+          }
+
+          return (
+            <SidebarListItem
+              key={item.id}
+              active={!!item.isActive}
+              leading={item.icon}
+              iconOnly={!showLabels}
+              onClick={item.onClick}
+              aria-label={item.ariaLabel}
+              aria-current={item.isActive ? "page" : undefined}
+              title={!showLabels ? (item.tooltip?.content ?? item.ariaLabel ?? item.id) : undefined}
+            >
+              {label}
+            </SidebarListItem>
+          );
+        })}
       </nav>
     );
   }

@@ -8,8 +8,8 @@ import { sendDebugAdapterRequest } from "../services/debug-adapter-service";
 import { useDebuggerStore } from "../stores/debugger.store";
 import type { DebugRequestContext } from "../types/debugger.types";
 import { Button } from "@/ui/button";
+import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
-import { DebugEmptyState } from "./debugger-panels";
 
 interface DebugWatchPanelProps {
   activeSessionId?: string;
@@ -119,7 +119,7 @@ export function DebugWatchPanel({
       </div>
 
       {watchExpressions.length === 0 ? (
-        <DebugEmptyState>Add expressions to inspect while paused.</DebugEmptyState>
+        <EmptyState layout="sidebar" message="Add expressions to inspect while paused." />
       ) : (
         <div className="space-y-1">
           {watchExpressions.map((watchExpression) => {

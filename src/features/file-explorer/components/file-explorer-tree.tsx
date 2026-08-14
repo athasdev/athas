@@ -62,6 +62,7 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import { SidebarHeader, SidebarHeaderIconButton, SidebarSearchPopover } from "@/ui/sidebar";
+import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import {
@@ -1260,7 +1261,7 @@ function FileExplorerTreeComponent({
       onMouseLeave={handleContainerMouseLeave}
     >
       <SidebarHeader
-        className="px-3"
+        className="justify-end px-3"
         onClick={(event) => event.stopPropagation()}
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -1482,6 +1483,7 @@ function FileExplorerTreeComponent({
           !rootFolderPath ? (
             <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
               <EmptyState
+                layout="sidebar"
                 message="No folder open"
                 action={{ label: "Open Folder", onClick: handleOpenFolder }}
               />
@@ -1489,12 +1491,15 @@ function FileExplorerTreeComponent({
           ) : displayedFiles.length === 0 ? (
             <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
               <EmptyState
+                layout="sidebar"
                 message={
-                  isTreeSearchSearching
-                    ? "Searching files"
-                    : isTreeSearchActive
-                      ? "No matching files"
-                      : "Folder is empty"
+                  isTreeSearchSearching ? (
+                    <Spinner label="Searching files" showLabel compact />
+                  ) : isTreeSearchActive ? (
+                    "No matching files"
+                  ) : (
+                    "Folder is empty"
+                  )
                 }
               />
             </div>

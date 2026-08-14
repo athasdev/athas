@@ -16,6 +16,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
@@ -35,7 +36,6 @@ import {
 } from "../utils/debugger-command";
 import {
   DebugBreakpointsList,
-  DebugEmptyState,
   DebugSection,
   DebugSessionStatusIcon,
   DebugStackFrames,
@@ -500,7 +500,7 @@ export default function DebuggerView() {
             }
           >
             {activeAdapterOutput.length === 0 ? (
-              <DebugEmptyState>Adapter output appears here.</DebugEmptyState>
+              <EmptyState layout="sidebar" message="Adapter output appears here." />
             ) : (
               <div className="py-1">
                 {activeAdapterOutput.map((output, index) => (

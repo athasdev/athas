@@ -1,11 +1,12 @@
 import { CaretRightIcon as CaretRight } from "@/ui/icons";
 import { useEffect, useState } from "react";
+import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { sendDebugAdapterRequest } from "../services/debug-adapter-service";
 import { useDebuggerStore } from "../stores/debugger.store";
 import type { DebugRequestContext, DebugScope, DebugVariable } from "../types/debugger.types";
-import { DebugEmptyState, EMPTY_DEBUG_SECTION_MESSAGES } from "./debugger-panels";
+import { EMPTY_DEBUG_SECTION_MESSAGES } from "./debugger-panels";
 
 interface DebugVariablesPanelProps {
   activeSessionId?: string;
@@ -115,7 +116,7 @@ export function DebugVariablesPanel({
     });
 
   if (scopes.length === 0) {
-    return <DebugEmptyState>{EMPTY_DEBUG_SECTION_MESSAGES.variables}</DebugEmptyState>;
+    return <EmptyState layout="sidebar" message={EMPTY_DEBUG_SECTION_MESSAGES.variables} />;
   }
 
   return (
