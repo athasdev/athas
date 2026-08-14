@@ -31,6 +31,7 @@ describe("extension browser catalog", () => {
   it("normalizes language packages for the browser", () => {
     const language = manifest({
       id: "athas.example-language",
+      icon: "/extensions/official/example/icon.svg",
       languages: [{ id: "example", extensions: [".example"], aliases: ["Example"] }],
     });
 
@@ -46,6 +47,7 @@ describe("extension browser catalog", () => {
     expect(result.find((extension) => extension.id === language.id)).toMatchObject({
       category: "language",
       extensions: ["example"],
+      icon: "/extensions/official/example/icon.svg",
       isInstalled: true,
     });
   });

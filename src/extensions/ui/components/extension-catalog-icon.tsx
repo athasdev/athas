@@ -149,15 +149,11 @@ export function resolveManifestIcon(
   ...fallbackIconIds: Array<string | undefined | null>
 ): string | undefined {
   const trimmedIcon = manifestIcon?.trim();
-  const iconFileName = trimmedIcon?.split(/[?#]/)[0]?.split("/").pop()?.toLowerCase();
-  if (!trimmedIcon || iconFileName === "icon.svg") {
-    return getCatalogIconUrl(...fallbackIconIds) ?? trimmedIcon;
-  }
-  return trimmedIcon;
+  return trimmedIcon || getCatalogIconUrl(...fallbackIconIds);
 }
 
-function getCategoryIcon(category: UnifiedExtension["category"]): ReactNode {
-  const className = "size-4 text-subtle-foreground";
+function getCategoryIcon(category: UnifiedExtension["category"], compact: boolean): ReactNode {
+  const className = compact ? "size-4 text-subtle-foreground" : "size-6 text-subtle-foreground";
   const icons = {
     language: <TextT className={className} weight="duotone" />,
     theme: <PaintBrush className={className} weight="duotone" />,
@@ -196,16 +192,12 @@ export function ExtensionIcon({
 
   return (
     <span
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-lg border border-border/60",
-        compact ? "size-7 rounded-md" : "size-12",
-        showImageIcon ? "bg-white/95" : "bg-background",
-      )}
+      className={cn("flex shrink-0 items-center justify-center", compact ? "size-7" : "size-10")}
     >
       {showImageIcon ? (
         <img
           alt=""
-          className={cn("object-contain", compact ? "size-4" : "size-7")}
+          className={cn("object-contain", compact ? "size-5" : "size-8")}
           draggable={false}
           src={icon}
           onError={() => setFailedImageIcon(true)}
@@ -213,10 +205,10 @@ export function ExtensionIcon({
       ) : showNamedIcon && icon ? (
         <DynamicIcon
           name={icon}
-          className={cn("text-subtle-foreground", compact ? "size-4" : "size-5")}
+          className={cn("text-subtle-foreground", compact ? "size-4" : "size-6")}
         />
       ) : (
-        getCategoryIcon(extension.category)
+        getCategoryIcon(extension.category, compact)
       )}
     </span>
   );

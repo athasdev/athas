@@ -204,7 +204,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
 
   return (
     <div className="font-sans flex h-full min-h-0 flex-col bg-background">
-      <header className="shrink-0 border-border/70 border-b bg-surface/25">
+      <header className="shrink-0">
         <div className="mx-auto w-full max-w-6xl px-5 pt-5 pb-4">
           <div className="flex min-w-0 items-start gap-4">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-foreground">

@@ -52,9 +52,9 @@ export function ExtensionCatalogCard({
 
   return (
     <Card
-      variant="outline"
+      variant="muted"
       size="sm"
-      className="cursor-default transition-colors hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+      className="cursor-default transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
       onClick={onSelect}
       onContextMenu={(event) => onContextMenu(event, extension)}
       onKeyDown={handleKeyDown}
@@ -70,10 +70,6 @@ export function ExtensionCatalogCard({
           {extension.isBundled ? (
             <Badge variant="accent" size="compact">
               Built-in
-            </Badge>
-          ) : extension.isInstalled ? (
-            <Badge variant="success" size="compact">
-              Installed
             </Badge>
           ) : null}
           <span className="flex size-5 items-center justify-center">{status}</span>
