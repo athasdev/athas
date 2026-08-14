@@ -7,7 +7,7 @@ import {
   inferRegistryIndexUrl,
   normalizeV0DesignSystems,
   parseV0DesignSystemDirectory,
-} from "@/extensions/v0/lib/v0-design-systems";
+} from "@/features/ai/integrations/v0/lib/v0-design-systems";
 
 describe("v0 design systems", () => {
   it("normalizes saved registry profiles", () => {

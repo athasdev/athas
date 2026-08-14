@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
+import { CsvPreview } from "@/features/viewer/csv/components/csv-preview";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";

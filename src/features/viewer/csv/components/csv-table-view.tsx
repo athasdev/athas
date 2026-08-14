@@ -3,7 +3,7 @@ import type React from "react";
 import { useMemo, useRef } from "react";
 import { cn } from "@/utils/cn";
 
-export interface TableViewProps {
+interface CsvTableViewProps {
   columns: string[];
   rows: (string | number | boolean | null)[][];
   className?: string;
@@ -15,7 +15,7 @@ export interface TableViewProps {
   overscan?: number;
 }
 
-export function TableView({
+export function CsvTableView({
   columns,
   rows,
   className,
@@ -25,7 +25,7 @@ export function TableView({
   virtualize = true,
   rowHeight = 28,
   overscan = 10,
-}: TableViewProps) {
+}: CsvTableViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const useVirtual = virtualize && rows.length > 200; // threshold to enable virtualization

@@ -1,7 +1,7 @@
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
 
-export const V0_EXTENSION_ID = "athas.ai.v0";
-export const V0_PROVIDER_ID = "v0";
+export const V0_EXTENSION_ID = "athas.ai.v0" as const;
+export const V0_PROVIDER_ID = "v0" as const;
 export const V0_DESIGN_SYSTEM_VIEW_ID = `extension:${V0_EXTENSION_ID}.design-systems` as const;
 
 export const v0ExtensionManifest: ExtensionManifest = {

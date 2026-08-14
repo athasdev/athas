@@ -1,6 +1,6 @@
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
-import { V0_EXTENSION_ID } from "@/extensions/v0/manifest";
-import { v0ExtensionModule } from "@/extensions/v0/v0-extension";
+import { v0ExtensionModule } from "./v0-extension";
+import { V0_EXTENSION_ID } from "./v0-extension-manifest";
 
 interface ExtensionActivationContext {
   extensionId: string;

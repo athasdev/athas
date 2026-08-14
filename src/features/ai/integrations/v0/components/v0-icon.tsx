@@ -1,8 +1,8 @@
 import type { SVGProps } from "react";
 
-type IconProps = SVGProps<SVGSVGElement> & { size?: number };
+type V0IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
-export function V0Icon({ size, className, ...props }: IconProps) {
+export function V0Icon({ size, className, ...props }: V0IconProps) {
   const resolvedSize = size ?? 14;
 
   return (

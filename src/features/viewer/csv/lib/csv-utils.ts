@@ -3,7 +3,6 @@ export interface ParsedCsv {
   rows: (string | number | boolean | null)[][];
 }
 
-// Very light CSV parser supporting quoted fields and basic delimiters
 export function parseCsv(
   text: string,
   delimiter: "," | "\t" | ";" | "|" = ",",

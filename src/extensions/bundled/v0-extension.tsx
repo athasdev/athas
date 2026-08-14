@@ -19,11 +19,14 @@ import {
 } from "@/features/ai/services/providers/ai-provider-settings-registry";
 import { getManifestAIProviderContributions } from "@/extensions/types/extension-contributions";
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
-import { V0_DESIGN_SYSTEM_VIEW_ID, V0_EXTENSION_ID, V0_PROVIDER_ID } from "./manifest";
-import { V0DesignSystemCommandContent } from "./components/v0-design-system-command";
-import { V0Icon } from "./components/v0-icon";
-import { buildV0DesignSystemPrompt, getActiveV0DesignSystem } from "./lib/v0-design-systems";
-import { V0Provider } from "./providers/v0-provider";
+import { V0DesignSystemCommandContent } from "@/features/ai/integrations/v0/components/v0-design-system-command";
+import { V0Icon } from "@/features/ai/integrations/v0/components/v0-icon";
+import {
+  buildV0DesignSystemPrompt,
+  getActiveV0DesignSystem,
+} from "@/features/ai/integrations/v0/lib/v0-design-systems";
+import { V0Provider } from "@/features/ai/integrations/v0/services/v0-provider";
+import { V0_DESIGN_SYSTEM_VIEW_ID, V0_EXTENSION_ID, V0_PROVIDER_ID } from "./v0-extension-manifest";
 
 interface ExtensionActivationContext {
   extensionId: string;

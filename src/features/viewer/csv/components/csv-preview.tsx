@@ -6,8 +6,8 @@ import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import Select from "@/ui/select";
-import { TableView } from "./csv-table-view";
-import { parseCsv } from "./csv-utils";
+import { parseCsv } from "../lib/csv-utils";
+import { CsvTableView } from "./csv-table-view";
 
 type Delim = "," | "\t" | ";" | "|";
 
@@ -81,7 +81,7 @@ export function CsvPreview() {
       className="flex h-full flex-col overflow-hidden bg-background"
       style={{ fontSize: `${fontSize}px`, fontFamily: `${uiFontFamily}, sans-serif` }}
     >
-      <TableView
+      <CsvTableView
         columns={headers}
         rows={rows}
         virtualize

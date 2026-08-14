@@ -1,7 +1,7 @@
 import {
-  AIProvider,
   type ProviderHeaders,
   type StreamRequest,
+  AIProvider,
 } from "@/features/ai/services/providers/ai-provider-interface";
 import { providerFetch } from "@/features/ai/services/providers/provider-fetch";
 
