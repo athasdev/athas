@@ -13,11 +13,11 @@ import type {
 } from "../types/extension-manifest";
 import { normalizeExtensionCategories } from "../manifest/extension-package-contract";
 import { getManifestLanguageContributions } from "../types/extension-contributions";
+import { loadExtensionCatalog } from "../marketplace/extension-catalog";
 import { registerLanguageAssetOverride } from "@/features/editor/lib/wasm-parser/extension-assets";
 import { getServiceUrls } from "@/config/services";
 
 const CDN_BASE_URL = getServiceUrls().extensionsCdnBaseUrl;
-const MANIFESTS_URL = `${CDN_BASE_URL}/manifests.json`;
 const BUNDLED_PARSER_BASE_URL = "/tree-sitter/parsers";
 
 interface ExternalLanguageContribution {
@@ -321,11 +321,7 @@ export async function initializeLanguagePackager(): Promise<void> {
 
   initPromise = (async () => {
     try {
-      const response = await fetch(MANIFESTS_URL);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch manifests: ${response.status} ${response.statusText}`);
-      }
-      const manifests: Record<string, ExternalLanguageManifest> = await response.json();
+      const manifests = await loadExtensionCatalog<ExternalLanguageManifest>();
       processManifests(manifests);
     } catch (error) {
       console.warn("Failed to load extension manifests from CDN:", error);
