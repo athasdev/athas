@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { cva } from "class-variance-authority";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import { EmptyState } from "@/ui/empty";
@@ -29,6 +30,7 @@ import { cn } from "@/utils/cn";
 import { ScrollArea } from "@/ui/scroll-area";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   clampFileNavigatorWidth,
   DEFAULT_FILE_NAVIGATOR_WIDTH,
@@ -52,6 +54,11 @@ export type FileNavigatorTone =
 
 const RESIZE_STEP = 16;
 const MAX_NAVIGATOR_SYNC_ITEMS = 5_000;
+const FLAT_NAVIGATOR_VIRTUALIZATION_THRESHOLD = 100;
+const COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT = 28;
+const COMFORTABLE_COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT = 32;
+const DETAILED_FLAT_NAVIGATOR_ROW_HEIGHT = 48;
+const FLAT_NAVIGATOR_OVERSCAN = 10;
 
 export interface FileNavigatorItem {
   key: string;
@@ -171,6 +178,7 @@ const FileNavigatorFlatRow = memo(function FileNavigatorFlatRow({
     <SidebarListItem
       onClick={() => onSelect(item.key)}
       aria-current={isSelected ? "true" : undefined}
+      data-file-navigator-key={item.key}
       title={title}
       active={isSelected}
       leading={
@@ -288,10 +296,12 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
 }: FileNavigatorSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const navigatorRef = useRef<HTMLElement>(null);
+  const navigatorScrollRef = useRef<HTMLDivElement>(null);
   const [preferredWidth, setPreferredWidth] = useState(DEFAULT_FILE_NAVIGATOR_WIDTH);
   const [parentWidth, setParentWidth] = useState<number>();
   const [isResizing, setIsResizing] = useState(false);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
+  const windowChromeDensity = useSettingsStore.use.settings().windowChromeDensity;
 
   useEffect(() => {
     setSearchQuery("");
@@ -351,6 +361,50 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       ? filteredItems
       : [...filteredItems].sort((left, right) => left.path.localeCompare(right.path));
   }, [filteredItems, searchMode, searchQuery, viewMode]);
+  const shouldVirtualizeFlatItems =
+    viewMode === "flat" && flatItems.length > FLAT_NAVIGATOR_VIRTUALIZATION_THRESHOLD;
+  const flatItemIndexByKey = useMemo(() => {
+    const indexByKey = new Map<string, number>();
+    for (let index = 0; index < flatItems.length; index++) {
+      const item = flatItems[index];
+      if (item) indexByKey.set(item.key, index);
+    }
+    return indexByKey;
+  }, [flatItems]);
+  const flatItemVirtualizer = useVirtualizer({
+    count: flatItems.length,
+    enabled: shouldVirtualizeFlatItems,
+    getScrollElement: () => navigatorScrollRef.current,
+    getItemKey: (index) => flatItems[index]?.key ?? index,
+    estimateSize: () =>
+      compactRows
+        ? windowChromeDensity === "comfortable"
+          ? COMFORTABLE_COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT
+          : COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT
+        : DETAILED_FLAT_NAVIGATOR_ROW_HEIGHT,
+    overscan: FLAT_NAVIGATOR_OVERSCAN,
+  });
+
+  useEffect(() => {
+    if (viewMode !== "flat" || !selectedKey) return;
+    const selectedIndex = flatItemIndexByKey.get(selectedKey);
+    if (selectedIndex === undefined) return;
+
+    if (shouldVirtualizeFlatItems) {
+      flatItemVirtualizer.scrollToIndex(selectedIndex, { align: "auto", behavior: "auto" });
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      const selectedElement = Array.from(
+        navigatorScrollRef.current?.querySelectorAll<HTMLElement>("[data-file-navigator-key]") ??
+          [],
+      ).find((element) => element.dataset.fileNavigatorKey === selectedKey);
+      selectedElement?.scrollIntoView({ behavior: "auto", block: "nearest" });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [flatItemIndexByKey, flatItemVirtualizer, selectedKey, shouldVirtualizeFlatItems, viewMode]);
 
   const navigatorLayout = getFileNavigatorLayout(preferredWidth, parentWidth);
 
@@ -465,6 +519,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         contentClassName={surface === "panel" ? "px-(--athas-chrome-padding-inline) py-2" : "p-1"}
         reserveScrollbarGutter
         scrollbarVisibility={surface === "panel" ? "always" : "hover"}
+        viewportProps={{ ref: navigatorScrollRef }}
       >
         {hiddenItemCount > 0 ? (
           <SidebarSectionLabel>
@@ -472,17 +527,48 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
           </SidebarSectionLabel>
         ) : null}
         {filteredItems.length === 0 ? (
-          <EmptyState message="No files match" />
+          <EmptyState layout="sidebar" message="No files match" />
         ) : viewMode === "flat" ? (
-          flatItems.map((item) => (
-            <FileNavigatorFlatRow
-              key={item.key}
-              item={item}
-              selectedKey={selectedKey}
-              onSelect={onSelect}
-              compactRows={compactRows}
-            />
-          ))
+          shouldVirtualizeFlatItems ? (
+            <div
+              className="relative min-w-0"
+              style={{ height: flatItemVirtualizer.getTotalSize() }}
+              data-virtualized-file-navigator=""
+            >
+              {flatItemVirtualizer.getVirtualItems().map((virtualItem) => {
+                const item = flatItems[virtualItem.index];
+                if (!item) return null;
+
+                return (
+                  <div
+                    key={virtualItem.key}
+                    className="absolute inset-x-0 top-0"
+                    style={{
+                      height: virtualItem.size,
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    <FileNavigatorFlatRow
+                      item={item}
+                      selectedKey={selectedKey}
+                      onSelect={onSelect}
+                      compactRows={compactRows}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            flatItems.map((item) => (
+              <FileNavigatorFlatRow
+                key={item.key}
+                item={item}
+                selectedKey={selectedKey}
+                onSelect={onSelect}
+                compactRows={compactRows}
+              />
+            ))
+          )
         ) : (
           <SidebarTree label={ariaLabel}>
             {tree.map((node) => (
