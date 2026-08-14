@@ -1,0 +1,541 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://athas.dev/schemas/extension.json",
+  "title": "Athas Extension Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "id",
+    "name",
+    "displayName",
+    "description",
+    "version",
+    "publisher",
+    "categories"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://athas.dev/schemas/extension.json"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.-]*$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
+    },
+    "publisher": {
+      "type": "string",
+      "minLength": 1
+    },
+    "categories": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "Language",
+          "Database",
+          "AI",
+          "Integration",
+          "Agent",
+          "Icon Theme",
+          "Linter",
+          "Formatter",
+          "Theme",
+          "Keymaps",
+          "Snippets",
+          "UI",
+          "Other"
+        ]
+      }
+    },
+    "engines": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/language"
+      }
+    },
+    "databases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/database"
+      }
+    },
+    "databaseProviders": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/database"
+      },
+      "deprecated": true
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/agent"
+      }
+    },
+    "aiProviders": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "integrations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/integration"
+      }
+    },
+    "themes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "icons": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "iconThemes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "deprecated": true
+    },
+    "lsp": {
+      "type": "object"
+    },
+    "grammar": {
+      "type": "object"
+    },
+    "formatter": {
+      "type": "object"
+    },
+    "linter": {
+      "type": "object"
+    },
+    "snippets": {
+      "type": "array"
+    },
+    "commands": {
+      "type": "array"
+    },
+    "keybindings": {
+      "type": "array"
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "extensionDependencies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "extensionPack": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "extensionKind": {
+      "oneOf": [
+        {
+          "enum": ["ui", "workspace", "web"]
+        },
+        {
+          "type": "array",
+          "items": {
+            "enum": ["ui", "workspace", "web"]
+          }
+        }
+      ]
+    },
+    "activationEvents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "contributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "languages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/language"
+          }
+        },
+        "databases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/database"
+          }
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/agent"
+          }
+        },
+        "aiProviders": {
+          "type": "array"
+        },
+        "integrations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/integration"
+          }
+        },
+        "themes": {
+          "type": "array"
+        },
+        "icons": {
+          "type": "array"
+        },
+        "grammars": {
+          "type": "array"
+        },
+        "snippets": {
+          "type": "array"
+        },
+        "keybindings": {
+          "type": "array"
+        },
+        "commands": {
+          "type": "array"
+        },
+        "menus": {
+          "type": "array"
+        },
+        "sidebarViews": {
+          "type": "array"
+        },
+        "toolbarActions": {
+          "type": "array"
+        }
+      }
+    },
+    "main": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "browser": {
+      "type": "string"
+    },
+    "permissions": {
+      "$ref": "#/$defs/permissions"
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "grammar": {
+          "type": "object"
+        },
+        "lsp": {
+          "$ref": "#/$defs/tool"
+        },
+        "formatter": {
+          "$ref": "#/$defs/tool"
+        },
+        "linter": {
+          "$ref": "#/$defs/tool"
+        }
+      }
+    },
+    "icon": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "url"],
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "installation": {
+      "$ref": "#/$defs/installation"
+    }
+  },
+  "$defs": {
+    "language": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "extensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "filenames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "filenamePatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "configuration": {
+          "type": "string"
+        },
+        "firstLine": {
+          "type": "string"
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "required": ["id", "label", "isFileBased", "protocolVersion", "sidecar"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "isFileBased": {
+          "type": "boolean"
+        },
+        "protocolVersion": {
+          "type": "number"
+        },
+        "defaultPort": {
+          "type": "number"
+        },
+        "fileExtensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sidecar": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "required": ["id", "name", "binaryName"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "binaryName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "envVars": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "icon": {
+          "type": "string"
+        },
+        "install": {
+          "type": "object"
+        }
+      }
+    },
+    "integration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": ["code-host", "observability", "project-management", "other"]
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "required": ["name", "runtime"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "runtime": {
+          "enum": ["bun", "node", "python", "go", "rust", "ruby", "r", "system", "binary"]
+        },
+        "package": {
+          "type": "string"
+        },
+        "packages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "downloadUrl": {
+          "type": "string"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "network": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "secrets": {
+          "type": "boolean"
+        },
+        "workspace": {
+          "const": "read"
+        },
+        "openExternal": {
+          "type": "boolean"
+        }
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["downloadUrl", "size", "checksum"],
+      "properties": {
+        "downloadUrl": {
+          "type": "string"
+        },
+        "size": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "checksum": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "installation": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": ["download", "bundled"]
+        },
+        "downloadUrl": {
+          "type": "string"
+        },
+        "size": {
+          "type": "number"
+        },
+        "checksum": {
+          "type": "string"
+        },
+        "minEditorVersion": {
+          "type": "string"
+        },
+        "maxEditorVersion": {
+          "type": "string"
+        },
+        "platforms": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/package"
+          }
+        },
+        "platformArch": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/package"
+          }
+        }
+      }
+    }
+  }
+}

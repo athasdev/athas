@@ -1,4 +1,5 @@
-import type { ExtensionCategory, ExtensionManifest } from "../types/extension-manifest";
+import type { ExtensionManifest } from "../types/extension-manifest";
+import { normalizeExtensionCategories } from "../manifest/extension-package-contract";
 import { filterRetiredExtensions } from "../registry/retired-extensions";
 import {
   getManifestAIProviderContributions,
@@ -29,29 +30,6 @@ const MANIFEST_SOURCES = import.meta.env.VITE_PARSER_CDN_URL
         withCdnCacheBuster(`${CDN_BASE_URL}/manifests.json`),
       ]
     : [withCdnCacheBuster(`${CDN_BASE_URL}/manifests.json`)];
-
-function toExtensionCategories(rawCategories: string[] | undefined): ExtensionCategory[] {
-  if (!rawCategories || rawCategories.length === 0) return ["Other"];
-
-  return rawCategories.map((category) => {
-    const normalized = category.trim().toLowerCase();
-    if (normalized === "database") return "Database";
-    if (normalized === "ai") return "AI";
-    if (normalized === "integration") return "Integration";
-    if (normalized === "agent") return "Agent";
-    if (normalized === "icon theme" || normalized === "icon-theme" || normalized === "icontheme") {
-      return "Icon Theme";
-    }
-    if (normalized === "language") return "Language";
-    if (normalized === "linter") return "Linter";
-    if (normalized === "formatter") return "Formatter";
-    if (normalized === "theme") return "Theme";
-    if (normalized === "keymaps") return "Keymaps";
-    if (normalized === "snippets") return "Snippets";
-    if (normalized === "ui") return "UI";
-    return "Other";
-  });
-}
 
 function isContributionExtension(manifest: ExtensionManifest): boolean {
   return Boolean(
@@ -117,7 +95,7 @@ export async function loadMarketplaceContributionExtensions(): Promise<Extension
         description: manifest.description || `${manifest.name} extension`,
         version: manifest.version || "1.0.0",
         publisher: manifest.publisher || "Athas",
-        categories: toExtensionCategories(manifest.categories),
+        categories: normalizeExtensionCategories(manifest.categories),
       })),
     ).filter(isContributionExtension);
   } catch (error) {

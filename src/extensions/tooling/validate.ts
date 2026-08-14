@@ -5,6 +5,7 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
+import { validateExtensionPackageContract } from "../manifest/extension-package-contract";
 import {
   GENERATED_CDN_DIR,
   getContributionArray,
@@ -261,14 +262,8 @@ async function validateExtension(folder: string): Promise<void> {
     return;
   }
 
-  if (!manifest.id || typeof manifest.id !== "string") {
-    error(folder, "Missing or invalid 'id' field");
-  }
-  if (!manifest.name || typeof manifest.name !== "string") {
-    error(folder, "Missing or invalid 'name' field");
-  }
-  if (!manifest.version || typeof manifest.version !== "string") {
-    error(folder, "Missing or invalid 'version' field");
+  for (const issue of validateExtensionPackageContract(manifest)) {
+    error(folder, `${issue.path}: ${issue.message}`);
   }
 
   const contributionCount =

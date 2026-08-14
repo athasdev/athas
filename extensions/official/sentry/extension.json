@@ -1,4 +1,5 @@
 {
+  "$schema": "https://athas.dev/schemas/extension.json",
   "id": "athas.sentry",
   "name": "sentry",
   "displayName": "Sentry",

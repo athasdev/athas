@@ -4,7 +4,6 @@
  */
 
 import type {
-  ExtensionCategory,
   ExtensionManifest,
   FormatterConfiguration,
   LinterConfiguration,
@@ -12,6 +11,7 @@ import type {
   PlatformExecutable,
   ToolRuntime,
 } from "../types/extension-manifest";
+import { normalizeExtensionCategories } from "../manifest/extension-package-contract";
 import { getManifestLanguageContributions } from "../types/extension-contributions";
 import { registerLanguageAssetOverride } from "@/features/editor/lib/wasm-parser/extension-assets";
 import { getServiceUrls } from "@/config/services";
@@ -69,25 +69,6 @@ type PackagedLanguageEntry = {
   wasmUrl: string;
   highlightQueryUrl: string;
 };
-
-function toExtensionCategories(rawCategories: string[] | undefined): ExtensionCategory[] {
-  if (!rawCategories || rawCategories.length === 0) return ["Language"];
-
-  return rawCategories.map((category) => {
-    const normalized = category.trim().toLowerCase();
-    if (normalized === "language") return "Language";
-    if (normalized === "database") return "Database";
-    if (normalized === "icon theme" || normalized === "icon-theme" || normalized === "icontheme") {
-      return "Icon Theme";
-    }
-    if (normalized === "linter") return "Linter";
-    if (normalized === "formatter") return "Formatter";
-    if (normalized === "theme") return "Theme";
-    if (normalized === "keymaps") return "Keymaps";
-    if (normalized === "snippets") return "Snippets";
-    return "Other";
-  });
-}
 
 function normalizeExtensions(extensions: string[]): string[] {
   return extensions.map((ext) => (ext.startsWith(".") ? ext : `.${ext}`));
@@ -241,7 +222,7 @@ function convertLanguageManifest(
     description: manifest.description || `${manifest.name} language support`,
     version: manifest.version || "1.0.0",
     publisher: manifest.publisher || "Athas",
-    categories: toExtensionCategories(manifest.categories),
+    categories: normalizeExtensionCategories(manifest.categories, "Language"),
     icon: resolveExtensionAssetUrl(folder, manifest.icon, "icon.svg"),
     languages,
     contributes: {
