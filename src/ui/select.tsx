@@ -3,7 +3,7 @@ import { Select as SelectPrimitive } from "@base-ui/react/select";
 import type { ComponentType, CSSProperties, ReactElement, ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
 import { menuItemVariants, menuSurfaceVariants } from "@/design-system/menu";
-import { buttonVariants } from "@/ui/button";
+import { Button } from "@/ui/button";
 import {
   Combobox,
   ComboboxContent,
@@ -209,8 +209,8 @@ function PlainSelect({
           data-setting-primary-control="true"
           data-prevent-dialog-escape={open ? "true" : undefined}
           aria-label={ariaLabel}
+          render={<Button variant={variant} size={getButtonSize(size, iconOnly)} />}
           className={cn(
-            buttonVariants({ variant, size: getButtonSize(size, iconOnly) }),
             !iconOnly &&
               "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
             !iconOnly && selectTriggerSizeClassName[size],
@@ -415,8 +415,8 @@ function SearchableSelect({
             data-setting-primary-control="true"
             data-prevent-dialog-escape={open ? "true" : undefined}
             aria-label={ariaLabel}
+            render={<Button variant={variant} size={getButtonSize(size, iconOnly)} />}
             className={cn(
-              buttonVariants({ variant, size: getButtonSize(size, iconOnly) }),
               !iconOnly &&
                 "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
               !iconOnly && selectTriggerSizeClassName[size],
