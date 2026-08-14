@@ -109,7 +109,9 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-chrome-control:hover {
+  .athas-chrome-control:hover,
+html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
+  .athas-chrome-control:focus-visible {
   background: var(--athas-chrome-control-hover-bg) !important;
   color: var(--athas-chrome-icon-hover-color) !important;
 }

@@ -69,7 +69,7 @@ function BreadcrumbSeparator({ children, className, ...props }: ComponentProps<"
       data-slot="breadcrumb-separator"
       role="presentation"
       aria-hidden="true"
-      className={cn("text-subtle-foreground/70 [&>svg]:size-3.5", className)}
+      className={cn("text-subtle-foreground/70 [&>svg]:size-3", className)}
       {...props}
     >
       {children ?? <ChevronRight className="rtl:rotate-180" />}

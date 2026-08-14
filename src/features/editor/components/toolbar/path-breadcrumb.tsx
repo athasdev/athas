@@ -38,7 +38,7 @@ export function PathBreadcrumb({
 
           return (
             <Fragment key={`${segment}-${index}`}>
-              {index > 0 ? <BreadcrumbSeparator className="mx-0.5 shrink-0" /> : null}
+              {index > 0 ? <BreadcrumbSeparator className="shrink-0" /> : null}
               <BreadcrumbItem className="shrink-0 gap-0">
                 {interactive ? (
                   <BreadcrumbLink
@@ -48,6 +48,7 @@ export function PathBreadcrumb({
                         onClick={(event) => onSegmentClick?.(index, event)}
                         variant="ghost"
                         size="xs"
+                        className="px-1"
                         data-slot="breadcrumb-segment"
                       />
                     }
@@ -61,13 +62,13 @@ export function PathBreadcrumb({
                     {segment}
                   </BreadcrumbLink>
                 ) : isLast ? (
-                  <BreadcrumbPage data-slot="breadcrumb-segment" className="truncate px-1.5">
+                  <BreadcrumbPage data-slot="breadcrumb-segment" className="truncate px-1">
                     {segment}
                   </BreadcrumbPage>
                 ) : (
                   <span
                     data-slot="breadcrumb-segment"
-                    className="truncate px-1.5 text-subtle-foreground"
+                    className="truncate px-1 text-subtle-foreground"
                   >
                     {segment}
                   </span>

@@ -49,7 +49,7 @@ function ContextMenuContent({
         <ContextMenuPrimitive.Popup
           data-slot="context-menu-content"
           className={cn(
-            menuSurfaceVariants({ density: "compact" }),
+            menuSurfaceVariants({ density: "default" }),
             "z-10070 duration-75 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
             className,
           )}
@@ -73,7 +73,7 @@ function ContextMenuLabel({
     <ContextMenuPrimitive.GroupLabel
       data-slot="context-menu-label"
       data-inset={inset}
-      className={cn(menuLabelVariants({ density: "compact" }), "data-inset:pl-8", className)}
+      className={cn(menuLabelVariants({ density: "default" }), "data-inset:pl-8", className)}
       {...props}
     />
   );
@@ -94,7 +94,7 @@ function ContextMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        menuItemVariants({ density: "compact", tone: variant }),
+        menuItemVariants({ density: "default", tone: variant }),
         "group/context-menu-item data-inset:pl-8",
         className,
       )}
@@ -118,14 +118,14 @@ function ContextMenuSubTrigger({
       data-slot="context-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        menuItemVariants({ density: "compact" }),
+        menuItemVariants({ density: "default" }),
         "data-inset:pl-8 data-open:bg-accent data-open:text-foreground",
         className,
       )}
       {...props}
     >
       {children}
-      <CaretRightIcon className="ml-auto" />
+      <CaretRightIcon className="ml-auto text-subtle-foreground" />
     </ContextMenuPrimitive.SubmenuTrigger>
   );
 }
@@ -152,7 +152,7 @@ function ContextMenuCheckboxItem({
     <ContextMenuPrimitive.CheckboxItem
       data-slot="context-menu-checkbox-item"
       data-inset={inset}
-      className={cn(menuItemVariants({ density: "compact" }), "pr-8 data-inset:pl-8", className)}
+      className={cn(menuItemVariants({ density: "default" }), "pr-8 data-inset:pl-8", className)}
       checked={checked}
       {...props}
     >
@@ -180,7 +180,7 @@ function ContextMenuRadioItem({
     <ContextMenuPrimitive.RadioItem
       data-slot="context-menu-radio-item"
       data-inset={inset}
-      className={cn(menuItemVariants({ density: "compact" }), "pr-8 data-inset:pl-8", className)}
+      className={cn(menuItemVariants({ density: "default" }), "pr-8 data-inset:pl-8", className)}
       {...props}
     >
       <span className="pointer-events-none absolute right-2">
@@ -197,7 +197,7 @@ function ContextMenuSeparator({ className, ...props }: ContextMenuPrimitive.Sepa
   return (
     <ContextMenuPrimitive.Separator
       data-slot="context-menu-separator"
-      className={cn(menuSeparatorVariants({ density: "compact" }), className)}
+      className={cn(menuSeparatorVariants({ density: "default" }), className)}
       {...props}
     />
   );

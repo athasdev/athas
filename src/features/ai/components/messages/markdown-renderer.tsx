@@ -164,7 +164,6 @@ function CodeBlock({
               <Button
                 type="button"
                 variant="ghost"
-                className="rounded"
                 onClick={() => void copyTextToClipboard(code)}
                 tooltip="Copy code"
                 size="icon"

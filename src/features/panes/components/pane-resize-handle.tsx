@@ -156,8 +156,8 @@ export function PaneResizeHandle({
       tabIndex={0}
     >
       <div
-        className={`bg-transparent transition-colors ${
-          isDragging ? "bg-primary" : "group-hover:bg-primary"
+        className={`bg-border transition-colors ${
+          isDragging ? "bg-primary" : "group-hover:bg-border-strong"
         } ${isHorizontal ? "h-full w-px" : "h-px w-full"}`}
       />
       {isDragging && (

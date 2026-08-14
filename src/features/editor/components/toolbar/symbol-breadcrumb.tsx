@@ -84,21 +84,26 @@ export function SymbolBreadcrumb({
 
           return (
             <Fragment key={symbol.id}>
-              <BreadcrumbSeparator className="mx-0.5 shrink-0" />
+              <BreadcrumbSeparator className="shrink-0" />
               <BreadcrumbItem className="shrink-0 gap-0">
                 {interactive ? (
                   <BreadcrumbLink
                     render={
-                      <Button onClick={() => openOutlineSymbol(symbol)} variant="ghost" size="xs" />
+                      <Button
+                        onClick={() => openOutlineSymbol(symbol)}
+                        variant="ghost"
+                        size="xs"
+                        className="px-1"
+                      />
                     }
                     className="min-w-0 whitespace-nowrap text-subtle-foreground hover:text-foreground"
                   >
                     {symbol.name}
                   </BreadcrumbLink>
                 ) : isLast ? (
-                  <BreadcrumbPage className="truncate px-1.5">{symbol.name}</BreadcrumbPage>
+                  <BreadcrumbPage className="truncate px-1">{symbol.name}</BreadcrumbPage>
                 ) : (
-                  <span className="truncate px-1.5 text-subtle-foreground">{symbol.name}</span>
+                  <span className="truncate px-1 text-subtle-foreground">{symbol.name}</span>
                 )}
               </BreadcrumbItem>
             </Fragment>

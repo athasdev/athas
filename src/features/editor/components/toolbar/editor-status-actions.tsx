@@ -27,21 +27,14 @@ import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/ui/combobox";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import Select, { type SelectOption } from "@/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 
-const statusChipClass =
+const cursorPositionClass =
   "font-sans inline-flex h-5 items-center self-center rounded-full border-0 px-1.5 ui-text-sm leading-none text-subtle-foreground transition-colors hover:bg-accent hover:text-foreground";
 
 const editorMenuActionButtonClass = "min-h-6 px-2 ui-text-sm text-subtle-foreground";
@@ -65,8 +58,6 @@ interface EditorStatusActionsProps {
   bufferId?: string;
   editorViewKey?: string | null;
 }
-
-type LanguageOption = ReturnType<typeof getAllLanguages>[number];
 
 function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }) {
   const activeEditorViewKey = useEditorStateStore.use.activeEditorViewKey();
@@ -134,7 +125,7 @@ function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }
           }
         }}
         className={cn(
-          statusChipClass,
+          cursorPositionClass,
           "w-14 bg-accent text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
         )}
       />
@@ -144,7 +135,7 @@ function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }
   return (
     <button
       type="button"
-      className={statusChipClass}
+      className={cursorPositionClass}
       onClick={() => setIsEditing(true)}
       aria-label="Go to line and column"
     >
@@ -324,20 +315,15 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   };
 
   const allLanguages = useMemo(() => getAllLanguages(), []);
-
-  const currentLanguageOption = useMemo(
-    () => allLanguages.find((language) => language.id === currentFileLanguageId) ?? null,
-    [allLanguages, currentFileLanguageId],
+  const languageOptions = useMemo<SelectOption[]>(
+    () =>
+      allLanguages.map((language) => ({
+        value: language.id,
+        label: language.displayName,
+        keywords: [language.id],
+      })),
+    [allLanguages],
   );
-
-  const filterLanguages = useCallback((language: LanguageOption, query: string) => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return true;
-    return (
-      language.displayName.toLowerCase().includes(normalizedQuery) ||
-      language.id.toLowerCase().includes(normalizedQuery)
-    );
-  }, []);
 
   const handleLanguageChange = useCallback(
     async (languageId: string) => {
@@ -502,58 +488,25 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       <CursorPositionChip editorViewKey={editorViewKey} />
 
       {activeBuffer?.type === "editor" && (
-        <div className="flex h-5 items-center self-center">
-          <Combobox
-            value={currentLanguageOption}
-            onValueChange={(value) => {
-              if (value) {
-                void handleLanguageChange(value.id);
-              }
-            }}
-            items={allLanguages}
-            itemToStringLabel={(item) => item.displayName}
-            itemToStringValue={(item) => item.id}
-            isItemEqualToValue={(item, value) => item.id === value.id}
-            filter={filterLanguages}
-          >
-            <ComboboxInput
-              aria-label="Select language mode"
-              placeholder={currentFileDisplayName || "Plain Text"}
-              size="xs"
-              variant="ghost"
-              showClear={false}
-              showTrigger={false}
-              inputClassName="truncate ui-text-sm text-subtle-foreground group-hover/combobox-input:text-foreground"
-              className={cn(
-                statusChipClass,
-                "h-5 w-fit max-w-60 bg-transparent px-0 focus-within:bg-accent focus-within:text-foreground",
-              )}
-              inputStyle={{
-                width: `${Math.min((currentFileDisplayName?.length ?? 10) + 2, 28)}ch`,
-              }}
-            />
-            <ComboboxContent align="end" className="w-55 min-w-55">
-              <ComboboxList className="max-h-55 p-1.5">
-                {allLanguages.map((lang) => (
-                  <ComboboxItem
-                    key={lang.id}
-                    value={lang}
-                    className={cn(
-                      "ui-text-sm",
-                      lang.id === currentFileLanguageId && "text-primary",
-                    )}
-                  >
-                    <span className="truncate">{lang.displayName}</span>
-                  </ComboboxItem>
-                ))}
-                <ComboboxEmpty className="ui-text-sm">No languages found</ComboboxEmpty>
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </div>
+        <Select
+          value={currentFileLanguageId ?? ""}
+          options={languageOptions}
+          onChange={(languageId) => void handleLanguageChange(languageId)}
+          placeholder={currentFileDisplayName || "Plain Text"}
+          aria-label="Select language mode"
+          tooltip="Select language mode"
+          size="xs"
+          variant="ghost"
+          searchable
+          searchableTrigger="menu"
+          hideChevron
+          menuWidth="content"
+          menuMinWidth={220}
+          className="w-fit max-w-60"
+        />
       )}
 
-      <VimStatusIndicator compact />
+      <VimStatusIndicator />
 
       <div className="relative flex items-center self-center">
         <Button

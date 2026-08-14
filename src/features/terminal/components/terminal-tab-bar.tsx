@@ -43,6 +43,7 @@ import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profi
 import { normalizeTerminalTitle } from "@/features/terminal/utils/terminal-title";
 import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
 import { Button } from "@/ui/button";
+import { EmptyState } from "@/ui/empty";
 import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
 import { cn } from "@/utils/cn";
 import {
@@ -199,23 +200,23 @@ const ToolbarContextMenu = ({
   return (
     <Dropdown isOpen={isOpen} point={position} onClose={onClose} className="min-w-45">
       <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">Terminal Width</div>
-      <MenuItemsList items={modeItems} onItemSelect={onClose} />
+      <MenuItemsList items={modeItems} onItemSelect={onClose} density="default" />
       <div className="my-0.5 border-border/70 border-t" />
       <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">Tab Layout</div>
-      <MenuItemsList items={layoutItems} onItemSelect={onClose} />
+      <MenuItemsList items={layoutItems} onItemSelect={onClose} density="default" />
       {currentLayout === "vertical" && (
         <>
           <div className="my-0.5 border-border/70 border-t" />
           <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">
             Tab Position
           </div>
-          <MenuItemsList items={sidebarPositionItems} onItemSelect={onClose} />
+          <MenuItemsList items={sidebarPositionItems} onItemSelect={onClose} density="default" />
         </>
       )}
       {actionItems.length > 0 && (
         <>
           <div className="my-0.5 border-border/70 border-t" />
-          <MenuItemsList items={actionItems} onItemSelect={onClose} />
+          <MenuItemsList items={actionItems} onItemSelect={onClose} density="default" />
         </>
       )}
     </Dropdown>
@@ -726,12 +727,17 @@ const TerminalTabBar = ({
                   : "flex items-center gap-0.5",
               )}
             >
-              {terminals.length === 0 && (
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <TerminalIcon className="text-subtle-foreground" />
-                  <span className="font-sans ui-text-sm text-subtle-foreground">No terminals</span>
-                </div>
-              )}
+              {terminals.length === 0 &&
+                (orientation === "vertical" ? (
+                  <EmptyState layout="sidebar" message="No terminals" />
+                ) : (
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <TerminalIcon className="text-subtle-foreground" />
+                    <span className="font-sans ui-text-sm text-subtle-foreground">
+                      No terminals
+                    </span>
+                  </div>
+                ))}
               {pinnedTerminals.length > 0 && (
                 <div
                   className={cn(
@@ -978,7 +984,11 @@ const TerminalTabBar = ({
               New Terminal
             </div>
             <div className="my-0.5 border-border/70 border-t" />
-            <MenuItemsList items={profileMenuItems} onItemSelect={closeProfileMenu} />
+            <MenuItemsList
+              items={profileMenuItems}
+              onItemSelect={closeProfileMenu}
+              density="default"
+            />
           </Dropdown>
         </>,
         document.body,

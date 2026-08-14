@@ -39,8 +39,12 @@ export function Avatar({ name, src, className }: AvatarProps) {
         />
       ) : null}
       <AvatarPrimitive.Fallback
-        delay={imageSource ? 150 : 0}
-        className="ui-text-sm flex size-full items-center justify-center font-medium text-subtle-foreground"
+        className={({ imageLoadingStatus }) =>
+          cn(
+            "ui-text-sm flex size-full items-center justify-center font-medium text-subtle-foreground",
+            imageSource && imageLoadingStatus !== "error" && "invisible",
+          )
+        }
       >
         {getAvatarInitials(label)}
       </AvatarPrimitive.Fallback>

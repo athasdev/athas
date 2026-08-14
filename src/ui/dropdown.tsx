@@ -305,7 +305,7 @@ export function Dropdown(props: DropdownProps) {
     animated = true,
     matchAnchorWidth = false,
     anchorMinWidth = 0,
-    density = "compact",
+    density: requestedDensity,
     showIcons = true,
   } = props;
 
@@ -319,6 +319,7 @@ export function Dropdown(props: DropdownProps) {
   const [isPositioned, setIsPositioned] = useState(false);
 
   const isAnchorMode = "anchorRef" in props && props.anchorRef != null;
+  const density = requestedDensity ?? (isAnchorMode ? "compact" : "default");
   const anchorRef = isAnchorMode ? (props as AnchorPositioning).anchorRef : null;
   const anchorSide = isAnchorMode
     ? ((props as AnchorPositioning).anchorSide ?? "bottom")

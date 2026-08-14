@@ -126,7 +126,7 @@ function ScrollBar({
     >
       <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="relative flex-1 rounded-full bg-(--app-scrollbar-thumb) hover:bg-(--app-scrollbar-thumb-hover) data-[orientation=horizontal]:h-1.5 data-[orientation=vertical]:w-1.5"
+        className="relative rounded-full bg-(--app-scrollbar-thumb) hover:bg-(--app-scrollbar-thumb-hover) data-[orientation=horizontal]:h-1.5 data-[orientation=vertical]:w-1.5"
       />
     </ScrollAreaPrimitive.Scrollbar>
   );

@@ -1,27 +1,24 @@
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimStore } from "@/features/vim/stores/vim.store";
-import { cn } from "@/utils/cn";
 
-interface VimStatusIndicatorProps {
-  compact?: boolean;
-}
-
-const VimStatusIndicator = ({ compact = false }: VimStatusIndicatorProps) => {
+const VimStatusIndicator = () => {
   const vimMode = useSettingsStore((state) => state.settings.vimMode);
   const mode = useVimStore.use.mode();
 
-  // Don't show anything if vim mode is disabled
   if (!vimMode) {
     return null;
   }
 
-  const modeDisplay = mode.toUpperCase();
-  const statusChipClass = cn(
-    "font-sans inline-flex h-5 items-center self-center rounded-full border border-transparent px-1.5 ui-text-sm leading-none text-subtle-foreground transition-colors hover:bg-accent hover:text-foreground",
-    compact && "px-1.5",
-  );
+  const modeDisplay = `${mode.charAt(0).toUpperCase()}${mode.slice(1)}`;
 
-  return <span className={statusChipClass}>{modeDisplay}</span>;
+  return (
+    <span
+      className="font-sans inline-flex h-6 select-none items-center self-center px-1.5 ui-text-caption leading-none text-subtle-foreground/80"
+      aria-label={`Vim mode: ${modeDisplay}`}
+    >
+      {modeDisplay}
+    </span>
+  );
 };
 
 export default VimStatusIndicator;

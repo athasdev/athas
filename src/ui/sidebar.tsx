@@ -286,7 +286,7 @@ export function SidebarListItem({
         "athas-chrome-control font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) px-2 py-1 text-left font-normal text-subtle-foreground transition-[background-color,color]",
         "hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
         active && "bg-selected font-medium text-foreground",
-        description && "min-h-11 items-start py-1.5",
+        description && "h-12 items-start py-1",
         iconOnly && "justify-center gap-0 rounded-full px-0",
         className,
       )}
