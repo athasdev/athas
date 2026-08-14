@@ -61,10 +61,10 @@ function InputGroupAddon({
 const inputGroupButtonVariants = cva("shadow-none", {
   variants: {
     size: {
-      xs: "h-5 rounded-md px-1.5",
-      sm: "h-6 rounded-md px-2",
-      "icon-xs": "size-5 rounded-md p-0",
-      "icon-sm": "size-6 rounded-md p-0",
+      xs: "h-5 rounded-(--athas-chrome-radius) px-1.5",
+      sm: "h-6 rounded-(--athas-chrome-radius) px-2",
+      "icon-xs": "size-5 rounded-full p-0",
+      "icon-sm": "size-6 rounded-full p-0",
     },
   },
   defaultVariants: {
