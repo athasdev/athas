@@ -7,6 +7,7 @@ import {
 import { memo, useState } from "react";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { Button } from "@/ui/button";
+import { Card, CardContent } from "@/ui/card";
 import { cn } from "@/utils/cn";
 import MarkdownRenderer from "./markdown-renderer";
 
@@ -31,17 +32,17 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
         : "text-subtle-foreground";
 
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-border bg-background/80",
-        status === "current" && "border-primary/30 bg-primary/5",
-      )}
+    <Card
+      variant={status === "current" ? "default" : "outline"}
+      size="flush"
+      className={status === "current" ? "border-primary/30 bg-primary/5" : undefined}
     >
       <Button
         type="button"
         variant="ghost"
+        size="sm"
         onClick={() => step.description && setIsExpanded(!isExpanded)}
-        className="h-auto w-full justify-start gap-2 px-2.5 py-2 text-left"
+        className="w-full justify-start text-left"
       >
         <StatusIcon className={cn("shrink-0", statusColor)} />
         <span className="min-w-0 flex-1 font-medium text-foreground">
@@ -57,10 +58,10 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
         )}
       </Button>
       {isExpanded && step.description && (
-        <div className="border-border border-t px-3 py-2.5 text-muted-foreground ui-text-sm">
+        <CardContent className="border-border border-t px-3 py-2.5 text-muted-foreground ui-text-sm">
           <MarkdownRenderer content={step.description} />
-        </div>
+        </CardContent>
       )}
-    </div>
+    </Card>
   );
 });
