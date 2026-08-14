@@ -59,8 +59,6 @@ import { ChatPreferencesMenu } from "./chat-preferences-menu";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ContextSelector } from "../selectors/context-selector";
-import { ProviderApiKeyCommand } from "../provider-api-key-command";
-import { SkillsCommand, type SkillsView } from "../skills/skills-command";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -93,9 +91,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // Local state for input emptiness check (to avoid subscribing to full input text)
   const [hasInputText, setHasInputText] = useState(false);
   const [isContextDragOver, setIsContextDragOver] = useState(false);
-  const [isSkillsManagerOpen, setIsSkillsManagerOpen] = useState(false);
-  const [skillsManagerView, setSkillsManagerView] = useState<SkillsView>("list");
-  const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
   const [isComposerFocused, setIsComposerFocused] = useState(false);
   const inputValueRef = useRef("");
   const [pastedImages, setPastedImages] = useState<PastedImage[]>([]);
@@ -235,9 +230,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
     if (mentionState.active) {
       hideMention();
     }
-    if (isSkillsManagerOpen) {
-      setIsSkillsManagerOpen(false);
-    }
   }, [
     slashCommandState.active,
     hideSlashCommands,
@@ -245,7 +237,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
     setIsContextDropdownOpen,
     mentionState.active,
     hideMention,
-    isSkillsManagerOpen,
   ]);
 
   const closeInlineMenus = useCallback(() => {
@@ -1095,15 +1086,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
               onSessionConfigChange={(optionId, value) =>
                 void changeSessionConfigOption(optionId, value)
               }
-              onManageApiKeys={() => {
-                closeInlineMenus();
-                setIsApiKeyManagerOpen(true);
-              }}
-              onManageSkills={(view) => {
-                closeInlineMenus();
-                setSkillsManagerView(view);
-                setIsSkillsManagerOpen(true);
-              }}
               onSelectSkill={insertSkillAtCursor}
               onBeforeOpen={closeInlineMenus}
             />
@@ -1281,19 +1263,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
           onClose={hideSlashCommands}
         />
       )}
-
-      <SkillsCommand
-        isOpen={isSkillsManagerOpen}
-        onClose={() => setIsSkillsManagerOpen(false)}
-        onSelectSkill={insertSkillAtCursor}
-        initialView={skillsManagerView}
-      />
-
-      <ProviderApiKeyCommand
-        isOpen={isApiKeyManagerOpen}
-        onClose={() => setIsApiKeyManagerOpen(false)}
-        initialProviderId={aiProviderId}
-      />
     </ChatComposer>
   );
 });

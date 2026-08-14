@@ -29,17 +29,13 @@ import {
 import {
   BookOpenIcon as BookOpen,
   BrainIcon as Brain,
-  CloudArrowDownIcon as CloudArrowDown,
   FadersHorizontalIcon as Preferences,
-  KeyIcon as Key,
   LockIcon as Lock,
-  PlusIcon as Plus,
   SlidersHorizontalIcon as Sliders,
   SparkleIcon as Sparkles,
 } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { matchesSearchQuery } from "@/utils/search-match";
-import type { SkillsView } from "../skills/skills-command";
 import { getChatPreferencesModel } from "./chat-preferences-model";
 
 const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
@@ -49,8 +45,12 @@ const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
 
 function CurrentValue({ children }: { children: string }) {
   return (
-    <span className="ml-auto max-w-28 truncate text-subtle-foreground ui-text-sm">{children}</span>
+    <span className="max-w-28 shrink-0 truncate text-right text-subtle-foreground">{children}</span>
   );
+}
+
+function PreferenceLabel({ children }: { children: string }) {
+  return <span className="min-w-0 flex-1 truncate">{children}</span>;
 }
 
 function MenuSearchInput({
@@ -90,7 +90,7 @@ function AgentPreferencesSubmenu({
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
         <Sparkles />
-        Agent
+        <PreferenceLabel>Agent</PreferenceLabel>
         <CurrentValue>{currentAgentName}</CurrentValue>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="min-w-56">
@@ -154,7 +154,7 @@ function ModePreferencesSubmenu({ currentAgentId }: { currentAgentId: AgentType 
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
         <Sliders />
-        Mode
+        <PreferenceLabel>Mode</PreferenceLabel>
         <CurrentValue>{selectedModeName}</CurrentValue>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
@@ -184,13 +184,11 @@ function AthasAgentPreferences({
   modelId,
   onProviderChange,
   onModelChange,
-  onManageApiKeys,
 }: {
   providerId: string;
   modelId: string;
   onProviderChange: (providerId: string) => void;
   onModelChange: (modelId: string) => void;
-  onManageApiKeys: () => void;
 }) {
   const [providerQuery, setProviderQuery] = useState("");
   const [modelQuery, setModelQuery] = useState("");
@@ -213,7 +211,7 @@ function AthasAgentPreferences({
       <DropdownMenuSub>
         <DropdownMenuSubTrigger>
           <ProviderIcon providerId={providerId} size={14} />
-          Provider
+          <PreferenceLabel>Provider</PreferenceLabel>
           <CurrentValue>{currentProvider?.name ?? providerId}</CurrentValue>
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent className="min-w-48">
@@ -239,7 +237,7 @@ function AthasAgentPreferences({
       <DropdownMenuSub>
         <DropdownMenuSubTrigger>
           <Brain />
-          Model
+          <PreferenceLabel>Model</PreferenceLabel>
           <CurrentValue>{currentModelName}</CurrentValue>
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent className="max-h-80 min-w-64 overflow-y-auto">
@@ -282,21 +280,14 @@ function AthasAgentPreferences({
           ) : null}
         </DropdownMenuSubContent>
       </DropdownMenuSub>
-
-      <DropdownMenuItem onClick={onManageApiKeys}>
-        <Key />
-        API Keys
-      </DropdownMenuItem>
     </>
   );
 }
 
 function SkillsPreferencesSubmenu({
   onSelectSkill,
-  onManageSkills,
 }: {
   onSelectSkill: (skill: AIChatSkill) => void;
-  onManageSkills: (view: SkillsView) => void;
 }) {
   const [query, setQuery] = useState("");
   const skills = useSettingsStore((state) => state.settings.aiSkills);
@@ -308,7 +299,7 @@ function SkillsPreferencesSubmenu({
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
         <BookOpen />
-        Skills
+        <PreferenceLabel>Skills</PreferenceLabel>
         <CurrentValue>{skills.length.toString()}</CurrentValue>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="max-h-80 min-w-64 overflow-y-auto">
@@ -324,24 +315,6 @@ function SkillsPreferencesSubmenu({
             {skills.length === 0 ? "No skills yet" : "No matching skills"}
           </DropdownMenuItem>
         ) : null}
-        <DropdownMenuSeparator />
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Manage skills</DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuItem onClick={() => onManageSkills("list")}>
-              <BookOpen />
-              My skills…
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onManageSkills("browse")}>
-              <CloudArrowDown />
-              Browse skills…
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onManageSkills("editor")}>
-              <Plus />
-              New skill…
-            </DropdownMenuItem>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
       </DropdownMenuSubContent>
     </DropdownMenuSub>
   );
@@ -364,7 +337,7 @@ function AcpConfigPreferences({
       <DropdownMenuSub key={option.id}>
         <DropdownMenuSubTrigger>
           <Brain />
-          {option.name}
+          <PreferenceLabel>{option.name}</PreferenceLabel>
           <CurrentValue>{currentName}</CurrentValue>
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent className="min-w-48">
@@ -393,8 +366,6 @@ interface ChatPreferencesMenuProps {
   onProviderChange: (providerId: string) => void;
   onModelChange: (modelId: string) => void;
   onSessionConfigChange: (optionId: string, value: string) => void;
-  onManageApiKeys: () => void;
-  onManageSkills: (view: SkillsView) => void;
   onSelectSkill: (skill: AIChatSkill) => void;
   onBeforeOpen: () => void;
 }
@@ -408,8 +379,6 @@ export function ChatPreferencesMenu({
   onProviderChange,
   onModelChange,
   onSessionConfigChange,
-  onManageApiKeys,
-  onManageSkills,
   onSelectSkill,
   onBeforeOpen,
 }: ChatPreferencesMenuProps) {
@@ -438,8 +407,9 @@ export function ChatPreferencesMenu({
       >
         <Preferences />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-60">
+      <DropdownMenuContent align="end" className="min-w-64">
         <DropdownMenuGroup>
+          <DropdownMenuLabel>Session</DropdownMenuLabel>
           {preferences.showAgentPreference && onAgentChange ? (
             <AgentPreferencesSubmenu
               currentAgentId={currentAgentId}
@@ -452,7 +422,6 @@ export function ChatPreferencesMenu({
               modelId={modelId}
               onProviderChange={onProviderChange}
               onModelChange={onModelChange}
-              onManageApiKeys={onManageApiKeys}
             />
           ) : (
             <AcpConfigPreferences
@@ -466,10 +435,14 @@ export function ChatPreferencesMenu({
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <SkillsPreferencesSubmenu onSelectSkill={onSelectSkill} onManageSkills={onManageSkills} />
+          <DropdownMenuLabel>Instructions</DropdownMenuLabel>
+          <SkillsPreferencesSubmenu onSelectSkill={onSelectSkill} />
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => useUIState.getState().openSettingsDialog("ai")}>
             <Preferences />
-            Settings
+            AI settings…
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

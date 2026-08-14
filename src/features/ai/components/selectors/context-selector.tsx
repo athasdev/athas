@@ -221,8 +221,8 @@ export function ContextSelector({
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <GitBranch />
-            Git changes
-            <span className="ml-auto text-subtle-foreground tabular-nums">
+            <span className="min-w-0 flex-1 truncate">Git changes</span>
+            <span className="shrink-0 text-subtle-foreground tabular-nums">
               {gitContextFiles.length}
             </span>
           </DropdownMenuSubTrigger>
@@ -251,8 +251,8 @@ export function ContextSelector({
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <GithubLogo />
-            GitHub
-            <span className="ml-auto text-subtle-foreground tabular-nums">
+            <span className="min-w-0 flex-1 truncate">GitHub</span>
+            <span className="shrink-0 text-subtle-foreground tabular-nums">
               {githubBuffers.length}
             </span>
           </DropdownMenuSubTrigger>
@@ -270,8 +270,8 @@ export function ContextSelector({
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Files />
-            Open tabs
-            <span className="ml-auto text-subtle-foreground tabular-nums">{openTabs.length}</span>
+            <span className="min-w-0 flex-1 truncate">Open tabs</span>
+            <span className="shrink-0 text-subtle-foreground tabular-nums">{openTabs.length}</span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="max-h-80 min-w-72">
             <DropdownMenuSearch
