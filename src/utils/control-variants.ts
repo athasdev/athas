@@ -6,7 +6,7 @@ export const controlSurfaceVariants = cva(
     variants: {
       variant: {
         default:
-          "rounded-lg border border-border bg-surface focus:border-border-strong focus:bg-surface focus:ring-1 focus:ring-border-strong/35",
+          "rounded-(--athas-chrome-radius) border border-border bg-surface focus:border-border-strong focus:bg-surface focus:ring-1 focus:ring-border-strong/35",
         ghost: "border-none bg-transparent focus:ring-0",
         inline:
           "rounded-none border-0 border-foreground border-b bg-transparent focus:border-subtle-foreground focus:ring-0",

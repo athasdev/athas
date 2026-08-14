@@ -23,8 +23,8 @@ const comboboxInputGroupVariants = cva(
     variants: {
       variant: {
         default:
-          "rounded-lg border border-border bg-surface focus-within:border-border-strong focus-within:bg-surface focus-within:ring-1 focus-within:ring-border-strong/35",
-        ghost: "rounded-lg border-0 bg-transparent focus-within:ring-0",
+          "rounded-(--athas-chrome-radius) border border-border bg-surface focus-within:border-border-strong focus-within:bg-surface focus-within:ring-1 focus-within:ring-border-strong/35",
+        ghost: "rounded-(--athas-chrome-radius) border-0 bg-transparent focus-within:ring-0",
       },
     },
     defaultVariants: {
@@ -332,7 +332,7 @@ function ComboboxChips({ className, ...props }: ComboboxPrimitive.Chips.Props) {
     <ComboboxPrimitive.Chips
       data-slot="combobox-chips"
       className={cn(
-        "flex min-h-8 flex-wrap items-center gap-1 rounded-lg border border-border bg-transparent px-2 py-1 ui-text-sm focus-within:border-border-strong focus-within:ring-1 focus-within:ring-border-strong/35",
+        "flex min-h-8 flex-wrap items-center gap-1 rounded-(--athas-chrome-radius) border border-border bg-transparent px-2 py-1 ui-text-sm focus-within:border-border-strong focus-within:ring-1 focus-within:ring-border-strong/35",
         className,
       )}
       {...props}
