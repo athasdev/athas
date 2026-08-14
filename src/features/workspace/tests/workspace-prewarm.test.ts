@@ -1,6 +1,10 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
-import { orderWorkspacePrewarmCandidates } from "@/features/workspace/services/workspace-prewarm";
+import {
+  orderWorkspacePrewarmCandidates,
+  scheduleWorkspacePrewarm,
+} from "@/features/workspace/services/workspace-prewarm";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
 
 const createTab = (id: string): ProjectTab => ({
@@ -33,5 +37,24 @@ describe("workspace prewarm ordering", () => {
     expect(
       orderWorkspacePrewarmCandidates(tabs, "c", (tab) => tab.id !== "d").map((tab) => tab.id),
     ).toEqual(["a"]);
+  });
+
+  it("skips invalid inactive workspaces before initializing them", async () => {
+    const tabs = ["a", "b"].map(createTab);
+    useWorkspaceTabsStore.setState({ projectTabs: tabs });
+    workspaceRuntimeRegistry.activateWorkspace({ id: "a", name: "a", path: "/a" }, "ready");
+    const initialize = vi.fn(async () => true);
+    const onInvalid = vi.fn();
+
+    await scheduleWorkspacePrewarm({
+      initialize,
+      isEligible: () => true,
+      validate: async () => false,
+      waitForIdle: async () => {},
+      onInvalid,
+    });
+
+    expect(initialize).not.toHaveBeenCalled();
+    expect(onInvalid).toHaveBeenCalledWith(tabs[1]);
   });
 });

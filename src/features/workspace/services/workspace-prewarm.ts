@@ -8,7 +8,9 @@ import { prepareWorkspaceRuntime } from "@/features/workspace/services/workspace
 interface ScheduleWorkspacePrewarmOptions {
   initialize: (workspaceId: string, path: string, name: string) => Promise<boolean>;
   isEligible: (tab: ProjectTab) => boolean;
+  validate?: (tab: ProjectTab) => Promise<boolean>;
   waitForIdle: () => Promise<void>;
+  onInvalid?: (tab: ProjectTab) => void;
   onPrepared?: (tab: ProjectTab, prepared: boolean, durationMs: number) => void;
 }
 
@@ -35,7 +37,9 @@ export const orderWorkspacePrewarmCandidates = (
 export const scheduleWorkspacePrewarm = ({
   initialize,
   isEligible,
+  validate,
   waitForIdle,
+  onInvalid,
   onPrepared,
 }: ScheduleWorkspacePrewarmOptions) => {
   if (pendingWorkspacePrewarm) {
@@ -58,6 +62,11 @@ export const scheduleWorkspacePrewarm = ({
           .projectTabs.some((candidate) => candidate.id === tab.id) ||
         workspaceRuntimeRegistry.isWorkspaceReady(tab.id)
       ) {
+        continue;
+      }
+
+      if (validate && !(await validate(tab))) {
+        onInvalid?.(tab);
         continue;
       }
 

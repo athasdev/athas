@@ -698,6 +698,19 @@ const scheduleInactiveWorkspacePrewarm = () => {
   void scheduleWorkspacePrewarm({
     waitForIdle: waitForWorkspaceIdle,
     isEligible: (tab) => !parseRemotePath(tab.path) && !parseWslPath(tab.path),
+    validate: async (tab) => {
+      try {
+        return (await getSymlinkInfo(tab.path)).is_dir;
+      } catch {
+        return false;
+      }
+    },
+    onInvalid: (tab) => {
+      useRecentFoldersStore.getState().actions.updateRecentFolder(tab.path, { missing: true });
+      useWorkspaceTabsStore.getState().actions.removeProjectTab(tab.id);
+      workspaceRuntimeRegistry.removeWorkspace(tab.id);
+      toast.warning(`Removed missing project "${tab.name}"`);
+    },
     initialize: async (workspaceId, path) =>
       await getScopedFileSystemStore(workspaceId).getState().initializeLocalWorkspace({
         workspaceId,
