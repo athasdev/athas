@@ -1,8 +1,26 @@
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
+import { cva } from "class-variance-authority";
 import type * as React from "react";
 import { cn } from "@/utils/cn";
 
 type ScrollAreaOrientation = "vertical" | "horizontal" | "both";
+type ScrollbarVisibility = "hover" | "always";
+
+const scrollbarVariants = cva(
+  "absolute z-10 flex touch-none select-none transition-opacity duration-(--app-duration-fast)",
+  {
+    variants: {
+      visibility: {
+        hover:
+          "opacity-0 group-hover/scroll-area:opacity-100 data-scrolling:opacity-100 group-focus-within/scroll-area:opacity-100",
+        always: "opacity-50 hover:opacity-100 data-scrolling:opacity-100",
+      },
+    },
+    defaultVariants: {
+      visibility: "hover",
+    },
+  },
+);
 
 type ScrollAreaProps = React.ComponentProps<typeof ScrollAreaPrimitive.Root> & {
   orientation?: ScrollAreaOrientation;
@@ -15,6 +33,7 @@ type ScrollAreaProps = React.ComponentProps<typeof ScrollAreaPrimitive.Root> & {
     [key: `data-${string}`]: string | number | boolean | undefined;
   };
   contentClassName?: string;
+  scrollbarVisibility?: ScrollbarVisibility;
 };
 
 function ScrollArea({
@@ -25,6 +44,7 @@ function ScrollArea({
   viewportClassName,
   viewportProps,
   contentClassName,
+  scrollbarVisibility = "hover",
   ...props
 }: ScrollAreaProps) {
   const { ref: viewportRef, style: viewportStyle, ...resolvedViewportProps } = viewportProps ?? {};
@@ -70,8 +90,10 @@ function ScrollArea({
           {children}
         </ScrollAreaPrimitive.Content>
       </ScrollAreaPrimitive.Viewport>
-      {orientation !== "horizontal" ? <ScrollBar /> : null}
-      {orientation !== "vertical" ? <ScrollBar orientation="horizontal" /> : null}
+      {orientation !== "horizontal" ? <ScrollBar visibility={scrollbarVisibility} /> : null}
+      {orientation !== "vertical" ? (
+        <ScrollBar orientation="horizontal" visibility={scrollbarVisibility} />
+      ) : null}
       {orientation === "both" ? (
         <ScrollAreaPrimitive.Corner
           data-slot="scroll-area-corner"
@@ -85,14 +107,17 @@ function ScrollArea({
 function ScrollBar({
   className,
   orientation = "vertical",
+  visibility = "hover",
   ...props
-}: React.ComponentProps<typeof ScrollAreaPrimitive.Scrollbar>) {
+}: React.ComponentProps<typeof ScrollAreaPrimitive.Scrollbar> & {
+  visibility?: ScrollbarVisibility;
+}) {
   return (
     <ScrollAreaPrimitive.Scrollbar
       data-slot="scroll-area-scrollbar"
       orientation={orientation}
       className={cn(
-        "absolute z-10 flex touch-none select-none opacity-0 transition-opacity group-hover/scroll-area:opacity-100 data-scrolling:opacity-100",
+        scrollbarVariants({ visibility }),
         orientation === "vertical" && "inset-y-0 right-0 w-2.5 flex-col items-center py-1",
         orientation === "horizontal" && "inset-x-0 bottom-0 h-2.5 items-center px-1",
         className,

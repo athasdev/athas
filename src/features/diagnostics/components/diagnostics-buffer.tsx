@@ -39,15 +39,7 @@ const DiagnosticsBuffer = () => {
     [handleFileSelect],
   );
 
-  return (
-    <DiagnosticsPane
-      diagnostics={diagnostics}
-      isVisible={true}
-      onClose={() => {}}
-      onDiagnosticClick={handleDiagnosticClick}
-      isEmbedded={true}
-    />
-  );
+  return <DiagnosticsPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />;
 };
 
 export default DiagnosticsBuffer;

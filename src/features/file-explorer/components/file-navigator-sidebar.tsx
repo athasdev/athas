@@ -38,7 +38,7 @@ import "../styles/file-explorer-tree.css";
 
 export type FileNavigatorViewMode = "flat" | "tree";
 type FileNavigatorSearchMode = "substring" | "fuzzy";
-type FileNavigatorSurface = "sidebar" | "plain" | "inset" | "review";
+type FileNavigatorSurface = "sidebar" | "plain" | "inset" | "review" | "panel";
 export type FileNavigatorTone =
   | "neutral"
   | "subtle"
@@ -89,6 +89,7 @@ interface FileNavigatorSidebarProps {
   searchMode?: FileNavigatorSearchMode;
   compactRows?: boolean;
   searchResetKey?: string;
+  resizeEdge?: "left" | "right";
 }
 
 const fileNavigatorSurfaceVariants = cva(
@@ -100,6 +101,7 @@ const fileNavigatorSurfaceVariants = cva(
         plain: "bg-transparent",
         inset: "rounded-xl border border-border/70 bg-surface/20",
         review: "border-border/60 border-r bg-surface/10",
+        panel: "bg-surface/55",
       },
     },
     defaultVariants: {
@@ -282,6 +284,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   searchMode = "substring",
   compactRows = false,
   searchResetKey,
+  resizeEdge = "right",
 }: FileNavigatorSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const navigatorRef = useRef<HTMLElement>(null);
@@ -372,7 +375,8 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       setIsResizing(true);
 
       const handlePointerMove = (moveEvent: globalThis.PointerEvent) => {
-        resizeTo(startWidth + moveEvent.clientX - startX);
+        const delta = moveEvent.clientX - startX;
+        resizeTo(startWidth + (resizeEdge === "right" ? delta : -delta));
       };
 
       const handlePointerUp = () => {
@@ -388,7 +392,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     },
-    [navigatorLayout.width, resizeTo],
+    [navigatorLayout.width, resizeEdge, resizeTo],
   );
 
   const handleResizeKeyDown = useCallback(
@@ -396,20 +400,34 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
 
       event.preventDefault();
-      resizeTo(navigatorLayout.width + (event.key === "ArrowRight" ? RESIZE_STEP : -RESIZE_STEP));
+      const direction = event.key === "ArrowRight" ? 1 : -1;
+      resizeTo(
+        navigatorLayout.width + (resizeEdge === "right" ? direction : -direction) * RESIZE_STEP,
+      );
     },
-    [navigatorLayout.width, resizeTo],
+    [navigatorLayout.width, resizeEdge, resizeTo],
   );
 
   return (
     <aside
       ref={navigatorRef}
-      className={cn(fileNavigatorSurfaceVariants({ surface }), className)}
+      className={cn(
+        fileNavigatorSurfaceVariants({ surface }),
+        surface === "panel" &&
+          (resizeEdge === "left" ? "border-border/70 border-l" : "border-border/70 border-r"),
+        className,
+      )}
       style={{ width: navigatorLayout.width }}
       aria-label={ariaLabel}
     >
       {onViewModeChange ? (
-        <SidebarHeader className={surface === "plain" ? "px-1" : undefined}>
+        <SidebarHeader
+          className={cn(
+            surface === "plain" && "px-1",
+            surface === "panel" &&
+              "border-border/60 border-b bg-surface/92 px-(--athas-chrome-padding-inline)",
+          )}
+        >
           <SidebarSearchPopover
             value={searchQuery}
             onChange={setSearchQuery}
@@ -442,7 +460,12 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         </SidebarHeader>
       ) : null}
 
-      <ScrollArea className="min-h-0 flex-1" contentClassName="p-1" reserveScrollbarGutter>
+      <ScrollArea
+        className="min-h-0 flex-1"
+        contentClassName={surface === "panel" ? "px-(--athas-chrome-padding-inline) py-2" : "p-1"}
+        reserveScrollbarGutter
+        scrollbarVisibility={surface === "panel" ? "always" : "hover"}
+      >
         {hiddenItemCount > 0 ? (
           <SidebarSectionLabel>
             Showing {searchableItems.length.toLocaleString()} of {items.length.toLocaleString()}
@@ -478,7 +501,10 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         )}
       </ScrollArea>
       <div
-        className="absolute top-0 -right-1 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary/20"
+        className={cn(
+          "absolute top-0 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary/20",
+          resizeEdge === "right" ? "-right-1" : "-left-1",
+        )}
         onPointerDown={handleResizeStart}
         onKeyDown={handleResizeKeyDown}
         role="separator"

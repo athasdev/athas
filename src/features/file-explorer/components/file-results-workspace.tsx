@@ -5,6 +5,7 @@ import {
   type FileNavigatorItem,
   type FileNavigatorViewMode,
 } from "./file-navigator-sidebar";
+import { cn } from "@/utils/cn";
 
 interface FileResultsWorkspaceProps {
   children: ReactNode;
@@ -18,6 +19,12 @@ interface FileResultsWorkspaceProps {
   navigatorSearchResetKey?: string;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
   orientation?: "vertical" | "both";
+  navigatorPosition?: "left" | "right";
+  navigatorResponsiveOverlay?: boolean;
+  navigatorAppearance?: "inset" | "panel";
+  contentInset?: boolean;
+  scrollbarVisibility?: "hover" | "always";
+  reserveScrollbarGutter?: boolean;
 }
 
 export function FileResultsWorkspace({
@@ -32,29 +39,48 @@ export function FileResultsWorkspace({
   navigatorSearchResetKey,
   scrollContainerRef,
   orientation = "vertical",
+  navigatorPosition = "left",
+  navigatorResponsiveOverlay = false,
+  navigatorAppearance = "inset",
+  contentInset = true,
+  scrollbarVisibility = "hover",
+  reserveScrollbarGutter = false,
 }: FileResultsWorkspaceProps) {
+  const navigator =
+    showNavigator && items.length > 0 ? (
+      <FileNavigatorSidebar
+        items={items}
+        selectedKey={selectedKey}
+        onSelect={onSelect}
+        ariaLabel={ariaLabel}
+        viewMode={viewMode}
+        onViewModeChange={onViewModeChange}
+        surface={navigatorAppearance}
+        searchMode="fuzzy"
+        compactRows={navigatorAppearance !== "panel"}
+        searchResetKey={navigatorSearchResetKey}
+        resizeEdge={navigatorPosition === "left" ? "right" : "left"}
+        className={cn(
+          "z-20 h-auto self-stretch",
+          navigatorAppearance === "inset" && "my-2",
+          navigatorAppearance === "inset" && (navigatorPosition === "left" ? "ml-2" : "mr-2"),
+          navigatorResponsiveOverlay &&
+            navigatorPosition === "right" &&
+            "@max-[720px]/file-results:absolute @max-[720px]/file-results:inset-y-0 @max-[720px]/file-results:right-0 @max-[720px]/file-results:shadow-xl",
+        )}
+      />
+    ) : null;
+
   return (
-    <div className="flex h-full min-h-0 min-w-0 overflow-hidden bg-background">
-      {showNavigator && items.length > 0 ? (
-        <FileNavigatorSidebar
-          items={items}
-          selectedKey={selectedKey}
-          onSelect={onSelect}
-          ariaLabel={ariaLabel}
-          viewMode={viewMode}
-          onViewModeChange={onViewModeChange}
-          surface="inset"
-          searchMode="fuzzy"
-          compactRows
-          searchResetKey={navigatorSearchResetKey}
-          className="my-2 ml-2 h-auto self-stretch"
-        />
-      ) : null}
+    <div className="@container/file-results relative flex h-full min-h-0 min-w-0 overflow-hidden bg-background">
+      {navigatorPosition === "left" ? navigator : null}
 
       <ScrollArea
         className="min-h-0 min-w-0 flex-1 bg-background"
-        contentClassName="min-h-full px-2 pb-2"
+        contentClassName={cn("min-h-full", contentInset && "px-2 pb-2")}
         orientation={orientation}
+        reserveScrollbarGutter={reserveScrollbarGutter}
+        scrollbarVisibility={scrollbarVisibility}
         viewportProps={
           scrollContainerRef
             ? {
@@ -66,6 +92,8 @@ export function FileResultsWorkspace({
       >
         {children}
       </ScrollArea>
+
+      {navigatorPosition === "right" ? navigator : null}
     </div>
   );
 }
