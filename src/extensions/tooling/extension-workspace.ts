@@ -11,6 +11,15 @@ export const EXTENSION_ARTIFACTS_PATH = join(EXTENSIONS_ROOT, "artifacts.json");
 export const CATALOG_DIR = join(EXTENSION_DOMAIN_ROOT, "catalog");
 const OFFICIAL_EXTENSIONS_DIR = join(EXTENSIONS_ROOT, "official");
 const COMMUNITY_EXTENSIONS_DIR = join(EXTENSIONS_ROOT, "community");
+const BUILD_ONLY_PACKAGE_ENTRIES = new Set([
+  "build",
+  "build.sh",
+  "node_modules",
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "tooling.json",
+  "yarn.lock",
+]);
 
 export interface ExtensionArtifactsFile {
   version: 1;
@@ -121,6 +130,14 @@ async function inspectPackageDirectories(
       }
       if (!isKebabCase(basename(directory))) {
         issues.push({ folder: relativeFolder, message: "Package folder must use kebab-case" });
+      }
+      for (const entry of entries) {
+        if (BUILD_ONLY_PACKAGE_ENTRIES.has(entry.name)) {
+          issues.push({
+            folder: relativeFolder,
+            message: `Build-only entry '${entry.name}' must live in extensions/tooling`,
+          });
+        }
       }
       return;
     }
