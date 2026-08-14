@@ -62,6 +62,11 @@ describe("parseDeepLinkAction", () => {
       type: "extensions",
       extensionsCategory: undefined,
     });
+
+    expect(parseDeepLinkAction("athas://settings?tab=extensions&category=ai")).toEqual({
+      type: "extensions",
+      extensionsCategory: "ai",
+    });
   });
 
   it("drops unsupported schemes and malformed actions", () => {
