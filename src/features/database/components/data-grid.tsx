@@ -38,7 +38,7 @@ import CellRenderer from "./cell-renderer";
 
 const MIN_COLUMN_WIDTH = 60;
 const DEFAULT_COLUMN_WIDTH = 150;
-const ESTIMATED_ROW_HEIGHT = 34;
+const DATA_GRID_ROW_HEIGHT = 34;
 
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
   int: { icon: Hash, color: "text-primary" },
@@ -128,11 +128,7 @@ export default function DataGrid({
   const rowVirtualizer = useVirtualizer({
     count: queryResult.rows.length,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => ESTIMATED_ROW_HEIGHT,
-    measureElement:
-      typeof window !== "undefined" && !navigator.userAgent.includes("Firefox")
-        ? (element) => element?.getBoundingClientRect().height
-        : undefined,
+    estimateSize: () => DATA_GRID_ROW_HEIGHT,
     overscan: 12,
   });
 
@@ -403,10 +399,9 @@ export default function DataGrid({
           type="button"
           variant="ghost"
           onClick={onCreateRow}
-          className={cn(
-            "rounded-md",
-            canCreateRows ? "opacity-0 group-hover:opacity-100" : "cursor-default opacity-30",
-          )}
+          className={
+            canCreateRows ? "opacity-0 group-hover:opacity-100" : "cursor-default opacity-30"
+          }
           aria-label="Add row"
           disabled={!canCreateRows}
           size="icon-xs"
@@ -516,9 +511,8 @@ export default function DataGrid({
               return (
                 <tr
                   key={ri}
-                  ref={rowVirtualizer.measureElement}
-                  data-index={virtualRow.index}
                   className="cursor-pointer transition-colors hover:bg-accent/25"
+                  style={{ height: DATA_GRID_ROW_HEIGHT }}
                   onContextMenu={(e) => canOpenRowMenu && onRowContextMenu(e, ri)}
                 >
                   <td
@@ -552,6 +546,7 @@ export default function DataGrid({
                         key={ci}
                         className={cn(
                           "max-w-75 border-border/50 border-b px-2 py-1.5 font-normal text-foreground",
+                          isEditing && "py-1",
                           canEditCells && !isPK && "cursor-pointer hover:bg-accent",
                           isPK && "bg-accent/55",
                           isSelected && "bg-primary/10",
@@ -586,6 +581,7 @@ export default function DataGrid({
                               if (e.key === "Escape") setEditing(null);
                             }}
                             onBlur={handleSubmit}
+                            size="xs"
                             className="w-full rounded-lg border-border/70 bg-surface/80 ui-text-sm focus:border-primary/60"
                           />
                         ) : (

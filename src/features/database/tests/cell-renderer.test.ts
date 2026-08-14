@@ -1,6 +1,29 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vite-plus/test";
 import { formatCellValue } from "../hooks/use-cell-copy";
-import { isIsoDate, isJsonString, isUnixTimestamp } from "../components/cell-renderer";
+import CellRenderer, {
+  isIsoDate,
+  isJsonString,
+  isUnixTimestamp,
+} from "../components/cell-renderer";
+
+describe("CellRenderer", () => {
+  it("keeps long-value details out of the table row until the popover opens", () => {
+    const value = "Long database value ".repeat(12);
+    const markup = renderToStaticMarkup(
+      createElement(CellRenderer, {
+        value,
+        columnName: "description",
+        isPrimaryKey: false,
+        onContextMenu: () => {},
+      }),
+    );
+
+    expect(markup).toContain('aria-label="View full value in description"');
+    expect(markup).not.toContain(value);
+  });
+});
 
 describe("cell-renderer detection heuristics", () => {
   describe("isIsoDate", () => {

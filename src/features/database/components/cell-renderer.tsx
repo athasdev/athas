@@ -1,6 +1,6 @@
-import { useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import type { ForeignKeyInfo } from "../types/common.types";
 
@@ -21,8 +21,6 @@ export default function CellRenderer({
   onFkClick,
   onContextMenu,
 }: CellRendererProps) {
-  const [expanded, setExpanded] = useState(false);
-
   const handleContextMenu = (e: React.MouseEvent) => {
     onContextMenu?.(e, value, columnName);
   };
@@ -38,22 +36,12 @@ export default function CellRenderer({
   // JSON detection
   if (typeof value === "string" && isJsonString(value)) {
     return (
-      <span onContextMenu={handleContextMenu}>
-        <Button
-          onClick={() => setExpanded(!expanded)}
-          variant="ghost"
-          size="xs"
-          className="block h-auto max-w-70 truncate p-0 text-left font-sans font-normal text-primary"
-          tooltip="Click to expand JSON"
-        >
-          {expanded ? value : truncateText(value, 50)}
-        </Button>
-        {expanded && (
-          <pre className="mt-1 max-h-40 overflow-auto rounded bg-surface p-2 font-sans ui-text-sm text-foreground">
-            {formatJson(value)}
-          </pre>
-        )}
-      </span>
+      <ExpandedCellValue
+        label={truncateText(value, 50)}
+        value={formatJson(value)}
+        ariaLabel={`View JSON value in ${columnName}`}
+        onContextMenu={handleContextMenu}
+      />
     );
   }
 
@@ -105,21 +93,13 @@ export default function CellRenderer({
   const text = String(value);
   if (text.length > 100) {
     return (
-      <span onContextMenu={handleContextMenu}>
-        <Button
-          onClick={() => setExpanded(!expanded)}
-          variant="ghost"
-          size="xs"
-          className={cn(
-            "block h-auto max-w-70 p-0 text-left font-normal",
-            expanded ? "whitespace-pre-wrap" : "truncate",
-            isPrimaryKey && "text-foreground",
-          )}
-          tooltip="Click to expand"
-        >
-          {expanded ? text : truncateText(text, 100)}
-        </Button>
-      </span>
+      <ExpandedCellValue
+        label={truncateText(text, 100)}
+        value={text}
+        ariaLabel={`View full value in ${columnName}`}
+        onContextMenu={handleContextMenu}
+        primary={isPrimaryKey}
+      />
     );
   }
 
@@ -131,6 +111,47 @@ export default function CellRenderer({
     >
       {text}
     </span>
+  );
+}
+
+function ExpandedCellValue({
+  label,
+  value,
+  ariaLabel,
+  onContextMenu,
+  primary = false,
+}: {
+  label: string;
+  value: string;
+  ariaLabel: string;
+  onContextMenu: (event: React.MouseEvent) => void;
+  primary?: boolean;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className={cn(
+              "block h-auto max-w-70 truncate p-0 text-left font-normal text-primary",
+              primary && "text-foreground",
+            )}
+            aria-label={ariaLabel}
+            onContextMenu={onContextMenu}
+          />
+        }
+      >
+        {label}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="max-h-80 w-96 max-w-[min(24rem,calc(100vw-16px))]">
+        <pre className="overflow-auto whitespace-pre-wrap wrap-break-word font-mono ui-text-sm text-foreground">
+          {value}
+        </pre>
+      </PopoverContent>
+    </Popover>
   );
 }
 

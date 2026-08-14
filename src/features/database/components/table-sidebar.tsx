@@ -12,6 +12,7 @@ import {
   SidebarSectionLabel,
   SidebarTitleBar,
 } from "@/ui/sidebar";
+import { EmptyState } from "@/ui/empty";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import { getDatabaseObjectOwner, groupDatabaseObjects } from "../lib/database-catalog";
@@ -66,6 +67,9 @@ export default function TableSidebar({
         </SidebarHeaderIconButton>
       </SidebarTitleBar>
       <ScrollArea className="flex-1" contentClassName="space-y-1 p-2">
+        {objectGroups.length === 0 ? (
+          <EmptyState layout="sidebar" message="No database objects" />
+        ) : null}
         {objectGroups.map((group, index) => {
           const Icon = groupIcon[group.kind];
           return (
