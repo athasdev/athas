@@ -1,56 +1,27 @@
 import {
-  ArrowClockwiseIcon as RefreshCw,
-  ArrowCounterClockwiseIcon as Reset,
   BrainIcon as Brain,
-  CheckIcon as Check,
-  DatabaseIcon as Database,
-  DownloadSimpleIcon as Download,
   PackageIcon as Package,
-  PaintBrushIcon as PaintBrush,
-  PlugsConnectedIcon as PlugsConnected,
   PlusIcon as Plus,
-  RobotIcon as Robot,
   SparkleIcon as Sparkles,
-  TextTIcon as TextT,
-  TrashIcon as Trash,
-  WarningCircleIcon as WarningCircle,
-  XCircleIcon as XCircle,
 } from "@/ui/icons";
 import { invoke } from "@tauri-apps/api/core";
-import { getVisibleIconThemes } from "@/extensions/icon-themes/icon-theme-normalization";
-import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
-import type { ExtensionRuntimeIssue } from "@/extensions/registry/extension-store-types";
-import { themeRegistry } from "@/extensions/themes/theme-registry";
-import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
-import {
-  getManifestAIProviderContributions,
-  getManifestDatabaseContributions,
-  getManifestIconContributions,
-  getManifestIntegrationContributions,
-  getManifestThemeContributions,
-} from "@/extensions/types/extension-contributions";
 import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useGenerateStore } from "@/features/generate/stores/generate.store";
 import {
   createSkillFromMarketplace,
   hasMarketplaceSkillUpdate,
-  hasSkillLocalOverride,
-  isMarketplaceSkillInstalled,
   loadMarketplaceSkills,
   resetSkillLocalOverride,
   updateSkillFromMarketplace,
 } from "@/features/ai/lib/skill-library";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
-import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
+import type { MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { Alert, AlertDescription } from "@/ui/alert";
-import Badge from "@/ui/badge";
-import { Button } from "@/ui/button";
 import {
   Dropdown,
   DropdownMenu,
@@ -59,471 +30,29 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   useDropdownMenu,
-  type MenuItem,
 } from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
   SidebarHeaderIconButton,
-  SidebarListItem,
   SidebarPanel,
   SidebarSearchPopover,
   SidebarSection,
   SidebarTitleBar,
 } from "@/ui/sidebar";
-import { cn } from "@/utils/cn";
-import { PLATFORM_ARCH } from "@/utils/platform";
 
-interface UnifiedExtension {
-  id: string;
-  name: string;
-  description: string;
-  category:
-    | "language"
-    | "theme"
-    | "icon-theme"
-    | "database"
-    | "ai"
-    | "integration"
-    | "skill"
-    | "agent";
-  isInstalled: boolean;
-  isEnabled: boolean;
-  version?: string;
-  extensions?: string[];
-  publisher?: string;
-  isMarketplace?: boolean;
-  isBundled?: boolean;
-  runtimeIssues?: ExtensionRuntimeIssue[];
-  skill?: AIChatSkill;
-  marketplaceSkill?: MarketplaceSkill;
-  agentId?: string;
-  icon?: string | null;
-  canInstall?: boolean;
-  packageSize?: number;
-  contributionSummary?: string[];
-  selectionId?: string;
-  appearanceOptions?: AppearanceOption[];
-  isActive?: boolean;
-}
-
-interface AppearanceOption {
-  id: string;
-  name: string;
-  description?: string;
-}
-
-const EXTENSION_CATEGORIES = [
-  { id: "language", label: "Languages" },
-  { id: "theme", label: "Themes" },
-  { id: "icon-theme", label: "Icon Themes" },
-  { id: "database", label: "Databases" },
-  { id: "ai", label: "AI" },
-  { id: "integration", label: "Integrations" },
-  { id: "skill", label: "Skills" },
-  { id: "agent", label: "Agents" },
-] as const;
-
-const LOCAL_FILE_ICON_MODULES = import.meta.glob(
-  "../../../extensions/bundled/icon-themes/athas/icons/files/*.svg",
-  { eager: true, import: "default", query: "?url" },
-) as Record<string, string>;
-const LOCAL_FILE_ICON_URLS = new Map(
-  Object.entries(LOCAL_FILE_ICON_MODULES).map(([path, url]) => [
-    path
-      .split("/")
-      .pop()
-      ?.replace(/\.svg$/i, "") ?? path,
-    url,
-  ]),
-);
-
-const SIMPLE_ICON_SLUGS: Record<string, string> = {
-  alibaba: "alibabacloud",
-  alibabacloud: "alibabacloud",
-  anthropic: "anthropic",
-  claude: "claude",
-  "claude-acp": "claude",
-  "claude-code": "claude",
-  duckdb: "duckdb",
-  gemini: "googlegemini",
-  "gemini-cli": "googlegemini",
-  "google-gemini": "googlegemini",
-  googlegemini: "googlegemini",
-  mongodb: "mongodb",
-  mongo: "mongodb",
-  mysql: "mysql",
-  opencode: "opencode",
-  postgres: "postgresql",
-  postgresql: "postgresql",
-  qwen: "qwen",
-  "qwen-code": "qwen",
-  redis: "redis",
-  sentry: "sentry",
-  gitlab: "gitlab",
-  sqlite: "sqlite",
-  v0: "v0",
-  vercel: "vercel",
-};
-
-const LOCAL_ICON_ALIASES: Record<string, string> = {
-  "c++": "cpp",
-  "c#": "csharp",
-  csharp: "csharp",
-  duckdb: "database",
-  icon: "package",
-  "icon-theme": "package",
-  javascriptreact: "react",
-  js: "javascript",
-  kimi: "agents",
-  "kimi-cli": "agents",
-  less: "css",
-  md: "markdown",
-  mongodb: "mongo",
-  mysql: "database",
-  openai: "codex",
-  opencode: "agents",
-  postgresql: "postgres",
-  rs: "rust",
-  scss: "sass",
-  sh: "shell",
-  sqlite: "database",
-  ts: "typescript",
-  tsx: "react",
-  typescriptreact: "react",
-};
-
-const SIMPLE_ICON_COLOR = "8B8F99";
-
-function isBuiltInDatabaseProvider(providerId: string): boolean {
-  return providerId === "sqlite";
-}
-
-function resolvePackageSize(manifest: {
-  installation?: {
-    size?: number;
-    platformArch?: Record<string, { size?: number }>;
-  };
-}): number | undefined {
-  const platformSize = manifest.installation?.platformArch?.[PLATFORM_ARCH]?.size;
-  if (typeof platformSize === "number" && platformSize > 0) return platformSize;
-  const size = manifest.installation?.size;
-  return typeof size === "number" && size > 0 ? size : undefined;
-}
-
-function getErrorMessage(error: unknown, fallback = "Unknown error"): string {
-  if (error instanceof Error) return error.message || fallback;
-  if (typeof error === "string") return error || fallback;
-  return String(error || fallback);
-}
-
-const getCategoryLabel = (category: UnifiedExtension["category"]) => {
-  switch (category) {
-    case "language":
-      return "Language";
-    case "theme":
-      return "Theme";
-    case "icon-theme":
-      return "Icon Theme";
-    case "database":
-      return "Database";
-    case "ai":
-      return "AI";
-    case "integration":
-      return "Integration";
-    case "skill":
-      return "Skill";
-    case "agent":
-      return "Agent";
-    default:
-      return category;
-  }
-};
-
-function getPrimaryActionLabel(extension: UnifiedExtension): string {
-  if (isAppearanceExtension(extension)) {
-    if (extension.isInstalled) {
-      if (!extension.isEnabled) return "Activate";
-      return extension.isActive ? "Current" : "Use";
-    }
-
-    return "Install";
-  }
-
-  if (extension.category === "skill") {
-    return extension.isInstalled ? "Remove" : "Add";
-  }
-
-  if (extension.category === "agent") {
-    return extension.isInstalled ? "Uninstall" : "Install";
-  }
-
-  return extension.isInstalled ? (extension.isEnabled ? "Deactivate" : "Activate") : "Install";
-}
-
-function isAppearanceExtension(extension: UnifiedExtension): boolean {
-  return extension.category === "theme" || extension.category === "icon-theme";
-}
-
-function getAppearanceSettingKey(extension: UnifiedExtension): "theme" | "iconTheme" | null {
-  if (extension.category === "theme") return "theme";
-  if (extension.category === "icon-theme") return "iconTheme";
-  return null;
-}
-
-function getAppearanceOptionLabel(extension: UnifiedExtension, optionId: string): string {
-  return (
-    extension.appearanceOptions?.find((option) => option.id === optionId)?.name ?? extension.name
-  );
-}
-
-function canDeactivateAppearanceExtension(extension: UnifiedExtension): boolean {
-  return Boolean(
-    isAppearanceExtension(extension) &&
-    extension.isInstalled &&
-    extension.isEnabled &&
-    !extension.isBundled,
-  );
-}
-
-function normalizeIconLookupKey(value: string | undefined | null): string {
-  return (value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9+#]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function stripGenericIconLookupTerms(value: string): string {
-  return normalizeIconLookupKey(
-    value.replace(/\b(?:provider|language support|language|theme|icons?|cli|code)\b/g, " "),
-  );
-}
-
-function getIconLookupCandidates(iconId: string | undefined | null): string[] {
-  const normalized = normalizeIconLookupKey(iconId);
-  if (!normalized) return [];
-
-  const stripped = stripGenericIconLookupTerms(normalized.replace(/-/g, " "));
-  const baseCandidates = [
-    normalized,
-    stripped,
-    normalized.replace(/-/g, ""),
-    stripped.replace(/-/g, ""),
-  ].filter(Boolean);
-
-  return Array.from(
-    new Set(
-      baseCandidates.flatMap((candidate) => [
-        candidate,
-        LOCAL_ICON_ALIASES[candidate],
-        SIMPLE_ICON_SLUGS[candidate],
-      ]),
-    ),
-  ).filter(Boolean) as string[];
-}
-
-function getLocalFileIconUrl(iconId: string | undefined | null): string | undefined {
-  const candidates = getIconLookupCandidates(iconId);
-
-  for (const candidate of candidates) {
-    const url = LOCAL_FILE_ICON_URLS.get(candidate);
-    if (url) return url;
-  }
-
-  return undefined;
-}
-
-function getSimpleIconUrl(iconId: string | undefined | null): string | undefined {
-  const candidates = getIconLookupCandidates(iconId);
-  const slug = candidates.find((candidate) => SIMPLE_ICON_SLUGS[candidate]);
-
-  return slug
-    ? `https://cdn.simpleicons.org/${SIMPLE_ICON_SLUGS[slug]}/${SIMPLE_ICON_COLOR}`
-    : undefined;
-}
-
-function getCatalogIconUrl(...iconIds: Array<string | undefined | null>): string | undefined {
-  for (const iconId of iconIds) {
-    const simpleIcon = getSimpleIconUrl(iconId);
-    if (simpleIcon) return simpleIcon;
-
-    const localIcon = getLocalFileIconUrl(iconId);
-    if (localIcon) return localIcon;
-  }
-
-  return undefined;
-}
-
-function resolveManifestIcon(
-  manifestIcon: string | undefined,
-  ...fallbackIconIds: Array<string | undefined | null>
-): string | undefined {
-  const trimmedIcon = manifestIcon?.trim();
-  const resolvedFallback = getCatalogIconUrl(...fallbackIconIds);
-  const iconFileName = trimmedIcon?.split(/[?#]/)[0]?.split("/").pop()?.toLowerCase();
-
-  if (!trimmedIcon || iconFileName === "icon.svg") {
-    return resolvedFallback ?? trimmedIcon;
-  }
-
-  return trimmedIcon;
-}
-
-function getCategoryIcon(category: UnifiedExtension["category"]): ReactNode {
-  const className = "size-4 text-subtle-foreground";
-
-  switch (category) {
-    case "language":
-      return <TextT className={className} weight="duotone" />;
-    case "theme":
-      return <PaintBrush className={className} weight="duotone" />;
-    case "icon-theme":
-      return <Package className={className} weight="duotone" />;
-    case "database":
-      return <Database className={className} weight="duotone" />;
-    case "ai":
-      return <Sparkles className={className} weight="duotone" />;
-    case "integration":
-      return <PlugsConnected className={className} weight="duotone" />;
-    case "skill":
-      return <Brain className={className} weight="duotone" />;
-    case "agent":
-      return <Robot className={className} weight="duotone" />;
-  }
-}
-
-function isImageIcon(icon: string): boolean {
-  return (
-    /^(?:[a-z]+:)?\/\//i.test(icon) ||
-    icon.startsWith("/") ||
-    icon.startsWith("data:") ||
-    /\.(?:svg|png|jpe?g|webp)(?:[?#].*)?$/i.test(icon)
-  );
-}
-
-function isNamedIcon(icon: string): boolean {
-  return !icon.includes("/") && !/\.(?:svg|png|jpe?g|webp)(?:[?#].*)?$/i.test(icon);
-}
-
-function ExtensionIcon({
-  extension,
-  compact = false,
-}: {
-  extension: UnifiedExtension;
-  compact?: boolean;
-}) {
-  const [failedImageIcon, setFailedImageIcon] = useState(false);
-  const icon = extension.icon?.trim();
-  const showImageIcon = Boolean(icon && isImageIcon(icon) && !failedImageIcon);
-  const showNamedIcon = Boolean(icon && !isImageIcon(icon) && isNamedIcon(icon));
-
-  useEffect(() => {
-    setFailedImageIcon(false);
-  }, [icon]);
-
-  return (
-    <span
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-lg border border-border/60",
-        compact ? "size-7 rounded-md" : "size-12",
-        showImageIcon ? "bg-white/95" : "bg-background",
-      )}
-    >
-      {showImageIcon ? (
-        <img
-          alt=""
-          className={cn("object-contain", compact ? "size-4" : "size-7")}
-          draggable={false}
-          src={icon}
-          onError={() => setFailedImageIcon(true)}
-        />
-      ) : showNamedIcon && icon ? (
-        <DynamicIcon
-          name={icon}
-          className={cn("text-subtle-foreground", compact ? "size-4" : "size-5")}
-        />
-      ) : (
-        getCategoryIcon(extension.category)
-      )}
-    </span>
-  );
-}
-
-const ExtensionRow = ({
-  extension,
-  onContextMenu,
-  onSelect,
-  selected,
-  isInstalling,
-  hasUpdate,
-  hasRuntimeIssue,
-}: {
-  extension: UnifiedExtension;
-  onContextMenu: (event: MouseEvent<HTMLElement>, extension: UnifiedExtension) => void;
-  onSelect: () => void;
-  selected?: boolean;
-  isInstalling?: boolean;
-  hasUpdate?: boolean;
-  hasRuntimeIssue?: boolean;
-}) => {
-  const isUnavailableAgent =
-    extension.category === "agent" && !extension.isInstalled && extension.canInstall === false;
-  const actionContent = isInstalling ? (
-    <span className="flex size-5 shrink-0 items-center justify-center text-primary">
-      <Spinner label="Installing" compact />
-    </span>
-  ) : hasRuntimeIssue ? (
-    <span
-      className="flex size-5 shrink-0 items-center justify-center text-destructive"
-      aria-label="Reinstall required"
-    >
-      <WarningCircle className="size-4" weight="duotone" />
-    </span>
-  ) : hasUpdate ? (
-    <span
-      className="flex size-5 shrink-0 items-center justify-center text-primary"
-      aria-label="Update available"
-    >
-      <RefreshCw className="size-4" weight="duotone" />
-    </span>
-  ) : isUnavailableAgent ? (
-    <span
-      className="flex size-5 shrink-0 items-center justify-center text-subtle-foreground"
-      aria-label="Unavailable"
-    >
-      <XCircle className="size-4" weight="duotone" />
-    </span>
-  ) : extension.isInstalled ? (
-    <span
-      className="flex size-5 shrink-0 items-center justify-center text-subtle-foreground"
-      aria-label={extension.isBundled ? "Built-in" : "Installed"}
-    >
-      <Check className="size-4" weight="bold" />
-    </span>
-  ) : (
-    <span
-      className="flex size-5 shrink-0 items-center justify-center text-subtle-foreground"
-      aria-label="Available"
-    >
-      <Plus className="size-4" />
-    </span>
-  );
-
-  return (
-    <SidebarListItem
-      active={selected}
-      leading={<ExtensionIcon extension={extension} compact />}
-      description={extension.description}
-      trailing={actionContent}
-      onClick={onSelect}
-      onContextMenu={(event) => onContextMenu(event, extension)}
-    >
-      {extension.name}
-    </SidebarListItem>
-  );
-};
+import { buildExtensionCatalog } from "./build-extension-catalog";
+import { EXTENSION_CATEGORIES, type UnifiedExtension } from "./extension-catalog-types";
+import {
+  getAppearanceOptionLabel,
+  getAppearanceSettingKey,
+  getErrorMessage,
+  isAppearanceExtension,
+} from "./extension-catalog-utils";
+import { buildExtensionContextMenuItems } from "./extension-context-menu-items";
+import { ExtensionDetailView } from "./extension-detail-view";
+import { ExtensionListItem } from "./extension-list-item";
 
 const ExtensionsView = ({ extensionId }: { extensionId?: string }) => {
   const settings = useSettingsStore(
@@ -536,7 +65,6 @@ const ExtensionsView = ({ extensionId }: { extensionId?: string }) => {
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [extensions, setExtensions] = useState<UnifiedExtension[]>([]);
   const [marketplaceSkills, setMarketplaceSkills] = useState<MarketplaceSkill[]>([]);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [agents, setAgents] = useState<AgentConfig[]>([]);
@@ -574,372 +102,25 @@ const ExtensionsView = ({ extensionId }: { extensionId?: string }) => {
     }
   }, []);
 
-  const loadAllExtensions = useCallback(() => {
-    const allExtensions: UnifiedExtension[] = [];
-    const detectedAgents = new Map(agents.map((agent) => [agent.id, agent]));
-
-    for (const [, ext] of availableExtensions) {
-      if (ext.manifest.agents && ext.manifest.agents.length > 0) {
-        const contribution = ext.manifest.agents[0];
-        const agent = detectedAgents.get(contribution.id);
-        allExtensions.push({
-          id: `agent:${contribution.id}`,
-          name: agent?.name ?? contribution.name,
-          description:
-            agent?.description ?? contribution.description ?? "ACP-compatible coding agent",
-          category: "agent",
-          isInstalled: agent?.installed ?? false,
-          isEnabled: agent?.installed ?? false,
-          version: ext.manifest.version,
-          extensions: [agent?.binaryName ?? contribution.binaryName],
-          publisher: ext.manifest.publisher,
-          isMarketplace: true,
-          isBundled: false,
-          runtimeIssues: ext.runtimeIssues,
-          agentId: contribution.id,
-          icon: resolveManifestIcon(
-            agent?.icon ?? contribution.icon ?? ext.manifest.icon,
-            contribution.id,
-            agent?.id,
-            agent?.name,
-            contribution.name,
-            contribution.binaryName,
-            ext.manifest.displayName,
-          ),
-          canInstall: agent?.canInstall ?? Boolean(contribution.install),
-          contributionSummary: [
-            `agent:${contribution.id}`,
-            agent?.binaryName ?? contribution.binaryName,
-          ].filter(Boolean),
-        });
-      }
-
-      if (ext.manifest.languages && ext.manifest.languages.length > 0) {
-        const lang = ext.manifest.languages[0];
-        const isBundled = !ext.manifest.installation;
-        allExtensions.push({
-          id: ext.manifest.id,
-          name: ext.manifest.displayName,
-          description: ext.manifest.description,
-          category: "language",
-          isInstalled: ext.isInstalled,
-          isEnabled: ext.isEnabled,
-          version: ext.manifest.version,
-          extensions: lang.extensions.map((e: string) => e.replace(".", "")),
-          publisher: ext.manifest.publisher,
-          isMarketplace: !isBundled,
-          isBundled,
-          icon: resolveManifestIcon(
-            ext.manifest.icon,
-            lang.id,
-            lang.aliases?.[0],
-            lang.extensions[0],
-            ext.manifest.displayName,
-            ext.manifest.name,
-          ),
-          runtimeIssues: ext.runtimeIssues,
-          packageSize: resolvePackageSize(ext.manifest),
-          contributionSummary: [
-            ...ext.manifest.languages.map((language) => `language:${language.id}`),
-            ...(ext.manifest.lsp?.name ? [`lsp:${ext.manifest.lsp.name}`] : []),
-            ...(ext.manifest.formatter?.name ? [`formatter:${ext.manifest.formatter.name}`] : []),
-            ...(ext.manifest.linter?.name ? [`linter:${ext.manifest.linter.name}`] : []),
-          ],
-        });
-      }
-
-      const databaseContributions = getManifestDatabaseContributions(ext.manifest);
-      if (databaseContributions.length > 0) {
-        const provider = databaseContributions[0];
-        const isBuiltInDatabase = isBuiltInDatabaseProvider(provider.id);
-        allExtensions.push({
-          id: ext.manifest.id,
-          name: ext.manifest.displayName,
-          description: ext.manifest.description,
-          category: "database",
-          isInstalled: ext.isInstalled,
-          isEnabled: ext.isEnabled,
-          version: ext.manifest.version,
-          extensions: provider.fileExtensions?.map((item) => item.replace(".", "")),
-          publisher: ext.manifest.publisher,
-          isMarketplace: !isBuiltInDatabase,
-          isBundled: isBuiltInDatabase,
-          icon: resolveManifestIcon(
-            ext.manifest.icon,
-            provider.id,
-            provider.label,
-            ext.manifest.displayName,
-          ),
-          runtimeIssues: ext.runtimeIssues,
-          packageSize: resolvePackageSize(ext.manifest),
-          contributionSummary: [`database:${provider.id}`],
-        });
-      }
-
-      const themeContributions = getManifestThemeContributions(ext.manifest);
-      if (themeContributions.length > 0) {
-        const themeIds = themeContributions.map((theme) => theme.id);
-        const activeThemeId = themeIds.find((themeId) => themeId === settings.theme);
-        const themeId = activeThemeId ?? themeIds[0] ?? ext.manifest.id;
-        allExtensions.push({
-          id: ext.manifest.id,
-          name: ext.manifest.displayName,
-          description: ext.manifest.description,
-          category: "theme",
-          isInstalled: ext.isInstalled,
-          isActive: ext.isEnabled && Boolean(activeThemeId),
-          isEnabled: ext.isEnabled,
-          version: ext.manifest.version,
-          publisher: ext.manifest.publisher,
-          isMarketplace: true,
-          isBundled: false,
-          icon: resolveManifestIcon(
-            ext.manifest.icon,
-            activeThemeId,
-            themeContributions[0]?.id,
-            themeContributions[0]?.name,
-            ext.manifest.displayName,
-            "theme",
-          ),
-          runtimeIssues: ext.runtimeIssues,
-          packageSize: resolvePackageSize(ext.manifest),
-          selectionId: themeId,
-          appearanceOptions: themeContributions.map((theme) => ({
-            id: theme.id,
-            name: theme.name,
-            description: theme.description,
-          })),
-          contributionSummary: themeContributions.map((theme) => `theme:${theme.id}`),
-        });
-      }
-
-      const iconContributions = getManifestIconContributions(ext.manifest);
-      if (iconContributions.length > 0) {
-        const iconThemeIds = iconContributions.map((theme) => theme.id);
-        const activeIconThemeId = iconThemeIds.find((themeId) => themeId === settings.iconTheme);
-        const iconThemeId = activeIconThemeId ?? iconThemeIds[0] ?? ext.manifest.id;
-        allExtensions.push({
-          id: ext.manifest.id,
-          name: ext.manifest.displayName,
-          description: ext.manifest.description,
-          category: "icon-theme",
-          isInstalled: ext.isInstalled,
-          isActive: ext.isEnabled && Boolean(activeIconThemeId),
-          isEnabled: ext.isEnabled,
-          version: ext.manifest.version,
-          publisher: ext.manifest.publisher,
-          isMarketplace: true,
-          isBundled: false,
-          icon: resolveManifestIcon(
-            ext.manifest.icon,
-            iconContributions[0]?.id,
-            iconContributions[0]?.name,
-            ext.manifest.displayName,
-            "icon-theme",
-          ),
-          runtimeIssues: ext.runtimeIssues,
-          packageSize: resolvePackageSize(ext.manifest),
-          selectionId: iconThemeId,
-          appearanceOptions: iconContributions.map((theme) => ({
-            id: theme.id,
-            name: theme.name,
-            description: theme.description,
-          })),
-          contributionSummary: iconContributions.map((theme) => `icon:${theme.id}`),
-        });
-      }
-
-      const aiProviderContributions = getManifestAIProviderContributions(ext.manifest);
-      if (aiProviderContributions.length > 0) {
-        allExtensions.push({
-          id: ext.manifest.id,
-          name: ext.manifest.displayName,
-          description: ext.manifest.description,
-          category: "ai",
-          isInstalled: ext.isInstalled,
-          isEnabled: ext.isEnabled,
-          version: ext.manifest.version,
-          publisher: ext.manifest.publisher,
-          isMarketplace: true,
-          isBundled: false,
-          icon: resolveManifestIcon(
-            ext.manifest.icon,
-            aiProviderContributions[0]?.id,
-            aiProviderContributions[0]?.name,
-            ext.manifest.displayName,
-          ),
-          runtimeIssues: ext.runtimeIssues,
-          packageSize: resolvePackageSize(ext.manifest),
-          contributionSummary: aiProviderContributions.map((provider) => `provider:${provider.id}`),
-        });
-      }
-
-      const integrationContributions = getManifestIntegrationContributions(ext.manifest);
-      if (integrationContributions.length > 0) {
-        const integration = integrationContributions[0];
-        allExtensions.push({
-          id: ext.manifest.id,
-          name: ext.manifest.displayName,
-          description: ext.manifest.description,
-          category: "integration",
-          isInstalled: ext.isInstalled,
-          isEnabled: ext.isEnabled,
-          version: ext.manifest.version,
-          publisher: ext.manifest.publisher,
-          isMarketplace: true,
-          isBundled: false,
-          icon: resolveManifestIcon(
-            ext.manifest.icon,
-            integration.icon,
-            integration.id,
-            integration.name,
-          ),
-          runtimeIssues: ext.runtimeIssues,
-          packageSize: resolvePackageSize(ext.manifest),
-          contributionSummary: integrationContributions.map((item) => `integration:${item.id}`),
-        });
-      }
-    }
-
-    themeRegistry.getAllThemes().forEach((theme) => {
-      if (themeRegistry.getThemeSource(theme.id)) {
-        return;
-      }
-
-      allExtensions.push({
-        id: theme.id,
-        name: theme.name,
-        description: theme.description || `${theme.category} theme`,
-        category: "theme",
-        isInstalled: true,
-        isEnabled: true,
-        isActive: settings.theme === theme.id,
-        version: "1.0.0",
-        icon: getCatalogIconUrl(theme.id, theme.name, "theme"),
-        selectionId: theme.id,
-        appearanceOptions: [
-          {
-            id: theme.id,
-            name: theme.name,
-            description: theme.description,
-          },
-        ],
-      });
-    });
-
-    getVisibleIconThemes(iconThemeRegistry.getAllThemes()).forEach((iconTheme) => {
-      if (iconThemeRegistry.getThemeSource(iconTheme.id)) {
-        return;
-      }
-
-      allExtensions.push({
-        id: iconTheme.id,
-        name: iconTheme.name,
-        description: iconTheme.description || `${iconTheme.name} icon theme`,
-        category: "icon-theme",
-        isInstalled: true,
-        isEnabled: true,
-        isActive: settings.iconTheme === iconTheme.id,
-        version: "1.0.0",
-        icon: getCatalogIconUrl(iconTheme.id, iconTheme.name, "icon-theme"),
-        selectionId: iconTheme.id,
-        appearanceOptions: [
-          {
-            id: iconTheme.id,
-            name: iconTheme.name,
-            description: iconTheme.description,
-          },
-        ],
-      });
-    });
-
-    for (const skill of settings.aiSkills) {
-      const preview = skill.content.trim().replace(/\s+/g, " ").slice(0, 160);
-      const marketplaceSkill =
-        skill.source === "marketplace"
-          ? marketplaceSkills.find(
-              (candidate) => candidate.id === skill.sourceId || candidate.id === skill.id,
-            )
-          : undefined;
-
-      allExtensions.push({
-        id: skill.id,
-        name: skill.title,
-        description: skill.description || preview || "Reusable AI chat instructions",
-        category: "skill",
-        isInstalled: true,
-        isEnabled: true,
-        version: skill.version || (skill.source === "marketplace" ? undefined : "Local"),
-        publisher: skill.author || (skill.source === "marketplace" ? "Marketplace" : "You"),
-        isMarketplace: skill.source === "marketplace",
-        icon: getCatalogIconUrl(skill.title, skill.author, "codex"),
-        skill,
-        marketplaceSkill,
-        contributionSummary: ["skill"],
-      });
-    }
-
-    for (const skill of marketplaceSkills) {
-      if (isMarketplaceSkillInstalled(settings.aiSkills, skill.id)) {
-        continue;
-      }
-
-      allExtensions.push({
-        id: skill.id,
-        name: skill.title,
-        description: skill.description,
-        category: "skill",
-        isInstalled: false,
-        isEnabled: false,
-        version: skill.version,
-        publisher: skill.author,
-        isMarketplace: true,
-        icon: getCatalogIconUrl(skill.title, skill.author, "codex"),
-        marketplaceSkill: skill,
-        contributionSummary: ["skill"],
-      });
-    }
-
-    const agentIds = new Set(
-      allExtensions
-        .filter((extension) => extension.category === "agent")
-        .map((extension) => extension.agentId ?? extension.id.replace(/^agent:/, "")),
-    );
-    for (const agent of agents) {
-      if (agentIds.has(agent.id)) {
-        continue;
-      }
-
-      allExtensions.push({
-        id: `agent:${agent.id}`,
-        name: agent.name,
-        description: agent.description ?? "ACP-compatible coding agent",
-        category: "agent",
-        isInstalled: agent.installed,
-        isEnabled: agent.installed,
-        extensions: [agent.binaryName],
-        publisher: "Marketplace",
-        isMarketplace: true,
-        agentId: agent.id,
-        icon: resolveManifestIcon(agent.icon ?? undefined, agent.id, agent.name, agent.binaryName),
-        canInstall: agent.canInstall,
-        contributionSummary: [`agent:${agent.id}`, agent.binaryName],
-      });
-    }
-
-    setExtensions(allExtensions);
-  }, [
-    agents,
-    availableExtensions,
-    marketplaceSkills,
-    settings.aiSkills,
-    settings.iconTheme,
-    settings.theme,
-  ]);
-
-  useEffect(() => {
-    loadAllExtensions();
-  }, [loadAllExtensions]);
+  const extensions = useMemo(
+    () =>
+      buildExtensionCatalog({
+        availableExtensions,
+        agents,
+        marketplaceSkills,
+        aiSkills: settings.aiSkills,
+        selectedThemeId: settings.theme,
+        selectedIconThemeId: settings.iconTheme,
+      }),
+    [
+      agents,
+      availableExtensions,
+      marketplaceSkills,
+      settings.aiSkills,
+      settings.iconTheme,
+      settings.theme,
+    ],
+  );
 
   useEffect(() => {
     void loadAgents();
@@ -1053,7 +234,6 @@ const ExtensionsView = ({ extensionId }: { extensionId?: string }) => {
         duration: 5000,
       });
     }
-    setTimeout(() => loadAllExtensions(), 100);
   };
 
   const handleActivateExtension = async (extension: UnifiedExtension) => {
@@ -1076,7 +256,6 @@ const ExtensionsView = ({ extensionId }: { extensionId?: string }) => {
         duration: 5000,
       });
     }
-    setTimeout(() => loadAllExtensions(), 100);
   };
 
   const handleDeactivateExtension = async (extension: UnifiedExtension) => {
@@ -1099,7 +278,6 @@ const ExtensionsView = ({ extensionId }: { extensionId?: string }) => {
         duration: 5000,
       });
     }
-    setTimeout(() => loadAllExtensions(), 100);
   };
 
   const handleToggle = async (extension: UnifiedExtension) => {
@@ -1241,7 +419,6 @@ const ExtensionsView = ({ extensionId }: { extensionId?: string }) => {
           duration: 5000,
         });
       }
-      setTimeout(() => loadAllExtensions(), 100);
       return;
     }
 
@@ -1263,8 +440,6 @@ const ExtensionsView = ({ extensionId }: { extensionId?: string }) => {
       }
       return;
     }
-
-    setTimeout(() => loadAllExtensions(), 100);
   };
 
   const handleUninstall = async (extension: UnifiedExtension) => {
@@ -1338,389 +513,33 @@ const ExtensionsView = ({ extensionId }: { extensionId?: string }) => {
     [extensionContextMenu],
   );
 
-  const extensionContextMenuItems = useMemo<MenuItem[]>(() => {
-    const extension = extensionContextMenu.data;
-    if (!extension) return [];
+  const extensionContextMenuItems = buildExtensionContextMenuItems({
+    extension: extensionContextMenu.data,
+    settings,
+    isExtensionInstalling,
+    hasExtensionUpdate,
+    handleActivateExtension,
+    handleDeactivateExtension,
+    handleUseAppearance,
+    handleToggle,
+    handleUpdate,
+    handleResetSkillOverride,
+    handleUninstall,
+  });
 
-    const items: MenuItem[] = [];
-    const isInstalling = isExtensionInstalling(extension);
-    const hasUpdate = hasExtensionUpdate(extension);
-    const hasLocalOverride = extension.skill ? hasSkillLocalOverride(extension.skill) : false;
-    const hasRuntimeIssue = Boolean(extension.runtimeIssues?.length);
-    const isUnavailableAgent =
-      extension.category === "agent" && !extension.isInstalled && extension.canInstall === false;
-    const isAppearance = isAppearanceExtension(extension);
-    const primaryActionLabel = getPrimaryActionLabel(extension);
-
-    if (extension.isBundled) {
-      items.push({
-        id: "built-in",
-        label: "Built-in",
-        icon: <Check className="size-3.5 text-primary" />,
-        disabled: true,
-        onClick: () => {},
-      });
-      return items;
-    }
-
-    if (extension.isInstalled && extension.category !== "agent" && extension.category !== "skill") {
-      if (isAppearance) {
-        if (!extension.isEnabled) {
-          items.push({
-            id: "activate",
-            label: "Activate",
-            icon: <Check className="size-3.5 text-primary" weight="bold" />,
-            disabled: isInstalling,
-            onClick: () => {
-              void handleActivateExtension(extension);
-            },
-          });
-        } else {
-          items.push({
-            id: "deactivate",
-            label: "Deactivate",
-            icon: <XCircle className="size-3.5" weight="duotone" />,
-            disabled: isInstalling,
-            onClick: () => {
-              void handleDeactivateExtension(extension);
-            },
-          });
-        }
-
-        const settingKey = getAppearanceSettingKey(extension);
-        const currentSelection = settingKey ? settings[settingKey] : undefined;
-        const appearanceOptions = extension.appearanceOptions?.length
-          ? extension.appearanceOptions
-          : extension.selectionId
-            ? [{ id: extension.selectionId, name: extension.name }]
-            : [];
-
-        if (appearanceOptions.length > 0) {
-          if (items.length > 0) {
-            items.push({ id: "sep-appearance", separator: true });
-          }
-
-          for (const option of appearanceOptions) {
-            const isCurrent = currentSelection === option.id;
-            items.push({
-              id: `use-${option.id}`,
-              label: isCurrent ? `Current: ${option.name}` : `Use ${option.name}`,
-              icon: (
-                <Check className="size-3.5 text-primary" weight={isCurrent ? "bold" : "regular"} />
-              ),
-              disabled: isCurrent || isInstalling,
-              onClick: () => {
-                void handleUseAppearance(extension, option.id);
-              },
-            });
-          }
-        } else if (extension.isEnabled) {
-          items.push({
-            id: extension.isActive ? "active" : "use",
-            label: extension.isActive ? "Current" : "Use",
-            icon: <Check className="size-3.5 text-primary" weight="bold" />,
-            disabled: extension.isActive || isInstalling,
-            onClick: () => {
-              void handleUseAppearance(extension);
-            },
-          });
-        }
-      } else {
-        items.push({
-          id: extension.isEnabled ? "deactivate" : "activate",
-          label: extension.isEnabled ? "Deactivate" : "Activate",
-          icon: extension.isEnabled ? (
-            <XCircle className="size-3.5" weight="duotone" />
-          ) : (
-            <Check className="size-3.5 text-primary" weight="bold" />
-          ),
-          disabled: isInstalling,
-          onClick: () => {
-            void handleToggle(extension);
-          },
-        });
-      }
-    }
-
-    if ((hasUpdate || hasRuntimeIssue) && extension.isInstalled) {
-      items.push({
-        id: "update",
-        label: hasRuntimeIssue ? "Reinstall" : "Update",
-        icon: <RefreshCw className="size-3.5" weight="duotone" />,
-        disabled: isInstalling,
-        onClick: () => {
-          void handleUpdate(extension);
-        },
-      });
-    }
-
-    if (hasLocalOverride) {
-      items.push({
-        id: "reset",
-        label: "Reset to Marketplace Version",
-        icon: <Reset className="size-3.5" weight="duotone" />,
-        disabled: isInstalling,
-        onClick: () => {
-          void handleResetSkillOverride(extension);
-        },
-      });
-    }
-
-    if (items.length > 0) {
-      items.push({ id: "sep-primary-action", separator: true });
-    }
-
-    if (!extension.isInstalled) {
-      items.push({
-        id: "install",
-        label: primaryActionLabel,
-        icon: <Download className="size-3.5" weight="fill" />,
-        disabled: isInstalling || isUnavailableAgent,
-        onClick: () => {
-          void handleToggle(extension);
-        },
-      });
-    } else if (extension.category === "agent" || extension.category === "skill") {
-      items.push({
-        id: "toggle",
-        label: primaryActionLabel,
-        icon: <Trash className="size-3.5" weight="duotone" />,
-        disabled: isInstalling,
-        tone: "destructive",
-        onClick: () => {
-          void handleToggle(extension);
-        },
-      });
-    } else if (extension.isMarketplace) {
-      items.push({
-        id: "uninstall",
-        label: "Uninstall",
-        icon: <Trash className="size-3.5" weight="duotone" />,
-        disabled: isInstalling,
-        tone: "destructive",
-        onClick: () => {
-          void handleUninstall(extension);
-        },
-      });
-    }
-
-    return items;
-  }, [extensionContextMenu.data, extensionsWithUpdates, installingAgentIds, availableExtensions]);
-
-  const extensionDetail = selectedExtension ? (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-6 py-8">
-      <div className="flex items-start gap-4">
-        <ExtensionIcon extension={selectedExtension} />
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate font-semibold text-foreground ui-text-2xl">
-            {selectedExtension.name}
-          </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-subtle-foreground ui-text-sm">
-            {selectedExtension.publisher ? <span>By {selectedExtension.publisher}</span> : null}
-            {selectedExtension.version ? <span>v{selectedExtension.version}</span> : null}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5">
-        <Badge variant="default" size="compact">
-          {getCategoryLabel(selectedExtension.category)}
-        </Badge>
-        {selectedExtension.isInstalled ? (
-          <Badge variant="accent" size="compact">
-            Installed
-          </Badge>
-        ) : null}
-        {selectedExtension.isInstalled && !selectedExtension.isEnabled ? (
-          <Badge variant="default" size="compact">
-            Disabled
-          </Badge>
-        ) : null}
-        {hasExtensionUpdate(selectedExtension) ? (
-          <Badge variant="accent" size="compact">
-            Update
-          </Badge>
-        ) : null}
-        {selectedExtension.isActive ? (
-          <Badge variant="accent" size="compact">
-            Active
-          </Badge>
-        ) : null}
-        {selectedExtension.isBundled ? (
-          <Badge variant="accent" size="compact">
-            Built-in
-          </Badge>
-        ) : null}
-      </div>
-
-      {selectedExtension.description ? (
-        <p className="leading-6 text-subtle-foreground ui-text-base">
-          {selectedExtension.description}
-        </p>
-      ) : null}
-
-      {selectedExtension.runtimeIssues?.length ? (
-        <Alert tone="error">
-          <AlertDescription>{selectedExtension.runtimeIssues[0]?.message}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      {isAppearanceExtension(selectedExtension) && selectedExtension.appearanceOptions?.length ? (
-        <div className="border-border/70 border-t pt-5">
-          <div className="mb-2 font-medium text-foreground ui-text-sm">
-            {selectedExtension.category === "theme" ? "Themes" : "Icon themes"}
-          </div>
-          <div className="space-y-2">
-            {selectedExtension.appearanceOptions.map((option) => {
-              const currentSelection =
-                selectedExtension.category === "theme" ? settings.theme : settings.iconTheme;
-              const isCurrent = currentSelection === option.id;
-
-              return (
-                <div
-                  key={option.id}
-                  className="flex min-w-0 items-center gap-3 rounded-lg border border-border/65 bg-background px-3 py-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-foreground ui-text-sm">
-                      {option.name}
-                    </div>
-                    {option.description ? (
-                      <div className="mt-0.5 line-clamp-1 text-subtle-foreground ui-text-sm">
-                        {option.description}
-                      </div>
-                    ) : null}
-                  </div>
-                  <Button
-                    variant={isCurrent ? "default" : "accent"}
-                    size="xs"
-                    active={isCurrent}
-                    disabled={!selectedExtension.isInstalled || isCurrent}
-                    onClick={() => void handleUseAppearance(selectedExtension, option.id)}
-                  >
-                    <Check />
-                    {isCurrent
-                      ? "Current"
-                      : selectedExtension.isEnabled
-                        ? "Use"
-                        : "Activate and use"}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap gap-2">
-        {!selectedExtension.isBundled ? (
-          <Button
-            variant={
-              isAppearanceExtension(selectedExtension) && selectedExtension.isActive
-                ? "default"
-                : isAppearanceExtension(selectedExtension) && selectedExtension.isInstalled
-                  ? "accent"
-                  : selectedExtension.isInstalled &&
-                      (selectedExtension.category === "agent" ||
-                        selectedExtension.category === "skill")
-                    ? "ghost"
-                    : selectedExtension.isInstalled && selectedExtension.isEnabled
-                      ? "default"
-                      : "accent"
-            }
-            className={
-              selectedExtension.isInstalled &&
-              (selectedExtension.category === "agent" || selectedExtension.category === "skill")
-                ? "text-subtle-foreground hover:text-destructive"
-                : undefined
-            }
-            onClick={() => void handleToggle(selectedExtension)}
-            disabled={
-              (isAppearanceExtension(selectedExtension) && selectedExtension.isActive) ||
-              isExtensionInstalling(selectedExtension) ||
-              (selectedExtension.category === "agent" &&
-                !selectedExtension.isInstalled &&
-                selectedExtension.canInstall === false)
-            }
-          >
-            {isAppearanceExtension(selectedExtension) && selectedExtension.isInstalled ? (
-              <Check />
-            ) : selectedExtension.isInstalled &&
-              (selectedExtension.category === "agent" || selectedExtension.category === "skill") ? (
-              <Trash />
-            ) : selectedExtension.isInstalled && selectedExtension.isEnabled ? (
-              <XCircle />
-            ) : selectedExtension.isInstalled ? (
-              <Check />
-            ) : (
-              <Download weight="fill" />
-            )}
-            {getPrimaryActionLabel(selectedExtension)}
-          </Button>
-        ) : null}
-        {selectedExtension.isMarketplace &&
-        selectedExtension.isInstalled &&
-        selectedExtension.category !== "agent" &&
-        selectedExtension.category !== "skill" ? (
-          <Button
-            variant="ghost"
-            className="text-subtle-foreground hover:text-destructive"
-            onClick={() => void handleUninstall(selectedExtension)}
-            disabled={isExtensionInstalling(selectedExtension)}
-          >
-            <Trash />
-            Uninstall
-          </Button>
-        ) : null}
-        {hasExtensionUpdate(selectedExtension) && selectedExtension.isInstalled ? (
-          <Button
-            variant="default"
-            onClick={() => void handleUpdate(selectedExtension)}
-            disabled={isExtensionInstalling(selectedExtension)}
-          >
-            <RefreshCw />
-            Update
-          </Button>
-        ) : null}
-        {canDeactivateAppearanceExtension(selectedExtension) ? (
-          <Button
-            variant="ghost"
-            className="text-subtle-foreground"
-            onClick={() => void handleDeactivateExtension(selectedExtension)}
-          >
-            <XCircle />
-            Deactivate
-          </Button>
-        ) : null}
-        {selectedExtension.skill && hasSkillLocalOverride(selectedExtension.skill) ? (
-          <Button
-            variant="default"
-            onClick={() => void handleResetSkillOverride(selectedExtension)}
-          >
-            <Reset />
-            Reset
-          </Button>
-        ) : null}
-      </div>
-
-      <div className="border-border/70 border-t pt-5">
-        <div className="mb-2 font-medium text-foreground ui-text-sm">Contributions</div>
-        <div className="flex flex-wrap gap-1.5">
-          {(selectedExtension.contributionSummary?.length
-            ? selectedExtension.contributionSummary
-            : selectedExtension.extensions
-              ? selectedExtension.extensions
-              : [getCategoryLabel(selectedExtension.category)]
-          ).map((item) => (
-            <Badge key={item} variant="default">
-              {item}
-            </Badge>
-          ))}
-        </div>
-      </div>
-    </div>
-  ) : (
-    <EmptyState layout="sidebar" message="Extension not found." />
+  const extensionDetail = (
+    <ExtensionDetailView
+      extension={selectedExtension}
+      settings={settings}
+      isInstalling={isExtensionInstalling}
+      hasUpdate={hasExtensionUpdate}
+      onUseAppearance={handleUseAppearance}
+      onToggle={handleToggle}
+      onUninstall={handleUninstall}
+      onUpdate={handleUpdate}
+      onDeactivate={handleDeactivateExtension}
+      onResetSkillOverride={handleResetSkillOverride}
+    />
   );
 
   const overlays = (
@@ -1816,7 +635,7 @@ const ExtensionsView = ({ extensionId }: { extensionId?: string }) => {
                   forceExpanded={normalizedSearchQuery.length > 0}
                 >
                   {section.extensions.map((extension) => (
-                    <ExtensionRow
+                    <ExtensionListItem
                       key={extension.id}
                       extension={extension}
                       selected={activeExtensionId === extension.id}
