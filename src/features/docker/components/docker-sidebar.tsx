@@ -4,27 +4,20 @@ import {
   ArrowSquareOutIcon as OpenExternal,
   BugIcon as Bug,
   DownloadSimpleIcon as Download,
-  DotsThreeIcon as More,
   FileIcon,
   FolderIcon,
   MagnifyingGlassIcon as Search,
-  PauseIcon as Pause,
   PlayIcon as Play,
-  ArrowsClockwiseIcon as Restart,
   StackIcon as ImageIcon,
-  StopIcon as Stop,
   SlidersHorizontalIcon as Sliders,
-  TerminalWindowIcon as Terminal,
   TrashIcon as Trash,
   UploadSimpleIcon as Upload,
-  WarningCircleIcon as WarningCircle,
-  XIcon as X,
 } from "@/ui/icons";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import type { ComponentProps, ReactNode } from "react";
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/ui/alert";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {
@@ -39,17 +32,8 @@ import {
 } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyState,
-  EmptyTitle,
-} from "@/ui/empty";
+import { Empty, EmptyDescription, EmptyState } from "@/ui/empty";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -57,12 +41,10 @@ import Dialog, { showPromptDialog } from "@/ui/dialog";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
 import {
-  SidebarPanel,
   SidebarSearchPopover,
-  SidebarSectionHeader,
   SidebarSectionLabel,
   SidebarTabBar,
-  SidebarTitleBar,
+  SidebarWorkspace,
 } from "@/ui/sidebar";
 import { SearchField } from "@/ui/search";
 import { cn } from "@/utils/cn";
@@ -108,12 +90,37 @@ import type {
   DockerInventory,
   DockerLogEvent,
   DockerLogExitEvent,
-  DockerNetwork,
   DockerProjectConfig,
   DockerRegistrySearchResult,
   DockerRunPreset,
-  DockerVolume,
 } from "../types/docker.types";
+import {
+  formatDockerFileSize as formatFileSize,
+  getDockerDebugCommand as dockerDebugCommand,
+  getDockerErrorMessage as getErrorMessage,
+  getDockerExecCommand as dockerExecCommand,
+  getDockerFileName as fileName,
+  getDockerImageReference as getImageReference,
+  getParentContainerPath as parentContainerPath,
+  includesDockerQuery as includesQuery,
+  isDockerConnectionError,
+  isDockerErrorLogLine as isErrorLogLine,
+  splitDockerConfigLines as splitConfigLines,
+} from "../utils/docker-sidebar-utils";
+import {
+  DockerCapabilityNotice,
+  DockerInlineError,
+  DockerUnavailableState,
+} from "./docker-sidebar-states";
+import {
+  ComposeServiceRow,
+  ContainerRow,
+  DockerActionMenu,
+  DockerResourceRow,
+  ImageRow,
+  NetworkRow,
+  VolumeRow,
+} from "./docker-resource-rows";
 
 type DockerSection =
   | "containers"
@@ -167,687 +174,10 @@ const emptyInventory: DockerInventory = {
   networks: [],
 };
 
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function isDockerConnectionError(message: string) {
-  const normalizedMessage = message.toLowerCase();
-  return [
-    "cannot connect to the docker daemon",
-    "docker cli was not found",
-    "error during connect",
-    "failed to connect",
-    "is the docker daemon running",
-    "permission denied while trying to connect to the docker api",
-    "connection refused",
-  ].some((fragment) => normalizedMessage.includes(fragment));
-}
-
-function getDockerUnavailableCopy(error: string) {
-  if (error.toLowerCase().includes("docker cli was not found")) {
-    return {
-      title: "Docker CLI isn't available",
-      description: "Install Docker or make sure the Docker CLI is available in Athas.",
-    };
-  }
-
-  if (isDockerConnectionError(error)) {
-    return {
-      title: "Docker isn't running",
-      description: "Athas can't connect to the active Docker context.",
-    };
-  }
-
-  return {
-    title: "Docker is unavailable",
-    description: "Athas couldn't load Docker resources.",
-  };
-}
-
-function openDockerConnectionDetailsBuffer(error: string) {
-  const copy = getDockerUnavailableCopy(error);
-  const content = `${copy.title}\n\n${copy.description}\n\nTechnical details\n${error}\n`;
-  const bufferStore = useBufferStore.getState();
-  const bufferId = bufferStore.actions.openContent({
-    type: "editor",
-    path: "docker://connection-details",
-    name: "Docker Connection.log",
-    content,
-    isVirtual: true,
-    readOnly: true,
-    language: "log",
-  });
-  const openedBuffer = useBufferStore.getState().buffers.find((buffer) => buffer.id === bufferId);
-  if (openedBuffer?.type === "editor") {
-    useBufferStore.getState().actions.updateBuffer({
-      ...openedBuffer,
-      content,
-      savedContent: content,
-      isDirty: false,
-      isVirtual: true,
-      readOnly: true,
-      language: "log",
-    });
-  }
-}
-
-function DockerUnavailableState({
-  error,
-  title,
-  description,
-  isRetrying,
-  onRetry,
-}: {
-  error: string;
-  title?: string;
-  description?: string;
-  isRetrying: boolean;
-  onRetry: () => void;
-}) {
-  const fallbackCopy = getDockerUnavailableCopy(error);
-
-  return (
-    <Empty className="min-h-0 flex-none gap-3 px-4 py-5" role="status">
-      <EmptyHeader className="gap-1.5">
-        <EmptyMedia variant="icon" className="size-9 border border-border/70 bg-accent">
-          <WarningCircle className="size-4.5 text-subtle-foreground" />
-        </EmptyMedia>
-        <EmptyTitle className="ui-text-base">{title ?? fallbackCopy.title}</EmptyTitle>
-        <EmptyDescription className="max-w-[34ch]">
-          {description ?? fallbackCopy.description}
-        </EmptyDescription>
-      </EmptyHeader>
-      <EmptyContent className="flex-row justify-center gap-1.5">
-        <Button type="button" variant="default" size="sm" disabled={isRetrying} onClick={onRetry}>
-          {isRetrying ? <Spinner compact /> : <Refresh />}
-          Retry
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => openDockerConnectionDetailsBuffer(error)}
-        >
-          <OpenExternal />
-          Details
-        </Button>
-      </EmptyContent>
-    </Empty>
-  );
-}
-
-function DockerInlineError({
-  title,
-  error,
-  onDismiss,
-  className,
-}: {
-  title: string;
-  error: string;
-  onDismiss: () => void;
-  className?: string;
-}) {
-  return (
-    <Alert tone="error" className={cn("min-w-0", className)}>
-      <AlertTitle>{title}</AlertTitle>
-      <AlertDescription className="min-w-0 select-text whitespace-pre-wrap wrap-break-word wrap-anywhere">
-        {error}
-      </AlertDescription>
-      <AlertAction>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          tooltip="Dismiss"
-          tooltipSide="left"
-          aria-label={`Dismiss ${title.toLowerCase()}`}
-          onClick={onDismiss}
-        >
-          <X />
-        </Button>
-      </AlertAction>
-    </Alert>
-  );
-}
-
-function DockerCapabilityNotice({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <Alert tone="warning" role="status" className={cn("mx-2 mb-2 w-auto", className)}>
-      <WarningCircle />
-      <AlertDescription>{children}</AlertDescription>
-    </Alert>
-  );
-}
-
-interface DockerMenuAction {
-  label: string;
-  icon?: ReactNode;
-  disabled?: boolean;
-  destructive?: boolean;
-  separatorBefore?: boolean;
-  onSelect: () => void;
-}
-
-function DockerActionMenu({ label, actions }: { label: string; actions: DockerMenuAction[] }) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            tooltip={label}
-            tooltipSide="left"
-            aria-label={label}
-          />
-        }
-      >
-        <More />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {actions.map((action) => (
-          <Fragment key={action.label}>
-            {action.separatorBefore ? <DropdownMenuSeparator /> : null}
-            <DropdownMenuItem
-              variant={action.destructive ? "destructive" : "default"}
-              disabled={action.disabled}
-              onClick={action.onSelect}
-            >
-              {action.icon}
-              {action.label}
-            </DropdownMenuItem>
-          </Fragment>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function getContainerStateVariant(
-  container: DockerContainer,
-): ComponentProps<typeof Badge>["variant"] {
-  if (container.health === "unhealthy") return "error";
-  if (container.health === "healthy") return "success";
-  if (container.state === "running") return "success";
-  if (container.state === "exited") return "warning";
-  if (container.state === "paused") return "accent";
-  return "muted";
-}
-
-function includesQuery(values: Array<string | null | undefined>, query: string) {
-  if (!query) return true;
-  return values.some((value) => value?.toLowerCase().includes(query));
-}
-
-function DockerResourceRow({
-  title,
-  description,
-  status,
-  active = false,
-  onClick,
-  actions,
-}: {
-  title: ReactNode;
-  description?: ReactNode;
-  status?: ReactNode;
-  active?: boolean;
-  onClick?: () => void;
-  actions?: ReactNode;
-}) {
-  const content = (
-    <>
-      <span className="flex min-w-0 items-center gap-1.5">
-        <span className="min-w-0 flex-1 truncate font-medium text-foreground ui-text-sm">
-          {title}
-        </span>
-        {status}
-      </span>
-      {description ? (
-        <span className="mt-0.5 block truncate text-subtle-foreground ui-text-sm">
-          {description}
-        </span>
-      ) : null}
-    </>
-  );
-
-  return (
-    <div
-      className={cn(
-        "group/docker-row flex min-h-12 w-full min-w-0 items-center rounded-lg transition-colors hover:bg-accent/70",
-        active && "bg-accent/80",
-      )}
-    >
-      {onClick ? (
-        <button
-          type="button"
-          className="min-w-0 flex-1 px-2.5 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
-          onClick={onClick}
-        >
-          {content}
-        </button>
-      ) : (
-        <div className="min-w-0 flex-1 px-2.5 py-2">{content}</div>
-      )}
-      {actions ? (
-        <div className="mr-1 shrink-0 opacity-0 transition-opacity group-hover/docker-row:opacity-100 group-focus-within/docker-row:opacity-100">
-          {actions}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function quoteShellArg(value: string) {
-  return `'${value.replace(/'/g, "'\\''")}'`;
-}
-
-function dockerExecCommand(containerId: string) {
-  const shellProbe =
-    "if command -v bash >/dev/null 2>&1; then exec bash; " +
-    "elif command -v sh >/dev/null 2>&1; then exec sh; " +
-    'else echo "No interactive shell found in this container." >&2; exit 127; fi';
-  return `docker exec -it ${quoteShellArg(containerId)} sh -lc ${quoteShellArg(shellProbe)}`;
-}
-
-function dockerDebugCommand(containerId: string, command: string, workdir?: string | null) {
-  const debugCommand = workdir?.trim()
-    ? `cd ${quoteShellArg(workdir.trim())} && ${command}`
-    : command;
-  return `docker exec -it ${quoteShellArg(containerId)} sh -lc ${quoteShellArg(debugCommand)}`;
-}
-
 function openDebuggerPane() {
   const state = useUIState.getState();
   state.setBottomPaneActiveTab("debugger");
   state.setIsBottomPaneVisible(true);
-}
-
-function isErrorLogLine(line: string) {
-  return /\b(error|exception|fatal|panic|failed|unhealthy|crash)\b/i.test(line);
-}
-
-function getPublishedTcpUrl(ports: string) {
-  const match = ports.match(
-    /(?:^|[\s,])(?:0\.0\.0\.0|127\.0\.0\.1|localhost|\[::\]|::)?(?::)?(\d+)->\d+\/tcp/,
-  );
-  if (!match?.[1]) return null;
-  return `http://localhost:${match[1]}`;
-}
-
-function splitConfigLines(value: string) {
-  return value
-    .split(/[\n,]/)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-}
-
-function getImageReference(image: DockerImage) {
-  if (image.repository === "<none>" || image.tag === "<none>") return image.id;
-  return `${image.repository}:${image.tag}`;
-}
-
-function parentContainerPath(path: string) {
-  const normalized = path.trim().replace(/\/+$/, "") || "/";
-  if (normalized === "/") return "/";
-  const parent = normalized.slice(0, normalized.lastIndexOf("/")) || "/";
-  return parent.startsWith("/") ? parent : `/${parent}`;
-}
-
-function formatFileSize(size: number) {
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function fileName(path: string) {
-  return path.split(/[\\/]/).pop() || path;
-}
-
-function getComposeServiceVariant(
-  service: DockerComposeService,
-): ComponentProps<typeof Badge>["variant"] {
-  if (service.health === "unhealthy") return "error";
-  if (service.health === "healthy") return "success";
-  if (service.state === "running") return "success";
-  if (service.state === "exited") return "warning";
-  return "muted";
-}
-
-function ContainerActions({
-  container,
-  busy,
-  onAction,
-  onOpenTerminal,
-  onDebug,
-  quickUrl,
-  onOpenUrl,
-}: {
-  container: DockerContainer;
-  busy: boolean;
-  onAction: (container: DockerContainer, action: DockerContainerAction) => void;
-  onOpenTerminal: (container: DockerContainer) => void;
-  onDebug: (container: DockerContainer) => void;
-  quickUrl: string | null;
-  onOpenUrl: (url: string) => void;
-}) {
-  const isRunning = container.state === "running";
-  const isPaused = container.state === "paused";
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            tooltip="Container actions"
-            tooltipSide="left"
-            aria-label={`Actions for ${container.name}`}
-          />
-        }
-      >
-        <More className="size-3.5" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem
-          disabled={busy || isRunning || isPaused}
-          onClick={() => onAction(container, "start")}
-        >
-          <Play />
-          Start
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={busy || !isRunning} onClick={() => onAction(container, "stop")}>
-          <Stop />
-          Stop
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={busy || (!isRunning && !isPaused)}
-          onClick={() => onAction(container, isPaused ? "unpause" : "pause")}
-        >
-          {isPaused ? <Play /> : <Pause />}
-          {isPaused ? "Unpause" : "Pause"}
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={busy} onClick={() => onAction(container, "restart")}>
-          <Restart />
-          Restart
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem disabled={busy || !isRunning} onClick={() => onOpenTerminal(container)}>
-          <Terminal />
-          Open shell
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={busy || !isRunning} onClick={() => onDebug(container)}>
-          <Bug />
-          Debug
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={busy || !quickUrl}
-          onClick={() => {
-            if (quickUrl) onOpenUrl(quickUrl);
-          }}
-        >
-          <OpenExternal />
-          Open service URL
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          disabled={busy || isRunning}
-          onClick={() => onAction(container, "remove")}
-        >
-          <Trash />
-          Remove
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function ContainerRow({
-  container,
-  busy,
-  selected,
-  onSelect,
-  onAction,
-  onOpenTerminal,
-  onDebug,
-  onOpenUrl,
-}: {
-  container: DockerContainer;
-  busy: boolean;
-  selected: boolean;
-  onSelect: (container: DockerContainer) => void;
-  onAction: (container: DockerContainer, action: DockerContainerAction) => void;
-  onOpenTerminal: (container: DockerContainer) => void;
-  onDebug: (container: DockerContainer) => void;
-  onOpenUrl: (url: string) => void;
-}) {
-  const quickUrl = getPublishedTcpUrl(container.ports);
-
-  return (
-    <DockerResourceRow
-      active={selected}
-      title={container.name}
-      status={
-        <Badge variant={getContainerStateVariant(container)} size="compact" className="capitalize">
-          {container.health ?? container.state}
-        </Badge>
-      }
-      description={
-        <>
-          {container.image}
-          {container.ports ? ` · ${container.ports}` : ""}
-          {container.size ? ` · ${container.size}` : ""}
-        </>
-      }
-      actions={
-        <ContainerActions
-          container={container}
-          busy={busy}
-          onAction={onAction}
-          onOpenTerminal={onOpenTerminal}
-          onDebug={onDebug}
-          quickUrl={quickUrl}
-          onOpenUrl={onOpenUrl}
-        />
-      }
-      onClick={() => onSelect(container)}
-    />
-  );
-}
-
-function ComposeServiceActions({
-  service,
-  busy,
-  onAction,
-  quickUrl,
-  onOpenUrl,
-}: {
-  service: DockerComposeService;
-  busy: boolean;
-  onAction: (service: DockerComposeService, action: DockerComposeAction) => void;
-  quickUrl: string | null;
-  onOpenUrl: (url: string) => void;
-}) {
-  const isRunning = service.state === "running";
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            tooltip="Service actions"
-            tooltipSide="left"
-            aria-label={`Actions for ${service.name}`}
-          />
-        }
-      >
-        <More className="size-3.5" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem disabled={busy} onClick={() => onAction(service, "up")}>
-          <Play />
-          Start
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={busy || !isRunning} onClick={() => onAction(service, "stop")}>
-          <Stop />
-          Stop
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={busy} onClick={() => onAction(service, "restart")}>
-          <Restart />
-          Restart
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={busy} onClick={() => onAction(service, "rebuild")}>
-          <ImageIcon />
-          Rebuild
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          disabled={busy || !quickUrl}
-          onClick={() => {
-            if (quickUrl) onOpenUrl(quickUrl);
-          }}
-        >
-          <OpenExternal />
-          Open service URL
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function ComposeServiceRow({
-  service,
-  busy,
-  onAction,
-  onOpenUrl,
-}: {
-  service: DockerComposeService;
-  busy: boolean;
-  onAction: (service: DockerComposeService, action: DockerComposeAction) => void;
-  onOpenUrl: (url: string) => void;
-}) {
-  const quickUrl = getPublishedTcpUrl(service.ports);
-
-  return (
-    <DockerResourceRow
-      title={service.name}
-      status={
-        <Badge variant={getComposeServiceVariant(service)} size="compact" className="capitalize">
-          {service.health ?? service.state}
-        </Badge>
-      }
-      actions={
-        <ComposeServiceActions
-          service={service}
-          busy={busy}
-          onAction={onAction}
-          quickUrl={quickUrl}
-          onOpenUrl={onOpenUrl}
-        />
-      }
-      description={
-        <>
-          {service.containerName ?? service.status}
-          {service.ports ? ` · ${service.ports}` : ""}
-        </>
-      }
-    />
-  );
-}
-
-function ImageRow({
-  image,
-  busy,
-  onRun,
-  onRemove,
-}: {
-  image: DockerImage;
-  busy: boolean;
-  onRun: (image: DockerImage) => void;
-  onRemove: (image: DockerImage) => void;
-}) {
-  const label = getImageReference(image);
-  return (
-    <DockerResourceRow
-      title={label}
-      actions={
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                tooltip="Image actions"
-                tooltipSide="left"
-                aria-label={`Actions for ${label}`}
-              />
-            }
-          >
-            <More className="size-3.5" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem disabled={busy} onClick={() => onRun(image)}>
-              <Play />
-              Run
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" disabled={busy} onClick={() => onRemove(image)}>
-              <Trash />
-              Remove
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      }
-      description={
-        <>
-          {image.size}
-          {image.createdSince ? ` · ${image.createdSince}` : ""}
-        </>
-      }
-    />
-  );
-}
-
-function VolumeRow({ volume }: { volume: DockerVolume }) {
-  return (
-    <DockerResourceRow
-      title={volume.name}
-      description={
-        <>
-          {volume.driver}
-          {volume.mountpoint ? ` · ${volume.mountpoint}` : ""}
-        </>
-      }
-    />
-  );
-}
-
-function NetworkRow({ network }: { network: DockerNetwork }) {
-  return (
-    <DockerResourceRow
-      title={network.name}
-      description={
-        <>
-          {network.driver}
-          {network.scope ? ` · ${network.scope}` : ""}
-        </>
-      }
-    />
-  );
 }
 
 export function DockerSidebar() {
@@ -1902,87 +1232,91 @@ export function DockerSidebar() {
     const isCollapsed = collapsedSections.has(section);
     const hasSectionHeader = activeTab === "resources";
 
+    if (!hasSectionHeader) {
+      return (
+        <section key={section} className={cn("min-w-0", !isVisible && "hidden")}>
+          <div className="space-y-0.5">{rows}</div>
+        </section>
+      );
+    }
+
     return (
-      <section
+      <Accordion
         key={section}
-        className={cn("min-w-0", hasSectionHeader && "pt-2 first:pt-0", !isVisible && "hidden")}
+        value={isCollapsed ? [] : [section]}
+        onValueChange={(value) =>
+          setCollapsedSections((current) => {
+            const next = new Set(current);
+            if (value.includes(section)) next.delete(section);
+            else next.add(section);
+            return next;
+          })
+        }
+        className={cn("min-w-0 pt-2 first:pt-0", !isVisible && "hidden")}
       >
-        {hasSectionHeader ? (
-          <SidebarSectionHeader
-            variant="surface"
-            expanded={!isCollapsed}
-            count={filteredCount}
-            onToggle={() =>
-              setCollapsedSections((current) => {
-                const next = new Set(current);
-                if (next.has(section)) {
-                  next.delete(section);
-                } else {
-                  next.add(section);
-                }
-                return next;
-              })
-            }
-          >
-            {title}
-          </SidebarSectionHeader>
-        ) : null}
-        {!hasSectionHeader || !isCollapsed ? <div className="space-y-0.5">{rows}</div> : null}
-      </section>
+        <AccordionItem value={section}>
+          <AccordionTrigger count={filteredCount}>{title}</AccordionTrigger>
+          <AccordionContent>{rows}</AccordionContent>
+        </AccordionItem>
+      </Accordion>
     );
   };
 
   return (
     <>
-      <SidebarPanel className="font-sans select-none">
-        <SidebarTitleBar title="Docker">
-          <SidebarSearchPopover
-            value={query}
-            onChange={setQuery}
-            placeholder="Search Docker"
-            aria-label="Search Docker resources"
-          />
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  active={containerFilter !== "all"}
-                  tooltip="View options"
-                  tooltipSide="bottom"
-                  aria-label="Docker view options"
-                />
-              }
-            >
-              <Sliders />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuRadioGroup
-                value={containerFilter}
-                onValueChange={(value) => setContainerFilter(value as DockerContainerFilter)}
+      <SidebarWorkspace
+        title="Docker"
+        actions={
+          <>
+            <SidebarSearchPopover
+              value={query}
+              onChange={setQuery}
+              placeholder="Search Docker"
+              aria-label="Search Docker resources"
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    active={containerFilter !== "all"}
+                    tooltip="View options"
+                    tooltipSide="bottom"
+                    aria-label="Docker view options"
+                  />
+                }
               >
-                <DropdownMenuLabel>Containers</DropdownMenuLabel>
-                <DropdownMenuRadioItem value="all" closeOnClick>
-                  All
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="running" closeOnClick>
-                  Running
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="stopped" closeOnClick>
-                  Stopped
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem disabled={isActiveTabLoading} onClick={refreshDocker}>
-                {isActiveTabLoading ? <Spinner compact /> : <Refresh />}
-                Refresh
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </SidebarTitleBar>
-
+                <Sliders />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuRadioGroup
+                  value={containerFilter}
+                  onValueChange={(value) => setContainerFilter(value as DockerContainerFilter)}
+                >
+                  <DropdownMenuLabel>Containers</DropdownMenuLabel>
+                  <DropdownMenuRadioItem value="all" closeOnClick>
+                    All
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="running" closeOnClick>
+                    Running
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="stopped" closeOnClick>
+                    Stopped
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled={isActiveTabLoading} onClick={refreshDocker}>
+                  {isActiveTabLoading ? <Spinner compact /> : <Refresh />}
+                  Refresh
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+        className="font-sans select-none"
+      >
         <SidebarTabBar items={dockerTabs} value={activeTab} onChange={setActiveTab} />
 
         {activeTab === "resources" && error && !connectionError ? (
@@ -2001,9 +1335,10 @@ export function DockerSidebar() {
             onRetry={() => void loadInventory()}
           />
         ) : activeTab === "resources" && isLoading ? (
-          <div className="flex flex-1 items-center justify-center">
-            <Spinner label="Loading Docker resources" showLabel compact />
-          </div>
+          <EmptyState
+            layout="sidebar"
+            message={<Spinner label="Loading Docker resources" showLabel compact />}
+          />
         ) : activeTab === "compose" && composeError ? (
           <DockerUnavailableState
             error={composeError}
@@ -2019,9 +1354,10 @@ export function DockerSidebar() {
             onRetry={() => void loadComposeProject()}
           />
         ) : activeTab === "compose" && isComposeLoading ? (
-          <div className="flex flex-1 items-center justify-center">
-            <Spinner label="Loading Docker Compose" showLabel compact />
-          </div>
+          <EmptyState
+            layout="sidebar"
+            message={<Spinner label="Loading Docker Compose" showLabel compact />}
+          />
         ) : (
           <>
             <ScrollArea className="min-h-0 flex-1" contentClassName="space-y-2 px-2 py-2">
@@ -2042,7 +1378,7 @@ export function DockerSidebar() {
                     />
                   ))
                 ) : (
-                  <EmptyState message="No matching containers" />
+                  <EmptyState layout="sidebar" message="No matching containers" />
                 ),
                 filteredContainers.length,
               )}
@@ -2053,9 +1389,12 @@ export function DockerSidebar() {
                     <EmptyDescription>{composeError}</EmptyDescription>
                   </Empty>
                 ) : !rootFolderPath ? (
-                  <EmptyState message="Open a workspace to inspect Compose services" />
+                  <EmptyState
+                    layout="sidebar"
+                    message="Open a workspace to inspect Compose services"
+                  />
                 ) : composeProject.files.length === 0 ? (
-                  <EmptyState message="No Compose files in this workspace" />
+                  <EmptyState layout="sidebar" message="No Compose files in this workspace" />
                 ) : (
                   <>
                     <DockerResourceRow
@@ -2112,13 +1451,14 @@ export function DockerSidebar() {
                         />
                       ))
                     ) : (
-                      <Empty>
-                        <EmptyDescription>
-                          {composeProject.services.length > 0
+                      <EmptyState
+                        layout="sidebar"
+                        message={
+                          composeProject.services.length > 0
                             ? "No matching Compose services"
-                            : "No Compose services found"}
-                        </EmptyDescription>
-                      </Empty>
+                            : "No Compose services found"
+                        }
+                      />
                     )}
                   </>
                 ),
@@ -2127,15 +1467,15 @@ export function DockerSidebar() {
               {renderSection(
                 "project",
                 !rootFolderPath ? (
-                  <EmptyState message="Open a workspace to manage Docker presets" />
+                  <EmptyState
+                    layout="sidebar"
+                    message="Open a workspace to manage Docker presets"
+                  />
                 ) : isProjectConfigLoading ? (
-                  <div
-                    className="flex items-center justify-center py-8"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <Spinner label="Loading project Docker config" showLabel compact />
-                  </div>
+                  <EmptyState
+                    layout="sidebar"
+                    message={<Spinner label="Loading project Docker config" showLabel compact />}
+                  />
                 ) : (
                   <>
                     {projectConfigError ? (
@@ -2153,7 +1493,10 @@ export function DockerSidebar() {
                     ) : null}
                     {projectConfigItemCount === 0 ? (
                       <div className="space-y-1 px-2 py-1">
-                        <EmptyState message="No env files or presets in this workspace" />
+                        <EmptyState
+                          layout="sidebar"
+                          message="No env files or presets in this workspace"
+                        />
                         <div className="flex flex-wrap items-center gap-1">
                           <Button
                             type="button"
@@ -2506,7 +1849,7 @@ export function DockerSidebar() {
                       />
                     ))
                   ) : (
-                    <EmptyState message="No matching images" />
+                    <EmptyState layout="sidebar" message="No matching images" />
                   )}
                 </>,
                 filteredImages.length,
@@ -2707,7 +2050,7 @@ export function DockerSidebar() {
                       />
                     ))
                   ) : (
-                    <EmptyState message="Search Docker Hub to find images" />
+                    <EmptyState layout="sidebar" message="Search Docker Hub to find images" />
                   )}
                 </>,
                 registryResults.length,
@@ -2749,7 +2092,7 @@ export function DockerSidebar() {
                 filteredVolumes.length > 0 ? (
                   filteredVolumes.map((volume) => <VolumeRow key={volume.name} volume={volume} />)
                 ) : (
-                  <EmptyState message="No matching volumes" />
+                  <EmptyState layout="sidebar" message="No matching volumes" />
                 ),
                 filteredVolumes.length,
               )}
@@ -2760,7 +2103,7 @@ export function DockerSidebar() {
                     <NetworkRow key={network.id} network={network} />
                   ))
                 ) : (
-                  <EmptyState message="No matching networks" />
+                  <EmptyState layout="sidebar" message="No matching networks" />
                 ),
                 filteredNetworks.length,
               )}
@@ -2964,7 +2307,7 @@ export function DockerSidebar() {
                           </div>
                         ))
                       ) : (
-                        <EmptyState message="No files found." />
+                        <EmptyState layout="sidebar" message="No files found." />
                       )}
                     </div>
                   </>
@@ -2973,7 +2316,7 @@ export function DockerSidebar() {
             ) : null}
           </>
         )}
-      </SidebarPanel>
+      </SidebarWorkspace>
 
       {dialogMode ? (
         <Dialog
