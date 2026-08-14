@@ -3,7 +3,7 @@ import type { ComponentProps } from "react";
 import { cn } from "@/utils/cn";
 
 const cardVariants = cva(
-  "group/card flex flex-col overflow-hidden rounded-xl font-sans ui-text-sm text-foreground",
+  "group/card flex flex-col overflow-hidden rounded-lg font-sans ui-text-sm text-foreground",
   {
     variants: {
       variant: {

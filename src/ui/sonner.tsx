@@ -49,7 +49,7 @@ export function Toaster() {
         descriptionClassName: "font-sans! font-normal!",
         classNames: {
           toast:
-            "group rounded-xl! border-border! bg-background! font-sans! font-normal! text-foreground! shadow-(--shadow-popover)! backdrop-blur-sm",
+            "group rounded-lg! border-border! bg-background! font-sans! font-normal! text-foreground! shadow-(--shadow-popover)! backdrop-blur-sm",
           content: "pr-8",
           title: "ui-text-sm font-sans! font-normal! leading-5! tracking-normal! text-foreground!",
           description:
