@@ -31,7 +31,7 @@ import {
 } from "./extension-store-lifecycle";
 import { markExtensionDisabled, markExtensionEnabled } from "./extension-enabled-state";
 import { isRetiredExtensionId } from "./retired-extensions";
-import { resolveInstalledExtensionId } from "./extension-store-runtime";
+import { resolveInstalledExtensionId } from "./installed-extension-resolution";
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
 import type { ExtensionManifest } from "../types/extension-manifest";
 import { getManifestDatabaseContributions } from "../types/extension-contributions";

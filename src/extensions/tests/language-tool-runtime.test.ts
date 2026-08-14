@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { ExtensionManifest } from "../types/extension-manifest";
 import {
-  buildRuntimeManifest,
   getLanguageToolConfigSet,
-  isExpectedMissingToolError,
   resolveToolDownloadUrlForBackend,
   resolveToolCommandForManifest,
   resolveToolDownloadUrlForManifest,
-} from "@/extensions/registry/extension-store-runtime";
+} from "@/extensions/runtime/language-tool-config";
+import {
+  buildRuntimeManifest,
+  isExpectedMissingToolError,
+} from "@/extensions/runtime/language-tool-resolution";
 
 function createManifest(overrides: Partial<ExtensionManifest> = {}): ExtensionManifest {
   return {

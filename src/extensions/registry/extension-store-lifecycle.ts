@@ -20,11 +20,10 @@ import {
 } from "./bundled-contribution-install-state";
 import { extensionRegistry } from "./extension-registry";
 import {
-  buildRuntimeManifest,
   installLanguageExtensionManifest,
   registerLanguageProvider,
-  resolveToolPaths,
-} from "./extension-store-runtime";
+} from "../runtime/language-extension-installation";
+import { buildRuntimeManifest, resolveToolPaths } from "../runtime/language-tool-resolution";
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
 
 async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExtension) {

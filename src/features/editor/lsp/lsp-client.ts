@@ -14,7 +14,7 @@ import type {
   Diagnostic,
   DiagnosticCodeAction,
 } from "@/features/diagnostics/types/diagnostics.types";
-import type { BackendLanguageToolConfigSet } from "@/extensions/registry/extension-store-runtime";
+import type { BackendLanguageToolConfigSet } from "@/extensions/runtime/language-tool-config";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useBufferStore } from "../stores/buffer.store";
 import { getSourceEditorBufferByPath } from "../utils/buffer-index";
@@ -200,7 +200,7 @@ export class LspClient {
         { extensionRegistry },
       ] = await Promise.all([
         import("@/extensions/registry/extension-store"),
-        import("@/extensions/registry/extension-store-runtime"),
+        import("@/extensions/runtime/language-tool-resolution"),
         import("@/extensions/registry/extension-registry"),
       ]);
 
@@ -466,7 +466,7 @@ export class LspClient {
       if (filePath) {
         const [{ extensionRegistry }, { getLanguageToolConfigSet }] = await Promise.all([
           import("@/extensions/registry/extension-registry"),
-          import("@/extensions/registry/extension-store-runtime"),
+          import("@/extensions/runtime/language-tool-config"),
         ]);
         const extension = extensionRegistry.getExtensionForFilePath(filePath);
 
@@ -577,7 +577,7 @@ export class LspClient {
       // Get LSP server info from extension registry
       const [{ extensionRegistry }, { getLanguageToolConfigSet }] = await Promise.all([
         import("@/extensions/registry/extension-registry"),
-        import("@/extensions/registry/extension-store-runtime"),
+        import("@/extensions/runtime/language-tool-config"),
       ]);
       const extension = extensionRegistry.getExtensionForFilePath(filePath);
 

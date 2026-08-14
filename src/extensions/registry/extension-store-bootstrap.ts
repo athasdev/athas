@@ -9,12 +9,11 @@ import { initializeLanguagePackager } from "../languages/language-packager";
 import { extensionRegistry } from "./extension-registry";
 import { isRetiredExtensionId } from "./retired-extensions";
 import {
-  buildRuntimeManifest,
   getExtensionManifestForLanguage,
   registerLanguageProvider,
-  resolveInstalledExtensionId,
-  resolveToolPaths,
-} from "./extension-store-runtime";
+} from "../runtime/language-extension-installation";
+import { buildRuntimeManifest, resolveToolPaths } from "../runtime/language-tool-resolution";
+import { resolveInstalledExtensionId } from "./installed-extension-resolution";
 import type {
   AvailableExtension,
   ExtensionInstallationMetadata,
