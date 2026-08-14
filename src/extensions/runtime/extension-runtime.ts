@@ -4,6 +4,7 @@ import { extensionRegistry } from "../registry/extension-registry";
 import { initializeGeneratedUIExtensions } from "../ui/services/generated/generated-ui-extension-installer";
 import { runExtensionLoadBatch } from "./extension-activation-batch";
 import { activateExtensionContributions } from "./extension-contribution-runtime";
+import { buildExtensionRuntimeCandidates } from "./extension-runtime-candidates";
 
 let initializationPromise: Promise<void> | null = null;
 
@@ -11,13 +12,14 @@ async function initializeExtensionRuntimeServices(): Promise<void> {
   await initializeExtensionStore();
   await extensionRegistry.ensureInitialized();
 
-  const installedExtensions = Array.from(
+  const installedExtensions = buildExtensionRuntimeCandidates(
     useExtensionStore.getState().availableExtensions.values(),
-  ).filter((extension) => extension.isInstalled && extension.isEnabled);
+    extensionRegistry.getAllExtensions(),
+  );
   const results = await runExtensionLoadBatch(installedExtensions, async (extension) => {
     const extensionId = extension.manifest.id;
     const registryExtension = extensionRegistry.getExtension(extensionId);
-    await activateExtensionContributions(extensionId, extension.manifest, registryExtension?.path);
+    await activateExtensionContributions(extensionId, extension.manifest, extension.path);
     if (registryExtension) {
       extensionRegistry.setExtensionState(extensionId, "activated");
     }

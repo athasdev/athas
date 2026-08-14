@@ -76,12 +76,6 @@ describe("extension browser catalog", () => {
   });
 
   it("keeps bundled icon themes visible without duplicating catalog contributions", () => {
-    const athasIcons = {
-      id: "athas-icons",
-      name: "Athas Icons",
-      description: "Athas icon theme",
-      getFileIcon: () => ({}),
-    };
     const symbols = {
       id: "symbols",
       name: "Symbols Icons",
@@ -93,9 +87,6 @@ describe("extension browser catalog", () => {
     )?.manifest;
 
     expect(symbolsManifest).toBeDefined();
-    iconThemeRegistry.registerTheme(athasIcons, {
-      extensionId: "athas.icon-theme.athas-icons",
-    });
     iconThemeRegistry.registerTheme(symbols, {
       extensionId: "athas.icon-theme.symbols",
     });
@@ -124,7 +115,6 @@ describe("extension browser catalog", () => {
         ),
       ).toHaveLength(1);
     } finally {
-      iconThemeRegistry.unregisterTheme(athasIcons.id);
       iconThemeRegistry.unregisterTheme(symbols.id);
     }
   });

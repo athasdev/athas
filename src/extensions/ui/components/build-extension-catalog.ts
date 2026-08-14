@@ -296,8 +296,7 @@ export function buildExtensionCatalog({
 
   for (const { manifest } of bundledExtensionManifests) {
     const iconContributions = getManifestIconContributions(manifest).filter(
-      (contribution) =>
-        iconThemeRegistry.getTheme(contribution.id) && !catalogedIconThemeIds.has(contribution.id),
+      (contribution) => !catalogedIconThemeIds.has(contribution.id),
     );
     if (iconContributions.length === 0) {
       continue;
