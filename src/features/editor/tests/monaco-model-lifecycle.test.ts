@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 const { getModel, createModel } = vi.hoisted(() => ({
   getModel: vi.fn(),
@@ -30,8 +30,14 @@ const uri = {
 
 describe("Monaco model lifecycle", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     getModel.mockReset();
     createModel.mockReset();
+  });
+
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
   it("shares one model between split editor surfaces", () => {
@@ -50,6 +56,8 @@ describe("Monaco model lifecycle", () => {
     expect(model.dispose).not.toHaveBeenCalled();
 
     second.release();
+    expect(model.dispose).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(5_000);
     expect(model.dispose).toHaveBeenCalledTimes(1);
   });
 
@@ -64,6 +72,27 @@ describe("Monaco model lifecycle", () => {
 
     acquired.release();
     acquired.release();
+    expect(model.dispose).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(5_000);
+    expect(model.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a model alive when another editor remounts during the release grace period", () => {
+    const model = createTextModel();
+    getModel.mockReturnValue(null);
+    createModel.mockReturnValue(model);
+
+    const first = acquireMonacoModel("const value = 1;", "typescript", uri as never);
+    first.release();
+    vi.advanceTimersByTime(4_000);
+
+    const second = acquireMonacoModel("const value = 1;", "typescript", uri as never);
+    vi.advanceTimersByTime(1_000);
+    expect(second.model).toBe(model);
+    expect(model.dispose).not.toHaveBeenCalled();
+
+    second.release();
+    vi.advanceTimersByTime(5_000);
     expect(model.dispose).toHaveBeenCalledTimes(1);
   });
 });
