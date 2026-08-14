@@ -589,7 +589,7 @@ export function MonacoEditor({
         vimModeEnabled && vimCurrentMode === "normal" ? "solid" : editorCursorBlinking,
       contextmenu: false,
       overviewRulerLanes: 0,
-      fixedOverflowWidgets: false,
+      fixedOverflowWidgets: true,
       "semanticHighlighting.enabled": semanticTokens,
       scrollbar: {
         vertical: scrollable ? "auto" : "hidden",
