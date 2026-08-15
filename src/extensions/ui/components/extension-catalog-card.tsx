@@ -7,7 +7,7 @@ import {
   XCircleIcon as Unavailable,
 } from "@/ui/icons";
 import Badge from "@/ui/badge";
-import { Card, CardContent, CardDescription, CardTitle } from "@/ui/card";
+import { Card, CardContent, CardTitle } from "@/ui/card";
 import { Spinner } from "@/ui/spinner";
 import { ExtensionIcon } from "./extension-catalog-icon";
 import type { UnifiedExtension } from "./extension-catalog-types";
@@ -61,13 +61,19 @@ export function ExtensionCatalogCard({
       role="button"
       tabIndex={0}
     >
-      <CardContent className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-3">
+      <CardContent className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-start gap-x-3">
         <ExtensionIcon extension={extension} />
         <div className="min-w-0">
           <CardTitle className="truncate">{extension.name}</CardTitle>
-          <CardDescription className="mt-1 line-clamp-2 min-h-10">
-            {extension.description}
-          </CardDescription>
+          <div className="mt-2 flex min-w-0 items-center gap-2 text-subtle-foreground ui-text-sm">
+            <Badge variant="muted" size="compact">
+              {getCategoryLabel(extension.category)}
+            </Badge>
+            {extension.publisher ? <span className="truncate">{extension.publisher}</span> : null}
+            {extension.version ? (
+              <span className="ml-auto shrink-0">v{extension.version}</span>
+            ) : null}
+          </div>
         </div>
         <div className="flex min-w-5 items-center justify-end gap-2">
           {extension.isBundled ? (
@@ -76,15 +82,6 @@ export function ExtensionCatalogCard({
             </Badge>
           ) : null}
           <span className="flex size-5 items-center justify-center">{status}</span>
-        </div>
-        <div className="col-span-2 col-start-2 flex min-w-0 items-center gap-2 text-subtle-foreground ui-text-sm">
-          <Badge variant="muted" size="compact">
-            {getCategoryLabel(extension.category)}
-          </Badge>
-          {extension.publisher ? <span className="truncate">{extension.publisher}</span> : null}
-          {extension.version ? (
-            <span className="ml-auto shrink-0">v{extension.version}</span>
-          ) : null}
         </div>
       </CardContent>
     </Card>
