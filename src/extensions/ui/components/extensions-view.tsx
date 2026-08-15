@@ -57,6 +57,8 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [marketplaceSkills, setMarketplaceSkills] = useState<MarketplaceSkill[]>([]);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
+  const [loadingSkillPreviewId, setLoadingSkillPreviewId] = useState<string>();
+  const [skillPreviewError, setSkillPreviewError] = useState<string>();
   const [isSkillsCommandOpen, setIsSkillsCommandOpen] = useState(false);
   const [editingSkillId, setEditingSkillId] = useState<string>();
   const extensionContextMenu = useDropdownMenu<UnifiedExtension>();
@@ -155,7 +157,39 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
     catalogExtension && selectedExtensionEnabled !== undefined
       ? { ...catalogExtension, isEnabled: selectedExtensionEnabled }
       : catalogExtension;
+  const selectedMarketplaceSkill = catalogExtension?.marketplaceSkill;
   const installedCount = extensions.filter((extension) => extension.isInstalled).length;
+
+  useEffect(() => {
+    if (!selectedMarketplaceSkill || selectedMarketplaceSkill.content) {
+      setLoadingSkillPreviewId(undefined);
+      setSkillPreviewError(undefined);
+      return;
+    }
+
+    let isCurrent = true;
+    setLoadingSkillPreviewId(selectedMarketplaceSkill.id);
+    setSkillPreviewError(undefined);
+
+    void resolveMarketplaceSkill(selectedMarketplaceSkill)
+      .then((resolvedSkill) => {
+        if (!isCurrent) return;
+        setMarketplaceSkills((skills) =>
+          skills.map((skill) => (skill.id === resolvedSkill.id ? resolvedSkill : skill)),
+        );
+      })
+      .catch(() => {
+        if (!isCurrent) return;
+        setSkillPreviewError("Could not load these skill instructions.");
+      })
+      .finally(() => {
+        if (isCurrent) setLoadingSkillPreviewId(undefined);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedMarketplaceSkill]);
 
   const isExtensionInstalling = (extension: UnifiedExtension) =>
     Boolean(availableExtensions.get(extension.id)?.isInstalling || isAgentInstalling(extension));
@@ -232,6 +266,8 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
               setEditingSkillId(skillId);
               setIsSkillsCommandOpen(true);
             }}
+            isSkillPreviewLoading={loadingSkillPreviewId === selectedMarketplaceSkill?.id}
+            skillPreviewError={skillPreviewError}
           />
         </ScrollArea>
         {overlays}

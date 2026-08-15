@@ -13,6 +13,9 @@ import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
+import { Card, CardContent } from "@/ui/card";
+import { Spinner } from "@/ui/spinner";
+import MarkdownRenderer from "@/features/ai/components/messages/markdown-renderer";
 import { hasSkillLocalOverride } from "@/features/ai/lib/skill-library";
 import { ExtensionIcon } from "./extension-catalog-icon";
 import type { UnifiedExtension } from "./extension-catalog-types";
@@ -35,6 +38,8 @@ interface ExtensionDetailViewProps {
   onDeactivate: (extension: UnifiedExtension) => void | Promise<void>;
   onResetSkillOverride: (extension: UnifiedExtension) => void | Promise<void>;
   onEditSkill: (skillId: string) => void;
+  isSkillPreviewLoading: boolean;
+  skillPreviewError?: string;
 }
 
 export function ExtensionDetailView({
@@ -49,10 +54,14 @@ export function ExtensionDetailView({
   onDeactivate,
   onResetSkillOverride,
   onEditSkill,
+  isSkillPreviewLoading,
+  skillPreviewError,
 }: ExtensionDetailViewProps) {
   if (!extension) {
     return <EmptyState layout="sidebar" message="Extension not found." />;
   }
+
+  const skillContent = extension.skill?.content ?? extension.marketplaceSkill?.content;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-6 py-8">
@@ -256,6 +265,40 @@ export function ExtensionDetailView({
           </Button>
         ) : null}
       </div>
+
+      {extension.category === "skill" ? (
+        <div className="border-border/70 border-t pt-5">
+          <div className="mb-3">
+            <div className="font-medium text-foreground ui-text-sm">Skill instructions</div>
+            <div className="mt-0.5 text-subtle-foreground ui-text-sm">
+              Review what this skill asks the agent to do before adding it.
+            </div>
+          </div>
+          {isSkillPreviewLoading ? (
+            <Card variant="muted" size="sm">
+              <CardContent>
+                <Spinner label="Loading skill instructions" showLabel />
+              </CardContent>
+            </Card>
+          ) : skillPreviewError ? (
+            <Alert tone="error">
+              <AlertDescription>{skillPreviewError}</AlertDescription>
+            </Alert>
+          ) : skillContent ? (
+            <Card variant="muted" size="sm">
+              <CardContent className="min-w-0 overflow-hidden">
+                <MarkdownRenderer content={skillContent} />
+              </CardContent>
+            </Card>
+          ) : (
+            <Alert>
+              <AlertDescription>
+                This skill does not provide previewable instructions.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+      ) : null}
 
       <div className="border-border/70 border-t pt-5">
         <div className="mb-2 font-medium text-foreground ui-text-sm">Contributions</div>
