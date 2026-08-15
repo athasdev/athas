@@ -10,6 +10,7 @@ import {
   XCircleIcon as XCircle,
 } from "@/ui/icons";
 import { Alert, AlertDescription } from "@/ui/alert";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
@@ -38,6 +39,7 @@ interface ExtensionDetailViewProps {
   onDeactivate: (extension: UnifiedExtension) => void | Promise<void>;
   onResetSkillOverride: (extension: UnifiedExtension) => void | Promise<void>;
   onEditSkill: (skillId: string) => void;
+  onOpenSkillPreview: () => void;
   isSkillPreviewLoading: boolean;
   skillPreviewError?: string;
 }
@@ -54,6 +56,7 @@ export function ExtensionDetailView({
   onDeactivate,
   onResetSkillOverride,
   onEditSkill,
+  onOpenSkillPreview,
   isSkillPreviewLoading,
   skillPreviewError,
 }: ExtensionDetailViewProps) {
@@ -268,35 +271,45 @@ export function ExtensionDetailView({
 
       {extension.category === "skill" ? (
         <div className="border-border/70 border-t pt-5">
-          <div className="mb-3">
-            <div className="font-medium text-foreground ui-text-sm">Skill instructions</div>
-            <div className="mt-0.5 text-subtle-foreground ui-text-sm">
-              Review what this skill asks the agent to do before adding it.
-            </div>
-          </div>
-          {isSkillPreviewLoading ? (
-            <Card variant="muted" size="sm">
-              <CardContent>
-                <Spinner label="Loading skill instructions" showLabel />
-              </CardContent>
-            </Card>
-          ) : skillPreviewError ? (
-            <Alert tone="error">
-              <AlertDescription>{skillPreviewError}</AlertDescription>
-            </Alert>
-          ) : skillContent ? (
-            <Card variant="muted" size="sm">
-              <CardContent className="min-w-0 overflow-hidden">
-                <MarkdownRenderer content={skillContent} />
-              </CardContent>
-            </Card>
-          ) : (
-            <Alert>
-              <AlertDescription>
-                This skill does not provide previewable instructions.
-              </AlertDescription>
-            </Alert>
-          )}
+          <Accordion
+            key={extension.id}
+            defaultValue={[]}
+            onValueChange={(value) => {
+              if (value.includes("instructions")) onOpenSkillPreview();
+            }}
+          >
+            <AccordionItem value="instructions">
+              <AccordionTrigger>Skill instructions</AccordionTrigger>
+              <AccordionContent className="gap-3 pt-2">
+                <p className="text-subtle-foreground ui-text-sm">
+                  Review what this skill asks the agent to do before adding it.
+                </p>
+                {isSkillPreviewLoading ? (
+                  <Card variant="muted" size="sm">
+                    <CardContent>
+                      <Spinner label="Loading skill instructions" showLabel />
+                    </CardContent>
+                  </Card>
+                ) : skillPreviewError ? (
+                  <Alert tone="error">
+                    <AlertDescription>{skillPreviewError}</AlertDescription>
+                  </Alert>
+                ) : skillContent ? (
+                  <Card variant="muted" size="sm">
+                    <CardContent className="min-w-0 overflow-hidden">
+                      <MarkdownRenderer content={skillContent} />
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Alert>
+                    <AlertDescription>
+                      This skill does not provide previewable instructions.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       ) : null}
 

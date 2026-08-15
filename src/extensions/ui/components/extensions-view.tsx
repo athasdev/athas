@@ -58,7 +58,10 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const [marketplaceSkills, setMarketplaceSkills] = useState<MarketplaceSkill[]>([]);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [loadingSkillPreviewId, setLoadingSkillPreviewId] = useState<string>();
-  const [skillPreviewError, setSkillPreviewError] = useState<string>();
+  const [skillPreviewError, setSkillPreviewError] = useState<{
+    skillId: string;
+    message: string;
+  }>();
   const [isSkillsCommandOpen, setIsSkillsCommandOpen] = useState(false);
   const [editingSkillId, setEditingSkillId] = useState<string>();
   const extensionContextMenu = useDropdownMenu<UnifiedExtension>();
@@ -158,38 +161,43 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
       ? { ...catalogExtension, isEnabled: selectedExtensionEnabled }
       : catalogExtension;
   const selectedMarketplaceSkill = catalogExtension?.marketplaceSkill;
+  const selectedSkillPreviewError =
+    selectedMarketplaceSkill && skillPreviewError?.skillId === selectedMarketplaceSkill.id
+      ? skillPreviewError.message
+      : undefined;
   const installedCount = extensions.filter((extension) => extension.isInstalled).length;
 
-  useEffect(() => {
-    if (!selectedMarketplaceSkill || selectedMarketplaceSkill.content) {
-      setLoadingSkillPreviewId(undefined);
-      setSkillPreviewError(undefined);
+  const handleOpenSkillPreview = useCallback(() => {
+    if (
+      !selectedMarketplaceSkill ||
+      selectedMarketplaceSkill.content ||
+      loadingSkillPreviewId === selectedMarketplaceSkill.id
+    ) {
       return;
     }
 
-    let isCurrent = true;
-    setLoadingSkillPreviewId(selectedMarketplaceSkill.id);
+    const skillId = selectedMarketplaceSkill.id;
+    setLoadingSkillPreviewId(skillId);
     setSkillPreviewError(undefined);
 
     void resolveMarketplaceSkill(selectedMarketplaceSkill)
       .then((resolvedSkill) => {
-        if (!isCurrent) return;
         setMarketplaceSkills((skills) =>
           skills.map((skill) => (skill.id === resolvedSkill.id ? resolvedSkill : skill)),
         );
       })
       .catch(() => {
-        if (!isCurrent) return;
-        setSkillPreviewError("Could not load these skill instructions.");
+        setSkillPreviewError({
+          skillId,
+          message: "Could not load these skill instructions.",
+        });
       })
       .finally(() => {
-        if (isCurrent) setLoadingSkillPreviewId(undefined);
+        setLoadingSkillPreviewId((currentSkillId) =>
+          currentSkillId === skillId ? undefined : currentSkillId,
+        );
       });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [selectedMarketplaceSkill]);
+  }, [loadingSkillPreviewId, selectedMarketplaceSkill]);
 
   const isExtensionInstalling = (extension: UnifiedExtension) =>
     Boolean(availableExtensions.get(extension.id)?.isInstalling || isAgentInstalling(extension));
@@ -266,8 +274,9 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
               setEditingSkillId(skillId);
               setIsSkillsCommandOpen(true);
             }}
+            onOpenSkillPreview={handleOpenSkillPreview}
             isSkillPreviewLoading={loadingSkillPreviewId === selectedMarketplaceSkill?.id}
-            skillPreviewError={skillPreviewError}
+            skillPreviewError={selectedSkillPreviewError}
           />
         </ScrollArea>
         {overlays}
