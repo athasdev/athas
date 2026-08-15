@@ -29,8 +29,14 @@ export function ModelSelector({
   tooltip,
 }: ModelSelectorProps) {
   const isComposer = appearance === "composer";
-  const { availableModels, currentModelName, hasHostedAi, isCustomProvider, modelFetchError } =
-    useAIModelOptions(providerId, modelId, onChange);
+  const {
+    availableModels,
+    currentModelName,
+    hasHostedAi,
+    isCustomProvider,
+    isLoadingModels,
+    modelFetchError,
+  } = useAIModelOptions(providerId, modelId, onChange);
 
   return (
     <Select
@@ -54,7 +60,13 @@ export function ModelSelector({
       openDirection={isComposer ? "up" : "down"}
       allowCustomValue={isCustomProvider}
       customValueLabel={(customValue) => `Use ${customValue}`}
-      emptyLabel={isCustomProvider ? "Type a model name and press Enter" : "No models found"}
+      emptyLabel={
+        isLoadingModels
+          ? "Loading models…"
+          : isCustomProvider
+            ? "Type a model name and press Enter"
+            : "No models found"
+      }
       hideChevron={isComposer}
       size="xs"
       variant={isComposer ? "ghost" : "default"}

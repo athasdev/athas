@@ -194,11 +194,8 @@ function AthasAgentPreferences({
   const [modelQuery, setModelQuery] = useState("");
   const providers = useAvailableProviders();
   const currentProvider = providers.find((provider) => provider.id === providerId);
-  const { availableModels, currentModelName, hasHostedAi, modelFetchError } = useAIModelOptions(
-    providerId,
-    modelId,
-    onModelChange,
-  );
+  const { availableModels, currentModelName, hasHostedAi, isLoadingModels, modelFetchError } =
+    useAIModelOptions(providerId, modelId, onModelChange);
   const filteredProviders = providers.filter((provider) =>
     matchesSearchQuery(providerQuery, [provider.name, provider.id]),
   );
@@ -253,23 +250,30 @@ function AthasAgentPreferences({
               </DropdownMenuLabel>
             </DropdownMenuGroup>
           ) : null}
-          <DropdownMenuRadioGroup value={modelId} onValueChange={onModelChange}>
-            {filteredModels.map((model) => {
-              const locked = Boolean(model.proOnly && !hasHostedAi);
-              return (
-                <DropdownMenuRadioItem key={model.id} value={model.id} disabled={locked}>
-                  {locked ? <Lock /> : null}
-                  <span className="min-w-0 flex-1 truncate" title={model.id}>
-                    {model.name}
-                  </span>
-                  {model.proOnly ? <ProBadge /> : null}
-                </DropdownMenuRadioItem>
-              );
-            })}
-            {filteredModels.length === 0 ? (
-              <DropdownMenuItem disabled>No matching models</DropdownMenuItem>
-            ) : null}
-          </DropdownMenuRadioGroup>
+          {isLoadingModels ? (
+            <DropdownMenuItem disabled>
+              <Spinner label="Loading models" compact />
+              Loading models…
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuRadioGroup value={modelId} onValueChange={onModelChange}>
+              {filteredModels.map((model) => {
+                const locked = Boolean(model.proOnly && !hasHostedAi);
+                return (
+                  <DropdownMenuRadioItem key={model.id} value={model.id} disabled={locked}>
+                    {locked ? <Lock /> : null}
+                    <span className="min-w-0 flex-1 truncate" title={model.id}>
+                      {model.name}
+                    </span>
+                    {model.proOnly ? <ProBadge /> : null}
+                  </DropdownMenuRadioItem>
+                );
+              })}
+              {filteredModels.length === 0 ? (
+                <DropdownMenuItem disabled>No matching models</DropdownMenuItem>
+              ) : null}
+            </DropdownMenuRadioGroup>
+          )}
           {providerId === "custom" ? (
             <>
               <DropdownMenuSeparator />
