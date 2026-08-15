@@ -4,6 +4,7 @@ import { useExtensionStore } from "@/extensions/registry/extension-store";
 import {
   createSkillFromMarketplace,
   resetSkillLocalOverride,
+  resolveMarketplaceSkill,
   updateSkillFromMarketplace,
 } from "@/features/ai/lib/skill-library";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
@@ -58,10 +59,8 @@ export function useExtensionCatalogActions(settings: ExtensionCatalogActionSetti
       if (!extension.skill || !extension.marketplaceSkill) return;
 
       try {
-        const updatedSkill = updateSkillFromMarketplace(
-          extension.skill,
-          extension.marketplaceSkill,
-        );
+        const marketplaceSkill = await resolveMarketplaceSkill(extension.marketplaceSkill);
+        const updatedSkill = updateSkillFromMarketplace(extension.skill, marketplaceSkill);
         await updateSetting(
           "aiSkills",
           settings.aiSkills.map((skill) =>
@@ -272,8 +271,10 @@ export function useExtensionCatalogActions(settings: ExtensionCatalogActionSetti
 
         if (!extension.marketplaceSkill) return;
 
+        const marketplaceSkill = await resolveMarketplaceSkill(extension.marketplaceSkill);
+
         await updateSetting("aiSkills", [
-          createSkillFromMarketplace(extension.marketplaceSkill),
+          createSkillFromMarketplace(marketplaceSkill),
           ...settings.aiSkills,
         ]);
         showToast({

@@ -14,6 +14,7 @@ import {
   hasSkillLocalOverride,
   isMarketplaceSkillInstalled,
   loadMarketplaceSkills,
+  resolveMarketplaceSkill,
 } from "@/features/ai/lib/skill-library";
 import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -174,7 +175,8 @@ export function SkillsCommand({
   const handleInstallMarketplaceSkill = useCallback(
     async (skill: MarketplaceSkill) => {
       if (isMarketplaceSkillInstalled(skills, skill.id)) return;
-      await updateSetting("aiSkills", [createSkillFromMarketplace(skill), ...skills]);
+      const resolvedSkill = await resolveMarketplaceSkill(skill);
+      await updateSetting("aiSkills", [createSkillFromMarketplace(resolvedSkill), ...skills]);
     },
     [skills, updateSetting],
   );

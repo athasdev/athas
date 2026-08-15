@@ -21,10 +21,15 @@ export interface MarketplaceSkill {
   id: string;
   title: string;
   description: string;
-  content: string;
+  content?: string;
   author?: string;
   version?: string;
   tags: string[];
+  detailUrl?: string;
   sourceUrl?: string;
   updatedAt?: string;
+}
+
+export interface ResolvedMarketplaceSkill extends MarketplaceSkill {
+  content: string;
 }

@@ -1,4 +1,8 @@
-import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
+import type {
+  AIChatSkill,
+  MarketplaceSkill,
+  ResolvedMarketplaceSkill,
+} from "@/features/ai/types/skills.types";
 import { getServiceUrls } from "@/config/services";
 
 const SKILLS_REGISTRY_URL = getServiceUrls().skillsRegistryUrl;
@@ -31,7 +35,9 @@ function normalizeMarketplaceSkill(entry: SkillRegistryEntry): MarketplaceSkill 
     asString(entry.instructions) ||
     asString(entry.prompt) ||
     asString(entry.body);
-  if (!content) return null;
+  const detailUrl =
+    asString(entry.detailUrl) || asString(entry.manifestUrl) || asString(entry.contentUrl);
+  if (!content && !detailUrl) return null;
 
   const id =
     asString(entry.id) ||
@@ -43,38 +49,16 @@ function normalizeMarketplaceSkill(entry: SkillRegistryEntry): MarketplaceSkill 
     title,
     description:
       asString(entry.description) ||
-      content.replace(/\s+/g, " ").trim().slice(0, 160) ||
+      content?.replace(/\s+/g, " ").trim().slice(0, 160) ||
       "Reusable Agent instructions.",
     content,
     author: asString(entry.author) || asString(entry.publisher),
     version: asString(entry.version),
     tags: asStringArray(entry.tags),
-    sourceUrl:
-      asString(entry.sourceUrl) ||
-      asString(entry.url) ||
-      asString(entry.manifestUrl) ||
-      asString(entry.contentUrl),
+    detailUrl,
+    sourceUrl: asString(entry.sourceUrl) || asString(entry.url),
     updatedAt: asString(entry.updatedAt) || asString(entry.updated_at),
   };
-}
-
-async function fetchSkillDetail(entry: SkillRegistryEntry): Promise<SkillRegistryEntry> {
-  if (asString(entry.content) || asString(entry.instructions) || asString(entry.prompt)) {
-    return entry;
-  }
-
-  const detailUrl =
-    asString(entry.manifestUrl) || asString(entry.contentUrl) || asString(entry.sourceUrl);
-  if (!detailUrl) return entry;
-
-  try {
-    const response = await fetch(detailUrl);
-    if (!response.ok) return entry;
-    const detail = (await response.json()) as SkillRegistryEntry;
-    return { ...entry, ...detail };
-  } catch {
-    return entry;
-  }
 }
 
 export async function loadMarketplaceSkills(): Promise<MarketplaceSkill[]> {
@@ -89,14 +73,9 @@ export async function loadMarketplaceSkills(): Promise<MarketplaceSkill[]> {
         ? (payload as { skills: unknown[] }).skills
         : [];
 
-    const detailedEntries = await Promise.all(
-      entries
-        .filter((entry): entry is SkillRegistryEntry => Boolean(entry) && typeof entry === "object")
-        .map((entry) => fetchSkillDetail(entry)),
-    );
-
     const seen = new Set<string>();
-    return detailedEntries
+    return entries
+      .filter((entry): entry is SkillRegistryEntry => Boolean(entry) && typeof entry === "object")
       .map(normalizeMarketplaceSkill)
       .filter((skill): skill is MarketplaceSkill => {
         if (!skill || seen.has(skill.id)) return false;
@@ -106,6 +85,31 @@ export async function loadMarketplaceSkills(): Promise<MarketplaceSkill[]> {
   } catch {
     return [];
   }
+}
+
+export async function resolveMarketplaceSkill(
+  skill: MarketplaceSkill,
+): Promise<ResolvedMarketplaceSkill> {
+  if (skill.content?.trim()) {
+    return { ...skill, content: skill.content };
+  }
+
+  if (!skill.detailUrl) {
+    throw new Error(`${skill.title} does not provide installable instructions`);
+  }
+
+  const response = await fetch(skill.detailUrl);
+  if (!response.ok) {
+    throw new Error(`Could not load ${skill.title} (${response.status})`);
+  }
+
+  const detail = (await response.json()) as SkillRegistryEntry;
+  const resolved = normalizeMarketplaceSkill({ ...skill, ...detail });
+  if (!resolved?.content) {
+    throw new Error(`${skill.title} does not provide installable instructions`);
+  }
+
+  return { ...resolved, content: resolved.content };
 }
 
 export function isMarketplaceSkillInstalled(skills: AIChatSkill[], marketplaceSkillId: string) {
@@ -139,28 +143,23 @@ export function hasSkillLocalOverride(skill: AIChatSkill) {
 export function hasMarketplaceSkillUpdate(installed: AIChatSkill, marketplace: MarketplaceSkill) {
   if (installed.source !== "marketplace") return false;
 
-  if (
-    installed.version !== marketplace.version &&
-    Boolean(installed.version || marketplace.version)
-  ) {
+  if (marketplace.version && installed.version !== marketplace.version) {
     return true;
   }
 
-  if (
-    installed.upstreamUpdatedAt !== marketplace.updatedAt &&
-    Boolean(installed.upstreamUpdatedAt && marketplace.updatedAt)
-  ) {
+  if (marketplace.updatedAt && installed.upstreamUpdatedAt !== marketplace.updatedAt) {
     return true;
   }
 
   return (
     getInstalledUpstreamTitle(installed) !== marketplace.title ||
-    getInstalledUpstreamContent(installed) !== marketplace.content ||
-    getInstalledUpstreamDescription(installed) !== marketplace.description
+    getInstalledUpstreamDescription(installed) !== marketplace.description ||
+    (marketplace.content !== undefined &&
+      getInstalledUpstreamContent(installed) !== marketplace.content)
   );
 }
 
-export function createSkillFromMarketplace(skill: MarketplaceSkill): AIChatSkill {
+export function createSkillFromMarketplace(skill: ResolvedMarketplaceSkill): AIChatSkill {
   const now = new Date().toISOString();
 
   return {
@@ -185,7 +184,7 @@ export function createSkillFromMarketplace(skill: MarketplaceSkill): AIChatSkill
 
 export function updateSkillFromMarketplace(
   installed: AIChatSkill,
-  marketplace: MarketplaceSkill,
+  marketplace: ResolvedMarketplaceSkill,
 ): AIChatSkill {
   const now = new Date().toISOString();
   const localOverride = hasSkillLocalOverride(installed);

@@ -1,14 +1,78 @@
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import {
   createSkillFromMarketplace,
   hasMarketplaceSkillUpdate,
   hasSkillLocalOverride,
   isMarketplaceSkillInstalled,
+  loadMarketplaceSkills,
   resetSkillLocalOverride,
+  resolveMarketplaceSkill,
   updateSkillFromMarketplace,
 } from "@/features/ai/lib/skill-library";
 
 describe("skill library", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("loads marketplace summaries without fetching every skill body", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          skills: [
+            {
+              id: "skills-sh:review",
+              title: "Review",
+              description: "Review code changes",
+              manifestUrl: "https://athas.dev/api/skills/details/review",
+            },
+          ],
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(loadMarketplaceSkills()).resolves.toEqual([
+      expect.objectContaining({
+        id: "skills-sh:review",
+        title: "Review",
+        detailUrl: "https://athas.dev/api/skills/details/review",
+        content: undefined,
+      }),
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves marketplace instructions only when requested", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "skills-sh:review",
+          title: "Review",
+          description: "Review code changes",
+          content: "Review this diff carefully.",
+          version: "abc123",
+          tags: ["review"],
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      resolveMarketplaceSkill({
+        id: "skills-sh:review",
+        title: "Review",
+        description: "Review code changes",
+        detailUrl: "https://athas.dev/api/skills/details/review",
+        tags: ["skills.sh"],
+      }),
+    ).resolves.toMatchObject({
+      content: "Review this diff carefully.",
+      version: "abc123",
+    });
+    expect(fetchMock).toHaveBeenCalledWith("https://athas.dev/api/skills/details/review");
+  });
+
   it("creates installable Agent skills from marketplace entries", () => {
     const skill = createSkillFromMarketplace({
       id: "athas.review",

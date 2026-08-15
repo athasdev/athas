@@ -11,7 +11,11 @@ import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useGenerateStore } from "@/features/generate/stores/generate.store";
-import { hasMarketplaceSkillUpdate, loadMarketplaceSkills } from "@/features/ai/lib/skill-library";
+import {
+  hasMarketplaceSkillUpdate,
+  loadMarketplaceSkills,
+  resolveMarketplaceSkill,
+} from "@/features/ai/lib/skill-library";
 import type { MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { Settings } from "@/features/settings/types/settings.types";
@@ -97,11 +101,35 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   );
 
   useEffect(() => {
+    let isCurrent = true;
     setIsLoadingSkills(true);
     void loadMarketplaceSkills()
-      .then(setMarketplaceSkills)
-      .finally(() => setIsLoadingSkills(false));
-  }, []);
+      .then(async (skills) => {
+        const installedSourceIds = new Set(
+          settings.aiSkills
+            .filter((skill) => skill.source === "marketplace")
+            .map((skill) => skill.sourceId)
+            .filter((sourceId): sourceId is string => Boolean(sourceId)),
+        );
+        return Promise.all(
+          skills.map((skill) =>
+            installedSourceIds.has(skill.id)
+              ? resolveMarketplaceSkill(skill).catch(() => skill)
+              : skill,
+          ),
+        );
+      })
+      .then((skills) => {
+        if (isCurrent) setMarketplaceSkills(skills);
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoadingSkills(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [settings.aiSkills]);
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const activeFilter = EXTENSION_FILTER_IDS.has(settings.extensionsActiveTab)
