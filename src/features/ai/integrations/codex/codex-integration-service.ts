@@ -15,6 +15,7 @@ interface CodexHandlers {
   onChunk: (chunk: string) => void;
   onComplete: () => void;
   onError: (error: string, canReconnect?: boolean) => void;
+  onNewMessage?: () => void;
   onToolUse?: (event: Extract<AcpEvent, { type: "tool_start" }>) => void;
   onToolComplete?: (toolName: string, toolId?: string, output?: unknown, error?: string) => void;
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
@@ -47,7 +48,24 @@ function itemId(params: Record<string, any>) {
 
 function itemName(params: Record<string, any>) {
   const item = params.item ?? {};
-  return String(item.command ?? item.name ?? item.type ?? "Codex tool");
+  return String(item.command ?? item.tool ?? item.name ?? item.type ?? "Codex tool");
+}
+
+const CODEX_TOOL_ITEM_TYPES = new Set([
+  "commandExecution",
+  "fileChange",
+  "mcpToolCall",
+  "dynamicToolCall",
+  "collabAgentToolCall",
+  "subAgentActivity",
+  "webSearch",
+  "imageView",
+  "sleep",
+  "imageGeneration",
+]);
+
+function isCodexToolItem(params: Record<string, any>) {
+  return CODEX_TOOL_ITEM_TYPES.has(String(params.item?.type ?? ""));
 }
 
 export class CodexIntegrationService {
@@ -56,6 +74,7 @@ export class CodexIntegrationService {
   private threadId: string | null = null;
   private turnId: string | null = null;
   private projectRoot = ".";
+  private pendingNewMessage = false;
 
   constructor(
     private handlers: CodexHandlers,
@@ -129,12 +148,21 @@ export class CodexIntegrationService {
     }
 
     if (method === "item/agentMessage/delta") {
+      this.startPendingMessage();
       this.handlers.onChunk(String(params.delta ?? ""));
       return;
     }
     if (method === "item/started") {
       const type = String(params.item?.type ?? "");
-      if (type !== "agentMessage" && type !== "reasoning") {
+      if (type === "reasoning") {
+        this.startPendingMessage();
+        this.handlers.onEvent?.({
+          type: "thought_chunk",
+          sessionId: this.threadId ?? "codex",
+          content: { type: "text", text: "" },
+          isComplete: false,
+        });
+      } else if (isCodexToolItem(params)) {
         const toolEvent: Extract<AcpEvent, { type: "tool_start" }> = {
           type: "tool_start",
           sessionId: this.threadId ?? "codex",
@@ -151,14 +179,14 @@ export class CodexIntegrationService {
       return;
     }
     if (method === "item/completed") {
-      const type = String(params.item?.type ?? "");
-      if (type !== "agentMessage" && type !== "reasoning") {
+      if (isCodexToolItem(params)) {
         this.handlers.onToolComplete?.(
           itemName(params),
           itemId(params),
           params.item,
           params.item?.error?.message,
         );
+        this.pendingNewMessage = true;
       }
       return;
     }
@@ -179,6 +207,7 @@ export class CodexIntegrationService {
     }
     if (method === "turn/completed") {
       const failed = params.turn?.status === "failed";
+      this.pendingNewMessage = false;
       this.dispose();
       if (failed) {
         this.handlers.onError(params.turn?.error?.message ?? "Codex turn failed");
@@ -191,7 +220,14 @@ export class CodexIntegrationService {
     }
   }
 
+  private startPendingMessage() {
+    if (!this.pendingNewMessage) return;
+    this.pendingNewMessage = false;
+    this.handlers.onNewMessage?.();
+  }
+
   private dispose() {
+    this.pendingNewMessage = false;
     this.unlisten?.();
     this.unlisten = null;
     if (CodexIntegrationService.active === this) CodexIntegrationService.active = null;

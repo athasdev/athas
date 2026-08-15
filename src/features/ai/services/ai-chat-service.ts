@@ -163,6 +163,7 @@ export const getChatCompletionStream = async (
           onChunk,
           onComplete,
           onError,
+          onNewMessage,
           onToolUse,
           onToolComplete,
           onPermissionRequest,

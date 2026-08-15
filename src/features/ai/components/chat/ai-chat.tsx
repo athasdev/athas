@@ -56,6 +56,9 @@ import { AcpPermissionPrompt, type AcpPermissionRequest } from "./acp-permission
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
 
+const createMessageId = () =>
+  globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
 const AIChat = memo(function AIChat({
   className,
   surfaceId,
@@ -438,19 +441,20 @@ const AIChat = memo(function AIChat({
             timestamp: new Date(),
           }
         : {
-            id: Date.now().toString(),
+            id: createMessageId(),
             content: trimmedMessageContent,
             role: "user",
             timestamp: new Date(),
           };
 
-    const assistantMessageId = (Date.now() + 1).toString();
+    const assistantMessageId = createMessageId();
     const assistantMessage: Message = {
       id: assistantMessageId,
       content: "",
       role: "assistant",
       timestamp: new Date(),
       isStreaming: true,
+      responsePhase: "waiting",
     };
 
     if (options.editedUserMessageId) {
@@ -553,6 +557,7 @@ const AIChat = memo(function AIChat({
           updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
             content: extracted.content,
             followUpActions: extracted.actions,
+            responsePhase: undefined,
           }));
         },
         () => {
@@ -725,7 +730,12 @@ details: ${errorDetails || mainError}
         },
         conversationContext,
         () => {
-          const newMessageId = Date.now().toString();
+          chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
+            isStreaming: false,
+            responsePhase: undefined,
+          });
+
+          const newMessageId = createMessageId();
           currentAssistantRawContent = "";
           const newAssistantMessage: Message = {
             id: newMessageId,
@@ -733,6 +743,7 @@ details: ${errorDetails || mainError}
             role: "assistant",
             timestamp: new Date(),
             isStreaming: true,
+            responsePhase: "waiting",
           };
 
           chatActions.addMessage(targetChatId, newAssistantMessage);
@@ -813,7 +824,7 @@ details: ${errorDetails || mainError}
           ]);
         },
         (event) => {
-          if (!isAcpAgent(currentAgentId)) return;
+          if (!isAcpAgent(currentAgentId) && currentAgentId !== CODEX_INTEGRATION_ID) return;
           // Only show meaningful events, skip noisy ones
           if (
             event.type === "content_chunk" ||
@@ -824,6 +835,9 @@ details: ${errorDetails || mainError}
           }
           switch (event.type) {
             case "thought_chunk":
+              updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
+                responsePhase: "thinking",
+              }));
               break;
             case "tool_start":
             case "tool_update":

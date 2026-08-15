@@ -197,4 +197,87 @@ describe("Codex integration service", () => {
 
     expect(mocks.updateChatTitle).not.toHaveBeenCalled();
   });
+
+  it("ignores transcript items and starts a new message after tool activity", () => {
+    const calls: string[] = [];
+    const onToolUse = vi.fn(() => calls.push("tool-start"));
+    const onToolComplete = vi.fn(() => calls.push("tool-complete"));
+    const onNewMessage = vi.fn(() => calls.push("new-message"));
+    const onChunk = vi.fn(() => calls.push("chunk"));
+    const service = new CodexIntegrationService({
+      onChunk,
+      onComplete: vi.fn(),
+      onError: vi.fn(),
+      onNewMessage,
+      onToolUse,
+      onToolComplete,
+    }) as unknown as {
+      handleEvent: (event: { method: string; params: Record<string, unknown> }) => void;
+    };
+
+    service.handleEvent({
+      method: "item/started",
+      params: { item: { id: "user-1", type: "userMessage" } },
+    });
+    service.handleEvent({
+      method: "item/completed",
+      params: { item: { id: "user-1", type: "userMessage" } },
+    });
+
+    expect(onToolUse).not.toHaveBeenCalled();
+    expect(onToolComplete).not.toHaveBeenCalled();
+
+    service.handleEvent({
+      method: "item/started",
+      params: {
+        item: {
+          id: "tool-1",
+          type: "dynamicToolCall",
+          tool: "athas_set_chat_title",
+        },
+      },
+    });
+    service.handleEvent({
+      method: "item/completed",
+      params: {
+        item: {
+          id: "tool-1",
+          type: "dynamicToolCall",
+          tool: "athas_set_chat_title",
+        },
+      },
+    });
+    service.handleEvent({
+      method: "item/agentMessage/delta",
+      params: { delta: "Done" },
+    });
+
+    expect(onToolUse).toHaveBeenCalledWith(
+      expect.objectContaining({ toolId: "tool-1", toolName: "athas_set_chat_title" }),
+    );
+    expect(calls).toEqual(["tool-start", "tool-complete", "new-message", "chunk"]);
+  });
+
+  it("surfaces Codex reasoning only after a real reasoning item starts", () => {
+    const onEvent = vi.fn();
+    const service = new CodexIntegrationService({
+      onChunk: vi.fn(),
+      onComplete: vi.fn(),
+      onError: vi.fn(),
+      onEvent,
+    }) as unknown as {
+      threadId: string;
+      handleEvent: (event: { method: string; params: Record<string, unknown> }) => void;
+    };
+    service.threadId = "thread-1";
+
+    service.handleEvent({
+      method: "item/started",
+      params: { item: { id: "reasoning-1", type: "reasoning" } },
+    });
+
+    expect(onEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "thought_chunk", sessionId: "thread-1" }),
+    );
+  });
 });

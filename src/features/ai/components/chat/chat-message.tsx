@@ -206,7 +206,14 @@ export const ChatMessage = memo(function ChatMessage({
     (!message.content || message.content.trim().length === 0) &&
     (!message.toolCalls || message.toolCalls.length === 0)
   ) {
-    return <ChatLoadingIndicator label="Thinking…" state="breathing" compact />;
+    const isThinking = message.responsePhase === "thinking";
+    return (
+      <ChatLoadingIndicator
+        label={isThinking ? "Thinking…" : "Waiting for response…"}
+        state={isThinking ? "breathing" : "connecting"}
+        compact
+      />
+    );
   }
 
   return (

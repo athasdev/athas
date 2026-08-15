@@ -10,6 +10,7 @@ import type { GenerativeUIComponent } from "@/extensions/ui/types/generative-ui"
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
+export type AssistantResponsePhase = "waiting" | "thinking";
 
 export interface ToolCall {
   id?: string;
@@ -40,6 +41,7 @@ export interface Message {
   role: "user" | "assistant" | "system";
   timestamp: Date;
   isStreaming?: boolean;
+  responsePhase?: AssistantResponsePhase;
   isToolUse?: boolean;
   toolName?: string;
   toolCalls?: ToolCall[];

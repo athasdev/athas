@@ -314,6 +314,9 @@ export class AcpStreamHandler {
       return;
     }
     this.markPromptActivity(event);
+    if (event.type === "thought_chunk") {
+      this.startPendingMessage();
+    }
     if (this.handlers.onEvent) {
       this.handlers.onEvent(event);
     }
@@ -476,10 +479,7 @@ export class AcpStreamHandler {
   }
 
   private handleContentChunk(event: Extract<AcpEvent, { type: "content_chunk" }>): void {
-    if (this.pendingNewMessage && this.handlers.onNewMessage) {
-      this.handlers.onNewMessage();
-    }
-    this.pendingNewMessage = false;
+    this.startPendingMessage();
 
     if (event.content.type === "text") {
       this.handlers.onChunk(event.content.text);
@@ -497,6 +497,12 @@ export class AcpStreamHandler {
       // Content block is complete, but session may continue
       console.log("Content block complete");
     }
+  }
+
+  private startPendingMessage(): void {
+    if (!this.pendingNewMessage) return;
+    this.pendingNewMessage = false;
+    this.handlers.onNewMessage?.();
   }
 
   private handleToolStart(event: Extract<AcpEvent, { type: "tool_start" }>): void {

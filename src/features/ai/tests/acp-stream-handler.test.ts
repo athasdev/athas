@@ -55,6 +55,8 @@ function createHandler(
     onChunk: (chunk: string) => void;
     onComplete: () => void;
     onError: (error: string, canReconnect?: boolean) => void;
+    onNewMessage: () => void;
+    onEvent: (event: AcpEvent) => void;
   }> = {},
 ) {
   const handlers = {
@@ -103,6 +105,41 @@ describe("AcpStreamHandler", () => {
     });
 
     expect(handlers.onChunk).toHaveBeenCalledWith("right chat");
+  });
+
+  it("starts a new message before reasoning that follows a completed tool", () => {
+    const calls: string[] = [];
+    const { handler } = createHandler({
+      onNewMessage: () => calls.push("new-message"),
+      onEvent: (event) => calls.push(event.type),
+    });
+
+    handler.handleAcpEvent({
+      type: "tool_start",
+      sessionId: "session-a",
+      toolName: "read_file",
+      toolId: "tool-1",
+      input: {},
+      kind: "read",
+      status: "in_progress",
+      locations: [],
+    });
+    handler.handleAcpEvent({
+      type: "tool_complete",
+      sessionId: "session-a",
+      toolId: "tool-1",
+      success: true,
+    });
+    calls.length = 0;
+
+    handler.handleAcpEvent({
+      type: "thought_chunk",
+      sessionId: "session-a",
+      content: { type: "text", text: "Checking the result" },
+      isComplete: false,
+    });
+
+    expect(calls).toEqual(["new-message", "thought_chunk"]);
   });
 
   it("normalizes startup authentication errors for the login action", () => {
