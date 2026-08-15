@@ -1,0 +1,27 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.skill.code-review",
+  "name": "code-review",
+  "displayName": "Code Review",
+  "description": "Review code changes for correctness, regressions, and missing validation.",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "categories": ["Skill"],
+  "contributes": {
+    "skills": [
+      {
+        "id": "athas.code-review",
+        "name": "Code Review",
+        "description": "Review code changes for correctness, regressions, and missing validation.",
+        "path": "SKILL.md",
+        "tags": ["review", "quality"]
+      }
+    ]
+  },
+  "icon": "icon.svg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas"
+  }
+}

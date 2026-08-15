@@ -61,11 +61,31 @@ describe("extension package contract", () => {
   });
 
   it("normalizes categories through one shared mapping", () => {
-    expect(normalizeExtensionCategories(["language", "icon-theme", "unknown"])).toEqual([
+    expect(normalizeExtensionCategories(["language", "icon-theme", "skill", "unknown"])).toEqual([
       "Language",
       "Icon Theme",
+      "Skill",
       "Other",
     ]);
     expect(normalizeExtensionCategories(undefined, "Language")).toEqual(["Language"]);
+  });
+
+  it("accepts skill packages in the shared extension manifest", () => {
+    expect(
+      parseExtensionPackageManifest({
+        ...validManifest,
+        id: "athas.skill.review",
+        categories: ["Skill"],
+        languages: undefined,
+        contributes: {
+          skills: [{ id: "athas.review", name: "Review", path: "SKILL.md" }],
+        },
+      }),
+    ).toMatchObject({
+      categories: ["Skill"],
+      contributes: {
+        skills: [{ id: "athas.review", name: "Review", path: "SKILL.md" }],
+      },
+    });
   });
 });

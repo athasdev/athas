@@ -54,7 +54,14 @@ type IndexEntry = {
   description: string;
   version: string;
   author: string;
-  category: "Languages" | "Themes" | "Icon Themes" | "Databases" | "Agents" | "Integrations";
+  category:
+    | "Languages"
+    | "Themes"
+    | "Icon Themes"
+    | "Databases"
+    | "Agents"
+    | "Integrations"
+    | "Skills";
   icon: string;
   manifestUrl: string;
   downloads: number;
@@ -73,6 +80,7 @@ function normalizeIndexCategory(raw?: string): IndexEntry["category"] {
   if (value === "icon" || value === "icon theme" || value === "icon themes") return "Icon Themes";
   if (value === "database" || value === "databases") return "Databases";
   if (value === "agent" || value === "agents") return "Agents";
+  if (value === "skill" || value === "skills") return "Skills";
   if (value === "integration" || value === "integrations") return "Integrations";
   if (value === "theme" || value === "themes") return "Themes";
   return "Languages";
@@ -83,6 +91,7 @@ function normalizeRegistryCategory(raw?: string): string {
   if (normalized.includes("icon")) return "icon-theme";
   if (normalized.includes("database")) return "database";
   if (normalized.includes("agent")) return "agent";
+  if (normalized.includes("skill")) return "skill";
   if (normalized.includes("integration")) return "integration";
   if (normalized.includes("theme")) return "theme";
   return "language";
@@ -128,6 +137,7 @@ async function buildCatalog() {
     const themes = getContributionArray(manifest, "themes");
     const icons = getContributionArray(manifest, "icons");
     const integrations = getContributionArray(manifest, "integrations");
+    const skills = getContributionArray(manifest, "skills");
 
     const reservedTheme = themes.find(getReservedBuiltInThemeContribution);
     if (reservedTheme) {
@@ -142,7 +152,8 @@ async function buildCatalog() {
       agents.length === 0 &&
       themes.length === 0 &&
       icons.length === 0 &&
-      integrations.length === 0
+      integrations.length === 0 &&
+      skills.length === 0
     ) {
       throw new Error(`No extension contributions declared in ${manifestPath}`);
     }

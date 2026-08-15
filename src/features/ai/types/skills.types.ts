@@ -4,6 +4,8 @@ export interface AIChatSkill {
   description?: string;
   content: string;
   author?: string;
+  license?: string;
+  sourceUrl?: string;
   source?: "local" | "marketplace";
   sourceId?: string;
   version?: string;
@@ -23,6 +25,7 @@ export interface MarketplaceSkill {
   description: string;
   content?: string;
   author?: string;
+  license?: string;
   version?: string;
   tags: string[];
   detailUrl?: string;

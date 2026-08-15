@@ -53,6 +53,7 @@
           "AI",
           "Integration",
           "Agent",
+          "Skill",
           "Icon Theme",
           "Linter",
           "Formatter",
@@ -105,6 +106,12 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/integration"
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/skill"
       }
     },
     "themes": {
@@ -213,6 +220,12 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/integration"
+          }
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skill"
           }
         },
         "themes": {
@@ -424,6 +437,35 @@
         },
         "icon": {
           "type": "string"
+        }
+      }
+    },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "path"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
+        "tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

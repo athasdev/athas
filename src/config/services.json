@@ -9,7 +9,6 @@
   "dashboardIntegrationsUrl": "https://athas.dev/dashboard/settings/integrations",
   "dashboardCollaborationUrl": "https://athas.dev/dashboard/collaboration",
   "extensionsCdnBaseUrl": "https://athas.dev/extensions",
-  "skillsRegistryUrl": "https://athas.dev/skills/index.json",
   "stableUpdateUrl": "https://athas.dev/api/update/stable",
   "previewUpdateUrl": "https://athas.dev/api/update/preview",
   "githubReleasesBaseUrl": "https://github.com/athasdev/athas/releases",

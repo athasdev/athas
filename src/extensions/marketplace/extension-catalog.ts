@@ -2,6 +2,10 @@ import { getServiceUrls } from "@/config/services";
 
 const CDN_BASE_URL = getServiceUrls().extensionsCdnBaseUrl;
 const USE_LOCAL_SOURCES = import.meta.env.VITE_EXTENSION_MARKETPLACE_LOCAL === "true";
+const LOCAL_CDN_BASE_URL = "http://localhost:14321";
+
+export const EXTENSION_ASSET_BASE_URL =
+  import.meta.env.DEV && USE_LOCAL_SOURCES ? LOCAL_CDN_BASE_URL : CDN_BASE_URL;
 
 function withCacheBuster(url: string): string {
   const separator = url.includes("?") ? "&" : "?";
@@ -12,7 +16,7 @@ const CATALOG_SOURCES =
   import.meta.env.DEV && USE_LOCAL_SOURCES
     ? [
         "http://localhost:3000/api/extensions/manifests",
-        "http://localhost:3001/manifests.json",
+        `${LOCAL_CDN_BASE_URL}/manifests.json`,
         withCacheBuster(`${CDN_BASE_URL}/manifests.json`),
       ]
     : [withCacheBuster(`${CDN_BASE_URL}/manifests.json`)];

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.skill.debugging",
+  "name": "systematic-debugging",
+  "displayName": "Systematic Debugging",
+  "description": "Trace failures to their real boundary before proposing a focused fix.",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "categories": ["Skill"],
+  "contributes": {
+    "skills": [
+      {
+        "id": "athas.systematic-debugging",
+        "name": "Systematic Debugging",
+        "description": "Trace failures to their real boundary before proposing a focused fix.",
+        "path": "SKILL.md",
+        "tags": ["debugging", "diagnostics"]
+      }
+    ]
+  },
+  "icon": "icon.svg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas"
+  }
+}

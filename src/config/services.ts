@@ -29,8 +29,6 @@ export function getServiceUrls() {
     dashboardIntegrationsUrl: `${websiteBaseUrl}/dashboard/settings/integrations`,
     dashboardCollaborationUrl: `${websiteBaseUrl}/dashboard/collaboration`,
     extensionsCdnBaseUrl,
-    skillsRegistryUrl:
-      import.meta.env.VITE_SKILLS_REGISTRY_URL?.trim() || `${websiteBaseUrl}/skills/index.json`,
     stableUpdateUrl: updateBaseUrl
       ? `${trimTrailingSlash(updateBaseUrl)}/api/update/stable`
       : SERVICE_DEFAULTS.stableUpdateUrl,

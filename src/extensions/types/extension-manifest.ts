@@ -60,6 +60,9 @@ export interface ExtensionManifest {
   // External service integrations
   integrations?: IntegrationContribution[];
 
+  // Reusable agent instructions
+  skills?: SkillContribution[];
+
   // Color theme contributions
   themes?: ThemeContribution[];
 
@@ -133,6 +136,7 @@ export type ExtensionCategory =
   | "AI"
   | "Integration"
   | "Agent"
+  | "Skill"
   | "Icon Theme"
   | "Linter"
   | "Formatter"
@@ -246,6 +250,14 @@ export interface IntegrationContribution {
   description?: string;
   kind: IntegrationKind;
   icon?: string;
+}
+
+export interface SkillContribution {
+  id: string;
+  name: string;
+  description?: string;
+  path: string;
+  tags?: string[];
 }
 
 export interface ExtensionPermissions {
@@ -472,6 +484,7 @@ export interface UIContributions {
   agents?: AgentContribution[];
   aiProviders?: AIProviderContribution[];
   integrations?: IntegrationContribution[];
+  skills?: SkillContribution[];
   grammars?: GrammarConfiguration[];
   snippets?: SnippetContribution[];
   themes?: ThemeContribution[];

@@ -3,9 +3,7 @@ import type {
   MarketplaceSkill,
   ResolvedMarketplaceSkill,
 } from "@/features/ai/types/skills.types";
-import { getServiceUrls } from "@/config/services";
-
-const SKILLS_REGISTRY_URL = getServiceUrls().skillsRegistryUrl;
+import { loadMarketplaceSkillContributions } from "@/extensions/marketplace/marketplace-skills";
 
 type SkillRegistryEntry = Record<string, unknown>;
 
@@ -53,6 +51,7 @@ function normalizeMarketplaceSkill(entry: SkillRegistryEntry): MarketplaceSkill 
       "Reusable Agent instructions.",
     content,
     author: asString(entry.author) || asString(entry.publisher),
+    license: asString(entry.license),
     version: asString(entry.version),
     tags: asStringArray(entry.tags),
     detailUrl,
@@ -63,25 +62,14 @@ function normalizeMarketplaceSkill(entry: SkillRegistryEntry): MarketplaceSkill 
 
 export async function loadMarketplaceSkills(): Promise<MarketplaceSkill[]> {
   try {
-    const response = await fetch(SKILLS_REGISTRY_URL);
-    if (!response.ok) return [];
-
-    const payload = (await response.json()) as unknown;
-    const entries = Array.isArray(payload)
-      ? payload
-      : Array.isArray((payload as { skills?: unknown }).skills)
-        ? (payload as { skills: unknown[] }).skills
-        : [];
-
     const seen = new Set<string>();
-    return entries
-      .filter((entry): entry is SkillRegistryEntry => Boolean(entry) && typeof entry === "object")
-      .map(normalizeMarketplaceSkill)
-      .filter((skill): skill is MarketplaceSkill => {
-        if (!skill || seen.has(skill.id)) return false;
+    return (await loadMarketplaceSkillContributions()).filter(
+      (skill): skill is MarketplaceSkill => {
+        if (seen.has(skill.id)) return false;
         seen.add(skill.id);
         return true;
-      });
+      },
+    );
   } catch {
     return [];
   }
@@ -103,7 +91,15 @@ export async function resolveMarketplaceSkill(
     throw new Error(`Could not load ${skill.title} (${response.status})`);
   }
 
-  const detail = (await response.json()) as SkillRegistryEntry;
+  const body = await response.text();
+  let detail: SkillRegistryEntry;
+  try {
+    detail = JSON.parse(body) as SkillRegistryEntry;
+  } catch {
+    const content = body.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").trim();
+    detail = { content };
+  }
+
   const resolved = normalizeMarketplaceSkill({ ...skill, ...detail });
   if (!resolved?.content) {
     throw new Error(`${skill.title} does not provide installable instructions`);
@@ -168,6 +164,8 @@ export function createSkillFromMarketplace(skill: ResolvedMarketplaceSkill): AIC
     description: skill.description,
     content: skill.content,
     author: skill.author,
+    license: skill.license,
+    sourceUrl: skill.sourceUrl,
     source: "marketplace",
     sourceId: skill.id,
     version: skill.version,
@@ -195,6 +193,8 @@ export function updateSkillFromMarketplace(
     description: marketplace.description,
     content: localOverride ? installed.content : marketplace.content,
     author: marketplace.author,
+    license: marketplace.license,
+    sourceUrl: marketplace.sourceUrl,
     source: "marketplace",
     sourceId: marketplace.id,
     version: marketplace.version,

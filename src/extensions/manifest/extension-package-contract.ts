@@ -8,6 +8,7 @@ export const EXTENSION_CATEGORIES = [
   "AI",
   "Integration",
   "Agent",
+  "Skill",
   "Icon Theme",
   "Linter",
   "Formatter",
@@ -60,6 +61,7 @@ const extensionPackageFields = new Set([
   "publisher",
   "repository",
   "snippets",
+  "skills",
   "themes",
   "version",
 ]);

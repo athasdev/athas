@@ -6,6 +6,7 @@ import type {
   IconThemeContribution,
   IntegrationContribution,
   LanguageContribution,
+  SkillContribution,
   Snippet,
   SnippetContribution,
   ThemeContribution,
@@ -89,6 +90,13 @@ export function getManifestIntegrationContributions(
   return uniqueBy(
     [...(manifest.integrations || []), ...(manifest.contributes?.integrations || [])],
     (integration) => integration.id,
+  );
+}
+
+export function getManifestSkillContributions(manifest: ExtensionManifest): SkillContribution[] {
+  return uniqueBy(
+    [...(manifest.skills || []), ...(manifest.contributes?.skills || [])],
+    (skill) => skill.id,
   );
 }
 

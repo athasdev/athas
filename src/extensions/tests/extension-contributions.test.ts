@@ -7,6 +7,7 @@ import {
   getManifestIntegrationContributions,
   getManifestActivationEvents,
   getManifestLanguageContributions,
+  getManifestSkillContributions,
   matchesLanguageContribution,
 } from "@/extensions/types/extension-contributions";
 
@@ -149,6 +150,32 @@ describe("extension contribution normalization", () => {
 
     expect(getManifestIntegrationContributions(manifest)).toEqual([
       { id: "gitlab", name: "GitLab", kind: "code-host" },
+    ]);
+  });
+
+  it("reads skill contributions from extension manifests", () => {
+    const manifest = createManifest({
+      contributes: {
+        skills: [
+          {
+            id: "athas.review",
+            name: "Review",
+            description: "Review code changes",
+            path: "SKILL.md",
+            tags: ["review"],
+          },
+        ],
+      },
+    });
+
+    expect(getManifestSkillContributions(manifest)).toEqual([
+      {
+        id: "athas.review",
+        name: "Review",
+        description: "Review code changes",
+        path: "SKILL.md",
+        tags: ["review"],
+      },
     ]);
   });
 });

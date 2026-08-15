@@ -276,7 +276,8 @@ async function validateExtension(folder: string): Promise<void> {
     getContributionArray(manifest, "agents").length +
     getContributionArray(manifest, "themes").length +
     getContributionArray(manifest, "icons").length +
-    getContributionArray(manifest, "integrations").length;
+    getContributionArray(manifest, "integrations").length +
+    getContributionArray(manifest, "skills").length;
 
   if (contributionCount === 0) {
     error(folder, "Extension must declare at least one contribution");
@@ -342,6 +343,25 @@ async function validateExtension(folder: string): Promise<void> {
     if (!icon.name) error(folder, `Icon '${icon.id}' missing 'name'`);
     if (!icon.iconDefinitions || typeof icon.iconDefinitions !== "object") {
       error(folder, `Icon '${icon.id}' missing 'iconDefinitions' map`);
+    }
+  }
+
+  const skills = getContributionArray(manifest, "skills");
+  if (skills.length > 0 && (typeof manifest.license !== "string" || !manifest.license.trim())) {
+    error(folder, "Skill extension must declare a license");
+  }
+  for (const skill of skills) {
+    if (!skill.id) error(folder, "Skill contribution missing 'id'");
+    if (!skill.name) error(folder, `Skill '${skill.id}' missing 'name'`);
+    if (typeof skill.path !== "string" || skill.path.length === 0) {
+      error(folder, `Skill '${skill.id}' missing 'path'`);
+    } else if (
+      isAbsolute(skill.path) ||
+      skill.path.split(/[\\/]/).some((segment) => segment === "..")
+    ) {
+      error(folder, `Skill '${skill.id}' path must be a safe relative path`);
+    } else if (!(await fileExists(join(extensionDir, skill.path)))) {
+      error(folder, `Skill instructions not found: ${skill.path}`);
     }
   }
 

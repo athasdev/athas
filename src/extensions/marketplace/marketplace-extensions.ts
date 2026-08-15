@@ -7,10 +7,9 @@ import {
   getManifestIconContributions,
   getManifestIntegrationContributions,
 } from "../types/extension-contributions";
-import { getServiceUrls } from "@/config/services";
-import { loadExtensionCatalog } from "./extension-catalog";
+import { EXTENSION_ASSET_BASE_URL, loadExtensionCatalog } from "./extension-catalog";
 
-const CDN_BASE_URL = getServiceUrls().extensionsCdnBaseUrl;
+const CDN_BASE_URL = EXTENSION_ASSET_BASE_URL;
 
 function isContributionExtension(manifest: ExtensionManifest): boolean {
   return Boolean(

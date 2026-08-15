@@ -231,9 +231,14 @@ export function getExtensionCdnPath(folder: string, manifest: ExtensionManifestR
   const themes = getContributionArray(manifest, "themes");
   const icons = getContributionArray(manifest, "icons");
   const integrations = getContributionArray(manifest, "integrations");
+  const skills = getContributionArray(manifest, "skills");
 
   if (integrations.length > 0 && typeof integrations[0].id === "string") {
     return `integration/${integrations[0].id}`;
+  }
+
+  if (skills.length > 0) {
+    return `skills/${slug.replace(/^skill-/, "")}`;
   }
 
   if (databases.length > 0 && typeof databases[0].id === "string") {

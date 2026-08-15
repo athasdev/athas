@@ -343,6 +343,10 @@ function normalizeAISkills(skills: Settings["aiSkills"]): Settings["aiSkills"] {
         : {}),
       content: skill.content.slice(0, 100_000),
       ...(typeof skill.author === "string" ? { author: skill.author.trim().slice(0, 120) } : {}),
+      ...(typeof skill.license === "string" ? { license: skill.license.trim().slice(0, 80) } : {}),
+      ...(typeof skill.sourceUrl === "string"
+        ? { sourceUrl: skill.sourceUrl.trim().slice(0, 2048) }
+        : {}),
       ...(skill.source === "marketplace" || skill.source === "local"
         ? { source: skill.source }
         : {}),
