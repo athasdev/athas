@@ -7,7 +7,7 @@ import {
   XCircleIcon as Unavailable,
 } from "@/ui/icons";
 import Badge from "@/ui/badge";
-import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Card, CardContent, CardDescription, CardTitle } from "@/ui/card";
 import { Spinner } from "@/ui/spinner";
 import { ExtensionIcon } from "./extension-catalog-icon";
 import type { UnifiedExtension } from "./extension-catalog-types";
@@ -54,35 +54,39 @@ export function ExtensionCatalogCard({
     <Card
       variant="muted"
       size="sm"
-      className="cursor-default transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+      className="min-w-0 cursor-default transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
       onClick={onSelect}
       onContextMenu={(event) => onContextMenu(event, extension)}
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
     >
-      <CardHeader className="grid-cols-[auto_1fr_auto] gap-x-3">
-        <div className="row-span-2">
-          <ExtensionIcon extension={extension} />
+      <CardContent className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-3">
+        <ExtensionIcon extension={extension} />
+        <div className="min-w-0">
+          <CardTitle className="truncate">{extension.name}</CardTitle>
+          <CardDescription className="mt-1 line-clamp-2 min-h-10">
+            {extension.description}
+          </CardDescription>
         </div>
-        <CardTitle className="min-w-0 truncate">{extension.name}</CardTitle>
-        <CardAction className="col-start-3 flex items-center gap-2">
+        <div className="flex min-w-5 items-center justify-end gap-2">
           {extension.isBundled ? (
             <Badge variant="accent" size="compact">
               Built-in
             </Badge>
           ) : null}
           <span className="flex size-5 items-center justify-center">{status}</span>
-        </CardAction>
-        <CardDescription className="line-clamp-2 min-h-10">{extension.description}</CardDescription>
-      </CardHeader>
-      <div className="flex min-w-0 items-center gap-2 px-(--card-spacing) text-subtle-foreground ui-text-sm">
-        <Badge variant="muted" size="compact">
-          {getCategoryLabel(extension.category)}
-        </Badge>
-        {extension.publisher ? <span className="truncate">{extension.publisher}</span> : null}
-        {extension.version ? <span className="ml-auto shrink-0">v{extension.version}</span> : null}
-      </div>
+        </div>
+        <div className="col-span-2 col-start-2 flex min-w-0 items-center gap-2 text-subtle-foreground ui-text-sm">
+          <Badge variant="muted" size="compact">
+            {getCategoryLabel(extension.category)}
+          </Badge>
+          {extension.publisher ? <span className="truncate">{extension.publisher}</span> : null}
+          {extension.version ? (
+            <span className="ml-auto shrink-0">v{extension.version}</span>
+          ) : null}
+        </div>
+      </CardContent>
     </Card>
   );
 }
