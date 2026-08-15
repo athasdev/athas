@@ -1,8 +1,11 @@
+import { openUrl } from "@tauri-apps/plugin-opener";
 import {
+  ArrowSquareOutIcon as OpenExternal,
   ArrowClockwiseIcon as RefreshCw,
   ArrowCounterClockwiseIcon as Reset,
   CheckIcon as Check,
   DownloadSimpleIcon as Download,
+  PencilSimpleIcon as Pencil,
   TrashIcon as Trash,
   XCircleIcon as XCircle,
 } from "@/ui/icons";
@@ -31,6 +34,7 @@ interface ExtensionDetailViewProps {
   onUpdate: (extension: UnifiedExtension) => void | Promise<void>;
   onDeactivate: (extension: UnifiedExtension) => void | Promise<void>;
   onResetSkillOverride: (extension: UnifiedExtension) => void | Promise<void>;
+  onEditSkill: (skillId: string) => void;
 }
 
 export function ExtensionDetailView({
@@ -44,6 +48,7 @@ export function ExtensionDetailView({
   onUpdate,
   onDeactivate,
   onResetSkillOverride,
+  onEditSkill,
 }: ExtensionDetailViewProps) {
   if (!extension) {
     return <EmptyState layout="sidebar" message="Extension not found." />;
@@ -58,6 +63,7 @@ export function ExtensionDetailView({
           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-subtle-foreground ui-text-sm">
             {extension.publisher ? <span>By {extension.publisher}</span> : null}
             {extension.version ? <span>v{extension.version}</span> : null}
+            {extension.license ? <span>{extension.license}</span> : null}
           </div>
         </div>
       </div>
@@ -147,6 +153,24 @@ export function ExtensionDetailView({
       ) : null}
 
       <div className="flex flex-wrap gap-2">
+        {extension.skill ? (
+          <Button
+            variant="accent"
+            onClick={() => extension.skill && onEditSkill(extension.skill.id)}
+          >
+            <Pencil />
+            Edit
+          </Button>
+        ) : null}
+        {extension.sourceUrl ? (
+          <Button
+            variant="ghost"
+            onClick={() => extension.sourceUrl && void openUrl(extension.sourceUrl)}
+          >
+            <OpenExternal />
+            Source
+          </Button>
+        ) : null}
         {!extension.isBundled ? (
           <Button
             variant={

@@ -41,6 +41,7 @@ interface SkillsCommandProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectSkill: (skill: AIChatSkill) => void;
+  initialSkillId?: string;
   initialView?: SkillsView;
 }
 
@@ -67,6 +68,7 @@ export function SkillsCommand({
   isOpen,
   onClose,
   onSelectSkill,
+  initialSkillId,
   initialView = "list",
 }: SkillsCommandProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -251,6 +253,17 @@ export function SkillsCommand({
     setQuery("");
     setSelectedIndex(0);
     resetEditor();
+    const initialSkill = initialSkillId
+      ? useSettingsStore.getState().settings.aiSkills.find((skill) => skill.id === initialSkillId)
+      : undefined;
+    if (initialSkill) {
+      setEditingSkillId(initialSkill.id);
+      setTitle(initialSkill.title);
+      setContent(initialSkill.content);
+      setView("editor");
+      requestAnimationFrame(() => titleInputRef.current?.focus());
+      return;
+    }
     setView(initialView);
     requestAnimationFrame(() => {
       if (initialView === "editor") {
@@ -259,7 +272,7 @@ export function SkillsCommand({
       }
       inputRef.current?.focus();
     });
-  }, [initialView, isOpen, resetEditor]);
+  }, [initialSkillId, initialView, isOpen, resetEditor]);
 
   useEffect(() => {
     setSelectedIndex(0);

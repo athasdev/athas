@@ -58,6 +58,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const [marketplaceSkills, setMarketplaceSkills] = useState<MarketplaceSkill[]>([]);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
   const [isSkillsCommandOpen, setIsSkillsCommandOpen] = useState(false);
+  const [editingSkillId, setEditingSkillId] = useState<string>();
   const extensionContextMenu = useDropdownMenu<UnifiedExtension>();
 
   const availableExtensions = useExtensionStore.use.availableExtensions();
@@ -192,9 +193,16 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
     <>
       <SkillsCommand
         isOpen={isSkillsCommandOpen}
+        initialSkillId={editingSkillId}
         initialView="editor"
-        onClose={() => setIsSkillsCommandOpen(false)}
-        onSelectSkill={() => setIsSkillsCommandOpen(false)}
+        onClose={() => {
+          setIsSkillsCommandOpen(false);
+          setEditingSkillId(undefined);
+        }}
+        onSelectSkill={() => {
+          setIsSkillsCommandOpen(false);
+          setEditingSkillId(undefined);
+        }}
       />
       <Dropdown
         isOpen={extensionContextMenu.isOpen}
@@ -220,6 +228,10 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
             onUpdate={handleUpdate}
             onDeactivate={handleDeactivateExtension}
             onResetSkillOverride={handleResetSkillOverride}
+            onEditSkill={(skillId) => {
+              setEditingSkillId(skillId);
+              setIsSkillsCommandOpen(true);
+            }}
           />
         </ScrollArea>
         {overlays}
@@ -259,9 +271,14 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
                   <Package />
                   Browse Extensions
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsSkillsCommandOpen(true)}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setEditingSkillId(undefined);
+                    setIsSkillsCommandOpen(true);
+                  }}
+                >
                   <Brain />
-                  Add Skill
+                  Create Skill
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -325,7 +342,15 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
               action={
                 normalizedSearchQuery
                   ? { label: "Clear search", onClick: () => setSearchQuery("") }
-                  : undefined
+                  : activeFilter === "skill"
+                    ? {
+                        label: "Create skill",
+                        onClick: () => {
+                          setEditingSkillId(undefined);
+                          setIsSkillsCommandOpen(true);
+                        },
+                      }
+                    : undefined
               }
             />
           ) : (

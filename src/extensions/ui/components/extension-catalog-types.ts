@@ -27,6 +27,8 @@ export interface UnifiedExtension {
   version?: string;
   extensions?: string[];
   publisher?: string;
+  license?: string;
+  sourceUrl?: string;
   isMarketplace?: boolean;
   isBundled?: boolean;
   runtimeIssues?: ExtensionRuntimeIssue[];
