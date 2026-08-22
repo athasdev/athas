@@ -167,6 +167,16 @@ function getCategoryIcon(category: UnifiedExtension["category"], compact: boolea
   return icons[category];
 }
 
+export function ExtensionCategoryIcon({
+  category,
+  compact = false,
+}: {
+  category: UnifiedExtension["category"];
+  compact?: boolean;
+}) {
+  return getCategoryIcon(category, compact);
+}
+
 function isImageIcon(icon: string): boolean {
   return (
     /^(?:[a-z]+:)?\/\//i.test(icon) ||
@@ -179,25 +189,39 @@ function isImageIcon(icon: string): boolean {
 export function ExtensionIcon({
   extension,
   compact = false,
+  size,
 }: {
   extension: UnifiedExtension;
   compact?: boolean;
+  size?: "default" | "compact" | "breadcrumb";
 }) {
   const [failedImageIcon, setFailedImageIcon] = useState(false);
   const icon = extension.icon?.trim();
   const showImageIcon = Boolean(icon && isImageIcon(icon) && !failedImageIcon);
   const showNamedIcon = Boolean(icon && !isImageIcon(icon) && !icon.includes("/"));
+  const resolvedSize = size ?? (compact ? "compact" : "default");
+  const isCompact = resolvedSize !== "default";
 
   useEffect(() => setFailedImageIcon(false), [icon]);
 
   return (
     <span
-      className={cn("flex shrink-0 items-center justify-center", compact ? "size-7" : "size-10")}
+      className={cn(
+        "flex shrink-0 items-center justify-center",
+        resolvedSize === "default" ? "size-10" : resolvedSize === "compact" ? "size-7" : "size-4",
+      )}
     >
       {showImageIcon ? (
         <img
           alt=""
-          className={cn("object-contain", compact ? "size-5" : "size-8")}
+          className={cn(
+            "object-contain",
+            resolvedSize === "default"
+              ? "size-8"
+              : resolvedSize === "compact"
+                ? "size-5"
+                : "size-4",
+          )}
           draggable={false}
           src={icon}
           onError={() => setFailedImageIcon(true)}
@@ -205,10 +229,10 @@ export function ExtensionIcon({
       ) : showNamedIcon && icon ? (
         <DynamicIcon
           name={icon}
-          className={cn("text-subtle-foreground", compact ? "size-4" : "size-6")}
+          className={cn("text-subtle-foreground", isCompact ? "size-4" : "size-6")}
         />
       ) : (
-        getCategoryIcon(extension.category, compact)
+        <ExtensionCategoryIcon category={extension.category} compact={isCompact} />
       )}
     </span>
   );
