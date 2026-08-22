@@ -189,7 +189,7 @@ function PlainSelect({
     ? ({ minWidth: menuMinWidth } satisfies CSSProperties)
     : undefined;
   const node = (
-    <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-36", className)}>
+    <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-fit max-w-72", className)}>
       <SelectPrimitive.Root
         value={value || null}
         onValueChange={(nextValue) => {
@@ -389,7 +389,7 @@ function SearchableSelect({
       modal={false}
     >
       {searchableTrigger === "input" ? (
-        <div className={cn("min-w-0 w-36", className)}>
+        <div className={cn("min-w-0 w-fit max-w-72", className)}>
           <ComboboxInput
             id={id}
             title={title}
@@ -402,12 +402,15 @@ function SearchableSelect({
             variant={variant === "default" ? "button" : "ghost"}
             shape={shape}
             className="w-full"
-            inputClassName="font-normal"
+            inputClassName={cn(
+              "field-sizing-content min-w-20 max-w-full font-normal",
+              selectedOption && "placeholder:text-foreground",
+            )}
             showTrigger={!hideChevron}
           />
         </div>
       ) : (
-        <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-36", className)}>
+        <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-fit max-w-72", className)}>
           <ComboboxPrimitive.Trigger
             id={id}
             title={title}
