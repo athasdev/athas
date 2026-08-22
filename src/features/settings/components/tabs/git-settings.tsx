@@ -1,6 +1,6 @@
 import { useShallow } from "zustand/react/shallow";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 
@@ -195,7 +195,6 @@ export const GitSettings = () => {
               { value: "split", label: "Split" },
             ]}
             onChange={(value) => updateSetting("gitDefaultDiffView", value as "unified" | "split")}
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
             searchable

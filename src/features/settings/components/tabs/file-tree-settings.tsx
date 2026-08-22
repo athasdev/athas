@@ -74,7 +74,6 @@ export const FileTreeSettings = () => {
               { value: "name", label: "Name" },
             ]}
             onChange={(value) => updateSetting("fileTreeSortOrder", value as FileTreeSortOrder)}
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="sm"
             variant="default"
           />

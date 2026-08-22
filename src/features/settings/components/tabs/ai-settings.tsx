@@ -918,7 +918,6 @@ export const AISettings = () => {
                     variant="default"
                     searchable
                     searchableTrigger="input"
-                    className={SETTINGS_CONTROL_WIDTHS.xwide}
                     disabled={
                       !aiCompletionAllowedByPolicy ||
                       isLoadingAutocompleteModels ||

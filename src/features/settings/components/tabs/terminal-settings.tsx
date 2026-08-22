@@ -131,7 +131,6 @@ export const TerminalSettings = () => {
                 value === DEFAULT_SHELL_OPTION_VALUE ? "" : value,
               )
             }
-            className={SETTINGS_CONTROL_WIDTHS.xwide}
             size="md"
             variant="default"
             searchable
@@ -159,7 +158,6 @@ export const TerminalSettings = () => {
                 value === SYSTEM_DEFAULT_PROFILE_ID ? "" : value,
               )
             }
-            className={SETTINGS_CONTROL_WIDTHS.xwide}
             size="md"
             variant="default"
             searchable
@@ -325,7 +323,6 @@ export const TerminalSettings = () => {
               value={settings.terminalFontFamily}
               options={fontOptions}
               onChange={(val) => updateSetting("terminalFontFamily", val)}
-              className={SETTINGS_CONTROL_WIDTHS.xwide}
               size="md"
               variant="default"
               searchable
@@ -493,7 +490,6 @@ export const TerminalSettings = () => {
             onChange={(val) =>
               updateSetting("terminalCursorStyle", val as "block" | "underline" | "bar")
             }
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
             searchable
@@ -564,7 +560,6 @@ export const TerminalSettings = () => {
                 value as typeof settings.terminalCursorInactiveStyle,
               )
             }
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
           />

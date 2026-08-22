@@ -211,7 +211,6 @@ export const AppearanceSettings = () => {
               value={settings.theme}
               options={normalizedThemeOptions}
               onChange={(value) => updateSetting("theme", value)}
-              className={SETTINGS_CONTROL_WIDTHS.wide}
               size="sm"
               variant="default"
               searchable
@@ -233,7 +232,6 @@ export const AppearanceSettings = () => {
                 value={settings.autoThemeLight}
                 options={lightThemeOptions}
                 onChange={(value) => updateSetting("autoThemeLight", value)}
-                className={SETTINGS_CONTROL_WIDTHS.wide}
                 size="sm"
                 variant="default"
                 searchable
@@ -252,7 +250,6 @@ export const AppearanceSettings = () => {
                 value={settings.autoThemeDark}
                 options={darkThemeOptions}
                 onChange={(value) => updateSetting("autoThemeDark", value)}
-                className={SETTINGS_CONTROL_WIDTHS.wide}
                 size="sm"
                 variant="default"
                 searchable
@@ -273,7 +270,6 @@ export const AppearanceSettings = () => {
             value={settings.iconTheme}
             options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
-            className={SETTINGS_CONTROL_WIDTHS.wide}
             size="sm"
             variant="default"
             searchable
@@ -344,7 +340,6 @@ export const AppearanceSettings = () => {
           <FontSelector
             value={settings.uiFontFamily}
             onChange={(fontFamily) => updateSetting("uiFontFamily", fontFamily)}
-            className={SETTINGS_CONTROL_WIDTHS.text}
             monospaceOnly={false}
           />
         </SettingRow>
@@ -429,7 +424,6 @@ export const AppearanceSettings = () => {
             onChange={(value) =>
               updateSetting("tabCloseButtonVisibility", value as TabCloseButtonVisibility)
             }
-            className={SETTINGS_CONTROL_WIDTHS.wide}
             size="sm"
             variant="default"
           />

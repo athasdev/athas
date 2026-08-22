@@ -74,7 +74,6 @@ export const EditorSettings = () => {
           <FontSelector
             value={settings.fontFamily}
             onChange={(fontFamily) => updateSetting("fontFamily", fontFamily)}
-            className={SETTINGS_CONTROL_WIDTHS.text}
             monospaceOnly={true}
           />
         </SettingRow>
@@ -196,7 +195,6 @@ export const EditorSettings = () => {
             onChange={(value) =>
               updateSetting("renderWhitespace", value as typeof settings.renderWhitespace)
             }
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
           />
@@ -352,7 +350,6 @@ export const EditorSettings = () => {
             onChange={(value) =>
               updateSetting("editorCursorStyle", value as typeof settings.editorCursorStyle)
             }
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
           />
@@ -379,7 +376,6 @@ export const EditorSettings = () => {
             onChange={(value) =>
               updateSetting("editorCursorBlinking", value as typeof settings.editorCursorBlinking)
             }
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
           />
@@ -438,7 +434,6 @@ export const EditorSettings = () => {
             value={settings.defaultLanguage}
             options={languageOptions}
             onChange={(value) => updateSetting("defaultLanguage", value)}
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
             searchable
