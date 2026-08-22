@@ -2,6 +2,7 @@ import {
   ArchiveIcon as Archive,
   CaretDownIcon as CaretDown,
   CheckIcon as Check,
+  DotsThreeIcon as MoreHorizontal,
   FileTextIcon as FileText,
   MinusIcon as Minus,
   PlusIcon as Plus,
@@ -17,7 +18,15 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { Checkbox } from "@/ui/checkbox";
-import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
+import {
+  Dropdown,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  useDropdownMenu,
+  type MenuItem,
+} from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { showConfirmDialog } from "@/ui/dialog";
 import { SidebarHeaderIconButton, SidebarToolbar } from "@/ui/sidebar";
@@ -536,7 +545,7 @@ const GitStatusPanel = ({
     <div className="flex h-full min-h-0 flex-col select-none">
       {hasFiles ? (
         <>
-          <SidebarToolbar>
+          <SidebarToolbar className="@container/git-status-toolbar">
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <ButtonGroup ref={diffMenuAnchorRef}>
                 <Button
@@ -572,9 +581,12 @@ const GitStatusPanel = ({
                 items={diffMenuItems}
                 className="min-w-37.5"
               />
-              {renderDiffStatsBadge(allDiffStats, "shrink-0")}
+              {renderDiffStatsBadge(
+                allDiffStats,
+                "shrink-0 @max-[230px]/git-status-toolbar:hidden",
+              )}
             </div>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1 @max-[300px]/git-status-toolbar:hidden">
               {unstagedFiles.length > 0 && (
                 <SidebarHeaderIconButton
                   onClick={handleStashAllUnstaged}
@@ -611,6 +623,47 @@ const GitStatusPanel = ({
                   <Minus />
                 </SidebarHeaderIconButton>
               )}
+            </div>
+            <div className="hidden shrink-0 @max-[300px]/git-status-toolbar:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <SidebarHeaderIconButton
+                      tooltip="Change actions"
+                      tooltipSide="bottom"
+                      aria-label="Change actions"
+                    />
+                  }
+                >
+                  <MoreHorizontal />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {unstagedFiles.length > 0 ? (
+                    <DropdownMenuItem onClick={handleStashAllUnstaged} disabled={isLoading}>
+                      <Archive />
+                      Stash all unstaged changes
+                    </DropdownMenuItem>
+                  ) : null}
+                  {unstagedFiles.length > 0 ? (
+                    <DropdownMenuItem
+                      onClick={() => void handleStageAll()}
+                      disabled={isLoading || isStageLoading}
+                    >
+                      <Plus />
+                      Stage all changes
+                    </DropdownMenuItem>
+                  ) : null}
+                  {stagedFiles.length > 0 ? (
+                    <DropdownMenuItem
+                      onClick={() => void handleUnstageAll()}
+                      disabled={isLoading || isStageLoading}
+                    >
+                      <Minus />
+                      Unstage all changes
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </SidebarToolbar>
           <div className="custom-scrollbar-auto min-h-0 flex-1 overflow-y-auto pr-2.5 [scrollbar-gutter:stable]">
