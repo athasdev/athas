@@ -10,6 +10,10 @@ describe("default settings", () => {
     expect(getDefaultSettingsSnapshot().openFoldersInNewWindow).toBe(true);
   });
 
+  it("starts with the AI chat sidebar hidden", () => {
+    expect(getDefaultSettingsSnapshot().isAIChatVisible).toBe(false);
+  });
+
   it("preserves the established editor and terminal interaction behavior", () => {
     const settings = getDefaultSettingsSnapshot();
 
