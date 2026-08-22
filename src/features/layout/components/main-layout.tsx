@@ -11,6 +11,7 @@ import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-s
 import { openDroppedWorkspacePaths } from "@/features/file-system/utils/open-dropped-workspace-paths";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { isGitChangeRelevant, subscribeToGitChanges } from "@/features/git/events/git-events";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
 import { CachedWorkspaceSplitViews } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
@@ -24,6 +25,8 @@ import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { Button } from "@/ui/button";
+import { FileTextIcon, PlusIcon, TerminalWindowIcon } from "@/ui/icons";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
@@ -327,7 +330,33 @@ export function MainLayout() {
               >
                 <CachedWorkspaceSplitViews />
               </div>
-            ) : null}
+            ) : (
+              <div className="flex min-h-0 flex-1 items-center justify-center">
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Button
+                    commandId="workbench.newTab"
+                    onClick={() => void keymapRegistry.executeCommand("workbench.newTab")}
+                  >
+                    <PlusIcon />
+                    New tab
+                  </Button>
+                  <Button
+                    commandId="file.quickOpen"
+                    onClick={() => void keymapRegistry.executeCommand("file.quickOpen")}
+                  >
+                    <FileTextIcon />
+                    Open file
+                  </Button>
+                  <Button
+                    commandId="terminal.new"
+                    onClick={() => void keymapRegistry.executeCommand("terminal.new")}
+                  >
+                    <TerminalWindowIcon />
+                    New terminal
+                  </Button>
+                </div>
+              </div>
+            )}
             {terminalWidthMode === "editor" && deferredSurfacesReady && (
               <Suspense fallback={null}>
                 <BottomPane />
