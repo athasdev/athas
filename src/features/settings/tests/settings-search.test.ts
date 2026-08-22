@@ -38,7 +38,8 @@ describe("settings search", () => {
     expect(searchSettings("reduce motion")[0]?.id).toBe("appearance-reduce-motion");
     expect(searchSettings("tab close buttons")[0]?.id).toBe("appearance-tab-close-buttons");
     expect(searchSettings("window chrome density")).toEqual([]);
-    expect(searchSettings("sidebar width")[0]?.id).toBe("appearance-sidebar-width");
+    expect(searchSettings("activity bar width")).toEqual([]);
+    expect(searchSettings("sidebar width")).toEqual([]);
   });
 
   it("finds file tree display and behavior settings", () => {

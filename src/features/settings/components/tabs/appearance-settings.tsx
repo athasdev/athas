@@ -37,7 +37,6 @@ export const AppearanceSettings = () => {
       autoThemeDark: state.settings.autoThemeDark,
       autoThemeLight: state.settings.autoThemeLight,
       activityRailExpanded: state.settings.activityRailExpanded,
-      activityRailWidth: state.settings.activityRailWidth,
       compactMenuBar: state.settings.compactMenuBar,
       iconTheme: state.settings.iconTheme,
       nativeMenuBar: state.settings.nativeMenuBar,
@@ -45,7 +44,6 @@ export const AppearanceSettings = () => {
       reduceMotion: state.settings.reduceMotion,
       showStatusBar: state.settings.showStatusBar,
       showTabIcons: state.settings.showTabIcons,
-      sidebarWidth: state.settings.sidebarWidth,
       syncSystemTheme: state.settings.syncSystemTheme,
       tabCloseButtonVisibility: state.settings.tabCloseButtonVisibility,
       theme: state.settings.theme,
@@ -440,43 +438,6 @@ export const AppearanceSettings = () => {
             checked={settings.activityRailExpanded}
             onChange={(checked) => updateSetting("activityRailExpanded", checked)}
             size="sm"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Activity Bar Width"
-          description="Set the width of the expanded activity bar"
-          onReset={() => updateSetting("activityRailWidth", getDefaultSetting("activityRailWidth"))}
-          canReset={settings.activityRailWidth !== getDefaultSetting("activityRailWidth")}
-        >
-          <NumberInput
-            min={140}
-            max={320}
-            step={10}
-            value={settings.activityRailWidth}
-            onChange={(value) => updateSetting("activityRailWidth", value)}
-            className={SETTINGS_CONTROL_WIDTHS.number}
-            size="sm"
-            disabled={!settings.activityRailExpanded}
-            aria-label={`Activity bar width: ${settings.activityRailWidth} pixels`}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Sidebar Width"
-          description="Set the default width used by left and right sidebars"
-          onReset={() => updateSetting("sidebarWidth", getDefaultSetting("sidebarWidth"))}
-          canReset={settings.sidebarWidth !== getDefaultSetting("sidebarWidth")}
-        >
-          <NumberInput
-            min={140}
-            max={600}
-            step={10}
-            value={settings.sidebarWidth}
-            onChange={(value) => updateSetting("sidebarWidth", value)}
-            className={SETTINGS_CONTROL_WIDTHS.number}
-            size="sm"
-            aria-label={`Sidebar width: ${settings.sidebarWidth} pixels`}
           />
         </SettingRow>
 

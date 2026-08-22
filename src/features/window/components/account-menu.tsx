@@ -1,6 +1,7 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
 import { getServiceUrls } from "@/config/services";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import {
   extractAutocompleteUsage,
@@ -62,6 +63,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   const { signIn, isSigningIn } = useDesktopSignIn({
     onSuccess: () => setIsOpen(false),
   });
+  const settingsShortcut = useCommandShortcut("workbench.openSettings");
 
   const handleSignIn = async () => {
     if (import.meta.env.DEV) {
@@ -108,6 +110,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
       id: "settings",
       label: "Settings",
       icon: <GearSixIcon />,
+      shortcut: settingsShortcut,
       onClick: handleOpenSettings,
     },
     {
@@ -171,6 +174,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
       id: "settings",
       label: "Settings",
       icon: <GearSixIcon />,
+      shortcut: settingsShortcut,
       onClick: handleOpenSettings,
     },
     {
@@ -234,7 +238,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
         anchorRef={buttonRef}
         anchorAlign="end"
         onClose={() => setIsOpen(false)}
-        className="w-[320px] overflow-hidden rounded-xl p-0"
+        className="overflow-hidden rounded-xl p-0"
       >
         <div className="p-1">
           {isAuthenticated ? (

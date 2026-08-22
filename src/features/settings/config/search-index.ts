@@ -538,22 +538,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show labels beside icons in the activity bar",
     keywords: ["activity", "bar", "rail", "expanded", "labels", "sidebar"],
   },
-  {
-    id: "appearance-activity-bar-width",
-    tab: "appearance",
-    section: "Layout",
-    label: "Activity Bar Width",
-    description: "Set the width of the expanded activity bar",
-    keywords: ["activity", "bar", "rail", "width", "size", "layout"],
-  },
-  {
-    id: "appearance-sidebar-width",
-    tab: "appearance",
-    section: "Layout",
-    label: "Sidebar Width",
-    description: "Set the default width used by left and right sidebars",
-    keywords: ["sidebar", "width", "size", "left", "right", "layout"],
-  },
   ...(!IS_MAC && !IS_WINDOWS && !IS_LINUX
     ? [
         {
