@@ -97,10 +97,10 @@
       monospace;
     --app-ui-font-size: 15px;
     --app-ui-scale: 1;
-    --ui-text-caption: 12px;
-    --ui-text-chrome: 13px;
-    --ui-text-sm: var(--app-ui-font-size);
     --ui-text-base: var(--app-ui-font-size);
+    --ui-text-sm: var(--app-ui-font-size);
+    --ui-text-caption: var(--ui-text-sm);
+    --ui-text-chrome: var(--ui-text-sm);
     --athas-title-bar-height: 2rem;
     --athas-footer-height: 1.75rem;
     --athas-pane-header-height: 2.75rem;

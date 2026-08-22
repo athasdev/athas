@@ -47,7 +47,6 @@ export const CollaborationSettings = () => {
             shape="pill"
             type="button"
             variant="default"
-            className="ui-text-base"
             onClick={openDashboardCollaboration}
             size="sm"
           >
@@ -83,7 +82,6 @@ export const CollaborationSettings = () => {
               shape="pill"
               type="button"
               variant="default"
-              className="ui-text-base"
               disabled={!presenceTarget.channelId && !presenceTarget.followingUserId}
               onClick={() => {
                 collaborationRuntimeActions.setPresenceChannel(null);
@@ -131,7 +129,6 @@ export const CollaborationSettings = () => {
                 shape="pill"
                 type="button"
                 variant={presenceTarget.channelId === channel.id ? "accent" : "default"}
-                className="ui-text-base"
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setPresenceChannel(channel.id)}
                 size="sm"
@@ -147,7 +144,6 @@ export const CollaborationSettings = () => {
                 shape="pill"
                 type="button"
                 variant={presenceTarget.followingUserId === member.userId ? "accent" : "default"}
-                className="ui-text-base"
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setFollowingUser(member.userId)}
                 size="sm"
