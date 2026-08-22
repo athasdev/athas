@@ -45,6 +45,7 @@ export interface SelectProps {
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
   variant?: "default" | "ghost";
+  shape?: "default" | "pill";
   align?: "default" | "start";
   searchable?: boolean;
   searchableTrigger?: "menu" | "input";
@@ -62,12 +63,6 @@ export interface SelectProps {
   onOpenChange?: (open: boolean) => void;
   "aria-label"?: string;
 }
-
-const selectTriggerSizeClassName = {
-  xs: "ui-text-sm",
-  sm: "ui-text-sm",
-  md: "ui-text-base",
-};
 
 function isIconComponent(
   icon: SelectProps["leftIcon"],
@@ -93,7 +88,7 @@ function getButtonSize(size: "xs" | "sm" | "md", iconOnly: boolean) {
     return size === "sm" ? ("icon-sm" as const) : ("icon-xs" as const);
   }
 
-  return size === "md" ? ("default" as const) : size;
+  return size;
 }
 
 function SelectTriggerContent({
@@ -165,6 +160,7 @@ function PlainSelect({
   disabled,
   size,
   variant,
+  shape,
   align,
   openDirection,
   leftIcon,
@@ -180,6 +176,7 @@ function PlainSelect({
   placeholder: string;
   size: "xs" | "sm" | "md";
   variant: "default" | "ghost";
+  shape: "default" | "pill";
   menuAnimated: boolean;
   hideChevron: boolean;
   iconOnly: boolean;
@@ -209,11 +206,10 @@ function PlainSelect({
           data-setting-primary-control="true"
           data-prevent-dialog-escape={open ? "true" : undefined}
           aria-label={ariaLabel}
-          render={<Button variant={variant} size={getButtonSize(size, iconOnly)} />}
+          render={<Button variant={variant} size={getButtonSize(size, iconOnly)} shape={shape} />}
           className={cn(
             !iconOnly &&
               "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
-            !iconOnly && selectTriggerSizeClassName[size],
             align === "start" && "justify-start",
           )}
         >
@@ -292,6 +288,7 @@ function SearchableSelect({
   disabled,
   size,
   variant,
+  shape,
   align,
   searchableTrigger,
   openDirection,
@@ -311,6 +308,7 @@ function SearchableSelect({
   placeholder: string;
   size: "xs" | "sm" | "md";
   variant: "default" | "ghost";
+  shape: "default" | "pill";
   searchableTrigger: "menu" | "input";
   menuAnimated: boolean;
   hideChevron: boolean;
@@ -401,7 +399,8 @@ function SearchableSelect({
             placeholder={selectedOption?.label || placeholder}
             leftIcon={componentIcon}
             size={size}
-            variant={variant}
+            variant={variant === "default" ? "button" : "ghost"}
+            shape={shape}
             className="w-full"
             inputClassName="font-normal"
             showTrigger={!hideChevron}
@@ -415,11 +414,10 @@ function SearchableSelect({
             data-setting-primary-control="true"
             data-prevent-dialog-escape={open ? "true" : undefined}
             aria-label={ariaLabel}
-            render={<Button variant={variant} size={getButtonSize(size, iconOnly)} />}
+            render={<Button variant={variant} size={getButtonSize(size, iconOnly)} shape={shape} />}
             className={cn(
               !iconOnly &&
                 "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
-              !iconOnly && selectTriggerSizeClassName[size],
               align === "start" && "justify-start",
             )}
           >
@@ -481,6 +479,7 @@ export default function Select({
   disabled = false,
   size = "sm",
   variant = "ghost",
+  shape = "default",
   align = "default",
   searchable = false,
   searchableTrigger = "menu",
@@ -515,6 +514,7 @@ export default function Select({
     disabled,
     size,
     variant,
+    shape,
     align,
     searchableTrigger,
     allowCustomValue,
