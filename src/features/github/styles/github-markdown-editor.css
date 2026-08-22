@@ -334,14 +334,6 @@
   letter-spacing: 0;
 }
 
-.github-markdown-slash-command {
-  width: 100%;
-  min-height: 30px;
-  margin: 0;
-  border-radius: 8px;
-  padding: 5px 7px;
-}
-
 .github-markdown-command-heading-icon {
   font-family: var(--font-sans);
   font-size: 10px;

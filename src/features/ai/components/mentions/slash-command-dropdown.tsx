@@ -106,7 +106,6 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
               iconClassName="size-4"
               title={command.name}
               description={command.description}
-              density="compact"
               contentClassName="[&>span:first-child]:shrink-0"
               accessory={
                 command.input?.hint ? (

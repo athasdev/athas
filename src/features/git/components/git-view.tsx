@@ -996,7 +996,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                       setCommitDiffSearchQuery("");
                     }}
                     disabled={isLoadingCommitDiff}
-                    className="min-h-9"
                   />
                 );
               })}
@@ -1031,7 +1030,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                   description={`compare with ${gitStatus.branch}`}
                   onClick={() => void handleViewBranchDiff(branch)}
                   disabled={isLoadingBranchDiff}
-                  className="min-h-9"
                 />
               ))}
             </div>
@@ -1073,7 +1071,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                   }
                   contentLayout="inline"
                   disabled={isActionLoading}
-                  className="group/stash min-h-9 text-subtle-foreground hover:text-foreground"
+                  className="group/stash text-subtle-foreground hover:text-foreground"
                   onClick={() => {
                     void handleViewStashDiff(stash.index);
                     setShowStashList(false);

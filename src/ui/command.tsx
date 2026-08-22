@@ -30,23 +30,16 @@ const commandContentVariants = cva(
 );
 
 const commandItemVariants = cva(
-  "group/command-item font-sans flex w-full items-center justify-start text-left transition-colors",
+  "group/command-item font-sans ui-text-sm mb-0.5 flex h-auto min-h-9 w-full items-center justify-start gap-2 rounded-(--athas-chrome-radius) px-2.5 py-2 text-left leading-row transition-colors",
   {
     variants: {
       selected: {
         true: "bg-selected text-foreground",
         false: "bg-transparent text-foreground hover:bg-accent",
       },
-      density: {
-        default:
-          "ui-text-sm mb-0.5 min-h-7 gap-2 rounded-(--athas-chrome-radius) px-2 py-1.5 leading-row",
-        compact:
-          "ui-text-chrome min-h-6 gap-1.5 rounded-(--athas-chrome-radius) px-2 py-1 leading-normal",
-      },
     },
     defaultVariants: {
       selected: false,
-      density: "default",
     },
   },
 );
@@ -386,7 +379,6 @@ export interface CommandItemProps {
   className?: string;
   disabled?: boolean;
   type?: React.ComponentProps<"button">["type"];
-  density?: "default" | "compact";
 }
 
 export const CommandItem = ({
@@ -399,7 +391,6 @@ export const CommandItem = ({
   className,
   disabled = false,
   type,
-  density = "default",
   ...props
 }: CommandItemProps &
   Omit<
@@ -437,7 +428,7 @@ export const CommandItem = ({
         onMouseLeave={onMouseLeave}
         {...divProps}
         className={cn(
-          commandItemVariants({ selected: isSelected, density }),
+          commandItemVariants({ selected: isSelected }),
           disabled && "pointer-events-none opacity-50",
           className,
         )}
@@ -456,8 +447,7 @@ export const CommandItem = ({
       type={type ?? "button"}
       {...props}
       variant="ghost"
-      className={cn(commandItemVariants({ selected: isSelected, density }), className)}
-      size="xs"
+      className={cn(commandItemVariants({ selected: isSelected }), className)}
     >
       {children}
     </Button>

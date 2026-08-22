@@ -796,10 +796,7 @@ function BranchRow({
       disabled={isLoading}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={cn(
-        "min-h-9",
-        isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground",
-      )}
+      className={isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground"}
       accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
       action={
         !isCurrent ? (
@@ -867,10 +864,7 @@ function RepositoryRow({
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={cn(
-        "min-h-9",
-        isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground",
-      )}
+      className={isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground"}
       accessory={
         <>
           {isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
@@ -914,10 +908,7 @@ function WorktreeRow({
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={cn(
-        "min-h-9",
-        isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground",
-      )}
+      className={isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground"}
       accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
     />
   );

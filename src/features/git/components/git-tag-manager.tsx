@@ -363,7 +363,6 @@ const GitTagManager = ({
                   title={tag.name}
                   description={tag.message}
                   contentLayout={tag.message ? "stacked" : "inline"}
-                  className="min-h-11"
                   accessory={
                     <>
                       {isExpanded ? (
