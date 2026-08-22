@@ -1,5 +1,6 @@
 import {
   BrainIcon as Brain,
+  CaretDownIcon as CaretDown,
   ExtensionsIcon as Extensions,
   PackageIcon as Package,
   PlusIcon as Plus,
@@ -24,6 +25,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   useDropdownMenu,
@@ -141,6 +144,8 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const activeFilter = EXTENSION_FILTER_IDS.has(settings.extensionsActiveTab)
     ? settings.extensionsActiveTab
     : "all";
+  const activeFilterLabel =
+    EXTENSION_FILTERS.find((filter) => filter.id === activeFilter)?.label ?? "All";
   const visibleExtensions = extensions.filter((extension) => {
     const matchesCategory = activeFilter === "all" || extension.category === activeFilter;
     const matchesSearch =
@@ -288,18 +293,15 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const resultLabel = `${visibleExtensions.length} extension${visibleExtensions.length === 1 ? "" : "s"}`;
 
   return (
-    <div className="font-sans flex h-full min-h-0 flex-col bg-background">
+    <div className="@container/extensions font-sans flex h-full min-h-0 min-w-0 flex-col bg-background">
       <header className="shrink-0">
-        <div className="mx-auto w-full max-w-6xl px-5 pt-5 pb-4">
-          <div className="flex min-w-0 items-start gap-4">
+        <div className="mx-auto w-full max-w-6xl px-5 pt-5 pb-4 @max-[480px]/extensions:px-3 @max-[480px]/extensions:pt-3">
+          <div className="flex min-w-0 items-center gap-4 @max-[480px]/extensions:gap-3">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-foreground">
               <Extensions className="size-5" weight="duotone" />
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="font-semibold text-foreground ui-text-2xl">Extensions</h1>
-              <p className="mt-0.5 text-subtle-foreground ui-text-base">
-                Add languages, themes, tools, integrations, and AI capabilities to Athas.
-              </p>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="accent" size="sm" />}>
@@ -336,12 +338,12 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
             </DropdownMenu>
           </div>
 
-          <div className="mt-5 flex min-w-0 flex-wrap items-center gap-3">
+          <div className="mt-5 flex min-w-0 flex-wrap items-center gap-3 @max-[480px]/extensions:mt-4">
             <SearchInput
               value={searchQuery}
               onChange={setSearchQuery}
               placeholder="Search extensions..."
-              className="min-w-64 max-w-xl"
+              className="min-w-64 max-w-xl @max-[480px]/extensions:min-w-full"
             />
             <div className="ml-auto shrink-0 text-subtle-foreground ui-text-sm" role="status">
               {resultLabel}
@@ -352,7 +354,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
           </div>
 
           <Tabs
-            className="mt-3"
+            className="mt-3 @max-[720px]/extensions:hidden"
             value={activeFilter}
             onValueChange={(value) =>
               void updateSetting("extensionsActiveTab", value as Settings["extensionsActiveTab"])
@@ -366,11 +368,47 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
               ))}
             </TabsList>
           </Tabs>
+
+          <div className="mt-3 hidden @max-[720px]/extensions:block">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    className="w-full justify-between"
+                    aria-label="Extension category"
+                  />
+                }
+              >
+                <span>{activeFilterLabel}</span>
+                <CaretDown />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-(--anchor-width)">
+                <DropdownMenuRadioGroup
+                  value={activeFilter}
+                  onValueChange={(value) =>
+                    void updateSetting(
+                      "extensionsActiveTab",
+                      value as Settings["extensionsActiveTab"],
+                    )
+                  }
+                >
+                  {EXTENSION_FILTERS.map((filter) => (
+                    <DropdownMenuRadioItem key={filter.id} value={filter.id} closeOnClick>
+                      {filter.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
 
       <ScrollArea className="min-h-0 flex-1">
-        <main className="mx-auto w-full max-w-6xl px-5 py-5">
+        <main className="mx-auto w-full max-w-6xl px-5 py-5 @max-[480px]/extensions:px-3 @max-[480px]/extensions:py-3">
           {isLoading ? (
             <EmptyState
               className="min-h-64"
@@ -399,7 +437,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
               }
             />
           ) : (
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 @min-[840px]/extensions:grid-cols-2">
               {visibleExtensions.map((extension) => (
                 <ExtensionCatalogCard
                   key={extension.id}
