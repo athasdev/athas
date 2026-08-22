@@ -129,7 +129,7 @@ export const SettingsVerticalTabs = ({
       >
         <ScrollArea
           className="min-h-0 min-w-0 flex-1"
-          contentClassName="p-2"
+          contentClassName="px-2 pb-2"
           viewportProps={{
             "aria-label": "Settings navigation",
           }}
