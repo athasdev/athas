@@ -206,6 +206,7 @@ type AnchorAlign = "start" | "end";
 interface DropdownBaseProps {
   isOpen: boolean;
   onClose: () => void;
+  header?: ReactNode;
   className?: string;
   menuClassName?: string;
   style?: CSSProperties;
@@ -295,6 +296,7 @@ export function Dropdown(props: DropdownProps) {
   const {
     isOpen,
     onClose,
+    header,
     className,
     menuClassName,
     style,
@@ -639,6 +641,7 @@ export function Dropdown(props: DropdownProps) {
       transition={quickTransition}
     >
       <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
+        {header}
         {searchable && (
           <div className="border-border/60 border-b px-1.5 pb-1.5 pt-0.5">
             <Input
