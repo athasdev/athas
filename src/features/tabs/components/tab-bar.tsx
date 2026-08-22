@@ -44,6 +44,7 @@ import {
   setInternalTabDragHover,
   setInternalTabDragData,
 } from "../utils/internal-tab-drag";
+import { getMainTabDragProgress } from "../utils/main-tab-drag-progress";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
 
@@ -76,10 +77,9 @@ const TabBar = ({
     return pane ? new Set(pane.bufferIds) : null;
   }, [pane?.bufferIds]);
   const buffers = useBufferStore((state) => {
-    const visibleBuffers = paneBufferIdSet
+    return paneBufferIdSet
       ? state.buffers.filter((buffer) => paneBufferIdSet.has(buffer.id))
       : state.buffers;
-    return visibleBuffers.filter((buffer) => buffer.type !== "newTab");
   });
   const globalActiveBufferId = useBufferStore((state) => (pane ? null : state.activeBufferId));
   const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;
@@ -704,9 +704,10 @@ const TabBar = ({
                     tabRefs.current[index] = el;
                   }}
                   disabled={editingBufferId === buffer.id}
+                  motionDrag
                   onClickCapture={getClickCapture(buffer.id)}
                 >
-                  {({ isDragging }) => (
+                  {({ isDragging, dragDistance }) => (
                     <ContextMenu>
                       <ContextMenuTrigger className="contents">
                         <TabBarItem
@@ -715,6 +716,7 @@ const TabBar = ({
                           index={index}
                           isActive={buffer.id === activeBufferId}
                           isDraggedTab={isDragging}
+                          dragProgress={getMainTabDragProgress(dragDistance)}
                           onClick={() => handleTabSelect(buffer)}
                           onDoubleClick={(e) => handleDoubleClick(e, index)}
                           onKeyDown={(e) => handleKeyDown(e, index)}

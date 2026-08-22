@@ -220,6 +220,7 @@ interface BufferActions {
 const generateBufferId = (path: string): string => {
   return `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
 };
+let newTabSequence = 0;
 
 const applyWorkspaceAutoEviction = (
   buffers: PaneContent[],
@@ -675,12 +676,12 @@ const createBufferStore = (workspaceId: string) => {
             }
 
             case "newTab": {
-              const cleanedBuffers = closeNewTabInActivePane([...buffers]);
-              const id = generateBufferId(`newtab://${Date.now()}`);
+              const nextBuffers = applyAutoEviction([...buffers], maxOpenTabs);
+              const id = generateBufferId(`newtab://${newTabSequence++}`);
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...deactivateBuffers(cleanedBuffers), newBuffer];
+                state.buffers = [...deactivateBuffers(nextBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
               syncBufferToPane(newBuffer.id);

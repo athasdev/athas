@@ -1,7 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { AgentLaunchInput } from "@/features/ai/components/agent-launch-input";
-import { AgentStartView } from "@/features/ai/components/agent-start-view";
 import type { DatabaseType } from "@/features/database/types/provider.types";
 import {
   PROVIDER_REGISTRY,
@@ -42,7 +40,7 @@ import { activateBufferInPaneAndSync, activatePaneAndSyncBuffer } from "../utils
 import { BOTTOM_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
 import type { PaneGroup } from "../types/pane.types";
-import type { EditorContent, NewTabContent, PullRequestContent } from "../types/pane-content.types";
+import type { EditorContent, PullRequestContent } from "../types/pane-content.types";
 import {
   ensureBufferInPaneDropTarget,
   getOrCreatePaneDropTarget,
@@ -141,7 +139,7 @@ const CAROUSEL_OUTER_GAP_PX = 160;
 const MAX_MOUNTED_EDITOR_BUFFERS = 8;
 
 type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type" | "readOnly">;
-type PaneRenderBuffer = Exclude<Buffer, EditorContent | NewTabContent> | EditorBufferShell;
+type PaneRenderBuffer = Exclude<Buffer, EditorContent> | EditorBufferShell;
 type PaneRenderState = {
   activeBuffer: PaneRenderBuffer | null;
   paneBuffers: PaneRenderBuffer[];
@@ -173,7 +171,6 @@ function getEditorBufferShell(buffer: EditorContent): EditorBufferShell {
 
 function toPaneRenderBuffer(buffer: Buffer | undefined): PaneRenderBuffer | undefined {
   if (!buffer) return undefined;
-  if (buffer.type === "newTab") return undefined;
   if (buffer.type === "editor") return getEditorBufferShell(buffer);
   return buffer;
 }
@@ -924,6 +921,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const renderActiveBuffer = useCallback(
     (buffer: PaneRenderBuffer) => {
       switch (buffer.type) {
+        case "newTab":
+          return null;
+
         case "terminal":
           return (
             <TerminalTab
@@ -1101,12 +1101,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         disablePaneActions={pane.id === BOTTOM_PANE_ID}
       />
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {!activeBuffer && !shouldRenderCarousel ? (
-          <AgentStartView showQuickActions>
-            <AgentLaunchInput autoFocus surfaceId="empty-editor" />
-          </AgentStartView>
-        ) : null}
-
         <Suspense fallback={null}>
           {shouldRenderCarousel ? (
             <div

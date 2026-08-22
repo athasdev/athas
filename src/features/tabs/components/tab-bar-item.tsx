@@ -13,6 +13,7 @@ import {
   WarningCircleIcon as WarningCircle,
   XIcon as X,
 } from "@/ui/icons";
+import { motion } from "motion/react";
 import { memo, useCallback, useEffect, useState } from "react";
 import type { RefCallback } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
@@ -24,6 +25,7 @@ import { InlineRenameInput } from "@/ui/input";
 import { TabBarTab } from "@/ui/tab-bar";
 import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
+import { quickTransition } from "@/utils/motion";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
 
@@ -33,6 +35,7 @@ interface TabBarItemProps {
   index: number;
   isActive: boolean;
   isDraggedTab: boolean;
+  dragProgress: number;
   showDropIndicatorBefore?: boolean;
   tabRef?: RefCallback<HTMLDivElement>;
   onClick?: () => void;
@@ -54,6 +57,7 @@ const TabBarItem = memo(function TabBarItem({
   displayName,
   isActive,
   isDraggedTab,
+  dragProgress,
   showDropIndicatorBefore = false,
   tabRef,
   onClick,
@@ -84,6 +88,7 @@ const TabBarItem = memo(function TabBarItem({
     buffer.type === "pullRequest" || buffer.type === "githubIssue"
       ? buffer.authorAvatarUrl
       : undefined;
+  const bottomCornerRadius = isActive ? 6 * dragProgress : 6;
 
   useEffect(() => {
     setAvatarError(false);
@@ -121,13 +126,19 @@ const TabBarItem = memo(function TabBarItem({
       {showDropIndicatorBefore ? (
         <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-primary" />
       ) : null}
-      <TabBarTab
+      <MotionTabBarTab
         role="tab"
         aria-selected={isActive}
         aria-label={`${buffer.name}${buffer.type === "editor" && buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
+        appearance="main"
+        animate={{
+          borderBottomLeftRadius: bottomCornerRadius,
+          borderBottomRightRadius: bottomCornerRadius,
+        }}
+        transition={quickTransition}
         onClick={isEditing ? undefined : onClick}
         onMouseDown={onMouseDown}
         onDoubleClick={isEditing ? undefined : onDoubleClick}
@@ -166,7 +177,7 @@ const TabBarItem = memo(function TabBarItem({
           ) : null
         }
       >
-        {showTabIcons ? (
+        {showTabIcons && buffer.type !== "newTab" ? (
           <div className="grid size-3 shrink-0 place-content-center">
             {buffer.type === "extension" ? (
               <Package className="text-subtle-foreground" />
@@ -275,7 +286,7 @@ const TabBarItem = memo(function TabBarItem({
             aria-label="Unsaved changes"
           />
         )}
-      </TabBarTab>
+      </MotionTabBarTab>
     </div>
   );
 });
@@ -290,3 +301,5 @@ function getDiffFileName(diff: GitDiff): string {
 }
 
 export default TabBarItem;
+
+const MotionTabBarTab = motion.create(TabBarTab);
