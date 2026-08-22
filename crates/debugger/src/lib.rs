@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
    collections::HashMap,
-   io::{BufRead, BufReader, Read, Write},
+   io::{BufRead, BufReader, Write},
    process::{Child, Command, Stdio},
    sync::{
       Arc, Mutex,
@@ -352,9 +352,7 @@ fn spawn_exit_watcher(
    });
 }
 
-fn read_protocol_message(
-   reader: &mut BufReader<std::process::ChildStdout>,
-) -> Result<Option<Value>> {
+fn read_protocol_message(reader: &mut impl BufRead) -> Result<Option<Value>> {
    let mut content_length = None;
    let mut line = String::new();
 
@@ -398,4 +396,62 @@ fn emit_session_ended(emitter: &DebugEventEmitter, session_id: &str, reason: &st
          reason: reason.to_string(),
       },
    );
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+   use std::io::Cursor;
+
+   #[test]
+   fn encodes_content_length_in_bytes() {
+      let message = json!({ "message": "Athas ğ" });
+      let encoded = encode_protocol_message(&message).expect("protocol message");
+      let (header, content) = encoded.split_once("\r\n\r\n").expect("header separator");
+
+      assert_eq!(header, format!("Content-Length: {}", content.len()));
+      assert_eq!(serde_json::from_str::<Value>(content).unwrap(), message);
+   }
+
+   #[test]
+   fn reads_protocol_message_with_additional_headers() {
+      let body = r#"{"event":"stopped"}"#;
+      let input = format!(
+         "Content-Type: application/vscode-jsonrpc; charset=utf-8\r\ncontent-length: {}\r\n\r\n{}",
+         body.len(),
+         body
+      );
+      let mut reader = Cursor::new(input.into_bytes());
+
+      assert_eq!(
+         read_protocol_message(&mut reader).unwrap(),
+         Some(json!({ "event": "stopped" }))
+      );
+   }
+
+   #[test]
+   fn reports_missing_content_length() {
+      let mut reader = Cursor::new(b"Content-Type: application/json\r\n\r\n{}".to_vec());
+
+      assert!(
+         read_protocol_message(&mut reader)
+            .unwrap_err()
+            .to_string()
+            .contains("missing Content-Length")
+      );
+   }
+
+   #[test]
+   fn reports_truncated_message_body() {
+      let mut reader = Cursor::new(b"Content-Length: 10\r\n\r\n{}".to_vec());
+
+      assert!(read_protocol_message(&mut reader).is_err());
+   }
+
+   #[test]
+   fn returns_none_when_stream_closes_before_a_message() {
+      let mut reader = Cursor::new(Vec::<u8>::new());
+
+      assert_eq!(read_protocol_message(&mut reader).unwrap(), None);
+   }
 }

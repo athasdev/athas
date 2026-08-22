@@ -232,3 +232,21 @@ pub(super) fn create_ssh_session(
    log::info!("Authentication successful!");
    Ok(sess)
 }
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn shell_quotes_empty_and_plain_values() {
+      assert_eq!(shell_quote(""), "''");
+      assert_eq!(shell_quote("workspace/file.rs"), "'workspace/file.rs'");
+      assert_eq!(shell_quote("path with spaces"), "'path with spaces'");
+   }
+
+   #[test]
+   fn shell_quotes_single_quotes() {
+      assert_eq!(shell_quote("it's safe"), "'it'\\''s safe'");
+      assert_eq!(shell_quote("'"), "''\\'''");
+   }
+}

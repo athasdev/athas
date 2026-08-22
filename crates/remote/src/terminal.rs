@@ -12,7 +12,6 @@ use std::{
 use tauri::ipc::Channel as TauriChannel;
 use uuid::Uuid;
 
-#[allow(clippy::too_many_arguments)]
 pub(super) async fn create_remote_terminal(
    host: String,
    port: u16,

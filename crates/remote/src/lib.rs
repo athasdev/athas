@@ -217,7 +217,6 @@ pub async fn ssh_copy_path(
    exec_remote_command(session, &command).map(|_| ())
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn create_remote_terminal(
    host: String,
    port: u16,
