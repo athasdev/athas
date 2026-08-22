@@ -8,6 +8,7 @@ import {
   ListBulletsIcon as ListBullets,
   PackageIcon as Package,
   MagnifyingGlassIcon as Search,
+  TableIcon as Table,
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
@@ -78,6 +79,19 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       action: () => {
         setIsSidebarVisible(true);
         setActiveView("github-prs");
+        onClose();
+      },
+    },
+    {
+      id: "view-show-data-sources",
+      label: "View: Show Data Sources",
+      description: "Switch to project data sources",
+      icon: <Table />,
+      category: "Navigation",
+      commandId: "workbench.showDataSources",
+      action: () => {
+        setIsSidebarVisible(true);
+        setActiveView("data-sources");
         onClose();
       },
     },

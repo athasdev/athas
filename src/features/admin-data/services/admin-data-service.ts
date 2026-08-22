@@ -8,7 +8,7 @@ import {
   buildProjectGitHubApiUrl,
   resolveProjectGitHubRepository,
 } from "@/features/admin-data/lib/admin-data-github";
-import type { AdminDataSource } from "@/features/admin-data/types/admin-data.types";
+import type { AdminDataSource, AdminDataTable } from "@/features/admin-data/types/admin-data.types";
 
 function validateSourceUrl(value: string): URL {
   let url: URL;
@@ -25,10 +25,10 @@ function validateSourceUrl(value: string): URL {
   return url;
 }
 
-export async function loadAdminDataSource(
+export async function loadAdminDataSourceTable(
   source: AdminDataSource,
   projectPath?: string,
-): Promise<string> {
+): Promise<AdminDataTable> {
   let sourceUrl: string;
   if (source.kind === "github") {
     if (!projectPath) throw new Error("Open a project before loading this GitHub source");
@@ -60,5 +60,12 @@ export async function loadAdminDataSource(
   }
 
   const payload = (await response.json()) as unknown;
-  return adminDataTableToCsv(jsonToAdminDataTable(payload, source.rowsPath));
+  return jsonToAdminDataTable(payload, source.rowsPath);
+}
+
+export async function loadAdminDataSource(
+  source: AdminDataSource,
+  projectPath?: string,
+): Promise<string> {
+  return adminDataTableToCsv(await loadAdminDataSourceTable(source, projectPath));
 }

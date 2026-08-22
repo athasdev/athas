@@ -14,22 +14,15 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
-import {
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/ui/dialog";
 import Input from "@/ui/input";
 import { GithubLogoIcon, SparkleIcon } from "@/ui/icons";
 import Select from "@/ui/select";
 import Textarea from "@/ui/textarea";
 
-interface AdminDataSourceDialogProps {
+interface AdminDataSourceSetupProps {
   projectPath: string;
   source?: AdminDataSource;
-  onClose: () => void;
+  onCancel: () => void;
   onSave: (source: AdminDataSource) => Promise<void>;
 }
 
@@ -41,12 +34,12 @@ function isGitHubApiUrl(value: string): boolean {
   }
 }
 
-export function AdminDataSourceDialog({
+export function AdminDataSourceSetup({
   projectPath,
   source,
-  onClose,
+  onCancel,
   onSave,
-}: AdminDataSourceDialogProps) {
+}: AdminDataSourceSetupProps) {
   const subscription = useAuthStore((state) => state.subscription);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
@@ -70,15 +63,18 @@ export function AdminDataSourceDialog({
 
   useEffect(() => {
     let cancelled = false;
-    setIsResolvingRepository(true);
 
-    void resolveProjectGitHubRepository(projectPath).then((nextRepository) => {
-      if (!cancelled) {
-        setRepository(nextRepository);
-        setIsResolvingRepository(false);
+    const resolveRepository = async () => {
+      setIsResolvingRepository(true);
+      try {
+        const nextRepository = await resolveProjectGitHubRepository(projectPath);
+        if (!cancelled) setRepository(nextRepository);
+      } finally {
+        if (!cancelled) setIsResolvingRepository(false);
       }
-    });
+    };
 
+    void resolveRepository();
     return () => {
       cancelled = true;
     };
@@ -128,7 +124,6 @@ export function AdminDataSourceDialog({
       }
 
       await onSave(plannedSource);
-      onClose();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not create this source");
     } finally {
@@ -170,7 +165,6 @@ export function AdminDataSourceDialog({
             };
 
       await onSave(nextSource);
-      onClose();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not load this source");
     } finally {
@@ -179,41 +173,43 @@ export function AdminDataSourceDialog({
   };
 
   return (
-    <DialogContent aria-describedby="admin-data-source-description" size="md" className="p-0">
-      <DialogHeader>
-        <DialogTitle>{source ? "Edit Data Source" : "Add Data Source"}</DialogTitle>
-        <DialogDescription id="admin-data-source-description">
-          {mode === "intelligence"
-            ? "Describe the project data you want. Athas will configure the source."
-            : "Configure the source only when automatic setup is not enough."}
-        </DialogDescription>
-      </DialogHeader>
-
-      {mode === "intelligence" ? (
-        <form onSubmit={(event) => void handleIntelligenceSubmit(event)}>
-          <div className="flex flex-col gap-3 px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
-              <Badge variant="muted" className="gap-1">
-                <SparkleIcon />
-                Athas Intelligence
-              </Badge>
-              {repository ? (
-                <span className="flex min-w-0 items-center gap-1.5 font-sans ui-text-sm text-subtle-foreground">
-                  <GithubLogoIcon className="shrink-0" />
-                  <span className="truncate">
-                    {repository.owner}/{repository.repo}
-                  </span>
+    <div className="h-full overflow-y-auto bg-background">
+      <div className="mx-auto flex w-full max-w-3xl flex-col px-6 pt-10 pb-16">
+        <div className="mb-7 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Badge variant="muted" className="gap-1">
+              <SparkleIcon />
+              Athas Intelligence
+            </Badge>
+            {repository ? (
+              <span className="flex min-w-0 items-center gap-1.5 font-sans ui-text-sm text-subtle-foreground">
+                <GithubLogoIcon className="shrink-0" />
+                <span className="truncate">
+                  {repository.owner}/{repository.repo}
                 </span>
-              ) : null}
-            </div>
-            <label className="flex flex-col gap-1.5 font-sans ui-text-sm text-foreground">
+              </span>
+            ) : null}
+          </div>
+          <h1 className="font-sans text-2xl leading-tight font-semibold tracking-tight text-foreground">
+            {source ? `Configure ${source.name}` : "Add a data source"}
+          </h1>
+          <p className="font-sans ui-text-sm text-subtle-foreground">
+            {mode === "intelligence"
+              ? "Describe the project data you need and Athas will configure the source."
+              : "Configure the source directly when automatic setup is not enough."}
+          </p>
+        </div>
+
+        {mode === "intelligence" ? (
+          <form className="space-y-5" onSubmit={(event) => void handleIntelligenceSubmit(event)}>
+            <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
               What do you want to see?
               <Textarea
                 autoFocus
                 value={request}
                 onChange={(event) => setRequest(event.target.value)}
                 placeholder="GitHub release download stats"
-                rows={4}
+                rows={6}
               />
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -245,38 +241,37 @@ export function AdminDataSourceDialog({
                 {error}
               </p>
             ) : null}
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              className="self-start"
-              onClick={() => {
-                setMode("manual");
-                setError(null);
-              }}
-            >
-              Configure manually
-            </Button>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="accent"
-              size="sm"
-              disabled={isSaving || isResolvingRepository}
-            >
-              <SparkleIcon />
-              {isSaving ? "Creating source..." : "Create Source"}
-            </Button>
-          </DialogFooter>
-        </form>
-      ) : (
-        <form onSubmit={(event) => void handleManualSubmit(event)}>
-          <div className="flex flex-col gap-3 px-4 py-4">
-            <label className="flex flex-col gap-1.5 font-sans ui-text-sm text-foreground">
+            <div className="flex items-center justify-between gap-3 border-border/60 border-t pt-4">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setMode("manual");
+                  setError(null);
+                }}
+              >
+                Configure manually
+              </Button>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="accent"
+                  size="sm"
+                  disabled={isSaving || isResolvingRepository}
+                >
+                  <SparkleIcon />
+                  {isSaving ? "Creating source..." : "Create Source"}
+                </Button>
+              </div>
+            </div>
+          </form>
+        ) : (
+          <form className="space-y-5" onSubmit={(event) => void handleManualSubmit(event)}>
+            <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
               Source type
               <Select
                 value={kind}
@@ -290,7 +285,7 @@ export function AdminDataSourceDialog({
                 ]}
               />
             </label>
-            <label className="flex flex-col gap-1.5 font-sans ui-text-sm text-foreground">
+            <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
               Name
               <Input
                 autoFocus
@@ -299,7 +294,7 @@ export function AdminDataSourceDialog({
                 placeholder="Release downloads"
               />
             </label>
-            <label className="flex flex-col gap-1.5 font-sans ui-text-sm text-foreground">
+            <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
               {kind === "github" ? "GitHub API path" : "JSON URL"}
               <Input
                 type={kind === "json" ? "url" : "text"}
@@ -315,7 +310,7 @@ export function AdminDataSourceDialog({
                 </span>
               ) : null}
             </label>
-            <label className="flex flex-col gap-1.5 font-sans ui-text-sm text-foreground">
+            <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
               Rows path
               <Input
                 value={rowsPath}
@@ -337,32 +332,35 @@ export function AdminDataSourceDialog({
                 {error}
               </p>
             ) : null}
-            {!source ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                className="self-start"
-                onClick={() => {
-                  setMode("intelligence");
-                  setError(null);
-                }}
-              >
-                <SparkleIcon />
-                Use Athas Intelligence
-              </Button>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="accent" size="sm" disabled={isSaving}>
-              {isSaving ? "Testing source..." : source ? "Save Source" : "Add Source"}
-            </Button>
-          </DialogFooter>
-        </form>
-      )}
-    </DialogContent>
+            <div className="flex items-center justify-between gap-3 border-border/60 border-t pt-4">
+              {!source ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setMode("intelligence");
+                    setError(null);
+                  }}
+                >
+                  <SparkleIcon />
+                  Use Athas Intelligence
+                </Button>
+              ) : (
+                <span />
+              )}
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="accent" size="sm" disabled={isSaving}>
+                  {isSaving ? "Testing source..." : source ? "Save Source" : "Add Source"}
+                </Button>
+              </div>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
   );
 }

@@ -21,6 +21,7 @@ import {
   LightningIcon,
   MagnifyingGlassIcon,
   NodesIcon,
+  TableIcon,
 } from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -262,6 +263,18 @@ export const SidebarPaneSelector = ({
             } satisfies SidebarPaneItem,
           ]
         : []),
+      {
+        id: "data-sources",
+        label: showLabels ? "Data Sources" : undefined,
+        icon: <TableIcon className={iconClassName} />,
+        isActive: isPrimarySidebarItemActive && activeSidebarView === "data-sources",
+        onClick: () => onViewChange("data-sources"),
+        ariaLabel: "Data Sources",
+        tooltip: {
+          content: "Data Sources",
+          side: tooltipSide,
+        },
+      },
       ...(coreFeatures.docker
         ? [
             {

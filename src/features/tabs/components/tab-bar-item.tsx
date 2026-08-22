@@ -9,6 +9,7 @@ import {
   PackageIcon as Package,
   PushPinIcon as Pin,
   SparkleIcon as Sparkles,
+  TableIcon as Table,
   TerminalWindowIcon as Terminal,
   WarningCircleIcon as WarningCircle,
   XIcon as X,
@@ -234,6 +235,8 @@ const TabBarItem = memo(function TabBarItem({
               ) : (
                 <Activity className="text-subtle-foreground" />
               )
+            ) : buffer.type === "adminData" ? (
+              <Table className="text-subtle-foreground" />
             ) : buffer.type === "globalSearch" ? (
               <Search className="text-subtle-foreground" />
             ) : buffer.type === "diagnostics" ? (

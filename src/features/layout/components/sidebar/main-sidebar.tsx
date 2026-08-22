@@ -11,7 +11,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { flushSync } from "react-dom";
-import { AdminDataSidebarSection } from "@/features/admin-data/components/admin-data-sidebar-section";
+import { AdminDataSidebar } from "@/features/admin-data/components/admin-data-sidebar";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
 import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
@@ -77,6 +77,7 @@ import {
   MagnifyingGlassIcon,
   NodesIcon,
   SparkleIcon,
+  TableIcon,
   TerminalIcon,
 } from "@/ui/icons";
 import { cn } from "@/utils/cn";
@@ -247,6 +248,11 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             },
           ]
         : []),
+      {
+        id: "data-sources",
+        label: "Data Sources",
+        icon: <TableIcon />,
+      },
       ...(coreFeatures.docker
         ? [
             {
@@ -747,7 +753,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
                     />
                   ) : null}
                 </div>
-                <AdminDataSidebarSection expanded={expanded} projectPath={project?.path ?? null} />
               </div>
             )}
           </>
@@ -964,6 +969,10 @@ export const MainSidebar = memo(
             },
           ]
         : []),
+      {
+        id: "data-sources",
+        content: <AdminDataSidebar projectPath={rootFolderPath ?? null} />,
+      },
       ...(coreFeatures.docker
         ? [
             {

@@ -121,6 +121,16 @@ export function toggleGitHubSidebar(): void {
   }
 }
 
+export function toggleDataSourcesSidebar(): void {
+  const state = useUIState.getState();
+  if (state.isSidebarVisible && state.activeSidebarView === "data-sources") {
+    state.setIsSidebarVisible(false);
+  } else {
+    state.setActiveView("data-sources");
+    state.setIsSidebarVisible(true);
+  }
+}
+
 export function toggleDockerSidebar(): void {
   const state = useUIState.getState();
   if (state.isSidebarVisible && state.activeSidebarView === "docker") {

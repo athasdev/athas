@@ -11,7 +11,10 @@ vi.mock("@tauri-apps/plugin-http", () => ({ fetch: mocks.fetch }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
 vi.mock("@/features/git/api/git-remotes-api", () => ({ getRemotes: mocks.getRemotes }));
 
-import { loadAdminDataSource } from "@/features/admin-data/services/admin-data-service";
+import {
+  loadAdminDataSource,
+  loadAdminDataSourceTable,
+} from "@/features/admin-data/services/admin-data-service";
 
 function createSource(
   overrides: Partial<Extract<AdminDataSource, { kind: "json" }>> = {},
@@ -43,6 +46,18 @@ describe("admin data service", () => {
     await expect(loadAdminDataSource(createSource())).resolves.toBe("name,downloads\nAthas,42");
     expect(mocks.fetch).toHaveBeenCalledWith("https://api.example.com/releases", {
       headers: { Accept: "application/json" },
+    });
+  });
+
+  it("returns structured rows for the module table view", async () => {
+    mocks.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => [{ name: "Athas", downloads: 42 }],
+    });
+
+    await expect(loadAdminDataSourceTable(createSource())).resolves.toEqual({
+      columns: ["name", "downloads"],
+      rows: [["Athas", 42]],
     });
   });
 

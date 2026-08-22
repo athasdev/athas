@@ -48,6 +48,16 @@ describe("getActiveSidebarView", () => {
       }),
     ).toBe("collaboration");
   });
+
+  test("returns data sources when the module sidebar is active", () => {
+    expect(
+      getActiveSidebarView({
+        isGitViewActive: false,
+        isGitHubPRsViewActive: false,
+        activeSidebarView: "data-sources",
+      }),
+    ).toBe("data-sources");
+  });
 });
 
 describe("resolveSidebarPaneClick", () => {
@@ -146,6 +156,23 @@ describe("resolveSidebarPaneClick", () => {
     ).toEqual({
       nextIsSidebarVisible: true,
       nextView: "collaboration",
+    });
+  });
+
+  test("opens data sources as a primary secondary-sidebar view", () => {
+    expect(
+      resolveSidebarPaneClick(
+        {
+          isSidebarVisible: true,
+          isGitViewActive: false,
+          isGitHubPRsViewActive: false,
+          activeSidebarView: "files",
+        },
+        "data-sources",
+      ),
+    ).toEqual({
+      nextIsSidebarVisible: true,
+      nextView: "data-sources",
     });
   });
 });

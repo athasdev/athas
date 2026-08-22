@@ -1,4 +1,5 @@
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
+import { getAdminDataBufferPath } from "@/features/admin-data/lib/admin-data-buffer";
 import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
 import type { OpenContentSpec, PaneContent } from "@/features/panes/types/pane-content.types";
 
@@ -177,6 +178,16 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         defaultHead: spec.defaultHead,
       };
     }
+    case "adminData":
+      return {
+        ...base,
+        type: "adminData",
+        path: getAdminDataBufferPath(spec.projectPath, spec.sourceId),
+        name: spec.name ?? (spec.sourceId ? "Data Source" : "New Data Source"),
+        isPreview: false,
+        projectPath: spec.projectPath,
+        sourceId: spec.sourceId,
+      };
     case "markdownDocument":
       return {
         ...base,

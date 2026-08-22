@@ -3,6 +3,7 @@ import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
 import type { DatabaseType } from "@/features/database/types/provider.types";
+import { getAdminDataBufferPath } from "@/features/admin-data/lib/admin-data-buffer";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { evictLeastRecentAutoClosableBuffer } from "@/features/editor/stores/buffer-eviction";
 import { createPaneContent } from "@/features/editor/stores/buffer-content-factory";
@@ -860,6 +861,30 @@ const createBufferStore = (workspaceId: string) => {
               const existing = buffers.find(
                 (buffer) => buffer.type === "githubForm" && buffer.path === path,
               );
+              if (existing) {
+                set((state) => {
+                  activateBufferInState(state, existing.id);
+                });
+                syncBufferToPane(existing.id);
+                return existing.id;
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
+                state.activeBufferId = newBuffer.id;
+              });
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
+            case "adminData": {
+              const path = getAdminDataBufferPath(spec.projectPath, spec.sourceId);
+              const existing = getBufferByPath(buffers, path);
               if (existing) {
                 set((state) => {
                   activateBufferInState(state, existing.id);

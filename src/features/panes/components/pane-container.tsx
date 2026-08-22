@@ -100,6 +100,11 @@ const GitHubCreateView = lazy(() =>
     default: module.GitHubCreateView,
   })),
 );
+const AdminDataSourceView = lazy(() =>
+  import("@/features/admin-data/components/admin-data-source-view").then((module) => ({
+    default: module.AdminDataSourceView,
+  })),
+);
 const MarkdownDocumentView = lazy(() =>
   import("@/features/editor/markdown/markdown-document-view").then((module) => ({
     default: module.MarkdownDocumentView,
@@ -981,6 +986,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "githubForm":
           return <GitHubCreateView buffer={buffer} />;
+
+        case "adminData":
+          return <AdminDataSourceView buffer={buffer} />;
 
         case "markdownDocument":
           return <MarkdownDocumentView bufferId={buffer.id} />;
