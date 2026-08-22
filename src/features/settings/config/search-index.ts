@@ -539,14 +539,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["activity", "bar", "rail", "expanded", "labels", "sidebar"],
   },
   {
-    id: "appearance-window-chrome-density",
-    tab: "appearance",
-    section: "Layout",
-    label: "Window Chrome Density",
-    description: "Choose a focused or roomier scale for window controls and navigation",
-    keywords: ["window", "chrome", "density", "focused", "comfortable", "tabs", "sidebar"],
-  },
-  {
     id: "appearance-activity-bar-width",
     tab: "appearance",
     section: "Layout",

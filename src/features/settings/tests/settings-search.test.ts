@@ -37,7 +37,7 @@ describe("settings search", () => {
   it("finds interface and layout settings", () => {
     expect(searchSettings("reduce motion")[0]?.id).toBe("appearance-reduce-motion");
     expect(searchSettings("tab close buttons")[0]?.id).toBe("appearance-tab-close-buttons");
-    expect(searchSettings("window chrome density")[0]?.id).toBe("appearance-window-chrome-density");
+    expect(searchSettings("window chrome density")).toEqual([]);
     expect(searchSettings("sidebar width")[0]?.id).toBe("appearance-sidebar-width");
   });
 

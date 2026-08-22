@@ -83,17 +83,16 @@ describe("settings normalization", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       tabCloseButtonVisibility: "missing" as never,
-      windowChromeDensity: "missing" as never,
+      windowChromeDensity: "comfortable",
       activityRailWidth: 400,
       sidebarWidth: 100,
-    });
+    } as ReturnType<typeof getDefaultSettingsSnapshot> & { windowChromeDensity: string });
 
     expect(normalized.tabCloseButtonVisibility).toBe("active");
-    expect(normalized.windowChromeDensity).toBe("focused");
+    expect(normalized).not.toHaveProperty("windowChromeDensity");
     expect(normalized.activityRailWidth).toBe(320);
     expect(normalized.sidebarWidth).toBe(140);
     expect(normalizeSettingValue("tabCloseButtonVisibility", "hover")).toBe("hover");
-    expect(normalizeSettingValue("windowChromeDensity", "comfortable")).toBe("comfortable");
     expect(normalizeSettingValue("activityRailWidth", 120)).toBe(140);
     expect(normalizeSettingValue("sidebarWidth", 900)).toBe(600);
   });

@@ -15,10 +15,7 @@ import {
   UI_FONT_SIZE_STEP,
 } from "@/features/settings/lib/ui-font-size";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
-import type {
-  TabCloseButtonVisibility,
-  WindowChromeDensity,
-} from "@/features/settings/types/settings.types";
+import type { TabCloseButtonVisibility } from "@/features/settings/types/settings.types";
 import { Button } from "@/ui/button";
 import NumberInput from "@/ui/number-input";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
@@ -55,7 +52,6 @@ export const AppearanceSettings = () => {
       uiFontFamily: state.settings.uiFontFamily,
       uiFontSize: state.settings.uiFontSize,
       windowTransparency: state.settings.windowTransparency,
-      windowChromeDensity: state.settings.windowChromeDensity,
     })),
   );
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
@@ -432,27 +428,6 @@ export const AppearanceSettings = () => {
       </Section>
 
       <Section title="Layout">
-        <SettingRow
-          label="Window Chrome Density"
-          description="Choose a focused or roomier scale for title bars, tabs, sidebars, and the footer"
-          onReset={() =>
-            updateSetting("windowChromeDensity", getDefaultSetting("windowChromeDensity"))
-          }
-          canReset={settings.windowChromeDensity !== getDefaultSetting("windowChromeDensity")}
-        >
-          <Select
-            value={settings.windowChromeDensity}
-            options={[
-              { value: "focused", label: "Focused" },
-              { value: "comfortable", label: "Comfortable" },
-            ]}
-            onChange={(value) => updateSetting("windowChromeDensity", value as WindowChromeDensity)}
-            className={SETTINGS_CONTROL_WIDTHS.wide}
-            size="sm"
-            variant="default"
-          />
-        </SettingRow>
-
         <SettingRow
           label="Expanded Activity Bar"
           description="Show labels beside icons in the activity bar"

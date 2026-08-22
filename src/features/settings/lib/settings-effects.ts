@@ -47,9 +47,7 @@ function applyWindowTransparency(enabled: boolean) {
   });
 }
 
-function applyUiPreferences(
-  settings: Pick<Settings, "reduceMotion" | "showStatusBar" | "windowChromeDensity">,
-) {
+function applyUiPreferences(settings: Pick<Settings, "reduceMotion" | "showStatusBar">) {
   if (typeof document === "undefined") return;
 
   for (const [name, value] of Object.entries(getUiRootAttributes(settings))) {
@@ -228,7 +226,7 @@ export function applySettingSideEffect<K extends keyof Settings>(
     applyWindowTransparency(value as boolean);
   }
 
-  if (key === "reduceMotion" || key === "showStatusBar" || key === "windowChromeDensity") {
+  if (key === "reduceMotion" || key === "showStatusBar") {
     applyUiPreferences(getSettings());
   }
 }

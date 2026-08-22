@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
 const sidebarControlVariants = cva(
-  "athas-chrome-control font-sans ui-text-caption flex min-h-(--athas-chrome-control-height) w-full min-w-0 items-center gap-(--athas-chrome-gap) rounded-(--athas-chrome-radius) px-1.5 py-0.5 font-normal",
+  "athas-chrome-control font-sans ui-text-sm flex min-h-(--athas-chrome-control-height) w-full min-w-0 items-center gap-(--athas-chrome-gap) rounded-(--athas-chrome-radius) px-1.5 py-0.5 font-normal [&_svg]:size-[1em]",
 );
 
 export function SidebarPanel({
@@ -181,7 +181,7 @@ export const SidebarIconButton = forwardRef<
       type="button"
       variant="ghost"
       size="icon-xs"
-      className={className}
+      className={cn("[&_svg]:size-[1em]", className)}
       {...props}
     />
   );
@@ -313,7 +313,7 @@ export function SidebarListItem({
           {children}
         </span>
         {description ? (
-          <span className="mt-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden font-normal leading-4 text-subtle-foreground/80 ui-text-caption">
+          <span className="mt-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden font-normal leading-row text-subtle-foreground/80">
             <span className="min-w-0 flex-1 truncate">{description}</span>
             {trailing ? (
               <span className="ml-auto max-w-[45%] shrink-0 truncate whitespace-nowrap text-right">
@@ -324,7 +324,7 @@ export function SidebarListItem({
         ) : null}
       </span>
       {trailing && !iconOnly && !description ? (
-        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-subtle-foreground/80 ui-text-caption">
+        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-subtle-foreground/80">
           {trailing}
         </span>
       ) : null}
@@ -555,7 +555,7 @@ export function SidebarSectionLabel({
   return (
     <div
       className={cn(
-        "font-sans ui-text-caption flex h-(--athas-chrome-control-height) min-w-0 select-none items-center gap-(--athas-chrome-gap) px-1.5 font-normal text-subtle-foreground/80",
+        "font-sans ui-text-sm flex h-(--athas-chrome-control-height) min-w-0 select-none items-center gap-(--athas-chrome-gap) px-1.5 font-normal text-subtle-foreground/80 [&_svg]:size-[1em]",
         className,
       )}
       {...props}

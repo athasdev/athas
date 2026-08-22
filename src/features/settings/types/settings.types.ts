@@ -20,7 +20,6 @@ type EditorCursorStyle =
 type EditorCursorBlinking = "blink" | "smooth" | "phase" | "expand" | "solid";
 type TerminalCursorInactiveStyle = "outline" | "block" | "bar" | "underline" | "none";
 export type TabCloseButtonVisibility = "active" | "hover" | "always";
-export type WindowChromeDensity = "focused" | "comfortable";
 export type FileTreeSortOrder = "folders-first" | "name";
 export type SettingsSection =
   | "account"
@@ -85,7 +84,6 @@ export interface Settings {
   showStatusBar: boolean;
   showTabIcons: boolean;
   tabCloseButtonVisibility: TabCloseButtonVisibility;
-  windowChromeDensity: WindowChromeDensity;
   // Theme
   theme: Theme;
   iconTheme: string;

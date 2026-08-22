@@ -157,20 +157,6 @@
     --subtle-foreground: var(--athas-sidebar-rail-foreground);
   }
 
-  :root[data-window-chrome-density="comfortable"] {
-    --ui-text-caption: 13px;
-    --ui-text-chrome: 14px;
-    --athas-footer-height: 2rem;
-    --athas-tab-height: 2rem;
-    --athas-sidebar-header-height: 2.25rem;
-    --athas-chrome-control-height: 1.75rem;
-    --athas-chrome-hit-target: 2rem;
-    --athas-chrome-gap-tight: 4px;
-    --athas-chrome-gap: 6px;
-    --athas-chrome-gap-loose: 8px;
-    --athas-chrome-padding-inline: 10px;
-  }
-
   :root[data-theme-type="dark"] {
     --shadow-card:
       0 1px 2px rgb(0 0 0 / 0.24), 0 2px 4px rgb(0 0 0 / 0.18), 0 0 0 0.5px rgb(255 255 255 / 0.1);

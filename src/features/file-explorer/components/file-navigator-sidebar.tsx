@@ -30,7 +30,6 @@ import { cn } from "@/utils/cn";
 import { ScrollArea } from "@/ui/scroll-area";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   clampFileNavigatorWidth,
   DEFAULT_FILE_NAVIGATOR_WIDTH,
@@ -56,7 +55,6 @@ const RESIZE_STEP = 16;
 const MAX_NAVIGATOR_SYNC_ITEMS = 5_000;
 const FLAT_NAVIGATOR_VIRTUALIZATION_THRESHOLD = 100;
 const COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT = 28;
-const COMFORTABLE_COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT = 32;
 const DETAILED_FLAT_NAVIGATOR_ROW_HEIGHT = 48;
 const FLAT_NAVIGATOR_OVERSCAN = 10;
 
@@ -301,8 +299,6 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   const [parentWidth, setParentWidth] = useState<number>();
   const [isResizing, setIsResizing] = useState(false);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
-  const windowChromeDensity = useSettingsStore.use.settings().windowChromeDensity;
-
   useEffect(() => {
     setSearchQuery("");
   }, [searchResetKey]);
@@ -377,11 +373,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
     getScrollElement: () => navigatorScrollRef.current,
     getItemKey: (index) => flatItems[index]?.key ?? index,
     estimateSize: () =>
-      compactRows
-        ? windowChromeDensity === "comfortable"
-          ? COMFORTABLE_COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT
-          : COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT
-        : DETAILED_FLAT_NAVIGATOR_ROW_HEIGHT,
+      compactRows ? COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT : DETAILED_FLAT_NAVIGATOR_ROW_HEIGHT,
     overscan: FLAT_NAVIGATOR_OVERSCAN,
   });
 

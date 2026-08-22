@@ -68,7 +68,6 @@ export const defaultSettings: Settings = {
   showStatusBar: true,
   showTabIcons: true,
   tabCloseButtonVisibility: "active",
-  windowChromeDensity: "focused",
   // Theme
   theme: "athas-dark",
   iconTheme: "athas-icons",
