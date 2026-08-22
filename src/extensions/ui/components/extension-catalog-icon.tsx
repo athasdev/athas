@@ -10,7 +10,6 @@ import {
   TextTIcon as TextT,
 } from "@/ui/icons";
 import { DynamicIcon } from "./dynamic-icon";
-import { cn } from "@/utils/cn";
 import type { UnifiedExtension } from "./extension-catalog-types";
 
 const LOCAL_FILE_ICON_MODULES = import.meta.glob(
@@ -152,8 +151,7 @@ export function resolveManifestIcon(
   return trimmedIcon || getCatalogIconUrl(...fallbackIconIds);
 }
 
-function getCategoryIcon(category: UnifiedExtension["category"], compact: boolean): ReactNode {
-  const className = compact ? "size-4 text-subtle-foreground" : "size-6 text-subtle-foreground";
+function getCategoryIcon(category: UnifiedExtension["category"], className: string): ReactNode {
   const icons = {
     language: <TextT className={className} weight="duotone" />,
     theme: <PaintBrush className={className} weight="duotone" />,
@@ -167,14 +165,8 @@ function getCategoryIcon(category: UnifiedExtension["category"], compact: boolea
   return icons[category];
 }
 
-export function ExtensionCategoryIcon({
-  category,
-  compact = false,
-}: {
-  category: UnifiedExtension["category"];
-  compact?: boolean;
-}) {
-  return getCategoryIcon(category, compact);
+export function ExtensionCategoryIcon({ category }: { category: UnifiedExtension["category"] }) {
+  return getCategoryIcon(category, "size-4 text-subtle-foreground");
 }
 
 function isImageIcon(icon: string): boolean {
@@ -186,54 +178,47 @@ function isImageIcon(icon: string): boolean {
   );
 }
 
-export function ExtensionIcon({
-  extension,
-  compact = false,
-  size,
-}: {
-  extension: UnifiedExtension;
-  compact?: boolean;
-  size?: "default" | "compact" | "breadcrumb";
-}) {
+function ExtensionIconGlyph({ extension }: { extension: UnifiedExtension }) {
   const [failedImageIcon, setFailedImageIcon] = useState(false);
   const icon = extension.icon?.trim();
   const showImageIcon = Boolean(icon && isImageIcon(icon) && !failedImageIcon);
   const showNamedIcon = Boolean(icon && !isImageIcon(icon) && !icon.includes("/"));
-  const resolvedSize = size ?? (compact ? "compact" : "default");
-  const isCompact = resolvedSize !== "default";
 
   useEffect(() => setFailedImageIcon(false), [icon]);
 
+  if (showImageIcon) {
+    return (
+      <img
+        alt=""
+        className="size-full object-contain"
+        draggable={false}
+        src={icon}
+        onError={() => setFailedImageIcon(true)}
+      />
+    );
+  }
+
+  if (showNamedIcon && icon) {
+    return <DynamicIcon name={icon} className="size-full text-subtle-foreground" />;
+  }
+
+  return getCategoryIcon(extension.category, "size-full text-subtle-foreground");
+}
+
+export function ExtensionIcon({ extension }: { extension: UnifiedExtension }) {
   return (
-    <span
-      className={cn(
-        "flex shrink-0 items-center justify-center",
-        resolvedSize === "default" ? "size-10" : resolvedSize === "compact" ? "size-7" : "size-4",
-      )}
-    >
-      {showImageIcon ? (
-        <img
-          alt=""
-          className={cn(
-            "object-contain",
-            resolvedSize === "default"
-              ? "size-8"
-              : resolvedSize === "compact"
-                ? "size-5"
-                : "size-4",
-          )}
-          draggable={false}
-          src={icon}
-          onError={() => setFailedImageIcon(true)}
-        />
-      ) : showNamedIcon && icon ? (
-        <DynamicIcon
-          name={icon}
-          className={cn("text-subtle-foreground", isCompact ? "size-4" : "size-6")}
-        />
-      ) : (
-        <ExtensionCategoryIcon category={extension.category} compact={isCompact} />
-      )}
+    <span className="flex size-10 shrink-0 items-center justify-center">
+      <span className="size-8">
+        <ExtensionIconGlyph extension={extension} />
+      </span>
+    </span>
+  );
+}
+
+export function ExtensionInlineIcon({ extension }: { extension: UnifiedExtension }) {
+  return (
+    <span className="flex size-4 shrink-0 items-center justify-center">
+      <ExtensionIconGlyph extension={extension} />
     </span>
   );
 }

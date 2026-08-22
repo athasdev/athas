@@ -1,6 +1,6 @@
 import { ExtensionsIcon as Extensions } from "@/ui/icons";
 import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
-import { ExtensionCategoryIcon, ExtensionIcon } from "./extension-catalog-icon";
+import { ExtensionCategoryIcon, ExtensionInlineIcon } from "./extension-catalog-icon";
 import {
   EXTENSION_CATEGORIES,
   type ExtensionCategory,
@@ -24,12 +24,12 @@ export function ExtensionsBreadcrumb({
 
   if (category && categoryLabel) {
     segments.push(categoryLabel);
-    icons.push(<ExtensionCategoryIcon key={category} category={category} compact />);
+    icons.push(<ExtensionCategoryIcon key={category} category={category} />);
   }
 
   if (extension) {
     segments.push(extension.name);
-    icons.push(<ExtensionIcon key={extension.id} extension={extension} size="breadcrumb" />);
+    icons.push(<ExtensionInlineIcon key={extension.id} extension={extension} />);
   }
 
   return (
