@@ -139,6 +139,8 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   useEffect(() => {
     if (!isOpen) return;
 
+    let revealFrameId: number | undefined;
+
     const clearSearchHighlights = () => {
       const content = contentRef.current;
       if (!content) return;
@@ -179,12 +181,24 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       clearSearchHighlights();
       section?.setAttribute("data-settings-search-section-active", "true");
       target.setAttribute("data-settings-search-active", "true");
-      target.scrollIntoView({ block: "center", inline: "nearest" });
-      target.focus({ preventScroll: true });
+
+      const revealTarget = () => {
+        target.scrollIntoView({ block: "center", inline: "nearest" });
+        target.focus({ preventScroll: true });
+      };
+      const sectionTrigger = section?.querySelector<HTMLElement>("[data-settings-section-trigger]");
+
+      if (sectionTrigger?.getAttribute("aria-expanded") === "false") {
+        sectionTrigger.click();
+        revealFrameId = window.requestAnimationFrame(revealTarget);
+      } else {
+        revealTarget();
+      }
     });
 
     return () => {
       window.cancelAnimationFrame(frameId);
+      if (revealFrameId !== undefined) window.cancelAnimationFrame(revealFrameId);
     };
   }, [activeTab, isOpen, selectedResultId, visibleSearchResults]);
 

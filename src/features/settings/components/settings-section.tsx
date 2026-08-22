@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { Button } from "@/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { cn } from "@/utils/cn";
 import { getSettingSearchTargetKey } from "../lib/settings-search";
 
@@ -49,23 +50,35 @@ export const SETTINGS_CONTROL_WIDTHS = {
 } as const;
 
 export default function Section({ title, description, children, className }: SectionProps) {
+  const sectionKey = getSettingSearchTargetKey(title);
+
   return (
-    <section
+    <Accordion
+      render={<section />}
       className={cn(
-        "rounded-lg transition-[background-color,box-shadow] first:[&>.settings-section-header]:hidden data-[settings-search-section-active=true]:bg-primary/5 data-[settings-search-section-active=true]:ring-1 data-[settings-search-section-active=true]:ring-primary/25",
+        "rounded-lg transition-[background-color,box-shadow] first:[&_.settings-section-header]:hidden data-[settings-search-section-active=true]:bg-primary/5 data-[settings-search-section-active=true]:ring-1 data-[settings-search-section-active=true]:ring-primary/25",
         className,
       )}
+      defaultValue={[sectionKey]}
       data-settings-section={title}
-      data-settings-section-key={getSettingSearchTargetKey(title)}
+      data-settings-section-key={sectionKey}
     >
-      <div className="settings-section-header mb-2 px-1 py-1.5">
-        <h4 className="font-sans ui-text-base text-foreground">{title}</h4>
-        {description && (
-          <p className="font-sans ui-text-base text-subtle-foreground">{description}</p>
-        )}
-      </div>
-      <div className="space-y-2">{children}</div>
-    </section>
+      <AccordionItem value={sectionKey} className="space-y-0">
+        <AccordionTrigger
+          variant="section"
+          className="settings-section-header mb-2"
+          data-settings-section-trigger=""
+        >
+          <span className="flex min-w-0 flex-col">
+            <span>{title}</span>
+            {description ? (
+              <span className="ui-text-base text-subtle-foreground">{description}</span>
+            ) : null}
+          </span>
+        </AccordionTrigger>
+        <AccordionContent className="gap-2">{children}</AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
 
