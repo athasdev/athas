@@ -29,7 +29,7 @@ import {
 } from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { showConfirmDialog } from "@/ui/dialog";
-import { SidebarHeaderIconButton, SidebarToolbar } from "@/ui/sidebar";
+import { SidebarIconButton, SidebarToolbar } from "@/ui/sidebar";
 import { SidebarTree, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { compactPathTreeBranch, type PathTreeNode } from "@/features/sidebar/lib/path-tree";
 import { cn } from "@/utils/cn";
@@ -588,7 +588,7 @@ const GitStatusPanel = ({
             </div>
             <div className="flex shrink-0 items-center gap-1 @max-[300px]/git-status-toolbar:hidden">
               {unstagedFiles.length > 0 && (
-                <SidebarHeaderIconButton
+                <SidebarIconButton
                   onClick={handleStashAllUnstaged}
                   disabled={isLoading}
                   className="disabled:opacity-50"
@@ -597,10 +597,10 @@ const GitStatusPanel = ({
                   aria-label="Stash all unstaged changes"
                 >
                   <Archive />
-                </SidebarHeaderIconButton>
+                </SidebarIconButton>
               )}
               {unstagedFiles.length > 0 && (
-                <SidebarHeaderIconButton
+                <SidebarIconButton
                   onClick={handleStageAll}
                   disabled={isLoading || isStageLoading}
                   className="disabled:opacity-50"
@@ -609,10 +609,10 @@ const GitStatusPanel = ({
                   aria-label="Stage all changes"
                 >
                   <Plus />
-                </SidebarHeaderIconButton>
+                </SidebarIconButton>
               )}
               {stagedFiles.length > 0 && (
-                <SidebarHeaderIconButton
+                <SidebarIconButton
                   onClick={handleUnstageAll}
                   disabled={isLoading || isStageLoading}
                   className="disabled:opacity-50"
@@ -621,14 +621,14 @@ const GitStatusPanel = ({
                   aria-label="Unstage all changes"
                 >
                   <Minus />
-                </SidebarHeaderIconButton>
+                </SidebarIconButton>
               )}
             </div>
             <div className="hidden shrink-0 @max-[300px]/git-status-toolbar:block">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <SidebarHeaderIconButton
+                    <SidebarIconButton
                       tooltip="Change actions"
                       tooltipSide="bottom"
                       aria-label="Change actions"

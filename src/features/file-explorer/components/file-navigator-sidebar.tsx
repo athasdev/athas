@@ -15,7 +15,7 @@ import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import { EmptyState } from "@/ui/empty";
 import {
   SidebarHeader,
-  SidebarHeaderIconButton,
+  SidebarIconButton,
   SidebarSearchPopover,
   SidebarListItem,
   SidebarSectionLabel,
@@ -492,7 +492,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
             role="group"
             aria-label="File navigator view"
           >
-            <SidebarHeaderIconButton
+            <SidebarIconButton
               active={viewMode === "flat"}
               onClick={() => onViewModeChange("flat")}
               tooltip="Flat list"
@@ -500,8 +500,8 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               aria-label="Flat list"
             >
               <ListBullets />
-            </SidebarHeaderIconButton>
-            <SidebarHeaderIconButton
+            </SidebarIconButton>
+            <SidebarIconButton
               active={viewMode === "tree"}
               onClick={() => onViewModeChange("tree")}
               tooltip="File tree"
@@ -509,7 +509,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               aria-label="File tree"
             >
               <TreeStructure />
-            </SidebarHeaderIconButton>
+            </SidebarIconButton>
           </div>
         </SidebarHeader>
       ) : null}

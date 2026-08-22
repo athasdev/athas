@@ -28,7 +28,6 @@ import {
 } from "@/features/terminal/constants/terminal-events";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { Button } from "@/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -51,7 +50,7 @@ import {
 } from "@/ui/icons";
 import { InlineRenameInput } from "@/ui/input";
 import {
-  SidebarHeaderIconButton,
+  SidebarIconButton,
   SidebarListEditor,
   SidebarListItem,
   SidebarSectionHeader,
@@ -93,14 +92,14 @@ function SidebarNewAgentButton({
 
   if (compact) {
     return (
-      <SidebarHeaderIconButton
+      <SidebarIconButton
         tooltip="New Agent"
         tooltipSide="right"
         aria-label="New Agent"
         onClick={handleNewAgent}
       >
         <PlusIcon />
-      </SidebarHeaderIconButton>
+      </SidebarIconButton>
     );
   }
 
@@ -279,12 +278,8 @@ function SidebarTerminalHistoryRow({
             {name}
           </SidebarListItem>
           <span className="pointer-events-none absolute right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/sidebar-terminal:pointer-events-auto group-hover/sidebar-terminal:opacity-100 group-focus-within/sidebar-terminal:pointer-events-auto group-focus-within/sidebar-terminal:opacity-100">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
+            <SidebarIconButton
               active={pinned}
-              className="size-5"
               aria-pressed={pinned}
               tooltip={pinned ? "Unpin terminal" : "Pin terminal"}
               tooltipSide="right"
@@ -298,12 +293,9 @@ function SidebarTerminalHistoryRow({
               ) : (
                 <PushPinIcon className="size-3" />
               )}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              className="size-5 hover:text-destructive"
+            </SidebarIconButton>
+            <SidebarIconButton
+              className="hover:text-destructive"
               tooltip="Close terminal"
               tooltipSide="right"
               onClick={(event) => {
@@ -312,7 +304,7 @@ function SidebarTerminalHistoryRow({
               }}
             >
               <XIcon className="size-3" />
-            </Button>
+            </SidebarIconButton>
           </span>
         </div>
       </ContextMenuTrigger>
@@ -657,7 +649,7 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
         onToggle={toggleCollapsed}
         action={
           terminalCount > 0 ? (
-            <SidebarHeaderIconButton
+            <SidebarIconButton
               tooltip="New Terminal"
               tooltipSide="right"
               commandId="terminal.new"
@@ -665,7 +657,7 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
               onClick={handleNewTerminal}
             >
               <PlusIcon />
-            </SidebarHeaderIconButton>
+            </SidebarIconButton>
           ) : undefined
         }
       >
@@ -780,14 +772,14 @@ export function SidebarWorktreeHistory({
         onToggle={toggleCollapsed}
         action={
           openableWorktrees.length > 0 ? (
-            <SidebarHeaderIconButton
+            <SidebarIconButton
               tooltip="New Worktree"
               tooltipSide="right"
               aria-label="New Worktree"
               onClick={onNewWorktree}
             >
               <PlusIcon />
-            </SidebarHeaderIconButton>
+            </SidebarIconButton>
           ) : undefined
         }
       >

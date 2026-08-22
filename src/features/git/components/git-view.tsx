@@ -24,7 +24,7 @@ import { Spinner } from "@/ui/spinner";
 import { showAlertDialog } from "@/ui/dialog";
 import {
   SidebarFooter,
-  SidebarHeaderIconButton,
+  SidebarIconButton,
   SidebarPanel,
   SidebarTabPanels,
   SidebarTabBar,
@@ -629,7 +629,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   };
 
   const renderActionsButton = () => (
-    <SidebarHeaderIconButton
+    <SidebarIconButton
       onClick={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         setGitActionsMenuAnchor({
@@ -646,7 +646,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       tooltip="Git Actions"
     >
       <MoreHorizontal />
-    </SidebarHeaderIconButton>
+    </SidebarIconButton>
   );
 
   const renderGitActionsMenu = ({

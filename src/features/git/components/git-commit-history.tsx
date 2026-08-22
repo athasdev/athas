@@ -11,7 +11,7 @@ import {
 import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
-import { SidebarHeaderIconButton, SidebarSearchPopover, SidebarSection } from "@/ui/sidebar";
+import { SidebarIconButton, SidebarSearchPopover, SidebarSection } from "@/ui/sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { AuthUser } from "@/features/window/services/auth-api";
 import { formatRelativeDate } from "@/utils/date";
@@ -69,7 +69,7 @@ export function GitCommitHistoryControls({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <SidebarHeaderIconButton
+            <SidebarIconButton
               active={searchScope !== "all"}
               tooltip={`Filter: ${HISTORY_SEARCH_SCOPE_LABELS[searchScope]}`}
               tooltipSide="bottom"

@@ -3,14 +3,9 @@ import {
   CaretRightIcon as CaretRight,
   MagnifyingGlassIcon as Search,
 } from "@/ui/icons";
+import { cva } from "class-variance-authority";
 import { forwardRef, type ComponentProps, type ReactNode, useEffect, useState } from "react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-  accordionTriggerVariants,
-} from "@/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
@@ -19,6 +14,10 @@ import { SearchField } from "@/ui/search";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
+
+const sidebarControlVariants = cva(
+  "athas-chrome-control font-sans ui-text-caption flex min-h-(--athas-chrome-control-height) w-full min-w-0 items-center gap-(--athas-chrome-gap) rounded-(--athas-chrome-radius) px-1.5 py-0.5 font-normal",
+);
 
 export function SidebarPanel({
   children,
@@ -172,10 +171,10 @@ export function SidebarComposerBody({
   );
 }
 
-export const SidebarHeaderIconButton = forwardRef<
+export const SidebarIconButton = forwardRef<
   HTMLButtonElement,
   Omit<ButtonProps, "variant" | "size">
->(function SidebarHeaderIconButton({ className, ...props }, ref) {
+>(function SidebarIconButton({ className, ...props }, ref) {
   return (
     <Button
       ref={ref}
@@ -233,7 +232,7 @@ export const SidebarSearchPopover = forwardRef<
     <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={
-          <SidebarHeaderIconButton
+          <SidebarIconButton
             active={isOpen || value.length > 0}
             tooltip={label}
             tooltipSide="bottom"
@@ -283,10 +282,11 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        "athas-chrome-control font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) px-2 py-1 text-left font-normal text-subtle-foreground transition-[background-color,color]",
+        sidebarControlVariants(),
+        "text-left text-subtle-foreground transition-[background-color,color]",
         "hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
         active && "bg-selected font-medium text-foreground",
-        description && "h-12 items-start py-1",
+        description && "h-auto min-h-10 items-start py-1",
         iconOnly && "justify-center gap-0 rounded-full px-0",
         className,
       )}
@@ -401,7 +401,7 @@ export function SidebarListMenuItem({
               iconOnly
               leading={<CaretRight />}
               aria-label={menuLabel}
-              className="w-(--athas-tab-height) flex-none bg-transparent px-0"
+              className="w-(--athas-chrome-control-height) flex-none bg-transparent px-0"
             >
               {menuLabel}
             </SidebarListItem>
@@ -426,10 +426,7 @@ export function SidebarListEditor({
 }) {
   return (
     <div
-      className={cn(
-        "athas-chrome-control font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) bg-selected px-2 py-1 font-medium text-foreground",
-        className,
-      )}
+      className={cn(sidebarControlVariants(), "bg-selected font-medium text-foreground", className)}
       data-active="true"
       {...props}
     >
@@ -447,7 +444,15 @@ export function SidebarListEditor({
 }
 
 export function SidebarSectionStack({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("mt-4 flex w-full flex-col gap-0.5", className)} {...props} />;
+  return (
+    <div
+      className={cn(
+        "mt-(--athas-chrome-gap-loose) flex w-full flex-col gap-(--athas-chrome-gap-tight)",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function SidebarSectionHeader({
@@ -456,7 +461,6 @@ export function SidebarSectionHeader({
   count,
   expanded = true,
   onToggle,
-  variant = "plain",
   className,
   ...props
 }: Omit<ComponentProps<"button">, "children"> & {
@@ -465,17 +469,14 @@ export function SidebarSectionHeader({
   count?: ReactNode;
   expanded?: boolean;
   onToggle?: () => void;
-  variant?: "plain" | "surface";
 }) {
   return (
-    <div className="flex h-(--athas-tab-height) w-full min-w-0 items-center justify-between gap-(--athas-chrome-gap-tight)">
+    <div className="flex min-h-(--athas-chrome-control-height) w-full min-w-0 items-center justify-between gap-(--athas-chrome-gap-tight)">
       <button
         type="button"
         className={cn(
-          accordionTriggerVariants(),
-          "w-full",
-          variant === "surface" &&
-            "h-8 rounded-lg bg-accent/80 px-2.5 hover:bg-accent focus-visible:bg-accent",
+          sidebarControlVariants(),
+          "select-none text-left text-subtle-foreground/80 transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50",
           className,
         )}
         aria-expanded={expanded}
@@ -554,7 +555,7 @@ export function SidebarSectionLabel({
   return (
     <div
       className={cn(
-        "font-sans ui-text-caption flex h-(--athas-chrome-control-height) min-w-0 select-none items-center gap-(--athas-chrome-gap-loose) px-2 font-normal text-subtle-foreground/80",
+        "font-sans ui-text-caption flex h-(--athas-chrome-control-height) min-w-0 select-none items-center gap-(--athas-chrome-gap) px-1.5 font-normal text-subtle-foreground/80",
         className,
       )}
       {...props}

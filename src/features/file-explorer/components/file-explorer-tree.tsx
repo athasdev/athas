@@ -61,7 +61,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import { SidebarHeader, SidebarHeaderIconButton, SidebarSearchPopover } from "@/ui/sidebar";
+import { SidebarHeader, SidebarIconButton, SidebarSearchPopover } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
@@ -1293,7 +1293,7 @@ function FileExplorerTreeComponent({
           }}
         />
         {treeSearchQuery.length > 0 ? (
-          <SidebarHeaderIconButton
+          <SidebarIconButton
             tooltip="Clear search"
             tooltipSide="bottom"
             aria-label="Clear search"
@@ -1303,12 +1303,12 @@ function FileExplorerTreeComponent({
             }}
           >
             <X />
-          </SidebarHeaderIconButton>
+          </SidebarIconButton>
         ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <SidebarHeaderIconButton
+              <SidebarIconButton
                 tooltip="File explorer preferences"
                 tooltipSide="bottom"
                 aria-label="File explorer preferences"

@@ -62,7 +62,7 @@ import Input, { InlineRenameInput } from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
   SidebarHeader,
-  SidebarHeaderIconButton,
+  SidebarIconButton,
   SidebarSearchPopover,
   SidebarListEditor,
   SidebarListItem,
@@ -1003,7 +1003,7 @@ export function CollaborationSidebarView() {
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <SidebarHeaderIconButton
+                  <SidebarIconButton
                     active={channelFilter !== "all"}
                     tooltip="Filter channels"
                     tooltipSide="bottom"
@@ -1303,7 +1303,7 @@ export function CollaborationSidebarView() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <SidebarHeaderIconButton
+              <SidebarIconButton
                 active={peopleFilter !== "all"}
                 tooltip="Filter people"
                 tooltipSide="bottom"
@@ -1400,7 +1400,7 @@ export function CollaborationSidebarView() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <SidebarHeaderIconButton
+              <SidebarIconButton
                 active={notesFilter !== "notes"}
                 tooltip="Filter notes"
                 tooltipSide="bottom"
