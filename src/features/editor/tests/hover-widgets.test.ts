@@ -35,4 +35,48 @@ describe("Monaco hover widgets", () => {
     expect(widgetStyle.maxHeight).toBe("160px");
     expect(widgetStyle.width).toBe("120px");
   });
+
+  it("caps long diagnostic content at the shared hover width", () => {
+    const createElement = () => {
+      const style = {
+        background: "",
+        border: "",
+        boxShadow: "",
+        maxHeight: "",
+        maxWidth: "",
+        width: "",
+      };
+      const element = {
+        children: [],
+        scrollWidth: 900,
+        style,
+        getBoundingClientRect: () => ({ width: 900 }),
+        querySelector: () => null,
+      } as unknown as HTMLElement;
+
+      return { element, style };
+    };
+
+    const widget = createElement();
+    const hover = createElement();
+    const scroll = createElement();
+    const content = createElement();
+    widget.element.querySelector = () => hover.element;
+    hover.element.querySelector = (selector: string) =>
+      selector === ".monaco-scrollable-element" ? scroll.element : content.element;
+
+    const container = {
+      clientHeight: 600,
+      clientWidth: 1000,
+      style: { setProperty() {} },
+      querySelectorAll: () => [widget.element],
+    } as unknown as HTMLElement;
+
+    clampMonacoHoverWidgets(container);
+
+    for (const node of [widget, hover, scroll, content]) {
+      expect(node.style.maxWidth).toBe("500px");
+      expect(node.style.width).toBe("500px");
+    }
+  });
 });
