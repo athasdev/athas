@@ -1,5 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { AgentLaunchInput } from "@/features/ai/components/agent-launch-input";
+import { AgentStartView } from "@/features/ai/components/agent-start-view";
 import type { DatabaseType } from "@/features/database/types/provider.types";
 import {
   PROVIDER_REGISTRY,
@@ -922,7 +924,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     (buffer: PaneRenderBuffer) => {
       switch (buffer.type) {
         case "newTab":
-          return null;
+          return (
+            <AgentStartView showQuickActions>
+              <AgentLaunchInput autoFocus={isActivePane} surfaceId={`new-tab-${buffer.id}`} />
+            </AgentStartView>
+          );
 
         case "terminal":
           return (
