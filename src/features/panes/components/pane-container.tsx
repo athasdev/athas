@@ -1116,7 +1116,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       />
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <Suspense fallback={null}>
-          {shouldRenderCarousel ? (
+          {paneBuffers.length === 0 ? (
+            <Empty className="h-full rounded-none bg-background" role="status">
+              <EmptyDescription>No tabs open</EmptyDescription>
+            </Empty>
+          ) : shouldRenderCarousel ? (
             <div
               ref={carouselViewportRef}
               className="scrollbar-hidden flex h-full items-stretch gap-4 overflow-x-auto overflow-y-hidden px-4 py-4 overscroll-x-contain"
