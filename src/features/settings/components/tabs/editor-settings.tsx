@@ -190,6 +190,7 @@ export const EditorSettings = () => {
           canReset={settings.renderWhitespace !== getDefaultSetting("renderWhitespace")}
         >
           <Select
+            shape="pill"
             value={settings.renderWhitespace}
             options={renderWhitespaceOptions}
             onChange={(value) =>
@@ -338,6 +339,7 @@ export const EditorSettings = () => {
           canReset={settings.editorCursorStyle !== getDefaultSetting("editorCursorStyle")}
         >
           <Select
+            shape="pill"
             value={settings.editorCursorStyle}
             options={[
               { value: "line", label: "Line" },
@@ -365,6 +367,7 @@ export const EditorSettings = () => {
           canReset={settings.editorCursorBlinking !== getDefaultSetting("editorCursorBlinking")}
         >
           <Select
+            shape="pill"
             value={settings.editorCursorBlinking}
             options={[
               { value: "blink", label: "Blink" },
@@ -431,6 +434,7 @@ export const EditorSettings = () => {
           canReset={settings.defaultLanguage !== getDefaultSetting("defaultLanguage")}
         >
           <Select
+            shape="pill"
             value={settings.defaultLanguage}
             options={languageOptions}
             onChange={(value) => updateSetting("defaultLanguage", value)}

@@ -154,6 +154,7 @@ export const FontSelector = ({
 
   return (
     <Select
+      shape="pill"
       value={resolvedValue}
       options={fontOptions}
       onChange={handleFontChange}

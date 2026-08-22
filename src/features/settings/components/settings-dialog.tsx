@@ -12,6 +12,7 @@ import {
 } from "@/features/settings/lib/settings-search";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
+import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import Dialog from "@/ui/dialog";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
@@ -235,16 +236,19 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         title={
           <>
             <span className="max-[720px]:hidden">Settings</span>
-            <button
+            <Button
               ref={tabDropdownRef}
               type="button"
-              className="hidden h-7 max-w-48 min-w-0 items-center gap-1.5 rounded-md border border-border/70 bg-surface/50 px-2 text-left text-foreground transition-colors hover:bg-accent max-[720px]:inline-flex"
+              variant="default"
+              size="sm"
+              shape="pill"
+              className="hidden max-w-48 min-w-0 justify-start gap-1.5 text-left max-[720px]:inline-flex"
               onClick={() => setIsTabDropdownOpen(true)}
             >
               <ActiveTabIcon className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
               <span className="truncate">{activeTabItem.label}</span>
               <CaretDown className="size-3.5 shrink-0 text-subtle-foreground" />
-            </button>
+            </Button>
           </>
         }
         headerActions={

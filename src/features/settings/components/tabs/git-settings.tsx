@@ -188,6 +188,7 @@ export const GitSettings = () => {
           canReset={settings.gitDefaultDiffView !== getDefaultSetting("gitDefaultDiffView")}
         >
           <Select
+            shape="pill"
             value={settings.gitDefaultDiffView}
             options={[
               { value: "unified", label: "Unified" },

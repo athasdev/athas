@@ -207,6 +207,7 @@ export const AppearanceSettings = () => {
             canReset={settings.theme !== getDefaultSetting("theme")}
           >
             <Select
+              shape="pill"
               value={settings.theme}
               options={normalizedThemeOptions}
               onChange={(value) => updateSetting("theme", value)}
@@ -228,6 +229,7 @@ export const AppearanceSettings = () => {
               canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
             >
               <Select
+                shape="pill"
                 value={settings.autoThemeLight}
                 options={lightThemeOptions}
                 onChange={(value) => updateSetting("autoThemeLight", value)}
@@ -246,6 +248,7 @@ export const AppearanceSettings = () => {
               canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
             >
               <Select
+                shape="pill"
                 value={settings.autoThemeDark}
                 options={darkThemeOptions}
                 onChange={(value) => updateSetting("autoThemeDark", value)}
@@ -266,6 +269,7 @@ export const AppearanceSettings = () => {
           canReset={settings.iconTheme !== getDefaultSetting("iconTheme")}
         >
           <Select
+            shape="pill"
             value={settings.iconTheme}
             options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
@@ -294,11 +298,16 @@ export const AppearanceSettings = () => {
           }
         >
           <div className="flex items-center gap-2">
-            <Button type="button" size="sm" onClick={() => setIsThemeCreatorOpen(true)}>
+            <Button
+              shape="pill"
+              type="button"
+              size="sm"
+              onClick={() => setIsThemeCreatorOpen(true)}
+            >
               <FilePlusIcon />
               Create
             </Button>
-            <Button type="button" size="sm" onClick={handleUploadTheme}>
+            <Button shape="pill" type="button" size="sm" onClick={handleUploadTheme}>
               <UploadIcon />
               Import
             </Button>
@@ -312,6 +321,7 @@ export const AppearanceSettings = () => {
             description={`${theme.category} custom theme · ${theme.id}`}
           >
             <Button
+              shape="pill"
               type="button"
               size="icon-xs"
               variant="danger"
@@ -409,6 +419,7 @@ export const AppearanceSettings = () => {
           }
         >
           <Select
+            shape="pill"
             value={settings.tabCloseButtonVisibility}
             options={[
               { value: "active", label: "Active and Hovered" },
