@@ -69,9 +69,9 @@ describe("admin data model", () => {
     const source: AdminDataSource = {
       id: "release-stats",
       name: "Release stats",
-      url: "https://api.github.com/repos/athasdev/athas/releases",
       rowsPath: "assets[]",
-      authentication: "github",
+      kind: "github",
+      endpointPath: "/releases?per_page=100",
     };
 
     saveAdminDataSources("/projects/athas", [source], storage);
@@ -88,5 +88,32 @@ describe("admin data model", () => {
     storage.setItem(getAdminDataStorageKey("/projects/athas"), "not-json");
 
     expect(loadAdminDataSources("/projects/athas", storage)).toEqual([]);
+  });
+
+  it("migrates URL sources saved before connector types were added", () => {
+    const storage = createStorage();
+    storage.setItem(
+      getAdminDataStorageKey("/projects/athas"),
+      JSON.stringify([
+        {
+          id: "legacy",
+          name: "Legacy source",
+          url: "https://api.example.com/data",
+          rowsPath: "items",
+          authentication: "none",
+        },
+      ]),
+    );
+
+    expect(loadAdminDataSources("/projects/athas", storage)).toEqual([
+      {
+        id: "legacy",
+        name: "Legacy source",
+        kind: "json",
+        url: "https://api.example.com/data",
+        rowsPath: "items",
+        authentication: "none",
+      },
+    ]);
   });
 });

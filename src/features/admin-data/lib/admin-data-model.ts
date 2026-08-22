@@ -121,15 +121,42 @@ export function adminDataTableToCsv(table: AdminDataTable): string {
   return [table.columns, ...table.rows].map((row) => row.map(escapeCsvCell).join(",")).join("\n");
 }
 
-function isAdminDataSource(value: unknown): value is AdminDataSource {
-  return (
-    isJsonRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.name === "string" &&
+function normalizeAdminDataSource(value: unknown): AdminDataSource | null {
+  if (
+    !isJsonRecord(value) ||
+    typeof value.id !== "string" ||
+    typeof value.name !== "string" ||
+    typeof value.rowsPath !== "string"
+  ) {
+    return null;
+  }
+
+  if (value.kind === "github" && typeof value.endpointPath === "string") {
+    return {
+      id: value.id,
+      name: value.name,
+      rowsPath: value.rowsPath,
+      kind: "github",
+      endpointPath: value.endpointPath,
+    };
+  }
+
+  if (
+    (value.kind === "json" || value.kind === undefined) &&
     typeof value.url === "string" &&
-    typeof value.rowsPath === "string" &&
     (value.authentication === "none" || value.authentication === "github")
-  );
+  ) {
+    return {
+      id: value.id,
+      name: value.name,
+      rowsPath: value.rowsPath,
+      kind: "json",
+      url: value.url,
+      authentication: value.authentication,
+    };
+  }
+
+  return null;
 }
 
 export function getAdminDataStorageKey(projectPath: string): string {
@@ -142,7 +169,11 @@ export function loadAdminDataSources(
 ): AdminDataSource[] {
   try {
     const value = JSON.parse(storage.getItem(getAdminDataStorageKey(projectPath)) ?? "[]");
-    return Array.isArray(value) ? value.filter(isAdminDataSource) : [];
+    return Array.isArray(value)
+      ? value
+          .map(normalizeAdminDataSource)
+          .filter((source): source is AdminDataSource => source !== null)
+      : [];
   } catch {
     return [];
   }

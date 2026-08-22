@@ -3,18 +3,23 @@ import type { AdminDataSource } from "@/features/admin-data/types/admin-data.typ
 
 const mocks = vi.hoisted(() => ({
   fetch: vi.fn(),
+  getRemotes: vi.fn(),
   invoke: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/plugin-http", () => ({ fetch: mocks.fetch }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
+vi.mock("@/features/git/api/git-remotes-api", () => ({ getRemotes: mocks.getRemotes }));
 
 import { loadAdminDataSource } from "@/features/admin-data/services/admin-data-service";
 
-function createSource(overrides: Partial<AdminDataSource> = {}): AdminDataSource {
+function createSource(
+  overrides: Partial<Extract<AdminDataSource, { kind: "json" }>> = {},
+): AdminDataSource {
   return {
     id: "source",
     name: "Release stats",
+    kind: "json",
     url: "https://api.example.com/releases",
     rowsPath: "",
     authentication: "none",
@@ -25,6 +30,7 @@ function createSource(overrides: Partial<AdminDataSource> = {}): AdminDataSource
 describe("admin data service", () => {
   beforeEach(() => {
     mocks.fetch.mockReset();
+    mocks.getRemotes.mockReset();
     mocks.invoke.mockReset();
   });
 
@@ -41,6 +47,9 @@ describe("admin data service", () => {
   });
 
   it("uses the connected account only for GitHub API sources", async () => {
+    mocks.getRemotes.mockResolvedValue([
+      { name: "origin", url: "git@github.com:athasdev/athas.git" },
+    ]);
     mocks.invoke.mockResolvedValue("github-token");
     mocks.fetch.mockResolvedValue({
       ok: true,
@@ -48,15 +57,19 @@ describe("admin data service", () => {
     });
 
     await loadAdminDataSource(
-      createSource({
-        url: "https://api.github.com/repos/athasdev/athas/releases",
-        authentication: "github",
-      }),
+      {
+        id: "releases",
+        name: "Releases",
+        kind: "github",
+        endpointPath: "/releases?per_page=100",
+        rowsPath: "",
+      },
+      "/projects/athas",
     );
 
     expect(mocks.invoke).toHaveBeenCalledWith("get_github_token");
     expect(mocks.fetch).toHaveBeenCalledWith(
-      "https://api.github.com/repos/athasdev/athas/releases",
+      "https://api.github.com/repos/athasdev/athas/releases?per_page=100",
       {
         headers: {
           Accept: "application/json",

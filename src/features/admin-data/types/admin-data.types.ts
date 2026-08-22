@@ -1,10 +1,21 @@
-export interface AdminDataSource {
+interface AdminDataSourceBase {
   id: string;
   name: string;
-  url: string;
   rowsPath: string;
-  authentication: "none" | "github";
 }
+
+export type AdminDataSource = AdminDataSourceBase &
+  (
+    | {
+        kind: "github";
+        endpointPath: string;
+      }
+    | {
+        kind: "json";
+        url: string;
+        authentication: "none" | "github";
+      }
+  );
 
 export interface AdminDataTable {
   columns: string[];

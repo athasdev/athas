@@ -4,6 +4,10 @@ import {
   adminDataTableToCsv,
   jsonToAdminDataTable,
 } from "@/features/admin-data/lib/admin-data-model";
+import {
+  buildProjectGitHubApiUrl,
+  resolveProjectGitHubRepository,
+} from "@/features/admin-data/lib/admin-data-github";
 import type { AdminDataSource } from "@/features/admin-data/types/admin-data.types";
 
 function validateSourceUrl(value: string): URL {
@@ -21,11 +25,24 @@ function validateSourceUrl(value: string): URL {
   return url;
 }
 
-export async function loadAdminDataSource(source: AdminDataSource): Promise<string> {
-  const url = validateSourceUrl(source.url);
+export async function loadAdminDataSource(
+  source: AdminDataSource,
+  projectPath?: string,
+): Promise<string> {
+  let sourceUrl: string;
+  if (source.kind === "github") {
+    if (!projectPath) throw new Error("Open a project before loading this GitHub source");
+    const repository = await resolveProjectGitHubRepository(projectPath);
+    if (!repository) throw new Error("This project does not have a GitHub remote");
+    sourceUrl = buildProjectGitHubApiUrl(repository, source.endpointPath);
+  } else {
+    sourceUrl = source.url;
+  }
+
+  const url = validateSourceUrl(sourceUrl);
   const headers: Record<string, string> = { Accept: "application/json" };
 
-  if (source.authentication === "github") {
+  if (source.kind === "github" || source.authentication === "github") {
     if (url.hostname !== "api.github.com") {
       throw new Error("GitHub authentication can only be used with api.github.com");
     }

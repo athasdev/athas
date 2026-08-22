@@ -16,12 +16,7 @@ import {
 } from "@/ui/context-menu";
 import { Dialog } from "@/ui/dialog";
 import { PencilSimpleLineIcon, PlusIcon, TableIcon, TrashIcon } from "@/ui/icons";
-import {
-  SidebarIconButton,
-  SidebarListItem,
-  SidebarSectionHeader,
-  SidebarSectionStack,
-} from "@/ui/sidebar";
+import { SidebarListItem } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 
 interface AdminDataSidebarSectionProps {
@@ -32,7 +27,6 @@ interface AdminDataSidebarSectionProps {
 export function AdminDataSidebarSection({ expanded, projectPath }: AdminDataSidebarSectionProps) {
   const [sources, setSources] = useState<AdminDataSource[]>([]);
   const [editingSource, setEditingSource] = useState<AdminDataSource | null | undefined>(undefined);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [loadingSourceId, setLoadingSourceId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,7 +51,7 @@ export function AdminDataSidebarSection({ expanded, projectPath }: AdminDataSide
       const toastId = toast.loading(`Loading ${source.name}...`);
 
       try {
-        const csv = content ?? (await loadAdminDataSource(source));
+        const csv = content ?? (await loadAdminDataSource(source, projectPath));
         const path = `admin-data://${encodeURIComponent(projectPath)}/${source.id}`;
         const bufferStore = useBufferStore.getState();
         const bufferId = bufferStore.actions.openContent({
@@ -93,7 +87,7 @@ export function AdminDataSidebarSection({ expanded, projectPath }: AdminDataSide
   const handleSaveSource = useCallback(
     async (source: AdminDataSource) => {
       if (!projectPath) return;
-      const csv = await loadAdminDataSource(source);
+      const csv = await loadAdminDataSource(source, projectPath);
       const nextSources = sources.some((item) => item.id === source.id)
         ? sources.map((item) => (item.id === source.id ? source : item))
         : [...sources, source];
@@ -114,86 +108,80 @@ export function AdminDataSidebarSection({ expanded, projectPath }: AdminDataSide
   if (!projectPath) return null;
 
   const showAddDialog = editingSource !== undefined;
-  const firstSource = sources[0];
 
   return (
     <>
       {!expanded ? (
-        <SidebarListItem
-          leading={loadingSourceId ? <Spinner compact label="Loading admin data" /> : <TableIcon />}
-          iconOnly
-          aria-label={firstSource ? `Open ${firstSource.name}` : "Add admin data source"}
-          onClick={() => {
-            if (firstSource) void openSource(firstSource);
-            else setEditingSource(null);
-          }}
-        >
-          Admin Data
-        </SidebarListItem>
-      ) : (
-        <SidebarSectionStack className="max-h-[42%] min-h-0 overflow-y-auto pr-2 pb-1">
-          <SidebarSectionHeader
-            expanded={!isCollapsed}
-            count={sources.length || undefined}
-            onToggle={() => setIsCollapsed((current) => !current)}
-            action={
-              <SidebarIconButton
-                tooltip="Add Data Source"
-                tooltipSide="right"
-                aria-label="Add Data Source"
-                onClick={() => setEditingSource(null)}
-              >
-                <PlusIcon />
-              </SidebarIconButton>
-            }
+        <div className="flex w-full flex-col gap-(--athas-chrome-gap-tight) pb-1">
+          {sources.map((source) => (
+            <SidebarListItem
+              key={source.id}
+              leading={
+                loadingSourceId === source.id ? (
+                  <Spinner compact label={`Loading ${source.name}`} />
+                ) : (
+                  <TableIcon />
+                )
+              }
+              iconOnly
+              disabled={loadingSourceId !== null}
+              aria-label={`Open ${source.name}`}
+              onClick={() => void openSource(source)}
+            >
+              {source.name}
+            </SidebarListItem>
+          ))}
+          <SidebarListItem
+            leading={<PlusIcon />}
+            iconOnly
+            aria-label="Add data source"
+            onClick={() => setEditingSource(null)}
           >
-            Admin Data
-          </SidebarSectionHeader>
-          {!isCollapsed ? (
-            sources.length > 0 ? (
-              sources.map((source) => (
-                <ContextMenu key={source.id}>
-                  <ContextMenuTrigger
-                    onContextMenu={(event) => event.stopPropagation()}
-                    render={
-                      <SidebarListItem
-                        leading={
-                          loadingSourceId === source.id ? (
-                            <Spinner compact label={`Loading ${source.name}`} />
-                          ) : (
-                            <TableIcon />
-                          )
-                        }
-                        disabled={loadingSourceId !== null}
-                        onClick={() => void openSource(source)}
-                      >
-                        {source.name}
-                      </SidebarListItem>
+            Add Source
+          </SidebarListItem>
+        </div>
+      ) : (
+        <div className="flex max-h-[42%] min-h-0 w-full flex-col gap-(--athas-chrome-gap-tight) overflow-y-auto pr-2 pb-1">
+          {sources.map((source) => (
+            <ContextMenu key={source.id}>
+              <ContextMenuTrigger
+                onContextMenu={(event) => event.stopPropagation()}
+                render={
+                  <SidebarListItem
+                    leading={
+                      loadingSourceId === source.id ? (
+                        <Spinner compact label={`Loading ${source.name}`} />
+                      ) : (
+                        <TableIcon />
+                      )
                     }
-                  />
-                  <ContextMenuContent>
-                    <ContextMenuItem onClick={() => void openSource(source)}>
-                      <TableIcon />
-                      Refresh and Open
-                    </ContextMenuItem>
-                    <ContextMenuItem onClick={() => setEditingSource(source)}>
-                      <PencilSimpleLineIcon />
-                      Edit Source
-                    </ContextMenuItem>
-                    <ContextMenuItem variant="destructive" onClick={() => removeSource(source.id)}>
-                      <TrashIcon />
-                      Remove Source
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              ))
-            ) : (
-              <SidebarListItem leading={<PlusIcon />} onClick={() => setEditingSource(null)}>
-                Add Source
-              </SidebarListItem>
-            )
-          ) : null}
-        </SidebarSectionStack>
+                    disabled={loadingSourceId !== null}
+                    onClick={() => void openSource(source)}
+                  >
+                    {source.name}
+                  </SidebarListItem>
+                }
+              />
+              <ContextMenuContent>
+                <ContextMenuItem onClick={() => void openSource(source)}>
+                  <TableIcon />
+                  Refresh and Open
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => setEditingSource(source)}>
+                  <PencilSimpleLineIcon />
+                  Edit Source
+                </ContextMenuItem>
+                <ContextMenuItem variant="destructive" onClick={() => removeSource(source.id)}>
+                  <TrashIcon />
+                  Remove Source
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
+          ))}
+          <SidebarListItem leading={<PlusIcon />} onClick={() => setEditingSource(null)}>
+            Add Source
+          </SidebarListItem>
+        </div>
       )}
       <Dialog
         open={showAddDialog}
@@ -203,6 +191,7 @@ export function AdminDataSidebarSection({ expanded, projectPath }: AdminDataSide
       >
         {showAddDialog ? (
           <AdminDataSourceDialog
+            projectPath={projectPath}
             source={editingSource ?? undefined}
             onClose={() => setEditingSource(undefined)}
             onSave={handleSaveSource}
