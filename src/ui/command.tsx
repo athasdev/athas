@@ -168,7 +168,7 @@ const Command = ({
                   />
                 }
                 className={cn(
-                  overlaySurface(),
+                  overlaySurface({ variant: "command" }),
                   commandContentVariants(),
                   "pointer-events-auto",
                   className,

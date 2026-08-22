@@ -26,7 +26,7 @@ const inputVariants = cva(
   {
     variants: {
       variant: {
-        default: "",
+        default: "border-0 focus:border-0",
         ghost: "",
         inline: "",
       },
