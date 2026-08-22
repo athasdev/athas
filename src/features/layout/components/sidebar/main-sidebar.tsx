@@ -11,6 +11,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { flushSync } from "react-dom";
+import { AdminDataSidebarSection } from "@/features/admin-data/components/admin-data-sidebar-section";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
 import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
@@ -707,40 +708,46 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
                 />
               </div>
             ) : (
-              <div className="scrollbar-hidden min-h-0 w-full flex-1 overflow-y-auto">
-                <SidebarPaneSelector
-                  activeSidebarView={activeSidebarView}
-                  isGitViewActive={isGitViewActive}
-                  isGitHubPRsViewActive={isGitHubPRsViewActive}
-                  isSidebarVisible={isSidebarVisible}
-                  coreFeatures={coreFeatures}
-                  onViewChange={handleSidebarViewChange}
-                  onSearchClick={() => openGlobalSearchBuffer()}
-                  onExtensionsClick={() => openExtensionsBuffer()}
-                  isExtensionsActive={isExtensionsBufferActive}
-                  compact={!expanded}
-                  showLabels={expanded}
-                  orientation="vertical"
-                />
-                <SidebarPinnedItems
-                  expanded={expanded}
-                  workspacePath={project?.path ?? null}
-                  showAgents={showActivityRailAgentHistory}
-                  showTerminals={coreFeatures.terminal && showActivityRailTerminals}
-                />
-                {showActivityRailAgentHistory ? (
-                  <SidebarAgentHistory expanded={expanded} workspacePath={project?.path ?? null} />
-                ) : null}
-                {coreFeatures.terminal && showActivityRailTerminals ? (
-                  <SidebarTerminalHistory expanded={expanded} />
-                ) : null}
-                {coreFeatures.git && showActivityRailWorktrees ? (
-                  <SidebarWorktreeHistory
-                    expanded={expanded}
-                    repoPath={project?.path ?? null}
-                    onNewWorktree={handleNewWorktree}
+              <div className="flex min-h-0 w-full flex-1 flex-col">
+                <div className="scrollbar-hidden min-h-0 w-full flex-1 overflow-y-auto">
+                  <SidebarPaneSelector
+                    activeSidebarView={activeSidebarView}
+                    isGitViewActive={isGitViewActive}
+                    isGitHubPRsViewActive={isGitHubPRsViewActive}
+                    isSidebarVisible={isSidebarVisible}
+                    coreFeatures={coreFeatures}
+                    onViewChange={handleSidebarViewChange}
+                    onSearchClick={() => openGlobalSearchBuffer()}
+                    onExtensionsClick={() => openExtensionsBuffer()}
+                    isExtensionsActive={isExtensionsBufferActive}
+                    compact={!expanded}
+                    showLabels={expanded}
+                    orientation="vertical"
                   />
-                ) : null}
+                  <SidebarPinnedItems
+                    expanded={expanded}
+                    workspacePath={project?.path ?? null}
+                    showAgents={showActivityRailAgentHistory}
+                    showTerminals={coreFeatures.terminal && showActivityRailTerminals}
+                  />
+                  {showActivityRailAgentHistory ? (
+                    <SidebarAgentHistory
+                      expanded={expanded}
+                      workspacePath={project?.path ?? null}
+                    />
+                  ) : null}
+                  {coreFeatures.terminal && showActivityRailTerminals ? (
+                    <SidebarTerminalHistory expanded={expanded} />
+                  ) : null}
+                  {coreFeatures.git && showActivityRailWorktrees ? (
+                    <SidebarWorktreeHistory
+                      expanded={expanded}
+                      repoPath={project?.path ?? null}
+                      onNewWorktree={handleNewWorktree}
+                    />
+                  ) : null}
+                </div>
+                <AdminDataSidebarSection expanded={expanded} projectPath={project?.path ?? null} />
               </div>
             )}
           </>
