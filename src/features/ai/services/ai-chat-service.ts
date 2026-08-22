@@ -62,7 +62,8 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
       provider: requestedProvider,
       model: {
         ...requestedDynamicModel,
-        maxTokens: requestedDynamicModel.maxTokens || 4096,
+        maxOutputTokens:
+          requestedDynamicModel.maxOutputTokens ?? requestedDynamicModel.maxTokens ?? 4096,
       },
     };
   }
@@ -75,7 +76,7 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
       model: {
         id: modelId,
         name: modelId,
-        maxTokens: 4096,
+        maxOutputTokens: 4096,
       },
     };
   }
@@ -93,7 +94,7 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
         model: {
           id: customModelId,
           name: customModelId,
-          maxTokens: 4096,
+          maxOutputTokens: 4096,
         },
       };
     }
@@ -118,7 +119,7 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
         provider,
         model: {
           ...dynamicModel,
-          maxTokens: dynamicModel.maxTokens || 4096,
+          maxOutputTokens: dynamicModel.maxOutputTokens ?? dynamicModel.maxTokens ?? 4096,
         },
       };
     }
@@ -179,7 +180,7 @@ export const getChatCompletionStream = async (
       return;
     }
 
-    // Handle ACP-based CLI agents (Gemini CLI, Codex CLI, etc.)
+    // Handle ACP-based coding agents.
     if (isAcpAgent(agentId)) {
       const handler = new AcpStreamHandler(
         agentId,
@@ -295,7 +296,7 @@ export const getChatCompletionStream = async (
 
       if (!response.ok) {
         const errorText = await response.text();
-        onError(errorText || `Hosted Athas Agent request failed (${response.status})`);
+        onError(errorText || `Hosted AI chat request failed (${response.status})`);
         return;
       }
 
@@ -312,7 +313,7 @@ export const getChatCompletionStream = async (
     const streamRequest = {
       modelId,
       messages,
-      maxTokens: resolveChatCompletionTokenLimit(model.maxTokens),
+      maxTokens: resolveChatCompletionTokenLimit(model.maxOutputTokens ?? model.maxTokens),
       temperature: 0.7,
       apiKey: apiKey || undefined,
     };

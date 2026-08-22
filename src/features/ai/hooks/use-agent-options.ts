@@ -12,8 +12,8 @@ import { toast } from "sonner";
 
 const ATHAS_AGENT_OPTION = {
   id: "custom",
-  name: "Athas Agent",
-  description: "Use Athas Agent settings and provider configuration",
+  name: "AI Chat",
+  description: "Chat directly with a configured model provider",
 };
 
 export interface AgentOption {
@@ -24,6 +24,7 @@ export interface AgentOption {
   isCurrent: boolean;
   canInstall: boolean;
   isInstalling: boolean;
+  updateAvailable: boolean;
 }
 
 export function useAgentOptions(currentAgentId: AgentType) {
@@ -80,6 +81,7 @@ export function useAgentOptions(currentAgentId: AgentType) {
             ? false
             : (agentConfig?.canInstall ?? true),
         isInstalling: installingAgentId === agent.id,
+        updateAvailable: agentConfig?.updateAvailable ?? false,
       };
     });
   }, [agentConfigs, currentAgentId, installedAgents, installingAgentId]);

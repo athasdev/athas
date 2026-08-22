@@ -441,10 +441,10 @@ export const AISettings = () => {
   return (
     <SettingsView>
       <CodexSettings />
-      <Section title="Athas Agent">
+      <Section title="AI Chat">
         <SettingRow
           label="Provider"
-          description="Choose the provider used by Athas Agent"
+          description="Choose the provider used by direct AI chat"
           onReset={() => {
             updateSetting("aiProviderId", getDefaultSetting("aiProviderId"));
             updateSetting("aiModelId", getDefaultSetting("aiModelId"));
@@ -465,7 +465,7 @@ export const AISettings = () => {
           description={
             isCustomProviderSelected
               ? "Model name sent to the custom endpoint"
-              : "Choose the model used by Athas Agent"
+              : "Choose the model used by direct AI chat"
           }
           onReset={() => {
             if (isCustomProviderSelected) {
@@ -540,7 +540,7 @@ export const AISettings = () => {
         <Section title="Custom Provider">
           <SettingRow
             label="Base URL"
-            description="OpenAI-compatible endpoint base URL for Athas Agent"
+            description="OpenAI-compatible endpoint base URL for direct AI chat"
             onReset={() => {
               updateSetting("aiCustomBaseUrl", getDefaultSetting("aiCustomBaseUrl"));
               setCustomProviderBaseUrl(getDefaultSetting("aiCustomBaseUrl"));

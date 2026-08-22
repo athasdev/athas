@@ -551,9 +551,11 @@ impl ToolInstaller {
          )));
       }
 
-      if let Some(binary_path) =
-         Self::resolve_node_package_binary(package_dir, package, command_name)
-      {
+      if let Some(binary_path) = Self::resolve_node_package_binary(
+         package_dir,
+         &Self::node_package_identity(package),
+         command_name,
+      ) {
          return Self::validate_and_prepare(&binary_path);
       }
 
@@ -899,6 +901,24 @@ impl ToolInstaller {
       }
    }
 
+   pub async fn install_managed(
+      app_handle: &AppHandle,
+      config: &ToolConfig,
+   ) -> Result<PathBuf, ToolError> {
+      if config.runtime != ToolRuntime::Binary {
+         return Self::install(app_handle, config).await;
+      }
+
+      let command_name = Self::configured_command_name(config);
+      let url = config.download_url.as_ref().ok_or_else(|| {
+         ToolError::NotFound(format!(
+            "{} has no managed binary download URL",
+            command_name
+         ))
+      })?;
+      Self::download_binary(app_handle, &config.name, command_name, url).await
+   }
+
    /// Get the installation directory for tools
    pub fn get_tools_dir(app_handle: &AppHandle) -> Result<PathBuf, ToolError> {
       let data_dir = app_handle
@@ -917,7 +937,9 @@ impl ToolInstaller {
    ) -> Result<PathBuf, ToolError> {
       let runtime_root = Self::get_runtime_root(app_handle)?;
       let tools_dir = Self::get_tools_dir(app_handle)?;
-      let package_dir = tools_dir.join("bun").join(package);
+      let package_dir = tools_dir
+         .join("bun")
+         .join(Self::node_package_identity(package));
       std::fs::create_dir_all(&package_dir)?;
       Self::ensure_node_package_manifest(&package_dir)?;
 
@@ -975,7 +997,9 @@ impl ToolInstaller {
          .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
 
       let tools_dir = Self::get_tools_dir(app_handle)?;
-      let package_dir = tools_dir.join("npm").join(package);
+      let package_dir = tools_dir
+         .join("npm")
+         .join(Self::node_package_identity(package));
       std::fs::create_dir_all(&package_dir)?;
       Self::ensure_node_package_manifest(&package_dir)?;
 
@@ -1446,10 +1470,15 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            let package_dir = tools_dir.join("bun").join(package);
-            Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
+            let package_identity = Self::node_package_identity(package);
+            let package_dir = tools_dir.join("bun").join(&package_identity);
+            Self::validate_node_companion_packages(
+               &package_dir,
+               &package_identity,
+               &config.packages,
+            )?;
             Ok(
-               Self::resolve_node_package_binary(&package_dir, package, command_name)
+               Self::resolve_node_package_binary(&package_dir, &package_identity, command_name)
                   .unwrap_or_else(|| {
                      package_dir
                         .join("node_modules")
@@ -1464,10 +1493,15 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            let package_dir = tools_dir.join("npm").join(package);
-            Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
+            let package_identity = Self::node_package_identity(package);
+            let package_dir = tools_dir.join("npm").join(&package_identity);
+            Self::validate_node_companion_packages(
+               &package_dir,
+               &package_identity,
+               &config.packages,
+            )?;
             Ok(
-               Self::resolve_node_package_binary(&package_dir, package, command_name)
+               Self::resolve_node_package_binary(&package_dir, &package_identity, command_name)
                   .unwrap_or_else(|| {
                      package_dir
                         .join("node_modules")
@@ -1555,11 +1589,16 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            let package_dir = tools_dir.join("bun").join(package);
-            Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
+            let package_identity = Self::node_package_identity(package);
+            let package_dir = tools_dir.join("bun").join(&package_identity);
+            Self::validate_node_companion_packages(
+               &package_dir,
+               &package_identity,
+               &config.packages,
+            )?;
 
             if let Some(entrypoint) =
-               Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
+               Self::resolve_node_package_entrypoint(&package_dir, &package_identity, command_name)
             {
                return Ok(entrypoint);
             }
@@ -1579,11 +1618,16 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            let package_dir = tools_dir.join("npm").join(package);
-            Self::validate_node_companion_packages(&package_dir, package, &config.packages)?;
+            let package_identity = Self::node_package_identity(package);
+            let package_dir = tools_dir.join("npm").join(&package_identity);
+            Self::validate_node_companion_packages(
+               &package_dir,
+               &package_identity,
+               &config.packages,
+            )?;
 
             if let Some(entrypoint) =
-               Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
+               Self::resolve_node_package_entrypoint(&package_dir, &package_identity, command_name)
             {
                return Ok(entrypoint);
             }
@@ -1605,6 +1649,22 @@ impl ToolInstaller {
 #[cfg(test)]
 mod tests {
    use super::*;
+
+   #[test]
+   fn normalizes_versioned_node_package_specs() {
+      assert_eq!(
+         ToolInstaller::node_package_identity("opencode-ai@1.18.21"),
+         "opencode-ai"
+      );
+      assert_eq!(
+         ToolInstaller::node_package_identity("@google/gemini-cli@0.56.0"),
+         "@google/gemini-cli"
+      );
+      assert_eq!(
+         ToolInstaller::node_package_identity("@scope/package"),
+         "@scope/package"
+      );
+   }
 
    #[test]
    fn rejects_non_https_binary_urls() {

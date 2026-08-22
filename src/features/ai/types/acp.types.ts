@@ -12,6 +12,10 @@ export interface AgentConfig {
   installed: boolean;
   installRuntime: "node" | "python" | "go" | "rust" | "binary" | null;
   installPackage: string | null;
+  availableVersion: string | null;
+  installedVersion: string | null;
+  updateAvailable: boolean;
+  managed: boolean;
   canInstall: boolean;
 }
 
@@ -107,13 +111,20 @@ export type SessionConfigOption = {
   id: string;
   name: string;
   description?: string;
-  category?: "mode" | "model" | "thought_level" | (string & {});
-  kind: {
-    type: "select";
-    currentValue: string;
-    options: SessionConfigOptionValue[];
-  };
+  category?: "mode" | "model" | "model_config" | "thought_level" | (string & {});
+  kind:
+    | {
+        type: "select";
+        currentValue: string;
+        options: SessionConfigOptionValue[];
+      }
+    | {
+        type: "boolean";
+        currentValue: boolean;
+      };
 };
+
+export type SessionConfigValue = string | boolean;
 
 interface SessionModeState {
   currentModeId: string | null;

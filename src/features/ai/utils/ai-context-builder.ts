@@ -48,14 +48,10 @@ export const buildContextPrompt = (context: ContextInfo): string => {
     context.agentId !== CODEX_INTEGRATION_ID &&
     !isTerminalAgent(context.agentId);
 
-  // For ACP agents, include available extension methods
   if (isAcpAgent) {
-    contextPrompt += `Athas ACP Extension Methods (protocol methods, NOT shell commands):
-- Call \`athas.openWebViewer\` with \`{ "url": "https://..." }\` to open websites inside Athas.
-- Call \`athas.openTerminal\` with \`{ "command": "..." }\` to open a terminal tab in Athas.
-- Call \`athas.setChatTitle\` with \`{ "title": "Short title" }\` to rename the active Athas chat.
-- Do NOT run \`ext_method\` in a terminal.
-- Do NOT use shell/browser commands like \`open https://...\` for "open on web" requests; use \`athas.openWebViewer\` instead.
+    contextPrompt += `Athas ACP client extensions:
+- If your adapter exposes client extension requests, use \`_athas/open_web_viewer\`, \`_athas/open_terminal\`, and \`_athas/set_chat_title\`.
+- Invoke them only as ACP extension requests. Never imitate them with a shell command.
 
 `;
   }
@@ -196,7 +192,6 @@ export const buildSystemPrompt = (
   outputStyle: OutputStyle = "default",
 ): string => {
   let basePrompt = `You are an expert coding assistant integrated into a code editor. You have access to the user's current project context and open files.`;
-  const hasAcpExtensions = contextPrompt.includes("Athas ACP Extension Methods");
 
   // Mode-specific behavior
   if (mode === "plan") {
@@ -282,19 +277,6 @@ Guidelines:
 - Ask clarifying questions if needed
 
 ${getFollowUpActionsInstruction()}`;
-
-  if (hasAcpExtensions) {
-    basePrompt += `
-
-ACP extension rules:
-- Use Athas extension methods as protocol calls, not shell commands.
-- Never run \`ext_method\` in a terminal command.
-- For "open URL/web/site" requests, call \`athas.openWebViewer\` directly instead of suggesting \`open https://...\`.
-- For "open X in terminal" requests (for example lazygit), call \`athas.openTerminal\` with \`{ "command": "X" }\`.
-- For rename/title requests, call \`athas.setChatTitle\` with \`{ "title": "Short title" }\`.
-- Never say Athas extension methods are unavailable or require MCP exposure in this ACP session.
-- After calling an Athas extension method, confirm success and stop; do not retry with shell fallbacks unless user asks.`;
-  }
 
   basePrompt += `
 

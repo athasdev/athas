@@ -22,6 +22,7 @@ export class OpenRouterProvider extends AIProvider {
         data?: Array<{
           id: string;
           name?: string;
+          context_length?: number;
           top_provider?: { max_completion_tokens?: number };
         }>;
       };
@@ -29,7 +30,8 @@ export class OpenRouterProvider extends AIProvider {
       return (data.data || []).map((model) => ({
         id: model.id,
         name: model.name || model.id,
-        maxTokens: model.top_provider?.max_completion_tokens,
+        contextWindow: model.context_length,
+        maxOutputTokens: model.top_provider?.max_completion_tokens,
       }));
     } catch (error) {
       console.error(`${this.id} model fetch error:`, error);

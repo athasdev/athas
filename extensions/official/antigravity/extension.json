@@ -1,0 +1,43 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.agent.antigravity",
+  "name": "Google Antigravity",
+  "displayName": "Google Antigravity",
+  "description": "Google's consumer coding agent, connected through its official ACP server.",
+  "version": "1.0.0",
+  "publisher": "Google",
+  "categories": ["Agent"],
+  "agents": [
+    {
+      "id": "antigravity-acp",
+      "name": "Google Antigravity",
+      "binaryName": "agy_acp_server",
+      "description": "Google's consumer coding agent with its official ACP server.",
+      "args": [],
+      "argsByPlatform": {
+        "linux-arm64": ["--uid="],
+        "linux-x64": ["--uid="]
+      },
+      "install": {
+        "runtime": "binary",
+        "package": "antigravity-acp",
+        "version": "1.0.0",
+        "command": "agy_acp_server.par",
+        "commandsByPlatform": {
+          "darwin-arm64": "agy_acp_server.par",
+          "linux-arm64": "agy_acp_server.par",
+          "linux-x64": "agy_acp_server.par",
+          "win32-arm64": "agy_acp_server.exe",
+          "win32-x64": "agy_acp_server.exe"
+        },
+        "downloadUrls": {
+          "darwin-arm64": "https://dl.google.com/agy-extensions/releases/macos/agy-acp-server-agy_acp_server_20260818_01_RC01-darwin-arm64.zip",
+          "linux-arm64": "https://dl.google.com/agy-extensions/releases/linux/agy-acp-server-agy_acp_server_20260818_01_RC01-linux-arm64.zip",
+          "linux-x64": "https://dl.google.com/agy-extensions/releases/linux/agy-acp-server-agy_acp_server_20260818_01_RC01-linux-x86_64.zip",
+          "win32-arm64": "https://dl.google.com/agy-extensions/releases/windows/agy-acp-server-agy_acp_server_20260818_01_RC01-windows-arm64.zip",
+          "win32-x64": "https://dl.google.com/agy-extensions/releases/windows/agy-acp-server-agy_acp_server_20260818_01_RC01-windows-x86_64.zip"
+        }
+      }
+    }
+  ]
+}

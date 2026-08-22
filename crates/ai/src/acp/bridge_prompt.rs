@@ -3,7 +3,7 @@ use super::{
    types::{AcpEvent, StopReason},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
-use agent_client_protocol::schema as acp;
+use agent_client_protocol::schema::v1 as acp;
 use anyhow::{Context, Result, bail};
 use std::sync::Arc;
 use tauri::Emitter;

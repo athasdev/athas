@@ -16,7 +16,8 @@
       "args": ["--acp", "--experimental-skills"],
       "install": {
         "runtime": "node",
-        "package": "@qwen-code/qwen-code",
+        "package": "@qwen-code/qwen-code@0.22.0",
+        "version": "0.22.0",
         "command": "qwen"
       }
     }

@@ -11,8 +11,8 @@ describe("custom model options", () => {
         autocompleteCustomModelId: "mimo-v2.5-pro",
       }),
     ).toEqual([
-      { id: "qwen2.5-coder:7b", name: "qwen2.5-coder:7b", maxTokens: 4096 },
-      { id: "mimo-v2.5-pro", name: "mimo-v2.5-pro", maxTokens: 4096 },
+      { id: "qwen2.5-coder:7b", name: "qwen2.5-coder:7b", maxOutputTokens: 4096 },
+      { id: "mimo-v2.5-pro", name: "mimo-v2.5-pro", maxOutputTokens: 4096 },
     ]);
   });
 

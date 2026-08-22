@@ -254,6 +254,7 @@ fn main() {
          // ACP agent commands (new)
          get_available_agents,
          install_acp_agent,
+         update_acp_agent,
          uninstall_acp_agent,
          start_acp_agent,
          stop_acp_agent,

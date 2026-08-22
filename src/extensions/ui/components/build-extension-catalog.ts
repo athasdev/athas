@@ -46,7 +46,7 @@ export function buildExtensionCatalog({
         category: "agent",
         isInstalled: agent?.installed ?? false,
         isEnabled: agent?.installed ?? false,
-        version: ext.manifest.version,
+        version: agent?.availableVersion ?? ext.manifest.version,
         extensions: [agent?.binaryName ?? contribution.binaryName],
         publisher: ext.manifest.publisher,
         isMarketplace: true,
@@ -55,6 +55,9 @@ export function buildExtensionCatalog({
         agentId: contribution.id,
         icon: agent?.icon ?? ext.manifest.icon,
         canInstall: agent?.canInstall ?? Boolean(contribution.install),
+        hasUpdate: agent?.updateAvailable ?? false,
+        installedVersion: agent?.installedVersion,
+        availableVersion: agent?.availableVersion,
         contributionSummary: [
           `agent:${contribution.id}`,
           agent?.binaryName ?? contribution.binaryName,
@@ -385,6 +388,10 @@ export function buildExtensionCatalog({
       agentId: agent.id,
       icon: agent.icon ?? undefined,
       canInstall: agent.canInstall,
+      version: agent.availableVersion ?? undefined,
+      hasUpdate: agent.updateAvailable,
+      installedVersion: agent.installedVersion,
+      availableVersion: agent.availableVersion,
       contributionSummary: [`agent:${agent.id}`, agent.binaryName],
     });
   }

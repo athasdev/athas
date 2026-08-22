@@ -1,5 +1,6 @@
 use super::types::AgentConfig;
 use crate::runtime::AthasAppHandle as AppHandle;
+use semver::Version;
 use std::{
    collections::HashMap,
    env, fs,
@@ -86,20 +87,25 @@ impl AgentRegistry {
          if let Some(path) = managed_wrapper_path(self.managed_bin_dir.as_deref(), &config.id) {
             config.installed = true;
             config.binary_path = Some(path.to_string_lossy().to_string());
-            continue;
-         }
-
-         if config.id == "codex-cli" {
-            detect_codex_adapter(config);
+            config.managed = true;
+            config.installed_version =
+               managed_agent_version(self.managed_bin_dir.as_deref(), &config.id);
+            config.update_available = should_update_agent(config, true);
             continue;
          }
 
          if let Some(path) = find_binary(&config.binary_name) {
             config.installed = true;
+            config.installed_version = detect_binary_version(&path);
             config.binary_path = Some(path.to_string_lossy().to_string());
+            config.managed = false;
+            config.update_available = should_update_agent(config, false);
          } else {
             config.installed = false;
             config.binary_path = None;
+            config.installed_version = None;
+            config.managed = false;
+            config.update_available = false;
          }
       }
 
@@ -109,6 +115,52 @@ impl AgentRegistry {
    pub fn invalidate_detection_cache(&mut self) {
       self.last_detection = None;
    }
+}
+
+fn should_update_agent(config: &AgentConfig, managed: bool) -> bool {
+   let Some(available) = config
+      .available_version
+      .as_deref()
+      .and_then(|version| Version::parse(version).ok())
+   else {
+      return false;
+   };
+
+   match config
+      .installed_version
+      .as_deref()
+      .and_then(|version| Version::parse(version).ok())
+   {
+      Some(installed) => installed < available,
+      None => managed,
+   }
+}
+
+fn managed_agent_version(managed_bin_dir: Option<&Path>, agent_id: &str) -> Option<String> {
+   let metadata_path = managed_bin_dir?.join(format!("{agent_id}.json"));
+   let metadata = fs::read_to_string(metadata_path).ok()?;
+   serde_json::from_str::<serde_json::Value>(&metadata)
+      .ok()?
+      .get("version")?
+      .as_str()
+      .map(ToString::to_string)
+}
+
+fn detect_binary_version(path: &Path) -> Option<String> {
+   let output = Command::new(path).arg("--version").output().ok()?;
+   let text = format!(
+      "{} {}",
+      String::from_utf8_lossy(&output.stdout),
+      String::from_utf8_lossy(&output.stderr)
+   );
+
+   text
+      .split(|character: char| {
+         !(character.is_ascii_alphanumeric() || matches!(character, '.' | '-' | '+'))
+      })
+      .map(|candidate| candidate.trim_start_matches('v'))
+      .find_map(|candidate| Version::parse(candidate).ok())
+      .map(|version| version.to_string())
 }
 
 impl Default for AgentRegistry {
@@ -138,34 +190,6 @@ fn wrapper_file_name(agent_id: &str) -> String {
    {
       agent_id.to_string()
    }
-}
-
-fn detect_codex_adapter(config: &mut AgentConfig) {
-   // Prefer a direct codex-acp binary when available.
-   if let Some(path) = find_binary("codex-acp") {
-      config.installed = true;
-      config.binary_path = Some(path.to_string_lossy().to_string());
-      config.args.clear();
-      log::debug!("Detected codex-acp binary at {}", path.display());
-      return;
-   }
-
-   // Fallback to npx for users who haven't installed codex-acp globally yet.
-   if let Some(path) = find_binary("npx") {
-      config.installed = true;
-      config.binary_path = Some(path.to_string_lossy().to_string());
-      config.args = vec![
-         "-y".to_string(),
-         "@agentclientprotocol/codex-acp".to_string(),
-      ];
-      log::debug!("Using npx fallback for codex-acp at {}", path.display());
-      return;
-   }
-
-   config.installed = false;
-   config.binary_path = None;
-   config.args.clear();
-   log::debug!("Codex ACP adapter not found (neither codex-acp nor npx available)");
 }
 
 fn find_binary(binary_name: &str) -> Option<PathBuf> {
@@ -320,21 +344,24 @@ fn check_dir_for_binary(dir: &Path, binary_name: &str) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-   use super::{check_dir_for_binary, managed_wrapper_path};
+   use super::{
+      check_dir_for_binary, managed_agent_version, managed_wrapper_path, should_update_agent,
+   };
+   use crate::acp::types::AgentConfig;
    use std::{fs, path::PathBuf};
 
    #[test]
    fn managed_wrapper_path_prefers_expected_wrapper_name() {
       let temp_dir = tempfile::tempdir().expect("temp dir");
       let wrapper = if cfg!(windows) {
-         temp_dir.path().join("codex-cli.cmd")
+         temp_dir.path().join("test-agent.cmd")
       } else {
-         temp_dir.path().join("codex-cli")
+         temp_dir.path().join("test-agent")
       };
       fs::write(&wrapper, "echo test").expect("write wrapper");
 
       let resolved =
-         managed_wrapper_path(Some(temp_dir.path()), "codex-cli").expect("wrapper should exist");
+         managed_wrapper_path(Some(temp_dir.path()), "test-agent").expect("wrapper should exist");
       assert_eq!(resolved, wrapper);
    }
 
@@ -342,5 +369,32 @@ mod tests {
    fn check_dir_for_binary_returns_none_for_missing_binary() {
       let missing = check_dir_for_binary(PathBuf::from("/tmp/athas-missing").as_path(), "nope");
       assert!(missing.is_none());
+   }
+
+   #[test]
+   fn compares_managed_agent_versions_semantically() {
+      let mut agent = AgentConfig::new("test-agent", "Test Agent", "test-agent");
+      agent.available_version = Some("2.0.0".to_string());
+      agent.installed_version = Some("1.10.0".to_string());
+
+      assert!(should_update_agent(&agent, true));
+
+      agent.installed_version = Some("2.0.0".to_string());
+      assert!(!should_update_agent(&agent, true));
+   }
+
+   #[test]
+   fn reads_managed_agent_version_metadata() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      fs::write(
+         temp_dir.path().join("test-agent.json"),
+         r#"{"version":"3.2.1"}"#,
+      )
+      .expect("write metadata");
+
+      assert_eq!(
+         managed_agent_version(Some(temp_dir.path()), "test-agent"),
+         Some("3.2.1".to_string())
+      );
    }
 }

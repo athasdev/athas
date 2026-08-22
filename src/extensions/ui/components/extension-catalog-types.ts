@@ -37,6 +37,9 @@ export interface UnifiedExtension {
   agentId?: string;
   icon?: string | null;
   canInstall?: boolean;
+  hasUpdate?: boolean;
+  installedVersion?: string | null;
+  availableVersion?: string | null;
   packageSize?: number;
   contributionSummary?: string[];
   selectionId?: string;

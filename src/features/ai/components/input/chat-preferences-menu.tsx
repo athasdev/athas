@@ -4,7 +4,7 @@ import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
 import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
-import type { SessionConfigOption } from "@/features/ai/types/acp.types";
+import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
 import type { AgentType, ChatMode } from "@/features/ai/types/ai-chat.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -14,6 +14,7 @@ import { Button } from "@/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuCheckboxItem,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -72,61 +73,116 @@ function MenuSearchInput({
   );
 }
 
-function AgentPreferencesSubmenu({
+function ProviderPreferencesSubmenu({
   currentAgentId,
+  providerId,
   onAgentChange,
+  onProviderChange,
 }: {
   currentAgentId: AgentType;
+  providerId: string;
   onAgentChange: (agentId: AgentType) => void;
+  onProviderChange: (providerId: string) => void;
 }) {
   const { options, installAgent } = useAgentOptions(currentAgentId);
+  const providers = useAvailableProviders();
   const [query, setQuery] = useState("");
-  const currentAgentName = options.find((option) => option.isCurrent)?.name ?? "Agent";
-  const filteredOptions = options.filter((option) =>
+  const agentOptions = options.filter((option) => option.id !== "custom");
+  const apiProviders = providers.filter((provider) => provider.id !== "custom");
+  const customProvider = providers.find((provider) => provider.id === "custom");
+  const filteredAgents = agentOptions.filter((option) =>
     matchesSearchQuery(query, [option.name, option.description ?? "", option.id]),
   );
+  const filteredApiProviders = apiProviders.filter((provider) =>
+    matchesSearchQuery(query, [provider.name, provider.id]),
+  );
+  const showCustom = Boolean(
+    customProvider && matchesSearchQuery(query, [customProvider.name, customProvider.id]),
+  );
+  const currentName =
+    currentAgentId === "custom"
+      ? (providers.find((provider) => provider.id === providerId)?.name ?? providerId)
+      : (options.find((option) => option.isCurrent)?.name ?? currentAgentId);
+  const selectedValue =
+    currentAgentId === "custom" ? `api:${providerId}` : `agent:${currentAgentId}`;
+  const hasGroupedResults = filteredAgents.length > 0 || filteredApiProviders.length > 0;
 
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
         <Sparkles />
-        <PreferenceLabel>Agent</PreferenceLabel>
-        <CurrentValue>{currentAgentName}</CurrentValue>
+        <PreferenceLabel>Provider</PreferenceLabel>
+        <CurrentValue>{currentName}</CurrentValue>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="min-w-56">
-        <MenuSearchInput value={query} onChange={setQuery} placeholder="Search agents..." />
+        <MenuSearchInput value={query} onChange={setQuery} placeholder="Search providers..." />
         <DropdownMenuRadioGroup
-          value={currentAgentId}
-          onValueChange={(agentId) => {
-            const option = options.find((candidate) => candidate.id === agentId);
+          value={selectedValue}
+          onValueChange={(value) => {
+            const [kind, id] = value.split(":", 2);
+            if (!id) return;
+            if (kind === "api") {
+              onProviderChange(id);
+              onAgentChange("custom");
+              return;
+            }
+
+            const option = agentOptions.find((candidate) => candidate.id === id);
             if (!option) return;
-            if (option.isInstalled || option.id === "custom") {
+            if (option.isInstalled) {
               onAgentChange(option.id);
               return;
             }
             if (option.canInstall) void installAgent(option.id, option.name);
           }}
         >
-          {filteredOptions.map((option) => (
-            <DropdownMenuRadioItem
-              key={option.id}
-              value={option.id}
-              disabled={option.isInstalling || (!option.isInstalled && !option.canInstall)}
-              title={option.description}
-            >
-              <ProviderIcon providerId={option.id} size={14} />
-              <span className="min-w-0 flex-1 truncate">{option.name}</span>
-              {!option.isInstalled ? (
-                option.isInstalling ? (
-                  <Spinner label={`Installing ${option.name}`} compact />
-                ) : (
-                  <span className="text-subtle-foreground ui-text-sm">Install</span>
-                )
-              ) : null}
-            </DropdownMenuRadioItem>
-          ))}
-          {filteredOptions.length === 0 ? (
-            <DropdownMenuItem disabled>No matching agents</DropdownMenuItem>
+          {filteredAgents.length > 0 ? (
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Agents</DropdownMenuLabel>
+              {filteredAgents.map((option) => (
+                <DropdownMenuRadioItem
+                  key={option.id}
+                  value={`agent:${option.id}`}
+                  disabled={option.isInstalling || (!option.isInstalled && !option.canInstall)}
+                  title={option.description}
+                >
+                  <ProviderIcon providerId={option.id} size={14} />
+                  <span className="min-w-0 flex-1 truncate">{option.name}</span>
+                  {!option.isInstalled ? (
+                    option.isInstalling ? (
+                      <Spinner label={`Installing ${option.name}`} compact />
+                    ) : (
+                      <span className="text-subtle-foreground ui-text-chrome">Install</span>
+                    )
+                  ) : option.updateAvailable ? (
+                    <span className="text-subtle-foreground ui-text-chrome">Update available</span>
+                  ) : null}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuGroup>
+          ) : null}
+          {filteredApiProviders.length > 0 ? (
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>API</DropdownMenuLabel>
+              {filteredApiProviders.map((provider) => (
+                <DropdownMenuRadioItem key={provider.id} value={`api:${provider.id}`}>
+                  <ProviderIcon providerId={provider.id} size={14} />
+                  {provider.name}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuGroup>
+          ) : null}
+          {showCustom ? (
+            <>
+              {hasGroupedResults ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuRadioItem value="api:custom">
+                <ProviderIcon providerId="custom" size={14} />
+                Custom
+              </DropdownMenuRadioItem>
+            </>
+          ) : null}
+          {!hasGroupedResults && !showCustom ? (
+            <DropdownMenuItem disabled>No matching providers</DropdownMenuItem>
           ) : null}
         </DropdownMenuRadioGroup>
       </DropdownMenuSubContent>
@@ -184,11 +240,13 @@ function AthasAgentPreferences({
   modelId,
   onProviderChange,
   onModelChange,
+  showProviderSelector,
 }: {
   providerId: string;
   modelId: string;
   onProviderChange: (providerId: string) => void;
   onModelChange: (modelId: string) => void;
+  showProviderSelector: boolean;
 }) {
   const [providerQuery, setProviderQuery] = useState("");
   const [modelQuery, setModelQuery] = useState("");
@@ -196,8 +254,13 @@ function AthasAgentPreferences({
   const currentProvider = providers.find((provider) => provider.id === providerId);
   const { availableModels, currentModelName, hasHostedAi, isLoadingModels, modelFetchError } =
     useAIModelOptions(providerId, modelId, onModelChange);
-  const filteredProviders = providers.filter((provider) =>
-    matchesSearchQuery(providerQuery, [provider.name, provider.id]),
+  const filteredApiProviders = providers.filter(
+    (provider) =>
+      provider.id !== "custom" && matchesSearchQuery(providerQuery, [provider.name, provider.id]),
+  );
+  const showCustom = providers.some(
+    (provider) =>
+      provider.id === "custom" && matchesSearchQuery(providerQuery, [provider.name, provider.id]),
   );
   const filteredModels = availableModels.filter((model) =>
     matchesSearchQuery(modelQuery, [model.name, model.id]),
@@ -205,31 +268,47 @@ function AthasAgentPreferences({
 
   return (
     <>
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger>
-          <ProviderIcon providerId={providerId} size={14} />
-          <PreferenceLabel>Provider</PreferenceLabel>
-          <CurrentValue>{currentProvider?.name ?? providerId}</CurrentValue>
-        </DropdownMenuSubTrigger>
-        <DropdownMenuSubContent className="min-w-48">
-          <MenuSearchInput
-            value={providerQuery}
-            onChange={setProviderQuery}
-            placeholder="Search providers..."
-          />
-          <DropdownMenuRadioGroup value={providerId} onValueChange={onProviderChange}>
-            {filteredProviders.map((provider) => (
-              <DropdownMenuRadioItem key={provider.id} value={provider.id}>
-                <ProviderIcon providerId={provider.id} size={14} />
-                {provider.name}
-              </DropdownMenuRadioItem>
-            ))}
-            {filteredProviders.length === 0 ? (
-              <DropdownMenuItem disabled>No matching providers</DropdownMenuItem>
-            ) : null}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
+      {showProviderSelector ? (
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <ProviderIcon providerId={providerId} size={14} />
+            <PreferenceLabel>Provider</PreferenceLabel>
+            <CurrentValue>{currentProvider?.name ?? providerId}</CurrentValue>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="min-w-48">
+            <MenuSearchInput
+              value={providerQuery}
+              onChange={setProviderQuery}
+              placeholder="Search providers..."
+            />
+            <DropdownMenuRadioGroup value={providerId} onValueChange={onProviderChange}>
+              {filteredApiProviders.length > 0 ? (
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>API</DropdownMenuLabel>
+                  {filteredApiProviders.map((provider) => (
+                    <DropdownMenuRadioItem key={provider.id} value={provider.id}>
+                      <ProviderIcon providerId={provider.id} size={14} />
+                      {provider.name}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuGroup>
+              ) : null}
+              {showCustom ? (
+                <>
+                  {filteredApiProviders.length > 0 ? <DropdownMenuSeparator /> : null}
+                  <DropdownMenuRadioItem value="custom">
+                    <ProviderIcon providerId="custom" size={14} />
+                    Custom
+                  </DropdownMenuRadioItem>
+                </>
+              ) : null}
+              {filteredApiProviders.length === 0 && !showCustom ? (
+                <DropdownMenuItem disabled>No matching providers</DropdownMenuItem>
+              ) : null}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      ) : null}
 
       <DropdownMenuSub>
         <DropdownMenuSubTrigger>
@@ -329,9 +408,23 @@ function AcpConfigPreferences({
   onChange,
 }: {
   options: SessionConfigOption[];
-  onChange: (optionId: string, value: string) => void;
+  onChange: (optionId: string, value: SessionConfigValue) => void;
 }) {
   return options.map((option) => {
+    if (option.kind.type === "boolean") {
+      return (
+        <DropdownMenuCheckboxItem
+          key={option.id}
+          checked={option.kind.currentValue}
+          onCheckedChange={(checked) => onChange(option.id, checked)}
+          title={option.description}
+        >
+          <Brain />
+          <PreferenceLabel>{option.name}</PreferenceLabel>
+        </DropdownMenuCheckboxItem>
+      );
+    }
+
     if (option.kind.options.length === 0) return null;
     const currentValue = option.kind.currentValue || option.kind.options[0]?.id || "";
     const currentName =
@@ -369,7 +462,7 @@ interface ChatPreferencesMenuProps {
   onAgentChange?: (agentId: AgentType) => void;
   onProviderChange: (providerId: string) => void;
   onModelChange: (modelId: string) => void;
-  onSessionConfigChange: (optionId: string, value: string) => void;
+  onSessionConfigChange: (optionId: string, value: SessionConfigValue) => void;
   onSelectSkill: (skill: AIChatSkill) => void;
   onBeforeOpen: () => void;
 }
@@ -415,9 +508,11 @@ export function ChatPreferencesMenu({
         <DropdownMenuGroup>
           <DropdownMenuLabel>Session</DropdownMenuLabel>
           {preferences.showAgentPreference && onAgentChange ? (
-            <AgentPreferencesSubmenu
+            <ProviderPreferencesSubmenu
               currentAgentId={currentAgentId}
+              providerId={providerId}
               onAgentChange={onAgentChange}
+              onProviderChange={onProviderChange}
             />
           ) : null}
           {preferences.showAthasAgentPreferences ? (
@@ -426,6 +521,7 @@ export function ChatPreferencesMenu({
               modelId={modelId}
               onProviderChange={onProviderChange}
               onModelChange={onModelChange}
+              showProviderSelector={!preferences.showAgentPreference}
             />
           ) : (
             <AcpConfigPreferences

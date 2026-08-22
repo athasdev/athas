@@ -50,17 +50,14 @@ export function createAcpActions(set: SetAIChatStore, get: GetAIChatStore): AcpA
 
       set((state) => {
         state.sessionConfigOptions = state.sessionConfigOptions.map((option) => {
-          if (option.id !== configId || option.kind.type !== "select") {
-            return option;
+          if (option.id !== configId) return option;
+          if (option.kind.type === "select" && typeof value === "string") {
+            option.kind.currentValue = value;
           }
-
-          return {
-            ...option,
-            kind: {
-              ...option.kind,
-              currentValue: value,
-            },
-          };
+          if (option.kind.type === "boolean" && typeof value === "boolean") {
+            option.kind.currentValue = value;
+          }
+          return option;
         });
       });
 

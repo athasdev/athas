@@ -219,6 +219,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const isExtensionInstalling = (extension: UnifiedExtension) =>
     Boolean(availableExtensions.get(extension.id)?.isInstalling || isAgentInstalling(extension));
   const hasExtensionUpdate = (extension: UnifiedExtension) =>
+    Boolean(extension.hasUpdate) ||
     extensionsWithUpdates.has(extension.id) ||
     Boolean(
       extension.skill &&

@@ -1,6 +1,7 @@
 import type {
   AcpAgentStatus,
   SessionConfigOption,
+  SessionConfigValue,
   SessionMode,
   SlashCommand,
 } from "@/features/ai/types/acp.types";
@@ -84,7 +85,7 @@ export interface AIChatActions {
   setAcpStatus: (status: AcpAgentStatus | null) => void;
   changeSessionMode: (modeId: string) => Promise<void>;
   setSessionConfigOptions: (options: SessionConfigOption[]) => void;
-  changeSessionConfigOption: (configId: string, value: string) => Promise<void>;
+  changeSessionConfigOption: (configId: string, value: SessionConfigValue) => Promise<void>;
 
   getWorkspaceSessionSnapshot: () => AIWorkspaceSessionSnapshot;
   restoreWorkspaceSession: (snapshot: AIWorkspaceSessionSnapshot | null | undefined) => void;
