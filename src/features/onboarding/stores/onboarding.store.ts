@@ -4,8 +4,13 @@ import {
   markOnboardingCompleted,
   markOnboardingSeen,
   resolveOnboardingContext,
+  shouldHideAIChatOnStartup,
   type OnboardingContext,
 } from "@/features/onboarding/lib/onboarding-state";
+import {
+  initializeSettingsStore,
+  useSettingsStore,
+} from "@/features/settings/stores/settings.store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 interface OnboardingStoreState {
@@ -32,7 +37,12 @@ const useOnboardingStoreBase = create<OnboardingStoreState>()((set, get) => ({
         return;
       }
 
+      await initializeSettingsStore();
       const context = await resolveOnboardingContext();
+
+      if (shouldHideAIChatOnStartup(context)) {
+        useSettingsStore.getState().actions.toggleAIChatVisible(false);
+      }
 
       set({
         initialized: true,
