@@ -13,6 +13,8 @@ export const buttonVariants = cva(
         default: "border-0 bg-accent text-foreground hover:bg-selected",
         accent:
           "border border-primary/30 bg-primary/12 text-primary hover:bg-primary/20 data-[active=true]:border-primary/45 data-[active=true]:bg-primary/24",
+        "accent-ghost":
+          "border-0 bg-transparent text-primary hover:bg-primary/10 data-[active=true]:bg-primary/12",
         ghost:
           "border-0 bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground",
         danger:
@@ -22,6 +24,7 @@ export const buttonVariants = cva(
         default: "h-8 rounded-(--athas-chrome-radius) px-3",
         xs: "h-6 gap-1 rounded-(--athas-chrome-radius) px-1.5",
         sm: "h-7 rounded-(--athas-chrome-radius) px-2.5",
+        md: "h-8 rounded-(--athas-chrome-radius) px-2.5 ui-text-base",
         lg: "h-9 rounded-(--athas-chrome-radius) px-4",
         icon: "size-8 rounded-full p-0",
         "icon-xs": "size-6 rounded-full p-0",
