@@ -12,6 +12,7 @@ import { cn } from "@/utils/cn";
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   size?: "xs" | "sm" | "md";
   variant?: "default" | "ghost" | "inline";
+  shape?: "default" | "pill";
   leftIcon?: AppIcon;
   rightIcon?: AppIcon;
   containerClassName?: string;
@@ -34,6 +35,10 @@ const inputVariants = cva(
         xs: "",
         sm: "",
         md: "",
+      },
+      shape: {
+        default: "",
+        pill: "rounded-full",
       },
       hasLeftIcon: {
         true: "",
@@ -58,6 +63,7 @@ const inputVariants = cva(
     defaultVariants: {
       size: "sm",
       variant: "default",
+      shape: "default",
       hasLeftIcon: false,
       hasRightIcon: false,
     },
@@ -104,6 +110,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   {
     size = "sm",
     variant = "default",
+    shape = "default",
     className,
     leftIcon: LeftIcon,
     rightIcon: RightIcon,
@@ -145,7 +152,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         className={cn(
           controlSurfaceVariants({ variant }),
           controlSizeVariants({ size }),
-          inputVariants({ size, variant, hasLeftIcon, hasRightIcon }),
+          inputVariants({ size, variant, shape, hasLeftIcon, hasRightIcon }),
           className,
         )}
         {...props}
@@ -172,7 +179,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         className={cn(
           controlSurfaceVariants({ variant }),
           controlSizeVariants({ size }),
-          inputVariants({ size, variant, hasLeftIcon, hasRightIcon }),
+          inputVariants({ size, variant, shape, hasLeftIcon, hasRightIcon }),
           className,
         )}
         {...props}

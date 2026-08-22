@@ -274,6 +274,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
               }}
               leftIcon={Search}
               size="md"
+              shape="pill"
               className="w-full"
             />
           </div>
@@ -299,7 +300,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
           <Card
             variant="elevated"
             size="flush"
-            className="@container/settings mt-0 mr-2 mb-2 ml-0 min-w-0 flex-1 bg-background max-[720px]:ml-2"
+            className="@container/settings mt-0 mr-2 mb-2 ml-0 min-w-0 flex-1 max-[720px]:ml-2"
           >
             <ScrollArea
               orientation="vertical"
