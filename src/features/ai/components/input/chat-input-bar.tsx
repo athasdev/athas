@@ -924,8 +924,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
       inputRef.current.innerHTML = "";
     }
 
-    // Send the captured message (TODO: include images in message)
-    await onSendMessage(currentInput);
+    // Send the captured message
+    await onSendMessage(currentInput, currentImages.length > 0 ? currentImages : undefined);
   };
 
   const focusInput = useCallback(() => inputRef.current?.focus(), []);

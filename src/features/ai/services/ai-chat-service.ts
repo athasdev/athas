@@ -17,6 +17,7 @@ import {
 } from "@/features/ai/services/providers/ai-provider-registry";
 import { isOllamaCloudUrl } from "@/features/ai/services/providers/ollama-provider";
 import { processStreamingResponse } from "@/utils/stream-utils";
+import type { DecodedPastedImage } from "@/features/ai/utils/pasted-images";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { canUseHostedProvider } from "@/features/ai/lib/provider-access";
 import { resolveChatCompletionTokenLimit } from "@/features/ai/lib/chat-completion-budget";
@@ -155,6 +156,7 @@ export const getChatCompletionStream = async (
   onResourceChunk?: (uri: string, name: string | null) => void,
   chatId?: string,
   systemPromptOverride?: string,
+  images?: readonly DecodedPastedImage[],
 ): Promise<void> => {
   try {
     if (agentId === CODEX_INTEGRATION_ID) {
@@ -198,7 +200,7 @@ export const getChatCompletionStream = async (
         },
         chatId,
       );
-      await handler.start(userMessage, context);
+      await handler.start(userMessage, context, images);
       return;
     }
 

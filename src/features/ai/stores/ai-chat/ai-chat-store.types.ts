@@ -11,6 +11,7 @@ import type {
   Message,
   OutputStyle,
 } from "@/features/ai/types/ai-chat.types";
+import type { PastedImage } from "@/features/ai/types/chat-composer.types";
 import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";
 
 export interface AIWorkspaceSessionSnapshot {
@@ -22,6 +23,7 @@ interface PendingAgentLaunchRequest {
   chatId: string;
   agentId: AgentType;
   prompt: string;
+  images?: PastedImage[];
   selectedBufferIds: string[];
   selectedFilesPaths: string[];
 }

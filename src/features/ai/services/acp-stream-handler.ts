@@ -9,6 +9,7 @@ import type {
   AgentConfig,
 } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
+import type { DecodedPastedImage } from "@/features/ai/utils/pasted-images";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { getAcpPathBaseName, toAcpFileUri } from "@/features/ai/lib/acp-file-uri";
@@ -89,14 +90,18 @@ export class AcpStreamHandler {
     await handler.ensureAgentRunning();
   }
 
-  async start(userMessage: string, context: ContextInfo): Promise<void> {
+  async start(
+    userMessage: string,
+    context: ContextInfo,
+    images: readonly DecodedPastedImage[] = [],
+  ): Promise<void> {
     try {
       AcpStreamHandler.activeHandler = this;
       await this.setupListeners();
       await this.ensureAgentRunning();
       this.awaitingFirstResponse = true;
       await withTimeout(
-        invoke("send_acp_prompt", { prompt: this.buildPrompt(userMessage, context) }),
+        invoke("send_acp_prompt", { prompt: this.buildPrompt(userMessage, context, images) }),
         ACP_PROMPT_TIMEOUT_MS,
         `${this.agentId} did not accept the prompt in time`,
       );
@@ -244,41 +249,47 @@ export class AcpStreamHandler {
     return `${this.agentId} is currently unavailable.`;
   }
 
-  private buildPrompt(userMessage: string, context: ContextInfo): AcpPromptContentBlock[] {
+  private buildPrompt(
+    userMessage: string,
+    context: ContextInfo,
+    images: readonly DecodedPastedImage[] = [],
+  ): AcpPromptContentBlock[] {
     // ACP slash commands must remain the first token in the prompt.
     // If we prepend context, agents interpret them as plain text.
+    const blocks: AcpPromptContentBlock[] = [];
     if (userMessage.trimStart().startsWith("/")) {
-      return [{ type: "text", text: userMessage }];
-    }
+      blocks.push({ type: "text", text: userMessage });
+    } else {
+      const contextPrompt = [buildContextPrompt(context), getFollowUpActionsInstruction()]
+        .filter(Boolean)
+        .join("\n\n");
+      blocks.push({
+        type: "text",
+        text: contextPrompt ? `${contextPrompt}\n\n${userMessage}` : userMessage,
+      });
 
-    const contextPrompt = [buildContextPrompt(context), getFollowUpActionsInstruction()]
-      .filter(Boolean)
-      .join("\n\n");
-    const blocks: AcpPromptContentBlock[] = [
-      { type: "text", text: contextPrompt ? `${contextPrompt}\n\n${userMessage}` : userMessage },
-    ];
+      const supportsEmbeddedContext =
+        useAIChatStore.getState().acpStatus?.agentCapabilities?.promptCapabilities
+          .embeddedContext ?? false;
 
-    const supportsEmbeddedContext =
-      useAIChatStore.getState().acpStatus?.agentCapabilities?.promptCapabilities.embeddedContext ??
-      false;
-
-    for (const file of context.mentionedFiles || []) {
-      if (supportsEmbeddedContext) {
-        blocks.push({
-          type: "resource",
-          resource: {
+      for (const file of context.mentionedFiles || []) {
+        if (supportsEmbeddedContext) {
+          blocks.push({
+            type: "resource",
+            resource: {
+              uri: toAcpFileUri(file.path),
+              text: file.content,
+              mimeType: "text/plain",
+            },
+          });
+        } else {
+          blocks.push({
+            type: "resource_link",
             uri: toAcpFileUri(file.path),
-            text: file.content,
+            name: getAcpPathBaseName(file.path),
             mimeType: "text/plain",
-          },
-        });
-      } else {
-        blocks.push({
-          type: "resource_link",
-          uri: toAcpFileUri(file.path),
-          name: getAcpPathBaseName(file.path),
-          mimeType: "text/plain",
-        });
+          });
+        }
       }
     }
 
@@ -297,6 +308,10 @@ export class AcpStreamHandler {
         name: getAcpPathBaseName(filePath),
         mimeType: "text/plain",
       });
+    }
+
+    for (const image of images) {
+      blocks.push({ type: "image", data: image.data, mediaType: image.mediaType });
     }
 
     return blocks;

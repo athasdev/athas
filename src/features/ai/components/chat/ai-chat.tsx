@@ -29,6 +29,8 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat.types";
+import type { PastedImage } from "@/features/ai/types/chat-composer.types";
+import { decodePastedImages } from "@/features/ai/utils/pasted-images";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
 import {
   getFallbackAgentSessionTitle,
@@ -93,7 +95,7 @@ const AIChat = memo(function AIChat({
   const [isSurfaceTyping, setIsSurfaceTyping] = useState(false);
   const [surfaceStreamingMessageId, setSurfaceStreamingMessageId] = useState<string | null>(null);
   const [queueCount, setQueueCount] = useState(0);
-  const messageQueueRef = useRef<string[]>([]);
+  const messageQueueRef = useRef<{ content: string; images?: PastedImage[] }[]>([]);
   const effectiveChatId = chatId ?? chatState.currentChatId;
   const currentChat = useMemo(
     () => chatState.chats.find((chat) => chat.id === effectiveChatId),
@@ -395,7 +397,7 @@ const AIChat = memo(function AIChat({
 
   const processMessage = async (
     messageContent: string,
-    options: { editedUserMessageId?: string } = {},
+    options: { editedUserMessageId?: string; images?: PastedImage[] } = {},
   ) => {
     const store = useAIChatStore.getState();
     const targetChat = effectiveChatId
@@ -433,6 +435,7 @@ const AIChat = memo(function AIChat({
         ? existingMessages.slice(0, editedUserMessageIndex)
         : existingMessages,
     );
+    const decodedImages = decodePastedImages(options.images ?? []);
     const userMessage: Message =
       editedUserMessageIndex >= 0
         ? {
@@ -445,6 +448,7 @@ const AIChat = memo(function AIChat({
             content: trimmedMessageContent,
             role: "user",
             timestamp: new Date(),
+            images: decodedImages.length > 0 ? decodedImages : undefined,
           };
 
     const assistantMessageId = createMessageId();
@@ -935,6 +939,8 @@ details: ${errorDetails || mainError}
           );
         },
         targetChatId,
+        undefined,
+        decodedImages,
       );
     } catch (error) {
       console.error("Failed to start streaming:", error);
@@ -957,32 +963,32 @@ details: ${errorDetails || mainError}
     const nextMessage = messageQueueRef.current.shift();
     setQueueCount(messageQueueRef.current.length);
     if (nextMessage) {
-      console.log("Processing next queued message:", nextMessage);
+      console.log("Processing next queued message:", nextMessage.content);
       await new Promise((resolve) => setTimeout(resolve, 500));
-      await processMessage(nextMessage);
+      await processMessage(nextMessage.content, { images: nextMessage.images });
     }
   }, [isSurfaceTyping, surfaceStreamingMessageId]);
 
   const sendMessage = useCallback(
-    async (messageContent: string) => {
+    async (messageContent: string, images?: PastedImage[]) => {
       const isAcp = isAcpAgent(currentAgentId);
       // For ACP agents, we don't need an API key.
       if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
 
       if (isSurfaceTyping || surfaceStreamingMessageId) {
-        messageQueueRef.current.push(messageContent);
+        messageQueueRef.current.push({ content: messageContent, images });
         setQueueCount(messageQueueRef.current.length);
         return;
       }
 
-      await processMessage(messageContent);
+      await processMessage(messageContent, { images });
     },
     [chatState.hasApiKey, currentAgentId, isSurfaceTyping, surfaceStreamingMessageId],
   );
 
   const handleSendMessage = useCallback(
-    async (messageContent: string) => {
-      await sendMessage(messageContent);
+    async (messageContent: string, images?: PastedImage[]) => {
+      await sendMessage(messageContent, images);
     },
     [sendMessage],
   );
@@ -1007,7 +1013,7 @@ details: ${errorDetails || mainError}
     setSelectedBufferIds(new Set(pendingLaunch.selectedBufferIds));
     setSelectedFilesPaths(new Set(pendingLaunch.selectedFilesPaths));
     chatActions.setPendingAgentLaunchRequest(null);
-    void sendMessage(pendingLaunch.prompt);
+    void sendMessage(pendingLaunch.prompt, pendingLaunch.images);
   }, [
     chatActions,
     effectiveChatId,

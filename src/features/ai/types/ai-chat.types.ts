@@ -5,6 +5,7 @@ import type {
 } from "@/features/ai/types/acp.types";
 import type { ChatFollowUpAction } from "@/features/ai/lib/follow-up-actions";
 import type { FileEntry } from "@/features/file-system/types/app.types";
+import type { PastedImage } from "@/features/ai/types/chat-composer.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { GenerativeUIComponent } from "@/extensions/ui/types/generative-ui";
 
@@ -109,6 +110,6 @@ export interface AIChatInputBarProps {
   presentation?: "default" | "initial";
   autoFocus?: boolean;
   onAgentChange?: (agentId: AgentType) => void;
-  onSendMessage: (message: string) => Promise<void>;
+  onSendMessage: (message: string, images?: PastedImage[]) => Promise<void>;
   onStopStreaming: () => void;
 }

@@ -6,6 +6,7 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
+import type { PastedImage } from "@/features/ai/types/chat-composer.types";
 
 const EMPTY_PROJECT_FILES: FileEntry[] = [];
 
@@ -33,7 +34,7 @@ export function AgentLaunchInput({
   const [selectedFilesPaths, setSelectedFilesPaths] = useState<Set<string>>(new Set());
 
   const submit = useCallback(
-    async (prompt: string) => {
+    async (prompt: string, images?: PastedImage[]) => {
       if (isTerminalAgent(selectedAgentId)) {
         openTerminalAgent(selectedAgentId);
         return;
@@ -47,6 +48,7 @@ export function AgentLaunchInput({
         chatId,
         agentId: selectedAgentId,
         prompt: nextPrompt,
+        images: images && images.length > 0 ? images : undefined,
         selectedBufferIds: Array.from(selectedBufferIds),
         selectedFilesPaths: Array.from(selectedFilesPaths),
       });
