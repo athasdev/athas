@@ -8,8 +8,10 @@ function getPathSegments(filePath: string): string[] {
   // Normalize path separators to forward slash
   const normalized = filePath.replace(/\\/g, "/");
   const parts = normalized.split("/");
+  // Drop empty segments caused by absolute-path leading slashes
+  const nonEmptyParts = parts.filter((part) => part.length > 0);
   // Return all parts except the last one (filename)
-  return parts.slice(0, -1);
+  return nonEmptyParts.slice(0, -1);
 }
 
 /**
