@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+vp staged
+bun scripts/hooks/pre-commit.ts

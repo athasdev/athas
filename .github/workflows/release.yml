@@ -30,10 +30,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.18.0
         with:
-          bun-version: 1.3.14
+          node-version-file: .node-version
+          run-install: false
 
       - name: Generate release metadata
         id: release_meta
@@ -150,10 +151,12 @@ jobs:
           echo "Disk usage after cleanup:"
           df -h
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.18.0
         with:
-          bun-version: 1.3.14
+          node-version-file: .node-version
+          cache: true
+          run-install: false
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -197,7 +200,7 @@ jobs:
         run: cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/cef --locked
 
       - name: Install frontend dependencies
-        run: bun install --ignore-scripts && bun scripts/postinstall.ts
+        run: vp install --ignore-scripts && bun scripts/postinstall.ts
 
       - name: Import Apple Certificate (macOS only)
         if: matrix.os == 'macos'
@@ -412,10 +415,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.18.0
         with:
-          bun-version: 1.3.14
+          node-version-file: .node-version
+          run-install: false
 
       - name: Download release metadata
         uses: actions/download-artifact@v4

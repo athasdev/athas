@@ -4,24 +4,23 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bunx vp test run",
-    "typecheck": "tsc --noEmit",
+    "test": "vp test run",
     "check": "bash scripts/check.sh",
     "check:frontend": "bash scripts/check/frontend.sh",
     "check:zustand": "bun scripts/check/zustand-architecture.ts",
     "check:ui-contracts": "bun scripts/check/ui-semantic-contracts.ts",
     "check:services": "bun scripts/check/service-config.ts",
     "services:check": "bun run check:services",
-    "lint": "bunx vp lint .",
-    "fix": "bunx vp check --fix",
-    "format": "bunx vp fmt --write .",
+    "lint": "vp lint .",
+    "fix": "vp check --fix",
+    "format": "vp fmt --write .",
     "check:rust": "bash scripts/check/rust.sh",
-    "reset:workspace": "concurrently --names \"node,rust\" --prefix-colors \"cyan,yellow\" \"rimraf dist build node_modules bun.lockb && bun install\" \"cargo clean && cargo build\"",
+    "reset:workspace": "bun scripts/reset-workspace.ts",
     "postinstall": "bun scripts/postinstall.ts",
-    "prepare": "simple-git-hooks",
+    "prepare": "vp config --no-agent",
     "commitlint": "commitlint",
     "setup": "bun scripts/setup.ts",
-    "dev": "concurrently --kill-others --names \"extensions,app\" --prefix-colors \"cyan,magenta\" \"bun run extensions:serve\" \"VITE_EXTENSION_MARKETPLACE_LOCAL=true WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev --config src-tauri/tauri.preview.conf.json\"",
+    "dev": "bun scripts/dev.ts",
     "dev:stable": "WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev",
     "dev:preview": "WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev --config src-tauri/tauri.preview.conf.json",
     "dev:linux": "cargo tauri dev --config src-tauri/tauri.dev.conf.json -- --no-default-features --features linux -- --ozone-platform=x11 --disable-vulkan --disable-features=Vulkan",
@@ -141,15 +140,13 @@
     "@tree-sitter-grammars/tree-sitter-vue": "github:tree-sitter-grammars/tree-sitter-vue",
     "@tree-sitter-grammars/tree-sitter-yaml": "^0.7.1",
     "@tree-sitter-grammars/tree-sitter-zig": "^1.1.2",
-    "@types/node": "^26.0.1",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
-    "@voidzero-dev/vite-plus-core": "^0.2.1",
+    "@voidzero-dev/vite-plus-core": "0.3.0",
     "bun-types": "^1.3.14",
     "code-inspector-plugin": "^1.6.2",
-    "concurrently": "^10.0.3",
-    "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^4.3.1",
     "tree-sitter-astro": "github:virchau13/tree-sitter-astro",
     "tree-sitter-bash": "^0.25.1",
@@ -185,20 +182,16 @@
     "tree-sitter-typescript": "^0.23.2",
     "typescript": "^6.0.3",
     "typescript-language-server": "^5.3.0",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.1",
-    "vite-plus": "^0.2.1"
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.3.0",
+    "vite-plus": "0.3.0"
   },
   "overrides": {
     "next": "15.5.19",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.24",
-    "vitest": "4.1.9"
-  },
-  "simple-git-hooks": {
-    "pre-commit": "bun pre-commit",
-    "commit-msg": "bun commitlint --edit $1"
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.3.0",
+    "vitest": "4.1.11"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": "24.x"
   },
   "packageManager": "bun@1.3.14",
   "trustedDependencies": [

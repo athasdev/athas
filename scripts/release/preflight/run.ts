@@ -314,18 +314,9 @@ async function main() {
   if (runFullChecks) {
     header("Frontend Checks");
 
-    // Check: TypeScript
-    await runCheck("TypeScript type check", async () => {
-      const result = await $`bun typecheck`.quiet().nothrow();
-      if (result.exitCode !== 0) {
-        return { passed: false, message: "Type errors found" };
-      }
-      return { passed: true };
-    });
-
-    // Check: Vite+ lint and format
+    // Check: Vite+ format, lint, and types
     await runCheck("Vite+ check", async () => {
-      const result = await $`bunx vp check`.quiet().nothrow();
+      const result = await $`vp check`.quiet().nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Format, lint, or type errors found" };
       }
@@ -333,7 +324,7 @@ async function main() {
     });
 
     await runCheck("Vite+ test suite", async () => {
-      const result = await $`bunx vp test run`.quiet().nothrow();
+      const result = await $`vp test run`.quiet().nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Tests failed" };
       }
@@ -341,7 +332,7 @@ async function main() {
     });
 
     await runCheck("Vite+ build", async () => {
-      const result = await $`bunx vp build`.quiet().nothrow();
+      const result = await $`vp build`.quiet().nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Frontend build failed" };
       }

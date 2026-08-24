@@ -138,7 +138,11 @@ function inspectJsxOpeningElement(
   if (!ts.isIdentifier(node.tagName) || node.tagName.text !== "Select") return;
 
   for (const property of node.attributes.properties) {
-    if (ts.isJsxAttribute(property) && property.name.text === "menuClassName") {
+    if (
+      ts.isJsxAttribute(property) &&
+      ts.isIdentifier(property.name) &&
+      property.name.text === "menuClassName"
+    ) {
       report(
         errors,
         path,
