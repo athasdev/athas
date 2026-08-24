@@ -6,6 +6,7 @@ import {
   ArrowRightIcon as ArrowRight,
   ArrowsOutIcon as Maximize2,
   ArrowsInIcon as Minimize2,
+  DotsThreeIcon as MoreHorizontal,
   PlusIcon as Plus,
   SidebarSimpleIcon as PanelLeftClose,
 } from "@/ui/icons";
@@ -35,6 +36,12 @@ import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-d
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
 import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
@@ -44,7 +51,6 @@ import {
   setInternalTabDragHover,
   setInternalTabDragData,
 } from "../utils/internal-tab-drag";
-import { getMainTabDragProgress } from "../utils/main-tab-drag-progress";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
 
@@ -707,7 +713,7 @@ const TabBar = ({
                   motionDrag
                   onClickCapture={getClickCapture(buffer.id)}
                 >
-                  {({ isDragging, dragDistance }) => (
+                  {({ isDragging }) => (
                     <ContextMenu>
                       <ContextMenuTrigger className="contents">
                         <TabBarItem
@@ -716,7 +722,6 @@ const TabBar = ({
                           index={index}
                           isActive={buffer.id === activeBufferId}
                           isDraggedTab={isDragging}
-                          dragProgress={getMainTabDragProgress(dragDistance)}
                           onClick={() => handleTabSelect(buffer)}
                           onDoubleClick={(e) => handleDoubleClick(e, index)}
                           onKeyDown={(e) => handleKeyDown(e, index)}
@@ -812,32 +817,35 @@ const TabBar = ({
                 <Plus weight="bold" />
               </Button>
             )}
-            {paneId && !disablePaneActions && !isBottomPane && isInSplit && (
-              <Button
-                type="button"
-                onClick={() => closePane(paneId)}
-                variant="ghost"
-                size="icon-xs"
-                tooltip="Close Split"
-                tooltipSide="bottom"
-                aria-label="Close split pane"
-              >
-                <PanelLeftClose />
-              </Button>
-            )}
             {paneId && !disablePaneActions && !isBottomPane && (
-              <Button
-                type="button"
-                onClick={handleTogglePaneFullscreen}
-                variant="ghost"
-                tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
-                commandId="workbench.toggleActivePaneFullscreen"
-                tooltipSide="bottom"
-                aria-label="Toggle editor full screen"
-                size="icon-xs"
-              >
-                {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      tooltip="Pane actions"
+                      tooltipSide="bottom"
+                      aria-label="Pane actions"
+                    />
+                  }
+                >
+                  <MoreHorizontal />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleTogglePaneFullscreen}>
+                    {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
+                    {isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
+                  </DropdownMenuItem>
+                  {isInSplit ? (
+                    <DropdownMenuItem onClick={() => closePane(paneId)}>
+                      <PanelLeftClose />
+                      Close split
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </TabBarSurface>

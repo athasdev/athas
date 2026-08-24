@@ -2,12 +2,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   resolveProjectGitHubRepository,
   type GitHubRepository,
-} from "@/features/admin-data/lib/admin-data-github";
+} from "@/features/views/lib/view-github";
 import {
-  planAdminDataSourceWithIntelligence,
-  planKnownGitHubSource,
-} from "@/features/admin-data/services/admin-data-intelligence";
-import type { AdminDataSource } from "@/features/admin-data/types/admin-data.types";
+  generateCustomView,
+  createKnownGitHubView,
+} from "@/features/views/services/view-generator";
+import type { CustomViewDefinition } from "@/features/views/types/view.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -20,11 +20,11 @@ import { ScrollArea } from "@/ui/scroll-area";
 import Select from "@/ui/select";
 import Textarea from "@/ui/textarea";
 
-interface AdminDataSourceSetupProps {
+interface ViewSetupProps {
   projectPath: string;
-  source?: AdminDataSource;
+  view?: CustomViewDefinition;
   onCancel: () => void;
-  onSave: (source: AdminDataSource) => Promise<void>;
+  onSave: (view: CustomViewDefinition) => Promise<void>;
 }
 
 function isGitHubApiUrl(value: string): boolean {
@@ -35,28 +35,23 @@ function isGitHubApiUrl(value: string): boolean {
   }
 }
 
-export function AdminDataSourceSetup({
-  projectPath,
-  source,
-  onCancel,
-  onSave,
-}: AdminDataSourceSetupProps) {
+export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProps) {
   const subscription = useAuthStore((state) => state.subscription);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
   const hasIntelligence = hasProductCapability(subscription, "intelligence");
-  const [mode, setMode] = useState<"intelligence" | "manual">(source ? "manual" : "intelligence");
+  const [mode, setMode] = useState<"intelligence" | "manual">(view ? "manual" : "intelligence");
   const [request, setRequest] = useState("");
   const [repository, setRepository] = useState<GitHubRepository | null>(null);
   const [isResolvingRepository, setIsResolvingRepository] = useState(true);
-  const [kind, setKind] = useState<AdminDataSource["kind"]>(source?.kind ?? "github");
-  const [name, setName] = useState(source?.name ?? "");
+  const [kind, setKind] = useState<CustomViewDefinition["kind"]>(view?.kind ?? "github");
+  const [name, setName] = useState(view?.name ?? "");
   const [location, setLocation] = useState(
-    source?.kind === "github" ? source.endpointPath : (source?.url ?? ""),
+    view?.kind === "github" ? view.endpointPath : (view?.url ?? ""),
   );
-  const [rowsPath, setRowsPath] = useState(source?.rowsPath ?? "");
+  const [rowsPath, setRowsPath] = useState(view?.rowsPath ?? "");
   const [useGitHubAccount, setUseGitHubAccount] = useState(
-    source?.kind === "json" && source.authentication === "github",
+    view?.kind === "json" && view.authentication === "github",
   );
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -89,11 +84,11 @@ export function AdminDataSourceSetup({
     event.preventDefault();
     const trimmedRequest = request.trim();
     if (!trimmedRequest) {
-      setError("Describe the data you want to see");
+      setError("Describe the view you want to create");
       return;
     }
     if (!repository) {
-      setError("This project does not have a GitHub remote. Configure the source manually.");
+      setError("This project does not have a GitHub remote. Configure the view manually.");
       return;
     }
 
@@ -101,12 +96,12 @@ export function AdminDataSourceSetup({
     setError(null);
 
     try {
-      let plannedSource: AdminDataSource | null = null;
+      let generatedView: CustomViewDefinition | null = null;
       let intelligenceError: unknown = null;
 
       if (isAuthenticated && hasIntelligence) {
         try {
-          plannedSource = await planAdminDataSourceWithIntelligence({
+          generatedView = await generateCustomView({
             request: trimmedRequest,
             repository,
             model: aiAutocompleteModelId,
@@ -116,17 +111,17 @@ export function AdminDataSourceSetup({
         }
       }
 
-      plannedSource ??= planKnownGitHubSource(trimmedRequest);
-      if (!plannedSource) {
+      generatedView ??= createKnownGitHubView(trimmedRequest);
+      if (!generatedView) {
         throw (
           intelligenceError ??
           new Error("This request needs manual configuration. Choose Configure manually.")
         );
       }
 
-      await onSave(plannedSource);
+      await onSave(generatedView);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Could not create this source");
+      setError(saveError instanceof Error ? saveError.message : "Could not create this view");
     } finally {
       setIsSaving(false);
     }
@@ -151,11 +146,11 @@ export function AdminDataSourceSetup({
 
     try {
       const base = {
-        id: source?.id ?? crypto.randomUUID(),
+        id: view?.id ?? crypto.randomUUID(),
         name: trimmedName,
         rowsPath: rowsPath.trim(),
       };
-      const nextSource: AdminDataSource =
+      const nextView: CustomViewDefinition =
         kind === "github"
           ? { ...base, kind, endpointPath: trimmedLocation }
           : {
@@ -165,9 +160,9 @@ export function AdminDataSourceSetup({
               authentication: useGitHubAccount ? "github" : "none",
             };
 
-      await onSave(nextSource);
+      await onSave(nextView);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Could not load this source");
+      setError(saveError instanceof Error ? saveError.message : "Could not load this view");
     } finally {
       setIsSaving(false);
     }
@@ -194,12 +189,12 @@ export function AdminDataSourceSetup({
           ) : null}
         </div>
         <h1 className="font-sans ui-text-base leading-tight font-semibold tracking-tight text-foreground">
-          {source ? `Configure ${source.name}` : "Add a data source"}
+          {view ? `Edit ${view.name}` : "Create a custom view"}
         </h1>
         <p className="font-sans ui-text-sm text-subtle-foreground">
           {mode === "intelligence"
-            ? "Describe the project data you need and Athas will configure the source."
-            : "Configure the source directly when automatic setup is not enough."}
+            ? "Describe what you want to see and Athas will generate the view."
+            : "Connect the view to a data source when automatic setup is not enough."}
         </p>
       </div>
 
@@ -235,8 +230,8 @@ export function AdminDataSourceSetup({
           ) : null}
           {!hasIntelligence ? (
             <p className="font-sans ui-text-sm text-subtle-foreground">
-              Common GitHub sources are configured automatically. Athas Pro Intelligence handles
-              custom requests.
+              Common GitHub views are generated automatically. Athas Pro Intelligence handles custom
+              requests.
             </p>
           ) : null}
           {error ? (
@@ -267,7 +262,7 @@ export function AdminDataSourceSetup({
                 disabled={isSaving || isResolvingRepository}
               >
                 <SparkleIcon />
-                {isSaving ? "Creating source..." : "Create Source"}
+                {isSaving ? "Creating view..." : "Create View"}
               </Button>
             </div>
           </div>
@@ -279,7 +274,7 @@ export function AdminDataSourceSetup({
             <Select
               value={kind}
               onChange={(value) => {
-                setKind(value as AdminDataSource["kind"]);
+                setKind(value as CustomViewDefinition["kind"]);
                 setLocation("");
               }}
               options={[
@@ -289,7 +284,7 @@ export function AdminDataSourceSetup({
             />
           </label>
           <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
-            Name
+            View name
             <Input
               autoFocus
               value={name}
@@ -336,7 +331,7 @@ export function AdminDataSourceSetup({
             </p>
           ) : null}
           <div className="flex items-center justify-between gap-3 border-border/60 border-t pt-4">
-            {!source ? (
+            {!view ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -357,7 +352,7 @@ export function AdminDataSourceSetup({
                 Cancel
               </Button>
               <Button type="submit" variant="accent" size="sm" disabled={isSaving}>
-                {isSaving ? "Testing source..." : source ? "Save Source" : "Add Source"}
+                {isSaving ? "Testing view..." : view ? "Save View" : "Create View"}
               </Button>
             </div>
           </div>

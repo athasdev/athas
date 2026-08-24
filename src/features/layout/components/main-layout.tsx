@@ -325,8 +325,7 @@ export function MainLayout() {
             {hasMainView ? (
               <div
                 className={cn(
-                  "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border/70 border-y border-r bg-background",
-                  isEditorBottomPaneVisible && "border-b-0",
+                  "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border/70 border-y border-r bg-editor",
                   roundMainContentLeftEdge &&
                     (isEditorBottomPaneVisible
                       ? "rounded-tl-xl border-l"

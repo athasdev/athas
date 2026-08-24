@@ -238,7 +238,7 @@ const tabVariants = cva(
       {
         variant: "connected",
         active: true,
-        className: "z-10 bg-accent/90 text-foreground shadow-none",
+        className: "z-10 bg-background text-foreground shadow-none",
       },
       {
         variant: "connected",
@@ -248,7 +248,7 @@ const tabVariants = cva(
       {
         variant: "main",
         active: true,
-        className: "z-10 text-foreground before:bg-accent/90",
+        className: "z-10 text-foreground before:bg-accent/70",
       },
       {
         variant: "main",

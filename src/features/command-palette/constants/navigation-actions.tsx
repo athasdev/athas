@@ -8,7 +8,7 @@ import {
   ListBulletsIcon as ListBullets,
   PackageIcon as Package,
   MagnifyingGlassIcon as Search,
-  TableIcon as Table,
+  SquaresFourIcon as Views,
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
@@ -83,15 +83,15 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       },
     },
     {
-      id: "view-show-data-sources",
-      label: "View: Show Data Sources",
-      description: "Switch to project data sources",
-      icon: <Table />,
+      id: "view-show-views",
+      label: "View: Show Views",
+      description: "Switch to project custom views",
+      icon: <Views />,
       category: "Navigation",
-      commandId: "workbench.showDataSources",
+      commandId: "workbench.showViews",
       action: () => {
         setIsSidebarVisible(true);
-        setActiveView("data-sources");
+        setActiveView("views");
         onClose();
       },
     },

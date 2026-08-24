@@ -3,9 +3,9 @@ import {
   buildProjectGitHubApiUrl,
   parseGitHubRepository,
   resolveProjectGitHubRepository,
-} from "@/features/admin-data/lib/admin-data-github";
+} from "@/features/views/lib/view-github";
 
-describe("admin data GitHub integration", () => {
+describe("custom view GitHub integration", () => {
   it.each([
     ["https://github.com/athasdev/athas.git", { owner: "athasdev", repo: "athas" }],
     ["git@github.com:athasdev/athas.git", { owner: "athasdev", repo: "athas" }],

@@ -30,7 +30,7 @@ export type PaneContentType =
   | "githubIssue"
   | "githubAction"
   | "githubForm"
-  | "adminData"
+  | "customView"
   | "markdownDocument"
   | "markdownPreview"
   | "htmlPreview"
@@ -159,10 +159,10 @@ export interface GitHubFormContent extends PaneContentBase {
   defaultHead?: string;
 }
 
-export interface AdminDataContent extends PaneContentBase {
-  type: "adminData";
+export interface CustomViewContent extends PaneContentBase {
+  type: "customView";
   projectPath: string;
-  sourceId?: string;
+  viewId?: string;
 }
 
 export interface MarkdownDocumentContent extends PaneContentBase {
@@ -238,7 +238,7 @@ export type PaneContent =
   | GitHubIssueContent
   | GitHubActionContent
   | GitHubFormContent
-  | AdminDataContent
+  | CustomViewContent
   | MarkdownDocumentContent
   | MarkdownPreviewContent
   | HtmlPreviewContent
@@ -273,7 +273,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "githubIssue",
   "githubAction",
   "githubForm",
-  "adminData",
+  "customView",
   "markdownDocument",
   "globalSearch",
   "diagnostics",
@@ -401,9 +401,9 @@ export type OpenContentSpec =
       defaultHead?: string;
     }
   | {
-      type: "adminData";
+      type: "customView";
       projectPath: string;
-      sourceId?: string;
+      viewId?: string;
       name?: string;
     }
   | {

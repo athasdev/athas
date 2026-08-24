@@ -4,7 +4,7 @@ export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "search",
   "git",
   "github-prs",
-  "data-sources",
+  "views",
   "docker",
   "extensions",
 ] as const;

@@ -54,7 +54,7 @@ export default function TableSidebar({
   } satisfies Record<DatabaseObjectKind, typeof Table>;
 
   return (
-    <SidebarPanel className="w-64 overflow-hidden">
+    <SidebarPanel className="w-64 shrink-0 overflow-hidden">
       <SidebarTitleBar title={`Objects (${tables.length})`} className="group">
         <SidebarIconButton
           onClick={onCreateTable}

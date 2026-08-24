@@ -5,6 +5,7 @@ import {
   MagnifyingGlassIcon as Search,
   XIcon as X,
 } from "@/ui/icons";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { CommandInput } from "@/ui/command";
@@ -36,9 +37,9 @@ export function DiagnosticsToolbar({
   onFileNavigatorVisibleChange,
 }: DiagnosticsToolbarProps) {
   return (
-    <div className="@container/diagnostics-toolbar border-border/70 border-b px-3 py-2">
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
-        <div className="flex h-7 min-w-48 basis-64 flex-1 items-center gap-2">
+    <PaneContentHeader
+      context={
+        <div className="flex h-6 min-w-0 flex-1 items-center gap-2">
           <Search className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
           <CommandInput
             ref={inputRef}
@@ -66,8 +67,9 @@ export function DiagnosticsToolbar({
             </Button>
           ) : null}
         </div>
-
-        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
+      }
+      actions={
+        <>
           <Button
             type="button"
             variant="ghost"
@@ -94,8 +96,8 @@ export function DiagnosticsToolbar({
               <Files />
             </Toggle>
           ) : null}
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 }

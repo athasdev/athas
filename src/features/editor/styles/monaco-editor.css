@@ -1,5 +1,5 @@
 .monaco-editor-shell {
-  --vscode-editor-background: var(--background);
+  --vscode-editor-background: var(--editor-bg);
   --athas-monaco-widget-background: color-mix(in srgb, var(--surface) 92%, var(--background));
   --athas-monaco-widget-border: color-mix(in srgb, var(--border) 82%, transparent);
   --athas-monaco-widget-hover: color-mix(in srgb, var(--accent) 68%, transparent);
@@ -8,7 +8,7 @@
 .monaco-editor-shell .monaco-editor,
 .monaco-editor-shell .monaco-editor-background,
 .monaco-editor-shell .monaco-editor .margin {
-  background-color: var(--background);
+  background-color: var(--editor-bg);
 }
 
 .monaco-editor-shell .monaco-scrollable-element > .scrollbar > .slider {

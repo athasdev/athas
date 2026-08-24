@@ -49,14 +49,14 @@ describe("getActiveSidebarView", () => {
     ).toBe("collaboration");
   });
 
-  test("returns data sources when the module sidebar is active", () => {
+  test("returns custom views when the module sidebar is active", () => {
     expect(
       getActiveSidebarView({
         isGitViewActive: false,
         isGitHubPRsViewActive: false,
-        activeSidebarView: "data-sources",
+        activeSidebarView: "views",
       }),
-    ).toBe("data-sources");
+    ).toBe("views");
   });
 });
 
@@ -159,7 +159,7 @@ describe("resolveSidebarPaneClick", () => {
     });
   });
 
-  test("opens data sources as a primary secondary-sidebar view", () => {
+  test("opens custom views as a primary secondary-sidebar view", () => {
     expect(
       resolveSidebarPaneClick(
         {
@@ -168,11 +168,11 @@ describe("resolveSidebarPaneClick", () => {
           isGitHubPRsViewActive: false,
           activeSidebarView: "files",
         },
-        "data-sources",
+        "views",
       ),
     ).toEqual({
       nextIsSidebarVisible: true,
-      nextView: "data-sources",
+      nextView: "views",
     });
   });
 });

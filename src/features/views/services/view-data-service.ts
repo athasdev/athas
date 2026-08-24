@@ -1,14 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import {
-  adminDataTableToCsv,
-  jsonToAdminDataTable,
-} from "@/features/admin-data/lib/admin-data-model";
+import { viewTableToCsv, jsonToViewTable } from "@/features/views/lib/view-model";
 import {
   buildProjectGitHubApiUrl,
   resolveProjectGitHubRepository,
-} from "@/features/admin-data/lib/admin-data-github";
-import type { AdminDataSource, AdminDataTable } from "@/features/admin-data/types/admin-data.types";
+} from "@/features/views/lib/view-github";
+import type { CustomViewDefinition, ViewTable } from "@/features/views/types/view.types";
 
 function validateSourceUrl(value: string): URL {
   let url: URL;
@@ -25,24 +22,24 @@ function validateSourceUrl(value: string): URL {
   return url;
 }
 
-export async function loadAdminDataSourceTable(
-  source: AdminDataSource,
+export async function loadViewTable(
+  view: CustomViewDefinition,
   projectPath?: string,
-): Promise<AdminDataTable> {
+): Promise<ViewTable> {
   let sourceUrl: string;
-  if (source.kind === "github") {
+  if (view.kind === "github") {
     if (!projectPath) throw new Error("Open a project before loading this GitHub source");
     const repository = await resolveProjectGitHubRepository(projectPath);
     if (!repository) throw new Error("This project does not have a GitHub remote");
-    sourceUrl = buildProjectGitHubApiUrl(repository, source.endpointPath);
+    sourceUrl = buildProjectGitHubApiUrl(repository, view.endpointPath);
   } else {
-    sourceUrl = source.url;
+    sourceUrl = view.url;
   }
 
   const url = validateSourceUrl(sourceUrl);
   const headers: Record<string, string> = { Accept: "application/json" };
 
-  if (source.kind === "github" || source.authentication === "github") {
+  if (view.kind === "github" || view.authentication === "github") {
     if (url.hostname !== "api.github.com") {
       throw new Error("GitHub authentication can only be used with api.github.com");
     }
@@ -60,12 +57,12 @@ export async function loadAdminDataSourceTable(
   }
 
   const payload = (await response.json()) as unknown;
-  return jsonToAdminDataTable(payload, source.rowsPath);
+  return jsonToViewTable(payload, view.rowsPath);
 }
 
-export async function loadAdminDataSource(
-  source: AdminDataSource,
+export async function loadViewData(
+  view: CustomViewDefinition,
   projectPath?: string,
 ): Promise<string> {
-  return adminDataTableToCsv(await loadAdminDataSourceTable(source, projectPath));
+  return viewTableToCsv(await loadViewTable(view, projectPath));
 }

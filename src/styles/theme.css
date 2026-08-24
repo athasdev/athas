@@ -126,7 +126,7 @@
     --athas-title-bar-height: 2rem;
     --athas-footer-height: 1.75rem;
     --athas-pane-header-height: 2.75rem;
-    --athas-tab-bar-height: var(--athas-pane-header-height);
+    --athas-tab-bar-height: 2rem;
     --athas-tab-height: 1.75rem;
     --athas-tab-max-width: 12.5rem;
     --athas-sidebar-header-height: 2rem;

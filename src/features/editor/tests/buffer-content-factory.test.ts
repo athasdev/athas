@@ -60,37 +60,37 @@ describe("createPaneContent extension surfaces", () => {
   });
 });
 
-describe("createPaneContent data source surfaces", () => {
+describe("createPaneContent custom view surfaces", () => {
   it("creates a project-scoped setup tab", () => {
-    const content = createPaneContent("new-source", {
-      type: "adminData",
+    const content = createPaneContent("new-view", {
+      type: "customView",
       projectPath: "/projects/athas",
     });
 
     expect(content).toMatchObject({
-      type: "adminData",
-      name: "New Data Source",
-      path: "admin-data://create/%2Fprojects%2Fathas",
+      type: "customView",
+      name: "New Custom View",
+      path: "view://create/%2Fprojects%2Fathas",
       projectPath: "/projects/athas",
-      sourceId: undefined,
+      viewId: undefined,
       isPreview: false,
     });
   });
 
-  it("creates a stable tab for a saved source", () => {
-    const content = createPaneContent("release-source", {
-      type: "adminData",
+  it("creates a stable tab for a saved view", () => {
+    const content = createPaneContent("release-view", {
+      type: "customView",
       projectPath: "/projects/athas",
-      sourceId: "release-downloads",
+      viewId: "release-downloads",
       name: "Release downloads",
     });
 
     expect(content).toMatchObject({
-      type: "adminData",
+      type: "customView",
       name: "Release downloads",
-      path: "admin-data://%2Fprojects%2Fathas/release-downloads",
+      path: "view://%2Fprojects%2Fathas/release-downloads",
       projectPath: "/projects/athas",
-      sourceId: "release-downloads",
+      viewId: "release-downloads",
       isPreview: false,
     });
   });

@@ -18,24 +18,23 @@ export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
   const chatTitle = useAIChatStore(
     (state) => state.chats.find((chat) => chat.id === buffer.sessionId)?.title,
   );
+  const tabTitle = chatTitle || "New Session";
 
   useEffect(() => {
-    if (!chatTitle || chatTitle === buffer.name) return;
-    updateBuffer({ ...buffer, name: chatTitle });
-  }, [buffer, chatTitle, updateBuffer]);
+    if (tabTitle === buffer.name) return;
+    updateBuffer({ ...buffer, name: tabTitle });
+  }, [buffer, tabTitle, updateBuffer]);
 
   return (
     <div className="size-full overflow-hidden">
-      <div className="mx-auto size-full max-w-4xl">
-        <AIChat
-          mode="chat"
-          surfaceId={`agent-tab:${buffer.id}`}
-          chatId={buffer.sessionId}
-          activeBuffer={activeBuffer}
-          buffers={contextBuffers}
-          isActiveSurface={isActive}
-        />
-      </div>
+      <AIChat
+        mode="chat"
+        surfaceId={`agent-tab:${buffer.id}`}
+        chatId={buffer.sessionId}
+        activeBuffer={activeBuffer}
+        buffers={contextBuffers}
+        isActiveSurface={isActive}
+      />
     </div>
   );
 }

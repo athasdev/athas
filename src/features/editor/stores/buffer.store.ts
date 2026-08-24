@@ -3,7 +3,7 @@ import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
 import type { DatabaseType } from "@/features/database/types/provider.types";
-import { getAdminDataBufferPath } from "@/features/admin-data/lib/admin-data-buffer";
+import { getViewBufferPath } from "@/features/views/lib/view-buffer";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { evictLeastRecentAutoClosableBuffer } from "@/features/editor/stores/buffer-eviction";
 import { createPaneContent } from "@/features/editor/stores/buffer-content-factory";
@@ -882,8 +882,8 @@ const createBufferStore = (workspaceId: string) => {
               return newBuffer.id;
             }
 
-            case "adminData": {
-              const path = getAdminDataBufferPath(spec.projectPath, spec.sourceId);
+            case "customView": {
+              const path = getViewBufferPath(spec.projectPath, spec.viewId);
               const existing = getBufferByPath(buffers, path);
               if (existing) {
                 set((state) => {

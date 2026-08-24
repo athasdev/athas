@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AdminDataSource } from "@/features/admin-data/types/admin-data.types";
+import type { CustomViewDefinition } from "@/features/views/types/view.types";
 
 const mocks = vi.hoisted(() => ({
   fetch: vi.fn(),
@@ -11,16 +11,13 @@ vi.mock("@tauri-apps/plugin-http", () => ({ fetch: mocks.fetch }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
 vi.mock("@/features/git/api/git-remotes-api", () => ({ getRemotes: mocks.getRemotes }));
 
-import {
-  loadAdminDataSource,
-  loadAdminDataSourceTable,
-} from "@/features/admin-data/services/admin-data-service";
+import { loadViewData, loadViewTable } from "@/features/views/services/view-data-service";
 
-function createSource(
-  overrides: Partial<Extract<AdminDataSource, { kind: "json" }>> = {},
-): AdminDataSource {
+function createView(
+  overrides: Partial<Extract<CustomViewDefinition, { kind: "json" }>> = {},
+): CustomViewDefinition {
   return {
-    id: "source",
+    id: "view",
     name: "Release stats",
     kind: "json",
     url: "https://api.example.com/releases",
@@ -30,20 +27,20 @@ function createSource(
   };
 }
 
-describe("admin data service", () => {
+describe("custom view service", () => {
   beforeEach(() => {
     mocks.fetch.mockReset();
     mocks.getRemotes.mockReset();
     mocks.invoke.mockReset();
   });
 
-  it("loads a public JSON source as CSV", async () => {
+  it("loads a public JSON view as CSV", async () => {
     mocks.fetch.mockResolvedValue({
       ok: true,
       json: async () => [{ name: "Athas", downloads: 42 }],
     });
 
-    await expect(loadAdminDataSource(createSource())).resolves.toBe("name,downloads\nAthas,42");
+    await expect(loadViewData(createView())).resolves.toBe("name,downloads\nAthas,42");
     expect(mocks.fetch).toHaveBeenCalledWith("https://api.example.com/releases", {
       headers: { Accept: "application/json" },
     });
@@ -55,7 +52,7 @@ describe("admin data service", () => {
       json: async () => [{ name: "Athas", downloads: 42 }],
     });
 
-    await expect(loadAdminDataSourceTable(createSource())).resolves.toEqual({
+    await expect(loadViewTable(createView())).resolves.toEqual({
       columns: ["name", "downloads"],
       rows: [["Athas", 42]],
     });
@@ -71,7 +68,7 @@ describe("admin data service", () => {
       json: async () => [{ tag_name: "v1.0.0" }],
     });
 
-    await loadAdminDataSource(
+    await loadViewData(
       {
         id: "releases",
         name: "Releases",
@@ -96,7 +93,7 @@ describe("admin data service", () => {
   });
 
   it("does not send GitHub credentials to another host", async () => {
-    await expect(loadAdminDataSource(createSource({ authentication: "github" }))).rejects.toThrow(
+    await expect(loadViewData(createView({ authentication: "github" }))).rejects.toThrow(
       "GitHub authentication can only be used with api.github.com",
     );
     expect(mocks.fetch).not.toHaveBeenCalled();
@@ -106,8 +103,6 @@ describe("admin data service", () => {
   it("reports unsuccessful source responses", async () => {
     mocks.fetch.mockResolvedValue({ ok: false, status: 403 });
 
-    await expect(loadAdminDataSource(createSource())).rejects.toThrow(
-      "Source request failed with HTTP 403",
-    );
+    await expect(loadViewData(createView())).rejects.toThrow("Source request failed with HTTP 403");
   });
 });

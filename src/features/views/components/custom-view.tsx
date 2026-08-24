@@ -1,52 +1,58 @@
 import { useCallback, useEffect, useState } from "react";
-import { getAdminDataBufferPath } from "@/features/admin-data/lib/admin-data-buffer";
-import { loadAdminDataSourceTable } from "@/features/admin-data/services/admin-data-service";
-import { useAdminDataStore } from "@/features/admin-data/stores/admin-data.store";
-import type { AdminDataSource, AdminDataTable } from "@/features/admin-data/types/admin-data.types";
+import { getViewBufferPath } from "@/features/views/lib/view-buffer";
+import { loadViewTable } from "@/features/views/services/view-data-service";
+import { useViewsStore } from "@/features/views/stores/views.store";
+import type { CustomViewDefinition, ViewTable } from "@/features/views/types/view.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import type { AdminDataContent } from "@/features/panes/types/pane-content.types";
+import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import type { CustomViewContent } from "@/features/panes/types/pane-content.types";
 import { CsvTableView } from "@/features/viewer/csv/components/csv-table-view";
-import { ViewerHeader } from "@/features/viewer/components/viewer-header";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
-import { ArrowClockwiseIcon, PencilSimpleLineIcon, TableIcon, WarningCircleIcon } from "@/ui/icons";
+import {
+  ArrowClockwiseIcon,
+  PencilSimpleLineIcon,
+  SquaresFourIcon,
+  WarningCircleIcon,
+} from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
-import { AdminDataSourceSetup } from "./admin-data-source-setup";
+import { ViewSetup } from "./view-setup";
 
-interface AdminDataSourceViewProps {
-  buffer: AdminDataContent;
+interface CustomViewProps {
+  buffer: CustomViewContent;
 }
 
-export function AdminDataSourceView({ buffer }: AdminDataSourceViewProps) {
-  const storedSources = useAdminDataStore((state) => state.sourcesByProject[buffer.projectPath]);
-  const sources = storedSources ?? [];
-  const hasLoadedProject = useAdminDataStore((state) =>
+export function CustomView({ buffer }: CustomViewProps) {
+  const storedViews = useViewsStore((state) => state.viewsByProject[buffer.projectPath]);
+  const views = storedViews ?? [];
+  const hasLoadedProject = useViewsStore((state) =>
     state.loadedProjectPaths.includes(buffer.projectPath),
   );
-  const adminDataActions = useAdminDataStore.use.actions();
-  const [table, setTable] = useState<AdminDataTable | null>(null);
+  const viewActions = useViewsStore.use.actions();
+  const [table, setTable] = useState<ViewTable | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isConfiguring, setIsConfiguring] = useState(!buffer.sourceId);
-  const source = buffer.sourceId
-    ? sources.find((candidate) => candidate.id === buffer.sourceId)
+  const [isConfiguring, setIsConfiguring] = useState(!buffer.viewId);
+  const view = buffer.viewId
+    ? views.find((candidate) => candidate.id === buffer.viewId)
     : undefined;
 
   useEffect(() => {
-    adminDataActions.loadProject(buffer.projectPath);
-  }, [adminDataActions, buffer.projectPath]);
+    viewActions.loadProject(buffer.projectPath);
+  }, [viewActions, buffer.projectPath]);
 
-  const loadSource = useCallback(
-    async (nextSource: AdminDataSource) => {
+  const loadView = useCallback(
+    async (nextView: CustomViewDefinition) => {
       setIsLoading(true);
       setError(null);
       try {
-        const nextTable = await loadAdminDataSourceTable(nextSource, buffer.projectPath);
+        const nextTable = await loadViewTable(nextView, buffer.projectPath);
         setTable(nextTable);
         return nextTable;
       } catch (nextError) {
         setTable(null);
-        setError(nextError instanceof Error ? nextError.message : "Could not load this source");
+        setError(nextError instanceof Error ? nextError.message : "Could not load this view");
         throw nextError;
       } finally {
         setIsLoading(false);
@@ -56,23 +62,23 @@ export function AdminDataSourceView({ buffer }: AdminDataSourceViewProps) {
   );
 
   useEffect(() => {
-    if (!source || isConfiguring) return;
-    void loadSource(source).catch(() => undefined);
-  }, [isConfiguring, loadSource, source]);
+    if (!view || isConfiguring) return;
+    void loadView(view).catch(() => undefined);
+  }, [isConfiguring, loadView, view]);
 
-  const handleSave = async (nextSource: AdminDataSource) => {
-    const nextTable = await loadSource(nextSource);
-    adminDataActions.upsertSource(buffer.projectPath, nextSource);
+  const handleSave = async (nextView: CustomViewDefinition) => {
+    const nextTable = await loadView(nextView);
+    viewActions.upsertView(buffer.projectPath, nextView);
 
     const currentBuffer = useBufferStore
       .getState()
       .buffers.find((candidate) => candidate.id === buffer.id);
-    if (currentBuffer?.type === "adminData") {
+    if (currentBuffer?.type === "customView") {
       useBufferStore.getState().actions.updateBuffer({
         ...currentBuffer,
-        path: getAdminDataBufferPath(buffer.projectPath, nextSource.id),
-        name: nextSource.name,
-        sourceId: nextSource.id,
+        path: getViewBufferPath(buffer.projectPath, nextView.id),
+        name: nextView.name,
+        viewId: nextView.id,
       });
     }
 
@@ -81,7 +87,7 @@ export function AdminDataSourceView({ buffer }: AdminDataSourceViewProps) {
   };
 
   const handleCancelSetup = () => {
-    if (source) {
+    if (view) {
       setIsConfiguring(false);
       return;
     }
@@ -90,9 +96,9 @@ export function AdminDataSourceView({ buffer }: AdminDataSourceViewProps) {
 
   if (isConfiguring) {
     return (
-      <AdminDataSourceSetup
+      <ViewSetup
         projectPath={buffer.projectPath}
-        source={source}
+        view={view}
         onCancel={handleCancelSetup}
         onSave={handleSave}
       />
@@ -102,28 +108,33 @@ export function AdminDataSourceView({ buffer }: AdminDataSourceViewProps) {
   if (!hasLoadedProject) {
     return (
       <div className="flex h-full items-center justify-center bg-background">
-        <Spinner label="Loading data source" showLabel />
+        <Spinner label="Loading custom view" showLabel />
       </div>
     );
   }
 
-  if (!source) {
+  if (!view) {
     return (
       <EmptyState
         className="h-full rounded-none bg-background"
         icon={<WarningCircleIcon />}
-        title="Data source not found"
-        message="This source may have been removed from the project."
+        title="View not found"
+        message="This view may have been deleted from the project."
       />
     );
   }
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-      <ViewerHeader
-        icon={<TableIcon />}
-        title={source.name}
-        detail={source.kind === "github" ? "Project GitHub" : "JSON"}
+      <PaneContentHeader
+        context={
+          <PathBreadcrumb
+            segments={["Views", view.name]}
+            icons={[<SquaresFourIcon key="views" />, undefined]}
+            ariaLabel="Custom view"
+          />
+        }
+        detail={view.kind === "github" ? "GitHub" : "JSON"}
         actions={
           <>
             <Button
@@ -131,7 +142,7 @@ export function AdminDataSourceView({ buffer }: AdminDataSourceViewProps) {
               variant="ghost"
               size="xs"
               disabled={isLoading}
-              onClick={() => void loadSource(source).catch(() => undefined)}
+              onClick={() => void loadView(view).catch(() => undefined)}
             >
               <ArrowClockwiseIcon />
               Refresh
@@ -146,17 +157,17 @@ export function AdminDataSourceView({ buffer }: AdminDataSourceViewProps) {
       <div className="min-h-0 flex-1">
         {isLoading && !table ? (
           <div className="flex h-full items-center justify-center">
-            <Spinner label={`Loading ${source.name}`} showLabel />
+            <Spinner label={`Loading ${view.name}`} showLabel />
           </div>
         ) : error ? (
           <EmptyState
             className="h-full rounded-none"
             tone="error"
-            title="Could not load data source"
+            title="Could not load custom view"
             message={error}
             action={{
               label: "Try again",
-              onClick: () => void loadSource(source).catch(() => undefined),
+              onClick: () => void loadView(view).catch(() => undefined),
             }}
             secondaryAction={{
               label: "Configure",

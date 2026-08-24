@@ -2,7 +2,7 @@ export type SidebarView =
   | "files"
   | "git"
   | "github-prs"
-  | "data-sources"
+  | "views"
   | "docker"
   | "outline"
   | "databases"

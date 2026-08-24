@@ -22,7 +22,7 @@ import {
   LightningIcon,
   MagnifierFillDuoIcon,
   NodesIcon,
-  TableFillDuoIcon,
+  SparkleFillDuoIcon,
 } from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -265,14 +265,14 @@ export const SidebarPaneSelector = ({
           ]
         : []),
       {
-        id: "data-sources",
-        label: showLabels ? "Data Sources" : undefined,
-        icon: <TableFillDuoIcon className={cn(iconClassName, "text-warning")} />,
-        isActive: isPrimarySidebarItemActive && activeSidebarView === "data-sources",
-        onClick: () => onViewChange("data-sources"),
-        ariaLabel: "Data Sources",
+        id: "views",
+        label: showLabels ? "Views" : undefined,
+        icon: <SparkleFillDuoIcon className={cn(iconClassName, "text-warning")} />,
+        isActive: isPrimarySidebarItemActive && activeSidebarView === "views",
+        onClick: () => onViewChange("views"),
+        ariaLabel: "Views",
         tooltip: {
-          content: "Data Sources",
+          content: "Views",
           side: tooltipSide,
         },
       },

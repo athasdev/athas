@@ -1,6 +1,7 @@
-import type { AdminDataSource, AdminDataTable } from "@/features/admin-data/types/admin-data.types";
+import type { CustomViewDefinition, ViewTable } from "@/features/views/types/view.types";
 
-const STORAGE_PREFIX = "athas-admin-data-sources:";
+const STORAGE_PREFIX = "athas-views:";
+const LEGACY_STORAGE_PREFIX = "athas-admin-data-sources:";
 
 type JsonRecord = Record<string, unknown>;
 type PathSegment = { type: "property"; value: string } | { type: "array"; index?: number };
@@ -90,7 +91,7 @@ function normalizeCell(value: unknown): string | number | boolean | null {
   return JSON.stringify(value);
 }
 
-export function jsonToAdminDataTable(payload: unknown, rowsPath = ""): AdminDataTable {
+export function jsonToViewTable(payload: unknown, rowsPath = ""): ViewTable {
   const selectedValues = selectRowsValue(payload, rowsPath);
   const records = selectedValues.flatMap((value) => (Array.isArray(value) ? value : [value]));
 
@@ -117,11 +118,11 @@ function escapeCsvCell(value: string | number | boolean | null): string {
   return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-export function adminDataTableToCsv(table: AdminDataTable): string {
+export function viewTableToCsv(table: ViewTable): string {
   return [table.columns, ...table.rows].map((row) => row.map(escapeCsvCell).join(",")).join("\n");
 }
 
-function normalizeAdminDataSource(value: unknown): AdminDataSource | null {
+function normalizeView(value: unknown): CustomViewDefinition | null {
   if (
     !isJsonRecord(value) ||
     typeof value.id !== "string" ||
@@ -159,30 +160,36 @@ function normalizeAdminDataSource(value: unknown): AdminDataSource | null {
   return null;
 }
 
-export function getAdminDataStorageKey(projectPath: string): string {
+export function getViewsStorageKey(projectPath: string): string {
   return `${STORAGE_PREFIX}${encodeURIComponent(projectPath)}`;
 }
 
-export function loadAdminDataSources(
+function getLegacyViewsStorageKey(projectPath: string): string {
+  return `${LEGACY_STORAGE_PREFIX}${encodeURIComponent(projectPath)}`;
+}
+
+export function loadViews(
   projectPath: string,
   storage: Pick<Storage, "getItem"> = localStorage,
-): AdminDataSource[] {
+): CustomViewDefinition[] {
   try {
-    const value = JSON.parse(storage.getItem(getAdminDataStorageKey(projectPath)) ?? "[]");
+    const storedViews =
+      storage.getItem(getViewsStorageKey(projectPath)) ??
+      storage.getItem(getLegacyViewsStorageKey(projectPath)) ??
+      "[]";
+    const value = JSON.parse(storedViews);
     return Array.isArray(value)
-      ? value
-          .map(normalizeAdminDataSource)
-          .filter((source): source is AdminDataSource => source !== null)
+      ? value.map(normalizeView).filter((view): view is CustomViewDefinition => view !== null)
       : [];
   } catch {
     return [];
   }
 }
 
-export function saveAdminDataSources(
+export function saveViews(
   projectPath: string,
-  sources: AdminDataSource[],
+  views: CustomViewDefinition[],
   storage: Pick<Storage, "setItem"> = localStorage,
 ): void {
-  storage.setItem(getAdminDataStorageKey(projectPath), JSON.stringify(sources));
+  storage.setItem(getViewsStorageKey(projectPath), JSON.stringify(views));
 }

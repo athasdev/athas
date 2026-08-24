@@ -100,9 +100,9 @@ const GitHubCreateView = lazy(() =>
     default: module.GitHubCreateView,
   })),
 );
-const AdminDataSourceView = lazy(() =>
-  import("@/features/admin-data/components/admin-data-source-view").then((module) => ({
-    default: module.AdminDataSourceView,
+const CustomView = lazy(() =>
+  import("@/features/views/components/custom-view").then((module) => ({
+    default: module.CustomView,
   })),
 );
 const MarkdownDocumentView = lazy(() =>
@@ -987,8 +987,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         case "githubForm":
           return <GitHubCreateView buffer={buffer} />;
 
-        case "adminData":
-          return <AdminDataSourceView buffer={buffer} />;
+        case "customView":
+          return <CustomView buffer={buffer} />;
 
         case "markdownDocument":
           return <MarkdownDocumentView bufferId={buffer.id} />;
@@ -1091,9 +1091,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       ref={containerRef}
       data-pane-container
       data-pane-id={pane.id}
-      className={`relative flex size-full flex-col overflow-hidden bg-background ${
-        isActivePane ? "ring-1 ring-primary/30" : ""
-      } ${isDragOver || internalHoverZone ? "ring-2 ring-primary" : ""}`}
+      className={cn(
+        "relative flex size-full flex-col overflow-hidden",
+        pane.id === BOTTOM_PANE_ID ? "bg-background" : "bg-editor",
+        isActivePane && "ring-1 ring-primary/30",
+        (isDragOver || internalHoverZone) && "ring-2 ring-primary",
+      )}
       onMouseDownCapture={handlePaneMouseDownCapture}
       onClick={handlePaneClick}
       onMouseUp={handleMouseUp}
@@ -1117,7 +1120,13 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <Suspense fallback={null}>
           {paneBuffers.length === 0 ? (
-            <Empty className="h-full rounded-none bg-background" role="status">
+            <Empty
+              className={cn(
+                "h-full rounded-none",
+                pane.id === BOTTOM_PANE_ID ? "bg-background" : "bg-editor",
+              )}
+              role="status"
+            >
               <EmptyDescription>No tabs open</EmptyDescription>
             </Empty>
           ) : shouldRenderCarousel ? (

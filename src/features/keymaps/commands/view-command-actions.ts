@@ -121,12 +121,12 @@ export function toggleGitHubSidebar(): void {
   }
 }
 
-export function toggleDataSourcesSidebar(): void {
+export function toggleViewsSidebar(): void {
   const state = useUIState.getState();
-  if (state.isSidebarVisible && state.activeSidebarView === "data-sources") {
+  if (state.isSidebarVisible && state.activeSidebarView === "views") {
     state.setIsSidebarVisible(false);
   } else {
-    state.setActiveView("data-sources");
+    state.setActiveView("views");
     state.setIsSidebarVisible(true);
   }
 }

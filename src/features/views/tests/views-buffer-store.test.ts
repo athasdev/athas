@@ -15,7 +15,7 @@ function createStorage(): Storage {
   };
 }
 
-describe("admin data buffer store", () => {
+describe("views buffer store", () => {
   beforeEach(() => {
     vi.stubGlobal("localStorage", createStorage());
     vi.stubGlobal("window", {
@@ -44,13 +44,13 @@ describe("admin data buffer store", () => {
     vi.unstubAllGlobals();
   });
 
-  it("reuses the existing tab for the same saved source", async () => {
+  it("reuses the existing tab for the same saved view", async () => {
     const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
     const openContent = useBufferStore.getState().actions.openContent;
     const spec = {
-      type: "adminData" as const,
+      type: "customView" as const,
       projectPath: "/projects/athas",
-      sourceId: "release-downloads",
+      viewId: "release-downloads",
       name: "Release downloads",
     };
 
@@ -59,25 +59,25 @@ describe("admin data buffer store", () => {
 
     expect(secondBufferId).toBe(firstBufferId);
     expect(
-      useBufferStore.getState().buffers.filter((buffer) => buffer.type === "adminData"),
+      useBufferStore.getState().buffers.filter((buffer) => buffer.type === "customView"),
     ).toHaveLength(1);
   });
 
-  it("keeps source setup separate from saved source tabs", async () => {
+  it("keeps view setup separate from saved view tabs", async () => {
     const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
     const openContent = useBufferStore.getState().actions.openContent;
 
     const setupBufferId = openContent({
-      type: "adminData",
+      type: "customView",
       projectPath: "/projects/athas",
     });
-    const sourceBufferId = openContent({
-      type: "adminData",
+    const viewBufferId = openContent({
+      type: "customView",
       projectPath: "/projects/athas",
-      sourceId: "release-downloads",
+      viewId: "release-downloads",
       name: "Release downloads",
     });
 
-    expect(sourceBufferId).not.toBe(setupBufferId);
+    expect(viewBufferId).not.toBe(setupBufferId);
   });
 });

@@ -1,10 +1,10 @@
-interface AdminDataSourceBase {
+interface CustomViewDefinitionBase {
   id: string;
   name: string;
   rowsPath: string;
 }
 
-export type AdminDataSource = AdminDataSourceBase &
+export type CustomViewDefinition = CustomViewDefinitionBase &
   (
     | {
         kind: "github";
@@ -17,7 +17,7 @@ export type AdminDataSource = AdminDataSourceBase &
       }
   );
 
-export interface AdminDataTable {
+export interface ViewTable {
   columns: string[];
   rows: (string | number | boolean | null)[][];
 }

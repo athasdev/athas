@@ -5,13 +5,13 @@ vi.mock("@/features/editor/services/editor-inline-edit-service", () => ({
 }));
 
 import {
-  parseAdminDataSourcePlan,
-  planKnownGitHubSource,
-} from "@/features/admin-data/services/admin-data-intelligence";
+  parseGeneratedViewPlan,
+  createKnownGitHubView,
+} from "@/features/views/services/view-generator";
 
-describe("admin data intelligence", () => {
+describe("custom view intelligence", () => {
   it("configures release downloads without asking for a URL", () => {
-    expect(planKnownGitHubSource("Show GitHub release download stats")).toMatchObject({
+    expect(createKnownGitHubView("Show GitHub release download stats")).toMatchObject({
       kind: "github",
       name: "Release downloads",
       endpointPath: "/releases?per_page=100",
@@ -21,7 +21,7 @@ describe("admin data intelligence", () => {
 
   it("accepts a constrained GitHub plan from Athas Intelligence", () => {
     expect(
-      parseAdminDataSourcePlan(`Result:
+      parseGeneratedViewPlan(`Result:
 {"kind":"github","name":"Latest runs","endpointPath":"/actions/runs?per_page=100","rowsPath":"workflow_runs"}`),
     ).toMatchObject({
       kind: "github",
@@ -33,7 +33,7 @@ describe("admin data intelligence", () => {
 
   it("rejects plans that require manual configuration", () => {
     expect(() =>
-      parseAdminDataSourcePlan('{"kind":"manual","reason":"Use a custom JSON endpoint"}'),
+      parseGeneratedViewPlan('{"kind":"manual","reason":"Use a custom JSON endpoint"}'),
     ).toThrow("Use a custom JSON endpoint");
   });
 });

@@ -10,6 +10,8 @@ export const chromeBarVariants = cva(
         title: "h-title-bar gap-chrome bg-transparent px-chrome-inline",
         footer: "h-footer gap-chrome bg-transparent px-chrome-inline",
         tabs: "h-tab-bar min-h-tab-bar gap-chrome bg-background px-chrome-inline",
+        content: "h-7 min-h-7 gap-chrome bg-background px-chrome-inline",
+        status: "h-7 min-h-7 gap-chrome-loose bg-background px-chrome-inline",
         sidebar: "min-h-sidebar-header gap-chrome bg-background/92 px-chrome-inline",
       },
       emphasis: {
@@ -60,8 +62,8 @@ export const chromeLabelVariants = cva("min-w-0 truncate leading-chrome", {
     tone: {
       muted: "text-subtle-foreground",
       default: "text-muted-foreground",
-      strong: "font-medium text-foreground",
-      accent: "font-medium text-primary",
+      strong: "text-foreground",
+      accent: "text-primary",
     },
   },
   defaultVariants: {

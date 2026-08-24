@@ -9,10 +9,12 @@ import { openUrl } from "@tauri-apps/plugin-opener"; // Keep for external links
 import { ArrowSquareOutIcon as ExternalLink } from "@/ui/icons";
 // Configure PDF.js worker
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
+import {
+  PaneContentHeader,
+  PaneContentStatusBar,
+} from "@/features/panes/components/pane-content-chrome";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
-import { ViewerFooter } from "@/features/viewer/components/viewer-footer";
-import { ViewerHeader } from "@/features/viewer/components/viewer-header";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { ViewerZoomControls } from "@/features/viewer/components/viewer-zoom-controls";
@@ -21,7 +23,6 @@ import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
 import { showConfirmDialog } from "@/ui/dialog";
 import { formatFileSize } from "@/utils/format-file-size";
-import { getRelativePath } from "@/utils/path-helpers";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -31,7 +32,7 @@ interface PdfViewerProps {
   bufferId: string;
 }
 
-export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
+export function PdfViewer({ filePath }: PdfViewerProps) {
   const [fileData, setFileData] = useState<Uint8Array | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [pageDimensions, setPageDimensions] = useState<{ width: number; height: number } | null>(
@@ -45,8 +46,6 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { width: containerWidth } = useResizeObserver(containerRef);
   const [isFitted, setIsFitted] = useState(true);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const relativePath = getRelativePath(filePath, rootFolderPath);
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
@@ -158,9 +157,10 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
 
   return (
     <ViewerLayout>
-      <ViewerHeader
+      <PaneContentHeader
         className="absolute inset-x-0 top-0 z-10"
-        title={<span title={fileName}>{fileName}</span>}
+        context={<FilePathBreadcrumb filePath={filePath} />}
+        detail="PDF"
         actions={
           <>
             <Button
@@ -196,7 +196,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
       {/* Main Content */}
       <div
         ref={containerRef}
-        className="absolute inset-x-0 top-10 bottom-9 flex justify-center overflow-auto bg-editor p-8"
+        className="absolute inset-x-0 top-7 bottom-7 flex justify-center overflow-auto bg-editor p-8"
         onClick={handleLinkClick}
       >
         {error ? (
@@ -258,16 +258,9 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
         )}
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 z-10 h-9">
-        <ViewerFooter
-          endContent={
-            <>
-              <span className="shrink-0">Size: {formatFileSize(fileData?.byteLength || 0)}</span>
-              <span className="truncate" title={relativePath || filePath}>
-                Path: {relativePath || filePath}
-              </span>
-            </>
-          }
+      <div className="absolute inset-x-0 bottom-0 z-10">
+        <PaneContentStatusBar
+          endContent={<span>Size: {formatFileSize(fileData?.byteLength || 0)}</span>}
         >
           <span>Zoom: {Math.round(zoom * 100)}%</span>
           <span>
@@ -278,8 +271,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
               Size: {Math.round(pageDimensions.width)} × {Math.round(pageDimensions.height)}pt
             </span>
           ) : null}
-          <span>Type: PDF</span>
-        </ViewerFooter>
+        </PaneContentStatusBar>
       </div>
     </ViewerLayout>
   );
