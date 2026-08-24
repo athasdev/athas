@@ -103,7 +103,7 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
             <EmptyMedia className="size-16">
               <ThinkingOrb state="shaping" size={64} aria-hidden="true" />
             </EmptyMedia>
-            <EmptyTitle className="ui-text-lg">Where should we begin?</EmptyTitle>
+            <EmptyTitle>Where should we begin?</EmptyTitle>
           </EmptyHeader>
 
           {children}

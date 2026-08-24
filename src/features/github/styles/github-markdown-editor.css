@@ -329,14 +329,14 @@
 .github-markdown-slash-group-label {
   padding: 5px 7px 3px;
   color: var(--subtle-foreground);
-  font-size: 10px;
+  font-size: var(--ui-text-sm);
   font-weight: 500;
   letter-spacing: 0;
 }
 
 .github-markdown-command-heading-icon {
   font-family: var(--font-sans);
-  font-size: 10px;
+  font-size: var(--ui-text-sm);
   font-weight: 650;
   letter-spacing: -0.04em;
 }

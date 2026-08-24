@@ -190,7 +190,7 @@ export function AdminDataSourceSetup({
               </span>
             ) : null}
           </div>
-          <h1 className="font-sans text-2xl leading-tight font-semibold tracking-tight text-foreground">
+          <h1 className="font-sans ui-text-base leading-tight font-semibold tracking-tight text-foreground">
             {source ? `Configure ${source.name}` : "Add a data source"}
           </h1>
           <p className="font-sans ui-text-sm text-subtle-foreground">

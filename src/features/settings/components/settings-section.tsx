@@ -72,7 +72,7 @@ export default function Section({ title, description, children, className }: Sec
           <span className="flex min-w-0 flex-col">
             <span>{title}</span>
             {description ? (
-              <span className="ui-text-base text-subtle-foreground">{description}</span>
+              <span className="ui-text-sm text-subtle-foreground">{description}</span>
             ) : null}
           </span>
         </AccordionTrigger>
@@ -242,7 +242,7 @@ export function SettingRow({
         {description && (
           <div
             id={descriptionId}
-            className="font-sans ui-text-base cursor-default leading-snug text-subtle-foreground"
+            className="font-sans ui-text-sm cursor-default leading-snug text-subtle-foreground"
           >
             {description}
           </div>
@@ -250,7 +250,7 @@ export function SettingRow({
       </div>
       <div
         ref={controlRef}
-        className="font-sans ui-text-base min-w-0 max-w-full shrink-0 select-auto max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>div]:flex-wrap max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full @max-[640px]/settings:w-full @max-[640px]/settings:shrink @max-[640px]/settings:[&>div]:flex-wrap @max-[640px]/settings:[&>input]:w-full @max-[640px]/settings:[&>textarea]:w-full"
+        className="font-sans ui-text-sm min-w-0 max-w-full shrink-0 select-auto max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>div]:flex-wrap max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full @max-[640px]/settings:w-full @max-[640px]/settings:shrink @max-[640px]/settings:[&>div]:flex-wrap @max-[640px]/settings:[&>input]:w-full @max-[640px]/settings:[&>textarea]:w-full"
       >
         {children}
       </div>

@@ -346,7 +346,7 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="UI Font Size"
-          description="Adjust UI text and icon scale in 0.5px steps"
+          description="Adjust interface text and control scale in 0.5px steps"
           onReset={() => updateSetting("uiFontSize", getDefaultSetting("uiFontSize"))}
           canReset={settings.uiFontSize !== getDefaultSetting("uiFontSize")}
         >

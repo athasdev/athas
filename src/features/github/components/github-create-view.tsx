@@ -420,7 +420,7 @@ ${statusSummary}`;
                 <Activity />
                 <span>{repositoryName}</span>
               </div>
-              <h1 className="font-sans text-2xl leading-tight font-semibold tracking-tight text-foreground">
+              <h1 className="font-sans ui-text-base leading-tight font-semibold tracking-tight text-foreground">
                 Run workflow
               </h1>
               <p className="font-sans ui-text-sm text-subtle-foreground">

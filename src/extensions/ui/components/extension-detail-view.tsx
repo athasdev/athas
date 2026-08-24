@@ -71,7 +71,7 @@ export function ExtensionDetailView({
       <div className="flex items-start gap-4">
         <ExtensionIcon extension={extension} />
         <div className="min-w-0 flex-1">
-          <h1 className="truncate font-semibold text-foreground ui-text-2xl">{extension.name}</h1>
+          <h1 className="truncate font-semibold text-foreground ui-text-base">{extension.name}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-subtle-foreground ui-text-sm">
             {extension.publisher ? <span>By {extension.publisher}</span> : null}
             {extension.version ? <span>v{extension.version}</span> : null}

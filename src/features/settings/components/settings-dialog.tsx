@@ -372,7 +372,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
                   ].join(" ")}
                 >
                   <span className="ui-text-base w-full truncate font-medium">{result.label}</span>
-                  <span className="ui-text-base w-full truncate text-subtle-foreground">
+                  <span className="ui-text-sm w-full truncate text-subtle-foreground">
                     {SETTINGS_SEARCH_TAB_LABELS[result.tab]} / {result.section}
                   </span>
                 </button>

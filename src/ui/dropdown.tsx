@@ -702,6 +702,7 @@ function DropdownMenuTrigger(props: DropdownMenuPrimitive.Trigger.Props) {
 }
 
 function DropdownMenuSearch({
+  className,
   onKeyDown,
   leftIcon = Search,
   size = "xs",
@@ -714,6 +715,7 @@ function DropdownMenuSearch({
       leftIcon={leftIcon}
       size={size}
       variant={variant}
+      className={cn("ui-text-chrome", className)}
       aria-label={props["aria-label"] ?? props.placeholder ?? "Search menu"}
       onKeyDown={(event) => {
         event.stopPropagation();

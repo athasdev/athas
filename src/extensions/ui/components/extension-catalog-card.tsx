@@ -67,7 +67,7 @@ export function ExtensionCatalogCard({
         <ExtensionIcon extension={extension} />
         <div className="min-w-0">
           <CardTitle className="truncate">{extension.name}</CardTitle>
-          <div className="mt-1 flex min-w-0 items-center gap-3 text-subtle-foreground ui-text-xs">
+          <div className="mt-1 flex min-w-0 items-center gap-3 text-subtle-foreground ui-text-sm">
             <span className="flex shrink-0 items-center gap-1">
               <Tag className="size-3.5" />
               {getCategoryLabel(extension.category)}
