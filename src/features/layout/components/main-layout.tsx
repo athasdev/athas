@@ -89,6 +89,7 @@ export function MainLayout() {
   useCollaborationPresence();
 
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
+  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
   const activityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
@@ -169,6 +170,10 @@ export function MainLayout() {
   }, !rootFolderPath);
 
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
+  const isEditorBottomPaneVisible =
+    hasMainView && terminalWidthMode === "editor" && deferredSurfacesReady && isBottomPaneVisible;
+  const roundMainContentLeftEdge = !isSidebarVisible;
+  const roundMainContentRightEdge = !visibleInlineAiChat && !isRightSidebarVisible;
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => setDeferredSurfacesReady(true), 0);
@@ -324,8 +329,13 @@ export function MainLayout() {
               <div
                 className={cn(
                   "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border/70 border-y border-r bg-background",
-                  !isSidebarVisible && "rounded-l-xl border-l",
-                  !visibleInlineAiChat && !isRightSidebarVisible && "rounded-r-xl",
+                  isEditorBottomPaneVisible && "border-b-0",
+                  roundMainContentLeftEdge &&
+                    (isEditorBottomPaneVisible
+                      ? "rounded-tl-xl border-l"
+                      : "rounded-l-xl border-l"),
+                  roundMainContentRightEdge &&
+                    (isEditorBottomPaneVisible ? "rounded-tr-xl" : "rounded-r-xl"),
                 )}
               >
                 <CachedWorkspaceSplitViews />
@@ -359,7 +369,11 @@ export function MainLayout() {
             )}
             {terminalWidthMode === "editor" && deferredSurfacesReady && (
               <Suspense fallback={null}>
-                <BottomPane />
+                <BottomPane
+                  embedded={hasMainView}
+                  roundLeftEdge={roundMainContentLeftEdge}
+                  roundRightEdge={roundMainContentRightEdge}
+                />
               </Suspense>
             )}
           </div>

@@ -19,7 +19,17 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { WorkbenchFullscreenSurface } from "@/features/window/components/workbench-fullscreen-surface";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 
-const BottomPane = () => {
+interface BottomPaneProps {
+  embedded?: boolean;
+  roundLeftEdge?: boolean;
+  roundRightEdge?: boolean;
+}
+
+const BottomPane = ({
+  embedded = false,
+  roundLeftEdge = true,
+  roundRightEdge = true,
+}: BottomPaneProps) => {
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
@@ -197,6 +207,8 @@ const BottomPane = () => {
       className={cn(
         "group relative flex h-(--athas-workbench-gap) w-full shrink-0 cursor-ns-resize items-center justify-center",
         "transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-primary/8",
+        embedded && "border-border/70 border-r bg-background",
+        embedded && roundLeftEdge && "border-l",
         isResizing && "bg-primary/8",
       )}
       role="separator"
@@ -216,7 +228,10 @@ const BottomPane = () => {
     <div
       data-bottom-pane-drop-target
       className={cn(
-        "athas-glass-island relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-background",
+        "athas-glass-island relative flex min-h-0 flex-col overflow-hidden bg-background",
+        embedded ? "border-border/70 border-r border-b" : "rounded-xl border border-border/70",
+        embedded && roundLeftEdge && "rounded-bl-xl border-l",
+        embedded && roundRightEdge && "rounded-br-xl",
         isInternalHoverTarget && "ring-2 ring-primary ring-inset",
         isFullScreen && "size-full rounded-none border-0 shadow-none ring-0",
         !isFullScreen && "flex-1",
