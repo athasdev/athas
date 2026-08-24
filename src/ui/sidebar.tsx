@@ -16,21 +16,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
 const sidebarControlVariants = cva(
-  "athas-chrome-control font-sans ui-text-sm flex min-h-chrome-control w-full min-w-0 items-center gap-chrome rounded-chrome px-1.5 py-0.5 font-normal [&_svg]:size-[1em]",
+  "athas-chrome-control font-sans ui-text-sm flex min-h-chrome-control min-w-0 items-center gap-chrome rounded-chrome px-1.5 py-0.5 font-normal [&_svg]:size-[1em]",
   {
     variants: {
       appearance: {
         default: "",
         activity: "min-h-8 gap-2 rounded-lg px-2.5 py-1 ui-text-base",
       },
+      width: {
+        fill: "w-full",
+        control: "w-chrome-control",
+      },
     },
     defaultVariants: {
       appearance: "default",
+      width: "fill",
     },
   },
 );
 
 type SidebarControlAppearance = VariantProps<typeof sidebarControlVariants>["appearance"];
+type SidebarControlWidth = VariantProps<typeof sidebarControlVariants>["width"];
 
 export function SidebarPanel({
   children,
@@ -270,6 +276,7 @@ export function SidebarListItem({
   children,
   active = false,
   appearance = "default",
+  width = "fill",
   description,
   leading,
   trailing,
@@ -281,6 +288,7 @@ export function SidebarListItem({
   children: ReactNode;
   active?: boolean;
   appearance?: SidebarControlAppearance;
+  width?: SidebarControlWidth;
   description?: ReactNode;
   leading?: ReactNode;
   trailing?: ReactNode;
@@ -291,7 +299,7 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        sidebarControlVariants({ appearance }),
+        sidebarControlVariants({ appearance, width }),
         "text-left transition-[background-color,color]",
         appearance === "activity" ? "text-foreground/80" : "text-subtle-foreground",
         "hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
@@ -414,9 +422,10 @@ export function SidebarListMenuItem({
               active={false}
               appearance={appearance}
               iconOnly
+              width="control"
               leading={<CaretRight />}
               aria-label={menuLabel}
-              className="w-chrome-control flex-none bg-transparent px-0"
+              className="flex-none bg-transparent px-0"
             >
               {menuLabel}
             </SidebarListItem>
