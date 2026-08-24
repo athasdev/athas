@@ -268,6 +268,7 @@ export interface ExtensionPermissions {
   secrets?: boolean;
   workspace?: "read";
   openExternal?: boolean;
+  clipboardWrite?: boolean;
 }
 
 export interface ThemeContribution {

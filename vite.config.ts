@@ -48,6 +48,7 @@ export default defineConfig({
     exclude: [
       ...defaultExclude,
       "**/.direnv/**",
+      "**/.delta/**",
       "**/dist/**",
       "**/build/**",
       "**/target/**",

@@ -532,6 +532,9 @@
         },
         "openExternal": {
           "type": "boolean"
+        },
+        "clipboardWrite": {
+          "type": "boolean"
         }
       }
     },

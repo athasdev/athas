@@ -6,7 +6,7 @@ import type {
 import type { ChatFollowUpAction } from "@/features/ai/lib/follow-up-actions";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import type { GenerativeUIComponent } from "@/extensions/ui/types/generative-ui";
+import type { GenerativeUIView } from "@/extensions/ui/types/generative-ui";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
@@ -47,7 +47,7 @@ export interface Message {
   toolCalls?: ToolCall[];
   images?: ImageContent[];
   resources?: ResourceContent[];
-  ui?: GenerativeUIComponent[];
+  ui?: GenerativeUIView[];
   followUpActions?: ChatFollowUpAction[];
 }
 

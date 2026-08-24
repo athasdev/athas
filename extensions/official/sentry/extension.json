@@ -20,7 +20,8 @@
   "permissions": {
     "network": ["https://*", "http://localhost:*", "http://127.0.0.1:*"],
     "secrets": true,
-    "openExternal": true
+    "openExternal": true,
+    "clipboardWrite": true
   },
   "icon": "icon.svg",
   "license": "MIT",

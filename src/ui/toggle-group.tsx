@@ -9,6 +9,7 @@ export interface ToggleGroupOption<Value extends string = string> {
   value: Value;
   label: string;
   icon?: ReactNode;
+  disabled?: boolean;
 }
 
 interface ToggleGroupCommonProps<Value extends string> {
@@ -19,6 +20,7 @@ interface ToggleGroupCommonProps<Value extends string> {
   className?: string;
   wrap?: boolean;
   iconOnly?: boolean;
+  disabled?: boolean;
 }
 
 interface SingleToggleGroupProps<Value extends string> extends ToggleGroupCommonProps<Value> {
@@ -91,6 +93,7 @@ export function ToggleGroup<Value extends string>(props: ToggleGroupProps<Value>
     className,
     wrap = true,
     iconOnly = false,
+    disabled = false,
   } = props;
   const values = props.type === "multiple" ? props.value : [props.value];
 
@@ -116,6 +119,7 @@ export function ToggleGroup<Value extends string>(props: ToggleGroupProps<Value>
         const item = (
           <TogglePrimitive
             value={option.value}
+            disabled={disabled || option.disabled}
             data-slot="toggle-group-item"
             aria-label={iconOnly ? option.label : undefined}
             className={toggleGroupItemVariants({ size, variant, iconOnly })}

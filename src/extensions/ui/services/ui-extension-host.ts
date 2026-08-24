@@ -4,7 +4,11 @@ import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
 import { ExternalExtensionView } from "../components/external-extension-view";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
 import type { ExtensionViewNode } from "../types/extension-view";
-import { callExtensionHostService } from "./extension-host-services";
+import {
+  callExtensionHostService,
+  clearExtensionHostServiceState,
+} from "./extension-host-services";
+import { parseExtensionViewNode } from "./extension-view-schema";
 import type { ExtensionWorkerMessage } from "./ui-extension-worker";
 
 interface LoadedExtension {
@@ -21,6 +25,12 @@ interface LoadedExtension {
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
+function dialogDimension(value: unknown, minimum: number, maximum: number): number | undefined {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(maximum, Math.max(minimum, value))
+    : undefined;
+}
+
 function assertNamespaced(extensionId: string, contributionId: unknown): string {
   const id = String(contributionId);
   if (!id.startsWith(`${extensionId}.`)) {
@@ -33,6 +43,27 @@ class UIExtensionHost {
   private loaded = new Map<string, LoadedExtension>();
 
   async loadExtension(manifest: ExtensionManifest, _extensionPath?: string): Promise<void> {
+    return this.loadExtensionSource(
+      manifest,
+      manifest.main
+        ? () =>
+            invoke<string>("read_extension_entrypoint", {
+              extensionId: manifest.id,
+              entrypoint: manifest.main,
+            })
+        : undefined,
+    );
+  }
+
+  async loadGeneratedExtension(manifest: ExtensionManifest, source: string): Promise<void> {
+    return this.loadExtensionSource(manifest, async () => source, "generated");
+  }
+
+  private async loadExtensionSource(
+    manifest: ExtensionManifest,
+    readSource?: () => Promise<string>,
+    compatibility?: "generated",
+  ): Promise<void> {
     const extensionId = manifest.id;
     if (this.loaded.has(extensionId)) return;
 
@@ -48,15 +79,12 @@ class UIExtensionHost {
     this.loaded.set(extensionId, loaded);
 
     try {
-      if (!manifest.main) {
+      if (!readSource) {
         actions.updateExtensionState(extensionId, "active");
         return;
       }
 
-      const source = await invoke<string>("read_extension_entrypoint", {
-        extensionId,
-        entrypoint: manifest.main,
-      });
+      const source = await readSource();
       loaded.entryPointUrl = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
       const worker = new Worker(new URL("./ui-extension-worker-runtime.ts", import.meta.url), {
         type: "module",
@@ -69,7 +97,12 @@ class UIExtensionHost {
       worker.addEventListener("error", (event) => {
         actions.updateExtensionState(extensionId, "error", event.message);
       });
-      worker.postMessage({ type: "activate", entryPointUrl: loaded.entryPointUrl });
+      worker.postMessage({
+        type: "activate",
+        entryPointUrl: loaded.entryPointUrl,
+        extensionId,
+        compatibility,
+      });
 
       await new Promise<void>((resolve, reject) => {
         const timeout = window.setTimeout(
@@ -150,6 +183,24 @@ class UIExtensionHost {
         render: () =>
           createElement(ExternalExtensionView, { extensionId: loaded.extensionId, viewId: id }),
       });
+    } else if (message.event === "toolbar.registerAction") {
+      const id = assertNamespaced(loaded.extensionId, payload.id);
+      actions.registerToolbarAction({
+        id,
+        extensionId: loaded.extensionId,
+        title: String(payload.title ?? id),
+        icon: String(payload.icon ?? "puzzle-piece"),
+        position: payload.position === "left" ? "left" : "right",
+        onClick: () => {
+          void this.request(loaded.extensionId, "executeToolbarAction", [id]).catch((error) => {
+            actions.updateExtensionState(
+              loaded.extensionId,
+              "error",
+              error instanceof Error ? error.message : String(error),
+            );
+          });
+        },
+      });
     } else if (message.event === "commands.register") {
       const id = assertNamespaced(loaded.extensionId, payload.id);
       actions.registerCommand({
@@ -159,6 +210,23 @@ class UIExtensionHost {
         category: typeof payload.category === "string" ? payload.category : undefined,
         execute: (...args) => this.executeCommand(loaded.extensionId, id, args),
       });
+    } else if (message.event === "dialogs.open") {
+      const id = assertNamespaced(loaded.extensionId, payload.id);
+      actions.openDialog({
+        id,
+        extensionId: loaded.extensionId,
+        title: String(payload.title ?? id),
+        width: dialogDimension(payload.width, 320, 960),
+        height: dialogDimension(payload.height, 240, 800),
+        render: () =>
+          createElement(ExternalExtensionView, {
+            extensionId: loaded.extensionId,
+            viewId: id,
+            surface: "embedded",
+          }),
+      });
+    } else if (message.event === "dialogs.close") {
+      actions.closeDialog(assertNamespaced(loaded.extensionId, payload.id));
     } else if (message.event === "views.invalidate") {
       actions.invalidateSidebarView(assertNamespaced(loaded.extensionId, payload.viewId));
     }
@@ -179,7 +247,8 @@ class UIExtensionHost {
   }
 
   async renderView(extensionId: string, viewId: string): Promise<ExtensionViewNode> {
-    return (await this.request(extensionId, "renderView", [viewId])) as ExtensionViewNode;
+    const result = await this.request(extensionId, "renderView", [viewId]);
+    return parseExtensionViewNode(result);
   }
 
   async executeCommand(
@@ -188,6 +257,15 @@ class UIExtensionHost {
     args: unknown[] = [],
   ): Promise<void> {
     await this.request(extensionId, "executeCommand", [commandId, ...args]);
+  }
+
+  async executeViewAction(
+    extensionId: string,
+    viewId: string,
+    commandId: string,
+    args: unknown[] = [],
+  ): Promise<void> {
+    await this.request(extensionId, "executeViewAction", [viewId, commandId, ...args]);
   }
 
   async unloadExtension(extensionId: string): Promise<void> {
@@ -203,6 +281,7 @@ class UIExtensionHost {
 
   private disposeWorker(loaded: LoadedExtension) {
     loaded.worker?.terminate();
+    clearExtensionHostServiceState(loaded.extensionId);
     if (loaded.entryPointUrl) URL.revokeObjectURL(loaded.entryPointUrl);
     for (const request of loaded.pending.values()) {
       window.clearTimeout(request.timeout);

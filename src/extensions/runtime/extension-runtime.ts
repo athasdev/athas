@@ -35,7 +35,7 @@ async function initializeExtensionRuntimeServices(): Promise<void> {
     }
   }
 
-  initializeGeneratedUIExtensions();
+  await initializeGeneratedUIExtensions();
 }
 
 export function initializeExtensionRuntime(): Promise<void> {

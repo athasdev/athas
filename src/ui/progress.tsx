@@ -17,13 +17,35 @@ const progressTrackVariants = cva(
   },
 );
 
+const progressIndicatorVariants = cva(
+  "h-full rounded-full transition-[width] duration-(--app-duration-normal) ease-(--app-ease-smooth)",
+  {
+    variants: {
+      tone: {
+        default: "bg-foreground/55",
+        muted: "bg-subtle-foreground/55",
+        accent: "bg-primary",
+        success: "bg-success",
+        warning: "bg-warning",
+        error: "bg-destructive",
+      },
+    },
+    defaultVariants: {
+      tone: "accent",
+    },
+  },
+);
+
 function Progress({
   className,
   children,
   value,
   size = "sm",
+  tone = "accent",
   ...props
-}: ProgressPrimitive.Root.Props & VariantProps<typeof progressTrackVariants>) {
+}: ProgressPrimitive.Root.Props &
+  VariantProps<typeof progressTrackVariants> &
+  VariantProps<typeof progressIndicatorVariants>) {
   return (
     <ProgressPrimitive.Root
       value={value}
@@ -34,7 +56,7 @@ function Progress({
     >
       {children}
       <ProgressTrack size={size}>
-        <ProgressIndicator />
+        <ProgressIndicator tone={tone} />
       </ProgressTrack>
     </ProgressPrimitive.Root>
   );
@@ -54,14 +76,15 @@ function ProgressTrack({
   );
 }
 
-function ProgressIndicator({ className, ...props }: ProgressPrimitive.Indicator.Props) {
+function ProgressIndicator({
+  className,
+  tone = "accent",
+  ...props
+}: ProgressPrimitive.Indicator.Props & VariantProps<typeof progressIndicatorVariants>) {
   return (
     <ProgressPrimitive.Indicator
       data-slot="progress-indicator"
-      className={cn(
-        "h-full rounded-full bg-primary transition-[width] duration-(--app-duration-normal) ease-(--app-ease-smooth)",
-        className,
-      )}
+      className={cn(progressIndicatorVariants({ tone }), className)}
       {...props}
     />
   );
