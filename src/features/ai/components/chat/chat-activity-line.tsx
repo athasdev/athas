@@ -20,6 +20,7 @@ interface ChatActivityLineProps {
   state?: ActivityState;
   actions?: ReactNode;
   children?: ReactNode;
+  detailsVariant?: "text" | "content";
 }
 
 export function ChatActivityLine({
@@ -29,6 +30,7 @@ export function ChatActivityLine({
   state = "info",
   actions,
   children,
+  detailsVariant = "text",
 }: ChatActivityLineProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const canExpand = Boolean(children);
@@ -61,10 +63,12 @@ export function ChatActivityLine({
         </Marker>
         {actions ? <span className="shrink-0">{actions}</span> : null}
       </div>
-      {canExpand && isExpanded ? (
+      {canExpand && isExpanded && detailsVariant === "text" ? (
         <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap pl-6 font-mono ui-text-sm text-subtle-foreground/55">
           {children}
         </pre>
+      ) : canExpand && isExpanded ? (
+        <div className="mt-1 min-w-0 pl-6">{children}</div>
       ) : null}
     </div>
   );
