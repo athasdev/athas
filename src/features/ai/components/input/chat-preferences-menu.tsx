@@ -1,5 +1,11 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { loadCodexComposerCatalog } from "@/features/ai/integrations/codex/codex-composer-catalog";
+import type {
+  CodexComposerCatalog,
+  CodexSkillSummary,
+} from "@/features/ai/integrations/codex/codex-types";
+import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
 import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
@@ -7,7 +13,9 @@ import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/type
 import type { AgentType, ChatMode } from "@/features/ai/types/ai-chat.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { openCodexThread } from "@/features/ai/lib/open-codex-thread";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import {
@@ -29,9 +37,12 @@ import {
 import {
   BookOpenIcon as BookOpen,
   BrainIcon as Brain,
+  ClockCounterClockwiseIcon as History,
   FadersHorizontalIcon as Preferences,
+  ArrowClockwiseIcon as Retry,
   SlidersHorizontalIcon as Sliders,
   SparkleIcon as Sparkles,
+  WarningIcon as Warning,
 } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -41,6 +52,20 @@ const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
   { id: "chat", label: "Ask" },
   { id: "plan", label: "Plan" },
 ];
+
+type CodexCatalogStatus = "idle" | "loading" | "loaded" | "error";
+
+interface CodexCatalogState {
+  status: CodexCatalogStatus;
+  catalog: CodexComposerCatalog;
+  error: string | null;
+}
+
+const EMPTY_CODEX_CATALOG: CodexComposerCatalog = {
+  threads: [],
+  skills: [],
+  skillErrors: [],
+};
 
 function CurrentValue({ children }: { children: string }) {
   return (
@@ -401,6 +426,173 @@ function SkillsPreferencesSubmenu({
   );
 }
 
+function CodexCatalogError({
+  label,
+  message,
+  onRetry,
+}: {
+  label: string;
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <>
+      <DropdownMenuItem disabled title={message}>
+        <Warning className="text-warning" />
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={onRetry}>
+        <Retry />
+        Retry
+      </DropdownMenuItem>
+    </>
+  );
+}
+
+function CodexSessionsPreferencesSubmenu({
+  state,
+  onRetry,
+}: {
+  state: CodexCatalogState;
+  onRetry: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const filteredThreads = state.catalog.threads.filter((thread) =>
+    matchesSearchQuery(query, [thread.name ?? "", thread.preview, thread.cwd]),
+  );
+  const count =
+    state.status === "error"
+      ? "!"
+      : state.status === "loading" || state.status === "idle"
+        ? "…"
+        : state.catalog.threads.length.toString();
+
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <History />
+        <PreferenceLabel>Sessions</PreferenceLabel>
+        <CurrentValue>{count}</CurrentValue>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-80 min-w-72 overflow-y-auto">
+        <MenuSearchInput value={query} onChange={setQuery} placeholder="Search sessions..." />
+        {state.status === "loading" || state.status === "idle" ? (
+          <DropdownMenuItem disabled>
+            <Spinner label="Loading sessions" compact />
+            Loading sessions…
+          </DropdownMenuItem>
+        ) : state.status === "error" ? (
+          <CodexCatalogError
+            label="Could not load sessions"
+            message={state.error ?? "Unknown error"}
+            onRetry={onRetry}
+          />
+        ) : state.catalog.threads.length === 0 ? (
+          <DropdownMenuItem disabled>No Codex sessions yet</DropdownMenuItem>
+        ) : filteredThreads.length === 0 ? (
+          <DropdownMenuItem disabled>No matching sessions</DropdownMenuItem>
+        ) : (
+          filteredThreads.map((thread) => {
+            const title = thread.name?.trim() || thread.preview.trim() || "Untitled session";
+            const updatedAt = thread.updatedAt > 0 ? new Date(thread.updatedAt * 1000) : null;
+
+            return (
+              <DropdownMenuItem
+                key={thread.id}
+                onClick={() => openCodexThread(thread)}
+                title={thread.preview || title}
+              >
+                <History />
+                <span className="min-w-0 flex-1 truncate">{title}</span>
+                {updatedAt ? (
+                  <span className="shrink-0 text-subtle-foreground">
+                    {updatedAt.toLocaleDateString()}
+                  </span>
+                ) : null}
+              </DropdownMenuItem>
+            );
+          })
+        )}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+}
+
+function CodexSkillsPreferencesSubmenu({
+  state,
+  onRetry,
+  onSelectSkill,
+}: {
+  state: CodexCatalogState;
+  onRetry: () => void;
+  onSelectSkill: (skill: CodexSkillSummary) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const filteredSkills = state.catalog.skills.filter((skill) =>
+    matchesSearchQuery(query, [skill.name, skill.description, skill.path, skill.scope]),
+  );
+  const count =
+    state.status === "error"
+      ? "!"
+      : state.status === "loading" || state.status === "idle"
+        ? "…"
+        : state.catalog.skills.length.toString();
+  const hasSkillLoadError =
+    state.status === "loaded" &&
+    state.catalog.skills.length === 0 &&
+    state.catalog.skillErrors.length > 0;
+
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <BookOpen />
+        <PreferenceLabel>Skills</PreferenceLabel>
+        <CurrentValue>{count}</CurrentValue>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-80 min-w-72 overflow-y-auto">
+        <MenuSearchInput value={query} onChange={setQuery} placeholder="Search Codex skills..." />
+        {state.status === "loading" || state.status === "idle" ? (
+          <DropdownMenuItem disabled>
+            <Spinner label="Loading skills" compact />
+            Loading skills…
+          </DropdownMenuItem>
+        ) : state.status === "error" || hasSkillLoadError ? (
+          <CodexCatalogError
+            label="Could not load skills"
+            message={state.error ?? state.catalog.skillErrors.join("\n")}
+            onRetry={onRetry}
+          />
+        ) : state.catalog.skills.length === 0 ? (
+          <DropdownMenuItem disabled>No Codex skills found</DropdownMenuItem>
+        ) : filteredSkills.length === 0 ? (
+          <DropdownMenuItem disabled>No matching skills</DropdownMenuItem>
+        ) : (
+          filteredSkills.map((skill) => (
+            <DropdownMenuItem
+              key={skill.path || skill.name}
+              onClick={() => onSelectSkill(skill)}
+              title={skill.description}
+              disabled={!skill.enabled}
+            >
+              <BookOpen />
+              <span className="min-w-0 flex-1 truncate">{skill.name}</span>
+              {skill.scope ? (
+                <span className="shrink-0 text-subtle-foreground">{skill.scope}</span>
+              ) : null}
+            </DropdownMenuItem>
+          ))
+        )}
+        {state.catalog.skills.length > 0 && state.catalog.skillErrors.length > 0 ? (
+          <DropdownMenuItem disabled title={state.catalog.skillErrors.join("\n")}>
+            <Warning className="text-warning" />
+            Some skills could not be loaded
+          </DropdownMenuItem>
+        ) : null}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+}
+
 function AcpConfigPreferences({
   options,
   onChange,
@@ -462,6 +654,7 @@ interface ChatPreferencesMenuProps {
   onModelChange: (modelId: string) => void;
   onSessionConfigChange: (optionId: string, value: SessionConfigValue) => void;
   onSelectSkill: (skill: AIChatSkill) => void;
+  onSelectCodexSkill: (skillName: string) => void;
   onBeforeOpen: () => void;
 }
 
@@ -475,8 +668,34 @@ export function ChatPreferencesMenu({
   onModelChange,
   onSessionConfigChange,
   onSelectSkill,
+  onSelectCodexSkill,
   onBeforeOpen,
 }: ChatPreferencesMenuProps) {
+  const cwd = useProjectStore((state) => state.rootFolderPath || ".");
+  const [codexCatalogState, setCodexCatalogState] = useState<CodexCatalogState>({
+    status: "idle",
+    catalog: EMPTY_CODEX_CATALOG,
+    error: null,
+  });
+  const codexCatalogRequestId = useRef(0);
+  const isCodex = currentAgentId === CODEX_INTEGRATION_ID;
+  const loadCodexCatalog = useCallback(() => {
+    const requestId = ++codexCatalogRequestId.current;
+    setCodexCatalogState({ status: "loading", catalog: EMPTY_CODEX_CATALOG, error: null });
+    void loadCodexComposerCatalog(cwd)
+      .then((catalog) => {
+        if (requestId !== codexCatalogRequestId.current) return;
+        setCodexCatalogState({ status: "loaded", catalog, error: null });
+      })
+      .catch((error) => {
+        if (requestId !== codexCatalogRequestId.current) return;
+        setCodexCatalogState({
+          status: "error",
+          catalog: EMPTY_CODEX_CATALOG,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+  }, [cwd]);
   const preferences = useMemo(
     () =>
       getChatPreferencesModel({
@@ -488,7 +707,13 @@ export function ChatPreferencesMenu({
   );
 
   return (
-    <DropdownMenu onOpenChange={(open) => open && onBeforeOpen()}>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (!open) return;
+        onBeforeOpen();
+        if (isCodex) loadCodexCatalog();
+      }}
+    >
       <DropdownMenuTrigger
         render={
           <Button
@@ -505,6 +730,9 @@ export function ChatPreferencesMenu({
       <DropdownMenuContent align="end" className="min-w-64">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Session</DropdownMenuLabel>
+          {isCodex ? (
+            <CodexSessionsPreferencesSubmenu state={codexCatalogState} onRetry={loadCodexCatalog} />
+          ) : null}
           {preferences.showAgentPreference && onAgentChange ? (
             <ProviderPreferencesSubmenu
               currentAgentId={currentAgentId}
@@ -534,7 +762,15 @@ export function ChatPreferencesMenu({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuLabel>Instructions</DropdownMenuLabel>
-          <SkillsPreferencesSubmenu onSelectSkill={onSelectSkill} />
+          {isCodex ? (
+            <CodexSkillsPreferencesSubmenu
+              state={codexCatalogState}
+              onRetry={loadCodexCatalog}
+              onSelectSkill={(skill) => onSelectCodexSkill(skill.name)}
+            />
+          ) : (
+            <SkillsPreferencesSubmenu onSelectSkill={onSelectSkill} />
+          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>

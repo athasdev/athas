@@ -3,6 +3,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
+import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { runCodexDynamicTool } from "./codex-dynamic-tools";
 import type {
@@ -13,7 +14,7 @@ import type {
 
 interface CodexHandlers {
   onChunk: (chunk: string) => void;
-  onComplete: () => void;
+  onComplete: (result?: AgentCompletionResult) => void;
   onError: (error: string, canReconnect?: boolean) => void;
   onNewMessage?: () => void;
   onToolUse?: (event: Extract<AcpEvent, { type: "tool_start" }>) => void;
@@ -82,12 +83,13 @@ export class CodexIntegrationService {
   ) {}
 
   async start(message: string, context: ContextInfo) {
+    if (CodexIntegrationService.active && CodexIntegrationService.active !== this) {
+      this.handlers.onError("Another Codex session is already running. Stop it before retrying.");
+      return;
+    }
     CodexIntegrationService.active = this;
     const cwd = context.projectRoot?.trim() || ".";
     this.projectRoot = cwd;
-    this.unlisten = await listen<CodexProtocolEvent>("codex-event", ({ payload }) =>
-      this.handleEvent(payload),
-    );
     try {
       const chat = this.chatId
         ? useAIChatStore.getState().actions.getChatById(this.chatId)
@@ -99,6 +101,9 @@ export class CodexIntegrationService {
       if (this.chatId) {
         useAIChatStore.getState().actions.setChatAcpSessionId(this.chatId, this.threadId);
       }
+      this.unlisten = await listen<CodexProtocolEvent>("codex-event", ({ payload }) =>
+        this.handleEvent(payload),
+      );
       const turn = await invoke<any>("start_codex_turn", {
         args: {
           threadId: this.threadId,
@@ -121,6 +126,13 @@ export class CodexIntegrationService {
       if (this.chatId && eventThreadId === this.threadId && threadName) {
         useAIChatStore.getState().actions.updateChatTitle(this.chatId, threadName);
       }
+      return;
+    }
+
+    if (!this.isEventForCurrentRun(params)) return;
+
+    if (method === "turn/started") {
+      this.turnId = String(params.turn?.id ?? params.turnId ?? "") || this.turnId;
       return;
     }
 
@@ -193,6 +205,7 @@ export class CodexIntegrationService {
     if (method.endsWith("/requestApproval") && event.id != null) {
       const permission: Extract<AcpEvent, { type: "permission_request" }> = {
         type: "permission_request",
+        sessionId: this.threadId ?? "codex",
         requestId: String(event.id),
         permissionType: method.includes("fileChange") ? "file-change" : "command",
         resource: String(params.command ?? params.filePath ?? "Workspace"),
@@ -207,17 +220,26 @@ export class CodexIntegrationService {
     }
     if (method === "turn/completed") {
       const failed = params.turn?.status === "failed";
+      const cancelled = ["canceled", "cancelled"].includes(String(params.turn?.status));
       this.pendingNewMessage = false;
       this.dispose();
       if (failed) {
         this.handlers.onError(params.turn?.error?.message ?? "Codex turn failed");
       } else {
-        this.handlers.onComplete();
+        this.handlers.onComplete({ outcome: cancelled ? "cancelled" : "completed" });
       }
     }
     if (method === "error") {
+      this.dispose();
       this.handlers.onError(String(params.message ?? "Codex app-server error"), true);
     }
+  }
+
+  private isEventForCurrentRun(params: Record<string, any>) {
+    if (!this.threadId || String(params.threadId ?? "") !== this.threadId) return false;
+
+    const eventTurnId = String(params.turnId ?? params.turn?.id ?? "");
+    return !this.turnId || !eventTurnId || eventTurnId === this.turnId;
   }
 
   private startPendingMessage() {

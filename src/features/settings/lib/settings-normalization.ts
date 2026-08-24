@@ -410,6 +410,7 @@ function normalizeAISettings(settings: Settings): Settings {
     normalizedSettings.aiAutocompleteCustomBaseUrl?.trim() || "";
   normalizedSettings.aiAutocompleteCustomModelId =
     normalizedSettings.aiAutocompleteCustomModelId?.trim() || "";
+  normalizedSettings.aiAgentNotifications = normalizedSettings.aiAgentNotifications === true;
   normalizedSettings.aiSkills = normalizeAISkills(normalizedSettings.aiSkills);
   normalizedSettings.v0DesignSystems = normalizeV0DesignSystems(
     (normalizedSettings as { v0DesignSystems?: unknown }).v0DesignSystems,

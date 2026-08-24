@@ -232,6 +232,7 @@ export type AcpEvent =
     }
   | {
       type: "permission_request";
+      sessionId: string;
       requestId: string;
       permissionType: string;
       resource: string;

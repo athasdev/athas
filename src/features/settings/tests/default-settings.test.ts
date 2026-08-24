@@ -14,6 +14,10 @@ describe("default settings", () => {
     expect(getDefaultSettingsSnapshot().isAIChatVisible).toBe(false);
   });
 
+  it("requires users to opt in to native agent notifications", () => {
+    expect(getDefaultSettingsSnapshot().aiAgentNotifications).toBe(false);
+  });
+
   it("preserves the established editor and terminal interaction behavior", () => {
     const settings = getDefaultSettingsSnapshot();
 

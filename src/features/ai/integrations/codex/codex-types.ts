@@ -37,3 +37,25 @@ export interface CodexCatalog {
   collaborationModes: any[];
   rateLimits: Record<string, any> | null;
 }
+
+export interface CodexThreadSummary {
+  id: string;
+  name: string | null;
+  preview: string;
+  cwd: string;
+  updatedAt: number;
+}
+
+export interface CodexSkillSummary {
+  name: string;
+  description: string;
+  path: string;
+  scope: string;
+  enabled: boolean;
+}
+
+export interface CodexComposerCatalog {
+  threads: CodexThreadSummary[];
+  skills: CodexSkillSummary[];
+  skillErrors: string[];
+}

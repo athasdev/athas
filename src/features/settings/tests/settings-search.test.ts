@@ -50,6 +50,10 @@ describe("settings search", () => {
     expect(searchSettings("confirm before delete")[0]?.id).toBe("file-tree-confirm-before-delete");
   });
 
+  it("finds native agent notifications", () => {
+    expect(searchSettings("native notifications")[0]?.id).toBe("ai-agent-notifications");
+  });
+
   it("creates stable DOM target keys for labels and sections", () => {
     expect(getSettingSearchTargetKey("Hide Root Folder")).toBe("hiderootfolder");
     expect(getSettingSearchTargetKey("File Tree")).toBe("filetree");

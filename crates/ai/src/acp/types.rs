@@ -462,6 +462,7 @@ pub enum AcpEvent {
    /// Permission request from agent
    #[serde(rename_all = "camelCase")]
    PermissionRequest {
+      session_id: String,
       request_id: String,
       permission_type: String,
       resource: String,

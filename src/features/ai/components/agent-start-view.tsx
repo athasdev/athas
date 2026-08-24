@@ -13,7 +13,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/ui/context-menu";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/ui/empty";
+import { Empty, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   FileTextIcon as FileText,
   FolderOpenIcon as FolderOpen,
@@ -22,7 +22,6 @@ import {
   SparkleIcon as Sparkles,
   TerminalWindowIcon as Terminal,
 } from "@/ui/icons";
-import { ThinkingOrb } from "@/ui/thinking-orb";
 
 interface AgentStartViewProps {
   children: ReactNode;
@@ -100,9 +99,6 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
       <ContextMenuTrigger className="flex size-full min-h-0 flex-1 overflow-auto">
         <Empty className="m-auto max-w-2xl gap-4 px-6 py-8" data-slot="agent-start-view">
           <EmptyHeader>
-            <EmptyMedia className="size-16">
-              <ThinkingOrb state="shaping" size={64} aria-hidden="true" />
-            </EmptyMedia>
             <EmptyTitle>Where should we begin?</EmptyTitle>
           </EmptyHeader>
 

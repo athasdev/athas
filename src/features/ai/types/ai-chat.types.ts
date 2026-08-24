@@ -10,7 +10,12 @@ import type { GenerativeUIView } from "@/extensions/ui/types/generative-ui";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
-export type AssistantResponsePhase = "waiting" | "thinking";
+export type AssistantResponsePhase = "starting" | "waiting" | "thinking";
+
+export interface AgentMessageSubmitResult {
+  accepted: boolean;
+  error?: string;
+}
 
 export interface ToolCall {
   id?: string;
@@ -109,6 +114,6 @@ export interface AIChatInputBarProps {
   presentation?: "default" | "initial";
   autoFocus?: boolean;
   onAgentChange?: (agentId: AgentType) => void;
-  onSendMessage: (message: string) => Promise<void>;
+  onSendMessage: (message: string) => AgentMessageSubmitResult;
   onStopStreaming: () => void;
 }

@@ -268,6 +268,21 @@ describe("settings normalization", () => {
     expect(normalized.aiModelId).toBe("extension-model");
   });
 
+  it("only enables agent notifications for an explicit boolean setting", () => {
+    expect(
+      normalizeSettings({
+        ...getDefaultSettingsSnapshot(),
+        aiAgentNotifications: "true" as never,
+      }).aiAgentNotifications,
+    ).toBe(false);
+    expect(
+      normalizeSettings({
+        ...getDefaultSettingsSnapshot(),
+        aiAgentNotifications: true,
+      }).aiAgentNotifications,
+    ).toBe(true);
+  });
+
   it("preserves supported marketplace skill metadata", () => {
     const now = new Date().toISOString();
     const normalized = normalizeSettingValue("aiSkills", [

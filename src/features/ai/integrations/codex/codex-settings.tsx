@@ -15,6 +15,7 @@ import {
 } from "./codex-integration-service";
 import type { CodexIntegrationStatus, CodexThreadSettings } from "./codex-types";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { normalizeCodexSkills, normalizeCodexThreads } from "./codex-composer-catalog";
 
 const effortOptions = ["low", "medium", "high", "xhigh"].map((value) => ({
   value,
@@ -37,10 +38,12 @@ export function CodexSettings() {
   const [settings, setSettings] = useState<CodexThreadSettings>(getCodexSettings);
   const [models, setModels] = useState<any[]>([]);
   const [details, setDetails] = useState({ skills: 0, mcp: 0, threads: 0 });
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const connect = useCallback(async () => {
     setBusy(true);
+    setCatalogError(null);
     try {
       setStatus(await invoke<CodexIntegrationStatus>("start_codex_integration", { args: { cwd } }));
       const [modelResult, skillsResult, mcpResult, threadResult] = await Promise.all([
@@ -51,10 +54,12 @@ export function CodexSettings() {
       ]);
       setModels(modelResult.data ?? modelResult.models ?? []);
       setDetails({
-        skills: (skillsResult.data ?? skillsResult.skills ?? []).length,
+        skills: normalizeCodexSkills(skillsResult).skills.length,
         mcp: (mcpResult.data ?? mcpResult.servers ?? []).length,
-        threads: (threadResult.data ?? threadResult.threads ?? []).length,
+        threads: normalizeCodexThreads(threadResult).length,
       });
+    } catch (error) {
+      setCatalogError(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
       setStatus(await CodexIntegrationService.status().catch(() => null));
@@ -143,7 +148,7 @@ export function CodexSettings() {
       </SettingRow>
       <SettingRow
         label="Codex capabilities"
-        description="Loaded from app-server for the current workspace"
+        description={catalogError ?? "Loaded from app-server for the current workspace"}
       >
         <div className="flex items-center gap-1.5">
           <Badge variant="default">{details.threads} threads</Badge>

@@ -100,6 +100,7 @@ tauri = { version = "2", default-features = false, features = [
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-http = "2"
+tauri-plugin-notification = "2.3.3"
 tauri-plugin-log = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-os = "2"

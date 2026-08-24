@@ -711,15 +711,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [getPlainTextFromDiv, handleInputChange],
   );
 
-  const insertSkillAtCursor = useCallback(
-    (skill: AIChatSkill) => {
-      if (!inputRef.current || !skill.content.trim()) return;
+  const insertSkillContentAtCursor = useCallback(
+    (content: string) => {
+      if (!inputRef.current || !content.trim()) return;
 
       const selection = window.getSelection();
       const range = document.createRange();
       const currentText = getPlainTextFromDiv();
       const prefix = currentText.trim().length > 0 && !/\s$/.test(currentText) ? "\n\n" : "";
-      const textNode = document.createTextNode(`${prefix}${skill.content.trim()} `);
+      const textNode = document.createTextNode(`${prefix}${content.trim()} `);
 
       inputRef.current.focus();
 
@@ -745,6 +745,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
       setHasInputText(true);
     },
     [getPlainTextFromDiv, handleInputChange],
+  );
+
+  const insertSkillAtCursor = useCallback(
+    (skill: AIChatSkill) => insertSkillContentAtCursor(skill.content),
+    [insertSkillContentAtCursor],
+  );
+
+  const insertCodexSkillAtCursor = useCallback(
+    (skillName: string) => insertSkillContentAtCursor(`$${skillName}`),
+    [insertSkillContentAtCursor],
   );
 
   useEffect(() => {
@@ -910,22 +920,21 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [hideSlashCommands, syncInputFromEditable],
   );
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = () => {
     const currentInput = inputValueRef.current;
     const currentImages = pastedImages;
     const hasContent = currentInput.trim() || currentImages.length > 0;
     if (!hasContent || !isInputEnabled) return;
 
-    // Clear input and images immediately after send is triggered
+    const result = onSendMessage(currentInput);
+    if (!result.accepted) return;
+
     setInput("");
     setHasInputText(false);
     clearPastedImages();
     if (inputRef.current) {
       inputRef.current.innerHTML = "";
     }
-
-    // Send the captured message (TODO: include images in message)
-    await onSendMessage(currentInput);
   };
 
   const focusInput = useCallback(() => inputRef.current?.focus(), []);
@@ -969,7 +978,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       dragActive={isContextDragOver}
       className={cn(isInitialPresentation && "w-full")}
     >
-      <ChatComposerBody>
+      <ChatComposerBody variant={isInitialPresentation ? "plain" : "surface"}>
         {pastedImages.length > 0 && (
           <AttachmentGroup className={cn("px-3 pt-3", isInitialPresentation && "px-4 pt-4")}>
             {pastedImages.map((image) => (
@@ -1087,6 +1096,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 void changeSessionConfigOption(optionId, value)
               }
               onSelectSkill={insertSkillAtCursor}
+              onSelectCodexSkill={insertCodexSkillAtCursor}
               onBeforeOpen={closeInlineMenus}
             />
 

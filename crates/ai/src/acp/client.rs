@@ -339,6 +339,12 @@ impl AthasAcpClient {
       args: acp::RequestPermissionRequest,
    ) -> acp::Result<acp::RequestPermissionResponse> {
       let request_id = uuid::Uuid::new_v4().to_string();
+      let session_id = self
+         .current_session_id
+         .lock()
+         .await
+         .clone()
+         .unwrap_or_default();
 
       // Extract tool call info for the permission request
       let tool_call_id = args.tool_call.tool_call_id.clone();
@@ -350,6 +356,7 @@ impl AthasAcpClient {
          .unwrap_or("Tool call");
       // Emit permission request to frontend
       self.emit_event(AcpEvent::PermissionRequest {
+         session_id,
          request_id: request_id.clone(),
          permission_type: "tool_call".to_string(),
          resource: tool_call_id.to_string(),

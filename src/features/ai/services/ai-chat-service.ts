@@ -2,6 +2,7 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat.types";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
+import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import type { AIMessage } from "@/features/ai/types/messages.types";
@@ -137,7 +138,7 @@ export const getChatCompletionStream = async (
   userMessage: string,
   context: ContextInfo,
   onChunk: (chunk: string) => void,
-  onComplete: () => void,
+  onComplete: (result?: AgentCompletionResult) => void,
   onError: (error: string, canReconnect?: boolean) => void,
   conversationHistory?: AIMessage[],
   onNewMessage?: () => void,

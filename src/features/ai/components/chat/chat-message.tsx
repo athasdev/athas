@@ -206,10 +206,11 @@ export const ChatMessage = memo(function ChatMessage({
     (!message.content || message.content.trim().length === 0) &&
     (!message.toolCalls || message.toolCalls.length === 0)
   ) {
+    const isStarting = message.responsePhase === "starting";
     const isThinking = message.responsePhase === "thinking";
     return (
       <ChatLoadingIndicator
-        label={isThinking ? "Thinking…" : "Waiting for response…"}
+        label={isStarting ? "Starting agent…" : isThinking ? "Thinking…" : "Waiting for response…"}
         state={isThinking ? "breathing" : "connecting"}
         compact
       />

@@ -622,6 +622,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["ai", "session", "mode", "default", "agent", "acp"],
   },
   {
+    id: "ai-agent-notifications",
+    tab: "ai",
+    section: "Notifications",
+    label: "Agent Notifications",
+    description: "Show native notifications when background agent work needs attention",
+    keywords: ["ai", "agent", "notification", "native", "system", "background", "permission"],
+  },
+  {
     id: "ai-autocomplete",
     tab: "ai",
     section: "Autocomplete",

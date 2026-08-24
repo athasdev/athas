@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
+import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -53,10 +54,11 @@ vi.mock("@/features/window/stores/project.store", () => ({
 function createHandler(
   overrides: Partial<{
     onChunk: (chunk: string) => void;
-    onComplete: () => void;
+    onComplete: (result?: AgentCompletionResult) => void;
     onError: (error: string, canReconnect?: boolean) => void;
     onNewMessage: () => void;
     onEvent: (event: AcpEvent) => void;
+    onPermissionRequest: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
   }> = {},
 ) {
   const handlers = {
@@ -105,6 +107,27 @@ describe("AcpStreamHandler", () => {
     });
 
     expect(handlers.onChunk).toHaveBeenCalledWith("right chat");
+  });
+
+  it("accepts permission requests only from the active ACP session", () => {
+    const onPermissionRequest = vi.fn();
+    const { handler } = createHandler({ onPermissionRequest });
+    const permission = {
+      type: "permission_request" as const,
+      requestId: "permission-1",
+      permissionType: "tool_call",
+      resource: "tool-1",
+      description: "Run command",
+      options: [],
+    };
+
+    handler.handleAcpEvent({ ...permission, sessionId: "session-b" });
+    expect(onPermissionRequest).not.toHaveBeenCalled();
+
+    handler.handleAcpEvent({ ...permission, sessionId: "session-a" });
+    expect(onPermissionRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ requestId: "permission-1", sessionId: "session-a" }),
+    );
   });
 
   it("starts a new message before reasoning that follows a completed tool", () => {
@@ -190,6 +213,19 @@ describe("AcpStreamHandler", () => {
     });
 
     expect(handlers.onComplete).toHaveBeenCalledTimes(1);
+    expect(handlers.onComplete).toHaveBeenCalledWith({ outcome: "completed" });
+  });
+
+  it("reports cancelled prompt completion without treating it as finished work", () => {
+    const { handler, handlers } = createHandler();
+
+    handler.handleAcpEvent({
+      type: "prompt_complete",
+      sessionId: "session-a",
+      stopReason: "cancelled",
+    });
+
+    expect(handlers.onComplete).toHaveBeenCalledWith({ outcome: "cancelled" });
   });
 
   it("ignores prompt completion from a different ACP session", () => {
@@ -310,7 +346,16 @@ describe("AcpStreamHandler", () => {
           running: true,
           initialized: true,
           agentId: "codex",
-          sessionId: null,
+          sessionId: "session-a",
+          workspacePath: "/workspace",
+        });
+      }
+      if (command === "start_acp_agent") {
+        return Promise.resolve({
+          running: true,
+          initialized: true,
+          agentId: "codex",
+          sessionId: "session-a",
           workspacePath: "/workspace",
         });
       }
@@ -318,10 +363,12 @@ describe("AcpStreamHandler", () => {
     });
 
     const { handler, handlers } = createHandler();
-    await (handler as unknown as AcpStreamHandler).start("Hey", {
+    const start = (handler as unknown as AcpStreamHandler).start("Hey", {
       agentId: "codex",
       projectRoot: "/workspace",
     });
+    await vi.advanceTimersByTimeAsync(1000);
+    await start;
 
     expect(handlers.onError).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(20_000);

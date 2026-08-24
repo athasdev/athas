@@ -59,6 +59,7 @@ import {
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
 import { CodexSettings } from "@/features/ai/integrations/codex/codex-settings";
+import { requestAgentNativeNotificationPermission } from "@/features/ai/services/agent-native-notifications";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
 
 function resolveAutocompleteDefaultModelId(models: Array<{ id: string; name: string }>): string {
@@ -78,6 +79,7 @@ export const AISettings = () => {
       aiCompletion: state.settings.aiCompletion,
       aiCustomBaseUrl: state.settings.aiCustomBaseUrl,
       aiCustomModelId: state.settings.aiCustomModelId,
+      aiAgentNotifications: state.settings.aiAgentNotifications,
       aiModelId: state.settings.aiModelId,
       aiProviderId: state.settings.aiProviderId,
       ollamaBaseUrl: state.settings.ollamaBaseUrl,
@@ -113,6 +115,7 @@ export const AISettings = () => {
   const [hasCustomChatApiKey, setHasCustomChatApiKey] = useState(false);
   const [isSavingCustomChatApiKey, setIsSavingCustomChatApiKey] = useState(false);
   const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
+  const [isUpdatingAgentNotifications, setIsUpdatingAgentNotifications] = useState(false);
 
   // Ollama URL state
   const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL);
@@ -430,6 +433,34 @@ export const AISettings = () => {
     updateSetting("aiAutocompleteCustomBaseUrl", customAutocompleteBaseUrlInput);
   };
 
+  const handleAgentNotificationsChange = async (checked: boolean) => {
+    if (!checked) {
+      await updateSetting("aiAgentNotifications", false);
+      return;
+    }
+
+    setIsUpdatingAgentNotifications(true);
+    try {
+      const permission = await requestAgentNativeNotificationPermission();
+      if (permission === "granted") {
+        await updateSetting("aiAgentNotifications", true);
+        showToast({ message: "Agent notifications enabled", type: "success" });
+        return;
+      }
+
+      await updateSetting("aiAgentNotifications", false);
+      showToast({
+        message:
+          permission === "denied"
+            ? "Native notification permission was not granted"
+            : "Native notifications are unavailable",
+        type: permission === "denied" ? "warning" : "error",
+      });
+    } finally {
+      setIsUpdatingAgentNotifications(false);
+    }
+  };
+
   const providersNeedingAuth = providers.filter((p) => p.requiresAuth && !p.requiresApiKey);
 
   const isOllamaSelected = settings.aiProviderId === "ollama";
@@ -441,6 +472,23 @@ export const AISettings = () => {
   return (
     <SettingsView>
       <CodexSettings />
+      <Section title="Notifications">
+        <SettingRow
+          label="Agent Notifications"
+          description="Show native notifications when background agent work finishes, fails, or needs approval"
+          onReset={() =>
+            updateSetting("aiAgentNotifications", getDefaultSetting("aiAgentNotifications"))
+          }
+          canReset={settings.aiAgentNotifications !== getDefaultSetting("aiAgentNotifications")}
+        >
+          <Switch
+            checked={settings.aiAgentNotifications}
+            onChange={(checked) => void handleAgentNotificationsChange(checked)}
+            disabled={isUpdatingAgentNotifications}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
       <Section title="AI Chat">
         <SettingRow
           label="Provider"

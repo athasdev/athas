@@ -112,6 +112,7 @@ export interface Settings {
   aiAutocompleteCustomBaseUrl: string;
   aiAutocompleteCustomModelId: string;
   aiDefaultSessionMode: string;
+  aiAgentNotifications: boolean;
   aiSkills: AIChatSkill[];
   v0DesignSystems: V0DesignSystemProfile[];
   activeV0DesignSystemId: string;
