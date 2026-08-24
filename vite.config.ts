@@ -34,7 +34,8 @@ export default defineConfig({
     },
   },
   staged: {
-    "*": "vp check --fix",
+    "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": "vp check --fix",
+    "*.{css,html,json,jsonc,md,mdx,toml,yaml,yml}": "vp fmt --write",
   },
   build: {
     // Tauri uses the system WKWebView on macOS. macOS 12 can run an older

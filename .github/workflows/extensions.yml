@@ -28,6 +28,10 @@ jobs:
           node-version-file: .node-version
           run-install: false
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
       - name: Prepare generated extension CDN output
         run: bun run extensions:prepare
 
@@ -55,6 +59,10 @@ jobs:
         with:
           node-version-file: .node-version
           run-install: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
 
       - name: Prepare generated extension CDN output
         run: bun run extensions:prepare

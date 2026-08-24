@@ -36,6 +36,11 @@ jobs:
           node-version-file: .node-version
           run-install: false
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
       - name: Generate release metadata
         id: release_meta
         env:
@@ -157,6 +162,11 @@ jobs:
           node-version-file: .node-version
           cache: true
           run-install: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -420,6 +430,11 @@ jobs:
         with:
           node-version-file: .node-version
           run-install: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
 
       - name: Download release metadata
         uses: actions/download-artifact@v4
