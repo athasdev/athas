@@ -257,24 +257,24 @@ const GitCommitHistory = ({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden select-none">
-      {(ahead > 0 || behind > 0) && (
-        <div className="space-y-1 px-2 pb-1">
-          {ahead > 0 ? (
-            <div className="ui-text-sm text-subtle-foreground">
-              <span className="text-primary">{ahead}</span>{" "}
-              {`local commit${ahead !== 1 ? "s" : ""} not pushed`}
-            </div>
-          ) : null}
-          {behind > 0 ? (
-            <div className="ui-text-sm text-subtle-foreground">
-              <span className="text-primary">{behind}</span>{" "}
-              {`remote commit${behind !== 1 ? "s" : ""} not pulled`}
-            </div>
-          ) : null}
-        </div>
-      )}
-
       <SidebarScrollArea className="min-h-0 flex-1">
+        {(ahead > 0 || behind > 0) && (
+          <div data-slot="git-history-sync-status" className="space-y-1 px-2 pb-1">
+            {ahead > 0 ? (
+              <div className="ui-text-sm text-subtle-foreground">
+                <span className="text-primary">{ahead}</span>{" "}
+                {`local commit${ahead !== 1 ? "s" : ""} not pushed`}
+              </div>
+            ) : null}
+            {behind > 0 ? (
+              <div className="ui-text-sm text-subtle-foreground">
+                <span className="text-primary">{behind}</span>{" "}
+                {`remote commit${behind !== 1 ? "s" : ""} not pulled`}
+              </div>
+            ) : null}
+          </div>
+        )}
+
         {!hasHistoryRows ? (
           <EmptyState layout="sidebar" message="No commits" />
         ) : filteredCommits.length === 0 ? (
