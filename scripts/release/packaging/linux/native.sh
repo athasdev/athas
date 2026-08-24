@@ -153,6 +153,7 @@ await Bun.write(
               "libgbm1",
               "libatk-bridge2.0-0",
               "libxkbcommon0",
+              "libxkbcommon-x11-0",
               "libdrm2",
               "libxcb1",
               "libxfixes3",
@@ -176,6 +177,7 @@ await Bun.write(
               "mesa-libgbm",
               "at-spi2-atk",
               "libxkbcommon",
+              "libxkbcommon-x11",
               "libdrm",
               "libxcb",
               "libXfixes",
@@ -213,7 +215,7 @@ if [[ ":${actual_rpath}:" != *":${expected_cef_rpath}:"* ]]; then
 fi
 
 patch_deb_dependencies() {
-  local depends="libgtk-3-0, libnss3, libnspr4, libasound2, libx11-6, libxcomposite1, libxdamage1, libxrandr2, libgbm1, libatk-bridge2.0-0, libxkbcommon0, libdrm2, libxcb1, libxfixes3, libxext6, libglib2.0-0, libpango-1.0-0, libcairo2, libgdk-pixbuf-2.0-0"
+  local depends="libgtk-3-0, libnss3, libnspr4, libasound2, libx11-6, libxcomposite1, libxdamage1, libxrandr2, libgbm1, libatk-bridge2.0-0, libxkbcommon0, libxkbcommon-x11-0, libdrm2, libxcb1, libxfixes3, libxext6, libglib2.0-0, libpango-1.0-0, libcairo2, libgdk-pixbuf-2.0-0"
   local deb
 
   while IFS= read -r deb; do
