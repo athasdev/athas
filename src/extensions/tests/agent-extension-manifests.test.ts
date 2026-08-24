@@ -11,6 +11,10 @@ async function readOfficialManifest(folder: string): Promise<ExtensionManifest> 
   ) as ExtensionManifest;
 }
 
+async function readOfficialIcon(folder: string): Promise<string> {
+  return readFile(join(ATHAS_ROOT, "extensions", "official", folder, "icon.svg"), "utf8");
+}
+
 describe("agent extension manifests", () => {
   it("uses the current Claude Agent ACP adapter without replacing the terminal integration", async () => {
     const manifest = await readOfficialManifest("claude-code");
@@ -137,5 +141,17 @@ describe("agent extension manifests", () => {
         }),
       },
     });
+  });
+
+  it("ships distinct brand artwork instead of the generic agent placeholder", async () => {
+    const folders = ["antigravity", "gemini-cli", "kimi-cli", "opencode", "qwen-code"];
+    const icons = await Promise.all(folders.map(readOfficialIcon));
+
+    for (const [index, icon] of icons.entries()) {
+      expect(icon).toContain(`data-brand="${folders[index]}"`);
+      expect(icon).not.toContain("M12.3333 3");
+    }
+
+    expect(new Set(icons).size).toBe(folders.length);
   });
 });
