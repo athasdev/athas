@@ -3,7 +3,7 @@ import {
   CaretRightIcon as CaretRight,
   MagnifyingGlassIcon as Search,
 } from "@/ui/icons";
-import { cva } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
 import { forwardRef, type ComponentProps, type ReactNode, useEffect, useState } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
@@ -17,7 +17,20 @@ import { cn } from "@/utils/cn";
 
 const sidebarControlVariants = cva(
   "athas-chrome-control font-sans ui-text-sm flex min-h-(--athas-chrome-control-height) w-full min-w-0 items-center gap-(--athas-chrome-gap) rounded-(--athas-chrome-radius) px-1.5 py-0.5 font-normal [&_svg]:size-[1em]",
+  {
+    variants: {
+      appearance: {
+        default: "",
+        activity: "min-h-8 gap-2 rounded-lg px-2.5 py-1 ui-text-base",
+      },
+    },
+    defaultVariants: {
+      appearance: "default",
+    },
+  },
 );
+
+type SidebarControlAppearance = VariantProps<typeof sidebarControlVariants>["appearance"];
 
 export function SidebarPanel({
   children,
@@ -262,6 +275,7 @@ export const SidebarSearchPopover = forwardRef<
 export function SidebarListItem({
   children,
   active = false,
+  appearance = "default",
   description,
   leading,
   trailing,
@@ -272,6 +286,7 @@ export function SidebarListItem({
 }: ComponentProps<"button"> & {
   children: ReactNode;
   active?: boolean;
+  appearance?: SidebarControlAppearance;
   description?: ReactNode;
   leading?: ReactNode;
   trailing?: ReactNode;
@@ -282,12 +297,14 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        sidebarControlVariants(),
-        "text-left text-subtle-foreground transition-[background-color,color]",
+        sidebarControlVariants({ appearance }),
+        "text-left transition-[background-color,color]",
+        appearance === "activity" ? "text-foreground/80" : "text-subtle-foreground",
         "hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
         active && "bg-selected font-medium text-foreground",
         description && "h-auto min-h-10 items-start py-1",
-        iconOnly && "justify-center gap-0 rounded-full px-0",
+        iconOnly &&
+          "min-h-(--athas-chrome-control-height) justify-center gap-0 rounded-full px-0 py-0",
         className,
       )}
       data-active={active}
@@ -345,6 +362,7 @@ export function SidebarListMenuItem({
   menu,
   menuLabel,
   active = false,
+  appearance = "default",
   iconOnly = false,
   className,
   onClick,
@@ -361,6 +379,7 @@ export function SidebarListMenuItem({
             <SidebarListItem
               {...props}
               active={active}
+              appearance={appearance}
               iconOnly
               leading={leading}
               className={className}
@@ -380,12 +399,14 @@ export function SidebarListMenuItem({
       role="group"
       data-active={active}
       className={cn(
-        "flex w-full min-w-0 rounded-(--athas-chrome-radius)",
+        "flex w-full min-w-0",
+        appearance === "activity" ? "rounded-lg" : "rounded-(--athas-chrome-radius)",
         active && "bg-selected text-foreground",
       )}
     >
       <SidebarListItem
         active={false}
+        appearance={appearance}
         leading={leading}
         onClick={onClick}
         className={cn("rounded-r-none bg-transparent", className)}
@@ -398,6 +419,7 @@ export function SidebarListMenuItem({
           render={
             <SidebarListItem
               active={false}
+              appearance={appearance}
               iconOnly
               leading={<CaretRight />}
               aria-label={menuLabel}
@@ -415,18 +437,24 @@ export function SidebarListMenuItem({
 
 export function SidebarListEditor({
   children,
+  appearance = "default",
   leading,
   trailing,
   className,
   ...props
 }: ComponentProps<"div"> & {
   children: ReactNode;
+  appearance?: SidebarControlAppearance;
   leading?: ReactNode;
   trailing?: ReactNode;
 }) {
   return (
     <div
-      className={cn(sidebarControlVariants(), "bg-selected font-medium text-foreground", className)}
+      className={cn(
+        sidebarControlVariants({ appearance }),
+        "bg-selected font-medium text-foreground",
+        className,
+      )}
       data-active="true"
       {...props}
     >

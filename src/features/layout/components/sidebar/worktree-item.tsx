@@ -10,17 +10,23 @@ import {
   ContextMenuTrigger,
 } from "@/ui/context-menu";
 import { showConfirmDialog } from "@/ui/dialog";
-import { CopyIcon, NodesIcon, OpenExternalIcon, TrashIcon, WindowExpandIcon } from "@/ui/icons";
+import {
+  CopyIcon,
+  NodesFillDuoIcon,
+  OpenExternalIcon,
+  TrashIcon,
+  WindowExpandIcon,
+} from "@/ui/icons";
 import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getFolderName } from "@/utils/path-helpers";
 
-interface SidebarWorktreeHistoryRowProps {
+interface WorktreeItemProps {
   repoPath: string;
   worktree: GitWorktree;
 }
 
-export function SidebarWorktreeHistoryRow({ repoPath, worktree }: SidebarWorktreeHistoryRowProps) {
+export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
   const { showToast } = useToast();
   const canRemove = !worktree.is_current;
 
@@ -55,12 +61,8 @@ export function SidebarWorktreeHistoryRow({ repoPath, worktree }: SidebarWorktre
         <div className="group/sidebar-worktree relative flex w-full min-w-0 items-center">
           <SidebarListItem
             active={worktree.is_current}
-            leading={<NodesIcon className="size-4" />}
-            trailing={
-              <span className="transition-opacity group-hover/sidebar-worktree:opacity-0 group-focus-within/sidebar-worktree:opacity-0">
-                {worktree.branch}
-              </span>
-            }
+            appearance="activity"
+            leading={<NodesFillDuoIcon className="size-4 text-success" />}
             title={worktree.path}
             className="pr-12"
             onClick={openWorktree}
@@ -71,7 +73,7 @@ export function SidebarWorktreeHistoryRow({ repoPath, worktree }: SidebarWorktre
           <span className="pointer-events-none absolute right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/sidebar-worktree:pointer-events-auto group-hover/sidebar-worktree:opacity-100 group-focus-within/sidebar-worktree:pointer-events-auto group-focus-within/sidebar-worktree:opacity-100">
             <SidebarIconButton
               tooltip="Open in New Window"
-              tooltipSide="right"
+              tooltipSide="top"
               onClick={(event) => {
                 event.stopPropagation();
                 openWorktreeInNewWindow();
@@ -83,7 +85,7 @@ export function SidebarWorktreeHistoryRow({ repoPath, worktree }: SidebarWorktre
               <SidebarIconButton
                 className="hover:text-destructive"
                 tooltip="Remove Worktree"
-                tooltipSide="right"
+                tooltipSide="top"
                 onClick={(event) => {
                   event.stopPropagation();
                   void handleRemove();

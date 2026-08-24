@@ -8,20 +8,21 @@ import { DropdownMenuItem, DropdownMenuSeparator } from "@/ui/dropdown";
 import { SidebarListItem, SidebarListMenuItem } from "@/ui/sidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import {
-  BoxIcon,
+  AppStackFillDuoIcon,
+  BoxFillDuoIcon,
   ChatCircleTextIcon,
   ClockCounterClockwiseIcon,
+  CodeBranchFillDuoIcon,
+  CodePullRequestFillDuoIcon,
+  FilesFillDuoIcon,
   FolderOpenIcon,
   GitBranchIcon,
   GitDiffIcon,
   GitPullRequestIcon,
-  ExtensionsIcon,
-  FilesIcon,
-  GithubLogoIcon,
   LightningIcon,
-  MagnifyingGlassIcon,
+  MagnifierFillDuoIcon,
   NodesIcon,
-  TableIcon,
+  TableFillDuoIcon,
 } from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -150,7 +151,7 @@ export const SidebarPaneSelector = ({
       {
         id: "files",
         label: showLabels ? "Files" : undefined,
-        icon: <FilesIcon className={iconClassName} />,
+        icon: <FilesFillDuoIcon className={cn(iconClassName, "text-primary")} />,
         isActive: isFilesActive,
         onClick: () => onViewChange("files"),
         ariaLabel: "Files",
@@ -165,7 +166,7 @@ export const SidebarPaneSelector = ({
             {
               id: "search",
               label: showLabels ? "Search" : undefined,
-              icon: <MagnifyingGlassIcon className={iconClassName} />,
+              icon: <MagnifierFillDuoIcon className={cn(iconClassName, "text-info")} />,
               isActive: isSearchActive,
               onClick: onSearchClick,
               ariaLabel: "Search",
@@ -182,7 +183,7 @@ export const SidebarPaneSelector = ({
             {
               id: "git",
               label: showLabels ? "Source Control" : undefined,
-              icon: <GitBranchIcon className={iconClassName} />,
+              icon: <CodeBranchFillDuoIcon className={cn(iconClassName, "text-success")} />,
               isActive: isPrimarySidebarItemActive && isGitViewActive,
               onClick: () => onViewChange("git"),
               submenuItems: [
@@ -232,7 +233,7 @@ export const SidebarPaneSelector = ({
             {
               id: "github-prs",
               label: showLabels ? "Pull Requests" : undefined,
-              icon: <GithubLogoIcon className={iconClassName} />,
+              icon: <CodePullRequestFillDuoIcon className={cn(iconClassName, "text-primary")} />,
               isActive: isPrimarySidebarItemActive && isGitHubPRsViewActive,
               onClick: () => onViewChange("github-prs"),
               submenuItems: [
@@ -266,7 +267,7 @@ export const SidebarPaneSelector = ({
       {
         id: "data-sources",
         label: showLabels ? "Data Sources" : undefined,
-        icon: <TableIcon className={iconClassName} />,
+        icon: <TableFillDuoIcon className={cn(iconClassName, "text-warning")} />,
         isActive: isPrimarySidebarItemActive && activeSidebarView === "data-sources",
         onClick: () => onViewChange("data-sources"),
         ariaLabel: "Data Sources",
@@ -280,7 +281,7 @@ export const SidebarPaneSelector = ({
             {
               id: "docker",
               label: showLabels ? "Docker" : undefined,
-              icon: <BoxIcon className={iconClassName} />,
+              icon: <BoxFillDuoIcon className={cn(iconClassName, "text-info")} />,
               isActive: isPrimarySidebarItemActive && activeSidebarView === "docker",
               onClick: () => onViewChange("docker"),
               ariaLabel: "Docker",
@@ -294,7 +295,7 @@ export const SidebarPaneSelector = ({
       {
         id: "extensions",
         label: showLabels ? "Extensions" : undefined,
-        icon: <ExtensionsIcon className={iconClassName} />,
+        icon: <AppStackFillDuoIcon className={cn(iconClassName, "text-warning")} />,
         isActive: isExtensionsActive,
         onClick: onExtensionsClick,
         ariaLabel: "Extensions",
@@ -370,6 +371,7 @@ export const SidebarPaneSelector = ({
               <SidebarListMenuItem
                 key={item.id}
                 active={!!item.isActive}
+                appearance="activity"
                 leading={item.icon}
                 iconOnly={!showLabels}
                 onClick={item.onClick}
@@ -398,6 +400,7 @@ export const SidebarPaneSelector = ({
             <SidebarListItem
               key={item.id}
               active={!!item.isActive}
+              appearance="activity"
               leading={item.icon}
               iconOnly={!showLabels}
               onClick={item.onClick}

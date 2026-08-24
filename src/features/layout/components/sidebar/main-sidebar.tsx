@@ -66,18 +66,18 @@ import {
 } from "@/ui/context-menu";
 import { Spinner } from "@/ui/spinner";
 import {
-  BoxIcon,
+  AppStackFillDuoIcon,
+  BoxFillDuoIcon,
+  CodeBranchFillDuoIcon,
+  CodePullRequestFillDuoIcon,
   EyeIcon,
-  ExtensionsIcon,
-  FilesIcon,
+  FilesFillDuoIcon,
   FolderIcon,
   FolderOpenIcon,
-  GitBranchIcon,
-  GithubLogoIcon,
-  MagnifyingGlassIcon,
+  MagnifierFillDuoIcon,
   NodesIcon,
   SparkleIcon,
-  TableIcon,
+  TableFillDuoIcon,
   TerminalIcon,
 } from "@/ui/icons";
 import { cn } from "@/utils/cn";
@@ -219,14 +219,14 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       {
         id: "files",
         label: "Files",
-        icon: <FilesIcon />,
+        icon: <FilesFillDuoIcon className="text-primary" />,
       },
       ...(coreFeatures.search
         ? [
             {
               id: "search",
               label: "Search",
-              icon: <MagnifyingGlassIcon />,
+              icon: <MagnifierFillDuoIcon className="text-info" />,
             },
           ]
         : []),
@@ -235,7 +235,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             {
               id: "git",
               label: "Source Control",
-              icon: <GitBranchIcon />,
+              icon: <CodeBranchFillDuoIcon className="text-success" />,
             },
           ]
         : []),
@@ -244,28 +244,28 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             {
               id: "github-prs",
               label: "Pull Requests",
-              icon: <GithubLogoIcon />,
+              icon: <CodePullRequestFillDuoIcon className="text-primary" />,
             },
           ]
         : []),
       {
         id: "data-sources",
         label: "Data Sources",
-        icon: <TableIcon />,
+        icon: <TableFillDuoIcon className="text-warning" />,
       },
       ...(coreFeatures.docker
         ? [
             {
               id: "docker",
               label: "Docker",
-              icon: <BoxIcon />,
+              icon: <BoxFillDuoIcon className="text-info" />,
             },
           ]
         : []),
       {
         id: "extensions",
         label: "Extensions",
-        icon: <ExtensionsIcon />,
+        icon: <AppStackFillDuoIcon className="text-warning" />,
       },
       ...Array.from(extensionViews.values()).map((view) => ({
         id: view.id,
@@ -829,11 +829,11 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             Open Project…
           </ContextMenuItem>
           <ContextMenuItem onClick={() => openGlobalSearchBuffer()}>
-            <MagnifyingGlassIcon />
+            <MagnifierFillDuoIcon className="text-info" />
             Search
           </ContextMenuItem>
           <ContextMenuItem onClick={() => openExtensionsBuffer()}>
-            <ExtensionsIcon />
+            <AppStackFillDuoIcon className="text-warning" />
             Extensions
           </ContextMenuItem>
         </ContextMenuGroup>

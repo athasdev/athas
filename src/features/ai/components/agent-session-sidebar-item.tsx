@@ -69,6 +69,7 @@ export function AgentSessionSidebarItem({
           render={
             <SidebarListItem
               active={active}
+              appearance="activity"
               leading={<ProviderIcon providerId={providerIconId} size={16} />}
               className="pr-12"
             >
@@ -146,7 +147,7 @@ export function AgentSessionSidebarItem({
 
         {workspacePath ? (
           <div
-            className="truncate border-border/70 border-t px-3 py-2 font-mono text-subtle-foreground ui-text-xs"
+            className="truncate border-border/70 border-t px-3 py-2 font-mono text-subtle-foreground ui-text-sm"
             title={workspacePath}
           >
             {workspacePath}

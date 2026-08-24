@@ -23,11 +23,10 @@ import {
 import {
   CaretRightIcon,
   CopyIcon,
-  FolderIcon,
+  FolderFillDuoIcon,
   FolderOpenIcon,
   ImageIcon,
   OpenExternalIcon,
-  PlusIcon,
   RemoteIcon,
   TrashIcon,
   WindowExpandIcon,
@@ -67,9 +66,9 @@ function ProjectGlyph({
     );
   }
 
-  const Icon = isRemote ? RemoteIcon : projectPath ? FolderIcon : PlusIcon;
+  const Icon = isRemote ? RemoteIcon : FolderFillDuoIcon;
 
-  return <Icon className={cn("shrink-0", className ?? "size-4")} />;
+  return <Icon className={cn("shrink-0", !isRemote && "text-primary", className ?? "size-4")} />;
 }
 
 export function SidebarProjectSwitcher({
@@ -124,6 +123,7 @@ export function SidebarProjectSwitcher({
         <DropdownMenuTrigger
           render={
             <SidebarListItem
+              appearance="activity"
               leading={
                 expanded ? (
                   <span
