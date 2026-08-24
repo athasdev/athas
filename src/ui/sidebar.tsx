@@ -301,7 +301,7 @@ export function SidebarListItem({
         "text-left transition-[background-color,color]",
         appearance === "activity" ? "text-foreground/80" : "text-subtle-foreground",
         "hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
-        active && "bg-selected font-medium text-foreground",
+        active && "bg-selected text-foreground",
         description && "h-auto min-h-10 items-start py-1",
         iconOnly &&
           "min-h-(--athas-chrome-control-height) justify-center gap-0 rounded-full px-0 py-0",
@@ -452,7 +452,7 @@ export function SidebarListEditor({
     <div
       className={cn(
         sidebarControlVariants({ appearance }),
-        "bg-selected font-medium text-foreground",
+        "bg-selected text-foreground",
         className,
       )}
       data-active="true"

@@ -69,7 +69,7 @@ export function PathBreadcrumb({
                     className={cn(
                       "min-w-0 gap-1 whitespace-nowrap",
                       isLast
-                        ? "font-medium text-foreground hover:text-foreground"
+                        ? "text-foreground hover:text-foreground"
                         : "text-subtle-foreground hover:text-foreground",
                     )}
                   >
