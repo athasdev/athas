@@ -708,7 +708,7 @@ const TerminalTabBar = ({
           orientation={orientation}
           className={cn(
             orientation === "vertical" ? "" : "justify-between",
-            "scrollbar-hidden overscroll-x-contain",
+            "scrollbar-none overscroll-x-contain",
           )}
           style={orientation === "vertical" ? { width: tabSidebarWidth } : undefined}
           role="tablist"
@@ -790,7 +790,7 @@ const TerminalTabBar = ({
 
               <div
                 className={cn(
-                  "scrollbar-hidden min-w-0 flex-1",
+                  "scrollbar-none min-w-0 flex-1",
                   orientation === "vertical"
                     ? "flex flex-col gap-0.5 overflow-y-auto overflow-x-hidden"
                     : "flex items-center gap-0.5 overflow-x-auto overflow-y-hidden",

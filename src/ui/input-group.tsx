@@ -11,7 +11,7 @@ function InputGroup({ className, ...props }: ComponentProps<"div">) {
       data-slot="input-group"
       role="group"
       className={cn(
-        "group/input-group relative flex min-h-7 w-full min-w-0 items-center rounded-(--athas-chrome-radius) border border-border bg-surface text-foreground outline-none transition-colors has-disabled:opacity-50 has-[[data-slot=input-group-control]:focus-visible]:border-border-strong has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-border-strong/35 has-[[data-slot][aria-invalid=true]]:border-destructive has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto",
+        "group/input-group relative flex min-h-7 w-full min-w-0 items-center rounded-chrome border border-border bg-surface text-foreground outline-none transition-colors has-disabled:opacity-50 has-[[data-slot=input-group-control]:focus-visible]:border-border-strong has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-border-strong/35 has-[[data-slot][aria-invalid=true]]:border-destructive has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto",
         className,
       )}
       {...props}
@@ -61,8 +61,8 @@ function InputGroupAddon({
 const inputGroupButtonVariants = cva("shadow-none", {
   variants: {
     size: {
-      xs: "h-5 rounded-(--athas-chrome-radius) px-1.5",
-      sm: "h-6 rounded-(--athas-chrome-radius) px-2",
+      xs: "h-5 rounded-chrome px-1.5",
+      sm: "h-6 rounded-chrome px-2",
       "icon-xs": "size-5 rounded-full p-0",
       "icon-sm": "size-6 rounded-full p-0",
     },

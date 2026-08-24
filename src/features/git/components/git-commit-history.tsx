@@ -11,7 +11,12 @@ import {
 import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
-import { SidebarIconButton, SidebarSearchPopover, SidebarSection } from "@/ui/sidebar";
+import {
+  SidebarIconButton,
+  SidebarScrollArea,
+  SidebarSearchPopover,
+  SidebarSection,
+} from "@/ui/sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { AuthUser } from "@/features/window/services/auth-api";
 import { formatRelativeDate } from "@/utils/date";
@@ -269,49 +274,47 @@ const GitCommitHistory = ({
         </div>
       )}
 
-      <div className="custom-scrollbar-auto relative min-h-0 flex-1 overflow-y-auto bg-transparent pr-2.5 [scrollbar-gutter:stable]">
-        <div className="px-2 py-2">
-          {!hasHistoryRows ? (
-            <EmptyState layout="sidebar" message="No commits" />
-          ) : filteredCommits.length === 0 ? (
-            <EmptyState layout="sidebar" message="No commits match the current filters" />
-          ) : (
-            <>
-              {commitGroups.map((group) => (
-                <SidebarSection key={group.label} title={group.label} count={group.commits.length}>
-                  {group.commits.map((commit) => (
-                    <CommitItem
-                      key={commit.hash}
-                      commit={commit}
-                      onSelectCommit={handleSelectCommit}
-                      syncState={commitSyncStateByHash.get(commit.hash) ?? "pushed"}
-                      repoPath={repoPath}
-                      account={account}
-                    />
-                  ))}
-                </SidebarSection>
-              ))}
-            </>
-          )}
+      <SidebarScrollArea className="min-h-0 flex-1">
+        {!hasHistoryRows ? (
+          <EmptyState layout="sidebar" message="No commits" />
+        ) : filteredCommits.length === 0 ? (
+          <EmptyState layout="sidebar" message="No commits match the current filters" />
+        ) : (
+          <>
+            {commitGroups.map((group) => (
+              <SidebarSection key={group.label} title={group.label} count={group.commits.length}>
+                {group.commits.map((commit) => (
+                  <CommitItem
+                    key={commit.hash}
+                    commit={commit}
+                    onSelectCommit={handleSelectCommit}
+                    syncState={commitSyncStateByHash.get(commit.hash) ?? "pushed"}
+                    repoPath={repoPath}
+                    account={account}
+                  />
+                ))}
+              </SidebarSection>
+            ))}
+          </>
+        )}
 
-          {hasMoreCommits ? (
-            <div className="pt-2">
-              <Button
-                size="sm"
-                className="w-full"
-                onClick={handleLoadMore}
-                disabled={!repoPath || isLoadingMoreCommits}
-              >
-                {isLoadingMoreCommits ? "Loading…" : "Load more"}
-              </Button>
-            </div>
-          ) : commits.length > 0 ? (
-            <div className="ui-text-sm px-3 py-1.5 text-center text-subtle-foreground">
-              end of history
-            </div>
-          ) : null}
-        </div>
-      </div>
+        {hasMoreCommits ? (
+          <div className="pt-2">
+            <Button
+              size="sm"
+              className="w-full"
+              onClick={handleLoadMore}
+              disabled={!repoPath || isLoadingMoreCommits}
+            >
+              {isLoadingMoreCommits ? "Loading…" : "Load more"}
+            </Button>
+          </div>
+        ) : commits.length > 0 ? (
+          <div className="ui-text-sm px-3 py-1.5 text-center text-subtle-foreground">
+            end of history
+          </div>
+        ) : null}
+      </SidebarScrollArea>
     </div>
   );
 };

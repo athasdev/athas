@@ -310,10 +310,7 @@ export function MainLayout() {
       <TitleBarWithSettings />
 
       <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden">
-        <div
-          className="flex flex-1 flex-row overflow-hidden pr-(--athas-workbench-gap)"
-          style={{ minHeight: 0 }}
-        >
+        <div className="flex flex-1 flex-row overflow-hidden pr-workbench" style={{ minHeight: 0 }}>
           <SidebarActivityRail expanded={activityRailExpanded} />
           <ResizablePane
             position="left"
@@ -414,7 +411,7 @@ export function MainLayout() {
         </div>
 
         {terminalWidthMode === "full" && deferredSurfacesReady && (
-          <div className="px-(--athas-workbench-gap)">
+          <div className="px-workbench">
             <Suspense fallback={null}>
               <BottomPane />
             </Suspense>

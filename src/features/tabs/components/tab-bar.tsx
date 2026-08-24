@@ -660,7 +660,7 @@ const TabBar = ({
         <TabBarSurface
           ref={tabBarRef}
           data-tab-bar-pane-id={paneId ?? ""}
-          className="scrollbar-hidden overscroll-x-contain"
+          className="scrollbar-none overscroll-x-contain"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
@@ -695,7 +695,7 @@ const TabBar = ({
           </div>
 
           <SortableContext items={sortedBufferIds} strategy={horizontalListSortingStrategy}>
-            <div className="scrollbar-hidden flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-contain">
+            <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-contain">
               {sortedBuffers.map((buffer, index) => (
                 <SortableTab
                   key={buffer.id}

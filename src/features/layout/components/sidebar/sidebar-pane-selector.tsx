@@ -359,10 +359,7 @@ export const SidebarPaneSelector = ({
 
   if (isVertical) {
     return (
-      <nav
-        aria-label="Activity views"
-        className="flex w-full flex-col gap-(--athas-chrome-gap-tight)"
-      >
+      <nav aria-label="Activity views" className="flex w-full flex-col gap-chrome-tight">
         {visibleItems.map((item) => {
           const label = item.label ?? item.tooltip?.content ?? item.ariaLabel ?? item.id;
 

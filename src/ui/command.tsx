@@ -30,7 +30,7 @@ const commandContentVariants = cva(
 );
 
 const commandItemVariants = cva(
-  "group/command-item font-sans ui-text-sm mb-0.5 flex h-auto min-h-9 w-full items-center justify-start gap-2 rounded-(--athas-chrome-radius) px-2.5 py-2 text-left leading-row transition-colors",
+  "group/command-item font-sans ui-text-sm mb-0.5 flex h-auto min-h-9 w-full items-center justify-start gap-2 rounded-chrome px-2.5 py-2 text-left leading-row transition-colors",
   {
     variants: {
       selected: {
@@ -51,7 +51,7 @@ const commandInputClassName = cva(
 );
 
 const commandItemActionVariants = cva(
-  "shrink-0 transition-[opacity,background-color,color] duration-(--app-duration-fast)",
+  "shrink-0 transition-[opacity,background-color,color] duration-fast",
   {
     variants: {
       visibility: {
@@ -72,7 +72,7 @@ export const CommandHeaderAction = (props: CommandHeaderActionProps) => (
   <Button
     variant="ghost"
     size="sm"
-    className="ui-text-sm w-7 shrink-0 rounded-full px-0 text-subtle-foreground hover:text-foreground has-[span]:w-auto has-[span]:rounded-(--athas-chrome-radius) has-[span]:px-2.5 [&_svg]:size-4"
+    className="ui-text-sm w-7 shrink-0 rounded-full px-0 text-subtle-foreground hover:text-foreground has-[span]:w-auto has-[span]:rounded-chrome has-[span]:px-2.5 [&_svg]:size-4"
     {...props}
   />
 );
@@ -265,11 +265,7 @@ export const CommandForm = ({
   onCancel,
 }: CommandFormProps) => (
   <div className="shrink-0 p-2 pb-0">
-    <form
-      data-command-form=""
-      className="rounded-(--athas-chrome-radius) bg-surface/55 p-2"
-      onSubmit={onSubmit}
-    >
+    <form data-command-form="" className="rounded-chrome bg-surface/55 p-2" onSubmit={onSubmit}>
       <div className="mb-2 flex min-w-0 items-center gap-2">
         {icon ? <CommandItemIcon variant="framed">{icon}</CommandItemIcon> : null}
         <span className="min-w-0 flex-1 truncate font-medium text-foreground ui-text-sm">

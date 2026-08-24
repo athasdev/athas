@@ -715,7 +715,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
               </div>
             ) : (
               <div className="flex min-h-0 w-full flex-1 flex-col">
-                <div className="scrollbar-hidden min-h-0 w-full flex-1 overflow-y-auto">
+                <div className="scrollbar-none min-h-0 w-full flex-1 overflow-y-auto">
                   <SidebarPaneSelector
                     activeSidebarView={activeSidebarView}
                     isGitViewActive={isGitViewActive}
@@ -798,10 +798,10 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             role="separator"
             aria-label="Resize activity rail"
             aria-orientation="vertical"
-            className="group absolute top-0 right-0 z-20 flex h-full w-(--athas-workbench-gap) cursor-col-resize items-center justify-center hover:bg-primary/8"
+            className="group absolute top-0 right-0 z-20 flex h-full w-workbench cursor-col-resize items-center justify-center hover:bg-primary/8"
             onMouseDown={handleResizeMouseDown}
           >
-            <div className="h-full w-px bg-transparent transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) group-hover:bg-primary" />
+            <div className="h-full w-px bg-transparent transition-colors duration-fast ease-smooth group-hover:bg-primary" />
           </div>
         ) : null}
         {isActivityRailResizing ? <div className="fixed inset-0 z-40 cursor-col-resize" /> : null}
@@ -1024,7 +1024,7 @@ export const MainSidebar = memo(
     })();
     return (
       <div className="flex h-full min-h-0" data-external-file-drop-scope="sidebar">
-        <SidebarPanel className={cn("min-w-0 flex-1 overflow-hidden bg-transparent")}>
+        <SidebarPanel className="min-w-0 flex-1 overflow-hidden bg-transparent">
           <div className="h-full min-h-0 overflow-hidden">{activePane?.content ?? null}</div>
         </SidebarPanel>
       </div>

@@ -224,7 +224,7 @@ const Footer = () => {
     >
       <ChromeGroup gap="tight">
         {orderChromeItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
-          <div key={item.id} className="flex min-h-(--athas-chrome-control-height) items-center">
+          <div key={item.id} className="flex min-h-chrome-control items-center">
             {item.content}
           </div>
         ))}
@@ -232,7 +232,7 @@ const Footer = () => {
 
       <ChromeGroup gap="tight">
         {orderChromeItems(footerTrailingItems, footerTrailingOrder).map((item) => (
-          <div key={item.id} className="flex min-h-(--athas-chrome-control-height) items-center">
+          <div key={item.id} className="flex min-h-chrome-control items-center">
             {item.content}
           </div>
         ))}

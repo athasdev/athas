@@ -34,7 +34,7 @@ function Menubar({ className, value = "", onValueChange, ...props }: MenubarProp
       <BaseMenubar
         data-slot="menubar"
         className={cn(
-          "flex h-6 items-center gap-0.5 rounded-(--athas-chrome-radius) bg-background/65 p-0.5 ring-1 ring-border/70",
+          "flex h-6 items-center gap-0.5 rounded-chrome bg-background/65 p-0.5 ring-1 ring-border/70",
           className,
         )}
         {...props}
@@ -84,7 +84,7 @@ function MenubarTrigger({ className, ...props }: ComponentProps<typeof Menu.Trig
       data-slot="menubar-trigger"
       openOnHover
       className={cn(
-        "flex h-5 select-none items-center rounded-(--athas-chrome-radius) px-1.5 font-sans ui-text-chrome text-subtle-foreground outline-none transition-colors hover:bg-accent/50 hover:text-foreground focus:bg-accent/50 focus:text-foreground data-popup-open:bg-accent/80 data-popup-open:text-foreground",
+        "flex h-5 select-none items-center rounded-chrome px-1.5 font-sans ui-text-chrome text-subtle-foreground outline-none transition-colors hover:bg-accent/50 hover:text-foreground focus:bg-accent/50 focus:text-foreground data-popup-open:bg-accent/80 data-popup-open:text-foreground",
         className,
       )}
       {...props}

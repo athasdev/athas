@@ -7,7 +7,7 @@ type ScrollAreaOrientation = "vertical" | "horizontal" | "both";
 type ScrollbarVisibility = "hover" | "always";
 
 const scrollbarVariants = cva(
-  "absolute z-10 flex touch-none select-none transition-opacity duration-(--app-duration-fast)",
+  "absolute z-10 flex touch-none select-none transition-opacity duration-fast",
   {
     variants: {
       visibility: {
@@ -126,7 +126,7 @@ function ScrollBar({
     >
       <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="relative rounded-full bg-(--app-scrollbar-thumb) hover:bg-(--app-scrollbar-thumb-hover) data-[orientation=horizontal]:h-1.5 data-[orientation=vertical]:w-1.5"
+        className="relative rounded-full bg-scrollbar-thumb hover:bg-scrollbar-thumb-hover data-[orientation=horizontal]:h-1.5 data-[orientation=vertical]:w-1.5"
       />
     </ScrollAreaPrimitive.Scrollbar>
   );

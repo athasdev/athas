@@ -60,7 +60,10 @@ export function ThemedFileIcon({
     return <span className={className}>&#8226;</span>;
   }
 
-  const iconClassName = cn("themed-file-icon", className);
+  const iconClassName = cn(
+    "inline-block size-[1em] shrink-0 leading-none [&_svg]:block [&_svg]:size-full",
+    className,
+  );
 
   const renderIcon = () => {
     if (iconResult.component) {
@@ -93,7 +96,7 @@ export function ThemedFileIcon({
         {renderIcon()}
         <svg
           viewBox="0 0 16 16"
-          className="-bottom-0.5 -right-0.5 themed-file-icon-badge absolute text-primary"
+          className="absolute -right-0.5 -bottom-0.5 size-[0.72em] text-primary"
           role="img"
           aria-label="Symlink"
         >

@@ -33,7 +33,10 @@ describe("UI typography contract", () => {
 
   it("only uses UI text utilities that exist in the design system", () => {
     const definedUtilities = new Set(
-      Array.from(utilityStyles.matchAll(/\.((?:ui-text)-[a-z0-9-]+)\s*\{/g), (match) => match[1]),
+      Array.from(
+        utilityStyles.matchAll(/@utility\s+((?:ui-text)-[a-z0-9-]+)\s*\{/g),
+        (match) => match[1],
+      ),
     );
     const missingUtilities = collectSourceFiles(new URL("../../..", import.meta.url)).flatMap(
       (file) => {

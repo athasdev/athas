@@ -278,7 +278,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
         className={cn(
           "absolute inset-x-0 top-10 bottom-9",
           "flex items-center justify-center",
-          "overflow-auto bg-(--editor-bg) p-4",
+          "overflow-auto bg-editor p-4",
         )}
         onContextMenu={handleContextMenu}
       >

@@ -188,7 +188,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           )}
 
           {!store.isLoading && store.documents.length > 0 && (
-            <div className="custom-scrollbar flex-1 overflow-auto p-3">
+            <div className="flex-1 overflow-auto p-3">
               <div className="mb-3 flex items-center justify-between">
                 <div className="text-subtle-foreground ui-text-sm">
                   {store.totalCount} document{store.totalCount === 1 ? "" : "s"}
@@ -222,7 +222,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                           onClick={() => actions.deleteDocument(id)}
                           variant="ghost"
                           size="icon-xs"
-                          className="text-destructive opacity-0 transition-[opacity,background-color] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-destructive/10 group-hover:opacity-100"
+                          className="text-destructive opacity-0 transition-[opacity,background-color] duration-fast ease-smooth hover:bg-destructive/10 group-hover:opacity-100"
                           aria-label={`Delete document ${id}`}
                         >
                           <Trash2 />

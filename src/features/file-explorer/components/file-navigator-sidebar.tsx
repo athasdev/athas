@@ -470,8 +470,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         <SidebarHeader
           className={cn(
             surface === "plain" && "px-1",
-            surface === "panel" &&
-              "border-border/60 border-b bg-surface/92 px-(--athas-chrome-padding-inline)",
+            surface === "panel" && "border-border/60 border-b bg-surface/92 px-chrome-inline",
           )}
         >
           <SidebarSearchPopover
@@ -480,7 +479,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
             aria-label="Search files"
           />
           <div
-            className="ml-auto flex shrink-0 items-center gap-(--athas-chrome-gap)"
+            className="ml-auto flex shrink-0 items-center gap-chrome"
             role="group"
             aria-label="File navigator view"
           >
@@ -508,7 +507,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
 
       <ScrollArea
         className="min-h-0 flex-1"
-        contentClassName={surface === "panel" ? "px-(--athas-chrome-padding-inline) py-2" : "p-1"}
+        contentClassName={surface === "panel" ? "px-chrome-inline py-2" : "p-1"}
         reserveScrollbarGutter
         scrollbarVisibility={surface === "panel" ? "always" : "hover"}
         viewportProps={{ ref: navigatorScrollRef }}

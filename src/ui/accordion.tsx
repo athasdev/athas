@@ -12,7 +12,7 @@ const accordionTriggerVariants = cva(
     variants: {
       variant: {
         chrome:
-          "athas-chrome-control ui-text-caption h-(--athas-tab-height) w-fit gap-(--athas-chrome-gap-tight) rounded-(--athas-chrome-radius) px-2 text-subtle-foreground/80 hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground",
+          "athas-chrome-control ui-text-caption h-tab w-fit gap-chrome-tight rounded-chrome px-2 text-subtle-foreground/80 hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground",
         section:
           "ui-text-base w-full justify-between gap-2 rounded-lg px-1 py-1.5 text-foreground hover:bg-accent/40 focus-visible:bg-accent/40",
       },
@@ -60,7 +60,7 @@ function AccordionTrigger({
   return (
     <AccordionPrimitive.Header
       className={cn(
-        "flex w-full min-w-0 items-center justify-between gap-(--athas-chrome-gap-tight)",
+        "flex w-full min-w-0 items-center justify-between gap-chrome-tight",
         sticky && "sticky top-2 z-10 bg-background",
       )}
     >

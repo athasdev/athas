@@ -18,7 +18,7 @@ const progressTrackVariants = cva(
 );
 
 const progressIndicatorVariants = cva(
-  "h-full rounded-full transition-[width] duration-(--app-duration-normal) ease-(--app-ease-smooth)",
+  "h-full rounded-full transition-[width] duration-normal ease-smooth",
   {
     variants: {
       tone: {

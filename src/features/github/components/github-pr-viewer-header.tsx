@@ -105,7 +105,7 @@ export function GitHubPRViewerHeader({
       }
     >
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-(--athas-chrome-gap)">
+        <div className="flex min-w-0 items-center gap-chrome">
           <Button
             type="button"
             variant="ghost"

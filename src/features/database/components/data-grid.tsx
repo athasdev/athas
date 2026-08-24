@@ -411,7 +411,7 @@ export default function DataGrid({
       </div>
       <div
         ref={scrollContainerRef}
-        className="custom-scrollbar flex-1 overflow-auto outline-none"
+        className="flex-1 overflow-auto outline-none"
         tabIndex={0}
         onKeyDown={handleGridKeyDown}
         aria-label="Database rows"

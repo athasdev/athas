@@ -1123,7 +1123,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           ) : shouldRenderCarousel ? (
             <div
               ref={carouselViewportRef}
-              className="scrollbar-hidden flex h-full items-stretch gap-4 overflow-x-auto overflow-y-hidden px-4 py-4 overscroll-x-contain"
+              className="scrollbar-none flex h-full items-stretch gap-4 overflow-x-auto overflow-y-hidden px-4 py-4 overscroll-x-contain"
               onWheelCapture={handleCarouselWheel}
             >
               {paneBuffers.map((buffer) => {
@@ -1138,7 +1138,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     key={buffer.id}
                     data-buffer-card-id={buffer.id}
                     className={cn(
-                      "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-(--app-duration-normal) ease-(--app-ease-smooth)",
+                      "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-normal ease-smooth",
                       isActiveBuffer
                         ? "border-primary/50 bg-background shadow-[0_0_0_1px_rgba(99,102,241,0.15)]"
                         : "border-border/70 bg-background hover:border-border/90",

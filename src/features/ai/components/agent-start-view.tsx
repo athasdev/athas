@@ -97,7 +97,7 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger className="flex h-full min-h-0 w-full flex-1 overflow-auto">
+      <ContextMenuTrigger className="flex size-full min-h-0 flex-1 overflow-auto">
         <Empty className="m-auto max-w-2xl gap-4 px-6 py-8" data-slot="agent-start-view">
           <EmptyHeader>
             <EmptyMedia className="size-16">

@@ -16,6 +16,7 @@ import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import Input from "@/ui/input";
 import { GithubLogoIcon, SparkleIcon } from "@/ui/icons";
+import { ScrollArea } from "@/ui/scroll-area";
 import Select from "@/ui/select";
 import Textarea from "@/ui/textarea";
 
@@ -173,194 +174,195 @@ export function AdminDataSourceSetup({
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-background">
-      <div className="mx-auto flex w-full max-w-3xl flex-col px-6 pt-10 pb-16">
-        <div className="mb-7 space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Badge variant="muted" className="gap-1">
-              <SparkleIcon />
-              Athas Intelligence
-            </Badge>
-            {repository ? (
-              <span className="flex min-w-0 items-center gap-1.5 font-sans ui-text-sm text-subtle-foreground">
-                <GithubLogoIcon className="shrink-0" />
-                <span className="truncate">
-                  {repository.owner}/{repository.repo}
-                </span>
+    <ScrollArea
+      className="h-full bg-background"
+      contentClassName="mx-auto flex w-full max-w-3xl flex-col px-6 pt-10 pb-16"
+    >
+      <div className="mb-7 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Badge variant="muted" className="gap-1">
+            <SparkleIcon />
+            Athas Intelligence
+          </Badge>
+          {repository ? (
+            <span className="flex min-w-0 items-center gap-1.5 font-sans ui-text-sm text-subtle-foreground">
+              <GithubLogoIcon className="shrink-0" />
+              <span className="truncate">
+                {repository.owner}/{repository.repo}
+              </span>
+            </span>
+          ) : null}
+        </div>
+        <h1 className="font-sans ui-text-base leading-tight font-semibold tracking-tight text-foreground">
+          {source ? `Configure ${source.name}` : "Add a data source"}
+        </h1>
+        <p className="font-sans ui-text-sm text-subtle-foreground">
+          {mode === "intelligence"
+            ? "Describe the project data you need and Athas will configure the source."
+            : "Configure the source directly when automatic setup is not enough."}
+        </p>
+      </div>
+
+      {mode === "intelligence" ? (
+        <form className="space-y-5" onSubmit={(event) => void handleIntelligenceSubmit(event)}>
+          <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
+            What do you want to see?
+            <Textarea
+              autoFocus
+              value={request}
+              onChange={(event) => setRequest(event.target.value)}
+              placeholder="GitHub release download stats"
+              rows={6}
+            />
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {["Release downloads", "Workflow runs", "Open pull requests"].map((suggestion) => (
+              <Button
+                key={suggestion}
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={() => setRequest(suggestion)}
+              >
+                {suggestion}
+              </Button>
+            ))}
+          </div>
+          {!isResolvingRepository && !repository ? (
+            <p role="status" className="font-sans ui-text-sm text-warning">
+              No GitHub remote was found for this project.
+            </p>
+          ) : null}
+          {!hasIntelligence ? (
+            <p className="font-sans ui-text-sm text-subtle-foreground">
+              Common GitHub sources are configured automatically. Athas Pro Intelligence handles
+              custom requests.
+            </p>
+          ) : null}
+          {error ? (
+            <p role="alert" className="font-sans ui-text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <div className="flex items-center justify-between gap-3 border-border/60 border-t pt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setMode("manual");
+                setError(null);
+              }}
+            >
+              Configure manually
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="accent"
+                size="sm"
+                disabled={isSaving || isResolvingRepository}
+              >
+                <SparkleIcon />
+                {isSaving ? "Creating source..." : "Create Source"}
+              </Button>
+            </div>
+          </div>
+        </form>
+      ) : (
+        <form className="space-y-5" onSubmit={(event) => void handleManualSubmit(event)}>
+          <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
+            Source type
+            <Select
+              value={kind}
+              onChange={(value) => {
+                setKind(value as AdminDataSource["kind"]);
+                setLocation("");
+              }}
+              options={[
+                { value: "github", label: "Project GitHub" },
+                { value: "json", label: "JSON URL" },
+              ]}
+            />
+          </label>
+          <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
+            Name
+            <Input
+              autoFocus
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Release downloads"
+            />
+          </label>
+          <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
+            {kind === "github" ? "GitHub API path" : "JSON URL"}
+            <Input
+              type={kind === "json" ? "url" : "text"}
+              value={location}
+              onChange={(event) => setLocation(event.target.value)}
+              placeholder={
+                kind === "github" ? "/releases?per_page=100" : "https://api.example.com/data"
+              }
+            />
+            {kind === "github" && repository ? (
+              <span className="text-subtle-foreground">
+                Relative to {repository.owner}/{repository.repo}
               </span>
             ) : null}
-          </div>
-          <h1 className="font-sans ui-text-base leading-tight font-semibold tracking-tight text-foreground">
-            {source ? `Configure ${source.name}` : "Add a data source"}
-          </h1>
-          <p className="font-sans ui-text-sm text-subtle-foreground">
-            {mode === "intelligence"
-              ? "Describe the project data you need and Athas will configure the source."
-              : "Configure the source directly when automatic setup is not enough."}
-          </p>
-        </div>
-
-        {mode === "intelligence" ? (
-          <form className="space-y-5" onSubmit={(event) => void handleIntelligenceSubmit(event)}>
-            <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
-              What do you want to see?
-              <Textarea
-                autoFocus
-                value={request}
-                onChange={(event) => setRequest(event.target.value)}
-                placeholder="GitHub release download stats"
-                rows={6}
-              />
+          </label>
+          <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
+            Rows path
+            <Input
+              value={rowsPath}
+              onChange={(event) => setRowsPath(event.target.value)}
+              placeholder="assets[]"
+            />
+            <span className="text-subtle-foreground">
+              Optional. Use dot paths and [] to expand arrays.
+            </span>
+          </label>
+          {canUseGitHubAccount ? (
+            <label className="flex items-center gap-2 font-sans ui-text-sm text-foreground">
+              <Checkbox checked={useGitHubAccount} onCheckedChange={setUseGitHubAccount} />
+              Use connected GitHub account
             </label>
-            <div className="flex flex-wrap gap-1.5">
-              {["Release downloads", "Workflow runs", "Open pull requests"].map((suggestion) => (
-                <Button
-                  key={suggestion}
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => setRequest(suggestion)}
-                >
-                  {suggestion}
-                </Button>
-              ))}
-            </div>
-            {!isResolvingRepository && !repository ? (
-              <p role="status" className="font-sans ui-text-sm text-warning">
-                No GitHub remote was found for this project.
-              </p>
-            ) : null}
-            {!hasIntelligence ? (
-              <p className="font-sans ui-text-sm text-subtle-foreground">
-                Common GitHub sources are configured automatically. Athas Pro Intelligence handles
-                custom requests.
-              </p>
-            ) : null}
-            {error ? (
-              <p role="alert" className="font-sans ui-text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
-            <div className="flex items-center justify-between gap-3 border-border/60 border-t pt-4">
+          ) : null}
+          {error ? (
+            <p role="alert" className="font-sans ui-text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <div className="flex items-center justify-between gap-3 border-border/60 border-t pt-4">
+            {!source ? (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setMode("manual");
+                  setMode("intelligence");
                   setError(null);
                 }}
               >
-                Configure manually
+                <SparkleIcon />
+                Use Athas Intelligence
               </Button>
-              <div className="flex items-center gap-2">
-                <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="accent"
-                  size="sm"
-                  disabled={isSaving || isResolvingRepository}
-                >
-                  <SparkleIcon />
-                  {isSaving ? "Creating source..." : "Create Source"}
-                </Button>
-              </div>
+            ) : (
+              <span />
+            )}
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="accent" size="sm" disabled={isSaving}>
+                {isSaving ? "Testing source..." : source ? "Save Source" : "Add Source"}
+              </Button>
             </div>
-          </form>
-        ) : (
-          <form className="space-y-5" onSubmit={(event) => void handleManualSubmit(event)}>
-            <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
-              Source type
-              <Select
-                value={kind}
-                onChange={(value) => {
-                  setKind(value as AdminDataSource["kind"]);
-                  setLocation("");
-                }}
-                options={[
-                  { value: "github", label: "Project GitHub" },
-                  { value: "json", label: "JSON URL" },
-                ]}
-              />
-            </label>
-            <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
-              Name
-              <Input
-                autoFocus
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Release downloads"
-              />
-            </label>
-            <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
-              {kind === "github" ? "GitHub API path" : "JSON URL"}
-              <Input
-                type={kind === "json" ? "url" : "text"}
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-                placeholder={
-                  kind === "github" ? "/releases?per_page=100" : "https://api.example.com/data"
-                }
-              />
-              {kind === "github" && repository ? (
-                <span className="text-subtle-foreground">
-                  Relative to {repository.owner}/{repository.repo}
-                </span>
-              ) : null}
-            </label>
-            <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
-              Rows path
-              <Input
-                value={rowsPath}
-                onChange={(event) => setRowsPath(event.target.value)}
-                placeholder="assets[]"
-              />
-              <span className="text-subtle-foreground">
-                Optional. Use dot paths and [] to expand arrays.
-              </span>
-            </label>
-            {canUseGitHubAccount ? (
-              <label className="flex items-center gap-2 font-sans ui-text-sm text-foreground">
-                <Checkbox checked={useGitHubAccount} onCheckedChange={setUseGitHubAccount} />
-                Use connected GitHub account
-              </label>
-            ) : null}
-            {error ? (
-              <p role="alert" className="font-sans ui-text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
-            <div className="flex items-center justify-between gap-3 border-border/60 border-t pt-4">
-              {!source ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setMode("intelligence");
-                    setError(null);
-                  }}
-                >
-                  <SparkleIcon />
-                  Use Athas Intelligence
-                </Button>
-              ) : (
-                <span />
-              )}
-              <div className="flex items-center gap-2">
-                <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="accent" size="sm" disabled={isSaving}>
-                  {isSaving ? "Testing source..." : source ? "Save Source" : "Add Source"}
-                </Button>
-              </div>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
+          </div>
+        </form>
+      )}
+    </ScrollArea>
   );
 }

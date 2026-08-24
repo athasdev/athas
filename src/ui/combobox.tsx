@@ -19,7 +19,7 @@ type ComboboxVariant = "default" | "ghost" | "button";
 type ComboboxShape = "default" | "pill";
 
 const comboboxInputGroupVariants = cva(
-  "group/combobox-input relative flex min-w-0 items-center transition-[border-color,box-shadow,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) outline-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
+  "group/combobox-input relative flex min-w-0 items-center transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth outline-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
   {
     variants: {
       variant: {
@@ -30,7 +30,7 @@ const comboboxInputGroupVariants = cva(
           "border-0 bg-accent text-foreground hover:bg-selected focus-within:ring-2 focus-within:ring-primary/20",
       },
       shape: {
-        default: "rounded-(--athas-chrome-radius)",
+        default: "rounded-chrome",
         pill: "rounded-full",
       },
     },
@@ -242,10 +242,7 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
   return (
     <ComboboxPrimitive.List
       data-slot="combobox-list"
-      className={cn(
-        "custom-scrollbar-thin max-h-80 overflow-y-auto overscroll-contain p-1",
-        className,
-      )}
+      className={cn("scrollbar-thin max-h-80 overflow-y-auto overscroll-contain p-1", className)}
       {...props}
     />
   );
@@ -262,7 +259,7 @@ function ComboboxActionItem({
       type={type}
       className={cn(
         menuItemVariants({ density: "compact" }),
-        "hover:bg-accent active:scale-(--app-press-scale)",
+        "hover:bg-accent active:scale-press",
         className,
       )}
       {...props}
@@ -342,7 +339,7 @@ function ComboboxChips({ className, ...props }: ComboboxPrimitive.Chips.Props) {
     <ComboboxPrimitive.Chips
       data-slot="combobox-chips"
       className={cn(
-        "flex min-h-8 flex-wrap items-center gap-1 rounded-(--athas-chrome-radius) border border-border bg-transparent px-2 py-1 ui-text-sm focus-within:border-border-strong focus-within:ring-1 focus-within:ring-border-strong/35",
+        "flex min-h-8 flex-wrap items-center gap-1 rounded-chrome border border-border bg-transparent px-2 py-1 ui-text-sm focus-within:border-border-strong focus-within:ring-1 focus-within:ring-border-strong/35",
         className,
       )}
       {...props}

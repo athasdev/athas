@@ -37,7 +37,7 @@ export function ChatComposerBody({
     <SidebarComposerBody
       data-ai-element="prompt-input-body"
       className={cn(
-        "transition-[border-color,background-color,box-shadow] duration-(--app-duration-fast)",
+        "transition-[border-color,background-color,box-shadow] duration-fast",
         className,
       )}
       {...props}

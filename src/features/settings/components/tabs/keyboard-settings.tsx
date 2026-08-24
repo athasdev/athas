@@ -37,6 +37,7 @@ import { Button } from "@/ui/button";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
+import { ScrollArea } from "@/ui/scroll-area";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
@@ -344,7 +345,7 @@ export const KeyboardSettings = () => {
             </div>
 
             <div className="flex-1 overflow-hidden">
-              <div className="h-full overflow-x-auto overflow-y-auto">
+              <ScrollArea className="h-full" orientation="both">
                 <Table className={keybindingTableMinWidth()}>
                   <colgroup>
                     <col className="w-[32%]" />
@@ -381,7 +382,7 @@ export const KeyboardSettings = () => {
                     )}
                   </TableBody>
                 </Table>
-              </div>
+              </ScrollArea>
             </div>
           </motion.div>
         ) : (

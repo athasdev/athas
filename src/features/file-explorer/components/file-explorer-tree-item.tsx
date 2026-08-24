@@ -141,7 +141,7 @@ function FileExplorerTreeItemComponent({
       <div className="file-tree-item w-full" data-depth={depth}>
         {renderTreeGuides()}
         <div
-          className="file-tree-row flex w-full items-center rounded-(--athas-chrome-radius) gap-1.5 px-1.5 py-1 ui-text-sm leading-row"
+          className="file-tree-row flex w-full items-center rounded-chrome gap-1.5 px-1.5 py-1 ui-text-sm leading-row"
           style={{
             paddingLeft: `${paddingLeft}px`,
           }}
