@@ -88,7 +88,7 @@ const DiffHunkHeader = memo(
       >
         <button
           type="button"
-          className="grid min-h-8 min-w-0 flex-1 cursor-pointer grid-cols-[2.75rem_minmax(0,1fr)] items-stretch text-left outline-none transition-colors hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/20"
+          className="grid min-h-8 min-w-0 flex-1 grid-cols-[2.75rem_minmax(0,1fr)] items-stretch text-left outline-none transition-colors hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/20"
           onClick={onToggleCollapse}
           aria-expanded={!isCollapsed}
           aria-label={`${isCollapsed ? "Expand" : "Collapse"} diff hunk ${rangeLabel}`}

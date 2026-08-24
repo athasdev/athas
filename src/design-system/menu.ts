@@ -31,7 +31,7 @@ export const menuItemVariants = cva(
       },
       disabled: {
         true: "cursor-not-allowed opacity-50",
-        false: "cursor-pointer hover:bg-accent",
+        false: "hover:bg-accent",
       },
       focused: {
         true: "bg-accent",

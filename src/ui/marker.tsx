@@ -4,7 +4,7 @@ import type * as React from "react";
 import { cn } from "@/utils/cn";
 
 const markerVariants = cva(
-  "group/marker relative flex min-h-4 w-full items-center gap-2 text-left font-sans ui-text-sm text-subtle-foreground outline-none [&_svg:not([class*='size-'])]:size-4 [a]:underline [a]:underline-offset-3 [a]:hover:text-foreground [button]:cursor-pointer [button]:rounded-md [button]:hover:text-foreground [button]:focus-visible:ring-2 [button]:focus-visible:ring-primary/20",
+  "group/marker relative flex min-h-4 w-full items-center gap-2 text-left font-sans ui-text-sm text-subtle-foreground outline-none [&_svg:not([class*='size-'])]:size-4 [a]:underline [a]:underline-offset-3 [a]:hover:text-foreground [button]:rounded-md [button]:hover:text-foreground [button]:focus-visible:ring-2 [button]:focus-visible:ring-primary/20",
   {
     variants: {
       variant: {

@@ -365,10 +365,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   onCheckedChange={(checked) => updateConnectionField(setSaveCredential, checked)}
                   aria-label="Save password securely"
                 />
-                <FieldLabel
-                  htmlFor="db-conn-save-password"
-                  className="cursor-pointer text-subtle-foreground"
-                >
+                <FieldLabel htmlFor="db-conn-save-password" className="text-subtle-foreground">
                   Save password securely
                 </FieldLabel>
               </Field>

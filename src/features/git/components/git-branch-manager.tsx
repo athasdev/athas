@@ -555,7 +555,7 @@ const GitBranchManager = ({
         className={cn(
           "inline-flex max-w-full shrink overflow-hidden px-2 text-subtle-foreground hover:bg-accent/80",
           triggerSurface === "footer" && "font-medium",
-          isDropdownOpen ? "bg-accent/80" : "cursor-pointer",
+          isDropdownOpen && "bg-accent/80",
         )}
         aria-label="Search branches"
       >

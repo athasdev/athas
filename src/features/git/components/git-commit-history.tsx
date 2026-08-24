@@ -149,7 +149,7 @@ const CommitItem = memo(
           type="button"
           onClick={handleCommitClick}
           className={cn(
-            "ui-text-sm flex w-full cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-accent/80 focus-visible:bg-accent/80",
+            "ui-text-sm flex w-full items-start gap-2.5 rounded-md px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-accent/80 focus-visible:bg-accent/80",
           )}
           draggable={!!repoPath}
           onDragStart={(event) => {

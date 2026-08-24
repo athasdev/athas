@@ -164,7 +164,7 @@ export function GitHubSidebarRow({
                         type="button"
                         aria-label={detail.actionLabel}
                         className={cn(
-                          "-mx-1 -my-0.5 max-w-full cursor-pointer truncate rounded px-1 py-0.5 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
+                          "-mx-1 -my-0.5 max-w-full truncate rounded px-1 py-0.5 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
                           detail.mono && "font-mono",
                           detail.className,
                         )}

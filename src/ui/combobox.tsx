@@ -252,7 +252,7 @@ function ComboboxActionItem({
       type={type}
       className={cn(
         menuItemVariants({ density: "compact" }),
-        "cursor-pointer hover:bg-accent active:scale-(--app-press-scale)",
+        "hover:bg-accent active:scale-(--app-press-scale)",
         className,
       )}
       {...props}

@@ -170,7 +170,7 @@ export default function ConnectionForm({
             onCheckedChange={(checked) => onChange({ saveCredentials: checked })}
             disabled={disabled}
           />
-          <FieldLabel htmlFor={`${idPrefix}-save-credentials`} className="cursor-pointer">
+          <FieldLabel htmlFor={`${idPrefix}-save-credentials`}>
             Save password for future connections
           </FieldLabel>
         </Field>

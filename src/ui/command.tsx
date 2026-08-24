@@ -30,7 +30,7 @@ const commandContentVariants = cva(
 );
 
 const commandItemVariants = cva(
-  "group/command-item font-sans flex w-full cursor-pointer items-center justify-start text-left transition-colors",
+  "group/command-item font-sans flex w-full items-center justify-start text-left transition-colors",
   {
     variants: {
       selected: {
