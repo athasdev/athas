@@ -98,14 +98,14 @@ const GitCommitPanel = ({
 
     const enterprisePolicy = subscription?.enterprise?.policy;
     const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-    const isPro = hasProductCapability(subscription, "hostedAi");
+    const hasIntelligence = hasProductCapability(subscription, "intelligence");
 
     if (managedPolicy && !managedPolicy.aiCompletionEnabled) {
       setError("AI commit message generation is disabled by your organization policy.");
       return;
     }
 
-    const useByok = managedPolicy ? managedPolicy.allowByok && !isPro : !isPro;
+    const useByok = managedPolicy ? managedPolicy.allowByok && !hasIntelligence : !hasIntelligence;
     if (managedPolicy && useByok && !managedPolicy.allowByok) {
       setError("BYOK is disabled by your organization policy.");
       return;
@@ -124,6 +124,7 @@ const GitCommitPanel = ({
       const { editedText } = await requestInlineEdit(
         {
           model: aiAutocompleteModelId,
+          feature: "commit-message",
           beforeSelection: "",
           selectedText,
           afterSelection: "",

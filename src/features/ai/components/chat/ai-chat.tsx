@@ -245,9 +245,9 @@ const AIChat = memo(function AIChat({
       const authState = useAuthStore.getState();
       const enterprisePolicy = authState.subscription?.enterprise?.policy;
       const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-      const isPro = hasProductCapability(authState.subscription, "hostedAi");
+      const hasIntelligence = hasProductCapability(authState.subscription, "intelligence");
 
-      if (!isPro || (managedPolicy && !managedPolicy.aiCompletionEnabled)) {
+      if (!hasIntelligence || (managedPolicy && !managedPolicy.aiCompletionEnabled)) {
         return;
       }
 
@@ -258,6 +258,7 @@ const AIChat = memo(function AIChat({
         const { editedText } = await requestInlineEdit(
           {
             model,
+            feature: "chat-title",
             beforeSelection: "",
             selectedText: userMessage,
             afterSelection: "",

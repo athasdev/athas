@@ -18,7 +18,6 @@ import {
 import { isOllamaCloudUrl } from "@/features/ai/services/providers/ollama-provider";
 import { processStreamingResponse } from "@/utils/stream-utils";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
-import { canUseHostedProvider } from "@/features/ai/lib/provider-access";
 import { resolveChatCompletionTokenLimit } from "@/features/ai/lib/chat-completion-budget";
 import {
   getCustomProviderApiToken,
@@ -26,9 +25,6 @@ import {
   resolveCustomProviderModelId,
 } from "@/features/ai/lib/custom-provider-config";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { getAuthToken } from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { getApiBase } from "@/utils/api-base";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
 import { isTerminalAgent } from "../lib/terminal-agents";
@@ -226,9 +222,7 @@ export const getChatCompletionStream = async (
       providerId === "custom"
         ? await getCustomProviderApiToken()
         : await getProviderApiToken(providerId);
-    const subscription = useAuthStore.getState().subscription;
-    const useHostedOpenRouter = !apiKey && canUseHostedProvider(providerId, subscription);
-    if (!apiKey && provider.requiresApiKey && !useHostedOpenRouter) {
+    if (!apiKey && provider.requiresApiKey) {
       throw new Error(`${provider.name} API key not found`);
     }
 
@@ -275,34 +269,6 @@ export const getChatCompletionStream = async (
       role: "user" as const,
       content: userMessage,
     });
-
-    if (useHostedOpenRouter) {
-      const token = await getAuthToken();
-      if (!token) {
-        throw new Error("Not authenticated");
-      }
-
-      const response = await tauriFetch(`${getApiBase()}/api/ai/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          model: modelId,
-          messages,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        onError(errorText || `Hosted AI chat request failed (${response.status})`);
-        return;
-      }
-
-      await processStreamingResponse(response, onChunk, onComplete, onError);
-      return;
-    }
 
     // Use provider abstraction
     const providerImpl = getProvider(providerId);

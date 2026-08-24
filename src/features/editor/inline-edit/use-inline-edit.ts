@@ -1,6 +1,6 @@
 import { type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  canUseHostedProvider,
+  canUseIntelligenceProvider,
   canUseProviderWithoutApiKey,
 } from "@/features/ai/lib/provider-access";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -367,12 +367,14 @@ export function useInlineEdit({
 
     const hasStoredProviderKey =
       useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
-    const canUseProvider = canUseProviderWithoutApiKey({
-      providerId: aiProviderId,
-      subscription,
-      hasStoredKey: hasStoredProviderKey,
-      requiresApiKey: provider?.requiresApiKey ?? true,
-    });
+    const canUseProvider =
+      canUseIntelligenceProvider(aiProviderId, subscription) ||
+      canUseProviderWithoutApiKey({
+        providerId: aiProviderId,
+        subscription,
+        hasStoredKey: hasStoredProviderKey,
+        requiresApiKey: provider?.requiresApiKey ?? true,
+      });
 
     if (!canUseProvider) {
       await checkAllProviderApiKeys();
@@ -385,10 +387,10 @@ export function useInlineEdit({
     }
 
     const hasProviderKey = useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
-    const useHosted = !hasProviderKey && canUseHostedProvider(aiProviderId, subscription);
+    const useHosted = !hasProviderKey && canUseIntelligenceProvider(aiProviderId, subscription);
 
     if (useHosted && !isAuthenticated) {
-      toast.error("Please sign in to use hosted inline edit.");
+      toast.error("Please sign in to use Athas Intelligence.");
       return;
     }
 
@@ -412,6 +414,7 @@ export function useInlineEdit({
       const { editedText } = await requestInlineEdit(
         {
           provider: aiProviderId,
+          feature: "inline-edit",
           model: aiModelId,
           beforeSelection,
           selectedText,

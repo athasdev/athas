@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { ProBadge } from "@/features/window/components/pro-badge";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
@@ -31,7 +30,6 @@ import {
   BookOpenIcon as BookOpen,
   BrainIcon as Brain,
   FadersHorizontalIcon as Preferences,
-  LockIcon as Lock,
   SlidersHorizontalIcon as Sliders,
   SparkleIcon as Sparkles,
 } from "@/ui/icons";
@@ -252,8 +250,11 @@ function AthasAgentPreferences({
   const [modelQuery, setModelQuery] = useState("");
   const providers = useAvailableProviders();
   const currentProvider = providers.find((provider) => provider.id === providerId);
-  const { availableModels, currentModelName, hasHostedAi, isLoadingModels, modelFetchError } =
-    useAIModelOptions(providerId, modelId, onModelChange);
+  const { availableModels, currentModelName, isLoadingModels, modelFetchError } = useAIModelOptions(
+    providerId,
+    modelId,
+    onModelChange,
+  );
   const filteredApiProviders = providers.filter(
     (provider) =>
       provider.id !== "custom" && matchesSearchQuery(providerQuery, [provider.name, provider.id]),
@@ -337,14 +338,11 @@ function AthasAgentPreferences({
           ) : (
             <DropdownMenuRadioGroup value={modelId} onValueChange={onModelChange}>
               {filteredModels.map((model) => {
-                const locked = Boolean(model.proOnly && !hasHostedAi);
                 return (
-                  <DropdownMenuRadioItem key={model.id} value={model.id} disabled={locked}>
-                    {locked ? <Lock /> : null}
+                  <DropdownMenuRadioItem key={model.id} value={model.id}>
                     <span className="min-w-0 flex-1 truncate" title={model.id}>
                       {model.name}
                     </span>
-                    {model.proOnly ? <ProBadge /> : null}
                   </DropdownMenuRadioItem>
                 );
               })}

@@ -17,20 +17,22 @@ describe("product capabilities", () => {
     const value = subscription({
       status: "pro",
       capabilities: {
+        intelligence: false,
         hostedAi: false,
         settingsSync: true,
+        cloudWorkspaces: true,
         collaboration: false,
         enterprisePolicy: true,
       },
     });
 
-    expect(hasProductCapability(value, "hostedAi")).toBe(false);
+    expect(hasProductCapability(value, "intelligence")).toBe(false);
     expect(hasProductCapability(value, "settingsSync")).toBe(true);
     expect(hasProductCapability(value, "enterprisePolicy")).toBe(true);
   });
 
   it("keeps compatibility with subscription responses from older servers", () => {
-    expect(hasProductCapability(subscription({ status: "pro" }), "hostedAi")).toBe(true);
+    expect(hasProductCapability(subscription({ status: "pro" }), "intelligence")).toBe(true);
     expect(hasProductCapability(subscription({ status: "free" }), "settingsSync")).toBe(false);
     expect(
       hasProductCapability(
