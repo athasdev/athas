@@ -13,7 +13,6 @@ import {
   TrashIcon as Trash,
   UploadSimpleIcon as Upload,
 } from "@/ui/icons";
-import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
@@ -68,8 +67,6 @@ import {
   runDockerImageAction,
   saveDockerProjectConfig,
   searchDockerRegistry,
-  startDockerContainerLogStream,
-  stopDockerContainerLogStream,
   tagDockerImage,
 } from "../services/docker-api";
 import type {
@@ -86,8 +83,6 @@ import type {
   DockerContainerFileEntry,
   DockerImage,
   DockerPruneTarget,
-  DockerLogEvent,
-  DockerLogExitEvent,
   DockerProjectConfig,
   DockerRegistrySearchResult,
   DockerRunPreset,
@@ -102,7 +97,6 @@ import {
   getParentContainerPath as parentContainerPath,
   includesDockerQuery as includesQuery,
   isDockerConnectionError,
-  isDockerErrorLogLine as isErrorLogLine,
   splitDockerConfigLines as splitConfigLines,
 } from "../utils/docker-sidebar-utils";
 import {
@@ -120,6 +114,7 @@ import {
   VolumeRow,
 } from "./docker-resource-rows";
 import { useDockerInventory } from "../hooks/use-docker-inventory";
+import { useDockerContainerLogs, type DockerLogFilter } from "../hooks/use-docker-container-logs";
 
 type DockerSection =
   | "containers"
@@ -130,14 +125,11 @@ type DockerSection =
   | "volumes"
   | "networks"
   | "cleanup";
-type DockerLogFilter = "all" | "stdout" | "stderr" | "errors";
-type DockerLogLine = DockerLogEvent & { id: number };
 type DockerDialogMode = "build" | "run" | null;
 type DockerDetailTab = "logs" | "files";
 type DockerTab = "resources" | "compose" | "project" | "registry";
 type DockerContainerFilter = "all" | "running" | "stopped";
 
-const maxLogLines = 1_000;
 const dockerTabSections: Record<DockerTab, DockerSection[]> = {
   resources: ["containers", "images", "cleanup", "volumes", "networks"],
   compose: ["compose"],
@@ -188,17 +180,23 @@ export function DockerSidebar() {
     clearError,
     selectContainer,
   } = useDockerInventory();
+  const {
+    lines: logLines,
+    query: logQuery,
+    filter: logFilter,
+    streamId: logStreamId,
+    error: logError,
+    filteredLines: filteredLogLines,
+    clearLines: clearLogLines,
+    setQuery: setLogQuery,
+    setFilter: setLogFilter,
+  } = useDockerContainerLogs(selectedContainerId);
   const [composeProject, setComposeProject] = useState<DockerComposeProject>(emptyComposeProject);
   const [projectConfig, setProjectConfig] = useState<DockerProjectConfig>(emptyProjectConfig);
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState<DockerTab>("resources");
   const [containerFilter, setContainerFilter] = useState<DockerContainerFilter>("all");
   const [collapsedSections, setCollapsedSections] = useState<Set<DockerSection>>(() => new Set());
-  const [logLines, setLogLines] = useState<DockerLogLine[]>([]);
-  const [logQuery, setLogQuery] = useState("");
-  const [logFilter, setLogFilter] = useState<DockerLogFilter>("all");
-  const [logStreamId, setLogStreamId] = useState<string | null>(null);
-  const [logError, setLogError] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DockerDetailTab>("logs");
   const [containerPath, setContainerPath] = useState("/");
   const [containerFiles, setContainerFiles] = useState<DockerContainerFileEntry[]>([]);
@@ -322,86 +320,6 @@ export function DockerSidebar() {
     void loadContainerFiles();
   }, [detailTab, loadContainerFiles, selectedContainer]);
 
-  useEffect(() => {
-    if (!selectedContainer) {
-      setLogLines([]);
-      setLogError(null);
-      return;
-    }
-
-    let cancelled = false;
-    let activeStreamId: string | null = null;
-    let removeLogListener: (() => void) | null = null;
-    let removeExitListener: (() => void) | null = null;
-    let nextLogId = 0;
-
-    setLogLines([]);
-    setLogError(null);
-    setLogStreamId(null);
-
-    const startLogStream = async () => {
-      try {
-        removeLogListener = await listen<DockerLogEvent>("docker-container-log", (event) => {
-          const matchesStream = activeStreamId
-            ? event.payload.streamId === activeStreamId
-            : event.payload.containerId === selectedContainer.id;
-
-          if (cancelled || !matchesStream) return;
-
-          setLogLines((current) =>
-            current
-              .concat({
-                ...event.payload,
-                id: nextLogId++,
-              })
-              .slice(-maxLogLines),
-          );
-        });
-        removeExitListener = await listen<DockerLogExitEvent>(
-          "docker-container-log-exit",
-          (event) => {
-            const matchesStream = activeStreamId
-              ? event.payload.streamId === activeStreamId
-              : event.payload.containerId === selectedContainer.id;
-
-            if (cancelled || !matchesStream) return;
-
-            setLogStreamId(null);
-            if (event.payload.error) {
-              setLogError(event.payload.error);
-            } else if (event.payload.code && event.payload.code !== 0) {
-              setLogError(`Docker log stream exited with code ${event.payload.code}.`);
-            }
-          },
-        );
-
-        const nextStreamId = await startDockerContainerLogStream(selectedContainer.id, 300);
-        if (cancelled) {
-          void stopDockerContainerLogStream(nextStreamId);
-          return;
-        }
-        activeStreamId = nextStreamId;
-        setLogStreamId(nextStreamId);
-      } catch (logsError) {
-        if (!cancelled) {
-          setLogError(logsError instanceof Error ? logsError.message : String(logsError));
-        }
-      }
-    };
-
-    void startLogStream();
-
-    return () => {
-      cancelled = true;
-      removeLogListener?.();
-      removeExitListener?.();
-      setLogStreamId(null);
-      if (activeStreamId) {
-        void stopDockerContainerLogStream(activeStreamId);
-      }
-    };
-  }, [selectedContainer]);
-
   const normalizedQuery = query.trim().toLowerCase();
   const filteredContainers = inventory.containers.filter((container) => {
     if (containerFilter === "running" && container.state !== "running") return false;
@@ -443,15 +361,6 @@ export function DockerSidebar() {
     projectConfig.composePresets.length +
     projectConfig.debugPresets.length +
     projectConfig.workspaceDebugPresets.length;
-  const normalizedLogQuery = logQuery.trim().toLowerCase();
-  const filteredLogLines = logLines.filter((entry) => {
-    if (logFilter === "stdout" && entry.stream !== "stdout") return false;
-    if (logFilter === "stderr" && entry.stream !== "stderr") return false;
-    if (logFilter === "errors" && !isErrorLogLine(entry.line)) return false;
-    if (!normalizedLogQuery) return true;
-    return entry.line.toLowerCase().includes(normalizedLogQuery);
-  });
-
   const handleContainerAction = async (
     container: DockerContainer,
     action: DockerContainerAction,
@@ -2092,7 +2001,7 @@ export function DockerSidebar() {
                         size="xs"
                         className="h-6 px-1.5 ui-text-sm"
                         disabled={logLines.length === 0}
-                        onClick={() => setLogLines([])}
+                        onClick={clearLogLines}
                       >
                         Clear
                       </Button>
