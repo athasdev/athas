@@ -1,6 +1,5 @@
 import {
   ArrowClockwiseIcon as Refresh,
-  ArrowFatLineDownIcon as Down,
   ArrowSquareOutIcon as OpenExternal,
   BugIcon as Bug,
   FileIcon,
@@ -13,7 +12,6 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
-import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -27,7 +25,7 @@ import {
 } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
-import { Empty, EmptyDescription, EmptyState } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
@@ -77,7 +75,6 @@ import {
   getDockerDebugCommand as dockerDebugCommand,
   getDockerErrorMessage as getErrorMessage,
   getDockerExecCommand as dockerExecCommand,
-  getDockerFileName as fileName,
   getDockerImageReference as getImageReference,
   includesDockerQuery as includesQuery,
   isDockerConnectionError,
@@ -92,8 +89,8 @@ import {
 import { DockerImageDialog, type DockerImageDialogMode } from "./docker-image-dialog";
 import { DockerContainerDetail, type DockerContainerDetailTab } from "./docker-container-detail";
 import { DockerRegistrySection } from "./docker-registry-section";
+import { DockerComposeSection } from "./docker-compose-section";
 import {
-  ComposeServiceRow,
   ContainerRow,
   DockerActionMenu,
   DockerResourceRow,
@@ -1114,80 +1111,20 @@ export function DockerSidebar() {
               )}
               {renderSection(
                 "compose",
-                composeError ? (
-                  <Empty tone="error" role="alert">
-                    <EmptyDescription>{composeError}</EmptyDescription>
-                  </Empty>
-                ) : !rootFolderPath ? (
-                  <EmptyState
-                    layout="sidebar"
-                    message="Open a workspace to inspect Compose services"
-                  />
-                ) : composeProject.files.length === 0 ? (
-                  <EmptyState layout="sidebar" message="No Compose files in this workspace" />
-                ) : (
-                  <>
-                    <DockerResourceRow
-                      title="Compose project"
-                      description={composeProject.files.map(fileName).join(", ")}
-                      status={
-                        <Badge variant="muted" size="compact">
-                          {composeProject.services.length} services
-                        </Badge>
-                      }
-                      actions={
-                        <DockerActionMenu
-                          label="Compose project actions"
-                          actions={[
-                            {
-                              label: "Start with env files",
-                              icon: <FileIcon />,
-                              disabled:
-                                busyComposeService !== null || composeEnvFilePaths.length === 0,
-                              onSelect: () =>
-                                void handleComposeAction(null, "up", composeEnvFilePaths),
-                            },
-                            {
-                              label: "Save preset",
-                              disabled: busyComposeService !== null,
-                              onSelect: () => void handleSaveComposePreset(),
-                            },
-                            {
-                              label: "Stop project",
-                              icon: <Down />,
-                              disabled: busyComposeService !== null,
-                              separatorBefore: true,
-                              onSelect: () => void handleComposeAction(null, "down"),
-                            },
-                          ]}
-                        />
-                      }
-                    />
-                    <DockerCommandOutput output={composeOutput} />
-                    {filteredComposeServices.length > 0 ? (
-                      filteredComposeServices.map((service) => (
-                        <ComposeServiceRow
-                          key={service.name}
-                          service={service}
-                          busy={busyComposeService === service.name}
-                          onAction={(nextService, action) =>
-                            void handleComposeAction(nextService, action)
-                          }
-                          onOpenUrl={openServiceUrl}
-                        />
-                      ))
-                    ) : (
-                      <EmptyState
-                        layout="sidebar"
-                        message={
-                          composeProject.services.length > 0
-                            ? "No matching Compose services"
-                            : "No Compose services found"
-                        }
-                      />
-                    )}
-                  </>
-                ),
+                <DockerComposeSection
+                  rootFolderPath={rootFolderPath}
+                  project={composeProject}
+                  services={filteredComposeServices}
+                  envFilePaths={composeEnvFilePaths}
+                  output={composeOutput}
+                  busyService={busyComposeService}
+                  onProjectAction={(action, envFiles) =>
+                    handleComposeAction(null, action, envFiles)
+                  }
+                  onSavePreset={handleSaveComposePreset}
+                  onServiceAction={handleComposeAction}
+                  onOpenUrl={openServiceUrl}
+                />,
                 filteredComposeServices.length,
               )}
               {renderSection(
