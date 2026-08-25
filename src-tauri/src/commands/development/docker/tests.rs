@@ -2,9 +2,10 @@ use super::{
    DockerComposeService, DockerContainerHealthDetails, DockerContainerRow, DockerDevContainer,
    DockerInspectContainerRow, DockerRegistrySearchRow, DockerStatsRow,
    devcontainer_workspace_folder, discover_dev_containers, discover_workspace_debug_presets,
-   docker_delete_env_file, docker_open_env_file, format_docker_launch_error, is_env_file_path,
-   normalize_jsonc, parse_compose_ps_output, parse_container_file_archive, parse_env_keys,
-   parse_health, parse_json_lines, resolve_workspace_mount, split_command_args,
+   docker_delete_env_file, docker_open_env_file, format_docker_launch_error, normalize_jsonc,
+   parse_compose_ps_output, parse_container_file_archive, parse_health, parse_json_lines,
+   project_config::{is_env_file_path, parse_env_keys, read_project_config},
+   resolve_workspace_mount, split_command_args,
 };
 use std::{
    fs,
@@ -146,6 +147,48 @@ fn allows_only_env_file_names() {
    assert!(!is_env_file_path(Path::new("package.json")));
 }
 
+#[test]
+fn normalizes_project_config_presets_when_loading() {
+   let workspace = tempfile::tempdir().expect("workspace tempdir");
+   let config_dir = workspace.path().join(".athas");
+   fs::create_dir_all(&config_dir).expect("config directory");
+   fs::write(
+      config_dir.join("docker.json"),
+      r#"{
+         "workspacePath": null,
+         "buildPresets": [
+            {
+               "name": " Web ",
+               "contextPath": " . ",
+               "dockerfilePath": " ",
+               "tag": " athas/web:latest ",
+               "buildArgs": [" --no-cache ", " "]
+            },
+            { "name": " ", "contextPath": ".", "buildArgs": [] }
+         ],
+         "runPresets": [],
+         "composePresets": [],
+         "debugPresets": [],
+         "workspaceDebugPresets": [],
+         "envFiles": [],
+         "devContainers": []
+      }"#,
+   )
+   .expect("project config");
+
+   let config = read_project_config(workspace.path()).expect("valid project config");
+
+   assert_eq!(config.build_presets.len(), 1);
+   assert_eq!(config.build_presets[0].name, "Web");
+   assert_eq!(config.build_presets[0].context_path, ".");
+   assert_eq!(config.build_presets[0].dockerfile_path, None);
+   assert_eq!(
+      config.build_presets[0].tag.as_deref(),
+      Some("athas/web:latest")
+   );
+   assert_eq!(config.build_presets[0].build_args, vec!["--no-cache"]);
+}
+
 #[tokio::test]
 async fn opens_or_creates_env_files() {
    let workspace = tempfile::tempdir().expect("workspace tempdir");
@@ -173,6 +216,27 @@ async fn opens_or_creates_env_files() {
       .await
       .expect_err("reject non-env file");
    assert!(invalid.contains("Only .env files"));
+}
+
+#[tokio::test]
+async fn rejects_env_files_outside_the_workspace() {
+   let root = tempfile::tempdir().expect("root tempdir");
+   let workspace = root.path().join("workspace");
+   fs::create_dir(&workspace).expect("workspace directory");
+   fs::write(root.path().join(".env"), "SECRET=outside\n").expect("outside env file");
+
+   let error = docker_open_env_file(
+      workspace.to_string_lossy().into_owned(),
+      "../.env".to_string(),
+   )
+   .await
+   .expect_err("reject env file outside workspace");
+
+   assert!(error.contains("inside the workspace"));
+   assert_eq!(
+      fs::read_to_string(root.path().join(".env")).expect("outside env remains"),
+      "SECRET=outside\n"
+   );
 }
 
 #[tokio::test]
