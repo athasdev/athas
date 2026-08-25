@@ -98,6 +98,7 @@ import {
 } from "../services/file-open-resource";
 import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buffer-restore";
 import { restoreWorkspaceSessionFolders } from "../services/workspace-session-folder-restore";
+import { prepareWorkspaceClose } from "../services/workspace-close-guard";
 import { initializeWorkspacePath } from "../services/workspace-initialization-router";
 import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
@@ -114,10 +115,7 @@ import {
 } from "@/features/wsl/controllers/wsl-workspace";
 import { buildWslPath, parseWslPath } from "@/features/wsl/utils/wsl-path";
 import { shouldIgnore, updateDirectoryContents } from "../controllers/utils";
-import {
-  getDirtyEditorBuffers,
-  prepareProjectTransitionWithUnsavedBuffers,
-} from "../controllers/workspace-project-transition";
+import { prepareProjectTransitionWithUnsavedBuffers } from "../controllers/workspace-project-transition";
 import {
   buildWorkspaceRestoreBatch,
   buildWorkspaceRestorePlan,
@@ -2669,24 +2667,15 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           return false;
         }
 
-        const workspaceBuffers = useBufferStore.getStore(projectId).getState().buffers;
-        if (getDirtyEditorBuffers(workspaceBuffers).length > 0) {
-          if (
-            workspaceRuntimeRegistry.getActiveWorkspaceId() !== projectId &&
-            !(await get().switchToProject(projectId))
-          ) {
-            return false;
-          }
-
-          if (
-            !(await prepareProjectTransitionWithUnsavedBuffers(
-              "closing this project",
-              useBufferStore.getStore(projectId).getState().buffers,
-            ))
-          ) {
-            return false;
-          }
-        }
+        const canClose = await prepareWorkspaceClose({
+          workspaceId: projectId,
+          getActiveWorkspaceId: workspaceRuntimeRegistry.getActiveWorkspaceId,
+          getBuffers: () => useBufferStore.getStore(projectId).getState().buffers,
+          switchToWorkspace: (workspaceId) => get().switchToProject(workspaceId),
+          confirmUnsavedBuffers: (buffers) =>
+            prepareProjectTransitionWithUnsavedBuffers("closing this project", buffers),
+        });
+        if (!canClose) return false;
 
         const { closeWorkspaceRuntime } =
           await import("@/features/workspace/services/workspace-lifecycle");
