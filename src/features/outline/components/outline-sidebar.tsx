@@ -273,7 +273,7 @@ export function OutlineSidebar() {
 
   return (
     <SidebarPanel onKeyDownCapture={handleSidebarKeyDown}>
-      <SidebarHeader className="px-3">
+      <SidebarHeader>
         <SidebarSearchPopover
           value={query}
           onChange={setQuery}

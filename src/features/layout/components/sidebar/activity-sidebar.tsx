@@ -1,14 +1,4 @@
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type UIEvent as ReactUIEvent,
-} from "react";
-import { flushSync } from "react-dom";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { memo, useCallback, useLayoutEffect, useRef } from "react";
 import {
   ActivityRailNavigation,
   ActivitySidebarNavigation,
@@ -19,25 +9,16 @@ import { ActivitySidebarMenu } from "@/features/layout/components/sidebar/activi
 import { ActivityTerminalHistory } from "@/features/layout/components/sidebar/activity-terminal-history";
 import { ActivityWorktreeHistory } from "@/features/layout/components/sidebar/activity-worktree-history";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
-import {
-  SidebarProjectDots,
-  SidebarProjectSwitcher,
-} from "@/features/layout/components/sidebar/sidebar-projects";
+import { ActivityProjectDots } from "@/features/layout/components/sidebar/activity-project-dots";
+import { ActivityProjectSwitcher } from "@/features/layout/components/sidebar/activity-project-switcher";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { useActivityNavigationItems } from "@/features/layout/hooks/use-activity-navigation-items";
+import { useActivityProjectCarousel } from "@/features/layout/hooks/use-activity-project-carousel";
 import { useActivitySidebarResize } from "@/features/layout/hooks/use-activity-sidebar-resize";
-import {
-  getProjectCarouselPageIndex,
-  getProjectCarouselWindow,
-} from "@/features/layout/utils/project-carousel";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import {
-  useWorkspaceTabsStore,
-  type ProjectTab,
-} from "@/features/window/stores/workspace-tabs.store";
+import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
@@ -47,15 +28,6 @@ interface ActivitySidebarProps {
 }
 
 export const COLLAPSED_ACTIVITY_RAIL_WIDTH = 40;
-const ACTIVITY_RAIL_HORIZONTAL_GUTTER = 8;
-const PROJECT_SCROLL_SETTLE_DELAY_MS = 120;
-
-const waitForProjectCarouselPaint = () =>
-  new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => resolve());
-    });
-  });
 
 export const ActivitySidebar = memo(({ expanded }: ActivitySidebarProps) => {
   const { openSidebarView } = useSidebarPaneController();
@@ -87,7 +59,6 @@ export const ActivitySidebar = memo(({ expanded }: ActivitySidebarProps) => {
       );
     }, 0);
   }, [openSidebarView]);
-  const openFoldersInNewWindow = useSettingsStore((state) => state.settings.openFoldersInNewWindow);
   const hiddenSidebarActivityItems = useSettingsStore(
     (state) => state.settings.hiddenSidebarActivityItems,
   );
@@ -106,29 +77,9 @@ export const ActivitySidebar = memo(({ expanded }: ActivitySidebarProps) => {
   const showActivityRailProjectIcons = useSettingsStore(
     (state) => state.settings.showActivityRailProjectIcons,
   );
-  const projectCarouselEnabled = !openFoldersInNewWindow;
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
-  const [carouselProjectId, setCarouselProjectId] = useState<string | null>(null);
-  const [loadingCarouselProjectId, setLoadingCarouselProjectId] = useState<string | null>(null);
   const railContentRef = useRef<HTMLDivElement>(null);
-  const isProjectGestureSettlingRef = useRef(false);
-  const projectScrollEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
-  const projectTabs = useWorkspaceTabsStore.use.projectTabs();
-  const activeProject = projectTabs.find((project) => project.isActive);
-  const carouselProject =
-    projectTabs.find((project) => project.id === carouselProjectId) ?? activeProject;
-  const carouselProjectIndex = carouselProject
-    ? projectTabs.findIndex((project) => project.id === carouselProject.id)
-    : -1;
-  const carouselProjects = getProjectCarouselWindow(projectTabs, carouselProjectIndex);
-  const renderedCarouselProjects = projectCarouselEnabled
-    ? carouselProjects
-    : carouselProject
-      ? [carouselProject]
-      : [];
-  const switchToProject = useFileSystemStore((state) => state.switchToProject);
-  const isSwitchingProject = useFileSystemStore((state) => state.isSwitchingProject);
   const handleSidebarViewChange = (view: typeof activeSidebarView) => {
     openSidebarView(view);
   };
@@ -178,11 +129,6 @@ export const ActivitySidebar = memo(({ expanded }: ActivitySidebarProps) => {
     void updateSetting("showActivityRailProjectIcons", true);
   }, [updateSetting]);
 
-  useEffect(() => {
-    if (isProjectGestureSettlingRef.current) return;
-    setCarouselProjectId(activeProject?.id ?? null);
-  }, [activeProject?.id]);
-
   const alignProjectCarouselToCurrent = useCallback(() => {
     const container = railContentRef.current;
     const currentPanel = container?.querySelector<HTMLElement>(
@@ -203,149 +149,24 @@ export const ActivitySidebar = memo(({ expanded }: ActivitySidebarProps) => {
     onPreview: alignProjectCarouselToCurrent,
   });
   const railPanelWidth = expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH;
+  const {
+    enabled: projectCarouselEnabled,
+    projects: projectTabs,
+    currentProject: carouselProject,
+    carouselProjects,
+    renderedProjects: renderedCarouselProjects,
+    loadingProjectId: loadingCarouselProjectId,
+    isSwitchingProject,
+    selectProject: handleProjectSelect,
+    handleScroll: handleProjectScroll,
+  } = useActivityProjectCarousel({
+    alignCurrentProject: alignProjectCarouselToCurrent,
+    isResizing: isActivityRailResizing,
+  });
 
   useLayoutEffect(() => {
     alignProjectCarouselToCurrent();
   }, [alignProjectCarouselToCurrent, carouselProject?.id, carouselProjects.length, railPanelWidth]);
-
-  useEffect(() => {
-    if (projectCarouselEnabled) return;
-
-    if (projectScrollEndTimerRef.current !== null) {
-      clearTimeout(projectScrollEndTimerRef.current);
-      projectScrollEndTimerRef.current = null;
-    }
-
-    isProjectGestureSettlingRef.current = false;
-    setCarouselProjectId(activeProject?.id ?? null);
-    setLoadingCarouselProjectId(null);
-  }, [activeProject?.id, projectCarouselEnabled]);
-
-  useEffect(() => {
-    return () => {
-      if (projectScrollEndTimerRef.current !== null) {
-        clearTimeout(projectScrollEndTimerRef.current);
-      }
-    };
-  }, []);
-
-  const activateCarouselProject = useCallback(
-    async (projectId: string) => {
-      if (
-        !projectCarouselEnabled ||
-        isActivityRailResizing ||
-        isSwitchingProject ||
-        isProjectGestureSettlingRef.current ||
-        projectTabs.length === 0
-      ) {
-        return;
-      }
-
-      const targetProject = projectTabs.find((project) => project.id === projectId);
-      if (!targetProject || targetProject.id === carouselProject?.id) {
-        alignProjectCarouselToCurrent();
-        return;
-      }
-      const targetWasReady = workspaceRuntimeRegistry.isWorkspaceReady(targetProject.id);
-
-      isProjectGestureSettlingRef.current = true;
-      if (projectScrollEndTimerRef.current !== null) {
-        clearTimeout(projectScrollEndTimerRef.current);
-        projectScrollEndTimerRef.current = null;
-      }
-
-      flushSync(() => {
-        setCarouselProjectId(targetProject.id);
-        setLoadingCarouselProjectId(targetWasReady ? null : targetProject.id);
-      });
-      alignProjectCarouselToCurrent();
-
-      try {
-        await waitForProjectCarouselPaint();
-        const switched = await switchToProject(targetProject.id);
-        if (!switched) {
-          flushSync(() => {
-            setCarouselProjectId(activeProject?.id ?? null);
-            setLoadingCarouselProjectId(null);
-          });
-          alignProjectCarouselToCurrent();
-          return;
-        }
-
-        if (!targetWasReady) {
-          await waitForProjectCarouselPaint();
-        }
-        setLoadingCarouselProjectId(null);
-      } catch {
-        flushSync(() => {
-          setCarouselProjectId(activeProject?.id ?? null);
-          setLoadingCarouselProjectId(null);
-        });
-        alignProjectCarouselToCurrent();
-      } finally {
-        isProjectGestureSettlingRef.current = false;
-      }
-    },
-    [
-      activeProject?.id,
-      alignProjectCarouselToCurrent,
-      carouselProject?.id,
-      isActivityRailResizing,
-      isSwitchingProject,
-      projectCarouselEnabled,
-      projectTabs,
-      switchToProject,
-    ],
-  );
-
-  const handleProjectSelect = useCallback(
-    (projectId: string) => {
-      void activateCarouselProject(projectId);
-    },
-    [activateCarouselProject],
-  );
-
-  const handleProjectScroll = useCallback(
-    (event: ReactUIEvent<HTMLDivElement>) => {
-      if (
-        !projectCarouselEnabled ||
-        isActivityRailResizing ||
-        isSwitchingProject ||
-        isProjectGestureSettlingRef.current ||
-        carouselProjects.length <= 1
-      ) {
-        return;
-      }
-
-      if (projectScrollEndTimerRef.current !== null) {
-        clearTimeout(projectScrollEndTimerRef.current);
-      }
-      const container = event.currentTarget;
-      projectScrollEndTimerRef.current = setTimeout(() => {
-        projectScrollEndTimerRef.current = null;
-        const pageIndex = getProjectCarouselPageIndex(
-          container.scrollLeft,
-          container.clientWidth,
-          carouselProjects.length,
-        );
-        const targetProject = pageIndex === null ? undefined : carouselProjects[pageIndex];
-        if (!targetProject || targetProject.id === carouselProject?.id) {
-          alignProjectCarouselToCurrent();
-          return;
-        }
-        void activateCarouselProject(targetProject.id);
-      }, PROJECT_SCROLL_SETTLE_DELAY_MS);
-    },
-    [
-      activateCarouselProject,
-      alignProjectCarouselToCurrent,
-      carouselProject?.id,
-      carouselProjects,
-      isActivityRailResizing,
-      isSwitchingProject,
-      projectCarouselEnabled,
-    ],
-  );
 
   const renderedRailWidth = `calc(${
     expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH
@@ -361,18 +182,14 @@ export const ActivitySidebar = memo(({ expanded }: ActivitySidebarProps) => {
         aria-hidden={isCurrent ? undefined : true}
         inert={isCurrent ? undefined : true}
         className={cn(
-          "relative flex h-full w-full shrink-0 snap-start snap-always flex-col items-start gap-2 overflow-hidden pt-2",
+          "relative box-border flex h-full w-full shrink-0 snap-start snap-always flex-col items-start gap-2 overflow-hidden pt-2 pl-chrome-inline",
           expanded && projectCarouselEnabled && showActivityRailProjectIcons ? "pb-7" : "pb-1.5",
+          !expanded && "pr-chrome-inline",
           !isCurrent && "pointer-events-none",
         )}
-        style={{
-          boxSizing: "border-box",
-          paddingLeft: ACTIVITY_RAIL_HORIZONTAL_GUTTER,
-          paddingRight: expanded ? 0 : ACTIVITY_RAIL_HORIZONTAL_GUTTER,
-        }}
       >
         {showActivityRailProjectSwitcher ? (
-          <SidebarProjectSwitcher
+          <ActivityProjectSwitcher
             expanded={expanded}
             project={project}
             projects={projectTabs}
@@ -447,7 +264,7 @@ export const ActivitySidebar = memo(({ expanded }: ActivitySidebarProps) => {
           {renderedCarouselProjects.map(renderProjectPanel)}
         </div>
         {expanded && projectCarouselEnabled && showActivityRailProjectIcons ? (
-          <SidebarProjectDots
+          <ActivityProjectDots
             projects={projectTabs}
             activeProjectId={carouselProject?.id}
             isSwitchingProject={isSwitchingProject}

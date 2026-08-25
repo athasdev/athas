@@ -72,7 +72,6 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
           <PlusIcon />
         </SidebarIconButton>
       }
-      className="font-sans select-none"
     >
       {!projectPath ? (
         <EmptyState layout="sidebar" message="Open a project to manage custom views." />

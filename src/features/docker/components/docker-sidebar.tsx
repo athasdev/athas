@@ -1864,7 +1864,7 @@ export function DockerSidebar() {
                   ) : null}
                   <div className="space-y-3 px-2 py-2">
                     <div className="space-y-1">
-                      <SidebarSectionLabel className="h-5 px-0">Docker Hub</SidebarSectionLabel>
+                      <SidebarSectionLabel>Docker Hub</SidebarSectionLabel>
                       <div className="flex min-w-0 items-center gap-1.5">
                         <SearchField
                           value={registryQuery}
@@ -1890,7 +1890,7 @@ export function DockerSidebar() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <SidebarSectionLabel className="h-5 px-0">Image actions</SidebarSectionLabel>
+                      <SidebarSectionLabel>Image actions</SidebarSectionLabel>
                       <Input
                         value={registryDraft.image}
                         onChange={(event) =>
@@ -1955,7 +1955,7 @@ export function DockerSidebar() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <SidebarSectionLabel className="h-5 px-0">Registry login</SidebarSectionLabel>
+                      <SidebarSectionLabel>Registry login</SidebarSectionLabel>
                       <Input
                         value={registryDraft.registry}
                         onChange={(event) =>

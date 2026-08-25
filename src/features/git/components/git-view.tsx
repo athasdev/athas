@@ -25,7 +25,6 @@ import { showAlertDialog } from "@/ui/dialog";
 import {
   SidebarFooter,
   SidebarIconButton,
-  SidebarPanel,
   SidebarTabPanels,
   SidebarTabBar,
   SidebarWorkspace,
@@ -830,16 +829,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   if (selectedHistoryCommit) {
     return (
-      <SidebarPanel className="font-sans ui-text-sm select-none">
-        <GitCommitFilesPanel
-          commit={selectedHistoryCommit}
-          files={selectedHistoryCommitFiles}
-          selectedFilePath={selectedHistoryFilePath}
-          isLoading={isLoadingHistoryCommitFiles}
-          onBack={handleBackFromHistoryCommit}
-          onSelectFile={handleSelectHistoryCommitFile}
-        />
-      </SidebarPanel>
+      <GitCommitFilesPanel
+        commit={selectedHistoryCommit}
+        files={selectedHistoryCommitFiles}
+        selectedFilePath={selectedHistoryFilePath}
+        isLoading={isLoadingHistoryCommitFiles}
+        onBack={handleBackFromHistoryCommit}
+        onSelectFile={handleSelectHistoryCommitFile}
+      />
     );
   }
 
@@ -905,7 +902,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             {renderActionsButton()}
           </>
         }
-        className="font-sans ui-text-sm select-none"
       >
         <SidebarTabBar items={gitTabs} value={activeTab} onChange={setActiveTab}>
           <SidebarTabPanels

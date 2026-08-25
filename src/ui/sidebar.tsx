@@ -16,6 +16,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
+import { ChromeBar } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { SearchField } from "@/ui/search";
@@ -53,7 +54,10 @@ export function SidebarPanel({
 }: ComponentProps<"div"> & { children: ReactNode }) {
   return (
     <div
-      className={cn("flex size-full min-h-0 min-w-0 flex-col bg-background", className)}
+      className={cn(
+        "flex size-full min-h-0 min-w-0 flex-col overflow-hidden bg-background",
+        className,
+      )}
       {...props}
     >
       {children}
@@ -156,15 +160,16 @@ export function SidebarHeader({
   ...props
 }: ComponentProps<"div"> & { children: ReactNode }) {
   return (
-    <div
+    <ChromeBar
+      region="sidebar"
       className={cn(
-        "ui-text-chrome sticky top-0 z-20 flex h-sidebar-header min-w-0 shrink-0 select-none items-center gap-chrome bg-background/92 px-0 py-1 backdrop-blur-sm",
+        "sticky top-0 z-20 h-sidebar-header select-none py-1 backdrop-blur-sm",
         className,
       )}
       {...props}
     >
       {children}
-    </div>
+    </ChromeBar>
   );
 }
 

@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 
 export const menuSurfaceVariants = cva(
-  "max-h-(--available-height) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-surface/98 p-1 font-sans text-subtle-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm ui-text-chrome",
+  "max-h-(--available-height) min-w-32 max-w-[min(480px,calc(100vw-16px))] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-surface/98 p-1 font-sans text-subtle-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm ui-text-chrome",
 );
 
 export const menuItemVariants = cva(

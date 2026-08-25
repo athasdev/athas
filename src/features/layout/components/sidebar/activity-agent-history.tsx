@@ -8,7 +8,7 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
 import { useGitStore } from "@/features/git/stores/git.store";
-import { getProjectNameFromPath } from "@/features/layout/components/sidebar/sidebar-projects";
+import { getProjectNameFromPath } from "@/features/layout/components/sidebar/project-glyph";
 import { useActivitySidebarSection } from "@/features/layout/hooks/use-activity-sidebar-section";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
@@ -250,7 +250,6 @@ export function ActivityAgentHistory({ workspacePath }: { workspacePath: string 
             point={olderAgentsMenu.position}
             items={olderAgentMenuItems}
             onClose={() => setOlderAgentsMenu((current) => ({ ...current, isOpen: false }))}
-            style={{ maxHeight: 320, width: 240 }}
           />
         </>
       ) : null}

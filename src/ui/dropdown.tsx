@@ -737,7 +737,7 @@ function DropdownMenuContent({
           data-slot="dropdown-menu-content"
           className={cn(
             menuSurfaceVariants(),
-            "z-10070 max-w-[min(480px,calc(100vw-16px))] duration-75 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+            "z-10070 duration-75 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
             className,
           )}
           {...props}

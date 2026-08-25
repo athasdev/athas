@@ -35,7 +35,6 @@ interface GitHubSidebarRowProps {
   trailing?: ReactNode;
   active?: boolean;
   preview?: GitHubSidebarPreview;
-  className?: string;
   draggable?: boolean;
   onClick: () => void;
   onContextMenu?: MouseEventHandler<HTMLElement>;
@@ -62,7 +61,6 @@ function previewBadgeClassName(tone: PreviewBadgeTone = "default") {
 
 export function GitHubSidebarRow({
   active = false,
-  className,
   description,
   draggable = false,
   leading,
@@ -91,7 +89,6 @@ export function GitHubSidebarRow({
       }
       description={description}
       trailing={trailing}
-      className={cn("group/github-row", className)}
       draggable={draggable}
       onClick={onClick}
       onContextMenu={onContextMenu}

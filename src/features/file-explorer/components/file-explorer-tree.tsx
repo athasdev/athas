@@ -1261,7 +1261,7 @@ function FileExplorerTreeComponent({
       onMouseLeave={handleContainerMouseLeave}
     >
       <SidebarHeader
-        className="justify-end px-3"
+        className="justify-end"
         onClick={(event) => event.stopPropagation()}
         onMouseDown={(event) => event.stopPropagation()}
       >

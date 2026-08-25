@@ -13,7 +13,6 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
-import { SidebarPanel } from "@/ui/sidebar";
 
 interface SidebarPaneProps {
   paneLevel?: "primary" | "edge";
@@ -87,9 +86,7 @@ export const SidebarPane = memo(
 
     return (
       <div className="flex h-full min-h-0" data-external-file-drop-scope="sidebar">
-        <SidebarPanel className="overflow-hidden">
-          <div className="h-full min-h-0 overflow-hidden">{activePane?.content ?? null}</div>
-        </SidebarPanel>
+        <div className="h-full min-h-0 flex-1 overflow-hidden">{activePane?.content ?? null}</div>
       </div>
     );
   },
