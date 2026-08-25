@@ -15,7 +15,7 @@ import {
 } from "@/ui/icons";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
@@ -54,7 +54,6 @@ import {
   copyToDockerContainer,
   deleteDockerEnvFile,
   getDockerComposeProject,
-  getDockerInventory,
   getDockerProjectConfig,
   loginDockerRegistry,
   listDockerContainerFiles,
@@ -87,7 +86,6 @@ import type {
   DockerContainerFileEntry,
   DockerImage,
   DockerPruneTarget,
-  DockerInventory,
   DockerLogEvent,
   DockerLogExitEvent,
   DockerProjectConfig,
@@ -121,6 +119,7 @@ import {
   NetworkRow,
   VolumeRow,
 } from "./docker-resource-rows";
+import { useDockerInventory } from "../hooks/use-docker-inventory";
 
 type DockerSection =
   | "containers"
@@ -167,13 +166,6 @@ const emptyProjectConfig: DockerProjectConfig = {
   devContainers: [],
 };
 
-const emptyInventory: DockerInventory = {
-  containers: [],
-  images: [],
-  volumes: [],
-  networks: [],
-};
-
 function openDebuggerPane() {
   const state = useUIState.getState();
   state.setBottomPaneActiveTab("debugger");
@@ -183,14 +175,25 @@ function openDebuggerPane() {
 export function DockerSidebar() {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
-  const [inventory, setInventory] = useState<DockerInventory>(emptyInventory);
+  const {
+    inventory,
+    selectedContainerId,
+    selectedContainer,
+    isLoading,
+    connectionError,
+    error,
+    loadInventory,
+    markDockerUnavailable,
+    handleDockerFailure,
+    clearError,
+    selectContainer,
+  } = useDockerInventory();
   const [composeProject, setComposeProject] = useState<DockerComposeProject>(emptyComposeProject);
   const [projectConfig, setProjectConfig] = useState<DockerProjectConfig>(emptyProjectConfig);
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState<DockerTab>("resources");
   const [containerFilter, setContainerFilter] = useState<DockerContainerFilter>("all");
   const [collapsedSections, setCollapsedSections] = useState<Set<DockerSection>>(() => new Set());
-  const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
   const [logLines, setLogLines] = useState<DockerLogLine[]>([]);
   const [logQuery, setLogQuery] = useState("");
   const [logFilter, setLogFilter] = useState<DockerLogFilter>("all");
@@ -201,7 +204,6 @@ export function DockerSidebar() {
   const [containerFiles, setContainerFiles] = useState<DockerContainerFileEntry[]>([]);
   const [isFilesLoading, setIsFilesLoading] = useState(false);
   const [filesError, setFilesError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isComposeLoading, setIsComposeLoading] = useState(false);
   const [isProjectConfigLoading, setIsProjectConfigLoading] = useState(false);
   const [busyContainerId, setBusyContainerId] = useState<string | null>(null);
@@ -209,8 +211,6 @@ export function DockerSidebar() {
   const [busyDevContainerPath, setBusyDevContainerPath] = useState<string | null>(null);
   const [busyImageId, setBusyImageId] = useState<string | null>(null);
   const [busyPruneTarget, setBusyPruneTarget] = useState<DockerPruneTarget | null>(null);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [composeError, setComposeError] = useState<string | null>(null);
   const [projectConfigError, setProjectConfigError] = useState<string | null>(null);
   const [composeOutput, setComposeOutput] = useState<string | null>(null);
@@ -243,33 +243,6 @@ export function DockerSidebar() {
     image: "",
     target: "",
   });
-  const loadInventory = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const nextInventory = await getDockerInventory();
-      setConnectionError(null);
-      setInventory(nextInventory);
-      setSelectedContainerId((current) => {
-        if (current && nextInventory.containers.some((container) => container.id === current)) {
-          return current;
-        }
-        return nextInventory.containers[0]?.id ?? null;
-      });
-    } catch (loadError) {
-      setConnectionError(getErrorMessage(loadError));
-      setInventory(emptyInventory);
-      setSelectedContainerId(null);
-      setLogLines([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadInventory();
-  }, [loadInventory]);
-
   const loadComposeProject = useCallback(async () => {
     setIsComposeLoading(true);
     setComposeError(null);
@@ -318,31 +291,6 @@ export function DockerSidebar() {
     }
     void loadProjectConfig();
   }, [activeTab, loadComposeProject, loadInventory, loadProjectConfig]);
-
-  const markDockerUnavailable = useCallback((message: string) => {
-    setConnectionError(message);
-    setError(null);
-    setInventory(emptyInventory);
-    setSelectedContainerId(null);
-    setLogLines([]);
-  }, []);
-
-  const handleDockerFailure = useCallback(
-    (failure: unknown) => {
-      const message = getErrorMessage(failure);
-      if (isDockerConnectionError(message)) {
-        markDockerUnavailable(message);
-        return;
-      }
-      setError(message);
-    },
-    [markDockerUnavailable],
-  );
-
-  const selectedContainer = useMemo(
-    () => inventory.containers.find((container) => container.id === selectedContainerId) ?? null,
-    [inventory.containers, selectedContainerId],
-  );
 
   useEffect(() => {
     setContainerPath("/");
@@ -509,7 +457,7 @@ export function DockerSidebar() {
     action: DockerContainerAction,
   ) => {
     setBusyContainerId(container.id);
-    setError(null);
+    clearError();
     try {
       await runDockerContainerAction(container.id, action, action === "remove");
       await loadInventory();
@@ -611,7 +559,7 @@ export function DockerSidebar() {
     if (!contextPath) return;
 
     setBusyImageId("__build__");
-    setError(null);
+    clearError();
     setDockerOutput(null);
     try {
       const output = await buildDockerImage({
@@ -635,7 +583,7 @@ export function DockerSidebar() {
     if (!image) return;
 
     setBusyImageId(image);
-    setError(null);
+    clearError();
     setDockerOutput(null);
     try {
       const output = await runDockerImage({
@@ -861,7 +809,7 @@ export function DockerSidebar() {
 
   const handleImageRemove = async (image: DockerImage) => {
     setBusyImageId(image.id);
-    setError(null);
+    clearError();
     setDockerOutput(null);
     try {
       const output = await runDockerImageAction(image.id, "remove", false);
@@ -884,7 +832,7 @@ export function DockerSidebar() {
     if (confirmation?.trim().toLowerCase() !== "prune") return;
 
     setBusyPruneTarget(target);
-    setError(null);
+    clearError();
     setDockerOutput(null);
     try {
       const output = await pruneDockerResources(target, includeVolumes);
@@ -1323,7 +1271,7 @@ export function DockerSidebar() {
           <DockerInlineError
             title="Docker action failed"
             error={error}
-            onDismiss={() => setError(null)}
+            onDismiss={clearError}
             className="rounded-none border-x-0"
           />
         ) : null}
@@ -1370,7 +1318,7 @@ export function DockerSidebar() {
                       container={container}
                       busy={busyContainerId === container.id}
                       selected={selectedContainerId === container.id}
-                      onSelect={(nextContainer) => setSelectedContainerId(nextContainer.id)}
+                      onSelect={(nextContainer) => selectContainer(nextContainer.id)}
                       onAction={handleContainerAction}
                       onOpenTerminal={openContainerTerminal}
                       onDebug={(nextContainer) => void handleDebugContainer(nextContainer)}
