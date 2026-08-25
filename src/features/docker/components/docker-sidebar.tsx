@@ -55,7 +55,6 @@ import {
   getDockerComposeProject,
   getDockerProjectConfig,
   loginDockerRegistry,
-  listDockerContainerFiles,
   openDockerEnvFile,
   openDockerDevContainer,
   pullDockerRegistryImage,
@@ -115,6 +114,7 @@ import {
 } from "./docker-resource-rows";
 import { useDockerInventory } from "../hooks/use-docker-inventory";
 import { useDockerContainerLogs, type DockerLogFilter } from "../hooks/use-docker-container-logs";
+import { useDockerContainerFiles } from "../hooks/use-docker-container-files";
 
 type DockerSection =
   | "containers"
@@ -180,6 +180,7 @@ export function DockerSidebar() {
     clearError,
     selectContainer,
   } = useDockerInventory();
+  const [detailTab, setDetailTab] = useState<DockerDetailTab>("logs");
   const {
     lines: logLines,
     query: logQuery,
@@ -191,17 +192,22 @@ export function DockerSidebar() {
     setQuery: setLogQuery,
     setFilter: setLogFilter,
   } = useDockerContainerLogs(selectedContainerId);
+  const {
+    path: containerPath,
+    files: containerFiles,
+    isLoading: isFilesLoading,
+    error: filesError,
+    loadFiles: loadContainerFiles,
+    setPath: setContainerPath,
+    clearError: clearFilesError,
+    reportError: reportFilesError,
+  } = useDockerContainerFiles(selectedContainerId, detailTab === "files");
   const [composeProject, setComposeProject] = useState<DockerComposeProject>(emptyComposeProject);
   const [projectConfig, setProjectConfig] = useState<DockerProjectConfig>(emptyProjectConfig);
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState<DockerTab>("resources");
   const [containerFilter, setContainerFilter] = useState<DockerContainerFilter>("all");
   const [collapsedSections, setCollapsedSections] = useState<Set<DockerSection>>(() => new Set());
-  const [detailTab, setDetailTab] = useState<DockerDetailTab>("logs");
-  const [containerPath, setContainerPath] = useState("/");
-  const [containerFiles, setContainerFiles] = useState<DockerContainerFileEntry[]>([]);
-  const [isFilesLoading, setIsFilesLoading] = useState(false);
-  const [filesError, setFilesError] = useState<string | null>(null);
   const [isComposeLoading, setIsComposeLoading] = useState(false);
   const [isProjectConfigLoading, setIsProjectConfigLoading] = useState(false);
   const [busyContainerId, setBusyContainerId] = useState<string | null>(null);
@@ -289,36 +295,6 @@ export function DockerSidebar() {
     }
     void loadProjectConfig();
   }, [activeTab, loadComposeProject, loadInventory, loadProjectConfig]);
-
-  useEffect(() => {
-    setContainerPath("/");
-    setContainerFiles([]);
-    setFilesError(null);
-  }, [selectedContainer?.id]);
-
-  const loadContainerFiles = useCallback(async () => {
-    if (!selectedContainer) {
-      setContainerFiles([]);
-      return;
-    }
-
-    setIsFilesLoading(true);
-    setFilesError(null);
-    try {
-      const entries = await listDockerContainerFiles(selectedContainer.id, containerPath);
-      setContainerFiles(entries);
-    } catch (loadError) {
-      setFilesError(loadError instanceof Error ? loadError.message : String(loadError));
-      setContainerFiles([]);
-    } finally {
-      setIsFilesLoading(false);
-    }
-  }, [containerPath, selectedContainer]);
-
-  useEffect(() => {
-    if (!selectedContainer || detailTab !== "files") return;
-    void loadContainerFiles();
-  }, [detailTab, loadContainerFiles, selectedContainer]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredContainers = inventory.containers.filter((container) => {
@@ -929,7 +905,7 @@ export function DockerSidebar() {
     });
     if (!hostPath?.trim()) return;
 
-    setFilesError(null);
+    clearFilesError();
     setDockerOutput(null);
     try {
       const output = await copyFromDockerContainer({
@@ -939,7 +915,7 @@ export function DockerSidebar() {
       });
       setDockerOutput(output.trim() || `Copied ${entry.path} to ${hostPath.trim()}.`);
     } catch (copyError) {
-      setFilesError(copyError instanceof Error ? copyError.message : String(copyError));
+      reportFilesError(copyError);
     }
   };
 
@@ -960,7 +936,7 @@ export function DockerSidebar() {
     });
     if (!containerDestination?.trim()) return;
 
-    setFilesError(null);
+    clearFilesError();
     setDockerOutput(null);
     try {
       const output = await copyToDockerContainer({
@@ -973,7 +949,7 @@ export function DockerSidebar() {
       );
       await loadContainerFiles();
     } catch (copyError) {
-      setFilesError(copyError instanceof Error ? copyError.message : String(copyError));
+      reportFilesError(copyError);
     }
   };
 
