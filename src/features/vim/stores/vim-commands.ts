@@ -28,11 +28,12 @@ const writeQuitCommand: VimCommand = {
   aliases: ["x"],
   description: "Save and close the current file",
   execute: async () => {
-    await useEditorAppStore.getState().actions.handleSave();
+    const bufferId = useBufferStore.getState().activeBufferId;
+    if (!bufferId) return;
 
-    const { activeBufferId, actions } = useBufferStore.getState();
-    if (activeBufferId) {
-      actions.closeBuffer(activeBufferId);
+    const saved = await useEditorAppStore.getState().actions.handleSave();
+    if (saved) {
+      useBufferStore.getState().actions.closeBuffer(bufferId);
     }
   },
 };

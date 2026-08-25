@@ -6,6 +6,7 @@ import type { useEditorAppStore as useEditorAppStoreHook } from "../../editor/st
 const mocks = vi.hoisted(() => ({
   notifyDocumentSave: vi.fn(),
   recordLocalHistoryFile: vi.fn(),
+  saveDialog: vi.fn(),
   writeFile: vi.fn(),
 }));
 
@@ -28,6 +29,10 @@ vi.mock("@/features/file-system/controllers/platform", async (importOriginal) =>
 
 vi.mock("@/features/local-history/api/local-history-api", () => ({
   recordLocalHistoryFile: mocks.recordLocalHistoryFile,
+}));
+
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  save: mocks.saveDialog,
 }));
 
 const createMockStorage = () => {
@@ -106,6 +111,7 @@ describe("vim ex commands", () => {
     mocks.writeFile.mockResolvedValue(undefined);
     mocks.recordLocalHistoryFile.mockResolvedValue(undefined);
     mocks.notifyDocumentSave.mockResolvedValue(undefined);
+    mocks.saveDialog.mockResolvedValue(null);
 
     ({ useBufferStore } = await import("../../editor/stores/buffer.store"));
     ({ useEditorAppStore } = await import("../../editor/stores/editor-app.store"));
@@ -158,6 +164,48 @@ describe("vim ex commands", () => {
     expect(handled).toBe(true);
     expect(mocks.writeFile).toHaveBeenCalledWith("/workspace/a.ts", "changed");
     expect(activeBuffer()).toBeUndefined();
+  });
+
+  it(":wq keeps an untitled buffer open when saving is canceled", async () => {
+    useBufferStore.setState({
+      activeBufferId: "a",
+      buffers: [makeEditorBuffer("a", "untitled:a.ts", "changed", true)],
+    });
+
+    const handled = await parseAndExecuteVimCommand("wq");
+
+    expect(handled).toBe(true);
+    expect(mocks.saveDialog).toHaveBeenCalledTimes(1);
+    expect(mocks.writeFile).not.toHaveBeenCalled();
+    expect(activeBuffer()).toBeDefined();
+    expect(useBufferStore.getState().pendingClose).toBeNull();
+  });
+
+  it(":wq closes the saved buffer when the active buffer changes", async () => {
+    const secondBuffer = makeEditorBuffer("b", "/workspace/b.ts", "unchanged", false);
+    useBufferStore.setState({
+      activeBufferId: "a",
+      buffers: [makeEditorBuffer("a", "/workspace/a.ts", "changed", true), secondBuffer],
+    });
+
+    let finishSave: (saved: boolean) => void = () => {};
+    const savePromise = new Promise<boolean>((resolve) => {
+      finishSave = resolve;
+    });
+    const handleSave = vi
+      .spyOn(useEditorAppStore.getState().actions, "handleSave")
+      .mockReturnValueOnce(savePromise);
+
+    const handledPromise = parseAndExecuteVimCommand("wq");
+    expect(handleSave).toHaveBeenCalledTimes(1);
+    useBufferStore.setState({ activeBufferId: "b" });
+    useBufferStore.getState().actions.markBufferDirty("a", false);
+    finishSave(true);
+
+    expect(await handledPromise).toBe(true);
+    expect(useBufferStore.getState().buffers.some((buffer) => buffer.id === "a")).toBe(false);
+    expect(useBufferStore.getState().buffers.some((buffer) => buffer.id === "b")).toBe(true);
+    expect(useBufferStore.getState().activeBufferId).toBe("b");
   });
 
   it(":q on a dirty buffer asks for confirmation instead of closing", async () => {
