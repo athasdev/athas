@@ -102,6 +102,10 @@ import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buf
 import { restoreWorkspaceSessionFolders } from "../services/workspace-session-folder-restore";
 import { prepareWorkspaceClose } from "../services/workspace-close-guard";
 import { drainDeferredWorkspaceSessionBuffers } from "../services/workspace-deferred-session-restore";
+import {
+  applyWorkspaceInitializationState,
+  type InitializedWorkspaceState,
+} from "../services/workspace-initialization-state";
 import { initializeWorkspacePath } from "../services/workspace-initialization-router";
 import { resetWorkspaceResources } from "../services/workspace-reset";
 import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
@@ -415,6 +419,39 @@ const initializeLocalWorkspaceInBackground = (
   })();
 };
 
+const applyNonLocalWorkspaceState = (
+  workspaceId: string,
+  workspace: InitializedWorkspaceState,
+  set: ScopedFileSystemSet,
+) =>
+  applyWorkspaceInitializationState(workspace, {
+    addProjectTab: (path, name) =>
+      useWorkspaceTabsStore.getState().actions.addProjectTab(path, name),
+    getActiveProjectTabId: () => useWorkspaceTabsStore.getState().actions.getActiveProjectTab()?.id,
+    expandRoot: (path) =>
+      useFileTreeStore
+        .getStore(workspaceId)
+        .getState()
+        .actions.setExpandedPaths(new Set([path])),
+    setProjectMetadata: (path, name, activeProjectId) => {
+      const projectActions = useProjectStore.getStore(workspaceId).getState().actions;
+      projectActions.setRootFolderPath(path);
+      projectActions.setProjectName(name);
+      projectActions.setActiveProjectId(activeProjectId);
+    },
+    restoreUiState: (path) => restoreProjectUiState(path, workspaceId),
+    commitFileSystemState: ({ path, name, files }) => {
+      set((state) => {
+        state.isFileTreeLoading = false;
+        state.files = files;
+        state.rootFolderPath = path;
+        state.workspaceFolders = [{ path, name, isPrimary: true }];
+        state.filesVersion++;
+        state.projectFilesCache = undefined;
+      });
+    },
+  });
+
 const openLocalWorkspace = async (
   options: OpenLocalWorkspaceOptions,
   set: ScopedFileSystemSet,
@@ -536,49 +573,42 @@ const openLocalWorkspace = async (
   return true;
 };
 
-const initializeRemoteWorkspaceSession = async (
+type NonLocalWorkspaceKind = "remote" | "wsl";
+
+const nonLocalWorkspaceSessionMessages = {
+  remote: {
+    traceLabel: "remoteWorkspace:restoreSession",
+    errorMessage: "Failed to restore remote workspace session:",
+    warningMessage: "Remote workspace opened, but saved tabs could not be restored.",
+  },
+  wsl: {
+    traceLabel: "wslWorkspace:restoreSession",
+    errorMessage: "Failed to restore WSL workspace session:",
+    warningMessage: "WSL workspace opened, but saved tabs could not be restored.",
+  },
+} as const;
+
+const initializeNonLocalWorkspaceSession = async (
+  kind: NonLocalWorkspaceKind,
   workspaceId: string,
-  remotePath: string,
+  path: string,
   get: FileSystemGet,
 ) => {
+  const messages = nonLocalWorkspaceSessionMessages[kind];
   await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
   useGitStore.getStore(workspaceId).getState().actions.setWorkspaceGitStatus(null, null);
 
   try {
     const restoreStartedAt = performance.now();
-    logWorkspaceOpenStep("start", "remoteWorkspace:restoreSession", remotePath);
-    await get().restoreSession(remotePath);
-    logWorkspaceOpenStep("end", "remoteWorkspace:restoreSession", remotePath, restoreStartedAt);
+    logWorkspaceOpenStep("start", messages.traceLabel, path);
+    await get().restoreSession(path);
+    logWorkspaceOpenStep("end", messages.traceLabel, path, restoreStartedAt);
   } catch (error) {
-    logWorkspaceOpenStep("error", "remoteWorkspace:restoreSession", remotePath);
-    console.error("Failed to restore remote workspace session:", error);
-    toast.warning("Remote workspace opened, but saved tabs could not be restored.");
-    frontendTrace("warn", "workspace-open", "remoteWorkspace:restoreSession:error", {
-      path: remotePath,
-      error: getErrorMessage(error),
-    });
-  }
-};
-
-const initializeWslWorkspaceSession = async (
-  workspaceId: string,
-  wslPath: string,
-  get: FileSystemGet,
-) => {
-  await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
-  useGitStore.getStore(workspaceId).getState().actions.setWorkspaceGitStatus(null, null);
-
-  try {
-    const restoreStartedAt = performance.now();
-    logWorkspaceOpenStep("start", "wslWorkspace:restoreSession", wslPath);
-    await get().restoreSession(wslPath);
-    logWorkspaceOpenStep("end", "wslWorkspace:restoreSession", wslPath, restoreStartedAt);
-  } catch (error) {
-    logWorkspaceOpenStep("error", "wslWorkspace:restoreSession", wslPath);
-    console.error("Failed to restore WSL workspace session:", error);
-    toast.warning("WSL workspace opened, but saved tabs could not be restored.");
-    frontendTrace("warn", "workspace-open", "wslWorkspace:restoreSession:error", {
-      path: wslPath,
+    logWorkspaceOpenStep("error", messages.traceLabel, path);
+    console.error(messages.errorMessage, error);
+    toast.warning(messages.warningMessage);
+    frontendTrace("warn", "workspace-open", `${messages.traceLabel}:error`, {
+      path,
       error: getErrorMessage(error),
     });
   }
@@ -1149,36 +1179,17 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             connection.name,
             entries,
           );
+          applyNonLocalWorkspaceState(
+            workspaceId,
+            {
+              path: remotePath,
+              name: connection.name,
+              files: wrappedFileTree,
+            },
+            set,
+          );
 
-          // Add project to workspace tabs
-          useWorkspaceTabsStore.getState().actions.addProjectTab(remotePath, connection.name);
-          const activeProjectTab = useWorkspaceTabsStore.getState().actions.getActiveProjectTab();
-
-          // Initialize tree UI state: expand remote root
-          useFileTreeStore
-            .getStore(workspaceId)
-            .getState()
-            .actions.setExpandedPaths(new Set([remotePath]));
-
-          // Update project store
-          const { setRootFolderPath, setProjectName, setActiveProjectId } = useProjectStore
-            .getStore(workspaceId)
-            .getState().actions;
-          setRootFolderPath(remotePath);
-          setProjectName(connection.name);
-          setActiveProjectId(activeProjectTab?.id);
-          restoreProjectUiState(remotePath, workspaceId);
-
-          set((state) => {
-            state.isFileTreeLoading = false;
-            state.files = wrappedFileTree;
-            state.rootFolderPath = remotePath;
-            state.workspaceFolders = [{ path: remotePath, name: connection.name, isPrimary: true }];
-            state.filesVersion++;
-            state.projectFilesCache = undefined;
-          });
-
-          await initializeRemoteWorkspaceSession(workspaceId, remotePath, get);
+          await initializeNonLocalWorkspaceSession("remote", workspaceId, remotePath, get);
 
           return true;
         } catch (error) {
@@ -1231,37 +1242,18 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             entries,
           );
           const projectName = getWslProjectName(distro, normalizedLinuxPath);
-
-          useWorkspaceTabsStore.getState().actions.addProjectTab(wslPath, projectName);
-          const activeProjectTab = useWorkspaceTabsStore.getState().actions.getActiveProjectTab();
-          useFileTreeStore
-            .getStore(workspaceId)
-            .getState()
-            .actions.setExpandedPaths(new Set([wslPath]));
-
-          const { setRootFolderPath, setProjectName, setActiveProjectId } = useProjectStore
-            .getStore(workspaceId)
-            .getState().actions;
-          setRootFolderPath(wslPath);
-          setProjectName(projectName);
-          setActiveProjectId(activeProjectTab?.id);
-          restoreProjectUiState(wslPath, workspaceId);
-
-          set((state) => {
-            state.isFileTreeLoading = false;
-            state.files = wrappedFileTree;
-            state.rootFolderPath = wslPath;
-            state.workspaceFolders = [{ path: wslPath, name: projectName, isPrimary: true }];
-            state.filesVersion++;
-            state.projectFilesCache = undefined;
-          });
+          const activeProjectId = applyNonLocalWorkspaceState(
+            workspaceId,
+            { path: wslPath, name: projectName, files: wrappedFileTree },
+            set,
+          );
 
           useRecentFoldersStore.getState().actions.addToRecents(wslPath, {
-            activeProjectTabId: activeProjectTab?.id,
+            activeProjectTabId: activeProjectId,
             missing: false,
           });
 
-          await initializeWslWorkspaceSession(workspaceId, wslPath, get);
+          await initializeNonLocalWorkspaceSession("wsl", workspaceId, wslPath, get);
 
           return true;
         } catch (error) {
