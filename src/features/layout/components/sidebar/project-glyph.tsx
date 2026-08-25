@@ -26,12 +26,12 @@ export function ProjectGlyph({
       <img
         src={convertFileSrc(iconPath)}
         alt=""
-        className={cn("shrink-0 rounded-md object-contain", className ?? "size-4")}
+        className={cn("size-[1em] shrink-0 rounded-md object-contain", className)}
       />
     );
   }
 
   const Icon = isRemoteProjectPath(projectPath) ? RemoteIcon : projectPath ? FolderIcon : PlusIcon;
 
-  return <Icon className={cn("shrink-0", className ?? "size-4")} />;
+  return <Icon className={cn("shrink-0", className)} />;
 }
