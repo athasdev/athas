@@ -252,10 +252,10 @@ pub async fn notebook_run_python_cell(
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
 
-   if let Some(cwd) = cwd {
-      if !cwd.trim().is_empty() {
-         command.current_dir(PathBuf::from(cwd));
-      }
+   if let Some(cwd) = cwd
+      && !cwd.trim().is_empty()
+   {
+      command.current_dir(PathBuf::from(cwd));
    }
 
    let mut child = command
@@ -377,10 +377,10 @@ run_file("{}", FALSE)
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
 
-   if let Some(cwd) = cwd {
-      if !cwd.trim().is_empty() {
-         command.current_dir(PathBuf::from(cwd));
-      }
+   if let Some(cwd) = cwd
+      && !cwd.trim().is_empty()
+   {
+      command.current_dir(PathBuf::from(cwd));
    }
 
    let mut child = match command.spawn() {

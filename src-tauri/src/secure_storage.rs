@@ -51,7 +51,7 @@ fn secure_store_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 fn load_store_from_path(path: &Path) -> Result<Map<String, Value>, String> {
-   match fs::read_to_string(&path) {
+   match fs::read_to_string(path) {
       Ok(contents) => {
          if contents.trim().is_empty() {
             return Ok(Map::new());

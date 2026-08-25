@@ -364,7 +364,7 @@ async function main() {
 
     // Check: Cargo check
     await runCheck("Cargo check", async () => {
-      const result = await $`cargo check --workspace`.quiet().nothrow();
+      const result = await $`cargo check --workspace --all-targets`.quiet().nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Compilation errors found" };
       }
@@ -381,9 +381,19 @@ async function main() {
 
     // Check: Cargo clippy
     await runCheck("Cargo clippy", async () => {
-      const result = await $`cargo clippy --workspace -- -D warnings`.quiet().nothrow();
+      const result = await $`cargo clippy --workspace --all-targets -- -D warnings`
+        .quiet()
+        .nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Clippy warnings found" };
+      }
+      return { passed: true };
+    });
+
+    await runCheck("Rust tests", async () => {
+      const result = await $`cargo test --workspace --no-fail-fast`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        return { passed: false, message: "Tests failed" };
       }
       return { passed: true };
     });

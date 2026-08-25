@@ -29,29 +29,6 @@ pub struct PermissionResponse {
    pub option_id: Option<String>,
 }
 
-#[cfg(test)]
-mod tests {
-   use super::{AthasAcpClient, SessionConfigOptionKind, acp};
-
-   #[test]
-   fn maps_boolean_model_configuration_options() {
-      let option = acp::SessionConfigOption::boolean("streaming", "Streaming", true)
-         .description("Stream partial responses")
-         .category(acp::SessionConfigOptionCategory::ModelConfig);
-
-      let mapped = AthasAcpClient::map_session_config_option(option).expect("mapped option");
-
-      assert_eq!(mapped.id, "streaming");
-      assert_eq!(mapped.category.as_deref(), Some("model_config"));
-      assert!(matches!(
-         mapped.kind,
-         SessionConfigOptionKind::Boolean {
-            current_value: true
-         }
-      ));
-   }
-}
-
 /// Athas ACP Client implementation
 /// Handles requests from the agent (file access, terminals, permissions)
 pub struct AthasAcpClient {
@@ -880,13 +857,12 @@ impl AthasAcpClient {
          states.remove(&terminal_id)
       };
 
-      if let Some(state) = removed_state {
-         if let Err(e) = self
+      if let Some(state) = removed_state
+         && let Err(e) = self
             .terminal_manager
             .close_terminal(&state.athas_terminal_id)
-         {
-            log::warn!("Failed to close terminal {}: {}", terminal_id, e);
-         }
+      {
+         log::warn!("Failed to close terminal {}: {}", terminal_id, e);
       }
 
       Ok(acp::ReleaseTerminalResponse::new())
@@ -1039,5 +1015,28 @@ impl AthasAcpClient {
          args.params.get()
       );
       Ok(())
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::{AthasAcpClient, SessionConfigOptionKind, acp};
+
+   #[test]
+   fn maps_boolean_model_configuration_options() {
+      let option = acp::SessionConfigOption::boolean("streaming", "Streaming", true)
+         .description("Stream partial responses")
+         .category(acp::SessionConfigOptionCategory::ModelConfig);
+
+      let mapped = AthasAcpClient::map_session_config_option(option).expect("mapped option");
+
+      assert_eq!(mapped.id, "streaming");
+      assert_eq!(mapped.category.as_deref(), Some("model_config"));
+      assert!(matches!(
+         mapped.kind,
+         SessionConfigOptionKind::Boolean {
+            current_value: true
+         }
+      ));
    }
 }
