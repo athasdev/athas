@@ -130,6 +130,13 @@ describe("settings UI contract", () => {
     expect(sectionSource).toContain("@max-[640px]/settings:[&>div]:flex-wrap");
   });
 
+  it("uses one keyboard-reachable scroll owner for settings content", () => {
+    const dialogSource = readFileSync(`${componentsDirectory}/settings-dialog.tsx`, "utf8");
+
+    expect(dialogSource).toContain("scrollable={false}");
+    expect(dialogSource).not.toContain("tabIndex: -1");
+  });
+
   it("content-sizes AI selector triggers and menus in settings", () => {
     for (const fileName of ["provider-selector.tsx", "model-selector.tsx"]) {
       const source = readFileSync(`${aiSelectorsDirectory}/${fileName}`, "utf8");

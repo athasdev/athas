@@ -32,6 +32,7 @@ interface DialogProps {
   children: ReactNode;
   onClose: () => void;
   title: ReactNode;
+  scrollable?: boolean;
   icon?: React.ForwardRefExoticComponent<
     Omit<AppIconProps, "ref"> & React.RefAttributes<SVGSVGElement>
   >;
@@ -177,6 +178,7 @@ const AppDialog = ({
   headerActions,
   footer,
   size = "md",
+  scrollable = true,
   classNames,
 }: DialogProps) => {
   const prefersReducedMotion = useReducedMotionConfig();
@@ -266,9 +268,13 @@ const AppDialog = ({
             </div>
           </div>
 
-          <ScrollArea className="flex-1" contentClassName={cn("p-4", classNames?.content)}>
-            {children}
-          </ScrollArea>
+          {scrollable ? (
+            <ScrollArea className="flex-1" contentClassName={cn("p-4", classNames?.content)}>
+              {children}
+            </ScrollArea>
+          ) : (
+            <div className={cn("min-h-0 flex-1 p-4", classNames?.content)}>{children}</div>
+          )}
 
           {footer && (
             <div className="flex shrink-0 items-center justify-end gap-2 px-4 py-3">{footer}</div>

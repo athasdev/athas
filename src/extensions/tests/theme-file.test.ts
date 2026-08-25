@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import athasThemes from "@/extensions/themes/builtin/athas.json";
+import catppuccinThemes from "@/extensions/themes/builtin/catppuccin.json";
 import {
   createThemeFileFromBase,
   formatThemeFile,
@@ -88,5 +89,35 @@ describe("theme files", () => {
     expect(Object.keys(definition.cssVariables).some((key) => key.startsWith("--color-"))).toBe(
       false,
     );
+  });
+
+  it("derives missing Git colors from each theme's own syntax palette", () => {
+    const theme = (catppuccinThemes as ThemeFile).themes.find(
+      (candidate) => candidate.id === "catppuccin-mocha",
+    );
+    expect(theme).toBeDefined();
+
+    const definition = toThemeDefinition(theme!);
+
+    expect(definition.cssVariables).toMatchObject({
+      "--git-added": theme!.syntax?.string,
+      "--git-deleted": theme!.syntax?.variable,
+      "--git-modified": theme!.syntax?.number,
+      "--git-modified-staged": theme!.syntax?.number,
+      "--git-untracked": theme!.syntax?.property,
+      "--git-renamed": theme!.syntax?.variable,
+    });
+  });
+
+  it("preserves explicit Git colors", () => {
+    const theme = (athasThemes as ThemeFile).themes.find(
+      (candidate) => candidate.id === "athas-dark",
+    );
+    expect(theme).toBeDefined();
+
+    const definition = toThemeDefinition(theme!);
+
+    expect(definition.cssVariables["--git-added"]).toBe(theme!.colors["git-added"]);
+    expect(definition.cssVariables["--git-deleted"]).toBe(theme!.colors["git-deleted"]);
   });
 });

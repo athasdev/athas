@@ -156,7 +156,7 @@ export function CodexSettings() {
           <Badge variant="default">{details.mcp} MCP</Badge>
         </div>
       </SettingRow>
-      <SettingRow label="Account" description="Uses the Codex CLI account on this Mac">
+      <SettingRow label="Account" description="Uses the Codex CLI account on this device">
         <div className="flex items-center gap-2">
           <Button
             size="sm"
