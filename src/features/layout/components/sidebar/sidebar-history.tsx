@@ -274,75 +274,56 @@ function SidebarTerminalHistoryRow({
   }
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger className="block" onContextMenu={(event) => event.stopPropagation()}>
-        <SidebarListActionRow
-          actions={[
-            <SidebarIconButton
-              key="pin"
-              active={pinned}
-              aria-pressed={pinned}
-              tooltip={pinned ? "Unpin terminal" : "Pin terminal"}
-              tooltipSide="right"
-              onClick={(event) => {
-                event.stopPropagation();
-                onPinChange();
-              }}
-            >
-              {pinned ? (
-                <PushPinSlashIcon className="size-3" />
-              ) : (
-                <PushPinIcon className="size-3" />
-              )}
-            </SidebarIconButton>,
-            <SidebarIconButton
-              key="close"
-              className="hover:text-destructive"
-              tooltip="Close terminal"
-              tooltipSide="right"
-              onClick={(event) => {
-                event.stopPropagation();
-                onClose();
-              }}
-            >
-              <XIcon className="size-3" />
-            </SidebarIconButton>,
-          ]}
-        >
-          <SidebarListItem
-            active={active}
-            appearance="activity"
-            leading={<TerminalIcon className="size-4" />}
-            onClick={onOpen}
-          >
-            {name}
-          </SidebarListItem>
-        </SidebarListActionRow>
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem onClick={onOpen}>
-          <OpenExternalIcon />
-          Open
-        </ContextMenuItem>
-        <ContextMenuItem
-          onClick={() => {
+    <SidebarListActionRow
+      actions={[
+        <SidebarIconButton
+          key="rename"
+          tooltip="Rename terminal"
+          tooltipSide="right"
+          onClick={(event) => {
+            event.stopPropagation();
             setRenameValue(name);
             setIsRenaming(true);
           }}
         >
-          <PencilSimpleLineIcon />
-          Rename
-        </ContextMenuItem>
-        <ContextMenuItem onClick={onPinChange}>
-          {pinned ? <PushPinSlashIcon /> : <PushPinIcon />}
-          {pinned ? "Unpin" : "Pin"}
-        </ContextMenuItem>
-        <ContextMenuItem variant="destructive" onClick={onClose}>
-          <XIcon />
-          Close
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+          <PencilSimpleLineIcon className="size-3" />
+        </SidebarIconButton>,
+        <SidebarIconButton
+          key="pin"
+          active={pinned}
+          aria-pressed={pinned}
+          tooltip={pinned ? "Unpin terminal" : "Pin terminal"}
+          tooltipSide="right"
+          onClick={(event) => {
+            event.stopPropagation();
+            onPinChange();
+          }}
+        >
+          {pinned ? <PushPinSlashIcon className="size-3" /> : <PushPinIcon className="size-3" />}
+        </SidebarIconButton>,
+        <SidebarIconButton
+          key="close"
+          className="hover:text-destructive"
+          tooltip="Close terminal"
+          tooltipSide="right"
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose();
+          }}
+        >
+          <XIcon className="size-3" />
+        </SidebarIconButton>,
+      ]}
+    >
+      <SidebarListItem
+        active={active}
+        appearance="activity"
+        leading={<TerminalIcon className="size-4" />}
+        onClick={onOpen}
+      >
+        {name}
+      </SidebarListItem>
+    </SidebarListActionRow>
   );
 }
 
