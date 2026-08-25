@@ -30,11 +30,8 @@ import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag"
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
-import {
-  COLLAPSED_ACTIVITY_RAIL_WIDTH,
-  MainSidebar,
-  SidebarActivityRail,
-} from "./sidebar/main-sidebar";
+import { COLLAPSED_ACTIVITY_RAIL_WIDTH, SidebarActivityRail } from "./sidebar/main-sidebar";
+import { SidebarPane } from "./sidebar/sidebar-pane";
 
 const AIChat = lazy(() => import("@/features/ai/components/chat/ai-chat"));
 const CommandPalette = lazy(() => import("@/features/command-palette/components/command-palette"));
@@ -309,7 +306,7 @@ export function MainLayout() {
             hidden={!isSidebarVisible}
             reservedWidth={leftPaneReservedWidth}
           >
-            <MainSidebar paneLevel="primary" />
+            <SidebarPane paneLevel="primary" />
           </ResizablePane>
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -361,7 +358,7 @@ export function MainLayout() {
             hidden={!isRightSidebarVisible}
             reservedWidth={rightPaneReservedWidth}
           >
-            <MainSidebar
+            <SidebarPane
               paneLevel="edge"
               activeView={activeRightSidebarView}
               isGitActive={false}

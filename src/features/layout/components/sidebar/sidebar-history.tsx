@@ -83,11 +83,9 @@ function useActivityRailSectionCollapse(sectionId: "agents" | "terminals" | "wor
 
 function SidebarNewAgentButton({
   onCreate,
-  iconOnly = false,
   compact = false,
 }: {
   onCreate?: () => void;
-  iconOnly?: boolean;
   compact?: boolean;
 }) {
   const handleNewAgent = useNewAgentAction({ onOpen: onCreate });
@@ -109,7 +107,6 @@ function SidebarNewAgentButton({
     <SidebarListItem
       appearance="activity"
       leading={<SparkleIcon className="size-4" />}
-      iconOnly={iconOnly}
       onClick={handleNewAgent}
       aria-label="New Agent"
     >
@@ -343,13 +340,7 @@ function renameTerminal(terminalId: string, name: string) {
   );
 }
 
-export function SidebarAgentHistory({
-  expanded,
-  workspacePath,
-}: {
-  expanded: boolean;
-  workspacePath: string | null;
-}) {
+export function SidebarAgentHistory({ workspacePath }: { workspacePath: string | null }) {
   const chats = useAIChatStore((state) => state.chats);
   const currentChatId = useAIChatStore((state) => state.currentChatId);
   const deleteChat = useAIChatStore((state) => state.actions.deleteChat);
@@ -393,8 +384,6 @@ export function SidebarAgentHistory({
       })),
     [handleOpenChat, olderChats],
   );
-
-  if (!expanded) return <SidebarNewAgentButton iconOnly />;
 
   return (
     <SidebarSectionStack>
@@ -447,12 +436,10 @@ export function SidebarAgentHistory({
 }
 
 export function SidebarPinnedItems({
-  expanded,
   workspacePath,
   showAgents,
   showTerminals,
 }: {
-  expanded: boolean;
   workspacePath: string | null;
   showAgents: boolean;
   showTerminals: boolean;
@@ -510,10 +497,9 @@ export function SidebarPinnedItems({
   );
 
   if (
-    !expanded ||
-    (pinnedChats.length === 0 &&
-      pinnedPanelTerminals.length === 0 &&
-      pinnedTerminalBuffers.length === 0)
+    pinnedChats.length === 0 &&
+    pinnedPanelTerminals.length === 0 &&
+    pinnedTerminalBuffers.length === 0
   ) {
     return null;
   }
@@ -576,7 +562,7 @@ export function SidebarPinnedItems({
   );
 }
 
-export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
+export function SidebarTerminalHistory() {
   const buffers = useBufferStore((state) => state.buffers);
   const activeBufferId = useBufferStore((state) => state.activeBufferId);
   const setActiveBuffer = useBufferStore.use.actions().setActiveBuffer;
@@ -617,24 +603,6 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
     },
     [dispatchTerminalAction, showTerminalPanel],
   );
-
-  if (!expanded) {
-    return (
-      <SidebarListItem
-        appearance="activity"
-        leading={<TerminalIcon className="size-4" />}
-        iconOnly
-        onClick={() => {
-          if (activePanelTerminalId) handleOpenPanelTerminal(activePanelTerminalId);
-          else if (terminalBuffers[0]) setActiveBuffer(terminalBuffers[0].id);
-          else handleNewTerminal();
-        }}
-        aria-label="Terminals"
-      >
-        Terminals
-      </SidebarListItem>
-    );
-  }
 
   return (
     <SidebarSectionStack>
@@ -711,11 +679,9 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
 }
 
 export function SidebarWorktreeHistory({
-  expanded,
   repoPath,
   onNewWorktree,
 }: {
-  expanded: boolean;
   repoPath: string | null;
   onNewWorktree: () => void;
 }) {
@@ -746,20 +712,6 @@ export function SidebarWorktreeHistory({
       unsubscribe();
     };
   }, [repoPath]);
-
-  if (!expanded) {
-    return (
-      <SidebarListItem
-        appearance="activity"
-        leading={<NodesIcon className="size-4" />}
-        iconOnly
-        onClick={onNewWorktree}
-        aria-label="Worktrees"
-      >
-        Worktrees
-      </SidebarListItem>
-    );
-  }
 
   return (
     <SidebarSectionStack>

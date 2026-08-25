@@ -3,22 +3,17 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
-  type ReactNode,
   type UIEvent as ReactUIEvent,
 } from "react";
 import { flushSync } from "react-dom";
-import { ViewsSidebar } from "@/features/views/components/views-sidebar";
-import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
-import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
-import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import GitView from "@/features/git/components/git-view";
-import GitHubPRsView from "@/features/github/components/github-prs-view";
-import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
+import {
+  ActivityRailNavigation,
+  ActivitySidebarNavigation,
+} from "@/features/layout/components/sidebar/activity-navigation";
 import {
   SidebarAgentHistory,
   SidebarPinnedItems,
@@ -31,12 +26,11 @@ import {
   SidebarProjectSwitcher,
 } from "@/features/layout/components/sidebar/sidebar-projects";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
+import { useActivityNavigationItems } from "@/features/layout/hooks/use-activity-navigation-items";
 import {
   getProjectCarouselPageIndex,
   getProjectCarouselWindow,
 } from "@/features/layout/utils/project-carousel";
-import { getSidebarPaneLevel, type SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
-import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
@@ -45,11 +39,6 @@ import {
   useWorkspaceTabsStore,
   type ProjectTab,
 } from "@/features/window/stores/workspace-tabs.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
-import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
-import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
-import { SidebarPanel } from "@/ui/sidebar";
 import {
   ContextMenu,
   ContextMenuCheckboxItem,
@@ -64,32 +53,16 @@ import {
 } from "@/ui/context-menu";
 import { Spinner } from "@/ui/spinner";
 import {
-  BoxIcon,
   EyeIcon,
   ExtensionsIcon,
-  FilesIcon,
   FolderIcon,
   FolderOpenIcon,
-  GitBranchIcon,
-  GithubLogoIcon,
   MagnifyingGlassIcon,
   NodesIcon,
   SparkleIcon,
   TerminalIcon,
 } from "@/ui/icons";
 import { cn } from "@/utils/cn";
-
-interface MainSidebarProps {
-  paneLevel?: "primary" | "edge";
-  activeView?: SidebarView;
-  isGitActive?: boolean;
-  isGitHubPRsActive?: boolean;
-}
-
-interface SidebarPaneEntry {
-  id: SidebarView;
-  content: ReactNode;
-}
 
 interface SidebarActivityRailProps {
   expanded?: boolean;
@@ -177,7 +150,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   const isProjectGestureSettlingRef = useRef(false);
   const projectScrollEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
-  const extensionViews = useExtensionViews();
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const activeProject = projectTabs.find((project) => project.isActive);
   const carouselProject =
@@ -198,72 +170,20 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     openSidebarView(view);
   };
 
-  const activityRailVisibilityItems = useMemo(
-    () => [
-      {
-        id: "files",
-        label: "Files",
-        icon: <FilesIcon />,
-      },
-      ...(coreFeatures.search
-        ? [
-            {
-              id: "search",
-              label: "Search",
-              icon: <MagnifyingGlassIcon />,
-            },
-          ]
-        : []),
-      ...(coreFeatures.git
-        ? [
-            {
-              id: "git",
-              label: "Source Control",
-              icon: <GitBranchIcon />,
-            },
-          ]
-        : []),
-      ...(coreFeatures.github
-        ? [
-            {
-              id: "github-prs",
-              label: "Pull Requests",
-              icon: <GithubLogoIcon />,
-            },
-          ]
-        : []),
-      {
-        id: "views",
-        label: "Views",
-        icon: <SparkleIcon />,
-      },
-      ...(coreFeatures.docker
-        ? [
-            {
-              id: "docker",
-              label: "Docker",
-              icon: <BoxIcon />,
-            },
-          ]
-        : []),
-      {
-        id: "extensions",
-        label: "Extensions",
-        icon: <ExtensionsIcon />,
-      },
-      ...Array.from(extensionViews.values()).map((view) => ({
-        id: view.id,
-        label: view.title,
-        icon: <DynamicIcon name={view.icon} />,
-      })),
-    ],
-    [
-      coreFeatures.docker,
-      coreFeatures.git,
-      coreFeatures.github,
-      coreFeatures.search,
-      extensionViews,
-    ],
+  const activityNavigationItems = useActivityNavigationItems({
+    activeSidebarView,
+    isGitViewActive,
+    isGitHubPRsViewActive,
+    isSidebarVisible,
+    coreFeatures,
+    onViewChange: handleSidebarViewChange,
+    onSearch: openGlobalSearchBuffer,
+    isSearchActive: false,
+    onOpenExtensions: openExtensionsBuffer,
+    isExtensionsActive: isExtensionsBufferActive,
+  });
+  const visibleActivityNavigationItems = activityNavigationItems.filter(
+    (item) => !hiddenSidebarActivityItems.includes(item.id),
   );
 
   const setActivityRailItemVisible = useCallback(
@@ -585,38 +505,31 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         ) : (
           <div className="flex min-h-0 w-full flex-1 flex-col">
             <div className="scrollbar-none min-h-0 w-full flex-1 overflow-y-auto">
-              <SidebarPaneSelector
-                activeSidebarView={activeSidebarView}
-                isGitViewActive={isGitViewActive}
-                isGitHubPRsViewActive={isGitHubPRsViewActive}
-                isSidebarVisible={isSidebarVisible}
-                coreFeatures={coreFeatures}
-                onViewChange={handleSidebarViewChange}
-                onSearchClick={() => openGlobalSearchBuffer()}
-                onExtensionsClick={() => openExtensionsBuffer()}
-                isExtensionsActive={isExtensionsBufferActive}
-                compact={!expanded}
-                showLabels={expanded}
-                orientation="vertical"
-              />
-              <SidebarPinnedItems
-                expanded={expanded}
-                workspacePath={project.path}
-                showAgents={showActivityRailAgentHistory}
-                showTerminals={coreFeatures.terminal && showActivityRailTerminals}
-              />
-              {showActivityRailAgentHistory ? (
-                <SidebarAgentHistory expanded={expanded} workspacePath={project.path} />
-              ) : null}
-              {coreFeatures.terminal && showActivityRailTerminals ? (
-                <SidebarTerminalHistory expanded={expanded} />
-              ) : null}
-              {coreFeatures.git && showActivityRailWorktrees ? (
-                <SidebarWorktreeHistory
-                  expanded={expanded}
-                  repoPath={project.path}
-                  onNewWorktree={handleNewWorktree}
-                />
+              {expanded ? (
+                <ActivitySidebarNavigation items={visibleActivityNavigationItems} />
+              ) : (
+                <ActivityRailNavigation items={visibleActivityNavigationItems} />
+              )}
+              {expanded ? (
+                <>
+                  <SidebarPinnedItems
+                    workspacePath={project.path}
+                    showAgents={showActivityRailAgentHistory}
+                    showTerminals={coreFeatures.terminal && showActivityRailTerminals}
+                  />
+                  {showActivityRailAgentHistory ? (
+                    <SidebarAgentHistory workspacePath={project.path} />
+                  ) : null}
+                  {coreFeatures.terminal && showActivityRailTerminals ? (
+                    <SidebarTerminalHistory />
+                  ) : null}
+                  {coreFeatures.git && showActivityRailWorktrees ? (
+                    <SidebarWorktreeHistory
+                      repoPath={project.path}
+                      onNewWorktree={handleNewWorktree}
+                    />
+                  ) : null}
+                </>
               ) : null}
             </div>
           </div>
@@ -719,7 +632,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
                 <FolderIcon />
                 Project Switcher
               </ContextMenuCheckboxItem>
-              {activityRailVisibilityItems.map((item) => (
+              {activityNavigationItems.map((item) => (
                 <ContextMenuCheckboxItem
                   key={item.id}
                   checked={!hiddenSidebarActivityItems.includes(item.id)}
@@ -785,114 +698,3 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     </ContextMenu>
   );
 });
-
-export const MainSidebar = memo(
-  ({ paneLevel = "primary", activeView, isGitActive, isGitHubPRsActive }: MainSidebarProps) => {
-    const uiGitViewActive = useUIState((state) => state.isGitViewActive);
-    const uiGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
-    const uiActiveSidebarView = useUIState((state) => state.activeSidebarView);
-    const isGitViewActive = isGitActive ?? uiGitViewActive;
-    const isGitHubPRsViewActive = isGitHubPRsActive ?? uiGitHubPRsViewActive;
-    const activeSidebarView = activeView ?? uiActiveSidebarView;
-    const extensionViews = useExtensionViews();
-
-    const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
-    const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
-
-    const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
-    const hasTeamsCollaborationAccess = useAuthStore(
-      (state) => state.subscription?.collaboration?.enabled === true,
-    );
-    const isCollaborationFeatureEnabled =
-      hasTeamsCollaborationAccess && coreFeatures.teamCollaboration;
-    const isOutlineFeatureEnabled = coreFeatures.outline;
-    const activePaneId: SidebarView = isGitViewActive
-      ? "git"
-      : isGitHubPRsViewActive
-        ? "github-prs"
-        : activeSidebarView;
-    const allPaneEntries: SidebarPaneEntry[] = [
-      ...(coreFeatures.git
-        ? [
-            {
-              id: "git" as const,
-              content: (
-                <GitView
-                  repoPath={rootFolderPath}
-                  onFileSelect={handleFileSelect}
-                  isActive={isGitViewActive}
-                />
-              ),
-            },
-          ]
-        : []),
-      ...(coreFeatures.github
-        ? [
-            {
-              id: "github-prs" as const,
-              content: <GitHubPRsView />,
-            },
-          ]
-        : []),
-      {
-        id: "views",
-        content: <ViewsSidebar projectPath={rootFolderPath ?? null} />,
-      },
-      ...(coreFeatures.docker
-        ? [
-            {
-              id: "docker" as const,
-              content: <DockerSidebar />,
-            },
-          ]
-        : []),
-      {
-        id: "files",
-        content: <FileExplorerPane />,
-      },
-      ...(isOutlineFeatureEnabled
-        ? [
-            {
-              id: "outline" as const,
-              content: <OutlineSidebar />,
-            },
-          ]
-        : []),
-      ...(isCollaborationFeatureEnabled
-        ? [
-            {
-              id: "collaboration" as const,
-              content: <CollaborationSidebarView />,
-            },
-          ]
-        : []),
-      ...Array.from(extensionViews).map(
-        ([viewId, view]) =>
-          ({
-            id: viewId,
-            content: (
-              <ExtensionErrorBoundary extensionId={view.extensionId} name={view.title}>
-                {view.render()}
-              </ExtensionErrorBoundary>
-            ),
-          }) satisfies SidebarPaneEntry,
-      ),
-    ];
-    const paneEntries = allPaneEntries.filter(
-      (pane) => pane.id === activeSidebarView || getSidebarPaneLevel(pane.id) === paneLevel,
-    );
-    const activePane = (() => {
-      const requestedIndex = paneEntries.findIndex((pane) => pane.id === activePaneId);
-      if (requestedIndex >= 0) return paneEntries[requestedIndex];
-
-      return paneEntries[0] ?? null;
-    })();
-    return (
-      <div className="flex h-full min-h-0" data-external-file-drop-scope="sidebar">
-        <SidebarPanel className="min-w-0 flex-1 overflow-hidden bg-transparent">
-          <div className="h-full min-h-0 overflow-hidden">{activePane?.content ?? null}</div>
-        </SidebarPanel>
-      </div>
-    );
-  },
-);
