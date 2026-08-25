@@ -12,7 +12,7 @@ import {
   clearQueuedWorkspaceSessionSave,
   useBufferStore,
 } from "@/features/editor/stores/buffer.store";
-import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { getLineSlice } from "@/features/editor/utils/large-file";
 import { getAncestorDirectoryPaths } from "@/features/file-explorer/utils/file-explorer-tree-utils";
@@ -44,7 +44,7 @@ import { showAlertDialog, showPromptDialog } from "@/ui/dialog";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
 import {
-  encodeWorkspaceBuffer,
+  buildWorkspaceBufferSnapshot,
   isLocalFileInWorkspace,
 } from "@/features/workspace/persistence/workspace-session-codec";
 import { switchWorkspaceRuntime } from "@/features/workspace/services/workspace-lifecycle";
@@ -952,7 +952,6 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
         const uiState = getCurrentProjectUiState(workspaceId);
         const { buffers, activeBufferId } = useBufferStore.getStore(workspaceId).getState();
-        const activeBuffer = getBufferById(buffers, activeBufferId);
         const workspaceFolders = normalizeWorkspaceFolders(currentRootPath, get().workspaceFolders);
         const workspaceFolderPaths = workspaceFolders.map((folder) => folder.path);
         const terminals = serializeTerminals(
@@ -964,27 +963,20 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             ? readPersistedAiWorkspaceSession()
             : undefined);
         deferredAiSession = undefined;
-        const openPersistedBuffers = buffers
-          .map((buffer) =>
-            encodeWorkspaceBuffer(buffer, {
-              workspaceRootPath: currentRootPath,
-              workspaceFolderPaths,
-              includeEditorId: true,
-            }),
-          )
-          .filter((buffer): buffer is BufferSession => buffer !== null);
-        const openBufferPaths = new Set(openPersistedBuffers.map((buffer) => buffer.path));
-        const persistedBuffers = [
-          ...openPersistedBuffers,
-          ...pendingSessionBuffers.filter((buffer) => !openBufferPaths.has(buffer.path)),
-        ];
+        const bufferSnapshot = buildWorkspaceBufferSnapshot({
+          buffers,
+          activeBufferId,
+          pendingBuffers: pendingSessionBuffers,
+          workspaceRootPath: currentRootPath,
+          workspaceFolderPaths,
+          includeEditorId: true,
+        });
 
         clearQueuedWorkspaceSessionSave(currentRootPath);
         scheduleWorkspaceSessionWrite(currentRootPath, () => {
           workspaceSessionRepository.save({
             projectPath: currentRootPath,
-            buffers: persistedBuffers,
-            activeBufferPath: activeBuffer?.path || null,
+            ...bufferSnapshot,
             terminals,
             aiSession,
             workspaceFolders,

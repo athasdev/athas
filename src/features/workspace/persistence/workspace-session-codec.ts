@@ -8,6 +8,17 @@ interface EncodeWorkspaceBufferOptions {
   includeEditorId?: boolean;
 }
 
+interface BuildWorkspaceBufferSnapshotOptions extends EncodeWorkspaceBufferOptions {
+  buffers: PaneContent[];
+  activeBufferId: string | null;
+  pendingBuffers?: BufferSession[];
+}
+
+interface WorkspaceBufferSnapshot {
+  buffers: BufferSession[];
+  activeBufferPath: string | null;
+}
+
 const normalizeWorkspacePath = (path: string) => path.replace(/\\/g, "/").replace(/\/+$/, "");
 
 export function isLocalFileInWorkspace(
@@ -105,4 +116,28 @@ export function encodeWorkspaceBuffer(
   }
 
   return null;
+}
+
+export function buildWorkspaceBufferSnapshot({
+  buffers,
+  activeBufferId,
+  pendingBuffers = [],
+  ...encodeOptions
+}: BuildWorkspaceBufferSnapshotOptions): WorkspaceBufferSnapshot {
+  const openBuffers = buffers
+    .map((buffer) => encodeWorkspaceBuffer(buffer, encodeOptions))
+    .filter((buffer): buffer is BufferSession => buffer !== null);
+  const openBufferPaths = new Set(openBuffers.map((buffer) => buffer.path));
+  const persistedBuffers = [
+    ...openBuffers,
+    ...pendingBuffers.filter((buffer) => !openBufferPaths.has(buffer.path)),
+  ];
+  const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+  const activeBufferPath =
+    activeBuffer && openBufferPaths.has(activeBuffer.path) ? activeBuffer.path : null;
+
+  return {
+    buffers: persistedBuffers,
+    activeBufferPath,
+  };
 }

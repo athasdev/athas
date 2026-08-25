@@ -6,6 +6,7 @@ import type {
   WebViewerContent,
 } from "@/features/panes/types/pane-content.types";
 import {
+  buildWorkspaceBufferSnapshot,
   encodeWorkspaceBuffer,
   getEditorWorkspaceScope,
   isLocalFileInWorkspace,
@@ -151,6 +152,58 @@ describe("workspace session codec", () => {
     expect(
       encodeWorkspaceBuffer(unsupportedBuffer, { workspaceRootPath: "/workspace" }),
     ).toBeNull();
+  });
+
+  it("builds one snapshot for open and deferred buffers without duplicate paths", () => {
+    const activeBuffer = createEditorBuffer();
+    const snapshot = buildWorkspaceBufferSnapshot({
+      buffers: [activeBuffer, createWebViewerBuffer()],
+      activeBufferId: activeBuffer.id,
+      pendingBuffers: [
+        {
+          type: "editor",
+          path: activeBuffer.path,
+          name: "stale app.ts",
+          isPinned: false,
+        },
+        {
+          type: "editor",
+          path: "/workspace/deferred.ts",
+          name: "deferred.ts",
+          isPinned: false,
+        },
+      ],
+      workspaceRootPath: "/workspace",
+      includeEditorId: true,
+    });
+
+    expect(snapshot.activeBufferPath).toBe(activeBuffer.path);
+    expect(snapshot.buffers.map((buffer) => buffer.path)).toEqual([
+      activeBuffer.path,
+      "webview://web-1",
+      "/workspace/deferred.ts",
+    ]);
+    expect(snapshot.buffers[0]).toMatchObject({ id: activeBuffer.id, name: "app.ts" });
+  });
+
+  it("does not save an active path for unsupported pane content", () => {
+    const newTab: PaneContent = {
+      id: "new-tab-1",
+      type: "newTab",
+      path: "new-tab://new-tab-1",
+      name: "New Tab",
+      isPinned: false,
+      isPreview: false,
+      isActive: true,
+    };
+
+    expect(
+      buildWorkspaceBufferSnapshot({
+        buffers: [newTab],
+        activeBufferId: newTab.id,
+        workspaceRootPath: "/workspace",
+      }),
+    ).toEqual({ buffers: [], activeBufferPath: null });
   });
 });
 
