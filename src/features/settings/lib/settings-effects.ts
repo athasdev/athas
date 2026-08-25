@@ -1,6 +1,7 @@
 import {
   cacheFontsForBootstrap,
   cacheThemeForBootstrap,
+  cacheWindowTransparencyForBootstrap,
 } from "@/features/settings/lib/appearance-bootstrap";
 import {
   resolveEffectiveTheme,
@@ -34,6 +35,7 @@ function getCurrentThemeType(): "light" | "dark" {
 function applyWindowTransparency(enabled: boolean) {
   if (typeof document === "undefined") return;
 
+  cacheWindowTransparencyForBootstrap(enabled);
   document.documentElement.setAttribute(
     "data-window-transparency",
     enabled ? "enabled" : "disabled",

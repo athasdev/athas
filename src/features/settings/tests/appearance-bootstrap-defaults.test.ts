@@ -12,6 +12,7 @@ describe("appearance bootstrap defaults", () => {
   it("uses the bundled Athas dark theme for startup CSS variables", () => {
     expect(DEFAULT_APPEARANCE_BOOTSTRAP_CACHE.themeId).toBe("athas-dark");
     expect(DEFAULT_APPEARANCE_BOOTSTRAP_CACHE.themeType).toBe("dark");
+    expect(DEFAULT_APPEARANCE_BOOTSTRAP_CACHE.windowTransparency).toBe(false);
     expect(DEFAULT_APPEARANCE_BOOTSTRAP_CACHE.cssVariables["--background"]).toBe(
       getAthasDefaultColor("dark", "background"),
     );

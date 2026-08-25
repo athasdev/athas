@@ -15,14 +15,14 @@ recordStartupMilestone("frontend:entry");
 const renderStartedAt = performance.now();
 traceWindowOpen("reactRender:start");
 
-void initializeFrontendTerminalSession()
-  .catch((error) => {
-    console.warn("Failed to clean up stale terminal sessions:", error);
-  })
-  .finally(() => {
-    createRoot(document.getElementById("root")!).render(<App />);
-    traceWindowOpen("reactRender:scheduled", {
-      durationMs: Math.round((performance.now() - renderStartedAt) * 100) / 100,
-    });
-    recordStartupMilestone("react:scheduled");
-  });
+const terminalSessionReady = initializeFrontendTerminalSession().catch((error) => {
+  console.warn("Failed to clean up stale terminal sessions:", error);
+});
+
+createRoot(document.getElementById("root")!).render(
+  <App terminalSessionReady={terminalSessionReady} />,
+);
+traceWindowOpen("reactRender:scheduled", {
+  durationMs: Math.round((performance.now() - renderStartedAt) * 100) / 100,
+});
+recordStartupMilestone("react:scheduled");

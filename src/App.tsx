@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, use, useEffect, useMemo } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { recordStartupMilestoneAfterFrame } from "@/features/bootstrap/startup-performance";
 import {
@@ -14,25 +14,6 @@ function isBlankWindowOpen() {
   return Boolean(diagnostics.traceId && !diagnostics.target);
 }
 
-function useWorkbenchReady(blankWindowOpen: boolean) {
-  const [ready, setReady] = useState(!blankWindowOpen);
-
-  useEffect(() => {
-    if (!blankWindowOpen) {
-      setReady(true);
-      return;
-    }
-
-    const frame = window.requestAnimationFrame(() => {
-      window.setTimeout(() => setReady(true), 0);
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [blankWindowOpen]);
-
-  return ready;
-}
-
 function InitialWindowShell() {
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
@@ -43,20 +24,43 @@ function InitialWindowShell() {
   };
 
   return (
-    <div className="h-dvh w-dvw overflow-hidden bg-surface">
+    <div className="athas-layout-shell relative h-dvh w-dvw overflow-hidden bg-surface">
       <div
-        className="h-10 w-full bg-surface/70"
+        className="athas-title-bar absolute inset-x-0 top-0 h-title-bar bg-transparent"
         data-tauri-drag-region
         onMouseDown={handleMouseDown}
       />
-      <div className="h-[calc(100dvh-2.5rem)] w-full bg-background" />
     </div>
   );
 }
 
-function App() {
+interface WorkbenchBoundaryProps {
+  blankWindowOpen: boolean;
+  terminalSessionReady: Promise<void>;
+}
+
+function WorkbenchBoundary({ blankWindowOpen, terminalSessionReady }: WorkbenchBoundaryProps) {
+  use(terminalSessionReady);
+
+  useEffect(() => {
+    const readyAt = performance.now();
+    traceWindowOpen("app:workbenchReady", { blankWindowOpen });
+    return traceWindowOpenAfterFrame("app:workbenchReadyFrame", () => ({
+      shell: true,
+      blankWindowOpen,
+      durationMs: Math.round((performance.now() - readyAt) * 100) / 100,
+    }));
+  }, [blankWindowOpen]);
+
+  return <WorkbenchApp />;
+}
+
+interface AppProps {
+  terminalSessionReady: Promise<void>;
+}
+
+function App({ terminalSessionReady }: AppProps) {
   const blankWindowOpen = useMemo(() => isBlankWindowOpen(), []);
-  const workbenchReady = useWorkbenchReady(blankWindowOpen);
 
   useEffect(() => {
     const mountedAt = performance.now();
@@ -74,25 +78,12 @@ function App() {
     };
   }, [blankWindowOpen]);
 
-  useEffect(() => {
-    if (!workbenchReady) return;
-
-    const readyAt = performance.now();
-    traceWindowOpen("app:workbenchReady", { blankWindowOpen });
-    return traceWindowOpenAfterFrame("app:workbenchReadyFrame", () => ({
-      shell: true,
-      blankWindowOpen,
-      durationMs: Math.round((performance.now() - readyAt) * 100) / 100,
-    }));
-  }, [blankWindowOpen, workbenchReady]);
-
-  if (!workbenchReady) {
-    return <InitialWindowShell />;
-  }
-
   return (
     <Suspense fallback={<InitialWindowShell />}>
-      <WorkbenchApp />
+      <WorkbenchBoundary
+        blankWindowOpen={blankWindowOpen}
+        terminalSessionReady={terminalSessionReady}
+      />
     </Suspense>
   );
 }
