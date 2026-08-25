@@ -218,9 +218,19 @@ interface BufferActions {
   reopenClosedTab: () => Promise<void>;
 }
 
-const generateBufferId = (path: string): string => {
-  return `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
-};
+interface ActivateExistingBufferOptions {
+  focus?: boolean;
+  update?: (buffer: PaneContent | null) => void;
+}
+
+interface OpenNewContentOptions {
+  includePreviewsInEviction?: boolean;
+  saveSession?: boolean;
+}
+
+let bufferIdSequence = 0;
+const generateBufferId = (path: string): string =>
+  `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}_${bufferIdSequence++}`;
 let newTabSequence = 0;
 
 const applyWorkspaceAutoEviction = (
@@ -494,6 +504,44 @@ const createBufferStore = (workspaceId: string) => {
       actions: {
         openContent: (spec: OpenContentSpec): string => {
           const { buffers, maxOpenTabs } = get();
+          const activateExistingBuffer = (
+            bufferId: string,
+            { focus = false, update }: ActivateExistingBufferOptions = {},
+          ) => {
+            set((state) => {
+              update?.(activateBufferInState(state, bufferId));
+            });
+            if (focus) {
+              syncAndFocusBufferInPane(bufferId);
+            } else {
+              syncBufferToPane(bufferId);
+            }
+            return bufferId;
+          };
+
+          const openNewContent = (path: string, options: OpenNewContentOptions = {}) => {
+            let newBuffers = closeNewTabInActivePane([...buffers]);
+            newBuffers = applyAutoEviction(
+              newBuffers,
+              maxOpenTabs,
+              options.includePreviewsInEviction === undefined
+                ? undefined
+                : { includePreviews: options.includePreviewsInEviction },
+            );
+
+            const id = generateBufferId(path);
+            const newBuffer = createPaneContent(id, spec);
+
+            set((state) => {
+              state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
+              state.activeBufferId = newBuffer.id;
+            });
+            syncBufferToPane(newBuffer.id);
+            if (options.saveSession) {
+              saveWorkspaceSession(get().buffers, get().activeBufferId);
+            }
+            return newBuffer.id;
+          };
 
           switch (spec.type) {
             case "editor": {
@@ -563,11 +611,7 @@ const createBufferStore = (workspaceId: string) => {
                 (b) => b.type === "terminal" && b.sessionId === sessionId,
               );
               if (existing) {
-                set((state) => {
-                  activateBufferInState(state, existing.id);
-                });
-                syncBufferToPane(existing.id);
-                return existing.id;
+                return activateExistingBuffer(existing.id);
               }
 
               let newBuffers = closeNewTabInActivePane([...buffers]);
@@ -602,11 +646,7 @@ const createBufferStore = (workspaceId: string) => {
                   (b) => b.type === "agent" && b.sessionId === spec.sessionId,
                 );
                 if (existing) {
-                  set((state) => {
-                    activateBufferInState(state, existing.id);
-                  });
-                  syncAndFocusBufferInPane(existing.id);
-                  return existing.id;
+                  return activateExistingBuffer(existing.id, { focus: true });
                 }
               }
 
@@ -652,11 +692,7 @@ const createBufferStore = (workspaceId: string) => {
 
               const existing = buffers.find((b) => b.type === "webViewer" && b.url === spec.url);
               if (existing) {
-                set((state) => {
-                  activateBufferInState(state, existing.id);
-                });
-                syncBufferToPane(existing.id);
-                return existing.id;
+                return activateExistingBuffer(existing.id);
               }
 
               let newBuffers = closeNewTabInActivePane([...buffers]);
@@ -692,19 +728,7 @@ const createBufferStore = (workspaceId: string) => {
 
             case "markdownDocument": {
               const path = `markdown-document://${spec.documentId}`;
-              let newBuffers = closeNewTabInActivePane([...buffers]);
-              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
-
-              const id = generateBufferId(path);
-              const newBuffer = createPaneContent(id, spec);
-
-              set((state) => {
-                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
-                state.activeBufferId = newBuffer.id;
-              });
-
-              syncBufferToPane(newBuffer.id);
-              return newBuffer.id;
+              return openNewContent(path);
             }
 
             case "pullRequest": {
@@ -720,41 +744,18 @@ const createBufferStore = (workspaceId: string) => {
                   (!spec.repoPath || !b.repoPath || b.repoPath === spec.repoPath),
               );
               if (existing) {
-                set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) =>
-                    b.id === existing.id && b.type === "pullRequest"
-                      ? {
-                          ...b,
-                          path,
-                          name: spec.name ?? b.name,
-                          repoPath: spec.repoPath ?? b.repoPath,
-                          authorAvatarUrl: spec.authorAvatarUrl ?? b.authorAvatarUrl,
-                          isActive: true,
-                        }
-                      : {
-                          ...b,
-                          isActive: b.id === existing.id,
-                        },
-                  );
+                return activateExistingBuffer(existing.id, {
+                  update: (buffer) => {
+                    if (buffer?.type !== "pullRequest") return;
+                    buffer.path = path;
+                    buffer.name = spec.name ?? buffer.name;
+                    buffer.repoPath = spec.repoPath ?? buffer.repoPath;
+                    buffer.authorAvatarUrl = spec.authorAvatarUrl ?? buffer.authorAvatarUrl;
+                  },
                 });
-                syncBufferToPane(existing.id);
-                return existing.id;
               }
 
-              let newBuffers = closeNewTabInActivePane([...buffers]);
-              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
-
-              const id = generateBufferId(path);
-              const newBuffer = createPaneContent(id, spec);
-
-              set((state) => {
-                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
-                state.activeBufferId = newBuffer.id;
-              });
-
-              syncBufferToPane(newBuffer.id);
-              return newBuffer.id;
+              return openNewContent(path);
             }
 
             case "githubIssue": {
@@ -766,42 +767,19 @@ const createBufferStore = (workspaceId: string) => {
                   (!spec.repoPath || !b.repoPath || b.repoPath === spec.repoPath),
               );
               if (existing) {
-                set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) =>
-                    b.id === existing.id && b.type === "githubIssue"
-                      ? {
-                          ...b,
-                          path,
-                          name: spec.name ?? b.name,
-                          repoPath: spec.repoPath ?? b.repoPath,
-                          authorAvatarUrl: spec.authorAvatarUrl ?? b.authorAvatarUrl,
-                          url: spec.url ?? b.url,
-                          isActive: true,
-                        }
-                      : {
-                          ...b,
-                          isActive: b.id === existing.id,
-                        },
-                  );
+                return activateExistingBuffer(existing.id, {
+                  update: (buffer) => {
+                    if (buffer?.type !== "githubIssue") return;
+                    buffer.path = path;
+                    buffer.name = spec.name ?? buffer.name;
+                    buffer.repoPath = spec.repoPath ?? buffer.repoPath;
+                    buffer.authorAvatarUrl = spec.authorAvatarUrl ?? buffer.authorAvatarUrl;
+                    buffer.url = spec.url ?? buffer.url;
+                  },
                 });
-                syncBufferToPane(existing.id);
-                return existing.id;
               }
 
-              let newBuffers = closeNewTabInActivePane([...buffers]);
-              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
-
-              const id = generateBufferId(path);
-              const newBuffer = createPaneContent(id, spec);
-
-              set((state) => {
-                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
-                state.activeBufferId = newBuffer.id;
-              });
-
-              syncBufferToPane(newBuffer.id);
-              return newBuffer.id;
+              return openNewContent(path);
             }
 
             case "githubAction": {
@@ -817,43 +795,20 @@ const createBufferStore = (workspaceId: string) => {
                   (!spec.repoPath || !b.repoPath || b.repoPath === spec.repoPath),
               );
               if (existing) {
-                set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) =>
-                    b.id === existing.id && b.type === "githubAction"
-                      ? {
-                          ...b,
-                          path,
-                          name: spec.name ?? b.name,
-                          repoPath: spec.repoPath ?? b.repoPath,
-                          runId: spec.runId ?? b.runId,
-                          notification: spec.notification ?? b.notification,
-                          url: spec.url ?? b.url,
-                          isActive: true,
-                        }
-                      : {
-                          ...b,
-                          isActive: b.id === existing.id,
-                        },
-                  );
+                return activateExistingBuffer(existing.id, {
+                  update: (buffer) => {
+                    if (buffer?.type !== "githubAction") return;
+                    buffer.path = path;
+                    buffer.name = spec.name ?? buffer.name;
+                    buffer.repoPath = spec.repoPath ?? buffer.repoPath;
+                    buffer.runId = spec.runId ?? buffer.runId;
+                    buffer.notification = spec.notification ?? buffer.notification;
+                    buffer.url = spec.url ?? buffer.url;
+                  },
                 });
-                syncBufferToPane(existing.id);
-                return existing.id;
               }
 
-              let newBuffers = closeNewTabInActivePane([...buffers]);
-              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
-
-              const id = generateBufferId(path);
-              const newBuffer = createPaneContent(id, spec);
-
-              set((state) => {
-                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
-                state.activeBufferId = newBuffer.id;
-              });
-
-              syncBufferToPane(newBuffer.id);
-              return newBuffer.id;
+              return openNewContent(path);
             }
 
             case "githubForm": {
@@ -862,48 +817,20 @@ const createBufferStore = (workspaceId: string) => {
                 (buffer) => buffer.type === "githubForm" && buffer.path === path,
               );
               if (existing) {
-                set((state) => {
-                  activateBufferInState(state, existing.id);
-                });
-                syncBufferToPane(existing.id);
-                return existing.id;
+                return activateExistingBuffer(existing.id);
               }
 
-              let newBuffers = closeNewTabInActivePane([...buffers]);
-              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
-              const id = generateBufferId(path);
-              const newBuffer = createPaneContent(id, spec);
-
-              set((state) => {
-                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
-                state.activeBufferId = newBuffer.id;
-              });
-              syncBufferToPane(newBuffer.id);
-              return newBuffer.id;
+              return openNewContent(path);
             }
 
             case "customView": {
               const path = getViewBufferPath(spec.projectPath, spec.viewId);
               const existing = getBufferByPath(buffers, path);
               if (existing) {
-                set((state) => {
-                  activateBufferInState(state, existing.id);
-                });
-                syncBufferToPane(existing.id);
-                return existing.id;
+                return activateExistingBuffer(existing.id);
               }
 
-              let newBuffers = closeNewTabInActivePane([...buffers]);
-              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
-              const id = generateBufferId(path);
-              const newBuffer = createPaneContent(id, spec);
-
-              set((state) => {
-                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
-                state.activeBufferId = newBuffer.id;
-              });
-              syncBufferToPane(newBuffer.id);
-              return newBuffer.id;
+              return openNewContent(path);
             }
 
             case "extension": {
@@ -912,39 +839,22 @@ const createBufferStore = (workspaceId: string) => {
                 (buffer) => buffer.type === "extension" && buffer.extensionId === spec.extensionId,
               );
               if (existing) {
-                set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((buffer) =>
-                    buffer.id === existing.id && buffer.type === "extension"
-                      ? { ...buffer, name: spec.name, isActive: true }
-                      : { ...buffer, isActive: buffer.id === existing.id },
-                  );
+                return activateExistingBuffer(existing.id, {
+                  update: (buffer) => {
+                    if (buffer?.type === "extension") {
+                      buffer.name = spec.name;
+                    }
+                  },
                 });
-                syncBufferToPane(existing.id);
-                return existing.id;
               }
 
-              let newBuffers = closeNewTabInActivePane([...buffers]);
-              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
-              const id = generateBufferId(path);
-              const newBuffer = createPaneContent(id, spec);
-
-              set((state) => {
-                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
-                state.activeBufferId = newBuffer.id;
-              });
-              syncBufferToPane(newBuffer.id);
-              return newBuffer.id;
+              return openNewContent(path);
             }
 
             case "externalEditor": {
               const existing = getBufferByPath(buffers, spec.path);
               if (existing) {
-                set((state) => {
-                  activateBufferInState(state, existing.id);
-                });
-                syncBufferToPane(existing.id);
-                return existing.id;
+                return activateExistingBuffer(existing.id);
               }
 
               const existingExternalEditor = buffers.find((b) => b.type === "externalEditor");
@@ -981,52 +891,20 @@ const createBufferStore = (workspaceId: string) => {
             case "extensions": {
               const existing = buffers.find((b) => b.type === spec.type);
               if (existing) {
-                set((state) => {
-                  activateBufferInState(state, existing.id);
-                });
-                syncAndFocusBufferInPane(existing.id);
-                return existing.id;
+                return activateExistingBuffer(existing.id, { focus: true });
               }
 
-              let newBuffers = closeNewTabInActivePane([...buffers]);
-              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
-
-              const id = generateBufferId(SINGLETON_TOOL_BUFFER_METADATA[spec.type].path);
-              const newBuffer = createPaneContent(id, spec);
-
-              set((state) => {
-                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
-                state.activeBufferId = newBuffer.id;
-              });
-
-              syncBufferToPane(newBuffer.id);
-              return newBuffer.id;
+              return openNewContent(SINGLETON_TOOL_BUFFER_METADATA[spec.type].path);
             }
 
             case "onboarding": {
               const path = `onboarding://${spec.context.mode}/${spec.context.currentVersion}`;
               const existing = getBufferByPath(buffers, path);
               if (existing) {
-                set((state) => {
-                  activateBufferInState(state, existing.id);
-                });
-                syncAndFocusBufferInPane(existing.id);
-                return existing.id;
+                return activateExistingBuffer(existing.id, { focus: true });
               }
 
-              let newBuffers = closeNewTabInActivePane([...buffers]);
-              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
-
-              const id = generateBufferId(path);
-              const newBuffer = createPaneContent(id, spec);
-
-              set((state) => {
-                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
-                state.activeBufferId = newBuffer.id;
-              });
-
-              syncBufferToPane(newBuffer.id);
-              return newBuffer.id;
+              return openNewContent(path);
             }
 
             case "diff":
@@ -1040,35 +918,22 @@ const createBufferStore = (workspaceId: string) => {
               const path = spec.path;
               const existing = getBufferByPath(buffers, path);
               if (existing) {
-                set((state) => {
-                  const activeBuffer = activateBufferInState(state, existing.id);
-                  if (spec.type === "diff" && activeBuffer?.type === "diff") {
-                    activeBuffer.name = spec.name;
-                    activeBuffer.content = spec.content;
-                    activeBuffer.savedContent = spec.content;
-                    activeBuffer.diffData = spec.diffData;
-                  }
+                return activateExistingBuffer(existing.id, {
+                  update: (buffer) => {
+                    if (spec.type === "diff" && buffer?.type === "diff") {
+                      buffer.name = spec.name;
+                      buffer.content = spec.content;
+                      buffer.savedContent = spec.content;
+                      buffer.diffData = spec.diffData;
+                    }
+                  },
                 });
-                syncBufferToPane(existing.id);
-                return existing.id;
               }
 
-              let newBuffers = closeNewTabInActivePane([...buffers]);
-              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs, {
-                includePreviews: false,
+              return openNewContent(path, {
+                includePreviewsInEviction: false,
+                saveSession: true,
               });
-
-              const id = generateBufferId(path);
-              const newBuffer = createPaneContent(id, spec);
-
-              set((state) => {
-                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
-                state.activeBufferId = newBuffer.id;
-              });
-
-              syncBufferToPane(newBuffer.id);
-              saveWorkspaceSession(get().buffers, get().activeBufferId);
-              return newBuffer.id;
             }
           }
         },
