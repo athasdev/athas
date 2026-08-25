@@ -101,6 +101,7 @@ import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buf
 import { restoreWorkspaceSessionFolders } from "../services/workspace-session-folder-restore";
 import { prepareWorkspaceClose } from "../services/workspace-close-guard";
 import { initializeWorkspacePath } from "../services/workspace-initialization-router";
+import { resetWorkspaceResources } from "../services/workspace-reset";
 import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
@@ -703,42 +704,36 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       resetWorkspace: async () => {
-        // Reset all project-related state to return to welcome screen
-        set((state) => {
-          state.files = [];
-          state.isFileTreeLoading = false;
-          state.filesVersion++;
-          state.rootFolderPath = undefined;
-          state.workspaceFolders = [];
-          state.projectFilesCache = undefined;
+        const bufferStore = useBufferStore.getStore(workspaceId);
+        const { buffers, actions: bufferActions } = bufferStore.getState();
+        const projectActions = useProjectStore.getStore(workspaceId).getState().actions;
+
+        await resetWorkspaceResources({
+          bufferIds: buffers.map((buffer) => buffer.id),
+          resetFileSystemState: () => {
+            set((state) => {
+              state.files = [];
+              state.isFileTreeLoading = false;
+              state.filesVersion++;
+              state.rootFolderPath = undefined;
+              state.workspaceFolders = [];
+              state.projectFilesCache = undefined;
+            });
+          },
+          collapseFileTree: () =>
+            useFileTreeStore.getStore(workspaceId).getState().actions.collapseAll(),
+          resetProjectMetadata: () => {
+            projectActions.setRootFolderPath("");
+            projectActions.setProjectName("");
+          },
+          closeBuffer: bufferActions.closeBuffer,
+          stopFileWatcher: () =>
+            useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot(""),
+          resetGitState: () => useGitStore.getStore(workspaceId).getState().actions.reset(),
+          clearGitDiffCache: () => gitDiffCache.clear(),
+          clearGitBlame: () =>
+            useGitBlameStore.getStore(workspaceId).getState().actions.clearAllBlame(),
         });
-
-        // Clear tree UI state
-        useFileTreeStore.getStore(workspaceId).getState().actions.collapseAll();
-
-        // Reset project store
-        const { setRootFolderPath, setProjectName } = useProjectStore
-          .getStore(workspaceId)
-          .getState().actions;
-        setRootFolderPath("");
-        setProjectName("");
-
-        // Close all buffers
-        const { buffers, actions: bufferActions } = useBufferStore.getStore(workspaceId).getState();
-        buffers.forEach((buffer) => bufferActions.closeBuffer(buffer.id));
-
-        // Stop file watching
-        await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
-
-        // Reset git store completely
-        const { actions: gitActions } = useGitStore.getStore(workspaceId).getState();
-        gitActions.reset();
-
-        // Clear git diff cache
-        gitDiffCache.clear();
-
-        // Clear git blame data
-        useGitBlameStore.getStore(workspaceId).getState().actions.clearAllBlame();
       },
 
       restoreSession: async (projectPath: string, skipBufferPath?: string) => {
