@@ -2,16 +2,21 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { getWorkspaceEntryMutationProvider } from "../services/workspace-entry-mutation-provider";
 
 const invoke = vi.hoisted(() => vi.fn());
+const dirname = vi.hoisted(() => vi.fn());
+const join = vi.hoisted(() => vi.fn());
 const createNewDirectory = vi.hoisted(() => vi.fn());
 const createNewFile = vi.hoisted(() => vi.fn());
 const deleteFileOrDirectory = vi.hoisted(() => vi.fn());
+const renameFile = vi.hoisted(() => vi.fn());
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
+vi.mock("@tauri-apps/api/path", () => ({ dirname, join }));
 vi.mock("../controllers/file-operations", () => ({
   createNewDirectory,
   createNewFile,
   deleteFileOrDirectory,
 }));
+vi.mock("../controllers/platform", () => ({ renameFile }));
 
 describe("workspace entry mutation provider", () => {
   beforeEach(() => {
@@ -19,6 +24,9 @@ describe("workspace entry mutation provider", () => {
     createNewDirectory.mockReset();
     createNewFile.mockReset();
     deleteFileOrDirectory.mockReset();
+    dirname.mockReset();
+    join.mockReset();
+    renameFile.mockReset();
   });
 
   it("routes local mutations through the platform file operations", async () => {
@@ -82,5 +90,50 @@ describe("workspace entry mutation provider", () => {
       targetPath: "/repo/src",
       isDirectory: true,
     });
+  });
+
+  it("renames local paths through the platform adapter", async () => {
+    dirname.mockResolvedValue("/workspace/src");
+    join.mockResolvedValue("/workspace/src/renamed.ts");
+    const provider = getWorkspaceEntryMutationProvider("/workspace/src/original.ts");
+
+    await expect(provider.renamePath("/workspace/src/original.ts", "renamed.ts")).resolves.toBe(
+      "/workspace/src/renamed.ts",
+    );
+
+    expect(renameFile).toHaveBeenCalledWith(
+      "/workspace/src/original.ts",
+      "/workspace/src/renamed.ts",
+    );
+  });
+
+  it("renames WSL paths without leaking Linux paths to the store", async () => {
+    const provider = getWorkspaceEntryMutationProvider("wsl://Ubuntu/home/me/original.ts");
+
+    await expect(
+      provider.renamePath("wsl://Ubuntu/home/me/original.ts", "renamed.ts"),
+    ).resolves.toBe("wsl://Ubuntu/home/me/renamed.ts");
+
+    expect(renameFile).toHaveBeenCalledWith(
+      "wsl://Ubuntu/home/me/original.ts",
+      "wsl://Ubuntu/home/me/renamed.ts",
+    );
+  });
+
+  it("renames SSH paths with separate application and backend targets", async () => {
+    const provider = getWorkspaceEntryMutationProvider(
+      "remote://connection-1/repo/src/original.ts",
+    );
+
+    await expect(
+      provider.renamePath("remote://connection-1/repo/src/original.ts", "renamed.ts"),
+    ).resolves.toBe("remote://connection-1/repo/src/renamed.ts");
+
+    expect(invoke).toHaveBeenCalledWith("ssh_rename_path", {
+      connectionId: "connection-1",
+      sourcePath: "/repo/src/original.ts",
+      targetPath: "/repo/src/renamed.ts",
+    });
+    expect(renameFile).not.toHaveBeenCalled();
   });
 });

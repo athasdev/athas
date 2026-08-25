@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { basename, dirname, extname, join } from "@tauri-apps/api/path";
+import { basename, dirname, extname } from "@tauri-apps/api/path";
 import { copyFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { immer } from "zustand/middleware/immer";
@@ -109,7 +109,7 @@ import {
 } from "../services/workspace-initialization-router";
 import { resetWorkspaceResources } from "../services/workspace-reset";
 import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
-import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
+import { getSymlinkInfo, openFolder, readDirectory } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
 import { useRecentFilesStore } from "../stores/recent-files.store";
 import {
@@ -2326,39 +2326,11 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
       handleRenamePath: async (path: string, newName?: string) => {
         if (newName) {
-          const remoteInfo = parseRemotePath(path);
-          const wslInfo = parseWslPath(path);
-
           try {
-            let targetPath: string;
-
-            if (remoteInfo) {
-              const segments = remoteInfo.remotePath.split("/");
-              segments.pop();
-              const remoteDir = segments.join("/") || "/";
-              const nextRemotePath = remoteDir === "/" ? `/${newName}` : `${remoteDir}/${newName}`;
-              targetPath = `remote://${remoteInfo.connectionId}${nextRemotePath}`;
-              await invoke("ssh_rename_path", {
-                connectionId: remoteInfo.connectionId,
-                sourcePath: remoteInfo.remotePath,
-                targetPath: nextRemotePath,
-              });
-            } else if (wslInfo) {
-              const segments = wslInfo.linuxPath.split("/");
-              segments.pop();
-              const wslDir = segments.join("/") || "/";
-              const nextLinuxPath = wslDir === "/" ? `/${newName}` : `${wslDir}/${newName}`;
-              targetPath = buildWslPath(wslInfo.distro, nextLinuxPath);
-              await invoke("wsl_rename_path", {
-                distro: wslInfo.distro,
-                sourcePath: wslInfo.linuxPath,
-                targetPath: nextLinuxPath,
-              });
-            } else {
-              const dir = await dirname(path);
-              targetPath = await join(dir, newName);
-              await renameFile(path, targetPath);
-            }
+            const targetPath = await getWorkspaceEntryMutationProvider(path).renamePath(
+              path,
+              newName,
+            );
 
             set((state) => {
               state.files = updateFileInTree(state.files, path, (item) => ({
