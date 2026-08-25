@@ -1,38 +1,37 @@
 import { describe, expect, it } from "vitest";
 import {
-  getAdjacentProjectIndex,
-  getProjectCarouselDirection,
-  getProjectSnapDuration,
-  getProjectSwipeBounds,
+  getProjectCarouselPageIndex,
+  getProjectCarouselWindow,
 } from "@/features/layout/utils/project-carousel";
 
 describe("project carousel", () => {
-  it("moves through projects without wrapping past the final project", () => {
-    expect(getAdjacentProjectIndex(0, 1, 3)).toBe(1);
-    expect(getAdjacentProjectIndex(1, 1, 3)).toBe(2);
-    expect(getAdjacentProjectIndex(2, 1, 3)).toBeNull();
-    expect(getAdjacentProjectIndex(0, 1, 1)).toBeNull();
+  it("renders only the current project and its available neighbors", () => {
+    const projects = ["alpha", "beta", "gamma", "delta"];
+
+    expect(getProjectCarouselWindow(projects, 0)).toEqual(["alpha", "beta"]);
+    expect(getProjectCarouselWindow(projects, 2)).toEqual(["beta", "gamma", "delta"]);
+    expect(getProjectCarouselWindow(projects, 3)).toEqual(["gamma", "delta"]);
   });
 
-  it("does not wrap backward from the first project", () => {
-    expect(getAdjacentProjectIndex(0, -1, 3)).toBeNull();
+  it("returns no panels when the current project is unavailable", () => {
+    expect(getProjectCarouselWindow(["alpha"], -1)).toEqual([]);
+    expect(getProjectCarouselWindow(["alpha"], 1)).toEqual([]);
   });
 
-  it("hard-stops the rail where an adjacent project does not exist", () => {
-    expect(getProjectSwipeBounds(false, true, 160)).toEqual({ left: -160, right: 0 });
-    expect(getProjectSwipeBounds(true, false, 160)).toEqual({ left: 0, right: 160 });
-    expect(getProjectSwipeBounds(false, false, 160)).toEqual({ left: 0, right: 0 });
+  it("selects the page nearest the native scroll snap position", () => {
+    expect(getProjectCarouselPageIndex(0, 160, 3)).toBe(0);
+    expect(getProjectCarouselPageIndex(159, 160, 3)).toBe(1);
+    expect(getProjectCarouselPageIndex(321, 160, 3)).toBe(2);
   });
 
-  it("uses the target position for direct project selection", () => {
-    expect(getProjectCarouselDirection(0, 2)).toBe(1);
-    expect(getProjectCarouselDirection(2, 0)).toBe(-1);
-    expect(getProjectCarouselDirection(1, 1)).toBeNull();
+  it("clamps elastic overscroll to an available page", () => {
+    expect(getProjectCarouselPageIndex(-30, 160, 3)).toBe(0);
+    expect(getProjectCarouselPageIndex(600, 160, 3)).toBe(2);
   });
 
-  it("finishes near-complete swipes without stretching the final pixels", () => {
-    expect(getProjectSnapDuration(-144, -160, 160)).toBe(0.035);
-    expect(getProjectSnapDuration(-40, -160, 160)).toBeCloseTo(0.105);
-    expect(getProjectSnapDuration(0, -160, 160)).toBe(0.14);
+  it("rejects invalid scroll geometry", () => {
+    expect(getProjectCarouselPageIndex(0, 0, 3)).toBeNull();
+    expect(getProjectCarouselPageIndex(Number.NaN, 160, 3)).toBeNull();
+    expect(getProjectCarouselPageIndex(0, 160, 0)).toBeNull();
   });
 });
