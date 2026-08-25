@@ -154,6 +154,7 @@ function SidebarAgentHistoryRow({
         leading={<ProviderIcon providerId={chat.agentId || "custom"} size={16} />}
       >
         <InlineRenameInput
+          className="select-text"
           value={renameValue}
           onValueChange={setRenameValue}
           onSubmit={(nextTitle) => {
@@ -257,6 +258,7 @@ function SidebarTerminalHistoryRow({
     return (
       <SidebarListEditor appearance="activity" leading={<TerminalIcon className="size-4" />}>
         <InlineRenameInput
+          className="select-text"
           value={renameValue}
           onValueChange={setRenameValue}
           onSubmit={(nextName) => {

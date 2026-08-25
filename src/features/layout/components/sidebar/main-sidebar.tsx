@@ -628,7 +628,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     <ContextMenu>
       <ContextMenuTrigger
         ref={railRef}
-        className="athas-sidebar-rail relative flex h-full shrink-0 overflow-hidden"
+        className="athas-sidebar-rail relative flex h-full shrink-0 select-none overflow-hidden"
         style={{
           width: renderedRailWidth,
         }}
