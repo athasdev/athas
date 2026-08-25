@@ -1,11 +1,9 @@
-use super::exec_guard::{validate_exec_command, validate_exec_env};
-use athas_runtime::process::configure_background_command;
-use serde::{Deserialize, Serialize};
-use std::{
-   collections::HashMap,
-   io::Write,
-   process::{Command, Stdio},
+use super::{
+   exec_guard::{validate_exec_command, validate_exec_env},
+   extension_command::build_extension_command,
 };
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, io::Write, process::Stdio};
 use tauri::command;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -99,33 +97,18 @@ async fn lint_with_generic(
       });
    }
 
-   // Substitute template variables in command and args
-   let command = substitute_variables(&config.command, file_path, workspace_folder);
-
-   let args: Vec<String> = if let Some(arg_list) = &config.args {
-      arg_list
-         .iter()
-         .map(|arg| substitute_variables(arg, file_path, workspace_folder))
-         .collect()
-   } else {
-      vec![]
-   };
-
    // Determine input method (default to stdin)
    let input_method = config.input_method.as_deref().unwrap_or("stdin");
 
    // Build command
-   let mut cmd = Command::new(&command);
-   configure_background_command(&mut cmd);
-   cmd.args(&args);
-
-   // Add environment variables if specified
-   if let Some(env) = &config.env {
-      for (key, value) in env {
-         let value = substitute_variables(value, file_path, workspace_folder);
-         cmd.env(key, value);
-      }
-   }
+   let mut cmd = build_extension_command(
+      &config.command,
+      config.args.as_deref(),
+      config.env.as_ref(),
+      file_path,
+      workspace_folder,
+   );
+   let command_name = cmd.get_program().to_string_lossy().into_owned();
 
    // Configure stdin/stdout
    if input_method == "stdin" {
@@ -197,7 +180,7 @@ async fn lint_with_generic(
       Err(e) => Ok(LintResponse {
          diagnostics: vec![],
          success: false,
-         error: Some(format!("Linter not available: {} - {}", command, e)),
+         error: Some(format!("Linter not available: {} - {}", command_name, e)),
       }),
    }
 }
@@ -402,53 +385,4 @@ fn parse_regex_diagnostics(output: &str, pattern: &str) -> Vec<Diagnostic> {
    }
 
    diagnostics
-}
-
-/// Substitute template variables in a string
-fn substitute_variables(
-   template: &str,
-   file_path: Option<&str>,
-   workspace_folder: Option<&str>,
-) -> String {
-   let mut result = template.to_string();
-
-   if let Some(path) = file_path {
-      result = result.replace("${file}", path);
-      result = result.replace(
-         "${fileBasename}",
-         std::path::Path::new(path)
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or(path),
-      );
-      result = result.replace(
-         "${fileBasenameNoExtension}",
-         std::path::Path::new(path)
-            .file_stem()
-            .and_then(|n| n.to_str())
-            .unwrap_or(path),
-      );
-      result = result.replace(
-         "${fileDirname}",
-         std::path::Path::new(path)
-            .parent()
-            .and_then(|p| p.to_str())
-            .unwrap_or(""),
-      );
-      result = result.replace(
-         "${fileExtname}",
-         std::path::Path::new(path)
-            .extension()
-            .and_then(|e| e.to_str())
-            .map(|e| format!(".{}", e))
-            .unwrap_or_default()
-            .as_str(),
-      );
-   }
-
-   if let Some(workspace) = workspace_folder {
-      result = result.replace("${workspaceFolder}", workspace);
-   }
-
-   result
 }
