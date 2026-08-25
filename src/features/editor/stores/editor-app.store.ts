@@ -216,7 +216,7 @@ interface AppActions {
     previousSelection?: Range,
     options?: EditorContentChangeOptions,
   ) => Promise<void>;
-  handleSave: () => Promise<void>;
+  handleSave: () => Promise<boolean>;
   handleSaveAll: () => Promise<number>;
   openQuickEdit: (params: {
     text: string;
@@ -330,9 +330,10 @@ export const useEditorAppStore = createSelectors(
         handleSave: async () => {
           const { activeBufferId, buffers } = useBufferStore.getState();
           const activeBuffer = getBufferById(buffers, activeBufferId);
-          if (!activeBuffer || !isEditorContent(activeBuffer) || activeBuffer.readOnly) return;
+          if (!activeBuffer || !isEditorContent(activeBuffer) || activeBuffer.readOnly)
+            return false;
 
-          await saveEditorBufferById(activeBuffer.id);
+          return saveEditorBufferById(activeBuffer.id);
         },
 
         handleSaveAll: async () => {
