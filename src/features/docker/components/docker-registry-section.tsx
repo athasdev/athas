@@ -8,7 +8,11 @@ import { Spinner } from "@/ui/spinner";
 import type { DockerRegistryDraft } from "../hooks/use-docker-registry";
 import type { DockerRegistrySearchResult } from "../types/docker.types";
 import { DockerActionMenu, DockerResourceRow } from "./docker-resource-rows";
-import { DockerCapabilityNotice, DockerInlineError } from "./docker-sidebar-states";
+import {
+  DockerCapabilityNotice,
+  DockerCommandOutput,
+  DockerInlineError,
+} from "./docker-sidebar-states";
 
 interface DockerRegistrySectionProps {
   query: string;
@@ -177,11 +181,7 @@ export function DockerRegistrySection({
           className="mx-2 mb-1 w-auto"
         />
       ) : null}
-      {output ? (
-        <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
-          {output}
-        </div>
-      ) : null}
+      <DockerCommandOutput output={output} />
       {results.length > 0 ? (
         results.map((result) => (
           <DockerResourceRow

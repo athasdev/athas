@@ -140,3 +140,17 @@ export function DockerCapabilityNotice({
     </Alert>
   );
 }
+
+export function DockerCommandOutput({ output }: { output: string | null }) {
+  if (!output) return null;
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="ui-text-sm mx-2 mb-1 max-h-16 select-text overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground"
+    >
+      {output}
+    </div>
+  );
+}

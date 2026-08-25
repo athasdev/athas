@@ -85,6 +85,7 @@ import {
 } from "../utils/docker-sidebar-utils";
 import {
   DockerCapabilityNotice,
+  DockerCommandOutput,
   DockerInlineError,
   DockerUnavailableState,
 } from "./docker-sidebar-states";
@@ -1162,11 +1163,7 @@ export function DockerSidebar() {
                         />
                       }
                     />
-                    {composeOutput ? (
-                      <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
-                        {composeOutput}
-                      </div>
-                    ) : null}
+                    <DockerCommandOutput output={composeOutput} />
                     {filteredComposeServices.length > 0 ? (
                       filteredComposeServices.map((service) => (
                         <ComposeServiceRow
@@ -1562,11 +1559,7 @@ export function DockerSidebar() {
                       Build
                     </Button>
                   </div>
-                  {dockerOutput ? (
-                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
-                      {dockerOutput}
-                    </div>
-                  ) : null}
+                  <DockerCommandOutput output={dockerOutput} />
                   {filteredImages.length > 0 ? (
                     filteredImages.map((image) => (
                       <ImageRow
