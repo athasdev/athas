@@ -65,12 +65,7 @@ import {
 } from "@/utils/path-helpers";
 import type { FileEntry } from "../types/app.types";
 import type { FsActions, FsState } from "../types/interface.types";
-import {
-  createNewDirectory,
-  createNewFile,
-  deleteFileOrDirectory,
-  readDirectoryContents,
-} from "../controllers/file-operations";
+import { readDirectoryContents } from "../controllers/file-operations";
 import {
   addFileToTree,
   findFileInTree,
@@ -100,6 +95,7 @@ import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buf
 import { restoreWorkspaceSessionFolders } from "../services/workspace-session-folder-restore";
 import { prepareWorkspaceClose } from "../services/workspace-close-guard";
 import { createWorkspaceBackgroundInitializer } from "../services/workspace-background-initializer";
+import { getWorkspaceEntryMutationProvider } from "../services/workspace-entry-mutation-provider";
 import { openLocalWorkspaceTransaction } from "../services/workspace-local-open";
 import { drainDeferredWorkspaceSessionBuffers } from "../services/workspace-deferred-session-restore";
 import { disposeWorkspaceResources } from "../services/workspace-disposal";
@@ -2108,22 +2104,10 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       createFile: async (directoryPath: string, fileName: string) => {
-        const remoteInfo = parseRemotePath(directoryPath);
-        const filePath = remoteInfo
-          ? (() => {
-              const normalizedDirectory = directoryPath.endsWith("/")
-                ? directoryPath.slice(0, -1)
-                : directoryPath;
-              return `${normalizedDirectory}/${fileName}`;
-            })()
-          : await createNewFile(directoryPath, fileName);
-
-        if (remoteInfo) {
-          await invoke("ssh_create_file", {
-            connectionId: remoteInfo.connectionId,
-            filePath: `${remoteInfo.remotePath.replace(/\/$/, "")}/${fileName}`,
-          });
-        }
+        const filePath = await getWorkspaceEntryMutationProvider(directoryPath).createFile(
+          directoryPath,
+          fileName,
+        );
 
         const newFile: FileEntry = {
           name: fileName,
@@ -2142,22 +2126,10 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       createDirectory: async (parentPath: string, folderName: string) => {
-        const remoteInfo = parseRemotePath(parentPath);
-        const folderPath = remoteInfo
-          ? (() => {
-              const normalizedParent = parentPath.endsWith("/")
-                ? parentPath.slice(0, -1)
-                : parentPath;
-              return `${normalizedParent}/${folderName}`;
-            })()
-          : await createNewDirectory(parentPath, folderName);
-
-        if (remoteInfo) {
-          await invoke("ssh_create_directory", {
-            connectionId: remoteInfo.connectionId,
-            directoryPath: `${remoteInfo.remotePath.replace(/\/$/, "")}/${folderName}`,
-          });
-        }
+        const folderPath = await getWorkspaceEntryMutationProvider(parentPath).createDirectory(
+          parentPath,
+          folderName,
+        );
 
         const newFolder: FileEntry = {
           name: folderName,
@@ -2175,18 +2147,8 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       deleteFile: async (path: string) => {
-        const remoteInfo = parseRemotePath(path);
         const entry = findFileInTree(get().files, path);
-
-        if (remoteInfo) {
-          await invoke("ssh_delete_path", {
-            connectionId: remoteInfo.connectionId,
-            targetPath: remoteInfo.remotePath,
-            isDirectory: !!entry?.isDir,
-          });
-        } else {
-          await deleteFileOrDirectory(path);
-        }
+        await getWorkspaceEntryMutationProvider(path).deletePath(path, !!entry?.isDir);
 
         const { buffers, actions } = useBufferStore.getStore(workspaceId).getState();
         buffers
