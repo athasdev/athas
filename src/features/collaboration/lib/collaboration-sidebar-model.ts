@@ -1,7 +1,7 @@
 import type { SubscriptionInfo } from "@/features/window/services/auth-api";
 
 type CollaborationSnapshot = NonNullable<SubscriptionInfo["collaboration"]>;
-type CollaborationChannel = CollaborationSnapshot["channels"][number];
+export type CollaborationChannel = CollaborationSnapshot["channels"][number];
 type CollaborationNote = CollaborationSnapshot["channelNotes"][number];
 
 interface CollaborationChatEntry {
@@ -17,7 +17,7 @@ interface CollaborationChatGroup {
   entries: CollaborationChatEntry[];
 }
 
-interface CollaborationParticipant {
+export interface CollaborationParticipant {
   id: string;
   name: string;
   role: string;

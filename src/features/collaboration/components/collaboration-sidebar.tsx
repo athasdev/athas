@@ -26,8 +26,10 @@ import {
   type CollaborationChannelFilter,
   type CollaborationNotesFilter,
   type CollaborationPeopleFilter,
-  matchesCollaborationSearchQuery as matchesSearchQuery,
-  normalizeCollaborationSearchQuery as normalizeSearchQuery,
+  filterCollaborationChannels,
+  filterCollaborationNoteItems,
+  filterCollaborationParticipants,
+  filterCollaborationPrivateChatParticipants,
   NOTE_FILTER_OPTIONS,
   PEOPLE_FILTER_OPTIONS,
 } from "@/features/collaboration/lib/collaboration-sidebar-filters";
@@ -210,93 +212,43 @@ export function CollaborationSidebarView() {
     model?.notesItems.find(
       (item) => item.type === "folder" && item.path === selectedNoteFolderPath,
     ) ?? null;
-  const channelSearch = normalizeSearchQuery(deferredChannelSearchQuery);
-  const peopleSearch = normalizeSearchQuery(deferredPeopleSearchQuery);
-  const notesSearch = normalizeSearchQuery(deferredNotesSearchQuery);
-  const filteredChannels = useMemo(() => {
-    let channels = model?.channels ?? [];
-
-    if (channelFilter === "active") {
-      channels = selectedChannel
-        ? channels.filter((channel) => channel.id === selectedChannel.id)
-        : [];
-    } else if (channelFilter === "with-guests") {
-      channels = channels.filter((channel) => channel.guestCount > 0);
-    } else if (channelFilter === "empty") {
-      channels = channels.filter(
-        (channel) => channel.memberCount === 0 && channel.guestCount === 0,
-      );
-    }
-
-    if (!channelSearch) return channels;
-
-    return channels.filter((channel) =>
-      matchesSearchQuery(channelSearch, [
-        channel.slug,
-        channel.description,
-        channel.memberCount,
-        channel.guestCount,
-        channel.id,
-      ]),
-    );
-  }, [channelFilter, channelSearch, model?.channels, selectedChannel]);
-  const filteredParticipants = useMemo(() => {
-    let participants = model?.participants ?? [];
-
-    if (peopleFilter === "online") {
-      participants = participants.filter((participant) => participant.online);
-    } else if (peopleFilter === "offline") {
-      participants = participants.filter((participant) => !participant.online);
-    } else if (peopleFilter === "sharing") {
-      participants = participants.filter(
-        (participant) => participant.microphone || participant.screen,
-      );
-    } else if (peopleFilter === "has-file") {
-      participants = participants.filter((participant) => Boolean(participant.activeFilePath));
-    }
-
-    if (!peopleSearch) return participants;
-
-    return participants.filter((participant) =>
-      matchesSearchQuery(peopleSearch, [
-        participant.name,
-        participant.role,
-        participant.activeFilePath,
-        participant.online ? "online" : "offline",
-        participant.microphone ? "microphone" : null,
-        participant.screen ? "screen" : null,
-      ]),
-    );
-  }, [model?.participants, peopleFilter, peopleSearch]);
-  const filteredPrivateChatParticipants = useMemo(() => {
-    if (channelFilter !== "all") return [];
-
-    const participants = model?.participants ?? [];
-    if (!channelSearch) return participants;
-
-    return participants.filter((participant) =>
-      matchesSearchQuery(channelSearch, [
-        participant.name,
-        participant.role,
-        participant.online ? "online" : "offline",
-        participant.activeFilePath,
-      ]),
-    );
-  }, [channelFilter, channelSearch, model?.participants]);
-  const filteredNoteItems = useMemo(() => {
-    if (notesFilter === "secrets") return [];
-
-    const items = model?.notesItems ?? [];
-    if (!notesSearch) return items;
-
-    return items.filter((item) =>
-      matchesSearchQuery(notesSearch, [
-        item.path,
-        item.type,
-        item.type === "file" ? item.content : null,
-      ]),
-    );
-  }, [model?.notesItems, notesFilter, notesSearch]);
+  const filteredChannels = useMemo(
+    () =>
+      filterCollaborationChannels({
+        channels: model?.channels ?? [],
+        filter: channelFilter,
+        query: deferredChannelSearchQuery,
+        selectedChannelId: selectedChannel?.id,
+      }),
+    [channelFilter, deferredChannelSearchQuery, model?.channels, selectedChannel?.id],
+  );
+  const filteredParticipants = useMemo(
+    () =>
+      filterCollaborationParticipants({
+        participants: model?.participants ?? [],
+        filter: peopleFilter,
+        query: deferredPeopleSearchQuery,
+      }),
+    [deferredPeopleSearchQuery, model?.participants, peopleFilter],
+  );
+  const filteredPrivateChatParticipants = useMemo(
+    () =>
+      filterCollaborationPrivateChatParticipants({
+        participants: model?.participants ?? [],
+        channelFilter,
+        query: deferredChannelSearchQuery,
+      }),
+    [channelFilter, deferredChannelSearchQuery, model?.participants],
+  );
+  const filteredNoteItems = useMemo(
+    () =>
+      filterCollaborationNoteItems({
+        items: model?.notesItems ?? [],
+        filter: notesFilter,
+        query: deferredNotesSearchQuery,
+      }),
+    [deferredNotesSearchQuery, model?.notesItems, notesFilter],
+  );
   const remoteDeviceIds = useMemo(() => {
     if (!selectedChannel || !collaboration?.presence) return [];
     const localDeviceId = localDeviceIdRef.current ?? getCollaborationClientId();
@@ -1134,7 +1086,7 @@ export function CollaborationSidebarView() {
                 </AccordionItem>
               </Accordion>
             ) : null}
-            {(channelSearch || channelFilter !== "all") &&
+            {(deferredChannelSearchQuery.trim() || channelFilter !== "all") &&
             filteredChannels.length === 0 &&
             filteredPrivateChatParticipants.length === 0 ? (
               <EmptyState layout="sidebar" message="No matching channels." />
@@ -1377,7 +1329,9 @@ export function CollaborationSidebarView() {
           <EmptyState
             layout="sidebar"
             message={
-              peopleSearch || peopleFilter !== "all" ? "No matching members." : "No members yet."
+              deferredPeopleSearchQuery.trim() || peopleFilter !== "all"
+                ? "No matching members."
+                : "No members yet."
             }
           />
         )}

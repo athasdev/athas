@@ -1,3 +1,9 @@
+import type {
+  CollaborationChannel,
+  CollaborationNoteItem,
+  CollaborationParticipant,
+} from "./collaboration-sidebar-model";
+
 export type CollaborationChannelFilter = "all" | "active" | "with-guests" | "empty";
 export type CollaborationPeopleFilter = "all" | "online" | "offline" | "sharing" | "has-file";
 export type CollaborationNotesFilter = "notes" | "secrets" | "all";
@@ -42,5 +48,104 @@ export function matchesCollaborationSearchQuery(
     String(value ?? "")
       .toLowerCase()
       .includes(query),
+  );
+}
+
+export function filterCollaborationChannels({
+  channels,
+  filter,
+  query,
+  selectedChannelId,
+}: {
+  channels: CollaborationChannel[];
+  filter: CollaborationChannelFilter;
+  query: string;
+  selectedChannelId?: number | null;
+}) {
+  const search = normalizeCollaborationSearchQuery(query);
+  const filtered = channels.filter((channel) => {
+    if (filter === "active" && channel.id !== selectedChannelId) return false;
+    if (filter === "with-guests" && channel.guestCount === 0) return false;
+    if (filter === "empty" && (channel.memberCount > 0 || channel.guestCount > 0)) return false;
+
+    return matchesCollaborationSearchQuery(search, [
+      channel.slug,
+      channel.description,
+      channel.memberCount,
+      channel.guestCount,
+      channel.id,
+    ]);
+  });
+
+  return filter === "active" && selectedChannelId == null ? [] : filtered;
+}
+
+export function filterCollaborationParticipants({
+  participants,
+  filter,
+  query,
+}: {
+  participants: CollaborationParticipant[];
+  filter: CollaborationPeopleFilter;
+  query: string;
+}) {
+  const search = normalizeCollaborationSearchQuery(query);
+  return participants.filter((participant) => {
+    if (filter === "online" && !participant.online) return false;
+    if (filter === "offline" && participant.online) return false;
+    if (filter === "sharing" && !participant.microphone && !participant.screen) return false;
+    if (filter === "has-file" && !participant.activeFilePath) return false;
+
+    return matchesCollaborationSearchQuery(search, [
+      participant.name,
+      participant.role,
+      participant.activeFilePath,
+      participant.online ? "online" : "offline",
+      participant.microphone ? "microphone" : null,
+      participant.screen ? "screen" : null,
+    ]);
+  });
+}
+
+export function filterCollaborationPrivateChatParticipants({
+  participants,
+  channelFilter,
+  query,
+}: {
+  participants: CollaborationParticipant[];
+  channelFilter: CollaborationChannelFilter;
+  query: string;
+}) {
+  if (channelFilter !== "all") return [];
+
+  const search = normalizeCollaborationSearchQuery(query);
+  return participants.filter((participant) =>
+    matchesCollaborationSearchQuery(search, [
+      participant.name,
+      participant.role,
+      participant.online ? "online" : "offline",
+      participant.activeFilePath,
+    ]),
+  );
+}
+
+export function filterCollaborationNoteItems({
+  items,
+  filter,
+  query,
+}: {
+  items: CollaborationNoteItem[];
+  filter: CollaborationNotesFilter;
+  query: string;
+}) {
+  if (filter === "secrets") return [];
+
+  const search = normalizeCollaborationSearchQuery(query);
+  return items.filter((item) =>
+    matchesCollaborationSearchQuery(search, [
+      item.path,
+      item.type,
+      item.type === "file" ? item.content : null,
+    ]),
   );
 }
