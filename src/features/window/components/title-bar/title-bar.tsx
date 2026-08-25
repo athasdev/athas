@@ -91,7 +91,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
-  const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
+  const openProjectPicker = useUIState((state) => state.openProjectPicker);
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isCompactMenuVisible, setIsCompactMenuVisible] = useState(false);
@@ -213,7 +213,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
         <WindowExpandIcon />
         New Window
       </ContextMenuItem>
-      <ContextMenuItem onClick={() => setIsProjectPickerVisible(true)}>
+      <ContextMenuItem onClick={() => openProjectPicker()}>
         <FilesIcon />
         Add Project
       </ContextMenuItem>
@@ -396,6 +396,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
 const TitleBarWithSettings = (props: TitleBarProps) => {
   const isSettingsDialogVisible = useUIState((state) => state.isSettingsDialogVisible);
   const isProjectPickerVisible = useUIState((state) => state.isProjectPickerVisible);
+  const projectPickerInitialStep = useUIState((state) => state.projectPickerInitialStep);
   const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
 
@@ -407,10 +408,13 @@ const TitleBarWithSettings = (props: TitleBarProps) => {
         onClose={() => setIsSettingsDialogVisible(false)}
       />
       {createPortal(
-        <ProjectPicker
-          isOpen={isProjectPickerVisible}
-          onClose={() => setIsProjectPickerVisible(false)}
-        />,
+        isProjectPickerVisible ? (
+          <ProjectPicker
+            isOpen
+            initialStep={projectPickerInitialStep}
+            onClose={() => setIsProjectPickerVisible(false)}
+          />
+        ) : null,
         document.body,
       )}
     </>

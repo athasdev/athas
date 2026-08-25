@@ -92,14 +92,14 @@ export function SidebarProjectSwitcher({
   projects,
   isSwitchingProject,
   onSelectProject,
-  onConnectRemote,
+  onAddRemote,
 }: {
   expanded: boolean;
   project?: ProjectTab;
   projects: ProjectTab[];
   isSwitchingProject: boolean;
   onSelectProject: (projectId: string) => void;
-  onConnectRemote: () => void;
+  onAddRemote: () => void;
 }) {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
@@ -342,9 +342,9 @@ export function SidebarProjectSwitcher({
             <FolderOpenIcon />
             Open project…
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onConnectRemote}>
+          <DropdownMenuItem onClick={onAddRemote}>
             <RemoteIcon />
-            Connect remote…
+            Add remote…
           </DropdownMenuItem>
         </SidebarMenuContent>
       </DropdownMenu>

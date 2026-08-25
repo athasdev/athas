@@ -2,6 +2,8 @@ import type { StateCreator } from "zustand";
 import type { CommandPaletteViewId } from "@/features/command-palette/types/view.types";
 import type { SettingsTab } from "./types/ui-state.types";
 
+export type ProjectPickerInitialStep = "picker" | "addRemote";
+
 interface ModalState {
   isQuickOpenVisible: boolean;
   isCommandPaletteVisible: boolean;
@@ -10,6 +12,7 @@ interface ModalState {
   isSettingsDialogVisible: boolean;
   isBranchManagerVisible: boolean;
   isProjectPickerVisible: boolean;
+  projectPickerInitialStep: ProjectPickerInitialStep;
   isDatabaseConnectionVisible: boolean;
   settingsInitialTab: SettingsTab | null;
 }
@@ -22,6 +25,7 @@ interface ModalActions {
   setIsSettingsDialogVisible: (v: boolean) => void;
   setIsBranchManagerVisible: (v: boolean) => void;
   setIsProjectPickerVisible: (v: boolean) => void;
+  openProjectPicker: (initialStep?: ProjectPickerInitialStep) => void;
   setIsDatabaseConnectionVisible: (v: boolean) => void;
   setSettingsInitialTab: (tab: SettingsTab) => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
@@ -40,6 +44,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   isSettingsDialogVisible: false,
   isBranchManagerVisible: false,
   isProjectPickerVisible: false,
+  projectPickerInitialStep: "picker",
   isDatabaseConnectionVisible: false,
   settingsInitialTab: null,
 
@@ -187,18 +192,23 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
 
   setIsProjectPickerVisible: (v: boolean) => {
     if (v) {
-      set({
-        isProjectPickerVisible: true,
-        isQuickOpenVisible: false,
-        isCommandPaletteVisible: false,
-        isGlobalSearchVisible: false,
-        isSettingsDialogVisible: false,
-        isBranchManagerVisible: false,
-        isDatabaseConnectionVisible: false,
-      });
+      get().openProjectPicker();
     } else {
       set({ isProjectPickerVisible: v });
     }
+  },
+
+  openProjectPicker: (initialStep = "picker") => {
+    set({
+      isProjectPickerVisible: true,
+      projectPickerInitialStep: initialStep,
+      isQuickOpenVisible: false,
+      isCommandPaletteVisible: false,
+      isGlobalSearchVisible: false,
+      isSettingsDialogVisible: false,
+      isBranchManagerVisible: false,
+      isDatabaseConnectionVisible: false,
+    });
   },
 
   setIsDatabaseConnectionVisible: (v: boolean) => {

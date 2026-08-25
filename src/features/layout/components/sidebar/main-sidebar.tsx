@@ -118,7 +118,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const activeSidebarView = useUIState((state) => state.activeSidebarView);
-  const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
+  const openProjectPicker = useUIState((state) => state.openProjectPicker);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
   const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
   const isExtensionsBufferActive = useBufferStore((state) => {
@@ -575,7 +575,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             projects={projectTabs}
             isSwitchingProject={isSwitchingProject}
             onSelectProject={handleProjectSelect}
-            onConnectRemote={() => setIsProjectPickerVisible(true)}
+            onAddRemote={() => openProjectPicker("addRemote")}
           />
         ) : null}
         {isLoadingProject ? (
@@ -689,7 +689,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
               New Worktree
             </ContextMenuItem>
           ) : null}
-          <ContextMenuItem onClick={() => setIsProjectPickerVisible(true)}>
+          <ContextMenuItem onClick={() => openProjectPicker()}>
             <FolderOpenIcon />
             Open Project…
           </ContextMenuItem>

@@ -126,7 +126,7 @@ export function createNewFile(): void {
 }
 
 export function openProjectPicker(): void {
-  useUIState.getState().setIsProjectPickerVisible(true);
+  useUIState.getState().openProjectPicker();
 }
 
 export function openQuickOpen(): void {
