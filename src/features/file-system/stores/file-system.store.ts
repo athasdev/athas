@@ -100,6 +100,7 @@ import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buf
 import { restoreWorkspaceSessionFolders } from "../services/workspace-session-folder-restore";
 import { prepareWorkspaceClose } from "../services/workspace-close-guard";
 import { createWorkspaceBackgroundInitializer } from "../services/workspace-background-initializer";
+import { openLocalWorkspaceTransaction } from "../services/workspace-local-open";
 import { drainDeferredWorkspaceSessionBuffers } from "../services/workspace-deferred-session-restore";
 import { disposeWorkspaceResources } from "../services/workspace-disposal";
 import {
@@ -395,109 +396,106 @@ const openLocalWorkspace = async (
   const currentBufferIds = isReplacingCurrentWorkspace
     ? bufferStore.getState().buffers.map((buffer) => buffer.id)
     : [];
-
-  try {
-    if (isReplacingCurrentWorkspace) {
+  const result = await openLocalWorkspaceTransaction({
+    replacingCurrentWorkspace: isReplacingCurrentWorkspace,
+    currentBufferIds,
+    prepareTransition: async () => {
       const currentBuffers = [...bufferStore.getState().buffers];
-      if (
-        !(await prepareProjectTransitionWithUnsavedBuffers("switching projects", currentBuffers))
-      ) {
-        logWorkspaceOpenStep("end", traceLabel, path, openStartedAt);
-        return false;
-      }
-
-      get().persistActiveProjectSession();
-      if (currentBufferIds.length > 0) {
-        bufferStore.getState().actions.closeBuffersBatch(currentBufferIds, true);
-      }
-    } else {
-      persistCurrentProjectUiState(currentRootPath, workspaceId);
-    }
-
-    set((state) => {
-      state.isFileTreeLoading = true;
-    });
-
-    const projectName = getFolderName(path);
-
-    const readDirectoryStartedAt = performance.now();
-    logWorkspaceOpenStep("start", "readDirectoryContents", path);
-    const entries = await readDirectoryContents(path);
-    logWorkspaceOpenStep("end", "readDirectoryContents", path, readDirectoryStartedAt);
-
-    const fileTree = sortFileEntries(entries);
-    const wrappedFileTree = wrapWithRootFolder(fileTree, path, projectName);
-
-    if (treeState === "expand-root") {
-      fileTreeStore.getState().actions.setExpandedPaths(new Set([path]));
-    } else {
-      fileTreeStore.getState().actions.collapseAll();
-    }
-
-    const { setRootFolderPath, setProjectName, setActiveProjectId } =
-      projectStore.getState().actions;
-    setRootFolderPath(path);
-    setProjectName(projectName);
-
-    if (restoreUiState) {
-      restoreProjectUiState(path, workspaceId);
-    }
-
-    const workspaceTab = useWorkspaceTabsStore
-      .getState()
-      .projectTabs.find((projectTab) => projectTab.id === workspaceId);
-    setActiveProjectId(workspaceId);
-    if (!prewarm) {
-      useRecentFoldersStore.getState().actions.addToRecents(path, {
-        activeProjectTabId: workspaceId,
-        customIcon: workspaceTab?.customIcon,
-        missing: false,
+      return await prepareProjectTransitionWithUnsavedBuffers("switching projects", currentBuffers);
+    },
+    persistCurrentSession: () => get().persistActiveProjectSession(),
+    closeCurrentBuffers: (bufferIds) =>
+      bufferStore.getState().actions.closeBuffersBatch(bufferIds, true),
+    persistCurrentUiState: () => persistCurrentProjectUiState(currentRootPath, workspaceId),
+    setLoading: (isLoading) => {
+      set((state) => {
+        state.isFileTreeLoading = isLoading;
       });
-      gitDiffCache.clear();
-    }
+    },
+    loadWorkspace: async () => {
+      const projectName = getFolderName(path);
+      const readDirectoryStartedAt = performance.now();
+      logWorkspaceOpenStep("start", "readDirectoryContents", path);
+      const entries = await readDirectoryContents(path);
+      logWorkspaceOpenStep("end", "readDirectoryContents", path, readDirectoryStartedAt);
 
-    set((state) => {
-      state.isFileTreeLoading = false;
-      state.files = wrappedFileTree;
-      state.rootFolderPath = path;
-      state.workspaceFolders = [{ path, name: projectName, isPrimary: true }];
-      state.filesVersion++;
-      state.projectFilesCache = undefined;
-    });
-  } catch (error) {
-    set((state) => {
-      state.isFileTreeLoading = false;
-    });
-    logWorkspaceOpenStep("error", traceLabel, path, openStartedAt);
-    console.error(`Failed to open folder: ${path}`, error);
-    toast.error(`Failed to open folder: ${path}`);
-    return false;
+      return {
+        projectName,
+        files: wrapWithRootFolder(sortFileEntries(entries), path, projectName),
+      };
+    },
+    applyWorkspace: ({ projectName, files }) => {
+      if (treeState === "expand-root") {
+        fileTreeStore.getState().actions.setExpandedPaths(new Set([path]));
+      } else {
+        fileTreeStore.getState().actions.collapseAll();
+      }
+
+      const { setRootFolderPath, setProjectName, setActiveProjectId } =
+        projectStore.getState().actions;
+      setRootFolderPath(path);
+      setProjectName(projectName);
+
+      if (restoreUiState) {
+        restoreProjectUiState(path, workspaceId);
+      }
+
+      const workspaceTab = useWorkspaceTabsStore
+        .getState()
+        .projectTabs.find((projectTab) => projectTab.id === workspaceId);
+      setActiveProjectId(workspaceId);
+      if (!prewarm) {
+        useRecentFoldersStore.getState().actions.addToRecents(path, {
+          activeProjectTabId: workspaceId,
+          customIcon: workspaceTab?.customIcon,
+          missing: false,
+        });
+        gitDiffCache.clear();
+      }
+
+      set((state) => {
+        state.isFileTreeLoading = false;
+        state.files = files;
+        state.rootFolderPath = path;
+        state.workspaceFolders = [{ path, name: projectName, isPrimary: true }];
+        state.filesVersion++;
+        state.projectFilesCache = undefined;
+      });
+    },
+    restoreSession: async () => {
+      const restoreStartedAt = performance.now();
+      logWorkspaceOpenStep("start", "restoreSession", path);
+      await get().restoreSession(path);
+      logWorkspaceOpenStep("end", "restoreSession", path, restoreStartedAt);
+    },
+    startBackgroundInitialization: () => {
+      if (prewarm) return;
+
+      initializeLocalWorkspaceInBackground(
+        workspaceId,
+        path,
+        get,
+        traceLabel === "handleOpenFolder"
+          ? "Failed to initialize workspace after opening folder:"
+          : "Failed to initialize workspace after opening folder by path:",
+      );
+    },
+    onOpenError: (error) => {
+      logWorkspaceOpenStep("error", traceLabel, path, openStartedAt);
+      console.error(`Failed to open folder: ${path}`, error);
+      toast.error(`Failed to open folder: ${path}`);
+    },
+    onRestoreError: (error) => {
+      logWorkspaceOpenStep("error", "restoreSession", path);
+      console.error("Failed to restore workspace session:", error);
+      toast.warning("Workspace opened, but saved tabs could not be restored.");
+    },
+  });
+
+  if (result !== "failed") {
+    logWorkspaceOpenStep("end", traceLabel, path, openStartedAt);
   }
-
-  try {
-    const restoreStartedAt = performance.now();
-    logWorkspaceOpenStep("start", "restoreSession", path);
-    await get().restoreSession(path);
-    logWorkspaceOpenStep("end", "restoreSession", path, restoreStartedAt);
-  } catch (error) {
-    logWorkspaceOpenStep("error", "restoreSession", path);
-    console.error("Failed to restore workspace session:", error);
-    toast.warning("Workspace opened, but saved tabs could not be restored.");
-  }
-
-  if (!prewarm) {
-    initializeLocalWorkspaceInBackground(
-      workspaceId,
-      path,
-      get,
-      traceLabel === "handleOpenFolder"
-        ? "Failed to initialize workspace after opening folder:"
-        : "Failed to initialize workspace after opening folder by path:",
-    );
-  }
-
-  logWorkspaceOpenStep("end", traceLabel, path, openStartedAt);
-  return true;
+  return result === "opened";
 };
 
 type NonLocalWorkspaceKind = "remote" | "wsl";
