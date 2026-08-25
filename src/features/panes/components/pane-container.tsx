@@ -1093,7 +1093,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       data-pane-id={pane.id}
       className={cn(
         "relative flex size-full flex-col overflow-hidden",
-        pane.id === BOTTOM_PANE_ID ? "bg-background" : "bg-editor",
+        pane.id === BOTTOM_PANE_ID || paneBuffers.length === 0 ? "bg-background" : "bg-editor",
         isActivePane && "ring-1 ring-primary/30",
         (isDragOver || internalHoverZone) && "ring-2 ring-primary",
       )}
@@ -1119,17 +1119,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       />
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <Suspense fallback={null}>
-          {paneBuffers.length === 0 ? (
-            <Empty
-              className={cn(
-                "h-full rounded-none",
-                pane.id === BOTTOM_PANE_ID ? "bg-background" : "bg-editor",
-              )}
-              role="status"
-            >
-              <EmptyDescription>No tabs open</EmptyDescription>
-            </Empty>
-          ) : shouldRenderCarousel ? (
+          {paneBuffers.length === 0 ? null : shouldRenderCarousel ? (
             <div
               ref={carouselViewportRef}
               className="scrollbar-none flex h-full items-stretch gap-4 overflow-x-auto overflow-y-hidden px-4 py-4 overscroll-x-contain"
