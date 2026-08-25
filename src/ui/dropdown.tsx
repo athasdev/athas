@@ -755,10 +755,13 @@ function DropdownMenuItem({
   className,
   inset,
   variant = "default",
+  trailingAction,
+  children,
   ...props
 }: DropdownMenuPrimitive.Item.Props & {
   inset?: boolean;
   variant?: "default" | "destructive";
+  trailingAction?: ReactNode;
 }) {
   return (
     <DropdownMenuPrimitive.Item
@@ -768,10 +771,29 @@ function DropdownMenuItem({
       className={cn(
         menuItemVariants({ tone: variant }),
         "group/dropdown-menu-item data-inset:pl-8",
+        trailingAction && "group/dropdown-menu-row pr-8",
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+      {trailingAction ? (
+        <DropdownMenuTrailingAction>{trailingAction}</DropdownMenuTrailingAction>
+      ) : null}
+    </DropdownMenuPrimitive.Item>
+  );
+}
+
+function DropdownMenuTrailingAction({ children }: { children: ReactNode }) {
+  return (
+    <span
+      className="absolute right-1 z-10 flex opacity-0 transition-opacity group-hover/dropdown-menu-row:opacity-100 group-focus-within/dropdown-menu-row:opacity-100"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -808,21 +830,36 @@ function DropdownMenuRadioItem({
   className,
   children,
   inset,
+  trailingAction,
   ...props
-}: DropdownMenuPrimitive.RadioItem.Props & { inset?: boolean }) {
+}: DropdownMenuPrimitive.RadioItem.Props & { inset?: boolean; trailingAction?: ReactNode }) {
   return (
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
-      className={cn(menuItemVariants(), "pr-8 data-inset:pl-8", className)}
+      className={cn(
+        menuItemVariants(),
+        "pr-8 data-inset:pl-8",
+        trailingAction && "group/dropdown-menu-row",
+        className,
+      )}
       {...props}
     >
-      <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
+      <span
+        className={cn(
+          "pointer-events-none absolute right-2 flex size-4 items-center justify-center transition-opacity",
+          trailingAction &&
+            "group-hover/dropdown-menu-row:opacity-0 group-focus-within/dropdown-menu-row:opacity-0",
+        )}
+      >
         <DropdownMenuPrimitive.RadioItemIndicator>
           <CheckIcon />
         </DropdownMenuPrimitive.RadioItemIndicator>
       </span>
       {children}
+      {trailingAction ? (
+        <DropdownMenuTrailingAction>{trailingAction}</DropdownMenuTrailingAction>
+      ) : null}
     </DropdownMenuPrimitive.RadioItem>
   );
 }

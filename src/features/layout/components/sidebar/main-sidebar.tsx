@@ -575,6 +575,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             projects={projectTabs}
             isSwitchingProject={isSwitchingProject}
             onSelectProject={handleProjectSelect}
+            onConnectRemote={() => setIsProjectPickerVisible(true)}
           />
         ) : null}
         {isLoadingProject ? (

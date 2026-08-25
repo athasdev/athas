@@ -1,10 +1,20 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import PasswordPromptDialog from "@/features/remote/components/password-prompt-dialog";
+import {
+  connectRemoteConnection,
+  loadRemoteConnections,
+} from "@/features/remote/services/remote-connection-actions";
+import { connectionStore } from "@/features/remote/stores/remote-connection.store";
+import type { RemoteConnection } from "@/features/remote/types/remote.types";
+import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
 import ProjectIconPicker from "@/features/window/components/project-icon-picker";
 import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { findBestProjectIcon } from "@/features/window/utils/project-icons";
+import { Button } from "@/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -31,10 +41,14 @@ import {
   RemoteIcon,
   TrashIcon,
   WindowExpandIcon,
+  XIcon,
 } from "@/ui/icons";
 import { SidebarListItem, SidebarMenuContent } from "@/ui/sidebar";
+import { showConfirmDialog } from "@/ui/dialog";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
+import { toast } from "sonner";
+import { getClosedRemoteConnections, getProjectRemoteConnectionId } from "./project-switcher-items";
 
 export function getProjectNameFromPath(path?: string) {
   if (!path) return "Open Project";
@@ -78,15 +92,25 @@ export function SidebarProjectSwitcher({
   projects,
   isSwitchingProject,
   onSelectProject,
+  onConnectRemote,
 }: {
   expanded: boolean;
   project?: ProjectTab;
   projects: ProjectTab[];
   isSwitchingProject: boolean;
   onSelectProject: (projectId: string) => void;
+  onConnectRemote: () => void;
 }) {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
+  const closeProject = useFileSystemStore((state) => state.closeProject);
+  const removeFromRecents = useRecentFoldersStore((state) => state.actions.removeFromRecents);
+  const [isOpen, setIsOpen] = useState(false);
+  const [remoteConnections, setRemoteConnections] = useState<RemoteConnection[]>([]);
+  const [connectingRemoteId, setConnectingRemoteId] = useState<string | null>(null);
+  const [passwordPromptConnection, setPasswordPromptConnection] = useState<RemoteConnection | null>(
+    null,
+  );
   const [detectedIconPath, setDetectedIconPath] = useState<string | undefined>();
   const [iconPickerProject, setIconPickerProject] = useState<ProjectTab | null>(null);
   const displayProject = project;
@@ -96,6 +120,18 @@ export function SidebarProjectSwitcher({
   const isRemote = isRemoteProjectPath(projectPath);
   const displayIconPath = customIcon ?? detectedIconPath;
   const displayProjectKey = displayProject?.id ?? projectPath;
+  const closedRemoteConnections = useMemo(
+    () => getClosedRemoteConnections(projects, remoteConnections),
+    [projects, remoteConnections],
+  );
+
+  const refreshRemoteConnections = useCallback(async () => {
+    try {
+      setRemoteConnections(await loadRemoteConnections());
+    } catch (error) {
+      console.error("Failed to load remote connections:", error);
+    }
+  }, []);
 
   useEffect(() => {
     setDetectedIconPath(undefined);
@@ -118,9 +154,90 @@ export function SidebarProjectSwitcher({
   const canChangeIcon = !!displayProject && !!projectPath && !isRemote;
   const projectGlyph = <ProjectGlyph projectPath={projectPath} iconPath={displayIconPath} />;
 
+  const handleConnectRemote = async (connectionId: string, providedPassword?: string) => {
+    const connection = remoteConnections.find((candidate) => candidate.id === connectionId);
+    if (!connection || connectingRemoteId === connectionId) return;
+
+    setConnectingRemoteId(connectionId);
+    try {
+      await connectRemoteConnection(connection, providedPassword);
+      await refreshRemoteConnections();
+    } catch (error) {
+      if (isRemoteAuthFailure(error) && !providedPassword && !connection.password) {
+        setPasswordPromptConnection(connection);
+        return;
+      }
+
+      if (providedPassword) {
+        throw new Error(getFriendlyRemoteError(error));
+      }
+
+      toast.error(getFriendlyRemoteError(error));
+    } finally {
+      setConnectingRemoteId(null);
+    }
+  };
+
+  const handleRemoveProject = async (availableProject: ProjectTab) => {
+    setIsOpen(false);
+    const connectionId = getProjectRemoteConnectionId(availableProject.path);
+    const confirmed = await showConfirmDialog(
+      connectionId
+        ? `Remove “${availableProject.name}” from Athas? Remote files will not be deleted.`
+        : `Remove “${availableProject.name}” from Athas? Files on disk will not be deleted.`,
+      {
+        title: connectionId ? "Remove Remote Connection" : "Remove Project",
+        confirmLabel: "Remove",
+      },
+    );
+    if (!confirmed) return;
+
+    try {
+      if (!(await closeProject(availableProject.id))) return;
+
+      if (connectionId) {
+        await connectionStore.deleteConnection(connectionId);
+        await refreshRemoteConnections();
+      } else {
+        removeFromRecents(availableProject.path);
+      }
+      toast.success(`Removed “${availableProject.name}” from Athas.`);
+    } catch (error) {
+      console.error("Failed to remove project from Athas:", error);
+      toast.error("Failed to remove the project from Athas.");
+    }
+  };
+
+  const handleRemoveRemoteConnection = async (connection: RemoteConnection) => {
+    setIsOpen(false);
+    const confirmed = await showConfirmDialog(
+      `Remove “${connection.name}” from Athas? Remote files will not be deleted.`,
+      {
+        title: "Remove Remote Connection",
+        confirmLabel: "Remove",
+      },
+    );
+    if (!confirmed) return;
+
+    try {
+      await connectionStore.deleteConnection(connection.id);
+      await refreshRemoteConnections();
+      toast.success(`Removed “${connection.name}” from Athas.`);
+    } catch (error) {
+      console.error("Failed to remove remote connection from Athas:", error);
+      toast.error("Failed to remove the remote connection from Athas.");
+    }
+  };
+
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu
+        open={isOpen}
+        onOpenChange={(open) => {
+          setIsOpen(open);
+          if (open) void refreshRemoteConnections();
+        }}
+      >
         <DropdownMenuTrigger
           render={
             <SidebarListItem
@@ -165,7 +282,7 @@ export function SidebarProjectSwitcher({
           }
         />
         <SidebarMenuContent>
-          {projects.length > 0 ? (
+          {projects.length > 0 || closedRemoteConnections.length > 0 ? (
             <>
               <DropdownMenuRadioGroup
                 value={displayProject?.id ?? ""}
@@ -177,6 +294,17 @@ export function SidebarProjectSwitcher({
                     value={availableProject.id}
                     disabled={isSwitchingProject}
                     closeOnClick
+                    trailingAction={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label={`Remove ${availableProject.name} from Athas`}
+                        onClick={() => void handleRemoveProject(availableProject)}
+                      >
+                        <XIcon />
+                      </Button>
+                    }
                   >
                     <ProjectGlyph
                       projectPath={availableProject.path}
@@ -186,12 +314,37 @@ export function SidebarProjectSwitcher({
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
+              {closedRemoteConnections.map((connection) => (
+                <DropdownMenuItem
+                  key={connection.id}
+                  disabled={connectingRemoteId === connection.id}
+                  onClick={() => void handleConnectRemote(connection.id)}
+                  trailingAction={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label={`Remove ${connection.name} from Athas`}
+                      onClick={() => void handleRemoveRemoteConnection(connection)}
+                    >
+                      <XIcon />
+                    </Button>
+                  }
+                >
+                  <RemoteIcon />
+                  <span className="min-w-0 flex-1 truncate">{connection.name}</span>
+                </DropdownMenuItem>
+              ))}
               <DropdownMenuSeparator />
             </>
           ) : null}
           <DropdownMenuItem onClick={() => void handleOpenFolder()}>
             <FolderOpenIcon />
             Open project…
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onConnectRemote}>
+            <RemoteIcon />
+            Connect remote…
           </DropdownMenuItem>
         </SidebarMenuContent>
       </DropdownMenu>
@@ -203,6 +356,12 @@ export function SidebarProjectSwitcher({
           projectPath={iconPickerProject.path}
         />
       ) : null}
+      <PasswordPromptDialog
+        isOpen={passwordPromptConnection !== null}
+        connection={passwordPromptConnection}
+        onClose={() => setPasswordPromptConnection(null)}
+        onConnect={handleConnectRemote}
+      />
     </>
   );
 }
