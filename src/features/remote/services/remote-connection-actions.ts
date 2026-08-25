@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { connectionStore } from "../stores/remote-connection.store";
 import type { RemoteConnection } from "../types/remote.types";
 import { getFriendlyRemoteError } from "../utils/remote-errors";
+import { establishRemoteConnection } from "./remote-connection-client";
 
 export async function loadRemoteConnections(): Promise<RemoteConnection[]> {
   return connectionStore.getAllConnections();
@@ -13,17 +14,7 @@ export async function connectRemoteConnection(
   connection: RemoteConnection,
   providedPassword?: string,
 ): Promise<void> {
-  await invoke("ssh_connect", {
-    connectionId: connection.id,
-    host: connection.host,
-    port: connection.port,
-    username: connection.username,
-    password: providedPassword || connection.password || null,
-    keyPath: connection.keyPath || null,
-    useSftp: connection.type === "sftp",
-  });
-
-  await connectionStore.updateConnectionStatus(connection.id, true, new Date().toISOString());
+  await establishRemoteConnection(connection, providedPassword);
 
   const { handleOpenRemoteProject } = useFileSystemStore.getState();
   if (handleOpenRemoteProject) {

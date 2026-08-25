@@ -21,7 +21,7 @@ import { getGitStatus } from "@/features/git/api/git-status-api";
 import { useGitBlameStore } from "@/features/git/stores/git-blame.store";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
-import { connectionStore } from "@/features/remote/stores/remote-connection.store";
+import { ensureRemoteConnectionConnected } from "@/features/remote/services/remote-connection-client";
 import { buildRemoteRootPath, parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
@@ -270,30 +270,6 @@ const restoreEditorSessionStateForPath = (
   if (openedBuffer?.type === "editor") {
     restorePersistedEditorViewState(openedBuffer, bufferSession.editorState);
   }
-};
-
-const reconnectRemoteConnection = async (connectionId: string) => {
-  const connection = await connectionStore.getConnection(connectionId);
-  if (!connection) {
-    throw new Error("Remote connection not found.");
-  }
-
-  if (connection.isConnected) {
-    return connection;
-  }
-
-  await invoke("ssh_connect", {
-    connectionId: connection.id,
-    host: connection.host,
-    port: connection.port,
-    username: connection.username,
-    password: connection.password || null,
-    keyPath: connection.keyPath || null,
-    useSftp: connection.type === "sftp",
-  });
-
-  await connectionStore.updateConnectionStatus(connection.id, true, new Date().toISOString());
-  return connection;
 };
 
 type FileSystemStoreState = FsState & FsActions;
@@ -1117,7 +1093,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         });
 
         try {
-          const connection = await reconnectRemoteConnection(connectionId);
+          const connection = await ensureRemoteConnectionConnected(connectionId);
 
           // Read remote root directory
           const entries = await invoke<RemoteDirectoryEntry[]>("ssh_read_directory", {
