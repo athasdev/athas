@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
+import { closeTerminalConnection } from "../services/terminal-connection-lifecycle";
 import type { TerminalDisposable, TerminalFrontend } from "../types/terminal-frontend.types";
 import type { TerminalInput, TerminalSize } from "../types/terminal.types";
 import type { TerminalTheme } from "./use-terminal-theme";
@@ -201,9 +202,7 @@ export function useTerminalConnection({
         return;
       }
 
-      void invoke(remoteConnectionId ? "close_remote_terminal" : "close_terminal", {
-        id: connectionId,
-      }).catch(() => {});
+      void closeTerminalConnection({ connectionId, remoteConnectionId }).catch(() => {});
       releaseTerminalEventChannel(connectionId);
 
       const exitCode = lastExitInfoRef.current?.exitCode;

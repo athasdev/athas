@@ -36,6 +36,7 @@ import {
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { serializeTerminals } from "@/features/terminal/lib/terminal-session-storage";
+import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { createTerminalEventChannel } from "@/features/terminal/utils/terminal-protocol";
@@ -2667,10 +2668,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
                   return;
                 }
 
-                const command = session.remoteConnectionId
-                  ? "close_remote_terminal"
-                  : "close_terminal";
-                await invoke(command, { id: session.connectionId }).catch((error) => {
+                await closeTerminalConnection(session).catch((error) => {
                   console.error("Failed to close terminal session:", error);
                 });
               }),

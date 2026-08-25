@@ -9,6 +9,7 @@ import {
 } from "@/features/terminal/constants/terminal-events";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
+import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
 import type { TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
@@ -77,10 +78,7 @@ const TerminalContainer = ({
       if (options.preserveSession) return;
 
       if (session?.connectionId) {
-        const closeCommand = session.remoteConnectionId
-          ? "close_remote_terminal"
-          : "close_terminal";
-        void invoke(closeCommand, { id: session.connectionId }).catch((error) => {
+        void closeTerminalConnection(session).catch((error) => {
           console.error("Failed to close terminal session:", error);
         });
       }

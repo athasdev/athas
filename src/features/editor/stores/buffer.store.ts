@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
@@ -43,6 +42,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
 import { ensureBufferInPane as ensureBufferInWorkspacePane } from "@/features/panes/utils/pane-buffer-actions";
 import { defaultSettings } from "@/features/settings/config/default-settings";
+import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { cleanupBufferHistoryTracking } from "@/features/editor/stores/buffer-history-tracking";
 import type {
@@ -781,8 +781,8 @@ const createBufferStore = (workspaceId: string) => {
               let newBuffers = closeNewTabInActivePane([...buffers]);
               if (existingExternalEditor) {
                 if (existingExternalEditor.type === "externalEditor") {
-                  invoke("close_terminal", {
-                    id: existingExternalEditor.terminalConnectionId,
+                  closeTerminalConnection({
+                    connectionId: existingExternalEditor.terminalConnectionId,
                   }).catch((e) => {
                     logger.error("BufferStore", "Failed to close old external editor terminal:", e);
                   });
@@ -1122,9 +1122,11 @@ const createBufferStore = (workspaceId: string) => {
 
           // Close terminal connection for external editor buffers
           if (closedBuffer.type === "externalEditor") {
-            invoke("close_terminal", { id: closedBuffer.terminalConnectionId }).catch((e) => {
-              logger.error("BufferStore", "Failed to close external editor terminal:", e);
-            });
+            closeTerminalConnection({ connectionId: closedBuffer.terminalConnectionId }).catch(
+              (e) => {
+                logger.error("BufferStore", "Failed to close external editor terminal:", e);
+              },
+            );
           }
 
           // Close terminal session for terminal tab buffers
@@ -1133,10 +1135,7 @@ const createBufferStore = (workspaceId: string) => {
               const terminalStore = useTerminalStore.getState();
               const session = terminalStore.actions.getSession(closedBuffer.sessionId);
               if (session?.connectionId) {
-                const closeCommand = session.remoteConnectionId
-                  ? "close_remote_terminal"
-                  : "close_terminal";
-                invoke(closeCommand, { id: session.connectionId }).catch((e) => {
+                closeTerminalConnection(session).catch((e) => {
                   logger.error("BufferStore", "Failed to close terminal tab session:", e);
                 });
               }
