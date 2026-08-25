@@ -34,6 +34,10 @@ import {
   getBufferByPath,
   getBufferIndexById,
 } from "@/features/editor/utils/buffer-index";
+import {
+  findDirtyEditorBuffer,
+  isDirtyEditorBuffer,
+} from "@/features/editor/utils/editor-buffer-selectors";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
@@ -1400,7 +1404,7 @@ const createBufferStore = (workspaceId: string) => {
           const { buffers } = get();
           const buffersToClose = buffers.filter((b) => b.id !== keepBufferId && !b.isPinned);
 
-          const dirtyBuffer = buffersToClose.find((b) => isEditorContent(b) && b.isDirty);
+          const dirtyBuffer = findDirtyEditorBuffer(buffersToClose);
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1419,7 +1423,7 @@ const createBufferStore = (workspaceId: string) => {
           const { buffers } = get();
           const buffersToClose = buffers.filter((b) => !b.isPinned);
 
-          const dirtyBuffer = buffersToClose.find((b) => isEditorContent(b) && b.isDirty);
+          const dirtyBuffer = findDirtyEditorBuffer(buffersToClose);
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1436,7 +1440,7 @@ const createBufferStore = (workspaceId: string) => {
         handleCloseSavedTabs: () => {
           const { buffers } = get();
           const buffersToClose = buffers.filter(
-            (buffer) => !buffer.isPinned && !(isEditorContent(buffer) && buffer.isDirty),
+            (buffer) => !buffer.isPinned && !isDirtyEditorBuffer(buffer),
           );
 
           buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
@@ -1449,7 +1453,7 @@ const createBufferStore = (workspaceId: string) => {
 
           const buffersToClose = buffers.slice(0, bufferIndex).filter((b) => !b.isPinned);
 
-          const dirtyBuffer = buffersToClose.find((b) => isEditorContent(b) && b.isDirty);
+          const dirtyBuffer = findDirtyEditorBuffer(buffersToClose);
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1471,7 +1475,7 @@ const createBufferStore = (workspaceId: string) => {
 
           const buffersToClose = buffers.slice(bufferIndex + 1).filter((b) => !b.isPinned);
 
-          const dirtyBuffer = buffersToClose.find((b) => isEditorContent(b) && b.isDirty);
+          const dirtyBuffer = findDirtyEditorBuffer(buffersToClose);
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {

@@ -7,16 +7,13 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
 import { emitGitChanged } from "@/features/git/events/git-events";
 import { recordLocalHistoryFile } from "@/features/local-history/api/local-history-api";
-import {
-  isEditorContent,
-  type EditorContent,
-  type PaneContent,
-} from "@/features/panes/types/pane-content.types";
+import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "@/features/file-system/controllers/platform";
 import type { EditorContentChangeOptions, Position, Range } from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
+import { getDirtyWritableEditorBuffers } from "../utils/editor-buffer-selectors";
 import { trackBufferHistoryChange } from "./buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
 import { queueEditorViewContentChange } from "./view.store";
@@ -190,13 +187,6 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
   }
 }
 
-function getDirtyEditorBuffers(buffers: PaneContent[]): EditorContent[] {
-  return buffers.filter(
-    (buffer): buffer is EditorContent =>
-      isEditorContent(buffer) && buffer.isDirty && !buffer.readOnly,
-  );
-}
-
 interface AppState {
   autoSaveTimeoutId: NodeJS.Timeout | null;
   quickEditState: {
@@ -337,9 +327,9 @@ export const useEditorAppStore = createSelectors(
         },
 
         handleSaveAll: async () => {
-          const dirtyBufferIds = getDirtyEditorBuffers(useBufferStore.getState().buffers).map(
-            (buffer) => buffer.id,
-          );
+          const dirtyBufferIds = getDirtyWritableEditorBuffers(
+            useBufferStore.getState().buffers,
+          ).map((buffer) => buffer.id);
           const saveResults = await Promise.all(
             dirtyBufferIds.map(async (bufferId) => {
               const saved = await saveEditorBufferById(bufferId);

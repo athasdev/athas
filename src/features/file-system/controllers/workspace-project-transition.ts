@@ -1,4 +1,5 @@
 import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { getDirtyEditorBuffers } from "@/features/editor/utils/editor-buffer-selectors";
 import { isEditorContent, type PaneContent } from "@/features/panes/types/pane-content.types";
 import { showChoiceDialog } from "@/ui/dialog";
 import { toast } from "sonner";
@@ -10,8 +11,7 @@ export type ProjectTransitionAction =
 
 type UnsavedProjectTransitionChoice = "cancel" | "discard" | "save";
 
-export const getDirtyEditorBuffers = (buffers: PaneContent[]) =>
-  buffers.filter((buffer) => isEditorContent(buffer) && buffer.isDirty);
+export { getDirtyEditorBuffers } from "@/features/editor/utils/editor-buffer-selectors";
 
 export const getUnsavedProjectTransitionMessage = (
   action: ProjectTransitionAction,
