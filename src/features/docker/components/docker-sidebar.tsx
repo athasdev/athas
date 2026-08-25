@@ -36,9 +36,8 @@ import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import Dialog, { showPromptDialog } from "@/ui/dialog";
+import { showPromptDialog } from "@/ui/dialog";
 import Input from "@/ui/input";
-import Textarea from "@/ui/textarea";
 import {
   SidebarSearchPopover,
   SidebarSectionLabel,
@@ -97,6 +96,7 @@ import {
   DockerInlineError,
   DockerUnavailableState,
 } from "./docker-sidebar-states";
+import { DockerImageDialog, type DockerImageDialogMode } from "./docker-image-dialog";
 import {
   ComposeServiceRow,
   ContainerRow,
@@ -120,7 +120,6 @@ type DockerSection =
   | "volumes"
   | "networks"
   | "cleanup";
-type DockerDialogMode = "build" | "run" | null;
 type DockerDetailTab = "logs" | "files";
 type DockerTab = "resources" | "compose" | "project" | "registry";
 type DockerContainerFilter = "all" | "running" | "stopped";
@@ -233,7 +232,7 @@ export function DockerSidebar() {
   const [projectConfigError, setProjectConfigError] = useState<string | null>(null);
   const [composeOutput, setComposeOutput] = useState<string | null>(null);
   const [dockerOutput, setDockerOutput] = useState<string | null>(null);
-  const [dialogMode, setDialogMode] = useState<DockerDialogMode>(null);
+  const [dialogMode, setDialogMode] = useState<DockerImageDialogMode | null>(null);
   const [buildDraft, setBuildDraft] = useState({
     contextPath: "",
     dockerfilePath: "",
@@ -2031,226 +2030,21 @@ export function DockerSidebar() {
       </SidebarWorkspace>
 
       {dialogMode ? (
-        <Dialog
-          title={dialogMode === "build" ? "Build Docker Image" : "Run Docker Image"}
-          icon={dialogMode === "build" ? ImageIcon : Play}
+        <DockerImageDialog
+          mode={dialogMode}
+          buildDraft={buildDraft}
+          runDraft={runDraft}
+          hasWorkspace={Boolean(rootFolderPath)}
+          isDockerDaemonReady={isDockerDaemonReady}
+          connectionError={connectionError}
+          setBuildDraft={setBuildDraft}
+          setRunDraft={setRunDraft}
           onClose={() => setDialogMode(null)}
-          size="md"
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setDialogMode(null)}>
-                Cancel
-              </Button>
-              {dialogMode === "build" ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    onClick={() => void handleSaveBuildPreset()}
-                    disabled={!rootFolderPath || !buildDraft.contextPath.trim()}
-                  >
-                    Save Preset
-                  </Button>
-                  <Button
-                    onClick={handleBuildImage}
-                    disabled={!isDockerDaemonReady || !buildDraft.contextPath.trim()}
-                  >
-                    Build
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    onClick={() => void handleSaveRunPreset()}
-                    disabled={!rootFolderPath || !runDraft.image.trim()}
-                  >
-                    Save Preset
-                  </Button>
-                  <Button
-                    onClick={handleRunImage}
-                    disabled={!isDockerDaemonReady || !runDraft.image.trim()}
-                  >
-                    Run
-                  </Button>
-                </>
-              )}
-            </>
-          }
-        >
-          {(dialogMode === "build" || dialogMode === "run") && connectionError ? (
-            <DockerCapabilityNotice className="mx-0 mb-3">
-              Start Docker before{" "}
-              {dialogMode === "build" ? "building this image" : "running this image"}. You can still
-              save these values as a preset.
-            </DockerCapabilityNotice>
-          ) : null}
-          {dialogMode === "build" ? (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label htmlFor="docker-build-context" className="ui-text-sm block text-foreground">
-                  Context Path
-                </label>
-                <Input
-                  id="docker-build-context"
-                  value={buildDraft.contextPath}
-                  onChange={(event) =>
-                    setBuildDraft((current) => ({
-                      ...current,
-                      contextPath: event.target.value,
-                    }))
-                  }
-                  placeholder="/path/to/project"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-build-file" className="ui-text-sm block text-foreground">
-                  Dockerfile
-                </label>
-                <Input
-                  id="docker-build-file"
-                  value={buildDraft.dockerfilePath}
-                  onChange={(event) =>
-                    setBuildDraft((current) => ({
-                      ...current,
-                      dockerfilePath: event.target.value,
-                    }))
-                  }
-                  placeholder="/path/to/Dockerfile"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-build-tag" className="ui-text-sm block text-foreground">
-                  Tag
-                </label>
-                <Input
-                  id="docker-build-tag"
-                  value={buildDraft.tag}
-                  onChange={(event) =>
-                    setBuildDraft((current) => ({ ...current, tag: event.target.value }))
-                  }
-                  placeholder="my-app:latest"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-build-args" className="ui-text-sm block text-foreground">
-                  Build Args
-                </label>
-                <Textarea
-                  id="docker-build-args"
-                  value={buildDraft.buildArgs}
-                  onChange={(event) =>
-                    setBuildDraft((current) => ({
-                      ...current,
-                      buildArgs: event.target.value,
-                    }))
-                  }
-                  placeholder="NODE_ENV=production"
-                  className="min-h-20 font-mono"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label htmlFor="docker-run-image" className="ui-text-sm block text-foreground">
-                  Image
-                </label>
-                <Input
-                  id="docker-run-image"
-                  value={runDraft.image}
-                  onChange={(event) =>
-                    setRunDraft((current) => ({ ...current, image: event.target.value }))
-                  }
-                  placeholder="nginx:latest"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-run-name" className="ui-text-sm block text-foreground">
-                  Container Name
-                </label>
-                <Input
-                  id="docker-run-name"
-                  value={runDraft.name}
-                  onChange={(event) =>
-                    setRunDraft((current) => ({ ...current, name: event.target.value }))
-                  }
-                  placeholder="my-container"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label htmlFor="docker-run-ports" className="ui-text-sm block text-foreground">
-                    Ports
-                  </label>
-                  <Textarea
-                    id="docker-run-ports"
-                    value={runDraft.ports}
-                    onChange={(event) =>
-                      setRunDraft((current) => ({ ...current, ports: event.target.value }))
-                    }
-                    placeholder="8080:80"
-                    className="min-h-20 font-mono"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="docker-run-volumes" className="ui-text-sm block text-foreground">
-                    Volumes
-                  </label>
-                  <Textarea
-                    id="docker-run-volumes"
-                    value={runDraft.volumes}
-                    onChange={(event) =>
-                      setRunDraft((current) => ({ ...current, volumes: event.target.value }))
-                    }
-                    placeholder="/host:/container"
-                    className="min-h-20 font-mono"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-run-env" className="ui-text-sm block text-foreground">
-                  Environment
-                </label>
-                <Textarea
-                  id="docker-run-env"
-                  value={runDraft.env}
-                  onChange={(event) =>
-                    setRunDraft((current) => ({ ...current, env: event.target.value }))
-                  }
-                  placeholder="KEY=value"
-                  className="min-h-20 font-mono"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-run-env-files" className="ui-text-sm block text-foreground">
-                  Env Files
-                </label>
-                <Textarea
-                  id="docker-run-env-files"
-                  value={runDraft.envFiles}
-                  onChange={(event) =>
-                    setRunDraft((current) => ({ ...current, envFiles: event.target.value }))
-                  }
-                  placeholder=".env"
-                  className="min-h-16 font-mono"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-run-command" className="ui-text-sm block text-foreground">
-                  Command
-                </label>
-                <Input
-                  id="docker-run-command"
-                  value={runDraft.command}
-                  onChange={(event) =>
-                    setRunDraft((current) => ({ ...current, command: event.target.value }))
-                  }
-                  placeholder="npm start"
-                />
-              </div>
-            </div>
-          )}
-        </Dialog>
+          onSaveBuildPreset={handleSaveBuildPreset}
+          onSaveRunPreset={handleSaveRunPreset}
+          onBuild={handleBuildImage}
+          onRun={handleRunImage}
+        />
       ) : null}
     </>
   );
