@@ -388,7 +388,7 @@ fn discovers_devcontainer_definitions() {
    )
    .expect("devcontainer json");
 
-   let definitions = discover_dev_containers(&workspace.path().to_path_buf());
+   let definitions = discover_dev_containers(workspace.path());
 
    assert_eq!(definitions.len(), 1);
    assert_eq!(definitions[0].name, "Rust");
