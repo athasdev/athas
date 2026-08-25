@@ -89,6 +89,26 @@ fn parses_container_file_archive_top_level_entries() {
 }
 
 #[test]
+fn parses_container_file_archive_without_a_wrapper_directory() {
+   let mut builder = tar::Builder::new(Vec::new());
+   append_tar_file(&mut builder, "package.json", b"{}");
+   append_tar_file(&mut builder, "src/main.rs", b"fn main() {}");
+   let archive = builder.into_inner().expect("archive bytes");
+
+   let entries = parse_container_file_archive(&archive, "/app").expect("container files");
+
+   assert_eq!(entries.len(), 2);
+   assert!(
+      entries
+         .iter()
+         .any(|entry| entry.name == "src" && entry.path == "/app/src" && entry.is_directory)
+   );
+   assert!(entries.iter().any(|entry| {
+      entry.name == "package.json" && entry.path == "/app/package.json" && !entry.is_directory
+   }));
+}
+
+#[test]
 fn parses_registry_search_json_lines() {
    let rows = parse_json_lines::<DockerRegistrySearchRow>(
       r#"{"Name":"nginx","Description":"Official build of Nginx.","StarCount":"21000","Official":"[OK]","Automated":""}"#,
