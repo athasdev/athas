@@ -80,21 +80,23 @@ import {
 import {
   getDatabaseTypeFromPath,
   getFilenameFromPath,
-  isBinaryContent,
   isBinaryFile,
   isKnownTextFile,
   isImageFile,
   isPdfFile,
 } from "../controllers/file-utils";
+import { resolveFileOpenPath, shouldResolveFileOpenSymlink } from "../controllers/file-open-path";
 import { useFileWatcherStore } from "../stores/file-watcher.store";
 import { fffListFiles, fffTrackAccess } from "@/features/file-search/lib/file-search-api";
 import { canUseNativeFileSearch } from "@/features/file-search/utils/file-search-paths";
 import { ensureWorkspaceFileSearch } from "@/features/file-search/services/workspace-file-search";
 import { cancelFileWatcherRefreshes } from "../services/file-watcher-refresh-scheduler";
 import {
-  getWorkspaceResourceProvider,
-  readWorkspaceDirectoryEntries,
-} from "../services/workspace-resource-provider";
+  createFileOpenResource,
+  inspectFileOpenResource,
+  readFileOpenText,
+} from "../services/file-open-resource";
+import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
 import { useRecentFilesStore } from "../stores/recent-files.store";
@@ -107,7 +109,7 @@ import {
   getWslProjectName,
   type WslDirectoryEntry,
 } from "@/features/wsl/controllers/wsl-workspace";
-import { buildWslPath, parseWslPath, resolveWslTargetPath } from "@/features/wsl/utils/wsl-path";
+import { buildWslPath, parseWslPath } from "@/features/wsl/utils/wsl-path";
 import { shouldIgnore, updateDirectoryContents } from "../controllers/utils";
 import {
   getDirtyEditorBuffers,
@@ -144,19 +146,6 @@ const logWorkspaceOpenStep = (
 
   frontendTrace("error", "workspace-open", `${label}:error`, payload);
 };
-
-const inFlightFileReads = new Map<string, Promise<unknown>>();
-
-function readFileOnce<T>(key: string, loader: () => Promise<T>): Promise<T> {
-  const existing = inFlightFileReads.get(key) as Promise<T> | undefined;
-  if (existing) return existing;
-
-  const promise = loader().finally(() => {
-    inFlightFileReads.delete(key);
-  });
-  inFlightFileReads.set(key, promise);
-  return promise;
-}
 
 function waitForWorkspaceIdle(): Promise<void> {
   return new Promise((resolve) => {
@@ -211,7 +200,6 @@ const readWorkspaceRootEntry = async (path: string): Promise<FileEntry> => {
   return wrapWithRootFolder(fileTree, path, projectName)[0];
 };
 
-const textFileDecoder = new TextDecoder("utf-8");
 const IMMEDIATE_SESSION_BUFFERS_TO_RESTORE = 1;
 const pendingWorkspaceSessionWrites = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -1454,39 +1442,10 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             });
         }
         const selectedFileEntry = findFileInTree(get().files, path);
-        const shouldResolveSymlink =
-          selectedFileEntry?.isSymlink === true &&
-          !path.startsWith("diff://") &&
-          !path.startsWith("remote://");
+        const shouldResolveSymlink = shouldResolveFileOpenSymlink(path, selectedFileEntry);
         if (shouldResolveSymlink) {
           try {
-            const workspaceRoot = get().rootFolderPath;
-            const symlinkInfo = selectedFileEntry.symlinkTarget
-              ? { is_symlink: true, target: selectedFileEntry.symlinkTarget }
-              : await getSymlinkInfo(path, workspaceRoot);
-
-            if (symlinkInfo.is_symlink && symlinkInfo.target) {
-              const wslTargetPath = resolveWslTargetPath(path, symlinkInfo.target);
-              if (wslTargetPath) {
-                resolvedPath = wslTargetPath;
-              } else {
-                const pathSeparator = path.includes("\\") ? "\\" : "/";
-                const pathParts = path.split(pathSeparator);
-                pathParts.pop();
-                const parentDir = pathParts.join(pathSeparator);
-
-                if (
-                  symlinkInfo.target.startsWith(pathSeparator) ||
-                  symlinkInfo.target.match(/^[a-zA-Z]:/)
-                ) {
-                  resolvedPath = symlinkInfo.target;
-                } else {
-                  resolvedPath = workspaceRoot
-                    ? `${workspaceRoot}${pathSeparator}${symlinkInfo.target}`
-                    : `${parentDir}${pathSeparator}${symlinkInfo.target}`;
-                }
-              }
-            }
+            resolvedPath = await resolveFileOpenPath(path, selectedFileEntry, get().rootFolderPath);
           } catch (error) {
             console.error("Failed to resolve symlink:", error);
           }
@@ -1578,23 +1537,15 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         } else {
           let preloadedText: string | null = null;
 
-          const wslInfo = parseWslPath(path);
-          const providerPath = parseRemotePath(path) || wslInfo ? path : resolvedPath;
-          const resourceProvider = getWorkspaceResourceProvider(providerPath);
+          const fileOpenResource = createFileOpenResource(path, resolvedPath);
 
-          const resolvedKnownTextPath =
-            resolvedPath === path ? isKnownTextPath : isKnownTextFile(resolvedPath);
-
-          if (resourceProvider.kind !== "remote" && !resolvedKnownTextPath) {
+          if (fileOpenResource.shouldInspectBytes) {
             try {
-              const fileData = await readFileOnce(
-                `${resourceProvider.kind}-bytes:${providerPath}`,
-                () => resourceProvider.readBytes(providerPath),
-              );
+              const inspection = await inspectFileOpenResource(fileOpenResource);
 
               if (isStaleRequest()) return;
 
-              if (fileData && isBinaryContent(fileData)) {
+              if (inspection.isBinary) {
                 openBuffer(
                   path,
                   fileName,
@@ -1622,12 +1573,10 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
                 return;
               }
 
-              if (fileData) {
-                preloadedText = textFileDecoder.decode(fileData);
-              }
+              preloadedText = inspection.preloadedText;
             } catch (error) {
               console.error(
-                resourceProvider.kind === "wsl"
+                fileOpenResource.provider.kind === "wsl"
                   ? "Failed to inspect WSL file bytes before opening:"
                   : "Failed to inspect file bytes before opening:",
                 error,
@@ -1643,7 +1592,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           const hasExternalEditorCommand =
             settings.externalEditor !== "custom" || settings.customEditorCommand.trim().length > 0;
 
-          if (settings.externalEditor !== "none" && hasExternalEditorCommand && !wslInfo) {
+          if (settings.externalEditor !== "none" && hasExternalEditorCommand && !selectedWslInfo) {
             if (isStaleRequest()) return;
             try {
               const { rootFolderPath } = get();
@@ -1676,11 +1625,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             }
           }
 
-          const content =
-            preloadedText ??
-            (await readFileOnce(`${resourceProvider.kind}-text:${providerPath}`, () =>
-              resourceProvider.readText(providerPath),
-            ));
+          const content = await readFileOpenText(fileOpenResource, preloadedText);
           fileOpenBenchmark.mark(path, "file-read", `${content.length} chars`);
 
           if (isStaleRequest()) return;
