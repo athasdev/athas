@@ -124,7 +124,7 @@ interface FileExplorerTreeProps {
   onRefreshDirectory?: (path: string, options?: { force?: boolean }) => void;
   onRevealInFinder?: (path: string) => void;
   onUploadFile?: (directoryPath: string) => void;
-  onFileMove?: (oldPath: string, newPath: string) => void;
+  onFileMove?: (oldPath: string, newPath: string) => void | Promise<void>;
 }
 
 interface FileExplorerAlertDialogState {

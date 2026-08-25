@@ -1886,34 +1886,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           return;
         }
 
-        const remoteSource = parseRemotePath(oldPath);
-        const remoteTarget = parseRemotePath(newPath);
-        const wslSource = parseWslPath(oldPath);
-        const wslTarget = parseWslPath(newPath);
-        if (
-          remoteSource &&
-          remoteTarget &&
-          remoteSource.connectionId === remoteTarget.connectionId
-        ) {
-          await invoke("ssh_rename_path", {
-            connectionId: remoteSource.connectionId,
-            sourcePath: remoteSource.remotePath,
-            targetPath: remoteTarget.remotePath,
-          });
-        } else if (wslSource || wslTarget) {
-          if (!wslSource || !wslTarget || wslSource.distro !== wslTarget.distro) {
-            toast.error(
-              "Moving files between WSL distributions or local folders is not supported.",
-            );
-            return;
-          }
-
-          await invoke("wsl_rename_path", {
-            distro: wslSource.distro,
-            sourcePath: wslSource.linuxPath,
-            targetPath: wslTarget.linuxPath,
-          });
-        }
+        await getWorkspaceEntryMutationProvider(oldPath).movePath(oldPath, newPath);
 
         // Remove from old location
         let updatedFiles = removeFileFromTree(get().files, oldPath);

@@ -7,6 +7,7 @@ const join = vi.hoisted(() => vi.fn());
 const createNewDirectory = vi.hoisted(() => vi.fn());
 const createNewFile = vi.hoisted(() => vi.fn());
 const deleteFileOrDirectory = vi.hoisted(() => vi.fn());
+const moveFile = vi.hoisted(() => vi.fn());
 const renameFile = vi.hoisted(() => vi.fn());
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
@@ -16,7 +17,7 @@ vi.mock("../controllers/file-operations", () => ({
   createNewFile,
   deleteFileOrDirectory,
 }));
-vi.mock("../controllers/platform", () => ({ renameFile }));
+vi.mock("../controllers/platform", () => ({ moveFile, renameFile }));
 
 describe("workspace entry mutation provider", () => {
   beforeEach(() => {
@@ -26,6 +27,7 @@ describe("workspace entry mutation provider", () => {
     deleteFileOrDirectory.mockReset();
     dirname.mockReset();
     join.mockReset();
+    moveFile.mockReset();
     renameFile.mockReset();
   });
 
@@ -135,5 +137,68 @@ describe("workspace entry mutation provider", () => {
       targetPath: "/repo/src/renamed.ts",
     });
     expect(renameFile).not.toHaveBeenCalled();
+  });
+
+  it("moves local paths through the platform adapter", async () => {
+    const provider = getWorkspaceEntryMutationProvider("/workspace/src/original.ts");
+
+    await provider.movePath("/workspace/src/original.ts", "/workspace/lib/original.ts");
+
+    expect(moveFile).toHaveBeenCalledWith(
+      "/workspace/src/original.ts",
+      "/workspace/lib/original.ts",
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("moves WSL paths through the platform adapter", async () => {
+    const provider = getWorkspaceEntryMutationProvider("wsl://Ubuntu/home/me/src/original.ts");
+
+    await provider.movePath(
+      "wsl://Ubuntu/home/me/src/original.ts",
+      "wsl://Ubuntu/home/me/lib/original.ts",
+    );
+
+    expect(moveFile).toHaveBeenCalledWith(
+      "wsl://Ubuntu/home/me/src/original.ts",
+      "wsl://Ubuntu/home/me/lib/original.ts",
+    );
+  });
+
+  it("moves SSH paths through one remote backend call", async () => {
+    const provider = getWorkspaceEntryMutationProvider(
+      "remote://connection-1/repo/src/original.ts",
+    );
+
+    await provider.movePath(
+      "remote://connection-1/repo/src/original.ts",
+      "remote://connection-1/repo/lib/original.ts",
+    );
+
+    expect(invoke).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledWith("ssh_rename_path", {
+      connectionId: "connection-1",
+      sourcePath: "/repo/src/original.ts",
+      targetPath: "/repo/lib/original.ts",
+    });
+    expect(moveFile).not.toHaveBeenCalled();
+  });
+
+  it("rejects moves across workspace backends", async () => {
+    await expect(
+      getWorkspaceEntryMutationProvider("/workspace/original.ts").movePath(
+        "/workspace/original.ts",
+        "remote://connection-1/repo/original.ts",
+      ),
+    ).rejects.toThrow("between local and remote workspaces");
+    await expect(
+      getWorkspaceEntryMutationProvider("remote://connection-1/repo/original.ts").movePath(
+        "remote://connection-1/repo/original.ts",
+        "remote://connection-2/repo/original.ts",
+      ),
+    ).rejects.toThrow("between SSH connections or local folders");
+
+    expect(moveFile).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalled();
   });
 });

@@ -8,13 +8,14 @@ import {
   createNewFile,
   deleteFileOrDirectory,
 } from "../controllers/file-operations";
-import { renameFile } from "../controllers/platform";
+import { moveFile, renameFile } from "../controllers/platform";
 
 export interface WorkspaceEntryMutationProvider {
   readonly kind: "local" | "remote" | "wsl";
   createFile(directoryPath: string, fileName: string): Promise<string>;
   createDirectory(parentPath: string, folderName: string): Promise<string>;
   deletePath(path: string, isDirectory: boolean): Promise<void>;
+  movePath(sourcePath: string, targetPath: string): Promise<void>;
   renamePath(path: string, newName: string): Promise<string>;
 }
 
@@ -23,6 +24,13 @@ const createPlatformMutationProvider = (kind: "local" | "wsl"): WorkspaceEntryMu
   createFile: createNewFile,
   createDirectory: createNewDirectory,
   deletePath: (path) => deleteFileOrDirectory(path),
+  async movePath(sourcePath, targetPath) {
+    if (kind === "local" && (parseRemotePath(targetPath) || parseWslPath(targetPath))) {
+      throw new Error("Moving files between local and remote workspaces is not supported.");
+    }
+
+    await moveFile(sourcePath, targetPath);
+  },
   async renamePath(path, newName) {
     const wsl = parseWslPath(path);
     let targetPath: string;
@@ -83,6 +91,19 @@ const remoteMutationProvider: WorkspaceEntryMutationProvider = {
       connectionId: remote.connectionId,
       targetPath: remote.remotePath,
       isDirectory,
+    });
+  },
+  async movePath(sourcePath, targetPath) {
+    const source = parseRemotePath(sourcePath);
+    const target = parseRemotePath(targetPath);
+    if (!source || !target || source.connectionId !== target.connectionId) {
+      throw new Error("Moving files between SSH connections or local folders is not supported.");
+    }
+
+    await invoke("ssh_rename_path", {
+      connectionId: source.connectionId,
+      sourcePath: source.remotePath,
+      targetPath: target.remotePath,
     });
   },
   async renamePath(path, newName) {
