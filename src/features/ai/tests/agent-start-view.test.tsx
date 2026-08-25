@@ -29,5 +29,6 @@ describe("AgentStartView", () => {
     expect(markup).toContain("New file");
     expect(markup).toContain("Open file");
     expect(markup).toContain("New terminal");
+    expect(markup).not.toContain('data-slot="context-menu-trigger"');
   });
 });

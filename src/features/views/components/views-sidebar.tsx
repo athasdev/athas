@@ -3,16 +3,11 @@ import { getViewBufferPath } from "@/features/views/lib/view-buffer";
 import { useViewsStore } from "@/features/views/stores/views.store";
 import type { CustomViewDefinition } from "@/features/views/types/view.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
 import { PlusIcon, SquaresFourIcon, TrashIcon } from "@/ui/icons";
 import {
   SidebarIconButton,
+  SidebarListActionRow,
   SidebarListItem,
   SidebarScrollArea,
   SidebarWorkspace,
@@ -91,35 +86,36 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
         <SidebarScrollArea className="min-h-0 flex-1">
           <div className="space-y-1 overflow-x-hidden">
             {views.map((view) => (
-              <ContextMenu key={view.id}>
-                <ContextMenuTrigger
-                  onContextMenu={(event) => event.stopPropagation()}
-                  render={
-                    <SidebarListItem
-                      leading={<SquaresFourIcon />}
-                      description={view.kind === "github" ? "GitHub view" : "JSON view"}
-                      active={
-                        activeBuffer?.type === "customView" &&
-                        activeBuffer.projectPath === projectPath &&
-                        activeBuffer.viewId === view.id
-                      }
-                      onClick={() => openView(view)}
-                    >
-                      {view.name}
-                    </SidebarListItem>
-                  }
-                />
-                <ContextMenuContent>
-                  <ContextMenuItem onClick={() => openView(view)}>
-                    <SquaresFourIcon />
-                    Open View
-                  </ContextMenuItem>
-                  <ContextMenuItem variant="destructive" onClick={() => removeView(view.id)}>
+              <SidebarListActionRow
+                key={view.id}
+                actions={[
+                  <SidebarIconButton
+                    key="delete"
+                    className="hover:text-destructive"
+                    tooltip="Delete View"
+                    tooltipSide="right"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      removeView(view.id);
+                    }}
+                  >
                     <TrashIcon />
-                    Delete View
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
+                  </SidebarIconButton>,
+                ]}
+              >
+                <SidebarListItem
+                  leading={<SquaresFourIcon />}
+                  description={view.kind === "github" ? "GitHub view" : "JSON view"}
+                  active={
+                    activeBuffer?.type === "customView" &&
+                    activeBuffer.projectPath === projectPath &&
+                    activeBuffer.viewId === view.id
+                  }
+                  onClick={() => openView(view)}
+                >
+                  {view.name}
+                </SidebarListItem>
+              </SidebarListActionRow>
             ))}
           </div>
         </SidebarScrollArea>

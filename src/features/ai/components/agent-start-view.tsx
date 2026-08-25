@@ -94,33 +94,41 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
     },
   ];
 
+  const startView = (
+    <Empty className="m-auto max-w-2xl gap-4 px-6 py-8" data-slot="agent-start-view">
+      <EmptyHeader>
+        <EmptyTitle>Where should we begin?</EmptyTitle>
+      </EmptyHeader>
+
+      {children}
+
+      {showQuickActions ? (
+        <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">
+          {quickActions.map((item) => (
+            <Button
+              key={item.id}
+              type="button"
+              onClick={item.action}
+              variant="default"
+              className="w-full min-w-0 justify-start overflow-hidden"
+            >
+              {item.icon}
+              <span className="min-w-0 truncate">{item.label}</span>
+            </Button>
+          ))}
+        </div>
+      ) : null}
+    </Empty>
+  );
+
+  if (showQuickActions) {
+    return <div className="flex size-full min-h-0 flex-1 overflow-auto">{startView}</div>;
+  }
+
   return (
     <ContextMenu>
       <ContextMenuTrigger className="flex size-full min-h-0 flex-1 overflow-auto">
-        <Empty className="m-auto max-w-2xl gap-4 px-6 py-8" data-slot="agent-start-view">
-          <EmptyHeader>
-            <EmptyTitle>Where should we begin?</EmptyTitle>
-          </EmptyHeader>
-
-          {children}
-
-          {showQuickActions ? (
-            <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">
-              {quickActions.map((item) => (
-                <Button
-                  key={item.id}
-                  type="button"
-                  onClick={item.action}
-                  variant="default"
-                  className="w-full min-w-0 justify-start overflow-hidden"
-                >
-                  {item.icon}
-                  <span className="min-w-0 truncate">{item.label}</span>
-                </Button>
-              ))}
-            </div>
-          ) : null}
-        </Empty>
+        {startView}
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onClick={handleNewFile}>

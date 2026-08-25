@@ -2,15 +2,8 @@ import { removeWorktree } from "@/features/git/api/git-worktrees-api";
 import type { GitWorktree } from "@/features/git/types/git.types";
 import { openGitWorktreeWorkspace } from "@/features/git/utils/git-worktree-open";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/ui/context-menu";
 import { showConfirmDialog } from "@/ui/dialog";
-import { CopyIcon, NodesIcon, OpenExternalIcon, TrashIcon, WindowExpandIcon } from "@/ui/icons";
+import { CopyIcon, NodesIcon, TrashIcon, WindowExpandIcon } from "@/ui/icons";
 import { SidebarIconButton, SidebarListActionRow, SidebarListItem } from "@/ui/sidebar";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getFolderName } from "@/utils/path-helpers";
@@ -50,72 +43,55 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
   };
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger className="block" onContextMenu={(event) => event.stopPropagation()}>
-        <SidebarListActionRow
-          actions={[
-            <SidebarIconButton
-              key="new-window"
-              tooltip="Open in New Window"
-              tooltipSide="top"
-              onClick={(event) => {
-                event.stopPropagation();
-                openWorktreeInNewWindow();
-              }}
-            >
-              <WindowExpandIcon className="size-3" />
-            </SidebarIconButton>,
-            canRemove ? (
-              <SidebarIconButton
-                key="remove"
-                className="hover:text-destructive"
-                tooltip="Remove Worktree"
-                tooltipSide="top"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void handleRemove();
-                }}
-              >
-                <TrashIcon className="size-3" />
-              </SidebarIconButton>
-            ) : null,
-          ]}
+    <SidebarListActionRow
+      actions={[
+        <SidebarIconButton
+          key="new-window"
+          tooltip="Open in New Window"
+          tooltipSide="top"
+          onClick={(event) => {
+            event.stopPropagation();
+            openWorktreeInNewWindow();
+          }}
         >
-          <SidebarListItem
-            active={worktree.is_current}
-            appearance="activity"
-            leading={<NodesIcon className="size-4" />}
-            title={worktree.path}
-            onClick={openWorktree}
+          <WindowExpandIcon className="size-3" />
+        </SidebarIconButton>,
+        <SidebarIconButton
+          key="copy"
+          tooltip="Copy Path"
+          tooltipSide="top"
+          onClick={(event) => {
+            event.stopPropagation();
+            void writeClipboardText(worktree.path);
+          }}
+        >
+          <CopyIcon className="size-3" />
+        </SidebarIconButton>,
+        canRemove ? (
+          <SidebarIconButton
+            key="remove"
+            className="hover:text-destructive"
+            tooltip="Remove Worktree"
+            tooltipSide="top"
+            onClick={(event) => {
+              event.stopPropagation();
+              void handleRemove();
+            }}
           >
-            {getFolderName(worktree.path)}
-          </SidebarListItem>
-        </SidebarListActionRow>
-      </ContextMenuTrigger>
-
-      <ContextMenuContent>
-        <ContextMenuItem disabled={worktree.is_current} onClick={openWorktree}>
-          <OpenExternalIcon />
-          Open Worktree
-        </ContextMenuItem>
-        <ContextMenuItem onClick={openWorktreeInNewWindow}>
-          <WindowExpandIcon />
-          Open in New Window
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => void writeClipboardText(worktree.path)}>
-          <CopyIcon />
-          Copy Path
-        </ContextMenuItem>
-        {canRemove ? (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem variant="destructive" onClick={() => void handleRemove()}>
-              <TrashIcon />
-              Remove Worktree
-            </ContextMenuItem>
-          </>
-        ) : null}
-      </ContextMenuContent>
-    </ContextMenu>
+            <TrashIcon className="size-3" />
+          </SidebarIconButton>
+        ) : null,
+      ]}
+    >
+      <SidebarListItem
+        active={worktree.is_current}
+        appearance="activity"
+        leading={<NodesIcon className="size-4" />}
+        title={worktree.path}
+        onClick={openWorktree}
+      >
+        {getFolderName(worktree.path)}
+      </SidebarListItem>
+    </SidebarListActionRow>
   );
 }

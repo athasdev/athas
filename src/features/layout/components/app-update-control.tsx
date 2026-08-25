@@ -2,12 +2,6 @@ import { useMemo, useRef, useState } from "react";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/ui/context-menu";
 import { Dropdown } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import {
@@ -98,80 +92,62 @@ export function AppUpdateControl() {
 
   return (
     <div className="ml-3 flex items-center">
-      <ContextMenu>
-        <ContextMenuTrigger
-          className="contents"
-          onContextMenu={(event) => {
-            event.stopPropagation();
-            setIsUpdateMenuOpen(false);
-          }}
-        >
-          <ButtonGroup
-            ref={updateMenuRef}
-            variant="accent"
-            className={
-              updateError
-                ? "bg-destructive/10 *:data-[slot=button-group-separator]:bg-destructive/25"
-                : undefined
+      <ButtonGroup
+        ref={updateMenuRef}
+        variant="accent"
+        className={
+          updateError
+            ? "bg-destructive/10 *:data-[slot=button-group-separator]:bg-destructive/25"
+            : undefined
+        }
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          tooltip={updateTooltip}
+          tooltipSide="bottom"
+          disabled={updateBusy}
+          onClick={() => {
+            if (!updateBusy) {
+              void downloadAndInstall();
             }
-          >
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              tooltip={updateTooltip}
-              tooltipSide="bottom"
-              disabled={updateBusy}
-              onClick={() => {
-                if (!updateBusy) {
-                  void downloadAndInstall();
-                }
-              }}
-              className={cn(
-                "font-sans ui-text-sm font-medium",
-                updateError && "text-destructive hover:bg-destructive/10 hover:text-destructive",
-                updateBusy &&
-                  "cursor-wait bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary",
-              )}
-            >
-              {updateBusy ? (
-                <Spinner label={downloading ? "Downloading" : "Installing"} compact />
-              ) : (
-                <DownloadIcon />
-              )}
-              <span>{updateLabel}</span>
-            </Button>
-            <ButtonGroupSeparator />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              active={isUpdateMenuOpen}
-              tooltip="Update Options"
-              tooltipSide="bottom"
-              onClick={() => setIsUpdateMenuOpen((open) => !open)}
-              className={
-                updateError
-                  ? "text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  : undefined
-              }
-              aria-label="Update options"
-              aria-haspopup="menu"
-              aria-expanded={isUpdateMenuOpen}
-            >
-              <CaretDownIcon />
-            </Button>
-          </ButtonGroup>
-        </ContextMenuTrigger>
-        <ContextMenuContent side="bottom" align="start" sideOffset={4} className="min-w-52">
-          {updateMenuItems.map((item) => (
-            <ContextMenuItem key={item.id} disabled={item.disabled} onClick={item.onClick}>
-              {item.icon}
-              {item.label}
-            </ContextMenuItem>
-          ))}
-        </ContextMenuContent>
-      </ContextMenu>
+          }}
+          className={cn(
+            "font-sans ui-text-sm font-medium",
+            updateError && "text-destructive hover:bg-destructive/10 hover:text-destructive",
+            updateBusy &&
+              "cursor-wait bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary",
+          )}
+        >
+          {updateBusy ? (
+            <Spinner label={downloading ? "Downloading" : "Installing"} compact />
+          ) : (
+            <DownloadIcon />
+          )}
+          <span>{updateLabel}</span>
+        </Button>
+        <ButtonGroupSeparator />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          active={isUpdateMenuOpen}
+          tooltip="Update Options"
+          tooltipSide="bottom"
+          onClick={() => setIsUpdateMenuOpen((open) => !open)}
+          className={
+            updateError
+              ? "text-destructive hover:bg-destructive/10 hover:text-destructive"
+              : undefined
+          }
+          aria-label="Update options"
+          aria-haspopup="menu"
+          aria-expanded={isUpdateMenuOpen}
+        >
+          <CaretDownIcon />
+        </Button>
+      </ButtonGroup>
       <Dropdown
         isOpen={isUpdateMenuOpen}
         onClose={() => setIsUpdateMenuOpen(false)}
