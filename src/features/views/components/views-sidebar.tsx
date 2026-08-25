@@ -91,7 +91,7 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
                 actions={[
                   <SidebarIconButton
                     key="delete"
-                    className="hover:text-destructive"
+                    tone="danger"
                     tooltip="Delete View"
                     tooltipSide="right"
                     onClick={(event) => {

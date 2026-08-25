@@ -30,7 +30,7 @@ import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag"
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
-import { COLLAPSED_ACTIVITY_RAIL_WIDTH, SidebarActivityRail } from "./sidebar/main-sidebar";
+import { ActivitySidebar, COLLAPSED_ACTIVITY_RAIL_WIDTH } from "./sidebar/activity-sidebar";
 import { SidebarPane } from "./sidebar/sidebar-pane";
 
 const AIChat = lazy(() => import("@/features/ai/components/chat/ai-chat"));
@@ -299,7 +299,7 @@ export function MainLayout() {
 
       <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden pr-workbench" style={{ minHeight: 0 }}>
-          <SidebarActivityRail expanded={activityRailExpanded} />
+          <ActivitySidebar expanded={activityRailExpanded} />
           <ResizablePane
             position="left"
             widthKey="sidebarWidth"

@@ -194,13 +194,13 @@ export function SidebarComposerBody({
 
 export const SidebarIconButton = forwardRef<
   HTMLButtonElement,
-  Omit<ButtonProps, "variant" | "size">
->(function SidebarIconButton({ className, ...props }, ref) {
+  Omit<ButtonProps, "variant" | "size"> & { tone?: "default" | "danger" }
+>(function SidebarIconButton({ className, tone = "default", ...props }, ref) {
   return (
     <Button
       ref={ref}
       type="button"
-      variant="ghost"
+      variant={tone === "danger" ? "danger" : "ghost"}
       size="icon-xs"
       className={cn("[&_svg]:size-[1em]", className)}
       {...props}

@@ -54,7 +54,7 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
             openWorktreeInNewWindow();
           }}
         >
-          <WindowExpandIcon className="size-3" />
+          <WindowExpandIcon />
         </SidebarIconButton>,
         <SidebarIconButton
           key="copy"
@@ -65,12 +65,12 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
             void writeClipboardText(worktree.path);
           }}
         >
-          <CopyIcon className="size-3" />
+          <CopyIcon />
         </SidebarIconButton>,
         canRemove ? (
           <SidebarIconButton
             key="remove"
-            className="hover:text-destructive"
+            tone="danger"
             tooltip="Remove Worktree"
             tooltipSide="top"
             onClick={(event) => {
@@ -78,7 +78,7 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
               void handleRemove();
             }}
           >
-            <TrashIcon className="size-3" />
+            <TrashIcon />
           </SidebarIconButton>
         ) : null,
       ]}
@@ -86,7 +86,7 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
       <SidebarListItem
         active={worktree.is_current}
         appearance="activity"
-        leading={<NodesIcon className="size-4" />}
+        leading={<NodesIcon />}
         title={worktree.path}
         onClick={openWorktree}
       >

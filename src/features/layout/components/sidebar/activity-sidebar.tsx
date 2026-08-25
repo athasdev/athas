@@ -5,7 +5,6 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-  type MouseEvent as ReactMouseEvent,
   type UIEvent as ReactUIEvent,
 } from "react";
 import { flushSync } from "react-dom";
@@ -14,12 +13,11 @@ import {
   ActivityRailNavigation,
   ActivitySidebarNavigation,
 } from "@/features/layout/components/sidebar/activity-navigation";
-import {
-  SidebarAgentHistory,
-  SidebarPinnedItems,
-  SidebarTerminalHistory,
-  SidebarWorktreeHistory,
-} from "@/features/layout/components/sidebar/sidebar-history";
+import { ActivityAgentHistory } from "@/features/layout/components/sidebar/activity-agent-history";
+import { ActivityPinnedItems } from "@/features/layout/components/sidebar/activity-pinned-items";
+import { ActivitySidebarMenu } from "@/features/layout/components/sidebar/activity-sidebar-menu";
+import { ActivityTerminalHistory } from "@/features/layout/components/sidebar/activity-terminal-history";
+import { ActivityWorktreeHistory } from "@/features/layout/components/sidebar/activity-worktree-history";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import {
   SidebarProjectDots,
@@ -27,6 +25,7 @@ import {
 } from "@/features/layout/components/sidebar/sidebar-projects";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { useActivityNavigationItems } from "@/features/layout/hooks/use-activity-navigation-items";
+import { useActivitySidebarResize } from "@/features/layout/hooks/use-activity-sidebar-resize";
 import {
   getProjectCarouselPageIndex,
   getProjectCarouselWindow,
@@ -39,44 +38,17 @@ import {
   useWorkspaceTabsStore,
   type ProjectTab,
 } from "@/features/window/stores/workspace-tabs.store";
-import {
-  ContextMenu,
-  ContextMenuCheckboxItem,
-  ContextMenuContent,
-  ContextMenuGroup,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from "@/ui/context-menu";
+import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import { Spinner } from "@/ui/spinner";
-import {
-  EyeIcon,
-  ExtensionsIcon,
-  FolderIcon,
-  FolderOpenIcon,
-  MagnifyingGlassIcon,
-  NodesIcon,
-  SparkleIcon,
-  TerminalIcon,
-} from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
-interface SidebarActivityRailProps {
-  expanded?: boolean;
+interface ActivitySidebarProps {
+  expanded: boolean;
 }
 
 export const COLLAPSED_ACTIVITY_RAIL_WIDTH = 40;
-const DEFAULT_ACTIVITY_RAIL_WIDTH = 160;
-const MIN_ACTIVITY_RAIL_WIDTH = 140;
-const MAX_ACTIVITY_RAIL_WIDTH = 320;
 const ACTIVITY_RAIL_HORIZONTAL_GUTTER = 8;
 const PROJECT_SCROLL_SETTLE_DELAY_MS = 120;
-
-const clampActivityRailWidth = (width: number) =>
-  Math.min(MAX_ACTIVITY_RAIL_WIDTH, Math.max(MIN_ACTIVITY_RAIL_WIDTH, Math.round(width)));
 
 const waitForProjectCarouselPaint = () =>
   new Promise<void>((resolve) => {
@@ -85,7 +57,7 @@ const waitForProjectCarouselPaint = () =>
     });
   });
 
-export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRailProps) => {
+export const ActivitySidebar = memo(({ expanded }: ActivitySidebarProps) => {
   const { openSidebarView } = useSidebarPaneController();
   const isGitViewActive = useUIState((state) => state.isGitViewActive);
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
@@ -115,7 +87,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       );
     }, 0);
   }, [openSidebarView]);
-  const configuredActivityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const openFoldersInNewWindow = useSettingsStore((state) => state.settings.openFoldersInNewWindow);
   const hiddenSidebarActivityItems = useSettingsStore(
     (state) => state.settings.hiddenSidebarActivityItems,
@@ -137,16 +108,9 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   );
   const projectCarouselEnabled = !openFoldersInNewWindow;
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
-  const [activityRailWidth, setActivityRailWidth] = useState(() =>
-    clampActivityRailWidth(configuredActivityRailWidth || DEFAULT_ACTIVITY_RAIL_WIDTH),
-  );
-  const [isActivityRailResizing, setIsActivityRailResizing] = useState(false);
   const [carouselProjectId, setCarouselProjectId] = useState<string | null>(null);
   const [loadingCarouselProjectId, setLoadingCarouselProjectId] = useState<string | null>(null);
-  const railRef = useRef<HTMLDivElement>(null);
   const railContentRef = useRef<HTMLDivElement>(null);
-  const resizeFrameRef = useRef<number | null>(null);
-  const isResizingRef = useRef(false);
   const isProjectGestureSettlingRef = useRef(false);
   const projectScrollEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
@@ -163,7 +127,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     : carouselProject
       ? [carouselProject]
       : [];
-  const railPanelWidth = expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH;
   const switchToProject = useFileSystemStore((state) => state.switchToProject);
   const isSwitchingProject = useFileSystemStore((state) => state.isSwitchingProject);
   const handleSidebarViewChange = (view: typeof activeSidebarView) => {
@@ -216,13 +179,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   }, [updateSetting]);
 
   useEffect(() => {
-    if (isResizingRef.current) return;
-    setActivityRailWidth(
-      clampActivityRailWidth(configuredActivityRailWidth || DEFAULT_ACTIVITY_RAIL_WIDTH),
-    );
-  }, [configuredActivityRailWidth]);
-
-  useEffect(() => {
     if (isProjectGestureSettlingRef.current) return;
     setCarouselProjectId(activeProject?.id ?? null);
   }, [activeProject?.id]);
@@ -235,6 +191,18 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     if (!container || !currentPanel) return;
     container.scrollLeft = currentPanel.offsetLeft;
   }, []);
+
+  const {
+    width: activityRailWidth,
+    isResizing: isActivityRailResizing,
+    sidebarRef: railRef,
+    handleResizeStart,
+  } = useActivitySidebarResize({
+    expanded,
+    contentRef: railContentRef,
+    onPreview: alignProjectCarouselToCurrent,
+  });
+  const railPanelWidth = expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH;
 
   useLayoutEffect(() => {
     alignProjectCarouselToCurrent();
@@ -255,96 +223,11 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
 
   useEffect(() => {
     return () => {
-      if (resizeFrameRef.current !== null) {
-        cancelAnimationFrame(resizeFrameRef.current);
-      }
       if (projectScrollEndTimerRef.current !== null) {
         clearTimeout(projectScrollEndTimerRef.current);
       }
     };
   }, []);
-
-  const previewActivityRailWidth = useCallback(
-    (nextWidth: number) => {
-      const clampedWidth = clampActivityRailWidth(nextWidth);
-      const expandedRailWidth = `calc(${clampedWidth}px + var(--athas-workbench-gap))`;
-
-      if (resizeFrameRef.current !== null) {
-        cancelAnimationFrame(resizeFrameRef.current);
-      }
-
-      resizeFrameRef.current = requestAnimationFrame(() => {
-        if (railRef.current) {
-          railRef.current.style.width = expandedRailWidth;
-        }
-
-        if (railContentRef.current) {
-          railContentRef.current.style.width = `${clampedWidth}px`;
-          alignProjectCarouselToCurrent();
-        }
-
-        resizeFrameRef.current = null;
-      });
-    },
-    [alignProjectCarouselToCurrent],
-  );
-
-  const handleResizeMouseDown = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
-      if (!expanded) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const startX = event.clientX;
-      const startWidth = activityRailWidth;
-      const previousCursor = document.body.style.cursor;
-      const previousUserSelect = document.body.style.userSelect;
-
-      isResizingRef.current = true;
-      setIsActivityRailResizing(true);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-
-      const finishResize = (clientX: number) => {
-        const nextWidth = clampActivityRailWidth(startWidth + clientX - startX);
-        const expandedRailWidth = `calc(${nextWidth}px + var(--athas-workbench-gap))`;
-        setActivityRailWidth(nextWidth);
-
-        if (railRef.current) {
-          railRef.current.style.width = expandedRailWidth;
-        }
-
-        if (railContentRef.current) {
-          railContentRef.current.style.width = `${nextWidth}px`;
-        }
-
-        void updateSetting("activityRailWidth", nextWidth);
-      };
-
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        previewActivityRailWidth(startWidth + moveEvent.clientX - startX);
-      };
-
-      const handleMouseUp = (upEvent: MouseEvent) => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-        document.body.style.cursor = previousCursor;
-        document.body.style.userSelect = previousUserSelect;
-        if (resizeFrameRef.current !== null) {
-          cancelAnimationFrame(resizeFrameRef.current);
-          resizeFrameRef.current = null;
-        }
-        isResizingRef.current = false;
-        setIsActivityRailResizing(false);
-        finishResize(upEvent.clientX);
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    },
-    [activityRailWidth, expanded, previewActivityRailWidth, updateSetting],
-  );
 
   const activateCarouselProject = useCallback(
     async (projectId: string) => {
@@ -512,19 +395,19 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
               )}
               {expanded ? (
                 <>
-                  <SidebarPinnedItems
+                  <ActivityPinnedItems
                     workspacePath={project.path}
                     showAgents={showActivityRailAgentHistory}
                     showTerminals={coreFeatures.terminal && showActivityRailTerminals}
                   />
                   {showActivityRailAgentHistory ? (
-                    <SidebarAgentHistory workspacePath={project.path} />
+                    <ActivityAgentHistory workspacePath={project.path} />
                   ) : null}
                   {coreFeatures.terminal && showActivityRailTerminals ? (
-                    <SidebarTerminalHistory />
+                    <ActivityTerminalHistory />
                   ) : null}
                   {coreFeatures.git && showActivityRailWorktrees ? (
-                    <SidebarWorktreeHistory
+                    <ActivityWorktreeHistory
                       repoPath={project.path}
                       onNewWorktree={handleNewWorktree}
                     />
@@ -577,124 +460,47 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             aria-label="Resize activity rail"
             aria-orientation="vertical"
             className="group absolute top-0 right-0 z-20 flex h-full w-workbench cursor-col-resize items-center justify-center hover:bg-primary/8"
-            onMouseDown={handleResizeMouseDown}
+            onMouseDown={handleResizeStart}
           >
             <div className="h-full w-px bg-transparent transition-colors duration-fast ease-smooth group-hover:bg-primary" />
           </div>
         ) : null}
         {isActivityRailResizing ? <div className="fixed inset-0 z-40 cursor-col-resize" /> : null}
       </ContextMenuTrigger>
-      <ContextMenuContent className="min-w-56">
-        <ContextMenuGroup>
-          <ContextMenuItem onClick={handleNewAgent}>
-            <SparkleIcon />
-            New Agent
-          </ContextMenuItem>
-          {coreFeatures.terminal ? (
-            <ContextMenuItem onClick={handleNewTerminal}>
-              <TerminalIcon />
-              New Terminal
-            </ContextMenuItem>
-          ) : null}
-          {coreFeatures.git ? (
-            <ContextMenuItem onClick={handleNewWorktree}>
-              <NodesIcon />
-              New Worktree
-            </ContextMenuItem>
-          ) : null}
-          <ContextMenuItem onClick={() => openProjectPicker()}>
-            <FolderOpenIcon />
-            Open Project…
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => openGlobalSearchBuffer()}>
-            <MagnifyingGlassIcon />
-            Search
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => openExtensionsBuffer()}>
-            <ExtensionsIcon />
-            Extensions
-          </ContextMenuItem>
-        </ContextMenuGroup>
-        <ContextMenuSeparator />
-        <ContextMenuSub>
-          <ContextMenuSubTrigger>
-            <EyeIcon />
-            Visible Items
-          </ContextMenuSubTrigger>
-          <ContextMenuSubContent className="min-w-56">
-            <ContextMenuGroup>
-              <ContextMenuCheckboxItem
-                checked={showActivityRailProjectSwitcher}
-                onCheckedChange={(checked) =>
-                  void updateSetting("showActivityRailProjectSwitcher", checked)
-                }
-              >
-                <FolderIcon />
-                Project Switcher
-              </ContextMenuCheckboxItem>
-              {activityNavigationItems.map((item) => (
-                <ContextMenuCheckboxItem
-                  key={item.id}
-                  checked={!hiddenSidebarActivityItems.includes(item.id)}
-                  onCheckedChange={(checked) => setActivityRailItemVisible(item.id, checked)}
-                >
-                  {item.icon}
-                  {item.label}
-                </ContextMenuCheckboxItem>
-              ))}
-              <ContextMenuCheckboxItem
-                checked={showActivityRailAgentHistory}
-                onCheckedChange={(checked) =>
-                  void updateSetting("showActivityRailAgentHistory", checked)
-                }
-              >
-                <SparkleIcon />
-                Agents
-              </ContextMenuCheckboxItem>
-              {coreFeatures.terminal ? (
-                <ContextMenuCheckboxItem
-                  checked={showActivityRailTerminals}
-                  onCheckedChange={(checked) =>
-                    void updateSetting("showActivityRailTerminals", checked)
-                  }
-                >
-                  <TerminalIcon />
-                  Terminals
-                </ContextMenuCheckboxItem>
-              ) : null}
-              {coreFeatures.git ? (
-                <ContextMenuCheckboxItem
-                  checked={showActivityRailWorktrees}
-                  onCheckedChange={(checked) =>
-                    void updateSetting("showActivityRailWorktrees", checked)
-                  }
-                >
-                  <NodesIcon />
-                  Worktrees
-                </ContextMenuCheckboxItem>
-              ) : null}
-              <ContextMenuCheckboxItem
-                checked={showActivityRailProjectIcons}
-                onCheckedChange={(checked) =>
-                  void updateSetting("showActivityRailProjectIcons", checked)
-                }
-              >
-                <FolderIcon />
-                Project Dots
-              </ContextMenuCheckboxItem>
-            </ContextMenuGroup>
-            {hasHiddenActivityRailItems ? (
-              <>
-                <ContextMenuSeparator />
-                <ContextMenuItem onClick={showAllActivityRailItems}>
-                  <EyeIcon />
-                  Show All
-                </ContextMenuItem>
-              </>
-            ) : null}
-          </ContextMenuSubContent>
-        </ContextMenuSub>
-      </ContextMenuContent>
+      <ActivitySidebarMenu
+        navigationItems={activityNavigationItems}
+        hiddenNavigationItemIds={hiddenSidebarActivityItems}
+        coreFeatures={coreFeatures}
+        showProjectSwitcher={showActivityRailProjectSwitcher}
+        showAgentHistory={showActivityRailAgentHistory}
+        showTerminals={showActivityRailTerminals}
+        showWorktrees={showActivityRailWorktrees}
+        showProjectDots={showActivityRailProjectIcons}
+        hasHiddenItems={hasHiddenActivityRailItems}
+        onNewAgent={handleNewAgent}
+        onNewTerminal={handleNewTerminal}
+        onNewWorktree={handleNewWorktree}
+        onOpenProject={() => openProjectPicker()}
+        onSearch={openGlobalSearchBuffer}
+        onOpenExtensions={openExtensionsBuffer}
+        onNavigationItemVisibleChange={setActivityRailItemVisible}
+        onProjectSwitcherVisibleChange={(visible) =>
+          void updateSetting("showActivityRailProjectSwitcher", visible)
+        }
+        onAgentHistoryVisibleChange={(visible) =>
+          void updateSetting("showActivityRailAgentHistory", visible)
+        }
+        onTerminalsVisibleChange={(visible) =>
+          void updateSetting("showActivityRailTerminals", visible)
+        }
+        onWorktreesVisibleChange={(visible) =>
+          void updateSetting("showActivityRailWorktrees", visible)
+        }
+        onProjectDotsVisibleChange={(visible) =>
+          void updateSetting("showActivityRailProjectIcons", visible)
+        }
+        onShowAll={showAllActivityRailItems}
+      />
     </ContextMenu>
   );
 });

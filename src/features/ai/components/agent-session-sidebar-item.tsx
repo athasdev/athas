@@ -74,11 +74,11 @@ export function AgentSessionSidebarItem({
               onPinChange(!pinned);
             }}
           >
-            <PushPinIcon className="size-3" />
+            <PushPinIcon />
           </SidebarIconButton>,
           <SidebarIconButton
             key="archive"
-            className="hover:text-destructive"
+            tone="danger"
             tooltip="Archive session"
             tooltipSide="top"
             onClick={(event) => {
@@ -86,7 +86,7 @@ export function AgentSessionSidebarItem({
               onArchive();
             }}
           >
-            <ArchiveIcon className="size-3" />
+            <ArchiveIcon />
           </SidebarIconButton>,
         ]}
       >
