@@ -18,17 +18,7 @@ import {
   ContextMenuTrigger,
 } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import {
-  ArchiveIcon,
-  DotsThreeIcon,
-  OpenExternalIcon,
-  PencilSimpleLineIcon,
-  PlusIcon,
-  PushPinIcon,
-  PushPinSlashIcon,
-  SparkleIcon,
-  TrashIcon,
-} from "@/ui/icons";
+import { DotsThreeIcon, PencilSimpleLineIcon, PlusIcon, SparkleIcon, TrashIcon } from "@/ui/icons";
 import { InlineRenameInput } from "@/ui/input";
 import {
   SidebarIconButton,
@@ -155,10 +145,6 @@ export function ActivityAgentRow({
         />
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onClick={() => onOpen(chat.id)}>
-          <OpenExternalIcon />
-          Open
-        </ContextMenuItem>
         <ContextMenuItem
           onClick={() => {
             setRenameValue(chat.title);
@@ -167,14 +153,6 @@ export function ActivityAgentRow({
         >
           <PencilSimpleLineIcon />
           Rename
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => onPinChange(chat.id, !chat.isPinned)}>
-          {chat.isPinned ? <PushPinSlashIcon /> : <PushPinIcon />}
-          {chat.isPinned ? "Unpin" : "Pin"}
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => onArchive(chat.id)}>
-          <ArchiveIcon />
-          Archive
         </ContextMenuItem>
         <ContextMenuItem variant="destructive" onClick={() => onDelete(chat.id)}>
           <TrashIcon />
