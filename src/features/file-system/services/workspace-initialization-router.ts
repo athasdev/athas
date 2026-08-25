@@ -7,6 +7,12 @@ export interface WorkspaceInitializationHandlers {
   initializeWsl(distro: string, linuxPath: string): Promise<boolean>;
 }
 
+export interface WorkspaceResumeHandlers {
+  resumeSession(): void;
+  resumeLocalServices(): void;
+  stopLocalServices(): void;
+}
+
 export function initializeWorkspacePath(path: string, handlers: WorkspaceInitializationHandlers) {
   const remote = parseRemotePath(path);
   if (remote) {
@@ -19,4 +25,15 @@ export function initializeWorkspacePath(path: string, handlers: WorkspaceInitial
   }
 
   return handlers.initializeLocal(path);
+}
+
+export function resumeWorkspacePath(path: string, handlers: WorkspaceResumeHandlers) {
+  handlers.resumeSession();
+
+  if (parseRemotePath(path) || parseWslPath(path)) {
+    handlers.stopLocalServices();
+    return;
+  }
+
+  handlers.resumeLocalServices();
 }

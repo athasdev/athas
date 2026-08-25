@@ -107,7 +107,10 @@ import {
   applyWorkspaceInitializationState,
   type InitializedWorkspaceState,
 } from "../services/workspace-initialization-state";
-import { initializeWorkspacePath } from "../services/workspace-initialization-router";
+import {
+  initializeWorkspacePath,
+  resumeWorkspacePath,
+} from "../services/workspace-initialization-router";
 import { resetWorkspaceResources } from "../services/workspace-reset";
 import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
@@ -345,6 +348,29 @@ const initializeLocalWorkspaceInBackground = (
     trace: (phase, step, startedAt) => logWorkspaceOpenStep(phase, step, path, startedAt),
     onError: (error) => console.error(errorContext, error),
   });
+};
+
+const resumeWorkspaceRuntimeServices = (workspaceId: string, path: string): Promise<void> => {
+  const targetStore = getScopedFileSystemStore(workspaceId).getState();
+  resumeWorkspacePath(path, {
+    resumeSession: () => targetStore.resumeWorkspaceSession(),
+    resumeLocalServices: () =>
+      initializeLocalWorkspaceInBackground(
+        workspaceId,
+        path,
+        () => targetStore,
+        "Failed to resume workspace services:",
+        {
+          deferWatcher: true,
+          preserveGitStatus: true,
+        },
+      ),
+    stopLocalServices: () => {
+      workspaceBackgroundInitializer.invalidate();
+      void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
+    },
+  });
+  return Promise.resolve();
 };
 
 const applyNonLocalWorkspaceState = (
@@ -624,20 +650,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               treeState: "expand-root",
               restoreUiState: false,
             }),
-          resume: async (workspaceId) => {
-            const targetStore = getScopedFileSystemStore(workspaceId).getState();
-            targetStore.resumeWorkspaceSession();
-            initializeLocalWorkspaceInBackground(
-              workspaceId,
-              selected,
-              () => targetStore,
-              "Failed to resume workspace services:",
-              {
-                deferWatcher: true,
-                preserveGitStatus: true,
-              },
-            );
-          },
+          resume: (workspaceId) => resumeWorkspaceRuntimeServices(workspaceId, selected),
         });
       },
 
@@ -951,20 +964,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               treeState: "collapse-all",
               restoreUiState: true,
             }),
-          resume: async (workspaceId) => {
-            const targetStore = getScopedFileSystemStore(workspaceId).getState();
-            targetStore.resumeWorkspaceSession();
-            initializeLocalWorkspaceInBackground(
-              workspaceId,
-              path,
-              () => targetStore,
-              "Failed to resume workspace services:",
-              {
-                deferWatcher: true,
-                preserveGitStatus: true,
-              },
-            );
-          },
+          resume: (workspaceId) => resumeWorkspaceRuntimeServices(workspaceId, path),
         });
       },
 
@@ -1075,11 +1075,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             getScopedFileSystemStore(workspaceId)
               .getState()
               .initializeRemoteWorkspace(connectionId),
-          resume: async (workspaceId) => {
-            getScopedFileSystemStore(workspaceId).getState().resumeWorkspaceSession();
-            workspaceBackgroundInitializer.invalidate();
-            void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
-          },
+          resume: (workspaceId) => resumeWorkspaceRuntimeServices(workspaceId, path),
         });
       },
 
@@ -1140,11 +1136,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             getScopedFileSystemStore(workspaceId)
               .getState()
               .initializeWslWorkspace(distro, normalizedLinuxPath),
-          resume: async (workspaceId) => {
-            getScopedFileSystemStore(workspaceId).getState().resumeWorkspaceSession();
-            workspaceBackgroundInitializer.invalidate();
-            void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
-          },
+          resume: (workspaceId) => resumeWorkspaceRuntimeServices(workspaceId, path),
         });
       },
 
@@ -2509,26 +2501,9 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             }).finally(() => targetStore.setIsSwitchingProject(false));
           },
           resume: async (workspaceId, path) => {
-            const targetStore = getScopedFileSystemStore(workspaceId).getState();
             const projectStore = useProjectStore.getStore(workspaceId).getState();
             projectStore.actions.setActiveProjectId(workspaceId);
-            targetStore.resumeWorkspaceSession();
-
-            if (parseRemotePath(path) || parseWslPath(path)) {
-              workspaceBackgroundInitializer.invalidate();
-              void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
-            } else {
-              initializeLocalWorkspaceInBackground(
-                workspaceId,
-                path,
-                () => targetStore,
-                "Failed to resume workspace services:",
-                {
-                  deferWatcher: true,
-                  preserveGitStatus: true,
-                },
-              );
-            }
+            await resumeWorkspaceRuntimeServices(workspaceId, path);
           },
         });
 
