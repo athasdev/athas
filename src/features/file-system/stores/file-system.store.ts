@@ -98,6 +98,7 @@ import {
 } from "../services/file-open-resource";
 import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buffer-restore";
 import { restoreWorkspaceSessionFolders } from "../services/workspace-session-folder-restore";
+import { initializeWorkspacePath } from "../services/workspace-initialization-router";
 import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
@@ -2597,20 +2598,23 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               void settingsStore.actions.updateSetting("theme", projectTheme);
             }
           },
-          initialize: async (workspaceId, path, name) => {
+          initialize: (workspaceId, path) => {
             const targetStore = getScopedFileSystemStore(workspaceId).getState();
             targetStore.setIsSwitchingProject(true);
-
-            const remote = parseRemotePath(path);
-            const wsl = parseWslPath(path);
-            const initialized = remote
-              ? await targetStore.handleOpenRemoteProject(remote.connectionId, name)
-              : wsl
-                ? await targetStore.handleOpenWslProject(wsl.distro, wsl.linuxPath)
-                : await targetStore.handleOpenFolderByPath(path);
-
-            targetStore.setIsSwitchingProject(false);
-            return initialized;
+            return initializeWorkspacePath(path, {
+              initializeLocal: (localPath) =>
+                targetStore.initializeLocalWorkspace({
+                  workspaceId,
+                  path: localPath,
+                  traceLabel: "handleOpenFolderByPath",
+                  treeState: "collapse-all",
+                  restoreUiState: true,
+                }),
+              initializeRemote: (connectionId) =>
+                targetStore.initializeRemoteWorkspace(connectionId),
+              initializeWsl: (distro, linuxPath) =>
+                targetStore.initializeWslWorkspace(distro, linuxPath),
+            }).finally(() => targetStore.setIsSwitchingProject(false));
           },
           resume: async (workspaceId, path) => {
             const targetStore = getScopedFileSystemStore(workspaceId).getState();
