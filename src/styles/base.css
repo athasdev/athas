@@ -1,11 +1,11 @@
 @layer base {
   * {
     border-color: var(--border);
-    overscroll-behavior: none;
   }
 
   html {
     overflow: hidden;
+    overscroll-behavior: none;
     background: transparent;
     scroll-behavior: smooth;
   }

@@ -305,6 +305,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
           headerActions: "max-[720px]:min-w-0",
           content: "flex h-full p-0",
         }}
+        scrollable={false}
       >
         <div className="flex size-full min-w-0 overflow-hidden">
           <div className="h-full w-52 shrink-0 max-[720px]:hidden">
@@ -330,7 +331,6 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
                 role: "tabpanel",
                 "aria-labelledby": activeTabId,
                 "data-settings-content": "",
-                tabIndex: -1,
               }}
             >
               {renderTabContent()}
