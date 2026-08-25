@@ -52,6 +52,7 @@ import {
 import { InlineRenameInput } from "@/ui/input";
 import {
   SidebarIconButton,
+  SidebarListActionRow,
   SidebarListEditor,
   SidebarListItem,
   SidebarSectionHeader,
@@ -275,18 +276,10 @@ function SidebarTerminalHistoryRow({
   return (
     <ContextMenu>
       <ContextMenuTrigger className="block" onContextMenu={(event) => event.stopPropagation()}>
-        <div className="group/sidebar-terminal relative flex w-full min-w-0 items-center">
-          <SidebarListItem
-            active={active}
-            appearance="activity"
-            leading={<TerminalIcon className="size-4" />}
-            className="pr-12"
-            onClick={onOpen}
-          >
-            {name}
-          </SidebarListItem>
-          <span className="pointer-events-none absolute right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/sidebar-terminal:pointer-events-auto group-hover/sidebar-terminal:opacity-100 group-focus-within/sidebar-terminal:pointer-events-auto group-focus-within/sidebar-terminal:opacity-100">
+        <SidebarListActionRow
+          actions={[
             <SidebarIconButton
+              key="pin"
               active={pinned}
               aria-pressed={pinned}
               tooltip={pinned ? "Unpin terminal" : "Pin terminal"}
@@ -301,8 +294,9 @@ function SidebarTerminalHistoryRow({
               ) : (
                 <PushPinIcon className="size-3" />
               )}
-            </SidebarIconButton>
+            </SidebarIconButton>,
             <SidebarIconButton
+              key="close"
               className="hover:text-destructive"
               tooltip="Close terminal"
               tooltipSide="right"
@@ -312,9 +306,18 @@ function SidebarTerminalHistoryRow({
               }}
             >
               <XIcon className="size-3" />
-            </SidebarIconButton>
-          </span>
-        </div>
+            </SidebarIconButton>,
+          ]}
+        >
+          <SidebarListItem
+            active={active}
+            appearance="activity"
+            leading={<TerminalIcon className="size-4" />}
+            onClick={onOpen}
+          >
+            {name}
+          </SidebarListItem>
+        </SidebarListActionRow>
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onClick={onOpen}>

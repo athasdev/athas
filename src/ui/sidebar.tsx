@@ -4,7 +4,15 @@ import {
   MagnifyingGlassIcon as Search,
 } from "@/ui/icons";
 import { cva, type VariantProps } from "class-variance-authority";
-import { forwardRef, type ComponentProps, type ReactNode, useEffect, useState } from "react";
+import {
+  Children,
+  forwardRef,
+  type ComponentProps,
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useState,
+} from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
@@ -200,6 +208,38 @@ export const SidebarIconButton = forwardRef<
   );
 });
 
+export function SidebarListActionRow({
+  actions,
+  children,
+  className,
+  style,
+  ...props
+}: ComponentProps<"div"> & {
+  actions: ReactNode;
+}) {
+  const actionCount = Children.toArray(actions).length;
+  const rowStyle = {
+    ...style,
+    "--sidebar-list-actions-width": `calc(${actionCount} * var(--athas-chrome-control-height) + ${Math.max(actionCount - 1, 0)} * var(--athas-chrome-gap-tight) + var(--athas-chrome-gap))`,
+  } as CSSProperties;
+
+  return (
+    <div
+      className={cn(
+        "group/sidebar-list-action-row relative flex w-full min-w-0 items-center [&:focus-within_[data-slot=sidebar-list-item]]:pr-(--sidebar-list-actions-width) [&:hover_[data-slot=sidebar-list-item]]:pr-(--sidebar-list-actions-width)",
+        className,
+      )}
+      style={rowStyle}
+      {...props}
+    >
+      {children}
+      <span className="pointer-events-none absolute right-1 flex items-center gap-chrome-tight opacity-0 transition-opacity duration-fast ease-smooth group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100 group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100">
+        {actions}
+      </span>
+    </div>
+  );
+}
+
 export const SidebarSearchPopover = forwardRef<
   HTMLInputElement,
   Omit<
@@ -300,7 +340,7 @@ export function SidebarListItem({
       type="button"
       className={cn(
         sidebarControlVariants({ appearance, width }),
-        "text-left transition-[background-color,color]",
+        "text-left transition-[background-color,color,padding-right]",
         appearance === "activity" ? "text-foreground/80" : "text-subtle-foreground",
         "hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
         active && "bg-selected text-foreground",
@@ -308,6 +348,7 @@ export function SidebarListItem({
         iconOnly && "min-h-chrome-control justify-center gap-0 rounded-full px-0 py-0",
         className,
       )}
+      data-slot="sidebar-list-item"
       data-active={active}
       {...props}
     >

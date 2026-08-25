@@ -9,7 +9,7 @@ import {
   PushPinIcon,
   SparkleIcon,
 } from "@/ui/icons";
-import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
+import { SidebarIconButton, SidebarListActionRow, SidebarListItem } from "@/ui/sidebar";
 
 export interface AgentSessionSidebarItemProps {
   title: string;
@@ -61,25 +61,10 @@ export function AgentSessionSidebarItem({
 
   return (
     <HoverCard>
-      <div className="group/agent-session relative flex w-full min-w-0 items-center">
-        <HoverCardTrigger
-          delay={320}
-          closeDelay={140}
-          onClick={onOpen}
-          render={
-            <SidebarListItem
-              active={active}
-              appearance="activity"
-              leading={<ProviderIcon providerId={providerIconId} size={16} />}
-              className="pr-12"
-            >
-              {title}
-            </SidebarListItem>
-          }
-        />
-
-        <span className="pointer-events-none absolute right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/agent-session:pointer-events-auto group-hover/agent-session:opacity-100 group-focus-within/agent-session:pointer-events-auto group-focus-within/agent-session:opacity-100">
+      <SidebarListActionRow
+        actions={[
           <SidebarIconButton
+            key="pin"
             active={pinned}
             aria-pressed={pinned}
             tooltip={pinned ? "Unpin session" : "Pin session"}
@@ -90,8 +75,9 @@ export function AgentSessionSidebarItem({
             }}
           >
             <PushPinIcon className="size-3" />
-          </SidebarIconButton>
+          </SidebarIconButton>,
           <SidebarIconButton
+            key="archive"
             className="hover:text-destructive"
             tooltip="Archive session"
             tooltipSide="top"
@@ -101,9 +87,24 @@ export function AgentSessionSidebarItem({
             }}
           >
             <ArchiveIcon className="size-3" />
-          </SidebarIconButton>
-        </span>
-      </div>
+          </SidebarIconButton>,
+        ]}
+      >
+        <HoverCardTrigger
+          delay={320}
+          closeDelay={140}
+          onClick={onOpen}
+          render={
+            <SidebarListItem
+              active={active}
+              appearance="activity"
+              leading={<ProviderIcon providerId={providerIconId} size={16} />}
+            >
+              {title}
+            </SidebarListItem>
+          }
+        />
+      </SidebarListActionRow>
 
       <HoverCardContent
         side="right"

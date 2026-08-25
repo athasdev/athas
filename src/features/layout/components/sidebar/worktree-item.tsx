@@ -11,7 +11,7 @@ import {
 } from "@/ui/context-menu";
 import { showConfirmDialog } from "@/ui/dialog";
 import { CopyIcon, NodesIcon, OpenExternalIcon, TrashIcon, WindowExpandIcon } from "@/ui/icons";
-import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
+import { SidebarIconButton, SidebarListActionRow, SidebarListItem } from "@/ui/sidebar";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getFolderName } from "@/utils/path-helpers";
 
@@ -52,20 +52,10 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
   return (
     <ContextMenu>
       <ContextMenuTrigger className="block" onContextMenu={(event) => event.stopPropagation()}>
-        <div className="group/sidebar-worktree relative flex w-full min-w-0 items-center">
-          <SidebarListItem
-            active={worktree.is_current}
-            appearance="activity"
-            leading={<NodesIcon className="size-4" />}
-            title={worktree.path}
-            className="pr-12"
-            onClick={openWorktree}
-          >
-            {getFolderName(worktree.path)}
-          </SidebarListItem>
-
-          <span className="pointer-events-none absolute right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/sidebar-worktree:pointer-events-auto group-hover/sidebar-worktree:opacity-100 group-focus-within/sidebar-worktree:pointer-events-auto group-focus-within/sidebar-worktree:opacity-100">
+        <SidebarListActionRow
+          actions={[
             <SidebarIconButton
+              key="new-window"
               tooltip="Open in New Window"
               tooltipSide="top"
               onClick={(event) => {
@@ -74,9 +64,10 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
               }}
             >
               <WindowExpandIcon className="size-3" />
-            </SidebarIconButton>
-            {canRemove ? (
+            </SidebarIconButton>,
+            canRemove ? (
               <SidebarIconButton
+                key="remove"
                 className="hover:text-destructive"
                 tooltip="Remove Worktree"
                 tooltipSide="top"
@@ -87,9 +78,19 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
               >
                 <TrashIcon className="size-3" />
               </SidebarIconButton>
-            ) : null}
-          </span>
-        </div>
+            ) : null,
+          ]}
+        >
+          <SidebarListItem
+            active={worktree.is_current}
+            appearance="activity"
+            leading={<NodesIcon className="size-4" />}
+            title={worktree.path}
+            onClick={openWorktree}
+          >
+            {getFolderName(worktree.path)}
+          </SidebarListItem>
+        </SidebarListActionRow>
       </ContextMenuTrigger>
 
       <ContextMenuContent>
