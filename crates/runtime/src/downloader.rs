@@ -62,22 +62,7 @@ pub async fn download_node(version: &str, target_dir: &Path) -> Result<(), Runti
    log::info!("Downloading Node.js {} from {}", version, url);
 
    // Download the file
-   let response = reqwest::get(&url)
-      .await
-      .map_err(|e| RuntimeError::DownloadFailed(e.to_string()))?;
-
-   if !response.status().is_success() {
-      return Err(RuntimeError::DownloadFailed(format!(
-         "HTTP {} for {}",
-         response.status(),
-         url
-      )));
-   }
-
-   let bytes = response
-      .bytes()
-      .await
-      .map_err(|e| RuntimeError::DownloadFailed(e.to_string()))?;
+   let bytes = download_bytes(&url).await?;
 
    log::info!(
       "Downloaded {} bytes, extracting to {:?}",
@@ -90,7 +75,7 @@ pub async fn download_node(version: &str, target_dir: &Path) -> Result<(), Runti
 
    // Extract based on archive type
    if platform.extension == "zip" {
-      extract_zip(&bytes, target_dir)?;
+      extract_wrapped_zip(&bytes, target_dir)?;
    } else {
       extract_tar_gz(&bytes, target_dir)?;
    }
@@ -101,6 +86,26 @@ pub async fn download_node(version: &str, target_dir: &Path) -> Result<(), Runti
       target_dir
    );
    Ok(())
+}
+
+pub(crate) async fn download_bytes(url: &str) -> Result<Vec<u8>, RuntimeError> {
+   let response = reqwest::get(url)
+      .await
+      .map_err(|error| RuntimeError::DownloadFailed(error.to_string()))?;
+
+   if !response.status().is_success() {
+      return Err(RuntimeError::DownloadFailed(format!(
+         "HTTP {} for {}",
+         response.status(),
+         url
+      )));
+   }
+
+   response
+      .bytes()
+      .await
+      .map(|bytes| bytes.to_vec())
+      .map_err(|error| RuntimeError::DownloadFailed(error.to_string()))
 }
 
 /// Extract a .tar.gz archive into `target_dir`, stripping the single top-level
@@ -203,7 +208,7 @@ fn move_dir_contents(src: &Path, dst: &Path) -> Result<(), RuntimeError> {
 }
 
 /// Extract a .zip archive (Windows)
-fn extract_zip(bytes: &[u8], target_dir: &Path) -> Result<(), RuntimeError> {
+pub(crate) fn extract_wrapped_zip(bytes: &[u8], target_dir: &Path) -> Result<(), RuntimeError> {
    let cursor = Cursor::new(bytes);
    let mut archive =
       zip::ZipArchive::new(cursor).map_err(|e| RuntimeError::ExtractionFailed(e.to_string()))?;
@@ -262,7 +267,26 @@ pub fn get_node_binary_path(base_dir: &Path) -> std::path::PathBuf {
 mod tests {
    use super::*;
    use flate2::{Compression, write::GzEncoder};
+   use std::io::Write;
    use tar::{EntryType, Header};
+   use zip::write::SimpleFileOptions;
+
+   fn make_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
+      let cursor = std::io::Cursor::new(Vec::new());
+      let mut archive = zip::ZipWriter::new(cursor);
+      let options = SimpleFileOptions::default().unix_permissions(0o755);
+
+      for (path, contents) in entries {
+         if path.ends_with('/') {
+            archive.add_directory(*path, options).unwrap();
+         } else {
+            archive.start_file(*path, options).unwrap();
+            archive.write_all(contents).unwrap();
+         }
+      }
+
+      archive.finish().unwrap().into_inner()
+   }
 
    /// Build a tar.gz archive. Files are detected by trailing `/` (dir) vs. not.
    fn make_tar_gz(entries: &[(&str, &[u8])]) -> Vec<u8> {
@@ -384,6 +408,28 @@ mod tests {
       extract_tar_gz(&archive, target.path()).expect("extraction should succeed");
 
       assert!(target.path().join("bin/node").exists());
+      assert_eq!(
+         std::fs::read(target.path().join("README.md")).unwrap(),
+         b"hello"
+      );
+   }
+
+   #[test]
+   fn extract_wrapped_zip_strips_single_top_level_dir() {
+      let archive = make_zip(&[
+         ("runtime/", b""),
+         ("runtime/bin/", b""),
+         ("runtime/bin/tool", b"binary"),
+         ("runtime/README.md", b"hello"),
+      ]);
+      let target = tempfile::tempdir().unwrap();
+
+      extract_wrapped_zip(&archive, target.path()).expect("extraction should succeed");
+
+      assert_eq!(
+         std::fs::read(target.path().join("bin/tool")).unwrap(),
+         b"binary"
+      );
       assert_eq!(
          std::fs::read(target.path().join("README.md")).unwrap(),
          b"hello"
