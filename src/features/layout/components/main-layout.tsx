@@ -11,13 +11,10 @@ import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-s
 import { openDroppedWorkspacePaths } from "@/features/file-system/utils/open-dropped-workspace-paths";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { isGitChangeRelevant, subscribeToGitChanges } from "@/features/git/events/git-events";
-import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
 import { CachedWorkspaceSplitViews } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
-import { usePaneStore } from "@/features/panes/stores/pane.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimStore } from "@/features/vim/stores/vim.store";
 import { isWslPath } from "@/features/wsl/utils/wsl-path";
@@ -25,8 +22,6 @@ import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { Button } from "@/ui/button";
-import { FileTextIcon, PlusIcon, TerminalWindowIcon } from "@/ui/icons";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
@@ -142,10 +137,6 @@ export function MainLayout() {
     (state) => state.actions.consumeOpenRequest,
   );
   const openOnboardingBuffer = useBufferStore.use.actions().openOnboardingBuffer;
-  const hasMainView = usePaneStore((state) =>
-    getAllPaneGroups(state.root).some((pane) => pane.bufferIds.length > 0),
-  );
-
   const hasRestoredWorkspace = useRef(false);
   const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
@@ -171,7 +162,7 @@ export function MainLayout() {
 
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
   const isEditorBottomPaneVisible =
-    hasMainView && terminalWidthMode === "editor" && deferredSurfacesReady && isBottomPaneVisible;
+    terminalWidthMode === "editor" && deferredSurfacesReady && isBottomPaneVisible;
   const roundMainContentLeftEdge = !isSidebarVisible;
   const roundMainContentRightEdge = !visibleInlineAiChat && !isRightSidebarVisible;
   useEffect(() => {
@@ -322,51 +313,21 @@ export function MainLayout() {
           </ResizablePane>
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            {hasMainView ? (
-              <div
-                className={cn(
-                  "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border/70 border-y border-r bg-editor",
-                  roundMainContentLeftEdge &&
-                    (isEditorBottomPaneVisible
-                      ? "rounded-tl-xl border-l"
-                      : "rounded-l-xl border-l"),
-                  roundMainContentRightEdge &&
-                    (isEditorBottomPaneVisible ? "rounded-tr-xl" : "rounded-r-xl"),
-                )}
-              >
-                <CachedWorkspaceSplitViews />
-              </div>
-            ) : (
-              <div className="flex min-h-0 flex-1 items-center justify-center">
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <Button
-                    commandId="workbench.newTab"
-                    onClick={() => void keymapRegistry.executeCommand("workbench.newTab")}
-                  >
-                    <PlusIcon />
-                    New tab
-                  </Button>
-                  <Button
-                    commandId="file.quickOpen"
-                    onClick={() => void keymapRegistry.executeCommand("file.quickOpen")}
-                  >
-                    <FileTextIcon />
-                    Open file
-                  </Button>
-                  <Button
-                    commandId="terminal.new"
-                    onClick={() => void keymapRegistry.executeCommand("terminal.new")}
-                  >
-                    <TerminalWindowIcon />
-                    New terminal
-                  </Button>
-                </div>
-              </div>
-            )}
+            <div
+              className={cn(
+                "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border/70 border-y border-r bg-editor",
+                roundMainContentLeftEdge &&
+                  (isEditorBottomPaneVisible ? "rounded-tl-xl border-l" : "rounded-l-xl border-l"),
+                roundMainContentRightEdge &&
+                  (isEditorBottomPaneVisible ? "rounded-tr-xl" : "rounded-r-xl"),
+              )}
+            >
+              <CachedWorkspaceSplitViews />
+            </div>
             {terminalWidthMode === "editor" && deferredSurfacesReady && (
               <Suspense fallback={null}>
                 <BottomPane
-                  embedded={hasMainView}
+                  embedded
                   roundLeftEdge={roundMainContentLeftEdge}
                   roundRightEdge={roundMainContentRightEdge}
                 />
