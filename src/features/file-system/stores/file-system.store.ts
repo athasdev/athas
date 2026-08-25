@@ -92,6 +92,7 @@ import { fffListFiles, fffTrackAccess } from "@/features/file-search/lib/file-se
 import { canUseNativeFileSearch } from "@/features/file-search/utils/file-search-paths";
 import { ensureWorkspaceFileSearch } from "@/features/file-search/services/workspace-file-search";
 import { cancelFileWatcherRefreshes } from "../services/file-watcher-refresh-scheduler";
+import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
 import { useRecentFilesStore } from "../stores/recent-files.store";
@@ -203,57 +204,9 @@ const syncFffWorkspace = async (get: FileSystemGet): Promise<void> => {
 
 const readWorkspaceRootEntry = async (path: string): Promise<FileEntry> => {
   const projectName = getFolderName(path);
-  const entries = await readProviderDirectoryEntries(path);
+  const entries = await readWorkspaceDirectoryEntries(path);
   const fileTree = sortFileEntries(entries);
   return wrapWithRootFolder(fileTree, path, projectName)[0];
-};
-
-const toRemoteFileEntries = (
-  connectionId: string,
-  entries: Array<{ name: string; path: string; is_dir: boolean }>,
-): FileEntry[] =>
-  entries.map((entry) => ({
-    name: entry.name,
-    path: `remote://${connectionId}${entry.path}`,
-    isDir: entry.is_dir,
-    children: entry.is_dir ? [] : undefined,
-  }));
-
-const toWslFileEntries = (entries: WslDirectoryEntry[]): FileEntry[] =>
-  entries.map((entry) => ({
-    name: entry.name,
-    path: entry.path,
-    isDir: entry.is_dir,
-    children: entry.is_dir ? [] : undefined,
-    isSymlink: entry.is_symlink,
-    symlinkTarget: entry.target ?? undefined,
-  }));
-
-const readProviderDirectoryEntries = async (
-  path: string,
-  workspaceRoot = path,
-): Promise<FileEntry[]> => {
-  const remoteInfo = parseRemotePath(path);
-  if (remoteInfo) {
-    const entries = await invoke<
-      Array<{ name: string; path: string; is_dir: boolean; size: number }>
-    >("ssh_read_directory", {
-      connectionId: remoteInfo.connectionId,
-      path: remoteInfo.remotePath,
-    });
-    return toRemoteFileEntries(remoteInfo.connectionId, entries);
-  }
-
-  const wslInfo = parseWslPath(path);
-  if (wslInfo) {
-    const entries = await invoke<WslDirectoryEntry[]>("wsl_read_directory", {
-      distro: wslInfo.distro,
-      path: wslInfo.linuxPath,
-    });
-    return toWslFileEntries(entries);
-  }
-
-  return sortFileEntries(await readDirectoryContents(path, workspaceRoot));
 };
 
 const textFileDecoder = new TextDecoder("utf-8");
@@ -1865,7 +1818,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         if (!isCurrentlyExpanded) {
           // Expand: load children if not present
           if (!folder.children || folder.children.length === 0) {
-            const childEntries = await readProviderDirectoryEntries(
+            const childEntries = await readWorkspaceDirectoryEntries(
               folder.path,
               get().rootFolderPath ?? folder.path,
             );
@@ -1911,7 +1864,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           }
 
           if (!node.children || node.children.length === 0) {
-            const childEntries = await readProviderDirectoryEntries(
+            const childEntries = await readWorkspaceDirectoryEntries(
               ancestorPath,
               get().rootFolderPath ?? ancestorPath,
             );
@@ -1988,7 +1941,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
                   return;
                 }
 
-                const children = await readProviderDirectoryEntries(
+                const children = await readWorkspaceDirectoryEntries(
                   item.path,
                   get().rootFolderPath ?? item.path,
                 );
@@ -2198,7 +2151,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         }
 
         const entries = (
-          await readProviderDirectoryEntries(directoryPath, get().rootFolderPath ?? directoryPath)
+          await readWorkspaceDirectoryEntries(directoryPath, get().rootFolderPath ?? directoryPath)
         ).map((entry) => ({
           name: entry.name,
           path: entry.path,
