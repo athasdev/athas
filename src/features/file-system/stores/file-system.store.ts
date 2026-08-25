@@ -97,6 +97,7 @@ import {
   readFileOpenText,
 } from "../services/file-open-resource";
 import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buffer-restore";
+import { restoreWorkspaceSessionFolders } from "../services/workspace-session-folder-restore";
 import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
@@ -121,7 +122,6 @@ import {
   buildWorkspaceRestorePlan,
   isWorkspaceFolderPath,
   normalizeWorkspaceFolders,
-  selectRestoredWorkspaceFolders,
 } from "../controllers/workspace-session";
 import type { WorkspaceSessionBuffer } from "../controllers/workspace-session";
 
@@ -750,55 +750,29 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       restoreSession: async (projectPath: string, skipBufferPath?: string) => {
         const { session, terminals } = workspaceSessionRepository.load(projectPath);
         if (session?.workspaceFolders && session.workspaceFolders.length > 1) {
-          const foldersToRestore = normalizeWorkspaceFolders(projectPath, session.workspaceFolders);
           const currentRootPaths = new Set(
             get()
               .files.filter((file) => file.isDir)
               .map((file) => file.path),
           );
-          const restoredFolders = (
-            await Promise.all(
-              foldersToRestore.map(async (folder) => {
-                if (folder.path === projectPath || currentRootPaths.has(folder.path)) {
-                  return { path: folder.path, entry: null };
-                }
-
-                try {
-                  return {
-                    path: folder.path,
-                    entry: await readWorkspaceRootEntry(folder.path),
-                  };
-                } catch (error) {
-                  console.warn("Failed to restore workspace folder:", folder.path, error);
-                  toast.warning(`Could not restore workspace folder "${folder.name}".`);
-                  return null;
-                }
-              }),
-            )
-          ).filter(
-            (
-              result,
-            ): result is {
-              path: string;
-              entry: FileEntry | null;
-            } => result !== null,
-          );
-          const restoredRootEntries = restoredFolders
-            .map((result) => result.entry)
-            .filter((entry): entry is FileEntry => entry !== null);
-          const restoredWorkspaceFolders = selectRestoredWorkspaceFolders(
+          const restoredFolders = await restoreWorkspaceSessionFolders({
             projectPath,
-            foldersToRestore,
-            restoredFolders.map((result) => result.path),
-          );
+            workspaceFolders: session.workspaceFolders,
+            currentRootPaths,
+            readRootEntry: readWorkspaceRootEntry,
+            onFolderError: (folder, error) => {
+              console.warn("Failed to restore workspace folder:", folder.path, error);
+              toast.warning(`Could not restore workspace folder "${folder.name}".`);
+            },
+          });
 
           set((state) => {
-            if (restoredRootEntries.length > 0) {
-              state.files = [...state.files, ...restoredRootEntries];
+            if (restoredFolders.rootEntries.length > 0) {
+              state.files = [...state.files, ...restoredFolders.rootEntries];
               state.filesVersion++;
               state.projectFilesCache = undefined;
             }
-            state.workspaceFolders = restoredWorkspaceFolders;
+            state.workspaceFolders = restoredFolders.workspaceFolders;
           });
           void syncFffWorkspace(get);
         }
