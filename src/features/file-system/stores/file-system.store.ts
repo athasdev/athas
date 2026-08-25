@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { basename, dirname, extname, join } from "@tauri-apps/api/path";
-import { copyFile, readFile } from "@tauri-apps/plugin-fs";
+import { copyFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { immer } from "zustand/middleware/immer";
 import type { StoreApi } from "zustand";
@@ -69,7 +69,6 @@ import {
   createNewFile,
   deleteFileOrDirectory,
   readDirectoryContents,
-  readFileContent,
 } from "../controllers/file-operations";
 import {
   addFileToTree,
@@ -92,7 +91,10 @@ import { fffListFiles, fffTrackAccess } from "@/features/file-search/lib/file-se
 import { canUseNativeFileSearch } from "@/features/file-search/utils/file-search-paths";
 import { ensureWorkspaceFileSearch } from "@/features/file-search/services/workspace-file-search";
 import { cancelFileWatcherRefreshes } from "../services/file-watcher-refresh-scheduler";
-import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
+import {
+  getWorkspaceResourceProvider,
+  readWorkspaceDirectoryEntries,
+} from "../services/workspace-resource-provider";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
 import { useRecentFilesStore } from "../stores/recent-files.store";
@@ -1574,22 +1576,25 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           );
           fileOpenBenchmark.finish(path, "binary-buffer-opened");
         } else {
-          let preloadedLocalText: string | null = null;
+          let preloadedText: string | null = null;
 
           const wslInfo = parseWslPath(path);
+          const providerPath = parseRemotePath(path) || wslInfo ? path : resolvedPath;
+          const resourceProvider = getWorkspaceResourceProvider(providerPath);
 
           const resolvedKnownTextPath =
             resolvedPath === path ? isKnownTextPath : isKnownTextFile(resolvedPath);
 
-          if (!path.startsWith("remote://") && !wslInfo && !resolvedKnownTextPath) {
+          if (resourceProvider.kind !== "remote" && !resolvedKnownTextPath) {
             try {
-              const fileData = await readFileOnce(`local-bytes:${resolvedPath}`, () =>
-                readFile(resolvedPath),
+              const fileData = await readFileOnce(
+                `${resourceProvider.kind}-bytes:${providerPath}`,
+                () => resourceProvider.readBytes(providerPath),
               );
 
               if (isStaleRequest()) return;
 
-              if (isBinaryContent(fileData)) {
+              if (fileData && isBinaryContent(fileData)) {
                 openBuffer(
                   path,
                   fileName,
@@ -1617,49 +1622,16 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
                 return;
               }
 
-              preloadedLocalText = textFileDecoder.decode(fileData);
-            } catch (error) {
-              console.error("Failed to inspect file bytes before opening:", error);
-            }
-          } else if (wslInfo && !resolvedKnownTextPath) {
-            try {
-              const fileData = await readFileOnce(
-                `wsl-bytes:${wslInfo.distro}:${wslInfo.linuxPath}`,
-                () =>
-                  invoke<number[]>("wsl_read_file_bytes", {
-                    distro: wslInfo.distro,
-                    filePath: wslInfo.linuxPath,
-                  }),
-              );
-
-              if (isStaleRequest()) return;
-
-              const bytes = new Uint8Array(fileData);
-              if (isBinaryContent(bytes)) {
-                openBuffer(
-                  path,
-                  fileName,
-                  "",
-                  false,
-                  undefined,
-                  false,
-                  false,
-                  undefined,
-                  false,
-                  false,
-                  false,
-                  undefined,
-                  false,
-                  false,
-                  true,
-                );
-                fileOpenBenchmark.finish(path, "binary-sniff-buffer-opened");
-                return;
+              if (fileData) {
+                preloadedText = textFileDecoder.decode(fileData);
               }
-
-              preloadedLocalText = textFileDecoder.decode(bytes);
             } catch (error) {
-              console.error("Failed to inspect WSL file bytes before opening:", error);
+              console.error(
+                resourceProvider.kind === "wsl"
+                  ? "Failed to inspect WSL file bytes before opening:"
+                  : "Failed to inspect file bytes before opening:",
+                error,
+              );
             }
           }
 
@@ -1704,38 +1676,11 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             }
           }
 
-          let content: string;
-
-          // Check if this is a remote file
-          if (path.startsWith("remote://")) {
-            const match = path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
-            if (!match) return;
-
-            const connectionId = match[1];
-            const remotePath = match[2] || "/";
-
-            content = await readFileOnce(`remote-text:${connectionId}:${remotePath}`, () =>
-              invoke<string>("ssh_read_file", {
-                connectionId,
-                filePath: remotePath,
-              }),
-            );
-          } else if (wslInfo) {
-            content =
-              preloadedLocalText ??
-              (await readFileOnce(`wsl-text:${wslInfo.distro}:${wslInfo.linuxPath}`, () =>
-                invoke<string>("wsl_read_file", {
-                  distro: wslInfo.distro,
-                  filePath: wslInfo.linuxPath,
-                }),
-              ));
-          } else {
-            content =
-              preloadedLocalText ??
-              (await readFileOnce(`local-text:${resolvedPath}`, () =>
-                readFileContent(resolvedPath),
-              ));
-          }
+          const content =
+            preloadedText ??
+            (await readFileOnce(`${resourceProvider.kind}-text:${providerPath}`, () =>
+              resourceProvider.readText(providerPath),
+            ));
           fileOpenBenchmark.mark(path, "file-read", `${content.length} chars`);
 
           if (isStaleRequest()) return;
