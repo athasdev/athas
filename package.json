@@ -8,7 +8,6 @@
     "check": "bash scripts/check.sh",
     "check:frontend": "bash scripts/check/frontend.sh",
     "check:zustand": "bun scripts/check/zustand-architecture.ts",
-    "check:ui-contracts": "bun scripts/check/ui-semantic-contracts.ts",
     "check:services": "bun scripts/check/service-config.ts",
     "services:check": "bun run check:services",
     "test:rust": "cargo test --workspace --no-fail-fast",
