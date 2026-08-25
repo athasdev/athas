@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CodexComposerCatalog, CodexSkillSummary, CodexThreadSummary } from "./codex-types";
+import type { CodexSkillSummary, CodexThreadPage, CodexThreadSummary } from "./codex-types";
+
+export const CODEX_COMPOSER_THREAD_PAGE_SIZE = 20;
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -32,6 +34,16 @@ export function normalizeCodexThreads(value: unknown): CodexThreadSummary[] {
       };
     })
     .filter((thread): thread is CodexThreadSummary => Boolean(thread));
+}
+
+export function normalizeCodexThreadPage(value: unknown): CodexThreadPage {
+  const response = asRecord(value);
+  const nextCursor = asString(response.nextCursor);
+
+  return {
+    threads: normalizeCodexThreads(value),
+    nextCursor: nextCursor || null,
+  };
 }
 
 export function normalizeCodexSkills(value: unknown) {
@@ -72,17 +84,23 @@ export function normalizeCodexSkills(value: unknown) {
   return { skills, skillErrors };
 }
 
-export async function loadCodexComposerCatalog(cwd: string): Promise<CodexComposerCatalog> {
+export async function startCodexComposer(cwd: string): Promise<void> {
   await invoke("start_codex_integration", { args: { cwd } });
-  const [threadResult, skillResult] = await Promise.all([
-    invoke("list_codex_threads", { cwd, cursor: null }),
-    invoke("list_codex_skills", { cwd }),
-  ]);
-  const { skills, skillErrors } = normalizeCodexSkills(skillResult);
+}
 
-  return {
-    threads: normalizeCodexThreads(threadResult),
-    skills,
-    skillErrors,
-  };
+export async function listCodexComposerThreads(
+  cwd: string,
+  cursor: string | null = null,
+): Promise<CodexThreadPage> {
+  const result = await invoke("list_codex_threads", {
+    cwd,
+    cursor,
+    limit: CODEX_COMPOSER_THREAD_PAGE_SIZE,
+  });
+
+  return normalizeCodexThreadPage(result);
+}
+
+export async function listCodexComposerSkills(cwd: string) {
+  return normalizeCodexSkills(await invoke("list_codex_skills", { cwd }));
 }

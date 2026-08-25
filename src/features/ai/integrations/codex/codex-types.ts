@@ -46,16 +46,15 @@ export interface CodexThreadSummary {
   updatedAt: number;
 }
 
+export interface CodexThreadPage {
+  threads: CodexThreadSummary[];
+  nextCursor: string | null;
+}
+
 export interface CodexSkillSummary {
   name: string;
   description: string;
   path: string;
   scope: string;
   enabled: boolean;
-}
-
-export interface CodexComposerCatalog {
-  threads: CodexThreadSummary[];
-  skills: CodexSkillSummary[];
-  skillErrors: string[];
 }

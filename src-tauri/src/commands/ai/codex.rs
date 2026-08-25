@@ -129,9 +129,10 @@ pub async fn list_codex_threads(
    server: State<'_, CodexAppServer>,
    cwd: Option<String>,
    cursor: Option<String>,
+   limit: Option<usize>,
 ) -> Result<Value, String> {
    server
-      .list_threads(cwd, cursor)
+      .list_threads(cwd, cursor, limit)
       .await
       .map_err(|error| error.to_string())
 }
