@@ -3,9 +3,7 @@ import {
   ArrowFatLineDownIcon as Down,
   ArrowSquareOutIcon as OpenExternal,
   BugIcon as Bug,
-  DownloadSimpleIcon as Download,
   FileIcon,
-  MagnifyingGlassIcon as Search,
   PlayIcon as Play,
   StackIcon as ImageIcon,
   SlidersHorizontalIcon as Sliders,
@@ -35,14 +33,12 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { showPromptDialog } from "@/ui/dialog";
-import Input from "@/ui/input";
 import {
   SidebarSearchPopover,
   SidebarSectionLabel,
   SidebarTabBar,
   SidebarWorkspace,
 } from "@/ui/sidebar";
-import { SearchField } from "@/ui/search";
 import { cn } from "@/utils/cn";
 import {
   buildDockerImage,
@@ -94,6 +90,7 @@ import {
 } from "./docker-sidebar-states";
 import { DockerImageDialog, type DockerImageDialogMode } from "./docker-image-dialog";
 import { DockerContainerDetail, type DockerContainerDetailTab } from "./docker-container-detail";
+import { DockerRegistrySection } from "./docker-registry-section";
 import {
   ComposeServiceRow,
   ContainerRow,
@@ -1588,178 +1585,24 @@ export function DockerSidebar() {
               )}
               {renderSection(
                 "registry",
-                <>
-                  {connectionError ? (
-                    <DockerCapabilityNotice>
-                      Search and login remain available. Start Docker to pull, push, or tag images.
-                    </DockerCapabilityNotice>
-                  ) : null}
-                  <div className="space-y-3 px-2 py-2">
-                    <div className="space-y-1">
-                      <SidebarSectionLabel>Docker Hub</SidebarSectionLabel>
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <SearchField
-                          value={registryQuery}
-                          onChange={setRegistryQuery}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") void handleRegistrySearch();
-                          }}
-                          placeholder="Search images"
-                          aria-label="Search Docker Hub"
-                          size="xs"
-                          className="min-w-0 flex-1 rounded-lg"
-                        />
-                        <Button
-                          type="button"
-                          variant="default"
-                          size="xs"
-                          disabled={isRegistryBusy || !registryQuery.trim()}
-                          onClick={() => void handleRegistrySearch()}
-                        >
-                          {isRegistryBusy ? <Spinner compact /> : <Search />}
-                          Search
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <SidebarSectionLabel>Image actions</SidebarSectionLabel>
-                      <Input
-                        value={registryDraft.image}
-                        onChange={(event) => setRegistryDraftField("image", event.target.value)}
-                        placeholder="Image, for example nginx:latest"
-                        size="xs"
-                        className="w-full rounded-lg"
-                      />
-                      <Input
-                        value={registryDraft.target}
-                        onChange={(event) => setRegistryDraftField("target", event.target.value)}
-                        placeholder="Target tag"
-                        size="xs"
-                        className="w-full rounded-lg"
-                      />
-                      <div className="flex flex-wrap items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          disabled={
-                            isRegistryBusy || !isDockerDaemonReady || !registryDraft.image.trim()
-                          }
-                          onClick={() => void handleRegistryPull(registryDraft.image)}
-                        >
-                          Pull
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          disabled={
-                            isRegistryBusy || !isDockerDaemonReady || !registryDraft.image.trim()
-                          }
-                          onClick={() => void handleRegistryPush()}
-                        >
-                          Push
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          disabled={
-                            isRegistryBusy ||
-                            !isDockerDaemonReady ||
-                            !registryDraft.image.trim() ||
-                            !registryDraft.target.trim()
-                          }
-                          onClick={() => void handleTagImage()}
-                        >
-                          Tag
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <SidebarSectionLabel>Registry login</SidebarSectionLabel>
-                      <Input
-                        value={registryDraft.registry}
-                        onChange={(event) => setRegistryDraftField("registry", event.target.value)}
-                        placeholder="Registry (optional)"
-                        size="xs"
-                        className="w-full rounded-lg"
-                      />
-                      <Input
-                        value={registryDraft.username}
-                        onChange={(event) => setRegistryDraftField("username", event.target.value)}
-                        placeholder="Username"
-                        size="xs"
-                        className="w-full rounded-lg"
-                      />
-                      <Input
-                        value={registryDraft.password}
-                        onChange={(event) => setRegistryDraftField("password", event.target.value)}
-                        type="password"
-                        placeholder="Password"
-                        size="xs"
-                        className="w-full rounded-lg"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="xs"
-                        disabled={
-                          isRegistryBusy ||
-                          !registryDraft.username.trim() ||
-                          !registryDraft.password
-                        }
-                        onClick={() => void handleRegistryLogin()}
-                      >
-                        Login
-                      </Button>
-                    </div>
-                  </div>
-                  {registryError ? (
-                    <DockerInlineError
-                      title="Registry action failed"
-                      error={registryError}
-                      onDismiss={dismissRegistryError}
-                      className="mx-2 mb-1 w-auto"
-                    />
-                  ) : null}
-                  {registryOutput ? (
-                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
-                      {registryOutput}
-                    </div>
-                  ) : null}
-                  {registryResults.length > 0 ? (
-                    registryResults.map((result) => (
-                      <DockerResourceRow
-                        key={result.name}
-                        title={result.name}
-                        description={
-                          <>
-                            {result.starCount ? `${result.starCount} stars` : "Registry image"}
-                            {result.official === "[OK]" ? " · official" : ""}
-                            {result.automated === "[OK]" ? " · automated" : ""}
-                            {result.description ? ` · ${result.description}` : ""}
-                          </>
-                        }
-                        actions={
-                          <DockerActionMenu
-                            label={`Actions for ${result.name}`}
-                            actions={[
-                              {
-                                label: "Pull",
-                                icon: <Download />,
-                                disabled: isRegistryBusy || !isDockerDaemonReady,
-                                onSelect: () => void handleRegistryPull(result.name),
-                              },
-                            ]}
-                          />
-                        }
-                      />
-                    ))
-                  ) : (
-                    <EmptyState layout="sidebar" message="Search Docker Hub to find images" />
-                  )}
-                </>,
+                <DockerRegistrySection
+                  query={registryQuery}
+                  results={registryResults}
+                  error={registryError}
+                  output={registryOutput}
+                  draft={registryDraft}
+                  isBusy={isRegistryBusy}
+                  isDockerDaemonReady={isDockerDaemonReady}
+                  hasConnectionError={connectionError !== null}
+                  onQueryChange={setRegistryQuery}
+                  onDraftFieldChange={setRegistryDraftField}
+                  onSearch={handleRegistrySearch}
+                  onLogin={handleRegistryLogin}
+                  onPull={handleRegistryPull}
+                  onPush={handleRegistryPush}
+                  onTag={handleTagImage}
+                  onDismissError={dismissRegistryError}
+                />,
                 registryResults.length,
               )}
               {renderSection(
