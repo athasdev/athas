@@ -18,14 +18,11 @@ import { matchesSearchQuery } from "@/utils/search-match";
 import { CaretRightIcon, CheckIcon, MagnifyingGlassIcon as Search } from "@/ui/icons";
 import Keybinding from "@/features/keymaps/components/keybinding";
 import {
-  type MenuDensity,
   menuItemVariants,
   menuLabelVariants,
   menuSeparatorVariants,
   menuSurfaceVariants,
 } from "@/design-system/menu";
-
-export type DropdownDensity = MenuDensity;
 
 export type MenuItemTone = "default" | "accent" | "destructive";
 
@@ -102,7 +99,6 @@ interface MenuItemsListProps {
   onItemSelect?: () => void;
   className?: string;
   focusIndex?: number;
-  density?: DropdownDensity;
   showIcons?: boolean;
 }
 
@@ -111,7 +107,6 @@ export function MenuItemsList({
   onItemSelect,
   className,
   focusIndex = -1,
-  density = "compact",
   showIcons = true,
 }: MenuItemsListProps) {
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -128,7 +123,7 @@ export function MenuItemsList({
     <div className={className}>
       {items.map((item) => {
         if (item.separator) {
-          return <div key={item.id} className={menuSeparatorVariants({ density })} />;
+          return <div key={item.id} className={menuSeparatorVariants()} />;
         }
 
         selectableIdx++;
@@ -154,7 +149,6 @@ export function MenuItemsList({
             disabled={isDisabled}
             className={cn(
               menuItemVariants({
-                density,
                 disabled: isDisabled,
                 focused: isFocused,
                 selected: item.selected,
@@ -164,12 +158,7 @@ export function MenuItemsList({
             aria-current={item.selected ? "true" : undefined}
           >
             {showIcons && item.icon && (
-              <span
-                className={cn(
-                  "grid shrink-0 place-items-center [&>svg]:block",
-                  density === "compact" ? "size-4 [&>svg]:size-4" : "size-4.5 [&>svg]:size-4.5",
-                )}
-              >
+              <span className="grid size-4 shrink-0 place-items-center [&>svg]:block [&>svg]:size-4">
                 {item.icon}
               </span>
             )}
@@ -215,7 +204,6 @@ interface DropdownBaseProps {
   animated?: boolean;
   matchAnchorWidth?: boolean;
   anchorMinWidth?: number;
-  density?: DropdownDensity;
   showIcons?: boolean;
 }
 
@@ -307,7 +295,6 @@ export function Dropdown(props: DropdownProps) {
     animated = true,
     matchAnchorWidth = false,
     anchorMinWidth = 0,
-    density: requestedDensity,
     showIcons = true,
   } = props;
 
@@ -321,7 +308,6 @@ export function Dropdown(props: DropdownProps) {
   const [isPositioned, setIsPositioned] = useState(false);
 
   const isAnchorMode = "anchorRef" in props && props.anchorRef != null;
-  const density = requestedDensity ?? (isAnchorMode ? "compact" : "default");
   const anchorRef = isAnchorMode ? (props as AnchorPositioning).anchorRef : null;
   const anchorSide = isAnchorMode
     ? ((props as AnchorPositioning).anchorSide ?? "bottom")
@@ -622,7 +608,7 @@ export function Dropdown(props: DropdownProps) {
       isOpen={isOpen}
       contentRef={menuRef}
       portalContainer={portalContainer}
-      className={cn(menuSurfaceVariants({ density }), className)}
+      className={cn(menuSurfaceVariants(), className)}
       style={{ transformOrigin, visibility: isPositioned ? "visible" : "hidden", ...style }}
       animated={animated}
       initial={{
@@ -665,21 +651,17 @@ export function Dropdown(props: DropdownProps) {
             items={getFilteredItems()}
             focusIndex={focusIndex}
             onItemSelect={closeOnSelect ? onClose : undefined}
-            density={density}
             showIcons={showIcons}
           />
         )}
         {hasSections &&
           getFilteredSections().map((section, sectionIdx) => (
             <div key={section.id}>
-              {sectionIdx > 0 ? <div className={menuSeparatorVariants({ density })} /> : null}
-              {section.label && (
-                <div className={menuLabelVariants({ density })}>{section.label}</div>
-              )}
+              {sectionIdx > 0 ? <div className={menuSeparatorVariants()} /> : null}
+              {section.label && <div className={menuLabelVariants()}>{section.label}</div>}
               <MenuItemsList
                 items={section.items}
                 onItemSelect={closeOnSelect ? onClose : undefined}
-                density={density}
                 showIcons={showIcons}
               />
             </div>
@@ -754,7 +736,7 @@ function DropdownMenuContent({
         <DropdownMenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn(
-            menuSurfaceVariants({ density: "compact" }),
+            menuSurfaceVariants(),
             "z-10070 max-w-[min(480px,calc(100vw-16px))] duration-75 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
             className,
           )}
@@ -784,7 +766,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        menuItemVariants({ density: "compact", tone: variant }),
+        menuItemVariants({ tone: variant }),
         "group/dropdown-menu-item data-inset:pl-8",
         className,
       )}
@@ -804,7 +786,7 @@ function DropdownMenuCheckboxItem({
     <DropdownMenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
-      className={cn(menuItemVariants({ density: "compact" }), "pr-8 data-inset:pl-8", className)}
+      className={cn(menuItemVariants(), "pr-8 data-inset:pl-8", className)}
       checked={checked}
       {...props}
     >
@@ -832,7 +814,7 @@ function DropdownMenuRadioItem({
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
-      className={cn(menuItemVariants({ density: "compact" }), "pr-8 data-inset:pl-8", className)}
+      className={cn(menuItemVariants(), "pr-8 data-inset:pl-8", className)}
       {...props}
     >
       <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
@@ -854,7 +836,7 @@ function DropdownMenuLabel({
     <DropdownMenuPrimitive.GroupLabel
       data-slot="dropdown-menu-label"
       data-inset={inset}
-      className={cn(menuLabelVariants({ density: "compact" }), "data-inset:pl-8", className)}
+      className={cn(menuLabelVariants(), "data-inset:pl-8", className)}
       {...props}
     />
   );
@@ -864,7 +846,7 @@ function DropdownMenuSeparator({ className, ...props }: DropdownMenuPrimitive.Se
   return (
     <DropdownMenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn(menuSeparatorVariants({ density: "compact" }), className)}
+      className={cn(menuSeparatorVariants(), className)}
       {...props}
     />
   );
@@ -885,7 +867,7 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        menuItemVariants({ density: "compact" }),
+        menuItemVariants(),
         "data-inset:pl-8 data-open:bg-accent data-open:text-foreground",
         className,
       )}

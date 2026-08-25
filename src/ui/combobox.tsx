@@ -227,7 +227,7 @@ function ComboboxContent({
           data-slot="combobox-content"
           data-chips={Boolean(anchor)}
           className={cn(
-            menuSurfaceVariants({ density: "compact" }),
+            menuSurfaceVariants(),
             "group/combobox-content relative w-(--anchor-width) max-w-(--available-width) min-w-60 overflow-hidden text-foreground duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
             className,
           )}
@@ -257,11 +257,7 @@ function ComboboxActionItem({
     <button
       data-slot="combobox-action-item"
       type={type}
-      className={cn(
-        menuItemVariants({ density: "compact" }),
-        "hover:bg-accent active:scale-press",
-        className,
-      )}
+      className={cn(menuItemVariants(), "hover:bg-accent active:scale-press", className)}
       {...props}
     />
   );
@@ -278,7 +274,7 @@ function ComboboxItem({
   return (
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
-      className={cn(menuItemVariants({ density: "compact" }), showIndicator && "pr-8", className)}
+      className={cn(menuItemVariants(), showIndicator && "pr-8", className)}
       {...props}
     >
       {children}
@@ -301,7 +297,7 @@ function ComboboxLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Pro
   return (
     <ComboboxPrimitive.GroupLabel
       data-slot="combobox-label"
-      className={cn(menuLabelVariants({ density: "compact" }), className)}
+      className={cn(menuLabelVariants(), className)}
       {...props}
     />
   );
@@ -328,7 +324,7 @@ function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.
   return (
     <ComboboxPrimitive.Separator
       data-slot="combobox-separator"
-      className={cn(menuSeparatorVariants({ density: "compact" }), className)}
+      className={cn(menuSeparatorVariants(), className)}
       {...props}
     />
   );

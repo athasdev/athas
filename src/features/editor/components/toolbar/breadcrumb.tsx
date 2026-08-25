@@ -191,7 +191,6 @@ export default function Breadcrumb({
           onClose={() => setIsActionsMenuOpen(false)}
           items={actionMenuItems}
           className="min-w-45 rounded-lg"
-          density="compact"
           showIcons={false}
         />
       </>

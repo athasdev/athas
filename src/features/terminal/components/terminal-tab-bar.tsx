@@ -200,23 +200,23 @@ const ToolbarContextMenu = ({
   return (
     <Dropdown isOpen={isOpen} point={position} onClose={onClose} className="min-w-45">
       <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">Terminal Width</div>
-      <MenuItemsList items={modeItems} onItemSelect={onClose} density="default" />
+      <MenuItemsList items={modeItems} onItemSelect={onClose} />
       <div className="my-0.5 border-border/70 border-t" />
       <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">Tab Layout</div>
-      <MenuItemsList items={layoutItems} onItemSelect={onClose} density="default" />
+      <MenuItemsList items={layoutItems} onItemSelect={onClose} />
       {currentLayout === "vertical" && (
         <>
           <div className="my-0.5 border-border/70 border-t" />
           <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">
             Tab Position
           </div>
-          <MenuItemsList items={sidebarPositionItems} onItemSelect={onClose} density="default" />
+          <MenuItemsList items={sidebarPositionItems} onItemSelect={onClose} />
         </>
       )}
       {actionItems.length > 0 && (
         <>
           <div className="my-0.5 border-border/70 border-t" />
-          <MenuItemsList items={actionItems} onItemSelect={onClose} density="default" />
+          <MenuItemsList items={actionItems} onItemSelect={onClose} />
         </>
       )}
     </Dropdown>
@@ -984,11 +984,7 @@ const TerminalTabBar = ({
               New Terminal
             </div>
             <div className="my-0.5 border-border/70 border-t" />
-            <MenuItemsList
-              items={profileMenuItems}
-              onItemSelect={closeProfileMenu}
-              density="default"
-            />
+            <MenuItemsList items={profileMenuItems} onItemSelect={closeProfileMenu} />
           </Dropdown>
         </>,
         document.body,

@@ -236,7 +236,7 @@ function PlainSelect({
               data-prevent-dialog-escape="true"
               style={popupStyle}
               className={cn(
-                menuSurfaceVariants({ density: "compact" }),
+                menuSurfaceVariants(),
                 "w-(--anchor-width) max-w-(--available-width) min-w-36 overflow-hidden text-foreground duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
                 !menuAnimated && "duration-0 data-ending-style:transform-none",
                 menuWidth === "content" && "w-fit min-w-0 max-w-(--available-width)",
@@ -250,7 +250,7 @@ function PlainSelect({
                     value={option.value}
                     label={option.label}
                     disabled={option.disabled}
-                    className={menuItemVariants({ density: "compact" })}
+                    className={menuItemVariants()}
                   >
                     {option.icon ? (
                       <span className="size-3 shrink-0 text-subtle-foreground">{option.icon}</span>

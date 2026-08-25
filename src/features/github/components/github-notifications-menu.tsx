@@ -267,7 +267,7 @@ export function GitHubNotificationsMenu() {
           <div className="max-h-96 min-w-0 overflow-x-hidden overflow-y-auto p-1">
             {notificationGroups.map((group) => (
               <section key={group.label} className="min-w-0">
-                <div className={menuLabelVariants({ density: "compact" })}>{group.label}</div>
+                <div className={menuLabelVariants()}>{group.label}</div>
                 <ItemGroup className="min-w-0 gap-0.5">
                   {group.notifications.map((notification) => {
                     const reason = notificationReasonLabel(notification.reason);

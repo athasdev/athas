@@ -87,7 +87,7 @@ export function SearchPopover({
   className,
 }: SearchPopoverProps) {
   return (
-    <div className={cn(menuSurfaceVariants({ density: "compact" }), "w-80", className)}>
+    <div className={cn(menuSurfaceVariants(), "w-80", className)}>
       <div className="flex items-center gap-1.5">
         {leadingControl}
 

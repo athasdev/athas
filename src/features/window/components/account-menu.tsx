@@ -276,7 +276,6 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
         anchorRef={buttonRef}
         anchorAlign="end"
         onClose={() => setIsOpen(false)}
-        density="default"
         className="w-fit min-w-64 max-w-72"
         header={
           isAuthenticated ? (
