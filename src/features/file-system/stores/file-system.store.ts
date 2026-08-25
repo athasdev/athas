@@ -7,10 +7,7 @@ import type { StoreApi } from "zustand";
 import { createStore } from "zustand/vanilla";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
-import {
-  buildPersistedEditorViewState,
-  restorePersistedEditorViewState,
-} from "@/features/editor/stores/editor-session-state";
+import { restorePersistedEditorViewState } from "@/features/editor/stores/editor-session-state";
 import {
   clearQueuedWorkspaceSessionSave,
   useBufferStore,
@@ -29,7 +26,7 @@ import { buildRemoteRootPath, parseRemotePath } from "@/features/remote/utils/re
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import type { BufferSession } from "@/features/window/stores/session.store";
+import type { BufferSession } from "@/features/workspace/types/workspace-session.types";
 import {
   getCurrentProjectUiState,
   persistCurrentProjectUiState,
@@ -43,10 +40,13 @@ import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.s
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { createTerminalEventChannel } from "@/features/terminal/utils/terminal-protocol";
 import { getFrontendTerminalSessionArgs } from "@/features/terminal/utils/frontend-terminal-session";
-import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { showAlertDialog, showPromptDialog } from "@/ui/dialog";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
+import {
+  encodeWorkspaceBuffer,
+  isLocalFileInWorkspace,
+} from "@/features/workspace/persistence/workspace-session-codec";
 import { switchWorkspaceRuntime } from "@/features/workspace/services/workspace-lifecycle";
 import { scheduleWorkspacePrewarm } from "@/features/workspace/services/workspace-prewarm";
 import {
@@ -113,8 +113,6 @@ import {
 import {
   buildWorkspaceRestoreBatch,
   buildWorkspaceRestorePlan,
-  getEditorWorkspaceScope,
-  isLocalFileInWorkspace,
   isWorkspaceFolderPath,
   normalizeWorkspaceFolders,
   selectRestoredWorkspaceFolders,
@@ -309,55 +307,6 @@ const recordLocalFileAccess = (
   }
 
   window.setTimeout(recordAccess, 50);
-};
-
-const serializeWorkspaceBuffer = (
-  buffer: PaneContent,
-  workspaceRootPath: string | undefined,
-  workspaceFolderPaths: string[] = [],
-): BufferSession | null => {
-  if (buffer.type === "editor" && !buffer.isVirtual) {
-    return {
-      type: "editor",
-      id: buffer.id,
-      name: buffer.name,
-      path: buffer.path,
-      isPinned: buffer.isPinned,
-      isPreview: buffer.isPreview,
-      workspaceScope: getEditorWorkspaceScope(buffer.path, workspaceRootPath, workspaceFolderPaths),
-      editorState: buildPersistedEditorViewState(buffer),
-    };
-  }
-
-  if (buffer.type === "terminal") {
-    return {
-      type: "terminal",
-      path: buffer.path,
-      name: buffer.name,
-      isPinned: buffer.isPinned,
-      sessionId: buffer.sessionId,
-      shell: buffer.shell,
-      initialCommand: buffer.initialCommand,
-      workingDirectory: buffer.workingDirectory,
-      remoteConnectionId: buffer.remoteConnectionId,
-    };
-  }
-
-  if (buffer.type === "webViewer") {
-    return {
-      type: "webViewer",
-      path: buffer.path,
-      name: buffer.name,
-      isPinned: buffer.isPinned,
-      url: buffer.url,
-      zoomLevel: buffer.zoomLevel,
-      profileKey: buffer.profileKey,
-      history: buffer.history,
-      historyIndex: buffer.historyIndex,
-    };
-  }
-
-  return null;
 };
 
 const restoreEditorSessionStateForPath = (
@@ -1130,7 +1079,13 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             : undefined);
         deferredAiSession = undefined;
         const openPersistedBuffers = buffers
-          .map((buffer) => serializeWorkspaceBuffer(buffer, currentRootPath, workspaceFolderPaths))
+          .map((buffer) =>
+            encodeWorkspaceBuffer(buffer, {
+              workspaceRootPath: currentRootPath,
+              workspaceFolderPaths,
+              includeEditorId: true,
+            }),
+          )
           .filter((buffer): buffer is BufferSession => buffer !== null);
         const openBufferPaths = new Set(openPersistedBuffers.map((buffer) => buffer.path));
         const persistedBuffers = [

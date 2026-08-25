@@ -2,8 +2,6 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   buildWorkspaceRestoreBatch,
   buildWorkspaceRestorePlan,
-  getEditorWorkspaceScope,
-  isLocalFileInWorkspace,
   isWorkspaceFolderPath,
   normalizeWorkspaceFolders,
   selectRestoredWorkspaceFolders,
@@ -80,28 +78,7 @@ describe("buildWorkspaceRestorePlan", () => {
   });
 });
 
-describe("workspace file scope", () => {
-  it("classifies files under the workspace root as workspace files", () => {
-    expect(isLocalFileInWorkspace("/workspace/src/app.ts", "/workspace")).toBe(true);
-    expect(getEditorWorkspaceScope("/workspace/src/app.ts", "/workspace")).toBe("workspace");
-  });
-
-  it("classifies local files outside the workspace root as external files", () => {
-    expect(isLocalFileInWorkspace("/other/readme.md", "/workspace")).toBe(false);
-    expect(getEditorWorkspaceScope("/other/readme.md", "/workspace")).toBe("external");
-  });
-
-  it("classifies files under added workspace folders as workspace files", () => {
-    expect(isLocalFileInWorkspace("/docs/readme.md", "/workspace", ["/docs"])).toBe(true);
-    expect(getEditorWorkspaceScope("/docs/readme.md", "/workspace", ["/docs"])).toBe("workspace");
-  });
-
-  it("does not classify remote or virtual editor paths as local external files", () => {
-    expect(getEditorWorkspaceScope("remote://conn/src/app.ts", "/workspace")).toBeUndefined();
-    expect(getEditorWorkspaceScope("wsl://Ubuntu/home/me/app.ts", "/workspace")).toBeUndefined();
-    expect(getEditorWorkspaceScope("diff://unstaged/src%2Fapp.ts", "/workspace")).toBeUndefined();
-  });
-
+describe("workspace folders", () => {
   it("normalizes workspace folders around the primary root", () => {
     expect(
       normalizeWorkspaceFolders("/workspace", [

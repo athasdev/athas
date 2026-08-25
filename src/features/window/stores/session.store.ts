@@ -2,55 +2,15 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import type { AIWorkspaceSessionSnapshot } from "@/features/ai/stores/ai-chat/ai-chat-store.types";
-import type { PersistedEditorViewState } from "@/features/editor/types/editor-session.types";
 import type { PaneNode } from "@/features/panes/types/pane.types";
 import type { PersistedTerminal } from "@/features/terminal/types/terminal.types";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
+import type {
+  BufferSession,
+  WorkspaceFolderSession,
+} from "@/features/workspace/types/workspace-session.types";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { createSafeJSONStorage } from "@/utils/zustand-storage";
-
-interface EditorBufferSession {
-  type: "editor";
-  id?: string;
-  path: string;
-  name: string;
-  isPinned: boolean;
-  isPreview?: boolean;
-  workspaceScope?: "workspace" | "external";
-  editorState?: PersistedEditorViewState;
-}
-
-interface TerminalBufferSession {
-  type: "terminal";
-  path: string;
-  name: string;
-  isPinned: boolean;
-  sessionId: string;
-  shell?: string;
-  initialCommand?: string;
-  workingDirectory?: string;
-  remoteConnectionId?: string;
-}
-
-interface WebViewerBufferSession {
-  type: "webViewer";
-  path: string;
-  name: string;
-  isPinned: boolean;
-  url: string;
-  zoomLevel?: number;
-  profileKey?: string;
-  history?: string[];
-  historyIndex?: number;
-}
-
-export type BufferSession = EditorBufferSession | TerminalBufferSession | WebViewerBufferSession;
-
-export interface WorkspaceFolderSession {
-  path: string;
-  name: string;
-  isPrimary?: boolean;
-}
 
 export interface ProjectSession {
   projectPath: string;

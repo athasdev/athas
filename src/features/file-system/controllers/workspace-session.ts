@@ -1,4 +1,4 @@
-import type { BufferSession } from "@/features/window/stores/session.store";
+import type { BufferSession } from "@/features/workspace/types/workspace-session.types";
 
 export interface WorkspaceSessionBuffer {
   type: BufferSession["type"];
@@ -28,31 +28,6 @@ export interface WorkspaceFolderSession {
 
 function normalizeWorkspacePath(path: string) {
   return path.replace(/\\/g, "/").replace(/\/+$/, "");
-}
-
-export function isLocalFileInWorkspace(
-  filePath: string,
-  workspaceRootPath: string | undefined,
-  workspaceFolderPaths: string[] = [],
-) {
-  const workspaceRoots = [
-    workspaceRootPath,
-    ...workspaceFolderPaths.filter((folderPath) => folderPath !== workspaceRootPath),
-  ].filter((folderPath): folderPath is string => !!folderPath);
-
-  if (workspaceRoots.length === 0) {
-    return false;
-  }
-
-  const normalizedFilePath = normalizeWorkspacePath(filePath);
-
-  return workspaceRoots.some((workspaceRoot) => {
-    const normalizedWorkspaceRoot = normalizeWorkspacePath(workspaceRoot);
-    return (
-      normalizedFilePath === normalizedWorkspaceRoot ||
-      normalizedFilePath.startsWith(`${normalizedWorkspaceRoot}/`)
-    );
-  });
 }
 
 export function normalizeWorkspaceFolders(
@@ -105,26 +80,6 @@ export function isWorkspaceFolderPath(
   return normalizeWorkspaceFolders(rootFolderPath, workspaceFolders).some(
     (folder) => normalizeWorkspacePath(folder.path) === normalizeWorkspacePath(path),
   );
-}
-
-export function getEditorWorkspaceScope(
-  filePath: string,
-  workspaceRootPath: string | undefined,
-  workspaceFolderPaths: string[] = [],
-): "workspace" | "external" | undefined {
-  if (
-    filePath.startsWith("remote://") ||
-    filePath.startsWith("wsl://") ||
-    filePath.startsWith("diff://") ||
-    filePath.startsWith("terminal://") ||
-    filePath.startsWith("webview://")
-  ) {
-    return undefined;
-  }
-
-  return isLocalFileInWorkspace(filePath, workspaceRootPath, workspaceFolderPaths)
-    ? "workspace"
-    : "external";
 }
 
 interface WorkspaceSessionSnapshot {
