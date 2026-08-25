@@ -54,19 +54,14 @@ import {
   deleteDockerEnvFile,
   getDockerComposeProject,
   getDockerProjectConfig,
-  loginDockerRegistry,
   openDockerEnvFile,
   openDockerDevContainer,
-  pullDockerRegistryImage,
   pruneDockerResources,
-  pushDockerRegistryImage,
   runDockerComposeAction,
   runDockerContainerAction,
   runDockerImage,
   runDockerImageAction,
   saveDockerProjectConfig,
-  searchDockerRegistry,
-  tagDockerImage,
 } from "../services/docker-api";
 import type {
   DockerBuildPreset,
@@ -83,7 +78,6 @@ import type {
   DockerImage,
   DockerPruneTarget,
   DockerProjectConfig,
-  DockerRegistrySearchResult,
   DockerRunPreset,
 } from "../types/docker.types";
 import {
@@ -115,6 +109,7 @@ import {
 import { useDockerInventory } from "../hooks/use-docker-inventory";
 import { useDockerContainerLogs, type DockerLogFilter } from "../hooks/use-docker-container-logs";
 import { useDockerContainerFiles } from "../hooks/use-docker-container-files";
+import { useDockerRegistry } from "../hooks/use-docker-registry";
 
 type DockerSection =
   | "containers"
@@ -202,6 +197,25 @@ export function DockerSidebar() {
     clearError: clearFilesError,
     reportError: reportFilesError,
   } = useDockerContainerFiles(selectedContainerId, detailTab === "files");
+  const {
+    query: registryQuery,
+    results: registryResults,
+    error: registryError,
+    output: registryOutput,
+    isBusy: isRegistryBusy,
+    draft: registryDraft,
+    search: handleRegistrySearch,
+    login: handleRegistryLogin,
+    pull: handleRegistryPull,
+    push: handleRegistryPush,
+    tag: handleTagImage,
+    setQuery: setRegistryQuery,
+    setDraftField: setRegistryDraftField,
+    dismissError: dismissRegistryError,
+  } = useDockerRegistry({
+    onDockerUnavailable: markDockerUnavailable,
+    onInventoryChanged: loadInventory,
+  });
   const [composeProject, setComposeProject] = useState<DockerComposeProject>(emptyComposeProject);
   const [projectConfig, setProjectConfig] = useState<DockerProjectConfig>(emptyProjectConfig);
   const [query, setQuery] = useState("");
@@ -220,11 +234,6 @@ export function DockerSidebar() {
   const [composeOutput, setComposeOutput] = useState<string | null>(null);
   const [dockerOutput, setDockerOutput] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<DockerDialogMode>(null);
-  const [registryQuery, setRegistryQuery] = useState("");
-  const [registryResults, setRegistryResults] = useState<DockerRegistrySearchResult[]>([]);
-  const [registryError, setRegistryError] = useState<string | null>(null);
-  const [registryOutput, setRegistryOutput] = useState<string | null>(null);
-  const [isRegistryBusy, setIsRegistryBusy] = useState(false);
   const [buildDraft, setBuildDraft] = useState({
     contextPath: "",
     dockerfilePath: "",
@@ -239,13 +248,6 @@ export function DockerSidebar() {
     env: "",
     envFiles: "",
     command: "",
-  });
-  const [registryDraft, setRegistryDraft] = useState({
-    registry: "",
-    username: "",
-    password: "",
-    image: "",
-    target: "",
   });
   const loadComposeProject = useCallback(async () => {
     setIsComposeLoading(true);
@@ -953,104 +955,6 @@ export function DockerSidebar() {
     }
   };
 
-  const handleRegistryFailure = (failure: unknown) => {
-    const message = getErrorMessage(failure);
-    if (isDockerConnectionError(message)) markDockerUnavailable(message);
-    setRegistryError(message);
-  };
-
-  const handleRegistrySearch = async () => {
-    const query = registryQuery.trim();
-    if (!query) return;
-
-    setIsRegistryBusy(true);
-    setRegistryError(null);
-    try {
-      const results = await searchDockerRegistry(query, 25);
-      setRegistryResults(results);
-    } catch (searchError) {
-      handleRegistryFailure(searchError);
-      setRegistryResults([]);
-    } finally {
-      setIsRegistryBusy(false);
-    }
-  };
-
-  const handleRegistryLogin = async () => {
-    if (!registryDraft.username.trim() || !registryDraft.password) return;
-
-    setIsRegistryBusy(true);
-    setRegistryError(null);
-    setRegistryOutput(null);
-    try {
-      const output = await loginDockerRegistry({
-        registry: registryDraft.registry.trim() || undefined,
-        username: registryDraft.username.trim(),
-        password: registryDraft.password,
-      });
-      setRegistryOutput(output.trim() || "Docker registry login completed.");
-      setRegistryDraft((current) => ({ ...current, password: "" }));
-    } catch (loginError) {
-      handleRegistryFailure(loginError);
-    } finally {
-      setIsRegistryBusy(false);
-    }
-  };
-
-  const handleRegistryPull = async (image: string) => {
-    const imageName = image.trim();
-    if (!imageName) return;
-
-    setIsRegistryBusy(true);
-    setRegistryError(null);
-    setRegistryOutput(null);
-    try {
-      const output = await pullDockerRegistryImage(imageName);
-      setRegistryOutput(output.trim() || `Pulled ${imageName}.`);
-      await loadInventory();
-    } catch (pullError) {
-      handleRegistryFailure(pullError);
-    } finally {
-      setIsRegistryBusy(false);
-    }
-  };
-
-  const handleRegistryPush = async () => {
-    const imageName = registryDraft.image.trim();
-    if (!imageName) return;
-
-    setIsRegistryBusy(true);
-    setRegistryError(null);
-    setRegistryOutput(null);
-    try {
-      const output = await pushDockerRegistryImage(imageName);
-      setRegistryOutput(output.trim() || `Pushed ${imageName}.`);
-    } catch (pushError) {
-      handleRegistryFailure(pushError);
-    } finally {
-      setIsRegistryBusy(false);
-    }
-  };
-
-  const handleTagImage = async () => {
-    const source = registryDraft.image.trim();
-    const target = registryDraft.target.trim();
-    if (!source || !target) return;
-
-    setIsRegistryBusy(true);
-    setRegistryError(null);
-    setRegistryOutput(null);
-    try {
-      const output = await tagDockerImage(source, target);
-      setRegistryOutput(output.trim() || `Tagged ${source} as ${target}.`);
-      await loadInventory();
-    } catch (tagError) {
-      handleRegistryFailure(tagError);
-    } finally {
-      setIsRegistryBusy(false);
-    }
-  };
-
   const isDockerDaemonReady = !isLoading && connectionError === null;
   const isActiveTabLoading =
     activeTab === "resources" || activeTab === "registry"
@@ -1726,24 +1630,14 @@ export function DockerSidebar() {
                       <SidebarSectionLabel>Image actions</SidebarSectionLabel>
                       <Input
                         value={registryDraft.image}
-                        onChange={(event) =>
-                          setRegistryDraft((current) => ({
-                            ...current,
-                            image: event.target.value,
-                          }))
-                        }
+                        onChange={(event) => setRegistryDraftField("image", event.target.value)}
                         placeholder="Image, for example nginx:latest"
                         size="xs"
                         className="w-full rounded-lg"
                       />
                       <Input
                         value={registryDraft.target}
-                        onChange={(event) =>
-                          setRegistryDraft((current) => ({
-                            ...current,
-                            target: event.target.value,
-                          }))
-                        }
+                        onChange={(event) => setRegistryDraftField("target", event.target.value)}
                         placeholder="Target tag"
                         size="xs"
                         className="w-full rounded-lg"
@@ -1791,36 +1685,21 @@ export function DockerSidebar() {
                       <SidebarSectionLabel>Registry login</SidebarSectionLabel>
                       <Input
                         value={registryDraft.registry}
-                        onChange={(event) =>
-                          setRegistryDraft((current) => ({
-                            ...current,
-                            registry: event.target.value,
-                          }))
-                        }
+                        onChange={(event) => setRegistryDraftField("registry", event.target.value)}
                         placeholder="Registry (optional)"
                         size="xs"
                         className="w-full rounded-lg"
                       />
                       <Input
                         value={registryDraft.username}
-                        onChange={(event) =>
-                          setRegistryDraft((current) => ({
-                            ...current,
-                            username: event.target.value,
-                          }))
-                        }
+                        onChange={(event) => setRegistryDraftField("username", event.target.value)}
                         placeholder="Username"
                         size="xs"
                         className="w-full rounded-lg"
                       />
                       <Input
                         value={registryDraft.password}
-                        onChange={(event) =>
-                          setRegistryDraft((current) => ({
-                            ...current,
-                            password: event.target.value,
-                          }))
-                        }
+                        onChange={(event) => setRegistryDraftField("password", event.target.value)}
                         type="password"
                         placeholder="Password"
                         size="xs"
@@ -1845,7 +1724,7 @@ export function DockerSidebar() {
                     <DockerInlineError
                       title="Registry action failed"
                       error={registryError}
-                      onDismiss={() => setRegistryError(null)}
+                      onDismiss={dismissRegistryError}
                       className="mx-2 mb-1 w-auto"
                     />
                   ) : null}
