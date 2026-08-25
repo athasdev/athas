@@ -99,6 +99,7 @@ import {
 import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buffer-restore";
 import { restoreWorkspaceSessionFolders } from "../services/workspace-session-folder-restore";
 import { prepareWorkspaceClose } from "../services/workspace-close-guard";
+import { createWorkspaceBackgroundInitializer } from "../services/workspace-background-initializer";
 import { drainDeferredWorkspaceSessionBuffers } from "../services/workspace-deferred-session-restore";
 import { disposeWorkspaceResources } from "../services/workspace-disposal";
 import {
@@ -323,7 +324,7 @@ let scopedFileSystemStore: WorkspaceScopedStore<ScopedFileSystemStoreState>;
 const getScopedFileSystemStore = (workspaceId: string) =>
   scopedFileSystemStore.getStore(workspaceId);
 
-let workspaceServiceActivationVersion = 0;
+const workspaceBackgroundInitializer = createWorkspaceBackgroundInitializer();
 
 const initializeLocalWorkspaceInBackground = (
   workspaceId: string,
@@ -336,86 +337,37 @@ const initializeLocalWorkspaceInBackground = (
     maxGitStatusAgeMs?: number;
   } = {},
 ) => {
-  const activationVersion = ++workspaceServiceActivationVersion;
   const gitStore = useGitStore.getStore(workspaceId);
-  if (!options.preserveGitStatus) {
-    gitStore.getState().actions.setWorkspaceGitStatus(null, path);
-  }
-
-  void (async () => {
-    const backgroundInitStartedAt = performance.now();
-    logWorkspaceOpenStep("start", "backgroundInit", path);
-    try {
-      if (options.deferWatcher) {
-        await waitForWorkspaceIdle();
-      }
-      if (
-        activationVersion !== workspaceServiceActivationVersion ||
-        workspaceRuntimeRegistry.getActiveWorkspaceId() !== workspaceId ||
-        get().rootFolderPath !== path
-      ) {
-        return;
-      }
-
-      const watcherStartedAt = performance.now();
-      logWorkspaceOpenStep("start", "setProjectRoot", path);
-      await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot(path);
-      logWorkspaceOpenStep("end", "setProjectRoot", path, watcherStartedAt);
-
-      await waitForWorkspaceIdle();
-
-      if (
-        activationVersion !== workspaceServiceActivationVersion ||
-        workspaceRuntimeRegistry.getActiveWorkspaceId() !== workspaceId ||
-        get().rootFolderPath !== path
-      ) {
-        return;
-      }
-
+  void workspaceBackgroundInitializer.start({
+    path,
+    deferWatcher: options.deferWatcher,
+    preserveGitStatus: options.preserveGitStatus,
+    maxGitStatusAgeMs: options.maxGitStatusAgeMs,
+    waitForIdle: waitForWorkspaceIdle,
+    canContinue: () =>
+      workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId &&
+      get().rootFolderPath === path,
+    canCommitGitStatus: () => get().rootFolderPath === path,
+    shouldResetGitStatusAfterError: () => get().rootFolderPath === path,
+    resetGitStatus: () => gitStore.getState().actions.setWorkspaceGitStatus(null, path),
+    setProjectRoot: () =>
+      useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot(path),
+    startFileSearchSync: () => {
       void syncFffWorkspace(get);
-
-      await waitForWorkspaceIdle();
-
-      if (
-        activationVersion !== workspaceServiceActivationVersion ||
-        workspaceRuntimeRegistry.getActiveWorkspaceId() !== workspaceId ||
-        get().rootFolderPath !== path
-      ) {
-        return;
-      }
-
+    },
+    getGitStatusSnapshot: () => {
       const gitState = gitStore.getState();
-      if (
-        options.preserveGitStatus &&
-        gitState.currentWorkspaceRepoPath === path &&
-        Date.now() - gitState.workspaceGitStatusUpdatedAt < (options.maxGitStatusAgeMs ?? 15_000)
-      ) {
-        logWorkspaceOpenStep("end", "backgroundInit", path, backgroundInitStartedAt);
-        return;
-      }
-
-      const gitStatusStartedAt = performance.now();
-      logWorkspaceOpenStep("start", "getGitStatus", path);
-      const gitStatus = await getGitStatus(path);
-      logWorkspaceOpenStep("end", "getGitStatus", path, gitStatusStartedAt);
-
-      if (
-        activationVersion !== workspaceServiceActivationVersion ||
-        get().rootFolderPath !== path
-      ) {
-        return;
-      }
-
-      gitStore.getState().actions.setWorkspaceGitStatus(gitStatus, path);
-      logWorkspaceOpenStep("end", "backgroundInit", path, backgroundInitStartedAt);
-    } catch (error) {
-      if (get().rootFolderPath === path) {
-        gitStore.getState().actions.setWorkspaceGitStatus(null, path);
-      }
-      logWorkspaceOpenStep("error", "backgroundInit", path, backgroundInitStartedAt);
-      console.error(errorContext, error);
-    }
-  })();
+      return {
+        repoPath: gitState.currentWorkspaceRepoPath,
+        updatedAt: gitState.workspaceGitStatusUpdatedAt,
+      };
+    },
+    readGitStatus: () => getGitStatus(path),
+    commitGitStatus: (gitStatus) =>
+      gitStore.getState().actions.setWorkspaceGitStatus(gitStatus, path),
+    trace: (phase, step, startedAt) => logWorkspaceOpenStep(phase, step, path, startedAt),
+    onError: (error) => console.error(errorContext, error),
+  });
 };
 
 const applyNonLocalWorkspaceState = (
@@ -1151,7 +1103,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               .initializeRemoteWorkspace(connectionId),
           resume: async (workspaceId) => {
             getScopedFileSystemStore(workspaceId).getState().resumeWorkspaceSession();
-            workspaceServiceActivationVersion++;
+            workspaceBackgroundInitializer.invalidate();
             void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
           },
         });
@@ -1216,7 +1168,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               .initializeWslWorkspace(distro, normalizedLinuxPath),
           resume: async (workspaceId) => {
             getScopedFileSystemStore(workspaceId).getState().resumeWorkspaceSession();
-            workspaceServiceActivationVersion++;
+            workspaceBackgroundInitializer.invalidate();
             void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
           },
         });
@@ -2589,7 +2541,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             targetStore.resumeWorkspaceSession();
 
             if (parseRemotePath(path) || parseWslPath(path)) {
-              workspaceServiceActivationVersion++;
+              workspaceBackgroundInitializer.invalidate();
               void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
             } else {
               initializeLocalWorkspaceInBackground(
