@@ -96,6 +96,7 @@ import {
   inspectFileOpenResource,
   readFileOpenText,
 } from "../services/file-open-resource";
+import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buffer-restore";
 import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
@@ -828,69 +829,37 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
           const restoreBuffers = async (buffers: typeof buffersToRestore) => {
             for (const buffer of buffers) {
-              if (buffer.type === "terminal") {
-                const restoredBufferId = bufferActions.openContent({
-                  type: "terminal",
-                  name: buffer.name,
-                  command: buffer.initialCommand,
-                  shell: buffer.shell,
-                  workingDirectory: buffer.workingDirectory,
-                  remoteConnectionId: buffer.remoteConnectionId,
-                  sessionId: buffer.sessionId,
-                  path: buffer.path,
+              if (buffer.type === "editor") {
+                frontendTrace("info", "workspace-open", "restoreSession:buffer:start", {
+                  projectPath,
+                  bufferPath: buffer.path,
                 });
-
-                if (buffer.isPinned) {
-                  bufferActions.handleTabPin(restoredBufferId);
-                }
-
-                continue;
               }
 
-              if (buffer.type === "webViewer") {
-                const restoredBufferId = bufferActions.openContent({
-                  type: "webViewer",
-                  url: buffer.url ?? "about:blank",
-                  zoomLevel: buffer.zoomLevel,
-                  profileKey: buffer.profileKey,
-                  history: buffer.history,
-                  historyIndex: buffer.historyIndex,
+              await restoreWorkspaceSessionBuffer(buffer, {
+                openContent: bufferActions.openContent,
+                openFile: async (path, isPreview) => {
+                  await get().handleFileSelect(
+                    path,
+                    false,
+                    undefined,
+                    undefined,
+                    undefined,
+                    isPreview,
+                  );
+                },
+                findBufferIdByPath: (path) =>
+                  getBufferByPath(bufferStore.getState().buffers, path)?.id ?? null,
+                pinBuffer: bufferActions.handleTabPin,
+                restoreEditorState: (bufferSession) =>
+                  restoreEditorSessionStateForPath(bufferSession, workspaceId),
+              });
+
+              if (buffer.type === "editor") {
+                frontendTrace("info", "workspace-open", "restoreSession:buffer:end", {
+                  projectPath,
+                  bufferPath: buffer.path,
                 });
-
-                if (buffer.isPinned) {
-                  bufferActions.handleTabPin(restoredBufferId);
-                }
-
-                continue;
-              }
-
-              frontendTrace("info", "workspace-open", "restoreSession:buffer:start", {
-                projectPath,
-                bufferPath: buffer.path,
-              });
-              // Use handleFileSelect to open the file (it handles reading content)
-              await get().handleFileSelect(
-                buffer.path,
-                false,
-                undefined,
-                undefined,
-                undefined,
-                buffer.isPreview,
-              );
-              restoreEditorSessionStateForPath(buffer, workspaceId);
-              frontendTrace("info", "workspace-open", "restoreSession:buffer:end", {
-                projectPath,
-                bufferPath: buffer.path,
-              });
-
-              // If it was pinned, we might need to handle that, but handleFileSelect doesn't support pinning arg.
-              // We can pin it after opening if needed.
-              if (buffer.isPinned) {
-                const newBuffers = bufferStore.getState().buffers;
-                const openedBuffer = getBufferByPath(newBuffers, buffer.path);
-                if (openedBuffer) {
-                  bufferActions.handleTabPin(openedBuffer.id);
-                }
               }
             }
           };
