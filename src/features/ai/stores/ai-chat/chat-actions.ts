@@ -364,6 +364,20 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       });
       void syncChatToDatabase(get, chatId);
     },
+    replaceChatMessages: (chatId, messages) => {
+      set((state) => {
+        const chat = state.chats.find((candidate) => candidate.id === chatId);
+        if (!chat) return;
+
+        chat.messages = messages.map(normalizeMessageFollowUpActions);
+        chat.lastMessageAt = messages[messages.length - 1]?.timestamp ?? chat.createdAt;
+      });
+      void syncChatToDatabase(get, chatId);
+    },
+    setChatMessageLoadState: (chatId, loadState) =>
+      set((state) => {
+        state.chatMessageLoadStates[chatId] = loadState;
+      }),
     replaceUserMessage: (chatId, messageId, content) => {
       const nextContent = content.trim();
       if (!nextContent) return false;

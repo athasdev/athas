@@ -86,6 +86,8 @@ export interface AIChatActions {
   setChatAcpSessionId: (chatId: string, sessionId: string | null) => void;
   addMessage: (chatId: string, message: Message) => void;
   updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void;
+  replaceChatMessages: (chatId: string, messages: Message[]) => void;
+  setChatMessageLoadState: (chatId: string, state: ChatMessageLoadState) => void;
   replaceUserMessage: (chatId: string, messageId: string, content: string) => boolean;
   initializeDatabase: () => Promise<void>;
   loadChatsFromDatabase: () => Promise<void>;
