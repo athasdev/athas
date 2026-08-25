@@ -1,3 +1,5 @@
+import type { ExtensionViewNode } from "./extension-view";
+
 export interface GenerativeUIComponent {
   type: "card" | "form" | "list" | "table" | "custom";
   props: Record<string, unknown>;
@@ -12,3 +14,5 @@ export interface GenerativeUIAction {
   url?: string;
   style?: "primary" | "secondary" | "danger";
 }
+
+export type GenerativeUIView = ExtensionViewNode | GenerativeUIComponent;

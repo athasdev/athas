@@ -182,6 +182,7 @@ export const EnterpriseSettings = () => {
             </p>
             <div className="flex gap-2">
               <Button
+                shape="pill"
                 variant="default"
                 onClick={() => setAllowlistInput("")}
                 disabled={!isAdmin || isSaving || !policy.managedMode}
@@ -190,6 +191,7 @@ export const EnterpriseSettings = () => {
                 Clear
               </Button>
               <Button
+                shape="pill"
                 onClick={() =>
                   savePolicyPatch(
                     { allowedExtensionIds: parsedAllowlist },

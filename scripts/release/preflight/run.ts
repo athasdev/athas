@@ -314,18 +314,9 @@ async function main() {
   if (runFullChecks) {
     header("Frontend Checks");
 
-    // Check: TypeScript
-    await runCheck("TypeScript type check", async () => {
-      const result = await $`bun typecheck`.quiet().nothrow();
-      if (result.exitCode !== 0) {
-        return { passed: false, message: "Type errors found" };
-      }
-      return { passed: true };
-    });
-
-    // Check: Vite+ lint and format
+    // Check: Vite+ format, lint, and types
     await runCheck("Vite+ check", async () => {
-      const result = await $`bunx vp check`.quiet().nothrow();
+      const result = await $`vp check`.quiet().nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Format, lint, or type errors found" };
       }
@@ -333,7 +324,7 @@ async function main() {
     });
 
     await runCheck("Vite+ test suite", async () => {
-      const result = await $`bunx vp test run`.quiet().nothrow();
+      const result = await $`vp test run`.quiet().nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Tests failed" };
       }
@@ -341,7 +332,7 @@ async function main() {
     });
 
     await runCheck("Vite+ build", async () => {
-      const result = await $`bunx vp build`.quiet().nothrow();
+      const result = await $`vp build`.quiet().nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Frontend build failed" };
       }
@@ -373,7 +364,7 @@ async function main() {
 
     // Check: Cargo check
     await runCheck("Cargo check", async () => {
-      const result = await $`cargo check --workspace`.quiet().nothrow();
+      const result = await $`cargo check --workspace --all-targets`.quiet().nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Compilation errors found" };
       }
@@ -390,9 +381,19 @@ async function main() {
 
     // Check: Cargo clippy
     await runCheck("Cargo clippy", async () => {
-      const result = await $`cargo clippy --workspace -- -D warnings`.quiet().nothrow();
+      const result = await $`cargo clippy --workspace --all-targets -- -D warnings`
+        .quiet()
+        .nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Clippy warnings found" };
+      }
+      return { passed: true };
+    });
+
+    await runCheck("Rust tests", async () => {
+      const result = await $`cargo test --workspace --no-fail-fast`.quiet().nothrow();
+      if (result.exitCode !== 0) {
+        return { passed: false, message: "Tests failed" };
       }
       return { passed: true };
     });

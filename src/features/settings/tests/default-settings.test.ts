@@ -10,6 +10,14 @@ describe("default settings", () => {
     expect(getDefaultSettingsSnapshot().openFoldersInNewWindow).toBe(true);
   });
 
+  it("starts with the AI chat sidebar hidden", () => {
+    expect(getDefaultSettingsSnapshot().isAIChatVisible).toBe(false);
+  });
+
+  it("requires users to opt in to native agent notifications", () => {
+    expect(getDefaultSettingsSnapshot().aiAgentNotifications).toBe(false);
+  });
+
   it("preserves the established editor and terminal interaction behavior", () => {
     const settings = getDefaultSettingsSnapshot();
 
@@ -34,7 +42,6 @@ describe("default settings", () => {
     expect(settings.showStatusBar).toBe(true);
     expect(settings.showTabIcons).toBe(true);
     expect(settings.tabCloseButtonVisibility).toBe("active");
-    expect(settings.windowChromeDensity).toBe("focused");
     expect(settings.activityRailExpanded).toBe(false);
     expect(settings.activityRailWidth).toBe(180);
     expect(settings.showActivityRailProjectSwitcher).toBe(true);

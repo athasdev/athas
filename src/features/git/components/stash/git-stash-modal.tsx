@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/ui/dialog";
 import Input from "@/ui/input";
-import { cn } from "@/utils/cn";
 
 interface StashMessageModalProps {
   isOpen: boolean;
@@ -76,7 +75,7 @@ const StashMessageModalContent = ({
           value={message}
           onChange={(event) => setMessage(event.target.value)}
           placeholder={placeholder}
-          className={cn("w-full bg-background ui-text-sm")}
+          className="w-full bg-background ui-text-sm"
           onKeyDown={(event) => {
             if (event.key === "Enter") void handleConfirm();
           }}

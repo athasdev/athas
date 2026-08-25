@@ -1,16 +1,13 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import {
-  ArrowDownIcon as ArrowDown,
-  ArrowUpIcon as ArrowUp,
-  FileIcon,
-  XIcon as X,
-} from "@/ui/icons";
+import { ArrowDownIcon as ArrowDown, ArrowUpIcon as ArrowUp, XIcon as X } from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
+import {
+  PaneContentHeader,
+  PaneContentStatusBar,
+} from "@/features/panes/components/pane-content-chrome";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
-import { ViewerFooter } from "@/features/viewer/components/viewer-footer";
-import { ViewerHeader } from "@/features/viewer/components/viewer-header";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
 import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { ImageEditorToolbar } from "@/features/viewer/image/editor/components/image-editor-toolbar";
@@ -31,7 +28,6 @@ import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-d
 import { cn } from "@/utils/cn";
 import { formatFileSize } from "@/utils/format-file-size";
 import { getImageMimeType } from "@/utils/image-file-types";
-import { getRelativePath } from "@/utils/path-helpers";
 import { ImageContextMenu } from "./image-context-menu";
 
 interface ImageViewerProps {
@@ -51,7 +47,6 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [originalSize, setOriginalSize] = useState(0);
   const [currentSize, setCurrentSize] = useState(0);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const { markBufferDirty } = useBufferStore.use.actions();
 
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -59,7 +54,6 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
   const [isFitted, setIsFitted] = useState(true);
 
   const fileExt = fileName.split(".").pop()?.toUpperCase() || "";
-  const relativePath = getRelativePath(filePath, rootFolderPath);
 
   useEffect(() => {
     const loadImageSrc = async () => {
@@ -221,14 +215,10 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
 
   return (
     <ViewerLayout className="select-none">
-      <ViewerHeader
+      <PaneContentHeader
         className="absolute inset-x-0 top-0 z-10"
-        icon={<FileIcon className="shrink-0 text-foreground" />}
-        title={
-          <span title={fileName}>
-            {fileName} {fileExt && <>• {fileExt}</>}
-          </span>
-        }
+        context={<FilePathBreadcrumb filePath={filePath} />}
+        detail={fileExt || undefined}
         actions={
           <>
             {initialImageSrc && (
@@ -276,9 +266,9 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
       <div
         ref={imageContainerRef}
         className={cn(
-          "absolute inset-x-0 top-10 bottom-9",
+          "absolute inset-x-0 top-7 bottom-7",
           "flex items-center justify-center",
-          "overflow-auto bg-(--editor-bg) p-4",
+          "overflow-auto bg-editor p-4",
         )}
         onContextMenu={handleContextMenu}
       >
@@ -299,35 +289,24 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
         )}
       </div>
 
-      {/* Footer */}
-      <div className="absolute inset-x-0 bottom-0 z-10 h-9">
-        <ViewerFooter
-          endContent={
-            <span className="truncate" title={relativePath}>
-              Path: {relativePath}
-            </span>
-          }
-        >
+      <div className="absolute inset-x-0 bottom-0 z-10">
+        <PaneContentStatusBar endContent={<span>Size: {formatFileSize(currentSize)}</span>}>
           <span>Zoom: {Math.round(zoom * 100)}%</span>
           {fileExt ? <span>Type: {fileExt}</span> : null}
           <span>
             {imageDimensions.width} × {imageDimensions.height}px
           </span>
-          <span className="flex items-center gap-1">
-            Size: {formatFileSize(currentSize)}
-            {imageOperations.hasChanges && originalSize !== currentSize && (
-              <span className="flex items-center gap-0.5 text-primary">
-                (
-                {currentSize < originalSize ? (
-                  <ArrowDown className="inline" />
-                ) : (
-                  <ArrowUp className="inline" />
-                )}
-                {Math.abs(Math.round(((currentSize - originalSize) / originalSize) * 100))}%)
-              </span>
-            )}
-          </span>
-        </ViewerFooter>
+          {imageOperations.hasChanges && originalSize !== currentSize ? (
+            <span className="flex items-center gap-0.5 text-primary">
+              {currentSize < originalSize ? (
+                <ArrowDown className="inline" />
+              ) : (
+                <ArrowUp className="inline" />
+              )}
+              {Math.abs(Math.round(((currentSize - originalSize) / originalSize) * 100))}%
+            </span>
+          ) : null}
+        </PaneContentStatusBar>
       </div>
 
       {/* Resize Dialog */}

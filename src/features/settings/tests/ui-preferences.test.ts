@@ -7,12 +7,10 @@ describe("UI preferences", () => {
       getUiRootAttributes({
         reduceMotion: true,
         showStatusBar: false,
-        windowChromeDensity: "focused",
       }),
     ).toEqual({
       "data-reduce-motion": "true",
       "data-status-bar": "hidden",
-      "data-window-chrome-density": "focused",
     });
   });
 
@@ -21,12 +19,10 @@ describe("UI preferences", () => {
       getUiRootAttributes({
         reduceMotion: false,
         showStatusBar: true,
-        windowChromeDensity: "comfortable",
       }),
     ).toEqual({
       "data-reduce-motion": "system",
       "data-status-bar": "visible",
-      "data-window-chrome-density": "comfortable",
     });
   });
 

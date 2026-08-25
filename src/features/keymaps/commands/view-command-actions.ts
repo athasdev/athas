@@ -121,6 +121,16 @@ export function toggleGitHubSidebar(): void {
   }
 }
 
+export function toggleViewsSidebar(): void {
+  const state = useUIState.getState();
+  if (state.isSidebarVisible && state.activeSidebarView === "views") {
+    state.setIsSidebarVisible(false);
+  } else {
+    state.setActiveView("views");
+    state.setIsSidebarVisible(true);
+  }
+}
+
 export function toggleDockerSidebar(): void {
   const state = useUIState.getState();
   if (state.isSidebarVisible && state.activeSidebarView === "docker") {

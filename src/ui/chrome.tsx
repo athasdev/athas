@@ -7,13 +7,12 @@ export const chromeBarVariants = cva(
   {
     variants: {
       region: {
-        title:
-          "h-(--athas-title-bar-height) gap-(--athas-chrome-gap) bg-transparent px-(--athas-chrome-padding-inline)",
-        footer:
-          "h-(--athas-footer-height) gap-(--athas-chrome-gap) bg-transparent px-(--athas-chrome-padding-inline)",
-        tabs: "h-(--athas-tab-bar-height) min-h-(--athas-tab-bar-height) gap-(--athas-chrome-gap) bg-background px-(--athas-chrome-padding-inline)",
-        sidebar:
-          "min-h-(--athas-sidebar-header-height) gap-(--athas-chrome-gap) bg-background/92 px-(--athas-chrome-padding-inline)",
+        title: "h-title-bar gap-chrome bg-transparent px-chrome-inline",
+        footer: "h-footer gap-chrome bg-transparent px-chrome-inline",
+        tabs: "h-tab-bar min-h-tab-bar gap-chrome bg-background px-chrome-inline",
+        content: "h-7 min-h-7 gap-chrome bg-background px-chrome-inline",
+        status: "h-7 min-h-7 gap-chrome-loose bg-background px-chrome-inline",
+        sidebar: "min-h-sidebar-header gap-chrome bg-background/92 px-chrome-inline",
       },
       emphasis: {
         supporting: "text-subtle-foreground",
@@ -36,9 +35,9 @@ export const chromeGroupVariants = cva("flex min-w-0 items-center", {
   variants: {
     gap: {
       none: "gap-0",
-      tight: "gap-(--athas-chrome-gap-tight)",
-      default: "gap-(--athas-chrome-gap)",
-      loose: "gap-(--athas-chrome-gap-loose)",
+      tight: "gap-chrome-tight",
+      default: "gap-chrome",
+      loose: "gap-chrome-loose",
     },
     grow: {
       true: "flex-1",
@@ -58,13 +57,13 @@ export const chromeGroupVariants = cva("flex min-w-0 items-center", {
   },
 });
 
-export const chromeLabelVariants = cva("min-w-0 truncate leading-(--athas-chrome-line-height)", {
+export const chromeLabelVariants = cva("min-w-0 truncate leading-chrome", {
   variants: {
     tone: {
       muted: "text-subtle-foreground",
       default: "text-muted-foreground",
-      strong: "font-medium text-foreground",
-      accent: "font-medium text-primary",
+      strong: "text-foreground",
+      accent: "text-primary",
     },
   },
   defaultVariants: {

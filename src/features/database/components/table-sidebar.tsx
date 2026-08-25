@@ -6,7 +6,7 @@ import {
   TableIcon as Table,
 } from "@/ui/icons";
 import {
-  SidebarHeaderIconButton,
+  SidebarIconButton,
   SidebarListItem,
   SidebarPanel,
   SidebarSectionLabel,
@@ -54,9 +54,9 @@ export default function TableSidebar({
   } satisfies Record<DatabaseObjectKind, typeof Table>;
 
   return (
-    <SidebarPanel className="w-64 overflow-hidden">
+    <SidebarPanel className="w-64 shrink-0 overflow-hidden">
       <SidebarTitleBar title={`Objects (${tables.length})`} className="group">
-        <SidebarHeaderIconButton
+        <SidebarIconButton
           onClick={onCreateTable}
           className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
           aria-label="Create table"
@@ -64,7 +64,7 @@ export default function TableSidebar({
           tooltipSide="bottom"
         >
           <Plus />
-        </SidebarHeaderIconButton>
+        </SidebarIconButton>
       </SidebarTitleBar>
       <ScrollArea className="flex-1" contentClassName="space-y-1 p-2">
         {objectGroups.length === 0 ? (

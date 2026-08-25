@@ -61,14 +61,16 @@ pub enum StopReason {
    Cancelled,
 }
 
-impl From<agent_client_protocol::schema::StopReason> for StopReason {
-   fn from(reason: agent_client_protocol::schema::StopReason) -> Self {
+impl From<agent_client_protocol::schema::v1::StopReason> for StopReason {
+   fn from(reason: agent_client_protocol::schema::v1::StopReason) -> Self {
       match reason {
-         agent_client_protocol::schema::StopReason::EndTurn => StopReason::EndTurn,
-         agent_client_protocol::schema::StopReason::MaxTokens => StopReason::MaxTokens,
-         agent_client_protocol::schema::StopReason::MaxTurnRequests => StopReason::MaxTurnRequests,
-         agent_client_protocol::schema::StopReason::Refusal => StopReason::Refusal,
-         agent_client_protocol::schema::StopReason::Cancelled => StopReason::Cancelled,
+         agent_client_protocol::schema::v1::StopReason::EndTurn => StopReason::EndTurn,
+         agent_client_protocol::schema::v1::StopReason::MaxTokens => StopReason::MaxTokens,
+         agent_client_protocol::schema::v1::StopReason::MaxTurnRequests => {
+            StopReason::MaxTurnRequests
+         }
+         agent_client_protocol::schema::v1::StopReason::Refusal => StopReason::Refusal,
+         agent_client_protocol::schema::v1::StopReason::Cancelled => StopReason::Cancelled,
          _ => StopReason::EndTurn, // Default for unknown variants
       }
    }
@@ -150,8 +152,8 @@ pub struct AcpAgentCapabilities {
    pub auth_capabilities: serde_json::Value,
 }
 
-impl From<agent_client_protocol::schema::AgentCapabilities> for AcpAgentCapabilities {
-   fn from(capabilities: agent_client_protocol::schema::AgentCapabilities) -> Self {
+impl From<agent_client_protocol::schema::v1::AgentCapabilities> for AcpAgentCapabilities {
+   fn from(capabilities: agent_client_protocol::schema::v1::AgentCapabilities) -> Self {
       let session_capabilities =
          serde_json::to_value(&capabilities.session_capabilities).unwrap_or_default();
       let auth_capabilities = serde_json::to_value(&capabilities.auth).unwrap_or_default();
@@ -219,6 +221,10 @@ pub struct AgentConfig {
    pub installed: bool,
    pub install_runtime: Option<AgentRuntime>,
    pub install_package: Option<String>,
+   pub available_version: Option<String>,
+   pub installed_version: Option<String>,
+   pub update_available: bool,
+   pub managed: bool,
    #[serde(default)]
    pub install_download_url: Option<String>,
    pub install_command: Option<String>,
@@ -239,6 +245,10 @@ impl AgentConfig {
          installed: false,
          install_runtime: None,
          install_package: None,
+         available_version: None,
+         installed_version: None,
+         update_available: false,
+         managed: false,
          install_download_url: None,
          install_command: None,
          can_install: false,
@@ -350,6 +360,16 @@ pub enum SessionConfigOptionKind {
       current_value: String,
       options: Vec<SessionConfigOptionValue>,
    },
+   Boolean {
+      current_value: bool,
+   },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum SessionConfigValue {
+   String(String),
+   Boolean(bool),
 }
 
 /// ACP session configuration option advertised by the agent
@@ -442,6 +462,7 @@ pub enum AcpEvent {
    /// Permission request from agent
    #[serde(rename_all = "camelCase")]
    PermissionRequest {
+      session_id: String,
       request_id: String,
       permission_type: String,
       resource: String,

@@ -2,6 +2,7 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat.types";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
+import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import type { AIMessage } from "@/features/ai/types/messages.types";
@@ -18,7 +19,6 @@ import {
 import { isOllamaCloudUrl } from "@/features/ai/services/providers/ollama-provider";
 import { processStreamingResponse } from "@/utils/stream-utils";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
-import { canUseHostedProvider } from "@/features/ai/lib/provider-access";
 import { resolveChatCompletionTokenLimit } from "@/features/ai/lib/chat-completion-budget";
 import {
   getCustomProviderApiToken,
@@ -26,9 +26,6 @@ import {
   resolveCustomProviderModelId,
 } from "@/features/ai/lib/custom-provider-config";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { getAuthToken } from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { getApiBase } from "@/utils/api-base";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
 import { isTerminalAgent } from "../lib/terminal-agents";
@@ -62,7 +59,8 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
       provider: requestedProvider,
       model: {
         ...requestedDynamicModel,
-        maxTokens: requestedDynamicModel.maxTokens || 4096,
+        maxOutputTokens:
+          requestedDynamicModel.maxOutputTokens ?? requestedDynamicModel.maxTokens ?? 4096,
       },
     };
   }
@@ -75,7 +73,7 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
       model: {
         id: modelId,
         name: modelId,
-        maxTokens: 4096,
+        maxOutputTokens: 4096,
       },
     };
   }
@@ -93,7 +91,7 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
         model: {
           id: customModelId,
           name: customModelId,
-          maxTokens: 4096,
+          maxOutputTokens: 4096,
         },
       };
     }
@@ -118,7 +116,7 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
         provider,
         model: {
           ...dynamicModel,
-          maxTokens: dynamicModel.maxTokens || 4096,
+          maxOutputTokens: dynamicModel.maxOutputTokens ?? dynamicModel.maxTokens ?? 4096,
         },
       };
     }
@@ -140,7 +138,7 @@ export const getChatCompletionStream = async (
   userMessage: string,
   context: ContextInfo,
   onChunk: (chunk: string) => void,
-  onComplete: () => void,
+  onComplete: (result?: AgentCompletionResult) => void,
   onError: (error: string, canReconnect?: boolean) => void,
   conversationHistory?: AIMessage[],
   onNewMessage?: () => void,
@@ -179,7 +177,7 @@ export const getChatCompletionStream = async (
       return;
     }
 
-    // Handle ACP-based CLI agents (Gemini CLI, Codex CLI, etc.)
+    // Handle ACP-based coding agents.
     if (isAcpAgent(agentId)) {
       const handler = new AcpStreamHandler(
         agentId,
@@ -225,9 +223,7 @@ export const getChatCompletionStream = async (
       providerId === "custom"
         ? await getCustomProviderApiToken()
         : await getProviderApiToken(providerId);
-    const subscription = useAuthStore.getState().subscription;
-    const useHostedOpenRouter = !apiKey && canUseHostedProvider(providerId, subscription);
-    if (!apiKey && provider.requiresApiKey && !useHostedOpenRouter) {
+    if (!apiKey && provider.requiresApiKey) {
       throw new Error(`${provider.name} API key not found`);
     }
 
@@ -275,34 +271,6 @@ export const getChatCompletionStream = async (
       content: userMessage,
     });
 
-    if (useHostedOpenRouter) {
-      const token = await getAuthToken();
-      if (!token) {
-        throw new Error("Not authenticated");
-      }
-
-      const response = await tauriFetch(`${getApiBase()}/api/ai/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          model: modelId,
-          messages,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        onError(errorText || `Hosted Athas Agent request failed (${response.status})`);
-        return;
-      }
-
-      await processStreamingResponse(response, onChunk, onComplete, onError);
-      return;
-    }
-
     // Use provider abstraction
     const providerImpl = getProvider(providerId);
     if (!providerImpl) {
@@ -312,7 +280,7 @@ export const getChatCompletionStream = async (
     const streamRequest = {
       modelId,
       messages,
-      maxTokens: resolveChatCompletionTokenLimit(model.maxTokens),
+      maxTokens: resolveChatCompletionTokenLimit(model.maxOutputTokens ?? model.maxTokens),
       temperature: 0.7,
       apiKey: apiKey || undefined,
     };

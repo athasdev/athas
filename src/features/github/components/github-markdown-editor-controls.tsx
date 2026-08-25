@@ -285,12 +285,10 @@ export function MarkdownSlashCommands() {
                             <CommandItemRow
                               icon={getCommandIcon(option.definition.id)}
                               title={option.definition.label}
-                              density="compact"
                               isSelected={isSelected}
                               onMouseEnter={() => menu.setHighlightedIndex(index)}
                               onClick={() => menu.selectOptionAndCleanUp(option)}
                               accessory={isSelected ? "enter" : undefined}
-                              className="github-markdown-slash-command"
                             />
                           </div>
                         );

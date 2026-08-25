@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useProFeature } from "@/features/window/hooks/use-pro-feature";
 import { useProviderById } from "@/features/ai/hooks/use-available-providers";
 import { getCustomModelOptions } from "@/features/ai/lib/custom-model-options";
 import { resolveModelOptions } from "@/features/ai/lib/model-options";
@@ -24,7 +23,6 @@ export function useAIModelOptions(
     providerId: string;
     message: string;
   }>();
-  const { hasHostedAi } = useProFeature();
   const subscription = useAuthStore((state) => state.subscription);
   const dynamicModels = useAIChatStore((state) => state.dynamicModels);
   const setDynamicModels = useAIChatStore((state) => state.actions.setDynamicModels);
@@ -98,7 +96,6 @@ export function useAIModelOptions(
   }, [
     canFetchDynamicModels,
     hasCachedDynamicModels,
-    hasHostedAi,
     providerId,
     providerInstance,
     setDynamicModels,
@@ -148,7 +145,6 @@ export function useAIModelOptions(
   return {
     availableModels,
     currentModelName,
-    hasHostedAi,
     isCustomProvider,
     isLoadingModels,
     modelFetchError: visibleModelFetchError,

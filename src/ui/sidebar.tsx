@@ -3,14 +3,9 @@ import {
   CaretRightIcon as CaretRight,
   MagnifyingGlassIcon as Search,
 } from "@/ui/icons";
+import { cva, type VariantProps } from "class-variance-authority";
 import { forwardRef, type ComponentProps, type ReactNode, useEffect, useState } from "react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-  accordionTriggerVariants,
-} from "@/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
@@ -20,6 +15,29 @@ import { ScrollArea } from "@/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
+const sidebarControlVariants = cva(
+  "athas-chrome-control font-sans ui-text-sm flex min-h-chrome-control min-w-0 items-center gap-chrome rounded-chrome px-1.5 py-0.5 font-normal [&_svg]:size-[1em]",
+  {
+    variants: {
+      appearance: {
+        default: "",
+        activity: "min-h-8 gap-2 rounded-lg px-2.5 py-1 ui-text-base",
+      },
+      width: {
+        fill: "w-full",
+        control: "w-chrome-control",
+      },
+    },
+    defaultVariants: {
+      appearance: "default",
+      width: "fill",
+    },
+  },
+);
+
+type SidebarControlAppearance = VariantProps<typeof sidebarControlVariants>["appearance"];
+type SidebarControlWidth = VariantProps<typeof sidebarControlVariants>["width"];
+
 export function SidebarPanel({
   children,
   className,
@@ -27,7 +45,7 @@ export function SidebarPanel({
 }: ComponentProps<"div"> & { children: ReactNode }) {
   return (
     <div
-      className={cn("flex h-full min-h-0 min-w-0 w-full flex-col bg-background", className)}
+      className={cn("flex size-full min-h-0 min-w-0 flex-col bg-background", className)}
       {...props}
     >
       {children}
@@ -58,13 +76,7 @@ export function SidebarScrollArea({
   className,
   ...props
 }: Omit<ComponentProps<typeof ScrollArea>, "contentClassName">) {
-  return (
-    <ScrollArea
-      className={className}
-      contentClassName="px-(--athas-chrome-padding-inline) py-2"
-      {...props}
-    />
-  );
+  return <ScrollArea className={className} contentClassName="px-chrome-inline py-2" {...props} />;
 }
 
 export function SidebarTitleBar({
@@ -81,13 +93,13 @@ export function SidebarTitleBar({
   return (
     <div
       className={cn(
-        "font-sans flex h-(--athas-pane-header-height) min-w-0 shrink-0 select-none items-center gap-(--athas-chrome-gap-loose) overflow-hidden px-(--athas-chrome-padding-inline)",
+        "font-sans flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome-loose overflow-hidden px-chrome-inline",
         className,
       )}
       {...props}
     >
       {typeof title === "string" ? (
-        <h2 className={cn(titleClassName, "pl-(--athas-chrome-padding-inline)")}>{title}</h2>
+        <h2 className={cn(titleClassName, "pl-chrome-inline")}>{title}</h2>
       ) : (
         <div className={titleClassName}>{title}</div>
       )}
@@ -102,7 +114,7 @@ export function SidebarToolbar({ children, className, ...props }: ComponentProps
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex h-(--athas-pane-header-height) min-w-0 shrink-0 select-none items-center gap-(--athas-chrome-gap) border-border/70 border-b px-(--athas-chrome-padding-inline)",
+        "font-sans ui-text-chrome flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome border-border/70 border-b px-chrome-inline",
         className,
       )}
       {...props}
@@ -138,7 +150,7 @@ export function SidebarHeader({
   return (
     <div
       className={cn(
-        "ui-text-chrome sticky top-0 z-20 flex h-(--athas-sidebar-header-height) min-w-0 shrink-0 select-none items-center gap-(--athas-chrome-gap) bg-background/92 px-0 py-1 backdrop-blur-sm",
+        "ui-text-chrome sticky top-0 z-20 flex h-sidebar-header min-w-0 shrink-0 select-none items-center gap-chrome bg-background/92 px-0 py-1 backdrop-blur-sm",
         className,
       )}
       {...props}
@@ -172,17 +184,17 @@ export function SidebarComposerBody({
   );
 }
 
-export const SidebarHeaderIconButton = forwardRef<
+export const SidebarIconButton = forwardRef<
   HTMLButtonElement,
   Omit<ButtonProps, "variant" | "size">
->(function SidebarHeaderIconButton({ className, ...props }, ref) {
+>(function SidebarIconButton({ className, ...props }, ref) {
   return (
     <Button
       ref={ref}
       type="button"
       variant="ghost"
       size="icon-xs"
-      className={className}
+      className={cn("[&_svg]:size-[1em]", className)}
       {...props}
     />
   );
@@ -233,7 +245,7 @@ export const SidebarSearchPopover = forwardRef<
     <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={
-          <SidebarHeaderIconButton
+          <SidebarIconButton
             active={isOpen || value.length > 0}
             tooltip={label}
             tooltipSide="bottom"
@@ -263,6 +275,8 @@ export const SidebarSearchPopover = forwardRef<
 export function SidebarListItem({
   children,
   active = false,
+  appearance = "default",
+  width = "fill",
   description,
   leading,
   trailing,
@@ -273,6 +287,8 @@ export function SidebarListItem({
 }: ComponentProps<"button"> & {
   children: ReactNode;
   active?: boolean;
+  appearance?: SidebarControlAppearance;
+  width?: SidebarControlWidth;
   description?: ReactNode;
   leading?: ReactNode;
   trailing?: ReactNode;
@@ -283,11 +299,13 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        "athas-chrome-control font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) px-2 py-1 text-left font-normal text-subtle-foreground transition-[background-color,color]",
+        sidebarControlVariants({ appearance, width }),
+        "text-left transition-[background-color,color]",
+        appearance === "activity" ? "text-foreground/80" : "text-subtle-foreground",
         "hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
-        active && "bg-selected font-medium text-foreground",
-        description && "h-12 items-start py-1",
-        iconOnly && "justify-center gap-0 rounded-full px-0",
+        active && "bg-selected text-foreground",
+        description && "h-auto min-h-10 items-start py-1",
+        iconOnly && "min-h-chrome-control justify-center gap-0 rounded-full px-0 py-0",
         className,
       )}
       data-active={active}
@@ -301,7 +319,7 @@ export function SidebarListItem({
       <span
         aria-hidden={iconOnly ? true : undefined}
         className={cn(
-          "min-w-0 flex-1 overflow-hidden transition-opacity duration-(--app-duration-fast) ease-(--app-ease-smooth)",
+          "min-w-0 flex-1 overflow-hidden transition-opacity duration-fast ease-smooth",
           iconOnly && "w-0 flex-none opacity-0",
           description && "flex flex-col",
           contentClassName,
@@ -313,7 +331,7 @@ export function SidebarListItem({
           {children}
         </span>
         {description ? (
-          <span className="mt-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden font-normal leading-4 text-subtle-foreground/80 ui-text-caption">
+          <span className="mt-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden font-normal leading-row text-subtle-foreground/80">
             <span className="min-w-0 flex-1 truncate">{description}</span>
             {trailing ? (
               <span className="ml-auto max-w-[45%] shrink-0 truncate whitespace-nowrap text-right">
@@ -324,7 +342,7 @@ export function SidebarListItem({
         ) : null}
       </span>
       {trailing && !iconOnly && !description ? (
-        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-subtle-foreground/80 ui-text-caption">
+        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-subtle-foreground/80">
           {trailing}
         </span>
       ) : null}
@@ -345,6 +363,7 @@ export function SidebarListMenuItem({
   menu,
   menuLabel,
   active = false,
+  appearance = "default",
   iconOnly = false,
   className,
   onClick,
@@ -361,6 +380,7 @@ export function SidebarListMenuItem({
             <SidebarListItem
               {...props}
               active={active}
+              appearance={appearance}
               iconOnly
               leading={leading}
               className={className}
@@ -380,12 +400,14 @@ export function SidebarListMenuItem({
       role="group"
       data-active={active}
       className={cn(
-        "flex w-full min-w-0 rounded-(--athas-chrome-radius)",
+        "flex w-full min-w-0",
+        appearance === "activity" ? "rounded-lg" : "rounded-chrome",
         active && "bg-selected text-foreground",
       )}
     >
       <SidebarListItem
         active={false}
+        appearance={appearance}
         leading={leading}
         onClick={onClick}
         className={cn("rounded-r-none bg-transparent", className)}
@@ -398,10 +420,12 @@ export function SidebarListMenuItem({
           render={
             <SidebarListItem
               active={false}
+              appearance={appearance}
               iconOnly
+              width="control"
               leading={<CaretRight />}
               aria-label={menuLabel}
-              className="w-(--athas-tab-height) flex-none bg-transparent px-0"
+              className="flex-none bg-transparent px-0"
             >
               {menuLabel}
             </SidebarListItem>
@@ -415,19 +439,22 @@ export function SidebarListMenuItem({
 
 export function SidebarListEditor({
   children,
+  appearance = "default",
   leading,
   trailing,
   className,
   ...props
 }: ComponentProps<"div"> & {
   children: ReactNode;
+  appearance?: SidebarControlAppearance;
   leading?: ReactNode;
   trailing?: ReactNode;
 }) {
   return (
     <div
       className={cn(
-        "athas-chrome-control font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-(--athas-chrome-radius) bg-selected px-2 py-1 font-medium text-foreground",
+        sidebarControlVariants({ appearance }),
+        "bg-selected text-foreground",
         className,
       )}
       data-active="true"
@@ -447,7 +474,12 @@ export function SidebarListEditor({
 }
 
 export function SidebarSectionStack({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("mt-4 flex w-full flex-col gap-0.5", className)} {...props} />;
+  return (
+    <div
+      className={cn("mt-chrome-loose flex w-full flex-col gap-chrome-tight", className)}
+      {...props}
+    />
+  );
 }
 
 export function SidebarSectionHeader({
@@ -456,7 +488,6 @@ export function SidebarSectionHeader({
   count,
   expanded = true,
   onToggle,
-  variant = "plain",
   className,
   ...props
 }: Omit<ComponentProps<"button">, "children"> & {
@@ -465,17 +496,14 @@ export function SidebarSectionHeader({
   count?: ReactNode;
   expanded?: boolean;
   onToggle?: () => void;
-  variant?: "plain" | "surface";
 }) {
   return (
-    <div className="flex h-(--athas-tab-height) w-full min-w-0 items-center justify-between gap-(--athas-chrome-gap-tight)">
+    <div className="flex min-h-chrome-control w-full min-w-0 items-center justify-between gap-chrome-tight">
       <button
         type="button"
         className={cn(
-          accordionTriggerVariants(),
-          "w-full",
-          variant === "surface" &&
-            "h-8 rounded-lg bg-accent/80 px-2.5 hover:bg-accent focus-visible:bg-accent",
+          sidebarControlVariants(),
+          "select-none text-left text-subtle-foreground/80 transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50",
           className,
         )}
         aria-expanded={expanded}
@@ -554,7 +582,7 @@ export function SidebarSectionLabel({
   return (
     <div
       className={cn(
-        "font-sans ui-text-caption flex h-(--athas-chrome-control-height) min-w-0 select-none items-center gap-(--athas-chrome-gap-loose) px-2 font-normal text-subtle-foreground/80",
+        "font-sans ui-text-sm flex h-chrome-control min-w-0 select-none items-center gap-chrome px-1.5 font-normal text-subtle-foreground/80 [&_svg]:size-[1em]",
         className,
       )}
       {...props}
@@ -601,11 +629,11 @@ export function SidebarTabBar<TValue extends string>({
     >
       <div
         className={cn(
-          "flex h-(--athas-pane-header-height) shrink-0 items-center overflow-hidden px-(--athas-chrome-padding-inline)",
+          "flex h-pane-header shrink-0 items-center overflow-hidden px-chrome-inline",
           className,
         )}
       >
-        <div className="scrollbar-hidden min-w-0 overflow-x-auto">
+        <div className="scrollbar-none min-w-0 overflow-x-auto">
           <TabsList aria-label="Sidebar sections">
             {items.map((item) => (
               <TabsTrigger key={item.id} value={item.id} disabled={item.disabled} size="xs">

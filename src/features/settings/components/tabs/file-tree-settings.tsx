@@ -67,13 +67,13 @@ export const FileTreeSettings = () => {
           canReset={settings.fileTreeSortOrder !== getDefaultSetting("fileTreeSortOrder")}
         >
           <Select
+            shape="pill"
             value={settings.fileTreeSortOrder}
             options={[
               { value: "folders-first", label: "Folders First" },
               { value: "name", label: "Name" },
             ]}
             onChange={(value) => updateSetting("fileTreeSortOrder", value as FileTreeSortOrder)}
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="sm"
             variant="default"
           />

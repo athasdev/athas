@@ -157,7 +157,7 @@ export class OllamaProvider extends AIProvider {
         models.push({
           id,
           name: paramSize ? `${id} (${paramSize})` : id,
-          maxTokens: 4096,
+          maxOutputTokens: 4096,
         });
       }
       return models;

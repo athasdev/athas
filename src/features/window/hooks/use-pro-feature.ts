@@ -6,14 +6,17 @@ export function useProFeature() {
   const subscription = useAuthStore((state) => state.subscription);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  const hasHostedAi = hasProductCapability(subscription, "hostedAi");
+  const hasIntelligence = hasProductCapability(subscription, "intelligence");
   const hasSettingsSync = hasProductCapability(subscription, "settingsSync");
-  const isPro = user?.subscription_status === "pro" || hasHostedAi || hasSettingsSync;
+  const hasCloudWorkspaces = hasProductCapability(subscription, "cloudWorkspaces");
+  const isPro = user?.subscription_status === "pro" || hasIntelligence || hasSettingsSync;
 
   return {
     isPro,
-    hasHostedAi,
+    hasIntelligence,
+    hasHostedAi: hasIntelligence,
     hasSettingsSync,
+    hasCloudWorkspaces,
     isAuthenticated,
     subscriptionStatus: subscription?.status ?? user?.subscription_status ?? "free",
   };

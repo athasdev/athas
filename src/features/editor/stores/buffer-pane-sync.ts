@@ -84,9 +84,8 @@ export const closeNewTabInActivePane = (
 ): PaneContent[] => {
   const paneStore = getPaneState(workspaceId);
   const activePane = paneStore.actions.getActivePane();
-  const paneBufferIds = activePane?.bufferIds ?? [];
   const newTabBuffer = buffers.find((buffer) => {
-    return buffer.type === "newTab" && paneBufferIds.includes(buffer.id);
+    return buffer.type === "newTab" && buffer.id === activePane?.activeBufferId;
   });
 
   if (!newTabBuffer) {

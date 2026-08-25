@@ -23,6 +23,9 @@ describe("AI chat surface sessions", () => {
       chats: [],
       currentChatId: null,
       pendingAgentLaunchRequest: null,
+      agentRuns: {},
+      agentMessageQueues: {},
+      chatMessageLoadStates: {},
     });
   });
 
@@ -78,5 +81,27 @@ describe("AI chat surface sessions", () => {
     useAIChatStore.getState().actions.setChatArchived(chatId, false);
 
     expect(useAIChatStore.getState().actions.getChatById(chatId)?.archivedAt).toBeNull();
+  });
+
+  it("keeps one run and queue per chat across surfaces", () => {
+    const chatId = useAIChatStore.getState().actions.createNewChat("codex");
+    const actions = useAIChatStore.getState().actions;
+
+    actions.startAgentRun(chatId, {
+      runId: "run-1",
+      assistantMessageId: "assistant-1",
+      agentId: "codex",
+      phase: "starting",
+    });
+    actions.enqueueAgentMessage(chatId, "second message");
+
+    expect(useAIChatStore.getState().agentRuns[chatId]).toMatchObject({
+      runId: "run-1",
+      phase: "starting",
+    });
+    expect(actions.dequeueAgentMessage(chatId)).toBe("second message");
+
+    actions.finishAgentRun(chatId, "run-1");
+    expect(useAIChatStore.getState().agentRuns[chatId]).toBeUndefined();
   });
 });

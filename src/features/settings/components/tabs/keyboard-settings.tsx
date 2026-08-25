@@ -37,6 +37,7 @@ import { Button } from "@/ui/button";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
+import { ScrollArea } from "@/ui/scroll-area";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
@@ -267,6 +268,7 @@ export const KeyboardSettings = () => {
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <Button
+                shape="pill"
                 variant="default"
                 onClick={() => setIsEditingKeybindings(false)}
                 className="gap-1.5"
@@ -277,10 +279,15 @@ export const KeyboardSettings = () => {
               </Button>
               <div className="flex items-center gap-2">
                 <TypedConfirmAction actionLabel="Reset to Defaults" onConfirm={handleResetAll} />
-                <Button variant="default" onClick={handleImport} size="sm">
+                <Button shape="pill" variant="default" onClick={handleImport} size="sm">
                   Import
                 </Button>
-                <Button variant="default" onClick={() => void handleExport()} size="sm">
+                <Button
+                  shape="pill"
+                  variant="default"
+                  onClick={() => void handleExport()}
+                  size="sm"
+                >
                   Export
                 </Button>
               </div>
@@ -338,7 +345,7 @@ export const KeyboardSettings = () => {
             </div>
 
             <div className="flex-1 overflow-hidden">
-              <div className="h-full overflow-x-auto overflow-y-auto">
+              <ScrollArea className="h-full" orientation="both">
                 <Table className={keybindingTableMinWidth()}>
                   <colgroup>
                     <col className="w-[32%]" />
@@ -375,7 +382,7 @@ export const KeyboardSettings = () => {
                     )}
                   </TableBody>
                 </Table>
-              </div>
+              </ScrollArea>
             </div>
           </motion.div>
         ) : (
@@ -402,6 +409,7 @@ export const KeyboardSettings = () => {
               canReset={keybindingPreset !== getDefaultSetting("keybindingPreset")}
             >
               <Select
+                shape="pill"
                 value={keybindingPreset}
                 onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
                 options={keybindingPresetOptions}
@@ -426,7 +434,12 @@ export const KeyboardSettings = () => {
             ) : null}
 
             <SettingRow label="Edit Keybindings" description="Customize shortcuts individually.">
-              <Button variant="default" onClick={() => setIsEditingKeybindings(true)} size="sm">
+              <Button
+                shape="pill"
+                variant="default"
+                onClick={() => setIsEditingKeybindings(true)}
+                size="sm"
+              >
                 Open Editor
               </Button>
             </SettingRow>

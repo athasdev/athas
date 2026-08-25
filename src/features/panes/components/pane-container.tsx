@@ -42,7 +42,7 @@ import { activateBufferInPaneAndSync, activatePaneAndSyncBuffer } from "../utils
 import { BOTTOM_PANE_ID } from "../constants/pane";
 import { usePaneStore } from "../stores/pane.store";
 import type { PaneGroup } from "../types/pane.types";
-import type { EditorContent, NewTabContent, PullRequestContent } from "../types/pane-content.types";
+import type { EditorContent, PullRequestContent } from "../types/pane-content.types";
 import {
   ensureBufferInPaneDropTarget,
   getOrCreatePaneDropTarget,
@@ -100,6 +100,11 @@ const GitHubCreateView = lazy(() =>
     default: module.GitHubCreateView,
   })),
 );
+const CustomView = lazy(() =>
+  import("@/features/views/components/custom-view").then((module) => ({
+    default: module.CustomView,
+  })),
+);
 const MarkdownDocumentView = lazy(() =>
   import("@/features/editor/markdown/markdown-document-view").then((module) => ({
     default: module.MarkdownDocumentView,
@@ -141,7 +146,7 @@ const CAROUSEL_OUTER_GAP_PX = 160;
 const MAX_MOUNTED_EDITOR_BUFFERS = 8;
 
 type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type" | "readOnly">;
-type PaneRenderBuffer = Exclude<Buffer, EditorContent | NewTabContent> | EditorBufferShell;
+type PaneRenderBuffer = Exclude<Buffer, EditorContent> | EditorBufferShell;
 type PaneRenderState = {
   activeBuffer: PaneRenderBuffer | null;
   paneBuffers: PaneRenderBuffer[];
@@ -173,7 +178,6 @@ function getEditorBufferShell(buffer: EditorContent): EditorBufferShell {
 
 function toPaneRenderBuffer(buffer: Buffer | undefined): PaneRenderBuffer | undefined {
   if (!buffer) return undefined;
-  if (buffer.type === "newTab") return undefined;
   if (buffer.type === "editor") return getEditorBufferShell(buffer);
   return buffer;
 }
@@ -924,6 +928,13 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const renderActiveBuffer = useCallback(
     (buffer: PaneRenderBuffer) => {
       switch (buffer.type) {
+        case "newTab":
+          return (
+            <AgentStartView showQuickActions>
+              <AgentLaunchInput autoFocus={isActivePane} surfaceId={`new-tab-${buffer.id}`} />
+            </AgentStartView>
+          );
+
         case "terminal":
           return (
             <TerminalTab
@@ -975,6 +986,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "githubForm":
           return <GitHubCreateView buffer={buffer} />;
+
+        case "customView":
+          return <CustomView buffer={buffer} />;
 
         case "markdownDocument":
           return <MarkdownDocumentView bufferId={buffer.id} />;
@@ -1077,9 +1091,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       ref={containerRef}
       data-pane-container
       data-pane-id={pane.id}
-      className={`relative flex size-full flex-col overflow-hidden bg-background ${
-        isActivePane ? "ring-1 ring-primary/30" : ""
-      } ${isDragOver || internalHoverZone ? "ring-2 ring-primary" : ""}`}
+      className={cn(
+        "relative flex size-full flex-col overflow-hidden",
+        pane.id === BOTTOM_PANE_ID ? "bg-background" : "bg-editor",
+        isActivePane && "ring-1 ring-primary/30",
+        (isDragOver || internalHoverZone) && "ring-2 ring-primary",
+      )}
       onMouseDownCapture={handlePaneMouseDownCapture}
       onClick={handlePaneClick}
       onMouseUp={handleMouseUp}
@@ -1101,17 +1118,21 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         disablePaneActions={pane.id === BOTTOM_PANE_ID}
       />
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {!activeBuffer && !shouldRenderCarousel ? (
-          <AgentStartView showQuickActions>
-            <AgentLaunchInput autoFocus surfaceId="empty-editor" />
-          </AgentStartView>
-        ) : null}
-
         <Suspense fallback={null}>
-          {shouldRenderCarousel ? (
+          {paneBuffers.length === 0 ? (
+            <Empty
+              className={cn(
+                "h-full rounded-none",
+                pane.id === BOTTOM_PANE_ID ? "bg-background" : "bg-editor",
+              )}
+              role="status"
+            >
+              <EmptyDescription>No tabs open</EmptyDescription>
+            </Empty>
+          ) : shouldRenderCarousel ? (
             <div
               ref={carouselViewportRef}
-              className="scrollbar-hidden flex h-full items-stretch gap-4 overflow-x-auto overflow-y-hidden px-4 py-4 overscroll-x-contain"
+              className="scrollbar-none flex h-full items-stretch gap-4 overflow-x-auto overflow-y-hidden px-4 py-4 overscroll-x-contain"
               onWheelCapture={handleCarouselWheel}
             >
               {paneBuffers.map((buffer) => {
@@ -1126,7 +1147,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     key={buffer.id}
                     data-buffer-card-id={buffer.id}
                     className={cn(
-                      "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-(--app-duration-normal) ease-(--app-ease-smooth)",
+                      "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-normal ease-smooth",
                       isActiveBuffer
                         ? "border-primary/50 bg-background shadow-[0_0_0_1px_rgba(99,102,241,0.15)]"
                         : "border-border/70 bg-background hover:border-border/90",

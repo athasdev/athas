@@ -305,13 +305,15 @@ function GitHubCreateViewContent({
 
     try {
       const enterprisePolicy = subscription?.enterprise?.policy;
-      const isPro = hasProductCapability(subscription, "hostedAi");
+      const hasIntelligence = hasProductCapability(subscription, "intelligence");
       if (enterprisePolicy?.managedMode && enterprisePolicy.aiCompletionEnabled === false) {
         setError("AI generation is disabled by your organization policy.");
         return;
       }
 
-      const useByok = enterprisePolicy ? enterprisePolicy.allowByok && !isPro : !isPro;
+      const useByok = enterprisePolicy
+        ? enterprisePolicy.allowByok && !hasIntelligence
+        : !hasIntelligence;
       const status = await getGitStatus(repoPath);
       const diffSummary =
         kind === "pull-request" ? summarizeDiffs(await getRefDiff(repoPath, base, head)) : "";
@@ -357,6 +359,7 @@ ${statusSummary}`;
       const { editedText } = await requestInlineEdit(
         {
           model: aiAutocompleteModelId,
+          feature: "github-draft",
           beforeSelection: "",
           selectedText: prompt,
           afterSelection: "",
@@ -417,7 +420,7 @@ ${statusSummary}`;
                 <Activity />
                 <span>{repositoryName}</span>
               </div>
-              <h1 className="font-sans text-2xl leading-tight font-semibold tracking-tight text-foreground">
+              <h1 className="font-sans ui-text-base leading-tight font-semibold tracking-tight text-foreground">
                 Run workflow
               </h1>
               <p className="font-sans ui-text-sm text-subtle-foreground">

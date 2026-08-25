@@ -54,14 +54,17 @@ describe("Codex integration service", () => {
       onError: vi.fn(),
     }) as unknown as {
       projectRoot: string;
+      threadId: string;
       handleEvent: (event: { method: string; id: number; params: Record<string, unknown> }) => void;
     };
     service.projectRoot = "/workspace/athas";
+    service.threadId = "thread-1";
 
     service.handleEvent({
       method: "item/tool/call",
       id: 91,
       params: {
+        threadId: "thread-1",
         tool: "athas_open_pull_request",
         arguments: { number: 73, title: "Native PR tabs" },
       },
@@ -90,14 +93,17 @@ describe("Codex integration service", () => {
       onError: vi.fn(),
     }) as unknown as {
       projectRoot: string;
+      threadId: string;
       handleEvent: (event: { method: string; id: number; params: Record<string, unknown> }) => void;
     };
     service.projectRoot = "/workspace/athas";
+    service.threadId = "thread-1";
 
     service.handleEvent({
       method: "item/tool/call",
       id: 92,
       params: {
+        threadId: "thread-1",
         tool: "athas_open_issue",
         arguments: { number: 735, title: "Test issue" },
       },
@@ -128,13 +134,16 @@ describe("Codex integration service", () => {
       },
       "chat-1",
     ) as unknown as {
+      threadId: string;
       handleEvent: (event: { method: string; id: number; params: Record<string, unknown> }) => void;
     };
+    service.threadId = "thread-1";
 
     service.handleEvent({
       method: "item/tool/call",
       id: 93,
       params: {
+        threadId: "thread-1",
         tool: "athas_set_chat_title",
         arguments: { title: "Native GitHub Tabs" },
       },
@@ -212,16 +221,18 @@ describe("Codex integration service", () => {
       onToolUse,
       onToolComplete,
     }) as unknown as {
+      threadId: string;
       handleEvent: (event: { method: string; params: Record<string, unknown> }) => void;
     };
+    service.threadId = "thread-1";
 
     service.handleEvent({
       method: "item/started",
-      params: { item: { id: "user-1", type: "userMessage" } },
+      params: { threadId: "thread-1", item: { id: "user-1", type: "userMessage" } },
     });
     service.handleEvent({
       method: "item/completed",
-      params: { item: { id: "user-1", type: "userMessage" } },
+      params: { threadId: "thread-1", item: { id: "user-1", type: "userMessage" } },
     });
 
     expect(onToolUse).not.toHaveBeenCalled();
@@ -230,6 +241,7 @@ describe("Codex integration service", () => {
     service.handleEvent({
       method: "item/started",
       params: {
+        threadId: "thread-1",
         item: {
           id: "tool-1",
           type: "dynamicToolCall",
@@ -240,6 +252,7 @@ describe("Codex integration service", () => {
     service.handleEvent({
       method: "item/completed",
       params: {
+        threadId: "thread-1",
         item: {
           id: "tool-1",
           type: "dynamicToolCall",
@@ -249,7 +262,7 @@ describe("Codex integration service", () => {
     });
     service.handleEvent({
       method: "item/agentMessage/delta",
-      params: { delta: "Done" },
+      params: { threadId: "thread-1", delta: "Done" },
     });
 
     expect(onToolUse).toHaveBeenCalledWith(
@@ -273,11 +286,67 @@ describe("Codex integration service", () => {
 
     service.handleEvent({
       method: "item/started",
-      params: { item: { id: "reasoning-1", type: "reasoning" } },
+      params: {
+        threadId: "thread-1",
+        item: { id: "reasoning-1", type: "reasoning" },
+      },
     });
 
     expect(onEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: "thought_chunk", sessionId: "thread-1" }),
     );
+  });
+
+  it("distinguishes cancelled Codex turns from completed work", () => {
+    const onComplete = vi.fn();
+    const service = new CodexIntegrationService({
+      onChunk: vi.fn(),
+      onComplete,
+      onError: vi.fn(),
+    }) as unknown as {
+      threadId: string;
+      handleEvent: (event: { method: string; params: Record<string, unknown> }) => void;
+    };
+    service.threadId = "thread-1";
+
+    service.handleEvent({
+      method: "turn/completed",
+      params: { threadId: "thread-1", turn: { status: "cancelled" } },
+    });
+
+    expect(onComplete).toHaveBeenCalledWith({ outcome: "cancelled" });
+  });
+
+  it("ignores message and reasoning events from another Codex thread", () => {
+    const onChunk = vi.fn();
+    const onEvent = vi.fn();
+    const service = new CodexIntegrationService({
+      onChunk,
+      onComplete: vi.fn(),
+      onError: vi.fn(),
+      onEvent,
+    }) as unknown as {
+      threadId: string;
+      turnId: string;
+      handleEvent: (event: { method: string; params: Record<string, unknown> }) => void;
+    };
+    service.threadId = "thread-1";
+    service.turnId = "turn-1";
+
+    service.handleEvent({
+      method: "item/agentMessage/delta",
+      params: { threadId: "thread-2", turnId: "turn-2", delta: "wrong chat" },
+    });
+    service.handleEvent({
+      method: "item/started",
+      params: {
+        threadId: "thread-1",
+        turnId: "turn-2",
+        item: { id: "reasoning-2", type: "reasoning" },
+      },
+    });
+
+    expect(onChunk).not.toHaveBeenCalled();
+    expect(onEvent).not.toHaveBeenCalled();
   });
 });

@@ -11,6 +11,10 @@ async function readOfficialManifest(folder: string): Promise<ExtensionManifest> 
   ) as ExtensionManifest;
 }
 
+async function readOfficialIcon(folder: string): Promise<string> {
+  return readFile(join(ATHAS_ROOT, "extensions", "official", folder, "icon.svg"), "utf8");
+}
+
 describe("agent extension manifests", () => {
   it("uses the current Claude Agent ACP adapter without replacing the terminal integration", async () => {
     const manifest = await readOfficialManifest("claude-code");
@@ -27,7 +31,8 @@ describe("agent extension manifests", () => {
         binaryName: "claude-agent-acp",
         install: expect.objectContaining({
           runtime: "node",
-          package: "@agentclientprotocol/claude-agent-acp",
+          package: "@agentclientprotocol/claude-agent-acp@0.70.0",
+          version: "0.70.0",
           command: "claude-agent-acp",
         }),
       }),
@@ -53,7 +58,6 @@ describe("agent extension manifests", () => {
       command: "kimi",
       downloadUrls: {
         "darwin-arm64": expect.stringContaining("/1.49.0/kimi-1.49.0-aarch64-apple-darwin"),
-        "darwin-x64": expect.stringContaining("/1.49.0/kimi-1.49.0-x86_64-apple-darwin"),
         "linux-arm64": expect.stringContaining("/1.49.0/kimi-1.49.0-aarch64-unknown-linux-gnu"),
         "linux-x64": expect.stringContaining("/1.49.0/kimi-1.49.0-x86_64-unknown-linux-gnu"),
         "win32-arm64": expect.stringContaining("/1.49.0/kimi-1.49.0-aarch64-pc-windows-msvc"),
@@ -77,7 +81,8 @@ describe("agent extension manifests", () => {
         args: ["--acp"],
         install: expect.objectContaining({
           runtime: "node",
-          package: "@github/copilot",
+          package: "@github/copilot@1.0.80",
+          version: "1.0.80",
           command: "copilot",
         }),
       }),
@@ -99,10 +104,54 @@ describe("agent extension manifests", () => {
         args: ["--acp"],
         install: expect.objectContaining({
           runtime: "node",
-          package: "@google/gemini-cli",
+          package: "@google/gemini-cli@0.56.0",
+          version: "0.56.0",
           command: "gemini",
         }),
       }),
     ]);
+  });
+
+  it("ships Google's official Antigravity ACP server for supported platforms", async () => {
+    const manifest = await readOfficialManifest("antigravity");
+
+    expect(manifest).toMatchObject({
+      id: "athas.agent.antigravity",
+      name: "Google Antigravity",
+      publisher: "Google",
+    });
+    expect(manifest.agents?.[0]).toMatchObject({
+      id: "antigravity-acp",
+      binaryName: "agy_acp_server",
+      argsByPlatform: {
+        "linux-arm64": ["--uid="],
+        "linux-x64": ["--uid="],
+      },
+      install: {
+        runtime: "binary",
+        version: "1.0.0",
+        command: "agy_acp_server.par",
+        commandsByPlatform: expect.objectContaining({
+          "darwin-arm64": "agy_acp_server.par",
+          "win32-x64": "agy_acp_server.exe",
+        }),
+        downloadUrls: expect.objectContaining({
+          "darwin-arm64": expect.stringContaining("dl.google.com/agy-extensions/releases"),
+          "win32-x64": expect.stringContaining("agy-acp-server"),
+        }),
+      },
+    });
+  });
+
+  it("ships distinct brand artwork instead of the generic agent placeholder", async () => {
+    const folders = ["antigravity", "gemini-cli", "kimi-cli", "opencode", "qwen-code"];
+    const icons = await Promise.all(folders.map(readOfficialIcon));
+
+    for (const [index, icon] of icons.entries()) {
+      expect(icon).toContain(`data-brand="${folders[index]}"`);
+      expect(icon).not.toContain("M12.3333 3");
+    }
+
+    expect(new Set(icons).size).toBe(folders.length);
   });
 });

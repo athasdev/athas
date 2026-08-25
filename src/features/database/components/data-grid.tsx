@@ -411,7 +411,7 @@ export default function DataGrid({
       </div>
       <div
         ref={scrollContainerRef}
-        className="custom-scrollbar flex-1 overflow-auto outline-none"
+        className="flex-1 overflow-auto outline-none"
         tabIndex={0}
         onKeyDown={handleGridKeyDown}
         aria-label="Database rows"
@@ -420,7 +420,7 @@ export default function DataGrid({
           <thead className="sticky top-0 z-10">
             <tr>
               <th
-                className="w-10 cursor-pointer border-border/70 border-b bg-surface px-2 py-1.5 text-left font-normal text-subtle-foreground hover:bg-accent"
+                className="w-10 border-border/70 border-b bg-surface px-2 py-1.5 text-left font-normal text-subtle-foreground hover:bg-accent"
                 onClick={handleSelectAllClick}
                 aria-label="Select all visible cells"
               >
@@ -435,7 +435,7 @@ export default function DataGrid({
                 return (
                   <th
                     key={i}
-                    className="group relative cursor-pointer whitespace-nowrap border-border/70 border-b bg-surface px-2 py-1.5 text-left font-normal transition-colors hover:bg-accent"
+                    className="group relative whitespace-nowrap border-border/70 border-b bg-surface px-2 py-1.5 text-left font-normal transition-colors hover:bg-accent"
                     style={{ width: colWidth, minWidth: 60 }}
                     onClick={() => canSortColumns && onColumnSort(col)}
                   >
@@ -511,7 +511,7 @@ export default function DataGrid({
               return (
                 <tr
                   key={ri}
-                  className="cursor-pointer transition-colors hover:bg-accent/25"
+                  className="transition-colors hover:bg-accent/25"
                   style={{ height: DATA_GRID_ROW_HEIGHT }}
                   onContextMenu={(e) => canOpenRowMenu && onRowContextMenu(e, ri)}
                 >
@@ -547,7 +547,7 @@ export default function DataGrid({
                         className={cn(
                           "max-w-75 border-border/50 border-b px-2 py-1.5 font-normal text-foreground",
                           isEditing && "py-1",
-                          canEditCells && !isPK && "cursor-pointer hover:bg-accent",
+                          canEditCells && !isPK && "hover:bg-accent",
                           isPK && "bg-accent/55",
                           isSelected && "bg-primary/10",
                           isActive && "outline outline-1 outline-primary/70 -outline-offset-1",

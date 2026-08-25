@@ -13,7 +13,9 @@ export interface ModelProvider {
 export interface Model {
   id: string;
   name: string;
-  maxTokens: number;
+  contextWindow?: number;
+  maxOutputTokens?: number;
+  maxTokens?: number;
   proOnly?: boolean;
 }
 
@@ -31,19 +33,28 @@ const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "claude-opus-4-8",
-        name: "Claude Opus 4.8",
-        maxTokens: 1000000,
+        id: "claude-fable-5",
+        name: "Claude Fable 5",
+        contextWindow: 1000000,
+        maxOutputTokens: 128000,
       },
       {
-        id: "claude-sonnet-4-6",
-        name: "Claude Sonnet 4.6",
-        maxTokens: 1000000,
+        id: "claude-opus-5",
+        name: "Claude Opus 5",
+        contextWindow: 1000000,
+        maxOutputTokens: 128000,
+      },
+      {
+        id: "claude-sonnet-5",
+        name: "Claude Sonnet 5",
+        contextWindow: 1000000,
+        maxOutputTokens: 128000,
       },
       {
         id: "claude-haiku-4-5",
         name: "Claude Haiku 4.5",
-        maxTokens: 200000,
+        contextWindow: 200000,
+        maxOutputTokens: 64000,
       },
     ],
   },
@@ -56,47 +67,20 @@ const AI_PROVIDERS: ModelProvider[] = [
       {
         id: "gpt-5.6-sol",
         name: "GPT-5.6 Sol",
-        maxTokens: 1050000,
+        contextWindow: 1050000,
+        maxOutputTokens: 128000,
       },
       {
         id: "gpt-5.6-terra",
         name: "GPT-5.6 Terra",
-        maxTokens: 1050000,
+        contextWindow: 1050000,
+        maxOutputTokens: 128000,
       },
       {
         id: "gpt-5.6-luna",
         name: "GPT-5.6 Luna",
-        maxTokens: 1050000,
-      },
-      {
-        id: "gpt-5.5",
-        name: "GPT-5.5",
-        maxTokens: 1047576,
-      },
-      {
-        id: "gpt-5.5-pro",
-        name: "GPT-5.5 Pro",
-        maxTokens: 1047576,
-      },
-      {
-        id: "gpt-5.4",
-        name: "GPT-5.4",
-        maxTokens: 1047576,
-      },
-      {
-        id: "gpt-5.4-pro",
-        name: "GPT-5.4 Pro",
-        maxTokens: 1047576,
-      },
-      {
-        id: "gpt-5.4-mini",
-        name: "GPT-5.4 Mini",
-        maxTokens: 1047576,
-      },
-      {
-        id: "gpt-5.4-nano",
-        name: "GPT-5.4 Nano",
-        maxTokens: 400000,
+        contextWindow: 1050000,
+        maxOutputTokens: 128000,
       },
     ],
   },
@@ -107,24 +91,34 @@ const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "gemini-3.1-pro-preview",
-        name: "Gemini 3.1 Pro Preview",
-        maxTokens: 1048576,
+        id: "gemini-3.7-flash",
+        name: "Gemini 3.7 Flash",
+        contextWindow: 1048576,
+        maxOutputTokens: 65536,
+      },
+      {
+        id: "gemini-3.6-flash",
+        name: "Gemini 3.6 Flash",
+        contextWindow: 1048576,
+        maxOutputTokens: 65536,
       },
       {
         id: "gemini-3.5-flash",
         name: "Gemini 3.5 Flash",
-        maxTokens: 1048576,
+        contextWindow: 1048576,
+        maxOutputTokens: 65536,
       },
       {
-        id: "gemini-3-flash-preview",
-        name: "Gemini 3 Flash Preview",
-        maxTokens: 1048576,
+        id: "gemini-3.5-flash-lite",
+        name: "Gemini 3.5 Flash-Lite",
+        contextWindow: 1048576,
+        maxOutputTokens: 65536,
       },
       {
-        id: "gemini-3.1-flash-lite",
-        name: "Gemini 3.1 Flash-Lite",
-        maxTokens: 1048576,
+        id: "gemini-3.1-pro-preview",
+        name: "Gemini 3.1 Pro Preview",
+        contextWindow: 1048576,
+        maxOutputTokens: 65536,
       },
     ],
   },
@@ -135,14 +129,16 @@ const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "grok-4.3",
-        name: "Grok 4.3",
-        maxTokens: 1000000,
+        id: "grok-4.6",
+        name: "Grok 4.6",
+        contextWindow: 500000,
+        maxOutputTokens: 131072,
       },
       {
         id: "grok-build-0.1",
         name: "Grok Build 0.1",
-        maxTokens: 256000,
+        contextWindow: 256000,
+        maxOutputTokens: 131072,
       },
     ],
   },
@@ -155,12 +151,14 @@ const AI_PROVIDERS: ModelProvider[] = [
       {
         id: "deepseek-v4-flash",
         name: "DeepSeek V4 Flash",
-        maxTokens: 1000000,
+        contextWindow: 1000000,
+        maxOutputTokens: 384000,
       },
       {
         id: "deepseek-v4-pro",
         name: "DeepSeek V4 Pro",
-        maxTokens: 1000000,
+        contextWindow: 1000000,
+        maxOutputTokens: 384000,
       },
     ],
   },
@@ -173,22 +171,26 @@ const AI_PROVIDERS: ModelProvider[] = [
       {
         id: "mistral-medium-2604",
         name: "Mistral Medium 3.5",
-        maxTokens: 262144,
+        contextWindow: 262144,
+        maxOutputTokens: 131072,
       },
       {
         id: "mistral-small-2603",
         name: "Mistral Small 4",
-        maxTokens: 262144,
+        contextWindow: 262144,
+        maxOutputTokens: 131072,
       },
       {
         id: "mistral-large-2512",
         name: "Mistral Large 3",
-        maxTokens: 262144,
+        contextWindow: 262144,
+        maxOutputTokens: 131072,
       },
       {
         id: "codestral-2508",
         name: "Codestral",
-        maxTokens: 256000,
+        contextWindow: 128000,
+        maxOutputTokens: 65536,
       },
     ],
   },
@@ -199,29 +201,22 @@ const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "qwen3-max",
-        name: "Qwen 3 Max",
-        maxTokens: 1000000,
+        id: "qwen3.8-max",
+        name: "Qwen 3.8 Max",
+        contextWindow: 1000000,
+        maxOutputTokens: 131072,
       },
       {
-        id: "qwen3.5-plus",
-        name: "Qwen 3.5 Plus",
-        maxTokens: 1000000,
+        id: "qwen3.7-plus",
+        name: "Qwen 3.7 Plus",
+        contextWindow: 1000000,
+        maxOutputTokens: 65536,
       },
       {
-        id: "qwen3.5-flash",
-        name: "Qwen 3.5 Flash",
-        maxTokens: 1000000,
-      },
-      {
-        id: "qwen3-coder-plus",
-        name: "Qwen 3 Coder Plus",
-        maxTokens: 1000000,
-      },
-      {
-        id: "qwen3-coder-flash",
-        name: "Qwen 3 Coder Flash",
-        maxTokens: 1000000,
+        id: "qwen3.7-flash",
+        name: "Qwen 3.7 Flash",
+        contextWindow: 1000000,
+        maxOutputTokens: 65536,
       },
     ],
   },

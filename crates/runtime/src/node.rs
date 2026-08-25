@@ -5,10 +5,10 @@ use std::{
 };
 
 /// Node.js version to download if system version is not available
-pub const NODE_VERSION: &str = "22.5.1";
+pub const NODE_VERSION: &str = "24.19.0";
 
 /// Minimum required Node.js version for LSP servers
-pub const MIN_NODE_VERSION: (u32, u32, u32) = (22, 0, 0);
+pub const MIN_NODE_VERSION: (u32, u32, u32) = (24, 0, 0);
 
 /// Manages Node.js runtime for running JS-based language servers
 pub struct NodeRuntime {
@@ -19,7 +19,7 @@ impl NodeRuntime {
    /// Get Node.js runtime, downloading if necessary
    ///
    /// Priority:
-   /// 1. Check system PATH for Node.js >= 22.0.0
+   /// 1. Check system PATH for Node.js >= 24.0.0
    /// 2. Check if Athas-managed Node.js exists
    /// 3. Download Node.js from nodejs.org
    pub async fn get_or_install(managed_root: Option<&Path>) -> Result<Self, RuntimeError> {
@@ -168,7 +168,7 @@ impl NodeRuntime {
       Self::parse_version(&version_str)
    }
 
-   /// Parse version string like "v22.5.1" into (22, 5, 1)
+   /// Parse version string like "v24.19.0" into (24, 19, 0)
    fn parse_version(version_str: &str) -> Result<(u32, u32, u32), RuntimeError> {
       let trimmed = version_str.trim().trim_start_matches('v');
 
@@ -208,11 +208,11 @@ mod tests {
 
    #[test]
    fn test_parse_version() {
-      assert_eq!(NodeRuntime::parse_version("v22.5.1").unwrap(), (22, 5, 1));
-      assert_eq!(NodeRuntime::parse_version("22.5.1").unwrap(), (22, 5, 1));
+      assert_eq!(NodeRuntime::parse_version("v24.19.0").unwrap(), (24, 19, 0));
+      assert_eq!(NodeRuntime::parse_version("24.19.0").unwrap(), (24, 19, 0));
       assert_eq!(
-         NodeRuntime::parse_version("v22.5.1-rc.1").unwrap(),
-         (22, 5, 1)
+         NodeRuntime::parse_version("v24.19.0-rc.1").unwrap(),
+         (24, 19, 0)
       );
    }
 }

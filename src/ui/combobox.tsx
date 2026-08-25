@@ -15,20 +15,28 @@ import { cn } from "@/utils/cn";
 
 const Combobox = ComboboxPrimitive.Root;
 type ComboboxSize = "xs" | "sm" | "md";
-type ComboboxVariant = "default" | "ghost";
+type ComboboxVariant = "default" | "ghost" | "button";
+type ComboboxShape = "default" | "pill";
 
 const comboboxInputGroupVariants = cva(
-  "group/combobox-input relative flex min-w-0 items-center transition-[border-color,box-shadow,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) outline-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
+  "group/combobox-input relative flex min-w-0 items-center transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth outline-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
   {
     variants: {
       variant: {
         default:
-          "rounded-(--athas-chrome-radius) border border-border bg-surface focus-within:border-border-strong focus-within:bg-surface focus-within:ring-1 focus-within:ring-border-strong/35",
-        ghost: "rounded-(--athas-chrome-radius) border-0 bg-transparent focus-within:ring-0",
+          "border border-border bg-surface focus-within:border-border-strong focus-within:bg-surface focus-within:ring-1 focus-within:ring-border-strong/35",
+        ghost: "border-0 bg-transparent focus-within:ring-0",
+        button:
+          "border-0 bg-accent text-foreground hover:bg-selected focus-within:ring-2 focus-within:ring-primary/20",
+      },
+      shape: {
+        default: "rounded-chrome",
+        pill: "rounded-full",
       },
     },
     defaultVariants: {
       variant: "default",
+      shape: "default",
     },
   },
 );
@@ -123,6 +131,7 @@ type ComboboxInputProps = Omit<ComboboxPrimitive.Input.Props, "size"> & {
   htmlSize?: number;
   size?: ComboboxSize;
   variant?: ComboboxVariant;
+  shape?: ComboboxShape;
   showTrigger?: boolean;
   showClear?: boolean;
 };
@@ -138,6 +147,7 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
     htmlSize,
     size = "sm",
     variant = "default",
+    shape = "default",
     children,
     disabled = false,
     showTrigger = true,
@@ -155,7 +165,7 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
       data-slot="combobox-input-group"
       style={containerStyle}
       className={cn(
-        comboboxInputGroupVariants({ variant }),
+        comboboxInputGroupVariants({ variant, shape }),
         controlSizeVariants({ size }),
         className,
       )}
@@ -232,10 +242,7 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
   return (
     <ComboboxPrimitive.List
       data-slot="combobox-list"
-      className={cn(
-        "custom-scrollbar-thin max-h-80 overflow-y-auto overscroll-contain p-1",
-        className,
-      )}
+      className={cn("scrollbar-thin max-h-80 overflow-y-auto overscroll-contain p-1", className)}
       {...props}
     />
   );
@@ -252,7 +259,7 @@ function ComboboxActionItem({
       type={type}
       className={cn(
         menuItemVariants({ density: "compact" }),
-        "cursor-pointer hover:bg-accent active:scale-(--app-press-scale)",
+        "hover:bg-accent active:scale-press",
         className,
       )}
       {...props}
@@ -332,7 +339,7 @@ function ComboboxChips({ className, ...props }: ComboboxPrimitive.Chips.Props) {
     <ComboboxPrimitive.Chips
       data-slot="combobox-chips"
       className={cn(
-        "flex min-h-8 flex-wrap items-center gap-1 rounded-(--athas-chrome-radius) border border-border bg-transparent px-2 py-1 ui-text-sm focus-within:border-border-strong focus-within:ring-1 focus-within:ring-border-strong/35",
+        "flex min-h-8 flex-wrap items-center gap-1 rounded-chrome border border-border bg-transparent px-2 py-1 ui-text-sm focus-within:border-border-strong focus-within:ring-1 focus-within:ring-border-strong/35",
         className,
       )}
       {...props}

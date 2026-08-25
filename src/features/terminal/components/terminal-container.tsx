@@ -650,7 +650,7 @@ const TerminalContainer = ({
                       ? terminal.splitDirection === "down"
                         ? "h-1/2 w-full border-border border-b"
                         : "h-full w-1/2 border-border border-r"
-                      : "h-full w-full",
+                      : "size-full",
                   )}
                 >
                   <TerminalSession

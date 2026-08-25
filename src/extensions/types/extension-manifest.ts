@@ -212,12 +212,15 @@ interface AgentContribution {
   binaryName: string;
   description?: string;
   args?: string[];
+  argsByPlatform?: Partial<Record<PlatformArch | "win32-arm64", string[]>>;
   envVars?: Record<string, string>;
   icon?: string;
   install?: {
     runtime: ToolRuntime;
     package: string;
+    version?: string;
     command?: string;
+    commandsByPlatform?: Partial<Record<PlatformArch | "win32-arm64", string>>;
     downloadUrl?: string;
     downloadUrls?: Partial<Record<PlatformArch | "win32-arm64", string>>;
   };
@@ -265,6 +268,7 @@ export interface ExtensionPermissions {
   secrets?: boolean;
   workspace?: "read";
   openExternal?: boolean;
+  clipboardWrite?: boolean;
 }
 
 export interface ThemeContribution {

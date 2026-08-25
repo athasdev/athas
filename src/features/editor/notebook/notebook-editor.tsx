@@ -218,7 +218,7 @@ function MarkdownOutput({ source }: { source: string }) {
 }
 
 const outputClassName =
-  "m-0 overflow-auto rounded-md border border-border bg-surface p-2.5 font-mono text-[0.92em] leading-[1.55] text-foreground";
+  "m-0 overflow-auto rounded-md border border-border bg-surface p-2.5 font-mono ui-text-sm leading-[1.55] text-foreground";
 
 function NotebookOutputView({ output }: { output: NotebookOutput }) {
   if (output.output_type === "stream") {
@@ -450,14 +450,14 @@ function NotebookCellView({
             <span className="size-1 rounded-full bg-current" />
             <span className="size-1 rounded-full bg-current" />
           </span>
-          <span className="font-mono text-[0.82em]">
+          <span className="font-mono ui-text-caption">
             {isCode ? `[${cell.execution_count ?? ""}]` : ""}
           </span>
         </div>
       </div>
       <div className="min-w-0">
         <div className="flex min-h-7 items-center justify-between gap-2 opacity-75 transition-opacity hover:opacity-100 focus-within:opacity-100">
-          <span className="font-mono text-[0.78em] text-subtle-foreground">{cell.cell_type}</span>
+          <span className="font-mono ui-text-caption text-subtle-foreground">{cell.cell_type}</span>
           <div className="flex items-center gap-0.5">
             {isCode ? (
               <Button
@@ -525,7 +525,7 @@ function NotebookCellView({
             />
           ) : (
             <textarea
-              className="m-0 block min-h-23 w-full resize-y rounded-md border border-border bg-surface p-2.5 font-mono text-[0.92em] leading-[1.55] text-foreground outline-none focus:border-primary"
+              className="m-0 block min-h-23 w-full resize-y rounded-md border border-border bg-surface p-2.5 font-mono ui-text-sm leading-[1.55] text-foreground outline-none focus:border-primary"
               value={source}
               spellCheck={isMarkdown}
               onChange={(event) => onSourceChange(cellIndex, event.target.value)}

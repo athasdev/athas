@@ -2,7 +2,7 @@
 
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { GENERATED_CDN_DIR } from "./extension-workspace";
 import { SERVICE_DEFAULTS } from "@/config/service-defaults";
 
@@ -13,6 +13,7 @@ type InstallablePackage = {
 };
 
 const cdnBaseUrl = process.env.EXTENSIONS_CDN_BASE_URL || SERVICE_DEFAULTS.extensionsCdnBaseUrl;
+const verifyLocalPackages = process.argv.includes("--local");
 
 function collectInstallablePackages(value: unknown, packages: InstallablePackage[] = []) {
   if (Array.isArray(value)) {
@@ -45,6 +46,37 @@ function sha256(bytes: Uint8Array) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+function verifyPackageBytes(installablePackage: InstallablePackage, bytes: Uint8Array) {
+  const checksum = sha256(bytes);
+
+  if (bytes.byteLength !== installablePackage.size || checksum !== installablePackage.checksum) {
+    return `${installablePackage.url}: expected ${installablePackage.size}/${installablePackage.checksum}, got ${bytes.byteLength}/${checksum}`;
+  }
+
+  return null;
+}
+
+async function verifyLocalPackage(installablePackage: InstallablePackage) {
+  const cdnUrl = new URL(`${cdnBaseUrl.replace(/\/$/, "")}/`);
+  const packageUrl = new URL(installablePackage.url);
+  const relativePath = decodeURIComponent(packageUrl.pathname.slice(cdnUrl.pathname.length));
+  const generatedRoot = resolve(GENERATED_CDN_DIR);
+  const packagePath = resolve(generatedRoot, relativePath);
+
+  if (packageUrl.origin !== cdnUrl.origin || !packagePath.startsWith(`${generatedRoot}${sep}`)) {
+    return `Invalid CDN package path for ${installablePackage.url}`;
+  }
+
+  try {
+    return verifyPackageBytes(installablePackage, new Uint8Array(await readFile(packagePath)));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return `Missing generated package for ${installablePackage.url}`;
+    }
+    throw error;
+  }
+}
+
 async function verifyRemotePackage(installablePackage: InstallablePackage) {
   const url = new URL(installablePackage.url);
   url.searchParams.set("verify", String(Date.now()));
@@ -54,14 +86,7 @@ async function verifyRemotePackage(installablePackage: InstallablePackage) {
     return `HTTP ${response.status} for ${installablePackage.url}`;
   }
 
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  const checksum = sha256(bytes);
-
-  if (bytes.byteLength !== installablePackage.size || checksum !== installablePackage.checksum) {
-    return `${installablePackage.url}: expected ${installablePackage.size}/${installablePackage.checksum}, got ${bytes.byteLength}/${checksum}`;
-  }
-
-  return null;
+  return verifyPackageBytes(installablePackage, new Uint8Array(await response.arrayBuffer()));
 }
 
 const manifests = JSON.parse(
@@ -77,7 +102,9 @@ const installablePackages = new Map(
 const failures: string[] = [];
 
 for (const installablePackage of installablePackages.values()) {
-  const failure = await verifyRemotePackage(installablePackage);
+  const failure = await (verifyLocalPackages ? verifyLocalPackage : verifyRemotePackage)(
+    installablePackage,
+  );
   if (failure) failures.push(failure);
 }
 
@@ -86,4 +113,6 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`Verified ${installablePackages.size} installable extension package(s).`);
+console.log(
+  `Verified ${installablePackages.size} ${verifyLocalPackages ? "generated" : "remote"} installable extension package(s).`,
+);

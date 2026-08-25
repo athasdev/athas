@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { SubscriptionInfo } from "@/features/window/services/auth-api";
-import { getAiUsageModeLabel } from "../lib/account-usage";
+import { getAccountPlanLabel } from "../lib/account-usage";
 
 function subscription(status: SubscriptionInfo["status"]): SubscriptionInfo {
   return {
@@ -11,13 +11,7 @@ function subscription(status: SubscriptionInfo["status"]): SubscriptionInfo {
 }
 
 describe("account usage", () => {
-  it("describes a configured user-provided key without internal terminology", () => {
-    expect(
-      getAiUsageModeLabel({
-        isAuthenticated: true,
-        subscription: subscription("free"),
-        hasOpenRouterKey: true,
-      }),
-    ).toBe("Your API key");
+  it("labels Intelligence subscribers as Pro without exposing internal usage", () => {
+    expect(getAccountPlanLabel(subscription("pro"), true)).toBe("Pro");
   });
 });

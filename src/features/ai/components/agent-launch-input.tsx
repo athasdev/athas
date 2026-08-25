@@ -33,14 +33,14 @@ export function AgentLaunchInput({
   const [selectedFilesPaths, setSelectedFilesPaths] = useState<Set<string>>(new Set());
 
   const submit = useCallback(
-    async (prompt: string) => {
+    (prompt: string) => {
       if (isTerminalAgent(selectedAgentId)) {
         openTerminalAgent(selectedAgentId);
-        return;
+        return { accepted: true };
       }
 
       const nextPrompt = prompt.trim();
-      if (!nextPrompt) return;
+      if (!nextPrompt) return { accepted: false };
 
       const chatId = createNewChat(selectedAgentId, { activate: false });
       setPendingAgentLaunchRequest({
@@ -51,6 +51,7 @@ export function AgentLaunchInput({
         selectedFilesPaths: Array.from(selectedFilesPaths),
       });
       openAgentBuffer(chatId);
+      return { accepted: true };
     },
     [
       createNewChat,

@@ -28,6 +28,61 @@ function manifest(overrides: Partial<ExtensionManifest>): ExtensionManifest {
 }
 
 describe("extension browser catalog", () => {
+  it("surfaces managed ACP agent versions and updates", () => {
+    const agentManifest = manifest({
+      id: "athas.agent.example",
+      agents: [
+        {
+          id: "example-agent",
+          name: "Example Agent",
+          binaryName: "example-agent",
+          args: [],
+          install: {
+            runtime: "node",
+            package: "example-agent@2.0.0",
+            version: "2.0.0",
+            command: "example-agent",
+          },
+        },
+      ],
+    });
+
+    const result = buildExtensionCatalog({
+      availableExtensions: new Map([[agentManifest.id, available(agentManifest)]]),
+      agents: [
+        {
+          id: "example-agent",
+          name: "Example Agent",
+          binaryName: "example-agent",
+          binaryPath: "/tmp/example-agent",
+          args: [],
+          envVars: {},
+          icon: null,
+          description: null,
+          installed: true,
+          installRuntime: "node",
+          installPackage: "example-agent@2.0.0",
+          availableVersion: "2.0.0",
+          installedVersion: "1.0.0",
+          updateAvailable: true,
+          managed: true,
+          canInstall: true,
+        },
+      ],
+      marketplaceSkills: [],
+      aiSkills: [],
+      selectedThemeId: "athas-dark",
+      selectedIconThemeId: "athas-icons",
+    });
+
+    expect(result.find((extension) => extension.id === "agent:example-agent")).toMatchObject({
+      version: "2.0.0",
+      installedVersion: "1.0.0",
+      availableVersion: "2.0.0",
+      hasUpdate: true,
+    });
+  });
+
   it("normalizes language packages for the browser", () => {
     const language = manifest({
       id: "athas.example-language",

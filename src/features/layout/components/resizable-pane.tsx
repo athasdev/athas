@@ -141,8 +141,8 @@ export function ResizablePane({
           : { left: "calc(var(--athas-workbench-gap) / -2)" }
       }
       className={cn(
-        "group absolute top-0 z-30 flex h-full w-(--athas-workbench-gap) cursor-col-resize items-center justify-center",
-        "transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-primary/8",
+        "group absolute top-0 z-30 flex h-full w-workbench cursor-col-resize items-center justify-center",
+        "transition-colors duration-fast ease-smooth hover:bg-primary/8",
       )}
       role="separator"
       aria-orientation="vertical"
@@ -154,7 +154,7 @@ export function ResizablePane({
     >
       <div
         className={cn(
-          "h-full w-px bg-transparent transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) group-hover:bg-primary",
+          "h-full w-px bg-transparent transition-colors duration-fast ease-smooth group-hover:bg-primary",
           isResizing && "bg-primary",
         )}
       />

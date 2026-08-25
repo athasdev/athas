@@ -10,8 +10,10 @@ import {
   RadioButtonIcon as RadioButton,
   TrashIcon as Trash,
 } from "@/ui/icons";
+import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { Button } from "@/ui/button";
-import { cn } from "@/utils/cn";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { databaseChipClassName } from "./database-surface";
 import { formatQueryResultSummary } from "../lib/query-result-summary";
 import type {
@@ -23,6 +25,7 @@ import type {
 
 interface TableToolbarProps {
   fileName: string;
+  selectedObjectName?: string | null;
   dbInfo: DatabaseInfo | null;
   selectedObjectKind?: DatabaseObjectKind;
   subscriptionInfo?: PostgresSubscriptionInfo | null;
@@ -52,6 +55,7 @@ const VIEW_TABS: { mode: ViewMode; label: string }[] = [
 
 export default function TableToolbar({
   fileName,
+  selectedObjectName,
   dbInfo,
   selectedObjectKind = "table",
   subscriptionInfo,
@@ -92,40 +96,31 @@ export default function TableToolbar({
   const jsonLabel = isCustomQuery ? "Copy visible query page as JSON" : "Copy as JSON";
 
   return (
-    <div className="px-3 py-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <Database className="text-subtle-foreground" />
-            <span className="font-sans ui-text-sm min-w-0 truncate text-foreground">
-              {fileName}
-            </span>
-            {dbInfo && (
-              <span className="font-sans ui-text-sm shrink-0 text-subtle-foreground">
-                {dbInfo.tables}t {dbInfo.indexes}i
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-surface/60 p-0.5">
-            {VIEW_TABS.map(({ mode, label }) => (
-              <Button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                variant={viewMode === mode ? "default" : "ghost"}
-                size="xs"
-                className={cn(
-                  "px-2.5 ui-text-sm text-subtle-foreground",
-                  viewMode === mode ? "text-foreground" : "text-subtle-foreground",
-                )}
-                aria-label={`Switch to ${label} view`}
-                tooltip={`Switch to ${label} view`}
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
+    <PaneContentHeader
+      context={
+        <PathBreadcrumb
+          segments={[fileName, ...(selectedObjectName ? [selectedObjectName] : [])]}
+          icons={[<Database key="database" />]}
+          ariaLabel="Database object"
+        />
+      }
+      detail={dbInfo ? `${dbInfo.tables} tables · ${dbInfo.indexes} indexes` : undefined}
+      actions={
+        <>
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
+            <TabsList variant="bare">
+              {VIEW_TABS.map(({ mode, label }) => (
+                <TabsTrigger
+                  key={mode}
+                  value={mode}
+                  size="xs"
+                  aria-label={`Switch to ${label} view`}
+                >
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
           {viewMode === "data" && !isCustomQuery && !isSubscription && (
             <Button
               onClick={() => setShowColumnTypes(!showColumnTypes)}
@@ -230,8 +225,8 @@ export default function TableToolbar({
               </Button>
             </>
           )}
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 }

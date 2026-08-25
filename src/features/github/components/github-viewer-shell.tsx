@@ -1,6 +1,14 @@
 import "../styles/github-viewer.css";
 import type { ReactNode } from "react";
 import { DotsThreeIcon as MoreHorizontal } from "@/ui/icons";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/ui/breadcrumb";
 import { Button } from "@/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { ScrollArea } from "@/ui/scroll-area";
@@ -73,33 +81,17 @@ export function GitHubViewerHeader({
   className,
 }: GitHubViewerHeaderProps) {
   return (
-    <div
-      className={cn(
-        "sticky top-0 z-20 shrink-0 border-border/60 border-b bg-background/92 backdrop-blur-xl",
-        className,
-      )}
-    >
-      <div className="px-4 sm:px-6">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 py-2">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex min-w-0 flex-1 items-start gap-3">
-              {leading ? <div className="mt-0.5 shrink-0">{leading}</div> : null}
-              <div className="min-w-0 flex-1">
-                <h1 className="font-sans ui-text-sm min-w-0 truncate leading-6 font-medium text-foreground">
-                  {title}
-                </h1>
-                {meta ? (
-                  <div className="font-sans ui-text-sm flex flex-wrap items-center gap-x-2 gap-y-1 text-subtle-foreground">
-                    {meta}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
-          </div>
-          {children}
-        </div>
-      </div>
+    <div className={cn("sticky top-0 z-20 shrink-0 bg-background/92 backdrop-blur-xl", className)}>
+      <PaneContentHeader
+        leading={leading}
+        context={title}
+        detail={meta ? <span className="flex items-center gap-1.5">{meta}</span> : undefined}
+        actions={actions}
+        separated={!children}
+      />
+      {children ? (
+        <div className="border-border/55 border-b bg-background px-2 py-1">{children}</div>
+      ) : null}
     </div>
   );
 }
@@ -113,15 +105,21 @@ interface GitHubViewerTitleProps {
 
 export function GitHubViewerTitle({ kind, number, title, stats }: GitHubViewerTitleProps) {
   return (
-    <span className="flex min-w-0 items-center gap-2">
-      <span className="shrink-0 text-subtle-foreground">
-        {kind}
-        {number !== undefined ? ` #${number}` : null}
-      </span>
-      <span className="text-subtle-foreground/60">&rsaquo;</span>
-      <span className="min-w-0 truncate">{title}</span>
+    <span className="flex min-w-0 items-center gap-1.5">
+      <Breadcrumb aria-label="GitHub item" className="min-w-0 overflow-hidden">
+        <BreadcrumbList className="flex-nowrap gap-0">
+          <BreadcrumbItem className="shrink-0 px-1 text-subtle-foreground">
+            {kind}
+            {number !== undefined ? ` #${number}` : null}
+          </BreadcrumbItem>
+          <BreadcrumbSeparator className="shrink-0" />
+          <BreadcrumbItem className="min-w-0">
+            <BreadcrumbPage className="min-w-0 truncate px-1">{title}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       {stats ? (
-        <span className="ml-1 hidden shrink-0 items-center gap-1.5 sm:inline-flex">{stats}</span>
+        <span className="hidden shrink-0 items-center gap-1.5 sm:inline-flex">{stats}</span>
       ) : null}
     </span>
   );

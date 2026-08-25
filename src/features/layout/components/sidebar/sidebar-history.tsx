@@ -20,7 +20,7 @@ import { useGitStore } from "@/features/git/stores/git.store";
 import type { GitWorktree } from "@/features/git/types/git.types";
 import { isOpenableGitWorktree } from "@/features/git/utils/git-worktree-open";
 import { getProjectNameFromPath } from "@/features/layout/components/sidebar/sidebar-projects";
-import { SidebarWorktreeHistoryRow } from "@/features/layout/components/sidebar/sidebar-worktree-history-row";
+import { WorktreeItem } from "@/features/layout/components/sidebar/worktree-item";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   CLOSE_TERMINAL_EVENT,
@@ -28,7 +28,6 @@ import {
 } from "@/features/terminal/constants/terminal-events";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { Button } from "@/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -39,19 +38,20 @@ import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import {
   ArchiveIcon,
   DotsThreeIcon,
-  NodesIcon,
+  NodesFillDuoIcon,
   OpenExternalIcon,
   PencilSimpleLineIcon,
   PlusIcon,
   PushPinIcon,
   PushPinSlashIcon,
-  TerminalIcon,
+  SparkleFillDuoIcon,
+  TerminalFillDuoIcon,
   TrashIcon,
   XIcon,
 } from "@/ui/icons";
 import { InlineRenameInput } from "@/ui/input";
 import {
-  SidebarHeaderIconButton,
+  SidebarIconButton,
   SidebarListEditor,
   SidebarListItem,
   SidebarSectionHeader,
@@ -93,20 +93,21 @@ function SidebarNewAgentButton({
 
   if (compact) {
     return (
-      <SidebarHeaderIconButton
+      <SidebarIconButton
         tooltip="New Agent"
         tooltipSide="right"
         aria-label="New Agent"
         onClick={handleNewAgent}
       >
         <PlusIcon />
-      </SidebarHeaderIconButton>
+      </SidebarIconButton>
     );
   }
 
   return (
     <SidebarListItem
-      leading={<PlusIcon className="size-4" />}
+      appearance="activity"
+      leading={<SparkleFillDuoIcon className="size-4 text-primary" />}
       iconOnly={iconOnly}
       onClick={handleNewAgent}
       aria-label="New Agent"
@@ -148,7 +149,10 @@ function SidebarAgentHistoryRow({
 
   if (isRenaming) {
     return (
-      <SidebarListEditor leading={<ProviderIcon providerId={chat.agentId || "custom"} size={16} />}>
+      <SidebarListEditor
+        appearance="activity"
+        leading={<ProviderIcon providerId={chat.agentId || "custom"} size={16} />}
+      >
         <InlineRenameInput
           value={renameValue}
           onValueChange={setRenameValue}
@@ -251,7 +255,10 @@ function SidebarTerminalHistoryRow({
 
   if (isRenaming) {
     return (
-      <SidebarListEditor leading={<TerminalIcon className="size-4" />}>
+      <SidebarListEditor
+        appearance="activity"
+        leading={<TerminalFillDuoIcon className="size-4 text-info" />}
+      >
         <InlineRenameInput
           value={renameValue}
           onValueChange={setRenameValue}
@@ -272,19 +279,16 @@ function SidebarTerminalHistoryRow({
         <div className="group/sidebar-terminal relative flex w-full min-w-0 items-center">
           <SidebarListItem
             active={active}
-            leading={<TerminalIcon className="size-4" />}
+            appearance="activity"
+            leading={<TerminalFillDuoIcon className="size-4 text-info" />}
             className="pr-12"
             onClick={onOpen}
           >
             {name}
           </SidebarListItem>
           <span className="pointer-events-none absolute right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/sidebar-terminal:pointer-events-auto group-hover/sidebar-terminal:opacity-100 group-focus-within/sidebar-terminal:pointer-events-auto group-focus-within/sidebar-terminal:opacity-100">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
+            <SidebarIconButton
               active={pinned}
-              className="size-5"
               aria-pressed={pinned}
               tooltip={pinned ? "Unpin terminal" : "Pin terminal"}
               tooltipSide="right"
@@ -298,12 +302,9 @@ function SidebarTerminalHistoryRow({
               ) : (
                 <PushPinIcon className="size-3" />
               )}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              className="size-5 hover:text-destructive"
+            </SidebarIconButton>
+            <SidebarIconButton
+              className="hover:text-destructive"
               tooltip="Close terminal"
               tooltipSide="right"
               onClick={(event) => {
@@ -312,7 +313,7 @@ function SidebarTerminalHistoryRow({
               }}
             >
               <XIcon className="size-3" />
-            </Button>
+            </SidebarIconButton>
           </span>
         </div>
       </ContextMenuTrigger>
@@ -442,6 +443,7 @@ export function SidebarAgentHistory({
           ))}
           {olderChats.length > 0 ? (
             <SidebarListItem
+              appearance="activity"
               leading={<DotsThreeIcon className="size-4" />}
               onClick={handleShowMoreAgents}
             >
@@ -636,7 +638,8 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
   if (!expanded) {
     return (
       <SidebarListItem
-        leading={<TerminalIcon className="size-4" />}
+        appearance="activity"
+        leading={<TerminalFillDuoIcon className="size-4 text-info" />}
         iconOnly
         onClick={() => {
           if (activePanelTerminalId) handleOpenPanelTerminal(activePanelTerminalId);
@@ -657,7 +660,7 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
         onToggle={toggleCollapsed}
         action={
           terminalCount > 0 ? (
-            <SidebarHeaderIconButton
+            <SidebarIconButton
               tooltip="New Terminal"
               tooltipSide="right"
               commandId="terminal.new"
@@ -665,7 +668,7 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
               onClick={handleNewTerminal}
             >
               <PlusIcon />
-            </SidebarHeaderIconButton>
+            </SidebarIconButton>
           ) : undefined
         }
       >
@@ -675,7 +678,8 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
         <>
           {terminalCount === 0 ? (
             <SidebarListItem
-              leading={<PlusIcon className="size-4" />}
+              appearance="activity"
+              leading={<TerminalFillDuoIcon className="size-4 text-info" />}
               aria-label="New Terminal"
               onClick={handleNewTerminal}
             >
@@ -763,7 +767,8 @@ export function SidebarWorktreeHistory({
   if (!expanded) {
     return (
       <SidebarListItem
-        leading={<NodesIcon className="size-4" />}
+        appearance="activity"
+        leading={<NodesFillDuoIcon className="size-4 text-success" />}
         iconOnly
         onClick={onNewWorktree}
         aria-label="Worktrees"
@@ -780,14 +785,14 @@ export function SidebarWorktreeHistory({
         onToggle={toggleCollapsed}
         action={
           openableWorktrees.length > 0 ? (
-            <SidebarHeaderIconButton
+            <SidebarIconButton
               tooltip="New Worktree"
               tooltipSide="right"
               aria-label="New Worktree"
               onClick={onNewWorktree}
             >
               <PlusIcon />
-            </SidebarHeaderIconButton>
+            </SidebarIconButton>
           ) : undefined
         }
       >
@@ -797,7 +802,8 @@ export function SidebarWorktreeHistory({
         <>
           {openableWorktrees.length === 0 ? (
             <SidebarListItem
-              leading={<PlusIcon className="size-4" />}
+              appearance="activity"
+              leading={<NodesFillDuoIcon className="size-4 text-success" />}
               onClick={onNewWorktree}
               aria-label="New Worktree"
             >
@@ -806,11 +812,7 @@ export function SidebarWorktreeHistory({
           ) : null}
           {repoPath
             ? openableWorktrees.map((worktree) => (
-                <SidebarWorktreeHistoryRow
-                  key={worktree.path}
-                  repoPath={repoPath}
-                  worktree={worktree}
-                />
+                <WorktreeItem key={worktree.path} repoPath={repoPath} worktree={worktree} />
               ))
             : null}
         </>

@@ -1,11 +1,11 @@
 import type { SubscriptionInfo } from "@/features/window/services/auth-api";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 
-export function canUseHostedProvider(
+export function canUseIntelligenceProvider(
   providerId: string,
   subscription: SubscriptionInfo | null,
 ): boolean {
-  return providerId === "openrouter" && hasProductCapability(subscription, "hostedAi");
+  return providerId === "openrouter" && hasProductCapability(subscription, "intelligence");
 }
 
 export function canUseProviderWithoutApiKey(params: {
@@ -14,7 +14,7 @@ export function canUseProviderWithoutApiKey(params: {
   hasStoredKey: boolean;
   requiresApiKey: boolean;
 }): boolean {
-  const { providerId, subscription, hasStoredKey, requiresApiKey } = params;
+  const { hasStoredKey, requiresApiKey } = params;
 
   if (!requiresApiKey) {
     return true;
@@ -24,5 +24,5 @@ export function canUseProviderWithoutApiKey(params: {
     return true;
   }
 
-  return canUseHostedProvider(providerId, subscription);
+  return false;
 }

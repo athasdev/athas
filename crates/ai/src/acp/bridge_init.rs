@@ -9,7 +9,10 @@ use super::{
    workspace_path::{path_to_string, resolve_workspace_path},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
-use agent_client_protocol::{self as acp_sdk, schema as acp};
+use agent_client_protocol::{
+   self as acp_sdk,
+   schema::{ProtocolVersion, v1 as acp},
+};
 use anyhow::{Result, bail};
 use athas_terminal::TerminalManager;
 use serde_json::json;
@@ -51,8 +54,7 @@ pub(super) async fn initialize_worker(
    map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
 ) -> Result<InitializedAcpWorker> {
    let workspace_path = resolve_workspace_path(workspace_path)?;
-   let (mut child, uses_npx_codex_adapter) =
-      spawn_agent_process(config, workspace_path.as_deref())?;
+   let mut child = spawn_agent_process(config, workspace_path.as_deref())?;
    let process_group_id = child.id();
    let stdin = child
       .stdin
@@ -115,13 +117,7 @@ pub(super) async fn initialize_worker(
          .map_err(|_| anyhow::anyhow!("Failed to establish ACP connection"))?,
    );
 
-   let init_response = initialize_connection(
-      connection.clone(),
-      uses_npx_codex_adapter,
-      &mut child,
-      &io_handle,
-   )
-   .await?;
+   let init_response = initialize_connection(connection.clone(), &mut child, &io_handle).await?;
    let auth_methods = init_response.auth_methods.clone();
    let auth_method_id = auth_methods.first().map(|method| method.id().to_string());
    let supports_session_resume = init_response
@@ -212,10 +208,7 @@ fn configure_background_agent_command(command: &mut Command) {
    }
 }
 
-fn spawn_agent_process(
-   config: &AgentConfig,
-   workspace_path: Option<&Path>,
-) -> Result<(Child, bool)> {
+fn spawn_agent_process(config: &AgentConfig, workspace_path: Option<&Path>) -> Result<Child> {
    let binary = config.binary_path.as_deref().unwrap_or(&config.binary_name);
    log::info!(
       "Starting agent '{}' (binary: {}, resolved: {}, args: {:?})",
@@ -238,23 +231,15 @@ fn spawn_agent_process(
       cmd.env("PATH", format!("{current}:{shell_path}"));
    }
 
-   let uses_npx_codex_adapter = binary.ends_with("npx")
-      && config
-         .args
-         .iter()
-         .any(|arg| arg == "@agentclientprotocol/codex-acp" || arg == "@zed-industries/codex-acp");
-
    for (key, value) in &config.env_vars {
       cmd.env(key, value);
    }
 
-   if uses_npx_codex_adapter {
-      cmd.current_dir(std::env::temp_dir());
-   } else if let Some(path) = workspace_path {
+   if let Some(path) = workspace_path {
       cmd.current_dir(path);
    }
 
-   Ok((cmd.spawn()?, uses_npx_codex_adapter))
+   Ok(cmd.spawn()?)
 }
 
 fn spawn_stderr_logger(child: &mut Child, agent_name: String) -> RecentAgentStderr {
@@ -307,20 +292,18 @@ fn relevant_agent_stderr(lines: &VecDeque<String>) -> Option<String> {
 
 async fn initialize_connection(
    connection: Arc<AcpConnection>,
-   uses_npx_codex_adapter: bool,
    child: &mut Child,
    io_handle: &tokio::task::JoinHandle<()>,
 ) -> Result<acp::InitializeResponse> {
    let mut client_meta = acp::Meta::new();
    client_meta.insert(
-      "athas".to_string(),
+      "athas.dev".to_string(),
       json!({
          "extensionMethods": [
-            { "name": "athas.openWebViewer", "description": "Open a URL in Athas web viewer", "params": { "url": "string" } },
-            { "name": "athas.openTerminal", "description": "Open a terminal tab in Athas", "params": { "command": "string|null" } },
-            { "name": "athas.setChatTitle", "description": "Rename the active Athas chat title", "params": { "title": "string" } }
-         ],
-         "notes": "Call these via ACP extension methods, not shell commands."
+            { "name": "_athas/open_web_viewer", "description": "Open a URL in Athas web viewer", "params": { "url": "string" } },
+            { "name": "_athas/open_terminal", "description": "Open a terminal tab in Athas", "params": { "command": "string|null" } },
+            { "name": "_athas/set_chat_title", "description": "Rename the active Athas chat title", "params": { "title": "string" } }
+         ]
       }),
    );
 
@@ -331,13 +314,19 @@ async fn initialize_connection(
             .write_text_file(true),
       )
       .terminal(true)
+      .session(
+         acp::ClientSessionCapabilities::new().config_options(
+            acp::SessionConfigOptionsCapabilities::new()
+               .boolean(acp::BooleanConfigOptionCapabilities::new()),
+         ),
+      )
       .meta(client_meta);
 
-   let init_request = acp::InitializeRequest::new(acp::ProtocolVersion::LATEST)
+   let init_request = acp::InitializeRequest::new(ProtocolVersion::LATEST)
       .client_capabilities(client_capabilities)
       .client_info(acp::Implementation::new("athas", env!("CARGO_PKG_VERSION")).title("Athas"));
 
-   let initialize_timeout_secs = if uses_npx_codex_adapter { 120 } else { 30 };
+   let initialize_timeout_secs = 30;
    log::info!(
       "Sending ACP initialize request (timeout: {}s)...",
       initialize_timeout_secs

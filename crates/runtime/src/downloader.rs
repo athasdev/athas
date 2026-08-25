@@ -50,13 +50,13 @@ impl PlatformInfo {
 pub async fn download_node(version: &str, target_dir: &Path) -> Result<(), RuntimeError> {
    let platform = PlatformInfo::detect()?;
 
-   // Build filename: node-v22.5.1-darwin-arm64.tar.gz
+   // Build filename: node-v24.19.0-darwin-arm64.tar.gz
    let filename = format!(
       "node-v{}-{}-{}.{}",
       version, platform.os, platform.arch, platform.extension
    );
 
-   // Build URL: https://nodejs.org/dist/v22.5.1/node-v22.5.1-darwin-arm64.tar.gz
+   // Build URL: https://nodejs.org/dist/v24.19.0/node-v24.19.0-darwin-arm64.tar.gz
    let url = format!("https://nodejs.org/dist/v{}/{}", version, filename);
 
    log::info!("Downloading Node.js {} from {}", version, url);
@@ -351,7 +351,7 @@ mod tests {
       assert!(!outside_marker.exists());
 
       let malicious = make_tarslip_symlink_archive(
-         "node-v22.0.0-linux-x64/",
+         "node-v24.0.0-linux-x64/",
          "evil",
          outside.path().to_str().unwrap(),
          "pwned",
@@ -374,10 +374,10 @@ mod tests {
    #[test]
    fn extract_tar_gz_strips_single_top_level_dir() {
       let archive = make_tar_gz(&[
-         ("node-v22.0.0-linux-x64/", b""),
-         ("node-v22.0.0-linux-x64/bin/", b""),
-         ("node-v22.0.0-linux-x64/bin/node", b"#!/bin/sh\n"),
-         ("node-v22.0.0-linux-x64/README.md", b"hello"),
+         ("node-v24.0.0-linux-x64/", b""),
+         ("node-v24.0.0-linux-x64/bin/", b""),
+         ("node-v24.0.0-linux-x64/bin/node", b"#!/bin/sh\n"),
+         ("node-v24.0.0-linux-x64/README.md", b"hello"),
       ]);
 
       let target = tempfile::tempdir().unwrap();

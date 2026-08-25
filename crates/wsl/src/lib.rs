@@ -617,15 +617,13 @@ fn parse_directory_entries(distro: &str, bytes: &[u8]) -> Result<Vec<WslFileEntr
 }
 
 fn decode_wsl_output(bytes: &[u8]) -> String {
-   if bytes.len() >= 2 && bytes.len() % 2 == 0 {
-      let odd_zero_count = bytes
-         .chunks_exact(2)
-         .filter(|pair| pair.get(1) == Some(&0))
-         .count();
+   if bytes.len() >= 2 && bytes.len().is_multiple_of(2) {
+      let pairs = bytes.as_chunks::<2>().0;
+      let odd_zero_count = pairs.iter().filter(|pair| pair[1] == 0).count();
 
       if odd_zero_count > bytes.len() / 4 {
-         let utf16 = bytes
-            .chunks_exact(2)
+         let utf16 = pairs
+            .iter()
             .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
             .collect::<Vec<_>>();
          return String::from_utf16_lossy(&utf16);

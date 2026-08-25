@@ -1,19 +1,27 @@
-import { useMemo, useState } from "react";
-import { ProBadge } from "@/features/window/components/pro-badge";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { loadCodexComposerCatalog } from "@/features/ai/integrations/codex/codex-composer-catalog";
+import type {
+  CodexComposerCatalog,
+  CodexSkillSummary,
+} from "@/features/ai/integrations/codex/codex-types";
+import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
 import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
-import type { SessionConfigOption } from "@/features/ai/types/acp.types";
+import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
 import type { AgentType, ChatMode } from "@/features/ai/types/ai-chat.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { openCodexThread } from "@/features/ai/lib/open-codex-thread";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuCheckboxItem,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -29,10 +37,12 @@ import {
 import {
   BookOpenIcon as BookOpen,
   BrainIcon as Brain,
+  ClockCounterClockwiseIcon as History,
   FadersHorizontalIcon as Preferences,
-  LockIcon as Lock,
+  ArrowClockwiseIcon as Retry,
   SlidersHorizontalIcon as Sliders,
   SparkleIcon as Sparkles,
+  WarningIcon as Warning,
 } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -42,6 +52,20 @@ const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
   { id: "chat", label: "Ask" },
   { id: "plan", label: "Plan" },
 ];
+
+type CodexCatalogStatus = "idle" | "loading" | "loaded" | "error";
+
+interface CodexCatalogState {
+  status: CodexCatalogStatus;
+  catalog: CodexComposerCatalog;
+  error: string | null;
+}
+
+const EMPTY_CODEX_CATALOG: CodexComposerCatalog = {
+  threads: [],
+  skills: [],
+  skillErrors: [],
+};
 
 function CurrentValue({ children }: { children: string }) {
   return (
@@ -72,61 +96,116 @@ function MenuSearchInput({
   );
 }
 
-function AgentPreferencesSubmenu({
+function ProviderPreferencesSubmenu({
   currentAgentId,
+  providerId,
   onAgentChange,
+  onProviderChange,
 }: {
   currentAgentId: AgentType;
+  providerId: string;
   onAgentChange: (agentId: AgentType) => void;
+  onProviderChange: (providerId: string) => void;
 }) {
   const { options, installAgent } = useAgentOptions(currentAgentId);
+  const providers = useAvailableProviders();
   const [query, setQuery] = useState("");
-  const currentAgentName = options.find((option) => option.isCurrent)?.name ?? "Agent";
-  const filteredOptions = options.filter((option) =>
+  const agentOptions = options.filter((option) => option.id !== "custom");
+  const apiProviders = providers.filter((provider) => provider.id !== "custom");
+  const customProvider = providers.find((provider) => provider.id === "custom");
+  const filteredAgents = agentOptions.filter((option) =>
     matchesSearchQuery(query, [option.name, option.description ?? "", option.id]),
   );
+  const filteredApiProviders = apiProviders.filter((provider) =>
+    matchesSearchQuery(query, [provider.name, provider.id]),
+  );
+  const showCustom = Boolean(
+    customProvider && matchesSearchQuery(query, [customProvider.name, customProvider.id]),
+  );
+  const currentName =
+    currentAgentId === "custom"
+      ? (providers.find((provider) => provider.id === providerId)?.name ?? providerId)
+      : (options.find((option) => option.isCurrent)?.name ?? currentAgentId);
+  const selectedValue =
+    currentAgentId === "custom" ? `api:${providerId}` : `agent:${currentAgentId}`;
+  const hasGroupedResults = filteredAgents.length > 0 || filteredApiProviders.length > 0;
 
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
         <Sparkles />
-        <PreferenceLabel>Agent</PreferenceLabel>
-        <CurrentValue>{currentAgentName}</CurrentValue>
+        <PreferenceLabel>Provider</PreferenceLabel>
+        <CurrentValue>{currentName}</CurrentValue>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="min-w-56">
-        <MenuSearchInput value={query} onChange={setQuery} placeholder="Search agents..." />
+        <MenuSearchInput value={query} onChange={setQuery} placeholder="Search providers..." />
         <DropdownMenuRadioGroup
-          value={currentAgentId}
-          onValueChange={(agentId) => {
-            const option = options.find((candidate) => candidate.id === agentId);
+          value={selectedValue}
+          onValueChange={(value) => {
+            const [kind, id] = value.split(":", 2);
+            if (!id) return;
+            if (kind === "api") {
+              onProviderChange(id);
+              onAgentChange("custom");
+              return;
+            }
+
+            const option = agentOptions.find((candidate) => candidate.id === id);
             if (!option) return;
-            if (option.isInstalled || option.id === "custom") {
+            if (option.isInstalled) {
               onAgentChange(option.id);
               return;
             }
             if (option.canInstall) void installAgent(option.id, option.name);
           }}
         >
-          {filteredOptions.map((option) => (
-            <DropdownMenuRadioItem
-              key={option.id}
-              value={option.id}
-              disabled={option.isInstalling || (!option.isInstalled && !option.canInstall)}
-              title={option.description}
-            >
-              <ProviderIcon providerId={option.id} size={14} />
-              <span className="min-w-0 flex-1 truncate">{option.name}</span>
-              {!option.isInstalled ? (
-                option.isInstalling ? (
-                  <Spinner label={`Installing ${option.name}`} compact />
-                ) : (
-                  <span className="text-subtle-foreground ui-text-sm">Install</span>
-                )
-              ) : null}
-            </DropdownMenuRadioItem>
-          ))}
-          {filteredOptions.length === 0 ? (
-            <DropdownMenuItem disabled>No matching agents</DropdownMenuItem>
+          {filteredAgents.length > 0 ? (
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Agents</DropdownMenuLabel>
+              {filteredAgents.map((option) => (
+                <DropdownMenuRadioItem
+                  key={option.id}
+                  value={`agent:${option.id}`}
+                  disabled={option.isInstalling || (!option.isInstalled && !option.canInstall)}
+                  title={option.description}
+                >
+                  <ProviderIcon providerId={option.id} size={14} />
+                  <span className="min-w-0 flex-1 truncate">{option.name}</span>
+                  {!option.isInstalled ? (
+                    option.isInstalling ? (
+                      <Spinner label={`Installing ${option.name}`} compact />
+                    ) : (
+                      <span className="text-subtle-foreground ui-text-chrome">Install</span>
+                    )
+                  ) : option.updateAvailable ? (
+                    <span className="text-subtle-foreground ui-text-chrome">Update available</span>
+                  ) : null}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuGroup>
+          ) : null}
+          {filteredApiProviders.length > 0 ? (
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>API</DropdownMenuLabel>
+              {filteredApiProviders.map((provider) => (
+                <DropdownMenuRadioItem key={provider.id} value={`api:${provider.id}`}>
+                  <ProviderIcon providerId={provider.id} size={14} />
+                  {provider.name}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuGroup>
+          ) : null}
+          {showCustom ? (
+            <>
+              {hasGroupedResults ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuRadioItem value="api:custom">
+                <ProviderIcon providerId="custom" size={14} />
+                Custom
+              </DropdownMenuRadioItem>
+            </>
+          ) : null}
+          {!hasGroupedResults && !showCustom ? (
+            <DropdownMenuItem disabled>No matching providers</DropdownMenuItem>
           ) : null}
         </DropdownMenuRadioGroup>
       </DropdownMenuSubContent>
@@ -184,20 +263,30 @@ function AthasAgentPreferences({
   modelId,
   onProviderChange,
   onModelChange,
+  showProviderSelector,
 }: {
   providerId: string;
   modelId: string;
   onProviderChange: (providerId: string) => void;
   onModelChange: (modelId: string) => void;
+  showProviderSelector: boolean;
 }) {
   const [providerQuery, setProviderQuery] = useState("");
   const [modelQuery, setModelQuery] = useState("");
   const providers = useAvailableProviders();
   const currentProvider = providers.find((provider) => provider.id === providerId);
-  const { availableModels, currentModelName, hasHostedAi, isLoadingModels, modelFetchError } =
-    useAIModelOptions(providerId, modelId, onModelChange);
-  const filteredProviders = providers.filter((provider) =>
-    matchesSearchQuery(providerQuery, [provider.name, provider.id]),
+  const { availableModels, currentModelName, isLoadingModels, modelFetchError } = useAIModelOptions(
+    providerId,
+    modelId,
+    onModelChange,
+  );
+  const filteredApiProviders = providers.filter(
+    (provider) =>
+      provider.id !== "custom" && matchesSearchQuery(providerQuery, [provider.name, provider.id]),
+  );
+  const showCustom = providers.some(
+    (provider) =>
+      provider.id === "custom" && matchesSearchQuery(providerQuery, [provider.name, provider.id]),
   );
   const filteredModels = availableModels.filter((model) =>
     matchesSearchQuery(modelQuery, [model.name, model.id]),
@@ -205,31 +294,47 @@ function AthasAgentPreferences({
 
   return (
     <>
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger>
-          <ProviderIcon providerId={providerId} size={14} />
-          <PreferenceLabel>Provider</PreferenceLabel>
-          <CurrentValue>{currentProvider?.name ?? providerId}</CurrentValue>
-        </DropdownMenuSubTrigger>
-        <DropdownMenuSubContent className="min-w-48">
-          <MenuSearchInput
-            value={providerQuery}
-            onChange={setProviderQuery}
-            placeholder="Search providers..."
-          />
-          <DropdownMenuRadioGroup value={providerId} onValueChange={onProviderChange}>
-            {filteredProviders.map((provider) => (
-              <DropdownMenuRadioItem key={provider.id} value={provider.id}>
-                <ProviderIcon providerId={provider.id} size={14} />
-                {provider.name}
-              </DropdownMenuRadioItem>
-            ))}
-            {filteredProviders.length === 0 ? (
-              <DropdownMenuItem disabled>No matching providers</DropdownMenuItem>
-            ) : null}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
+      {showProviderSelector ? (
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <ProviderIcon providerId={providerId} size={14} />
+            <PreferenceLabel>Provider</PreferenceLabel>
+            <CurrentValue>{currentProvider?.name ?? providerId}</CurrentValue>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="min-w-48">
+            <MenuSearchInput
+              value={providerQuery}
+              onChange={setProviderQuery}
+              placeholder="Search providers..."
+            />
+            <DropdownMenuRadioGroup value={providerId} onValueChange={onProviderChange}>
+              {filteredApiProviders.length > 0 ? (
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>API</DropdownMenuLabel>
+                  {filteredApiProviders.map((provider) => (
+                    <DropdownMenuRadioItem key={provider.id} value={provider.id}>
+                      <ProviderIcon providerId={provider.id} size={14} />
+                      {provider.name}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuGroup>
+              ) : null}
+              {showCustom ? (
+                <>
+                  {filteredApiProviders.length > 0 ? <DropdownMenuSeparator /> : null}
+                  <DropdownMenuRadioItem value="custom">
+                    <ProviderIcon providerId="custom" size={14} />
+                    Custom
+                  </DropdownMenuRadioItem>
+                </>
+              ) : null}
+              {filteredApiProviders.length === 0 && !showCustom ? (
+                <DropdownMenuItem disabled>No matching providers</DropdownMenuItem>
+              ) : null}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      ) : null}
 
       <DropdownMenuSub>
         <DropdownMenuSubTrigger>
@@ -258,14 +363,11 @@ function AthasAgentPreferences({
           ) : (
             <DropdownMenuRadioGroup value={modelId} onValueChange={onModelChange}>
               {filteredModels.map((model) => {
-                const locked = Boolean(model.proOnly && !hasHostedAi);
                 return (
-                  <DropdownMenuRadioItem key={model.id} value={model.id} disabled={locked}>
-                    {locked ? <Lock /> : null}
+                  <DropdownMenuRadioItem key={model.id} value={model.id}>
                     <span className="min-w-0 flex-1 truncate" title={model.id}>
                       {model.name}
                     </span>
-                    {model.proOnly ? <ProBadge /> : null}
                   </DropdownMenuRadioItem>
                 );
               })}
@@ -324,14 +426,195 @@ function SkillsPreferencesSubmenu({
   );
 }
 
+function CodexCatalogError({
+  label,
+  message,
+  onRetry,
+}: {
+  label: string;
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <>
+      <DropdownMenuItem disabled title={message}>
+        <Warning className="text-warning" />
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={onRetry}>
+        <Retry />
+        Retry
+      </DropdownMenuItem>
+    </>
+  );
+}
+
+function CodexSessionsPreferencesSubmenu({
+  state,
+  onRetry,
+}: {
+  state: CodexCatalogState;
+  onRetry: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const filteredThreads = state.catalog.threads.filter((thread) =>
+    matchesSearchQuery(query, [thread.name ?? "", thread.preview, thread.cwd]),
+  );
+  const count =
+    state.status === "error"
+      ? "!"
+      : state.status === "loading" || state.status === "idle"
+        ? "…"
+        : state.catalog.threads.length.toString();
+
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <History />
+        <PreferenceLabel>Sessions</PreferenceLabel>
+        <CurrentValue>{count}</CurrentValue>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-80 min-w-72 overflow-y-auto">
+        <MenuSearchInput value={query} onChange={setQuery} placeholder="Search sessions..." />
+        {state.status === "loading" || state.status === "idle" ? (
+          <DropdownMenuItem disabled>
+            <Spinner label="Loading sessions" compact />
+            Loading sessions…
+          </DropdownMenuItem>
+        ) : state.status === "error" ? (
+          <CodexCatalogError
+            label="Could not load sessions"
+            message={state.error ?? "Unknown error"}
+            onRetry={onRetry}
+          />
+        ) : state.catalog.threads.length === 0 ? (
+          <DropdownMenuItem disabled>No Codex sessions yet</DropdownMenuItem>
+        ) : filteredThreads.length === 0 ? (
+          <DropdownMenuItem disabled>No matching sessions</DropdownMenuItem>
+        ) : (
+          filteredThreads.map((thread) => {
+            const title = thread.name?.trim() || thread.preview.trim() || "Untitled session";
+            const updatedAt = thread.updatedAt > 0 ? new Date(thread.updatedAt * 1000) : null;
+
+            return (
+              <DropdownMenuItem
+                key={thread.id}
+                onClick={() => openCodexThread(thread)}
+                title={thread.preview || title}
+              >
+                <History />
+                <span className="min-w-0 flex-1 truncate">{title}</span>
+                {updatedAt ? (
+                  <span className="shrink-0 text-subtle-foreground">
+                    {updatedAt.toLocaleDateString()}
+                  </span>
+                ) : null}
+              </DropdownMenuItem>
+            );
+          })
+        )}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+}
+
+function CodexSkillsPreferencesSubmenu({
+  state,
+  onRetry,
+  onSelectSkill,
+}: {
+  state: CodexCatalogState;
+  onRetry: () => void;
+  onSelectSkill: (skill: CodexSkillSummary) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const filteredSkills = state.catalog.skills.filter((skill) =>
+    matchesSearchQuery(query, [skill.name, skill.description, skill.path, skill.scope]),
+  );
+  const count =
+    state.status === "error"
+      ? "!"
+      : state.status === "loading" || state.status === "idle"
+        ? "…"
+        : state.catalog.skills.length.toString();
+  const hasSkillLoadError =
+    state.status === "loaded" &&
+    state.catalog.skills.length === 0 &&
+    state.catalog.skillErrors.length > 0;
+
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <BookOpen />
+        <PreferenceLabel>Skills</PreferenceLabel>
+        <CurrentValue>{count}</CurrentValue>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-80 min-w-72 overflow-y-auto">
+        <MenuSearchInput value={query} onChange={setQuery} placeholder="Search Codex skills..." />
+        {state.status === "loading" || state.status === "idle" ? (
+          <DropdownMenuItem disabled>
+            <Spinner label="Loading skills" compact />
+            Loading skills…
+          </DropdownMenuItem>
+        ) : state.status === "error" || hasSkillLoadError ? (
+          <CodexCatalogError
+            label="Could not load skills"
+            message={state.error ?? state.catalog.skillErrors.join("\n")}
+            onRetry={onRetry}
+          />
+        ) : state.catalog.skills.length === 0 ? (
+          <DropdownMenuItem disabled>No Codex skills found</DropdownMenuItem>
+        ) : filteredSkills.length === 0 ? (
+          <DropdownMenuItem disabled>No matching skills</DropdownMenuItem>
+        ) : (
+          filteredSkills.map((skill) => (
+            <DropdownMenuItem
+              key={skill.path || skill.name}
+              onClick={() => onSelectSkill(skill)}
+              title={skill.description}
+              disabled={!skill.enabled}
+            >
+              <BookOpen />
+              <span className="min-w-0 flex-1 truncate">{skill.name}</span>
+              {skill.scope ? (
+                <span className="shrink-0 text-subtle-foreground">{skill.scope}</span>
+              ) : null}
+            </DropdownMenuItem>
+          ))
+        )}
+        {state.catalog.skills.length > 0 && state.catalog.skillErrors.length > 0 ? (
+          <DropdownMenuItem disabled title={state.catalog.skillErrors.join("\n")}>
+            <Warning className="text-warning" />
+            Some skills could not be loaded
+          </DropdownMenuItem>
+        ) : null}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+}
+
 function AcpConfigPreferences({
   options,
   onChange,
 }: {
   options: SessionConfigOption[];
-  onChange: (optionId: string, value: string) => void;
+  onChange: (optionId: string, value: SessionConfigValue) => void;
 }) {
   return options.map((option) => {
+    if (option.kind.type === "boolean") {
+      return (
+        <DropdownMenuCheckboxItem
+          key={option.id}
+          checked={option.kind.currentValue}
+          onCheckedChange={(checked) => onChange(option.id, checked)}
+          title={option.description}
+        >
+          <Brain />
+          <PreferenceLabel>{option.name}</PreferenceLabel>
+        </DropdownMenuCheckboxItem>
+      );
+    }
+
     if (option.kind.options.length === 0) return null;
     const currentValue = option.kind.currentValue || option.kind.options[0]?.id || "";
     const currentName =
@@ -369,8 +652,9 @@ interface ChatPreferencesMenuProps {
   onAgentChange?: (agentId: AgentType) => void;
   onProviderChange: (providerId: string) => void;
   onModelChange: (modelId: string) => void;
-  onSessionConfigChange: (optionId: string, value: string) => void;
+  onSessionConfigChange: (optionId: string, value: SessionConfigValue) => void;
   onSelectSkill: (skill: AIChatSkill) => void;
+  onSelectCodexSkill: (skillName: string) => void;
   onBeforeOpen: () => void;
 }
 
@@ -384,8 +668,34 @@ export function ChatPreferencesMenu({
   onModelChange,
   onSessionConfigChange,
   onSelectSkill,
+  onSelectCodexSkill,
   onBeforeOpen,
 }: ChatPreferencesMenuProps) {
+  const cwd = useProjectStore((state) => state.rootFolderPath || ".");
+  const [codexCatalogState, setCodexCatalogState] = useState<CodexCatalogState>({
+    status: "idle",
+    catalog: EMPTY_CODEX_CATALOG,
+    error: null,
+  });
+  const codexCatalogRequestId = useRef(0);
+  const isCodex = currentAgentId === CODEX_INTEGRATION_ID;
+  const loadCodexCatalog = useCallback(() => {
+    const requestId = ++codexCatalogRequestId.current;
+    setCodexCatalogState({ status: "loading", catalog: EMPTY_CODEX_CATALOG, error: null });
+    void loadCodexComposerCatalog(cwd)
+      .then((catalog) => {
+        if (requestId !== codexCatalogRequestId.current) return;
+        setCodexCatalogState({ status: "loaded", catalog, error: null });
+      })
+      .catch((error) => {
+        if (requestId !== codexCatalogRequestId.current) return;
+        setCodexCatalogState({
+          status: "error",
+          catalog: EMPTY_CODEX_CATALOG,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+  }, [cwd]);
   const preferences = useMemo(
     () =>
       getChatPreferencesModel({
@@ -397,7 +707,13 @@ export function ChatPreferencesMenu({
   );
 
   return (
-    <DropdownMenu onOpenChange={(open) => open && onBeforeOpen()}>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (!open) return;
+        onBeforeOpen();
+        if (isCodex) loadCodexCatalog();
+      }}
+    >
       <DropdownMenuTrigger
         render={
           <Button
@@ -414,10 +730,15 @@ export function ChatPreferencesMenu({
       <DropdownMenuContent align="end" className="min-w-64">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Session</DropdownMenuLabel>
+          {isCodex ? (
+            <CodexSessionsPreferencesSubmenu state={codexCatalogState} onRetry={loadCodexCatalog} />
+          ) : null}
           {preferences.showAgentPreference && onAgentChange ? (
-            <AgentPreferencesSubmenu
+            <ProviderPreferencesSubmenu
               currentAgentId={currentAgentId}
+              providerId={providerId}
               onAgentChange={onAgentChange}
+              onProviderChange={onProviderChange}
             />
           ) : null}
           {preferences.showAthasAgentPreferences ? (
@@ -426,6 +747,7 @@ export function ChatPreferencesMenu({
               modelId={modelId}
               onProviderChange={onProviderChange}
               onModelChange={onModelChange}
+              showProviderSelector={!preferences.showAgentPreference}
             />
           ) : (
             <AcpConfigPreferences
@@ -440,7 +762,15 @@ export function ChatPreferencesMenu({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuLabel>Instructions</DropdownMenuLabel>
-          <SkillsPreferencesSubmenu onSelectSkill={onSelectSkill} />
+          {isCodex ? (
+            <CodexSkillsPreferencesSubmenu
+              state={codexCatalogState}
+              onRetry={loadCodexCatalog}
+              onSelectSkill={(skill) => onSelectCodexSkill(skill.name)}
+            />
+          ) : (
+            <SkillsPreferencesSubmenu onSelectSkill={onSelectSkill} />
+          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>

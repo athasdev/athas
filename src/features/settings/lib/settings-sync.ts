@@ -54,7 +54,6 @@ type SyncableSettingsKey =
   | "showStatusBar"
   | "showTabIcons"
   | "tabCloseButtonVisibility"
-  | "windowChromeDensity"
   | "theme"
   | "iconTheme"
   | "syncSystemTheme"
@@ -180,7 +179,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "showStatusBar",
   "showTabIcons",
   "tabCloseButtonVisibility",
-  "windowChromeDensity",
   "theme",
   "iconTheme",
   "syncSystemTheme",

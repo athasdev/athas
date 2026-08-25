@@ -8,7 +8,7 @@ import {
 } from "@/ui/icons";
 import { SidebarListItem } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
-import { ExtensionIcon } from "./extension-catalog-icon";
+import { ExtensionInlineIcon } from "./extension-catalog-icon";
 import type { UnifiedExtension } from "./extension-catalog-types";
 
 export function ExtensionListItem({
@@ -47,7 +47,7 @@ export function ExtensionListItem({
   return (
     <SidebarListItem
       active={selected}
-      leading={<ExtensionIcon extension={extension} compact />}
+      leading={<ExtensionInlineIcon extension={extension} />}
       description={extension.description}
       trailing={
         <span className="flex size-5 shrink-0 items-center justify-center text-subtle-foreground">

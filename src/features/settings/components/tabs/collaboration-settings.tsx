@@ -44,9 +44,9 @@ export const CollaborationSettings = () => {
       >
         <SettingRow label="Dashboard" description="Open the full collaboration workspace.">
           <Button
+            shape="pill"
             type="button"
             variant="default"
-            className="ui-text-base"
             onClick={openDashboardCollaboration}
             size="sm"
           >
@@ -79,9 +79,9 @@ export const CollaborationSettings = () => {
               {collaboration?.presence.length ?? 0} sessions
             </Badge>
             <Button
+              shape="pill"
               type="button"
               variant="default"
-              className="ui-text-base"
               disabled={!presenceTarget.channelId && !presenceTarget.followingUserId}
               onClick={() => {
                 collaborationRuntimeActions.setPresenceChannel(null);
@@ -126,9 +126,9 @@ export const CollaborationSettings = () => {
               description={`${channel.memberCount} members · ${channel.guestCount} guests`}
             >
               <Button
+                shape="pill"
                 type="button"
                 variant={presenceTarget.channelId === channel.id ? "accent" : "default"}
-                className="ui-text-base"
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setPresenceChannel(channel.id)}
                 size="sm"
@@ -141,9 +141,9 @@ export const CollaborationSettings = () => {
           {followableMembers.slice(0, 4).map((member) => (
             <SettingRow key={`follow-${member.id}`} label={member.name} description={member.email}>
               <Button
+                shape="pill"
                 type="button"
                 variant={presenceTarget.followingUserId === member.userId ? "accent" : "default"}
-                className="ui-text-base"
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setFollowingUser(member.userId)}
                 size="sm"

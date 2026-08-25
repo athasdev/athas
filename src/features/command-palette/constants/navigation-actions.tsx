@@ -8,6 +8,7 @@ import {
   ListBulletsIcon as ListBullets,
   PackageIcon as Package,
   MagnifyingGlassIcon as Search,
+  SquaresFourIcon as Views,
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
@@ -78,6 +79,19 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       action: () => {
         setIsSidebarVisible(true);
         setActiveView("github-prs");
+        onClose();
+      },
+    },
+    {
+      id: "view-show-views",
+      label: "View: Show Views",
+      description: "Switch to project custom views",
+      icon: <Views />,
+      category: "Navigation",
+      commandId: "workbench.showViews",
+      action: () => {
+        setIsSidebarVisible(true);
+        setActiveView("views");
         onClose();
       },
     },

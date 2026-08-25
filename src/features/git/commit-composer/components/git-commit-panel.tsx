@@ -1,7 +1,6 @@
 import {
   ArrowDownIcon as ArrowDown,
   ArrowUpIcon as ArrowUp,
-  CheckIcon as Check,
   CaretDownIcon as ChevronDown,
   WarningCircleIcon as AlertCircle,
   SparkleIcon as Sparkles,
@@ -14,7 +13,13 @@ import { hasProductCapability } from "@/features/window/lib/product-capabilities
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import { SidebarComposerBody } from "@/ui/sidebar";
 import Textarea from "@/ui/textarea";
 import { toast } from "sonner";
@@ -70,7 +75,6 @@ const GitCommitPanel = ({
   const [isGenerateModeMenuOpen, setIsGenerateModeMenuOpen] = useState(false);
   const [remoteAction, setRemoteAction] = useState<"push" | "pull" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const generateMenuAnchorRef = useRef<HTMLDivElement>(null);
   const commitTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useLayoutEffect(() => {
@@ -98,14 +102,14 @@ const GitCommitPanel = ({
 
     const enterprisePolicy = subscription?.enterprise?.policy;
     const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-    const isPro = hasProductCapability(subscription, "hostedAi");
+    const hasIntelligence = hasProductCapability(subscription, "intelligence");
 
     if (managedPolicy && !managedPolicy.aiCompletionEnabled) {
       setError("AI commit message generation is disabled by your organization policy.");
       return;
     }
 
-    const useByok = managedPolicy ? managedPolicy.allowByok && !isPro : !isPro;
+    const useByok = managedPolicy ? managedPolicy.allowByok && !hasIntelligence : !hasIntelligence;
     if (managedPolicy && useByok && !managedPolicy.allowByok) {
       setError("BYOK is disabled by your organization policy.");
       return;
@@ -124,6 +128,7 @@ const GitCommitPanel = ({
       const { editedText } = await requestInlineEdit(
         {
           model: aiAutocompleteModelId,
+          feature: "commit-message",
           beforeSelection: "",
           selectedText,
           afterSelection: "",
@@ -233,20 +238,6 @@ const GitCommitPanel = ({
   const isGenerateDisabled = stagedFilesCount === 0 || isGenerating || isCommitting;
   const hasRemoteChanges = ahead > 0 || behind > 0;
   const isRemoteActionLoading = remoteAction !== null;
-  const generateModeItems: MenuItem[] = [
-    {
-      id: "title",
-      label: "Title only",
-      icon: commitMessageMode === "title" ? <Check /> : undefined,
-      onClick: () => setCommitMessageMode("title"),
-    },
-    {
-      id: "body",
-      label: "Title + body",
-      icon: commitMessageMode === "body" ? <Check /> : undefined,
-      onClick: () => setCommitMessageMode("body"),
-    },
-  ];
 
   return (
     <>
@@ -319,7 +310,7 @@ const GitCommitPanel = ({
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
-          <ButtonGroup ref={generateMenuAnchorRef}>
+          <ButtonGroup>
             <Button
               type="button"
               variant="default"
@@ -332,29 +323,35 @@ const GitCommitPanel = ({
               <Sparkles />
             </Button>
             <ButtonGroupSeparator />
-            <Button
-              type="button"
-              variant="default"
-              size="icon-xs"
-              onClick={() => setIsGenerateModeMenuOpen((open) => !open)}
-              disabled={isGenerating || isCommitting}
-              active={isGenerateModeMenuOpen}
-              tooltip="Commit message format"
-              aria-label="Commit message format"
-              aria-haspopup="menu"
-              aria-expanded={isGenerateModeMenuOpen}
-            >
-              <ChevronDown />
-            </Button>
+            <DropdownMenu open={isGenerateModeMenuOpen} onOpenChange={setIsGenerateModeMenuOpen}>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="icon-xs"
+                    disabled={isGenerating || isCommitting}
+                    active={isGenerateModeMenuOpen}
+                    tooltip="Commit message format"
+                    aria-label="Commit message format"
+                  />
+                }
+              >
+                <ChevronDown />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-37.5">
+                <DropdownMenuRadioGroup
+                  value={commitMessageMode}
+                  onValueChange={(value) => {
+                    if (value === "title" || value === "body") setCommitMessageMode(value);
+                  }}
+                >
+                  <DropdownMenuRadioItem value="title">Title only</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="body">Title + body</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </ButtonGroup>
-          <Dropdown
-            isOpen={isGenerateModeMenuOpen}
-            anchorRef={generateMenuAnchorRef}
-            anchorAlign="end"
-            onClose={() => setIsGenerateModeMenuOpen(false)}
-            items={generateModeItems}
-            className="min-w-37.5"
-          />
 
           <Button
             type="button"

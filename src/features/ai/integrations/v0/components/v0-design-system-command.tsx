@@ -508,7 +508,6 @@ export function V0DesignSystemCommandContent({
                 onMouseEnter={() => setSelectedIndex(index)}
                 isSelected={index === selectedIndex}
                 disabled={Boolean(savingRegistryUrl)}
-                className="h-8 gap-2 px-2 py-0"
               >
                 {row.kind === "suggestion" ? (
                   <Globe className="shrink-0 text-subtle-foreground" />

@@ -1,5 +1,6 @@
 import { memo, type KeyboardEventHandler, type RefObject } from "react";
 import { FilesIcon as Files, MagnifyingGlassIcon as MagnifyingGlass, XIcon as X } from "@/ui/icons";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { CommandInput } from "@/ui/command";
@@ -91,16 +92,19 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
   const activeSearchOptions = toSearchOptionValues(searchOptions);
 
   return (
-    <div className="@container/search-toolbar border-border/70 border-b px-3 py-2">
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
-        <div className="flex min-w-48 basis-64 flex-1 items-center gap-2">
+    <>
+      <PaneContentHeader
+        separated={!detailsVisible}
+        leading={
           <SearchReplaceToggle
             isExpanded={detailsVisible}
             onToggle={() => onDetailsVisibleChange(!detailsVisible)}
             expandedLabel="Hide details"
             collapsedLabel="Show details"
           />
-          <div className="flex h-7 min-w-0 flex-1 items-center gap-2">
+        }
+        context={
+          <div className="flex h-6 min-w-0 flex-1 items-center gap-2">
             <MagnifyingGlass className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
             <CommandInput
               ref={inputRef}
@@ -129,56 +133,57 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
               </Button>
             ) : null}
           </div>
-        </div>
-
-        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
-          <ToggleGroup<SearchOptionValue>
-            type="multiple"
-            value={activeSearchOptions}
-            options={searchOptionButtons}
-            onValueChange={(nextValues) => {
-              const next = fromSearchOptionValues(nextValues);
-              setSearchOption("caseSensitive", next.caseSensitive);
-              setSearchOption("wholeWord", next.wholeWord);
-              setSearchOption("useRegex", next.useRegex);
-            }}
-            ariaLabel="Search options"
-            variant="segmented"
-            size="xs"
-            wrap={false}
-            iconOnly
-            className="shrink-0"
-          />
-          {searchWarning ? (
-            <Badge
-              variant="warning"
-              className="max-w-64 shrink truncate"
-              title={searchWarning}
-              role="status"
-              aria-live="polite"
-            >
-              {searchWarning}
-            </Badge>
-          ) : resultLabel ? (
-            <Badge className="max-w-56 shrink truncate" title={resultLabel} role="status">
-              {resultLabel}
-            </Badge>
-          ) : null}
-          {fileNavigatorAvailable ? (
-            <Toggle
-              pressed={fileNavigatorVisible}
-              onPressedChange={onFileNavigatorVisibleChange}
+        }
+        actions={
+          <>
+            <ToggleGroup<SearchOptionValue>
+              type="multiple"
+              value={activeSearchOptions}
+              options={searchOptionButtons}
+              onValueChange={(nextValues) => {
+                const next = fromSearchOptionValues(nextValues);
+                setSearchOption("caseSensitive", next.caseSensitive);
+                setSearchOption("wholeWord", next.wholeWord);
+                setSearchOption("useRegex", next.useRegex);
+              }}
+              ariaLabel="Search options"
+              variant="segmented"
               size="xs"
-              tooltip={fileNavigatorVisible ? "Hide result files" : "Show result files"}
-              tooltipSide="bottom"
-            >
-              <Files />
-            </Toggle>
-          ) : null}
-        </div>
-      </div>
+              wrap={false}
+              iconOnly
+              className="shrink-0"
+            />
+            {searchWarning ? (
+              <Badge
+                variant="warning"
+                className="max-w-64 shrink truncate"
+                title={searchWarning}
+                role="status"
+                aria-live="polite"
+              >
+                {searchWarning}
+              </Badge>
+            ) : resultLabel ? (
+              <Badge className="max-w-56 shrink truncate" title={resultLabel} role="status">
+                {resultLabel}
+              </Badge>
+            ) : null}
+            {fileNavigatorAvailable ? (
+              <Toggle
+                pressed={fileNavigatorVisible}
+                onPressedChange={onFileNavigatorVisibleChange}
+                size="xs"
+                tooltip={fileNavigatorVisible ? "Hide result files" : "Show result files"}
+                tooltipSide="bottom"
+              >
+                <Files />
+              </Toggle>
+            ) : null}
+          </>
+        }
+      />
       {detailsVisible ? (
-        <div className="mt-2 space-y-2">
+        <div className="space-y-2 border-border/55 border-b bg-background px-2 pb-2">
           <SearchReplaceRow
             value={replaceQuery}
             onChange={onReplaceQueryChange}
@@ -217,6 +222,6 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
           </div>
         </div>
       ) : null}
-    </div>
+    </>
   );
 });

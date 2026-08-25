@@ -10,6 +10,8 @@ pub mod types;
 mod workspace_path;
 
 pub use bridge::AcpAgentBridge;
-pub use types::{AcpAgentStatus, AcpSessionInfo, AcpSessionList, AgentConfig, AgentRuntime};
+pub use types::{
+   AcpAgentStatus, AcpSessionInfo, AcpSessionList, AgentConfig, AgentRuntime, SessionConfigValue,
+};
 
 pub(super) type AcpConnection = agent_client_protocol::ConnectionTo<agent_client_protocol::Agent>;

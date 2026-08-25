@@ -81,7 +81,7 @@ export class OpenAICompatibleProvider extends AIProvider {
       parsedModels.push({
         id,
         name: model.name || id,
-        maxTokens: model.max_context_length,
+        contextWindow: model.max_context_length,
       });
     }
     return parsedModels;

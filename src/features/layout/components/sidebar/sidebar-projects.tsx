@@ -23,11 +23,10 @@ import {
 import {
   CaretRightIcon,
   CopyIcon,
-  FolderIcon,
+  FolderFillDuoIcon,
   FolderOpenIcon,
   ImageIcon,
   OpenExternalIcon,
-  PlusIcon,
   RemoteIcon,
   TrashIcon,
   WindowExpandIcon,
@@ -67,9 +66,9 @@ function ProjectGlyph({
     );
   }
 
-  const Icon = isRemote ? RemoteIcon : projectPath ? FolderIcon : PlusIcon;
+  const Icon = isRemote ? RemoteIcon : FolderFillDuoIcon;
 
-  return <Icon className={cn("shrink-0", className ?? "size-4")} />;
+  return <Icon className={cn("shrink-0", !isRemote && "text-primary", className ?? "size-4")} />;
 }
 
 export function SidebarProjectSwitcher({
@@ -124,6 +123,7 @@ export function SidebarProjectSwitcher({
         <DropdownMenuTrigger
           render={
             <SidebarListItem
+              appearance="activity"
               leading={
                 expanded ? (
                   <span
@@ -224,7 +224,7 @@ export function SidebarProjectDots({
 
   return (
     <>
-      <div className="scrollbar-hidden pointer-events-none absolute right-(--athas-workbench-gap) bottom-1.5 left-0 z-20 flex items-center justify-center overflow-x-auto px-2">
+      <div className="scrollbar-none pointer-events-none absolute right-workbench bottom-1.5 left-0 z-20 flex items-center justify-center overflow-x-auto px-2">
         {projects.map((project) => {
           const isRemote = isRemoteProjectPath(project.path);
           const isActive = project.id === activeProjectId;
@@ -254,7 +254,7 @@ export function SidebarProjectDots({
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "size-1.5 rounded-full bg-foreground transition-[opacity,transform] duration-(--app-duration-fast) ease-(--app-ease-smooth)",
+                    "size-1.5 rounded-full bg-foreground transition-[opacity,transform] duration-fast ease-smooth",
                     isActive
                       ? "scale-100 opacity-100"
                       : "scale-75 opacity-25 group-hover:scale-100 group-hover:opacity-50",

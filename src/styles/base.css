@@ -1,53 +1,22 @@
-@layer base, utilities;
-
-* {
-  box-sizing: border-box;
-  overscroll-behavior: none;
-}
-
-#root {
-  background: transparent;
-  overscroll-behavior: none;
-}
-
-html {
-  scroll-behavior: smooth;
-  overflow: hidden;
-  overscroll-behavior: none !important;
-  background: transparent;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  font-size: var(--ui-text-base);
-  overflow: hidden;
-  overscroll-behavior: none !important;
-  background: transparent;
-}
-
 @layer base {
   * {
     border-color: var(--border);
+    overscroll-behavior: none;
   }
-}
 
-input,
-textarea,
-select,
-button {
-  font-family: inherit;
-}
+  html {
+    overflow: hidden;
+    background: transparent;
+    scroll-behavior: smooth;
+  }
 
-textarea {
-  overflow: auto !important;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: none !important;
-}
+  body {
+    overflow: hidden;
+    background: transparent;
+    font-size: var(--ui-text-base);
+  }
 
-[class*="overflow-auto"],
-.overflow-auto {
-  overflow: auto !important;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: none !important;
+  #root {
+    background: transparent;
+  }
 }

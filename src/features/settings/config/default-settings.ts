@@ -68,7 +68,6 @@ export const defaultSettings: Settings = {
   showStatusBar: true,
   showTabIcons: true,
   tabCloseButtonVisibility: "active",
-  windowChromeDensity: "focused",
   // Theme
   theme: "athas-dark",
   iconTheme: "athas-icons",
@@ -97,6 +96,7 @@ export const defaultSettings: Settings = {
   aiAutocompleteCustomBaseUrl: DEFAULT_AI_AUTOCOMPLETE_CUSTOM_BASE_URL,
   aiAutocompleteCustomModelId: "",
   aiDefaultSessionMode: "",
+  aiAgentNotifications: false,
   aiSkills: [],
   v0DesignSystems: [],
   activeV0DesignSystemId: "",

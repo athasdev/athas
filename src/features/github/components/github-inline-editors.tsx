@@ -28,7 +28,7 @@ export function GitHubInlineTitle({ value, onSave }: GitHubInlineTitleProps) {
         onClick={() => setIsEditing(true)}
         aria-label="Edit title"
       >
-        <span className="block font-sans text-2xl leading-tight font-semibold tracking-tight text-foreground">
+        <span className="block font-sans ui-text-base leading-tight font-semibold tracking-tight text-foreground">
           {value}
         </span>
       </button>

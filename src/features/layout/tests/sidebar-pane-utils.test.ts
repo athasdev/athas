@@ -48,6 +48,16 @@ describe("getActiveSidebarView", () => {
       }),
     ).toBe("collaboration");
   });
+
+  test("returns custom views when the module sidebar is active", () => {
+    expect(
+      getActiveSidebarView({
+        isGitViewActive: false,
+        isGitHubPRsViewActive: false,
+        activeSidebarView: "views",
+      }),
+    ).toBe("views");
+  });
 });
 
 describe("resolveSidebarPaneClick", () => {
@@ -146,6 +156,23 @@ describe("resolveSidebarPaneClick", () => {
     ).toEqual({
       nextIsSidebarVisible: true,
       nextView: "collaboration",
+    });
+  });
+
+  test("opens custom views as a primary secondary-sidebar view", () => {
+    expect(
+      resolveSidebarPaneClick(
+        {
+          isSidebarVisible: true,
+          isGitViewActive: false,
+          isGitHubPRsViewActive: false,
+          activeSidebarView: "files",
+        },
+        "views",
+      ),
+    ).toEqual({
+      nextIsSidebarVisible: true,
+      nextView: "views",
     });
   });
 });

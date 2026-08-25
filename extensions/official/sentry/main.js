@@ -56,9 +56,11 @@ function setupView() {
     { title: "Sentry" },
     ui.section(
       "Connect",
-      ui.text(
-        "Use an organization auth token with project read access. Credentials stay in Athas secure storage.",
-      ),
+      ui.callout({
+        title: "Credentials stay local",
+        description: "Use an organization auth token with project read access.",
+        tone: "info",
+      }),
       field("Sentry URL", "baseUrl", "https://sentry.io", "url"),
       field("Organization slug", "organization", "my-org"),
       field("Project slug", "project", "my-project"),
@@ -87,18 +89,40 @@ function issuesView() {
       ],
     },
     state.error ? ui.error("Refresh failed", state.error) : null,
+    ui.metric({
+      label: "Unresolved issues",
+      value: state.issues.length,
+      detail: state.issues.length ? "Needs attention" : "Healthy",
+      tone: state.issues.length ? "warning" : "success",
+    }),
     ui.section(
       "Unresolved issues",
       state.issues.length
         ? ui.list(
             ...state.issues.map((issue) =>
-              ui.listItem({
-                title: issue.title,
-                description: issue.culprit || issue.shortId,
-                meta: issue.count ? `${issue.count} events` : undefined,
-                badges: [{ label: issue.level || "error", tone: levelTone(issue.level) }],
-                onSelect: ui.action(command("open"), issue.permalink),
-              }),
+              ui.disclosure(
+                {
+                  title: issue.title,
+                  description: issue.culprit || issue.shortId,
+                },
+                ui.keyValue({
+                  items: [
+                    { label: "Issue", value: issue.shortId || "Unknown", monospace: true },
+                    {
+                      label: "Level",
+                      value: issue.level || "error",
+                      tone: levelTone(issue.level),
+                    },
+                    { label: "Events", value: String(issue.count || 0) },
+                  ],
+                }),
+                ui.button("Open in Sentry", ui.action(command("open"), issue.permalink), {
+                  tone: "ghost",
+                }),
+                ui.button("Copy issue ID", ui.action(command("copyIssue"), issue.shortId), {
+                  tone: "ghost",
+                }),
+              ),
             ),
           )
         : ui.empty("No unresolved issues", "This project is looking healthy."),
@@ -152,6 +176,20 @@ export async function activate(extensionApi) {
     id: command("open"),
     title: "Open in Sentry",
     run: (url) => api.opener.openExternal(String(url)),
+  });
+  api.commands.register({
+    id: command("copyIssue"),
+    title: "Copy Sentry issue ID",
+    async run(issueId) {
+      const value = String(issueId || "");
+      if (!value) return;
+      await api.clipboard.writeText(value);
+      await api.notifications.show({
+        title: "Issue ID copied",
+        description: value,
+        tone: "success",
+      });
+    },
   });
   api.sidebar.registerView({
     id: VIEW_ID,

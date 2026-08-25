@@ -10,6 +10,8 @@ import {
   TrashIcon as Trash2,
 } from "@/ui/icons";
 import { useEffect, useState } from "react";
+import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
@@ -19,10 +21,8 @@ import Select from "@/ui/select";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import {
-  databaseCardClassName,
   databaseChipClassName,
   databaseCodeBlockClassName,
-  databaseHeaderClassName,
   databasePanelClassName,
 } from "../../components/database-surface";
 import { getMongoDocumentDisplayIndex } from "./mongodb-pagination";
@@ -63,39 +63,33 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-surface/30 text-foreground">
-      <div className={databaseHeaderClassName()}>
-        <div className="flex items-center gap-2">
-          <div className={databaseChipClassName()}>
-            <Database className="text-subtle-foreground" />
-            <span className="font-sans ui-text-sm">{store.fileName}</span>
-          </div>
-          {store.selectedDatabase && (
-            <>
-              <span className="text-subtle-foreground ui-text-sm">Database</span>
-              <Select
-                value={store.selectedDatabase}
-                onChange={actions.selectDatabase}
-                options={store.databases.map((db) => ({ value: db, label: db }))}
-                aria-label="Select database"
-                size="xs"
-                className="rounded-full border-border/70 bg-surface/70 px-2.5 focus:border-primary/60 focus:ring-primary/30"
-              />
-            </>
-          )}
-          <div className="ml-auto flex items-center gap-1 text-subtle-foreground ui-text-sm">
-            <Layers />
-            <span>{store.collections.length} collections</span>
-          </div>
-        </div>
-      </div>
+    <div className="flex h-full flex-col overflow-hidden bg-background text-foreground">
+      <PaneContentHeader
+        context={
+          <PathBreadcrumb
+            segments={[store.fileName, ...(store.selectedDatabase ? [store.selectedDatabase] : [])]}
+            icons={[<Database key="database" />]}
+            ariaLabel="MongoDB database"
+          />
+        }
+        detail={`${store.collections.length} collections`}
+        actions={
+          store.selectedDatabase ? (
+            <Select
+              value={store.selectedDatabase}
+              onChange={actions.selectDatabase}
+              options={store.databases.map((db) => ({ value: db, label: db }))}
+              aria-label="Select database"
+              size="xs"
+              className="min-w-28"
+            />
+          ) : undefined
+        }
+      />
 
-      <div className="flex min-h-0 flex-1 gap-2 p-2 pt-1.5">
-        <div className={databasePanelClassName("w-56")}>
-          <div className="flex items-center gap-1.5 border-border/60 border-b px-3 py-2">
-            <Layers className="text-subtle-foreground" />
-            <span className="font-sans text-subtle-foreground ui-text-sm">Collections</span>
-          </div>
+      <div className="flex min-h-0 flex-1">
+        <div className={databasePanelClassName("w-56 shrink-0 border-border/60 border-r")}>
+          <PaneContentHeader leading={<Layers />} title="Collections" />
           <ScrollArea className="flex-1" contentClassName="space-y-0.5 p-1.5">
             {store.collections.map((col) => (
               <Button
@@ -116,51 +110,59 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
         </div>
 
         <div className={databasePanelClassName("flex-1")}>
-          <div className="flex items-center gap-2 border-border/60 border-b px-3 py-2">
-            <Input
-              className="flex-1"
-              placeholder='Filter JSON, e.g. {"name": "John"}'
-              value={filterInput}
-              onChange={(e) => setFilterInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleApplyQuery()}
-              aria-label="MongoDB filter query"
-            />
-            <Input
-              className="w-56"
-              placeholder='Sort JSON, e.g. {"createdAt": -1}'
-              value={sortInput}
-              onChange={(e) => setSortInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleApplyQuery()}
-              aria-label="MongoDB sort query"
-            />
-            <Button
-              onClick={handleApplyQuery}
-              className="gap-1.5"
-              aria-label="Apply query"
-              size="xs"
-            >
-              <Braces />
-              Apply
-            </Button>
-            <Button
-              onClick={handleResetQuery}
-              variant="ghost"
-              size="xs"
-              className="px-2 py-1 text-subtle-foreground"
-              aria-label="Reset query"
-            >
-              Reset
-            </Button>
-            <Button
-              onClick={() => actions.refresh()}
-              variant="ghost"
-              size="icon-xs"
-              className="text-subtle-foreground"
-              aria-label="Refresh"
-            >
-              <RefreshCw />
-            </Button>
-          </div>
+          <PaneContentHeader
+            context={
+              <div className="flex min-w-0 flex-1 items-center gap-1">
+                <Input
+                  className="min-w-0 flex-1"
+                  placeholder='Filter JSON, e.g. {"name": "John"}'
+                  value={filterInput}
+                  onChange={(e) => setFilterInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleApplyQuery()}
+                  aria-label="MongoDB filter query"
+                />
+                <Input
+                  className="w-48"
+                  placeholder='Sort JSON, e.g. {"createdAt": -1}'
+                  value={sortInput}
+                  onChange={(e) => setSortInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleApplyQuery()}
+                  aria-label="MongoDB sort query"
+                />
+              </div>
+            }
+            actions={
+              <>
+                <Button
+                  onClick={handleApplyQuery}
+                  className="gap-1.5"
+                  aria-label="Apply query"
+                  size="xs"
+                >
+                  <Braces />
+                  Apply
+                </Button>
+                <Button
+                  onClick={handleResetQuery}
+                  variant="ghost"
+                  size="xs"
+                  className="px-2 py-1 text-subtle-foreground"
+                  aria-label="Reset query"
+                >
+                  Reset
+                </Button>
+                <Button
+                  onClick={() => actions.refresh()}
+                  variant="ghost"
+                  size="icon-xs"
+                  className="text-subtle-foreground"
+                  aria-label="Refresh"
+                >
+                  <RefreshCw />
+                </Button>
+              </>
+            }
+          />
 
           {!store.isLoading && !store.selectedCollection && (
             <Empty>
@@ -188,7 +190,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           )}
 
           {!store.isLoading && store.documents.length > 0 && (
-            <div className="custom-scrollbar flex-1 overflow-auto p-3">
+            <div className="flex-1 overflow-auto p-3">
               <div className="mb-3 flex items-center justify-between">
                 <div className="text-subtle-foreground ui-text-sm">
                   {store.totalCount} document{store.totalCount === 1 ? "" : "s"}
@@ -199,7 +201,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   </div>
                 )}
               </div>
-              <div className="space-y-2">
+              <div className="divide-y divide-border/60 border-y border-border/60">
                 {store.documents.map((doc, i) => {
                   const id = doc._id ? String(doc._id) : String(i);
                   const displayIndex = getMongoDocumentDisplayIndex(
@@ -208,12 +210,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                     i,
                   );
                   return (
-                    <div
-                      key={id}
-                      className={databaseCardClassName(
-                        "group p-3 shadow-[0_10px_30px_-28px_rgba(0,0,0,0.55)]",
-                      )}
-                    >
+                    <div key={id} className="group py-3">
                       <div className="mb-2 flex items-center justify-between gap-2">
                         <div className="truncate text-subtle-foreground ui-text-sm">
                           Document {displayIndex}
@@ -222,7 +219,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                           onClick={() => actions.deleteDocument(id)}
                           variant="ghost"
                           size="icon-xs"
-                          className="text-destructive opacity-0 transition-[opacity,background-color] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-destructive/10 group-hover:opacity-100"
+                          className="text-destructive opacity-0 transition-[opacity,background-color] duration-fast ease-smooth hover:bg-destructive/10 group-hover:opacity-100"
                           aria-label={`Delete document ${id}`}
                         >
                           <Trash2 />

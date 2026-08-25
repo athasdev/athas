@@ -1,5 +1,6 @@
 import {
   BrainIcon as Brain,
+  CaretDownIcon as CaretDown,
   ExtensionsIcon as Extensions,
   PackageIcon as Package,
   PlusIcon as Plus,
@@ -9,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "reac
 import { useShallow } from "zustand/react/shallow";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
+import EditorBreadcrumb from "@/features/editor/components/toolbar/breadcrumb";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useGenerateStore } from "@/features/generate/stores/generate.store";
 import {
@@ -24,6 +26,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   useDropdownMenu,
@@ -36,13 +40,22 @@ import { ScrollArea } from "@/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { buildExtensionCatalog } from "./build-extension-catalog";
 import { ExtensionCatalogCard } from "./extension-catalog-card";
-import { EXTENSION_CATEGORIES, type UnifiedExtension } from "./extension-catalog-types";
+import {
+  EXTENSION_CATEGORIES,
+  type ExtensionCategory,
+  type UnifiedExtension,
+} from "./extension-catalog-types";
 import { buildExtensionContextMenuItems } from "./extension-context-menu-items";
 import { ExtensionDetailView } from "./extension-detail-view";
+import { ExtensionsBreadcrumb } from "./extensions-breadcrumb";
 import { useExtensionCatalogActions } from "../hooks/use-extension-catalog-actions";
 
 const EXTENSION_FILTERS = [{ id: "all", label: "All" }, ...EXTENSION_CATEGORIES] as const;
 const EXTENSION_FILTER_IDS = new Set<string>(EXTENSION_FILTERS.map((filter) => filter.id));
+
+function isExtensionFilter(value: string): value is "all" | ExtensionCategory {
+  return EXTENSION_FILTER_IDS.has(value);
+}
 
 function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const settings = useSettingsStore(
@@ -71,6 +84,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const selectedExtensionEnabled = useExtensionStore((state) =>
     extensionId ? state.availableExtensions.get(extensionId)?.isEnabled : undefined,
   );
+  const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
   const openExtensionBuffer = useBufferStore.use.actions().openExtensionBuffer;
 
   const {
@@ -138,9 +152,12 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   }, [settings.aiSkills]);
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const activeFilter = EXTENSION_FILTER_IDS.has(settings.extensionsActiveTab)
+  const activeFilter = isExtensionFilter(settings.extensionsActiveTab)
     ? settings.extensionsActiveTab
     : "all";
+  const activeFilterLabel =
+    EXTENSION_FILTERS.find((filter) => filter.id === activeFilter)?.label ?? "All";
+  const activeCategory = EXTENSION_CATEGORIES.find((category) => category.id === activeFilter)?.id;
   const visibleExtensions = extensions.filter((extension) => {
     const matchesCategory = activeFilter === "all" || extension.category === activeFilter;
     const matchesSearch =
@@ -202,6 +219,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const isExtensionInstalling = (extension: UnifiedExtension) =>
     Boolean(availableExtensions.get(extension.id)?.isInstalling || isAgentInstalling(extension));
   const hasExtensionUpdate = (extension: UnifiedExtension) =>
+    Boolean(extension.hasUpdate) ||
     extensionsWithUpdates.has(extension.id) ||
     Boolean(
       extension.skill &&
@@ -255,9 +273,35 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
     </>
   );
 
+  const handleOpenCatalog = useCallback(() => {
+    void updateSetting("extensionsActiveTab", "all");
+    openExtensionsBuffer();
+  }, [openExtensionsBuffer, updateSetting]);
+
+  const handleOpenCategory = useCallback(
+    (category: ExtensionCategory) => {
+      void updateSetting("extensionsActiveTab", category);
+      openExtensionsBuffer();
+    },
+    [openExtensionsBuffer, updateSetting],
+  );
+
   if (extensionId) {
     return (
-      <div className="font-sans flex h-full min-h-0 flex-col bg-background">
+      <div className="@container/extensions font-sans flex h-full min-h-0 flex-col bg-background">
+        <EditorBreadcrumb
+          filePathOverride="Extensions"
+          showPath={false}
+          showDefaultActions={false}
+          extraLeftContent={
+            <ExtensionsBreadcrumb
+              category={selectedExtension?.category}
+              extension={selectedExtension}
+              onOpenCatalog={handleOpenCatalog}
+              onOpenCategory={handleOpenCategory}
+            />
+          }
+        />
         <ScrollArea className="min-h-0 flex-1">
           <ExtensionDetailView
             extension={selectedExtension}
@@ -288,21 +332,22 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const resultLabel = `${visibleExtensions.length} extension${visibleExtensions.length === 1 ? "" : "s"}`;
 
   return (
-    <div className="font-sans flex h-full min-h-0 flex-col bg-background">
+    <div className="@container/extensions font-sans flex h-full min-h-0 min-w-0 flex-col bg-background">
       <header className="shrink-0">
-        <div className="mx-auto w-full max-w-6xl px-5 pt-5 pb-4">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-foreground">
-              <Extensions className="size-5" weight="duotone" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="font-semibold text-foreground ui-text-2xl">Extensions</h1>
-              <p className="mt-0.5 text-subtle-foreground ui-text-base">
-                Add languages, themes, tools, integrations, and AI capabilities to Athas.
-              </p>
-            </div>
+        <EditorBreadcrumb
+          filePathOverride="Extensions"
+          showPath={false}
+          showDefaultActions={false}
+          extraLeftContent={
+            <ExtensionsBreadcrumb
+              category={activeCategory}
+              onOpenCatalog={handleOpenCatalog}
+              onOpenCategory={handleOpenCategory}
+            />
+          }
+          rightContent={
             <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="accent" size="sm" />}>
+              <DropdownMenuTrigger render={<Button variant="ghost" size="xs" />}>
                 <Plus />
                 Add
               </DropdownMenuTrigger>
@@ -334,14 +379,16 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
+          }
+        />
 
-          <div className="mt-5 flex min-w-0 flex-wrap items-center gap-3">
+        <div className="mx-auto w-full max-w-6xl px-5 py-4 @max-[480px]/extensions:px-3 @max-[480px]/extensions:py-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
             <SearchInput
               value={searchQuery}
               onChange={setSearchQuery}
               placeholder="Search extensions..."
-              className="min-w-64 max-w-xl"
+              className="min-w-64 max-w-xl @max-[480px]/extensions:min-w-full"
             />
             <div className="ml-auto shrink-0 text-subtle-foreground ui-text-sm" role="status">
               {resultLabel}
@@ -352,7 +399,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
           </div>
 
           <Tabs
-            className="mt-3"
+            className="mt-3 @max-[720px]/extensions:hidden"
             value={activeFilter}
             onValueChange={(value) =>
               void updateSetting("extensionsActiveTab", value as Settings["extensionsActiveTab"])
@@ -366,11 +413,47 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
               ))}
             </TabsList>
           </Tabs>
+
+          <div className="mt-3 hidden @max-[720px]/extensions:block">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    className="w-full justify-between"
+                    aria-label="Extension category"
+                  />
+                }
+              >
+                <span>{activeFilterLabel}</span>
+                <CaretDown />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-(--anchor-width)">
+                <DropdownMenuRadioGroup
+                  value={activeFilter}
+                  onValueChange={(value) =>
+                    void updateSetting(
+                      "extensionsActiveTab",
+                      value as Settings["extensionsActiveTab"],
+                    )
+                  }
+                >
+                  {EXTENSION_FILTERS.map((filter) => (
+                    <DropdownMenuRadioItem key={filter.id} value={filter.id} closeOnClick>
+                      {filter.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
 
       <ScrollArea className="min-h-0 flex-1">
-        <main className="mx-auto w-full max-w-6xl px-5 py-5">
+        <main className="mx-auto w-full max-w-6xl px-5 py-5 @max-[480px]/extensions:px-3 @max-[480px]/extensions:py-3">
           {isLoading ? (
             <EmptyState
               className="min-h-64"
@@ -399,7 +482,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
               }
             />
           ) : (
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 @min-[840px]/extensions:grid-cols-2">
               {visibleExtensions.map((extension) => (
                 <ExtensionCatalogCard
                   key={extension.id}

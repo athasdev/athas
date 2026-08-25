@@ -41,7 +41,7 @@ import {
 import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import {
-  SidebarHeaderIconButton,
+  SidebarIconButton,
   SidebarSearchPopover,
   SidebarScrollArea,
   SidebarSection,
@@ -710,7 +710,7 @@ const GitHubPRsView = memo(() => {
                 onChange={setSearchQuery}
                 aria-label="Search GitHub"
               />
-              <SidebarHeaderIconButton
+              <SidebarIconButton
                 disabled={!effectiveRepoPath}
                 tooltip={
                   activeSection === "pull-requests"
@@ -737,11 +737,11 @@ const GitHubPRsView = memo(() => {
                 }}
               >
                 <Plus />
-              </SidebarHeaderIconButton>
+              </SidebarIconButton>
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <SidebarHeaderIconButton
+                    <SidebarIconButton
                       active={!isActiveFilterDefault}
                       tooltip={`Filter: ${activeFilterLabel}`}
                       tooltipSide="bottom"

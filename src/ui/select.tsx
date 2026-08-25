@@ -45,6 +45,7 @@ export interface SelectProps {
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
   variant?: "default" | "ghost";
+  shape?: "default" | "pill";
   align?: "default" | "start";
   searchable?: boolean;
   searchableTrigger?: "menu" | "input";
@@ -62,12 +63,6 @@ export interface SelectProps {
   onOpenChange?: (open: boolean) => void;
   "aria-label"?: string;
 }
-
-const selectTriggerSizeClassName = {
-  xs: "ui-text-sm",
-  sm: "ui-text-sm",
-  md: "ui-text-base",
-};
 
 function isIconComponent(
   icon: SelectProps["leftIcon"],
@@ -93,7 +88,7 @@ function getButtonSize(size: "xs" | "sm" | "md", iconOnly: boolean) {
     return size === "sm" ? ("icon-sm" as const) : ("icon-xs" as const);
   }
 
-  return size === "md" ? ("default" as const) : size;
+  return size;
 }
 
 function SelectTriggerContent({
@@ -165,6 +160,7 @@ function PlainSelect({
   disabled,
   size,
   variant,
+  shape,
   align,
   openDirection,
   leftIcon,
@@ -180,6 +176,7 @@ function PlainSelect({
   placeholder: string;
   size: "xs" | "sm" | "md";
   variant: "default" | "ghost";
+  shape: "default" | "pill";
   menuAnimated: boolean;
   hideChevron: boolean;
   iconOnly: boolean;
@@ -192,7 +189,7 @@ function PlainSelect({
     ? ({ minWidth: menuMinWidth } satisfies CSSProperties)
     : undefined;
   const node = (
-    <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-36", className)}>
+    <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-fit max-w-72", className)}>
       <SelectPrimitive.Root
         value={value || null}
         onValueChange={(nextValue) => {
@@ -209,11 +206,10 @@ function PlainSelect({
           data-setting-primary-control="true"
           data-prevent-dialog-escape={open ? "true" : undefined}
           aria-label={ariaLabel}
-          render={<Button variant={variant} size={getButtonSize(size, iconOnly)} />}
+          render={<Button variant={variant} size={getButtonSize(size, iconOnly)} shape={shape} />}
           className={cn(
             !iconOnly &&
               "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
-            !iconOnly && selectTriggerSizeClassName[size],
             align === "start" && "justify-start",
           )}
         >
@@ -247,7 +243,7 @@ function PlainSelect({
               )}
             >
               {menuHeader}
-              <SelectPrimitive.List className="custom-scrollbar-thin max-h-96 overflow-y-auto overscroll-contain">
+              <SelectPrimitive.List className="scrollbar-thin max-h-96 overflow-y-auto overscroll-contain">
                 {options.map((option) => (
                   <SelectPrimitive.Item
                     key={option.value}
@@ -292,6 +288,7 @@ function SearchableSelect({
   disabled,
   size,
   variant,
+  shape,
   align,
   searchableTrigger,
   openDirection,
@@ -311,6 +308,7 @@ function SearchableSelect({
   placeholder: string;
   size: "xs" | "sm" | "md";
   variant: "default" | "ghost";
+  shape: "default" | "pill";
   searchableTrigger: "menu" | "input";
   menuAnimated: boolean;
   hideChevron: boolean;
@@ -391,7 +389,7 @@ function SearchableSelect({
       modal={false}
     >
       {searchableTrigger === "input" ? (
-        <div className={cn("min-w-0 w-36", className)}>
+        <div className={cn("min-w-0 w-fit max-w-72", className)}>
           <ComboboxInput
             id={id}
             title={title}
@@ -401,25 +399,28 @@ function SearchableSelect({
             placeholder={selectedOption?.label || placeholder}
             leftIcon={componentIcon}
             size={size}
-            variant={variant}
+            variant={variant === "default" ? "button" : "ghost"}
+            shape={shape}
             className="w-full"
-            inputClassName="font-normal"
+            inputClassName={cn(
+              "field-sizing-content min-w-20 max-w-full font-normal",
+              selectedOption && "placeholder:text-foreground",
+            )}
             showTrigger={!hideChevron}
           />
         </div>
       ) : (
-        <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-36", className)}>
+        <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-fit max-w-72", className)}>
           <ComboboxPrimitive.Trigger
             id={id}
             title={title}
             data-setting-primary-control="true"
             data-prevent-dialog-escape={open ? "true" : undefined}
             aria-label={ariaLabel}
-            render={<Button variant={variant} size={getButtonSize(size, iconOnly)} />}
+            render={<Button variant={variant} size={getButtonSize(size, iconOnly)} shape={shape} />}
             className={cn(
               !iconOnly &&
                 "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
-              !iconOnly && selectTriggerSizeClassName[size],
               align === "start" && "justify-start",
             )}
           >
@@ -481,6 +482,7 @@ export default function Select({
   disabled = false,
   size = "sm",
   variant = "ghost",
+  shape = "default",
   align = "default",
   searchable = false,
   searchableTrigger = "menu",
@@ -515,6 +517,7 @@ export default function Select({
     disabled,
     size,
     variant,
+    shape,
     align,
     searchableTrigger,
     allowCustomValue,

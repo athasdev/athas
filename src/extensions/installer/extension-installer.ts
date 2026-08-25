@@ -8,161 +8,261 @@ import {
   type ParserCacheEntry,
 } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 import { logger } from "@/features/editor/utils/logger";
+import { Cause, Data, Effect, Exit, Option, Schedule } from "effect";
 
-interface DownloadProgress {
+export interface ExtensionDownloadProgress {
   loaded: number;
   total: number;
   percentage: number;
 }
 
-interface InstallOptions {
-  onProgress?: (progress: DownloadProgress) => void;
+export interface ExtensionInstallOptions {
+  extensionId?: string;
+  version?: string;
+  checksum?: string;
+  onProgress?: (progress: ExtensionDownloadProgress) => void;
   retryCount?: number;
   timeout?: number;
+  retryBaseDelay?: number;
 }
 
-class ExtensionInstaller {
+type DownloadOptions = Pick<
+  ExtensionInstallOptions,
+  "onProgress" | "retryCount" | "timeout" | "retryBaseDelay"
+>;
+
+export class ExtensionDownloadError extends Data.TaggedError("ExtensionDownloadError")<{
+  message: string;
+  url: string;
+  reason: unknown;
+}> {}
+
+export class ExtensionDownloadTimeoutError extends Data.TaggedError(
+  "ExtensionDownloadTimeoutError",
+)<{
+  message: string;
+  url: string;
+  timeout: number;
+}> {}
+
+export class ExtensionChecksumError extends Data.TaggedError("ExtensionChecksumError")<{
+  message: string;
+  languageId: string;
+  expectedChecksum?: string;
+  actualChecksum?: string;
+  reason?: unknown;
+}> {}
+
+export class ExtensionStorageError extends Data.TaggedError("ExtensionStorageError")<{
+  message: string;
+  languageId: string;
+  reason: unknown;
+}> {}
+
+export class ExtensionInstallCancelledError extends Data.TaggedError(
+  "ExtensionInstallCancelledError",
+)<{
+  message: string;
+  languageId: string;
+}> {}
+
+export type ExtensionInstallationError =
+  | ExtensionDownloadError
+  | ExtensionDownloadTimeoutError
+  | ExtensionChecksumError
+  | ExtensionStorageError
+  | ExtensionInstallCancelledError;
+
+type ExtensionInstallationProgramError = Exclude<
+  ExtensionInstallationError,
+  ExtensionInstallCancelledError
+>;
+
+export class ExtensionInstaller {
   private abortControllers: Map<string, AbortController> = new Map();
 
-  /**
-   * Download a file with progress tracking
-   */
-  private async downloadWithProgress(
+  private downloadWithProgress(
     url: string,
-    options: InstallOptions = {},
-  ): Promise<ArrayBuffer> {
-    const { onProgress, retryCount = 3, timeout = 30000 } = options;
+    options: DownloadOptions = {},
+  ): Effect.Effect<ArrayBuffer, ExtensionDownloadError | ExtensionDownloadTimeoutError> {
+    const { onProgress, retryCount = 3, timeout = 30_000, retryBaseDelay = 1_000 } = options;
+    const attempts = Math.max(1, retryCount);
+    let attempt = 0;
 
-    for (let attempt = 1; attempt <= retryCount; attempt++) {
-      try {
-        const abortController = new AbortController();
-        const timeoutId = setTimeout(() => abortController.abort(), timeout);
+    const downloadAttempt = Effect.suspend(() => {
+      attempt += 1;
 
-        const response = await fetch(url, {
-          signal: abortController.signal,
-        });
+      return Effect.tryPromise({
+        try: async (signal) => {
+          const response = await fetch(url, { signal });
 
-        clearTimeout(timeoutId);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
 
+          const contentLength = response.headers.get("content-length");
+          const total = contentLength ? Number.parseInt(contentLength, 10) : 0;
+
+          if (!response.body) {
+            throw new Error("Response body is null");
+          }
+
+          const reader = response.body.getReader();
+          const chunks: Uint8Array[] = [];
+          let loaded = 0;
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+
+              if (done) break;
+
+              chunks.push(value);
+              loaded += value.length;
+
+              if (onProgress && total > 0) {
+                onProgress({
+                  loaded,
+                  total,
+                  percentage: (loaded / total) * 100,
+                });
+              }
+            }
+          } finally {
+            reader.releaseLock();
+          }
+
+          const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+          const result = new Uint8Array(totalLength);
+          let offset = 0;
+
+          for (const chunk of chunks) {
+            result.set(chunk, offset);
+            offset += chunk.length;
+          }
+
+          return result.buffer;
+        },
+        catch: (reason) =>
+          new ExtensionDownloadError({
+            message: `Failed to download ${url}`,
+            url,
+            reason,
+          }),
+      }).pipe(
+        Effect.timeoutFail({
+          duration: timeout,
+          onTimeout: () =>
+            new ExtensionDownloadTimeoutError({
+              message: `Download timed out after ${timeout}ms: ${url}`,
+              url,
+              timeout,
+            }),
+        }),
+        Effect.tapError((error) =>
+          Effect.sync(() => {
+            if (attempt < attempts) {
+              logger.warn(
+                "ExtensionInstaller",
+                `Download attempt ${attempt}/${attempts} failed, retrying...`,
+                error,
+              );
+            }
+          }),
+        ),
+      );
+    });
+
+    const retryPolicy = Schedule.exponential(Math.max(0, retryBaseDelay)).pipe(
+      Schedule.intersect(Schedule.recurs(attempts - 1)),
+    );
+
+    return downloadAttempt.pipe(Effect.retry(retryPolicy));
+  }
+
+  private downloadOptionalText(url: string, timeout: number): Effect.Effect<string, never> {
+    return Effect.tryPromise({
+      try: async (signal) => {
+        const response = await fetch(url, { signal });
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-
-        const contentLength = response.headers.get("content-length");
-        const total = contentLength ? Number.parseInt(contentLength, 10) : 0;
-
-        if (!response.body) {
-          throw new Error("Response body is null");
-        }
-
-        const reader = response.body.getReader();
-        const chunks: Uint8Array[] = [];
-        let loaded = 0;
-
-        while (true) {
-          const { done, value } = await reader.read();
-
-          if (done) break;
-
-          chunks.push(value);
-          loaded += value.length;
-
-          if (onProgress && total > 0) {
-            onProgress({
-              loaded,
-              total,
-              percentage: (loaded / total) * 100,
-            });
-          }
-        }
-
-        // Combine chunks into single ArrayBuffer
-        const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-        const result = new Uint8Array(totalLength);
-        let offset = 0;
-
-        for (const chunk of chunks) {
-          result.set(chunk, offset);
-          offset += chunk.length;
-        }
-
-        return result.buffer;
-      } catch (error) {
-        if (attempt === retryCount) {
-          throw error;
-        }
-
-        logger.warn(
-          "ExtensionInstaller",
-          `Download attempt ${attempt}/${retryCount} failed, retrying...`,
-          error,
-        );
-
-        // Exponential backoff
-        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
-      }
-    }
-
-    throw new Error("Download failed after retries");
+        return response.text();
+      },
+      catch: (reason) =>
+        new ExtensionDownloadError({
+          message: `Failed to download ${url}`,
+          url,
+          reason,
+        }),
+    }).pipe(
+      Effect.timeoutFail({
+        duration: timeout,
+        onTimeout: () =>
+          new ExtensionDownloadTimeoutError({
+            message: `Download timed out after ${timeout}ms: ${url}`,
+            url,
+            timeout,
+          }),
+      }),
+      Effect.catchAll((error) =>
+        Effect.sync(() => {
+          logger.warn(
+            "ExtensionInstaller",
+            "Failed to download highlight query, continuing without it:",
+            error,
+          );
+          return "";
+        }),
+      ),
+    );
   }
 
-  /**
-   * Calculate SHA-256 checksum of data
-   */
-  private async calculateChecksum(data: ArrayBuffer): Promise<string> {
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  private calculateChecksum(
+    languageId: string,
+    data: ArrayBuffer,
+    expectedChecksum?: string,
+  ): Effect.Effect<string, ExtensionChecksumError> {
+    return Effect.tryPromise({
+      try: async () => {
+        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
+      },
+      catch: (reason) =>
+        new ExtensionChecksumError({
+          message: `Could not calculate checksum for ${languageId}`,
+          languageId,
+          expectedChecksum,
+          reason,
+        }),
+    });
   }
 
-  /**
-   * Verify checksum matches expected value
-   */
-  private async verifyChecksum(data: ArrayBuffer, expectedChecksum: string): Promise<boolean> {
-    if (!expectedChecksum) return true; // Skip verification if no checksum provided
-
-    const actualChecksum = await this.calculateChecksum(data);
-    const match = actualChecksum === expectedChecksum;
-
-    if (!match) {
-      logger.error(
-        "ExtensionInstaller",
-        `Checksum mismatch! Expected: ${expectedChecksum}, Got: ${actualChecksum}`,
-      );
-    }
-
-    return match;
-  }
-
-  /**
-   * Install a language extension
-   */
-  async installLanguage(
+  private createInstallation(
     languageId: string,
     wasmUrl: string,
     highlightQueryUrl: string,
-    options: {
-      extensionId?: string; // Full extension ID from manifest (e.g., "language.typescript")
-      version?: string;
-      checksum?: string;
-      onProgress?: (progress: DownloadProgress) => void;
-    } = {},
-  ): Promise<void> {
-    const { extensionId, version = "1.0.0", checksum = "", onProgress } = options;
+    options: ExtensionInstallOptions,
+  ): Effect.Effect<void, ExtensionInstallationProgramError> {
+    const {
+      extensionId,
+      version = "1.0.0",
+      checksum = "",
+      onProgress,
+      retryCount,
+      timeout = 30_000,
+      retryBaseDelay,
+    } = options;
 
-    logger.info("ExtensionInstaller", `Installing language extension: ${languageId}`);
-
-    try {
-      // Create abort controller for this installation
-      const abortController = new AbortController();
-      this.abortControllers.set(languageId, abortController);
-
-      // Download WASM parser
+    return Effect.gen(this, function* () {
       logger.debug("ExtensionInstaller", `Downloading WASM from: ${wasmUrl}`);
 
-      const wasmData = await this.downloadWithProgress(wasmUrl, {
+      const wasmData = yield* this.downloadWithProgress(wasmUrl, {
+        retryCount,
+        timeout,
+        retryBaseDelay,
         onProgress: (progress) => {
-          // Scale progress to 0-70% for WASM download
           onProgress?.({
             loaded: progress.loaded,
             total: progress.total,
@@ -171,61 +271,49 @@ class ExtensionInstaller {
         },
       });
 
-      // Verify checksum if provided
-      if (checksum) {
-        const isValid = await this.verifyChecksum(wasmData, checksum);
-        if (!isValid) {
-          throw new Error(`Checksum verification failed for ${languageId}`);
-        }
+      const actualChecksum = yield* this.calculateChecksum(languageId, wasmData, checksum);
+      if (checksum && actualChecksum !== checksum) {
+        return yield* new ExtensionChecksumError({
+          message: `Checksum verification failed for ${languageId}`,
+          languageId,
+          expectedChecksum: checksum,
+          actualChecksum,
+        });
       }
 
-      // Download highlight query
       logger.debug("ExtensionInstaller", `Downloading highlight query from: ${highlightQueryUrl}`);
+      const highlightQuery = yield* this.downloadOptionalText(highlightQueryUrl, timeout);
 
-      let highlightQuery = "";
-      try {
-        const queryResponse = await fetch(highlightQueryUrl);
-        if (queryResponse.ok) {
-          highlightQuery = await queryResponse.text();
-        } else {
-          logger.warn(
-            "ExtensionInstaller",
-            `Failed to download highlight query (${queryResponse.status}), continuing without it`,
-          );
-        }
-      } catch (error) {
-        logger.warn(
-          "ExtensionInstaller",
-          "Failed to download highlight query, continuing without it:",
-          error,
-        );
-      }
-
-      // Report 80% progress after downloads
       onProgress?.({
         loaded: 80,
         total: 100,
         percentage: 80,
       });
 
-      // Store in IndexedDB cache
       const cacheEntry: ParserCacheEntry = {
         languageId,
-        extensionId, // Store the full extension ID from manifest
-        wasmBlob: new Blob([wasmData]), // Legacy compatibility
-        wasmData: wasmData, // Preferred: ArrayBuffer avoids WebKit blob issues
+        extensionId,
+        wasmBlob: new Blob([wasmData]),
+        wasmData,
         highlightQuery,
         version,
-        checksum: checksum || (await this.calculateChecksum(wasmData)),
+        checksum: checksum || actualChecksum,
         downloadedAt: Date.now(),
         lastUsedAt: Date.now(),
         size: wasmData.byteLength,
         sourceUrl: wasmUrl,
       };
 
-      await indexedDBParserCache.set(cacheEntry);
+      yield* Effect.tryPromise({
+        try: () => indexedDBParserCache.set(cacheEntry),
+        catch: (reason) =>
+          new ExtensionStorageError({
+            message: `Failed to store language extension ${languageId}`,
+            languageId,
+            reason,
+          }),
+      });
 
-      // Report 100% progress
       onProgress?.({
         loaded: 100,
         total: 100,
@@ -236,11 +324,52 @@ class ExtensionInstaller {
         "ExtensionInstaller",
         `Successfully installed ${languageId} (${(wasmData.byteLength / 1024).toFixed(1)} KB)`,
       );
+    });
+  }
+
+  async installLanguage(
+    languageId: string,
+    wasmUrl: string,
+    highlightQueryUrl: string,
+    options: ExtensionInstallOptions = {},
+  ): Promise<void> {
+    logger.info("ExtensionInstaller", `Installing language extension: ${languageId}`);
+    this.cancelInstallation(languageId);
+    const abortController = new AbortController();
+    this.abortControllers.set(languageId, abortController);
+
+    try {
+      const exit = await Effect.runPromiseExit(
+        this.createInstallation(languageId, wasmUrl, highlightQueryUrl, options),
+        {
+          signal: abortController.signal,
+        },
+      );
+
+      if (Exit.isSuccess(exit)) {
+        return;
+      }
+
+      if (abortController.signal.aborted || Cause.isInterruptedOnly(exit.cause)) {
+        throw new ExtensionInstallCancelledError({
+          message: `Installation cancelled for ${languageId}`,
+          languageId,
+        });
+      }
+
+      const failure = Cause.failureOption(exit.cause);
+      if (Option.isSome(failure)) {
+        throw failure.value;
+      }
+
+      throw Cause.squash(exit.cause);
     } catch (error) {
       logger.error("ExtensionInstaller", `Failed to install ${languageId}:`, error);
       throw error;
     } finally {
-      this.abortControllers.delete(languageId);
+      if (this.abortControllers.get(languageId) === abortController) {
+        this.abortControllers.delete(languageId);
+      }
     }
   }
 
@@ -303,7 +432,6 @@ class ExtensionInstaller {
     const controller = this.abortControllers.get(languageId);
     if (controller) {
       controller.abort();
-      this.abortControllers.delete(languageId);
       logger.info("ExtensionInstaller", `Cancelled installation of ${languageId}`);
     }
   }

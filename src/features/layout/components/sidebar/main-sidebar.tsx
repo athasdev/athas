@@ -11,6 +11,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { flushSync } from "react-dom";
+import { ViewsSidebar } from "@/features/views/components/views-sidebar";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
 import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
@@ -65,16 +66,17 @@ import {
 } from "@/ui/context-menu";
 import { Spinner } from "@/ui/spinner";
 import {
-  BoxIcon,
+  AppStackFillDuoIcon,
+  BoxFillDuoIcon,
+  CodeBranchFillDuoIcon,
+  CodePullRequestFillDuoIcon,
   EyeIcon,
-  ExtensionsIcon,
-  FilesIcon,
+  FilesFillDuoIcon,
   FolderIcon,
   FolderOpenIcon,
-  GitBranchIcon,
-  GithubLogoIcon,
-  MagnifyingGlassIcon,
+  MagnifierFillDuoIcon,
   NodesIcon,
+  SparkleFillDuoIcon,
   SparkleIcon,
   TerminalIcon,
 } from "@/ui/icons";
@@ -217,14 +219,14 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       {
         id: "files",
         label: "Files",
-        icon: <FilesIcon />,
+        icon: <FilesFillDuoIcon className="text-primary" />,
       },
       ...(coreFeatures.search
         ? [
             {
               id: "search",
               label: "Search",
-              icon: <MagnifyingGlassIcon />,
+              icon: <MagnifierFillDuoIcon className="text-info" />,
             },
           ]
         : []),
@@ -233,7 +235,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             {
               id: "git",
               label: "Source Control",
-              icon: <GitBranchIcon />,
+              icon: <CodeBranchFillDuoIcon className="text-success" />,
             },
           ]
         : []),
@@ -242,23 +244,28 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             {
               id: "github-prs",
               label: "Pull Requests",
-              icon: <GithubLogoIcon />,
+              icon: <CodePullRequestFillDuoIcon className="text-primary" />,
             },
           ]
         : []),
+      {
+        id: "views",
+        label: "Views",
+        icon: <SparkleFillDuoIcon className="text-warning" />,
+      },
       ...(coreFeatures.docker
         ? [
             {
               id: "docker",
               label: "Docker",
-              icon: <BoxIcon />,
+              icon: <BoxFillDuoIcon className="text-info" />,
             },
           ]
         : []),
       {
         id: "extensions",
         label: "Extensions",
-        icon: <ExtensionsIcon />,
+        icon: <AppStackFillDuoIcon className="text-warning" />,
       },
       ...Array.from(extensionViews.values()).map((view) => ({
         id: view.id,
@@ -707,40 +714,45 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
                 />
               </div>
             ) : (
-              <div className="scrollbar-hidden min-h-0 w-full flex-1 overflow-y-auto">
-                <SidebarPaneSelector
-                  activeSidebarView={activeSidebarView}
-                  isGitViewActive={isGitViewActive}
-                  isGitHubPRsViewActive={isGitHubPRsViewActive}
-                  isSidebarVisible={isSidebarVisible}
-                  coreFeatures={coreFeatures}
-                  onViewChange={handleSidebarViewChange}
-                  onSearchClick={() => openGlobalSearchBuffer()}
-                  onExtensionsClick={() => openExtensionsBuffer()}
-                  isExtensionsActive={isExtensionsBufferActive}
-                  compact={!expanded}
-                  showLabels={expanded}
-                  orientation="vertical"
-                />
-                <SidebarPinnedItems
-                  expanded={expanded}
-                  workspacePath={project?.path ?? null}
-                  showAgents={showActivityRailAgentHistory}
-                  showTerminals={coreFeatures.terminal && showActivityRailTerminals}
-                />
-                {showActivityRailAgentHistory ? (
-                  <SidebarAgentHistory expanded={expanded} workspacePath={project?.path ?? null} />
-                ) : null}
-                {coreFeatures.terminal && showActivityRailTerminals ? (
-                  <SidebarTerminalHistory expanded={expanded} />
-                ) : null}
-                {coreFeatures.git && showActivityRailWorktrees ? (
-                  <SidebarWorktreeHistory
-                    expanded={expanded}
-                    repoPath={project?.path ?? null}
-                    onNewWorktree={handleNewWorktree}
+              <div className="flex min-h-0 w-full flex-1 flex-col">
+                <div className="scrollbar-none min-h-0 w-full flex-1 overflow-y-auto">
+                  <SidebarPaneSelector
+                    activeSidebarView={activeSidebarView}
+                    isGitViewActive={isGitViewActive}
+                    isGitHubPRsViewActive={isGitHubPRsViewActive}
+                    isSidebarVisible={isSidebarVisible}
+                    coreFeatures={coreFeatures}
+                    onViewChange={handleSidebarViewChange}
+                    onSearchClick={() => openGlobalSearchBuffer()}
+                    onExtensionsClick={() => openExtensionsBuffer()}
+                    isExtensionsActive={isExtensionsBufferActive}
+                    compact={!expanded}
+                    showLabels={expanded}
+                    orientation="vertical"
                   />
-                ) : null}
+                  <SidebarPinnedItems
+                    expanded={expanded}
+                    workspacePath={project?.path ?? null}
+                    showAgents={showActivityRailAgentHistory}
+                    showTerminals={coreFeatures.terminal && showActivityRailTerminals}
+                  />
+                  {showActivityRailAgentHistory ? (
+                    <SidebarAgentHistory
+                      expanded={expanded}
+                      workspacePath={project?.path ?? null}
+                    />
+                  ) : null}
+                  {coreFeatures.terminal && showActivityRailTerminals ? (
+                    <SidebarTerminalHistory expanded={expanded} />
+                  ) : null}
+                  {coreFeatures.git && showActivityRailWorktrees ? (
+                    <SidebarWorktreeHistory
+                      expanded={expanded}
+                      repoPath={project?.path ?? null}
+                      onNewWorktree={handleNewWorktree}
+                    />
+                  ) : null}
+                </div>
               </div>
             )}
           </>
@@ -786,10 +798,10 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             role="separator"
             aria-label="Resize activity rail"
             aria-orientation="vertical"
-            className="group absolute top-0 right-0 z-20 flex h-full w-(--athas-workbench-gap) cursor-col-resize items-center justify-center hover:bg-primary/8"
+            className="group absolute top-0 right-0 z-20 flex h-full w-workbench cursor-col-resize items-center justify-center hover:bg-primary/8"
             onMouseDown={handleResizeMouseDown}
           >
-            <div className="h-full w-px bg-transparent transition-colors duration-(--app-duration-fast) ease-(--app-ease-smooth) group-hover:bg-primary" />
+            <div className="h-full w-px bg-transparent transition-colors duration-fast ease-smooth group-hover:bg-primary" />
           </div>
         ) : null}
         {isActivityRailResizing ? <div className="fixed inset-0 z-40 cursor-col-resize" /> : null}
@@ -817,11 +829,11 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             Open Project…
           </ContextMenuItem>
           <ContextMenuItem onClick={() => openGlobalSearchBuffer()}>
-            <MagnifyingGlassIcon />
+            <MagnifierFillDuoIcon className="text-info" />
             Search
           </ContextMenuItem>
           <ContextMenuItem onClick={() => openExtensionsBuffer()}>
-            <ExtensionsIcon />
+            <AppStackFillDuoIcon className="text-warning" />
             Extensions
           </ContextMenuItem>
         </ContextMenuGroup>
@@ -957,6 +969,10 @@ export const MainSidebar = memo(
             },
           ]
         : []),
+      {
+        id: "views",
+        content: <ViewsSidebar projectPath={rootFolderPath ?? null} />,
+      },
       ...(coreFeatures.docker
         ? [
             {
@@ -1008,7 +1024,7 @@ export const MainSidebar = memo(
     })();
     return (
       <div className="flex h-full min-h-0" data-external-file-drop-scope="sidebar">
-        <SidebarPanel className={cn("min-w-0 flex-1 overflow-hidden bg-transparent")}>
+        <SidebarPanel className="min-w-0 flex-1 overflow-hidden bg-transparent">
           <div className="h-full min-h-0 overflow-hidden">{activePane?.content ?? null}</div>
         </SidebarPanel>
       </div>

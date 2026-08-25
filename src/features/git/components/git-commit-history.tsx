@@ -11,7 +11,12 @@ import {
 import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
-import { SidebarHeaderIconButton, SidebarSearchPopover, SidebarSection } from "@/ui/sidebar";
+import {
+  SidebarIconButton,
+  SidebarScrollArea,
+  SidebarSearchPopover,
+  SidebarSection,
+} from "@/ui/sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { AuthUser } from "@/features/window/services/auth-api";
 import { formatRelativeDate } from "@/utils/date";
@@ -69,7 +74,7 @@ export function GitCommitHistoryControls({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <SidebarHeaderIconButton
+            <SidebarIconButton
               active={searchScope !== "all"}
               tooltip={`Filter: ${HISTORY_SEARCH_SCOPE_LABELS[searchScope]}`}
               tooltipSide="bottom"
@@ -149,7 +154,7 @@ const CommitItem = memo(
           type="button"
           onClick={handleCommitClick}
           className={cn(
-            "ui-text-sm flex w-full cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-accent/80 focus-visible:bg-accent/80",
+            "ui-text-sm flex w-full items-start gap-2.5 rounded-md px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-accent/80 focus-visible:bg-accent/80",
           )}
           draggable={!!repoPath}
           onDragStart={(event) => {
@@ -252,66 +257,64 @@ const GitCommitHistory = ({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden select-none">
-      {(ahead > 0 || behind > 0) && (
-        <div className="space-y-1 px-2 pb-1">
-          {ahead > 0 ? (
-            <div className="ui-text-sm text-subtle-foreground">
-              <span className="text-primary">{ahead}</span>{" "}
-              {`local commit${ahead !== 1 ? "s" : ""} not pushed`}
-            </div>
-          ) : null}
-          {behind > 0 ? (
-            <div className="ui-text-sm text-subtle-foreground">
-              <span className="text-primary">{behind}</span>{" "}
-              {`remote commit${behind !== 1 ? "s" : ""} not pulled`}
-            </div>
-          ) : null}
-        </div>
-      )}
+      <SidebarScrollArea className="min-h-0 flex-1">
+        {(ahead > 0 || behind > 0) && (
+          <div data-slot="git-history-sync-status" className="space-y-1 px-2 pb-1">
+            {ahead > 0 ? (
+              <div className="ui-text-sm text-subtle-foreground">
+                <span className="text-primary">{ahead}</span>{" "}
+                {`local commit${ahead !== 1 ? "s" : ""} not pushed`}
+              </div>
+            ) : null}
+            {behind > 0 ? (
+              <div className="ui-text-sm text-subtle-foreground">
+                <span className="text-primary">{behind}</span>{" "}
+                {`remote commit${behind !== 1 ? "s" : ""} not pulled`}
+              </div>
+            ) : null}
+          </div>
+        )}
 
-      <div className="custom-scrollbar-auto relative min-h-0 flex-1 overflow-y-auto bg-transparent pr-2.5 [scrollbar-gutter:stable]">
-        <div className="px-2 py-2">
-          {!hasHistoryRows ? (
-            <EmptyState layout="sidebar" message="No commits" />
-          ) : filteredCommits.length === 0 ? (
-            <EmptyState layout="sidebar" message="No commits match the current filters" />
-          ) : (
-            <>
-              {commitGroups.map((group) => (
-                <SidebarSection key={group.label} title={group.label} count={group.commits.length}>
-                  {group.commits.map((commit) => (
-                    <CommitItem
-                      key={commit.hash}
-                      commit={commit}
-                      onSelectCommit={handleSelectCommit}
-                      syncState={commitSyncStateByHash.get(commit.hash) ?? "pushed"}
-                      repoPath={repoPath}
-                      account={account}
-                    />
-                  ))}
-                </SidebarSection>
-              ))}
-            </>
-          )}
+        {!hasHistoryRows ? (
+          <EmptyState layout="sidebar" message="No commits" />
+        ) : filteredCommits.length === 0 ? (
+          <EmptyState layout="sidebar" message="No commits match the current filters" />
+        ) : (
+          <>
+            {commitGroups.map((group) => (
+              <SidebarSection key={group.label} title={group.label} count={group.commits.length}>
+                {group.commits.map((commit) => (
+                  <CommitItem
+                    key={commit.hash}
+                    commit={commit}
+                    onSelectCommit={handleSelectCommit}
+                    syncState={commitSyncStateByHash.get(commit.hash) ?? "pushed"}
+                    repoPath={repoPath}
+                    account={account}
+                  />
+                ))}
+              </SidebarSection>
+            ))}
+          </>
+        )}
 
-          {hasMoreCommits ? (
-            <div className="pt-2">
-              <Button
-                size="sm"
-                className="w-full"
-                onClick={handleLoadMore}
-                disabled={!repoPath || isLoadingMoreCommits}
-              >
-                {isLoadingMoreCommits ? "Loading…" : "Load more"}
-              </Button>
-            </div>
-          ) : commits.length > 0 ? (
-            <div className="ui-text-sm px-3 py-1.5 text-center text-subtle-foreground">
-              end of history
-            </div>
-          ) : null}
-        </div>
-      </div>
+        {hasMoreCommits ? (
+          <div className="pt-2">
+            <Button
+              size="sm"
+              className="w-full"
+              onClick={handleLoadMore}
+              disabled={!repoPath || isLoadingMoreCommits}
+            >
+              {isLoadingMoreCommits ? "Loading…" : "Load more"}
+            </Button>
+          </div>
+        ) : commits.length > 0 ? (
+          <div className="ui-text-sm px-3 py-1.5 text-center text-subtle-foreground">
+            end of history
+          </div>
+        ) : null}
+      </SidebarScrollArea>
     </div>
   );
 };

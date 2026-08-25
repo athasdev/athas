@@ -77,12 +77,16 @@ async function syncChatToDatabase(get: GetAIChatStore, chatId: string) {
 }
 
 async function loadChatMessages(set: SetAIChatStore, chatId: string) {
+  set((state) => {
+    state.chatMessageLoadStates[chatId] = "loading";
+  });
   try {
     const fullChat = await loadChatFromDb(chatId);
     set((state) => {
       const chatIndex = state.chats.findIndex((candidate) => candidate.id === chatId);
       if (chatIndex !== -1) {
         state.chats[chatIndex] = fullChat;
+        state.chatMessageLoadStates[chatId] = "loaded";
       }
     });
   } catch (error) {
@@ -92,9 +96,13 @@ async function loadChatMessages(set: SetAIChatStore, chatId: string) {
         if (state.currentChatId === chatId) {
           state.currentChatId = null;
         }
+        delete state.chatMessageLoadStates[chatId];
       });
       return;
     }
+    set((state) => {
+      state.chatMessageLoadStates[chatId] = "error";
+    });
     console.error(`Failed to load messages for chat ${chatId}:`, error);
   }
 }
@@ -126,6 +134,38 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       set((state) => {
         state.pendingAgentLaunchRequest = request;
       }),
+    startAgentRun: (chatId, run) =>
+      set((state) => {
+        state.agentRuns[chatId] = run;
+      }),
+    updateAgentRun: (chatId, runId, updates) =>
+      set((state) => {
+        const run = state.agentRuns[chatId];
+        if (run?.runId === runId) {
+          Object.assign(run, updates);
+        }
+      }),
+    finishAgentRun: (chatId, runId) =>
+      set((state) => {
+        if (state.agentRuns[chatId]?.runId === runId) {
+          delete state.agentRuns[chatId];
+        }
+      }),
+    enqueueAgentMessage: (chatId, message) =>
+      set((state) => {
+        (state.agentMessageQueues[chatId] ??= []).push(message);
+      }),
+    dequeueAgentMessage: (chatId) => {
+      let message: string | null = null;
+      set((state) => {
+        const queue = state.agentMessageQueues[chatId];
+        message = queue?.shift() ?? null;
+        if (queue?.length === 0) {
+          delete state.agentMessageQueues[chatId];
+        }
+      });
+      return message;
+    },
     createNewChat: (agentId, options = {}) => {
       const state = get();
       const activate = options.activate ?? true;
@@ -133,6 +173,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
 
       set((draft) => {
         draft.chats.unshift(newChat);
+        draft.chatMessageLoadStates[newChat.id] = "loaded";
         if (activate) {
           draft.currentChatId = newChat.id;
           draft.pendingAgentLaunchRequest = null;
@@ -154,6 +195,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       const newChat = createChat(agentId || state.selectedAgentId, chatId);
       set((draft) => {
         draft.chats.unshift(newChat);
+        draft.chatMessageLoadStates[newChat.id] = "loaded";
         if (options.activate ?? true) {
           draft.currentChatId = newChat.id;
         }
@@ -202,7 +244,9 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       set((state) => {
         state.currentChatId = chatId;
       });
-      void loadChatMessages(set, chatId);
+      if (get().chatMessageLoadStates[chatId] !== "loaded") {
+        void loadChatMessages(set, chatId);
+      }
     },
     deleteChat: (chatId) => {
       set((state) => {
@@ -218,6 +262,9 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
             .sort((left, right) => right.lastMessageAt.getTime() - left.lastMessageAt.getTime())[0];
           state.currentChatId = mostRecentChat?.id ?? null;
         }
+        delete state.agentRuns[chatId];
+        delete state.agentMessageQueues[chatId];
+        delete state.chatMessageLoadStates[chatId];
       });
 
       void deleteChatFromDb(chatId).catch((error) =>
@@ -353,7 +400,19 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       try {
         const chats = await loadAllChatsFromDb();
         set((state) => {
-          state.chats = chats as Chat[];
+          const persistedIds = new Set(chats.map((chat) => chat.id));
+          const inMemoryChats = new Map(state.chats.map((chat) => [chat.id, chat]));
+          state.chats = [
+            ...chats.map((chat) =>
+              state.chatMessageLoadStates[chat.id] === "loaded"
+                ? (inMemoryChats.get(chat.id) ?? (chat as Chat))
+                : (chat as Chat),
+            ),
+            ...state.chats.filter((chat) => !persistedIds.has(chat.id)),
+          ];
+          for (const chat of chats) {
+            state.chatMessageLoadStates[chat.id] ??= "loading";
+          }
         });
       } catch (error) {
         console.error("Failed to load chats from database:", error);
@@ -366,6 +425,9 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         set((state) => {
           state.chats = [];
           state.currentChatId = null;
+          state.agentRuns = {};
+          state.agentMessageQueues = {};
+          state.chatMessageLoadStates = {};
         });
       } catch (error) {
         console.error("Failed to clear all chats:", error);
@@ -386,7 +448,9 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       });
 
       if (snapshot?.currentChatId) {
-        void loadChatMessages(set, snapshot.currentChatId);
+        if (get().chatMessageLoadStates[snapshot.currentChatId] !== "loaded") {
+          void loadChatMessages(set, snapshot.currentChatId);
+        }
       }
     },
     getCurrentChat: () => {

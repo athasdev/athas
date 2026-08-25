@@ -314,26 +314,24 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     ...createGenerateActions({
       onClose,
     }),
-    ...Array.from(extensionCommands.values()).map(
-      (command): Action => ({
-        id: `extension-command:${command.id}`,
-        label: command.title,
-        description: command.category
-          ? `${command.category} extension command`
-          : "Installed extension command",
-        icon: <Puzzle />,
-        category: command.category ?? "Extensions",
-        action: () => {
-          onClose();
-          void Promise.resolve(command.execute()).catch((error) => {
-            showToast({
-              message: error instanceof Error ? error.message : "Extension command failed",
-              type: "error",
-            });
+    ...Array.from(extensionCommands.values()).map((command): Action => ({
+      id: `extension-command:${command.id}`,
+      label: command.title,
+      description: command.category
+        ? `${command.category} extension command`
+        : "Installed extension command",
+      icon: <Puzzle />,
+      category: command.category ?? "Extensions",
+      action: () => {
+        onClose();
+        void Promise.resolve(command.execute()).catch((error) => {
+          showToast({
+            message: error instanceof Error ? error.message : "Extension command failed",
+            type: "error",
           });
-        },
-      }),
-    ),
+        });
+      },
+    })),
     ...createWindowActions({
       onClose,
     }),

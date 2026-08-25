@@ -20,26 +20,9 @@ async function main() {
   const rustFiles = stagedFiles.filter(
     (file) => file.endsWith(".rs") || file.endsWith("Cargo.toml") || file.endsWith("Cargo.lock"),
   );
-  const frontendFiles = stagedFiles.filter(
-    (file) =>
-      !file.endsWith(".rs") &&
-      !file.endsWith("Cargo.toml") &&
-      !file.endsWith("Cargo.lock") &&
-      !file.startsWith("src-tauri/target/") &&
-      !file.startsWith("public/tree-sitter/parsers/"),
-  );
-
-  if (frontendFiles.length > 0) {
-    console.log(`Running vp check --fix on ${frontendFiles.length} staged file(s)...`);
-    await $`bunx vp check --fix ${frontendFiles}`.cwd(process.cwd());
-  }
-
   if (rustFiles.length > 0) {
     console.log("Running cargo fmt --all for staged Rust changes...");
     await $`cargo fmt --all`.cwd(process.cwd());
-  }
-
-  if (frontendFiles.length > 0 || rustFiles.length > 0) {
     await $`git update-index --again`.cwd(process.cwd());
   }
 

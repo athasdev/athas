@@ -98,6 +98,7 @@ import {
   showWhatsNew,
   toggleActivitySidebar,
   toggleAIChat,
+  toggleViewsSidebar,
   toggleFilesSidebar,
   toggleDockerSidebar,
   toggleGitHubSidebar,
@@ -643,6 +644,12 @@ const viewCommands: Command[] = [
     title: "Show GitHub",
     category: "View",
     execute: toggleGitHubSidebar,
+  },
+  {
+    id: "workbench.showViews",
+    title: "Show Views",
+    category: "View",
+    execute: toggleViewsSidebar,
   },
   {
     id: "workbench.showDocker",

@@ -538,30 +538,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show labels beside icons in the activity bar",
     keywords: ["activity", "bar", "rail", "expanded", "labels", "sidebar"],
   },
-  {
-    id: "appearance-window-chrome-density",
-    tab: "appearance",
-    section: "Layout",
-    label: "Window Chrome Density",
-    description: "Choose a focused or roomier scale for window controls and navigation",
-    keywords: ["window", "chrome", "density", "focused", "comfortable", "tabs", "sidebar"],
-  },
-  {
-    id: "appearance-activity-bar-width",
-    tab: "appearance",
-    section: "Layout",
-    label: "Activity Bar Width",
-    description: "Set the width of the expanded activity bar",
-    keywords: ["activity", "bar", "rail", "width", "size", "layout"],
-  },
-  {
-    id: "appearance-sidebar-width",
-    tab: "appearance",
-    section: "Layout",
-    label: "Sidebar Width",
-    description: "Set the default width used by left and right sidebars",
-    keywords: ["sidebar", "width", "size", "left", "right", "layout"],
-  },
   ...(!IS_MAC && !IS_WINDOWS && !IS_LINUX
     ? [
         {
@@ -608,9 +584,9 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   {
     id: "ai-provider-model",
     tab: "ai",
-    section: "Athas Agent",
+    section: "AI Chat",
     label: "Provider & Model",
-    description: "Choose the provider and model used by Athas Agent",
+    description: "Choose the provider and model used by direct AI chat",
     keywords: ["ai", "provider", "model", "llm", "service", "agent"],
   },
   {
@@ -644,6 +620,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Default Session Mode",
     description: "Default mode for ACP agent sessions",
     keywords: ["ai", "session", "mode", "default", "agent", "acp"],
+  },
+  {
+    id: "ai-agent-notifications",
+    tab: "ai",
+    section: "Notifications",
+    label: "Agent Notifications",
+    description: "Show native notifications when background agent work needs attention",
+    keywords: ["ai", "agent", "notification", "native", "system", "background", "permission"],
   },
   {
     id: "ai-autocomplete",

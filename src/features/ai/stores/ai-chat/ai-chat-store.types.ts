@@ -1,6 +1,7 @@
 import type {
   AcpAgentStatus,
   SessionConfigOption,
+  SessionConfigValue,
   SessionMode,
   SlashCommand,
 } from "@/features/ai/types/acp.types";
@@ -26,11 +27,25 @@ interface PendingAgentLaunchRequest {
   selectedFilesPaths: string[];
 }
 
+export type AgentRunPhase = "starting" | "waiting" | "thinking" | "tool" | "approval";
+
+export interface AgentRunState {
+  runId: string;
+  assistantMessageId: string;
+  agentId: AgentType;
+  phase: AgentRunPhase;
+}
+
+export type ChatMessageLoadState = "loading" | "loaded" | "error";
+
 export interface AIChatState {
   chats: Chat[];
   currentChatId: string | null;
   selectedAgentId: AgentType;
   pendingAgentLaunchRequest: PendingAgentLaunchRequest | null;
+  agentRuns: Record<string, AgentRunState>;
+  agentMessageQueues: Record<string, string[]>;
+  chatMessageLoadStates: Record<string, ChatMessageLoadState>;
   mode: ChatMode;
   outputStyle: OutputStyle;
   hasApiKey: boolean;
@@ -51,6 +66,11 @@ export interface AIChatActions {
   changeCurrentChatAgent: (agentId: AgentType) => void;
   setMode: (mode: ChatMode) => void;
   setPendingAgentLaunchRequest: (request: PendingAgentLaunchRequest | null) => void;
+  startAgentRun: (chatId: string, run: AgentRunState) => void;
+  updateAgentRun: (chatId: string, runId: string, updates: Partial<AgentRunState>) => void;
+  finishAgentRun: (chatId: string, runId: string) => void;
+  enqueueAgentMessage: (chatId: string, message: string) => void;
+  dequeueAgentMessage: (chatId: string) => string | null;
   createNewChat: (agentId?: AgentType, options?: { activate?: boolean }) => string;
   ensureChatSession: (
     chatId: string,
@@ -84,7 +104,7 @@ export interface AIChatActions {
   setAcpStatus: (status: AcpAgentStatus | null) => void;
   changeSessionMode: (modeId: string) => Promise<void>;
   setSessionConfigOptions: (options: SessionConfigOption[]) => void;
-  changeSessionConfigOption: (configId: string, value: string) => Promise<void>;
+  changeSessionConfigOption: (configId: string, value: SessionConfigValue) => Promise<void>;
 
   getWorkspaceSessionSnapshot: () => AIWorkspaceSessionSnapshot;
   restoreWorkspaceSession: (snapshot: AIWorkspaceSessionSnapshot | null | undefined) => void;

@@ -10,17 +10,10 @@ import {
 import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync.store";
 import { useProFeature } from "@/features/window/hooks/use-pro-feature";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import {
-  extractAutocompleteUsage,
-  formatUsageDate,
-  formatUsdFromCents,
-  getAccountPlanLabel,
-  getUsageProgress,
-} from "@/features/window/lib/account-usage";
+import { getAccountPlanLabel } from "@/features/window/lib/account-usage";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { Progress } from "@/ui/progress";
 import Switch from "@/ui/switch";
 import Section, { SettingsView, SettingRow } from "../settings-section";
 
@@ -30,7 +23,7 @@ export const AccountSettings = () => {
   const subscription = useAuthStore((state) => state.subscription);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const logout = useAuthStore((state) => state.actions.logout);
-  const { isPro, hasSettingsSync } = useProFeature();
+  const { isPro, hasIntelligence, hasSettingsSync } = useProFeature();
   const { isSigningIn, signIn } = useDesktopSignIn();
   const { showToast } = useToast();
   const settingsSyncEnabled = useSettingsSyncStore((state) => state.enabled);
@@ -45,8 +38,6 @@ export const AccountSettings = () => {
   const isTeams = Boolean(subscription?.collaboration?.enabled);
   const isPaidPlan = isPro || isEnterprise || isTeams;
   const planLabel = getAccountPlanLabel(subscription, isAuthenticated);
-  const autocompleteUsage = extractAutocompleteUsage(subscription);
-  const usageProgress = getUsageProgress(autocompleteUsage);
 
   const handleManageAccount = async () => {
     await openUrl(services.dashboardUrl);
@@ -112,10 +103,10 @@ export const AccountSettings = () => {
             <span className="font-sans ui-text-base text-subtle-foreground">{user?.email}</span>
           ) : (
             <Button
+              shape="pill"
               variant="default"
               onClick={signIn}
               disabled={isSigningIn}
-              className="ui-text-base"
               size="sm"
             >
               {isSigningIn ? "Signing In..." : "Sign In"}
@@ -126,49 +117,30 @@ export const AccountSettings = () => {
         {isAuthenticated && (
           <div
             role="group"
-            aria-labelledby="account-ai-usage-label"
-            aria-describedby="account-ai-usage-description"
+            aria-labelledby="account-intelligence-label"
+            aria-describedby="account-intelligence-description"
             className="rounded-lg px-1 py-2"
           >
             <div className="mb-3">
               <div className="min-w-0">
-                <div id="account-ai-usage-label" className="font-sans ui-text-base text-foreground">
-                  AI Usage
+                <div
+                  id="account-intelligence-label"
+                  className="font-sans ui-text-base text-foreground"
+                >
+                  Athas Intelligence
                 </div>
                 <div
-                  id="account-ai-usage-description"
+                  id="account-intelligence-description"
                   className="font-sans ui-text-base text-subtle-foreground"
                 >
-                  Monthly hosted AI usage across chat, agents, inline edits, generation, and other
-                  Athas AI features.
+                  Focused editor features including commit messages, inline edits, autocomplete,
+                  drafts, and extension generation. Athas Agent uses your configured provider.
                 </div>
               </div>
             </div>
-            {autocompleteUsage ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="font-sans ui-text-base text-subtle-foreground">
-                    Monthly usage
-                  </span>
-                  <span className="font-sans ui-text-base font-medium text-foreground">
-                    {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
-                    {formatUsdFromCents(autocompleteUsage.budgetCents)}
-                  </span>
-                </div>
-                <Progress value={usageProgress} size="md" aria-label="Hosted AI monthly usage" />
-                <div className="flex items-center justify-between gap-4">
-                  <span className="font-sans ui-text-base text-subtle-foreground/70">
-                    {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
-                    {formatUsageDate(autocompleteUsage.periodEnd)}
-                  </span>
-                  <span className="font-sans ui-text-base text-subtle-foreground/70">
-                    Resets {formatUsageDate(autocompleteUsage.periodEnd)}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="font-sans ui-text-base text-subtle-foreground">Usage unavailable</div>
-            )}
+            <Badge variant={hasIntelligence ? "default" : "muted"}>
+              {hasIntelligence ? "Included in Pro" : "Pro required"}
+            </Badge>
           </div>
         )}
 
@@ -184,12 +156,7 @@ export const AccountSettings = () => {
                   {planLabel}
                 </Badge>
               ) : null}
-              <Button
-                variant="default"
-                onClick={handleManagePlan}
-                className="ui-text-base"
-                size="sm"
-              >
+              <Button shape="pill" variant="default" onClick={handleManagePlan} size="sm">
                 {isPaidPlan ? "Manage plan" : "Upgrade plan"}
               </Button>
             </div>
@@ -225,9 +192,9 @@ export const AccountSettings = () => {
               description="Upload this device's current settings snapshot to the cloud."
             >
               <Button
+                shape="pill"
                 variant="default"
                 onClick={() => void handleSyncNow()}
-                className="ui-text-base"
                 disabled={settingsSyncIsSyncing}
                 size="sm"
               >
@@ -240,9 +207,9 @@ export const AccountSettings = () => {
               description="Replace this device's non-sensitive settings with the cloud snapshot."
             >
               <Button
+                shape="pill"
                 variant="default"
                 onClick={() => void handleRestoreFromCloud()}
-                className="ui-text-base"
                 disabled={settingsSyncIsSyncing}
                 size="sm"
               >
@@ -257,12 +224,7 @@ export const AccountSettings = () => {
             label="Manage Account"
             description="Open your Athas dashboard to manage billing and subscription details."
           >
-            <Button
-              variant="default"
-              onClick={handleManageAccount}
-              className="ui-text-base"
-              size="sm"
-            >
+            <Button shape="pill" variant="default" onClick={handleManageAccount} size="sm">
               Open Dashboard
             </Button>
           </SettingRow>
@@ -273,12 +235,7 @@ export const AccountSettings = () => {
             label="Sign Out"
             description="End your current Athas account session on this device."
           >
-            <Button
-              variant="default"
-              onClick={() => void logout()}
-              className="ui-text-base"
-              size="sm"
-            >
+            <Button shape="pill" variant="default" onClick={() => void logout()} size="sm">
               Sign Out
             </Button>
           </SettingRow>

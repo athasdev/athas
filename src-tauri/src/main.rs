@@ -61,6 +61,7 @@ fn main() {
       .plugin(tauri_plugin_opener::init())
       .plugin(tauri_plugin_os::init())
       .plugin(tauri_plugin_http::init())
+      .plugin(tauri_plugin_notification::init())
       .plugin(tauri_plugin_process::init())
       .plugin(tauri_plugin_deep_link::init())
       .plugin(tauri_plugin_updater::Builder::new().build())
@@ -254,6 +255,7 @@ fn main() {
          // ACP agent commands (new)
          get_available_agents,
          install_acp_agent,
+         update_acp_agent,
          uninstall_acp_agent,
          start_acp_agent,
          stop_acp_agent,

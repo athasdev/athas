@@ -3,6 +3,7 @@ import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
 import type { DatabaseType } from "@/features/database/types/provider.types";
+import { getViewBufferPath } from "@/features/views/lib/view-buffer";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { evictLeastRecentAutoClosableBuffer } from "@/features/editor/stores/buffer-eviction";
 import { createPaneContent } from "@/features/editor/stores/buffer-content-factory";
@@ -220,6 +221,7 @@ interface BufferActions {
 const generateBufferId = (path: string): string => {
   return `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
 };
+let newTabSequence = 0;
 
 const applyWorkspaceAutoEviction = (
   buffers: PaneContent[],
@@ -675,12 +677,12 @@ const createBufferStore = (workspaceId: string) => {
             }
 
             case "newTab": {
-              const cleanedBuffers = closeNewTabInActivePane([...buffers]);
-              const id = generateBufferId(`newtab://${Date.now()}`);
+              const nextBuffers = applyAutoEviction([...buffers], maxOpenTabs);
+              const id = generateBufferId(`newtab://${newTabSequence++}`);
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...deactivateBuffers(cleanedBuffers), newBuffer];
+                state.buffers = [...deactivateBuffers(nextBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
               syncBufferToPane(newBuffer.id);
@@ -859,6 +861,30 @@ const createBufferStore = (workspaceId: string) => {
               const existing = buffers.find(
                 (buffer) => buffer.type === "githubForm" && buffer.path === path,
               );
+              if (existing) {
+                set((state) => {
+                  activateBufferInState(state, existing.id);
+                });
+                syncBufferToPane(existing.id);
+                return existing.id;
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
+                state.activeBufferId = newBuffer.id;
+              });
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
+            case "customView": {
+              const path = getViewBufferPath(spec.projectPath, spec.viewId);
+              const existing = getBufferByPath(buffers, path);
               if (existing) {
                 set((state) => {
                   activateBufferInState(state, existing.id);

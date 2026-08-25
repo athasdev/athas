@@ -307,3 +307,53 @@ impl FileWatcher {
       Ok(())
    }
 }
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn matches_exact_files_and_descendants_of_watched_directories() {
+      let watched_file = PathBuf::from("/workspace/README.md");
+      let watched_directory = PathBuf::from("/workspace/src");
+      let watched_paths = HashSet::from([watched_file.clone()]);
+      let watched_directories = HashSet::from([watched_directory]);
+
+      assert!(FileWatcher::is_path_watched(
+         &watched_file,
+         &watched_paths,
+         &watched_directories
+      ));
+      assert!(FileWatcher::is_path_watched(
+         &PathBuf::from("/workspace/src/lib.rs"),
+         &watched_paths,
+         &watched_directories
+      ));
+      assert!(!FileWatcher::is_path_watched(
+         &PathBuf::from("/workspace/src-old/lib.rs"),
+         &watched_paths,
+         &watched_directories
+      ));
+   }
+
+   #[test]
+   fn tracks_new_and_deleted_files() {
+      let temp = tempfile::tempdir().expect("temp directory");
+      let path = temp.path().join("file.txt");
+      std::fs::write(&path, "contents").expect("write test file");
+      let known_files = Arc::new(Mutex::new(HashMap::new()));
+
+      assert!(matches!(
+         FileWatcher::determine_event_type(&path, &known_files),
+         Some(FileChangeType::Opened)
+      ));
+      assert!(FileWatcher::determine_event_type(&path, &known_files).is_none());
+
+      std::fs::remove_file(&path).expect("remove test file");
+      assert!(matches!(
+         FileWatcher::determine_event_type(&path, &known_files),
+         Some(FileChangeType::Deleted)
+      ));
+      assert!(!known_files.lock().unwrap().contains_key(&path));
+   }
+}

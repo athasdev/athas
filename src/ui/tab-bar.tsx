@@ -13,8 +13,10 @@ import {
 import { defaultAnimateLayoutChanges, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cva } from "class-variance-authority";
+import { motion } from "motion/react";
 import type { HTMLAttributes, MouseEvent as ReactMouseEvent, ReactNode, RefCallback } from "react";
 import { forwardRef, useCallback, useEffect, useRef } from "react";
+import { instantTransition, quickTransition } from "@/utils/motion";
 import { cn } from "@/utils/cn";
 
 const tabCollisionDetection: CollisionDetection = (args) => {
@@ -48,12 +50,17 @@ export function TabDndContext(props: TabDndContextProps) {
 
 interface SortableTabRenderState {
   isDragging: boolean;
+  dragDistance: number;
 }
 
-export interface SortableTabProps extends Omit<HTMLAttributes<HTMLDivElement>, "children" | "id"> {
+export interface SortableTabProps extends Pick<
+  HTMLAttributes<HTMLDivElement>,
+  "className" | "style" | "onClickCapture"
+> {
   id: UniqueIdentifier;
   orientation?: "horizontal" | "vertical";
   disabled?: boolean;
+  motionDrag?: boolean;
   tabRef?: RefCallback<HTMLDivElement>;
   children: (state: SortableTabRenderState) => ReactNode;
 }
@@ -62,6 +69,7 @@ export function SortableTab({
   id,
   orientation = "horizontal",
   disabled = false,
+  motionDrag = false,
   tabRef,
   className,
   style,
@@ -78,12 +86,42 @@ export function SortableTab({
     },
   });
 
+  const dragDistance = isDragging ? Math.hypot(transform?.x ?? 0, transform?.y ?? 0) : 0;
+  const setRefs = (element: HTMLDivElement | null) => {
+    setNodeRef(element);
+    tabRef?.(element);
+  };
+  const tabClassName = cn(
+    "relative flex min-w-0 items-stretch will-change-transform",
+    orientation === "vertical" ? "w-full" : "shrink-0",
+    !disabled && "touch-none",
+    isDragging && "z-10 cursor-grabbing",
+    className,
+  );
+  const content = children({ isDragging, dragDistance });
+
+  if (motionDrag) {
+    return (
+      <motion.div
+        ref={setRefs}
+        data-slot="sortable-tab"
+        data-dragging={isDragging}
+        style={style}
+        animate={{ x: transform?.x ?? 0, y: transform?.y ?? 0 }}
+        transition={isDragging ? instantTransition : quickTransition}
+        className={tabClassName}
+        {...attributes}
+        {...listeners}
+        {...props}
+      >
+        {content}
+      </motion.div>
+    );
+  }
+
   return (
     <div
-      ref={(element) => {
-        setNodeRef(element);
-        tabRef?.(element);
-      }}
+      ref={setRefs}
       data-slot="sortable-tab"
       data-dragging={isDragging}
       style={{
@@ -91,18 +129,12 @@ export function SortableTab({
         transform: CSS.Translate.toString(transform),
         transition,
       }}
-      className={cn(
-        "relative flex min-w-0 items-stretch will-change-transform",
-        orientation === "vertical" ? "w-full" : "shrink-0",
-        !disabled && "touch-none",
-        isDragging && "z-10 cursor-grabbing",
-        className,
-      )}
+      className={tabClassName}
       {...attributes}
       {...listeners}
       {...props}
     >
-      {children({ isDragging })}
+      {content}
     </div>
   );
 }
@@ -151,7 +183,7 @@ export function useTabDragClickGuard() {
   return { getClickCapture, releaseClickSuppression, suppressNextClick };
 }
 
-export type TabVariant = "default" | "connected";
+export type TabVariant = "default" | "connected" | "main";
 export type TabBarOrientation = "horizontal" | "vertical";
 
 export interface TabProps extends HTMLAttributes<HTMLDivElement> {
@@ -164,16 +196,19 @@ export interface TabProps extends HTMLAttributes<HTMLDivElement> {
 
 export interface TabBarTabProps extends Omit<TabProps, "variant"> {
   orientation?: TabBarOrientation;
+  appearance?: "standard" | "main";
 }
 
 const tabVariants = cva(
-  "group/tab ui-text-chrome relative flex min-h-(--athas-chrome-control-height) shrink-0 select-none items-center gap-(--athas-chrome-gap-loose) whitespace-nowrap rounded-(--athas-chrome-radius) px-2 text-subtle-foreground outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent/70 hover:text-foreground active:scale-(--app-press-scale) focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+  "group/tab ui-text-chrome relative flex min-h-chrome-control shrink-0 select-none items-center gap-chrome-loose whitespace-nowrap rounded-chrome px-2 text-subtle-foreground outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-fast ease-smooth hover:bg-accent/70 hover:text-foreground active:scale-press",
   {
     variants: {
       variant: {
-        default: "border border-transparent",
+        default:
+          "border border-transparent focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
         connected:
-          "min-h-(--athas-tab-height) rounded-(--athas-chrome-radius) border-0 active:scale-100",
+          "min-h-tab rounded-chrome border-0 active:scale-100 focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+        main: "isolate min-h-tab rounded-chrome border-0 bg-transparent active:scale-100 before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-transparent before:content-['']",
       },
       active: {
         true: "",
@@ -203,12 +238,28 @@ const tabVariants = cva(
       {
         variant: "connected",
         active: true,
-        className: "z-10 bg-accent/90 text-foreground shadow-none",
+        className: "z-10 bg-background text-foreground shadow-none",
       },
       {
         variant: "connected",
         active: false,
         className: "text-subtle-foreground/85 hover:bg-tab-hover/60 hover:text-foreground",
+      },
+      {
+        variant: "main",
+        active: true,
+        className: "z-10 text-foreground before:bg-accent/70",
+      },
+      {
+        variant: "main",
+        active: false,
+        className:
+          "text-subtle-foreground/85 hover:bg-transparent hover:text-foreground hover:before:bg-tab-hover/60",
+      },
+      {
+        variant: "main",
+        dragged: true,
+        className: "opacity-100 shadow-(--shadow-drag)",
       },
     ],
   },
@@ -230,9 +281,7 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
       )}
       {...props}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-(--athas-chrome-gap-loose)">
-        {children}
-      </div>
+      <div className="flex min-w-0 flex-1 items-center gap-chrome-loose">{children}</div>
       {action}
     </div>
   );
@@ -242,8 +291,8 @@ const tabBarSurfaceVariants = cva("relative flex overflow-hidden", {
   variants: {
     orientation: {
       horizontal:
-        "h-(--athas-tab-bar-height) min-h-(--athas-tab-bar-height) shrink-0 items-center gap-(--athas-chrome-gap) bg-background px-(--athas-chrome-padding-inline)",
-      vertical: "h-full min-h-0 flex-col bg-background py-(--athas-chrome-gap)",
+        "h-tab-bar min-h-tab-bar shrink-0 items-center gap-chrome bg-background px-chrome-inline",
+      vertical: "h-full min-h-0 flex-col bg-background py-chrome",
     },
   },
   defaultVariants: {
@@ -254,8 +303,8 @@ const tabBarSurfaceVariants = cva("relative flex overflow-hidden", {
 const tabBarTabVariants = cva("ui-text-chrome", {
   variants: {
     orientation: {
-      horizontal: "h-(--athas-tab-height) min-w-20 max-w-(--athas-tab-max-width) w-fit pl-2 pr-6",
-      vertical: "min-h-(--athas-tab-height) w-full max-w-none justify-start pl-2 pr-6",
+      horizontal: "h-tab min-w-20 max-w-tab-max w-fit pl-2 pr-6",
+      vertical: "min-h-tab w-full max-w-none justify-start pl-2 pr-6",
     },
   },
   defaultVariants: {
@@ -264,13 +313,15 @@ const tabBarTabVariants = cva("ui-text-chrome", {
 });
 
 export const TabBarTab = forwardRef<HTMLDivElement, TabBarTabProps>(function TabBarTab(
-  { className, orientation = "horizontal", ...props },
+  { className, orientation = "horizontal", appearance = "standard", ...props },
   ref,
 ) {
   return (
     <Tab
       ref={ref}
-      variant={orientation === "horizontal" ? "connected" : "default"}
+      variant={
+        appearance === "main" ? "main" : orientation === "horizontal" ? "connected" : "default"
+      }
       className={cn(tabBarTabVariants({ orientation }), className)}
       data-slot="tab-bar-tab"
       {...props}

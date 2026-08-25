@@ -122,6 +122,7 @@ export const TerminalSettings = () => {
           canReset={settings.terminalDefaultShellId !== getDefaultSetting("terminalDefaultShellId")}
         >
           <Select
+            shape="pill"
             value={selectedDefaultShellId}
             options={shellOptions}
             onChange={(value) =>
@@ -130,7 +131,6 @@ export const TerminalSettings = () => {
                 value === DEFAULT_SHELL_OPTION_VALUE ? "" : value,
               )
             }
-            className={SETTINGS_CONTROL_WIDTHS.xwide}
             size="md"
             variant="default"
             searchable
@@ -149,6 +149,7 @@ export const TerminalSettings = () => {
           }
         >
           <Select
+            shape="pill"
             value={selectedDefaultProfileId}
             options={profileOptions}
             onChange={(value) =>
@@ -157,7 +158,6 @@ export const TerminalSettings = () => {
                 value === SYSTEM_DEFAULT_PROFILE_ID ? "" : value,
               )
             }
-            className={SETTINGS_CONTROL_WIDTHS.xwide}
             size="md"
             variant="default"
             searchable
@@ -177,6 +177,7 @@ export const TerminalSettings = () => {
               terminal toolbar profile picker.
             </div>
             <Button
+              shape="pill"
               variant="default"
               onClick={() =>
                 profileActions.addProfile({
@@ -214,6 +215,7 @@ export const TerminalSettings = () => {
                     </div>
                   </div>
                   <Button
+                    shape="pill"
                     variant="danger"
                     onClick={() => profileActions.deleteProfile(profile.id)}
                     aria-label={`Delete ${profile.name}`}
@@ -241,6 +243,7 @@ export const TerminalSettings = () => {
                   <Field>
                     <FieldLabel htmlFor={`terminal-profile-shell-${profile.id}`}>Shell</FieldLabel>
                     <Select
+                      shape="pill"
                       id={`terminal-profile-shell-${profile.id}`}
                       value={profile.shell || DEFAULT_SHELL_OPTION_VALUE}
                       options={shellOptions}
@@ -316,10 +319,10 @@ export const TerminalSettings = () => {
         >
           <div className="flex items-center gap-2">
             <Select
+              shape="pill"
               value={settings.terminalFontFamily}
               options={fontOptions}
               onChange={(val) => updateSetting("terminalFontFamily", val)}
-              className={SETTINGS_CONTROL_WIDTHS.xwide}
               size="md"
               variant="default"
               searchable
@@ -477,6 +480,7 @@ export const TerminalSettings = () => {
           canReset={settings.terminalCursorStyle !== getDefaultSetting("terminalCursorStyle")}
         >
           <Select
+            shape="pill"
             value={settings.terminalCursorStyle}
             options={[
               { value: "block", label: "Block" },
@@ -486,7 +490,6 @@ export const TerminalSettings = () => {
             onChange={(val) =>
               updateSetting("terminalCursorStyle", val as "block" | "underline" | "bar")
             }
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
             searchable
@@ -542,6 +545,7 @@ export const TerminalSettings = () => {
           }
         >
           <Select
+            shape="pill"
             value={settings.terminalCursorInactiveStyle}
             options={[
               { value: "outline", label: "Outline" },
@@ -556,7 +560,6 @@ export const TerminalSettings = () => {
                 value as typeof settings.terminalCursorInactiveStyle,
               )
             }
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
           />

@@ -1,6 +1,11 @@
 import type { SessionConfigOption } from "@/features/ai/types/acp.types";
 
-export type SessionConfigOptionCategory = "model" | "mode" | "thought_level" | "other";
+export type SessionConfigOptionCategory =
+  | "model"
+  | "model_config"
+  | "mode"
+  | "thought_level"
+  | "other";
 
 function normalizeConfigText(option: SessionConfigOption): string {
   return [option.id, option.name, option.description ?? ""].join(" ").toLowerCase();
@@ -10,7 +15,12 @@ export function classifySessionConfigOption(
   option: SessionConfigOption,
 ): SessionConfigOptionCategory {
   const category = option.category;
-  if (category === "model" || category === "mode" || category === "thought_level") {
+  if (
+    category === "model" ||
+    category === "model_config" ||
+    category === "mode" ||
+    category === "thought_level"
+  ) {
     return category as SessionConfigOptionCategory;
   }
 

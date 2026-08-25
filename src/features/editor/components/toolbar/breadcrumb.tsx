@@ -10,6 +10,7 @@ import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
 import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-toolbar-action";
 import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button, type ButtonProps } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
@@ -197,8 +198,10 @@ export default function Breadcrumb({
     ) : null;
 
   return (
-    <>
-      <div className="flex min-h-7 select-none items-center justify-between bg-background px-3 py-1">
+    <PaneContentHeader
+      separated={false}
+      className="select-none bg-editor"
+      context={
         <div className="font-sans flex min-w-0 items-center gap-1 text-subtle-foreground ui-text-sm">
           {showPath && showBreadcrumbPath ? (
             <>
@@ -219,15 +222,17 @@ export default function Breadcrumb({
           ))}
           {extraLeftContent}
         </div>
-        <div className="flex items-center gap-1">
+      }
+      actions={
+        <>
           {defaultActions}
           {defaultActions && rightContent ? <div className="mx-1 h-3.5 w-px bg-border/70" /> : null}
           {rightContent}
           {extensionActions.right.map((action) => (
             <ExtensionToolbarAction key={action.id} action={action} />
           ))}
-        </div>
-      </div>
-    </>
+        </>
+      }
+    />
   );
 }

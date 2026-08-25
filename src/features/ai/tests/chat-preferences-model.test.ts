@@ -46,7 +46,7 @@ describe("AI chat preferences model", () => {
     expect(preferences.acpConfigOptions).toEqual([model, mode]);
   });
 
-  it("limits ACP preferences to supported non-empty selectors", () => {
+  it("keeps supported ACP preferences in the agent-provided order", () => {
     const supported = [
       option("agent-model", "model"),
       option("agent-mode", "mode"),
@@ -55,14 +55,20 @@ describe("AI chat preferences model", () => {
     ];
     const unsupported = option("theme", "theme");
     const empty = option("empty-model", "model");
-    empty.kind.options = [];
+    if (empty.kind.type === "select") empty.kind.options = [];
+    const enabled: SessionConfigOption = {
+      id: "brave-mode",
+      name: "Brave mode",
+      category: "mode",
+      kind: { type: "boolean", currentValue: true },
+    };
 
     const preferences = getChatPreferencesModel({
       currentAgentId: "codex",
       canChangeAgent: true,
-      sessionConfigOptions: [...supported, unsupported, empty],
+      sessionConfigOptions: [...supported, unsupported, empty, enabled],
     });
 
-    expect(preferences.acpConfigOptions).toEqual(supported.slice(0, 3));
+    expect(preferences.acpConfigOptions).toEqual([...supported, unsupported, enabled]);
   });
 });

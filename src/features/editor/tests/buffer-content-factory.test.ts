@@ -60,6 +60,42 @@ describe("createPaneContent extension surfaces", () => {
   });
 });
 
+describe("createPaneContent custom view surfaces", () => {
+  it("creates a project-scoped setup tab", () => {
+    const content = createPaneContent("new-view", {
+      type: "customView",
+      projectPath: "/projects/athas",
+    });
+
+    expect(content).toMatchObject({
+      type: "customView",
+      name: "New Custom View",
+      path: "view://create/%2Fprojects%2Fathas",
+      projectPath: "/projects/athas",
+      viewId: undefined,
+      isPreview: false,
+    });
+  });
+
+  it("creates a stable tab for a saved view", () => {
+    const content = createPaneContent("release-view", {
+      type: "customView",
+      projectPath: "/projects/athas",
+      viewId: "release-downloads",
+      name: "Release downloads",
+    });
+
+    expect(content).toMatchObject({
+      type: "customView",
+      name: "Release downloads",
+      path: "view://%2Fprojects%2Fathas/release-downloads",
+      projectPath: "/projects/athas",
+      viewId: "release-downloads",
+      isPreview: false,
+    });
+  });
+});
+
 describe("createPaneContent web viewer surfaces", () => {
   it("preserves explicit access when the general web viewer feature is disabled", () => {
     const content = createPaneContent("github-notification", {

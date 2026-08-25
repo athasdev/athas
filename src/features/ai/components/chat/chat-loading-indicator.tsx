@@ -26,7 +26,7 @@ export function ChatLoadingIndicator({
       <MarkerIcon className="size-5">
         <ThinkingOrb state={state} size={20} aria-hidden="true" />
       </MarkerIcon>
-      {showLabel ? <MarkerContent className="ui-text-shimmer">{label}</MarkerContent> : null}
+      {showLabel ? <MarkerContent className="text-shimmer">{label}</MarkerContent> : null}
     </Marker>
   );
 }

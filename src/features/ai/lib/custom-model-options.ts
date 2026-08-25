@@ -27,6 +27,6 @@ export function getCustomModelOptions({
   return modelIds.map((id) => ({
     id,
     name: id,
-    maxTokens: 4096,
+    maxOutputTokens: 4096,
   }));
 }

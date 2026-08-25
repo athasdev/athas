@@ -18,7 +18,7 @@ const settingsComponentFiles = [
     .map((name) => `${tabsDirectory}/${name}`),
 ];
 
-function collectButtonSizes(filePath: string) {
+function collectControlProps(filePath: string, tagName: "Button" | "Select") {
   const source = readFileSync(filePath, "utf8");
   const sourceFile = ts.createSourceFile(
     filePath,
@@ -27,23 +27,36 @@ function collectButtonSizes(filePath: string) {
     true,
     ts.ScriptKind.TSX,
   );
-  const sizes: Array<{ filePath: string; line: number; size: string | null }> = [];
+  const controls: Array<{
+    className: string | null;
+    filePath: string;
+    line: number;
+    shape: string | null;
+    size: string | null;
+    variant: string | null;
+  }> = [];
 
   const visit = (node: ts.Node) => {
     if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
       const openingElement = ts.isJsxElement(node) ? node.openingElement : node;
 
-      if (openingElement.tagName.getText(sourceFile) === "Button") {
-        const sizeAttribute = openingElement.attributes.properties.find(
-          (property): property is ts.JsxAttribute =>
-            ts.isJsxAttribute(property) && property.name.getText(sourceFile) === "size",
-        );
+      if (openingElement.tagName.getText(sourceFile) === tagName) {
+        const getAttribute = (name: string) =>
+          openingElement.attributes.properties.find(
+            (property): property is ts.JsxAttribute =>
+              ts.isJsxAttribute(property) && property.name.getText(sourceFile) === name,
+          );
         const position = sourceFile.getLineAndCharacterOfPosition(openingElement.getStart());
 
-        sizes.push({
+        controls.push({
+          className:
+            getAttribute("className")?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
           filePath,
           line: position.line + 1,
-          size: sizeAttribute?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
+          shape: getAttribute("shape")?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
+          size: getAttribute("size")?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
+          variant:
+            getAttribute("variant")?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
         });
       }
     }
@@ -52,7 +65,7 @@ function collectButtonSizes(filePath: string) {
   };
 
   visit(sourceFile);
-  return sizes;
+  return controls;
 }
 
 describe("settings UI contract", () => {
@@ -67,12 +80,41 @@ describe("settings UI contract", () => {
   });
 
   it("uses one standard size for text actions and explicit compact sizes for icon actions", () => {
-    const buttonSizes = settingsComponentFiles.flatMap(collectButtonSizes);
+    const buttonSizes = settingsComponentFiles.flatMap((filePath) =>
+      collectControlProps(filePath, "Button"),
+    );
     const invalidButtons = buttonSizes.filter(
-      ({ size }) => size !== "sm" && size !== "icon-sm" && size !== "icon-xs",
+      ({ filePath, size }) =>
+        size !== "sm" &&
+        size !== "icon-sm" &&
+        size !== "icon-xs" &&
+        !(filePath.endsWith("settings-vertical-tabs.tsx") && size === "md"),
     );
 
     expect(invalidButtons).toEqual([]);
+  });
+
+  it("uses pill-shaped Button surfaces for settings actions and selectors", () => {
+    const buttons = settingsComponentFiles.flatMap((filePath) =>
+      collectControlProps(filePath, "Button"),
+    );
+    const selects = settingsComponentFiles.flatMap((filePath) =>
+      collectControlProps(filePath, "Select"),
+    );
+
+    expect(buttons.filter(({ shape }) => shape !== "pill")).toEqual([]);
+    expect(
+      selects.filter(({ shape, variant }) => shape !== "pill" || variant !== "default"),
+    ).toEqual([]);
+  });
+
+  it("inherits shared control typography without tab-specific overrides", () => {
+    const controls = settingsComponentFiles.flatMap((filePath) => [
+      ...collectControlProps(filePath, "Button"),
+      ...collectControlProps(filePath, "Select"),
+    ]);
+
+    expect(controls.filter(({ className }) => className?.includes("ui-text-"))).toEqual([]);
   });
 
   it("keeps controls reachable without making the settings panel horizontally scrollable", () => {

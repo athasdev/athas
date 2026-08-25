@@ -59,6 +59,7 @@ import {
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
 import { CodexSettings } from "@/features/ai/integrations/codex/codex-settings";
+import { requestAgentNativeNotificationPermission } from "@/features/ai/services/agent-native-notifications";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
 
 function resolveAutocompleteDefaultModelId(models: Array<{ id: string; name: string }>): string {
@@ -78,6 +79,7 @@ export const AISettings = () => {
       aiCompletion: state.settings.aiCompletion,
       aiCustomBaseUrl: state.settings.aiCustomBaseUrl,
       aiCustomModelId: state.settings.aiCustomModelId,
+      aiAgentNotifications: state.settings.aiAgentNotifications,
       aiModelId: state.settings.aiModelId,
       aiProviderId: state.settings.aiProviderId,
       ollamaBaseUrl: state.settings.ollamaBaseUrl,
@@ -113,6 +115,7 @@ export const AISettings = () => {
   const [hasCustomChatApiKey, setHasCustomChatApiKey] = useState(false);
   const [isSavingCustomChatApiKey, setIsSavingCustomChatApiKey] = useState(false);
   const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
+  const [isUpdatingAgentNotifications, setIsUpdatingAgentNotifications] = useState(false);
 
   // Ollama URL state
   const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL);
@@ -430,6 +433,34 @@ export const AISettings = () => {
     updateSetting("aiAutocompleteCustomBaseUrl", customAutocompleteBaseUrlInput);
   };
 
+  const handleAgentNotificationsChange = async (checked: boolean) => {
+    if (!checked) {
+      await updateSetting("aiAgentNotifications", false);
+      return;
+    }
+
+    setIsUpdatingAgentNotifications(true);
+    try {
+      const permission = await requestAgentNativeNotificationPermission();
+      if (permission === "granted") {
+        await updateSetting("aiAgentNotifications", true);
+        showToast({ message: "Agent notifications enabled", type: "success" });
+        return;
+      }
+
+      await updateSetting("aiAgentNotifications", false);
+      showToast({
+        message:
+          permission === "denied"
+            ? "Native notification permission was not granted"
+            : "Native notifications are unavailable",
+        type: permission === "denied" ? "warning" : "error",
+      });
+    } finally {
+      setIsUpdatingAgentNotifications(false);
+    }
+  };
+
   const providersNeedingAuth = providers.filter((p) => p.requiresAuth && !p.requiresApiKey);
 
   const isOllamaSelected = settings.aiProviderId === "ollama";
@@ -441,10 +472,27 @@ export const AISettings = () => {
   return (
     <SettingsView>
       <CodexSettings />
-      <Section title="Athas Agent">
+      <Section title="Notifications">
+        <SettingRow
+          label="Agent Notifications"
+          description="Show native notifications when background agent work finishes, fails, or needs approval"
+          onReset={() =>
+            updateSetting("aiAgentNotifications", getDefaultSetting("aiAgentNotifications"))
+          }
+          canReset={settings.aiAgentNotifications !== getDefaultSetting("aiAgentNotifications")}
+        >
+          <Switch
+            checked={settings.aiAgentNotifications}
+            onChange={(checked) => void handleAgentNotificationsChange(checked)}
+            disabled={isUpdatingAgentNotifications}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
+      <Section title="AI Chat">
         <SettingRow
           label="Provider"
-          description="Choose the provider used by Athas Agent"
+          description="Choose the provider used by direct AI chat"
           onReset={() => {
             updateSetting("aiProviderId", getDefaultSetting("aiProviderId"));
             updateSetting("aiModelId", getDefaultSetting("aiModelId"));
@@ -465,7 +513,7 @@ export const AISettings = () => {
           description={
             isCustomProviderSelected
               ? "Model name sent to the custom endpoint"
-              : "Choose the model used by Athas Agent"
+              : "Choose the model used by direct AI chat"
           }
           onReset={() => {
             if (isCustomProviderSelected) {
@@ -501,6 +549,7 @@ export const AISettings = () => {
 
         <SettingRow label="API Keys" description="Manage provider API keys separately">
           <Button
+            shape="pill"
             type="button"
             variant="default"
             onClick={() => setIsApiKeyManagerOpen(true)}
@@ -522,6 +571,7 @@ export const AISettings = () => {
               description={action.getDescription?.() || "Configure provider extension"}
             >
               <Button
+                shape="pill"
                 type="button"
                 variant="default"
                 onClick={() => openCommandPaletteView(action.commandPaletteViewId)}
@@ -540,7 +590,7 @@ export const AISettings = () => {
         <Section title="Custom Provider">
           <SettingRow
             label="Base URL"
-            description="OpenAI-compatible endpoint base URL for Athas Agent"
+            description="OpenAI-compatible endpoint base URL for direct AI chat"
             onReset={() => {
               updateSetting("aiCustomBaseUrl", getDefaultSetting("aiCustomBaseUrl"));
               setCustomProviderBaseUrl(getDefaultSetting("aiCustomBaseUrl"));
@@ -584,6 +634,7 @@ export const AISettings = () => {
                 disabled={isSavingCustomChatApiKey}
               />
               <Button
+                shape="pill"
                 type="button"
                 variant="default"
                 onClick={handleSaveCustomChatApiKey}
@@ -594,6 +645,7 @@ export const AISettings = () => {
               </Button>
               {hasCustomChatApiKey && (
                 <Button
+                  shape="pill"
                   type="button"
                   variant="default"
                   onClick={handleRemoveCustomChatApiKey}
@@ -659,6 +711,7 @@ export const AISettings = () => {
               {ollamaStatus === "error" && <AlertCircle className="text-destructive" />}
               {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
                 <Button
+                  shape="pill"
                   type="button"
                   variant="default"
                   onClick={handleResetOllamaUrl}
@@ -691,6 +744,7 @@ export const AISettings = () => {
                 disabled={isSavingOllamaKey}
               />
               <Button
+                shape="pill"
                 type="button"
                 variant="default"
                 onClick={handleSaveOllamaApiKey}
@@ -701,6 +755,7 @@ export const AISettings = () => {
               </Button>
               {hasStoredOllamaKey && (
                 <Button
+                  shape="pill"
                   type="button"
                   variant="default"
                   onClick={handleRemoveOllamaApiKey}
@@ -778,6 +833,7 @@ export const AISettings = () => {
                 description={option.description || "Session option exposed by the active ACP agent"}
               >
                 <Select
+                  shape="pill"
                   value={option.kind.currentValue}
                   options={option.kind.options.map((value) => ({
                     value: value.id,
@@ -885,6 +941,7 @@ export const AISettings = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   <Button
+                    shape="pill"
                     variant="default"
                     onClick={loadAutocompleteModels}
                     disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
@@ -898,6 +955,7 @@ export const AISettings = () => {
                     )}
                   </Button>
                   <Select
+                    shape="pill"
                     value={hasAutocompleteModels ? settings.aiAutocompleteModelId : ""}
                     options={autocompleteModels.map((model) => ({
                       value: model.id,
@@ -908,7 +966,6 @@ export const AISettings = () => {
                     variant="default"
                     searchable
                     searchableTrigger="input"
-                    className={SETTINGS_CONTROL_WIDTHS.xwide}
                     disabled={
                       !aiCompletionAllowedByPolicy ||
                       isLoadingAutocompleteModels ||
@@ -975,6 +1032,7 @@ export const AISettings = () => {
                       disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
                     />
                     <Button
+                      shape="pill"
                       variant="default"
                       onClick={handleSaveCustomAutocompleteApiKey}
                       disabled={
@@ -988,6 +1046,7 @@ export const AISettings = () => {
                     </Button>
                     {hasCustomAutocompleteApiKey && (
                       <Button
+                        shape="pill"
                         variant="default"
                         onClick={handleRemoveCustomAutocompleteApiKey}
                         disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}

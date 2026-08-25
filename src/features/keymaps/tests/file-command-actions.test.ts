@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
 import type { useBufferStore as useBufferStoreHook } from "@/features/editor/stores/buffer.store";
+import type { useKeymapStore as useKeymapStoreHook } from "../stores/keymaps.store";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -60,15 +61,19 @@ function makeEditorTab(
 
 describe("file command actions", () => {
   let useBufferStore: typeof useBufferStoreHook;
+  let useKeymapStore: typeof useKeymapStoreHook;
   let closeAllTabs: () => void;
   let closeOtherTabs: () => void;
   let closeSavedTabs: () => void;
   let closeTabsToLeft: () => void;
   let closeTabsToRight: () => void;
+  let showNewTab: () => void;
 
   beforeEach(async () => {
-    vi.stubGlobal("localStorage", createMockStorage());
+    const testStorage = createMockStorage();
+    vi.stubGlobal("localStorage", testStorage);
     vi.stubGlobal("window", {
+      localStorage: testStorage,
       __TAURI_INTERNALS__: {
         invoke: vi.fn().mockResolvedValue([]),
         metadata: {
@@ -82,8 +87,15 @@ describe("file command actions", () => {
     });
 
     ({ useBufferStore } = await import("@/features/editor/stores/buffer.store"));
-    ({ closeAllTabs, closeOtherTabs, closeSavedTabs, closeTabsToLeft, closeTabsToRight } =
-      await import("../commands/file-command-actions"));
+    ({ useKeymapStore } = await import("../stores/keymaps.store"));
+    ({
+      closeAllTabs,
+      closeOtherTabs,
+      closeSavedTabs,
+      closeTabsToLeft,
+      closeTabsToRight,
+      showNewTab,
+    } = await import("../commands/file-command-actions"));
   });
 
   afterEach(() => {
@@ -93,8 +105,23 @@ describe("file command actions", () => {
       pendingClose: null,
       closedBuffersHistory: [],
     });
+    useKeymapStore?.setState((state) => ({
+      contexts: { ...state.contexts, terminalFocus: false },
+    }));
     vi.unstubAllGlobals();
     vi.clearAllMocks();
+  });
+
+  it("opens a terminal when the new-tab command is triggered with terminal focus", () => {
+    useKeymapStore.setState((state) => ({
+      contexts: { ...state.contexts, terminalFocus: true },
+    }));
+
+    showNewTab();
+
+    expect(window.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "terminal-new" }),
+    );
   });
 
   it("closes every unpinned tab except the active tab", () => {

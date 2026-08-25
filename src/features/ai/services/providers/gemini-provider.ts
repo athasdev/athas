@@ -28,6 +28,7 @@ export class GeminiProvider extends AIProvider {
         models?: Array<{
           name: string;
           displayName?: string;
+          inputTokenLimit?: number;
           outputTokenLimit?: number;
           supportedGenerationMethods?: string[];
         }>;
@@ -44,7 +45,8 @@ export class GeminiProvider extends AIProvider {
         .map((model) => ({
           id: model.name.replace(/^models\//, ""),
           name: model.displayName || model.name.replace(/^models\//, ""),
-          maxTokens: model.outputTokenLimit,
+          contextWindow: model.inputTokenLimit,
+          maxOutputTokens: model.outputTokenLimit,
         }));
     } catch (error) {
       console.error(`${this.id} model fetch error:`, error);

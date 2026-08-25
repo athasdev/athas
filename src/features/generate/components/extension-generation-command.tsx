@@ -4,6 +4,7 @@ import {
   CursorClickIcon as CursorClick,
   PackageIcon as Package,
   RowsPlusTopIcon as Sidebar,
+  ShieldWarningIcon as ShieldWarning,
   SparkleIcon as Sparkles,
   TerminalWindowIcon as Terminal,
 } from "@/ui/icons";
@@ -15,6 +16,7 @@ import {
   type UIExtensionGenerationResult,
 } from "@/extensions/ui/services/ui-extension-generation-service";
 import { installGeneratedUIExtension } from "@/extensions/ui/services/generated/generated-ui-extension-installer";
+import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
 import { useProFeature } from "@/features/window/hooks/use-pro-feature";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useGenerateStore } from "@/features/generate/stores/generate.store";
@@ -150,6 +152,17 @@ const GENERATING_MESSAGES = [
   "Building the preview",
 ];
 
+function getPermissionLabels(permissions: UIExtensionGenerationResult["permissions"]): string[] {
+  if (!permissions) return [];
+  return [
+    ...(permissions.network ?? []).map((origin) => `Connect to ${origin}`),
+    ...(permissions.secrets ? ["Store credentials securely"] : []),
+    ...(permissions.workspace === "read" ? ["Read current workspace context"] : []),
+    ...(permissions.openExternal ? ["Open external links"] : []),
+    ...(permissions.clipboardWrite ? ["Write text to the clipboard"] : []),
+  ];
+}
+
 function getOption(id: UIExtensionContributionType | null) {
   return CONTRIBUTION_OPTIONS.find((option) => option.id === id) ?? CONTRIBUTION_OPTIONS[0];
 }
@@ -182,7 +195,7 @@ export function ExtensionGenerationCommand() {
   const { closeExtensionGeneration } = useGenerateStore.use.actions();
   const setActiveView = useUIState((state) => state.setActiveView);
   const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
-  const { isAuthenticated, hasHostedAi } = useProFeature();
+  const { isAuthenticated, hasIntelligence } = useProFeature();
   const { signIn, isSigningIn } = useDesktopSignIn();
   const { showToast } = useToast();
   const [step, setStep] = useState<GenerationStep>("type");
@@ -200,6 +213,7 @@ export function ExtensionGenerationCommand() {
 
   const selectedOption = getOption(selectedType);
   const selectedIntent = getIntent(selectedType, selectedIntentId);
+  const permissionLabels = getPermissionLabels(result?.permissions);
   const intentOptions = selectedType ? INTENT_OPTIONS[selectedType] : [];
   const filteredTypeOptions = useMemo(
     () =>
@@ -225,7 +239,7 @@ export function ExtensionGenerationCommand() {
   const activeIntentOption =
     filteredIntentOptions[selectedIndex] ?? filteredIntentOptions[0] ?? null;
   const canGenerate = Boolean(selectedType && selectedIntent && details.trim());
-  const locked = !isAuthenticated || !hasHostedAi;
+  const locked = !isAuthenticated || !hasIntelligence;
 
   useEffect(() => {
     isVisibleRef.current = isVisible;
@@ -338,14 +352,14 @@ export function ExtensionGenerationCommand() {
     setStep("preview");
   };
 
-  const install = () => {
+  const install = async () => {
     if (!result || !selectedType) return;
 
     setIsInstalling(true);
     setError(null);
 
     try {
-      const installed = installGeneratedUIExtension({
+      const installed = await installGeneratedUIExtension({
         ...result,
         contributionType: selectedType,
       });
@@ -430,7 +444,7 @@ export function ExtensionGenerationCommand() {
               <div className="min-w-0 truncate font-sans ui-text-base text-foreground">
                 Generate Extension
               </div>
-              <CommandHeaderBadge>Hosted</CommandHeaderBadge>
+              <CommandHeaderBadge>Athas Intelligence</CommandHeaderBadge>
             </div>
           </CommandHeader>
           <CommandList>
@@ -442,7 +456,7 @@ export function ExtensionGenerationCommand() {
                   </CardTitle>
                   <CardDescription>
                     {isAuthenticated
-                      ? "Hosted extension generation is available with Athas Pro."
+                      ? "Extension generation with Athas Intelligence is included with Athas Pro."
                       : "Sign in with your Athas account to generate UI extensions."}
                   </CardDescription>
                 </CardHeader>
@@ -664,6 +678,32 @@ export function ExtensionGenerationCommand() {
                       ),
                     )}
                   </div>
+                  {permissionLabels.length > 0 ? (
+                    <Alert tone="warning" role="status">
+                      <ShieldWarning />
+                      <AlertTitle>Access requested</AlertTitle>
+                      <AlertDescription>
+                        <ul className="space-y-1">
+                          {permissionLabels.map((permission) => (
+                            <li key={permission}>{permission}</li>
+                          ))}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
+                  {result.preview?.view ? (
+                    <div
+                      inert
+                      aria-label="Generated extension surface preview"
+                      className="rounded-lg border border-border/70 bg-background/70 p-2"
+                    >
+                      <ExtensionViewRenderer
+                        node={result.preview.view}
+                        execute={() => undefined}
+                        surface="embedded"
+                      />
+                    </div>
+                  ) : null}
                 </>
               ) : null}
             </div>

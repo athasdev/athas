@@ -136,10 +136,11 @@ export function CustomThemeCreatorDialog({
       size="lg"
       footer={
         <>
-          <Button type="button" variant="ghost" onClick={onClose} size="sm">
+          <Button shape="pill" type="button" variant="ghost" onClick={onClose} size="sm">
             Cancel
           </Button>
           <Button
+            shape="pill"
             type="button"
             variant="default"
             size="sm"
@@ -149,6 +150,7 @@ export function CustomThemeCreatorDialog({
             {isSaving ? "Saving..." : "Save JSON"}
           </Button>
           <Button
+            shape="pill"
             type="button"
             variant="accent"
             size="sm"
@@ -197,6 +199,8 @@ export function CustomThemeCreatorDialog({
         <Field>
           <FieldLabel htmlFor="custom-theme-base">Base theme</FieldLabel>
           <Select
+            shape="pill"
+            variant="default"
             id="custom-theme-base"
             value={selectedBaseThemeId}
             options={themeOptions}

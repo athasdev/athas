@@ -30,23 +30,16 @@ const commandContentVariants = cva(
 );
 
 const commandItemVariants = cva(
-  "group/command-item font-sans flex w-full cursor-pointer items-center justify-start text-left transition-colors",
+  "group/command-item font-sans ui-text-sm mb-0.5 flex h-auto min-h-9 w-full items-center justify-start gap-2 rounded-chrome px-2.5 py-2 text-left leading-row transition-colors",
   {
     variants: {
       selected: {
         true: "bg-selected text-foreground",
         false: "bg-transparent text-foreground hover:bg-accent",
       },
-      density: {
-        default:
-          "ui-text-sm mb-0.5 min-h-7 gap-2 rounded-(--athas-chrome-radius) px-2 py-1.5 leading-row",
-        compact:
-          "ui-text-chrome min-h-6 gap-1.5 rounded-(--athas-chrome-radius) px-2 py-1 leading-normal",
-      },
     },
     defaultVariants: {
       selected: false,
-      density: "default",
     },
   },
 );
@@ -58,7 +51,7 @@ const commandInputClassName = cva(
 );
 
 const commandItemActionVariants = cva(
-  "shrink-0 transition-[opacity,background-color,color] duration-(--app-duration-fast)",
+  "shrink-0 transition-[opacity,background-color,color] duration-fast",
   {
     variants: {
       visibility: {
@@ -79,7 +72,7 @@ export const CommandHeaderAction = (props: CommandHeaderActionProps) => (
   <Button
     variant="ghost"
     size="sm"
-    className="ui-text-sm w-7 shrink-0 rounded-full px-0 text-subtle-foreground hover:text-foreground has-[span]:w-auto has-[span]:rounded-(--athas-chrome-radius) has-[span]:px-2.5 [&_svg]:size-4"
+    className="ui-text-sm w-7 shrink-0 rounded-full px-0 text-subtle-foreground hover:text-foreground has-[span]:w-auto has-[span]:rounded-chrome has-[span]:px-2.5 [&_svg]:size-4"
     {...props}
   />
 );
@@ -168,7 +161,7 @@ const Command = ({
                   />
                 }
                 className={cn(
-                  overlaySurface(),
+                  overlaySurface({ variant: "command" }),
                   commandContentVariants(),
                   "pointer-events-auto",
                   className,
@@ -272,11 +265,7 @@ export const CommandForm = ({
   onCancel,
 }: CommandFormProps) => (
   <div className="shrink-0 p-2 pb-0">
-    <form
-      data-command-form=""
-      className="rounded-(--athas-chrome-radius) bg-surface/55 p-2"
-      onSubmit={onSubmit}
-    >
+    <form data-command-form="" className="rounded-chrome bg-surface/55 p-2" onSubmit={onSubmit}>
       <div className="mb-2 flex min-w-0 items-center gap-2">
         {icon ? <CommandItemIcon variant="framed">{icon}</CommandItemIcon> : null}
         <span className="min-w-0 flex-1 truncate font-medium text-foreground ui-text-sm">
@@ -386,7 +375,6 @@ export interface CommandItemProps {
   className?: string;
   disabled?: boolean;
   type?: React.ComponentProps<"button">["type"];
-  density?: "default" | "compact";
 }
 
 export const CommandItem = ({
@@ -399,7 +387,6 @@ export const CommandItem = ({
   className,
   disabled = false,
   type,
-  density = "default",
   ...props
 }: CommandItemProps &
   Omit<
@@ -437,7 +424,7 @@ export const CommandItem = ({
         onMouseLeave={onMouseLeave}
         {...divProps}
         className={cn(
-          commandItemVariants({ selected: isSelected, density }),
+          commandItemVariants({ selected: isSelected }),
           disabled && "pointer-events-none opacity-50",
           className,
         )}
@@ -456,8 +443,7 @@ export const CommandItem = ({
       type={type ?? "button"}
       {...props}
       variant="ghost"
-      className={cn(commandItemVariants({ selected: isSelected, density }), className)}
-      size="xs"
+      className={cn(commandItemVariants({ selected: isSelected }), className)}
     >
       {children}
     </Button>

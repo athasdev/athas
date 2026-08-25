@@ -12,6 +12,7 @@ import {
 } from "@/features/settings/lib/settings-search";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
+import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import Dialog from "@/ui/dialog";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
@@ -138,6 +139,8 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   useEffect(() => {
     if (!isOpen) return;
 
+    let revealFrameId: number | undefined;
+
     const clearSearchHighlights = () => {
       const content = contentRef.current;
       if (!content) return;
@@ -178,12 +181,24 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       clearSearchHighlights();
       section?.setAttribute("data-settings-search-section-active", "true");
       target.setAttribute("data-settings-search-active", "true");
-      target.scrollIntoView({ block: "center", inline: "nearest" });
-      target.focus({ preventScroll: true });
+
+      const revealTarget = () => {
+        target.scrollIntoView({ block: "center", inline: "nearest" });
+        target.focus({ preventScroll: true });
+      };
+      const sectionTrigger = section?.querySelector<HTMLElement>("[data-settings-section-trigger]");
+
+      if (sectionTrigger?.getAttribute("aria-expanded") === "false") {
+        sectionTrigger.click();
+        revealFrameId = window.requestAnimationFrame(revealTarget);
+      } else {
+        revealTarget();
+      }
     });
 
     return () => {
       window.cancelAnimationFrame(frameId);
+      if (revealFrameId !== undefined) window.cancelAnimationFrame(revealFrameId);
     };
   }, [activeTab, isOpen, selectedResultId, visibleSearchResults]);
 
@@ -235,16 +250,19 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         title={
           <>
             <span className="max-[720px]:hidden">Settings</span>
-            <button
+            <Button
               ref={tabDropdownRef}
               type="button"
-              className="hidden h-7 max-w-48 min-w-0 items-center gap-1.5 rounded-md border border-border/70 bg-surface/50 px-2 text-left text-foreground transition-colors hover:bg-accent max-[720px]:inline-flex"
+              variant="default"
+              size="sm"
+              shape="pill"
+              className="hidden max-w-48 min-w-0 justify-start gap-1.5 text-left max-[720px]:inline-flex"
               onClick={() => setIsTabDropdownOpen(true)}
             >
               <ActiveTabIcon className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
               <span className="truncate">{activeTabItem.label}</span>
               <CaretDown className="size-3.5 shrink-0 text-subtle-foreground" />
-            </button>
+            </Button>
           </>
         }
         headerActions={
@@ -274,6 +292,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
               }}
               leftIcon={Search}
               size="md"
+              shape="pill"
               className="w-full"
             />
           </div>
@@ -299,7 +318,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
           <Card
             variant="elevated"
             size="flush"
-            className="@container/settings mt-0 mr-2 mb-2 ml-0 min-w-0 flex-1 bg-background max-[720px]:ml-2"
+            className="@container/settings mt-0 mr-2 mb-2 ml-0 min-w-0 flex-1 max-[720px]:ml-2"
           >
             <ScrollArea
               orientation="vertical"
@@ -353,7 +372,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
                   ].join(" ")}
                 >
                   <span className="ui-text-base w-full truncate font-medium">{result.label}</span>
-                  <span className="ui-text-base w-full truncate text-subtle-foreground">
+                  <span className="ui-text-sm w-full truncate text-subtle-foreground">
                     {SETTINGS_SEARCH_TAB_LABELS[result.tab]} / {result.section}
                   </span>
                 </button>

@@ -70,7 +70,7 @@ function TitleBarTrailingActions({ items }: { items: Array<ChromeItem<HeaderTrai
       <AppUpdateControl />
       {items.map((item) =>
         item.content ? (
-          <div key={item.id} className="flex min-h-(--athas-chrome-control-height) items-center">
+          <div key={item.id} className="flex min-h-chrome-control items-center">
             {item.content}
           </div>
         ) : null,
@@ -342,7 +342,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
         <ContextMenuTrigger
           onContextMenu={handleTitleBarContextMenu}
           className={cn(
-            "athas-title-bar font-sans ui-text-chrome relative z-50 flex h-(--athas-title-bar-height) items-center justify-between gap-(--athas-chrome-gap) bg-transparent pr-(--athas-chrome-padding-inline) text-subtle-foreground",
+            "athas-title-bar font-sans ui-text-chrome relative z-50 flex h-title-bar items-center justify-between gap-chrome bg-transparent pr-chrome-inline text-subtle-foreground",
             isFullscreen ? "pl-2" : "pl-23.5",
           )}
           data-tauri-drag-region
@@ -368,7 +368,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
         onContextMenu={handleTitleBarContextMenu}
-        className="athas-title-bar font-sans ui-text-chrome relative z-50 flex h-(--athas-title-bar-height) items-center justify-between gap-(--athas-chrome-gap) bg-transparent px-(--athas-chrome-padding-inline) text-subtle-foreground"
+        className="athas-title-bar font-sans ui-text-chrome relative z-50 flex h-title-bar items-center justify-between gap-chrome bg-transparent px-chrome-inline text-subtle-foreground"
       >
         <ChromeGroup data-tauri-drag-region grow>
           <ChromeGroup className="pointer-events-auto">

@@ -130,7 +130,12 @@ export function registerAIProviderExtension(contribution: AIProviderRuntimeContr
 
   const maxTokens =
     contribution.provider.maxTokens ??
-    Math.max(4096, ...contribution.provider.models.map((model) => model.maxTokens));
+    Math.max(
+      4096,
+      ...contribution.provider.models.map(
+        (model) => model.maxOutputTokens ?? model.maxTokens ?? 4096,
+      ),
+    );
   const config: ProviderConfig = {
     id: contribution.provider.id,
     name: contribution.provider.name,

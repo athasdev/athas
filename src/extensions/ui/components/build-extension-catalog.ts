@@ -13,7 +13,6 @@ import {
 import { isMarketplaceSkillInstalled } from "@/features/ai/lib/skill-library";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
-import { getCatalogIconUrl, resolveManifestIcon } from "./extension-catalog-icon";
 import type { UnifiedExtension } from "./extension-catalog-types";
 import { isBuiltInDatabaseProvider, resolvePackageSize } from "./extension-catalog-utils";
 
@@ -47,23 +46,18 @@ export function buildExtensionCatalog({
         category: "agent",
         isInstalled: agent?.installed ?? false,
         isEnabled: agent?.installed ?? false,
-        version: ext.manifest.version,
+        version: agent?.availableVersion ?? ext.manifest.version,
         extensions: [agent?.binaryName ?? contribution.binaryName],
         publisher: ext.manifest.publisher,
         isMarketplace: true,
         isBundled: false,
         runtimeIssues: ext.runtimeIssues,
         agentId: contribution.id,
-        icon: resolveManifestIcon(
-          agent?.icon ?? contribution.icon ?? ext.manifest.icon,
-          contribution.id,
-          agent?.id,
-          agent?.name,
-          contribution.name,
-          contribution.binaryName,
-          ext.manifest.displayName,
-        ),
+        icon: agent?.icon ?? ext.manifest.icon,
         canInstall: agent?.canInstall ?? Boolean(contribution.install),
+        hasUpdate: agent?.updateAvailable ?? false,
+        installedVersion: agent?.installedVersion,
+        availableVersion: agent?.availableVersion,
         contributionSummary: [
           `agent:${contribution.id}`,
           agent?.binaryName ?? contribution.binaryName,
@@ -86,14 +80,7 @@ export function buildExtensionCatalog({
         publisher: ext.manifest.publisher,
         isMarketplace: !isBundled,
         isBundled,
-        icon: resolveManifestIcon(
-          ext.manifest.icon,
-          lang.id,
-          lang.aliases?.[0],
-          lang.extensions[0],
-          ext.manifest.displayName,
-          ext.manifest.name,
-        ),
+        icon: ext.manifest.icon,
         runtimeIssues: ext.runtimeIssues,
         packageSize: resolvePackageSize(ext.manifest),
         contributionSummary: [
@@ -121,12 +108,7 @@ export function buildExtensionCatalog({
         publisher: ext.manifest.publisher,
         isMarketplace: !isBuiltInDatabase,
         isBundled: isBuiltInDatabase,
-        icon: resolveManifestIcon(
-          ext.manifest.icon,
-          provider.id,
-          provider.label,
-          ext.manifest.displayName,
-        ),
+        icon: ext.manifest.icon,
         runtimeIssues: ext.runtimeIssues,
         packageSize: resolvePackageSize(ext.manifest),
         contributionSummary: [`database:${provider.id}`],
@@ -150,14 +132,7 @@ export function buildExtensionCatalog({
         publisher: ext.manifest.publisher,
         isMarketplace: true,
         isBundled: false,
-        icon: resolveManifestIcon(
-          ext.manifest.icon,
-          activeThemeId,
-          themeContributions[0]?.id,
-          themeContributions[0]?.name,
-          ext.manifest.displayName,
-          "theme",
-        ),
+        icon: ext.manifest.icon,
         runtimeIssues: ext.runtimeIssues,
         packageSize: resolvePackageSize(ext.manifest),
         selectionId: extensionThemeId,
@@ -187,13 +162,7 @@ export function buildExtensionCatalog({
         publisher: ext.manifest.publisher,
         isMarketplace: true,
         isBundled: false,
-        icon: resolveManifestIcon(
-          ext.manifest.icon,
-          iconContributions[0]?.id,
-          iconContributions[0]?.name,
-          ext.manifest.displayName,
-          "icon-theme",
-        ),
+        icon: ext.manifest.icon,
         runtimeIssues: ext.runtimeIssues,
         packageSize: resolvePackageSize(ext.manifest),
         selectionId: extensionIconThemeId,
@@ -219,12 +188,7 @@ export function buildExtensionCatalog({
         publisher: ext.manifest.publisher,
         isMarketplace: true,
         isBundled: false,
-        icon: resolveManifestIcon(
-          ext.manifest.icon,
-          aiProviderContributions[0]?.id,
-          aiProviderContributions[0]?.name,
-          ext.manifest.displayName,
-        ),
+        icon: ext.manifest.icon,
         runtimeIssues: ext.runtimeIssues,
         packageSize: resolvePackageSize(ext.manifest),
         contributionSummary: aiProviderContributions.map((provider) => `provider:${provider.id}`),
@@ -233,7 +197,6 @@ export function buildExtensionCatalog({
 
     const integrationContributions = getManifestIntegrationContributions(ext.manifest);
     if (integrationContributions.length > 0) {
-      const integration = integrationContributions[0];
       allExtensions.push({
         id: ext.manifest.id,
         name: ext.manifest.displayName,
@@ -245,12 +208,7 @@ export function buildExtensionCatalog({
         publisher: ext.manifest.publisher,
         isMarketplace: true,
         isBundled: false,
-        icon: resolveManifestIcon(
-          ext.manifest.icon,
-          integration.icon,
-          integration.id,
-          integration.name,
-        ),
+        icon: ext.manifest.icon,
         runtimeIssues: ext.runtimeIssues,
         packageSize: resolvePackageSize(ext.manifest),
         contributionSummary: integrationContributions.map((item) => `integration:${item.id}`),
@@ -272,7 +230,6 @@ export function buildExtensionCatalog({
       isEnabled: true,
       isActive: selectedThemeId === theme.id,
       version: "1.0.0",
-      icon: getCatalogIconUrl(theme.id, theme.name, "theme"),
       selectionId: theme.id,
       appearanceOptions: [
         {
@@ -319,13 +276,7 @@ export function buildExtensionCatalog({
       publisher: manifest.publisher,
       isMarketplace: false,
       isBundled: true,
-      icon: resolveManifestIcon(
-        manifest.icon,
-        iconContributions[0]?.id,
-        iconContributions[0]?.name,
-        manifest.displayName,
-        "icon-theme",
-      ),
+      icon: manifest.icon,
       selectionId: extensionIconThemeId,
       appearanceOptions: iconContributions.map((theme) => ({
         id: theme.id,
@@ -354,7 +305,6 @@ export function buildExtensionCatalog({
       isEnabled: true,
       isActive: selectedIconThemeId === iconTheme.id,
       version: "1.0.0",
-      icon: getCatalogIconUrl(iconTheme.id, iconTheme.name, "icon-theme"),
       selectionId: iconTheme.id,
       appearanceOptions: [
         {
@@ -387,7 +337,6 @@ export function buildExtensionCatalog({
       license: skill.license,
       sourceUrl: skill.sourceUrl,
       isMarketplace: skill.source === "marketplace",
-      icon: getCatalogIconUrl(skill.title, skill.author, "codex"),
       skill,
       marketplaceSkill,
       contributionSummary: ["skill"],
@@ -411,7 +360,6 @@ export function buildExtensionCatalog({
       license: skill.license,
       sourceUrl: skill.sourceUrl,
       isMarketplace: true,
-      icon: getCatalogIconUrl(skill.title, skill.author, "codex"),
       marketplaceSkill: skill,
       contributionSummary: ["skill"],
     });
@@ -438,8 +386,12 @@ export function buildExtensionCatalog({
       publisher: "Marketplace",
       isMarketplace: true,
       agentId: agent.id,
-      icon: resolveManifestIcon(agent.icon ?? undefined, agent.id, agent.name, agent.binaryName),
+      icon: agent.icon ?? undefined,
       canInstall: agent.canInstall,
+      version: agent.availableVersion ?? undefined,
+      hasUpdate: agent.updateAvailable,
+      installedVersion: agent.installedVersion,
+      availableVersion: agent.availableVersion,
       contributionSummary: [`agent:${agent.id}`, agent.binaryName],
     });
   }

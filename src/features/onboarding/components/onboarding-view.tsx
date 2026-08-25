@@ -139,7 +139,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
         };
 
   return (
-    <ScrollArea className="h-full w-full bg-background">
+    <ScrollArea className="size-full bg-background">
       <div className="mx-auto flex w-full max-w-205 flex-col px-8 py-10">
         <div className={viewModel.showSettings ? "mb-7" : "mb-6"}>
           <h1 className="font-sans ui-text-base font-semibold text-foreground">

@@ -37,6 +37,7 @@ import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordStartupMilestone } from "@/features/bootstrap/startup-performance";
 import { useVimStore } from "@/features/vim/stores/vim.store";
+import { AnchoredTooltip } from "@/ui/tooltip";
 import { formatRelativeTime } from "@/utils/date";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
@@ -439,6 +440,7 @@ export function MonacoEditor({
     x: number;
     y: number;
   } | null>(null);
+  const [copyTooltipAnchor, setCopyTooltipAnchor] = useState<HTMLElement | null>(null);
 
   const executeEditorCommand = useCallback((commandId: string) => {
     void keymapRegistry.executeCommand(commandId);
@@ -669,6 +671,7 @@ export function MonacoEditor({
     };
     const hoverMutationObserver = new MutationObserver((mutations) => {
       if (mutationsContainMonacoHoverWidget(mutations)) scheduleMonacoHoverClamp();
+      setCopyTooltipAnchor((current) => (current && !container.contains(current) ? null : current));
     });
     hoverMutationObserver.observe(container, {
       childList: true,
@@ -677,6 +680,38 @@ export function MonacoEditor({
     const hoverResizeObserver = new ResizeObserver(scheduleMonacoHoverClamp);
     hoverResizeObserver.observe(container);
     scheduleMonacoHoverClamp();
+
+    let copyTooltipTimer: number | null = null;
+    const clearCopyTooltipTimer = () => {
+      if (copyTooltipTimer === null) return;
+      window.clearTimeout(copyTooltipTimer);
+      copyTooltipTimer = null;
+    };
+    const getCopyButton = (target: EventTarget | null) =>
+      target instanceof Element ? target.closest<HTMLElement>(".hover-copy-button") : null;
+    const showCopyTooltip = (event: Event) => {
+      const copyButton = getCopyButton(event.target);
+      if (!copyButton || !container.contains(copyButton)) return;
+      if (event.type === "mouseover") event.stopPropagation();
+      clearCopyTooltipTimer();
+      copyTooltipTimer = window.setTimeout(() => {
+        copyTooltipTimer = null;
+        if (!container.contains(copyButton)) return;
+        setCopyTooltipAnchor(copyButton);
+      }, 150);
+    };
+    const hideCopyTooltip = (event: Event) => {
+      const copyButton = getCopyButton(event.target);
+      if (!copyButton) return;
+      const relatedTarget = event instanceof MouseEvent ? event.relatedTarget : null;
+      if (relatedTarget instanceof Node && copyButton.contains(relatedTarget)) return;
+      clearCopyTooltipTimer();
+      setCopyTooltipAnchor((current) => (current === copyButton ? null : current));
+    };
+    container.addEventListener("mouseover", showCopyTooltip, true);
+    container.addEventListener("mouseout", hideCopyTooltip, true);
+    container.addEventListener("focusin", showCopyTooltip, true);
+    container.addEventListener("focusout", hideCopyTooltip, true);
 
     let bottomScrollPadding = getEditorBottomScrollPadding(container.clientHeight);
     const syncBottomScrollPadding = (viewportHeight: number) => {
@@ -853,6 +888,12 @@ export function MonacoEditor({
       }
       hoverMutationObserver.disconnect();
       hoverResizeObserver.disconnect();
+      clearCopyTooltipTimer();
+      setCopyTooltipAnchor(null);
+      container.removeEventListener("mouseover", showCopyTooltip, true);
+      container.removeEventListener("mouseout", hideCopyTooltip, true);
+      container.removeEventListener("focusin", showCopyTooltip, true);
+      container.removeEventListener("focusout", hideCopyTooltip, true);
       if (hoverClampRaf !== null) {
         cancelAnimationFrame(hoverClampRaf);
       }
@@ -1432,7 +1473,7 @@ export function MonacoEditor({
   return (
     <>
       <div
-        className={`monaco-editor-shell absolute inset-0 min-h-0 bg-background ${className ?? ""}`}
+        className={`monaco-editor-shell absolute inset-0 min-h-0 bg-editor ${className ?? ""}`}
         style={shellStyle}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
@@ -1462,6 +1503,7 @@ export function MonacoEditor({
         />
         <InlineEditPopover state={inlineEditState} selection={selection} />
       </div>
+      <AnchoredTooltip anchor={copyTooltipAnchor} content="Copy" />
       {contextMenuPosition &&
         createPortal(
           <EditorContextMenu

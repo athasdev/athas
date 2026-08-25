@@ -74,7 +74,6 @@ export const EditorSettings = () => {
           <FontSelector
             value={settings.fontFamily}
             onChange={(fontFamily) => updateSetting("fontFamily", fontFamily)}
-            className={SETTINGS_CONTROL_WIDTHS.text}
             monospaceOnly={true}
           />
         </SettingRow>
@@ -190,12 +189,12 @@ export const EditorSettings = () => {
           canReset={settings.renderWhitespace !== getDefaultSetting("renderWhitespace")}
         >
           <Select
+            shape="pill"
             value={settings.renderWhitespace}
             options={renderWhitespaceOptions}
             onChange={(value) =>
               updateSetting("renderWhitespace", value as typeof settings.renderWhitespace)
             }
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
           />
@@ -338,6 +337,7 @@ export const EditorSettings = () => {
           canReset={settings.editorCursorStyle !== getDefaultSetting("editorCursorStyle")}
         >
           <Select
+            shape="pill"
             value={settings.editorCursorStyle}
             options={[
               { value: "line", label: "Line" },
@@ -350,7 +350,6 @@ export const EditorSettings = () => {
             onChange={(value) =>
               updateSetting("editorCursorStyle", value as typeof settings.editorCursorStyle)
             }
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
           />
@@ -365,6 +364,7 @@ export const EditorSettings = () => {
           canReset={settings.editorCursorBlinking !== getDefaultSetting("editorCursorBlinking")}
         >
           <Select
+            shape="pill"
             value={settings.editorCursorBlinking}
             options={[
               { value: "blink", label: "Blink" },
@@ -376,7 +376,6 @@ export const EditorSettings = () => {
             onChange={(value) =>
               updateSetting("editorCursorBlinking", value as typeof settings.editorCursorBlinking)
             }
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
           />
@@ -431,10 +430,10 @@ export const EditorSettings = () => {
           canReset={settings.defaultLanguage !== getDefaultSetting("defaultLanguage")}
         >
           <Select
+            shape="pill"
             value={settings.defaultLanguage}
             options={languageOptions}
             onChange={(value) => updateSetting("defaultLanguage", value)}
-            className={SETTINGS_CONTROL_WIDTHS.default}
             size="md"
             variant="default"
             searchable

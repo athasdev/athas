@@ -112,35 +112,39 @@ const TabContextMenu = ({
           menuSeparator("sep-lock"),
         ]
       : []),
-    {
-      id: "copy-path",
-      label: "Copy Path",
-      icon: <Copy />,
-      onClick: async () => {
-        if (onCopyPath) {
-          onCopyPath(buffer.path);
-          return;
-        }
+    ...(buffer.type !== "newTab"
+      ? [
+          {
+            id: "copy-path",
+            label: "Copy Path",
+            icon: <Copy />,
+            onClick: async () => {
+              if (onCopyPath) {
+                onCopyPath(buffer.path);
+                return;
+              }
 
-        try {
-          await writeClipboardText(buffer.path);
-        } catch (error) {
-          console.error("Failed to copy path:", error);
-        }
-      },
-    },
-    {
-      id: "copy-relative-path",
-      label: "Copy Relative Path",
-      icon: <Copy />,
-      onClick: () => onCopyRelativePath?.(buffer.path),
-    },
-    {
-      id: "reveal",
-      label: "Reveal in Finder",
-      icon: <FolderOpen />,
-      onClick: () => onRevealInFinder?.(buffer.path),
-    },
+              try {
+                await writeClipboardText(buffer.path);
+              } catch (error) {
+                console.error("Failed to copy path:", error);
+              }
+            },
+          },
+          {
+            id: "copy-relative-path",
+            label: "Copy Relative Path",
+            icon: <Copy />,
+            onClick: () => onCopyRelativePath?.(buffer.path),
+          },
+          {
+            id: "reveal",
+            label: "Reveal in Finder",
+            icon: <FolderOpen />,
+            onClick: () => onRevealInFinder?.(buffer.path),
+          },
+        ]
+      : []),
     ...(!isVirtualContent(buffer) && !buffer.path.includes("://")
       ? [
           {
@@ -159,7 +163,7 @@ const TabContextMenu = ({
           },
         ]
       : []),
-    ...(buffer.type !== "extension"
+    ...(buffer.type !== "extension" && buffer.type !== "newTab"
       ? [
           {
             id: "reload",

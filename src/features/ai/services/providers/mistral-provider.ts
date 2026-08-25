@@ -31,7 +31,7 @@ export class MistralProvider extends AIProvider {
         .map((model) => ({
           id: model.id,
           name: model.name || formatMistralModelName(model.id),
-          maxTokens: model.max_context_length,
+          contextWindow: model.max_context_length,
         }));
     } catch (error) {
       console.error(`${this.id} model fetch error:`, error);

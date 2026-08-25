@@ -26,8 +26,16 @@ export function resolveModelOptions({
     mergedModels.set(model.id, {
       id: model.id,
       name: model.name,
-      proOnly: existingModel?.proOnly,
-      maxTokens: model.maxTokens ?? existingModel?.maxTokens ?? 4096,
+      ...(existingModel?.proOnly === undefined ? {} : { proOnly: existingModel.proOnly }),
+      ...((model.contextWindow ?? existingModel?.contextWindow) === undefined
+        ? {}
+        : { contextWindow: model.contextWindow ?? existingModel?.contextWindow }),
+      maxOutputTokens:
+        model.maxOutputTokens ??
+        model.maxTokens ??
+        existingModel?.maxOutputTokens ??
+        existingModel?.maxTokens ??
+        4096,
     });
   }
 

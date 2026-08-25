@@ -14,10 +14,12 @@ import {
   MagnifyingGlassPlusIcon as ZoomIn,
 } from "@/ui/icons";
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/ui/input-group";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
+import { cn } from "@/utils/cn";
 
 interface WebViewerToolbarProps {
   canOpenDevTools: boolean;
@@ -141,133 +143,139 @@ export function WebViewerToolbar({
   };
 
   return (
-    <div className="flex h-8 shrink-0 items-center gap-0.5 border-border border-b bg-background px-2">
-      <form onSubmit={onUrlSubmit} className="flex flex-1 items-center">
-        <InputGroup
-          className={`h-6 flex-1 bg-background ${
-            hasUrlError ? "border-destructive/60 bg-destructive/5" : "border-border"
-          }`}
-          aria-invalid={hasUrlError || undefined}
-        >
-          <InputGroupAddon
-            className={`pl-2 ${showFavicon ? "" : securityToneClass}`}
-            title={securityTooltip}
-          >
-            {showFavicon ? (
-              <img
-                src={favicon ?? undefined}
-                alt=""
-                className="size-4 rounded-sm object-contain"
-                onError={() => setFaviconFailed(true)}
-              />
-            ) : (
-              <SecurityIcon className="size-4" />
+    <PaneContentHeader
+      context={
+        <form onSubmit={onUrlSubmit} className="flex min-w-0 flex-1 items-center">
+          <InputGroup
+            className={cn(
+              "h-6 flex-1 bg-background",
+              hasUrlError ? "border-destructive/60 bg-destructive/5" : "border-border",
             )}
-          </InputGroupAddon>
-          <InputGroupInput
-            ref={urlInputRef}
-            type="text"
-            value={inputUrl}
-            onChange={(e) => onInputUrlChange(e.target.value)}
-            onKeyDown={handleUrlInputKeyDown}
-            placeholder="Enter URL..."
-            size="xs"
-            className="h-full"
+            aria-invalid={hasUrlError || undefined}
+          >
+            <InputGroupAddon
+              className={`pl-2 ${showFavicon ? "" : securityToneClass}`}
+              title={securityTooltip}
+            >
+              {showFavicon ? (
+                <img
+                  src={favicon ?? undefined}
+                  alt=""
+                  className="size-4 rounded-sm object-contain"
+                  onError={() => setFaviconFailed(true)}
+                />
+              ) : (
+                <SecurityIcon className="size-4" />
+              )}
+            </InputGroupAddon>
+            <InputGroupInput
+              ref={urlInputRef}
+              type="text"
+              value={inputUrl}
+              onChange={(e) => onInputUrlChange(e.target.value)}
+              onKeyDown={handleUrlInputKeyDown}
+              placeholder="Enter URL..."
+              size="xs"
+              className="h-full"
+            />
+            <InputGroupAddon align="inline-end" className="gap-0.5 pr-1">
+              <InputGroupButton
+                type="button"
+                variant="ghost"
+                onClick={isLoading ? onStopLoading : onRefresh}
+                tooltip={isLoading ? "Stop loading" : "Refresh"}
+                size="icon-xs"
+              >
+                {isLoading ? <X className="size-3.5" /> : <RefreshCw className="size-3.5" />}
+              </InputGroupButton>
+              <InputGroupButton
+                type="button"
+                variant="ghost"
+                onClick={onCopyUrl}
+                disabled={!canCopyUrl}
+                tooltip="Copy URL"
+                size="icon-xs"
+              >
+                {copied ? (
+                  <Check className="size-3.5 text-success" />
+                ) : (
+                  <Copy className="size-3.5" />
+                )}
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+        </form>
+      }
+      actions={
+        <>
+          <Button
+            ref={zoomButtonRef}
+            variant="ghost"
+            onClick={() => setShowZoomPopover((open) => !open)}
+            tooltip="Zoom controls"
+            size="icon-xs"
+          >
+            <ZoomIn />
+          </Button>
+          <Dropdown
+            isOpen={showZoomPopover}
+            anchorRef={zoomButtonRef}
+            anchorSide="bottom"
+            anchorAlign="end"
+            onClose={() => setShowZoomPopover(false)}
+            className="w-36"
+            items={[
+              {
+                id: "zoom-in",
+                label: "Zoom in",
+                icon: <Plus />,
+                disabled: zoomLevel >= 3,
+                onClick: onZoomIn,
+              },
+              {
+                id: "zoom-out",
+                label: "Zoom out",
+                icon: <Minus />,
+                disabled: zoomLevel <= 0.25,
+                onClick: onZoomOut,
+              },
+              {
+                id: "reset-zoom",
+                label: "Reset zoom",
+                trailing: { type: "text", label: `${Math.round(zoomLevel * 100)}%` },
+                onClick: onResetZoom,
+              },
+            ]}
           />
-          <InputGroupAddon align="inline-end" className="gap-0.5 pr-1">
-            <InputGroupButton
-              type="button"
-              variant="ghost"
-              onClick={isLoading ? onStopLoading : onRefresh}
-              tooltip={isLoading ? "Stop loading" : "Refresh"}
-              size="icon-xs"
-            >
-              {isLoading ? <X className="size-3.5" /> : <RefreshCw className="size-3.5" />}
-            </InputGroupButton>
-            <InputGroupButton
-              type="button"
-              variant="ghost"
-              onClick={onCopyUrl}
-              disabled={!canCopyUrl}
-              tooltip="Copy URL"
-              size="icon-xs"
-            >
-              {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
-            </InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
-      </form>
-
-      <div className="mx-1.5 h-4 w-px bg-border" />
-
-      <div className="flex items-center gap-0.5">
-        <Button
-          ref={zoomButtonRef}
-          variant="ghost"
-          onClick={() => setShowZoomPopover((open) => !open)}
-          tooltip="Zoom controls"
-          size="icon-xs"
-        >
-          <ZoomIn />
-        </Button>
-        <Dropdown
-          isOpen={showZoomPopover}
-          anchorRef={zoomButtonRef}
-          anchorSide="bottom"
-          anchorAlign="end"
-          onClose={() => setShowZoomPopover(false)}
-          className="w-36"
-          items={[
-            {
-              id: "zoom-in",
-              label: "Zoom in",
-              icon: <Plus />,
-              disabled: zoomLevel >= 3,
-              onClick: onZoomIn,
-            },
-            {
-              id: "zoom-out",
-              label: "Zoom out",
-              icon: <Minus />,
-              disabled: zoomLevel <= 0.25,
-              onClick: onZoomOut,
-            },
-            {
-              id: "reset-zoom",
-              label: "Reset zoom",
-              trailing: { type: "text", label: `${Math.round(zoomLevel * 100)}%` },
-              onClick: onResetZoom,
-            },
-          ]}
-        />
-        <Button
-          variant="ghost"
-          onClick={onClearBrowsingData}
-          disabled={!canClearBrowsingData}
-          tooltip="Clear browsing data"
-          size="icon-xs"
-        >
-          <Broom />
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={onOpenDevTools}
-          disabled={!canOpenDevTools}
-          tooltip={devToolsTooltip}
-          size="icon-xs"
-        >
-          <Code2 />
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={onOpenExternal}
-          disabled={!canOpenExternal}
-          tooltip="Open in browser"
-          size="icon-xs"
-        >
-          <ExternalLink />
-        </Button>
-      </div>
-    </div>
+          <Button
+            variant="ghost"
+            onClick={onClearBrowsingData}
+            disabled={!canClearBrowsingData}
+            tooltip="Clear browsing data"
+            size="icon-xs"
+          >
+            <Broom />
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={onOpenDevTools}
+            disabled={!canOpenDevTools}
+            tooltip={devToolsTooltip}
+            size="icon-xs"
+          >
+            <Code2 />
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={onOpenExternal}
+            disabled={!canOpenExternal}
+            tooltip="Open in browser"
+            size="icon-xs"
+          >
+            <ExternalLink />
+          </Button>
+        </>
+      }
+    />
   );
 }

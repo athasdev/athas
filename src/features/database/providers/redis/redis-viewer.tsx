@@ -7,6 +7,8 @@ import {
   TrashIcon as Trash2,
 } from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
+import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -16,10 +18,7 @@ import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import {
-  databaseCardClassName,
-  databaseChipClassName,
   databaseCodeBlockClassName,
-  databaseHeaderClassName,
   databasePanelClassName,
 } from "../../components/database-surface";
 import { createRedisStore } from "./stores/redis.store";
@@ -86,14 +85,17 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
   }, [actions, store.hasMore, store.isScanningKeys, store.keys.length]);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-surface/30 text-foreground">
-      <div className={databaseHeaderClassName()}>
-        <div className="flex items-center gap-2">
-          <div className={databaseChipClassName()}>
-            <Server className="text-subtle-foreground" />
-            <span className="font-sans ui-text-sm">{store.fileName}</span>
-          </div>
-          <div className="ml-auto flex items-center gap-1">
+    <div className="flex h-full flex-col overflow-hidden bg-background text-foreground">
+      <PaneContentHeader
+        context={
+          <PathBreadcrumb
+            segments={[store.fileName]}
+            icons={[<Server key="server" />]}
+            ariaLabel="Redis connection"
+          />
+        }
+        actions={
+          <>
             <Button
               onClick={() => setShowInfo(!showInfo)}
               variant="ghost"
@@ -112,32 +114,36 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             >
               {store.isScanningKeys ? <Spinner label="Refreshing keys" compact /> : <RefreshCw />}
             </Button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      <div className="flex min-h-0 flex-1 gap-2 p-2 pt-1.5">
-        <div className={databasePanelClassName("w-64")}>
-          <div className="flex items-center gap-1.5 border-border/60 border-b px-3 py-2">
-            <Search className="text-subtle-foreground" />
-            <Input
-              className="border-0 bg-transparent p-0 focus:border-transparent focus:ring-0"
-              placeholder="Pattern (e.g. user:*)"
-              value={patternInput}
-              onChange={(e) => setPatternInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              aria-label="Key pattern"
-            />
-            <Button
-              onClick={handleSearch}
-              variant="ghost"
-              disabled={store.isScanningKeys}
-              aria-label="Search keys"
-              size="icon-xs"
-            >
-              {store.isScanningKeys ? <Spinner label="Scanning keys" compact /> : <Search />}
-            </Button>
-          </div>
+      <div className="flex min-h-0 flex-1">
+        <div className={databasePanelClassName("w-64 shrink-0 border-border/60 border-r")}>
+          <PaneContentHeader
+            leading={<Search />}
+            context={
+              <Input
+                className="min-w-0 flex-1 border-0 bg-transparent p-0 focus:border-transparent focus:ring-0"
+                placeholder="Pattern (e.g. user:*)"
+                value={patternInput}
+                onChange={(e) => setPatternInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                aria-label="Key pattern"
+              />
+            }
+            actions={
+              <Button
+                onClick={handleSearch}
+                variant="ghost"
+                disabled={store.isScanningKeys}
+                aria-label="Search keys"
+                size="icon-xs"
+              >
+                {store.isScanningKeys ? <Spinner label="Scanning keys" compact /> : <Search />}
+              </Button>
+            }
+          />
           <ScrollArea
             className="flex-1"
             contentClassName="space-y-0.5 p-1.5"
@@ -204,7 +210,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
 
           {!store.isLoading && showInfo && store.serverInfo && (
             <div className="flex-1 overflow-auto p-3">
-              <div className={databaseCardClassName("p-3")}>
+              <section className="border-y border-border/60 py-3">
                 <div className="mb-3 text-subtle-foreground ui-text-sm uppercase tracking-[0.08em]">
                   Server Info
                 </div>
@@ -216,34 +222,28 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
             </div>
           )}
 
           {!store.isLoading && !showInfo && store.selectedKey && (
             <div className="flex flex-1 flex-col overflow-hidden">
-              <div className="flex items-center gap-2 border-border/60 border-b px-3 py-2">
-                <Key className="text-subtle-foreground" />
-                <span className="font-sans font-medium ui-text-sm">{store.selectedKey}</span>
-                <Badge
-                  className={cn(
-                    "border-0 bg-surface/70 px-1.5 font-bold uppercase",
-                    TYPE_COLORS[store.selectedKeyType || ""] || "text-subtle-foreground",
-                  )}
-                >
-                  {store.selectedKeyType}
-                </Badge>
-                <div className="flex-1" />
-                <Button
-                  onClick={() => actions.deleteKey(store.selectedKey!)}
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  aria-label="Delete key"
-                >
-                  <Trash2 />
-                </Button>
-              </div>
+              <PaneContentHeader
+                leading={<Key />}
+                title={store.selectedKey}
+                detail={store.selectedKeyType}
+                actions={
+                  <Button
+                    onClick={() => actions.deleteKey(store.selectedKey!)}
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Delete key"
+                  >
+                    <Trash2 />
+                  </Button>
+                }
+              />
               <div className="flex-1 overflow-auto p-3">
                 <pre className={databaseCodeBlockClassName()}>
                   {typeof store.keyValue === "string"

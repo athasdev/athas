@@ -102,9 +102,7 @@ export function ImageResizeDialog({
           checked={maintainAspectRatio}
           onCheckedChange={setMaintainAspectRatio}
         />
-        <FieldLabel htmlFor="maintainAspectRatio" className="cursor-pointer">
-          Maintain aspect ratio
-        </FieldLabel>
+        <FieldLabel htmlFor="maintainAspectRatio">Maintain aspect ratio</FieldLabel>
       </Field>
 
       <div className="ui-text-sm text-subtle-foreground">

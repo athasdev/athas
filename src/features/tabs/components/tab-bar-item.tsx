@@ -9,6 +9,7 @@ import {
   PackageIcon as Package,
   PushPinIcon as Pin,
   SparkleIcon as Sparkles,
+  SquaresFourIcon as Views,
   TerminalWindowIcon as Terminal,
   WarningCircleIcon as WarningCircle,
   XIcon as X,
@@ -128,6 +129,7 @@ const TabBarItem = memo(function TabBarItem({
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
+        appearance="main"
         onClick={isEditing ? undefined : onClick}
         onMouseDown={onMouseDown}
         onDoubleClick={isEditing ? undefined : onDoubleClick}
@@ -166,7 +168,7 @@ const TabBarItem = memo(function TabBarItem({
           ) : null
         }
       >
-        {showTabIcons ? (
+        {showTabIcons && buffer.type !== "newTab" ? (
           <div className="grid size-3 shrink-0 place-content-center">
             {buffer.type === "extension" ? (
               <Package className="text-subtle-foreground" />
@@ -223,6 +225,8 @@ const TabBarItem = memo(function TabBarItem({
               ) : (
                 <Activity className="text-subtle-foreground" />
               )
+            ) : buffer.type === "customView" ? (
+              <Views className="text-subtle-foreground" />
             ) : buffer.type === "globalSearch" ? (
               <Search className="text-subtle-foreground" />
             ) : buffer.type === "diagnostics" ? (

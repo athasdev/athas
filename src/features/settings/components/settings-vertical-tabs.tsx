@@ -129,7 +129,7 @@ export const SettingsVerticalTabs = ({
       >
         <ScrollArea
           className="min-h-0 min-w-0 flex-1"
-          contentClassName="p-2"
+          contentClassName="px-2 pb-2"
           viewportProps={{
             "aria-label": "Settings navigation",
           }}
@@ -175,12 +175,13 @@ export const SettingsVerticalTabs = ({
         <div data-slot="settings-sidebar-footer" className="shrink-0 p-2">
           <Button
             type="button"
-            variant="default"
+            variant="accent-ghost"
             onClick={promptUpgrade}
-            className="w-full justify-center"
-            size="sm"
+            className="w-full justify-start gap-2.5 text-left"
+            size="md"
+            shape="pill"
           >
-            <ArrowSquareUp className="size-4" weight="duotone" />
+            <ArrowSquareUp className="size-4.5" weight="duotone" />
             Upgrade to Pro
           </Button>
         </div>

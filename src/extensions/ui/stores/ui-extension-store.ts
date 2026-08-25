@@ -126,7 +126,10 @@ export const useUIExtensionStore = createSelectors(
 
         openDialog: (dialog) => {
           set((state) => {
-            state.activeDialogs.push(dialog);
+            state.activeDialogs = [
+              ...state.activeDialogs.filter((activeDialog) => activeDialog.id !== dialog.id),
+              dialog,
+            ];
           });
         },
 

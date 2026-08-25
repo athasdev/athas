@@ -15,10 +15,7 @@ import {
   UI_FONT_SIZE_STEP,
 } from "@/features/settings/lib/ui-font-size";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
-import type {
-  TabCloseButtonVisibility,
-  WindowChromeDensity,
-} from "@/features/settings/types/settings.types";
+import type { TabCloseButtonVisibility } from "@/features/settings/types/settings.types";
 import { Button } from "@/ui/button";
 import NumberInput from "@/ui/number-input";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
@@ -40,7 +37,6 @@ export const AppearanceSettings = () => {
       autoThemeDark: state.settings.autoThemeDark,
       autoThemeLight: state.settings.autoThemeLight,
       activityRailExpanded: state.settings.activityRailExpanded,
-      activityRailWidth: state.settings.activityRailWidth,
       compactMenuBar: state.settings.compactMenuBar,
       iconTheme: state.settings.iconTheme,
       nativeMenuBar: state.settings.nativeMenuBar,
@@ -48,14 +44,12 @@ export const AppearanceSettings = () => {
       reduceMotion: state.settings.reduceMotion,
       showStatusBar: state.settings.showStatusBar,
       showTabIcons: state.settings.showTabIcons,
-      sidebarWidth: state.settings.sidebarWidth,
       syncSystemTheme: state.settings.syncSystemTheme,
       tabCloseButtonVisibility: state.settings.tabCloseButtonVisibility,
       theme: state.settings.theme,
       uiFontFamily: state.settings.uiFontFamily,
       uiFontSize: state.settings.uiFontSize,
       windowTransparency: state.settings.windowTransparency,
-      windowChromeDensity: state.settings.windowChromeDensity,
     })),
   );
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
@@ -213,10 +207,10 @@ export const AppearanceSettings = () => {
             canReset={settings.theme !== getDefaultSetting("theme")}
           >
             <Select
+              shape="pill"
               value={settings.theme}
               options={normalizedThemeOptions}
               onChange={(value) => updateSetting("theme", value)}
-              className={SETTINGS_CONTROL_WIDTHS.wide}
               size="sm"
               variant="default"
               searchable
@@ -234,10 +228,10 @@ export const AppearanceSettings = () => {
               canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
             >
               <Select
+                shape="pill"
                 value={settings.autoThemeLight}
                 options={lightThemeOptions}
                 onChange={(value) => updateSetting("autoThemeLight", value)}
-                className={SETTINGS_CONTROL_WIDTHS.wide}
                 size="sm"
                 variant="default"
                 searchable
@@ -252,10 +246,10 @@ export const AppearanceSettings = () => {
               canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
             >
               <Select
+                shape="pill"
                 value={settings.autoThemeDark}
                 options={darkThemeOptions}
                 onChange={(value) => updateSetting("autoThemeDark", value)}
-                className={SETTINGS_CONTROL_WIDTHS.wide}
                 size="sm"
                 variant="default"
                 searchable
@@ -272,10 +266,10 @@ export const AppearanceSettings = () => {
           canReset={settings.iconTheme !== getDefaultSetting("iconTheme")}
         >
           <Select
+            shape="pill"
             value={settings.iconTheme}
             options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
-            className={SETTINGS_CONTROL_WIDTHS.wide}
             size="sm"
             variant="default"
             searchable
@@ -300,11 +294,16 @@ export const AppearanceSettings = () => {
           }
         >
           <div className="flex items-center gap-2">
-            <Button type="button" size="sm" onClick={() => setIsThemeCreatorOpen(true)}>
+            <Button
+              shape="pill"
+              type="button"
+              size="sm"
+              onClick={() => setIsThemeCreatorOpen(true)}
+            >
               <FilePlusIcon />
               Create
             </Button>
-            <Button type="button" size="sm" onClick={handleUploadTheme}>
+            <Button shape="pill" type="button" size="sm" onClick={handleUploadTheme}>
               <UploadIcon />
               Import
             </Button>
@@ -318,6 +317,7 @@ export const AppearanceSettings = () => {
             description={`${theme.category} custom theme · ${theme.id}`}
           >
             <Button
+              shape="pill"
               type="button"
               size="icon-xs"
               variant="danger"
@@ -340,14 +340,13 @@ export const AppearanceSettings = () => {
           <FontSelector
             value={settings.uiFontFamily}
             onChange={(fontFamily) => updateSetting("uiFontFamily", fontFamily)}
-            className={SETTINGS_CONTROL_WIDTHS.text}
             monospaceOnly={false}
           />
         </SettingRow>
 
         <SettingRow
           label="UI Font Size"
-          description="Adjust UI text and icon scale in 0.5px steps"
+          description="Adjust interface text and control scale in 0.5px steps"
           onReset={() => updateSetting("uiFontSize", getDefaultSetting("uiFontSize"))}
           canReset={settings.uiFontSize !== getDefaultSetting("uiFontSize")}
         >
@@ -415,6 +414,7 @@ export const AppearanceSettings = () => {
           }
         >
           <Select
+            shape="pill"
             value={settings.tabCloseButtonVisibility}
             options={[
               { value: "active", label: "Active and Hovered" },
@@ -424,7 +424,6 @@ export const AppearanceSettings = () => {
             onChange={(value) =>
               updateSetting("tabCloseButtonVisibility", value as TabCloseButtonVisibility)
             }
-            className={SETTINGS_CONTROL_WIDTHS.wide}
             size="sm"
             variant="default"
           />
@@ -432,27 +431,6 @@ export const AppearanceSettings = () => {
       </Section>
 
       <Section title="Layout">
-        <SettingRow
-          label="Window Chrome Density"
-          description="Choose a focused or roomier scale for title bars, tabs, sidebars, and the footer"
-          onReset={() =>
-            updateSetting("windowChromeDensity", getDefaultSetting("windowChromeDensity"))
-          }
-          canReset={settings.windowChromeDensity !== getDefaultSetting("windowChromeDensity")}
-        >
-          <Select
-            value={settings.windowChromeDensity}
-            options={[
-              { value: "focused", label: "Focused" },
-              { value: "comfortable", label: "Comfortable" },
-            ]}
-            onChange={(value) => updateSetting("windowChromeDensity", value as WindowChromeDensity)}
-            className={SETTINGS_CONTROL_WIDTHS.wide}
-            size="sm"
-            variant="default"
-          />
-        </SettingRow>
-
         <SettingRow
           label="Expanded Activity Bar"
           description="Show labels beside icons in the activity bar"
@@ -465,43 +443,6 @@ export const AppearanceSettings = () => {
             checked={settings.activityRailExpanded}
             onChange={(checked) => updateSetting("activityRailExpanded", checked)}
             size="sm"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Activity Bar Width"
-          description="Set the width of the expanded activity bar"
-          onReset={() => updateSetting("activityRailWidth", getDefaultSetting("activityRailWidth"))}
-          canReset={settings.activityRailWidth !== getDefaultSetting("activityRailWidth")}
-        >
-          <NumberInput
-            min={140}
-            max={320}
-            step={10}
-            value={settings.activityRailWidth}
-            onChange={(value) => updateSetting("activityRailWidth", value)}
-            className={SETTINGS_CONTROL_WIDTHS.number}
-            size="sm"
-            disabled={!settings.activityRailExpanded}
-            aria-label={`Activity bar width: ${settings.activityRailWidth} pixels`}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Sidebar Width"
-          description="Set the default width used by left and right sidebars"
-          onReset={() => updateSetting("sidebarWidth", getDefaultSetting("sidebarWidth"))}
-          canReset={settings.sidebarWidth !== getDefaultSetting("sidebarWidth")}
-        >
-          <NumberInput
-            min={140}
-            max={600}
-            step={10}
-            value={settings.sidebarWidth}
-            onChange={(value) => updateSetting("sidebarWidth", value)}
-            className={SETTINGS_CONTROL_WIDTHS.number}
-            size="sm"
-            aria-label={`Sidebar width: ${settings.sidebarWidth} pixels`}
           />
         </SettingRow>
 

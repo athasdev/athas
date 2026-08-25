@@ -1,6 +1,5 @@
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import type { ReactNode } from "react";
-import { Button } from "@/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
 import {
   ArchiveIcon,
@@ -10,7 +9,7 @@ import {
   PushPinIcon,
   SparkleIcon,
 } from "@/ui/icons";
-import { SidebarListItem } from "@/ui/sidebar";
+import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
 
 export interface AgentSessionSidebarItemProps {
   title: string;
@@ -70,6 +69,7 @@ export function AgentSessionSidebarItem({
           render={
             <SidebarListItem
               active={active}
+              appearance="activity"
               leading={<ProviderIcon providerId={providerIconId} size={16} />}
               className="pr-12"
             >
@@ -79,10 +79,7 @@ export function AgentSessionSidebarItem({
         />
 
         <span className="pointer-events-none absolute right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/agent-session:pointer-events-auto group-hover/agent-session:opacity-100 group-focus-within/agent-session:pointer-events-auto group-focus-within/agent-session:opacity-100">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
+          <SidebarIconButton
             active={pinned}
             aria-pressed={pinned}
             tooltip={pinned ? "Unpin session" : "Pin session"}
@@ -93,11 +90,8 @@ export function AgentSessionSidebarItem({
             }}
           >
             <PushPinIcon className="size-3" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
+          </SidebarIconButton>
+          <SidebarIconButton
             className="hover:text-destructive"
             tooltip="Archive session"
             tooltipSide="top"
@@ -107,7 +101,7 @@ export function AgentSessionSidebarItem({
             }}
           >
             <ArchiveIcon className="size-3" />
-          </Button>
+          </SidebarIconButton>
         </span>
       </div>
 
@@ -153,7 +147,7 @@ export function AgentSessionSidebarItem({
 
         {workspacePath ? (
           <div
-            className="truncate border-border/70 border-t px-3 py-2 font-mono text-subtle-foreground ui-text-xs"
+            className="truncate border-border/70 border-t px-3 py-2 font-mono text-subtle-foreground ui-text-sm"
             title={workspacePath}
           >
             {workspacePath}

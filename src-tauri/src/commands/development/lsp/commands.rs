@@ -20,20 +20,19 @@ use serde_json::Value;
 use std::{collections::HashMap, path::PathBuf};
 use tauri::State;
 
+type LspLaunchRequest = (
+   Option<String>,
+   Option<Vec<String>>,
+   Option<HashMap<String, String>>,
+);
+
 fn resolve_lsp_launch_request(
    app_handle: &AppHandle,
    language_id: Option<String>,
    server_path: Option<String>,
    server_args: Option<Vec<String>>,
    tools: Option<LanguageToolConfigSet>,
-) -> Result<
-   (
-      Option<String>,
-      Option<Vec<String>>,
-      Option<HashMap<String, String>>,
-   ),
-   String,
-> {
+) -> Result<LspLaunchRequest, String> {
    let Some(language_id) = language_id else {
       return Ok((server_path, server_args, None));
    };
