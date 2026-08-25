@@ -8,21 +8,20 @@ import { DropdownMenuItem, DropdownMenuSeparator } from "@/ui/dropdown";
 import { SidebarListItem, SidebarListMenuItem } from "@/ui/sidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import {
-  AppStackFillDuoIcon,
-  BoxFillDuoIcon,
+  BoxIcon,
   ChatCircleTextIcon,
   ClockCounterClockwiseIcon,
-  CodeBranchFillDuoIcon,
-  CodePullRequestFillDuoIcon,
-  FilesFillDuoIcon,
+  ExtensionsIcon,
+  FilesIcon,
   FolderOpenIcon,
   GitBranchIcon,
   GitDiffIcon,
   GitPullRequestIcon,
+  GithubLogoIcon,
   LightningIcon,
-  MagnifierFillDuoIcon,
+  MagnifyingGlassIcon,
   NodesIcon,
-  SparkleFillDuoIcon,
+  SparkleIcon,
 } from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -151,7 +150,7 @@ export const SidebarPaneSelector = ({
       {
         id: "files",
         label: showLabels ? "Files" : undefined,
-        icon: <FilesFillDuoIcon className={cn(iconClassName, "text-primary")} />,
+        icon: <FilesIcon className={iconClassName} />,
         isActive: isFilesActive,
         onClick: () => onViewChange("files"),
         ariaLabel: "Files",
@@ -166,7 +165,7 @@ export const SidebarPaneSelector = ({
             {
               id: "search",
               label: showLabels ? "Search" : undefined,
-              icon: <MagnifierFillDuoIcon className={cn(iconClassName, "text-info")} />,
+              icon: <MagnifyingGlassIcon className={iconClassName} />,
               isActive: isSearchActive,
               onClick: onSearchClick,
               ariaLabel: "Search",
@@ -183,7 +182,7 @@ export const SidebarPaneSelector = ({
             {
               id: "git",
               label: showLabels ? "Source Control" : undefined,
-              icon: <CodeBranchFillDuoIcon className={cn(iconClassName, "text-success")} />,
+              icon: <GitBranchIcon className={iconClassName} />,
               isActive: isPrimarySidebarItemActive && isGitViewActive,
               onClick: () => onViewChange("git"),
               submenuItems: [
@@ -233,7 +232,7 @@ export const SidebarPaneSelector = ({
             {
               id: "github-prs",
               label: showLabels ? "Pull Requests" : undefined,
-              icon: <CodePullRequestFillDuoIcon className={cn(iconClassName, "text-primary")} />,
+              icon: <GithubLogoIcon className={iconClassName} />,
               isActive: isPrimarySidebarItemActive && isGitHubPRsViewActive,
               onClick: () => onViewChange("github-prs"),
               submenuItems: [
@@ -267,7 +266,7 @@ export const SidebarPaneSelector = ({
       {
         id: "views",
         label: showLabels ? "Views" : undefined,
-        icon: <SparkleFillDuoIcon className={cn(iconClassName, "text-warning")} />,
+        icon: <SparkleIcon className={iconClassName} />,
         isActive: isPrimarySidebarItemActive && activeSidebarView === "views",
         onClick: () => onViewChange("views"),
         ariaLabel: "Views",
@@ -281,7 +280,7 @@ export const SidebarPaneSelector = ({
             {
               id: "docker",
               label: showLabels ? "Docker" : undefined,
-              icon: <BoxFillDuoIcon className={cn(iconClassName, "text-info")} />,
+              icon: <BoxIcon className={iconClassName} />,
               isActive: isPrimarySidebarItemActive && activeSidebarView === "docker",
               onClick: () => onViewChange("docker"),
               ariaLabel: "Docker",
@@ -295,7 +294,7 @@ export const SidebarPaneSelector = ({
       {
         id: "extensions",
         label: showLabels ? "Extensions" : undefined,
-        icon: <AppStackFillDuoIcon className={cn(iconClassName, "text-warning")} />,
+        icon: <ExtensionsIcon className={iconClassName} />,
         isActive: isExtensionsActive,
         onClick: onExtensionsClick,
         ariaLabel: "Extensions",

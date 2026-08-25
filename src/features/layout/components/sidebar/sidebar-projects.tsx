@@ -23,10 +23,11 @@ import {
 import {
   CaretRightIcon,
   CopyIcon,
-  FolderFillDuoIcon,
+  FolderIcon,
   FolderOpenIcon,
   ImageIcon,
   OpenExternalIcon,
+  PlusIcon,
   RemoteIcon,
   TrashIcon,
   WindowExpandIcon,
@@ -66,9 +67,9 @@ function ProjectGlyph({
     );
   }
 
-  const Icon = isRemote ? RemoteIcon : FolderFillDuoIcon;
+  const Icon = isRemote ? RemoteIcon : projectPath ? FolderIcon : PlusIcon;
 
-  return <Icon className={cn("shrink-0", !isRemote && "text-primary", className ?? "size-4")} />;
+  return <Icon className={cn("shrink-0", className ?? "size-4")} />;
 }
 
 export function SidebarProjectSwitcher({

@@ -10,7 +10,6 @@ import {
   type SVGProps,
 } from "react";
 import * as Nucleo from "nucleo-ui-outline-18";
-import * as NucleoFillDuo from "nucleo-ui-fill-duo-18";
 
 export type IconWeight = "thin" | "light" | "regular" | "bold" | "fill" | "duotone";
 
@@ -468,47 +467,6 @@ export const ExtensionsIcon = createIconComponent(Nucleo.IconAppStackOutline18, 
 export const FilesIcon = createIconComponent(Nucleo.IconFiles2Outline18, "FilesIcon");
 export const MoneyIcon = createIconComponent(Nucleo.IconMoneyBillCoinOutline18, "MoneyIcon");
 export const NodesIcon = createIconComponent(Nucleo.IconNodesOutline18, "NodesIcon");
-export const AppStackFillDuoIcon = createIconComponent(
-  NucleoFillDuo.IconAppStackFillDuo18,
-  "AppStackFillDuoIcon",
-);
-export const BoxFillDuoIcon = createIconComponent(NucleoFillDuo.IconBoxFillDuo18, "BoxFillDuoIcon");
-export const CodeBranchFillDuoIcon = createIconComponent(
-  NucleoFillDuo.IconCodeBranchFillDuo18,
-  "CodeBranchFillDuoIcon",
-);
-export const CodePullRequestFillDuoIcon = createIconComponent(
-  NucleoFillDuo.IconCodePullRequestFillDuo18,
-  "CodePullRequestFillDuoIcon",
-);
-export const FilesFillDuoIcon = createIconComponent(
-  NucleoFillDuo.IconFiles2FillDuo18,
-  "FilesFillDuoIcon",
-);
-export const FolderFillDuoIcon = createIconComponent(
-  NucleoFillDuo.IconFolderFillDuo18,
-  "FolderFillDuoIcon",
-);
-export const MagnifierFillDuoIcon = createIconComponent(
-  NucleoFillDuo.IconMagnifierFillDuo18,
-  "MagnifierFillDuoIcon",
-);
-export const NodesFillDuoIcon = createIconComponent(
-  NucleoFillDuo.IconNodesFillDuo18,
-  "NodesFillDuoIcon",
-);
-export const SparkleFillDuoIcon = createIconComponent(
-  NucleoFillDuo.IconSparkleFillDuo18,
-  "SparkleFillDuoIcon",
-);
-export const TableFillDuoIcon = createIconComponent(
-  NucleoFillDuo.IconTableFillDuo18,
-  "TableFillDuoIcon",
-);
-export const TerminalFillDuoIcon = createIconComponent(
-  NucleoFillDuo.IconSquareTerminalFillDuo18,
-  "TerminalFillDuoIcon",
-);
 export const OpenExternalIcon = createIconComponent(
   Nucleo.IconOpenExternalOutline18,
   "OpenExternalIcon",

@@ -38,14 +38,14 @@ import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import {
   ArchiveIcon,
   DotsThreeIcon,
-  NodesFillDuoIcon,
+  NodesIcon,
   OpenExternalIcon,
   PencilSimpleLineIcon,
   PlusIcon,
   PushPinIcon,
   PushPinSlashIcon,
-  SparkleFillDuoIcon,
-  TerminalFillDuoIcon,
+  SparkleIcon,
+  TerminalIcon,
   TrashIcon,
   XIcon,
 } from "@/ui/icons";
@@ -107,7 +107,7 @@ function SidebarNewAgentButton({
   return (
     <SidebarListItem
       appearance="activity"
-      leading={<SparkleFillDuoIcon className="size-4 text-primary" />}
+      leading={<SparkleIcon className="size-4" />}
       iconOnly={iconOnly}
       onClick={handleNewAgent}
       aria-label="New Agent"
@@ -255,10 +255,7 @@ function SidebarTerminalHistoryRow({
 
   if (isRenaming) {
     return (
-      <SidebarListEditor
-        appearance="activity"
-        leading={<TerminalFillDuoIcon className="size-4 text-info" />}
-      >
+      <SidebarListEditor appearance="activity" leading={<TerminalIcon className="size-4" />}>
         <InlineRenameInput
           value={renameValue}
           onValueChange={setRenameValue}
@@ -280,7 +277,7 @@ function SidebarTerminalHistoryRow({
           <SidebarListItem
             active={active}
             appearance="activity"
-            leading={<TerminalFillDuoIcon className="size-4 text-info" />}
+            leading={<TerminalIcon className="size-4" />}
             className="pr-12"
             onClick={onOpen}
           >
@@ -639,7 +636,7 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
     return (
       <SidebarListItem
         appearance="activity"
-        leading={<TerminalFillDuoIcon className="size-4 text-info" />}
+        leading={<TerminalIcon className="size-4" />}
         iconOnly
         onClick={() => {
           if (activePanelTerminalId) handleOpenPanelTerminal(activePanelTerminalId);
@@ -679,7 +676,7 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
           {terminalCount === 0 ? (
             <SidebarListItem
               appearance="activity"
-              leading={<TerminalFillDuoIcon className="size-4 text-info" />}
+              leading={<TerminalIcon className="size-4" />}
               aria-label="New Terminal"
               onClick={handleNewTerminal}
             >
@@ -768,7 +765,7 @@ export function SidebarWorktreeHistory({
     return (
       <SidebarListItem
         appearance="activity"
-        leading={<NodesFillDuoIcon className="size-4 text-success" />}
+        leading={<NodesIcon className="size-4" />}
         iconOnly
         onClick={onNewWorktree}
         aria-label="Worktrees"
@@ -803,7 +800,7 @@ export function SidebarWorktreeHistory({
           {openableWorktrees.length === 0 ? (
             <SidebarListItem
               appearance="activity"
-              leading={<NodesFillDuoIcon className="size-4 text-success" />}
+              leading={<NodesIcon className="size-4" />}
               onClick={onNewWorktree}
               aria-label="New Worktree"
             >

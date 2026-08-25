@@ -10,13 +10,7 @@ import {
   ContextMenuTrigger,
 } from "@/ui/context-menu";
 import { showConfirmDialog } from "@/ui/dialog";
-import {
-  CopyIcon,
-  NodesFillDuoIcon,
-  OpenExternalIcon,
-  TrashIcon,
-  WindowExpandIcon,
-} from "@/ui/icons";
+import { CopyIcon, NodesIcon, OpenExternalIcon, TrashIcon, WindowExpandIcon } from "@/ui/icons";
 import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getFolderName } from "@/utils/path-helpers";
@@ -62,7 +56,7 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
           <SidebarListItem
             active={worktree.is_current}
             appearance="activity"
-            leading={<NodesFillDuoIcon className="size-4 text-success" />}
+            leading={<NodesIcon className="size-4" />}
             title={worktree.path}
             className="pr-12"
             onClick={openWorktree}
