@@ -36,7 +36,6 @@ import {
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { serializeTerminals } from "@/features/terminal/lib/terminal-session-storage";
-import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { createTerminalEventChannel } from "@/features/terminal/utils/terminal-protocol";
@@ -92,7 +91,6 @@ import { useFileWatcherStore } from "../stores/file-watcher.store";
 import { fffListFiles, fffTrackAccess } from "@/features/file-search/lib/file-search-api";
 import { canUseNativeFileSearch } from "@/features/file-search/utils/file-search-paths";
 import { ensureWorkspaceFileSearch } from "@/features/file-search/services/workspace-file-search";
-import { cancelFileWatcherRefreshes } from "../services/file-watcher-refresh-scheduler";
 import {
   createFileOpenResource,
   inspectFileOpenResource,
@@ -102,6 +100,7 @@ import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buf
 import { restoreWorkspaceSessionFolders } from "../services/workspace-session-folder-restore";
 import { prepareWorkspaceClose } from "../services/workspace-close-guard";
 import { drainDeferredWorkspaceSessionBuffers } from "../services/workspace-deferred-session-restore";
+import { disposeWorkspaceResources } from "../services/workspace-disposal";
 import {
   applyWorkspaceInitializationState,
   type InitializedWorkspaceState,
@@ -2651,35 +2650,15 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         return await closeWorkspaceRuntime(projectId, {
           persist: () =>
             getScopedFileSystemStore(projectId).getState().persistActiveProjectSession(),
-          dispose: async (path) => {
-            cancelFileWatcherRefreshes(projectId);
-            const terminalSessions = useTerminalStore.getStore(projectId).getState().sessions;
-            await Promise.all(
-              [...terminalSessions.values()].map(async (session) => {
-                if (!session.connectionId) {
-                  return;
-                }
-
-                await closeTerminalConnection(session).catch((error) => {
-                  console.error("Failed to close terminal session:", error);
-                });
-              }),
-            );
-
-            const remote = parseRemotePath(path);
-            if (!remote) {
-              return;
-            }
-
-            await invoke("ssh_disconnect_only", {
-              connectionId: remote.connectionId,
-            }).catch((error) => {
-              console.error("Failed to disconnect remote workspace:", error);
-            });
-            await connectionStore
-              .updateConnectionStatus(remote.connectionId, false)
-              .catch(() => {});
-          },
+          dispose: (path) =>
+            disposeWorkspaceResources({
+              workspaceId: projectId,
+              path,
+              terminalConnections: useTerminalStore
+                .getStore(projectId)
+                .getState()
+                .sessions.values(),
+            }),
           switchTo: (nextWorkspaceId) => get().switchToProject(nextWorkspaceId),
           showWelcome: async () => {
             await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
