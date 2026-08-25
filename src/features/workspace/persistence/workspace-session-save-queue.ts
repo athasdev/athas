@@ -21,11 +21,11 @@ export function createWorkspaceSessionSaveQueue<T>(
 
       const timer = setTimeout(() => {
         timers.delete(projectPath);
-        const latestPayload = pending.get(projectPath);
-        if (!latestPayload) {
+        if (!pending.has(projectPath)) {
           return;
         }
 
+        const latestPayload = pending.get(projectPath) as T;
         pending.delete(projectPath);
         save(projectPath, latestPayload);
       }, delayMs);

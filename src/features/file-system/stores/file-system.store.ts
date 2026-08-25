@@ -43,6 +43,7 @@ import { getFrontendTerminalSessionArgs } from "@/features/terminal/utils/fronte
 import { showAlertDialog, showPromptDialog } from "@/ui/dialog";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
+import { createWorkspaceSessionSaveQueue } from "@/features/workspace/persistence/workspace-session-save-queue";
 import {
   buildWorkspaceBufferSnapshot,
   isLocalFileInWorkspace,
@@ -201,22 +202,16 @@ const readWorkspaceRootEntry = async (path: string): Promise<FileEntry> => {
 };
 
 const IMMEDIATE_SESSION_BUFFERS_TO_RESTORE = 1;
-const pendingWorkspaceSessionWrites = new Map<string, ReturnType<typeof setTimeout>>();
-
-const scheduleWorkspaceSessionWrite = (projectPath: string, write: () => void) => {
-  const pendingWrite = pendingWorkspaceSessionWrites.get(projectPath);
-  if (pendingWrite) {
-    clearTimeout(pendingWrite);
-  }
-
-  pendingWorkspaceSessionWrites.set(
-    projectPath,
-    setTimeout(() => {
-      pendingWorkspaceSessionWrites.delete(projectPath);
-      write();
-    }, 0),
-  );
-};
+type WorkspaceSessionSavePayload = Omit<
+  Parameters<typeof workspaceSessionRepository.save>[0],
+  "projectPath"
+>;
+const workspaceSessionWriteQueue = createWorkspaceSessionSaveQueue(
+  (projectPath: string, payload: WorkspaceSessionSavePayload) => {
+    workspaceSessionRepository.save({ projectPath, ...payload });
+  },
+  0,
+);
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error || "Unknown error");
@@ -972,15 +967,12 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         });
 
         clearQueuedWorkspaceSessionSave(currentRootPath);
-        scheduleWorkspaceSessionWrite(currentRootPath, () => {
-          workspaceSessionRepository.save({
-            projectPath: currentRootPath,
-            ...bufferSnapshot,
-            terminals,
-            aiSession,
-            workspaceFolders,
-            uiState,
-          });
+        workspaceSessionWriteQueue.schedule(currentRootPath, {
+          ...bufferSnapshot,
+          terminals,
+          aiSession,
+          workspaceFolders,
+          uiState,
         });
       },
 

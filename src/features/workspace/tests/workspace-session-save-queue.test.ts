@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { createWorkspaceSessionSaveQueue } from "../stores/workspace-session-save-queue";
+import { createWorkspaceSessionSaveQueue } from "../persistence/workspace-session-save-queue";
 
 describe("createWorkspaceSessionSaveQueue", () => {
   beforeEach(() => {
@@ -46,5 +46,15 @@ describe("createWorkspaceSessionSaveQueue", () => {
     vi.advanceTimersByTime(50);
 
     expect(save).not.toHaveBeenCalled();
+  });
+
+  it("persists falsy payloads", () => {
+    const save = vi.fn();
+    const queue = createWorkspaceSessionSaveQueue(save, 50);
+
+    queue.schedule("/workspace-a", false);
+    vi.advanceTimersByTime(50);
+
+    expect(save).toHaveBeenCalledWith("/workspace-a", false);
   });
 });

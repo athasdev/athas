@@ -1,6 +1,6 @@
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
 import { buildWorkspaceBufferSnapshot } from "@/features/workspace/persistence/workspace-session-codec";
-import { createWorkspaceSessionSaveQueue } from "./workspace-session-save-queue";
+import { createWorkspaceSessionSaveQueue } from "@/features/workspace/persistence/workspace-session-save-queue";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 
 const SAVE_SESSION_DEBOUNCE_MS = 300;
