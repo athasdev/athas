@@ -36,7 +36,6 @@ export const AppearanceSettings = () => {
     useShallow((state) => ({
       autoThemeDark: state.settings.autoThemeDark,
       autoThemeLight: state.settings.autoThemeLight,
-      activityRailExpanded: state.settings.activityRailExpanded,
       compactMenuBar: state.settings.compactMenuBar,
       iconTheme: state.settings.iconTheme,
       nativeMenuBar: state.settings.nativeMenuBar,
@@ -431,21 +430,6 @@ export const AppearanceSettings = () => {
       </Section>
 
       <Section title="Layout">
-        <SettingRow
-          label="Expanded Activity Bar"
-          description="Show labels beside icons in the activity bar"
-          onReset={() =>
-            updateSetting("activityRailExpanded", getDefaultSetting("activityRailExpanded"))
-          }
-          canReset={settings.activityRailExpanded !== getDefaultSetting("activityRailExpanded")}
-        >
-          <Switch
-            checked={settings.activityRailExpanded}
-            onChange={(checked) => updateSetting("activityRailExpanded", checked)}
-            size="sm"
-          />
-        </SettingRow>
-
         {!IS_MAC && !IS_WINDOWS && !IS_LINUX && (
           <SettingRow
             label="Native Menu Bar"
