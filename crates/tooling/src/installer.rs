@@ -116,10 +116,10 @@ impl ToolInstaller {
          ]);
       }
 
-      if cfg!(windows) {
-         if let Some(local_app_data) = env::var_os("LOCALAPPDATA").map(PathBuf::from) {
-            dirs.push(local_app_data.join("Coursier").join("data").join("bin"));
-         }
+      if cfg!(windows)
+         && let Some(local_app_data) = env::var_os("LOCALAPPDATA").map(PathBuf::from)
+      {
+         dirs.push(local_app_data.join("Coursier").join("data").join("bin"));
       }
 
       dirs
