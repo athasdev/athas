@@ -12,7 +12,7 @@ export interface CategorizedFiles {
 
 export type FileCategory = "open" | "recent" | "other";
 
-export interface SearchResult {
+export interface ScoredFile {
   file: FileItem;
   score: number;
 }

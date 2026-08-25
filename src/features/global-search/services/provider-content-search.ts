@@ -6,7 +6,7 @@ import type {
   FileSearchResult,
   SearchFilesResponse,
 } from "@/features/file-search/lib/file-search-api";
-import { shouldIgnoreInCommandPalette } from "../constants/ignored-patterns";
+import { shouldIgnoreSearchEntry } from "@/features/file-search/utils/file-search-filtering";
 import type { ContentSearchOptions } from "../types/global-search.types";
 import { buildFileSearchResult } from "../utils/content-search-results";
 import { createPathFilterPredicate } from "../utils/path-filters";
@@ -20,7 +20,7 @@ function flattenProviderSearchFiles(entries: FileEntry[]): FileEntry[] {
 
   while (stack.length > 0) {
     const entry = stack.pop();
-    if (!entry || shouldIgnoreInCommandPalette(entry.name, entry.isDir)) continue;
+    if (!entry || shouldIgnoreSearchEntry(entry.name, entry.isDir)) continue;
 
     if (entry.isDir) {
       const children = entry.children ?? [];

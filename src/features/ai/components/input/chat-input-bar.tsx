@@ -8,7 +8,7 @@ import {
   XIcon as X,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
+import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
 import {
   AI_CHAT_INSERT_SKILL_EVENT,
   type AIChatSkillInsertDetail,
@@ -409,7 +409,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   }, [mentionState.active, updatePosition, getMentionDropdownPosition]);
 
   const mentionableFiles = useMemo(
-    () => allProjectFiles.filter((file) => !file.isDir && !shouldIgnoreFile(file.path)),
+    () => allProjectFiles.filter((file) => !file.isDir && !shouldIgnoreSearchFile(file.path)),
     [allProjectFiles],
   );
 

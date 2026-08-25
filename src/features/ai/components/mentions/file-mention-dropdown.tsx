@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { MentionState } from "@/features/ai/types/chat-composer.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import type { FileItem } from "@/features/global-search/types/global-search.types";
-import { shouldIgnoreFile } from "@/features/global-search/utils/file-filtering";
+import type { FileItem } from "@/features/file-search/types/file-search.types";
+import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { ComposerAttachedPanel } from "../input/composer-attached-panel";
 import { AIFileSelector } from "./ai-file-selector";
@@ -44,7 +44,9 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
     getAllProjectFiles().then((allFiles) => {
       if (cancelled) return;
 
-      setFallbackFiles(allFiles.filter((file) => !file.isDir && !shouldIgnoreFile(file.path)));
+      setFallbackFiles(
+        allFiles.filter((file) => !file.isDir && !shouldIgnoreSearchFile(file.path)),
+      );
     });
 
     return () => {

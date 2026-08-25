@@ -4,14 +4,14 @@ import {
   fffListFiles,
   fffScanStatus,
 } from "@/features/file-search/lib/file-search-api";
+import type { FileItem } from "@/features/file-search/types/file-search.types";
+import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
 import { getNativeWorkspaceRootPaths } from "@/features/file-search/utils/file-search-paths";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import type { FileItem } from "../types/quick-open.types";
-import { shouldIgnoreFile } from "../utils/file-filtering";
 
 const toQuickOpenFiles = (files: readonly Pick<FffIndexedFile, "name" | "path">[]): FileItem[] =>
   files
-    .filter((file) => !shouldIgnoreFile(file.path))
+    .filter((file) => !shouldIgnoreSearchFile(file.path))
     .map((file) => ({
       name: file.name,
       path: file.path,

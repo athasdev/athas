@@ -7,7 +7,7 @@ import {
   getNativeWorkspaceRootPaths,
 } from "@/features/file-search/utils/file-search-paths";
 import { useFileSearch } from "@/features/global-search/hooks/use-file-search";
-import type { FileCategory, FileItem } from "@/features/global-search/types/global-search.types";
+import type { FileCategory, FileItem } from "@/features/file-search/types/file-search.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";

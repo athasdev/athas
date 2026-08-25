@@ -7,7 +7,7 @@ import {
   KEY_ESCAPE,
   KEY_K,
 } from "../constants/keyboard-keys";
-import type { FileItem } from "../types/quick-open.types";
+import type { FileItem } from "@/features/file-search/types/file-search.types";
 
 interface UseKeyboardNavigationProps {
   isVisible: boolean;
