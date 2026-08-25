@@ -31,6 +31,7 @@ import {
   type AgentNativeNotificationKind,
 } from "@/features/ai/services/agent-native-notifications";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type {
@@ -97,8 +98,8 @@ const AIChat = memo(function AIChat({
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [activeMessageSearchIndex, setActiveMessageSearchIndex] = useState(0);
-  const [selectedBufferIds, setSelectedBufferIds] = useState<Set<string>>(new Set());
-  const [selectedFilesPaths, setSelectedFilesPaths] = useState<Set<string>>(new Set());
+  const composerContext = useComposerContextSelection();
+  const { selectedBufferIds, selectedFilesPaths } = composerContext.inputProps;
   const effectiveChatId = chatId ?? chatState.currentChatId;
   const currentChat = useMemo(
     () => chatState.chats.find((chat) => chat.id === effectiveChatId),
@@ -148,9 +149,8 @@ const AIChat = memo(function AIChat({
   useEffect(() => {
     setAcpEvents([]);
     closeMessageSearch();
-    setSelectedBufferIds(new Set());
-    setSelectedFilesPaths(new Set());
-  }, [closeMessageSearch, effectiveChatId]);
+    composerContext.clear();
+  }, [closeMessageSearch, composerContext.clear, effectiveChatId]);
 
   useEffect(() => {
     setActiveMessageSearchIndex(0);
@@ -1055,8 +1055,7 @@ details: ${errorDetails || mainError}
       return;
     }
 
-    setSelectedBufferIds(new Set(pendingLaunch.selectedBufferIds));
-    setSelectedFilesPaths(new Set(pendingLaunch.selectedFilesPaths));
+    composerContext.replace(pendingLaunch.selectedBufferIds, pendingLaunch.selectedFilesPaths);
     chatActions.setPendingAgentLaunchRequest(null);
     void sendMessage(pendingLaunch.prompt);
   }, [
@@ -1067,6 +1066,7 @@ details: ${errorDetails || mainError}
     chatState.pendingAgentLaunchRequest,
     surfaceStreamingMessageId,
     activeBuffer,
+    composerContext.replace,
     sendMessage,
     showToast,
   ]);
@@ -1100,6 +1100,24 @@ details: ${errorDetails || mainError}
       setPermissionQueue((prev) => prev.slice(1));
     }
   };
+
+  const composer = (
+    <AIChatInputBar
+      key={effectiveChatId ?? "new-session"}
+      surfaceId={surfaceId}
+      buffers={buffers}
+      allProjectFiles={allProjectFiles}
+      currentAgentId={currentAgentId}
+      isTyping={isSurfaceTyping}
+      streamingMessageId={surfaceStreamingMessageId}
+      queueCount={queueCount}
+      {...composerContext.inputProps}
+      isActiveSurface={isActiveSurface}
+      presentation={useInitialComposer ? "initial" : "default"}
+      onSendMessage={handleSendMessage}
+      onStopStreaming={stopStreaming}
+    />
+  );
 
   return (
     <div
@@ -1154,42 +1172,7 @@ details: ${errorDetails || mainError}
       ) : (
         <>
           {useInitialComposer ? (
-            <AgentStartView>
-              <AIChatInputBar
-                key={effectiveChatId ?? "new-session"}
-                surfaceId={surfaceId}
-                buffers={buffers}
-                allProjectFiles={allProjectFiles}
-                currentAgentId={currentAgentId}
-                isTyping={isSurfaceTyping}
-                streamingMessageId={surfaceStreamingMessageId}
-                queueCount={queueCount}
-                selectedBufferIds={selectedBufferIds}
-                selectedFilesPaths={selectedFilesPaths}
-                onToggleBufferSelection={(bufferId) =>
-                  setSelectedBufferIds((current) => {
-                    const next = new Set(current);
-                    if (next.has(bufferId)) next.delete(bufferId);
-                    else next.add(bufferId);
-                    return next;
-                  })
-                }
-                onToggleFileSelection={(filePath) =>
-                  setSelectedFilesPaths((current) => {
-                    const next = new Set(current);
-                    if (next.has(filePath)) next.delete(filePath);
-                    else next.add(filePath);
-                    return next;
-                  })
-                }
-                onSetSelectedBufferIds={setSelectedBufferIds}
-                onSetSelectedFilesPaths={setSelectedFilesPaths}
-                isActiveSurface={isActiveSurface}
-                presentation="initial"
-                onSendMessage={handleSendMessage}
-                onStopStreaming={stopStreaming}
-              />
-            </AgentStartView>
+            <AgentStartView>{composer}</AgentStartView>
           ) : (
             <MessageScrollerProvider autoScroll defaultScrollPosition="last-anchor">
               <MessageScroller>
@@ -1228,41 +1211,7 @@ details: ${errorDetails || mainError}
             />
           ) : null}
 
-          {!useInitialComposer ? (
-            <AIChatInputBar
-              key={effectiveChatId ?? "new-session"}
-              surfaceId={surfaceId}
-              buffers={buffers}
-              allProjectFiles={allProjectFiles}
-              currentAgentId={currentAgentId}
-              isTyping={isSurfaceTyping}
-              streamingMessageId={surfaceStreamingMessageId}
-              queueCount={queueCount}
-              selectedBufferIds={selectedBufferIds}
-              selectedFilesPaths={selectedFilesPaths}
-              onToggleBufferSelection={(bufferId) =>
-                setSelectedBufferIds((current) => {
-                  const next = new Set(current);
-                  if (next.has(bufferId)) next.delete(bufferId);
-                  else next.add(bufferId);
-                  return next;
-                })
-              }
-              onToggleFileSelection={(filePath) =>
-                setSelectedFilesPaths((current) => {
-                  const next = new Set(current);
-                  if (next.has(filePath)) next.delete(filePath);
-                  else next.add(filePath);
-                  return next;
-                })
-              }
-              onSetSelectedBufferIds={setSelectedBufferIds}
-              onSetSelectedFilesPaths={setSelectedFilesPaths}
-              isActiveSurface={isActiveSurface}
-              onSendMessage={handleSendMessage}
-              onStopStreaming={stopStreaming}
-            />
-          ) : null}
+          {!useInitialComposer ? composer : null}
         </>
       )}
     </div>

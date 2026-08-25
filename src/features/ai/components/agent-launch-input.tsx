@@ -1,5 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import AIChatInputBar from "@/features/ai/components/input/chat-input-bar";
+import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
 import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
 import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -29,8 +30,8 @@ export function AgentLaunchInput({
   const setPendingAgentLaunchRequest = useAIChatStore(
     (state) => state.actions.setPendingAgentLaunchRequest,
   );
-  const [selectedBufferIds, setSelectedBufferIds] = useState<Set<string>>(new Set());
-  const [selectedFilesPaths, setSelectedFilesPaths] = useState<Set<string>>(new Set());
+  const composerContext = useComposerContextSelection();
+  const { selectedBufferIds, selectedFilesPaths } = composerContext.inputProps;
 
   const submit = useCallback(
     (prompt: string) => {
@@ -72,26 +73,7 @@ export function AgentLaunchInput({
       isTyping={false}
       streamingMessageId={null}
       queueCount={0}
-      selectedBufferIds={selectedBufferIds}
-      selectedFilesPaths={selectedFilesPaths}
-      onToggleBufferSelection={(bufferId) =>
-        setSelectedBufferIds((current) => {
-          const next = new Set(current);
-          if (next.has(bufferId)) next.delete(bufferId);
-          else next.add(bufferId);
-          return next;
-        })
-      }
-      onToggleFileSelection={(filePath) =>
-        setSelectedFilesPaths((current) => {
-          const next = new Set(current);
-          if (next.has(filePath)) next.delete(filePath);
-          else next.add(filePath);
-          return next;
-        })
-      }
-      onSetSelectedBufferIds={setSelectedBufferIds}
-      onSetSelectedFilesPaths={setSelectedFilesPaths}
+      {...composerContext.inputProps}
       isActiveSurface
       presentation="initial"
       autoFocus={autoFocus}
