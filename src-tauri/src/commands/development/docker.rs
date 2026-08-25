@@ -9,7 +9,7 @@ use std::{
 };
 use tauri::{Emitter, State};
 use tokio::{
-   io::{AsyncBufReadExt, AsyncRead, AsyncWriteExt, BufReader},
+   io::{AsyncBufReadExt, AsyncRead, BufReader},
    process::Command,
    sync::Mutex,
    task::JoinHandle,
@@ -19,6 +19,7 @@ use uuid::Uuid;
 mod container_files;
 mod devcontainer;
 mod jsonc;
+mod process;
 mod project_config;
 
 use container_files::parse_container_file_archive;
@@ -27,6 +28,10 @@ use devcontainer::{
    resolve_workspace_mount, string_array_or_single, string_value,
 };
 use jsonc::normalize_jsonc;
+use process::{
+   format_docker_launch_error, run_docker, run_docker_bytes, run_docker_in, run_docker_owned,
+   run_docker_with_stdin,
+};
 use project_config::{
    discover_env_files, empty_project_config, ensure_workspace_dir, inspect_env_file,
    is_env_file_path, project_config_path, read_project_config, resolve_workspace_file,
@@ -1185,7 +1190,7 @@ async fn docker_container_health_details()
 }
 
 async fn docker_compose_services(
-   workspace_path: &PathBuf,
+   workspace_path: &Path,
    compose_files: &[PathBuf],
 ) -> Result<Vec<DockerComposeService>, String> {
    let service_names = docker_compose_service_names(workspace_path, compose_files).await?;
@@ -1221,7 +1226,7 @@ async fn docker_compose_services(
 }
 
 async fn docker_compose_service_names(
-   workspace_path: &PathBuf,
+   workspace_path: &Path,
    compose_files: &[PathBuf],
 ) -> Result<Vec<String>, String> {
    let mut args = compose_path_args(compose_files);
@@ -1238,7 +1243,7 @@ async fn docker_compose_service_names(
 }
 
 async fn docker_compose_ps(
-   workspace_path: &PathBuf,
+   workspace_path: &Path,
    compose_files: &[PathBuf],
 ) -> Result<Vec<DockerComposeServiceRow>, String> {
    let mut args = compose_path_args(compose_files);
@@ -1392,7 +1397,7 @@ fn workspace_debug_preset_from_launch(
 }
 
 async fn open_compose_dev_container(
-   workspace_path: &PathBuf,
+   workspace_path: &Path,
    dev_container: &DockerDevContainer,
 ) -> Result<DockerDevContainerOpenResult, String> {
    let service = dev_container
@@ -1843,122 +1848,6 @@ fn join_command_output(first: String, second: String) -> String {
       .filter(|output| !output.is_empty())
       .collect::<Vec<_>>()
       .join("\n")
-}
-
-fn format_docker_launch_error(error: std::io::Error) -> String {
-   if error.kind() == std::io::ErrorKind::NotFound {
-      "Docker CLI was not found. Install Docker Desktop or make sure `docker` is available in PATH."
-         .to_string()
-   } else {
-      format!("Failed to launch Docker CLI: {}", error)
-   }
-}
-
-async fn run_docker(args: &[&str]) -> Result<String, String> {
-   let output = Command::new("docker")
-      .args(args)
-      .output()
-      .await
-      .map_err(format_docker_launch_error)?;
-
-   if output.status.success() {
-      return String::from_utf8(output.stdout)
-         .map_err(|error| format!("Docker returned non-UTF-8 output: {}", error));
-   }
-
-   let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-   let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-   let detail = if !stderr.is_empty() { stderr } else { stdout };
-
-   Err(if detail.is_empty() {
-      format!("Docker command failed with status {}", output.status)
-   } else {
-      detail
-   })
-}
-
-async fn run_docker_in(args: &[String], cwd: &PathBuf) -> Result<String, String> {
-   let output = Command::new("docker")
-      .args(args)
-      .current_dir(cwd)
-      .output()
-      .await
-      .map_err(format_docker_launch_error)?;
-
-   docker_output_result(output).await
-}
-
-async fn run_docker_owned(args: &[String]) -> Result<String, String> {
-   let output = Command::new("docker")
-      .args(args)
-      .output()
-      .await
-      .map_err(format_docker_launch_error)?;
-
-   docker_output_result(output).await
-}
-
-async fn run_docker_with_stdin(args: &[String], stdin: String) -> Result<String, String> {
-   let mut child = Command::new("docker")
-      .args(args)
-      .stdin(Stdio::piped())
-      .stdout(Stdio::piped())
-      .stderr(Stdio::piped())
-      .spawn()
-      .map_err(format_docker_launch_error)?;
-
-   if let Some(mut child_stdin) = child.stdin.take() {
-      child_stdin
-         .write_all(stdin.as_bytes())
-         .await
-         .map_err(|error| format!("Failed to write Docker command input: {}", error))?;
-   }
-
-   let output = child
-      .wait_with_output()
-      .await
-      .map_err(|error| format!("Docker command task failed: {}", error))?;
-
-   docker_output_result(output).await
-}
-
-async fn run_docker_bytes(args: &[String]) -> Result<Vec<u8>, String> {
-   let output = Command::new("docker")
-      .args(args)
-      .output()
-      .await
-      .map_err(format_docker_launch_error)?;
-
-   if output.status.success() {
-      return Ok(output.stdout);
-   }
-
-   let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-   let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-   let detail = if !stderr.is_empty() { stderr } else { stdout };
-
-   Err(if detail.is_empty() {
-      format!("Docker command failed with status {}", output.status)
-   } else {
-      detail
-   })
-}
-
-async fn docker_output_result(output: std::process::Output) -> Result<String, String> {
-   if output.status.success() {
-      return String::from_utf8(output.stdout)
-         .map_err(|error| format!("Docker returned non-UTF-8 output: {}", error));
-   }
-
-   let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-   let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-   let detail = if !stderr.is_empty() { stderr } else { stdout };
-
-   Err(if detail.is_empty() {
-      format!("Docker command failed with status {}", output.status)
-   } else {
-      detail
-   })
 }
 
 async fn run_container_log_stream(
