@@ -100,6 +100,7 @@ import {
 import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buffer-restore";
 import { restoreWorkspaceSessionFolders } from "../services/workspace-session-folder-restore";
 import { prepareWorkspaceClose } from "../services/workspace-close-guard";
+import { drainDeferredWorkspaceSessionBuffers } from "../services/workspace-deferred-session-restore";
 import { initializeWorkspacePath } from "../services/workspace-initialization-router";
 import { resetWorkspaceResources } from "../services/workspace-reset";
 import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
@@ -860,50 +861,38 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
               isRestoringDeferredBuffers = true;
               void (async () => {
-                let restoredBufferCount = 0;
-
-                while (pendingSessionBuffers.length > 0) {
-                  await waitForWorkspaceIdle();
-                  if (
-                    get().rootFolderPath !== projectPath ||
-                    workspaceRuntimeRegistry.getActiveWorkspaceId() !== workspaceId
-                  ) {
-                    return;
-                  }
-
-                  const nextBuffer = pendingSessionBuffers[0];
-                  if (!nextBuffer) {
-                    break;
-                  }
-
-                  try {
-                    await restoreBuffers([nextBuffer]);
-                  } catch (error) {
+                const result = await drainDeferredWorkspaceSessionBuffers({
+                  pendingBuffers: pendingSessionBuffers,
+                  waitForIdle: waitForWorkspaceIdle,
+                  shouldContinue: () =>
+                    get().rootFolderPath === projectPath &&
+                    workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId,
+                  restoreBuffer: async (buffer) => restoreBuffers([buffer]),
+                  onBufferError: (buffer, error) => {
                     console.warn(
-                      `[workspace-open] failed to restore deferred tab ${nextBuffer.path}`,
+                      `[workspace-open] failed to restore deferred tab ${buffer.path}`,
                       error,
                     );
-                  }
-                  pendingSessionBuffers.shift();
-                  restoredBufferCount++;
-
-                  if (restorePlan.activeBufferPath) {
-                    const activeBuffer = getBufferByPath(
-                      bufferStore.getState().buffers,
-                      restorePlan.activeBufferPath,
-                    );
-                    if (activeBuffer) {
-                      bufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
+                  },
+                  afterBufferRestored: () => {
+                    if (restorePlan.activeBufferPath) {
+                      const activeBuffer = getBufferByPath(
+                        bufferStore.getState().buffers,
+                        restorePlan.activeBufferPath,
+                      );
+                      if (activeBuffer) {
+                        bufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
+                      }
                     }
-                  }
-                }
+                  },
+                });
 
-                if (pendingSessionBuffers.length === 0) {
+                if (result.completed) {
                   resumePendingSessionRestore = null;
                   restoreProjectPaneState(projectPath, workspaceId);
                   frontendTrace("info", "workspace-open", "restoreSession:deferred:end", {
                     projectPath,
-                    restoredBuffers: restoredBufferCount,
+                    restoredBuffers: result.restoredBufferCount,
                   });
                 }
               })()
