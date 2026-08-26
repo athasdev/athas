@@ -32,10 +32,20 @@ function getCurrentThemeType(): "light" | "dark" {
   return document.documentElement.getAttribute("data-theme-type") === "light" ? "light" : "dark";
 }
 
-function applyWindowTransparency(enabled: boolean) {
+let requestedWindowTransparency = false;
+
+function isEffectiveWindowTransparencyEnabled() {
+  return (
+    requestedWindowTransparency &&
+    document.documentElement.getAttribute("data-reduce-transparency") !== "true"
+  );
+}
+
+export function syncEffectiveWindowTransparency() {
   if (typeof document === "undefined") return;
 
-  cacheWindowTransparencyForBootstrap(enabled);
+  const enabled = isEffectiveWindowTransparencyEnabled();
+
   document.documentElement.setAttribute(
     "data-window-transparency",
     enabled ? "enabled" : "disabled",
@@ -47,6 +57,12 @@ function applyWindowTransparency(enabled: boolean) {
   }).catch((error) => {
     console.warn("Failed to sync window transparency", error);
   });
+}
+
+function applyWindowTransparency(enabled: boolean) {
+  requestedWindowTransparency = enabled;
+  cacheWindowTransparencyForBootstrap(enabled);
+  syncEffectiveWindowTransparency();
 }
 
 function applyUiPreferences(settings: Pick<Settings, "reduceMotion" | "showStatusBar">) {
@@ -130,9 +146,7 @@ async function applyTheme(theme: Theme) {
 
 function syncNativeWindowAppearance(themeType: "light" | "dark") {
   const transparencyEnabled =
-    typeof document === "undefined"
-      ? true
-      : document.documentElement.getAttribute("data-window-transparency") !== "disabled";
+    typeof document === "undefined" ? true : isEffectiveWindowTransparencyEnabled();
 
   void invoke("set_native_window_appearance", { themeType, transparencyEnabled }).catch((error) => {
     console.warn("Failed to sync native window appearance", error);

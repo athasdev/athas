@@ -3,6 +3,25 @@ use std::{collections::HashMap, fs, path::Path, process::Command};
 use tauri::State;
 use tokio::sync::RwLock;
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SystemAccessibilityPreferences {
+   reduce_transparency: bool,
+   increase_contrast: bool,
+   differentiate_without_color: bool,
+}
+
+#[cfg(target_os = "macos")]
+fn read_macos_accessibility_preference(key: &str) -> bool {
+   Command::new("defaults")
+      .args(["read", "com.apple.universalaccess", key])
+      .output()
+      .ok()
+      .filter(|output| output.status.success())
+      .map(|output| String::from_utf8_lossy(&output.stdout).trim() == "1")
+      .unwrap_or(false)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TomlTheme {
    pub id: String,
@@ -124,6 +143,28 @@ fn get_system_theme_sync() -> String {
 #[tauri::command]
 pub async fn get_system_theme() -> Result<String, String> {
    Ok(get_system_theme_sync())
+}
+
+#[tauri::command]
+pub async fn get_system_accessibility_preferences() -> Result<SystemAccessibilityPreferences, String>
+{
+   #[cfg(target_os = "macos")]
+   {
+      Ok(SystemAccessibilityPreferences {
+         reduce_transparency: read_macos_accessibility_preference("reduceTransparency"),
+         increase_contrast: read_macos_accessibility_preference("increaseContrast"),
+         differentiate_without_color: read_macos_accessibility_preference(
+            "differentiateWithoutColor",
+         ),
+      })
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   Ok(SystemAccessibilityPreferences {
+      reduce_transparency: false,
+      increase_contrast: false,
+      differentiate_without_color: false,
+   })
 }
 
 pub fn load_theme_from_toml(toml_path: &Path) -> Result<Vec<TomlTheme>, String> {

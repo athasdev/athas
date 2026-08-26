@@ -291,6 +291,7 @@ fn main() {
          start_codex_review,
          // Theme commands
          get_system_theme,
+         get_system_accessibility_preferences,
          load_toml_themes,
          load_single_toml_theme,
          get_cached_themes,

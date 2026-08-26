@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { MotionConfig } from "motion/react";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
+import { useSystemAccessibility } from "@/features/settings/hooks/use-system-accessibility";
 import { initializeAppBootstrap } from "@/features/bootstrap/initialize-app-bootstrap";
 import {
   recordStartupMilestone,
@@ -23,6 +24,7 @@ import { DialogServiceProvider } from "@/ui/dialog";
 
 function WorkbenchApp() {
   useAppBootstrap();
+  useSystemAccessibility();
   const reduceMotion = useSettingsStore((state) => state.settings.reduceMotion);
 
   useEffect(() => {
