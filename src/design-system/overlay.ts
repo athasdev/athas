@@ -12,7 +12,7 @@ export const overlaySurface = cva("rounded-xl bg-background text-foreground outl
   variants: {
     variant: {
       dialog: "shadow-(--shadow-dialog) ring-1 ring-border/70",
-      command: "shadow-(--shadow-popover)",
+      command: "shadow-(--shadow-dialog) ring-1 ring-border/70",
     },
   },
   defaultVariants: {

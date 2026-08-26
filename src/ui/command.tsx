@@ -26,11 +26,11 @@ interface CommandProps {
 const commandInputSelector = "[data-command-input]";
 
 const commandContentVariants = cva(
-  "relative z-10 flex max-h-[min(68vh,32rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden",
+  "relative z-10 flex max-h-[min(72vh,38rem)] w-[min(50rem,calc(100vw-2rem))] flex-col overflow-hidden",
 );
 
 const commandItemVariants = cva(
-  "group/command-item font-sans ui-text-sm mb-0.5 flex h-auto min-h-9 w-full items-center justify-start gap-2 rounded-chrome px-2.5 py-2 text-left leading-row transition-colors",
+  "group/command-item font-sans ui-text-sm mb-0.5 flex h-auto min-h-10 w-full items-center justify-start gap-2.5 rounded-chrome px-2.5 py-2 text-left leading-row transition-colors",
   {
     variants: {
       selected: {
@@ -44,10 +44,10 @@ const commandItemVariants = cva(
   },
 );
 
-const commandHeaderContentClassName = "flex items-center gap-1.5 px-3 py-2";
+const commandHeaderContentClassName = "flex items-center gap-2 px-3 py-2.5";
 
 const commandInputClassName = cva(
-  "font-sans ui-text-sm h-7 min-w-0 flex-1 bg-transparent leading-[1.4] text-foreground placeholder-subtle-foreground outline-none",
+  "font-sans ui-text-sm h-8 min-w-0 flex-1 bg-transparent leading-[1.4] text-foreground placeholder-subtle-foreground outline-none",
 );
 
 const commandItemActionVariants = cva(
@@ -132,7 +132,7 @@ const Command = ({
         <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
           <DialogPrimitive.Portal>
             <div
-              className="fixed inset-0 z-10060 flex items-start justify-center pt-16"
+              className="fixed inset-0 z-10060 flex items-start justify-center bg-black/10 pt-[10vh]"
               onMouseDown={(event) => {
                 if (event.target !== event.currentTarget) return;
                 event.preventDefault();
@@ -202,14 +202,14 @@ export const CommandHeader = ({
     <div data-command-header className={cn("border-border border-b", className)}>
       <div className={cn(commandHeaderContentClassName, contentClassName)}>
         {children}
-        <CommandHeaderAction aria-label="Close command palette" onClick={onClose}>
-          <X />
-        </CommandHeaderAction>
         {showClearButton && (
           <CommandHeaderAction aria-label="Clear persisted actions" onClick={clearActionsStack}>
             <RefreshCwIcon />
           </CommandHeaderAction>
         )}
+        <CommandHeaderAction aria-label="Close command palette" onClick={onClose}>
+          <X />
+        </CommandHeaderAction>
       </div>
     </div>
   );
@@ -532,7 +532,7 @@ export const CommandItemIcon = ({
 }: CommandItemIconProps) => (
   <span
     className={cn(
-      "inline-flex size-5 shrink-0 items-center justify-center text-subtle-foreground",
+      "inline-flex size-6 shrink-0 items-center justify-center text-subtle-foreground",
       variant === "framed" && "rounded-md border border-border/70 bg-surface/70",
       className,
     )}
@@ -676,6 +676,18 @@ export function useCommandListNavigation({
       if (event.key === "ArrowUp") {
         event.preventDefault();
         setSelectedIndex((index) => moveCommandListIndex(index, itemCount, "previous"));
+        return;
+      }
+
+      if (event.key === "Home") {
+        event.preventDefault();
+        setSelectedIndex(0);
+        return;
+      }
+
+      if (event.key === "End") {
+        event.preventDefault();
+        setSelectedIndex(clampCommandListIndex(itemCount - 1, itemCount));
         return;
       }
 
