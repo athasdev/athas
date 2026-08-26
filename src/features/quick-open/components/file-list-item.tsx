@@ -1,9 +1,9 @@
 import { ClockIcon } from "@/ui/icons";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { CommandItemBadge, CommandItemRow } from "@/ui/command";
+import { SearchMatchHighlight } from "@/ui/search-match-highlight";
 import { getDirectoryPath } from "@/utils/path-helpers";
 import type { FileCategory, FileItem } from "@/features/file-search/types/file-search.types";
-import { SearchMatchHighlight } from "./search-match-highlight";
 
 interface FileListItemProps {
   file: FileItem;
