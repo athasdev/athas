@@ -1,6 +1,8 @@
 import type { StateCreator } from "zustand";
 import type { CommandPaletteViewId } from "@/features/command-palette/types/view.types";
 import type { SettingsTab } from "./types/ui-state.types";
+import { invoke } from "@tauri-apps/api/core";
+import { IS_MAC } from "@/utils/platform";
 
 export type ProjectPickerInitialStep = "picker" | "addRemote";
 
@@ -229,7 +231,12 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
 
   setSettingsInitialTab: (tab: SettingsTab) => set({ settingsInitialTab: tab }),
 
-  openSettingsDialog: (tab?: SettingsTab) =>
+  openSettingsDialog: (tab?: SettingsTab) => {
+    if (IS_MAC && typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+      void invoke("open_settings_window", { tab: tab ?? null });
+      return;
+    }
+
     set({
       isSettingsDialogVisible: true,
       isQuickOpenVisible: false,
@@ -239,5 +246,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       isProjectPickerVisible: false,
       isDatabaseConnectionVisible: false,
       settingsInitialTab: tab ?? null,
-    }),
+    });
+  },
 });

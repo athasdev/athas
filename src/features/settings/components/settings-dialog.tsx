@@ -14,11 +14,14 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
+import { ChromeBar, ChromeLabel } from "@/ui/chrome";
 import Dialog from "@/ui/dialog";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
+import { cn } from "@/utils/cn";
+import { IS_MAC } from "@/utils/platform";
 import type { SearchResult } from "../types/search.types";
 import { SETTINGS_TAB_ITEMS, SettingsVerticalTabs } from "./settings-vertical-tabs";
 
@@ -38,9 +41,10 @@ import { TerminalSettings } from "./tabs/terminal-settings";
 interface SettingsDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  presentation?: "dialog" | "window";
 }
 
-const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
+const SettingsDialog = ({ isOpen, onClose, presentation = "dialog" }: SettingsDialogProps) => {
   const { settingsInitialTab, setSettingsInitialTab } = useUIState();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const lastSettingsTab = useSettingsStore((state) => state.settings.lastSettingsTab);
@@ -243,101 +247,147 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   const activePanelId = `settings-panel-${activeTab}`;
   const activeTabId = `settings-tab-${activeTab}`;
 
+  const tabPicker = (
+    <Button
+      ref={tabDropdownRef}
+      type="button"
+      variant="default"
+      size="sm"
+      className="hidden max-w-48 min-w-0 justify-start gap-1.5 text-left max-[720px]:inline-flex"
+      onClick={() => setIsTabDropdownOpen(true)}
+    >
+      <ActiveTabIcon weight="duotone" />
+      <span className="truncate">{activeTabItem.label}</span>
+      <CaretDown className="shrink-0 text-subtle-foreground" />
+    </Button>
+  );
+
+  const searchInput = (
+    <div
+      ref={searchInputAnchorRef}
+      className={cn(
+        presentation === "window" ? "w-56" : "w-64",
+        "max-[720px]:w-44 max-[520px]:w-32",
+      )}
+    >
+      <Input
+        type="text"
+        placeholder="Search settings..."
+        value={searchQuery}
+        onChange={(event) => {
+          setSearchQuery(event.target.value);
+          setIsSearchDropdownOpen(event.target.value.trim().length > 0);
+        }}
+        onFocus={() => {
+          if (searchQuery.trim()) setIsSearchDropdownOpen(true);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            setIsSearchDropdownOpen(false);
+            return;
+          }
+
+          if (event.key !== "Enter") return;
+          const firstResult = visibleSearchResults[0];
+          if (!firstResult) return;
+          event.preventDefault();
+          navigateToSearchResult(firstResult);
+        }}
+        leftIcon={Search}
+        size={presentation === "window" ? "xs" : "md"}
+        shape="pill"
+        className="w-full"
+      />
+    </div>
+  );
+
+  const settingsContent = (
+    <div
+      className={cn(
+        "flex size-full min-w-0 overflow-hidden",
+        presentation === "window" && "gap-workbench px-workbench pb-workbench",
+      )}
+    >
+      <div className="h-full w-52 shrink-0 overflow-hidden max-[720px]:hidden">
+        <SettingsVerticalTabs
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          panelIdForTab={(tab) => `settings-panel-${tab}`}
+        />
+      </div>
+
+      <Card
+        variant={presentation === "window" ? "default" : "elevated"}
+        size="flush"
+        className={cn(
+          "@container/settings min-w-0 flex-1",
+          presentation === "dialog" && "mt-0 mr-2 mb-2 ml-0 max-[720px]:ml-2",
+        )}
+      >
+        <ScrollArea
+          orientation="vertical"
+          className="min-w-0 flex-1"
+          contentClassName="w-full max-w-full overflow-x-hidden p-3 max-[720px]:p-2"
+          viewportProps={{
+            ref: contentRef,
+            id: activePanelId,
+            role: "tabpanel",
+            "aria-labelledby": activeTabId,
+            "data-settings-content": "",
+          }}
+        >
+          {renderTabContent()}
+        </ScrollArea>
+      </Card>
+    </div>
+  );
+
   return (
     <>
-      <Dialog
-        onClose={onClose}
-        title={
-          <>
-            <span className="max-[720px]:hidden">Settings</span>
-            <Button
-              ref={tabDropdownRef}
-              type="button"
-              variant="default"
-              size="sm"
-              shape="pill"
-              className="hidden max-w-48 min-w-0 justify-start gap-1.5 text-left max-[720px]:inline-flex"
-              onClick={() => setIsTabDropdownOpen(true)}
-            >
-              <ActiveTabIcon className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
-              <span className="truncate">{activeTabItem.label}</span>
-              <CaretDown className="size-3.5 shrink-0 text-subtle-foreground" />
-            </Button>
-          </>
-        }
-        headerActions={
-          <div ref={searchInputAnchorRef} className="w-64 max-[720px]:w-44 max-[520px]:w-32">
-            <Input
-              type="text"
-              placeholder="Search settings..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setIsSearchDropdownOpen(e.target.value.trim().length > 0);
-              }}
-              onFocus={() => {
-                if (searchQuery.trim()) setIsSearchDropdownOpen(true);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  setIsSearchDropdownOpen(false);
-                  return;
-                }
-
-                if (event.key !== "Enter") return;
-                const firstResult = visibleSearchResults[0];
-                if (!firstResult) return;
-                event.preventDefault();
-                navigateToSearchResult(firstResult);
-              }}
-              leftIcon={Search}
-              size="md"
-              shape="pill"
-              className="w-full"
-            />
-          </div>
-        }
-        classNames={{
-          modal:
-            "h-[74vh] max-h-205 w-[90vw] max-w-280 min-w-0 max-[720px]:h-[86vh] max-[720px]:w-[calc(100vw-32px)] [&>div:first-child]:border-b-0",
-          header: "max-[720px]:grid max-[720px]:grid-cols-[minmax(0,1fr)_auto] max-[720px]:gap-2",
-          title: "max-[720px]:min-w-0",
-          headerActions: "max-[720px]:min-w-0",
-          content: "flex h-full p-0",
-        }}
-        scrollable={false}
-      >
-        <div className="flex size-full min-w-0 overflow-hidden">
-          <div className="h-full w-52 shrink-0 max-[720px]:hidden">
-            <SettingsVerticalTabs
-              activeTab={activeTab}
-              onTabChange={handleTabChange}
-              panelIdForTab={(tab) => `settings-panel-${tab}`}
-            />
-          </div>
-
-          <Card
-            variant="elevated"
-            size="flush"
-            className="@container/settings mt-0 mr-2 mb-2 ml-0 min-w-0 flex-1 max-[720px]:ml-2"
+      {presentation === "window" ? (
+        <div className="athas-layout-shell flex size-full flex-col overflow-hidden bg-surface">
+          <ChromeBar
+            region="title"
+            emphasis="primary"
+            data-tauri-drag-region
+            className={cn(
+              "athas-title-bar justify-between",
+              IS_MAC ? "pl-23.5" : "pl-chrome-inline",
+            )}
           >
-            <ScrollArea
-              orientation="vertical"
-              className="min-w-0 flex-1"
-              contentClassName="w-full max-w-full overflow-x-hidden p-3 max-[720px]:p-2"
-              viewportProps={{
-                ref: contentRef,
-                id: activePanelId,
-                role: "tabpanel",
-                "aria-labelledby": activeTabId,
-                "data-settings-content": "",
-              }}
-            >
-              {renderTabContent()}
-            </ScrollArea>
-          </Card>
+            <div className="flex min-w-0 items-center gap-chrome-loose">
+              <ChromeLabel tone="strong" className="max-[720px]:hidden">
+                Settings
+              </ChromeLabel>
+              {tabPicker}
+            </div>
+            {searchInput}
+          </ChromeBar>
+          <div className="min-h-0 flex-1">{settingsContent}</div>
         </div>
-      </Dialog>
+      ) : (
+        <Dialog
+          onClose={onClose}
+          title={
+            <>
+              <span className="max-[720px]:hidden">Settings</span>
+              {tabPicker}
+            </>
+          }
+          headerActions={searchInput}
+          classNames={{
+            modal:
+              "h-[74vh] max-h-205 w-[90vw] max-w-280 min-w-0 max-[720px]:h-[86vh] max-[720px]:w-[calc(100vw-32px)] [&>div:first-child]:border-b-0",
+            header: "max-[720px]:grid max-[720px]:grid-cols-[minmax(0,1fr)_auto] max-[720px]:gap-2",
+            title: "max-[720px]:min-w-0",
+            headerActions: "max-[720px]:min-w-0",
+            content: "flex h-full p-0",
+          }}
+          scrollable={false}
+        >
+          {settingsContent}
+        </Dialog>
+      )}
       <Dropdown
         isOpen={isTabDropdownOpen}
         anchorRef={tabDropdownRef}
