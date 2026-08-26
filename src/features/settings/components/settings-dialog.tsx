@@ -253,6 +253,7 @@ const SettingsDialog = ({ isOpen, onClose, presentation = "dialog" }: SettingsDi
       type="button"
       variant="default"
       size="sm"
+      shape="pill"
       className="hidden max-w-48 min-w-0 justify-start gap-1.5 text-left max-[720px]:inline-flex"
       onClick={() => setIsTabDropdownOpen(true)}
     >
