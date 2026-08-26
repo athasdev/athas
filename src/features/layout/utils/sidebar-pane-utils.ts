@@ -4,6 +4,7 @@ export type SidebarView =
   | "github-prs"
   | "views"
   | "docker"
+  | "settings"
   | "outline"
   | "databases"
   | "collaboration"

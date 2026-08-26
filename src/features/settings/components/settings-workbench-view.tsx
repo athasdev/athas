@@ -19,7 +19,7 @@ import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import type { SearchResult } from "../types/search.types";
-import { SETTINGS_TAB_ITEMS, SettingsVerticalTabs } from "./settings-vertical-tabs";
+import { SETTINGS_TAB_ITEMS } from "./settings-vertical-tabs";
 
 import { AdvancedSettings } from "./tabs/advanced-settings";
 import { AccountSettings } from "./tabs/account-settings";
@@ -35,7 +35,13 @@ import { FileTreeSettings } from "./tabs/file-tree-settings";
 import { TerminalSettings } from "./tabs/terminal-settings";
 
 const SettingsWorkbenchView = () => {
-  const { settingsInitialTab, setSettingsInitialTab } = useUIState();
+  const {
+    settingsInitialTab,
+    settingsInitialSection,
+    settingsNavigationRequestId,
+    setSettingsInitialTab,
+    setSettingsInitialSection,
+  } = useUIState();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const lastSettingsTab = useSettingsStore((state) => state.settings.lastSettingsTab);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
@@ -102,10 +108,19 @@ const SettingsWorkbenchView = () => {
       if (nextTab !== result.tab) return;
 
       setActiveTab(nextTab);
+      setSettingsInitialTab(nextTab);
+      setSettingsInitialSection(result.section);
+      void updateSetting("lastSettingsTab", nextTab);
       selectSearchResult(result.id);
       setIsSearchDropdownOpen(false);
     },
-    [resolveVisibleTab, selectSearchResult],
+    [
+      resolveVisibleTab,
+      selectSearchResult,
+      setSettingsInitialSection,
+      setSettingsInitialTab,
+      updateSetting,
+    ],
   );
   const tabMenuItems: MenuItem[] = visibleTabs.map((tab) => {
     const Icon = tab.icon;
@@ -124,6 +139,39 @@ const SettingsWorkbenchView = () => {
     },
     [clearSearch],
   );
+
+  useEffect(() => {
+    if (!settingsInitialSection) return;
+
+    let revealFrameId: number | undefined;
+    const frameId = window.requestAnimationFrame(() => {
+      const content = contentRef.current;
+      if (!content) return;
+
+      const sectionKey = getSettingSearchTargetKey(settingsInitialSection);
+      const section = content.querySelector<HTMLElement>(
+        `[data-settings-section-key="${sectionKey}"]`,
+      );
+      if (!section) return;
+
+      const revealSection = () => {
+        section.scrollIntoView({ block: "start", inline: "nearest" });
+      };
+      const sectionTrigger = section.querySelector<HTMLElement>("[data-settings-section-trigger]");
+
+      if (sectionTrigger?.getAttribute("aria-expanded") === "false") {
+        sectionTrigger.click();
+        revealFrameId = window.requestAnimationFrame(revealSection);
+      } else {
+        revealSection();
+      }
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      if (revealFrameId !== undefined) window.cancelAnimationFrame(revealFrameId);
+    };
+  }, [activeTab, settingsInitialSection, settingsNavigationRequestId]);
 
   useEffect(() => {
     let revealFrameId: number | undefined;
@@ -289,30 +337,20 @@ const SettingsWorkbenchView = () => {
           {searchInput}
         </ChromeBar>
 
-        <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-          <div className="h-full w-52 shrink-0 overflow-hidden max-[720px]:hidden">
-            <SettingsVerticalTabs
-              activeTab={activeTab}
-              onTabChange={handleTabChange}
-              panelIdForTab={(tab) => `settings-panel-${tab}`}
-            />
-          </div>
-
-          <ScrollArea
-            orientation="vertical"
-            className="min-w-0 flex-1"
-            contentClassName="mx-auto min-h-full w-full max-w-4xl overflow-x-hidden px-6 py-4 max-[720px]:px-3 max-[720px]:py-2"
-            viewportProps={{
-              ref: contentRef,
-              id: activePanelId,
-              role: "tabpanel",
-              "aria-labelledby": activeTabId,
-              "data-settings-content": "",
-            }}
-          >
-            {renderTabContent()}
-          </ScrollArea>
-        </div>
+        <ScrollArea
+          orientation="vertical"
+          className="min-h-0 min-w-0 flex-1"
+          contentClassName="mx-auto min-h-full w-full max-w-4xl overflow-x-hidden px-6 py-4 max-[720px]:px-3 max-[720px]:py-2"
+          viewportProps={{
+            ref: contentRef,
+            id: activePanelId,
+            role: "tabpanel",
+            "aria-labelledby": activeTabId,
+            "data-settings-content": "",
+          }}
+        >
+          {renderTabContent()}
+        </ScrollArea>
       </div>
       <Dropdown
         isOpen={isTabDropdownOpen}

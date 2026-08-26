@@ -145,6 +145,31 @@ describe("settings UI contract", () => {
     expect(settingsViewSource).not.toContain("tabIndex: -1");
   });
 
+  it("keeps settings navigation in the shared sidebar instead of the workbench content", () => {
+    const settingsViewSource = readFileSync(
+      `${componentsDirectory}/settings-workbench-view.tsx`,
+      "utf8",
+    );
+    const settingsSidebarSource = readFileSync(
+      `${componentsDirectory}/settings-sidebar.tsx`,
+      "utf8",
+    );
+    const settingsNavigationSource = readFileSync(
+      `${componentsDirectory}/settings-vertical-tabs.tsx`,
+      "utf8",
+    );
+
+    expect(settingsViewSource).not.toContain("<SettingsVerticalTabs");
+    expect(settingsSidebarSource).toContain('<SidebarWorkspace title="Settings">');
+    expect(settingsSidebarSource).toContain("<SettingsVerticalTabs");
+    expect(settingsSidebarSource).toContain("onSectionChange={handleSectionChange}");
+    expect(settingsNavigationSource).toContain("<SidebarListItem");
+    expect(settingsNavigationSource).toContain('data-slot="settings-sidebar-nested-sections"');
+    expect(settingsNavigationSource).toContain('sections: ["Theme", "Typography"');
+    expect(settingsViewSource).toContain("settingsInitialSection");
+    expect(settingsViewSource).toContain('section.scrollIntoView({ block: "start"');
+  });
+
   it("content-sizes AI selector triggers and menus in settings", () => {
     for (const fileName of ["provider-selector.tsx", "model-selector.tsx"]) {
       const source = readFileSync(`${aiSelectorsDirectory}/${fileName}`, "utf8");

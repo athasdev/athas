@@ -21,17 +21,20 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { SettingsTab } from "@/features/window/stores/ui-state.store";
 import { useProFeature } from "@/features/window/hooks/use-pro-feature";
 import { Empty, EmptyDescription } from "@/ui/empty";
-import { SidebarListItem, SidebarPanel, SidebarScrollArea } from "@/ui/sidebar";
+import { SidebarListItem, SidebarScrollArea } from "@/ui/sidebar";
 
 interface SettingsVerticalTabsProps {
   activeTab: SettingsTab;
+  activeSection?: string | null;
   onTabChange: (tab: SettingsTab) => void;
+  onSectionChange?: (tab: SettingsTab, section: string) => void;
   panelIdForTab?: (tab: SettingsTab) => string;
 }
 
 export interface SettingsTabItem {
   id: SettingsTab;
   label: string;
+  sections?: string[];
   icon: ComponentType<{
     size?: string | number;
     className?: string;
@@ -53,6 +56,7 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
   {
     id: "appearance",
     label: "Appearance",
+    sections: ["Theme", "Typography", "Interface", "Layout"],
     icon: PaintBrush,
   },
   {
@@ -63,16 +67,19 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
   {
     id: "file-explorer",
     label: "Files",
+    sections: ["Display", "Behavior", "Filters"],
     icon: TreeStructure,
   },
   {
     id: "git",
     label: "Git",
+    sections: ["Integration", "Git View", "Editor"],
     icon: GitBranch,
   },
   {
     id: "terminal",
     label: "Terminal",
+    sections: ["Launch", "Profiles", "Typography", "Interaction", "Cursor"],
     icon: TerminalWindow,
   },
   {
@@ -83,6 +90,7 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
   {
     id: "ai",
     label: "Agent",
+    sections: ["Notifications", "AI Chat", "Autocomplete", "Agent History"],
     icon: Sparkle,
   },
   {
@@ -93,18 +101,22 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
   {
     id: "enterprise",
     label: "Enterprise",
+    sections: ["Enterprise Controls", "Extension Allowlist"],
     icon: ShieldCheck,
   },
   {
     id: "advanced",
     label: "Advanced",
+    sections: ["Features", "Data", "Telemetry"],
     icon: Gear,
   },
 ];
 
 export const SettingsVerticalTabs = ({
   activeTab,
+  activeSection,
   onTabChange,
+  onSectionChange,
   panelIdForTab = (tab) => `settings-panel-${tab}`,
 }: SettingsVerticalTabsProps) => {
   const subscription = useAuthStore((state) => state.subscription);
@@ -119,27 +131,32 @@ export const SettingsVerticalTabs = ({
   const handleNavigationKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
 
-    const tabs = Array.from(
-      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]:not(:disabled)'),
+    const navigationItems = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>(
+        "[data-settings-navigation-item]:not(:disabled)",
+      ),
     );
-    if (tabs.length === 0) return;
+    if (navigationItems.length === 0) return;
 
     event.preventDefault();
-    const currentIndex = tabs.indexOf(document.activeElement as HTMLButtonElement);
+    const currentIndex = navigationItems.indexOf(document.activeElement as HTMLButtonElement);
     const nextIndex =
       event.key === "Home"
         ? 0
         : event.key === "End"
-          ? tabs.length - 1
+          ? navigationItems.length - 1
           : event.key === "ArrowDown"
-            ? (currentIndex + 1 + tabs.length) % tabs.length
-            : (currentIndex - 1 + tabs.length) % tabs.length;
-    tabs[nextIndex]?.focus();
-    tabs[nextIndex]?.click();
+            ? (currentIndex + 1 + navigationItems.length) % navigationItems.length
+            : (currentIndex - 1 + navigationItems.length) % navigationItems.length;
+    navigationItems[nextIndex]?.focus();
+    navigationItems[nextIndex]?.click();
   };
 
   return (
-    <SidebarPanel data-slot="settings-sidebar" className="bg-transparent">
+    <div
+      data-slot="settings-sidebar-navigation"
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+    >
       <SidebarScrollArea
         className="min-h-0 min-w-0 flex-1"
         viewportProps={{
@@ -147,9 +164,7 @@ export const SettingsVerticalTabs = ({
         }}
       >
         <nav
-          role="tablist"
           aria-label="Settings sections"
-          aria-orientation="vertical"
           className="flex w-full flex-col gap-chrome-tight"
           onKeyDown={handleNavigationKeyDown}
         >
@@ -157,22 +172,46 @@ export const SettingsVerticalTabs = ({
             visibleTabs.map((item) => {
               const Icon = item.icon;
               const active = activeTab === item.id;
+              const nestedSectionActive = item.sections?.includes(activeSection ?? "") ?? false;
 
               return (
-                <SidebarListItem
-                  key={item.id}
-                  active={active}
-                  size="sm"
-                  leading={<Icon weight="duotone" />}
-                  id={`settings-tab-${item.id}`}
-                  role="tab"
-                  aria-selected={active}
-                  aria-controls={panelIdForTab(item.id)}
-                  tabIndex={active ? 0 : -1}
-                  onClick={() => onTabChange(item.id)}
-                >
-                  {item.label}
-                </SidebarListItem>
+                <div key={item.id} className="flex min-w-0 flex-col gap-chrome-tight">
+                  <SidebarListItem
+                    active={active && !nestedSectionActive}
+                    leading={<Icon weight="duotone" />}
+                    id={`settings-tab-${item.id}`}
+                    aria-current={active && !nestedSectionActive ? "page" : undefined}
+                    aria-controls={panelIdForTab(item.id)}
+                    data-settings-navigation-item=""
+                    onClick={() => onTabChange(item.id)}
+                  >
+                    {item.label}
+                  </SidebarListItem>
+                  {active && item.sections?.length ? (
+                    <div
+                      role="group"
+                      aria-label={`${item.label} sections`}
+                      data-slot="settings-sidebar-nested-sections"
+                      className="flex min-w-0 flex-col gap-chrome-tight pl-5"
+                    >
+                      {item.sections.map((section) => {
+                        const sectionActive = activeSection === section;
+
+                        return (
+                          <SidebarListItem
+                            key={section}
+                            active={sectionActive}
+                            aria-current={sectionActive ? "location" : undefined}
+                            data-settings-navigation-item=""
+                            onClick={() => onSectionChange?.(item.id, section)}
+                          >
+                            {section}
+                          </SidebarListItem>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
               );
             })
           ) : (
@@ -185,15 +224,11 @@ export const SettingsVerticalTabs = ({
 
       {!hasSettingsSync ? (
         <div data-slot="settings-sidebar-footer" className="shrink-0 px-chrome-inline pb-2">
-          <SidebarListItem
-            size="sm"
-            leading={<ArrowSquareUp weight="duotone" />}
-            onClick={promptUpgrade}
-          >
+          <SidebarListItem leading={<ArrowSquareUp weight="duotone" />} onClick={promptUpgrade}>
             Upgrade to Pro
           </SidebarListItem>
         </div>
       ) : null}
-    </SidebarPanel>
+    </div>
   );
 };

@@ -16,6 +16,8 @@ interface ModalState {
   projectPickerInitialStep: ProjectPickerInitialStep;
   isDatabaseConnectionVisible: boolean;
   settingsInitialTab: SettingsTab | null;
+  settingsInitialSection: string | null;
+  settingsNavigationRequestId: number;
 }
 
 interface ModalActions {
@@ -29,7 +31,8 @@ interface ModalActions {
   openProjectPicker: (initialStep?: ProjectPickerInitialStep) => void;
   setIsDatabaseConnectionVisible: (v: boolean) => void;
   setSettingsInitialTab: (tab: SettingsTab) => void;
-  openSettingsDialog: (tab?: SettingsTab) => void;
+  setSettingsInitialSection: (section: string | null) => void;
+  openSettingsDialog: (tab?: SettingsTab, section?: string) => void;
   hasOpenModal: () => boolean;
   closeTopModal: () => boolean;
 }
@@ -48,6 +51,8 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   projectPickerInitialStep: "picker",
   isDatabaseConnectionVisible: false,
   settingsInitialTab: null,
+  settingsInitialSection: null,
+  settingsNavigationRequestId: 0,
 
   // Actions
   hasOpenModal: () => {
@@ -220,9 +225,19 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
     }
   },
 
-  setSettingsInitialTab: (tab: SettingsTab) => set({ settingsInitialTab: tab }),
+  setSettingsInitialTab: (tab: SettingsTab) =>
+    set((state) => ({
+      settingsInitialTab: tab,
+      settingsInitialSection: null,
+      settingsNavigationRequestId: state.settingsNavigationRequestId + 1,
+    })),
+  setSettingsInitialSection: (section: string | null) =>
+    set((state) => ({
+      settingsInitialSection: section,
+      settingsNavigationRequestId: state.settingsNavigationRequestId + 1,
+    })),
 
-  openSettingsDialog: (tab?: SettingsTab) => {
+  openSettingsDialog: (tab?: SettingsTab, section?: string) => {
     set({
       isSettingsDialogVisible: false,
       isQuickOpenVisible: false,
@@ -232,7 +247,15 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       isProjectPickerVisible: false,
       isDatabaseConnectionVisible: false,
       settingsInitialTab: tab ?? null,
+      settingsInitialSection: section ?? null,
+      settingsNavigationRequestId: get().settingsNavigationRequestId + 1,
     });
+    const state = get() as ModalSlice & {
+      setActiveView: (view: "settings") => void;
+      setIsSidebarVisible: (visible: boolean) => void;
+    };
+    state.setActiveView("settings");
+    state.setIsSidebarVisible(true);
     useBufferStore.getState().actions.openSettingsBuffer();
   },
 });

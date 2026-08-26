@@ -1,5 +1,15 @@
 import { describe, expect, test } from "vite-plus/test";
-import { getActiveSidebarView, resolveSidebarPaneClick } from "../utils/sidebar-pane-utils";
+import {
+  getActiveSidebarView,
+  getSidebarPaneLevel,
+  resolveSidebarPaneClick,
+} from "../utils/sidebar-pane-utils";
+
+describe("getSidebarPaneLevel", () => {
+  test("keeps settings in the primary sidebar", () => {
+    expect(getSidebarPaneLevel("settings")).toBe("primary");
+  });
+});
 
 describe("getActiveSidebarView", () => {
   test("defaults to files when no alternate pane is active", () => {
