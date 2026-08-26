@@ -13,18 +13,15 @@ import {
   UserCircleIcon as UserCircle,
   UsersThreeIcon as UsersThree,
 } from "@/ui/icons";
-import type { ComponentType } from "react";
+import type { ComponentType, KeyboardEvent } from "react";
 import { useUpgradeToPro } from "@/features/settings/hooks/use-upgrade-to-pro";
 import { resolveSettingsAccess } from "@/features/settings/lib/settings-access";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { SettingsTab } from "@/features/window/stores/ui-state.store";
 import { useProFeature } from "@/features/window/hooks/use-pro-feature";
-import { Button } from "@/ui/button";
 import { Empty, EmptyDescription } from "@/ui/empty";
-import { ScrollArea } from "@/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
-import { cn } from "@/utils/cn";
+import { SidebarListItem, SidebarPanel, SidebarScrollArea } from "@/ui/sidebar";
 
 interface SettingsVerticalTabsProps {
   activeTab: SettingsTab;
@@ -119,73 +116,84 @@ export const SettingsVerticalTabs = ({
     matchingTabs: null,
   });
 
-  return (
-    <div data-slot="settings-sidebar" className="flex h-full min-h-0 min-w-0 flex-col">
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => onTabChange(value as SettingsTab)}
-        orientation="vertical"
-        className="min-h-0 flex-1 gap-0"
-      >
-        <ScrollArea
-          className="min-h-0 min-w-0 flex-1"
-          contentClassName="px-2 pb-2"
-          viewportProps={{
-            "aria-label": "Settings navigation",
-          }}
-        >
-          <TabsList
-            variant="bare"
-            aria-label="Settings sections"
-            className="flex w-full flex-col items-stretch gap-0.5"
-          >
-            {visibleTabs.length > 0 ? (
-              visibleTabs.map((item) => {
-                const Icon = item.icon;
+  const handleNavigationKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
 
-                return (
-                  <TabsTrigger
-                    key={item.id}
-                    value={item.id}
-                    size="md"
-                    id={`settings-tab-${item.id}`}
-                    aria-controls={panelIdForTab(item.id)}
-                    className={cn(
-                      "h-auto w-full justify-start gap-2.5 px-2.5 py-1.5 text-left",
-                      activeTab === item.id
-                        ? "bg-primary/10 text-primary"
-                        : "text-foreground hover:bg-accent",
-                    )}
-                  >
-                    <Icon className="size-4.5 shrink-0 text-current" weight="duotone" />
-                    <span className="truncate">{item.label}</span>
-                  </TabsTrigger>
-                );
-              })
-            ) : (
-              <Empty className="min-h-0 flex-none rounded-none p-2">
-                <EmptyDescription>No matching settings</EmptyDescription>
-              </Empty>
-            )}
-          </TabsList>
-        </ScrollArea>
-      </Tabs>
+    const tabs = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]:not(:disabled)'),
+    );
+    if (tabs.length === 0) return;
+
+    event.preventDefault();
+    const currentIndex = tabs.indexOf(document.activeElement as HTMLButtonElement);
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? tabs.length - 1
+          : event.key === "ArrowDown"
+            ? (currentIndex + 1 + tabs.length) % tabs.length
+            : (currentIndex - 1 + tabs.length) % tabs.length;
+    tabs[nextIndex]?.focus();
+    tabs[nextIndex]?.click();
+  };
+
+  return (
+    <SidebarPanel data-slot="settings-sidebar" className="bg-transparent">
+      <SidebarScrollArea
+        className="min-h-0 min-w-0 flex-1"
+        viewportProps={{
+          "aria-label": "Settings navigation",
+        }}
+      >
+        <nav
+          role="tablist"
+          aria-label="Settings sections"
+          aria-orientation="vertical"
+          className="flex w-full flex-col gap-chrome-tight"
+          onKeyDown={handleNavigationKeyDown}
+        >
+          {visibleTabs.length > 0 ? (
+            visibleTabs.map((item) => {
+              const Icon = item.icon;
+              const active = activeTab === item.id;
+
+              return (
+                <SidebarListItem
+                  key={item.id}
+                  active={active}
+                  size="sm"
+                  leading={<Icon weight="duotone" />}
+                  id={`settings-tab-${item.id}`}
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls={panelIdForTab(item.id)}
+                  tabIndex={active ? 0 : -1}
+                  onClick={() => onTabChange(item.id)}
+                >
+                  {item.label}
+                </SidebarListItem>
+              );
+            })
+          ) : (
+            <Empty className="min-h-0 flex-none rounded-none p-2">
+              <EmptyDescription>No matching settings</EmptyDescription>
+            </Empty>
+          )}
+        </nav>
+      </SidebarScrollArea>
 
       {!hasSettingsSync ? (
-        <div data-slot="settings-sidebar-footer" className="shrink-0 p-2">
-          <Button
-            type="button"
-            variant="accent-ghost"
+        <div data-slot="settings-sidebar-footer" className="shrink-0 px-chrome-inline pb-2">
+          <SidebarListItem
+            size="sm"
+            leading={<ArrowSquareUp weight="duotone" />}
             onClick={promptUpgrade}
-            className="w-full justify-start gap-2.5 text-left"
-            size="md"
-            shape="pill"
           >
-            <ArrowSquareUp className="size-4.5" weight="duotone" />
             Upgrade to Pro
-          </Button>
+          </SidebarListItem>
         </div>
       ) : null}
-    </div>
+    </SidebarPanel>
   );
 };
