@@ -10,7 +10,8 @@ type ClosedBufferType =
   | "diff"
   | "markdownPreview"
   | "htmlPreview"
-  | "csvPreview";
+  | "csvPreview"
+  | "svgPreview";
 
 interface ClosedBufferBase {
   type: ClosedBufferType;
@@ -30,7 +31,7 @@ interface ClosedDiffBuffer extends ClosedBufferBase {
 }
 
 interface ClosedPreviewBuffer extends ClosedBufferBase {
-  type: "markdownPreview" | "htmlPreview" | "csvPreview";
+  type: "markdownPreview" | "htmlPreview" | "csvPreview" | "svgPreview";
   content: string;
   sourceFilePath: string;
 }
@@ -48,7 +49,8 @@ const isReopenableBuffer = (
     buffer.type === "diff" ||
     buffer.type === "markdownPreview" ||
     buffer.type === "htmlPreview" ||
-    buffer.type === "csvPreview"
+    buffer.type === "csvPreview" ||
+    buffer.type === "svgPreview"
   );
 };
 
@@ -80,6 +82,7 @@ export const buildClosedBufferHistoryEntry = (buffer: PaneContent): ClosedBuffer
     case "markdownPreview":
     case "htmlPreview":
     case "csvPreview":
+    case "svgPreview":
       return {
         type: buffer.type,
         path: buffer.path,

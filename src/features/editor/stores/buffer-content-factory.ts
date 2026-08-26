@@ -227,6 +227,16 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         content: spec.content,
         sourceFilePath: spec.sourceFilePath,
       };
+    case "svgPreview":
+      return {
+        ...base,
+        type: "svgPreview",
+        path: spec.path,
+        name: spec.name,
+        isPreview: false,
+        content: spec.content,
+        sourceFilePath: spec.sourceFilePath,
+      };
     case "externalEditor":
       return {
         ...base,

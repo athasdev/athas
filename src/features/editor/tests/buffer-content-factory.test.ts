@@ -111,3 +111,23 @@ describe("createPaneContent web viewer surfaces", () => {
     });
   });
 });
+
+describe("createPaneContent SVG preview surfaces", () => {
+  it("keeps the preview linked to its editable source file", () => {
+    const content = createPaneContent("svg-preview", {
+      type: "svgPreview",
+      path: "/workspace/icon.svg:preview",
+      name: "icon.svg (Preview)",
+      content: "<svg />",
+      sourceFilePath: "/workspace/icon.svg",
+    });
+
+    expect(content).toMatchObject({
+      type: "svgPreview",
+      path: "/workspace/icon.svg:preview",
+      sourceFilePath: "/workspace/icon.svg",
+      content: "<svg />",
+      isPreview: false,
+    });
+  });
+});

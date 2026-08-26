@@ -9,7 +9,7 @@ import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
 import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-toolbar-action";
-import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
+import { getFilePreviewType } from "@/features/editor/utils/file-preview";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button, type ButtonProps } from "@/ui/button";
@@ -80,22 +80,7 @@ export default function Breadcrumb({
     inlineEditActions.show(editorViewKey ?? resolvedBufferId ?? null);
   };
 
-  const isMarkdownFile = () => {
-    if (!activeBuffer) return false;
-    return isMarkdownPreviewableFile(activeBuffer.path);
-  };
-
-  const isHtmlFile = () => {
-    if (!activeBuffer) return false;
-    const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
-    return extension === "html" || extension === "htm";
-  };
-
-  const isCsvFile = () => {
-    if (!activeBuffer) return false;
-    const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
-    return extension === "csv";
-  };
+  const previewType = activeBuffer ? getFilePreviewType(activeBuffer.path) : null;
 
   const handlePreviewClick = () => {
     const fullActiveBuffer = resolvedBufferId
@@ -105,34 +90,26 @@ export default function Breadcrumb({
       !fullActiveBuffer ||
       fullActiveBuffer.type === "markdownPreview" ||
       fullActiveBuffer.type === "htmlPreview" ||
-      fullActiveBuffer.type === "csvPreview"
+      fullActiveBuffer.type === "csvPreview" ||
+      fullActiveBuffer.type === "svgPreview"
     )
       return;
 
-    const { openBuffer } = useBufferStore.getState().actions;
+    const type = getFilePreviewType(fullActiveBuffer.path);
+    if (!type) return;
+
+    const { openContent } = useBufferStore.getState().actions;
     const previewPath = `${fullActiveBuffer.path}:preview`;
     const previewName = `${fullActiveBuffer.name} (Preview)`;
-
-    const isMarkdown = isMarkdownFile();
-    const isHtml = isHtmlFile();
-    const isCsv = isCsvFile();
-
     const bufferContent = hasTextContent(fullActiveBuffer) ? fullActiveBuffer.content : "";
 
-    openBuffer(
-      previewPath,
-      previewName,
-      bufferContent,
-      false, // isImage
-      undefined, // databaseType
-      false, // isDiff
-      true, // isVirtual
-      undefined, // diffData
-      isMarkdown, // isMarkdownPreview
-      isHtml, // isHtmlPreview
-      isCsv, // isCsvPreview
-      fullActiveBuffer.path, // sourceFilePath
-    );
+    openContent({
+      type,
+      path: previewPath,
+      name: previewName,
+      content: bufferContent,
+      sourceFilePath: fullActiveBuffer.path,
+    });
   };
 
   const filePath = filePathOverride ?? activeBuffer?.path ?? "";
@@ -140,10 +117,7 @@ export default function Breadcrumb({
   if (!filePath) return null;
   const isLocalHistorySnapshot = filePath.startsWith("local-history://");
 
-  const canPreview =
-    (isMarkdownFile() && activeBuffer?.type !== "markdownPreview") ||
-    (isHtmlFile() && activeBuffer?.type !== "htmlPreview") ||
-    (isCsvFile() && activeBuffer?.type !== "csvPreview");
+  const canPreview = previewType !== null && activeBuffer?.type !== previewType;
 
   const actionMenuItems: MenuItem[] = [
     ...(canPreview

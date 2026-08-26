@@ -35,6 +35,7 @@ export type PaneContentType =
   | "markdownPreview"
   | "htmlPreview"
   | "csvPreview"
+  | "svgPreview"
   | "externalEditor"
   | "globalSearch"
   | "diagnostics"
@@ -188,6 +189,12 @@ export interface CsvPreviewContent extends PaneContentBase {
   sourceFilePath: string;
 }
 
+export interface SvgPreviewContent extends PaneContentBase {
+  type: "svgPreview";
+  content: string;
+  sourceFilePath: string;
+}
+
 interface ExternalEditorContent extends PaneContentBase {
   type: "externalEditor";
   terminalConnectionId: string;
@@ -243,6 +250,7 @@ export type PaneContent =
   | MarkdownPreviewContent
   | HtmlPreviewContent
   | CsvPreviewContent
+  | SvgPreviewContent
   | ExternalEditorContent
   | GlobalSearchContent
   | DiagnosticsContent
@@ -303,14 +311,16 @@ export function hasTextContent(
   | MarkdownDocumentContent
   | MarkdownPreviewContent
   | HtmlPreviewContent
-  | CsvPreviewContent {
+  | CsvPreviewContent
+  | SvgPreviewContent {
   return (
     c.type === "editor" ||
     c.type === "diff" ||
     c.type === "markdownDocument" ||
     c.type === "markdownPreview" ||
     c.type === "htmlPreview" ||
-    c.type === "csvPreview"
+    c.type === "csvPreview" ||
+    c.type === "svgPreview"
   );
 }
 
@@ -427,6 +437,13 @@ export type OpenContentSpec =
     }
   | {
       type: "csvPreview";
+      path: string;
+      name: string;
+      content: string;
+      sourceFilePath: string;
+    }
+  | {
+      type: "svgPreview";
       path: string;
       name: string;
       content: string;

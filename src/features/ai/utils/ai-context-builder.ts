@@ -102,7 +102,8 @@ export const buildContextPrompt = (context: ContextInfo): string => {
         ab.type === "diff" ||
         ab.type === "markdownPreview" ||
         ab.type === "htmlPreview" ||
-        ab.type === "csvPreview";
+        ab.type === "csvPreview" ||
+        ab.type === "svgPreview";
       if (hasContent) {
         const textContent = (ab as { content: string }).content;
         const lines = textContent.split("\n");

@@ -84,9 +84,12 @@ const makeFileBuffer = (
 };
 
 const makePreviewBuffer = (
-  type: "markdownPreview" | "htmlPreview" | "csvPreview",
+  type: "markdownPreview" | "htmlPreview" | "csvPreview" | "svgPreview",
   isPinned = true,
-): Extract<PaneContent, { type: "markdownPreview" | "htmlPreview" | "csvPreview" }> => ({
+): Extract<
+  PaneContent,
+  { type: "markdownPreview" | "htmlPreview" | "csvPreview" | "svgPreview" }
+> => ({
   id: `${type}-buffer`,
   type,
   path: `/workspace/file.${type}:preview`,
@@ -178,7 +181,7 @@ describe("reopen closed tab", () => {
     expect(state.closedBuffersHistory).toEqual([]);
   });
 
-  it.each(["markdownPreview", "htmlPreview", "csvPreview"] as const)(
+  it.each(["markdownPreview", "htmlPreview", "csvPreview", "svgPreview"] as const)(
     "restores a closed %s buffer from its preview state",
     async (type) => {
       const closedBuffer = makePreviewBuffer(type);

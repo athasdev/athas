@@ -48,6 +48,7 @@ import type { EditorContentChangeOptions, Position, Range } from "../types/edito
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
 import { MonacoEditor } from "./monaco-editor";
+import { SvgPreview } from "./svg/svg-preview";
 import { EditorStylesheet } from "./stylesheet";
 import Breadcrumb, { type BreadcrumbProps } from "./toolbar/breadcrumb";
 
@@ -185,6 +186,7 @@ const CodeEditor = ({
   const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
   const showCsvPreview = activeBuffer?.type === "csvPreview";
+  const showSvgPreview = activeBuffer?.type === "svgPreview";
 
   // Initialize refs in store
   useEffect(() => {
@@ -578,6 +580,8 @@ const CodeEditor = ({
               <HtmlPreview />
             ) : showCsvPreview ? (
               <CsvPreview />
+            ) : showSvgPreview ? (
+              <SvgPreview bufferId={activeBufferId ?? undefined} />
             ) : showNotebookEditor ? (
               <NotebookEditor />
             ) : (

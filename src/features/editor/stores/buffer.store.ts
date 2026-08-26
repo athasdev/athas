@@ -834,7 +834,8 @@ const createBufferStore = (workspaceId: string) => {
             case "database":
             case "markdownPreview":
             case "htmlPreview":
-            case "csvPreview": {
+            case "csvPreview":
+            case "svgPreview": {
               const path = spec.path;
               const existing = getBufferByPath(buffers, path);
               if (existing) {
@@ -1680,7 +1681,8 @@ const createBufferStore = (workspaceId: string) => {
             if (
               closedBuffer.type === "markdownPreview" ||
               closedBuffer.type === "htmlPreview" ||
-              closedBuffer.type === "csvPreview"
+              closedBuffer.type === "csvPreview" ||
+              closedBuffer.type === "svgPreview"
             ) {
               reopenedBufferId = get().actions.openContent({
                 type: closedBuffer.type,

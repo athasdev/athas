@@ -29,7 +29,8 @@ export function getExplorerTargetPath(activeBuffer: PaneContent | null): string 
   if (
     activeBuffer.type === "markdownPreview" ||
     activeBuffer.type === "htmlPreview" ||
-    activeBuffer.type === "csvPreview"
+    activeBuffer.type === "csvPreview" ||
+    activeBuffer.type === "svgPreview"
   ) {
     return activeBuffer.sourceFilePath;
   }
