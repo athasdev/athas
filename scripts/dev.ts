@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
 
+import { withMacosDevSigning } from "./dev/macos-dev-signing";
+
 const children = new Set<ReturnType<typeof Bun.spawn>>();
 
 let stopping = false;
@@ -25,11 +27,14 @@ try {
   );
   children.add(
     Bun.spawn(["tauri", "dev", "--config", "src-tauri/tauri.preview.conf.json"], {
-      env: {
-        ...process.env,
-        VITE_EXTENSION_MARKETPLACE_LOCAL: "true",
-        WEBKIT_DISABLE_DMABUF_RENDERER: "1",
-      },
+      env: withMacosDevSigning(
+        {
+          ...process.env,
+          VITE_EXTENSION_MARKETPLACE_LOCAL: "true",
+          WEBKIT_DISABLE_DMABUF_RENDERER: "1",
+        },
+        { identifier: "com.code.athas.preview" },
+      ),
       stdin: "inherit",
       stdout: "inherit",
       stderr: "inherit",
