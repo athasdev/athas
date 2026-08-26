@@ -8,7 +8,6 @@ import {
 } from "@/features/window/utils/window-open-diagnostics";
 
 const WorkbenchApp = lazy(() => import("./workbench-app"));
-const SettingsWindowApp = lazy(() => import("./features/settings/components/settings-window-app"));
 
 function isBlankWindowOpen() {
   const diagnostics = getWindowOpenDiagnostics();
@@ -61,10 +60,6 @@ interface AppProps {
 }
 
 function App({ terminalSessionReady }: AppProps) {
-  const isSettingsWindow = useMemo(
-    () => new URL(window.location.href).searchParams.get("window") === "settings",
-    [],
-  );
   const blankWindowOpen = useMemo(() => isBlankWindowOpen(), []);
 
   useEffect(() => {
@@ -82,14 +77,6 @@ function App({ terminalSessionReady }: AppProps) {
       cleanupStartupMilestone();
     };
   }, [blankWindowOpen]);
-
-  if (isSettingsWindow) {
-    return (
-      <Suspense fallback={<InitialWindowShell />}>
-        <SettingsWindowApp />
-      </Suspense>
-    );
-  }
 
   return (
     <Suspense fallback={<InitialWindowShell />}>

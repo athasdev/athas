@@ -4,6 +4,7 @@ import {
   GitBranchIcon as GitBranch,
   GitPullRequestIcon as GitPullRequest,
   GlobeHemisphereWestIcon as Globe,
+  GearSixIcon as Settings,
   MagnifyingGlassIcon as Search,
   ChatCircleTextIcon as MessageSquare,
   PackageIcon as Package,
@@ -233,6 +234,8 @@ const TabBarItem = memo(function TabBarItem({
               <WarningCircle className="text-subtle-foreground" />
             ) : buffer.type === "references" ? (
               <Search className="text-subtle-foreground" />
+            ) : buffer.type === "settings" ? (
+              <Settings className="text-subtle-foreground" />
             ) : (
               <ThemedFileIcon
                 fileName={getDiffIconName() ?? buffer.name}

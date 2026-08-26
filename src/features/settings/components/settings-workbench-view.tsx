@@ -13,15 +13,11 @@ import {
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
-import { Card } from "@/ui/card";
-import { ChromeBar, ChromeLabel } from "@/ui/chrome";
-import Dialog from "@/ui/dialog";
+import { ChromeBar } from "@/ui/chrome";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
-import { cn } from "@/utils/cn";
-import { IS_MAC } from "@/utils/platform";
 import type { SearchResult } from "../types/search.types";
 import { SETTINGS_TAB_ITEMS, SettingsVerticalTabs } from "./settings-vertical-tabs";
 
@@ -38,13 +34,7 @@ import { KeyboardSettings } from "./tabs/keyboard-settings";
 import { FileTreeSettings } from "./tabs/file-tree-settings";
 import { TerminalSettings } from "./tabs/terminal-settings";
 
-interface SettingsDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  presentation?: "dialog" | "window";
-}
-
-const SettingsDialog = ({ isOpen, onClose, presentation = "dialog" }: SettingsDialogProps) => {
+const SettingsWorkbenchView = () => {
   const { settingsInitialTab, setSettingsInitialTab } = useUIState();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const lastSettingsTab = useSettingsStore((state) => state.settings.lastSettingsTab);
@@ -86,18 +76,14 @@ const SettingsDialog = ({ isOpen, onClose, presentation = "dialog" }: SettingsDi
     SETTINGS_TAB_ITEMS.find((tab) => tab.id === activeTab) ??
     SETTINGS_TAB_ITEMS[0];
   const ActiveTabIcon = activeTabItem.icon;
-  // Sync active tab with explicit requests, or fall back to the persisted last section.
   useEffect(() => {
-    if (isOpen) {
-      const requestedTab = settingsInitialTab ?? lastSettingsTab;
-      const nextTab = resolveVisibleTab(requestedTab);
-      setActiveTab(nextTab);
-      void updateSetting("lastSettingsTab", nextTab);
-    }
+    const requestedTab = settingsInitialTab ?? lastSettingsTab;
+    const nextTab = resolveVisibleTab(requestedTab);
+    setActiveTab(nextTab);
+    void updateSetting("lastSettingsTab", nextTab);
   }, [
     settingsInitialTab,
     lastSettingsTab,
-    isOpen,
     canShowEnterpriseSettings,
     canShowCollaborationSettings,
     updateSetting,
@@ -132,17 +118,14 @@ const SettingsDialog = ({ isOpen, onClose, presentation = "dialog" }: SettingsDi
     };
   });
 
-  // Clear search when dialog closes
-  useEffect(() => {
-    if (!isOpen) {
+  useEffect(
+    () => () => {
       clearSearch();
-      setIsSearchDropdownOpen(false);
-    }
-  }, [isOpen, clearSearch]);
+    },
+    [clearSearch],
+  );
 
   useEffect(() => {
-    if (!isOpen) return;
-
     let revealFrameId: number | undefined;
 
     const clearSearchHighlights = () => {
@@ -204,12 +187,12 @@ const SettingsDialog = ({ isOpen, onClose, presentation = "dialog" }: SettingsDi
       window.cancelAnimationFrame(frameId);
       if (revealFrameId !== undefined) window.cancelAnimationFrame(revealFrameId);
     };
-  }, [activeTab, isOpen, selectedResultId, visibleSearchResults]);
+  }, [activeTab, selectedResultId, visibleSearchResults]);
 
   useEffect(() => {
-    if (!isOpen || !contentRef.current) return;
+    if (!contentRef.current) return;
     contentRef.current.scrollLeft = 0;
-  }, [activeTab, isOpen]);
+  }, [activeTab]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -242,8 +225,6 @@ const SettingsDialog = ({ isOpen, onClose, presentation = "dialog" }: SettingsDi
     }
   };
 
-  if (!isOpen) return null;
-
   const activePanelId = `settings-panel-${activeTab}`;
   const activeTabId = `settings-tab-${activeTab}`;
 
@@ -264,13 +245,7 @@ const SettingsDialog = ({ isOpen, onClose, presentation = "dialog" }: SettingsDi
   );
 
   const searchInput = (
-    <div
-      ref={searchInputAnchorRef}
-      className={cn(
-        presentation === "window" ? "w-56" : "w-64",
-        "max-[720px]:w-44 max-[520px]:w-32",
-      )}
-    >
+    <div ref={searchInputAnchorRef} className="w-56 max-[720px]:w-44 max-[520px]:w-32">
       <Input
         type="text"
         placeholder="Search settings..."
@@ -295,100 +270,50 @@ const SettingsDialog = ({ isOpen, onClose, presentation = "dialog" }: SettingsDi
           navigateToSearchResult(firstResult);
         }}
         leftIcon={Search}
-        size={presentation === "window" ? "xs" : "md"}
+        size="xs"
         shape="pill"
         className="w-full"
       />
     </div>
   );
 
-  const settingsContent = (
-    <div
-      className={cn(
-        "flex size-full min-w-0 overflow-hidden",
-        presentation === "window" && "gap-workbench px-workbench pb-workbench",
-      )}
-    >
-      <div className="h-full w-52 shrink-0 overflow-hidden max-[720px]:hidden">
-        <SettingsVerticalTabs
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          panelIdForTab={(tab) => `settings-panel-${tab}`}
-        />
-      </div>
-
-      <Card
-        variant={presentation === "window" ? "default" : "elevated"}
-        size="flush"
-        className={cn(
-          "@container/settings min-w-0 flex-1",
-          presentation === "dialog" && "mt-0 mr-2 mb-2 ml-0 max-[720px]:ml-2",
-        )}
-      >
-        <ScrollArea
-          orientation="vertical"
-          className="min-w-0 flex-1"
-          contentClassName="w-full max-w-full overflow-x-hidden p-3 max-[720px]:p-2"
-          viewportProps={{
-            ref: contentRef,
-            id: activePanelId,
-            role: "tabpanel",
-            "aria-labelledby": activeTabId,
-            "data-settings-content": "",
-          }}
-        >
-          {renderTabContent()}
-        </ScrollArea>
-      </Card>
-    </div>
-  );
-
   return (
     <>
-      {presentation === "window" ? (
-        <div className="athas-layout-shell flex size-full flex-col overflow-hidden bg-surface">
-          <ChromeBar
-            region="title"
-            emphasis="primary"
-            data-tauri-drag-region
-            className={cn(
-              "athas-title-bar justify-between",
-              IS_MAC ? "pl-23.5" : "pl-chrome-inline",
-            )}
-          >
-            <div className="flex min-w-0 items-center gap-chrome-loose">
-              <ChromeLabel tone="strong" className="max-[720px]:hidden">
-                Settings
-              </ChromeLabel>
-              {tabPicker}
-            </div>
-            {searchInput}
-          </ChromeBar>
-          <div className="min-h-0 flex-1">{settingsContent}</div>
-        </div>
-      ) : (
-        <Dialog
-          onClose={onClose}
-          title={
-            <>
-              <span className="max-[720px]:hidden">Settings</span>
-              {tabPicker}
-            </>
-          }
-          headerActions={searchInput}
-          classNames={{
-            modal:
-              "h-[74vh] max-h-205 w-[90vw] max-w-280 min-w-0 max-[720px]:h-[86vh] max-[720px]:w-[calc(100vw-32px)] [&>div:first-child]:border-b-0",
-            header: "max-[720px]:grid max-[720px]:grid-cols-[minmax(0,1fr)_auto] max-[720px]:gap-2",
-            title: "max-[720px]:min-w-0",
-            headerActions: "max-[720px]:min-w-0",
-            content: "flex h-full p-0",
-          }}
-          scrollable={false}
+      <div className="@container/settings flex size-full min-w-0 flex-col overflow-hidden bg-background">
+        <ChromeBar
+          region="content"
+          emphasis="primary"
+          className="justify-end bg-background max-[720px]:justify-between"
         >
-          {settingsContent}
-        </Dialog>
-      )}
+          {tabPicker}
+          {searchInput}
+        </ChromeBar>
+
+        <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+          <div className="h-full w-52 shrink-0 overflow-hidden max-[720px]:hidden">
+            <SettingsVerticalTabs
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              panelIdForTab={(tab) => `settings-panel-${tab}`}
+            />
+          </div>
+
+          <ScrollArea
+            orientation="vertical"
+            className="min-w-0 flex-1"
+            contentClassName="mx-auto min-h-full w-full max-w-4xl overflow-x-hidden px-6 py-4 max-[720px]:px-3 max-[720px]:py-2"
+            viewportProps={{
+              ref: contentRef,
+              id: activePanelId,
+              role: "tabpanel",
+              "aria-labelledby": activeTabId,
+              "data-settings-content": "",
+            }}
+          >
+            {renderTabContent()}
+          </ScrollArea>
+        </div>
+      </div>
       <Dropdown
         isOpen={isTabDropdownOpen}
         anchorRef={tabDropdownRef}
@@ -440,4 +365,4 @@ const SettingsDialog = ({ isOpen, onClose, presentation = "dialog" }: SettingsDi
   );
 };
 
-export default SettingsDialog;
+export default SettingsWorkbenchView;

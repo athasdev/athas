@@ -195,11 +195,14 @@ describe("buffer preview pane integration", () => {
     const firstReferencesId = bufferActions.openReferencesBuffer();
     const secondReferencesId = bufferActions.openReferencesBuffer();
     const diagnosticsId = bufferActions.openDiagnosticsBuffer();
+    const firstSettingsId = bufferActions.openSettingsBuffer();
+    const secondSettingsId = bufferActions.openSettingsBuffer();
     const firstExtensionsId = bufferActions.openExtensionsBuffer();
     const secondExtensionsId = bufferActions.openExtensionsBuffer();
 
     expect(secondSearchId).toBe(firstSearchId);
     expect(secondReferencesId).toBe(firstReferencesId);
+    expect(secondSettingsId).toBe(firstSettingsId);
     expect(secondExtensionsId).toBe(firstExtensionsId);
     expect(useBufferStore.getState().buffers).toEqual(
       expect.arrayContaining([
@@ -220,6 +223,12 @@ describe("buffer preview pane integration", () => {
           type: "diagnostics",
           path: "diagnostics://problems",
           name: "Diagnostics",
+        }),
+        expect.objectContaining({
+          id: firstSettingsId,
+          type: "settings",
+          path: "settings://preferences",
+          name: "Settings",
         }),
         expect.objectContaining({
           id: firstExtensionsId,

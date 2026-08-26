@@ -15,12 +15,9 @@ recordStartupMilestone("frontend:entry");
 const renderStartedAt = performance.now();
 traceWindowOpen("reactRender:start");
 
-const isSettingsWindow = new URL(window.location.href).searchParams.get("window") === "settings";
-const terminalSessionReady = isSettingsWindow
-  ? Promise.resolve()
-  : initializeFrontendTerminalSession().catch((error) => {
-      console.warn("Failed to clean up stale terminal sessions:", error);
-    });
+const terminalSessionReady = initializeFrontendTerminalSession().catch((error) => {
+  console.warn("Failed to clean up stale terminal sessions:", error);
+});
 
 createRoot(document.getElementById("root")!).render(
   <App terminalSessionReady={terminalSessionReady} />,

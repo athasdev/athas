@@ -8,7 +8,6 @@ import { GitHubNotificationsMenu } from "@/features/github/components/github-not
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import { orderChromeItems, type ChromeItem } from "@/features/layout/utils/chrome-items";
 import RunActionsButton from "@/features/run-actions/components/run-actions-button";
-import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
@@ -393,20 +392,14 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   );
 };
 
-const TitleBarWithSettings = (props: TitleBarProps) => {
-  const isSettingsDialogVisible = useUIState((state) => state.isSettingsDialogVisible);
+const TitleBarWithOverlays = (props: TitleBarProps) => {
   const isProjectPickerVisible = useUIState((state) => state.isProjectPickerVisible);
   const projectPickerInitialStep = useUIState((state) => state.projectPickerInitialStep);
-  const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
 
   return (
     <>
       <TitleBar {...props} />
-      <SettingsDialog
-        isOpen={isSettingsDialogVisible}
-        onClose={() => setIsSettingsDialogVisible(false)}
-      />
       {createPortal(
         isProjectPickerVisible ? (
           <ProjectPicker
@@ -421,4 +414,4 @@ const TitleBarWithSettings = (props: TitleBarProps) => {
   );
 };
 
-export default TitleBarWithSettings;
+export default TitleBarWithOverlays;

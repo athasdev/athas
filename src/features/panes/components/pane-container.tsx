@@ -80,6 +80,9 @@ const DiagnosticsBuffer = lazy(
   () => import("@/features/diagnostics/components/diagnostics-buffer"),
 );
 const ReferencesBuffer = lazy(() => import("@/features/references/components/references-buffer"));
+const SettingsWorkbenchView = lazy(
+  () => import("@/features/settings/components/settings-workbench-view"),
+);
 const ExtensionsView = lazy(() =>
   import("@/extensions/ui/components/extensions-view").then((m) => ({
     default: m.ExtensionsView,
@@ -1001,6 +1004,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "references":
           return <ReferencesBuffer />;
+
+        case "settings":
+          return <SettingsWorkbenchView />;
 
         case "extensions":
           return <ExtensionsView />;

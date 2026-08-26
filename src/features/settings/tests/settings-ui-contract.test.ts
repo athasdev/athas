@@ -118,23 +118,31 @@ describe("settings UI contract", () => {
   });
 
   it("keeps controls reachable without making the settings panel horizontally scrollable", () => {
-    const dialogSource = readFileSync(`${componentsDirectory}/settings-dialog.tsx`, "utf8");
+    const settingsViewSource = readFileSync(
+      `${componentsDirectory}/settings-workbench-view.tsx`,
+      "utf8",
+    );
     const sectionSource = readFileSync(`${componentsDirectory}/settings-section.tsx`, "utf8");
 
-    expect(dialogSource).toContain("@container/settings");
-    expect(dialogSource).toContain('orientation="vertical"');
-    expect(dialogSource).not.toContain('orientation="both"');
-    expect(dialogSource).toContain("overflow-x-hidden");
+    expect(settingsViewSource).toContain("@container/settings");
+    expect(settingsViewSource).toContain('orientation="vertical"');
+    expect(settingsViewSource).not.toContain('orientation="both"');
+    expect(settingsViewSource).toContain("overflow-x-hidden");
     expect(sectionSource).toContain("@max-[640px]/settings:flex-col");
     expect(sectionSource).toContain("@max-[640px]/settings:w-full");
     expect(sectionSource).toContain("@max-[640px]/settings:[&>div]:flex-wrap");
   });
 
-  it("uses one keyboard-reachable scroll owner for settings content", () => {
-    const dialogSource = readFileSync(`${componentsDirectory}/settings-dialog.tsx`, "utf8");
+  it("renders settings as a workbench surface with one keyboard-reachable scroll owner", () => {
+    const settingsViewSource = readFileSync(
+      `${componentsDirectory}/settings-workbench-view.tsx`,
+      "utf8",
+    );
 
-    expect(dialogSource).toContain("scrollable={false}");
-    expect(dialogSource).not.toContain("tabIndex: -1");
+    expect(settingsViewSource).toContain("bg-background");
+    expect(settingsViewSource).not.toContain("<Dialog");
+    expect(settingsViewSource).not.toContain("<Card");
+    expect(settingsViewSource).not.toContain("tabIndex: -1");
   });
 
   it("content-sizes AI selector triggers and menus in settings", () => {
