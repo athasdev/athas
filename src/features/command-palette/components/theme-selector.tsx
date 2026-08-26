@@ -1,13 +1,9 @@
 import {
   CaretLeftIcon as CaretLeft,
-  MonitorIcon as Monitor,
-  MoonIcon as Moon,
-  PaletteIcon as Palette,
   GearSixIcon as Settings,
-  SunIcon as Sun,
   UploadIcon as Upload,
 } from "@/ui/icons";
-import type React from "react";
+import type { ThemeDefinition } from "@/extensions/themes/theme.types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
@@ -24,14 +20,7 @@ import {
 } from "@/ui/command";
 import { toast } from "sonner";
 import { matchesSearchQuery } from "@/utils/search-match";
-
-interface ThemeInfo {
-  id: string;
-  name: string;
-  description: string;
-  category: "System" | "Light" | "Dark" | "Colorful";
-  icon?: React.ReactNode;
-}
+import { getThemePreviewColors } from "../utils/theme-preview";
 
 interface ThemeSelectorContentProps {
   isActive: boolean;
@@ -41,18 +30,20 @@ interface ThemeSelectorContentProps {
   currentTheme?: string;
 }
 
-const getThemeIcon = (category: string): React.ReactNode => {
-  switch (category) {
-    case "System":
-      return <Monitor />;
-    case "Light":
-      return <Sun />;
-    case "Dark":
-      return <Moon />;
-    default:
-      return <Palette />;
-  }
-};
+const ThemeColorPreview = ({ theme }: { theme: ThemeDefinition }) => (
+  <span
+    className="flex size-6 overflow-hidden rounded-md border border-border/70"
+    aria-label={`${theme.name} color palette`}
+  >
+    {getThemePreviewColors(theme).map((color, index) => (
+      <span
+        key={`${color}-${index}`}
+        className="h-full min-w-0 flex-1"
+        style={{ background: color }}
+      />
+    ))}
+  </span>
+);
 
 const clampSelectedIndex = (index: number, size: number): number => {
   if (size <= 0) return 0;
@@ -75,17 +66,7 @@ export const ThemeSelectorContent = ({
   const activeThemeSnapshotRef = useRef<string | undefined>(undefined);
   const didCommitRef = useRef(false);
 
-  const themes = useMemo<ThemeInfo[]>(
-    () =>
-      registeredThemes.map((theme) => ({
-        id: theme.id,
-        name: theme.name,
-        description: theme.description,
-        category: theme.category,
-        icon: getThemeIcon(theme.category),
-      })),
-    [registeredThemes],
-  );
+  const themes = useMemo(() => registeredThemes, [registeredThemes]);
 
   // Filter themes based on query
   const filteredThemes = themes.filter(
@@ -241,6 +222,13 @@ export const ThemeSelectorContent = ({
           onChange={setQuery}
           onKeyDown={handleKeyDown}
           placeholder="Search themes..."
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded="true"
+          aria-controls="theme-selector-results"
+          aria-activedescendant={
+            filteredThemes.length ? `theme-selector-option-${selectedIndex}` : undefined
+          }
         />
         <CommandHeaderAction onClick={handleUploadTheme} aria-label="Upload theme">
           <Upload />
@@ -256,7 +244,12 @@ export const ThemeSelectorContent = ({
         </CommandHeaderAction>
       </CommandHeader>
 
-      <CommandList ref={resultsRef}>
+      <CommandList
+        ref={resultsRef}
+        id="theme-selector-results"
+        role="listbox"
+        aria-label="Color themes"
+      >
         {filteredThemes.length === 0 ? (
           <CommandEmpty>No themes found</CommandEmpty>
         ) : (
@@ -267,6 +260,11 @@ export const ThemeSelectorContent = ({
             return (
               <CommandItemRow
                 key={theme.id}
+                as="div"
+                id={`theme-selector-option-${index}`}
+                role="option"
+                tabIndex={-1}
+                aria-selected={isSelected}
                 data-index={index}
                 onClick={() => {
                   didCommitRef.current = true;
@@ -277,8 +275,10 @@ export const ThemeSelectorContent = ({
                   setSelectedIndex(index);
                 }}
                 isSelected={isSelected}
-                icon={theme.icon || <Moon />}
+                icon={<ThemeColorPreview theme={theme} />}
+                contentLayout="stacked"
                 title={theme.name}
+                description={theme.description || theme.category}
                 accessory={isCurrent ? <CommandItemBadge>Current</CommandItemBadge> : undefined}
               />
             );

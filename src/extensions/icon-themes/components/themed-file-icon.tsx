@@ -1,16 +1,8 @@
-import DOMPurify from "dompurify";
-import { cloneElement, isValidElement, useMemo, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
-import { cn } from "@/utils/cn";
 import { iconThemeRegistry } from "../icon-theme-registry";
-
-const THEMED_FILE_ICON_CACHE_KEY = import.meta.env.DEV ? Date.now().toString(36) : "";
-
-function getIconUrl(url: string) {
-  if (!THEMED_FILE_ICON_CACHE_KEY || url.startsWith("data:")) return url;
-  return `${url}${url.includes("?") ? "&" : "?"}v=${THEMED_FILE_ICON_CACHE_KEY}`;
-}
+import { IconThemeGraphic } from "./icon-theme-graphic";
 
 interface ThemedFileIconProps {
   fileName: string;
@@ -46,54 +38,12 @@ export function ThemedFileIcon({
     () => iconTheme?.getFileIcon(fileName, isDir, isExpanded, isSymlink) ?? null,
     [fileName, iconTheme, isDir, isExpanded, isSymlink, colorThemeId],
   );
-  const sanitizedSvg = useMemo(
-    () =>
-      iconResult?.svg
-        ? DOMPurify.sanitize(iconResult.svg, {
-            USE_PROFILES: { svg: true, svgFilters: true },
-          })
-        : null,
-    [iconResult?.svg],
-  );
-
-  if (!iconResult) {
-    return <span className={className}>&#8226;</span>;
-  }
-
-  const iconClassName = cn(
-    "inline-block size-[1em] shrink-0 leading-none [&_svg]:block [&_svg]:size-full",
-    className,
-  );
-
-  const renderIcon = () => {
-    if (iconResult.component) {
-      if (isValidElement(iconResult.component)) {
-        return cloneElement(iconResult.component, {
-          className: iconClassName,
-        } as React.Attributes & {
-          className: string;
-        });
-      }
-      return <span className={iconClassName}>{iconResult.component}</span>;
-    }
-
-    if (sanitizedSvg) {
-      return <span className={iconClassName} dangerouslySetInnerHTML={{ __html: sanitizedSvg }} />;
-    }
-
-    if (iconResult.url) {
-      return (
-        <img src={getIconUrl(iconResult.url)} alt="" aria-hidden="true" className={iconClassName} />
-      );
-    }
-
-    return <span className={className}>&#8226;</span>;
-  };
+  const icon = <IconThemeGraphic result={iconResult} className={className} />;
 
   if (isSymlink) {
     return (
       <span className="relative inline-block">
-        {renderIcon()}
+        {icon}
         <svg
           viewBox="0 0 16 16"
           className="absolute -right-0.5 -bottom-0.5 size-[0.72em] text-primary"
@@ -114,5 +64,5 @@ export function ThemedFileIcon({
     );
   }
 
-  return renderIcon();
+  return icon;
 }
