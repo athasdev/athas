@@ -33,12 +33,12 @@ import { useInlineEdit } from "@/features/editor/inline-edit/use-inline-edit";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
+import { getInlineGitBlamePresentation } from "@/features/git/utils/git-blame-decoration";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordStartupMilestone } from "@/features/bootstrap/startup-performance";
 import { useVimStore } from "@/features/vim/stores/vim.store";
 import { AnchoredTooltip } from "@/ui/tooltip";
-import { formatRelativeTime } from "@/utils/date";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
 import { getRelativePath, pathStartsWithRoot } from "@/utils/path-helpers";
@@ -242,9 +242,13 @@ export function MonacoEditor({
       return;
     }
 
-    const content = blameLine.is_uncommitted
-      ? "  Uncommitted changes"
-      : `  ${blameLine.author}, ${formatRelativeTime(blameLine.time)}`;
+    const presentation = getInlineGitBlamePresentation(blameLine);
+    if (!presentation) {
+      clearDecoration();
+      return;
+    }
+
+    const { text: content, hoverMarkdown } = presentation;
     const decorationKey = `${filePath}:${lineNumber}:${blameLine.commit_hash}:${content}`;
     if (renderedGitBlameKeyRef.current === decorationKey) return;
 
@@ -253,12 +257,13 @@ export function MonacoEditor({
       {
         range: new MonacoRange(lineNumber, column, lineNumber, column),
         options: {
+          hoverMessage: { value: hoverMarkdown },
           after: {
             content,
             inlineClassName: "monaco-inline-git-blame",
             cursorStops: monacoEditor.InjectedTextCursorStops.None,
           },
-          showIfCollapsed: false,
+          showIfCollapsed: true,
         },
       },
     ]);
