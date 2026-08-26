@@ -427,12 +427,6 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                   emit_menu_event(&window, "menu_check_updates", ());
                }
                "open_settings" => {
-                  #[cfg(target_os = "macos")]
-                  if let Err(error) = commands::open_settings_window(app_handle.clone(), None) {
-                     log::error!("Failed to open settings window: {error}");
-                  }
-
-                  #[cfg(not(target_os = "macos"))]
                   emit_menu_event(&window, "menu_open_settings", ());
                }
                "open_extensions" => {

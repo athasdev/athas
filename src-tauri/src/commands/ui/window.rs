@@ -650,66 +650,6 @@ pub async fn create_app_window(
    result
 }
 
-#[command]
-pub fn open_settings_window(
-   app: tauri::AppHandle<AthasRuntime>,
-   tab: Option<String>,
-) -> Result<(), String> {
-   if let Some(window) = app.get_webview_window("settings") {
-      if let Some(tab) = tab {
-         let _ = window.emit("settings_navigate", tab);
-      }
-      let _ = window.unminimize();
-      window.show().map_err(|error| error.to_string())?;
-      window.set_focus().map_err(|error| error.to_string())?;
-      return Ok(());
-   }
-
-   let mut serializer = url::form_urlencoded::Serializer::new(String::new());
-   serializer.append_pair("window", "settings");
-   if let Some(tab) = tab {
-      serializer.append_pair("tab", &tab);
-   }
-
-   let builder = tauri::WebviewWindowBuilder::new(
-      &app,
-      "settings",
-      WebviewUrl::App(format!("/?{}", serializer.finish()).into()),
-   )
-   .title("Settings")
-   .inner_size(920.0, 680.0)
-   .min_inner_size(720.0, 520.0)
-   .center()
-   .decorations(true)
-   .transparent(cfg!(any(target_os = "macos", target_os = "windows")))
-   .resizable(true)
-   .minimizable(false)
-   .maximizable(false)
-   .skip_taskbar(true)
-   .shadow(true);
-
-   #[cfg(any(
-      target_os = "windows",
-      all(target_os = "linux", not(feature = "linux"))
-   ))]
-   let builder = builder.decorations(false);
-
-   #[cfg(all(target_os = "macos", not(feature = "linux")))]
-   let builder = builder
-      .hidden_title(true)
-      .title_bar_style(TitleBarStyle::Overlay)
-      .traffic_light_position(tauri::LogicalPosition::new(14.0, 20.0));
-
-   let window = builder
-      .build()
-      .map_err(|error| format!("Failed to create settings window: {error}"))?;
-
-   configure_app_window(&window);
-   window.show().map_err(|error| error.to_string())?;
-   window.set_focus().map_err(|error| error.to_string())?;
-   Ok(())
-}
-
 fn build_webview_bridge_script(
    webview_label: &str,
    parent_window_label: &str,

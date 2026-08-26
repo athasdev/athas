@@ -190,7 +190,6 @@ fn main() {
          get_chat_stats,
          // Window commands
          create_app_window,
-         open_settings_window,
          uses_native_window_chrome,
          set_native_window_appearance,
          set_window_transparency_enabled,
