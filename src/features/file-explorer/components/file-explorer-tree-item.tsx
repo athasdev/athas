@@ -73,7 +73,7 @@ function renderHighlightedLabel(label: string, query: string | undefined) {
   return (
     <>
       {label.slice(0, matchIndex)}
-      <mark className="file-tree-search-highlight">
+      <mark className="file-tree-search-highlight rounded-md bg-primary/30 px-px text-inherit">
         {label.slice(matchIndex, matchIndex + trimmedQuery.length)}
       </mark>
       {label.slice(matchIndex + trimmedQuery.length)}
@@ -109,7 +109,7 @@ function FileExplorerTreeItemComponent({
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
   const renderTreeGuides = () =>
     showIndentGuides ? (
-      <div className="file-tree-guides">
+      <div className="file-tree-guides pointer-events-none absolute inset-0 z-1">
         {guideLevels.map((level) => {
           const target = guideTargets[level];
           const startsHere = previousDepth <= level;
@@ -117,7 +117,7 @@ function FileExplorerTreeItemComponent({
           return (
             <span
               key={level}
-              className="file-tree-guide"
+              className="file-tree-guide pointer-events-auto absolute w-[7px] -translate-x-[3px] opacity-90 before:absolute before:inset-y-0 before:left-[3px] before:w-px before:bg-subtle-foreground/18"
               data-file-path={target?.path}
               data-is-dir={target?.isDir}
               data-path={target?.path}
@@ -125,7 +125,7 @@ function FileExplorerTreeItemComponent({
               title={target?.name}
               style={
                 {
-                  left: `calc(${FILE_TREE_BASE_INDENT + level * indentSize}px + var(--file-tree-guide-icon-offset, 7px))`,
+                  left: `calc(${FILE_TREE_BASE_INDENT + level * indentSize}px + 7px)`,
                   top: startsHere ? "4px" : "0",
                   bottom: endsHere ? "4px" : "0",
                 } as React.CSSProperties
@@ -138,10 +138,13 @@ function FileExplorerTreeItemComponent({
 
   if (file.isEditing || file.isRenaming) {
     return (
-      <div className="file-tree-item w-full" data-depth={depth}>
+      <div
+        className="file-tree-item relative flex h-(--file-tree-row-height) w-full min-w-0 items-center"
+        data-depth={depth}
+      >
         {renderTreeGuides()}
         <div
-          className="file-tree-row flex w-full items-center rounded-chrome gap-1.5 px-1.5 py-1 ui-text-sm leading-row"
+          className="file-tree-row relative z-2 box-border flex h-full w-full min-w-0 max-w-full items-center justify-start overflow-hidden rounded-chrome border border-transparent gap-1.5 px-1.5 py-1 ui-text-sm leading-row"
           style={{
             paddingLeft: `${paddingLeft}px`,
           }}
@@ -175,7 +178,7 @@ function FileExplorerTreeItemComponent({
             onValueChange={onEditingValueChange}
             onSubmit={(value) => onSubmit(value, file)}
             onCancel={() => onCancel(file)}
-            className="relative z-1 flex-1"
+            className="relative z-1 min-w-0 flex-1"
             placeholder={file.isDir ? "folder name" : "file name"}
             aria-label={
               file.isRenaming ? `Rename ${file.name}` : `Name new ${file.isDir ? "folder" : "file"}`
@@ -199,12 +202,13 @@ function FileExplorerTreeItemComponent({
       showDisclosure={file.isDir}
       reserveDisclosureSpace={!file.isDir}
       guides={renderTreeGuides()}
+      containerClassName="h-(--file-tree-row-height)"
       data-file-path={file.path}
       data-is-dir={file.isDir}
       data-path={file.path}
       title={file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined}
       className={cn(
-        "min-w-max",
+        "box-border h-full max-w-full justify-start overflow-hidden",
         isDragOver && "border-2! border-dashed! border-primary! bg-primary! bg-opacity-20!",
         isDragging && "cursor-move",
         file.ignored && "opacity-50",

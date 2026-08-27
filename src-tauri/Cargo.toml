@@ -127,6 +127,7 @@ nucleo-matcher = "0.3.1"
 toml = "0.8"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-deep-link = "2"
+tauri-plugin-drag = "2.1.1"
 agent-client-protocol = "2"
 async-trait = "0.1"
 tokio-util = { version = "0.7", features = ["compat"] }

@@ -1,4 +1,5 @@
 import ignore from "ignore";
+import { invoke } from "@tauri-apps/api/core";
 import {
   CursorClickIcon as CursorClick,
   EyeIcon as Eye,
@@ -22,6 +23,7 @@ import {
   filterFileTreeEntries,
   filterFileTreeForFffHits,
   getGuideAncestorRows,
+  getStickyAncestorRows,
   type FilterFileTreeForSearchResult,
 } from "@/features/file-explorer/lib/visible-file-tree-rows";
 import {
@@ -65,6 +67,7 @@ import { SidebarHeader, SidebarIconButton, SidebarSearchPopover } from "@/ui/sid
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
+import { IS_MAC } from "@/utils/platform";
 import {
   getDirName,
   getRelativePath,
@@ -82,7 +85,6 @@ import {
 import { FileExplorerViewport, type FileExplorerViewportHandle } from "./file-explorer-viewport";
 import { FileExplorerTreeItem } from "./file-explorer-tree-item";
 import type { FileTreeGuideTarget } from "./file-explorer-tree-item";
-import "../styles/file-explorer-tree.css";
 
 const ALWAYS_HIDDEN_FILE_NAMES = new Set([".ds_store"]);
 const OPEN_ALL_FILES_LIMIT = 1_000;
@@ -485,6 +487,14 @@ function FileExplorerTreeComponent({
     expandedPathsOverride: displayedExpandedPaths,
     rootFolderPath,
   });
+  const getStickyRowIndexes = useCallback(
+    (firstVisibleIndex: number) =>
+      getStickyAncestorRows(visibleRows, firstVisibleIndex).flatMap((row) => {
+        const index = visibleRowIndexByPath.get(row.file.path);
+        return index === undefined ? [] : [index];
+      }),
+    [visibleRowIndexByPath, visibleRows],
+  );
 
   useLayoutEffect(() => {
     const wasSearchActive = wasTreeSearchActiveRef.current;
@@ -1239,6 +1249,15 @@ function FileExplorerTreeComponent({
             }
             break;
           }
+          case " ": {
+            if (!IS_MAC || !current || isDir || mod || e.altKey || e.shiftKey) break;
+            e.preventDefault();
+            e.stopPropagation();
+            void invoke("toggle_quick_look", { path: current.path }).catch((error) => {
+              console.error("Failed to toggle Quick Look:", error);
+            });
+            break;
+          }
           case "F2": {
             if (!current) break;
             e.preventDefault();
@@ -1479,6 +1498,7 @@ function FileExplorerTreeComponent({
         rowCount={visibleRows.length}
         rowHeight={rowHeight}
         getRowKey={(index) => getVisibleFileTreeRowKey(visibleRows, index)}
+        getStickyIndexes={getStickyRowIndexes}
         emptyState={
           !rootFolderPath ? (
             <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">

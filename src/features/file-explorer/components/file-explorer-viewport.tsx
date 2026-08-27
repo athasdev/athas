@@ -11,6 +11,7 @@ import {
 import {
   FILE_TREE_VIEWPORT_OVERSCAN,
   FILE_TREE_VIEWPORT_PADDING,
+  getFileTreeFirstVisibleIndex,
   getFileTreeScrollTop,
   getFileTreeTotalHeight,
   getFileTreeVirtualRange,
@@ -31,6 +32,7 @@ interface FileExplorerViewportProps extends Omit<
 > {
   emptyState?: React.ReactNode;
   getRowKey: (index: number) => React.Key;
+  getStickyIndexes?: (firstVisibleIndex: number) => readonly number[];
   renderRow: (index: number) => React.ReactNode;
   rowCount: number;
   rowHeight: number;
@@ -45,7 +47,17 @@ export const FileExplorerViewport = forwardRef<
   FileExplorerViewportHandle,
   FileExplorerViewportProps
 >(function FileExplorerViewport(
-  { className, emptyState, getRowKey, renderRow, rowCount, rowHeight, style, ...props },
+  {
+    className,
+    emptyState,
+    getRowKey,
+    getStickyIndexes,
+    renderRow,
+    rowCount,
+    rowHeight,
+    style,
+    ...props
+  },
   forwardedRef,
 ) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -75,6 +87,22 @@ export const FileExplorerViewport = forwardRef<
       updateLayout();
     });
   }, [updateLayout]);
+
+  const resolveStickyIndexes = useCallback(
+    (firstVisibleIndex: number) => {
+      if (!getStickyIndexes || firstVisibleIndex < 0) return [];
+
+      const seen = new Set<number>();
+      return getStickyIndexes(firstVisibleIndex).filter((index) => {
+        if (index < 0 || index >= firstVisibleIndex || index >= rowCount || seen.has(index)) {
+          return false;
+        }
+        seen.add(index);
+        return true;
+      });
+    },
+    [getStickyIndexes, rowCount],
+  );
 
   useLayoutEffect(() => {
     const element = scrollRef.current;
@@ -124,6 +152,7 @@ export const FileExplorerViewport = forwardRef<
           index,
           rowCount,
           rowHeight,
+          viewportStartOffset: resolveStickyIndexes(index).length * rowHeight,
           viewportHeight: element.clientHeight,
         });
         if (nextScrollTop === null) return false;
@@ -141,7 +170,7 @@ export const FileExplorerViewport = forwardRef<
         updateLayout();
       },
     }),
-    [rowCount, rowHeight, updateLayout],
+    [resolveStickyIndexes, rowCount, rowHeight, updateLayout],
   );
 
   const range = useMemo(
@@ -162,11 +191,28 @@ export const FileExplorerViewport = forwardRef<
       (_, offset) => range.startIndex + offset,
     );
   }, [range.endIndex, range.startIndex]);
+  const firstVisibleIndex = useMemo(
+    () =>
+      getFileTreeFirstVisibleIndex({
+        rowCount,
+        rowHeight,
+        scrollTop: layout.scrollTop,
+      }),
+    [layout.scrollTop, rowCount, rowHeight],
+  );
+  const stickyIndexes = useMemo(
+    () => resolveStickyIndexes(firstVisibleIndex),
+    [firstVisibleIndex, resolveStickyIndexes],
+  );
+  const stickyIndexSet = useMemo(() => new Set(stickyIndexes), [stickyIndexes]);
 
   return (
     <div
       ref={scrollRef}
-      className={cn("file-tree-container", className)}
+      className={cn(
+        "file-tree-container relative overflow-x-hidden overflow-y-auto overscroll-none scroll-auto scrollbar-gutter-both font-sans [overflow-anchor:none]",
+        className,
+      )}
       style={
         {
           "--file-tree-row-height": `${rowHeight}px`,
@@ -175,22 +221,45 @@ export const FileExplorerViewport = forwardRef<
       }
       {...props}
     >
+      {stickyIndexes.length > 0 ? (
+        <div
+          className="pointer-events-none sticky top-0 z-20 h-0 overflow-visible"
+          data-file-tree-sticky-ancestors=""
+        >
+          <div
+            className="pointer-events-auto relative w-full min-w-0 overflow-hidden bg-background shadow-[0_-1px_0_0_var(--background)] after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-border/60"
+            style={{ height: stickyIndexes.length * rowHeight }}
+          >
+            {stickyIndexes.map((index) => (
+              <div
+                key={`sticky-${String(getRowKey(index))}`}
+                className="h-(--file-tree-row-height) w-full min-w-0"
+                data-file-tree-sticky-row=""
+              >
+                {renderRow(index)}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div
-        className="file-tree-virtual-canvas"
+        className="file-tree-virtual-canvas relative min-h-full w-full min-w-0 contain-layout contain-style [overflow-anchor:none]"
         style={{ height: getFileTreeTotalHeight(rowCount, rowHeight) }}
       >
-        {virtualIndexes.map((index) => (
-          <div
-            key={getRowKey(index)}
-            className="file-tree-virtual-row"
-            style={{
-              height: rowHeight,
-              top: FILE_TREE_VIEWPORT_PADDING + index * rowHeight,
-            }}
-          >
-            {renderRow(index)}
-          </div>
-        ))}
+        {virtualIndexes.map((index) =>
+          stickyIndexSet.has(index) ? null : (
+            <div
+              key={getRowKey(index)}
+              className="file-tree-virtual-row absolute inset-x-0 w-full min-w-0"
+              style={{
+                height: rowHeight,
+                top: FILE_TREE_VIEWPORT_PADDING + index * rowHeight,
+              }}
+            >
+              {renderRow(index)}
+            </div>
+          ),
+        )}
       </div>
       {emptyState}
     </div>

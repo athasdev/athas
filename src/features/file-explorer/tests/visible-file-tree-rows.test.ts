@@ -5,6 +5,7 @@ import {
   filterFileTreeEntries,
   filterFileTreeForFffHits,
   getGuideAncestorRows,
+  getStickyAncestorRows,
 } from "../lib/visible-file-tree-rows";
 
 const tree = [
@@ -168,6 +169,21 @@ describe("buildVisibleFileTreeRows", () => {
       "/root/src/features",
       "/root/src/features/file-explorer",
     ]);
+  });
+
+  test("finds the full sticky ancestor stack for a visible descendant", () => {
+    const rows = buildVisibleFileTreeRows(
+      tree,
+      new Set(["/root", "/root/src", "/root/src/features", "/root/src/features/file-explorer"]),
+    );
+
+    expect(getStickyAncestorRows(rows, 4).map((row) => row.file.path)).toEqual([
+      "/root",
+      "/root/src",
+      "/root/src/features",
+      "/root/src/features/file-explorer",
+    ]);
+    expect(getStickyAncestorRows(rows, 0)).toEqual([]);
   });
 });
 

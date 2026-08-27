@@ -13,6 +13,7 @@ import {
   InfoIcon as Info,
   LinkIcon as Link,
   ArrowClockwiseIcon as RefreshCw,
+  ArrowSquareUpIcon as Share,
   ScissorsIcon as Scissors,
   MagnifyingGlassIcon as Search,
   TerminalWindowIcon as Terminal,
@@ -21,6 +22,7 @@ import {
   UploadIcon as Upload,
   WarningIcon as Warning,
 } from "@/ui/icons";
+import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useMemo, useState } from "react";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -35,10 +37,12 @@ import { useFileClipboardStore } from "@/features/file-explorer/stores/file-expl
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
 import type { ContextMenuState } from "@/features/file-system/types/app.types";
 import { Button } from "@/ui/button";
-import { Dropdown, menuSeparator, type MenuItem } from "@/ui/dropdown";
+import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
+import { menuSeparator, type MenuItem } from "@/ui/dropdown";
 import Dialog from "@/ui/dialog";
 import { toast } from "sonner";
 import { getBaseName, getDirName, getRelativePath, joinPath } from "@/utils/path-helpers";
+import { IS_MAC } from "@/utils/platform";
 
 interface UseFileExplorerContextMenuOptions {
   rootFolderPath?: string;
@@ -414,6 +418,31 @@ export function useFileExplorerContextMenu({
     }
 
     if (shouldShowFileManagementItems) {
+      if (IS_MAC && !contextMenu.isDir) {
+        items.push(
+          {
+            id: "quick-look",
+            label: "Quick Look",
+            icon: <Eye />,
+            onClick: () => {
+              void invoke("toggle_quick_look", { path: contextMenu.path }).catch((error) => {
+                toast.error(`Unable to preview file: ${String(error)}`);
+              });
+            },
+          },
+          {
+            id: "share",
+            label: "Share…",
+            icon: <Share />,
+            onClick: () => {
+              void invoke("show_share_picker", { path: contextMenu.path }).catch((error) => {
+                toast.error(`Unable to share file: ${String(error)}`);
+              });
+            },
+          },
+        );
+      }
+
       items.push(
         {
           id: "rename",
@@ -482,10 +511,10 @@ export function useFileExplorerContextMenu({
     contextMenu || hasDialog ? (
       <>
         {contextMenu && (
-          <Dropdown
+          <ContextMenuPopup
             isOpen
             point={{ x: contextMenu.x, y: contextMenu.y }}
-            items={contextMenuItems}
+            groups={createContextMenuGroups(contextMenuItems)}
             onClose={() => setContextMenu(null)}
           />
         )}

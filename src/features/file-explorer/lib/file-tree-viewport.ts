@@ -8,6 +8,23 @@ export interface FileTreeVirtualRange {
   endIndex: number;
 }
 
+export function getFileTreeFirstVisibleIndex({
+  rowCount,
+  rowHeight,
+  scrollTop,
+  padding = FILE_TREE_VIEWPORT_PADDING,
+}: {
+  rowCount: number;
+  rowHeight: number;
+  scrollTop: number;
+  padding?: number;
+}) {
+  if (rowCount <= 0 || rowHeight <= 0) return -1;
+
+  const contentScrollTop = Math.max(0, scrollTop - padding);
+  return Math.min(rowCount - 1, Math.floor(contentScrollTop / rowHeight));
+}
+
 export function getFileTreeTotalHeight(
   rowCount: number,
   rowHeight: number,
@@ -51,6 +68,7 @@ export function getFileTreeScrollTop({
   index,
   rowCount,
   rowHeight,
+  viewportStartOffset = 0,
   viewportHeight,
   padding = FILE_TREE_VIEWPORT_PADDING,
 }: {
@@ -59,6 +77,7 @@ export function getFileTreeScrollTop({
   index: number;
   rowCount: number;
   rowHeight: number;
+  viewportStartOffset?: number;
   viewportHeight: number;
   padding?: number;
 }): number | null {
@@ -70,18 +89,22 @@ export function getFileTreeScrollTop({
   const rowBottom = rowTop + rowHeight;
   const totalHeight = getFileTreeTotalHeight(rowCount, rowHeight, padding);
   const maxScrollTop = Math.max(0, totalHeight - viewportHeight);
+  const topOffset = Math.max(
+    0,
+    Math.min(viewportStartOffset, Math.max(0, viewportHeight - rowHeight)),
+  );
   let targetScrollTop = currentScrollTop;
 
   if (alignment === "nearest") {
-    if (rowTop < currentScrollTop) {
-      targetScrollTop = rowTop;
+    if (rowTop < currentScrollTop + topOffset) {
+      targetScrollTop = rowTop - topOffset;
     } else if (rowBottom > currentScrollTop + viewportHeight) {
       targetScrollTop = rowBottom - viewportHeight;
     }
   } else if (alignment === "start") {
-    targetScrollTop = rowTop - padding;
+    targetScrollTop = rowTop - padding - topOffset;
   } else if (alignment === "center") {
-    targetScrollTop = rowTop - (viewportHeight - rowHeight) / 2;
+    targetScrollTop = rowTop - (viewportHeight + topOffset - rowHeight) / 2;
   } else {
     targetScrollTop = rowBottom - viewportHeight + padding;
   }

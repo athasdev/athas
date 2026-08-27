@@ -19,11 +19,14 @@ export type AgentNativeNotificationPermissionResult = "granted" | "denied" | "un
 export interface AgentNativeNotificationRequest {
   kind: AgentNativeNotificationKind;
   dedupeId: string;
+  chatId: string;
 }
 
 export interface NativeNotificationOptions {
   title: string;
   body: string;
+  group?: string;
+  extra?: Record<string, unknown>;
 }
 
 export interface AgentNativeNotificationDependencies {
@@ -87,7 +90,14 @@ export function createAgentNativeNotificationService(
         return "duplicate";
       }
 
-      dependencies.send(getAgentNativeNotificationContent(request.kind));
+      dependencies.send({
+        ...getAgentNativeNotificationContent(request.kind),
+        group: "athas-agent",
+        extra: {
+          athasRoute: "agent",
+          chatId: request.chatId,
+        },
+      });
       recentNotifications.set(key, now);
       return "sent";
     } catch (error) {

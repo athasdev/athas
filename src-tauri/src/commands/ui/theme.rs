@@ -9,17 +9,7 @@ pub struct SystemAccessibilityPreferences {
    reduce_transparency: bool,
    increase_contrast: bool,
    differentiate_without_color: bool,
-}
-
-#[cfg(target_os = "macos")]
-fn read_macos_accessibility_preference(key: &str) -> bool {
-   Command::new("defaults")
-      .args(["read", "com.apple.universalaccess", key])
-      .output()
-      .ok()
-      .filter(|output| output.status.success())
-      .map(|output| String::from_utf8_lossy(&output.stdout).trim() == "1")
-      .unwrap_or(false)
+   reduce_motion: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -146,25 +136,39 @@ pub async fn get_system_theme() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn get_system_accessibility_preferences() -> Result<SystemAccessibilityPreferences, String>
-{
+pub async fn get_system_accessibility_preferences(
+   app: crate::app_runtime::AppHandle,
+) -> Result<SystemAccessibilityPreferences, String> {
    #[cfg(target_os = "macos")]
    {
+      let (sender, receiver) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let _ = sender.send(crate::bootstrap::macos::accessibility_preferences());
+      })
+      .map_err(|error| error.to_string())?;
+      let (reduce_transparency, increase_contrast, differentiate_without_color, reduce_motion) =
+         receiver.await.map_err(|_| {
+            "Failed to read accessibility preferences on the main thread".to_string()
+         })??;
+
       Ok(SystemAccessibilityPreferences {
-         reduce_transparency: read_macos_accessibility_preference("reduceTransparency"),
-         increase_contrast: read_macos_accessibility_preference("increaseContrast"),
-         differentiate_without_color: read_macos_accessibility_preference(
-            "differentiateWithoutColor",
-         ),
+         reduce_transparency,
+         increase_contrast,
+         differentiate_without_color,
+         reduce_motion,
       })
    }
 
    #[cfg(not(target_os = "macos"))]
-   Ok(SystemAccessibilityPreferences {
-      reduce_transparency: false,
-      increase_contrast: false,
-      differentiate_without_color: false,
-   })
+   {
+      let _ = app;
+      Ok(SystemAccessibilityPreferences {
+         reduce_transparency: false,
+         increase_contrast: false,
+         differentiate_without_color: false,
+         reduce_motion: false,
+      })
+   }
 }
 
 pub fn load_theme_from_toml(toml_path: &Path) -> Result<Vec<TomlTheme>, String> {

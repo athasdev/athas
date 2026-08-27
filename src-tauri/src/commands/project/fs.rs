@@ -2,7 +2,7 @@ use super::path_guard::{require_path_under_home, require_symlink_container_under
 use crate::app_runtime::AppHandle;
 use serde::Serialize;
 use std::{fs, path::Path, time::Instant};
-use tauri::command;
+use tauri::{Manager, command};
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
 
@@ -88,6 +88,64 @@ pub fn open_file_external(path: String) -> Result<(), String> {
          .spawn()
          .map_err(|e| e.to_string())?;
    }
+   Ok(())
+}
+
+#[command]
+pub async fn toggle_quick_look(app: AppHandle, path: String) -> Result<(), String> {
+   let resolved = require_path_under_home(&path)?;
+   if !resolved.is_file() {
+      return Err("Quick Look is only available for local files".to_string());
+   }
+
+   #[cfg(target_os = "macos")]
+   {
+      let (sender, receiver) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let _ = sender.send(crate::bootstrap::macos::toggle_quick_look(&resolved));
+      })
+      .map_err(|error| error.to_string())?;
+      receiver
+         .await
+         .map_err(|_| "Failed to open Quick Look on the main thread".to_string())??;
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   let _ = (app, resolved);
+
+   Ok(())
+}
+
+#[command]
+pub async fn show_share_picker(
+   window: tauri::WebviewWindow<crate::app_runtime::AthasRuntime>,
+   path: String,
+) -> Result<(), String> {
+   let resolved = require_path_under_home(&path)?;
+   if !resolved.is_file() {
+      return Err("Share is only available for local files".to_string());
+   }
+
+   #[cfg(target_os = "macos")]
+   {
+      let app = window.app_handle().clone();
+      let (sender, receiver) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let result = window
+            .ns_view()
+            .map_err(|error| error.to_string())
+            .and_then(|ns_view| crate::bootstrap::macos::show_share_picker(ns_view, &resolved));
+         let _ = sender.send(result);
+      })
+      .map_err(|error| error.to_string())?;
+      receiver
+         .await
+         .map_err(|_| "Failed to open Share Sheet on the main thread".to_string())??;
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   let _ = (window, resolved);
+
    Ok(())
 }
 

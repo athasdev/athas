@@ -146,6 +146,12 @@ export function GitHubNotificationsMenu() {
   }, [fetchNotifications, isAuthenticated, isOpen]);
 
   useEffect(() => {
+    const openNotifications = () => setIsOpen(true);
+    window.addEventListener("athas:open-github-notifications", openNotifications);
+    return () => window.removeEventListener("athas:open-github-notifications", openNotifications);
+  }, []);
+
+  useEffect(() => {
     if (!isOpen || !hasBlockingModalOpen) return;
     setIsOpen(false);
   }, [hasBlockingModalOpen, isOpen]);

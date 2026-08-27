@@ -338,6 +338,9 @@ export function useMenuEventsWrapper() {
         showToast({ message: "You're on the latest version", type: "success" });
       }
     },
+    onOpenGitHubNotifications: () => {
+      window.dispatchEvent(new CustomEvent("athas:open-github-notifications"));
+    },
     onOpenSettings: () => {
       useUIState.getState().openSettingsDialog("general");
     },

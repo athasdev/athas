@@ -25,6 +25,28 @@ pub fn configure_app(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn s
    #[cfg(all(target_os = "linux", feature = "linux"))]
    create_initial_linux_window(app)?;
    configure_menu(app)?;
+   #[cfg(target_os = "macos")]
+   if let Err(error) = crate::bootstrap::macos::install_dock_menu(app.handle()) {
+      log::warn!("Failed to install macOS Dock menu: {error}");
+   } else {
+      log::info!("macOS Dock menu installed");
+   }
+   #[cfg(target_os = "macos")]
+   if let Err(error) = crate::bootstrap::macos::install_accessibility_observer(app.handle()) {
+      log::warn!("Failed to observe macOS accessibility display options: {error}");
+   }
+   #[cfg(target_os = "macos")]
+   if let Err(error) = crate::bootstrap::macos::install_native_choice_sheet_handler() {
+      log::warn!("Failed to install macOS native sheet handler: {error}");
+   }
+   #[cfg(target_os = "macos")]
+   if let Err(error) = crate::bootstrap::macos::install_spotlight_activity_handler(app.handle()) {
+      log::warn!("Failed to install macOS Spotlight activity handler: {error}");
+   }
+   #[cfg(target_os = "macos")]
+   if let Err(error) = crate::bootstrap::macos::install_services_provider(app.handle()) {
+      log::warn!("Failed to install macOS Services provider: {error}");
+   }
    register_managed_state(app);
    emit_cli_open_requests(app);
    configure_initial_window(app);
@@ -146,18 +168,27 @@ pub fn handle_single_instance_open(
          return;
       }
 
-      emit_cli_requests_to_frontend(&app_handle, open_requests);
+      queue_cli_requests(&app_handle, open_requests);
    });
 }
 
-fn emit_cli_requests_to_frontend(
+fn queue_cli_requests(
    app_handle: &tauri::AppHandle<AthasRuntime>,
    open_requests: Vec<commands::development::cli_args::CliRequest>,
 ) {
-   for req in open_requests {
-      if let Err(e) = app_handle.emit("cli_open_request", &req) {
-         log::error!("Failed to emit cli_open_request: {}", e);
-      }
+   if open_requests.is_empty() {
+      return;
+   }
+
+   let request_count = open_requests.len();
+   app_handle
+      .state::<commands::development::cli_args::PendingCliOpenRequests>()
+      .push_all(open_requests);
+
+   if let Err(error) = app_handle.emit("cli_open_requests_pending", ()) {
+      log::error!("Failed to signal pending open requests: {error}");
+   } else {
+      log::info!("Queued {request_count} open request(s) for frontend");
    }
 }
 
@@ -182,6 +213,70 @@ fn focus_active_window(app: &tauri::AppHandle<AthasRuntime>) {
       let _ = window.show();
       let _ = window.set_focus();
    }
+}
+
+#[cfg(target_os = "macos")]
+pub fn handle_reopen(app: &tauri::AppHandle<AthasRuntime>, has_visible_windows: bool) {
+   if get_active_webview_window(app).is_some() {
+      log::info!("[macos:reopen] focusing existing window visible={has_visible_windows}");
+      focus_active_window(app);
+      return;
+   }
+
+   log::info!("[macos:reopen] creating window visible={has_visible_windows}");
+   if let Err(error) = commands::ui::window::create_app_window_internal(app, None) {
+      log::error!("Failed to create window after macOS reopen event: {error}");
+   }
+}
+
+#[cfg(target_os = "macos")]
+pub fn handle_opened_urls(app: &tauri::AppHandle<AthasRuntime>, urls: &[tauri::Url]) {
+   let open_requests = commands::development::cli_args::parse_opened_urls(urls);
+   if open_requests.is_empty() {
+      return;
+   }
+
+   for request in &open_requests {
+      if let commands::development::cli_args::CliRequest::Path { path, .. } = request
+         && let Err(error) =
+            crate::bootstrap::macos::note_recent_document(PathBuf::from(path).as_path())
+      {
+         log::warn!("Failed to register macOS recent document: {error}");
+      }
+   }
+
+   if get_active_webview_window(app).is_none()
+      && let Err(error) = commands::ui::window::create_app_window_internal(app, None)
+   {
+      log::error!("Failed to create window for macOS open event: {error}");
+      return;
+   }
+
+   focus_active_window(app);
+   queue_cli_requests(app, open_requests);
+
+   if let Err(error) = menu::refresh_open_recent_submenu(app) {
+      log::warn!("Failed to refresh macOS Open Recent menu: {error}");
+   }
+}
+
+#[cfg(target_os = "macos")]
+fn open_recent_document(app: &tauri::AppHandle<AthasRuntime>, index: usize) {
+   let Ok(paths) = crate::bootstrap::macos::recent_documents() else {
+      return;
+   };
+   let Some(path) = paths.get(index) else {
+      return;
+   };
+   let Some(request) = commands::development::cli_args::parse_open_arg(
+      path.to_string_lossy().as_ref(),
+      PathBuf::from("/").as_path(),
+   ) else {
+      return;
+   };
+
+   focus_active_window(app);
+   queue_cli_requests(app, vec![request.into()]);
 }
 
 fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
@@ -248,8 +343,44 @@ where
    let _ = window.emit_to(window.label(), event, payload);
 }
 
+fn perform_macos_window_tab_action(window: &tauri::WebviewWindow<AthasRuntime>, action: &str) {
+   #[cfg(target_os = "macos")]
+   match window.ns_window() {
+      Ok(ns_window) => {
+         if let Err(error) = crate::bootstrap::macos::perform_window_tab_action(ns_window, action) {
+            log::error!("Failed to perform macOS window tab action: {error}");
+         }
+      }
+      Err(error) => log::error!("Failed to access macOS window: {error}"),
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   let _ = (window, action);
+}
+
 fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::menu::MenuEvent) {
-   match event.id().0.as_str() {
+   let event_id = event.id().0.as_str();
+
+   #[cfg(target_os = "macos")]
+   if event_id == "clear_recent_documents" {
+      if let Err(error) = crate::bootstrap::macos::clear_recent_documents() {
+         log::error!("Failed to clear macOS recent documents: {error}");
+      } else if let Err(error) = menu::refresh_open_recent_submenu(app_handle) {
+         log::error!("Failed to refresh macOS Open Recent menu: {error}");
+      }
+      return;
+   }
+
+   #[cfg(target_os = "macos")]
+   if let Some(index) = event_id
+      .strip_prefix("open_recent:")
+      .and_then(|index| index.parse::<usize>().ok())
+   {
+      open_recent_document(app_handle, index);
+      return;
+   }
+
+   match event_id {
       "new_window" => {
          let received_at = Instant::now();
          log::info!("[window-open:menu] new_window:received");
@@ -334,6 +465,9 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                "toggle_ai_chat" => {
                   emit_menu_event(&window, "menu_toggle_ai_chat", ());
                }
+               "open_github_notifications" => {
+                  emit_menu_event(&window, "menu_open_github_notifications", ());
+               }
                "split_editor" => {
                   emit_menu_event(&window, "menu_split_editor", ());
                }
@@ -391,6 +525,18 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                }
                "next_tab" => {
                   emit_menu_event(&window, "menu_next_tab", ());
+               }
+               "show_previous_window_tab" => {
+                  perform_macos_window_tab_action(&window, "previous");
+               }
+               "show_next_window_tab" => {
+                  perform_macos_window_tab_action(&window, "next");
+               }
+               "move_window_tab" => {
+                  perform_macos_window_tab_action(&window, "move");
+               }
+               "merge_all_windows" => {
+                  perform_macos_window_tab_action(&window, "merge");
                }
                "prev_tab" => {
                   emit_menu_event(&window, "menu_prev_tab", ());

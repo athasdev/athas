@@ -23,5 +23,55 @@
         "shadow": true
       }
     ]
+  },
+  "bundle": {
+    "fileAssociations": [
+      {
+        "ext": [
+          "txt",
+          "md",
+          "markdown",
+          "json",
+          "jsonc",
+          "yaml",
+          "yml",
+          "toml",
+          "xml",
+          "c",
+          "h",
+          "m",
+          "mm",
+          "cc",
+          "cpp",
+          "hpp",
+          "swift",
+          "rs",
+          "go",
+          "zig",
+          "py",
+          "rb",
+          "php",
+          "js",
+          "jsx",
+          "ts",
+          "tsx",
+          "css",
+          "scss",
+          "html",
+          "htm",
+          "sh",
+          "zsh",
+          "bash",
+          "fish",
+          "sql",
+          "vue",
+          "svelte"
+        ],
+        "contentTypes": ["public.plain-text", "public.source-code", "public.script"],
+        "name": "Text and Source Code",
+        "role": "Editor",
+        "rank": "Alternate"
+      }
+    ]
   }
 }

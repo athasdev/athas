@@ -35,7 +35,6 @@ import {
   DEFAULT_FILE_NAVIGATOR_WIDTH,
   getFileNavigatorLayout,
 } from "@/features/file-explorer/lib/file-navigator-layout";
-import "../styles/file-explorer-tree.css";
 
 export type FileNavigatorViewMode = "flat" | "tree";
 type FileNavigatorSearchMode = "substring" | "fuzzy";
@@ -188,7 +187,6 @@ const FileNavigatorFlatRow = memo(function FileNavigatorFlatRow({
       }
       trailing={<FileNavigatorMetadata item={item} />}
       description={compactRows ? undefined : directoryPath}
-      className={cn(compactRows && "py-1 ui-text-sm")}
     >
       {fileName}
     </SidebarListItem>

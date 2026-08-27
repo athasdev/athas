@@ -91,6 +91,7 @@
     "notification:allow-is-permission-granted",
     "notification:allow-request-permission",
     "notification:allow-notify",
+    "core:window:allow-set-badge-count",
     "process:allow-restart",
     "process:allow-exit",
     {
@@ -103,6 +104,7 @@
     },
     "store:default",
     "deep-link:default",
+    "drag:allow-start-drag",
     "updater:default"
   ]
 }

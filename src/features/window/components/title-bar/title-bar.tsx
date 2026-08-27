@@ -1,5 +1,5 @@
 import { getCurrentWindow, type Window as TauriWindow } from "@tauri-apps/api/window";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -23,9 +23,16 @@ import {
   ContextMenuTrigger,
 } from "@/ui/context-menu";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
+import {
   FilesIcon,
   FolderOpenIcon,
   ListIcon,
+  DotsThreeIcon,
   SidebarSimpleIcon,
   SparkleIcon,
   TrashIcon,
@@ -42,6 +49,8 @@ import WindowMenuBar from "../window-menu-bar";
 
 interface TitleBarProps {
   showMinimal?: boolean;
+  activityBarExpanded?: boolean;
+  onActivityBarExpandedChange?: (expanded: boolean) => void;
 }
 
 function placeAgentBeforeAccount(items: Array<ChromeItem<HeaderTrailingItemId>>) {
@@ -63,10 +72,37 @@ function placeAgentBeforeAccount(items: Array<ChromeItem<HeaderTrailingItemId>>)
 }
 
 function TitleBarTrailingActions({ items }: { items: Array<ChromeItem<HeaderTrailingItemId>> }) {
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const updateRef = useRef<HTMLDivElement>(null);
+  const activateFirstButton = (container: HTMLDivElement | null) => {
+    container?.querySelector<HTMLButtonElement>("button")?.click();
+  };
+
   return (
     <ChromeGroup gap="tight">
-      <GitHubNotificationsMenu />
-      <AppUpdateControl />
+      <div ref={notificationsRef} className="max-[820px]:hidden">
+        <GitHubNotificationsMenu />
+      </div>
+      <div ref={updateRef} className="max-[820px]:hidden">
+        <AppUpdateControl />
+      </div>
+      <div className="hidden max-[820px]:block">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="ghost" size="icon-xs" aria-label="More toolbar actions" />}
+          >
+            <DotsThreeIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="bottom">
+            <DropdownMenuItem onClick={() => activateFirstButton(notificationsRef.current)}>
+              GitHub Notifications
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => activateFirstButton(updateRef.current)}>
+              Check for Updates
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       {items.map((item) =>
         item.content ? (
           <div key={item.id} className="flex min-h-chrome-control items-center">
@@ -78,11 +114,16 @@ function TitleBarTrailingActions({ items }: { items: Array<ChromeItem<HeaderTrai
   );
 }
 
-const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
+const TitleBar = ({
+  showMinimal = false,
+  activityBarExpanded: controlledActivityBarExpanded,
+  onActivityBarExpandedChange,
+}: TitleBarProps) => {
   const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
   const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
   const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
+  const effectiveActivityBarExpanded = controlledActivityBarExpanded ?? activityRailExpanded;
   const headerTrailingItemsOrder = useSettingsStore(
     (state) => state.settings.headerTrailingItemsOrder,
   );
@@ -90,6 +131,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
+  const activeProject = projectTabs.find((tab) => tab.isActive);
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
@@ -269,12 +311,15 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const sidebarToggle = (
     <Toggle
       type="button"
-      pressed={activityRailExpanded}
-      tooltip={activityRailExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
+      pressed={effectiveActivityBarExpanded}
+      tooltip={effectiveActivityBarExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
       commandId="workbench.toggleActivitySidebar"
       tooltipSide="bottom"
-      onPressedChange={(pressed) => void updateSetting("activityRailExpanded", pressed)}
-      aria-label={activityRailExpanded ? "Collapse activity bar" : "Expand activity bar"}
+      onPressedChange={(pressed) => {
+        if (onActivityBarExpandedChange) onActivityBarExpandedChange(pressed);
+        else void updateSetting("activityRailExpanded", pressed);
+      }}
+      aria-label={effectiveActivityBarExpanded ? "Collapse activity bar" : "Expand activity bar"}
       size="xs"
     >
       <SidebarSimpleIcon />
@@ -318,6 +363,8 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
     return (
       <ChromeBar
         region="title"
+        role="toolbar"
+        aria-label="Window toolbar"
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
         className="athas-title-bar relative z-50 justify-between select-none"
@@ -339,6 +386,8 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
     return (
       <ContextMenu>
         <ContextMenuTrigger
+          role="toolbar"
+          aria-label="Window toolbar"
           onContextMenu={handleTitleBarContextMenu}
           className={cn(
             "athas-title-bar font-sans ui-text-chrome relative z-50 flex h-title-bar items-center justify-between gap-chrome bg-transparent pr-chrome-inline text-subtle-foreground",
@@ -350,6 +399,9 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
           <ChromeGroup className="pointer-events-auto h-full">
             {menuItem}
             {sidebarToggle}
+            <span className="pointer-events-none ml-1 max-w-56 truncate text-muted-foreground max-[760px]:hidden">
+              {activeProject?.name ?? "Athas"}
+            </span>
           </ChromeGroup>
 
           <ChromeGroup className="h-full">
@@ -364,6 +416,8 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   return (
     <ContextMenu>
       <ContextMenuTrigger
+        role="toolbar"
+        aria-label="Window toolbar"
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
         onContextMenu={handleTitleBarContextMenu}
@@ -373,6 +427,9 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
           <ChromeGroup className="pointer-events-auto">
             {menuItem}
             {sidebarToggle}
+            <span className="pointer-events-none ml-1 max-w-56 truncate text-muted-foreground max-[760px]:hidden">
+              {activeProject?.name ?? "Athas"}
+            </span>
           </ChromeGroup>
         </ChromeGroup>
         <ChromeGroup className="z-20">

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 import { syncEffectiveWindowTransparency } from "@/features/settings/lib/settings-effects";
 
@@ -6,6 +7,7 @@ interface SystemAccessibilityPreferences {
   reduceTransparency: boolean;
   increaseContrast: boolean;
   differentiateWithoutColor: boolean;
+  reduceMotion: boolean;
 }
 
 function setBooleanAttribute(name: string, enabled: boolean) {
@@ -22,6 +24,7 @@ export function useSystemAccessibility() {
         reduceTransparency: false,
         increaseContrast: false,
         differentiateWithoutColor: false,
+        reduceMotion: false,
       };
 
       try {
@@ -45,15 +48,18 @@ export function useSystemAccessibility() {
         "data-differentiate-without-color",
         nativePreferences.differentiateWithoutColor,
       );
+      setBooleanAttribute("data-reduce-motion", nativePreferences.reduceMotion);
       syncEffectiveWindowTransparency();
     };
 
     void sync();
+    const unlistenPromise = listen("system_accessibility_changed", sync);
     window.addEventListener("focus", sync);
     contrastQuery.addEventListener("change", sync);
     transparencyQuery.addEventListener("change", sync);
 
     return () => {
+      void unlistenPromise.then((unlisten) => unlisten());
       window.removeEventListener("focus", sync);
       contrastQuery.removeEventListener("change", sync);
       transparencyQuery.removeEventListener("change", sync);

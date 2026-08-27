@@ -65,6 +65,9 @@ async function setupMenuListeners(handlers: any) {
     currentWindow.listen("menu_report_bug", () => currentHandlers.current.onReportBug()),
     currentWindow.listen("menu_request_feature", () => currentHandlers.current.onRequestFeature()),
     currentWindow.listen("menu_check_updates", () => currentHandlers.current.onCheckForUpdates()),
+    currentWindow.listen("menu_open_github_notifications", () =>
+      currentHandlers.current.onOpenGitHubNotifications(),
+    ),
     currentWindow.listen("menu_open_settings", () => currentHandlers.current.onOpenSettings()),
     currentWindow.listen("menu_open_extensions", () => currentHandlers.current.onOpenExtensions()),
     currentWindow.listen("menu_toggle_menu_bar", () => currentHandlers.current.onToggleMenuBar()),
@@ -108,6 +111,7 @@ interface UseMenuEventsProps {
   onReportBug: () => void | Promise<void>;
   onRequestFeature: () => void | Promise<void>;
   onCheckForUpdates: () => void | Promise<void>;
+  onOpenGitHubNotifications: () => void;
   onOpenSettings: () => void | Promise<void>;
   onOpenExtensions: () => void | Promise<void>;
   onToggleMenuBar: () => void;

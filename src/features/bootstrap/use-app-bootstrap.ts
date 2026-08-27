@@ -21,6 +21,8 @@ import { useExternalNavigationGuard } from "@/features/window/hooks/use-external
 import { useFontLoading } from "@/features/window/hooks/use-font-loading";
 import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
 import { useSettingsSync } from "@/features/window/hooks/use-settings-sync";
+import { useNativeMenuState } from "@/features/window/hooks/use-native-menu-state";
+import { useWindowDocumentState } from "@/features/window/hooks/use-window-document-state";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import {
   enqueueWindowOpenRequest,
@@ -33,6 +35,8 @@ export function useAppBootstrap() {
 
   usePlatformSetup();
   useSettingsSync();
+  useNativeMenuState();
+  useWindowDocumentState();
   useFontLoading();
   useDeepLink();
   useCliOpen();

@@ -489,6 +489,7 @@ const AIChat = memo(function AIChat({
       void sendAgentNativeNotification({
         kind,
         dedupeId: `${targetChatId}:${dedupeId}`,
+        chatId: targetChatId,
       });
     };
     const assistantMessage: Message = {

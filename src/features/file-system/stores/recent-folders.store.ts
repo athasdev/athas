@@ -1,8 +1,10 @@
+import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { IS_MAC } from "@/utils/platform";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { createSafeJSONStorage } from "@/utils/zustand-storage";
 import type { RecentFolder, RecentFolderMetadata } from "../types/recent-folders.types";
@@ -50,6 +52,12 @@ const useRecentFoldersStoreBase = create<RecentFoldersStore>()(
             set((state) => {
               state.recentFolders = upsertRecentFolder(state.recentFolders, folderPath, metadata);
             });
+
+            if (IS_MAC && typeof window !== "undefined") {
+              void invoke("note_recent_document", { path: folderPath }).catch((error) => {
+                console.error("Failed to update the macOS Open Recent menu:", error);
+              });
+            }
           },
 
           importRecentFolders: (folders: RecentFolderImport[]) => {

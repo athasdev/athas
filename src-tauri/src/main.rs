@@ -64,6 +64,7 @@ fn main() {
       .plugin(tauri_plugin_notification::init())
       .plugin(tauri_plugin_process::init())
       .plugin(tauri_plugin_deep_link::init())
+      .plugin(tauri_plugin_drag::init())
       .plugin(tauri_plugin_updater::Builder::new().build())
       .setup(configure_app)
       .invoke_handler(tauri::generate_handler![
@@ -71,6 +72,8 @@ fn main() {
          read_athas_log,
          read_local_file,
          open_file_external,
+         toggle_quick_look,
+         show_share_picker,
          open_folder_dialog,
          move_file,
          rename_file,
@@ -190,6 +193,9 @@ fn main() {
          get_chat_stats,
          // Window commands
          create_app_window,
+         note_recent_document,
+         set_window_document_state,
+         show_native_choice_sheet,
          uses_native_window_chrome,
          set_native_window_appearance,
          set_window_transparency_enabled,
@@ -430,6 +436,7 @@ fn main() {
          // Menu commands
          menu::toggle_menu_bar,
          menu::rebuild_menu_themes,
+         menu::sync_native_menu_state,
       ])
       .build(tauri::generate_context!())
       .expect("error while building tauri application")
@@ -441,6 +448,13 @@ fn main() {
          }
          #[cfg(not(target_os = "linux"))]
          tauri::RunEvent::Ready => app_handle.state::<StartupTiming>().record("native:ready"),
+         #[cfg(target_os = "macos")]
+         tauri::RunEvent::Reopen {
+            has_visible_windows,
+            ..
+         } => app_setup::handle_reopen(app_handle, has_visible_windows),
+         #[cfg(target_os = "macos")]
+         tauri::RunEvent::Opened { urls } => app_setup::handle_opened_urls(app_handle, &urls),
          tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
             shutdown_background_services(app_handle);
          }

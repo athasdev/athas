@@ -14,6 +14,7 @@ import {
   traceWindowOpenAfterFrame,
 } from "@/features/window/utils/window-open-diagnostics";
 import { NotificationRecorder } from "@/features/notifications/components/notification-recorder";
+import { useNativeNotificationIntegration } from "@/features/notifications/hooks/use-native-notification-integration";
 
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/window/components/zoom-indicator";
@@ -25,6 +26,7 @@ import { DialogServiceProvider } from "@/ui/dialog";
 function WorkbenchApp() {
   useAppBootstrap();
   useSystemAccessibility();
+  useNativeNotificationIntegration();
   const reduceMotion = useSettingsStore((state) => state.settings.reduceMotion);
 
   useEffect(() => {

@@ -23,7 +23,9 @@ describe("agent native notifications", () => {
     const dependencies = createDependencies({ isEnabled: () => false });
     const notify = createAgentNativeNotificationService(dependencies);
 
-    await expect(notify({ kind: "complete", dedupeId: "run-1" })).resolves.toBe("disabled");
+    await expect(notify({ kind: "complete", dedupeId: "run-1", chatId: "chat-1" })).resolves.toBe(
+      "disabled",
+    );
     expect(dependencies.isAppFocused).not.toHaveBeenCalled();
     expect(dependencies.send).not.toHaveBeenCalled();
   });
@@ -32,7 +34,9 @@ describe("agent native notifications", () => {
     const dependencies = createDependencies({ isAppFocused: async () => true });
     const notify = createAgentNativeNotificationService(dependencies);
 
-    await expect(notify({ kind: "permission", dedupeId: "request-1" })).resolves.toBe("focused");
+    await expect(
+      notify({ kind: "permission", dedupeId: "request-1", chatId: "chat-1" }),
+    ).resolves.toBe("focused");
     expect(dependencies.isPermissionGranted).not.toHaveBeenCalled();
     expect(dependencies.send).not.toHaveBeenCalled();
   });
@@ -41,7 +45,9 @@ describe("agent native notifications", () => {
     const dependencies = createDependencies({ isPermissionGranted: async () => false });
     const notify = createAgentNativeNotificationService(dependencies);
 
-    await expect(notify({ kind: "error", dedupeId: "run-1" })).resolves.toBe("permission-denied");
+    await expect(notify({ kind: "error", dedupeId: "run-1", chatId: "chat-1" })).resolves.toBe(
+      "permission-denied",
+    );
     expect(dependencies.send).not.toHaveBeenCalled();
   });
 
@@ -49,10 +55,17 @@ describe("agent native notifications", () => {
     const dependencies = createDependencies();
     const notify = createAgentNativeNotificationService(dependencies);
 
-    await expect(notify({ kind: "permission", dedupeId: "request-1" })).resolves.toBe("sent");
+    await expect(
+      notify({ kind: "permission", dedupeId: "request-1", chatId: "chat-1" }),
+    ).resolves.toBe("sent");
     expect(dependencies.send).toHaveBeenCalledWith({
       title: "Agent needs your approval",
       body: "Open Athas to review the request.",
+      group: "athas-agent",
+      extra: {
+        athasRoute: "agent",
+        chatId: "chat-1",
+      },
     });
     expect(JSON.stringify(getAgentNativeNotificationContent("complete"))).not.toContain(
       "/workspace",
@@ -63,9 +76,12 @@ describe("agent native notifications", () => {
     const dependencies = createDependencies();
     const notify = createAgentNativeNotificationService(dependencies);
 
-    await expect(notify({ kind: "complete", dedupeId: "run-1" })).resolves.toBe("sent");
-    await expect(notify({ kind: "complete", dedupeId: "run-1" })).resolves.toBe("duplicate");
-    await expect(notify({ kind: "error", dedupeId: "run-1" })).resolves.toBe("sent");
+    const request = { kind: "complete" as const, dedupeId: "run-1", chatId: "chat-1" };
+    await expect(notify(request)).resolves.toBe("sent");
+    await expect(notify(request)).resolves.toBe("duplicate");
+    await expect(notify({ kind: "error", dedupeId: "run-1", chatId: "chat-1" })).resolves.toBe(
+      "sent",
+    );
     expect(dependencies.send).toHaveBeenCalledTimes(2);
   });
 
@@ -74,10 +90,11 @@ describe("agent native notifications", () => {
     const dependencies = createDependencies({ now: () => now });
     const notify = createAgentNativeNotificationService(dependencies);
 
-    await notify({ kind: "complete", dedupeId: "run-1" });
+    const request = { kind: "complete" as const, dedupeId: "run-1", chatId: "chat-1" };
+    await notify(request);
     now += 60_000;
 
-    await expect(notify({ kind: "complete", dedupeId: "run-1" })).resolves.toBe("sent");
+    await expect(notify(request)).resolves.toBe("sent");
     expect(dependencies.send).toHaveBeenCalledTimes(2);
   });
 });

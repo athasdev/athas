@@ -1,12 +1,14 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FileEntry } from "@/features/file-system/types/app.types";
+import { startNativeFileDrag } from "@/features/file-explorer/utils/start-native-file-drag";
 import { dispatchSidebarResourceDropOnAI } from "@/features/sidebar/utils/sidebar-resource-drag";
 import {
   setInternalTabDragHover,
   setInternalTabDragHoverTarget,
 } from "@/features/tabs/utils/internal-tab-drag";
 import { getDirName, getPathSeparator, joinPath } from "@/utils/path-helpers";
+import { IS_MAC } from "@/utils/platform";
 
 interface DragState {
   isDragging: boolean;
@@ -300,6 +302,13 @@ export function useFileExplorerDragDrop(
   const startDrag = useCallback((e: React.MouseEvent, file: FileEntry) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (IS_MAC && e.altKey) {
+      void startNativeFileDrag(file.path, file.name).catch((error) => {
+        console.error("Failed to start native file drag:", error);
+      });
+      return;
+    }
 
     setDragState({
       isDragging: true,
