@@ -5,6 +5,7 @@
   --leading-chrome: var(--athas-chrome-line-height);
 
   --spacing-title-bar: var(--athas-title-bar-height);
+  --spacing-title-bar-leading: var(--athas-title-bar-leading-inset);
   --spacing-footer: var(--athas-footer-height);
   --spacing-pane-header: var(--athas-pane-header-height);
   --spacing-tab-bar: var(--athas-tab-bar-height);
@@ -123,6 +124,7 @@
     --ui-text-caption: max(10px, calc(var(--app-ui-font-size) - 3px));
     --ui-text-chrome: var(--ui-text-sm);
     --athas-title-bar-height: 2rem;
+    --athas-title-bar-leading-inset: var(--athas-chrome-padding-inline);
     --athas-footer-height: 1.75rem;
     --athas-pane-header-height: 2.75rem;
     --athas-tab-bar-height: 2rem;
@@ -174,7 +176,8 @@
   }
 
   html.platform-macos {
-    --athas-title-bar-height: 2.25rem;
+    --athas-title-bar-height: 2.125rem;
+    --athas-title-bar-leading-inset: 4.75rem;
   }
 
   :root[data-increase-contrast="true"] {

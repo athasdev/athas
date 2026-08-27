@@ -131,7 +131,6 @@ const TitleBar = ({
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
-  const activeProject = projectTabs.find((tab) => tab.isActive);
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
@@ -391,7 +390,7 @@ const TitleBar = ({
           onContextMenu={handleTitleBarContextMenu}
           className={cn(
             "athas-title-bar font-sans ui-text-chrome relative z-50 flex h-title-bar items-center justify-between gap-chrome bg-transparent pr-chrome-inline text-subtle-foreground",
-            isFullscreen ? "pl-2" : "pl-23.5",
+            isFullscreen ? "pl-2" : "pl-title-bar-leading",
           )}
           data-tauri-drag-region
           onMouseDown={handleTitleBarMouseDown}
@@ -399,9 +398,6 @@ const TitleBar = ({
           <ChromeGroup className="pointer-events-auto h-full">
             {menuItem}
             {sidebarToggle}
-            <span className="pointer-events-none ml-1 max-w-56 truncate text-muted-foreground max-[760px]:hidden">
-              {activeProject?.name ?? "Athas"}
-            </span>
           </ChromeGroup>
 
           <ChromeGroup className="h-full">
@@ -427,9 +423,6 @@ const TitleBar = ({
           <ChromeGroup className="pointer-events-auto">
             {menuItem}
             {sidebarToggle}
-            <span className="pointer-events-none ml-1 max-w-56 truncate text-muted-foreground max-[760px]:hidden">
-              {activeProject?.name ?? "Athas"}
-            </span>
           </ChromeGroup>
         </ChromeGroup>
         <ChromeGroup className="z-20">
