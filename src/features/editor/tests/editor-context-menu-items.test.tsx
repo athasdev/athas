@@ -22,7 +22,7 @@ describe("buildEditorContextMenuGroups", () => {
     const groups = buildEditorContextMenuGroups(baseOptions);
 
     expect(groups.map((group) => group.id)).toEqual(["editing", "code", "navigation"]);
-    expect(groups.flatMap((group) => group.items)).toHaveLength(14);
+    expect(groups.flatMap((group) => group.items)).toHaveLength(13);
   });
 
   it("disables commands that do not have a handler", () => {

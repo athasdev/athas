@@ -102,13 +102,7 @@ export const AccountSettings = () => {
           {isAuthenticated ? (
             <span className="font-sans ui-text-base text-subtle-foreground">{user?.email}</span>
           ) : (
-            <Button
-              shape="pill"
-              variant="default"
-              onClick={signIn}
-              disabled={isSigningIn}
-              size="sm"
-            >
+            <Button shape="pill" variant="default" onClick={signIn} disabled={isSigningIn}>
               {isSigningIn ? "Signing In..." : "Sign In"}
             </Button>
           )}
@@ -148,15 +142,11 @@ export const AccountSettings = () => {
           <SettingRow label="Plan" description="Manage your Athas subscription and billing.">
             <div className="flex items-center gap-2">
               {isPaidPlan ? (
-                <Badge
-                  variant="default"
-                  size="compact"
-                  className="bg-primary/10 font-normal text-primary"
-                >
+                <Badge variant="default" className="bg-primary/10 font-normal text-primary">
                   {planLabel}
                 </Badge>
               ) : null}
-              <Button shape="pill" variant="default" onClick={handleManagePlan} size="sm">
+              <Button shape="pill" variant="default" onClick={handleManagePlan}>
                 {isPaidPlan ? "Manage plan" : "Upgrade plan"}
               </Button>
             </div>
@@ -176,11 +166,10 @@ export const AccountSettings = () => {
               <Switch
                 checked={settingsSyncHydrated ? settingsSyncEnabled : false}
                 onChange={(checked) => void handleToggleSettingsSync(checked)}
-                size="sm"
                 disabled={!settingsSyncHydrated}
               />
             ) : (
-              <Switch checked={false} onChange={() => undefined} size="sm" disabled />
+              <Switch checked={false} onChange={() => undefined} disabled />
             )}
           </SettingRow>
         )}
@@ -196,7 +185,6 @@ export const AccountSettings = () => {
                 variant="default"
                 onClick={() => void handleSyncNow()}
                 disabled={settingsSyncIsSyncing}
-                size="sm"
               >
                 {settingsSyncIsSyncing ? "Syncing..." : "Sync Now"}
               </Button>
@@ -211,7 +199,6 @@ export const AccountSettings = () => {
                 variant="default"
                 onClick={() => void handleRestoreFromCloud()}
                 disabled={settingsSyncIsSyncing}
-                size="sm"
               >
                 Restore
               </Button>
@@ -224,7 +211,7 @@ export const AccountSettings = () => {
             label="Manage Account"
             description="Open your Athas dashboard to manage billing and subscription details."
           >
-            <Button shape="pill" variant="default" onClick={handleManageAccount} size="sm">
+            <Button shape="pill" variant="default" onClick={handleManageAccount}>
               Open Dashboard
             </Button>
           </SettingRow>
@@ -235,7 +222,7 @@ export const AccountSettings = () => {
             label="Sign Out"
             description="End your current Athas account session on this device."
           >
-            <Button shape="pill" variant="default" onClick={() => void logout()} size="sm">
+            <Button shape="pill" variant="default" onClick={() => void logout()}>
               Sign Out
             </Button>
           </SettingRow>

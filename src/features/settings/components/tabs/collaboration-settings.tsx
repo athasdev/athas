@@ -43,20 +43,14 @@ export const CollaborationSettings = () => {
         description="Teams workspace status. Manage members, channels, invites, and policies in the web dashboard."
       >
         <SettingRow label="Dashboard" description="Open the full collaboration workspace.">
-          <Button
-            shape="pill"
-            type="button"
-            variant="default"
-            onClick={openDashboardCollaboration}
-            size="sm"
-          >
+          <Button shape="pill" type="button" variant="default" onClick={openDashboardCollaboration}>
             <UsersThree />
             Open
           </Button>
         </SettingRow>
 
         <SettingRow label="Members" description={`${invitations.length} pending invitations`}>
-          <Badge variant="default" size="compact">
+          <Badge variant="default">
             {activeMembers.length}/{members.length} active
           </Badge>
         </SettingRow>
@@ -65,9 +59,7 @@ export const CollaborationSettings = () => {
           label="Channels"
           description={selectedChannel ? `Joined #${selectedChannel.slug}` : "No channel selected"}
         >
-          <Badge variant="default" size="compact">
-            {channels.length} channels
-          </Badge>
+          <Badge variant="default">{channels.length} channels</Badge>
         </SettingRow>
 
         <SettingRow
@@ -75,9 +67,7 @@ export const CollaborationSettings = () => {
           description={followedMember ? `Following ${followedMember.name}` : "Not following anyone"}
         >
           <div className="flex items-center gap-2">
-            <Badge variant="default" size="compact">
-              {collaboration?.presence.length ?? 0} sessions
-            </Badge>
+            <Badge variant="default">{collaboration?.presence.length ?? 0} sessions</Badge>
             <Button
               shape="pill"
               type="button"
@@ -87,7 +77,6 @@ export const CollaborationSettings = () => {
                 collaborationRuntimeActions.setPresenceChannel(null);
                 collaborationRuntimeActions.setFollowingUser(null);
               }}
-              size="sm"
             >
               Clear
             </Button>
@@ -102,16 +91,13 @@ export const CollaborationSettings = () => {
               : "No active document stream"
           }
         >
-          <Badge
-            variant={activeDocumentStream.status === "error" ? "error" : "default"}
-            size="compact"
-          >
+          <Badge variant={activeDocumentStream.status === "error" ? "error" : "default"}>
             {activeDocumentStream.status}
           </Badge>
         </SettingRow>
 
         <SettingRow label="Workspace Rules" description={`Invites: ${invitePolicy}`}>
-          <Badge variant="default" size="compact">
+          <Badge variant="default">
             Seats {seatLimit} · Updates {updateLimit}
           </Badge>
         </SettingRow>
@@ -131,7 +117,6 @@ export const CollaborationSettings = () => {
                 variant={presenceTarget.channelId === channel.id ? "accent" : "default"}
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setPresenceChannel(channel.id)}
-                size="sm"
               >
                 Join
               </Button>
@@ -146,7 +131,6 @@ export const CollaborationSettings = () => {
                 variant={presenceTarget.followingUserId === member.userId ? "accent" : "default"}
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setFollowingUser(member.userId)}
-                size="sm"
               >
                 Follow
               </Button>

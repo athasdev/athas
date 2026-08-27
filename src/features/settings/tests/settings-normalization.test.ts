@@ -86,15 +86,18 @@ describe("settings normalization", () => {
       windowChromeDensity: "comfortable",
       activityRailWidth: 400,
       sidebarWidth: 100,
+      rightSidebarWidth: 900,
     } as ReturnType<typeof getDefaultSettingsSnapshot> & { windowChromeDensity: string });
 
     expect(normalized.tabCloseButtonVisibility).toBe("active");
     expect(normalized).not.toHaveProperty("windowChromeDensity");
     expect(normalized.activityRailWidth).toBe(320);
     expect(normalized.sidebarWidth).toBe(140);
+    expect(normalized.rightSidebarWidth).toBe(600);
     expect(normalizeSettingValue("tabCloseButtonVisibility", "hover")).toBe("hover");
     expect(normalizeSettingValue("activityRailWidth", 120)).toBe(140);
     expect(normalizeSettingValue("sidebarWidth", 900)).toBe(600);
+    expect(normalizeSettingValue("rightSidebarWidth", 100)).toBe(140);
   });
 
   it("preserves and canonicalizes custom Ollama LAN endpoints", () => {
@@ -115,7 +118,7 @@ describe("settings normalization", () => {
       hiddenSidebarActivityItems: ["search", "", "search", "extension.example"] as string[],
     });
 
-    expect(normalized.hiddenSidebarActivityItems).toEqual(["search", "extension.example"]);
+    expect(normalized.hiddenSidebarActivityItems).toEqual(["extension.example"]);
     expect(
       normalizeSettingValue("hiddenSidebarActivityItems", [
         "git",

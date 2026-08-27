@@ -1,5 +1,6 @@
-import { CaretDownIcon as CaretDown, MagnifyingGlassIcon as Search } from "@/ui/icons";
+import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SETTINGS_TAB_ITEMS } from "@/features/settings/config/settings-tabs";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   resolveSettingsAccess,
@@ -12,14 +13,13 @@ import {
 } from "@/features/settings/lib/settings-search";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
-import { Button } from "@/ui/button";
 import { ChromeBar } from "@/ui/chrome";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { Dropdown } from "@/ui/dropdown";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import type { SearchResult } from "../types/search.types";
-import { SETTINGS_TAB_ITEMS } from "./settings-vertical-tabs";
 
 import { AdvancedSettings } from "./tabs/advanced-settings";
 import { AccountSettings } from "./tabs/account-settings";
@@ -41,6 +41,8 @@ const SettingsWorkbenchView = () => {
     settingsNavigationRequestId,
     setSettingsInitialTab,
     setSettingsInitialSection,
+    activeSidebarView,
+    setActiveView,
   } = useUIState();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const lastSettingsTab = useSettingsStore((state) => state.settings.lastSettingsTab);
@@ -57,9 +59,12 @@ const SettingsWorkbenchView = () => {
   const setSearchQuery = useSettingsStore((state) => state.actions.setSearchQuery);
   const contentRef = useRef<HTMLDivElement>(null);
   const searchInputAnchorRef = useRef<HTMLDivElement>(null);
-  const tabDropdownRef = useRef<HTMLButtonElement>(null);
-  const [isTabDropdownOpen, setIsTabDropdownOpen] = useState(false);
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    if (activeSidebarView === "settings") setActiveView("files");
+  }, [activeSidebarView, setActiveView]);
+
   const resolveVisibleTab = useCallback(
     (tab: SettingsTab) =>
       resolveVisibleSettingsSection(tab, {
@@ -77,11 +82,6 @@ const SettingsWorkbenchView = () => {
     ...settingsAccess,
     matchingTabs: null,
   });
-  const activeTabItem =
-    visibleTabs.find((tab) => tab.id === activeTab) ??
-    SETTINGS_TAB_ITEMS.find((tab) => tab.id === activeTab) ??
-    SETTINGS_TAB_ITEMS[0];
-  const ActiveTabIcon = activeTabItem.icon;
   useEffect(() => {
     const requestedTab = settingsInitialTab ?? lastSettingsTab;
     const nextTab = resolveVisibleTab(requestedTab);
@@ -122,17 +122,6 @@ const SettingsWorkbenchView = () => {
       updateSetting,
     ],
   );
-  const tabMenuItems: MenuItem[] = visibleTabs.map((tab) => {
-    const Icon = tab.icon;
-    return {
-      id: tab.id,
-      label: tab.label,
-      icon: <Icon className="size-4" weight="duotone" />,
-      selected: tab.id === activeTab,
-      onClick: () => handleTabChange(tab.id),
-    };
-  });
-
   useEffect(
     () => () => {
       clearSearch();
@@ -276,24 +265,8 @@ const SettingsWorkbenchView = () => {
   const activePanelId = `settings-panel-${activeTab}`;
   const activeTabId = `settings-tab-${activeTab}`;
 
-  const tabPicker = (
-    <Button
-      ref={tabDropdownRef}
-      type="button"
-      variant="default"
-      size="sm"
-      shape="pill"
-      className="hidden max-w-48 min-w-0 justify-start gap-1.5 text-left max-[720px]:inline-flex"
-      onClick={() => setIsTabDropdownOpen(true)}
-    >
-      <ActiveTabIcon weight="duotone" />
-      <span className="truncate">{activeTabItem.label}</span>
-      <CaretDown className="shrink-0 text-subtle-foreground" />
-    </Button>
-  );
-
   const searchInput = (
-    <div ref={searchInputAnchorRef} className="w-56 max-[720px]:w-44 max-[520px]:w-32">
+    <div ref={searchInputAnchorRef} className="w-56 shrink-0 max-[720px]:w-44 max-[520px]:w-32">
       <Input
         type="text"
         placeholder="Search settings..."
@@ -318,7 +291,6 @@ const SettingsWorkbenchView = () => {
           navigateToSearchResult(firstResult);
         }}
         leftIcon={Search}
-        size="xs"
         shape="pill"
         className="w-full"
       />
@@ -328,12 +300,33 @@ const SettingsWorkbenchView = () => {
   return (
     <>
       <div className="@container/settings flex size-full min-w-0 flex-col overflow-hidden bg-background">
-        <ChromeBar
-          region="content"
-          emphasis="primary"
-          className="justify-end bg-background max-[720px]:justify-between"
-        >
-          {tabPicker}
+        <ChromeBar region="content" emphasis="primary" className="min-w-0 bg-background">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => handleTabChange(value as SettingsTab)}
+            className="min-w-0 flex-1 gap-0"
+          >
+            <div className="scrollbar-none min-w-0 overflow-x-auto">
+              <TabsList variant="bare" aria-label="Settings sections">
+                {visibleTabs.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <TabsTrigger
+                      key={item.id}
+                      id={`settings-tab-${item.id}`}
+                      value={item.id}
+                      aria-controls={`settings-panel-${item.id}`}
+                      className="w-fit flex-none"
+                    >
+                      <Icon weight="duotone" />
+                      <span>{item.label}</span>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </div>
+          </Tabs>
           {searchInput}
         </ChromeBar>
 
@@ -352,15 +345,6 @@ const SettingsWorkbenchView = () => {
           {renderTabContent()}
         </ScrollArea>
       </div>
-      <Dropdown
-        isOpen={isTabDropdownOpen}
-        anchorRef={tabDropdownRef}
-        anchorSide="bottom"
-        anchorAlign="start"
-        items={tabMenuItems}
-        onClose={() => setIsTabDropdownOpen(false)}
-        className="w-fit min-w-0"
-      />
       <Dropdown
         isOpen={isSearchDropdownOpen && searchQuery.trim().length > 0}
         anchorRef={searchInputAnchorRef}

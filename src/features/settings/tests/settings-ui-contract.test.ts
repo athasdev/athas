@@ -79,19 +79,16 @@ describe("settings UI contract", () => {
     }
   });
 
-  it("uses one standard size for text actions and explicit compact sizes for icon actions", () => {
-    const buttonSizes = settingsComponentFiles.flatMap((filePath) =>
+  it("uses the canonical primitive geometry without local size selection", () => {
+    const buttons = settingsComponentFiles.flatMap((filePath) =>
       collectControlProps(filePath, "Button"),
     );
-    const invalidButtons = buttonSizes.filter(
-      ({ filePath, size }) =>
-        size !== "sm" &&
-        size !== "icon-sm" &&
-        size !== "icon-xs" &&
-        !(filePath.endsWith("settings-vertical-tabs.tsx") && size === "md"),
+    const selects = settingsComponentFiles.flatMap((filePath) =>
+      collectControlProps(filePath, "Select"),
     );
 
-    expect(invalidButtons).toEqual([]);
+    expect(buttons.filter(({ size }) => size !== null)).toEqual([]);
+    expect(selects.filter(({ size }) => size !== null)).toEqual([]);
   });
 
   it("uses pill-shaped Button surfaces for settings actions and selectors", () => {
@@ -145,27 +142,28 @@ describe("settings UI contract", () => {
     expect(settingsViewSource).not.toContain("tabIndex: -1");
   });
 
-  it("keeps settings navigation in the shared sidebar instead of the workbench content", () => {
+  it("keeps settings navigation inline in the workbench content", () => {
     const settingsViewSource = readFileSync(
       `${componentsDirectory}/settings-workbench-view.tsx`,
       "utf8",
     );
-    const settingsSidebarSource = readFileSync(
-      `${componentsDirectory}/settings-sidebar.tsx`,
+    const sidebarPaneSource = readFileSync(
+      fileURLToPath(new URL("../../layout/components/sidebar/sidebar-pane.tsx", import.meta.url)),
       "utf8",
     );
-    const settingsNavigationSource = readFileSync(
-      `${componentsDirectory}/settings-vertical-tabs.tsx`,
+    const modalSliceSource = readFileSync(
+      fileURLToPath(new URL("../../window/stores/ui-state/modal-slice.ts", import.meta.url)),
       "utf8",
     );
 
-    expect(settingsViewSource).not.toContain("<SettingsVerticalTabs");
-    expect(settingsSidebarSource).toContain('<SidebarWorkspace title="Settings">');
-    expect(settingsSidebarSource).toContain("<SettingsVerticalTabs");
-    expect(settingsSidebarSource).toContain("onSectionChange={handleSectionChange}");
-    expect(settingsNavigationSource).toContain("<SidebarListItem");
-    expect(settingsNavigationSource).toContain('data-slot="settings-sidebar-nested-sections"');
-    expect(settingsNavigationSource).toContain('sections: ["Theme", "Typography"');
+    expect(settingsViewSource).toContain("<Tabs");
+    expect(settingsViewSource).toContain("<TabsList");
+    expect(settingsViewSource).toContain("<TabsTrigger");
+    expect(settingsViewSource).toContain('aria-label="Settings sections"');
+    expect(settingsViewSource).toContain("overflow-x-auto");
+    expect(sidebarPaneSource).not.toContain("SettingsSidebar");
+    expect(modalSliceSource).not.toContain('setActiveView("settings")');
+    expect(modalSliceSource).not.toContain("setIsSidebarVisible(true)");
     expect(settingsViewSource).toContain("settingsInitialSection");
     expect(settingsViewSource).toContain('section.scrollIntoView({ block: "start"');
   });

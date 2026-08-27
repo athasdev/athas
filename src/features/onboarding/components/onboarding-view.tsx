@@ -172,7 +172,6 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
                 value={keybindingPreset}
                 onChange={(value) => setKeybindingPreset(value as KeybindingPreset)}
                 options={keybindingPresetOptions}
-                size="sm"
                 variant="default"
                 aria-label="Keybinding preset"
               />

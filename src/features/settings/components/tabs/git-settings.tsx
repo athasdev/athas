@@ -39,7 +39,7 @@ export const GitSettings = () => {
           onReset={() => updateSetting("coreFeatures", getDefaultSetting("coreFeatures"))}
           canReset={settings.coreFeatures.git !== getDefaultSetting("coreFeatures").git}
         >
-          <Switch checked={settings.coreFeatures.git} onChange={handleGitFeatureToggle} size="sm" />
+          <Switch checked={settings.coreFeatures.git} onChange={handleGitFeatureToggle} />
         </SettingRow>
 
         <SettingRow
@@ -53,7 +53,6 @@ export const GitSettings = () => {
           <Switch
             checked={settings.autoRefreshGitStatus}
             onChange={(checked) => updateSetting("autoRefreshGitStatus", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -68,7 +67,6 @@ export const GitSettings = () => {
           <Switch
             checked={settings.confirmBeforeDiscard}
             onChange={(checked) => updateSetting("confirmBeforeDiscard", checked)}
-            size="sm"
           />
         </SettingRow>
       </Section>
@@ -85,7 +83,6 @@ export const GitSettings = () => {
           <Switch
             checked={settings.gitChangesFolderView}
             onChange={(checked) => updateSetting("gitChangesFolderView", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -100,7 +97,6 @@ export const GitSettings = () => {
           <Switch
             checked={settings.showUntrackedFiles}
             onChange={(checked) => updateSetting("showUntrackedFiles", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -113,7 +109,6 @@ export const GitSettings = () => {
           <Switch
             checked={settings.showStagedFirst}
             onChange={(checked) => updateSetting("showStagedFirst", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -126,7 +121,6 @@ export const GitSettings = () => {
           <Switch
             checked={settings.openDiffOnClick}
             onChange={(checked) => updateSetting("openDiffOnClick", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -141,7 +135,6 @@ export const GitSettings = () => {
           <Switch
             checked={settings.compactGitStatusBadges}
             onChange={(checked) => updateSetting("compactGitStatusBadges", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -158,7 +151,6 @@ export const GitSettings = () => {
           <Switch
             checked={settings.collapseEmptyGitSections}
             onChange={(checked) => updateSetting("collapseEmptyGitSections", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -175,7 +167,6 @@ export const GitSettings = () => {
           <Switch
             checked={settings.rememberLastGitPanelMode}
             onChange={(checked) => updateSetting("rememberLastGitPanelMode", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -195,7 +186,6 @@ export const GitSettings = () => {
               { value: "split", label: "Split" },
             ]}
             onChange={(value) => updateSetting("gitDefaultDiffView", value as "unified" | "split")}
-            size="md"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -215,7 +205,6 @@ export const GitSettings = () => {
           <Switch
             checked={settings.enableInlineGitBlame}
             onChange={(checked) => updateSetting("enableInlineGitBlame", checked)}
-            size="sm"
           />
         </SettingRow>
       </Section>

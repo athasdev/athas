@@ -250,12 +250,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       settingsInitialSection: section ?? null,
       settingsNavigationRequestId: get().settingsNavigationRequestId + 1,
     });
-    const state = get() as ModalSlice & {
-      setActiveView: (view: "settings") => void;
-      setIsSidebarVisible: (visible: boolean) => void;
-    };
-    state.setActiveView("settings");
-    state.setIsSidebarVisible(true);
     useBufferStore.getState().actions.openSettingsBuffer();
   },
 });

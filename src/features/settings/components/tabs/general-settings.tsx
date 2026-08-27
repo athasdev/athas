@@ -177,7 +177,6 @@ export const GeneralSettings = () => {
               onClick={downloadAndInstall}
               disabled={downloading || installing}
               variant="default"
-              size="sm"
             >
               {downloading
                 ? "Downloading..."
@@ -191,7 +190,6 @@ export const GeneralSettings = () => {
               onClick={handleCheckForUpdates}
               disabled={checking || downloading || installing}
               variant="default"
-              size="sm"
             >
               {checking ? "Checking..." : "Check"}
             </Button>
@@ -240,7 +238,6 @@ export const GeneralSettings = () => {
                 onClick={() => void handleInstallCli()}
                 disabled={cliInstalling || cliChecking}
                 variant="default"
-                size="sm"
               >
                 {cliInstalling ? "Installing..." : "Install"}
               </Button>
@@ -250,7 +247,6 @@ export const GeneralSettings = () => {
                 disabled={cliChecking}
                 variant="default"
                 tooltip="Copy install command to clipboard"
-                size="sm"
               >
                 Copy
               </Button>
@@ -268,12 +264,7 @@ export const GeneralSettings = () => {
       </div>
 
       <SettingRow label="Import Settings" description="Import matching setup from another editor.">
-        <Button
-          shape="pill"
-          onClick={() => setIsImportDialogOpen(true)}
-          variant="default"
-          size="sm"
-        >
+        <Button shape="pill" onClick={() => setIsImportDialogOpen(true)} variant="default">
           Import
         </Button>
       </SettingRow>
@@ -282,12 +273,7 @@ export const GeneralSettings = () => {
         label="Report a Bug"
         description="Choose where to report an issue with environment details."
       >
-        <Button
-          shape="pill"
-          onClick={() => setIsReportBugDialogOpen(true)}
-          variant="default"
-          size="sm"
-        >
+        <Button shape="pill" onClick={() => setIsReportBugDialogOpen(true)} variant="default">
           Open
         </Button>
       </SettingRow>

@@ -27,8 +27,6 @@ import { createSelectors } from "@/utils/zustand-selectors";
 
 export type { Settings } from "../types/settings.types";
 
-const AI_CHAT_TOGGLE_COOLDOWN_MS = 120;
-
 let settingsStoreInitPromise: Promise<Settings> | null = null;
 
 export function initializeSettingsStore(): Promise<Settings> {
@@ -48,7 +46,6 @@ const useSettingsStoreBase = create(
     combine(
       {
         settings: getDefaultSettingsSnapshot(),
-        _lastAiChatToggleAt: 0,
         search: {
           query: "",
           results: [] as SearchResult[],
@@ -56,7 +53,7 @@ const useSettingsStoreBase = create(
           selectedResultId: null,
         } as SearchState,
       },
-      (set, get) => ({
+      (set) => ({
         actions: {
           updateSettingsFromJSON: (jsonString: string): boolean => {
             try {
@@ -94,24 +91,6 @@ const useSettingsStoreBase = create(
 
             applySettingsSideEffects(nextSettings);
             await saveSettingsToStore(nextSettings);
-          },
-
-          toggleAIChatVisible: (forceValue?: boolean) => {
-            const now = Date.now();
-            const previousToggleAt = get()._lastAiChatToggleAt;
-            if (now - previousToggleAt < AI_CHAT_TOGGLE_COOLDOWN_MS) {
-              return;
-            }
-
-            const nextValue =
-              forceValue !== undefined ? forceValue : !get().settings.isAIChatVisible;
-
-            set((state) => {
-              state.settings.isAIChatVisible = nextValue;
-              state._lastAiChatToggleAt = now;
-            });
-
-            debouncedSaveSettingsToStore({ isAIChatVisible: nextValue });
           },
 
           updateSetting: async <K extends keyof Settings>(key: K, value: Settings[K]) => {

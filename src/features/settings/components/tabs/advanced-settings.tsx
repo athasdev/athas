@@ -137,7 +137,7 @@ export const AdvancedSettings = () => {
             label={feature.name}
             labelAccessory={
               feature.status === "experimental" ? (
-                <Badge variant="accent" size="compact" className="uppercase">
+                <Badge variant="accent" className="uppercase">
                   Experimental
                 </Badge>
               ) : undefined
@@ -152,19 +152,13 @@ export const AdvancedSettings = () => {
             <Switch
               checked={feature.enabled}
               onChange={(checked) => handleCoreFeatureToggle(feature.id, checked)}
-              size="sm"
             />
           </SettingRow>
         ))}
       </Section>
       <Section title="Data">
         <SettingRow label="Export Settings" description="Save all app settings to a JSON file.">
-          <Button
-            shape="pill"
-            variant="default"
-            onClick={() => void handleExportSettings()}
-            size="sm"
-          >
+          <Button shape="pill" variant="default" onClick={() => void handleExportSettings()}>
             Export
           </Button>
         </SettingRow>
@@ -172,7 +166,7 @@ export const AdvancedSettings = () => {
           label="Import Settings"
           description="Restore app settings from an Athas settings JSON file."
         >
-          <Button shape="pill" variant="default" onClick={handleImportSettings} size="sm">
+          <Button shape="pill" variant="default" onClick={handleImportSettings}>
             Import
           </Button>
         </SettingRow>
@@ -197,11 +191,7 @@ export const AdvancedSettings = () => {
             </>
           }
         >
-          <Switch
-            checked={telemetry}
-            onChange={(checked) => updateSetting("telemetry", checked)}
-            size="sm"
-          />
+          <Switch checked={telemetry} onChange={(checked) => updateSetting("telemetry", checked)} />
         </SettingRow>
         <SettingRow
           label="Telemetry Log"
@@ -212,11 +202,10 @@ export const AdvancedSettings = () => {
               shape="pill"
               variant="default"
               onClick={() => setShowTelemetryLog((value) => !value)}
-              size="sm"
             >
               {showTelemetryLog ? "Hide Log" : "Open Log"}
             </Button>
-            <Button shape="pill" variant="default" onClick={handleClearTelemetryLog} size="sm">
+            <Button shape="pill" variant="default" onClick={handleClearTelemetryLog}>
               Clear
             </Button>
           </div>

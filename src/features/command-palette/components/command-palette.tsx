@@ -150,7 +150,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const formatOnSave = useSettingsStore((state) => state.settings.formatOnSave);
   const iconTheme = useSettingsStore((state) => state.settings.iconTheme);
   const inlayHints = useSettingsStore((state) => state.settings.inlayHints);
-  const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
   const lineNumbers = useSettingsStore((state) => state.settings.lineNumbers);
   const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
@@ -205,7 +204,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       formatOnSave,
       iconTheme,
       inlayHints,
-      isAIChatVisible,
       lineNumbers,
       nativeMenuBar,
       parameterHints,
@@ -233,7 +231,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       formatOnSave,
       iconTheme,
       inlayHints,
-      isAIChatVisible,
       lineNumbers,
       nativeMenuBar,
       parameterHints,
@@ -270,7 +267,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       setBottomPaneActiveTab,
       settings: {
         activityRailExpanded: commandSettings.activityRailExpanded,
-        isAIChatVisible: commandSettings.isAIChatVisible,
         nativeMenuBar: commandSettings.nativeMenuBar,
         compactMenuBar: commandSettings.compactMenuBar,
         webViewerEnabled: commandSettings.coreFeatures.webViewer,

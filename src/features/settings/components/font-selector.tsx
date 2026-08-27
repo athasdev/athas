@@ -171,7 +171,6 @@ export const FontSelector = ({
       onChange={handleFontChange}
       placeholder="Select font"
       className={className}
-      size="sm"
       variant="default"
       searchable
       searchableTrigger="input"

@@ -485,7 +485,6 @@ export const AISettings = () => {
             checked={settings.aiAgentNotifications}
             onChange={(checked) => void handleAgentNotificationsChange(checked)}
             disabled={isUpdatingAgentNotifications}
-            size="sm"
           />
         </SettingRow>
       </Section>
@@ -554,7 +553,6 @@ export const AISettings = () => {
             variant="default"
             onClick={() => setIsApiKeyManagerOpen(true)}
             className="w-fit"
-            size="sm"
           >
             <Key />
             <span>Manage keys</span>
@@ -576,7 +574,6 @@ export const AISettings = () => {
                 variant="default"
                 onClick={() => openCommandPaletteView(action.commandPaletteViewId)}
                 className="w-fit"
-                size="sm"
               >
                 <Icon />
                 <span>{action.buttonLabel}</span>
@@ -607,7 +604,6 @@ export const AISettings = () => {
                 }
               }}
               placeholder="http://localhost:11434/v1"
-              size="md"
               className={SETTINGS_CONTROL_WIDTHS.xwide}
               spellCheck={false}
               leftIcon={Globe}
@@ -627,7 +623,6 @@ export const AISettings = () => {
                 value={customChatApiKeyInput}
                 onChange={(event) => setCustomChatApiKeyInput(event.currentTarget.value)}
                 placeholder={hasCustomChatApiKey ? "Saved" : "API key"}
-                size="md"
                 className={SETTINGS_CONTROL_WIDTHS.wide}
                 spellCheck={false}
                 autoComplete="off"
@@ -639,7 +634,6 @@ export const AISettings = () => {
                 variant="default"
                 onClick={handleSaveCustomChatApiKey}
                 disabled={!customChatApiKeyInput.trim() || isSavingCustomChatApiKey}
-                size="sm"
               >
                 Save
               </Button>
@@ -650,7 +644,6 @@ export const AISettings = () => {
                   variant="default"
                   onClick={handleRemoveCustomChatApiKey}
                   disabled={isSavingCustomChatApiKey}
-                  size="sm"
                 >
                   Remove
                 </Button>
@@ -717,7 +710,7 @@ export const AISettings = () => {
                   onClick={handleResetOllamaUrl}
                   title="Reset to default"
                   aria-label="Reset Ollama URL to default"
-                  size="icon-xs"
+                  iconOnly
                 >
                   <RotateCcw />
                 </Button>
@@ -749,7 +742,6 @@ export const AISettings = () => {
                 variant="default"
                 onClick={handleSaveOllamaApiKey}
                 disabled={!ollamaApiKeyInput.trim() || isSavingOllamaKey}
-                size="sm"
               >
                 {isSavingOllamaKey ? "Saving…" : "Save"}
               </Button>
@@ -762,7 +754,7 @@ export const AISettings = () => {
                   title="Remove saved API key"
                   aria-label="Remove Ollama API key"
                   className="text-destructive hover:bg-destructive/10"
-                  size="icon-xs"
+                  iconOnly
                 >
                   <Trash2 />
                 </Button>
@@ -842,7 +834,6 @@ export const AISettings = () => {
                   onChange={(value) =>
                     useAIChatStore.getState().actions.changeSessionConfigOption(option.id, value)
                   }
-                  size="md"
                   variant="default"
                   searchable
                   searchableTrigger="input"
@@ -864,7 +855,6 @@ export const AISettings = () => {
             checked={aiCompletionAllowedByPolicy ? settings.aiCompletion : false}
             onChange={(checked) => updateSetting("aiCompletion", checked)}
             disabled={!aiCompletionAllowedByPolicy}
-            size="sm"
           />
         </SettingRow>
         {settings.aiCompletion && (
@@ -892,7 +882,6 @@ export const AISettings = () => {
                   )
                 }
                 ariaLabel="Autocomplete provider"
-                size="xs"
                 wrap={false}
               />
             </SettingRow>
@@ -934,7 +923,6 @@ export const AISettings = () => {
                     }
                   }}
                   placeholder="qwen2.5-coder:7b"
-                  size="md"
                   className={SETTINGS_CONTROL_WIDTHS.xwide}
                   disabled={!aiCompletionAllowedByPolicy}
                 />
@@ -946,7 +934,7 @@ export const AISettings = () => {
                     onClick={loadAutocompleteModels}
                     disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
                     title="Refresh model list"
-                    size="icon-xs"
+                    iconOnly
                   >
                     {isLoadingAutocompleteModels ? (
                       <Spinner label="Loading models" compact />
@@ -962,7 +950,6 @@ export const AISettings = () => {
                       label: model.name,
                     }))}
                     onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
-                    size="md"
                     variant="default"
                     searchable
                     searchableTrigger="input"
@@ -1006,7 +993,6 @@ export const AISettings = () => {
                       }
                     }}
                     placeholder="http://localhost:11434/v1"
-                    size="md"
                     className={SETTINGS_CONTROL_WIDTHS.xwide}
                     disabled={!aiCompletionAllowedByPolicy}
                   />
@@ -1027,7 +1013,6 @@ export const AISettings = () => {
                         setCustomAutocompleteApiKeyInput(event.currentTarget.value)
                       }
                       placeholder={hasCustomAutocompleteApiKey ? "Saved" : "API key"}
-                      size="md"
                       className={SETTINGS_CONTROL_WIDTHS.wide}
                       disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
                     />
@@ -1040,7 +1025,6 @@ export const AISettings = () => {
                         !aiCompletionAllowedByPolicy ||
                         isSavingCustomAutocompleteApiKey
                       }
-                      size="sm"
                     >
                       Save
                     </Button>
@@ -1050,7 +1034,6 @@ export const AISettings = () => {
                         variant="default"
                         onClick={handleRemoveCustomAutocompleteApiKey}
                         disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
-                        size="sm"
                       >
                         Remove
                       </Button>

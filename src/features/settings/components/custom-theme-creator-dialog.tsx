@@ -136,14 +136,13 @@ export function CustomThemeCreatorDialog({
       size="lg"
       footer={
         <>
-          <Button shape="pill" type="button" variant="ghost" onClick={onClose} size="sm">
+          <Button shape="pill" type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
           <Button
             shape="pill"
             type="button"
             variant="default"
-            size="sm"
             onClick={() => void handleSave()}
             disabled={isSaving}
           >
@@ -153,7 +152,6 @@ export function CustomThemeCreatorDialog({
             shape="pill"
             type="button"
             variant="accent"
-            size="sm"
             onClick={() => void handleInstall()}
             disabled={isInstalling}
           >

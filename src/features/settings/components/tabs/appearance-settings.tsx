@@ -194,7 +194,6 @@ export const AppearanceSettings = () => {
           <Switch
             checked={settings.syncSystemTheme}
             onChange={(checked) => updateSetting("syncSystemTheme", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -210,7 +209,6 @@ export const AppearanceSettings = () => {
               value={settings.theme}
               options={normalizedThemeOptions}
               onChange={(value) => updateSetting("theme", value)}
-              size="sm"
               variant="default"
               searchable
               searchableTrigger="input"
@@ -231,7 +229,6 @@ export const AppearanceSettings = () => {
                 value={settings.autoThemeLight}
                 options={lightThemeOptions}
                 onChange={(value) => updateSetting("autoThemeLight", value)}
-                size="sm"
                 variant="default"
                 searchable
                 searchableTrigger="input"
@@ -249,7 +246,6 @@ export const AppearanceSettings = () => {
                 value={settings.autoThemeDark}
                 options={darkThemeOptions}
                 onChange={(value) => updateSetting("autoThemeDark", value)}
-                size="sm"
                 variant="default"
                 searchable
                 searchableTrigger="input"
@@ -269,7 +265,6 @@ export const AppearanceSettings = () => {
             value={settings.iconTheme}
             options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
-            size="sm"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -293,16 +288,11 @@ export const AppearanceSettings = () => {
           }
         >
           <div className="flex items-center gap-2">
-            <Button
-              shape="pill"
-              type="button"
-              size="sm"
-              onClick={() => setIsThemeCreatorOpen(true)}
-            >
+            <Button shape="pill" type="button" onClick={() => setIsThemeCreatorOpen(true)}>
               <FilePlusIcon />
               Create
             </Button>
-            <Button shape="pill" type="button" size="sm" onClick={handleUploadTheme}>
+            <Button shape="pill" type="button" onClick={handleUploadTheme}>
               <UploadIcon />
               Import
             </Button>
@@ -318,7 +308,7 @@ export const AppearanceSettings = () => {
             <Button
               shape="pill"
               type="button"
-              size="icon-xs"
+              iconOnly
               variant="danger"
               tooltip={`Remove ${theme.name}`}
               onClick={() => void handleRemoveCustomTheme(theme.id)}
@@ -356,7 +346,6 @@ export const AppearanceSettings = () => {
             value={settings.uiFontSize}
             onChange={(value) => updateSetting("uiFontSize", value)}
             className={cn(SETTINGS_CONTROL_WIDTHS.number, "tabular-nums")}
-            size="sm"
             aria-label={`UI font size: ${formatUiFontSize(settings.uiFontSize)} pixels`}
           />
         </SettingRow>
@@ -372,7 +361,6 @@ export const AppearanceSettings = () => {
           <Switch
             checked={settings.reduceMotion}
             onChange={(checked) => updateSetting("reduceMotion", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -385,7 +373,6 @@ export const AppearanceSettings = () => {
           <Switch
             checked={settings.showStatusBar}
             onChange={(checked) => updateSetting("showStatusBar", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -398,7 +385,6 @@ export const AppearanceSettings = () => {
           <Switch
             checked={settings.showTabIcons}
             onChange={(checked) => updateSetting("showTabIcons", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -423,7 +409,6 @@ export const AppearanceSettings = () => {
             onChange={(value) =>
               updateSetting("tabCloseButtonVisibility", value as TabCloseButtonVisibility)
             }
-            size="sm"
             variant="default"
           />
         </SettingRow>
@@ -443,7 +428,6 @@ export const AppearanceSettings = () => {
                 updateSetting("nativeMenuBar", checked);
                 invoke("toggle_menu_bar", { toggle: checked });
               }}
-              size="sm"
             />
           </SettingRow>
         )}
@@ -459,7 +443,6 @@ export const AppearanceSettings = () => {
               checked={settings.compactMenuBar}
               disabled={settings.nativeMenuBar}
               onChange={(checked) => updateSetting("compactMenuBar", checked)}
-              size="sm"
             />
           </SettingRow>
         )}
@@ -475,7 +458,6 @@ export const AppearanceSettings = () => {
           <Switch
             checked={settings.windowTransparency}
             onChange={(checked) => updateSetting("windowTransparency", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -490,7 +472,6 @@ export const AppearanceSettings = () => {
           <Switch
             checked={settings.openFoldersInNewWindow}
             onChange={(checked) => updateSetting("openFoldersInNewWindow", checked)}
-            size="sm"
           />
         </SettingRow>
       </Section>

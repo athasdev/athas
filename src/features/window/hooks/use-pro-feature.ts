@@ -9,7 +9,6 @@ export function useProFeature() {
   const hasIntelligence = hasProductCapability(subscription, "intelligence");
   const hasSettingsSync = hasProductCapability(subscription, "settingsSync");
   const hasCloudWorkspaces = hasProductCapability(subscription, "cloudWorkspaces");
-  const hasViews = hasProductCapability(subscription, "views");
   const isPro = user?.subscription_status === "pro" || hasIntelligence || hasSettingsSync;
 
   return {
@@ -18,7 +17,6 @@ export function useProFeature() {
     hasHostedAi: hasIntelligence,
     hasSettingsSync,
     hasCloudWorkspaces,
-    hasViews,
     isAuthenticated,
     subscriptionStatus: subscription?.status ?? user?.subscription_status ?? "free",
   };

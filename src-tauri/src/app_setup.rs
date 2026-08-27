@@ -462,9 +462,6 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                "toggle_terminal" => {
                   emit_menu_event(&window, "menu_toggle_terminal", ());
                }
-               "toggle_ai_chat" => {
-                  emit_menu_event(&window, "menu_toggle_ai_chat", ());
-               }
                "open_github_notifications" => {
                   emit_menu_event(&window, "menu_open_github_notifications", ());
                }
@@ -519,9 +516,6 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                }
                "quick_open" => {
                   emit_menu_event(&window, "menu_quick_open", ());
-               }
-               "go_to_line" => {
-                  emit_menu_event(&window, "menu_go_to_line", ());
                }
                "next_tab" => {
                   emit_menu_event(&window, "menu_next_tab", ());

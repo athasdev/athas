@@ -46,11 +46,9 @@ async function setupMenuListeners(handlers: any) {
     ),
     currentWindow.listen("menu_toggle_sidebar", () => currentHandlers.current.onToggleSidebar()),
     currentWindow.listen("menu_toggle_terminal", () => currentHandlers.current.onToggleTerminal()),
-    currentWindow.listen("menu_toggle_ai_chat", () => currentHandlers.current.onToggleAiChat()),
     currentWindow.listen("menu_split_editor", () => currentHandlers.current.onSplitEditor()),
     currentWindow.listen("menu_toggle_vim", () => currentHandlers.current.onToggleVim()),
     currentWindow.listen("menu_quick_open", () => currentHandlers.current.onQuickOpen()),
-    currentWindow.listen("menu_go_to_line", () => currentHandlers.current.onGoToLine()),
     currentWindow.listen("menu_next_tab", () => currentHandlers.current.onNextTab()),
     currentWindow.listen("menu_prev_tab", () => currentHandlers.current.onPrevTab()),
     currentWindow.listen("menu_theme_change", (event) =>
@@ -96,11 +94,9 @@ interface UseMenuEventsProps {
   onToggleActivitySidebar: () => void;
   onToggleSidebar: () => void;
   onToggleTerminal: () => void;
-  onToggleAiChat: () => void;
   onSplitEditor: () => void;
   onToggleVim: () => void;
   onQuickOpen: () => void;
-  onGoToLine: () => void;
   onNextTab: () => void;
   onPrevTab: () => void;
   onThemeChange: (theme: string) => void;

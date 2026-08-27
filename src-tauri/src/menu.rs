@@ -723,13 +723,6 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          true,
          Some("CmdOrCtrl+P"),
       )?)
-      .item(&MenuItem::with_id(
-         app,
-         "go_to_line",
-         "Go to Line",
-         true,
-         Some("CmdOrCtrl+G"),
-      )?)
       .separator()
       .item(&MenuItem::with_id(
          app,
@@ -827,13 +820,6 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
 
    // Agent menu
    let ai_menu = SubmenuBuilder::new(app, "Agent")
-      .item(&MenuItem::with_id(
-         app,
-         "toggle_ai_chat",
-         "Toggle Agent",
-         true,
-         Some("CmdOrCtrl+R"),
-      )?)
       .item(&MenuItem::with_id(
          app,
          "command_new_agent",

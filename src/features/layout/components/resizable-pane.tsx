@@ -8,11 +8,9 @@ import {
   MIN_RESPONSIVE_PANE_WIDTH,
 } from "../utils/resizable-pane-layout";
 
-type WidthSettingKey = "sidebarWidth" | "aiChatWidth";
+type WidthSettingKey = "sidebarWidth" | "rightSidebarWidth";
 
 const MIN_SIDEBAR_WIDTH = 140;
-const MIN_AI_CHAT_WIDTH = 300;
-const MIN_AI_CHAT_COMPACT_WIDTH = 220;
 
 interface ResizablePaneProps {
   children: React.ReactNode;
@@ -42,13 +40,7 @@ export function ResizablePane({
 
   const getViewportWidth = () => (typeof window !== "undefined" ? window.innerWidth : 1280);
 
-  const getMinWidth = useCallback(() => {
-    if (widthKey === "aiChatWidth") {
-      // Keep AI chat usable on normal widths, but relax for very small windows.
-      return getViewportWidth() < 1100 ? MIN_AI_CHAT_COMPACT_WIDTH : MIN_AI_CHAT_WIDTH;
-    }
-    return MIN_SIDEBAR_WIDTH;
-  }, [widthKey]);
+  const getMinWidth = useCallback(() => MIN_SIDEBAR_WIDTH, []);
 
   const getMaxWidth = useCallback(() => {
     return getResponsivePaneMaxWidth(getViewportWidth(), reservedWidth);
@@ -146,7 +138,7 @@ export function ResizablePane({
       )}
       role="separator"
       aria-orientation="vertical"
-      aria-label={widthKey === "aiChatWidth" ? "Resize AI chat" : "Resize sidebar"}
+      aria-label={position === "right" ? "Resize right sidebar" : "Resize left sidebar"}
       aria-valuenow={Math.round(width)}
       aria-valuemin={Math.round(getMinWidth())}
       aria-valuemax={Math.round(getMaxWidth())}

@@ -50,6 +50,7 @@ export interface Settings {
   renderIndentGuides: boolean;
   highlightOccurrences: boolean;
   showMinimap: boolean;
+  showOutline: boolean;
   editorFontLigatures: boolean;
   editorItalicComments: boolean;
   editorStickyScroll: boolean;
@@ -104,8 +105,6 @@ export interface Settings {
   aiModelId: string;
   aiCustomBaseUrl: string;
   aiCustomModelId: string;
-  aiChatWidth: number;
-  isAIChatVisible: boolean;
   aiCompletion: boolean;
   aiAutocompleteProvider: "openrouter" | "custom";
   aiAutocompleteModelId: string;
@@ -127,6 +126,7 @@ export interface Settings {
   showActivityRailProjectIcons: boolean;
   collapsedActivityRailSections: string[];
   sidebarWidth: number;
+  rightSidebarWidth: number;
   showGitHubPullRequests: boolean;
   showGitHubIssues: boolean;
   showGitHubActions: boolean;

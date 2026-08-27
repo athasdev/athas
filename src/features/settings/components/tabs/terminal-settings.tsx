@@ -131,7 +131,6 @@ export const TerminalSettings = () => {
                 value === DEFAULT_SHELL_OPTION_VALUE ? "" : value,
               )
             }
-            size="md"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -158,7 +157,6 @@ export const TerminalSettings = () => {
                 value === SYSTEM_DEFAULT_PROFILE_ID ? "" : value,
               )
             }
-            size="md"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -186,7 +184,6 @@ export const TerminalSettings = () => {
                   startupCommands: [],
                 })
               }
-              size="sm"
             >
               <Plus className="mr-1" />
               Add Profile
@@ -219,7 +216,7 @@ export const TerminalSettings = () => {
                     variant="danger"
                     onClick={() => profileActions.deleteProfile(profile.id)}
                     aria-label={`Delete ${profile.name}`}
-                    size="icon-sm"
+                    iconOnly
                   >
                     <Trash2 />
                   </Button>
@@ -237,7 +234,6 @@ export const TerminalSettings = () => {
                         })
                       }
                       placeholder="My Profile"
-                      size="md"
                     />
                   </Field>
                   <Field>
@@ -253,7 +249,6 @@ export const TerminalSettings = () => {
                         })
                       }
                       className="w-full"
-                      size="md"
                       variant="default"
                       searchable
                       searchableTrigger="input"
@@ -274,7 +269,6 @@ export const TerminalSettings = () => {
                       })
                     }
                     placeholder="Leave empty to use the current workspace directory"
-                    size="md"
                   />
                   <FieldDescription>
                     Leave empty to use the current workspace directory.
@@ -298,7 +292,6 @@ export const TerminalSettings = () => {
                     }
                     placeholder="One command per line"
                     rows={3}
-                    size="md"
                   />
                   <FieldDescription>Enter one command per line.</FieldDescription>
                 </Field>
@@ -323,7 +316,6 @@ export const TerminalSettings = () => {
               value={settings.terminalFontFamily}
               options={fontOptions}
               onChange={(val) => updateSetting("terminalFontFamily", val)}
-              size="md"
               variant="default"
               searchable
               searchableTrigger="input"
@@ -347,7 +339,6 @@ export const TerminalSettings = () => {
             value={settings.terminalFontSize}
             onChange={(val) => updateSetting("terminalFontSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.number}
-            size="md"
           />
         </SettingRow>
 
@@ -366,7 +357,6 @@ export const TerminalSettings = () => {
             value={settings.terminalLineHeight}
             onChange={(val) => updateSetting("terminalLineHeight", val)}
             className={SETTINGS_CONTROL_WIDTHS.number}
-            size="md"
           />
         </SettingRow>
 
@@ -385,7 +375,6 @@ export const TerminalSettings = () => {
             value={settings.terminalLetterSpacing}
             onChange={(val) => updateSetting("terminalLetterSpacing", val)}
             className={SETTINGS_CONTROL_WIDTHS.number}
-            size="md"
           />
         </SettingRow>
 
@@ -404,7 +393,6 @@ export const TerminalSettings = () => {
             value={settings.terminalScrollback}
             onChange={(val) => updateSetting("terminalScrollback", val)}
             className={SETTINGS_CONTROL_WIDTHS.default}
-            size="md"
           />
         </SettingRow>
       </Section>
@@ -427,7 +415,6 @@ export const TerminalSettings = () => {
           <Switch
             checked={settings.terminalAltClickMovesCursor}
             onChange={(checked) => updateSetting("terminalAltClickMovesCursor", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -444,7 +431,6 @@ export const TerminalSettings = () => {
           <Switch
             checked={settings.terminalMacOptionIsMeta}
             onChange={(checked) => updateSetting("terminalMacOptionIsMeta", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -465,7 +451,6 @@ export const TerminalSettings = () => {
           <Switch
             checked={settings.terminalRightClickSelectsWord}
             onChange={(checked) => updateSetting("terminalRightClickSelectsWord", checked)}
-            size="sm"
           />
         </SettingRow>
       </Section>
@@ -490,7 +475,6 @@ export const TerminalSettings = () => {
             onChange={(val) =>
               updateSetting("terminalCursorStyle", val as "block" | "underline" | "bar")
             }
-            size="md"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -508,7 +492,6 @@ export const TerminalSettings = () => {
           <Switch
             checked={settings.terminalCursorBlink}
             onChange={(val) => updateSetting("terminalCursorBlink", val)}
-            size="sm"
           />
         </SettingRow>
 
@@ -526,7 +509,6 @@ export const TerminalSettings = () => {
             value={settings.terminalCursorWidth}
             onChange={(val) => updateSetting("terminalCursorWidth", val)}
             className={SETTINGS_CONTROL_WIDTHS.number}
-            size="md"
           />
         </SettingRow>
 
@@ -560,7 +542,6 @@ export const TerminalSettings = () => {
                 value as typeof settings.terminalCursorInactiveStyle,
               )
             }
-            size="md"
             variant="default"
           />
         </SettingRow>

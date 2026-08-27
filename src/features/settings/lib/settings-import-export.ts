@@ -68,6 +68,13 @@ export function parseSettingsImportJson(jsonString: string): Settings | null {
     return null;
   }
 
+  if (
+    importedSettings.rightSidebarWidth === undefined &&
+    importedSettings.sidebarWidth !== undefined
+  ) {
+    importedSettings.rightSidebarWidth = importedSettings.sidebarWidth;
+  }
+
   return normalizeSettings({
     ...getDefaultSettingsSnapshot(),
     ...importedSettings,

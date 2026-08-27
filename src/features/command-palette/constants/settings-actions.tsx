@@ -583,9 +583,11 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     {
       id: "toggle-ai-chat-feature",
       label: settings.coreFeatures.aiChat
-        ? "Features: Disable AI Chat"
-        : "Features: Enable AI Chat",
-      description: settings.coreFeatures.aiChat ? "Disable AI chat panel" : "Enable AI chat panel",
+        ? "Features: Disable Agent Sessions"
+        : "Features: Enable Agent Sessions",
+      description: settings.coreFeatures.aiChat
+        ? "Disable agent sessions"
+        : "Enable agent sessions",
       icon: <MessageSquare />,
       category: "Features",
       action: () => {

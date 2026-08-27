@@ -102,7 +102,6 @@ export const EnterpriseSettings = () => {
             onChange={(checked) =>
               savePolicyPatch({ managedMode: checked }, "Managed mode updated.")
             }
-            size="sm"
             disabled={!isAdmin || isSaving}
           />
         </SettingRow>
@@ -119,7 +118,6 @@ export const EnterpriseSettings = () => {
                 "Allowlist enforcement updated.",
               )
             }
-            size="sm"
             disabled={!isAdmin || isSaving || !policy.managedMode}
           />
         </SettingRow>
@@ -131,7 +129,6 @@ export const EnterpriseSettings = () => {
           <Switch
             checked={policy.allowByok}
             onChange={(checked) => savePolicyPatch({ allowByok: checked }, "BYOK policy updated.")}
-            size="sm"
             disabled={!isAdmin || isSaving || !policy.managedMode}
           />
         </SettingRow>
@@ -145,7 +142,6 @@ export const EnterpriseSettings = () => {
             onChange={(checked) =>
               savePolicyPatch({ aiCompletionEnabled: checked }, "AI autocomplete policy updated.")
             }
-            size="sm"
             disabled={!isAdmin || isSaving || !policy.managedMode}
           />
         </SettingRow>
@@ -156,7 +152,6 @@ export const EnterpriseSettings = () => {
             onChange={(checked) =>
               savePolicyPatch({ aiChatEnabled: checked }, "Agent policy updated.")
             }
-            size="sm"
             disabled={!isAdmin || isSaving || !policy.managedMode}
           />
         </SettingRow>
@@ -171,7 +166,6 @@ export const EnterpriseSettings = () => {
             value={allowlistInput}
             onChange={(event) => setAllowlistInput(event.target.value)}
             rows={8}
-            size="md"
             className="font-mono ui-text-base"
             placeholder="athas.typescript&#10;athas.python&#10;athas.go"
             disabled={!isAdmin || isSaving || !policy.managedMode}
@@ -186,7 +180,6 @@ export const EnterpriseSettings = () => {
                 variant="default"
                 onClick={() => setAllowlistInput("")}
                 disabled={!isAdmin || isSaving || !policy.managedMode}
-                size="sm"
               >
                 Clear
               </Button>
@@ -199,7 +192,6 @@ export const EnterpriseSettings = () => {
                   )
                 }
                 disabled={!isAdmin || isSaving || !policy.managedMode}
-                size="sm"
               >
                 {isSaving ? "Saving..." : "Apply allowlist"}
               </Button>

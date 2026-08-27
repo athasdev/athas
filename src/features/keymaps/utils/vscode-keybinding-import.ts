@@ -96,7 +96,6 @@ const VSCODE_COMMANDS: Record<string, string> = {
   "workbench.action.zoomOut": "workbench.zoomOut",
   "workbench.action.zoomReset": "workbench.zoomReset",
   "workbench.action.openGlobalKeybindings": "workbench.openKeyboardShortcuts",
-  "workbench.action.gotoLine": "editor.goToLine",
   "workbench.action.gotoSymbol": "editor.showOutline",
   "workbench.action.nextEditor": "workbench.nextTab",
   "workbench.action.nextEditorInGroup": "workbench.nextTab",

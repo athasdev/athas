@@ -222,7 +222,6 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
                 key={suggestion}
                 type="button"
                 variant="ghost"
-                size="xs"
                 onClick={() => setRequest(suggestion)}
               >
                 {suggestion}
@@ -249,7 +248,6 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
             <Button
               type="button"
               variant="ghost"
-              size="sm"
               onClick={() => {
                 setMode("manual");
                 setError(null);
@@ -258,15 +256,10 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
               Configure manually
             </Button>
             <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+              <Button type="button" variant="ghost" onClick={onCancel}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                variant="accent"
-                size="sm"
-                disabled={isSaving || isResolvingRepository}
-              >
+              <Button type="submit" variant="accent" disabled={isSaving || isResolvingRepository}>
                 <SparkleIcon />
                 {isSaving ? "Creating view..." : "Create View"}
               </Button>
@@ -364,7 +357,6 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
                 onClick={() => {
                   setMode("intelligence");
                   setError(null);
@@ -377,10 +369,10 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
               <span />
             )}
             <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+              <Button type="button" variant="ghost" onClick={onCancel}>
                 Cancel
               </Button>
-              <Button type="submit" variant="accent" size="sm" disabled={isSaving}>
+              <Button type="submit" variant="accent" disabled={isSaving}>
                 {isSaving ? "Testing view..." : view ? "Save View" : "Create View"}
               </Button>
             </div>

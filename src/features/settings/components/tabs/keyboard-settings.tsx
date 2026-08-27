@@ -272,22 +272,16 @@ export const KeyboardSettings = () => {
                 variant="default"
                 onClick={() => setIsEditingKeybindings(false)}
                 className="gap-1.5"
-                size="sm"
               >
                 <ArrowLeft size={14} weight="duotone" />
                 Back
               </Button>
               <div className="flex items-center gap-2">
                 <TypedConfirmAction actionLabel="Reset to Defaults" onConfirm={handleResetAll} />
-                <Button shape="pill" variant="default" onClick={handleImport} size="sm">
+                <Button shape="pill" variant="default" onClick={handleImport}>
                   Import
                 </Button>
-                <Button
-                  shape="pill"
-                  variant="default"
-                  onClick={() => void handleExport()}
-                  size="sm"
-                >
+                <Button shape="pill" variant="default" onClick={() => void handleExport()}>
                   Export
                 </Button>
               </div>
@@ -299,7 +293,6 @@ export const KeyboardSettings = () => {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 leftIcon={Search}
-                size="md"
                 containerClassName="w-full"
               />
             </div>
@@ -393,11 +386,7 @@ export const KeyboardSettings = () => {
               onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
               canReset={vimMode !== getDefaultSetting("vimMode")}
             >
-              <Switch
-                checked={vimMode}
-                onChange={(checked) => updateSetting("vimMode", checked)}
-                size="sm"
-              />
+              <Switch checked={vimMode} onChange={(checked) => updateSetting("vimMode", checked)} />
             </SettingRow>
 
             <SettingRow
@@ -413,7 +402,6 @@ export const KeyboardSettings = () => {
                 value={keybindingPreset}
                 onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
                 options={keybindingPresetOptions}
-                size="md"
                 variant="default"
                 searchable
                 searchableTrigger="input"
@@ -434,12 +422,7 @@ export const KeyboardSettings = () => {
             ) : null}
 
             <SettingRow label="Edit Keybindings" description="Customize shortcuts individually.">
-              <Button
-                shape="pill"
-                variant="default"
-                onClick={() => setIsEditingKeybindings(true)}
-                size="sm"
-              >
+              <Button shape="pill" variant="default" onClick={() => setIsEditingKeybindings(true)}>
                 Open Editor
               </Button>
             </SettingRow>

@@ -19,7 +19,6 @@ export interface EditorContextMenuHandlers {
   onSelectAll?: () => void;
   onDelete?: () => void;
   onFind?: () => void;
-  onGoToLine?: () => void;
   onGoToDefinition?: () => void;
   onFindReferences?: () => void;
   onRenameSymbol?: () => void;
@@ -46,7 +45,6 @@ export function buildEditorContextMenuGroups({
   onSelectAll,
   onDelete,
   onFind,
-  onGoToLine,
   onGoToDefinition,
   onFindReferences,
   onRenameSymbol,
@@ -160,13 +158,6 @@ export function buildEditorContextMenuGroups({
           icon: <Search />,
           disabled: isDisabled(onFind),
           onClick: onFind,
-        },
-        {
-          id: "go-to-line",
-          label: "Go to Line",
-          icon: <Search />,
-          disabled: isDisabled(onGoToLine),
-          onClick: onGoToLine,
         },
       ],
     },

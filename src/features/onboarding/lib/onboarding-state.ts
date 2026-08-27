@@ -15,10 +15,6 @@ export interface PersistedOnboardingState {
   completedVersion?: string;
 }
 
-export function shouldHideAIChatOnStartup(context: OnboardingContext | null): boolean {
-  return context?.mode === "first-run";
-}
-
 async function readPersistedOnboardingState(): Promise<PersistedOnboardingState> {
   const store = await getSettingsStore();
   const state = await store.get<PersistedOnboardingState>(ONBOARDING_STATE_KEY);

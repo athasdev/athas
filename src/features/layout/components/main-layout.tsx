@@ -3,9 +3,7 @@ import { useChatInitialization } from "@/features/ai/hooks/use-chat-initializati
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
-import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
 import { openDroppedWorkspacePaths } from "@/features/file-system/utils/open-dropped-workspace-paths";
@@ -14,7 +12,6 @@ import { isGitChangeRelevant, subscribeToGitChanges } from "@/features/git/event
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
 import { CachedWorkspaceSplitViews } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
-import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimStore } from "@/features/vim/stores/vim.store";
 import { isWslPath } from "@/features/wsl/utils/wsl-path";
@@ -34,7 +31,6 @@ import { ActivityBar, COLLAPSED_ACTIVITY_BAR_WIDTH } from "./sidebar/activity-ba
 import { SidebarPane } from "./sidebar/sidebar-pane";
 import { useResponsiveWorkbenchLayout } from "../hooks/use-responsive-workbench-layout";
 
-const AIChat = lazy(() => import("@/features/ai/components/chat/ai-chat"));
 const CommandPalette = lazy(() => import("@/features/command-palette/components/command-palette"));
 const ConnectionDialog = lazy(() =>
   import("@/features/database/components/connection/connection-dialog").then((module) => ({
@@ -67,8 +63,6 @@ const TerminalHost = lazy(() =>
 );
 const BottomPane = lazy(() => import("./bottom-pane/bottom-pane"));
 
-const EMPTY_PROJECT_FILES: FileEntry[] = [];
-const EMPTY_BUFFERS: PaneContent[] = [];
 export function MainLayout() {
   const [deferredSurfacesReady, setDeferredSurfacesReady] = useState(false);
 
@@ -85,7 +79,7 @@ export function MainLayout() {
   const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
   const activityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
-  const aiChatWidth = useSettingsStore((state) => state.settings.aiChatWidth);
+  const rightSidebarWidth = useSettingsStore((state) => state.settings.rightSidebarWidth);
   const showStatusBar = useSettingsStore((state) => state.settings.showStatusBar);
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const renderedRightSidebarVisible = isRightSidebarVisible && !responsiveLayout.narrow;
@@ -94,37 +88,19 @@ export function MainLayout() {
   const setIsDatabaseConnectionVisible = useUIState(
     (state) => state.setIsDatabaseConnectionVisible,
   );
-  const showInlineAiChat = useSettingsStore((state) => state.settings.isAIChatVisible);
   const renderedActivityRailWidth = renderedActivityRailExpanded
     ? activityRailWidth
     : COLLAPSED_ACTIVITY_BAR_WIDTH;
-  const visibleInlineAiChat = showInlineAiChat && deferredSurfacesReady;
   const leftPaneReservedWidth =
-    renderedActivityRailWidth +
-    (renderedRightSidebarVisible ? sidebarWidth : 0) +
-    (visibleInlineAiChat && !responsiveLayout.narrow ? aiChatWidth : 0);
-  const aiPaneReservedWidth =
-    renderedActivityRailWidth +
-    (renderedSidebarVisible ? sidebarWidth : 0) +
-    (renderedRightSidebarVisible ? sidebarWidth : 0);
+    renderedActivityRailWidth + (renderedRightSidebarVisible ? rightSidebarWidth : 0);
   const rightPaneReservedWidth =
-    renderedActivityRailWidth +
-    (renderedSidebarVisible ? sidebarWidth : 0) +
-    (visibleInlineAiChat && !responsiveLayout.narrow ? aiChatWidth : 0);
+    renderedActivityRailWidth + (renderedSidebarVisible ? sidebarWidth : 0);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
-  const buffers = useBufferStore((state) => (showInlineAiChat ? state.buffers : EMPTY_BUFFERS));
-  const activeBuffer = useBufferStore((state) => {
-    if (!showInlineAiChat || !state.activeBufferId) return null;
-    return getBufferById(state.buffers, state.activeBufferId);
-  });
   const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
-  const allProjectFiles = useFileSystemStore(
-    (state) => state.projectFilesCache?.files ?? EMPTY_PROJECT_FILES,
-  );
   const switchToProject = useFileSystemStore.use.switchToProject?.();
   const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
   const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
@@ -162,8 +138,7 @@ export function MainLayout() {
   const isEditorBottomPaneVisible =
     terminalWidthMode === "editor" && deferredSurfacesReady && isBottomPaneVisible;
   const roundMainContentLeftEdge = !renderedSidebarVisible;
-  const roundMainContentRightEdge =
-    !(visibleInlineAiChat && !responsiveLayout.narrow) && !renderedRightSidebarVisible;
+  const roundMainContentRightEdge = !renderedRightSidebarVisible;
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => setDeferredSurfacesReady(true), 0);
@@ -343,29 +318,9 @@ export function MainLayout() {
             )}
           </div>
 
-          {/* Right side panes are ordered from inner to edge. */}
-          {visibleInlineAiChat && !responsiveLayout.narrow ? (
-            <ResizablePane
-              position="right"
-              widthKey="aiChatWidth"
-              outerEdge={!renderedRightSidebarVisible}
-              reservedWidth={aiPaneReservedWidth}
-            >
-              <Suspense fallback={null}>
-                <AIChat
-                  mode="chat"
-                  surfaceId="activity-sidebar"
-                  activeBuffer={activeBuffer}
-                  buffers={buffers}
-                  allProjectFiles={allProjectFiles}
-                />
-              </Suspense>
-            </ResizablePane>
-          ) : null}
-
           <ResizablePane
             position="right"
-            widthKey="sidebarWidth"
+            widthKey="rightSidebarWidth"
             hidden={!renderedRightSidebarVisible}
             reservedWidth={rightPaneReservedWidth}
           >

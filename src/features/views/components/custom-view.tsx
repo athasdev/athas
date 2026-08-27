@@ -13,7 +13,6 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import type { CustomViewContent } from "@/features/panes/types/pane-content.types";
-import { useProFeature } from "@/features/window/hooks/use-pro-feature";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import {
@@ -30,7 +29,6 @@ import { Spinner } from "@/ui/spinner";
 import { ToggleGroup } from "@/ui/toggle-group";
 import { ViewDataDisplay } from "./view-data-display";
 import { ViewSetup } from "./view-setup";
-import { ViewsProState } from "./views-pro-state";
 
 interface CustomViewProps {
   buffer: CustomViewContent;
@@ -42,13 +40,7 @@ const viewLayoutOptions = [
   { value: "board" as const, label: "Board", icon: <ColumnsIcon /> },
 ];
 
-export function CustomView(props: CustomViewProps) {
-  const { hasViews } = useProFeature();
-  if (!hasViews) return <ViewsProState />;
-  return <CustomViewContent {...props} />;
-}
-
-function CustomViewContent({ buffer }: CustomViewProps) {
+export function CustomView({ buffer }: CustomViewProps) {
   const storedViews = useViewsStore((state) => state.viewsByProject[buffer.projectPath]);
   const views = storedViews ?? [];
   const hasLoadedProject = useViewsStore((state) =>
@@ -230,14 +222,13 @@ function CustomViewContent({ buffer }: CustomViewProps) {
             <Button
               type="button"
               variant="ghost"
-              size="xs"
               disabled={isLoading}
               onClick={() => void loadView(view).catch(() => undefined)}
             >
               <ArrowClockwiseIcon />
               Refresh
             </Button>
-            <Button type="button" variant="ghost" size="xs" onClick={() => setIsConfiguring(true)}>
+            <Button type="button" variant="ghost" onClick={() => setIsConfiguring(true)}>
               <PencilSimpleLineIcon />
               Configure
             </Button>

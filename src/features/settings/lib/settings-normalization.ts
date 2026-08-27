@@ -505,6 +505,12 @@ export function normalizeSettings(settings: Settings): Settings {
     SIDEBAR_WIDTH_MIN,
     SIDEBAR_WIDTH_MAX,
   );
+  normalizedSettings.rightSidebarWidth = normalizeBoundedWidth(
+    normalizedSettings.rightSidebarWidth,
+    defaultSettings.rightSidebarWidth,
+    SIDEBAR_WIDTH_MIN,
+    SIDEBAR_WIDTH_MAX,
+  );
   normalizedSettings.externalEditor = normalizeExternalEditor(
     (normalizedSettings as { externalEditor?: unknown }).externalEditor,
     normalizedSettings.customEditorCommand,
@@ -534,7 +540,7 @@ export function normalizeSettings(settings: Settings): Settings {
   );
   normalizedSettings.hiddenSidebarActivityItems = normalizeStringList(
     normalizedSettings.hiddenSidebarActivityItems,
-  );
+  ).filter((itemId) => itemId !== "search");
   normalizedSettings.collapsedActivityRailSections = normalizeStringList(
     normalizedSettings.collapsedActivityRailSections,
   );
@@ -611,10 +617,12 @@ export function normalizeSettingValue<K extends keyof Settings>(
     ) as Settings[K];
   }
 
-  if (key === "sidebarWidth") {
+  if (key === "sidebarWidth" || key === "rightSidebarWidth") {
+    const fallback =
+      key === "sidebarWidth" ? defaultSettings.sidebarWidth : defaultSettings.rightSidebarWidth;
     return normalizeBoundedWidth(
       value,
-      defaultSettings.sidebarWidth,
+      fallback,
       SIDEBAR_WIDTH_MIN,
       SIDEBAR_WIDTH_MAX,
     ) as Settings[K];

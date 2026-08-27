@@ -126,7 +126,6 @@ describe("auth-api desktop auth parsers", () => {
         hostedAi: false,
         settingsSync: true,
         cloudWorkspaces: true,
-        views: true,
         collaboration: false,
         enterprisePolicy: true,
       },
@@ -139,7 +138,6 @@ describe("auth-api desktop auth parsers", () => {
       hostedAi: false,
       settingsSync: true,
       cloudWorkspaces: true,
-      views: true,
       collaboration: false,
       enterprisePolicy: true,
     });

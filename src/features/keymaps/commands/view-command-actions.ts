@@ -149,10 +149,6 @@ export async function showWhatsNew(): Promise<void> {
   await useWhatsNewStore.getState().actions.open();
 }
 
-export function toggleAIChat(): void {
-  useSettingsStore.getState().actions.toggleAIChatVisible();
-}
-
 export function toggleMinimap(): void {
   const { settings, actions } = useSettingsStore.getState();
   const { updateSetting } = actions;

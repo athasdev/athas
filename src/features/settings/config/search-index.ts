@@ -158,6 +158,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["minimap", "overview", "code", "preview", "display"],
   },
   {
+    id: "editor-show-outline",
+    tab: "editor",
+    section: "Display",
+    label: "Show Outline",
+    description: "Show symbols for the active editor in the right sidebar",
+    keywords: ["outline", "symbols", "sidebar", "structure", "display"],
+  },
+  {
     id: "editor-sticky-scroll",
     tab: "editor",
     section: "Editor",
@@ -710,14 +718,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Toggle Secondary Sidebar",
     description: "Show/hide secondary sidebar",
     keywords: ["keyboard", "shortcut", "secondary", "sidebar", "toggle"],
-  },
-  {
-    id: "keyboard-go-to-line",
-    tab: "keyboard",
-    section: "Navigation",
-    label: "Go to Line",
-    description: "Jump to specific line",
-    keywords: ["keyboard", "shortcut", "go", "line", "jump", "navigate"],
   },
   {
     id: "keyboard-next-tab",

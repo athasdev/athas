@@ -44,7 +44,9 @@ export const restoreProjectUiState = (projectPath: string | undefined, workspace
   const state = workspaceId ? useUIState.getStore(workspaceId).getState() : useUIState.getState();
   const legacyDebuggerSidebar = nextUiState.activeSidebarView === "debugger";
   const legacyToolBufferSidebar =
-    legacyDebuggerSidebar || nextUiState.activeSidebarView === "extensions";
+    legacyDebuggerSidebar ||
+    nextUiState.activeSidebarView === "extensions" ||
+    nextUiState.activeSidebarView === "settings";
   const activeSidebarView =
     nextUiState.activeSidebarView === "data-sources" ? "views" : nextUiState.activeSidebarView;
 
