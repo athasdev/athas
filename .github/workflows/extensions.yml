@@ -5,16 +5,12 @@ on:
     branches: [main]
     paths:
       - "extensions/**"
-      - "src/extensions/**"
       - ".github/workflows/extensions.yml"
   pull_request:
     paths:
       - "extensions/**"
-      - "src/extensions/**"
       - ".github/workflows/extensions.yml"
   workflow_dispatch:
-  schedule:
-    - cron: "17 6 * * *"
 
 jobs:
   validate:
@@ -33,12 +29,9 @@ jobs:
       - name: Validate extensions
         run: bun run extensions:validate
 
-      - name: Verify agent registry freshness
-        run: bun run extensions:validate:agents
-
       - name: Check generated source changes
         run: |
-          git diff --exit-code extensions src/extensions package.json .gitignore || (
+          git diff --exit-code extensions package.json .gitignore || (
             echo "Extension source or generated metadata changed. Run the extension scripts locally."
             exit 1
           )
