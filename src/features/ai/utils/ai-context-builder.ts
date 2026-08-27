@@ -39,6 +39,24 @@ function getTextContextPreview(buffer: PaneContent) {
   return `\n\`\`\`text\n${preview}\n\`\`\``;
 }
 
+function formatEditorSelection(
+  selection: NonNullable<ContextInfo["editorSelections"]>[number],
+  projectRoot?: string,
+) {
+  const path = formatContextPath(selection.filePath, projectRoot);
+  const location =
+    selection.startLine === selection.endLine
+      ? `${selection.startLine}`
+      : `${selection.startLine}-${selection.endLine}`;
+  const selectedText =
+    selection.selectedText.length <= 50_000
+      ? selection.selectedText
+      : `${selection.selectedText.slice(0, 50_000)}\n... (selection truncated) ...`;
+  const fence = selectedText.includes("```") ? "````" : "```";
+
+  return `- ${path}:${location}\n${fence}${selection.languageId}\n${selectedText}\n${fence}`;
+}
+
 // Build a comprehensive context prompt for the AI
 export const buildContextPrompt = (context: ContextInfo): string => {
   let contextPrompt = "";
@@ -150,6 +168,17 @@ export const buildContextPrompt = (context: ContextInfo): string => {
           contextPrompt += `\n... and ${selectedOpenContexts.length - 8} more`;
         }
       }
+    }
+  }
+
+  if (context.editorSelections && context.editorSelections.length > 0) {
+    const selections = context.editorSelections
+      .slice(0, 8)
+      .map((selection) => formatEditorSelection(selection, context.projectRoot));
+
+    contextPrompt += `\n\nSelected editor context:\n${selections.join("\n\n")}`;
+    if (context.editorSelections.length > 8) {
+      contextPrompt += `\n... and ${context.editorSelections.length - 8} more selections`;
     }
   }
 

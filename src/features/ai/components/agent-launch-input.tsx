@@ -50,6 +50,7 @@ export function AgentLaunchInput({
         prompt: nextPrompt,
         selectedBufferIds: Array.from(selectedBufferIds),
         selectedFilesPaths: Array.from(selectedFilesPaths),
+        editorSelections: composerContext.inputProps.selectedEditorContexts,
       });
       openAgentBuffer(chatId);
       return { accepted: true };
@@ -60,6 +61,7 @@ export function AgentLaunchInput({
       selectedAgentId,
       selectedBufferIds,
       selectedFilesPaths,
+      composerContext.inputProps.selectedEditorContexts,
       setPendingAgentLaunchRequest,
     ],
   );

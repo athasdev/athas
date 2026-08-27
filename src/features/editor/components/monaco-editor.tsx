@@ -26,8 +26,11 @@ import {
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
+import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
+import { EditorSelectionAgentAction } from "@/features/editor/components/selection/editor-selection-agent-action";
 import { InlineEditPopover } from "@/features/editor/inline-edit/inline-edit-popover";
 import { useInlineEdit } from "@/features/editor/inline-edit/use-inline-edit";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
@@ -48,6 +51,7 @@ import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import type { EditorContentChangeOptions, Position, Range } from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
+import { createEditorSelectionContext } from "../utils/editor-agent-context";
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { getLanguageIdFromPath } from "../utils/language-id";
 import { editorAPI } from "../extensions/api";
@@ -85,6 +89,11 @@ registerMonacoCodeLensProvider();
 
 const EMPTY_DIAGNOSTICS: Diagnostic[] = [];
 const INACTIVE_CURSOR_POSITION: Position = { line: 0, column: 0, offset: 0 };
+
+interface SelectionAgentActionState {
+  anchorRect: { x: number; y: number; width: number; height: number };
+  context: EditorSelectionContext;
+}
 
 interface MonacoEditorProps {
   bufferId?: string;
@@ -150,6 +159,8 @@ export function MonacoEditor({
   const gitBlameRenderFrameRef = useRef<number | null>(null);
   const renderedGitBlameKeyRef = useRef<string | null>(null);
   const renderInlineGitBlameRef = useRef<() => void>(() => {});
+  const syncSelectionAgentActionRef = useRef<() => void>(() => {});
+  const isPointerSelectingRef = useRef(false);
   const latestContentChangeRef = useRef(onContentChange);
   const isActiveSurfaceRef = useRef(isActiveSurface);
   const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
@@ -161,6 +172,8 @@ export function MonacoEditor({
   const filePath = buffer?.path ?? "";
   const languageId = buffer?.languageOverride ?? getLanguageIdFromPath(filePath);
   const monacoLanguageId = toMonacoLanguageId(languageId);
+  const [selectionAgentAction, setSelectionAgentAction] =
+    useState<SelectionAgentActionState | null>(null);
   const {
     fontFamily,
     fontSize,
@@ -295,6 +308,75 @@ export function MonacoEditor({
 
   latestContentChangeRef.current = onContentChange;
   isActiveSurfaceRef.current = isActiveSurface;
+
+  syncSelectionAgentActionRef.current = () => {
+    const editor = editorRef.current;
+    const model = modelRef.current;
+    const container = containerRef.current;
+    const selection = editor?.getSelection();
+
+    if (
+      !editor ||
+      !model ||
+      !container ||
+      !buffer ||
+      !isActiveSurfaceRef.current ||
+      isPointerSelectingRef.current ||
+      readOnly ||
+      isPreviewMode ||
+      inlineEditRequested ||
+      !selection ||
+      selection.isEmpty()
+    ) {
+      setSelectionAgentAction(null);
+      return;
+    }
+
+    const editorRange = toEditorRange(model, selection);
+    const context = editorRange
+      ? createEditorSelectionContext(
+          { ...buffer, content: model.getValue() },
+          editorRange,
+          languageId || "text",
+        )
+      : null;
+    if (!context) {
+      setSelectionAgentAction(null);
+      return;
+    }
+
+    const startPosition = editor.getScrolledVisiblePosition(selection.getStartPosition());
+    const endPosition = editor.getScrolledVisiblePosition(selection.getEndPosition());
+    const visiblePosition = startPosition ?? endPosition;
+    if (!visiblePosition) {
+      setSelectionAgentAction(null);
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const isSingleVisibleLine =
+      selection.startLineNumber === selection.endLineNumber && startPosition && endPosition;
+    const left = isSingleVisibleLine
+      ? Math.min(startPosition.left, endPosition.left)
+      : visiblePosition.left;
+    const width = isSingleVisibleLine
+      ? Math.max(Math.abs(endPosition.left - startPosition.left), 1)
+      : 1;
+
+    setSelectionAgentAction({
+      anchorRect: {
+        x: containerRect.left + left,
+        y: containerRect.top + visiblePosition.top,
+        width,
+        height: visiblePosition.height,
+      },
+      context,
+    });
+  };
+
+  useEffect(() => {
+    syncSelectionAgentActionRef.current();
+  }, [inlineEditRequested, isActiveSurface, isPreviewMode, readOnly]);
 
   const lineNumberFormatter = useCallback(
     (lineNumber: number) => {
@@ -757,8 +839,18 @@ export function MonacoEditor({
     };
 
     window.addEventListener("keydown", handleWindowSelectAllShortcut, true);
+    const handleSelectionMouseUp = () => {
+      if (!isPointerSelectingRef.current) return;
+      isPointerSelectingRef.current = false;
+      syncSelectionAgentActionRef.current();
+    };
+    window.addEventListener("mouseup", handleSelectionMouseUp, true);
 
     const disposables = [
+      editor.onMouseDown(() => {
+        isPointerSelectingRef.current = true;
+        setSelectionAgentAction(null);
+      }),
       editor.onContextMenu((event) => {
         event.event.preventDefault();
         event.event.stopPropagation();
@@ -823,20 +915,24 @@ export function MonacoEditor({
             : undefined,
         );
         syncCursorAndSelection();
+        syncSelectionAgentActionRef.current();
       }),
       editor.onDidChangeCursorSelection(() => {
         syncCursorAndSelection();
         scheduleInlineGitBlameRender();
+        syncSelectionAgentActionRef.current();
       }),
       editor.onDidScrollChange((event) => {
         const viewKey = viewStateKey ?? activeBufferId ?? null;
         setScrollForBuffer(viewKey, event.scrollTop, event.scrollLeft);
         onScrollOffsetChange?.(event.scrollTop, event.scrollLeft);
+        syncSelectionAgentActionRef.current();
       }),
       editor.onDidLayoutChange((info) => {
         setViewportHeight(info.height);
         syncBottomScrollPadding(info.height);
         scheduleMonacoHoverClamp();
+        syncSelectionAgentActionRef.current();
       }),
     ];
 
@@ -863,8 +959,10 @@ export function MonacoEditor({
           );
         }
       }
+      syncSelectionAgentActionRef.current();
     });
     scheduleInlineGitBlameRender();
+    syncSelectionAgentActionRef.current();
 
     return () => {
       if (benchmarkRafId !== null) cancelAnimationFrame(benchmarkRafId);
@@ -876,6 +974,7 @@ export function MonacoEditor({
       unsubscribeCursor();
       unsubscribeSelection();
       window.removeEventListener("keydown", handleWindowSelectAllShortcut, true);
+      window.removeEventListener("mouseup", handleSelectionMouseUp, true);
       for (const disposable of disposables) {
         disposable.dispose();
       }
@@ -1494,6 +1593,18 @@ export function MonacoEditor({
           data-line-number-start={lineNumberStart}
           data-line-number-map={lineNumberMap?.length ?? undefined}
         />
+        {selectionAgentAction ? (
+          <EditorSelectionAgentAction
+            anchorRect={selectionAgentAction.anchorRect}
+            onClose={() => setSelectionAgentAction(null)}
+            onSelect={() => {
+              openNewAgentChat(undefined, {
+                editorSelections: [selectionAgentAction.context],
+              });
+              setSelectionAgentAction(null);
+            }}
+          />
+        ) : null}
         <InlineEditPopover state={inlineEditState} selection={selection} />
       </div>
       <AnchoredTooltip anchor={copyTooltipAnchor} content="Copy" />
@@ -1516,7 +1627,6 @@ export function MonacoEditor({
                 : undefined
             }
             onFind={() => executeEditorCommand("workbench.showFind")}
-            onGoToLine={() => executeEditorCommand("editor.goToLine")}
             onToggleComment={
               canEdit ? () => executeEditorCommand("editor.toggleComment") : undefined
             }

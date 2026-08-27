@@ -13,6 +13,7 @@ import type {
   OutputStyle,
 } from "@/features/ai/types/ai-chat.types";
 import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";
+import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
 
 export interface AIWorkspaceSessionSnapshot {
   currentChatId: string | null;
@@ -22,9 +23,10 @@ export interface AIWorkspaceSessionSnapshot {
 interface PendingAgentLaunchRequest {
   chatId: string;
   agentId: AgentType;
-  prompt: string;
+  prompt: string | null;
   selectedBufferIds: string[];
   selectedFilesPaths: string[];
+  editorSelections: EditorSelectionContext[];
 }
 
 export type AgentRunPhase = "starting" | "waiting" | "thinking" | "tool" | "approval";

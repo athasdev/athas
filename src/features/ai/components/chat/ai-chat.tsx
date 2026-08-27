@@ -99,7 +99,8 @@ const AIChat = memo(function AIChat({
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [activeMessageSearchIndex, setActiveMessageSearchIndex] = useState(0);
   const composerContext = useComposerContextSelection();
-  const { selectedBufferIds, selectedFilesPaths } = composerContext.inputProps;
+  const { selectedBufferIds, selectedEditorContexts, selectedFilesPaths } =
+    composerContext.inputProps;
   const effectiveChatId = chatId ?? chatState.currentChatId;
   const currentChat = useMemo(
     () => chatState.chats.find((chat) => chat.id === effectiveChatId),
@@ -326,6 +327,7 @@ const AIChat = memo(function AIChat({
       openBuffers: selectedBuffers,
       selectedFiles,
       selectedProjectFiles: Array.from(selectedFilesPaths),
+      editorSelections: selectedEditorContexts,
       projectRoot: rootFolderPath,
       providerId,
       agentId,
@@ -1049,15 +1051,20 @@ details: ${errorDetails || mainError}
     if (activeBuffer?.type !== "agent") return;
     if (activeBuffer.sessionId !== pendingLaunch.chatId) return;
     if (isSurfaceTyping || surfaceStreamingMessageId) return;
+    composerContext.replace(
+      pendingLaunch.selectedBufferIds,
+      pendingLaunch.selectedFilesPaths,
+      pendingLaunch.editorSelections,
+    );
+    chatActions.setPendingAgentLaunchRequest(null);
+    if (!pendingLaunch.prompt) return;
+
     const access = getAgentMessageAccess(pendingLaunch.agentId, chatState.hasApiKey);
     if (!access.accepted) {
-      chatActions.setPendingAgentLaunchRequest(null);
       showToast({ message: access.error ?? "This agent is not ready.", type: "error" });
       return;
     }
 
-    composerContext.replace(pendingLaunch.selectedBufferIds, pendingLaunch.selectedFilesPaths);
-    chatActions.setPendingAgentLaunchRequest(null);
     void sendMessage(pendingLaunch.prompt);
   }, [
     chatActions,

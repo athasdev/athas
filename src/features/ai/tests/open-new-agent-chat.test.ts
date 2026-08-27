@@ -4,6 +4,7 @@ import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 const mocks = vi.hoisted(() => ({
   currentAgentId: "custom",
   createNewChat: vi.fn(() => "chat-1"),
+  setPendingAgentLaunchRequest: vi.fn(),
   openAgentBuffer: vi.fn(() => "agent://chat-1"),
   openTerminalAgent: vi.fn(() => "terminal://claude"),
 }));
@@ -14,6 +15,7 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
       actions: {
         getCurrentAgentId: () => mocks.currentAgentId,
         createNewChat: mocks.createNewChat,
+        setPendingAgentLaunchRequest: mocks.setPendingAgentLaunchRequest,
       },
     }),
   },
@@ -59,5 +61,53 @@ describe("open new agent chat", () => {
     expect(mocks.openTerminalAgent).toHaveBeenCalledWith("claude-code");
     expect(mocks.createNewChat).not.toHaveBeenCalled();
     expect(bufferId).toBe("terminal://claude");
+  });
+
+  it("opens a new chat with editor selection context without submitting a prompt", () => {
+    const editorSelection = {
+      id: "selection-1",
+      bufferId: "buffer-1",
+      filePath: "/workspace/src/app.ts",
+      fileName: "app.ts",
+      languageId: "typescript",
+      selectedText: "const answer = 42;",
+      startLine: 4,
+      startColumn: 1,
+      endLine: 4,
+      endColumn: 19,
+    };
+
+    openNewAgentChat(undefined, { editorSelections: [editorSelection] });
+
+    expect(mocks.setPendingAgentLaunchRequest).toHaveBeenCalledWith({
+      chatId: "chat-1",
+      agentId: "custom",
+      prompt: null,
+      selectedBufferIds: [],
+      selectedFilesPaths: [],
+      editorSelections: [editorSelection],
+    });
+    expect(mocks.openAgentBuffer).toHaveBeenCalledWith("chat-1");
+  });
+
+  it("uses a context-capable chat when the current agent only runs in a terminal", () => {
+    mocks.currentAgentId = "claude-code";
+    const editorSelection = {
+      id: "selection-1",
+      bufferId: "buffer-1",
+      filePath: "/workspace/src/app.ts",
+      fileName: "app.ts",
+      languageId: "typescript",
+      selectedText: "const answer = 42;",
+      startLine: 4,
+      startColumn: 1,
+      endLine: 4,
+      endColumn: 19,
+    };
+
+    openNewAgentChat(undefined, { editorSelections: [editorSelection] });
+
+    expect(mocks.openTerminalAgent).not.toHaveBeenCalled();
+    expect(mocks.createNewChat).toHaveBeenCalledWith("custom", { activate: false });
   });
 });
