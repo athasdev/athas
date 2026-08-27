@@ -6,6 +6,9 @@ import { InlineRenameInput } from "@/ui/input";
 import { SidebarTreeDisclosure, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { cn } from "@/utils/cn";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import { shouldShowDirectorySize, useDirectorySize } from "../hooks/use-directory-size";
+import Badge from "@/ui/badge";
+import { formatFileSize } from "@/utils/format-file-size";
 
 const FILE_TREE_BASE_INDENT = 10;
 
@@ -106,6 +109,9 @@ function FileExplorerTreeItemComponent({
 }: FileExplorerTreeItemProps) {
   const paddingLeft = FILE_TREE_BASE_INDENT + depth * indentSize;
   const gitStatusDecoration = getGitStatusDecoration(file);
+  const showDirectorySize = shouldShowDirectorySize(file);
+  const directorySize = useDirectorySize(file.path, showDirectorySize);
+  const formattedDirectorySize = directorySize === null ? null : formatFileSize(directorySize);
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
   const renderTreeGuides = () =>
     showIndentGuides ? (
@@ -208,7 +214,7 @@ function FileExplorerTreeItemComponent({
       data-path={file.path}
       title={file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined}
       className={cn(
-        "box-border h-full max-w-full justify-start overflow-hidden",
+        "group/file-tree-row box-border h-full max-w-full justify-start overflow-hidden",
         isDragOver && "border-2! border-dashed! border-primary! bg-primary! bg-opacity-20!",
         isDragging && "cursor-move",
         file.ignored && "opacity-50",
@@ -229,6 +235,17 @@ function FileExplorerTreeItemComponent({
         <span className={cn("select-none whitespace-nowrap", gitStatusDecoration?.colorClassName)}>
           {renderHighlightedLabel(displayName ?? file.name, searchQuery)}
         </span>
+      }
+      trailing={
+        formattedDirectorySize === null ? null : (
+          <Badge
+            variant="muted"
+            className="shrink-0 font-mono opacity-0 tabular-nums group-hover/file-tree-row:opacity-100"
+            title={`Folder size: ${formattedDirectorySize}`}
+          >
+            {formattedDirectorySize}
+          </Badge>
+        )
       }
     />
   );

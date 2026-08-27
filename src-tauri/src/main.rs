@@ -71,6 +71,7 @@ fn main() {
          // File system commands
          read_athas_log,
          read_local_file,
+         get_local_directory_size,
          open_file_external,
          toggle_quick_look,
          show_share_picker,
