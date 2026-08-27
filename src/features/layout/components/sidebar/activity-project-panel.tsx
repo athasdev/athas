@@ -4,7 +4,6 @@ import {
   ActivitySidebarNavigation,
 } from "@/features/layout/components/sidebar/activity-navigation";
 import { ActivityPinnedItems } from "@/features/layout/components/sidebar/activity-pinned-items";
-import { ActivityProjectSwitcher } from "@/features/layout/components/sidebar/activity-project-switcher";
 import { ActivityTerminalHistory } from "@/features/layout/components/sidebar/activity-terminal-history";
 import { ActivityWorktreeHistory } from "@/features/layout/components/sidebar/activity-worktree-history";
 import type { ActivityNavigationItem } from "@/features/layout/hooks/use-activity-navigation-items";
@@ -15,38 +14,24 @@ import { cn } from "@/utils/cn";
 interface ActivityProjectPanelProps {
   expanded: boolean;
   project: ProjectTab;
-  projects: ProjectTab[];
   current: boolean;
   loading: boolean;
-  switchingProject: boolean;
-  reserveProjectDots: boolean;
   navigationItems: ActivityNavigationItem[];
-  footerNavigationItems: ActivityNavigationItem[];
-  showProjectSwitcher: boolean;
   showAgents: boolean;
   showTerminals: boolean;
   showWorktrees: boolean;
-  onSelectProject: (projectId: string) => void;
-  onAddRemote: () => void;
   onNewWorktree: () => void;
 }
 
 export function ActivityProjectPanel({
   expanded,
   project,
-  projects,
   current,
   loading,
-  switchingProject,
-  reserveProjectDots,
   navigationItems,
-  footerNavigationItems,
-  showProjectSwitcher,
   showAgents,
   showTerminals,
   showWorktrees,
-  onSelectProject,
-  onAddRemote,
   onNewWorktree,
 }: ActivityProjectPanelProps) {
   return (
@@ -57,20 +42,10 @@ export function ActivityProjectPanel({
       className={cn(
         "relative box-border flex h-full w-full shrink-0 snap-start snap-always flex-col items-start gap-2 overflow-hidden pt-2",
         expanded ? "pl-chrome-inline" : "px-chrome-inline",
-        expanded && reserveProjectDots ? "pb-7" : "pb-1.5",
+        "pb-1.5",
         !current && "pointer-events-none",
       )}
     >
-      {showProjectSwitcher ? (
-        <ActivityProjectSwitcher
-          expanded={expanded}
-          project={project}
-          projects={projects}
-          isSwitchingProject={switchingProject}
-          onSelectProject={onSelectProject}
-          onAddRemote={onAddRemote}
-        />
-      ) : null}
       {loading ? (
         <div className="flex min-h-0 flex-1 self-stretch items-center justify-center">
           <Spinner label={`Opening ${project.name}`} showLabel={expanded} compact={!expanded} />
@@ -98,13 +73,6 @@ export function ActivityProjectPanel({
           ) : null}
         </div>
       )}
-      <div className="w-full shrink-0">
-        {expanded ? (
-          <ActivitySidebarNavigation items={footerNavigationItems} />
-        ) : (
-          <ActivityRailNavigation items={footerNavigationItems} />
-        )}
-      </div>
     </div>
   );
 }

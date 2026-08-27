@@ -5,9 +5,12 @@ import { FileExplorerPane } from "@/features/file-explorer/components/file-explo
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
-import { getSidebarPaneLevel, type SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
+import {
+  getActiveSidebarView,
+  getSidebarPaneLevel,
+  type SidebarView,
+} from "@/features/layout/utils/sidebar-pane-utils";
 import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
-import { SettingsSidebar } from "@/features/settings/components/settings-sidebar";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ViewsSidebar } from "@/features/views/components/views-sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -42,11 +45,11 @@ export const SidebarPane = memo(
     const hasTeamsCollaborationAccess = useAuthStore(
       (state) => state.subscription?.collaboration?.enabled === true,
     );
-    const activePaneId: SidebarView = isGitViewActive
-      ? "git"
-      : isGitHubPRsViewActive
-        ? "github-prs"
-        : activeSidebarView;
+    const activePaneId = getActiveSidebarView({
+      isGitViewActive,
+      isGitHubPRsViewActive,
+      activeSidebarView,
+    });
 
     const paneEntries: SidebarPaneEntry[] = [
       ...(coreFeatures.git
@@ -66,7 +69,6 @@ export const SidebarPane = memo(
       ...(coreFeatures.github ? [{ id: "github-prs" as const, content: <GitHubPRsView /> }] : []),
       { id: "views", content: <ViewsSidebar projectPath={rootFolderPath ?? null} /> },
       ...(coreFeatures.docker ? [{ id: "docker" as const, content: <DockerSidebar /> }] : []),
-      { id: "settings", content: <SettingsSidebar /> },
       { id: "files", content: <FileExplorerPane /> },
       ...(coreFeatures.outline ? [{ id: "outline" as const, content: <OutlineSidebar /> }] : []),
       ...(hasTeamsCollaborationAccess && coreFeatures.teamCollaboration

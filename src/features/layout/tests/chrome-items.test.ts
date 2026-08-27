@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
+import { FOOTER_TRAILING_ITEM_IDS, SIDEBAR_ACTIVITY_ITEM_IDS } from "../config/item-order";
 import { orderChromeItems, type ChromeItem } from "../utils/chrome-items";
 
 type ItemId = "first" | "second" | "third";
@@ -24,5 +25,10 @@ describe("orderChromeItems", () => {
       "first",
       "third",
     ]);
+  });
+
+  test("keeps search and notifications out of legacy activity and footer ordering", () => {
+    expect(SIDEBAR_ACTIVITY_ITEM_IDS).not.toContain("search");
+    expect(FOOTER_TRAILING_ITEM_IDS).not.toContain("notifications");
   });
 });

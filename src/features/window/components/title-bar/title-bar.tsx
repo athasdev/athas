@@ -1,17 +1,15 @@
 import { getCurrentWindow, type Window as TauriWindow } from "@tauri-apps/api/window";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { AppUpdateControl } from "@/features/layout/components/app-update-control";
-import { GitHubNotificationsMenu } from "@/features/github/components/github-notifications-menu";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import { orderChromeItems, type ChromeItem } from "@/features/layout/utils/chrome-items";
 import RunActionsButton from "@/features/run-actions/components/run-actions-button";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
-import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import { ChromeBar, ChromeGroup } from "@/ui/chrome";
@@ -23,18 +21,10 @@ import {
   ContextMenuTrigger,
 } from "@/ui/context-menu";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/ui/dropdown";
-import {
   FilesIcon,
   FolderOpenIcon,
   ListIcon,
-  DotsThreeIcon,
   SidebarSimpleIcon,
-  SparkleIcon,
   TrashIcon,
   WindowExpandIcon,
 } from "@/ui/icons";
@@ -42,10 +32,9 @@ import { Toggle } from "@/ui/toggle";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
-import { AccountMenu } from "../account-menu";
 import ProjectPicker from "../project-picker";
-import { WindowControls } from "./window-controls";
 import WindowMenuBar from "../window-menu-bar";
+import { WindowControls } from "./window-controls";
 
 interface TitleBarProps {
   showMinimal?: boolean;
@@ -53,56 +42,9 @@ interface TitleBarProps {
   onActivityBarExpandedChange?: (expanded: boolean) => void;
 }
 
-function placeAgentBeforeAccount(items: Array<ChromeItem<HeaderTrailingItemId>>) {
-  const accountIndex = items.findIndex((item) => item.id === "account");
-  if (accountIndex < 0) return items;
-
-  const nextItems = [...items];
-  const itemIndex = nextItems.findIndex((item) => item.id === "ai-chat");
-  const nextAccountIndex = nextItems.findIndex((item) => item.id === "account");
-  if (itemIndex < 0 || nextAccountIndex < 0 || itemIndex === nextAccountIndex - 1) {
-    return nextItems;
-  }
-
-  const [item] = nextItems.splice(itemIndex, 1);
-  const insertionIndex = nextItems.findIndex((candidate) => candidate.id === "account");
-  nextItems.splice(insertionIndex, 0, item);
-
-  return nextItems;
-}
-
 function TitleBarTrailingActions({ items }: { items: Array<ChromeItem<HeaderTrailingItemId>> }) {
-  const notificationsRef = useRef<HTMLDivElement>(null);
-  const updateRef = useRef<HTMLDivElement>(null);
-  const activateFirstButton = (container: HTMLDivElement | null) => {
-    container?.querySelector<HTMLButtonElement>("button")?.click();
-  };
-
   return (
     <ChromeGroup gap="tight">
-      <div ref={notificationsRef} className="max-[820px]:hidden">
-        <GitHubNotificationsMenu />
-      </div>
-      <div ref={updateRef} className="max-[820px]:hidden">
-        <AppUpdateControl />
-      </div>
-      <div className="hidden max-[820px]:block">
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<Button variant="ghost" size="icon-xs" aria-label="More toolbar actions" />}
-          >
-            <DotsThreeIcon />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="bottom">
-            <DropdownMenuItem onClick={() => activateFirstButton(notificationsRef.current)}>
-              GitHub Notifications
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => activateFirstButton(updateRef.current)}>
-              Check for Updates
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
       {items.map((item) =>
         item.content ? (
           <div key={item.id} className="flex min-h-chrome-control items-center">
@@ -121,7 +63,6 @@ const TitleBar = ({
 }: TitleBarProps) => {
   const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
-  const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
   const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
   const effectiveActivityBarExpanded = controlledActivityBarExpanded ?? activityRailExpanded;
   const headerTrailingItemsOrder = useSettingsStore(
@@ -285,7 +226,7 @@ const TitleBar = ({
             <Button
               onClick={handleCompactMenuToggle}
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className={isCompactMenuVisible ? "bg-accent/70 text-foreground" : undefined}
               aria-label="Menu"
               aria-expanded={isCompactMenuVisible}
@@ -319,7 +260,6 @@ const TitleBar = ({
         else void updateSetting("activityRailExpanded", pressed);
       }}
       aria-label={effectiveActivityBarExpanded ? "Collapse activity bar" : "Expand activity bar"}
-      size="xs"
     >
       <SidebarSimpleIcon />
     </Toggle>
@@ -327,36 +267,8 @@ const TitleBar = ({
 
   const headerTrailingItems: Array<ChromeItem<HeaderTrailingItemId>> = [
     { id: "run-actions", label: "Run actions", content: <RunActionsButton /> },
-    {
-      id: "ai-chat",
-      label: "Agent",
-      content: (
-        <Button
-          type="button"
-          variant="ghost"
-          active={isAIChatVisible}
-          tooltip="Toggle Agent"
-          tooltipSide="bottom"
-          commandId="workbench.toggleAIChat"
-          onClick={() => {
-            useSettingsStore.getState().actions.toggleAIChatVisible();
-          }}
-          aria-label="Toggle Agent"
-          size="icon-xs"
-        >
-          <SparkleIcon />
-        </Button>
-      ),
-    },
-    {
-      id: "account",
-      label: "Account",
-      content: <AccountMenu className={!isMacOS ? "mr-1" : undefined} />,
-    },
   ];
-  const orderedTrailingItems = placeAgentBeforeAccount(
-    orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
-  );
+  const orderedTrailingItems = orderChromeItems(headerTrailingItems, headerTrailingItemsOrder);
 
   if (showMinimal) {
     return (

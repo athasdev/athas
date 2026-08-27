@@ -40,7 +40,7 @@ export function ActivityProjectDots({
 
   return (
     <>
-      <div className="scrollbar-none pointer-events-none absolute right-workbench bottom-1.5 left-0 z-20 flex items-center justify-center overflow-x-auto px-2">
+      <div className="scrollbar-none pointer-events-none flex w-full items-center justify-center overflow-x-auto px-2">
         {projects.map((project) => {
           const isRemote = isRemoteProjectPath(project.path);
           const isActive = project.id === activeProjectId;

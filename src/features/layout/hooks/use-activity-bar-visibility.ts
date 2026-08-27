@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
@@ -13,8 +13,12 @@ const VISIBILITY_SETTING_BY_ITEM = {
 export type ActivityBarVisibilityItem = keyof typeof VISIBILITY_SETTING_BY_ITEM;
 
 export function useActivityBarVisibility(coreFeatures: CoreFeaturesState) {
-  const hiddenNavigationItemIds = useSettingsStore(
+  const storedHiddenNavigationItemIds = useSettingsStore(
     (state) => state.settings.hiddenSidebarActivityItems,
+  );
+  const hiddenNavigationItemIds = useMemo(
+    () => storedHiddenNavigationItemIds.filter((itemId) => itemId !== "search"),
+    [storedHiddenNavigationItemIds],
   );
   const projectSwitcher = useSettingsStore(
     (state) => state.settings.showActivityRailProjectSwitcher,

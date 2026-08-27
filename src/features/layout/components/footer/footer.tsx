@@ -1,13 +1,10 @@
 import { useMemo } from "react";
-import { buildDiagnosticsFooterStatus } from "@/features/diagnostics/lib/diagnostics-footer-status";
-import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
-import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
 import {
   FOOTER_TRAILING_ITEM_IDS,
   normalizeItemOrder,
@@ -18,21 +15,12 @@ import { orderChromeItems, type ChromeItem } from "@/features/layout/utils/chrom
 import { useFooterDebuggerItem } from "./footer-debugger-item";
 import { useFooterGitBranchItem } from "./footer-git-branch-item";
 import { FooterControlBadge, FooterTabControl } from "./footer-tab-control";
-import {
-  DatabaseIcon,
-  ExtensionsIcon,
-  ListIcon,
-  TerminalWindowIcon,
-  UsersThreeIcon,
-  WarningIcon,
-} from "@/ui/icons";
+import { DatabaseIcon, ExtensionsIcon, TerminalWindowIcon, UsersThreeIcon } from "@/ui/icons";
 import { ChromeBar, ChromeGroup } from "@/ui/chrome";
 
 const Footer = () => {
   const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
   const debuggerEnabled = useSettingsStore((state) => state.settings.coreFeatures.debugger);
-  const diagnosticsEnabled = useSettingsStore((state) => state.settings.coreFeatures.diagnostics);
-  const outlineEnabled = useSettingsStore((state) => state.settings.coreFeatures.outline);
   const teamCollaborationEnabled = useSettingsStore(
     (state) => state.settings.coreFeatures.teamCollaboration,
   );
@@ -56,13 +44,6 @@ const Footer = () => {
   );
   const isCollaborationFeatureEnabled = hasTeamsCollaborationAccess && teamCollaborationEnabled;
   const { openSidebarView } = useSidebarPaneController();
-  const isDiagnosticsBufferActive = useBufferStore((state) => {
-    if (!state.activeBufferId) return false;
-    return state.buffers.some(
-      (buffer) => buffer.id === state.activeBufferId && buffer.type === "diagnostics",
-    );
-  });
-  const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
   const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
   const isExtensionsBufferActive = useBufferStore((state) => {
     const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
@@ -72,12 +53,6 @@ const Footer = () => {
 
   const debuggerItem = useFooterDebuggerItem(debuggerEnabled, footerLeadingItemsOrder);
   const extensionUpdatesCount = useExtensionStore.use.extensionsWithUpdates().size;
-  const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
-  const diagnosticsCount = Array.from(diagnosticsByFile.values()).reduce(
-    (total, diagnostics) => total + diagnostics.length,
-    0,
-  );
-  const diagnosticsStatus = buildDiagnosticsFooterStatus(diagnosticsEnabled, diagnosticsCount);
   const footerLeadingItemsSource: Array<ChromeItem<FooterLeadingItemId> | null> = [
     branchItem,
     terminalEnabled
@@ -101,24 +76,6 @@ const Footer = () => {
         }
       : null,
     debuggerItem,
-    diagnosticsStatus
-      ? {
-          id: "diagnostics",
-          label: "Diagnostics",
-          content: (
-            <FooterTabControl
-              tooltip={diagnosticsStatus.tooltip}
-              active={isDiagnosticsBufferActive}
-              tone={!isDiagnosticsBufferActive ? "warning" : "default"}
-              commandId="workbench.toggleDiagnostics"
-              onClick={() => openDiagnosticsBuffer()}
-            >
-              <WarningIcon />
-              <span className="tabular-nums">{diagnosticsStatus.count}</span>
-            </FooterTabControl>
-          ),
-        }
-      : null,
     extensionUpdatesCount > 0
       ? {
           id: "extensions",
@@ -142,8 +99,6 @@ const Footer = () => {
   const footerLeadingItems = footerLeadingItemsSource.filter(
     (item): item is ChromeItem<FooterLeadingItemId> => item !== null,
   );
-  const shouldShowOutline = outlineEnabled;
-  const isOutlineActive = isRightSidebarVisible && activeRightSidebarView === "outline";
   const isDatabasesActive = isCommandPaletteVisible && commandPaletteInitialView === "databases";
   const isCollaborationActive = isRightSidebarVisible && activeRightSidebarView === "collaboration";
   const footerTrailingOrder = useMemo<FooterTrailingItemId[]>(() => {
@@ -154,26 +109,6 @@ const Footer = () => {
   }, [footerTrailingItemsOrder]);
 
   const footerTrailingItems: Array<ChromeItem<FooterTrailingItemId>> = [
-    ...(shouldShowOutline
-      ? [
-          {
-            id: "outline" as const,
-            label: "Outline",
-            content: (
-              <FooterTabControl
-                tooltip="Outline"
-                active={isOutlineActive}
-                commandId="workbench.focusOutline"
-                onClick={() => {
-                  openSidebarView("outline");
-                }}
-              >
-                <ListIcon />
-              </FooterTabControl>
-            ),
-          },
-        ]
-      : []),
     {
       id: "databases",
       label: "Databases",
@@ -209,11 +144,6 @@ const Footer = () => {
           },
         ]
       : []),
-    {
-      id: "notifications",
-      label: "Notifications",
-      content: <NotificationsTrigger />,
-    },
   ];
 
   return (

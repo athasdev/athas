@@ -3,7 +3,6 @@ import { normalizeItemOrder } from "@/features/layout/config/item-order";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useProFeature } from "@/features/window/hooks/use-pro-feature";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import {
@@ -18,7 +17,6 @@ import {
   GitPullRequestIcon,
   GithubLogoIcon,
   LightningIcon,
-  MagnifyingGlassIcon,
   NodesIcon,
   StackIcon as LayersIcon,
 } from "@/ui/icons";
@@ -49,8 +47,6 @@ interface ActivityNavigationItemOptions {
   isSidebarVisible: boolean;
   coreFeatures: CoreFeaturesState;
   onViewChange: (view: SidebarView) => void;
-  onSearch: () => void;
-  isSearchActive: boolean;
   onOpenExtensions: () => void;
   isExtensionsActive: boolean;
 }
@@ -71,17 +67,14 @@ export function useActivityNavigationItems({
   isSidebarVisible,
   coreFeatures,
   onViewChange,
-  onSearch,
-  isSearchActive,
   onOpenExtensions,
   isExtensionsActive,
 }: ActivityNavigationItemOptions) {
   const extensionViews = useExtensionViews();
-  const { hasViews } = useProFeature();
   const sidebarActivityItemsOrder = useSettingsStore(
     (state) => state.settings.sidebarActivityItemsOrder,
   );
-  const isBufferOwnedSurfaceActive = isSearchActive || isExtensionsActive;
+  const isBufferOwnedSurfaceActive = isExtensionsActive;
   const isPrimarySidebarItemActive = isSidebarVisible && !isBufferOwnedSurfaceActive;
 
   const openGitSubview = useCallback(
@@ -136,19 +129,6 @@ export function useActivityNavigationItems({
         ariaLabel: "Files",
         shortcut: "Mod+Shift+E",
       },
-      ...(coreFeatures.search
-        ? [
-            {
-              id: "search",
-              label: "Search",
-              icon: <MagnifyingGlassIcon />,
-              active: isSearchActive,
-              onClick: onSearch,
-              ariaLabel: "Search",
-              shortcut: "Mod+Shift+F",
-            } satisfies ActivityNavigationItem,
-          ]
-        : []),
       ...(coreFeatures.git
         ? [
             {
@@ -199,11 +179,11 @@ export function useActivityNavigationItems({
         ? [
             {
               id: "github-prs",
-              label: "Pull Requests",
+              label: "GitHub",
               icon: <GithubLogoIcon />,
               active: isPrimarySidebarItemActive && isGitHubPRsViewActive,
               onClick: () => onViewChange("github-prs"),
-              ariaLabel: "GitHub Pull Requests",
+              ariaLabel: "GitHub",
               submenuItems: [
                 {
                   id: "pull-requests",
@@ -229,11 +209,11 @@ export function useActivityNavigationItems({
         : []),
       {
         id: "views",
-        label: hasViews ? "Views" : "Views · Pro",
+        label: "Views",
         icon: <LayersIcon />,
         active: isPrimarySidebarItemActive && activeSidebarView === "views",
         onClick: () => onViewChange("views"),
-        ariaLabel: hasViews ? "Views" : "Views, Pro feature",
+        ariaLabel: "Views",
       },
       ...(coreFeatures.docker
         ? [
@@ -272,16 +252,12 @@ export function useActivityNavigationItems({
       coreFeatures.docker,
       coreFeatures.git,
       coreFeatures.github,
-      coreFeatures.search,
       extensionViews,
-      hasViews,
       isExtensionsActive,
       isGitHubPRsViewActive,
       isGitViewActive,
       isPrimarySidebarItemActive,
-      isSearchActive,
       onOpenExtensions,
-      onSearch,
       onViewChange,
       openGitHubSubview,
       openGitSubview,

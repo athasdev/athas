@@ -6,8 +6,8 @@ import {
 } from "../utils/sidebar-pane-utils";
 
 describe("getSidebarPaneLevel", () => {
-  test("keeps settings in the primary sidebar", () => {
-    expect(getSidebarPaneLevel("settings")).toBe("primary");
+  test("keeps ordinary workbench views in the primary sidebar", () => {
+    expect(getSidebarPaneLevel("files")).toBe("primary");
   });
 });
 
@@ -67,6 +67,16 @@ describe("getActiveSidebarView", () => {
         activeSidebarView: "views",
       }),
     ).toBe("views");
+  });
+
+  test("falls back to files for the removed settings sidebar", () => {
+    expect(
+      getActiveSidebarView({
+        isGitViewActive: false,
+        isGitHubPRsViewActive: false,
+        activeSidebarView: "settings",
+      }),
+    ).toBe("files");
   });
 });
 

@@ -1,20 +1,16 @@
 import { useMemo, useRef, useState } from "react";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
-import { Button } from "@/ui/button";
-import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { Dropdown } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
-import {
-  CalendarIcon,
-  CaretDownIcon,
-  ClockIcon,
-  DownloadIcon,
-  FileTextIcon,
-  XCircleIcon,
-} from "@/ui/icons";
-import { cn } from "@/utils/cn";
+import { CalendarIcon, ClockIcon, DownloadIcon, FileTextIcon, XCircleIcon } from "@/ui/icons";
+import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
+import Tooltip from "@/ui/tooltip";
 
-export function AppUpdateControl() {
+interface AppUpdateControlProps {
+  expanded: boolean;
+}
+
+export function AppUpdateControl({ expanded }: AppUpdateControlProps) {
   const {
     showUpdateIndicator,
     downloading,
@@ -34,6 +30,13 @@ export function AppUpdateControl() {
 
   const updateMenuItems = useMemo(
     () => [
+      {
+        id: "install-update",
+        label: `Install Athas ${updateInfo?.version ?? "Update"}`,
+        icon: <DownloadIcon />,
+        onClick: downloadAndInstall,
+        disabled: updateBusy,
+      },
       {
         id: "release-notes",
         label: "View Release Notes",
@@ -65,6 +68,7 @@ export function AppUpdateControl() {
     ],
     [
       dismissUpdate,
+      downloadAndInstall,
       onRemindLater,
       onSkipVersion,
       onViewReleaseNotes,
@@ -91,69 +95,49 @@ export function AppUpdateControl() {
         : `Update available: ${updateInfo.version}`;
 
   return (
-    <div className="ml-3 flex items-center">
-      <ButtonGroup
-        ref={updateMenuRef}
-        variant="accent"
-        className={
-          updateError
-            ? "bg-destructive/10 *:data-[slot=button-group-separator]:bg-destructive/25"
-            : undefined
-        }
-      >
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          tooltip={updateTooltip}
-          tooltipSide="bottom"
-          disabled={updateBusy}
-          onClick={() => {
-            if (!updateBusy) {
-              void downloadAndInstall();
-            }
-          }}
-          className={cn(
-            "font-sans ui-text-sm font-medium",
-            updateError && "text-destructive hover:bg-destructive/10 hover:text-destructive",
-            updateBusy &&
-              "cursor-wait bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary",
-          )}
-        >
-          {updateBusy ? (
-            <Spinner label={downloading ? "Downloading" : "Installing"} compact />
-          ) : (
-            <DownloadIcon />
-          )}
-          <span>{updateLabel}</span>
-        </Button>
-        <ButtonGroupSeparator />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          active={isUpdateMenuOpen}
-          tooltip="Update Options"
-          tooltipSide="bottom"
-          onClick={() => setIsUpdateMenuOpen((open) => !open)}
-          className={
-            updateError
-              ? "text-destructive hover:bg-destructive/10 hover:text-destructive"
-              : undefined
+    <div ref={updateMenuRef} className="w-full">
+      {expanded ? (
+        <SidebarListItem
+          leading={
+            updateBusy ? (
+              <Spinner label={downloading ? "Downloading" : "Installing"} compact />
+            ) : (
+              <DownloadIcon />
+            )
           }
-          aria-label="Update options"
+          active={isUpdateMenuOpen}
+          disabled={updateBusy}
+          onClick={() => setIsUpdateMenuOpen((open) => !open)}
           aria-haspopup="menu"
           aria-expanded={isUpdateMenuOpen}
+          aria-label={updateTooltip}
         >
-          <CaretDownIcon />
-        </Button>
-      </ButtonGroup>
+          {updateLabel}
+        </SidebarListItem>
+      ) : (
+        <Tooltip content={updateTooltip} side="right">
+          <SidebarIconButton
+            active={isUpdateMenuOpen}
+            disabled={updateBusy}
+            onClick={() => setIsUpdateMenuOpen((open) => !open)}
+            aria-haspopup="menu"
+            aria-expanded={isUpdateMenuOpen}
+            aria-label={updateTooltip}
+          >
+            {updateBusy ? (
+              <Spinner label={downloading ? "Downloading" : "Installing"} compact />
+            ) : (
+              <DownloadIcon />
+            )}
+          </SidebarIconButton>
+        </Tooltip>
+      )}
       <Dropdown
         isOpen={isUpdateMenuOpen}
         onClose={() => setIsUpdateMenuOpen(false)}
         anchorRef={updateMenuRef}
-        anchorSide="bottom"
-        anchorAlign="end"
+        anchorSide="top"
+        anchorAlign="start"
         items={updateMenuItems}
         className="min-w-52"
       />

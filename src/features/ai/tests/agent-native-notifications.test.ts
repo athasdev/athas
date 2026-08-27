@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import {
   createAgentNativeNotificationService,
+  getAgentNotificationRecord,
   getAgentNativeNotificationContent,
   type AgentNativeNotificationDependencies,
 } from "@/features/ai/services/agent-native-notifications";
@@ -70,6 +71,22 @@ describe("agent native notifications", () => {
     expect(JSON.stringify(getAgentNativeNotificationContent("complete"))).not.toContain(
       "/workspace",
     );
+  });
+
+  it("records agent events in the Agent notification category", () => {
+    expect(
+      getAgentNotificationRecord({
+        kind: "permission",
+        dedupeId: "request-1",
+        chatId: "chat-1",
+      }),
+    ).toEqual({
+      id: "agent:permission:request-1",
+      message: "Agent needs your approval",
+      description: "Open Athas to review the request.",
+      type: "warning",
+      category: "agent",
+    });
   });
 
   it("deduplicates the same event within the notification window", async () => {

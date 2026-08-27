@@ -1,533 +1,345 @@
-import {
-  CaretRightIcon as CaretRight,
-  CheckIcon as Check,
-  ClipboardTextIcon as ClipboardText,
-  CopyIcon as Copy,
-  FunnelIcon as Funnel,
-  InfoIcon as Info,
-  MagnifyingGlassIcon as Search,
-  TrashIcon as Trash,
-  WarningCircleIcon as WarningCircle,
-  XCircleIcon as XCircle,
-} from "@/ui/icons";
-import type React from "react";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { GitHubAuthStatusMessage } from "@/features/github/components/github-auth-status";
+import type { useGitHubNotifications } from "@/features/notifications/hooks/use-github-notifications";
 import { NotificationIcon } from "@/features/notifications/components/notification-icon";
-import { NotificationListItem } from "@/features/notifications/components/notification-list-item";
 import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
 import type {
+  NotificationCategory,
+  NotificationCategoryFilter,
   NotificationEntry,
-  NotificationFilter,
 } from "@/features/notifications/types/notifications.types";
 import {
   formatNotificationAge,
-  formatNotificationGroupDate,
   formatNotificationText,
 } from "@/features/notifications/utils/notification-formatters";
+import { getTimeAgo } from "@/features/github/utils/github-viewer-utils";
 import { Button } from "@/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/collapsible";
 import Command, {
   CommandEmpty,
   CommandHeader,
   CommandHeaderAction,
   CommandInput,
+  CommandItemAction,
   CommandItemBadge,
+  CommandItemRow,
   CommandList,
+  CommandTabs,
 } from "@/ui/command";
-import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
-import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
-import { ItemGroup } from "@/ui/item";
-import Tooltip from "@/ui/tooltip";
+import {
+  BellIcon,
+  ChatCircleTextIcon,
+  CopyIcon,
+  GitPullRequestIcon,
+  GithubLogoIcon,
+  LightningIcon,
+  MagnifyingGlassIcon,
+  SparkleIcon,
+  TrashIcon,
+} from "@/ui/icons";
 import { writeClipboardText } from "@/utils/clipboard";
-import { cn } from "@/utils/cn";
+import { matchesSearchQuery } from "@/utils/search-match";
+
+type GitHubNotificationsModel = ReturnType<typeof useGitHubNotifications>;
 
 interface NotificationsCommandProps {
   isVisible: boolean;
+  initialCategory: NotificationCategoryFilter;
+  github: GitHubNotificationsModel;
   onClose: () => void;
 }
 
-export function NotificationsCommand({ isVisible, onClose }: NotificationsCommandProps) {
+interface LocalNotificationSection {
+  id: NotificationCategory;
+  label: string;
+  notifications: NotificationEntry[];
+}
+
+function notificationReasonLabel(reason: string) {
+  if (reason === "ci_activity") return "Workflow completed";
+  const label = reason.replace(/_/g, " ");
+  return label ? `${label[0]?.toUpperCase()}${label.slice(1)}` : "";
+}
+
+function GitHubNotificationIcon({ subjectType }: { subjectType: string }) {
+  if (subjectType === "PullRequest") return <GitPullRequestIcon />;
+  if (subjectType === "Issue") return <ChatCircleTextIcon />;
+  if (subjectType === "CheckSuite") return <LightningIcon />;
+  return <GithubLogoIcon />;
+}
+
+export function NotificationsCommand({
+  isVisible,
+  initialCategory,
+  github,
+  onClose,
+}: NotificationsCommandProps) {
   const notifications = useNotificationsStore.use.notifications();
-  const markAllNotificationsRead = useNotificationsStore((state) => state.actions.markAllRead);
-  const removeNotification = useNotificationsStore((state) => state.actions.remove);
-  const clearNotifications = useNotificationsStore((state) => state.actions.clear);
-  const notificationContextMenu = useDropdownMenu<NotificationEntry>();
-  const panelContextMenu = useDropdownMenu();
-  const filterButtonRef = useRef<HTMLButtonElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const notificationRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const markAllNotificationsRead = useNotificationsStore.use.actions().markAllRead;
+  const removeNotification = useNotificationsStore.use.actions().remove;
+  const clearNotifications = useNotificationsStore.use.actions().clear;
+  const [category, setCategory] = useState<NotificationCategoryFilter>(initialCategory);
   const [searchQuery, setSearchQuery] = useState("");
-  const [focusedNotificationId, setFocusedNotificationId] = useState<string | null>(null);
   const [activeNotification, setActiveNotification] = useState<NotificationEntry | null>(null);
   const [copiedNotificationId, setCopiedNotificationId] = useState<string | null>(null);
-  const [notificationFilter, setNotificationFilter] = useState<NotificationFilter>("all");
-  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
-  const [collapsedNotificationGroups, setCollapsedNotificationGroups] = useState<Set<string>>(
-    () => new Set(),
-  );
   const deferredSearchQuery = useDeferredValue(searchQuery);
-  const unreadCount = useMemo(
-    () =>
-      notifications.filter((notification) => !notification.read && notification.type !== "success")
-        .length,
-    [notifications],
-  );
-
-  useEffect(() => {
-    if (!isVisible || unreadCount === 0) return;
-    markAllNotificationsRead();
-  }, [isVisible, unreadCount, markAllNotificationsRead]);
 
   useEffect(() => {
     if (!isVisible) return;
-    focusNotificationSearch();
-  }, [isVisible]);
+    setCategory(initialCategory);
+    markAllNotificationsRead();
+    if (github.isAuthenticated) void github.refresh();
+  }, [
+    github.isAuthenticated,
+    github.refresh,
+    initialCategory,
+    isVisible,
+    markAllNotificationsRead,
+  ]);
 
-  const copyText = async (text: string) => {
-    await writeClipboardText(text);
-  };
+  const localSections = useMemo<LocalNotificationSection[]>(() => {
+    const sections: LocalNotificationSection[] = [
+      { id: "athas", label: "Athas", notifications: [] },
+      { id: "agent", label: "Agent", notifications: [] },
+    ];
 
-  const openNotificationDetails = (notification: NotificationEntry) => {
-    setFocusedNotificationId(notification.id);
-    setCopiedNotificationId(null);
-    setActiveNotification(notification);
-  };
+    for (const notification of notifications) {
+      const notificationCategory = notification.category ?? "athas";
+      if (category !== "all" && category !== notificationCategory) continue;
+      if (
+        !matchesSearchQuery(deferredSearchQuery, [
+          notification.message,
+          notification.description,
+          notification.type,
+          notification.category,
+          formatNotificationAge(notification.updatedAt),
+        ])
+      ) {
+        continue;
+      }
+      sections
+        .find((section) => section.id === notificationCategory)
+        ?.notifications.push(notification);
+    }
+
+    return sections.filter((section) => section.notifications.length > 0);
+  }, [category, deferredSearchQuery, notifications]);
+
+  const githubNotifications = useMemo(() => {
+    if (category !== "all" && category !== "github") return [];
+    return github.notifications.filter((notification) =>
+      matchesSearchQuery(deferredSearchQuery, [
+        notification.title,
+        notification.repositoryFullName,
+        notification.reason,
+        notification.subjectType,
+      ]),
+    );
+  }, [category, deferredSearchQuery, github.notifications]);
+
+  const hasVisibleNotifications = localSections.length > 0 || githubNotifications.length > 0;
+  const selectedCategoryCount =
+    (category === "all" || category === "athas"
+      ? notifications.filter((notification) => (notification.category ?? "athas") === "athas")
+          .length
+      : 0) +
+    (category === "all" || category === "agent"
+      ? notifications.filter((notification) => notification.category === "agent").length
+      : 0) +
+    (category === "all" || category === "github" ? github.notifications.length : 0);
 
   const copyActiveNotification = async (notification: NotificationEntry) => {
-    await copyText(formatNotificationText(notification));
+    await writeClipboardText(formatNotificationText(notification));
     setCopiedNotificationId(notification.id);
     window.setTimeout(() => {
       setCopiedNotificationId((currentId) => (currentId === notification.id ? null : currentId));
     }, 1000);
   };
 
-  const notificationContextMenuItems = useMemo<MenuItem[]>(() => {
-    const notification = notificationContextMenu.data;
-    if (!notification) return [];
-
-    return [
-      {
-        id: "copy-message",
-        label: "Copy Message",
-        icon: <Copy />,
-        onClick: () => void copyText(notification.message),
-      },
-      ...(notification.description
-        ? [
-            {
-              id: "copy-details",
-              label: "Copy Details",
-              icon: <ClipboardText />,
-              onClick: () => void copyText(notification.description || ""),
-            },
-          ]
-        : []),
-      {
-        id: "copy-notification",
-        label: "Copy Notification",
-        icon: <ClipboardText />,
-        onClick: () => void copyText(formatNotificationText(notification)),
-      },
-      { id: "sep-delete", separator: true },
-      {
-        id: "delete-notification",
-        label: "Delete",
-        icon: <Trash />,
-        tone: "destructive",
-        onClick: () => removeNotification(notification.id),
-      },
-      {
-        id: "clear-all",
-        label: "Clear All",
-        icon: <Trash />,
-        tone: "destructive",
-        onClick: () => clearNotifications(),
-      },
-    ];
-  }, [clearNotifications, notificationContextMenu.data, removeNotification]);
-
-  const panelContextMenuItems = useMemo<MenuItem[]>(
-    () => [
-      {
-        id: "copy-all",
-        label: "Copy All",
-        icon: <ClipboardText />,
-        disabled: notifications.length === 0,
-        onClick: () => void copyText(notifications.map(formatNotificationText).join("\n\n---\n\n")),
-      },
-      {
-        id: "clear-all",
-        label: "Clear All",
-        icon: <Trash />,
-        tone: "destructive",
-        disabled: notifications.length === 0,
-        onClick: () => clearNotifications(),
-      },
-    ],
-    [clearNotifications, notifications],
-  );
-
-  const filterMenuItems = useMemo<MenuItem[]>(
-    () =>
-      [
-        { id: "all", label: "All", icon: <Funnel />, value: "all" },
-        { id: "info", label: "Info", icon: <Info />, value: "info" },
-        { id: "success", label: "Success", icon: <Check />, value: "success" },
-        { id: "warning", label: "Warnings", icon: <WarningCircle />, value: "warning" },
-        { id: "error", label: "Errors", icon: <XCircle />, value: "error" },
-      ].map((item) => ({
-        id: item.id,
-        label: item.label,
-        icon: item.icon,
-        onClick: () => setNotificationFilter(item.value as NotificationFilter),
-        selected: notificationFilter === item.value,
-      })),
-    [notificationFilter],
-  );
-
-  const filteredNotifications = useMemo(() => {
-    const query = deferredSearchQuery.trim().toLowerCase();
-    const filterMatches = (notification: NotificationEntry) =>
-      notificationFilter === "all" || notification.type === notificationFilter;
-    const filteredByType = notifications.filter(filterMatches);
-    if (!query) return filteredByType;
-
-    return filteredByType.filter((notification) =>
-      [
-        notification.message,
-        notification.description,
-        notification.type,
-        formatNotificationAge(notification.updatedAt),
-      ]
-        .filter(Boolean)
-        .some((value) => value?.toLowerCase().includes(query)),
-    );
-  }, [deferredSearchQuery, notificationFilter, notifications]);
-
-  const groupedNotifications = useMemo(() => {
-    const groups: Array<{ label: string; notifications: NotificationEntry[] }> = [];
-
-    for (const notification of filteredNotifications) {
-      const label = formatNotificationGroupDate(notification.updatedAt);
-      const lastGroup = groups[groups.length - 1];
-
-      if (lastGroup?.label === label) {
-        lastGroup.notifications.push(notification);
-        continue;
-      }
-
-      groups.push({ label, notifications: [notification] });
-    }
-
-    return groups;
-  }, [filteredNotifications]);
-  const visibleNotifications = useMemo(
-    () =>
-      groupedNotifications.flatMap((group) =>
-        collapsedNotificationGroups.has(group.label) ? [] : group.notifications,
-      ),
-    [collapsedNotificationGroups, groupedNotifications],
-  );
-  const focusedNotificationIndex = focusedNotificationId
-    ? visibleNotifications.findIndex((notification) => notification.id === focusedNotificationId)
-    : -1;
-  useEffect(() => {
-    if (visibleNotifications.length === 0) {
-      setFocusedNotificationId(null);
-      return;
-    }
-
-    if (
-      !focusedNotificationId ||
-      !visibleNotifications.some((notification) => notification.id === focusedNotificationId)
-    ) {
-      setFocusedNotificationId(visibleNotifications[0]?.id ?? null);
-    }
-  }, [focusedNotificationId, visibleNotifications]);
-
-  const toggleNotificationGroup = (label: string) => {
-    setCollapsedNotificationGroups((groups) => {
-      const nextGroups = new Set(groups);
-      if (nextGroups.has(label)) {
-        nextGroups.delete(label);
-      } else {
-        nextGroups.add(label);
-      }
-      return nextGroups;
-    });
-  };
-
-  const focusNotificationAtIndex = (index: number) => {
-    const notification = visibleNotifications[index];
-    if (!notification) return;
-
-    setFocusedNotificationId(notification.id);
-    requestAnimationFrame(() => notificationRefs.current.get(notification.id)?.focus());
-  };
-
-  const focusNotificationSearch = () => {
-    requestAnimationFrame(() => {
-      searchInputRef.current?.focus();
-      searchInputRef.current?.select();
-    });
-  };
-
-  const handleNotificationsKeyDown = (event: React.KeyboardEvent) => {
-    const target = event.target;
-    const isTypingTarget =
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement ||
-      (target instanceof HTMLElement && target.isContentEditable);
-
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
-      event.preventDefault();
-      focusNotificationSearch();
-      return;
-    }
-
-    if (!isTypingTarget && event.key === "/") {
-      event.preventDefault();
-      focusNotificationSearch();
-    }
-  };
-
-  const handleNotificationItemKeyDown = (
-    event: React.KeyboardEvent<HTMLDivElement>,
-    notification: NotificationEntry,
-  ) => {
-    const currentIndex = visibleNotifications.findIndex((item) => item.id === notification.id);
-    if (currentIndex === -1) return;
-
-    switch (event.key) {
-      case "ArrowDown":
-        event.preventDefault();
-        focusNotificationAtIndex(Math.min(currentIndex + 1, visibleNotifications.length - 1));
-        break;
-      case "ArrowUp":
-        event.preventDefault();
-        focusNotificationAtIndex(Math.max(currentIndex - 1, 0));
-        break;
-      case "Home":
-        event.preventDefault();
-        focusNotificationAtIndex(0);
-        break;
-      case "End":
-        event.preventDefault();
-        focusNotificationAtIndex(visibleNotifications.length - 1);
-        break;
-      case "Enter":
-      case " ":
-        event.preventDefault();
-        openNotificationDetails(notification);
-        break;
-      case "Delete":
-      case "Backspace":
-        event.preventDefault();
-        removeNotification(notification.id);
-        break;
-    }
+  const closeDetails = () => {
+    setActiveNotification(null);
+    setCopiedNotificationId(null);
   };
 
   return (
     <>
       <Command isVisible={isVisible} onClose={onClose} title="Notifications">
-        <div
-          className="flex h-full min-h-0 flex-col"
-          onKeyDownCapture={handleNotificationsKeyDown}
-          onContextMenu={(event) => {
-            if (notifications.length === 0) return;
-            panelContextMenu.open(event);
-          }}
-        >
-          <CommandHeader onClose={onClose}>
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <Search className="size-3.5 shrink-0 text-subtle-foreground" />
-              <CommandInput
-                ref={searchInputRef}
-                value={searchQuery}
-                onChange={setSearchQuery}
-                placeholder="Search notifications"
-                onKeyDown={(event) => {
-                  if (event.key === "ArrowDown" && visibleNotifications.length > 0) {
-                    event.preventDefault();
-                    focusNotificationAtIndex(0);
-                  }
-                }}
-              />
+        <CommandHeader onClose={onClose}>
+          <MagnifyingGlassIcon className="shrink-0 text-subtle-foreground" />
+          <CommandInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search notifications"
+            aria-label="Search notifications"
+          />
+          {notifications.length > 0 ? (
+            <CommandHeaderAction
+              aria-label="Clear local notifications"
+              onClick={clearNotifications}
+            >
+              <TrashIcon />
+            </CommandHeaderAction>
+          ) : null}
+        </CommandHeader>
+        <CommandTabs
+          ariaLabel="Notification categories"
+          items={[
+            {
+              id: "all",
+              label: "All",
+              isActive: category === "all",
+              onSelect: () => setCategory("all"),
+            },
+            {
+              id: "athas",
+              label: "Athas",
+              icon: <BellIcon />,
+              isActive: category === "athas",
+              onSelect: () => setCategory("athas"),
+            },
+            {
+              id: "agent",
+              label: "Agent",
+              icon: <SparkleIcon />,
+              isActive: category === "agent",
+              onSelect: () => setCategory("agent"),
+            },
+            {
+              id: "github",
+              label: "GitHub",
+              icon: <GithubLogoIcon />,
+              isActive: category === "github",
+              onSelect: () => setCategory("github"),
+            },
+          ]}
+        />
+        {!github.isAuthenticated && category === "github" ? (
+          <GitHubAuthStatusMessage />
+        ) : github.error && category === "github" ? (
+          <CommandEmpty>
+            <div className="flex flex-col items-center gap-2">
+              <span>Could not load GitHub notifications.</span>
+              <Button type="button" variant="ghost" onClick={() => void github.refresh(true)}>
+                Try again
+              </Button>
             </div>
-            <Tooltip content="Filter Notifications" side="bottom" triggerClassName="size-7">
-              <CommandHeaderAction
-                ref={filterButtonRef}
-                type="button"
-                active={notificationFilter !== "all"}
-                aria-label="Filter Notifications"
-                onClick={() => setIsFilterMenuOpen(true)}
-              >
-                <Funnel />
-              </CommandHeaderAction>
-            </Tooltip>
-          </CommandHeader>
-          {notifications.length === 0 ? (
-            <CommandEmpty>No notifications yet.</CommandEmpty>
-          ) : filteredNotifications.length === 0 ? (
-            <CommandEmpty>No matching notifications.</CommandEmpty>
-          ) : (
-            <CommandList>
-              <div className="flex min-h-0 flex-1 flex-col gap-1.5">
-                {groupedNotifications.map((group) => (
-                  <Collapsible
-                    key={group.label}
-                    open={!collapsedNotificationGroups.has(group.label)}
-                    onOpenChange={() => toggleNotificationGroup(group.label)}
-                    className="flex flex-col gap-1"
-                  >
-                    <CollapsibleTrigger
-                      render={
-                        <button
-                          type="button"
-                          className="flex h-6 w-full select-none items-center gap-1 rounded-lg px-2 text-left font-sans ui-text-base text-subtle-foreground transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:outline-none"
-                        />
+          </CommandEmpty>
+        ) : github.isLoading &&
+          (category === "all" || category === "github") &&
+          selectedCategoryCount === 0 ? (
+          <CommandEmpty>Loading notifications…</CommandEmpty>
+        ) : !hasVisibleNotifications ? (
+          <CommandEmpty>
+            {deferredSearchQuery ? "No matching notifications." : "No notifications yet."}
+          </CommandEmpty>
+        ) : (
+          <CommandList>
+            <div className="flex flex-col gap-2">
+              {localSections.map((section) => (
+                <section key={section.id} aria-labelledby={`notification-section-${section.id}`}>
+                  <div className="flex h-7 items-center gap-2 px-2 text-subtle-foreground ui-text-sm">
+                    <span id={`notification-section-${section.id}`} className="min-w-0 flex-1">
+                      {section.label}
+                    </span>
+                    <CommandItemBadge>{section.notifications.length}</CommandItemBadge>
+                  </div>
+                  {section.notifications.map((notification) => (
+                    <CommandItemRow
+                      key={notification.id}
+                      as="div"
+                      icon={<NotificationIcon type={notification.type} />}
+                      title={notification.message}
+                      description={
+                        notification.description ?? formatNotificationAge(notification.updatedAt)
                       }
-                    >
-                      <CaretRight
-                        className={cn(
-                          "size-3.5 shrink-0 transition-transform",
-                          !collapsedNotificationGroups.has(group.label) && "rotate-90",
-                        )}
-                      />
-                      <span className="min-w-0 flex-1 truncate">{group.label}</span>
-                      <CommandItemBadge>{group.notifications.length}</CommandItemBadge>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <ItemGroup className="gap-0.5">
-                        {group.notifications.map((notification) => (
-                          <NotificationListItem
-                            key={notification.id}
-                            ref={(node) => {
-                              if (node) {
-                                notificationRefs.current.set(notification.id, node);
-                              } else {
-                                notificationRefs.current.delete(notification.id);
-                              }
-                            }}
-                            notification={notification}
-                            actions={[
-                              {
-                                id: "delete-notification",
-                                label: "Delete Notification",
-                                icon: <Trash className="size-3.5" />,
-                                onSelect: () => removeNotification(notification.id),
-                                variant: "danger",
-                              },
-                            ]}
-                            selected={notification.id === focusedNotificationId}
-                            onClick={() => openNotificationDetails(notification)}
-                            onContextMenu={notificationContextMenu.open}
-                            onFocus={() => setFocusedNotificationId(notification.id)}
-                            onKeyDown={(event) =>
-                              handleNotificationItemKeyDown(event, notification)
-                            }
-                            tabIndex={
-                              notification.id === focusedNotificationId ||
-                              (focusedNotificationIndex === -1 &&
-                                notification === visibleNotifications[0])
-                                ? 0
-                                : -1
-                            }
-                          />
-                        ))}
-                      </ItemGroup>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
-              </div>
-            </CommandList>
-          )}
-        </div>
+                      contentLayout="stacked"
+                      onClick={() => setActiveNotification(notification)}
+                      action={
+                        <CommandItemAction
+                          tone="danger"
+                          aria-label={`Delete ${notification.message}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            removeNotification(notification.id);
+                          }}
+                        >
+                          <TrashIcon />
+                        </CommandItemAction>
+                      }
+                    />
+                  ))}
+                </section>
+              ))}
+              {githubNotifications.length > 0 ? (
+                <section aria-labelledby="notification-section-github">
+                  <div className="flex h-7 items-center gap-2 px-2 text-subtle-foreground ui-text-sm">
+                    <span id="notification-section-github" className="min-w-0 flex-1">
+                      GitHub
+                    </span>
+                    <CommandItemBadge>{githubNotifications.length}</CommandItemBadge>
+                  </div>
+                  {githubNotifications.map((notification) => (
+                    <CommandItemRow
+                      key={notification.id}
+                      icon={<GitHubNotificationIcon subjectType={notification.subjectType} />}
+                      title={notification.title}
+                      description={`${notification.repositoryFullName} · ${notificationReasonLabel(notification.reason)} · ${getTimeAgo(notification.updatedAt, { includeAgo: false })}`}
+                      contentLayout="stacked"
+                      onClick={() => {
+                        onClose();
+                        github.openNotification(notification);
+                      }}
+                    />
+                  ))}
+                </section>
+              ) : null}
+            </div>
+          </CommandList>
+        )}
       </Command>
-      <ContextMenuPopup
-        isOpen={notificationContextMenu.isOpen}
-        point={notificationContextMenu.position}
-        groups={createContextMenuGroups(notificationContextMenuItems)}
-        onClose={notificationContextMenu.close}
-      />
-      <ContextMenuPopup
-        isOpen={panelContextMenu.isOpen}
-        point={panelContextMenu.position}
-        groups={createContextMenuGroups(panelContextMenuItems)}
-        onClose={panelContextMenu.close}
-      />
-      <Dropdown
-        isOpen={isFilterMenuOpen}
-        anchorRef={filterButtonRef}
-        anchorSide="bottom"
-        anchorAlign="end"
-        items={filterMenuItems}
-        onClose={() => setIsFilterMenuOpen(false)}
-        className="z-10070 w-fit min-w-fit"
-      />
       <Command
         isVisible={activeNotification !== null}
-        onClose={() => {
-          setActiveNotification(null);
-          setCopiedNotificationId(null);
-        }}
+        onClose={closeDetails}
         title="Notification details"
       >
         {activeNotification ? (
           <>
-            <CommandHeader
-              onClose={() => {
-                setActiveNotification(null);
-                setCopiedNotificationId(null);
-              }}
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="shrink-0">
-                  <NotificationIcon type={activeNotification.type} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="font-sans ui-text-base truncate font-medium text-foreground">
-                    {activeNotification.message}
-                  </div>
-                  <div className="font-sans ui-text-base mt-0.5 flex items-center gap-1 text-subtle-foreground">
-                    <span className="capitalize">{activeNotification.type}</span>
-                    <span>-</span>
-                    <span>{formatNotificationAge(activeNotification.updatedAt)}</span>
-                  </div>
+            <CommandHeader onClose={closeDetails}>
+              <NotificationIcon type={activeNotification.type} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium text-foreground ui-text-sm">
+                  {activeNotification.message}
+                </div>
+                <div className="mt-0.5 flex items-center gap-1 text-subtle-foreground ui-text-sm">
+                  <span className="capitalize">{activeNotification.category ?? "athas"}</span>
+                  <span>·</span>
+                  <span>{formatNotificationAge(activeNotification.updatedAt)}</span>
                 </div>
               </div>
             </CommandHeader>
             <CommandList>
               {activeNotification.description ? (
-                <div className="border-border/70 border-b px-3 py-2">
-                  <pre className="font-sans ui-text-base max-h-40 overflow-auto whitespace-pre-wrap wrap-break-word text-muted-foreground">
-                    {activeNotification.description}
-                  </pre>
-                </div>
+                <pre className="font-sans max-h-40 whitespace-pre-wrap wrap-break-word rounded-chrome bg-surface/55 p-2 text-muted-foreground ui-text-sm">
+                  {activeNotification.description}
+                </pre>
               ) : null}
-              <div className="flex items-center gap-2 p-2">
+              <div className="mt-2 flex items-center gap-2">
                 <Button
                   type="button"
                   variant="ghost"
-                  size="xs"
-                  className="gap-1.5"
                   onClick={() => void copyActiveNotification(activeNotification)}
                 >
-                  <Copy className="size-3.5" />
+                  <CopyIcon />
                   {copiedNotificationId === activeNotification.id ? "Copied" : "Copy"}
                 </Button>
                 <Button
                   type="button"
                   variant="danger"
-                  size="xs"
-                  className="gap-1.5"
                   onClick={() => {
                     removeNotification(activeNotification.id);
-                    setActiveNotification(null);
+                    closeDetails();
                   }}
                 >
-                  <Trash className="size-3.5" />
+                  <TrashIcon />
                   Delete
                 </Button>
               </div>

@@ -4,6 +4,7 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
+import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 export type AgentNativeNotificationKind = "complete" | "error" | "permission";
@@ -59,6 +60,22 @@ export function getAgentNativeNotificationContent(
         body: "Open Athas to review the result.",
       };
   }
+}
+
+export function getAgentNotificationRecord(request: AgentNativeNotificationRequest) {
+  const content = getAgentNativeNotificationContent(request.kind);
+  return {
+    id: `agent:${request.kind}:${request.dedupeId}`,
+    message: content.title,
+    description: content.body,
+    type:
+      request.kind === "error"
+        ? ("error" as const)
+        : request.kind === "permission"
+          ? ("warning" as const)
+          : ("success" as const),
+    category: "agent" as const,
+  };
 }
 
 export function createAgentNativeNotificationService(
@@ -131,6 +148,7 @@ const notifyAgent = createAgentNativeNotificationService({
 export async function sendAgentNativeNotification(
   request: AgentNativeNotificationRequest,
 ): Promise<AgentNativeNotificationResult> {
+  useNotificationsStore.getState().actions.record(getAgentNotificationRecord(request));
   return notifyAgent(request);
 }
 

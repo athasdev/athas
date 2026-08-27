@@ -14,19 +14,28 @@ import { SearchField } from "@/ui/search";
 import { cn } from "@/utils/cn";
 
 const sidebarListRowClassName =
-  "athas-chrome-control font-sans ui-text-sm flex min-h-chrome-control w-full min-w-0 items-center gap-chrome rounded-chrome px-1.5 py-0.5 font-normal [&_svg]:size-[1em]";
+  "athas-chrome-control flex min-h-chrome-control w-full min-w-0 items-center gap-chrome rounded-chrome px-1.5 py-0.5 font-sans font-normal ui-text-sm [&_svg]:size-[1em]";
 
 export const SidebarIconButton = forwardRef<
   HTMLButtonElement,
-  Omit<ButtonProps, "variant" | "size"> & { tone?: "default" | "danger" }
+  Omit<ButtonProps, "variant"> & {
+    tone?: "default" | "warning" | "error" | "danger";
+  }
 >(function SidebarIconButton({ className, tone = "default", ...props }, ref) {
   return (
     <Button
       ref={ref}
       type="button"
       variant={tone === "danger" ? "danger" : "ghost"}
-      size="icon-xs"
-      className={cn("[&_svg:not([class*='size-'])]:size-[1em]", className)}
+      iconOnly
+      className={cn(
+        "size-6 [&_svg:not([class*='size-'])]:size-[1em]",
+        tone === "warning" &&
+          "bg-warning/10 text-warning hover:bg-warning/15 hover:text-warning data-[active=true]:bg-warning/15 data-[active=true]:text-warning",
+        tone === "error" &&
+          "bg-destructive/8 text-destructive hover:bg-destructive/12 hover:text-destructive data-[active=true]:bg-destructive/12 data-[active=true]:text-destructive",
+        className,
+      )}
       {...props}
     />
   );
@@ -68,14 +77,7 @@ export const SidebarSearchPopover = forwardRef<
   HTMLInputElement,
   Omit<
     ComponentProps<typeof SearchField>,
-    | "autoFocus"
-    | "className"
-    | "containerClassName"
-    | "leftIcon"
-    | "onChange"
-    | "size"
-    | "value"
-    | "variant"
+    "autoFocus" | "className" | "containerClassName" | "leftIcon" | "onChange" | "value" | "variant"
   > & {
     value: string;
     onChange: (value: string) => void;
@@ -123,7 +125,6 @@ export const SidebarSearchPopover = forwardRef<
           value={value}
           onChange={onChange}
           leftIcon={MagnifyingGlassIcon}
-          size="sm"
           placeholder={placeholder}
           aria-label={ariaLabel}
           autoFocus
@@ -140,6 +141,8 @@ export function SidebarListItem({
   description,
   leading,
   trailing,
+  tone = "default",
+  width = "fill",
   ...props
 }: Omit<ComponentProps<"button">, "className" | "style"> & {
   children: ReactNode;
@@ -147,16 +150,26 @@ export function SidebarListItem({
   description?: ReactNode;
   leading?: ReactNode;
   trailing?: ReactNode;
+  tone?: "default" | "warning" | "error";
+  width?: "fill" | "content";
 }) {
   return (
     <button
       type="button"
       className={cn(
         sidebarListRowClassName,
-        "text-left text-subtle-foreground transition-[background-color,color,padding-right]",
-        "hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
-        active && "bg-selected text-foreground",
+        "text-left transition-[background-color,color,padding-right] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+        tone === "default" &&
+          "text-subtle-foreground hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground",
+        tone === "warning" &&
+          "bg-warning/10 text-warning hover:bg-warning/15 hover:text-warning focus-visible:bg-warning/15 focus-visible:text-warning",
+        tone === "error" &&
+          "bg-destructive/8 text-destructive hover:bg-destructive/12 hover:text-destructive focus-visible:bg-destructive/12 focus-visible:text-destructive",
+        active && tone === "default" && "bg-selected text-foreground",
+        active && tone === "warning" && "bg-warning/15 text-warning",
+        active && tone === "error" && "bg-destructive/12 text-destructive",
         description && "h-auto min-h-10 items-start py-1",
+        width === "content" && "w-fit max-w-full",
       )}
       data-slot="sidebar-list-item"
       data-active={active}
@@ -185,7 +198,12 @@ export function SidebarListItem({
         ) : null}
       </span>
       {trailing && !description ? (
-        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-subtle-foreground/80">
+        <span
+          className={cn(
+            "ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right",
+            tone === "default" ? "text-subtle-foreground/80" : "text-current",
+          )}
+        >
           {trailing}
         </span>
       ) : null}

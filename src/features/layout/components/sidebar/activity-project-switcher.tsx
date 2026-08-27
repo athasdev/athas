@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import { CaretRightIcon, FolderOpenIcon, ImageIcon, RemoteIcon, XIcon } from "@/ui/icons";
+import { ChevronExpandYIcon, FolderOpenIcon, ImageIcon, RemoteIcon, XIcon } from "@/ui/icons";
 import { SidebarIconButton, SidebarListItem, SidebarMenuContent } from "@/ui/sidebar";
 import { showConfirmDialog } from "@/ui/dialog";
 import { toast } from "sonner";
@@ -184,7 +184,8 @@ export function ActivityProjectSwitcher({
             expanded ? (
               <SidebarListItem
                 leading={projectGlyph}
-                trailing={<CaretRightIcon />}
+                trailing={<ChevronExpandYIcon />}
+                width="content"
                 aria-label="Switch project"
               >
                 {projectName}
@@ -213,7 +214,7 @@ export function ActivityProjectSwitcher({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         aria-label={`Remove ${availableProject.name} from Athas`}
                         onClick={() => void handleRemoveProject(availableProject)}
                       >
@@ -238,7 +239,7 @@ export function ActivityProjectSwitcher({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon-xs"
+                      iconOnly
                       aria-label={`Remove ${connection.name} from Athas`}
                       onClick={() => void handleRemoveRemoteConnection(connection)}
                     >

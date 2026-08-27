@@ -1,16 +1,16 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { getServiceUrls } from "@/config/services";
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import { getGitHubAvatarUrl } from "@/features/github/utils/github-avatar-url";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
+import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { getAccountPlanLabel } from "@/features/window/lib/account-usage";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Avatar } from "@/ui/avatar";
 import Badge from "@/ui/badge";
-import { Button } from "@/ui/button";
 import { Dropdown, type DropdownSection, type MenuItem } from "@/ui/dropdown";
 import {
   BookOpenIcon,
@@ -25,16 +25,28 @@ import {
   UserIcon,
   UsersThreeIcon,
 } from "@/ui/icons";
+import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
-import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 
 const COMMUNITY_URL = "https://discord.gg/DD8F38wFMv";
 
 interface AccountMenuProps {
-  className?: string;
+  expanded: boolean;
 }
 
-export const AccountMenu = ({ className }: AccountMenuProps) => {
+function isBlockingModalOpen() {
+  const state = useUIState.getState();
+  return (
+    state.isQuickOpenVisible ||
+    state.isCommandPaletteVisible ||
+    state.isGlobalSearchVisible ||
+    state.isSettingsDialogVisible ||
+    state.isProjectPickerVisible ||
+    state.isDatabaseConnectionVisible
+  );
+}
+
+export const AccountMenu = memo(function AccountMenu({ expanded }: AccountMenuProps) {
   const services = getServiceUrls();
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -46,18 +58,9 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   const openWhatsNew = useWhatsNewStore((state) => state.actions.open);
   const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
   const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
-  const hasBlockingModalOpen = useUIState(
-    (state) =>
-      state.isQuickOpenVisible ||
-      state.isCommandPaletteVisible ||
-      state.isGlobalSearchVisible ||
-      state.isSettingsDialogVisible ||
-      state.isProjectPickerVisible ||
-      state.isDatabaseConnectionVisible,
-  );
 
   const [isOpen, setIsOpen] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const { signIn, isSigningIn } = useDesktopSignIn({
     onSuccess: () => setIsOpen(false),
   });
@@ -240,9 +243,15 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   const tooltipLabel = isAuthenticated ? accountName : "Account";
 
   useEffect(() => {
-    if (!isOpen || !hasBlockingModalOpen) return;
-    setIsOpen(false);
-  }, [hasBlockingModalOpen, isOpen]);
+    if (!isOpen) return;
+
+    const closeForBlockingModal = () => {
+      if (isBlockingModalOpen()) setIsOpen(false);
+    };
+
+    closeForBlockingModal();
+    return useUIState.subscribe(closeForBlockingModal);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -251,30 +260,47 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
 
   return (
     <>
-      <Tooltip content={tooltipLabel} side="bottom">
-        <Button
-          ref={buttonRef}
-          onClick={() => setIsOpen((open) => !open)}
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          active={isOpen}
-          className={className}
-          aria-expanded={isOpen}
-          aria-haspopup="menu"
-          aria-label="Account"
-        >
-          {isAuthenticated && accountAvatarUrl ? (
-            <Avatar name={accountName} src={accountAvatarUrl} className="size-4" />
-          ) : (
-            <UserIcon className="size-4" />
-          )}
-        </Button>
-      </Tooltip>
+      <div ref={triggerRef} className="w-full">
+        {expanded ? (
+          <SidebarListItem
+            leading={
+              isAuthenticated ? (
+                <Avatar name={accountName} src={accountAvatarUrl} className="size-4" />
+              ) : (
+                <UserIcon />
+              )
+            }
+            active={isOpen}
+            onClick={() => setIsOpen((open) => !open)}
+            aria-expanded={isOpen}
+            aria-haspopup="menu"
+            aria-label="Account"
+          >
+            {accountName}
+          </SidebarListItem>
+        ) : (
+          <Tooltip content={tooltipLabel} side="right">
+            <SidebarIconButton
+              onClick={() => setIsOpen((open) => !open)}
+              active={isOpen}
+              aria-expanded={isOpen}
+              aria-haspopup="menu"
+              aria-label="Account"
+            >
+              {isAuthenticated ? (
+                <Avatar name={accountName} src={accountAvatarUrl} className="size-4" />
+              ) : (
+                <UserIcon />
+              )}
+            </SidebarIconButton>
+          </Tooltip>
+        )}
+      </div>
       <Dropdown
         isOpen={isOpen}
-        anchorRef={buttonRef}
-        anchorAlign="end"
+        anchorRef={triggerRef}
+        anchorSide="top"
+        anchorAlign="start"
         onClose={() => setIsOpen(false)}
         className="w-fit min-w-64 max-w-72"
         header={
@@ -287,7 +313,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
                   <div className="truncate text-subtle-foreground">{accountDetail}</div>
                 ) : null}
               </div>
-              <Badge variant="muted" size="compact" className="shrink-0">
+              <Badge variant="muted" className="shrink-0">
                 {planLabel}
               </Badge>
             </div>
@@ -297,4 +323,4 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
       />
     </>
   );
-};
+});
