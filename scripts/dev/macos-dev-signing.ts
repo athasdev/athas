@@ -20,7 +20,7 @@ export function withMacosDevSigning(
 
   return {
     ...environment,
-    [`CARGO_TARGET_${target}_RUNNER`]: path.join(repoRoot, "scripts/dev/macos-dev-runner.ts"),
+    [`CARGO_TARGET_${target}_RUNNER`]: path.join(repoRoot, "scripts/dev/macos-dev-runner.zsh"),
     ATHAS_DEV_CODE_SIGN_IDENTIFIER: options.identifier,
   };
 }

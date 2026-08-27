@@ -21,7 +21,7 @@ describe("withMacosDevSigning", () => {
       ATHAS_DEV_CODE_SIGN_IDENTIFIER: "com.code.athas.preview",
       CARGO_TARGET_AARCH64_APPLE_DARWIN_RUNNER: path.join(
         repoRoot,
-        "scripts/dev/macos-dev-runner.ts",
+        "scripts/dev/macos-dev-runner.zsh",
       ),
     });
   });
@@ -38,7 +38,7 @@ describe("withMacosDevSigning", () => {
     );
 
     expect(environment.CARGO_TARGET_X86_64_APPLE_DARWIN_RUNNER).toBe(
-      path.join(repoRoot, "scripts/dev/macos-dev-runner.ts"),
+      path.join(repoRoot, "scripts/dev/macos-dev-runner.zsh"),
     );
   });
 

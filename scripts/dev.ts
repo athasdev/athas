@@ -6,20 +6,38 @@ const children = new Set<ReturnType<typeof Bun.spawn>>();
 
 let stopping = false;
 
-function stop() {
-  if (stopping) return;
-  stopping = true;
-  for (const child of children) child.kill();
+function stopChildProcessTree(child: ReturnType<typeof Bun.spawn>, signal: NodeJS.Signals) {
+  if (process.platform === "win32") {
+    if (child.exitCode !== null) return;
+    Bun.spawnSync(["taskkill", "/pid", String(child.pid), "/t", "/f"], {
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+    return;
+  }
+
+  try {
+    process.kill(-child.pid, signal);
+  } catch {
+    if (child.exitCode === null) child.kill(signal);
+  }
 }
 
-process.on("SIGINT", stop);
-process.on("SIGTERM", stop);
+function stop(signal: NodeJS.Signals = "SIGTERM") {
+  if (stopping) return;
+  stopping = true;
+  for (const child of children) stopChildProcessTree(child, signal);
+}
+
+process.on("SIGINT", () => stop("SIGINT"));
+process.on("SIGTERM", () => stop("SIGTERM"));
 
 let exitCode = 1;
 
 try {
   children.add(
-    Bun.spawn(["bun", "run", "extensions:serve"], {
+    Bun.spawn(["bun", "extensions/tooling/serve-cdn.ts"], {
+      detached: process.platform !== "win32",
       stdin: "inherit",
       stdout: "inherit",
       stderr: "inherit",
@@ -27,6 +45,7 @@ try {
   );
   children.add(
     Bun.spawn(["tauri", "dev", "--config", "src-tauri/tauri.preview.conf.json"], {
+      detached: process.platform !== "win32",
       env: withMacosDevSigning(
         {
           ...process.env,
