@@ -49,6 +49,7 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button } from "@/ui/button";
 import { Card, CardContent } from "@/ui/card";
+import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
 import {
   Dropdown,
@@ -931,6 +932,7 @@ export function CollaborationSidebarView() {
             id: "delete",
             label: "Delete",
             icon: <FileText />,
+            tone: "destructive" as const,
             disabled: !model.canEditNotes,
             onClick: () => void deleteNoteItem(item),
           },
@@ -1497,22 +1499,22 @@ export function CollaborationSidebarView() {
         />
       </SidebarTabBar>
 
-      <Dropdown
+      <ContextMenuPopup
         isOpen={channelsContextMenu.isOpen}
         point={channelsContextMenu.position}
-        items={channelMenuItems}
+        groups={createContextMenuGroups(channelMenuItems)}
         onClose={channelsContextMenu.close}
       />
-      <Dropdown
+      <ContextMenuPopup
         isOpen={participantContextMenu.isOpen}
         point={participantContextMenu.position}
-        items={participantMenuItems}
+        groups={createContextMenuGroups(participantMenuItems)}
         onClose={participantContextMenu.close}
       />
-      <Dropdown
+      <ContextMenuPopup
         isOpen={notesContextMenu.isOpen}
         point={notesContextMenu.position}
-        items={noteMenuItems}
+        groups={createContextMenuGroups(noteMenuItems)}
         onClose={notesContextMenu.close}
       />
 

@@ -18,6 +18,7 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { Checkbox } from "@/ui/checkbox";
+import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import {
   Dropdown,
   DropdownMenu,
@@ -705,10 +706,10 @@ const GitStatusPanel = ({
         <EmptyState layout="sidebar" tone="success" icon={<Check />} title="Working tree clean" />
       )}
 
-      <Dropdown
+      <ContextMenuPopup
         isOpen={contextMenu.isOpen}
         point={contextMenu.position}
-        items={
+        groups={createContextMenuGroups(
           contextMenuData
             ? [
                 ...(onOpenFile
@@ -750,13 +751,14 @@ const GitStatusPanel = ({
                         id: "discard-file",
                         label: "Discard Changes",
                         icon: <Trash2 />,
+                        tone: "destructive" as const,
                         onClick: () => void handleDiscardFile(contextMenuData.filePath),
                       },
                     ]
                   : []),
               ]
-            : []
-        }
+            : [],
+        )}
         onClose={contextMenu.close}
       />
 

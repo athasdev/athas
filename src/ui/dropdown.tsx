@@ -99,7 +99,6 @@ interface MenuItemsListProps {
   onItemSelect?: () => void;
   className?: string;
   focusIndex?: number;
-  showIcons?: boolean;
 }
 
 export function MenuItemsList({
@@ -107,7 +106,6 @@ export function MenuItemsList({
   onItemSelect,
   className,
   focusIndex = -1,
-  showIcons = true,
 }: MenuItemsListProps) {
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -118,10 +116,26 @@ export function MenuItemsList({
   }, [focusIndex]);
 
   let selectableIdx = -1;
+  const iconVisibility = items.map(() => false);
+  let groupStart = 0;
+
+  for (let index = 0; index <= items.length; index++) {
+    const item = items[index];
+    if (item && !item.separator) continue;
+
+    const groupItems = items.slice(groupStart, index).filter(isMenuActionItem);
+    const showGroupIcons = groupItems.length > 0 && groupItems.every((entry) => entry.icon);
+    if (showGroupIcons) {
+      for (let groupIndex = groupStart; groupIndex < index; groupIndex++) {
+        iconVisibility[groupIndex] = true;
+      }
+    }
+    groupStart = index + 1;
+  }
 
   return (
     <div className={className}>
-      {items.map((item) => {
+      {items.map((item, itemIndex) => {
         if (item.separator) {
           return <div key={item.id} className={menuSeparatorVariants()} />;
         }
@@ -157,7 +171,7 @@ export function MenuItemsList({
             )}
             aria-current={item.selected ? "true" : undefined}
           >
-            {showIcons && item.icon && (
+            {iconVisibility[itemIndex] && item.icon && (
               <span className="grid size-4 shrink-0 place-items-center [&>svg]:block [&>svg]:size-4">
                 {item.icon}
               </span>
@@ -204,7 +218,6 @@ interface DropdownBaseProps {
   animated?: boolean;
   matchAnchorWidth?: boolean;
   anchorMinWidth?: number;
-  showIcons?: boolean;
 }
 
 interface AnchorPositioning {
@@ -295,7 +308,6 @@ export function Dropdown(props: DropdownProps) {
     animated = true,
     matchAnchorWidth = false,
     anchorMinWidth = 0,
-    showIcons = true,
   } = props;
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -651,7 +663,6 @@ export function Dropdown(props: DropdownProps) {
             items={getFilteredItems()}
             focusIndex={focusIndex}
             onItemSelect={closeOnSelect ? onClose : undefined}
-            showIcons={showIcons}
           />
         )}
         {hasSections &&
@@ -662,7 +673,6 @@ export function Dropdown(props: DropdownProps) {
               <MenuItemsList
                 items={section.items}
                 onItemSelect={closeOnSelect ? onClose : undefined}
-                showIcons={showIcons}
               />
             </div>
           ))}

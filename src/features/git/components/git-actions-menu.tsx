@@ -206,7 +206,6 @@ const GitActionsMenu = ({
           disabled: isSelectingRepository,
           onClick: () => void handleSelectRepository(),
         },
-        { id: "sep-1", separator: true },
         {
           id: "manage-branches",
           label: "Manage Branches",
@@ -227,7 +226,6 @@ const GitActionsMenu = ({
           disabled: isLoading,
           onClick: handlePush,
         },
-        { id: "sep-2", separator: true },
         {
           id: "pull",
           label: "Pull Changes",
@@ -261,7 +259,6 @@ const GitActionsMenu = ({
           icon: <Archive />,
           onClick: handleViewStashes,
         },
-        { id: "sep-4", separator: true },
         {
           id: "refresh",
           label: "Refresh Status",
@@ -269,7 +266,6 @@ const GitActionsMenu = ({
           disabled: isRefreshing,
           onClick: () => void handleRefresh(),
         },
-        { id: "sep-5", separator: true },
         {
           id: "discard-all",
           label: "Discard All Changes",

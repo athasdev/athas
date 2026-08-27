@@ -164,8 +164,6 @@ export default function Breadcrumb({
           anchorAlign="end"
           onClose={() => setIsActionsMenuOpen(false)}
           items={actionMenuItems}
-          className="min-w-45 rounded-lg"
-          showIcons={false}
         />
       </>
     ) : null;
@@ -173,7 +171,7 @@ export default function Breadcrumb({
   return (
     <PaneContentHeader
       separated={false}
-      className="select-none bg-editor"
+      className="select-none"
       context={
         <div className="font-sans flex min-w-0 items-center gap-1 text-subtle-foreground ui-text-sm">
           {showPath && showBreadcrumbPath ? (

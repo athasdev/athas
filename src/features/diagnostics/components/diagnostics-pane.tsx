@@ -21,6 +21,7 @@ import { writeClipboardText } from "@/utils/clipboard";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
+import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import {
   Empty,
@@ -785,7 +786,6 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
     }
 
     if (hasFilters) {
-      items.push({ id: "sep-reset", separator: true });
       items.push({
         id: "reset-filters",
         label: "Reset All Filters",
@@ -1000,10 +1000,10 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
         </FileResultsWorkspace>
       </div>
 
-      <Dropdown
+      <ContextMenuPopup
         isOpen={diagnosticContextMenu.isOpen}
         point={diagnosticContextMenu.position}
-        items={diagnosticContextMenuItems}
+        groups={createContextMenuGroups(diagnosticContextMenuItems)}
         onClose={diagnosticContextMenu.close}
       />
 

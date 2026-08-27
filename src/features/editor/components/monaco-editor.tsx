@@ -43,13 +43,13 @@ import { frontendTrace } from "@/utils/frontend-trace";
 import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
 import { getRelativePath, pathStartsWithRoot } from "@/utils/path-helpers";
 import EditorContextMenu from "../context-menu/context-menu";
+import { toggleCaseText } from "../utils/text-operations";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import type { EditorContentChangeOptions, Position, Range } from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { getLanguageIdFromPath } from "../utils/language-id";
-import { toggleCaseText } from "../utils/text-operations";
 import { editorAPI } from "../extensions/api";
 import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import { syncContainedEditorFontOptions } from "../engines/monaco/contained-editors";
@@ -450,18 +450,6 @@ export function MonacoEditor({
   const executeEditorCommand = useCallback((commandId: string) => {
     void keymapRegistry.executeCommand(commandId);
   }, []);
-
-  const triggerMonacoAction = useCallback(
-    (actionId: string) => {
-      const editor = editorRef.current;
-      if (!editor) return;
-
-      editor.trigger("athas-context-menu", actionId, null);
-      editor.focus();
-      syncCursorAndSelection();
-    },
-    [syncCursorAndSelection],
-  );
 
   const toggleMonacoSelectionCase = useCallback(() => {
     const editor = editorRef.current;
@@ -1478,7 +1466,7 @@ export function MonacoEditor({
   return (
     <>
       <div
-        className={`monaco-editor-shell absolute inset-0 min-h-0 bg-editor ${className ?? ""}`}
+        className={`monaco-editor-shell absolute inset-0 min-h-0 bg-background ${className ?? ""}`}
         style={shellStyle}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
@@ -1529,13 +1517,6 @@ export function MonacoEditor({
             }
             onFind={() => executeEditorCommand("workbench.showFind")}
             onGoToLine={() => executeEditorCommand("editor.goToLine")}
-            onDuplicate={canEdit ? () => executeEditorCommand("editor.duplicateLine") : undefined}
-            onSelectNextOccurrence={() => executeEditorCommand("editor.selectNextOccurrence")}
-            onSelectAllOccurrences={() => executeEditorCommand("editor.selectAllOccurrences")}
-            onIndent={canEdit ? () => triggerMonacoAction("editor.action.indentLines") : undefined}
-            onOutdent={
-              canEdit ? () => triggerMonacoAction("editor.action.outdentLines") : undefined
-            }
             onToggleComment={
               canEdit ? () => executeEditorCommand("editor.toggleComment") : undefined
             }
@@ -1544,17 +1525,10 @@ export function MonacoEditor({
               canEdit ? () => executeEditorCommand("editor.formatSelection") : undefined
             }
             onToggleCase={canEdit ? toggleMonacoSelectionCase : undefined}
-            onMoveLineUp={canEdit ? () => executeEditorCommand("editor.moveLineUp") : undefined}
-            onMoveLineDown={canEdit ? () => executeEditorCommand("editor.moveLineDown") : undefined}
             onGoToDefinition={() => executeEditorCommand("editor.goToDefinition")}
-            onGoToTypeDefinition={() => executeEditorCommand("editor.goToTypeDefinition")}
             onFindReferences={() => executeEditorCommand("editor.goToReferences")}
             onRenameSymbol={canEdit ? () => executeEditorCommand("editor.renameSymbol") : undefined}
             onQuickFix={canEdit ? () => executeEditorCommand("editor.quickFix") : undefined}
-            onShowHover={() => executeEditorCommand("editor.showHover")}
-            onTriggerSuggest={
-              canEdit ? () => executeEditorCommand("editor.triggerSuggest") : undefined
-            }
           />,
           document.body,
         )}

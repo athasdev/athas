@@ -34,6 +34,7 @@ import Command, {
   CommandItemBadge,
   CommandList,
 } from "@/ui/command";
+import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { ItemGroup } from "@/ui/item";
 import Tooltip from "@/ui/tooltip";
@@ -132,12 +133,14 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
         id: "delete-notification",
         label: "Delete",
         icon: <Trash />,
+        tone: "destructive",
         onClick: () => removeNotification(notification.id),
       },
       {
         id: "clear-all",
         label: "Clear All",
         icon: <Trash />,
+        tone: "destructive",
         onClick: () => clearNotifications(),
       },
     ];
@@ -156,6 +159,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
         id: "clear-all",
         label: "Clear All",
         icon: <Trash />,
+        tone: "destructive",
         disabled: notifications.length === 0,
         onClick: () => clearNotifications(),
       },
@@ -441,19 +445,17 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
           )}
         </div>
       </Command>
-      <Dropdown
+      <ContextMenuPopup
         isOpen={notificationContextMenu.isOpen}
         point={notificationContextMenu.position}
-        items={notificationContextMenuItems}
+        groups={createContextMenuGroups(notificationContextMenuItems)}
         onClose={notificationContextMenu.close}
-        className="w-fit min-w-fit"
       />
-      <Dropdown
+      <ContextMenuPopup
         isOpen={panelContextMenu.isOpen}
         point={panelContextMenu.position}
-        items={panelContextMenuItems}
+        groups={createContextMenuGroups(panelContextMenuItems)}
         onClose={panelContextMenu.close}
-        className="w-fit min-w-fit"
       />
       <Dropdown
         isOpen={isFilterMenuOpen}

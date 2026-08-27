@@ -1,6 +1,7 @@
 import { PencilSimpleIcon as EditIcon, PlusIcon, TrashIcon } from "@/ui/icons";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { Dropdown, menuSeparator, type MenuItem } from "@/ui/dropdown";
+import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
+import { menuSeparator, type MenuItem } from "@/ui/dropdown";
 import type { DatabaseRow } from "../types/common.types";
 
 export const SqlTableMenu = ({
@@ -40,18 +41,19 @@ export const SqlTableMenu = ({
           id: "delete-table",
           label: deleteLabel,
           icon: <TrashIcon />,
+          tone: "destructive",
           onClick: () => onDeleteTable(databaseTableMenu.tableName),
         },
       ]
     : [];
 
   return (
-    <Dropdown
+    <ContextMenuPopup
       isOpen={!!databaseTableMenu}
       point={
         databaseTableMenu ? { x: databaseTableMenu.x, y: databaseTableMenu.y } : { x: 0, y: 0 }
       }
-      items={items}
+      groups={createContextMenuGroups(items)}
       onClose={onCloseMenu}
     />
   );
@@ -79,16 +81,17 @@ export const SqlRowMenu = ({
           id: "delete-row",
           label: "Delete Row",
           icon: <TrashIcon />,
+          tone: "destructive",
           onClick: () => onDeleteRow(databaseRowMenu.tableName, databaseRowMenu.rowData),
         },
       ]
     : [];
 
   return (
-    <Dropdown
+    <ContextMenuPopup
       isOpen={!!databaseRowMenu}
       point={databaseRowMenu ? { x: databaseRowMenu.x, y: databaseRowMenu.y } : { x: 0, y: 0 }}
-      items={items}
+      groups={createContextMenuGroups(items)}
       onClose={onCloseMenu}
     />
   );

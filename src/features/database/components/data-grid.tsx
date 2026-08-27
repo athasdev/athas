@@ -14,7 +14,8 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
+import type { MenuItem } from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
@@ -620,10 +621,10 @@ export default function DataGrid({
         </table>
       </div>
 
-      <Dropdown
+      <ContextMenuPopup
         isOpen={!!cellMenu}
         point={cellMenu?.position ?? { x: 0, y: 0 }}
-        items={cellMenuItems}
+        groups={createContextMenuGroups(cellMenuItems)}
         onClose={closeCellMenu}
       />
     </div>
