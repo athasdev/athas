@@ -1,4 +1,9 @@
-import type { CustomViewDefinition, ViewTable } from "@/features/views/types/view.types";
+import type {
+  CustomViewDefinition,
+  ViewLayout,
+  ViewPresentation,
+  ViewTable,
+} from "@/features/views/types/view.types";
 
 const STORAGE_PREFIX = "athas-views:";
 const LEGACY_STORAGE_PREFIX = "athas-admin-data-sources:";
@@ -91,6 +96,31 @@ function normalizeCell(value: unknown): string | number | boolean | null {
   return JSON.stringify(value);
 }
 
+function normalizePresentation(value: unknown): ViewPresentation | undefined {
+  if (!isJsonRecord(value)) return undefined;
+
+  const layout: ViewLayout | null =
+    value.layout === "table" || value.layout === "list" || value.layout === "board"
+      ? value.layout
+      : null;
+  if (!layout) return undefined;
+
+  return {
+    layout,
+    ...(value.groupBy === null
+      ? { groupBy: null }
+      : typeof value.groupBy === "string" && value.groupBy
+        ? { groupBy: value.groupBy }
+        : {}),
+    ...(typeof value.titleColumn === "string" && value.titleColumn
+      ? { titleColumn: value.titleColumn }
+      : {}),
+    ...(typeof value.descriptionColumn === "string" && value.descriptionColumn
+      ? { descriptionColumn: value.descriptionColumn }
+      : {}),
+  };
+}
+
 export function jsonToViewTable(payload: unknown, rowsPath = ""): ViewTable {
   const selectedValues = selectRowsValue(payload, rowsPath);
   const records = selectedValues.flatMap((value) => (Array.isArray(value) ? value : [value]));
@@ -133,12 +163,14 @@ function normalizeView(value: unknown): CustomViewDefinition | null {
   }
 
   if (value.kind === "github" && typeof value.endpointPath === "string") {
+    const presentation = normalizePresentation(value.presentation);
     return {
       id: value.id,
       name: value.name,
       rowsPath: value.rowsPath,
       kind: "github",
       endpointPath: value.endpointPath,
+      ...(presentation ? { presentation } : {}),
     };
   }
 
@@ -147,6 +179,7 @@ function normalizeView(value: unknown): CustomViewDefinition | null {
     typeof value.url === "string" &&
     (value.authentication === "none" || value.authentication === "github")
   ) {
+    const presentation = normalizePresentation(value.presentation);
     return {
       id: value.id,
       name: value.name,
@@ -154,6 +187,7 @@ function normalizeView(value: unknown): CustomViewDefinition | null {
       kind: "json",
       url: value.url,
       authentication: value.authentication,
+      ...(presentation ? { presentation } : {}),
     };
   }
 

@@ -81,6 +81,22 @@ describe("custom view model", () => {
     expect(getViewsStorageKey("/projects/athas")).not.toBe(getViewsStorageKey("/projects/other"));
   });
 
+  it("persists view layout and grouping", () => {
+    const storage = createStorage();
+    const configuredView: CustomViewDefinition = {
+      id: "issues",
+      name: "Issues",
+      rowsPath: "",
+      kind: "github",
+      endpointPath: "/issues?state=all",
+      presentation: { layout: "board", groupBy: "state", titleColumn: "title" },
+    };
+
+    saveViews("/projects/athas", [configuredView], storage);
+
+    expect(loadViews("/projects/athas", storage)).toEqual([configuredView]);
+  });
+
   it("ignores malformed persisted views", () => {
     const storage = createStorage();
     storage.setItem(getViewsStorageKey("/projects/athas"), "not-json");

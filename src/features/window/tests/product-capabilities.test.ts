@@ -21,6 +21,7 @@ describe("product capabilities", () => {
         hostedAi: false,
         settingsSync: true,
         cloudWorkspaces: true,
+        views: true,
         collaboration: false,
         enterprisePolicy: true,
       },
@@ -28,6 +29,7 @@ describe("product capabilities", () => {
 
     expect(hasProductCapability(value, "intelligence")).toBe(false);
     expect(hasProductCapability(value, "settingsSync")).toBe(true);
+    expect(hasProductCapability(value, "views")).toBe(true);
     expect(hasProductCapability(value, "enterprisePolicy")).toBe(true);
   });
 

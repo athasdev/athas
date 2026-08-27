@@ -3,6 +3,7 @@ import { normalizeItemOrder } from "@/features/layout/config/item-order";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useProFeature } from "@/features/window/hooks/use-pro-feature";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import {
@@ -19,7 +20,7 @@ import {
   LightningIcon,
   MagnifyingGlassIcon,
   NodesIcon,
-  SparkleIcon,
+  StackIcon as LayersIcon,
 } from "@/ui/icons";
 
 export interface ActivityNavigationSubmenuItem {
@@ -76,6 +77,7 @@ export function useActivityNavigationItems({
   isExtensionsActive,
 }: ActivityNavigationItemOptions) {
   const extensionViews = useExtensionViews();
+  const { hasViews } = useProFeature();
   const sidebarActivityItemsOrder = useSettingsStore(
     (state) => state.settings.sidebarActivityItemsOrder,
   );
@@ -227,11 +229,11 @@ export function useActivityNavigationItems({
         : []),
       {
         id: "views",
-        label: "Views",
-        icon: <SparkleIcon />,
+        label: hasViews ? "Views" : "Views · Pro",
+        icon: <LayersIcon />,
         active: isPrimarySidebarItemActive && activeSidebarView === "views",
         onClick: () => onViewChange("views"),
-        ariaLabel: "Views",
+        ariaLabel: hasViews ? "Views" : "Views, Pro feature",
       },
       ...(coreFeatures.docker
         ? [
@@ -272,6 +274,7 @@ export function useActivityNavigationItems({
       coreFeatures.github,
       coreFeatures.search,
       extensionViews,
+      hasViews,
       isExtensionsActive,
       isGitHubPRsViewActive,
       isGitViewActive,

@@ -31,6 +31,16 @@ describe("custom view intelligence", () => {
     });
   });
 
+  it("accepts a generated board presentation", () => {
+    expect(
+      parseGeneratedViewPlan(
+        '{"kind":"github","name":"Issues","endpointPath":"/issues?state=all","rowsPath":"","presentation":{"layout":"board","groupBy":"state","titleColumn":"title"}}',
+      ),
+    ).toMatchObject({
+      presentation: { layout: "board", groupBy: "state", titleColumn: "title" },
+    });
+  });
+
   it("rejects plans that require manual configuration", () => {
     expect(() =>
       parseGeneratedViewPlan('{"kind":"manual","reason":"Use a custom JSON endpoint"}'),

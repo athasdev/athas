@@ -7,7 +7,7 @@ import {
   generateCustomView,
   createKnownGitHubView,
 } from "@/features/views/services/view-generator";
-import type { CustomViewDefinition } from "@/features/views/types/view.types";
+import type { CustomViewDefinition, ViewLayout } from "@/features/views/types/view.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -50,6 +50,8 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
     view?.kind === "github" ? view.endpointPath : (view?.url ?? ""),
   );
   const [rowsPath, setRowsPath] = useState(view?.rowsPath ?? "");
+  const [layout, setLayout] = useState<ViewLayout>(view?.presentation?.layout ?? "table");
+  const [groupBy, setGroupBy] = useState(view?.presentation?.groupBy ?? "");
   const [useGitHubAccount, setUseGitHubAccount] = useState(
     view?.kind === "json" && view.authentication === "github",
   );
@@ -149,6 +151,10 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
         id: view?.id ?? crypto.randomUUID(),
         name: trimmedName,
         rowsPath: rowsPath.trim(),
+        presentation: {
+          layout,
+          ...(groupBy.trim() ? { groupBy: groupBy.trim() } : {}),
+        },
       };
       const nextView: CustomViewDefinition =
         kind === "github"
@@ -319,6 +325,29 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
               Optional. Use dot paths and [] to expand arrays.
             </span>
           </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
+              Display as
+              <Select
+                value={layout}
+                onChange={(value) => setLayout(value as ViewLayout)}
+                options={[
+                  { value: "table", label: "Table" },
+                  { value: "list", label: "List" },
+                  { value: "board", label: "Board" },
+                ]}
+              />
+            </label>
+            <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
+              Group by column
+              <Input
+                value={groupBy}
+                onChange={(event) => setGroupBy(event.target.value)}
+                placeholder="status"
+              />
+              <span className="text-subtle-foreground">Optional for table and list views.</span>
+            </label>
+          </div>
           {canUseGitHubAccount ? (
             <label className="flex items-center gap-2 font-sans ui-text-sm text-foreground">
               <Checkbox checked={useGitHubAccount} onCheckedChange={setUseGitHubAccount} />

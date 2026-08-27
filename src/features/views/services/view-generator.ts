@@ -8,6 +8,33 @@ function createView(plan: GeneratedViewPlan): CustomViewDefinition {
   return { id: crypto.randomUUID(), ...plan };
 }
 
+function parsePresentation(value: unknown): CustomViewDefinition["presentation"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const presentation = value as Record<string, unknown>;
+  if (
+    presentation.layout !== "table" &&
+    presentation.layout !== "list" &&
+    presentation.layout !== "board"
+  ) {
+    return undefined;
+  }
+
+  return {
+    layout: presentation.layout,
+    ...(presentation.groupBy === null
+      ? { groupBy: null }
+      : typeof presentation.groupBy === "string"
+        ? { groupBy: presentation.groupBy.trim() }
+        : {}),
+    ...(typeof presentation.titleColumn === "string"
+      ? { titleColumn: presentation.titleColumn.trim() }
+      : {}),
+    ...(typeof presentation.descriptionColumn === "string"
+      ? { descriptionColumn: presentation.descriptionColumn.trim() }
+      : {}),
+  };
+}
+
 export function createKnownGitHubView(request: string): CustomViewDefinition | null {
   const normalized = request.toLocaleLowerCase();
   const mentionsReleases = /release|releases|sürüm|yayın/.test(normalized);
@@ -28,6 +55,7 @@ export function createKnownGitHubView(request: string): CustomViewDefinition | n
       name: "Releases",
       endpointPath: "/releases?per_page=100",
       rowsPath: "",
+      presentation: { layout: "list", titleColumn: "tag_name", descriptionColumn: "name" },
     });
   }
 
@@ -37,6 +65,7 @@ export function createKnownGitHubView(request: string): CustomViewDefinition | n
       name: "Workflow runs",
       endpointPath: "/actions/runs?per_page=100",
       rowsPath: "workflow_runs",
+      presentation: { layout: "board", groupBy: "status", titleColumn: "name" },
     });
   }
 
@@ -46,6 +75,7 @@ export function createKnownGitHubView(request: string): CustomViewDefinition | n
       name: "Pull requests",
       endpointPath: "/pulls?state=all&per_page=100",
       rowsPath: "",
+      presentation: { layout: "board", groupBy: "state", titleColumn: "title" },
     });
   }
 
@@ -55,6 +85,7 @@ export function createKnownGitHubView(request: string): CustomViewDefinition | n
       name: "Issues",
       endpointPath: "/issues?state=all&per_page=100",
       rowsPath: "",
+      presentation: { layout: "list", groupBy: "state", titleColumn: "title" },
     });
   }
 
@@ -87,12 +118,14 @@ export function parseGeneratedViewPlan(value: string): CustomViewDefinition {
   if (!name || !endpointPath.startsWith("/") || endpointPath.startsWith("//")) {
     throw new Error("Athas Intelligence returned an invalid GitHub view");
   }
+  const presentation = parsePresentation(parsed.presentation);
 
   return createView({
     kind: "github",
     name,
     endpointPath,
     rowsPath: parsed.rowsPath.trim(),
+    ...(presentation ? { presentation } : {}),
   });
 }
 
@@ -110,7 +143,9 @@ export async function generateCustomView(options: {
       afterSelection: "",
       instruction: `Generate a read-only custom view for the current project's GitHub repository.
 Return only one JSON object with these fields:
-{"kind":"github","name":"Short view name","endpointPath":"/repository-relative GitHub REST API path","rowsPath":"optional dot path with [] for arrays"}
+{"kind":"github","name":"Short view name","endpointPath":"/repository-relative GitHub REST API path","rowsPath":"optional dot path with [] for arrays","presentation":{"layout":"table","groupBy":"optional column","titleColumn":"optional column","descriptionColumn":"optional column"}}
+
+Set presentation.layout to table, list, or board. Prefer board for status-driven work, list for content with a clear title, and table for numeric or highly structured data. Only use column names returned by the endpoint.
 
 The endpoint path is always relative to /repos/${repository.owner}/${repository.repo}. Never return a host, full URL, token, GraphQL request, mutation, or endpoint for another repository. Use per_page=100 for list endpoints. For release download statistics use /releases?per_page=100 with rowsPath assets[]. For workflow runs use /actions/runs?per_page=100 with rowsPath workflow_runs.
 

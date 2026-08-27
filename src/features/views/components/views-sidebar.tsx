@@ -3,8 +3,10 @@ import { getViewBufferPath } from "@/features/views/lib/view-buffer";
 import { useViewsStore } from "@/features/views/stores/views.store";
 import type { CustomViewDefinition } from "@/features/views/types/view.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useProFeature } from "@/features/window/hooks/use-pro-feature";
+import { ProBadge } from "@/features/window/components/pro-badge";
 import { EmptyState } from "@/ui/empty";
-import { PlusIcon, SquaresFourIcon, TrashIcon } from "@/ui/icons";
+import { PlusIcon, StackIcon, TrashIcon } from "@/ui/icons";
 import {
   SidebarIconButton,
   SidebarListActionRow,
@@ -12,12 +14,14 @@ import {
   SidebarScrollArea,
   SidebarWorkspace,
 } from "@/ui/sidebar";
+import { ViewsProState } from "./views-pro-state";
 
 interface ViewsSidebarProps {
   projectPath: string | null;
 }
 
 export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
+  const { hasViews } = useProFeature();
   const storedViews = useViewsStore((state) =>
     projectPath ? state.viewsByProject[projectPath] : undefined,
   );
@@ -33,11 +37,11 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
   );
 
   useEffect(() => {
-    if (projectPath) viewActions.loadProject(projectPath);
-  }, [viewActions, projectPath]);
+    if (projectPath && hasViews) viewActions.loadProject(projectPath);
+  }, [hasViews, viewActions, projectPath]);
 
   const openView = (view?: CustomViewDefinition) => {
-    if (!projectPath) return;
+    if (!projectPath || !hasViews) return;
     useBufferStore.getState().actions.openContent({
       type: "customView",
       projectPath,
@@ -62,18 +66,24 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
     <SidebarWorkspace
       title="Views"
       actions={
-        <SidebarIconButton
-          tooltip="Create View"
-          tooltipSide="bottom"
-          aria-label="Create View"
-          disabled={!projectPath}
-          onClick={() => openView()}
-        >
-          <PlusIcon />
-        </SidebarIconButton>
+        hasViews ? (
+          <SidebarIconButton
+            tooltip="Create View"
+            tooltipSide="bottom"
+            aria-label="Create View"
+            disabled={!projectPath}
+            onClick={() => openView()}
+          >
+            <PlusIcon />
+          </SidebarIconButton>
+        ) : (
+          <ProBadge />
+        )
       }
     >
-      {!projectPath ? (
+      {!hasViews ? (
+        <ViewsProState layout="sidebar" />
+      ) : !projectPath ? (
         <EmptyState layout="sidebar" message="Open a project to manage custom views." />
       ) : !hasLoadedProject ? null : views.length === 0 ? (
         <EmptyState
@@ -103,7 +113,7 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
                 ]}
               >
                 <SidebarListItem
-                  leading={<SquaresFourIcon />}
+                  leading={<StackIcon />}
                   description={view.kind === "github" ? "GitHub view" : "JSON view"}
                   active={
                     activeBuffer?.type === "customView" &&

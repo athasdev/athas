@@ -35,6 +35,7 @@ export type ProductCapability =
   | "hostedAi"
   | "settingsSync"
   | "cloudWorkspaces"
+  | "views"
   | "collaboration"
   | "enterprisePolicy";
 
@@ -316,6 +317,8 @@ function parseSubscriptionInfoResponse(payload: unknown): SubscriptionInfo | nul
         typeof capabilities.cloudWorkspaces === "boolean"
           ? capabilities.cloudWorkspaces
           : payload.status === "pro",
+      views:
+        typeof capabilities.views === "boolean" ? capabilities.views : payload.status === "pro",
       collaboration:
         typeof capabilities.collaboration === "boolean"
           ? capabilities.collaboration
