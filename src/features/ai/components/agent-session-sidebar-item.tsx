@@ -97,7 +97,6 @@ export function AgentSessionSidebarItem({
           render={
             <SidebarListItem
               active={active}
-              appearance="activity"
               leading={<ProviderIcon providerId={providerIconId} size={16} />}
             >
               {title}

@@ -23,7 +23,8 @@ describe("activity navigation", () => {
 
     expect(markup).toContain('data-slot="activity-rail-navigation"');
     expect(markup).toContain('aria-label="Files"');
-    expect(markup).toContain('aria-hidden="true"');
+    expect(markup).toContain('data-slot="button"');
+    expect(markup).not.toContain('data-slot="sidebar-list-item"');
   });
 
   it("keeps labels visible in the expanded activity sidebar", () => {
@@ -31,6 +32,6 @@ describe("activity navigation", () => {
 
     expect(markup).toContain('data-slot="activity-sidebar-navigation"');
     expect(markup).toContain(">Files</span>");
-    expect(markup).not.toContain('aria-hidden="true"');
+    expect(markup).toContain('data-slot="sidebar-list-item"');
   });
 });

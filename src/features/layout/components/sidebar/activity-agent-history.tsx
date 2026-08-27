@@ -9,7 +9,7 @@ import type { Chat } from "@/features/ai/types/ai-chat.types";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { getProjectNameFromPath } from "@/features/layout/components/sidebar/project-glyph";
-import { useActivitySidebarSection } from "@/features/layout/hooks/use-activity-sidebar-section";
+import { ActivitySidebarSection } from "@/features/layout/components/sidebar/activity-sidebar-section";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   ContextMenu,
@@ -20,13 +20,7 @@ import {
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { DotsThreeIcon, PencilSimpleLineIcon, PlusIcon, SparkleIcon, TrashIcon } from "@/ui/icons";
 import { InlineRenameInput } from "@/ui/input";
-import {
-  SidebarIconButton,
-  SidebarListEditor,
-  SidebarListItem,
-  SidebarSectionHeader,
-  SidebarSectionStack,
-} from "@/ui/sidebar";
+import { SidebarIconButton, SidebarListEditor, SidebarListItem } from "@/ui/sidebar";
 
 const AGENT_HISTORY_INLINE_LIMIT = 5;
 
@@ -49,12 +43,7 @@ function NewAgentRow() {
   const handleNewAgent = useNewAgentAction();
 
   return (
-    <SidebarListItem
-      appearance="activity"
-      leading={<SparkleIcon />}
-      onClick={handleNewAgent}
-      aria-label="New Agent"
-    >
+    <SidebarListItem leading={<SparkleIcon />} onClick={handleNewAgent} aria-label="New Agent">
       New Agent
     </SidebarListItem>
   );
@@ -92,10 +81,7 @@ export function ActivityAgentRow({
 
   if (isRenaming) {
     return (
-      <SidebarListEditor
-        appearance="activity"
-        leading={<ProviderIcon providerId={chat.agentId || "custom"} size={16} />}
-      >
+      <SidebarListEditor leading={<ProviderIcon providerId={chat.agentId || "custom"} size={16} />}>
         <InlineRenameInput
           className="select-text"
           value={renameValue}
@@ -173,7 +159,6 @@ export function ActivityAgentHistory({ workspacePath }: { workspacePath: string 
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
   const currentBranch = useGitStore((state) => state.gitStatus?.branch ?? null);
-  const { isCollapsed, toggleCollapsed } = useActivitySidebarSection("agents");
   const [olderAgentsMenu, setOlderAgentsMenu] = useState({
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -209,50 +194,39 @@ export function ActivityAgentHistory({ workspacePath }: { workspacePath: string 
   );
 
   return (
-    <SidebarSectionStack>
-      <SidebarSectionHeader
-        expanded={!isCollapsed}
-        onToggle={toggleCollapsed}
-        action={visibleChats.length > 0 ? <NewAgentIconButton /> : undefined}
-      >
-        Agents
-      </SidebarSectionHeader>
-      {!isCollapsed ? (
-        <>
-          {visibleChats.length === 0 ? <NewAgentRow /> : null}
-          {visibleChats.map((chat) => (
-            <ActivityAgentRow
-              key={chat.id}
-              chat={chat}
-              active={chat.id === currentChatId}
-              aiProviderId={aiProviderId}
-              aiModelId={aiModelId}
-              currentBranch={currentBranch}
-              workspacePath={workspacePath}
-              onOpen={handleOpenChat}
-              onUpdateTitle={updateChatTitle}
-              onPinChange={setChatPinned}
-              onArchive={(chatId) => setChatArchived(chatId, true)}
-              onDelete={deleteChat}
-            />
-          ))}
-          {olderChats.length > 0 ? (
-            <SidebarListItem
-              appearance="activity"
-              leading={<DotsThreeIcon />}
-              onClick={handleShowMoreAgents}
-            >
-              More
-            </SidebarListItem>
-          ) : null}
-          <Dropdown
-            isOpen={olderAgentsMenu.isOpen}
-            point={olderAgentsMenu.position}
-            items={olderAgentMenuItems}
-            onClose={() => setOlderAgentsMenu((current) => ({ ...current, isOpen: false }))}
-          />
-        </>
+    <ActivitySidebarSection
+      id="agents"
+      title="Agents"
+      action={visibleChats.length > 0 ? <NewAgentIconButton /> : undefined}
+    >
+      {visibleChats.length === 0 ? <NewAgentRow /> : null}
+      {visibleChats.map((chat) => (
+        <ActivityAgentRow
+          key={chat.id}
+          chat={chat}
+          active={chat.id === currentChatId}
+          aiProviderId={aiProviderId}
+          aiModelId={aiModelId}
+          currentBranch={currentBranch}
+          workspacePath={workspacePath}
+          onOpen={handleOpenChat}
+          onUpdateTitle={updateChatTitle}
+          onPinChange={setChatPinned}
+          onArchive={(chatId) => setChatArchived(chatId, true)}
+          onDelete={deleteChat}
+        />
+      ))}
+      {olderChats.length > 0 ? (
+        <SidebarListItem leading={<DotsThreeIcon />} onClick={handleShowMoreAgents}>
+          More
+        </SidebarListItem>
       ) : null}
-    </SidebarSectionStack>
+      <Dropdown
+        isOpen={olderAgentsMenu.isOpen}
+        point={olderAgentsMenu.position}
+        items={olderAgentMenuItems}
+        onClose={() => setOlderAgentsMenu((current) => ({ ...current, isOpen: false }))}
+      />
+    </ActivitySidebarSection>
   );
 }

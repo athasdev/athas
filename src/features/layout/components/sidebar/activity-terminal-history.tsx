@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useActivitySidebarSection } from "@/features/layout/hooks/use-activity-sidebar-section";
+import { ActivitySidebarSection } from "@/features/layout/components/sidebar/activity-sidebar-section";
 import {
   useActivityTerminalItems,
   type ActivityTerminalItem,
@@ -19,8 +19,6 @@ import {
   SidebarListActionRow,
   SidebarListEditor,
   SidebarListItem,
-  SidebarSectionHeader,
-  SidebarSectionStack,
 } from "@/ui/sidebar";
 
 export function ActivityTerminalRow({
@@ -37,7 +35,7 @@ export function ActivityTerminalRow({
 
   if (isRenaming) {
     return (
-      <SidebarListEditor appearance="activity" leading={<TerminalIcon />}>
+      <SidebarListEditor leading={<TerminalIcon />}>
         <InlineRenameInput
           className="select-text"
           value={renameValue}
@@ -95,12 +93,7 @@ export function ActivityTerminalRow({
         </SidebarIconButton>,
       ]}
     >
-      <SidebarListItem
-        active={active}
-        appearance="activity"
-        leading={<TerminalIcon />}
-        onClick={onOpen}
-      >
+      <SidebarListItem active={active} leading={<TerminalIcon />} onClick={onOpen}>
         {name}
       </SidebarListItem>
     </SidebarListActionRow>
@@ -108,7 +101,6 @@ export function ActivityTerminalRow({
 }
 
 export function ActivityTerminalHistory() {
-  const { isCollapsed, toggleCollapsed } = useActivitySidebarSection("terminals");
   const terminalItems = useActivityTerminalItems({ pinned: false });
 
   const handleNewTerminal = useCallback(() => {
@@ -119,43 +111,35 @@ export function ActivityTerminalHistory() {
   }, []);
 
   return (
-    <SidebarSectionStack>
-      <SidebarSectionHeader
-        expanded={!isCollapsed}
-        onToggle={toggleCollapsed}
-        action={
-          terminalItems.length > 0 ? (
-            <SidebarIconButton
-              tooltip="New Terminal"
-              tooltipSide="right"
-              commandId="terminal.new"
-              aria-label="New Terminal"
-              onClick={handleNewTerminal}
-            >
-              <PlusIcon />
-            </SidebarIconButton>
-          ) : undefined
-        }
-      >
-        Terminals
-      </SidebarSectionHeader>
-      {!isCollapsed ? (
-        <>
-          {terminalItems.length === 0 ? (
-            <SidebarListItem
-              appearance="activity"
-              leading={<TerminalIcon />}
-              aria-label="New Terminal"
-              onClick={handleNewTerminal}
-            >
-              New Terminal
-            </SidebarListItem>
-          ) : null}
-          {terminalItems.map((terminal) => (
-            <ActivityTerminalRow key={terminal.id} {...terminal} />
-          ))}
-        </>
+    <ActivitySidebarSection
+      id="terminals"
+      title="Terminals"
+      action={
+        terminalItems.length > 0 ? (
+          <SidebarIconButton
+            tooltip="New Terminal"
+            tooltipSide="right"
+            commandId="terminal.new"
+            aria-label="New Terminal"
+            onClick={handleNewTerminal}
+          >
+            <PlusIcon />
+          </SidebarIconButton>
+        ) : undefined
+      }
+    >
+      {terminalItems.length === 0 ? (
+        <SidebarListItem
+          leading={<TerminalIcon />}
+          aria-label="New Terminal"
+          onClick={handleNewTerminal}
+        >
+          New Terminal
+        </SidebarListItem>
       ) : null}
-    </SidebarSectionStack>
+      {terminalItems.map((terminal) => (
+        <ActivityTerminalRow key={terminal.id} {...terminal} />
+      ))}
+    </ActivitySidebarSection>
   );
 }

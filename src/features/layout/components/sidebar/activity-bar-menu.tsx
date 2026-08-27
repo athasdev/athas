@@ -21,7 +21,7 @@ import {
   TerminalIcon,
 } from "@/ui/icons";
 
-interface ActivitySidebarMenuProps {
+interface ActivityBarMenuProps {
   navigationItems: ActivityNavigationItem[];
   hiddenNavigationItemIds: string[];
   coreFeatures: CoreFeaturesState;
@@ -46,7 +46,7 @@ interface ActivitySidebarMenuProps {
   onShowAll: () => void;
 }
 
-export function ActivitySidebarMenu({
+export function ActivityBarMenu({
   navigationItems,
   hiddenNavigationItemIds,
   coreFeatures,
@@ -69,7 +69,7 @@ export function ActivitySidebarMenu({
   onWorktreesVisibleChange,
   onProjectDotsVisibleChange,
   onShowAll,
-}: ActivitySidebarMenuProps) {
+}: ActivityBarMenuProps) {
   return (
     <ContextMenuContent>
       <ContextMenuGroup>

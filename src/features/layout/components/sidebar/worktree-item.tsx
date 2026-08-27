@@ -85,7 +85,6 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
     >
       <SidebarListItem
         active={worktree.is_current}
-        appearance="activity"
         leading={<NodesIcon />}
         title={worktree.path}
         onClick={openWorktree}

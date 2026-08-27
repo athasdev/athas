@@ -8,14 +8,14 @@ import {
 } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
-const DEFAULT_ACTIVITY_SIDEBAR_WIDTH = 160;
-const MIN_ACTIVITY_SIDEBAR_WIDTH = 140;
-const MAX_ACTIVITY_SIDEBAR_WIDTH = 320;
+const DEFAULT_ACTIVITY_BAR_WIDTH = 160;
+const MIN_ACTIVITY_BAR_WIDTH = 140;
+const MAX_ACTIVITY_BAR_WIDTH = 320;
 
-const clampActivitySidebarWidth = (width: number) =>
-  Math.min(MAX_ACTIVITY_SIDEBAR_WIDTH, Math.max(MIN_ACTIVITY_SIDEBAR_WIDTH, Math.round(width)));
+const clampActivityBarWidth = (width: number) =>
+  Math.min(MAX_ACTIVITY_BAR_WIDTH, Math.max(MIN_ACTIVITY_BAR_WIDTH, Math.round(width)));
 
-export function useActivitySidebarResize({
+export function useActivityBarResize({
   expanded,
   contentRef,
   onPreview,
@@ -27,7 +27,7 @@ export function useActivitySidebarResize({
   const configuredWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const [width, setWidth] = useState(() =>
-    clampActivitySidebarWidth(configuredWidth || DEFAULT_ACTIVITY_SIDEBAR_WIDTH),
+    clampActivityBarWidth(configuredWidth || DEFAULT_ACTIVITY_BAR_WIDTH),
   );
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -36,7 +36,7 @@ export function useActivitySidebarResize({
 
   useEffect(() => {
     if (isResizingRef.current) return;
-    setWidth(clampActivitySidebarWidth(configuredWidth || DEFAULT_ACTIVITY_SIDEBAR_WIDTH));
+    setWidth(clampActivityBarWidth(configuredWidth || DEFAULT_ACTIVITY_BAR_WIDTH));
   }, [configuredWidth]);
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export function useActivitySidebarResize({
 
   const previewWidth = useCallback(
     (nextWidth: number) => {
-      const clampedWidth = clampActivitySidebarWidth(nextWidth);
+      const clampedWidth = clampActivityBarWidth(nextWidth);
       const expandedWidth = `calc(${clampedWidth}px + var(--athas-workbench-gap))`;
 
       if (resizeFrameRef.current !== null) cancelAnimationFrame(resizeFrameRef.current);
@@ -80,7 +80,7 @@ export function useActivitySidebarResize({
       document.body.style.userSelect = "none";
 
       const finishResize = (clientX: number) => {
-        const nextWidth = clampActivitySidebarWidth(startWidth + clientX - startX);
+        const nextWidth = clampActivityBarWidth(startWidth + clientX - startX);
         const expandedWidth = `calc(${nextWidth}px + var(--athas-workbench-gap))`;
         setWidth(nextWidth);
 

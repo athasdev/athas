@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import PasswordPromptDialog from "@/features/remote/components/password-prompt-dialog";
@@ -22,34 +22,11 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import { CaretRightIcon, FolderOpenIcon, ImageIcon, RemoteIcon, XIcon } from "@/ui/icons";
-import { SidebarListItem, SidebarMenuContent } from "@/ui/sidebar";
+import { SidebarIconButton, SidebarListItem, SidebarMenuContent } from "@/ui/sidebar";
 import { showConfirmDialog } from "@/ui/dialog";
 import { toast } from "sonner";
 import { getClosedRemoteConnections, getProjectRemoteConnectionId } from "./project-switcher-items";
 import { getProjectNameFromPath, isRemoteProjectPath, ProjectGlyph } from "./project-glyph";
-
-export function ActivityProjectTrigger({
-  expanded,
-  projectName,
-  projectGlyph,
-}: {
-  expanded: boolean;
-  projectName: string;
-  projectGlyph: ReactNode;
-}) {
-  return (
-    <SidebarListItem
-      appearance="activity"
-      leading={projectGlyph}
-      iconOnly={!expanded}
-      trailing={expanded ? <CaretRightIcon /> : undefined}
-      aria-label="Switch project"
-      title={expanded ? undefined : projectName}
-    >
-      {projectName}
-    </SidebarListItem>
-  );
-}
 
 export function ActivityProjectSwitcher({
   expanded,
@@ -204,11 +181,19 @@ export function ActivityProjectSwitcher({
       >
         <DropdownMenuTrigger
           render={
-            <ActivityProjectTrigger
-              expanded={expanded}
-              projectName={projectName}
-              projectGlyph={projectGlyph}
-            />
+            expanded ? (
+              <SidebarListItem
+                leading={projectGlyph}
+                trailing={<CaretRightIcon />}
+                aria-label="Switch project"
+              >
+                {projectName}
+              </SidebarListItem>
+            ) : (
+              <SidebarIconButton aria-label="Switch project" title={projectName}>
+                {projectGlyph}
+              </SidebarIconButton>
+            )
           }
         />
         <SidebarMenuContent>

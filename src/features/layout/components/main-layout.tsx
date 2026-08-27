@@ -30,8 +30,9 @@ import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag"
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
-import { ActivitySidebar, COLLAPSED_ACTIVITY_RAIL_WIDTH } from "./sidebar/activity-sidebar";
+import { ActivityBar, COLLAPSED_ACTIVITY_BAR_WIDTH } from "./sidebar/activity-bar";
 import { SidebarPane } from "./sidebar/sidebar-pane";
+import { useResponsiveWorkbenchLayout } from "../hooks/use-responsive-workbench-layout";
 
 const AIChat = lazy(() => import("@/features/ai/components/chat/ai-chat"));
 const CommandPalette = lazy(() => import("@/features/command-palette/components/command-palette"));
@@ -42,11 +43,6 @@ const ConnectionDialog = lazy(() =>
 );
 const LinuxFolderPickerDialog = lazy(
   () => import("@/features/file-system/components/linux-folder-picker-dialog"),
-);
-const ProjectNameMenu = lazy(() =>
-  import("@/features/file-system/components/project-name-menu").then((module) => ({
-    default: module.ProjectNameMenu,
-  })),
 );
 const ExtensionGenerationCommand = lazy(() =>
   import("@/features/generate/components/extension-generation-command").then((module) => ({
@@ -83,33 +79,38 @@ export function MainLayout() {
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
+  const responsiveLayout = useResponsiveWorkbenchLayout(activityRailExpanded);
+  const renderedActivityRailExpanded = responsiveLayout.activityBarExpanded;
+  const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
   const activityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
   const aiChatWidth = useSettingsStore((state) => state.settings.aiChatWidth);
   const showStatusBar = useSettingsStore((state) => state.settings.showStatusBar);
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
+  const renderedRightSidebarVisible = isRightSidebarVisible && !responsiveLayout.narrow;
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
   const isDatabaseConnectionVisible = useUIState((state) => state.isDatabaseConnectionVisible);
   const setIsDatabaseConnectionVisible = useUIState(
     (state) => state.setIsDatabaseConnectionVisible,
   );
   const showInlineAiChat = useSettingsStore((state) => state.settings.isAIChatVisible);
-  const renderedActivityRailWidth = activityRailExpanded
+  const renderedActivityRailWidth = renderedActivityRailExpanded
     ? activityRailWidth
-    : COLLAPSED_ACTIVITY_RAIL_WIDTH;
+    : COLLAPSED_ACTIVITY_BAR_WIDTH;
   const visibleInlineAiChat = showInlineAiChat && deferredSurfacesReady;
   const leftPaneReservedWidth =
     renderedActivityRailWidth +
-    (isRightSidebarVisible ? sidebarWidth : 0) +
-    (visibleInlineAiChat ? aiChatWidth : 0);
+    (renderedRightSidebarVisible ? sidebarWidth : 0) +
+    (visibleInlineAiChat && !responsiveLayout.narrow ? aiChatWidth : 0);
   const aiPaneReservedWidth =
     renderedActivityRailWidth +
-    (isSidebarVisible ? sidebarWidth : 0) +
-    (isRightSidebarVisible ? sidebarWidth : 0);
+    (renderedSidebarVisible ? sidebarWidth : 0) +
+    (renderedRightSidebarVisible ? sidebarWidth : 0);
   const rightPaneReservedWidth =
     renderedActivityRailWidth +
-    (isSidebarVisible ? sidebarWidth : 0) +
-    (visibleInlineAiChat ? aiChatWidth : 0);
+    (renderedSidebarVisible ? sidebarWidth : 0) +
+    (visibleInlineAiChat && !responsiveLayout.narrow ? aiChatWidth : 0);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
@@ -160,8 +161,9 @@ export function MainLayout() {
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
   const isEditorBottomPaneVisible =
     terminalWidthMode === "editor" && deferredSurfacesReady && isBottomPaneVisible;
-  const roundMainContentLeftEdge = !isSidebarVisible;
-  const roundMainContentRightEdge = !visibleInlineAiChat && !isRightSidebarVisible;
+  const roundMainContentLeftEdge = !renderedSidebarVisible;
+  const roundMainContentRightEdge =
+    !(visibleInlineAiChat && !responsiveLayout.narrow) && !renderedRightSidebarVisible;
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => setDeferredSurfacesReady(true), 0);
@@ -295,15 +297,24 @@ export function MainLayout() {
         </div>
       )}
 
-      <TitleBarWithSettings />
+      <TitleBarWithSettings
+        activityBarExpanded={renderedActivityRailExpanded}
+        onActivityBarExpandedChange={(expanded) => {
+          if (responsiveLayout.compact) {
+            responsiveLayout.setActivityBarExpanded(expanded);
+          } else {
+            void updateSetting("activityRailExpanded", expanded);
+          }
+        }}
+      />
 
       <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden pr-workbench" style={{ minHeight: 0 }}>
-          <ActivitySidebar expanded={activityRailExpanded} />
+          <ActivityBar expanded={renderedActivityRailExpanded} />
           <ResizablePane
             position="left"
             widthKey="sidebarWidth"
-            hidden={!isSidebarVisible}
+            hidden={!renderedSidebarVisible}
             reservedWidth={leftPaneReservedWidth}
           >
             <SidebarPane paneLevel="primary" />
@@ -312,7 +323,7 @@ export function MainLayout() {
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div
               className={cn(
-                "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border/70 border-y border-r bg-editor",
+                "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border/70 border-y border-r bg-background",
                 roundMainContentLeftEdge &&
                   (isEditorBottomPaneVisible ? "rounded-tl-xl border-l" : "rounded-l-xl border-l"),
                 roundMainContentRightEdge &&
@@ -333,11 +344,11 @@ export function MainLayout() {
           </div>
 
           {/* Right side panes are ordered from inner to edge. */}
-          {visibleInlineAiChat ? (
+          {visibleInlineAiChat && !responsiveLayout.narrow ? (
             <ResizablePane
               position="right"
               widthKey="aiChatWidth"
-              outerEdge={!isRightSidebarVisible}
+              outerEdge={!renderedRightSidebarVisible}
               reservedWidth={aiPaneReservedWidth}
             >
               <Suspense fallback={null}>
@@ -355,7 +366,7 @@ export function MainLayout() {
           <ResizablePane
             position="right"
             widthKey="sidebarWidth"
-            hidden={!isRightSidebarVisible}
+            hidden={!renderedRightSidebarVisible}
             reservedWidth={rightPaneReservedWidth}
           >
             <SidebarPane
@@ -384,8 +395,6 @@ export function MainLayout() {
           <QuickOpen />
           <CommandPalette />
           <ExtensionGenerationCommand />
-          <ProjectNameMenu />
-
           <ConnectionDialog
             isOpen={isDatabaseConnectionVisible}
             onClose={() => setIsDatabaseConnectionVisible(false)}
