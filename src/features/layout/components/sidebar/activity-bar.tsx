@@ -142,14 +142,14 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
     alignProjectCarouselToCurrent();
   }, [alignProjectCarouselToCurrent, carouselProject?.id, carouselProjects.length, railPanelWidth]);
 
-  const renderedRailWidth = `calc(${
-    expanded ? activityRailWidth : COLLAPSED_ACTIVITY_BAR_WIDTH
-  }px + var(--athas-workbench-gap))`;
+  const renderedRailWidth = expanded
+    ? `calc(${activityRailWidth}px + var(--athas-workbench-gap))`
+    : `${COLLAPSED_ACTIVITY_BAR_WIDTH}px`;
   return (
     <ContextMenu>
       <ContextMenuTrigger
         ref={railRef}
-        className="athas-sidebar-rail relative flex h-full shrink-0 select-none overflow-hidden"
+        className="relative flex h-full shrink-0 select-none overflow-hidden"
         style={{
           width: renderedRailWidth,
         }}
@@ -159,14 +159,10 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
           onScroll={projectCarouselEnabled ? handleProjectScroll : undefined}
           data-slot="project-carousel"
           className={cn(
-            "scrollbar-none absolute inset-y-0 left-0 flex shrink-0 overflow-y-hidden overscroll-x-contain",
+            "athas-sidebar-rail scrollbar-none absolute inset-y-0 left-0 flex shrink-0 overflow-y-hidden overscroll-x-contain",
             projectCarouselEnabled ? "snap-x snap-mandatory overflow-x-auto" : "overflow-x-hidden",
           )}
-          style={{
-            width: expanded
-              ? railPanelWidth
-              : `calc(${railPanelWidth}px + var(--athas-workbench-gap))`,
-          }}
+          style={{ width: railPanelWidth }}
         >
           {renderedCarouselProjects.map((project) => (
             <ActivityProjectPanel

@@ -56,7 +56,7 @@ export function ActivityProjectPanel({
       inert={current ? undefined : true}
       className={cn(
         "relative box-border flex h-full w-full shrink-0 snap-start snap-always flex-col items-start gap-2 overflow-hidden pt-2",
-        expanded ? "pl-chrome-inline" : "px-chrome",
+        expanded ? "pl-chrome-inline" : "px-chrome-inline",
         expanded && reserveProjectDots ? "pb-7" : "pb-1.5",
         !current && "pointer-events-none",
       )}

@@ -26,7 +26,7 @@ export const SidebarIconButton = forwardRef<
       type="button"
       variant={tone === "danger" ? "danger" : "ghost"}
       size="icon-xs"
-      className={cn("[&_svg]:size-[1em]", className)}
+      className={cn("[&_svg:not([class*='size-'])]:size-[1em]", className)}
       {...props}
     />
   );
