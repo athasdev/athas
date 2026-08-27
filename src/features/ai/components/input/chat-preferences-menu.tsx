@@ -880,7 +880,7 @@ export function ChatPreferencesMenu({
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
+            iconOnly
             tooltip="AI preferences"
             aria-label="AI preferences"
           />

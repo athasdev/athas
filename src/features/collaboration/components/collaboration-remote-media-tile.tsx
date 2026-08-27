@@ -22,7 +22,7 @@ export function RemoteMediaTile({ share }: { share: RemoteMediaShare }) {
   }, [audioElement, hasVideo, share.stream, videoElement]);
 
   return (
-    <Card size="flush">
+    <Card>
       {hasVideo ? (
         <video
           ref={setVideoElement}

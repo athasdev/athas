@@ -2,7 +2,6 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import type { ComponentType, CSSProperties, ReactElement, ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
-import { menuItemVariants, menuSurfaceVariants } from "@/design-system/menu";
 import { Button } from "@/ui/button";
 import {
   Combobox,
@@ -12,6 +11,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/ui/combobox";
+import { menuItemVariants, menuSurfaceVariants } from "@/ui/dropdown";
 import {
   CaretDownIcon as ChevronDown,
   CheckIcon as Check,
@@ -19,7 +19,6 @@ import {
   type Icon as AppIcon,
 } from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
-import { controlIconSizes } from "@/utils/control-variants";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 
@@ -43,7 +42,6 @@ export interface SelectProps {
   menuMinWidth?: number;
   menuAnimated?: boolean;
   disabled?: boolean;
-  size?: "xs" | "sm" | "md";
   variant?: "default" | "ghost";
   shape?: "default" | "pill";
   align?: "default" | "start";
@@ -72,23 +70,14 @@ function isIconComponent(
   );
 }
 
-function renderTriggerIcon(icon: SelectProps["leftIcon"], size: "xs" | "sm" | "md") {
+function renderTriggerIcon(icon: SelectProps["leftIcon"]) {
   if (!icon) return null;
   if (!isIconComponent(icon)) {
     return <span className="shrink-0 text-current">{icon}</span>;
   }
 
   const Icon = icon;
-  return <Icon size={controlIconSizes[size]} className="shrink-0 text-current" />;
-}
-
-function getButtonSize(size: "xs" | "sm" | "md", iconOnly: boolean) {
-  if (iconOnly) {
-    if (size === "md") return "icon" as const;
-    return size === "sm" ? ("icon-sm" as const) : ("icon-xs" as const);
-  }
-
-  return size;
+  return <Icon size={12} className="shrink-0 text-current" />;
 }
 
 function SelectTriggerContent({
@@ -96,7 +85,6 @@ function SelectTriggerContent({
   placeholder,
   value,
   leftIcon,
-  size,
   iconOnly,
   hideChevron,
 }: {
@@ -104,11 +92,10 @@ function SelectTriggerContent({
   placeholder: string;
   value: string;
   leftIcon: SelectProps["leftIcon"];
-  size: "xs" | "sm" | "md";
   iconOnly: boolean;
   hideChevron: boolean;
 }) {
-  const triggerIcon = renderTriggerIcon(leftIcon, size);
+  const triggerIcon = renderTriggerIcon(leftIcon);
 
   return (
     <>
@@ -130,9 +117,7 @@ function SelectTriggerContent({
           </span>
         </span>
       )}
-      {!hideChevron ? (
-        <ChevronDown size={controlIconSizes[size]} className="shrink-0 text-subtle-foreground" />
-      ) : null}
+      {!hideChevron ? <ChevronDown size={12} className="shrink-0 text-subtle-foreground" /> : null}
     </>
   );
 }
@@ -158,7 +143,6 @@ function PlainSelect({
   menuMinWidth,
   menuAnimated,
   disabled,
-  size,
   variant,
   shape,
   align,
@@ -174,7 +158,6 @@ function PlainSelect({
   ariaLabel,
 }: SelectProps & {
   placeholder: string;
-  size: "xs" | "sm" | "md";
   variant: "default" | "ghost";
   shape: "default" | "pill";
   menuAnimated: boolean;
@@ -206,7 +189,7 @@ function PlainSelect({
           data-setting-primary-control="true"
           data-prevent-dialog-escape={open ? "true" : undefined}
           aria-label={ariaLabel}
-          render={<Button variant={variant} size={getButtonSize(size, iconOnly)} shape={shape} />}
+          render={<Button variant={variant} iconOnly={iconOnly} shape={shape} />}
           className={cn(
             !iconOnly &&
               "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
@@ -218,7 +201,6 @@ function PlainSelect({
             placeholder={placeholder}
             value={value}
             leftIcon={leftIcon}
-            size={size}
             iconOnly={iconOnly}
             hideChevron={hideChevron}
           />
@@ -286,7 +268,6 @@ function SearchableSelect({
   menuMinWidth,
   menuAnimated,
   disabled,
-  size,
   variant,
   shape,
   align,
@@ -306,7 +287,6 @@ function SearchableSelect({
   emptyLabel = "No matching options",
 }: SelectProps & {
   placeholder: string;
-  size: "xs" | "sm" | "md";
   variant: "default" | "ghost";
   shape: "default" | "pill";
   searchableTrigger: "menu" | "input";
@@ -398,7 +378,6 @@ function SearchableSelect({
             aria-label={ariaLabel}
             placeholder={selectedOption?.label || placeholder}
             leftIcon={componentIcon}
-            size={size}
             variant={variant === "default" ? "button" : "ghost"}
             shape={shape}
             className="w-full"
@@ -417,7 +396,7 @@ function SearchableSelect({
             data-setting-primary-control="true"
             data-prevent-dialog-escape={open ? "true" : undefined}
             aria-label={ariaLabel}
-            render={<Button variant={variant} size={getButtonSize(size, iconOnly)} shape={shape} />}
+            render={<Button variant={variant} iconOnly={iconOnly} shape={shape} />}
             className={cn(
               !iconOnly &&
                 "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
@@ -429,7 +408,6 @@ function SearchableSelect({
               placeholder={placeholder}
               value={value}
               leftIcon={leftIcon}
-              size={size}
               iconOnly={iconOnly}
               hideChevron={hideChevron}
             />
@@ -454,7 +432,6 @@ function SearchableSelect({
             <ComboboxInput
               ref={searchInputRef}
               leftIcon={Search}
-              size={size}
               variant="ghost"
               placeholder="Search..."
               aria-label="Search options"
@@ -480,7 +457,6 @@ export default function Select({
   menuMinWidth = 0,
   menuAnimated = true,
   disabled = false,
-  size = "sm",
   variant = "ghost",
   shape = "default",
   align = "default",
@@ -515,7 +491,6 @@ export default function Select({
     menuMinWidth,
     menuAnimated,
     disabled,
-    size,
     variant,
     shape,
     align,

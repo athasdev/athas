@@ -79,10 +79,10 @@ const PasswordPromptDialog = ({
       size="sm"
       footer={
         <>
-          <Button onClick={onClose} variant="ghost" size="xs">
+          <Button onClick={onClose} variant="ghost">
             Cancel
           </Button>
-          <Button onClick={handleConnect} disabled={!password.trim() || isConnecting} size="xs">
+          <Button onClick={handleConnect} disabled={!password.trim() || isConnecting}>
             {isConnecting ? "Connecting..." : "Connect"}
           </Button>
         </>
@@ -122,7 +122,7 @@ const PasswordPromptDialog = ({
                 variant="ghost"
                 onClick={() => setShowPassword(!showPassword)}
                 tooltip={showPassword ? "Hide password" : "Show password"}
-                size="icon-sm"
+                iconOnly
               >
                 {showPassword ? <EyeOff /> : <Eye />}
               </InputGroupButton>

@@ -1,4 +1,5 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import {
   SlidersHorizontalIcon as SlidersHorizontal,
   SquareIcon as Square,
@@ -12,12 +13,13 @@ import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcu
 import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/builtin/syntax-highlighting";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.store";
-import type { Position } from "@/features/editor/types/editor.types";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { resolveEditorViewCursorPosition } from "@/features/editor/utils/editor-view-cursor-position";
+import {
+  applyOutlineVisibilityPreference,
+  setOutlineVisibilityPreference,
+} from "@/features/outline/actions/outline-visibility";
 import { Spinner } from "@/ui/spinner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
   getAllLanguages,
   getLanguageDisplayName,
@@ -33,9 +35,6 @@ import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
-
-const cursorPositionClass =
-  "font-sans inline-flex h-5 items-center self-center rounded-full border-0 px-1.5 ui-text-sm leading-none text-subtle-foreground transition-colors hover:bg-accent hover:text-foreground";
 
 const editorMenuActionButtonClass = "min-h-6 px-2 ui-text-sm text-subtle-foreground";
 
@@ -56,99 +55,15 @@ function canStartLanguageServerForPath(filePath: string, languageId: string) {
 
 interface EditorStatusActionsProps {
   bufferId?: string;
-  editorViewKey?: string | null;
 }
 
-function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }) {
-  const activeEditorViewKey = useEditorStateStore.use.activeEditorViewKey();
-  const cursorPosition = useEditorStateStore.use.cursorPosition();
-  const [isEditing, setIsEditing] = useState(false);
-  const [draftPosition, setDraftPosition] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const displayedCursorPosition = useMemo<Position>(() => {
-    const cachedCursor = editorViewKey
-      ? useEditorStateStore.getState().actions.getCachedPosition(editorViewKey)
-      : undefined;
-    return resolveEditorViewCursorPosition(
-      editorViewKey,
-      activeEditorViewKey,
-      cursorPosition,
-      cachedCursor,
-    );
-  }, [activeEditorViewKey, cursorPosition, editorViewKey]);
-  const displayPosition = `${displayedCursorPosition.line + 1}:${displayedCursorPosition.column + 1}`;
-
-  useEffect(() => {
-    if (!isEditing) return;
-    setDraftPosition(displayPosition);
-    const frameId = requestAnimationFrame(() => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    });
-    return () => cancelAnimationFrame(frameId);
-  }, [displayPosition, isEditing]);
-
-  const submitPosition = () => {
-    const match = draftPosition.trim().match(/^(\d+)(?::(\d+))?$/);
-    if (!match) {
-      setIsEditing(false);
-      return;
-    }
-
-    const line = Number(match[1]);
-    const column = match[2] ? Number(match[2]) : 1;
-
-    if (!Number.isFinite(line) || !Number.isFinite(column) || line < 1 || column < 1) {
-      setIsEditing(false);
-      return;
-    }
-
-    window.dispatchEvent(new CustomEvent("menu-go-to-line", { detail: { line, column } }));
-    setIsEditing(false);
-  };
-
-  if (isEditing) {
-    return (
-      <input
-        ref={inputRef}
-        aria-label="Go to line and column"
-        value={draftPosition}
-        onChange={(event) => setDraftPosition(event.target.value)}
-        onBlur={submitPosition}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            submitPosition();
-          } else if (event.key === "Escape") {
-            event.preventDefault();
-            setIsEditing(false);
-          }
-        }}
-        className={cn(
-          cursorPositionClass,
-          "w-14 bg-accent text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
-        )}
-      />
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      className={cursorPositionClass}
-      onClick={() => setIsEditing(true)}
-      aria-label="Go to line and column"
-    >
-      {displayPosition}
-    </button>
-  );
-}
-
-export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusActionsProps = {}) {
+export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {}) {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
   const breadcrumbsEnabled = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
+  const outlineEnabled = useSettingsStore((state) => state.settings.coreFeatures.outline);
   const showMinimap = useSettingsStore((state) => state.settings.showMinimap);
+  const showOutline = useSettingsStore((state) => state.settings.showOutline);
   const lineNumbers = useSettingsStore((state) => state.settings.lineNumbers);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const wordWrap = useSettingsStore((state) => state.settings.wordWrap);
@@ -217,6 +132,12 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
         : null;
     }),
   );
+
+  useEffect(() => {
+    if (activeBuffer?.type !== "editor") return;
+    applyOutlineVisibilityPreference(outlineEnabled && showOutline);
+  }, [activeBuffer?.id, activeBuffer?.type, outlineEnabled, showOutline]);
+
   const lspClient = LspClient.getInstance();
   const activeServerEntries = lspClient.getActiveServerEntries();
   const isBulkLspBusy = bulkLspAction !== null;
@@ -384,6 +305,17 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       shortcut: minimapShortcut,
       onToggle: () => updateSetting("showMinimap", !showMinimap),
     },
+    ...(outlineEnabled && activeBuffer?.type === "editor"
+      ? [
+          {
+            id: "outline",
+            label: "Outline",
+            checked: showOutline,
+            shortcut: null,
+            onToggle: () => setOutlineVisibilityPreference(!showOutline),
+          },
+        ]
+      : []),
     {
       id: "line-numbers",
       label: "Line Numbers",
@@ -466,10 +398,10 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
     },
   ];
   const viewMenuItems: MenuItem[] = [];
-  for (const [index, option] of displayOptions.entries()) {
-    if (index === 2 || index === 6) {
+  for (const option of displayOptions) {
+    if (option.id === "line-numbers" || option.id === "auto-completion") {
       viewMenuItems.push({
-        id: `display-separator-${index}`,
+        id: `display-separator-${option.id}`,
         separator: true,
       });
     }
@@ -485,24 +417,30 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
 
   return (
     <>
-      <CursorPositionChip editorViewKey={editorViewKey} />
-
       {activeBuffer?.type === "editor" && (
         <Select
           value={currentFileLanguageId ?? ""}
           options={languageOptions}
           onChange={(languageId) => void handleLanguageChange(languageId)}
           placeholder={currentFileDisplayName || "Plain Text"}
-          aria-label="Select language mode"
-          tooltip="Select language mode"
-          size="xs"
+          aria-label={
+            currentFileDisplayName
+              ? `Language mode: ${currentFileDisplayName}`
+              : "Select language mode"
+          }
+          tooltip={
+            currentFileDisplayName
+              ? `Language mode: ${currentFileDisplayName}`
+              : "Select language mode"
+          }
           variant="ghost"
           searchable
           searchableTrigger="menu"
+          leftIcon={<ThemedFileIcon fileName={activeBuffer.path} isDir={false} />}
+          iconOnly
           hideChevron
           menuWidth="content"
           menuMinWidth={220}
-          className="w-fit max-w-60"
         />
       )}
 
@@ -514,7 +452,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           type="button"
           onClick={() => setIsLspOpen((open) => !open)}
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           className={cn(
             "text-subtle-foreground",
             config.color,
@@ -547,7 +485,6 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       onClick={() => void handleRestartAllServers()}
                       disabled={!canRunBulkLspAction}
                       variant="default"
-                      size="xs"
                       className={cn(editorMenuActionButtonClass, "flex-1")}
                     >
                       {bulkLspAction === "restart" ? "Restarting..." : "Restart all"}
@@ -557,7 +494,6 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       onClick={() => void handleStopAllServers()}
                       disabled={!canRunBulkLspAction}
                       variant="default"
-                      size="xs"
                       className={cn(editorMenuActionButtonClass, "flex-1")}
                     >
                       {bulkLspAction === "stop" ? "Stopping..." : "Stop all"}
@@ -580,7 +516,6 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                           onClick={() => void handleRestartServer(entry.key)}
                           disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
-                          size="xs"
                           className={editorMenuActionButtonClass}
                         >
                           {isBusy ? "..." : "Restart"}
@@ -590,7 +525,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                           onClick={() => void handleStopServer(entry.key)}
                           disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
-                          size="icon-xs"
+                          iconOnly
                           className={editorMenuActionButtonClass}
                           aria-label={`Stop ${entry.displayName} language server`}
                         >
@@ -614,7 +549,6 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                         onClick={() => void handleStartCurrent()}
                         disabled={isRestartingCurrent || isBulkLspBusy}
                         variant="default"
-                        size="xs"
                         className={editorMenuActionButtonClass}
                       >
                         {isRestartingCurrent ? "Starting..." : "Start"}
@@ -664,7 +598,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           type="button"
           onClick={() => setIsViewMenuOpen((open) => !open)}
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           className={cn(
             "text-subtle-foreground",
             isViewMenuOpen && "border-border/60 bg-accent/80 text-foreground",

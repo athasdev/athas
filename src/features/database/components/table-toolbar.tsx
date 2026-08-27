@@ -110,12 +110,7 @@ export default function TableToolbar({
           <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
             <TabsList variant="bare">
               {VIEW_TABS.map(({ mode, label }) => (
-                <TabsTrigger
-                  key={mode}
-                  value={mode}
-                  size="xs"
-                  aria-label={`Switch to ${label} view`}
-                >
+                <TabsTrigger key={mode} value={mode} aria-label={`Switch to ${label} view`}>
                   {label}
                 </TabsTrigger>
               ))}
@@ -125,7 +120,7 @@ export default function TableToolbar({
             <Button
               onClick={() => setShowColumnTypes(!showColumnTypes)}
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className="text-subtle-foreground"
               aria-label="Toggle column types"
               tooltip={showColumnTypes ? "Hide column types" : "Show column types"}
@@ -144,7 +139,7 @@ export default function TableToolbar({
             <Button
               onClick={() => setIsCustomQuery(true)}
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className="text-subtle-foreground"
               disabled={isCustomQuery}
               aria-label="Open SQL editor"
@@ -160,7 +155,7 @@ export default function TableToolbar({
               className="text-subtle-foreground"
               aria-label="Create subscription"
               tooltip="Create subscription"
-              size="icon-xs"
+              iconOnly
             >
               <RadioButton />
             </Button>
@@ -172,7 +167,7 @@ export default function TableToolbar({
               className="text-subtle-foreground"
               aria-label={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
               tooltip={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
-              size="icon-xs"
+              iconOnly
             >
               {subscriptionInfo.enabled ? <MinusCircle /> : <PlusCircle />}
             </Button>
@@ -184,7 +179,7 @@ export default function TableToolbar({
               className="text-subtle-foreground"
               aria-label="Refresh subscription"
               tooltip="Refresh subscription"
-              size="icon-xs"
+              iconOnly
             >
               <ArrowClockwise />
             </Button>
@@ -196,7 +191,7 @@ export default function TableToolbar({
               className="text-subtle-foreground"
               aria-label="Drop subscription"
               tooltip="Drop subscription"
-              size="icon-xs"
+              iconOnly
             >
               <Trash />
             </Button>
@@ -209,7 +204,7 @@ export default function TableToolbar({
                 className="text-subtle-foreground"
                 aria-label={exportLabel}
                 tooltip={exportTooltip}
-                size="icon-xs"
+                iconOnly
               >
                 <Download weight="fill" />
               </Button>
@@ -219,7 +214,7 @@ export default function TableToolbar({
                 className="text-subtle-foreground"
                 aria-label={jsonLabel}
                 tooltip={jsonTooltip}
-                size="icon-xs"
+                iconOnly
               >
                 <ClipboardText />
               </Button>

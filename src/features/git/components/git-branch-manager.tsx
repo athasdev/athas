@@ -551,7 +551,6 @@ const GitBranchManager = ({
         onClick={() => void handleOpenDropdown()}
         disabled={isLoading}
         variant="ghost"
-        size={triggerSurface === "footer" ? "xs" : "default"}
         className={cn(
           "inline-flex max-w-full shrink overflow-hidden px-2 text-subtle-foreground hover:bg-accent/80",
           triggerSurface === "footer" && "font-medium",
@@ -812,7 +811,7 @@ function BranchRow({
             }}
             disabled={isLoading}
             variant="ghost"
-            size="icon-xs"
+            iconOnly
             className={cn(
               "text-git-deleted opacity-100 transition-opacity sm:opacity-0",
               "hover:bg-git-deleted/10 hover:opacity-80 hover:text-git-deleted",

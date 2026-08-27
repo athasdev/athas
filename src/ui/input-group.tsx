@@ -58,36 +58,21 @@ function InputGroupAddon({
   );
 }
 
-const inputGroupButtonVariants = cva("shadow-none", {
-  variants: {
-    size: {
-      xs: "h-5 rounded-chrome px-1.5",
-      sm: "h-6 rounded-chrome px-2",
-      "icon-xs": "size-5 rounded-full p-0",
-      "icon-sm": "size-6 rounded-full p-0",
-    },
-  },
-  defaultVariants: {
-    size: "xs",
-  },
-});
-
 function InputGroupButton({
   className,
   type = "button",
   variant = "ghost",
-  size = "xs",
+  iconOnly = false,
   ...props
-}: Omit<ButtonProps, "size" | "type"> &
-  VariantProps<typeof inputGroupButtonVariants> & {
-    type?: "button" | "submit" | "reset";
-  }) {
+}: Omit<ButtonProps, "type"> & {
+  type?: "button" | "submit" | "reset";
+}) {
   return (
     <Button
       type={type}
-      data-size={size}
       variant={variant}
-      className={cn(inputGroupButtonVariants({ size }), className)}
+      iconOnly={iconOnly}
+      className={cn("h-5 shadow-none", iconOnly ? "w-5" : "px-1.5", className)}
       {...props}
     />
   );

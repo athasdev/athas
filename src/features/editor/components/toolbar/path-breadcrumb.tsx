@@ -61,7 +61,6 @@ export function PathBreadcrumb({
                         ref={(element) => setSegmentRef?.(index, element)}
                         onClick={(event) => onSegmentClick?.(index, event)}
                         variant="ghost"
-                        size="xs"
                         className="px-1"
                         data-slot="breadcrumb-segment"
                       />

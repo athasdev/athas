@@ -51,7 +51,7 @@ function ViewerState({
       </EmptyHeader>
       {actionLabel && onAction ? (
         <EmptyContent>
-          <Button type="button" variant="default" size="xs" onClick={onAction}>
+          <Button type="button" variant="default" onClick={onAction}>
             {actionLabel}
           </Button>
         </EmptyContent>
@@ -116,7 +116,7 @@ function ViewerErrorState({
       </EmptyHeader>
       {actionLabel && onAction ? (
         <EmptyContent>
-          <Button type="button" variant="default" size="xs" onClick={onAction}>
+          <Button type="button" variant="default" onClick={onAction}>
             {actionLabel}
           </Button>
         </EmptyContent>

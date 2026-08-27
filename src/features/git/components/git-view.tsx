@@ -868,7 +868,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               <Button
                 type="button"
                 variant="default"
-                size="xs"
                 className="min-w-0 flex-1"
                 onClick={() => void handleRemoteAction(primaryRemoteAction)}
                 disabled={!activeRepoPath || isRemoteActionLoading}
@@ -880,7 +879,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               <Button
                 type="button"
                 variant="default"
-                size="icon-xs"
+                iconOnly
                 onClick={() => setIsSyncMenuOpen((open) => !open)}
                 disabled={!activeRepoPath || isRemoteActionLoading}
                 active={isSyncMenuOpen}
@@ -1087,7 +1086,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         }}
                         disabled={isActionLoading}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-subtle-foreground disabled:opacity-50"
                         tooltip="Apply stash"
                       >
@@ -1105,7 +1104,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         }}
                         disabled={isActionLoading}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-subtle-foreground disabled:opacity-50"
                         tooltip="Pop stash"
                       >
@@ -1123,7 +1122,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         }}
                         disabled={isActionLoading}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                         tooltip="Drop stash"
                       >

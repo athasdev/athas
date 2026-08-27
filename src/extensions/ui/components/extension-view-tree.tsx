@@ -50,7 +50,6 @@ export function ExtensionViewTree({
               <Badge
                 key={`${badge.label}-${index}`}
                 variant={badge.tone === "error" ? "error" : (badge.tone ?? "default")}
-                size="compact"
               >
                 {badge.label}
               </Badge>

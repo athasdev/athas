@@ -331,7 +331,7 @@ const TerminalTabBar = ({
         <Button
           onClick={onSearchTerminal}
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           tooltip="Find in Terminal"
           commandId="terminal.find"
           tooltipSide="bottom"
@@ -347,7 +347,7 @@ const TerminalTabBar = ({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
                 tooltip="New Terminal"
                 commandId="terminal.new"
                 tooltipSide="bottom"
@@ -370,7 +370,7 @@ const TerminalTabBar = ({
         <Button
           onClick={onFullScreen}
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           tooltip={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
           commandId="workbench.toggleActivePaneFullscreen"
           tooltipSide="bottom"

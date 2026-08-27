@@ -114,7 +114,7 @@ function SearchExcerptFileHeader({
             tooltip={isExpanded ? "Collapse context" : "Expand context"}
             aria-label={isExpanded ? "Collapse context" : "Expand context"}
             className="shrink-0 text-subtle-foreground"
-            size="icon-xs"
+            iconOnly
           >
             {isExpanded ? <Minus size={14} /> : <Plus size={14} />}
           </Button>

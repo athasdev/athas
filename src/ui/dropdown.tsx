@@ -1,4 +1,5 @@
 import { Menu as DropdownMenuPrimitive } from "@base-ui/react/menu";
+import { cva } from "class-variance-authority";
 import {
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
@@ -17,12 +18,33 @@ import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { CaretRightIcon, CheckIcon, MagnifyingGlassIcon as Search } from "@/ui/icons";
 import Keybinding from "@/features/keymaps/components/keybinding";
-import {
-  menuItemVariants,
-  menuLabelVariants,
-  menuSeparatorVariants,
-  menuSurfaceVariants,
-} from "@/design-system/menu";
+
+const menuSurfaceVariants = cva(
+  "max-h-(--available-height) w-fit min-w-32 max-w-[min(480px,calc(100vw-16px))] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-surface/98 p-1 font-sans text-subtle-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm ui-text-chrome",
+);
+
+const menuItemVariants = cva(
+  "relative flex w-full cursor-default items-center justify-start gap-2 whitespace-nowrap rounded-md px-2 py-1 text-left font-sans text-subtle-foreground outline-hidden select-none transition-colors hover:bg-accent focus:bg-accent/70 focus:text-foreground data-highlighted:bg-accent/70 data-highlighted:text-foreground data-selected:bg-selected disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50 ui-text-chrome [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  {
+    variants: {
+      tone: {
+        default: "",
+        accent: "text-primary",
+        destructive:
+          "hover:bg-destructive/8 hover:text-destructive focus:bg-destructive/10 focus:text-destructive data-[variant=destructive]:hover:bg-destructive/8 data-[variant=destructive]:hover:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive",
+      },
+    },
+    defaultVariants: {
+      tone: "default",
+    },
+  },
+);
+
+const menuLabelVariants = cva(
+  "px-2 py-0.5 font-sans font-medium text-subtle-foreground ui-text-chrome",
+);
+
+const menuSeparatorVariants = cva("-mx-1 my-0.5 h-px bg-border/60");
 
 export type MenuItemTone = "default" | "accent" | "destructive";
 
@@ -162,12 +184,9 @@ export function MenuItemsList({
             }}
             disabled={isDisabled}
             className={cn(
-              menuItemVariants({
-                disabled: isDisabled,
-                focused: isFocused,
-                selected: item.selected,
-                tone: item.tone,
-              }),
+              menuItemVariants({ tone: item.tone }),
+              isFocused && "bg-accent",
+              item.selected && "bg-selected",
             )}
             aria-current={item.selected ? "true" : undefined}
           >
@@ -697,7 +716,6 @@ function DropdownMenuSearch({
   className,
   onKeyDown,
   leftIcon = Search,
-  size = "xs",
   variant = "ghost",
   ...props
 }: InputProps) {
@@ -705,7 +723,6 @@ function DropdownMenuSearch({
     <Input
       data-slot="dropdown-menu-search"
       leftIcon={leftIcon}
-      size={size}
       variant={variant}
       className={cn("ui-text-chrome", className)}
       aria-label={props["aria-label"] ?? props.placeholder ?? "Search menu"}
@@ -953,4 +970,8 @@ export {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  menuItemVariants,
+  menuLabelVariants,
+  menuSeparatorVariants,
+  menuSurfaceVariants,
 };

@@ -60,7 +60,7 @@ export function CollaborationMessageComposer({
             tooltip="Share Documents"
             tooltipSide="top"
             onClick={onShareDocuments}
-            size="icon-sm"
+            iconOnly
           >
             <FilePlus />
           </Button>
@@ -74,7 +74,7 @@ export function CollaborationMessageComposer({
           tooltip={isSending ? "Sending" : "Send"}
           tooltipSide="top"
           onClick={onSubmit}
-          size="icon-xs"
+          iconOnly
         >
           {isSending ? <Spinner label="Sending" compact /> : <PaperPlaneTilt />}
         </Button>

@@ -210,7 +210,7 @@ export function SidebarSectionHeader({
           )}
         />
         {count !== undefined ? (
-          <Badge variant="muted" size="compact" className="shrink-0">
+          <Badge variant="muted" className="shrink-0">
             {count}
           </Badge>
         ) : null}
@@ -328,7 +328,7 @@ export function SidebarTabBar<TValue extends string>({
         <div className="scrollbar-none min-w-0 overflow-x-auto">
           <TabsList aria-label="Sidebar sections">
             {items.map((item) => (
-              <TabsTrigger key={item.id} value={item.id} disabled={item.disabled} size="xs">
+              <TabsTrigger key={item.id} value={item.id} disabled={item.disabled}>
                 {item.icon}
                 <span className="truncate whitespace-nowrap">{item.label}</span>
               </TabsTrigger>

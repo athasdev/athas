@@ -57,7 +57,6 @@ export function ModelSelector({
             : "No models found"
       }
       hideChevron={isComposer}
-      size="xs"
       variant={isComposer ? "ghost" : "default"}
       disabled={disabled}
       open={open}

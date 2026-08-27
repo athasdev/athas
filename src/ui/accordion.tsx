@@ -77,7 +77,7 @@ function AccordionTrigger({
           className="pointer-events-none size-3 shrink-0 -rotate-90 text-subtle-foreground transition-transform group-aria-expanded/accordion-trigger:rotate-0"
         />
         {count !== undefined ? (
-          <Badge variant="muted" size="compact" className="shrink-0">
+          <Badge variant="muted" className="shrink-0">
             {count}
           </Badge>
         ) : null}

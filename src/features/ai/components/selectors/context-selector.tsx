@@ -172,7 +172,7 @@ export function ContextSelector({
             variant="ghost"
             tooltip="Add context"
             aria-label="Add context"
-            size="icon-sm"
+            iconOnly
           />
         }
       >

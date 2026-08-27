@@ -34,13 +34,11 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
   return (
     <Card
       variant={status === "current" ? "default" : "outline"}
-      size="flush"
       className={status === "current" ? "border-primary/30 bg-primary/5" : undefined}
     >
       <Button
         type="button"
         variant="ghost"
-        size="sm"
         onClick={() => step.description && setIsExpanded(!isExpanded)}
         className="w-full justify-start text-left"
       >

@@ -693,7 +693,6 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
                   <Item
                     render={<button type="button" />}
                     variant={isSelectedJob ? "muted" : "default"}
-                    size="sm"
                     onClick={() => handleSelectJob(job)}
                     className="min-w-0 flex-nowrap text-left"
                   >
@@ -726,7 +725,6 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
                               render={<button type="button" />}
                               key={`${job.name}-${step.name}-${index}`}
                               variant={selectedStepIndex === index ? "muted" : "default"}
-                              size="xs"
                               onClick={() => setSelectedStepIndex(index)}
                               className="min-w-0 flex-nowrap text-left"
                             >
@@ -766,7 +764,6 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
                               <Input
                                 value={logSearchQuery}
                                 onChange={(event) => setLogSearchQuery(event.target.value)}
-                                size="xs"
                                 className="w-40 bg-surface/40"
                                 placeholder="Search logs"
                                 aria-label="Search logs"
@@ -776,7 +773,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
                               type="button"
                               onClick={handleToggleLogSearch}
                               variant="ghost"
-                              size="icon-xs"
+                              iconOnly
                               tooltip={isLogSearchVisible ? "Hide log search" : "Search logs"}
                             >
                               <Search />
@@ -786,7 +783,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
                                 type="button"
                                 onClick={() => void loadJobLogs(job.id!, true)}
                                 variant="ghost"
-                                size="icon-xs"
+                                iconOnly
                                 tooltip="Refresh job logs"
                                 disabled={!areJobLogsDownloadable(job)}
                               >
@@ -803,7 +800,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
                               variant="ghost"
                               tooltip="Copy job logs"
                               disabled={!job.id || !selectedStepLogs}
-                              size="icon-xs"
+                              iconOnly
                             >
                               <Copy />
                             </Button>
@@ -826,7 +823,6 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
                                 type="button"
                                 onClick={() => void loadJobLogs(job.id!, true)}
                                 variant="default"
-                                size="xs"
                                 className="border border-destructive/40 text-destructive/90 hover:bg-destructive/10"
                               >
                                 Retry

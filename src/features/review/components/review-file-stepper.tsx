@@ -117,7 +117,6 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
           onClick={() => previousItem && onSelect(previousItem.key)}
           disabled={!previousItem}
           tooltip="Previous changed file"
@@ -135,7 +134,6 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
           onClick={() => nextItem && onSelect(nextItem.key)}
           disabled={!nextItem}
           tooltip="Next changed file"

@@ -99,7 +99,6 @@ export function ChatHeader({
                 }
               }}
               placeholder="Search messages"
-              size="xs"
               variant="ghost"
               leftIcon={Search}
               className="h-7 bg-surface/45"
@@ -111,7 +110,7 @@ export function ChatHeader({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
                 disabled={!hasMessageSearchMatches}
                 onClick={onPreviousMessageSearchMatch}
                 tooltip="Previous match"
@@ -122,7 +121,7 @@ export function ChatHeader({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
                 disabled={!hasMessageSearchMatches}
                 onClick={onNextMessageSearchMatch}
                 tooltip="Next match"
@@ -133,7 +132,7 @@ export function ChatHeader({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
                 onClick={onCloseMessageSearch}
                 tooltip="Close search"
                 aria-label="Close message search"
@@ -151,7 +150,7 @@ export function ChatHeader({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
                 onClick={onToggleMessageSearch}
                 tooltip="Search messages"
                 tooltipSide="bottom"
@@ -171,7 +170,7 @@ export function ChatHeader({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
                 onClick={handleNewAgent}
                 tooltip="New Agent"
                 commandId="workbench.agentLauncher"

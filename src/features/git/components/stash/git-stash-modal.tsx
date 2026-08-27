@@ -59,12 +59,7 @@ const StashMessageModalContent = ({
   };
 
   return (
-    <DialogContent
-      aria-describedby={undefined}
-      size="sm"
-      showCloseButton={false}
-      className="max-w-80 p-0"
-    >
+    <DialogContent aria-describedby={undefined} showCloseButton={false} size="sm" className="p-0">
       <DialogHeader className="px-4 pt-4">
         <DialogTitle>{title}</DialogTitle>
       </DialogHeader>
@@ -86,7 +81,6 @@ const StashMessageModalContent = ({
           onClick={onClose}
           variant="ghost"
           className="text-subtle-foreground ui-text-sm hover:text-foreground"
-          size="xs"
         >
           Cancel
         </Button>
@@ -95,7 +89,6 @@ const StashMessageModalContent = ({
           disabled={isLoading}
           variant="accent"
           className="ui-text-sm disabled:opacity-50"
-          size="xs"
         >
           {isLoading ? "Stashing..." : "Stash"}
         </Button>

@@ -324,7 +324,7 @@ function ToolCallDisplay({
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           tooltip="Open diff"
           onClick={(event) => {
             event.stopPropagation();
@@ -338,7 +338,7 @@ function ToolCallDisplay({
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           tooltip="Open file"
           onClick={(event) => {
             event.stopPropagation();
@@ -352,7 +352,7 @@ function ToolCallDisplay({
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           tooltip="Open terminal"
           onClick={(event) => {
             event.stopPropagation();

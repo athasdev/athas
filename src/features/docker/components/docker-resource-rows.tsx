@@ -55,7 +55,7 @@ export function DockerActionMenu({
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
+            iconOnly
             tooltip={label}
             tooltipSide="left"
             aria-label={label}
@@ -179,7 +179,7 @@ function ContainerActions({
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
+            iconOnly
             tooltip="Container actions"
             tooltipSide="left"
             aria-label={`Actions for ${container.name}`}
@@ -269,7 +269,7 @@ export function ContainerRow({
       active={selected}
       title={container.name}
       status={
-        <Badge variant={getContainerStateVariant(container)} size="compact" className="capitalize">
+        <Badge variant={getContainerStateVariant(container)} className="capitalize">
           {container.health ?? container.state}
         </Badge>
       }
@@ -328,7 +328,7 @@ function ComposeServiceActions({
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
+            iconOnly
             tooltip="Service actions"
             tooltipSide="left"
             aria-label={`Actions for ${service.name}`}
@@ -386,7 +386,7 @@ export function ComposeServiceRow({
     <DockerResourceRow
       title={service.name}
       status={
-        <Badge variant={getComposeServiceVariant(service)} size="compact" className="capitalize">
+        <Badge variant={getComposeServiceVariant(service)} className="capitalize">
           {service.health ?? service.state}
         </Badge>
       }
@@ -431,7 +431,7 @@ export function ImageRow({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
                 tooltip="Image actions"
                 tooltipSide="left"
                 aria-label={`Actions for ${label}`}

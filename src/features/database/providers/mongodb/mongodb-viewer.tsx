@@ -80,7 +80,6 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
               onChange={actions.selectDatabase}
               options={store.databases.map((db) => ({ value: db, label: db }))}
               aria-label="Select database"
-              size="xs"
               className="min-w-28"
             />
           ) : undefined
@@ -96,7 +95,6 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                 key={col.name}
                 onClick={() => actions.selectCollection(col.name)}
                 variant="ghost"
-                size="xs"
                 className={cn(
                   "block h-auto w-full justify-start rounded-lg px-2 py-1 text-left ui-text-sm leading-row",
                   store.selectedCollection === col.name && "bg-selected",
@@ -133,19 +131,13 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
             }
             actions={
               <>
-                <Button
-                  onClick={handleApplyQuery}
-                  className="gap-1.5"
-                  aria-label="Apply query"
-                  size="xs"
-                >
+                <Button onClick={handleApplyQuery} className="gap-1.5" aria-label="Apply query">
                   <Braces />
                   Apply
                 </Button>
                 <Button
                   onClick={handleResetQuery}
                   variant="ghost"
-                  size="xs"
                   className="px-2 py-1 text-subtle-foreground"
                   aria-label="Reset query"
                 >
@@ -154,7 +146,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                 <Button
                   onClick={() => actions.refresh()}
                   variant="ghost"
-                  size="icon-xs"
+                  iconOnly
                   className="text-subtle-foreground"
                   aria-label="Refresh"
                 >
@@ -218,7 +210,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                         <Button
                           onClick={() => actions.deleteDocument(id)}
                           variant="ghost"
-                          size="icon-xs"
+                          iconOnly
                           className="text-destructive opacity-0 transition-[opacity,background-color] duration-fast ease-smooth hover:bg-destructive/10 group-hover:opacity-100"
                           aria-label={`Delete document ${id}`}
                         >
@@ -262,7 +254,6 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   ]}
                   onChange={(value) => actions.setPageSize(Number(value))}
                   aria-label="Documents per page"
-                  size="xs"
                   className="min-w-16"
                 />
                 <span className="font-sans text-subtle-foreground ui-text-sm">per page</span>
@@ -275,7 +266,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   onClick={() => actions.setCurrentPage(1)}
                   disabled={store.currentPage === 1}
                   variant="ghost"
-                  size="icon-xs"
+                  iconOnly
                   aria-label="First page"
                 >
                   <ChevronsLeft />
@@ -284,7 +275,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   onClick={() => actions.setCurrentPage(store.currentPage - 1)}
                   disabled={store.currentPage === 1}
                   variant="ghost"
-                  size="icon-xs"
+                  iconOnly
                   aria-label="Previous page"
                 >
                   <ChevronLeft />
@@ -293,7 +284,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   onClick={() => actions.setCurrentPage(store.currentPage + 1)}
                   disabled={store.currentPage === store.totalPages}
                   variant="ghost"
-                  size="icon-xs"
+                  iconOnly
                   aria-label="Next page"
                 >
                   <ChevronRight />
@@ -302,7 +293,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   onClick={() => actions.setCurrentPage(store.totalPages)}
                   disabled={store.currentPage === store.totalPages}
                   variant="ghost"
-                  size="icon-xs"
+                  iconOnly
                   aria-label="Last page"
                 >
                   <ChevronsRight />

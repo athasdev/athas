@@ -353,9 +353,6 @@ const WindowMenuBar = ({
           <MenubarItem shortcut="mod+p" onClick={() => handleClickEmit("menu_quick_open")}>
             Quick Open
           </MenubarItem>
-          <MenubarItem shortcut="mod+g" onClick={() => handleClickEmit("menu_go_to_line")}>
-            Go to Line
-          </MenubarItem>
           <MenubarSeparator />
           <MenubarItem shortcut="ctrl+-" onClick={() => handleCommand("navigation.goBack")}>
             Go Back
@@ -421,9 +418,6 @@ const WindowMenuBar = ({
       ),
       Agent: (
         <MenubarContent>
-          <MenubarItem shortcut="mod+r" onClick={() => handleClickEmit("menu_toggle_ai_chat")}>
-            Toggle Agent
-          </MenubarItem>
           <MenubarItem
             shortcut="mod+shift+space"
             onClick={() => handleCommand("workbench.agentLauncher")}

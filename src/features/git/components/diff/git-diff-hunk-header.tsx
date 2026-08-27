@@ -126,7 +126,6 @@ const DiffHunkHeader = memo(
             <Button
               type="button"
               variant="ghost"
-              size="xs"
               onClick={handleStageHunk}
               className={cn(isStaged ? "text-git-deleted" : "text-git-added")}
               tooltip={isStaged ? "Unstage hunk" : "Stage hunk"}

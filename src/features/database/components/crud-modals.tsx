@@ -45,7 +45,7 @@ export const CreateRowModal = ({
   if (!isOpen) return null;
 
   return (
-    <Dialog onClose={handleClose} title={`Add Row to ${tableName}`} icon={PlusIcon} size="md">
+    <Dialog onClose={handleClose} title={`Add Row to ${tableName}`} icon={PlusIcon}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {columns
           .filter((col) => col.name.toLowerCase() !== "rowid")
@@ -77,10 +77,10 @@ export const CreateRowModal = ({
           })}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={handleClose} size="xs">
+          <Button type="button" variant="ghost" onClick={handleClose}>
             Cancel
           </Button>
-          <Button type="submit" className="gap-1" size="xs">
+          <Button type="submit" className="gap-1">
             <PlusIcon size="14" />
             Add Row
           </Button>
@@ -131,7 +131,7 @@ export const EditRowModal = ({
   if (!isOpen) return null;
 
   return (
-    <Dialog onClose={handleClose} title={`Edit Row in ${tableName}`} size="md">
+    <Dialog onClose={handleClose} title={`Edit Row in ${tableName}`}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {columns
           .filter((col) => col.name.toLowerCase() !== "rowid")
@@ -163,12 +163,10 @@ export const EditRowModal = ({
           })}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={handleClose} size="xs">
+          <Button type="button" variant="ghost" onClick={handleClose}>
             Cancel
           </Button>
-          <Button type="submit" size="xs">
-            Save Changes
-          </Button>
+          <Button type="submit">Save Changes</Button>
         </div>
       </form>
     </Dialog>
@@ -259,7 +257,6 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   { value: "REAL", label: "REAL" },
                   { value: "BLOB", label: "BLOB" },
                 ]}
-                size="md"
                 className="bg-surface"
               />
               <label
@@ -279,7 +276,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   type="button"
                   onClick={() => removeColumn(index)}
                   variant="danger"
-                  size="icon-xs"
+                  iconOnly
                   aria-label={`Remove ${column.name || `column ${index + 1}`}`}
                 >
                   <XIcon size="14" />
@@ -287,14 +284,14 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
               )}
             </div>
           ))}
-          <Button type="button" onClick={addColumn} variant="ghost" size="xs">
+          <Button type="button" onClick={addColumn} variant="ghost">
             <PlusIcon size="12" />
             Add Column
           </Button>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={handleClose} size="xs">
+          <Button type="button" variant="ghost" onClick={handleClose}>
             Cancel
           </Button>
           <Button type="submit" disabled={!canSubmit}>

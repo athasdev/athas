@@ -301,7 +301,6 @@ const GitCommitHistory = ({
         {hasMoreCommits ? (
           <div className="pt-2">
             <Button
-              size="sm"
               className="w-full"
               onClick={handleLoadMore}
               disabled={!repoPath || isLoadingMoreCommits}

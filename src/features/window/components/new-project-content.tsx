@@ -370,7 +370,6 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
                 value={repositoryUrl}
                 onChange={(event) => handleRepositoryUrlChange(event.target.value)}
                 placeholder="https://github.com/owner/repository.git"
-                size="md"
               />
               <FieldDescription>HTTPS and SSH repository URLs are supported.</FieldDescription>
             </Field>
@@ -384,7 +383,6 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
               value={projectName}
               onChange={(event) => handleProjectNameChange(event.target.value)}
               placeholder={source === "clone" ? "repository" : "my-project"}
-              size="md"
               aria-invalid={Boolean(projectName && projectNameError)}
             />
             {projectName && projectNameError ? <FieldError>{projectNameError}</FieldError> : null}
@@ -401,12 +399,10 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
                   setErrorMessage("");
                 }}
                 placeholder="Choose a parent folder"
-                size="md"
                 className="font-mono"
               />
               <InputGroupAddon align="inline-end">
                 <InputGroupButton
-                  size="sm"
                   onClick={() => void handleChooseLocation()}
                   aria-label="Choose project location"
                 >
@@ -425,7 +421,6 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
                 value={packageManager}
                 options={packageManagerOptions}
                 onChange={(value) => setPackageManager(value as ProjectPackageManager)}
-                size="md"
               />
               <FieldDescription>
                 Setup runs in the integrated terminal so you can follow its output.
@@ -434,7 +429,7 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
           ) : null}
 
           {destinationPath ? (
-            <Card variant="muted" size="sm">
+            <Card variant="muted">
               <CardHeader>
                 <CardTitle>Project location</CardTitle>
                 <CardDescription className="break-all font-mono">{destinationPath}</CardDescription>
@@ -447,18 +442,12 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
       </CommandList>
 
       <CommandFooter>
-        <Button type="button" variant="ghost" size="xs" onClick={returnToSource}>
+        <Button type="button" variant="ghost" onClick={returnToSource}>
           <ArrowLeft />
           Starters
         </Button>
         <div className="ml-auto">
-          <Button
-            type="submit"
-            form="new-project-form"
-            variant="accent"
-            size="xs"
-            disabled={!canCreate}
-          >
+          <Button type="submit" form="new-project-form" variant="accent" disabled={!canCreate}>
             {source === "clone" ? <GitBranch /> : source === "empty" ? <FolderPlus /> : <Package />}
             {getCreationLabel(source)}
           </Button>

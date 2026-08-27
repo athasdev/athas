@@ -80,7 +80,6 @@ export function DockerContainerDetail({
               key={tab}
               type="button"
               variant={activeTab === tab ? "accent" : "ghost"}
-              size="xs"
               className="h-6 px-1.5 ui-text-sm capitalize"
               onClick={() => onTabChange(tab)}
             >
@@ -91,7 +90,6 @@ export function DockerContainerDetail({
             <Button
               type="button"
               variant="ghost"
-              size="xs"
               className="h-6 px-1.5 ui-text-sm"
               disabled={logLines.length === 0}
               onClick={onClearLogs}
@@ -102,7 +100,6 @@ export function DockerContainerDetail({
             <Button
               type="button"
               variant="ghost"
-              size="xs"
               className="h-6 px-1.5 ui-text-sm"
               onClick={() => void onCopyToContainer()}
             >
@@ -120,7 +117,6 @@ export function DockerContainerDetail({
               onChange={onLogQueryChange}
               placeholder="Search logs"
               aria-label="Search container logs"
-              size="xs"
               className="min-w-0 flex-1"
             />
             {(["all", "stderr", "errors"] as DockerLogFilter[]).map((filter) => (
@@ -128,7 +124,6 @@ export function DockerContainerDetail({
                 key={filter}
                 type="button"
                 variant={logFilter === filter ? "accent" : "ghost"}
-                size="xs"
                 className="h-6 px-1.5 ui-text-sm capitalize"
                 onClick={() => onLogFilterChange(filter)}
               >
@@ -167,7 +162,6 @@ export function DockerContainerDetail({
             <Button
               type="button"
               variant="ghost"
-              size="xs"
               className="h-6 px-1.5 ui-text-sm"
               disabled={containerPath === "/"}
               onClick={() => onContainerPathChange(getParentContainerPath(containerPath))}
@@ -180,7 +174,7 @@ export function DockerContainerDetail({
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className="ui-text-sm"
               disabled={isFilesLoading}
               onClick={() => void onRefreshFiles()}
@@ -236,7 +230,7 @@ export function DockerContainerDetail({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon-xs"
+                    iconOnly
                     className="ui-text-sm"
                     tooltip="Copy to host"
                     tooltipSide="left"

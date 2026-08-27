@@ -21,10 +21,7 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
   const detail = action.command ?? action.description;
 
   return (
-    <Item
-      size="xs"
-      className="min-h-11 flex-nowrap px-1.5 py-1 hover:bg-accent focus-within:bg-accent"
-    >
+    <Item className="min-h-11 flex-nowrap px-1.5 py-1 hover:bg-accent focus-within:bg-accent">
       <button
         type="button"
         onClick={onRun}
@@ -36,7 +33,7 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
         <ItemContent>
           <ItemTitle className="gap-1.5 font-normal">
             <span className="truncate">{action.name}</span>
-            <Badge size="compact" variant={action.source === "lsp" ? "accent" : "muted"}>
+            <Badge variant={action.source === "lsp" ? "accent" : "muted"}>
               {action.sourceLabel}
             </Badge>
           </ItemTitle>
@@ -53,7 +50,7 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
               type="button"
               onClick={onEdit}
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className="text-subtle-foreground"
               aria-label={`Edit ${action.name}`}
             >
@@ -65,7 +62,7 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
               type="button"
               onClick={onDelete}
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className="text-subtle-foreground hover:text-destructive"
               aria-label={`Delete ${action.name}`}
             >

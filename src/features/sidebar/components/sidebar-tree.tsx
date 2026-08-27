@@ -300,7 +300,7 @@ export function SidebarTreeDisclosure({
       aria-hidden="true"
       className={cn(
         "mr-0.5 flex size-4 shrink-0 items-center justify-center rounded text-subtle-foreground transition-colors",
-        visible ? "hover:text-foreground" : "pointer-events-none text-transparent",
+        !visible && "pointer-events-none text-transparent",
         className,
       )}
       onClick={(event) => {

@@ -82,7 +82,6 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                 event.stopPropagation();
               }}
               variant="ghost"
-              size="sm"
               aria-label="Inline edit instruction"
               aria-describedby={
                 state.inlineEditError
@@ -109,7 +108,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               onClick={() => void state.handleApplyInlineEdit()}
               disabled={state.isInlineEditRunning}
               className="text-primary hover:bg-transparent hover:text-primary/80"
@@ -122,7 +121,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               onClick={() => state.inlineEditToolbarActions.hide()}
               className="text-subtle-foreground hover:text-foreground"
               tooltip="Close inline edit"

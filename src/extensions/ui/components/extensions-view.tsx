@@ -347,7 +347,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
           }
           rightContent={
             <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="ghost" size="xs" />}>
+              <DropdownMenuTrigger render={<Button variant="ghost" />}>
                 <Plus />
                 Add
               </DropdownMenuTrigger>
@@ -407,7 +407,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
           >
             <TabsList variant="bare" className="max-w-full flex-wrap justify-start">
               {EXTENSION_FILTERS.map((filter) => (
-                <TabsTrigger key={filter.id} value={filter.id} size="xs">
+                <TabsTrigger key={filter.id} value={filter.id}>
                   {filter.label}
                 </TabsTrigger>
               ))}
@@ -421,7 +421,6 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
                   <Button
                     type="button"
                     variant="default"
-                    size="sm"
                     className="w-full justify-between"
                     aria-label="Extension category"
                   />

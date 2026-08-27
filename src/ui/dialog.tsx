@@ -2,7 +2,6 @@ import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { motion, useReducedMotionConfig } from "motion/react";
 import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
-import { overlayBackdrop, overlaySurface, overlaySurfaceTransition } from "@/design-system/overlay";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,7 +39,6 @@ interface DialogProps {
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
   classNames?: Partial<{
-    modal: string;
     header: string;
     title: string;
     headerActions: string;
@@ -49,17 +47,13 @@ interface DialogProps {
 }
 
 const dialogContentVariants = cva(
-  [
-    overlaySurface(),
-    "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-9999",
-    "flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col overflow-hidden",
-  ],
+  "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-9999 flex max-h-[90vh] w-full max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background text-foreground shadow-(--shadow-dialog) ring-1 ring-border/70 outline-none",
   {
     variants: {
       size: {
-        sm: "w-full max-w-sm",
-        md: "w-full max-w-md",
-        lg: "w-full max-w-lg",
+        sm: "max-w-sm",
+        md: "max-w-md",
+        lg: "max-w-lg",
       },
     },
     defaultVariants: {
@@ -88,7 +82,10 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
-      className={cn(overlayBackdrop(), "z-9998", className)}
+      className={cn(
+        "fixed inset-0 z-9998 bg-black/20 transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+        className,
+      )}
       {...props}
     />
   );
@@ -109,13 +106,17 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
-        className={cn(dialogContentVariants({ size }), overlaySurfaceTransition(), className)}
+        className={cn(
+          dialogContentVariants({ size }),
+          "transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+          className,
+        )}
         {...props}
       >
         {children}
         {showCloseButton ? (
           <DialogPrimitive.Close
-            render={<Button variant="ghost" size="icon-xs" />}
+            render={<Button variant="ghost" iconOnly />}
             className="absolute top-2.5 right-2.5 text-subtle-foreground hover:text-foreground"
             aria-label="Close dialog"
           >
@@ -228,7 +229,7 @@ const AppDialog = ({
               transition={prefersReducedMotion ? instantTransition : quickTransition}
             />
           }
-          className={cn(overlayBackdrop(), "z-9998")}
+          className="fixed inset-0 z-9998 bg-black/20 transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0"
         />
 
         <DialogPrimitive.Popup
@@ -242,7 +243,7 @@ const AppDialog = ({
             />
           }
           data-dialog-content=""
-          className={cn(dialogContentVariants({ size }), classNames?.modal)}
+          className={dialogContentVariants({ size })}
         >
           <div
             className={cn(
@@ -260,7 +261,7 @@ const AppDialog = ({
             <div className={cn("flex items-center gap-1", classNames?.headerActions)}>
               {headerActions}
               <DialogPrimitive.Close
-                render={<Button variant="ghost" size="icon-xs" />}
+                render={<Button variant="ghost" iconOnly />}
                 aria-label="Close dialog"
               >
                 <X />
@@ -469,7 +470,7 @@ function PrimitiveDialogHost({
           if (!open) onClose(dialog.resolve);
         }}
       >
-        <AlertDialogContent size="sm">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogMedia>
               <Info />
@@ -495,7 +496,7 @@ function PrimitiveDialogHost({
           if (!open) onClose(() => dialog.resolve(false));
         }}
       >
-        <AlertDialogContent size="sm">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogMedia>
               <Question />

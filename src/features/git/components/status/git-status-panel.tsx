@@ -377,7 +377,6 @@ const GitStatusPanel = ({
   const renderDiffStatsBadge = (stats: GitFileDiffStats, className?: string) => (
     <Badge
       variant="default"
-      size="compact"
       className={cn("h-5 gap-1 border-border/50 bg-accent/60 tabular-nums", className)}
     >
       <span className="text-git-added">+{stats.additions}</span>
@@ -552,7 +551,6 @@ const GitStatusPanel = ({
                 <Button
                   type="button"
                   variant="default"
-                  size="xs"
                   onClick={() => openScopedDiff("all")}
                   disabled={!onViewDiff || isLoading}
                   aria-label="View all diffs"
@@ -563,7 +561,7 @@ const GitStatusPanel = ({
                 <Button
                   type="button"
                   variant="default"
-                  size="icon-xs"
+                  iconOnly
                   onClick={() => setIsDiffMenuOpen((open) => !open)}
                   disabled={isLoading}
                   active={isDiffMenuOpen}

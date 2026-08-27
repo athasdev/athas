@@ -81,34 +81,14 @@ export function ExtensionDetailView({
       </div>
 
       <div className="flex flex-wrap gap-1.5">
-        <Badge variant="default" size="compact">
-          {getCategoryLabel(extension.category)}
-        </Badge>
-        {extension.isInstalled ? (
-          <Badge variant="accent" size="compact">
-            Installed
-          </Badge>
-        ) : null}
+        <Badge variant="default">{getCategoryLabel(extension.category)}</Badge>
+        {extension.isInstalled ? <Badge variant="accent">Installed</Badge> : null}
         {extension.isInstalled && !extension.isEnabled ? (
-          <Badge variant="default" size="compact">
-            Disabled
-          </Badge>
+          <Badge variant="default">Disabled</Badge>
         ) : null}
-        {hasUpdate(extension) ? (
-          <Badge variant="accent" size="compact">
-            Update
-          </Badge>
-        ) : null}
-        {extension.isActive ? (
-          <Badge variant="accent" size="compact">
-            Active
-          </Badge>
-        ) : null}
-        {extension.isBundled ? (
-          <Badge variant="accent" size="compact">
-            Built-in
-          </Badge>
-        ) : null}
+        {hasUpdate(extension) ? <Badge variant="accent">Update</Badge> : null}
+        {extension.isActive ? <Badge variant="accent">Active</Badge> : null}
+        {extension.isBundled ? <Badge variant="accent">Built-in</Badge> : null}
       </div>
 
       {extension.description ? (
@@ -149,7 +129,6 @@ export function ExtensionDetailView({
                   </div>
                   <Button
                     variant={isCurrent ? "default" : "accent"}
-                    size="xs"
                     active={isCurrent}
                     disabled={!extension.isInstalled || isCurrent}
                     onClick={() => void onUseAppearance(extension, option.id)}
@@ -285,7 +264,7 @@ export function ExtensionDetailView({
                   Review what this skill asks the agent to do before adding it.
                 </p>
                 {isSkillPreviewLoading ? (
-                  <Card variant="muted" size="sm">
+                  <Card variant="muted">
                     <CardContent>
                       <Spinner label="Loading skill instructions" showLabel />
                     </CardContent>
@@ -295,7 +274,7 @@ export function ExtensionDetailView({
                     <AlertDescription>{skillPreviewError}</AlertDescription>
                   </Alert>
                 ) : skillContent ? (
-                  <Card variant="muted" size="sm">
+                  <Card variant="muted">
                     <CardContent className="min-w-0 overflow-hidden">
                       <MarkdownRenderer content={skillContent} />
                     </CardContent>

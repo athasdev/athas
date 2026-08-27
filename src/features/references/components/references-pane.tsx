@@ -79,7 +79,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
                 tooltip={isFullScreen ? "Exit fullscreen" : "Fullscreen"}
                 commandId="workbench.toggleActivePaneFullscreen"
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
               >
                 {isFullScreen ? <Minimize2 /> : <Maximize2 />}
               </Button>
@@ -88,7 +88,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
               onClick={() => useReferencesStore.getState().actions.clear()}
               tooltip="Clear references"
               variant="ghost"
-              size="icon-xs"
+              iconOnly
             >
               <X />
             </Button>

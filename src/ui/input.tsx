@@ -2,15 +2,9 @@ import { type Icon as AppIcon } from "@/ui/icons";
 import { cva } from "class-variance-authority";
 import type React from "react";
 import { forwardRef, useEffect, useRef } from "react";
-import {
-  controlIconSizes,
-  controlSizeVariants,
-  controlSurfaceVariants,
-} from "@/utils/control-variants";
 import { cn } from "@/utils/cn";
 
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
-  size?: "xs" | "sm" | "md";
   variant?: "default" | "ghost" | "inline";
   shape?: "default" | "pill";
   leftIcon?: AppIcon;
@@ -20,21 +14,18 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
 
 const inputVariants = cva(
   [
-    "w-full disabled:cursor-not-allowed disabled:opacity-50",
+    "h-7 w-full min-w-0 font-sans ui-text-sm text-foreground outline-none transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth disabled:cursor-not-allowed disabled:opacity-50",
     "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
     "placeholder:text-subtle-foreground",
   ],
   {
     variants: {
       variant: {
-        default: "border-0 focus:border-0",
-        ghost: "",
-        inline: "",
-      },
-      size: {
-        xs: "",
-        sm: "",
-        md: "",
+        default:
+          "rounded-chrome border-0 bg-surface focus:border-0 focus:bg-surface focus:ring-1 focus:ring-border-strong/35",
+        ghost: "border-none bg-transparent focus:ring-0",
+        inline:
+          "rounded-none border-0 border-foreground border-b bg-transparent focus:border-subtle-foreground focus:ring-0",
       },
       shape: {
         default: "",
@@ -50,18 +41,11 @@ const inputVariants = cva(
       },
     },
     compoundVariants: [
-      { size: "xs", hasLeftIcon: true, className: "pl-6 pr-2 py-1" },
-      { size: "xs", hasRightIcon: true, className: "pl-2 pr-6 py-1" },
-      { size: "xs", hasLeftIcon: false, hasRightIcon: false, className: "px-2 py-1" },
-      { size: "sm", hasLeftIcon: true, className: "pl-7 pr-2 py-1" },
-      { size: "sm", hasRightIcon: true, className: "pl-2 pr-7 py-1" },
-      { size: "sm", hasLeftIcon: false, hasRightIcon: false, className: "px-2 py-1" },
-      { size: "md", hasLeftIcon: true, className: "pl-9 pr-3 py-1" },
-      { size: "md", hasRightIcon: true, className: "pl-3 pr-9 py-1" },
-      { size: "md", hasLeftIcon: false, hasRightIcon: false, className: "px-3 py-1" },
+      { hasLeftIcon: true, className: "py-1 pr-2 pl-7" },
+      { hasRightIcon: true, className: "py-1 pr-7 pl-2" },
+      { hasLeftIcon: false, hasRightIcon: false, className: "px-2 py-1" },
     ],
     defaultVariants: {
-      size: "sm",
       variant: "default",
       shape: "default",
       hasLeftIcon: false,
@@ -108,7 +92,6 @@ type InlineRenameInputProps = Omit<
 
 const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   {
-    size = "sm",
     variant = "default",
     shape = "default",
     className,
@@ -122,23 +105,6 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   },
   ref,
 ) {
-  const iconSizes = {
-    xs: controlIconSizes.xs,
-    sm: controlIconSizes.sm,
-    md: controlIconSizes.md,
-  };
-
-  const iconPositions = {
-    xs: "left-1.5",
-    sm: "left-2",
-    md: "left-2.5",
-  };
-
-  const iconPositionsRight = {
-    xs: "right-1.5",
-    sm: "right-2",
-    md: "right-2.5",
-  };
   const hasLeftIcon = Boolean(LeftIcon);
   const hasRightIcon = Boolean(RightIcon);
 
@@ -149,12 +115,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         autoComplete={autoComplete}
         autoCorrect={autoCorrect}
         spellCheck={spellCheck}
-        className={cn(
-          controlSurfaceVariants({ variant }),
-          controlSizeVariants({ size }),
-          inputVariants({ size, variant, shape, hasLeftIcon, hasRightIcon }),
-          className,
-        )}
+        className={cn(inputVariants({ variant, shape, hasLeftIcon, hasRightIcon }), className)}
         {...props}
       />
     );
@@ -164,11 +125,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     <div className={cn("relative", containerClassName)}>
       {LeftIcon && (
         <LeftIcon
-          className={cn(
-            "-translate-y-1/2 absolute top-1/2 text-subtle-foreground",
-            iconPositions[size],
-          )}
-          size={iconSizes[size]}
+          className="-translate-y-1/2 absolute top-1/2 left-2 text-subtle-foreground"
+          size={12}
         />
       )}
       <input
@@ -176,21 +134,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         autoComplete={autoComplete}
         autoCorrect={autoCorrect}
         spellCheck={spellCheck}
-        className={cn(
-          controlSurfaceVariants({ variant }),
-          controlSizeVariants({ size }),
-          inputVariants({ size, variant, shape, hasLeftIcon, hasRightIcon }),
-          className,
-        )}
+        className={cn(inputVariants({ variant, shape, hasLeftIcon, hasRightIcon }), className)}
         {...props}
       />
       {RightIcon && (
         <RightIcon
-          className={cn(
-            "-translate-y-1/2 absolute top-1/2 text-subtle-foreground",
-            iconPositionsRight[size],
-          )}
-          size={iconSizes[size]}
+          className="-translate-y-1/2 absolute top-1/2 right-2 text-subtle-foreground"
+          size={12}
         />
       )}
     </div>
@@ -207,7 +157,6 @@ export function InlineRenameInput({
   tone = "default",
   width = "full",
   className,
-  size = "xs",
   ...props
 }: InlineRenameInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -258,7 +207,6 @@ export function InlineRenameInput({
         }
       }}
       variant={appearance === "field" ? "default" : "inline"}
-      size={size}
       className={cn(inlineRenameInputVariants({ appearance, tone, width }), className)}
       {...props}
     />

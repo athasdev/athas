@@ -821,7 +821,6 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
           <Item
             key={rowKey}
             render={<button type="button" />}
-            size="sm"
             onClick={() => onDiagnosticClick?.(diagnostic)}
             onContextMenu={(event) => {
               diagnosticContextMenu.open(event, diagnostic);
@@ -987,7 +986,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
                     <span className="flex min-w-0 flex-1 items-center gap-1.5">
                       {group.severity ? getSeverityIcon(group.severity, 13) : null}
                       <span className="min-w-0 flex-1 truncate">{group.label}</span>
-                      <Badge variant="muted" size="compact" className="shrink-0">
+                      <Badge variant="muted" className="shrink-0">
                         {group.items.length}
                       </Badge>
                     </span>

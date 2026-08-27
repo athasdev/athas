@@ -482,12 +482,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               <Tooltip content="Diff actions" side="bottom">
                 <DropdownMenuTrigger
                   render={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label="Diff actions"
-                    />
+                    <Button type="button" variant="ghost" iconOnly aria-label="Diff actions" />
                   }
                 >
                   <MoreHorizontal />

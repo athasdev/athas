@@ -134,7 +134,6 @@ function EmptyState({
     <Button
       type="button"
       variant={item.variant ?? "default"}
-      size="xs"
       disabled={item.disabled}
       tooltip={item.tooltip}
       onClick={item.onClick}

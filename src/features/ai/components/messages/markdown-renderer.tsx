@@ -166,7 +166,7 @@ function CodeBlock({
                 variant="ghost"
                 onClick={() => void copyTextToClipboard(code)}
                 tooltip="Copy code"
-                size="icon"
+                iconOnly
               >
                 <Copy className="text-subtle-foreground" size={12} />
               </Button>

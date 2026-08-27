@@ -405,7 +405,7 @@ export default function DataGrid({
           }
           aria-label="Add row"
           disabled={!canCreateRows}
-          size="icon-xs"
+          iconOnly
         >
           <Plus className="text-subtle-foreground hover:text-foreground" />
         </Button>
@@ -472,7 +472,7 @@ export default function DataGrid({
                             !canFilterColumns && "pointer-events-none opacity-20",
                           )}
                           aria-label={`Filter by ${col}`}
-                          size="icon"
+                          iconOnly
                         >
                           <Filter className="text-subtle-foreground hover:text-foreground" />
                         </Button>
@@ -582,7 +582,6 @@ export default function DataGrid({
                               if (e.key === "Escape") setEditing(null);
                             }}
                             onBlur={handleSubmit}
-                            size="xs"
                             className="w-full rounded-lg border-border/70 bg-surface/80 ui-text-sm focus:border-primary/60"
                           />
                         ) : (

@@ -52,7 +52,6 @@ export function ProviderSelector({
       searchable
       searchableTrigger={isComposer ? "input" : "menu"}
       hideChevron={isComposer}
-      size="xs"
       variant={isComposer ? "ghost" : "default"}
       disabled={disabled}
       open={open}

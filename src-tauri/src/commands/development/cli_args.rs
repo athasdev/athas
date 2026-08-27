@@ -188,6 +188,7 @@ pub fn parse_cli_argv(argv: &[String], cwd: &Path) -> Vec<CliRequest> {
    parse_cli_args(argv.get(1..).unwrap_or_default(), cwd)
 }
 
+#[cfg(any(target_os = "macos", test))]
 pub fn parse_opened_urls(urls: &[tauri::Url]) -> Vec<CliRequest> {
    urls
       .iter()

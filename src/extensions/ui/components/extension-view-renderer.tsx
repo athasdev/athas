@@ -138,7 +138,7 @@ function renderNode(
       );
     case "card":
       return (
-        <Card key={key} variant={node.variant ?? "default"} size="sm">
+        <Card key={key} variant={node.variant ?? "default"}>
           {node.title || node.description ? (
             <CardHeader>
               {node.title ? <CardTitle>{node.title}</CardTitle> : null}
@@ -171,13 +171,13 @@ function renderNode(
       );
     case "badge":
       return (
-        <Badge key={key} variant={badgeTone(node.tone)} size="compact">
+        <Badge key={key} variant={badgeTone(node.tone)}>
           {node.label}
         </Badge>
       );
     case "metric":
       return (
-        <Card key={key} variant="muted" size="sm" className="min-w-0 flex-1 basis-24">
+        <Card key={key} variant="muted" className="min-w-0 flex-1 basis-24">
           <CardContent className="flex min-w-0 items-end justify-between gap-2">
             <div className="min-w-0">
               <div className="text-subtle-foreground">{node.label}</div>
@@ -375,7 +375,7 @@ function renderNode(
         node.meta || node.badges?.length ? (
           <span className="flex items-center gap-1">
             {node.badges?.map((badge) => (
-              <Badge key={badge.label} variant={badgeTone(badge.tone)} size="compact">
+              <Badge key={badge.label} variant={badgeTone(badge.tone)}>
                 {badge.label}
               </Badge>
             ))}
@@ -389,7 +389,6 @@ function renderNode(
             key={key}
             render={node.onSelect ? <button type="button" /> : undefined}
             variant="muted"
-            size="xs"
             className="min-w-0 flex-nowrap text-left"
             onClick={() => node.onSelect && execute(node.onSelect)}
           >

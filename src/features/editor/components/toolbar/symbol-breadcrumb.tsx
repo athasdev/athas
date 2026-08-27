@@ -92,7 +92,6 @@ export function SymbolBreadcrumb({
                       <Button
                         onClick={() => openOutlineSymbol(symbol)}
                         variant="ghost"
-                        size="xs"
                         className="px-1"
                       />
                     }

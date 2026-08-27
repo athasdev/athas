@@ -175,7 +175,6 @@ export function WebViewerToolbar({
               onChange={(e) => onInputUrlChange(e.target.value)}
               onKeyDown={handleUrlInputKeyDown}
               placeholder="Enter URL..."
-              size="xs"
               className="h-full"
             />
             <InputGroupAddon align="inline-end" className="gap-0.5 pr-1">
@@ -184,7 +183,7 @@ export function WebViewerToolbar({
                 variant="ghost"
                 onClick={isLoading ? onStopLoading : onRefresh}
                 tooltip={isLoading ? "Stop loading" : "Refresh"}
-                size="icon-xs"
+                iconOnly
               >
                 {isLoading ? <X className="size-3.5" /> : <RefreshCw className="size-3.5" />}
               </InputGroupButton>
@@ -194,7 +193,7 @@ export function WebViewerToolbar({
                 onClick={onCopyUrl}
                 disabled={!canCopyUrl}
                 tooltip="Copy URL"
-                size="icon-xs"
+                iconOnly
               >
                 {copied ? (
                   <Check className="size-3.5 text-success" />
@@ -213,7 +212,7 @@ export function WebViewerToolbar({
             variant="ghost"
             onClick={() => setShowZoomPopover((open) => !open)}
             tooltip="Zoom controls"
-            size="icon-xs"
+            iconOnly
           >
             <ZoomIn />
           </Button>
@@ -252,7 +251,7 @@ export function WebViewerToolbar({
             onClick={onClearBrowsingData}
             disabled={!canClearBrowsingData}
             tooltip="Clear browsing data"
-            size="icon-xs"
+            iconOnly
           >
             <Broom />
           </Button>
@@ -261,7 +260,7 @@ export function WebViewerToolbar({
             onClick={onOpenDevTools}
             disabled={!canOpenDevTools}
             tooltip={devToolsTooltip}
-            size="icon-xs"
+            iconOnly
           >
             <Code2 />
           </Button>
@@ -270,7 +269,7 @@ export function WebViewerToolbar({
             onClick={onOpenExternal}
             disabled={!canOpenExternal}
             tooltip="Open in browser"
-            size="icon-xs"
+            iconOnly
           >
             <ExternalLink />
           </Button>

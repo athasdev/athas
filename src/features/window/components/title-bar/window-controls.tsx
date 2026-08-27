@@ -50,7 +50,7 @@ export function WindowControls({
         onClick={handleMinimize}
         variant="ghost"
         className="pointer-events-auto"
-        size="icon-xs"
+        iconOnly
         tooltip="Minimize"
         commandId="window.minimize.alt"
         tooltipSide="bottom"
@@ -62,7 +62,7 @@ export function WindowControls({
         onClick={handleToggleMaximize}
         variant="ghost"
         className="pointer-events-auto"
-        size="icon-xs"
+        iconOnly
         tooltip={isMaximized ? "Restore" : "Maximize"}
         commandId="window.maximize"
         tooltipSide="bottom"
@@ -74,7 +74,7 @@ export function WindowControls({
         onClick={handleClose}
         variant="danger"
         className="pointer-events-auto group hover:text-white"
-        size="icon-xs"
+        iconOnly
         tooltip="Close"
         commandId="workbench.closeWindow"
         tooltipSide="bottom"

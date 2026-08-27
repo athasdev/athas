@@ -646,14 +646,13 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
         ) : (
           <CommandFooter>
             <div className="flex w-full justify-end gap-2">
-              <Button type="button" onClick={onClose} variant="ghost" size="xs">
+              <Button type="button" onClick={onClose} variant="ghost">
                 Cancel
               </Button>
               <Button
                 type="button"
                 onClick={() => void handleTestRemoteConnection()}
                 variant="ghost"
-                size="xs"
                 disabled={isRemoteTesting}
               >
                 {isRemoteTesting ? (
@@ -667,7 +666,6 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
                 form="project-picker-add-remote-form"
                 variant="accent"
                 disabled={!isRemoteFormValid || isRemoteSaving}
-                size="xs"
               >
                 {isRemoteSaving ? "Saving..." : "Save Connection"}
               </Button>

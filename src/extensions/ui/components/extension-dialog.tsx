@@ -24,7 +24,7 @@ export function ExtensionDialogs() {
           <DialogContent
             aria-describedby={undefined}
             showCloseButton={false}
-            className="max-w-[calc(100vw-2rem)]"
+            size="lg"
             style={{
               width: dialog.width ?? 480,
               maxHeight: dialog.height ?? 600,
@@ -32,9 +32,7 @@ export function ExtensionDialogs() {
           >
             <DialogHeader className="flex-row items-center justify-between gap-2 border-border border-b px-4 py-3">
               <DialogTitle>{dialog.title}</DialogTitle>
-              <DialogClose
-                render={<Button variant="ghost" size="icon-xs" aria-label="Close dialog" />}
-              >
+              <DialogClose render={<Button variant="ghost" iconOnly aria-label="Close dialog" />}>
                 <X />
               </DialogClose>
             </DialogHeader>

@@ -282,7 +282,6 @@ const GitCommitPanel = ({
                   onClick={() => void handleRemoteAction("push", () => pushChanges(repoPath!))}
                   disabled={!repoPath || isRemoteActionLoading}
                   variant="ghost"
-                  size="xs"
                   className="text-git-added hover:text-git-added"
                   tooltip={`Push ${ahead} commit${ahead !== 1 ? "s" : ""}`}
                 >
@@ -297,7 +296,6 @@ const GitCommitPanel = ({
                   onClick={() => void handleRemoteAction("pull", () => pullChanges(repoPath!))}
                   disabled={!repoPath || isRemoteActionLoading}
                   variant="ghost"
-                  size="xs"
                   className="text-git-deleted hover:text-git-deleted"
                   tooltip={`Pull ${behind} commit${behind !== 1 ? "s" : ""}`}
                 >
@@ -314,7 +312,6 @@ const GitCommitPanel = ({
             <Button
               type="button"
               variant="default"
-              size="xs"
               onClick={() => void handleGenerateCommitMessage()}
               disabled={isGenerateDisabled}
               tooltip="Generate commit message with AI"
@@ -329,7 +326,7 @@ const GitCommitPanel = ({
                   <Button
                     type="button"
                     variant="default"
-                    size="icon-xs"
+                    iconOnly
                     disabled={isGenerating || isCommitting}
                     active={isGenerateModeMenuOpen}
                     tooltip="Commit message format"
@@ -358,7 +355,6 @@ const GitCommitPanel = ({
             onClick={() => void handleCommit()}
             disabled={isCommitDisabled}
             variant="accent"
-            size="xs"
           >
             {isCommitting ? "Committing..." : "Commit"}
           </Button>

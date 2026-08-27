@@ -64,7 +64,6 @@ export function GitHubLabelPicker({
           leftIcon={Tag}
           placeholder={summary}
           aria-label="Choose labels"
-          size="xs"
           variant="ghost"
           className="w-full bg-transparent hover:bg-accent/60"
           inputClassName="truncate"
@@ -117,12 +116,7 @@ export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerPr
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            className="max-w-44 justify-start font-normal"
-          />
+          <Button type="button" variant="ghost" className="max-w-44 justify-start font-normal" />
         }
       >
         <User />
@@ -141,13 +135,12 @@ export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerPr
             }}
             placeholder="GitHub username"
             aria-label="Add assignee"
-            size="sm"
             autoFocus
           />
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
+            iconOnly
             onClick={addAssignees}
             disabled={!draft.trim()}
             aria-label="Add assignee"
@@ -162,7 +155,6 @@ export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerPr
                 key={assignee}
                 type="button"
                 variant="ghost"
-                size="xs"
                 className="gap-1 bg-accent/55 font-normal"
                 onClick={() => onChange(value.filter((item) => item !== assignee))}
                 aria-label={`Remove @${assignee}`}

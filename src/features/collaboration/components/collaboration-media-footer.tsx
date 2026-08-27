@@ -35,7 +35,7 @@ export function CollaborationMediaFooter({
           tooltip={micState === "active" ? "Stop Mic" : "Start Mic"}
           tooltipSide="top"
           onClick={onToggleMic}
-          size="icon-sm"
+          iconOnly
         >
           <Mic />
         </Button>
@@ -46,7 +46,7 @@ export function CollaborationMediaFooter({
           tooltip={screenState === "active" ? "Stop Screen Share" : "Share Screen"}
           tooltipSide="top"
           onClick={onToggleScreenShare}
-          size="icon-sm"
+          iconOnly
         >
           <Monitor />
         </Button>
@@ -58,13 +58,7 @@ export function CollaborationMediaFooter({
           <span className="text-subtle-foreground">{streamStatus}</span>
         </div>
         {isFollowing ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            className="ml-auto"
-            onClick={onStopFollowing}
-          >
+          <Button type="button" variant="ghost" className="ml-auto" onClick={onStopFollowing}>
             Stop
           </Button>
         ) : null}

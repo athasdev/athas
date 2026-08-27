@@ -84,22 +84,20 @@ function MessageScrollerButton({
   children,
   render,
   variant = "default",
-  size = "icon-sm",
   ...props
 }: React.ComponentProps<typeof MessageScrollerPrimitive.Button> &
-  Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+  Pick<React.ComponentProps<typeof Button>, "variant">) {
   return (
     <MessageScrollerPrimitive.Button
       data-slot="message-scroller-button"
       data-direction={direction}
       data-variant={variant}
-      data-size={size}
       direction={direction}
       className={cn(
         "absolute inset-s-1/2 -translate-x-1/2 border border-border bg-background text-foreground transition-[translate,scale,opacity] duration-200 hover:bg-accent hover:text-foreground data-[active=false]:pointer-events-none data-[active=false]:scale-95 data-[active=false]:opacity-0 data-[active=false]:duration-400 data-[active=true]:translate-y-0 data-[active=true]:scale-100 data-[active=true]:opacity-100 data-[direction=end]:bottom-4 data-[direction=end]:data-[active=false]:translate-y-full data-[direction=start]:top-4 data-[direction=start]:data-[active=false]:-translate-y-full rtl:translate-x-1/2 data-[direction=start]:[&_svg]:rotate-180",
         className,
       )}
-      render={render ?? <Button variant={variant} size={size} />}
+      render={render ?? <Button variant={variant} iconOnly />}
       {...props}
     >
       {children ?? (

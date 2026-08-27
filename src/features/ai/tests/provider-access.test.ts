@@ -13,7 +13,6 @@ const subscription: SubscriptionInfo = {
     hostedAi: true,
     settingsSync: true,
     cloudWorkspaces: true,
-    views: true,
     collaboration: true,
     enterprisePolicy: false,
   },

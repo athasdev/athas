@@ -462,7 +462,7 @@ function NotebookCellView({
             {isCode ? (
               <Button
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
                 className="text-subtle-foreground hover:text-foreground"
                 onClick={() => onRun(cellIndex)}
                 disabled={isRunning}
@@ -474,7 +474,7 @@ function NotebookCellView({
             ) : null}
             <Button
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className="text-subtle-foreground hover:text-foreground"
               onClick={() => onTypeChange(cellIndex, isCode ? "markdown" : "code")}
               tooltip={isCode ? "Convert to Markdown" : "Convert to Code"}
@@ -484,7 +484,7 @@ function NotebookCellView({
             </Button>
             <Button
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className="text-subtle-foreground hover:text-foreground"
               onClick={() => onInsertBelow(cellIndex, isCode ? "code" : "markdown")}
               tooltip="Insert cell below"
@@ -494,7 +494,7 @@ function NotebookCellView({
             </Button>
             <Button
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className="text-subtle-foreground hover:text-foreground"
               onClick={() => onDelete(cellIndex)}
               tooltip="Delete cell"
@@ -504,7 +504,7 @@ function NotebookCellView({
             </Button>
             <Button
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className="text-subtle-foreground hover:text-foreground"
               onClick={() => onEditToggle(cellIndex)}
               tooltip={isEditing ? "Preview cell" : "Edit cell"}
@@ -802,7 +802,6 @@ export function NotebookEditor() {
         <div className="mb-3 flex items-center justify-end gap-1">
           <Button
             variant="ghost"
-            size="xs"
             className="h-7 gap-1.5 text-subtle-foreground hover:text-foreground"
             onClick={() => handleAddCell("code")}
           >
@@ -811,7 +810,6 @@ export function NotebookEditor() {
           </Button>
           <Button
             variant="ghost"
-            size="xs"
             className="h-7 gap-1.5 text-subtle-foreground hover:text-foreground"
             onClick={() => handleAddCell("markdown")}
           >

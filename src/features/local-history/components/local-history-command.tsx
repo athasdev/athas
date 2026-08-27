@@ -467,7 +467,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void openSnapshot(entry);
                   }}
-                  size="icon"
+                  iconOnly
                 >
                   <Eye />
                 </Button>
@@ -479,7 +479,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void compareWithCurrent(entry);
                   }}
-                  size="icon"
+                  iconOnly
                 >
                   <ArrowsLeftRight />
                 </Button>
@@ -491,7 +491,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void compareWithPrevious(entry);
                   }}
-                  size="icon"
+                  iconOnly
                 >
                   <ClockCounterClockwise />
                 </Button>
@@ -503,7 +503,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void restoreSnapshot(entry);
                   }}
-                  size="icon"
+                  iconOnly
                 >
                   <ArrowCounterClockwise />
                 </Button>
@@ -516,7 +516,7 @@ export function LocalHistoryCommandContent({
                     setRenamingEntryId(entry.id);
                     setRenameValue(entry.label ?? "");
                   }}
-                  size="icon"
+                  iconOnly
                 >
                   <PencilSimple />
                 </Button>
@@ -528,7 +528,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void deleteSnapshot(entry);
                   }}
-                  size="icon"
+                  iconOnly
                 >
                   <Trash />
                 </Button>

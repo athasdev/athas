@@ -536,7 +536,6 @@ export function useFileExplorerContextMenu({
                 <Button
                   variant="danger"
                   onClick={handleEnvOverwriteConfirm}
-                  size="xs"
                   className="ui-text-base"
                 >
                   Overwrite

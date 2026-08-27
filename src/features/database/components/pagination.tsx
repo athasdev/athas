@@ -62,7 +62,6 @@ export default function Pagination({
             { value: "500", label: "500" },
           ]}
           onChange={(value) => onPageSizeChange(Number(value))}
-          size="xs"
           className="min-w-16"
         />
         <span className="font-sans ui-text-sm text-subtle-foreground">per page</span>
@@ -73,7 +72,7 @@ export default function Pagination({
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           className="text-subtle-foreground hover:text-foreground disabled:opacity-50"
           aria-label="Previous page"
           tooltip="Previous page"
@@ -101,7 +100,7 @@ export default function Pagination({
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           className="text-subtle-foreground hover:text-foreground disabled:opacity-50"
           aria-label="Next page"
           tooltip="Next page"

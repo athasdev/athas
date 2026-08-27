@@ -1008,7 +1008,6 @@ export function CollaborationSidebarView() {
                           <Button
                             type="submit"
                             variant="ghost"
-                            size="xs"
                             disabled={!newChannelName.trim() || isSending}
                           >
                             Create
@@ -1019,7 +1018,6 @@ export function CollaborationSidebarView() {
                           autoFocus
                           value={newChannelName}
                           variant="ghost"
-                          size="xs"
                           placeholder="channel-name"
                           disabled={isSending}
                           className="min-w-0"
@@ -1105,7 +1103,7 @@ export function CollaborationSidebarView() {
               tooltip="Back to Channels"
               tooltipSide="bottom"
               onClick={() => setOpenConversation(null)}
-              size="icon-sm"
+              iconOnly
             >
               <CaretLeft />
             </Button>
@@ -1116,7 +1114,6 @@ export function CollaborationSidebarView() {
                   type="button"
                   variant="ghost"
                   active={openChannel?.id === channel.id}
-                  size="sm"
                   className="max-w-32"
                   onClick={() => openChannelChat(channel.id)}
                   onContextMenu={(event) => channelsContextMenu.open(event, channel)}
@@ -1139,7 +1136,7 @@ export function CollaborationSidebarView() {
                       <div className="px-1 text-subtle-foreground ui-text-sm">{group.author}</div>
                       <div className="space-y-1">
                         {group.entries.map((entry) => (
-                          <Card key={entry.id} size="flush">
+                          <Card key={entry.id}>
                             <CardContent className="px-2.5 py-1.5">
                               {entry.kind === "document" ? (
                                 <span className="mb-0.5 flex items-center gap-1.5 text-subtle-foreground">
@@ -1185,7 +1182,7 @@ export function CollaborationSidebarView() {
               tooltip="Back to Channels"
               tooltipSide="bottom"
               onClick={() => setOpenConversation(null)}
-              size="icon-sm"
+              iconOnly
             >
               <CaretLeft />
             </Button>
@@ -1215,7 +1212,7 @@ export function CollaborationSidebarView() {
                       <CollaborationAvatar name={authorName} />
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="px-1 text-subtle-foreground ui-text-sm">{authorName}</div>
-                        <Card size="flush">
+                        <Card>
                           <CardContent className="px-2.5 py-1.5">{entry.body}</CardContent>
                         </Card>
                       </div>
@@ -1312,7 +1309,6 @@ export function CollaborationSidebarView() {
                     <Button
                       type="button"
                       variant="ghost"
-                      size="xs"
                       onClick={(event) => {
                         event.stopPropagation();
                         void openParticipantFile(participant.activeFilePath!);

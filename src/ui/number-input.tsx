@@ -3,18 +3,12 @@ import { cva } from "class-variance-authority";
 import type React from "react";
 import { MinusIcon as Minus, PlusIcon as Plus } from "@/ui/icons";
 import { Button } from "@/ui/button";
-import {
-  controlIconSizes,
-  controlSizeVariants,
-  controlSurfaceVariants,
-} from "@/utils/control-variants";
 import { cn } from "@/utils/cn";
 
 interface InputProps extends Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
   "defaultValue" | "max" | "min" | "onChange" | "size" | "step" | "value"
 > {
-  size?: "xs" | "sm" | "md";
   value?: number | string;
   defaultValue?: number | string;
   min?: number | string;
@@ -22,18 +16,6 @@ interface InputProps extends Omit<
   step?: number | string;
   onChange?: (value: number) => void;
 }
-
-const numberInputFieldPadding = {
-  xs: "px-2",
-  sm: "px-2",
-  md: "px-3",
-} as const;
-
-const numberInputTextSize = {
-  xs: "ui-text-sm",
-  sm: "ui-text-sm",
-  md: "ui-text-base",
-} as const;
 
 const numberInputGroupVariants = cva("flex min-w-0 items-center gap-1", {
   variants: {
@@ -51,7 +33,6 @@ function toNumber(value: number | string | undefined) {
 }
 
 export default function NumberInput({
-  size = "sm",
   value,
   defaultValue,
   onChange,
@@ -92,29 +73,23 @@ export default function NumberInput({
       className={cn(numberInputGroupVariants({ disabled }), className)}
     >
       <NumberFieldPrimitive.Decrement
-        render={<Button type="button" variant="ghost" size="icon-xs" className="shrink-0" />}
+        render={<Button type="button" variant="ghost" iconOnly className="shrink-0" />}
         aria-label="Decrease value"
       >
-        <Minus size={controlIconSizes[size]} />
+        <Minus size={12} />
       </NumberFieldPrimitive.Decrement>
 
       <NumberFieldPrimitive.Input
         data-setting-primary-control="true"
         {...props}
-        className={cn(
-          controlSurfaceVariants({ variant: "default" }),
-          controlSizeVariants({ size }),
-          numberInputTextSize[size],
-          numberInputFieldPadding[size],
-          "min-w-[5ch] flex-1 bg-transparent text-center tabular-nums text-foreground outline-none placeholder:text-subtle-foreground",
-        )}
+        className="h-7 min-w-[5ch] flex-1 rounded-chrome border border-border bg-surface px-2 text-center font-sans ui-text-sm tabular-nums text-foreground outline-none transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth placeholder:text-subtle-foreground focus:border-border-strong focus:bg-surface focus:ring-1 focus:ring-border-strong/35 disabled:cursor-not-allowed disabled:opacity-50"
       />
 
       <NumberFieldPrimitive.Increment
-        render={<Button type="button" variant="ghost" size="icon-xs" className="shrink-0" />}
+        render={<Button type="button" variant="ghost" iconOnly className="shrink-0" />}
         aria-label="Increase value"
       >
-        <Plus size={controlIconSizes[size]} />
+        <Plus size={12} />
       </NumberFieldPrimitive.Increment>
     </NumberFieldPrimitive.Root>
   );

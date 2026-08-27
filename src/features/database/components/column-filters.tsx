@@ -52,7 +52,6 @@ export default function ColumnFilters({
             <Button
               onClick={() => onAddFilter(columns[0].name)}
               variant="ghost"
-              size="xs"
               className="gap-0.5 text-subtle-foreground"
               aria-label="Add filter"
             >
@@ -66,7 +65,6 @@ export default function ColumnFilters({
           variant="ghost"
           className="text-subtle-foreground"
           aria-label="Clear all filters"
-          size="xs"
         >
           Clear all
         </Button>
@@ -78,7 +76,6 @@ export default function ColumnFilters({
               value={filter.column}
               options={columns.map((column) => ({ value: column.name, label: column.name }))}
               onChange={(value) => onUpdate(index, { column: value })}
-              size="xs"
               className="min-w-20"
             />
             <Select
@@ -88,7 +85,6 @@ export default function ColumnFilters({
                 label: operator.label,
               }))}
               onChange={(value) => onUpdate(index, { operator: value as FilterOperator })}
-              size="xs"
               className="min-w-20"
             />
             {!NO_VALUE_OPERATORS.has(filter.operator) && (
@@ -96,7 +92,6 @@ export default function ColumnFilters({
                 value={filter.value}
                 onChange={(e) => onUpdate(index, { value: e.target.value })}
                 placeholder="value"
-                size="xs"
                 className="flex-1"
               />
             )}
@@ -105,14 +100,13 @@ export default function ColumnFilters({
                 value={filter.value2 || ""}
                 onChange={(e) => onUpdate(index, { value2: e.target.value })}
                 placeholder="to"
-                size="xs"
                 className="flex-1"
               />
             )}
             <Button
               onClick={() => onRemove(index)}
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className="text-subtle-foreground hover:text-destructive"
               aria-label="Remove filter"
             >

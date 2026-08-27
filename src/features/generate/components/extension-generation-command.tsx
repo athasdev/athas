@@ -449,7 +449,7 @@ export function ExtensionGenerationCommand() {
           </CommandHeader>
           <CommandList>
             <div className="p-3">
-              <Card size="sm">
+              <Card>
                 <CardHeader>
                   <CardTitle>
                     {isAuthenticated ? "Upgrade to generate extensions" : "Sign in to continue"}

@@ -94,7 +94,6 @@ export function CodexSettings() {
             {status?.initialized ? "Connected" : status?.installed ? "Installed" : "Unavailable"}
           </Badge>
           <Button
-            size="sm"
             variant="default"
             onClick={() => void connect()}
             disabled={!status?.installed || busy}
@@ -159,13 +158,12 @@ export function CodexSettings() {
       <SettingRow label="Account" description="Uses the Codex CLI account on this device">
         <div className="flex items-center gap-2">
           <Button
-            size="sm"
             variant="default"
             onClick={() => void invoke("start_codex_login", { loginType: "chatgpt" })}
           >
             Sign in
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => void invoke("logout_codex_account")}>
+          <Button variant="ghost" onClick={() => void invoke("logout_codex_account")}>
             Sign out
           </Button>
         </div>

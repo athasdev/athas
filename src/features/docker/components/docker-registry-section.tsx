@@ -70,13 +70,11 @@ export function DockerRegistrySection({
               }}
               placeholder="Search images"
               aria-label="Search Docker Hub"
-              size="xs"
               className="min-w-0 flex-1 rounded-lg"
             />
             <Button
               type="button"
               variant="default"
-              size="xs"
               disabled={isBusy || !query.trim()}
               onClick={() => void onSearch()}
             >
@@ -92,7 +90,6 @@ export function DockerRegistrySection({
             onChange={(event) => onDraftFieldChange("image", event.target.value)}
             placeholder="Image, for example nginx:latest"
             aria-label="Registry image"
-            size="xs"
             className="w-full rounded-lg"
           />
           <Input
@@ -100,14 +97,12 @@ export function DockerRegistrySection({
             onChange={(event) => onDraftFieldChange("target", event.target.value)}
             placeholder="Target tag"
             aria-label="Target image tag"
-            size="xs"
             className="w-full rounded-lg"
           />
           <div className="flex flex-wrap items-center gap-1">
             <Button
               type="button"
               variant="ghost"
-              size="xs"
               disabled={isBusy || !isDockerDaemonReady || !draft.image.trim()}
               onClick={() => void onPull(draft.image)}
             >
@@ -116,7 +111,6 @@ export function DockerRegistrySection({
             <Button
               type="button"
               variant="ghost"
-              size="xs"
               disabled={isBusy || !isDockerDaemonReady || !draft.image.trim()}
               onClick={() => void onPush()}
             >
@@ -125,7 +119,6 @@ export function DockerRegistrySection({
             <Button
               type="button"
               variant="ghost"
-              size="xs"
               disabled={
                 isBusy || !isDockerDaemonReady || !draft.image.trim() || !draft.target.trim()
               }
@@ -142,7 +135,6 @@ export function DockerRegistrySection({
             onChange={(event) => onDraftFieldChange("registry", event.target.value)}
             placeholder="Registry (optional)"
             aria-label="Registry host"
-            size="xs"
             className="w-full rounded-lg"
           />
           <Input
@@ -150,7 +142,6 @@ export function DockerRegistrySection({
             onChange={(event) => onDraftFieldChange("username", event.target.value)}
             placeholder="Username"
             aria-label="Registry username"
-            size="xs"
             className="w-full rounded-lg"
           />
           <Input
@@ -159,13 +150,11 @@ export function DockerRegistrySection({
             type="password"
             placeholder="Password"
             aria-label="Registry password"
-            size="xs"
             className="w-full rounded-lg"
           />
           <Button
             type="button"
             variant="ghost"
-            size="xs"
             disabled={isBusy || !draft.username.trim() || !draft.password}
             onClick={() => void onLogin()}
           >

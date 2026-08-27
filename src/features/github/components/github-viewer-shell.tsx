@@ -136,7 +136,7 @@ export function GitHubViewerActionsMenu({
     <DropdownMenu>
       <Tooltip content={label} side="bottom">
         <DropdownMenuTrigger
-          render={<Button type="button" variant="ghost" size="icon-xs" aria-label={label} />}
+          render={<Button type="button" variant="ghost" iconOnly aria-label={label} />}
         >
           <MoreHorizontal />
         </DropdownMenuTrigger>

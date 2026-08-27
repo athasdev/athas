@@ -83,7 +83,6 @@ export const GitCommitFilesPanel = memo(function GitCommitFilesPanel({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             onClick={onBack}
             className="max-w-full justify-start px-1.5"
             aria-label="Back to Source Control history"

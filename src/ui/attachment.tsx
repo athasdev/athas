@@ -5,22 +5,15 @@ import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 const attachmentVariants = cva(
-  "group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap rounded-lg border border-border bg-surface text-foreground outline-none transition-colors duration-fast focus-within:ring-1 focus-within:ring-primary/35 focus-visible:ring-1 focus-visible:ring-primary/35 has-[>a,>button]:hover:bg-accent/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
+  "group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap gap-2.5 rounded-lg border border-border bg-surface ui-text-sm text-foreground outline-none transition-colors duration-fast focus-within:ring-1 focus-within:ring-primary/35 focus-visible:ring-1 focus-visible:ring-primary/35 has-data-[slot=attachment-content]:px-2 has-data-[slot=attachment-content]:py-1.5 has-data-[slot=attachment-media]:p-1.5 has-[>a,>button]:hover:bg-accent/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
   {
     variants: {
-      size: {
-        default:
-          "gap-2 ui-text-base has-data-[slot=attachment-content]:px-2.5 has-data-[slot=attachment-content]:py-2 has-data-[slot=attachment-media]:p-2",
-        sm: "gap-2.5 ui-text-sm has-data-[slot=attachment-content]:px-2 has-data-[slot=attachment-content]:py-1.5 has-data-[slot=attachment-media]:p-1.5",
-        xs: "gap-1.5 rounded-lg ui-text-sm has-data-[slot=attachment-content]:px-1.5 has-data-[slot=attachment-content]:py-1 has-data-[slot=attachment-media]:p-1",
-      },
       orientation: {
         horizontal: "min-w-40 items-center",
         vertical: "w-24 flex-col has-data-[slot=attachment-content]:w-30",
       },
     },
     defaultVariants: {
-      size: "default",
       orientation: "horizontal",
     },
   },
@@ -36,7 +29,6 @@ type AttachmentProps = React.ComponentProps<"div"> &
 function Attachment({
   className,
   state = "done",
-  size = "default",
   orientation = "horizontal",
   ...props
 }: AttachmentProps) {
@@ -44,16 +36,15 @@ function Attachment({
     <div
       data-slot="attachment"
       data-state={state}
-      data-size={size}
       data-orientation={orientation}
-      className={cn(attachmentVariants({ size, orientation }), className)}
+      className={cn(attachmentVariants({ orientation }), className)}
       {...props}
     />
   );
 }
 
 const attachmentMediaVariants = cva(
-  "relative flex aspect-square w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-accent text-foreground group-data-[orientation=vertical]/attachment:w-full group-data-[size=sm]/attachment:w-8 group-data-[size=xs]/attachment:w-7 group-data-[size=xs]/attachment:rounded-md group-data-[state=error]/attachment:bg-destructive/10 group-data-[state=error]/attachment:text-destructive [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 group-data-[orientation=vertical]/attachment:[&_svg:not([class*='size-'])]:size-6 group-data-[size=xs]/attachment:[&_svg:not([class*='size-'])]:size-3.5",
+  "relative flex aspect-square w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-accent text-foreground group-data-[orientation=vertical]/attachment:w-full group-data-[state=error]/attachment:bg-destructive/10 group-data-[state=error]/attachment:text-destructive [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 group-data-[orientation=vertical]/attachment:[&_svg:not([class*='size-'])]:size-6",
   {
     variants: {
       variant: {
@@ -137,11 +128,16 @@ function AttachmentActions({ className, ...props }: React.ComponentProps<"div">)
 
 function AttachmentAction({
   variant,
-  size = "icon-xs",
+  iconOnly = true,
   ...props
 }: React.ComponentProps<typeof Button>) {
   return (
-    <Button data-slot="attachment-action" variant={variant ?? "ghost"} size={size} {...props} />
+    <Button
+      data-slot="attachment-action"
+      variant={variant ?? "ghost"}
+      iconOnly={iconOnly}
+      {...props}
+    />
   );
 }
 

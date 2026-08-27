@@ -55,7 +55,6 @@ export function ExtensionCatalogCard({
   return (
     <Card
       variant="ghost"
-      size="sm"
       className="min-w-0 cursor-default transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
       onClick={onSelect}
       onContextMenu={(event) => onContextMenu(event, extension)}

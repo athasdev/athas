@@ -483,7 +483,7 @@ export function SkillsCommand({
                         className="opacity-0 focus:opacity-100 group-hover:opacity-100"
                         tooltip="Edit skill"
                         aria-label={`Edit ${skill.title}`}
-                        size="icon"
+                        iconOnly
                       >
                         <PencilSimple size={13} />
                       </Button>
@@ -497,7 +497,7 @@ export function SkillsCommand({
                         className="opacity-0 focus:opacity-100 group-hover:opacity-100"
                         tooltip="Delete skill"
                         aria-label={`Delete ${skill.title}`}
-                        size="icon"
+                        iconOnly
                       >
                         <Trash size={13} />
                       </Button>
@@ -552,7 +552,6 @@ export function SkillsCommand({
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Code review checklist"
               maxLength={120}
-              size="sm"
             />
           </div>
 
@@ -569,7 +568,6 @@ export function SkillsCommand({
               onChange={(event) => setContent(event.target.value)}
               placeholder="Write the instructions or reusable context for this skill..."
               className="min-h-36 resize-none"
-              size="sm"
             />
           </div>
         </ScrollArea>

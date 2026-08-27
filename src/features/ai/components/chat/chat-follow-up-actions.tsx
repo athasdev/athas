@@ -69,7 +69,6 @@ function FollowUpButton({
     <Button
       type="button"
       variant="default"
-      size="xs"
       onClick={() => onSelect(action.prompt)}
       tooltip={action.prompt}
       aria-label={action.label}

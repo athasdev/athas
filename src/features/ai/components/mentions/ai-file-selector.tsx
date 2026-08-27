@@ -171,7 +171,6 @@ export function AIFileSelector({
             ref={searchInputRef}
             placeholder="Search files..."
             variant="ghost"
-            size={compact ? "xs" : "sm"}
             leftIcon={Search}
             showTrigger={false}
             className="w-full"

@@ -8,12 +8,12 @@ type ScrollAreaOrientation = "vertical" | "horizontal" | "both";
 type ScrollbarVisibility = "hover" | "always";
 
 const scrollbarVariants = cva(
-  "pointer-events-none absolute z-10 flex touch-none select-none transition-opacity duration-fast",
+  "absolute z-10 flex touch-none select-none transition-opacity duration-fast",
   {
     variants: {
       visibility: {
         hover:
-          "opacity-0 group-hover/scroll-area:pointer-events-auto group-hover/scroll-area:opacity-100 data-scrolling:pointer-events-auto data-scrolling:opacity-100 group-focus-within/scroll-area:pointer-events-auto group-focus-within/scroll-area:opacity-100",
+          "pointer-events-auto opacity-0 hover:opacity-100 data-scrolling:opacity-100 group-focus-within/scroll-area:opacity-100",
         always: "pointer-events-auto opacity-50 hover:opacity-100 data-scrolling:opacity-100",
       },
     },
@@ -253,15 +253,15 @@ function ScrollBar({
       orientation={orientation}
       className={cn(
         scrollbarVariants({ visibility }),
-        orientation === "vertical" && "inset-y-0 right-0 w-2.5 flex-col items-center py-1",
-        orientation === "horizontal" && "inset-x-0 bottom-0 h-2.5 items-center px-1",
+        orientation === "vertical" && "inset-y-0 right-0 w-2 flex-col items-center py-1",
+        orientation === "horizontal" && "inset-x-0 bottom-0 h-2 items-center px-1",
         className,
       )}
       {...props}
     >
       <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="relative rounded-full bg-scrollbar-thumb hover:bg-scrollbar-thumb-hover data-[orientation=horizontal]:h-1.5 data-[orientation=vertical]:w-1.5"
+        className="relative rounded-full bg-scrollbar-thumb hover:bg-scrollbar-thumb-hover data-[orientation=horizontal]:h-1 data-[orientation=vertical]:w-1"
       />
     </ScrollAreaPrimitive.Scrollbar>
   );

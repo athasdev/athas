@@ -5,7 +5,6 @@ import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type React from "react";
-import { overlaySurface } from "@/design-system/overlay";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
@@ -66,12 +65,11 @@ const commandItemActionVariants = cva(
   },
 );
 
-type CommandHeaderActionProps = Omit<ButtonProps, "className" | "size" | "variant">;
+type CommandHeaderActionProps = Omit<ButtonProps, "className" | "variant">;
 
 export const CommandHeaderAction = (props: CommandHeaderActionProps) => (
   <Button
     variant="ghost"
-    size="sm"
     className="ui-text-sm w-7 shrink-0 rounded-full px-0 text-subtle-foreground hover:text-foreground has-[span]:w-auto has-[span]:rounded-chrome has-[span]:px-2.5 [&_svg]:size-4"
     {...props}
   />
@@ -83,7 +81,6 @@ type CommandHeaderBadgeProps = React.ComponentProps<typeof Badge>;
 
 export const CommandHeaderBadge = ({ className, ...props }: CommandHeaderBadgeProps) => (
   <Badge
-    size="compact"
     className={cn("max-w-40 shrink-0 text-subtle-foreground ui-text-chrome", className)}
     {...props}
   />
@@ -91,7 +88,7 @@ export const CommandHeaderBadge = ({ className, ...props }: CommandHeaderBadgePr
 
 CommandHeaderBadge.displayName = "CommandHeaderBadge";
 
-type CommandItemActionProps = Omit<ButtonProps, "className" | "size" | "variant"> & {
+type CommandItemActionProps = Omit<ButtonProps, "className" | "variant"> & {
   tone?: "neutral" | "danger";
   visibility?: "always" | "hover";
 };
@@ -103,7 +100,7 @@ export const CommandItemAction = ({
 }: CommandItemActionProps) => (
   <Button
     variant={tone === "danger" ? "danger" : "ghost"}
-    size="icon-xs"
+    iconOnly
     className={commandItemActionVariants({ visibility })}
     {...props}
   />
@@ -161,7 +158,7 @@ const Command = ({
                   />
                 }
                 className={cn(
-                  overlaySurface({ variant: "command" }),
+                  "rounded-xl bg-background text-foreground shadow-(--shadow-dialog) ring-1 ring-border/70 outline-none",
                   commandContentVariants(),
                   "pointer-events-auto",
                   className,
@@ -275,14 +272,14 @@ export const CommandForm = ({
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
+            iconOnly
             onClick={onCancel}
             aria-label={`Cancel ${submitLabel.toLowerCase()}`}
           >
             <X />
           </Button>
         ) : null}
-        <Button type="submit" variant="accent" size="xs" disabled={submitDisabled || isPending}>
+        <Button type="submit" variant="accent" disabled={submitDisabled || isPending}>
           {isPending ? (pendingLabel ?? submitLabel) : submitLabel}
         </Button>
       </div>
@@ -477,12 +474,7 @@ export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) =
     >
       <TabsList variant="bare" aria-label={ariaLabel}>
         {items.map((item) => (
-          <TabsTrigger
-            key={item.id}
-            value={item.id}
-            size="sm"
-            className="w-fit flex-none justify-start"
-          >
+          <TabsTrigger key={item.id} value={item.id} className="w-fit flex-none justify-start">
             {item.icon}
             {item.label}
           </TabsTrigger>
@@ -543,11 +535,7 @@ export const CommandItemIcon = ({
 CommandItemIcon.displayName = "CommandItemIcon";
 
 export const CommandItemBadge = ({ className, ...props }: React.ComponentProps<typeof Badge>) => (
-  <Badge
-    size="compact"
-    className={cn("h-auto max-w-32 shrink-0 gap-1 truncate", className)}
-    {...props}
-  />
+  <Badge className={cn("h-auto max-w-32 shrink-0 gap-1 truncate", className)} {...props} />
 );
 
 CommandItemBadge.displayName = "CommandItemBadge";
@@ -702,15 +690,10 @@ export function useCommandListNavigation({
   return { selectedIndex, setSelectedIndex, onInputKeyDown };
 }
 
-type CommandFooterActionProps = Omit<ButtonProps, "className" | "size" | "variant">;
+type CommandFooterActionProps = Omit<ButtonProps, "className" | "variant">;
 
 export const CommandFooterAction = (props: CommandFooterActionProps) => (
-  <Button
-    variant="default"
-    size="sm"
-    className="min-w-0 justify-center gap-1.5 [&_svg]:size-4"
-    {...props}
-  />
+  <Button variant="default" className="min-w-0 justify-center gap-1.5 [&_svg]:size-4" {...props} />
 );
 
 CommandFooterAction.displayName = "CommandFooterAction";

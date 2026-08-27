@@ -99,7 +99,6 @@ export function CsvPreview() {
                 { value: ";", label: "Semicolon" },
                 { value: "|", label: "Pipe" },
               ]}
-              size="xs"
               className="min-w-24 rounded border-border px-1"
               title="Change delimiter"
             />
@@ -108,7 +107,6 @@ export function CsvPreview() {
             <Button
               onClick={() => setHasHeader((v) => !v)}
               variant="default"
-              size="xs"
               className="h-6 gap-1 text-subtle-foreground"
               tooltip="Toggle header row"
             >
@@ -121,7 +119,6 @@ export function CsvPreview() {
               variant="default"
               className="h-6 gap-1 text-subtle-foreground"
               tooltip="Copy as CSV"
-              size="xs"
             >
               <Download weight="fill" /> CSV
             </Button>
@@ -132,7 +129,6 @@ export function CsvPreview() {
               variant="default"
               className="h-6 gap-1 text-subtle-foreground"
               tooltip="Copy as JSON"
-              size="xs"
             >
               <FileJson /> JSON
             </Button>

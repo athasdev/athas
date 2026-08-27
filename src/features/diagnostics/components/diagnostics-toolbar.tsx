@@ -55,7 +55,7 @@ export function DiagnosticsToolbar({
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               onClick={() => {
                 onQueryChange("");
                 inputRef.current?.focus();
@@ -73,7 +73,7 @@ export function DiagnosticsToolbar({
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
+            iconOnly
             active={activeFilterCount > 0}
             onClick={onOpenFilters}
             tooltip={activeFilterCount > 0 ? `Filters (${activeFilterCount})` : "Filter problems"}
@@ -89,7 +89,6 @@ export function DiagnosticsToolbar({
             <Toggle
               pressed={fileNavigatorVisible}
               onPressedChange={onFileNavigatorVisibleChange}
-              size="xs"
               tooltip={fileNavigatorVisible ? "Hide problem files" : "Show problem files"}
               tooltipSide="bottom"
             >

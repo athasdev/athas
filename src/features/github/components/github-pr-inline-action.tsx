@@ -70,7 +70,6 @@ export function GitHubPRInlineAction({
               variant="ghost"
               active={method === option}
               onClick={() => setMethod(option)}
-              size="xs"
               className="capitalize"
               disabled={isSubmitting}
             >
@@ -89,13 +88,12 @@ export function GitHubPRInlineAction({
         />
       )}
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" size="xs" onClick={onCancel} disabled={isSubmitting}>
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button
           type="button"
           variant="accent"
-          size="xs"
           onClick={() => void onSubmit(body, method)}
           disabled={!canSubmit}
         >

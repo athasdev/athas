@@ -99,7 +99,6 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             <Button
               onClick={() => setShowInfo(!showInfo)}
               variant="ghost"
-              size="xs"
               data-active={showInfo}
               aria-label="Toggle server info"
             >
@@ -108,7 +107,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             <Button
               onClick={() => actions.scanKeys(undefined, true)}
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               disabled={store.isScanningKeys}
               aria-label="Refresh keys"
             >
@@ -138,7 +137,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 variant="ghost"
                 disabled={store.isScanningKeys}
                 aria-label="Search keys"
-                size="icon-xs"
+                iconOnly
               >
                 {store.isScanningKeys ? <Spinner label="Scanning keys" compact /> : <Search />}
               </Button>
@@ -236,7 +235,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                   <Button
                     onClick={() => actions.deleteKey(store.selectedKey!)}
                     variant="ghost"
-                    size="icon-xs"
+                    iconOnly
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                     aria-label="Delete key"
                   >

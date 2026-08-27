@@ -121,7 +121,7 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
                 onClick={() => {
                   onQueryChange("");
                   inputRef.current?.focus();
@@ -148,7 +148,6 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
               }}
               ariaLabel="Search options"
               variant="segmented"
-              size="xs"
               wrap={false}
               iconOnly
               className="shrink-0"
@@ -172,7 +171,6 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
               <Toggle
                 pressed={fileNavigatorVisible}
                 onPressedChange={onFileNavigatorVisibleChange}
-                size="xs"
                 tooltip={fileNavigatorVisible ? "Hide result files" : "Show result files"}
                 tooltipSide="bottom"
               >

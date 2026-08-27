@@ -179,7 +179,6 @@ export function ExtensionFormControl({
         <div className="flex justify-end">
           <Button
             type="submit"
-            size="sm"
             variant="accent"
             disabled={node.disabled || pending}
             aria-busy={pending || undefined}
@@ -198,7 +197,6 @@ export function ExtensionButtonControl({ node, execute }: ExtensionControlProps<
 
   return (
     <Button
-      size="sm"
       variant={node.tone ?? "default"}
       disabled={node.disabled || pending}
       aria-busy={pending || undefined}
@@ -221,7 +219,7 @@ export function ExtensionScreenActionControl({
 
   return (
     <Button
-      size="icon-xs"
+      iconOnly
       variant="ghost"
       tooltip={action.label}
       disabled={pending}
@@ -392,7 +390,6 @@ export function ExtensionToggleControl({ node, execute }: ExtensionControlProps<
         aria-required={node.required || undefined}
         aria-invalid={formField.invalid || undefined}
         disabled={node.disabled}
-        size="sm"
         onChange={(nextChecked) => {
           setChecked(nextChecked);
           formField.update(nextChecked);
@@ -505,7 +502,7 @@ export function ExtensionTabsControl({
     >
       <TabsList variant="line" className="max-w-full overflow-x-auto">
         {node.tabs.map((tab) => (
-          <TabsTrigger key={tab.value} value={tab.value} disabled={tab.disabled} size="xs">
+          <TabsTrigger key={tab.value} value={tab.value} disabled={tab.disabled}>
             {tab.label}
           </TabsTrigger>
         ))}

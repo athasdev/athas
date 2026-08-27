@@ -249,12 +249,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
               onResetZoom={handleManualReset}
             />
             {onClose && (
-              <Button
-                onClick={handleClose}
-                variant="ghost"
-                tooltip="Close image viewer"
-                size="icon-xs"
-              >
+              <Button onClick={handleClose} variant="ghost" tooltip="Close image viewer" iconOnly>
                 <X />
               </Button>
             )}

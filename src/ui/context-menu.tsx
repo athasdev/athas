@@ -2,7 +2,7 @@ import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { Fragment, type ReactNode, useMemo } from "react";
 import { CaretRightIcon, CheckIcon } from "@/ui/icons";
-import { menuItemVariants, menuSeparatorVariants, menuSurfaceVariants } from "@/design-system/menu";
+import { menuItemVariants, menuSeparatorVariants, menuSurfaceVariants } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 
 export interface ContextMenuAction {
@@ -273,11 +273,7 @@ function ContextMenuPopup({ isOpen, point, groups, onClose }: ContextMenuPopupPr
                           aria-current={item.selected ? "true" : undefined}
                           data-selected={item.selected ? "" : undefined}
                           data-variant={item.tone === "destructive" ? "destructive" : undefined}
-                          className={menuItemVariants({
-                            disabled,
-                            selected: item.selected,
-                            tone: item.tone,
-                          })}
+                          className={menuItemVariants({ tone: item.tone })}
                         >
                           {showIcons ? (
                             <span className="grid size-4 shrink-0 place-items-center [&>svg]:block [&>svg]:size-4">

@@ -61,7 +61,6 @@ export function DockerImageDialog({
       title={mode === "build" ? "Build Docker Image" : "Run Docker Image"}
       icon={mode === "build" ? ImageIcon : Play}
       onClose={onClose}
-      size="md"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>

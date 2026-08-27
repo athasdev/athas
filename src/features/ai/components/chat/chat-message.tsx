@@ -146,15 +146,10 @@ export const ChatMessage = memo(function ChatMessage({
                     aria-label="Edit prompt"
                   />
                   <div className="flex justify-end gap-1">
-                    <Button type="button" variant="ghost" size="xs" onClick={cancelEditing}>
+                    <Button type="button" variant="ghost" onClick={cancelEditing}>
                       Cancel
                     </Button>
-                    <Button
-                      type="submit"
-                      variant="accent"
-                      size="xs"
-                      disabled={!draftContent.trim()}
-                    >
+                    <Button type="submit" variant="accent" disabled={!draftContent.trim()}>
                       Send
                     </Button>
                   </div>
@@ -225,7 +220,7 @@ export const ChatMessage = memo(function ChatMessage({
             {message.images?.length || message.resources?.length ? (
               <AttachmentGroup className="mb-2">
                 {message.images?.map((image, index) => (
-                  <Attachment key={`${message.id}-image-${index}`} orientation="vertical" size="sm">
+                  <Attachment key={`${message.id}-image-${index}`} orientation="vertical">
                     <AttachmentMedia variant="image">
                       <img
                         src={`data:${image.mediaType};base64,${image.data}`}
@@ -242,7 +237,7 @@ export const ChatMessage = memo(function ChatMessage({
                   const resourceName = resource.name || resource.uri;
 
                   return (
-                    <Attachment key={`${message.id}-resource-${index}`} size="sm">
+                    <Attachment key={`${message.id}-resource-${index}`}>
                       <AttachmentMedia>
                         <FileText />
                       </AttachmentMedia>

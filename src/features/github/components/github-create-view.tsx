@@ -405,7 +405,7 @@ ${statusSummary}`;
             </span>
           }
           actions={
-            <Button type="button" variant="ghost" size="xs" onClick={onClose}>
+            <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
           }
@@ -439,7 +439,6 @@ ${statusSummary}`;
                   onChange={setWorkflowId}
                   placeholder={isLoadingMetadata ? "Loading..." : "Choose workflow"}
                   searchable
-                  size="sm"
                   variant="ghost"
                   align="start"
                   className="min-w-0 flex-1"
@@ -456,7 +455,6 @@ ${statusSummary}`;
                   placeholder={isLoadingMetadata ? "Loading..." : "Choose branch or tag"}
                   searchable
                   allowCustomValue
-                  size="sm"
                   variant="ghost"
                   align="start"
                   className="min-w-0 flex-1"
@@ -475,7 +473,6 @@ ${statusSummary}`;
               <Button
                 type="button"
                 variant="accent"
-                size="sm"
                 disabled={!canSubmit || isSubmitting}
                 onClick={() => void handleSubmit()}
               >
@@ -502,7 +499,6 @@ ${statusSummary}`;
                 }}
                 placeholder={kind === "issue" ? "Issue title" : "Pull request title"}
                 variant="ghost"
-                size="md"
                 className="github-composer-title h-auto px-0 py-1 font-semibold tracking-tight"
                 autoFocus
               />
@@ -519,7 +515,6 @@ ${statusSummary}`;
                   placeholder={isLoadingMetadata ? "Loading..." : "Choose head"}
                   searchable
                   allowCustomValue
-                  size="xs"
                   variant="ghost"
                   align="start"
                   className="w-52"
@@ -535,7 +530,6 @@ ${statusSummary}`;
                   placeholder={isLoadingMetadata ? "Loading..." : "Choose base"}
                   searchable
                   allowCustomValue
-                  size="xs"
                   variant="ghost"
                   align="start"
                   className="w-52"
@@ -589,7 +583,6 @@ ${statusSummary}`;
                     ]}
                     onChange={setMilestone}
                     placeholder="Milestone"
-                    size="xs"
                     className="w-40"
                     searchable
                     aria-label="Issue milestone"
@@ -604,7 +597,6 @@ ${statusSummary}`;
                     ]}
                     onChange={setIssueType}
                     placeholder="Issue type"
-                    size="xs"
                     className="w-40"
                     searchable
                     aria-label="Issue type"
@@ -615,7 +607,6 @@ ${statusSummary}`;
                 <Button
                   type="button"
                   variant="ghost"
-                  size="xs"
                   disabled={isGenerating || isSubmitting}
                   onClick={() => void handleGenerateDraft()}
                 >
@@ -625,7 +616,6 @@ ${statusSummary}`;
                 <Button
                   type="button"
                   variant="accent"
-                  size="xs"
                   disabled={!canSubmit || isSubmitting}
                   onClick={() => void handleSubmit()}
                 >

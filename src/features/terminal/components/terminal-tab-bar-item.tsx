@@ -76,7 +76,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
           !isEditing ? (
             <Button
               type="button"
-              size="icon-xs"
+              iconOnly
               variant="ghost"
               onClick={(e) => {
                 e.stopPropagation();

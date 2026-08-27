@@ -67,7 +67,6 @@ export default function ConnectionForm({
           value={formData.name}
           onChange={(event) => onChange({ name: event.target.value })}
           placeholder="My Server"
-          size="sm"
           disabled={disabled}
         />
       </Field>
@@ -79,7 +78,6 @@ export default function ConnectionForm({
           value={formData.type}
           options={connectionTypeOptions}
           onChange={(value) => onChange({ type: value as RemoteConnectionFormData["type"] })}
-          size="sm"
           className="w-full"
         />
       </Field>
@@ -95,7 +93,6 @@ export default function ConnectionForm({
             value={formData.host}
             onChange={(event) => onChange({ host: event.target.value })}
             placeholder="192.168.1.100"
-            size="sm"
             disabled={disabled}
           />
         </Field>
@@ -109,7 +106,6 @@ export default function ConnectionForm({
             placeholder="22"
             min="1"
             max="65535"
-            size="sm"
             disabled={disabled}
           />
         </Field>
@@ -125,7 +121,6 @@ export default function ConnectionForm({
           value={formData.username}
           onChange={(event) => onChange({ username: event.target.value })}
           placeholder="root"
-          size="sm"
           disabled={disabled}
         />
       </Field>
@@ -140,7 +135,6 @@ export default function ConnectionForm({
           value={formData.keyPath}
           onChange={(event) => onChange({ keyPath: event.target.value })}
           placeholder="~/.ssh/id_ed25519"
-          size="sm"
           disabled={disabled}
         />
       </Field>
@@ -156,7 +150,6 @@ export default function ConnectionForm({
             value={formData.password}
             onChange={(event) => onChange({ password: event.target.value })}
             placeholder="Leave empty to use key authentication"
-            size="sm"
             disabled={disabled}
           />
           <InputGroupAddon align="inline-end">
@@ -166,7 +159,7 @@ export default function ConnectionForm({
               onClick={() => onShowPasswordChange((value) => !value)}
               aria-label={showPassword ? "Hide password" : "Show password"}
               tooltip={showPassword ? "Hide password" : "Show password"}
-              size="icon-sm"
+              iconOnly
             >
               {showPassword ? <EyeOff /> : <Eye />}
             </InputGroupButton>

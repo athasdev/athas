@@ -167,7 +167,7 @@ export function PdfViewer({ filePath }: PdfViewerProps) {
               variant="ghost"
               onClick={handleOpenExternal}
               tooltip="Open in external viewer"
-              size="icon-xs"
+              iconOnly
             >
               <ExternalLink className="text-foreground" />
             </Button>

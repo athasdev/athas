@@ -1585,12 +1585,7 @@ function FileExplorerTreeComponent({
           icon={AlertTriangle}
           onClose={() => setAlertDialog(null)}
           footer={
-            <Button
-              onClick={() => setAlertDialog(null)}
-              variant="accent"
-              size="xs"
-              className="ui-text-base"
-            >
+            <Button onClick={() => setAlertDialog(null)} variant="accent" className="ui-text-base">
               OK
             </Button>
           }

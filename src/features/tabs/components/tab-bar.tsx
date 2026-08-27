@@ -681,7 +681,7 @@ const TabBar = ({
               tooltipSide="bottom"
               commandId="navigation.goBack"
               aria-label="Go back to previous location"
-              size="icon-xs"
+              iconOnly
             >
               <ArrowLeft />
             </Button>
@@ -694,7 +694,7 @@ const TabBar = ({
               tooltipSide="bottom"
               commandId="navigation.goForward"
               aria-label="Go forward to next location"
-              size="icon-xs"
+              iconOnly
             >
               <ArrowRight />
             </Button>
@@ -808,7 +808,7 @@ const TabBar = ({
                 type="button"
                 onClick={handleShowNewTab}
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
                 tooltip="New Tab"
                 commandId="workbench.newTab"
                 tooltipSide="bottom"
@@ -824,7 +824,7 @@ const TabBar = ({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon-xs"
+                      iconOnly
                       tooltip="Pane actions"
                       tooltipSide="bottom"
                       aria-label="Pane actions"

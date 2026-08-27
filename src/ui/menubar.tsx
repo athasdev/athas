@@ -1,7 +1,7 @@
 import { Menu, Menubar as BaseMenubar } from "@base-ui/react";
 import { createContext, useContext, useMemo, type ComponentProps } from "react";
-import { menuItemVariants, menuSeparatorVariants, menuSurfaceVariants } from "@/design-system/menu";
 import Keybinding from "@/features/keymaps/components/keybinding";
+import { menuItemVariants, menuSeparatorVariants, menuSurfaceVariants } from "@/ui/dropdown";
 import { CaretRightIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 

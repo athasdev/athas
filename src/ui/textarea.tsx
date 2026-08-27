@@ -1,29 +1,30 @@
 import { cva } from "class-variance-authority";
 import type React from "react";
 import { forwardRef } from "react";
-import { controlSurfaceVariants } from "@/utils/control-variants";
 import { cn } from "@/utils/cn";
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  size?: "sm" | "md";
   variant?: "default" | "ghost";
 }
 
-const textareaVariants = cva("w-full resize-y placeholder:text-subtle-foreground", {
-  variants: {
-    size: {
-      sm: "px-2 py-1 ui-text-sm",
-      md: "px-3 py-2 ui-text-base",
+const textareaVariants = cva(
+  "w-full min-w-0 resize-y rounded-chrome px-2 py-1 font-sans ui-text-sm text-foreground outline-none transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth placeholder:text-subtle-foreground disabled:cursor-not-allowed disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default:
+          "border border-border bg-surface focus:border-border-strong focus:bg-surface focus:ring-1 focus:ring-border-strong/35",
+        ghost: "border-none bg-transparent focus:ring-0",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
     },
   },
-  defaultVariants: {
-    size: "sm",
-  },
-});
+);
 
 const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
   {
-    size = "sm",
     variant = "default",
     className,
     autoComplete = "off",
@@ -39,7 +40,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textare
       autoComplete={autoComplete}
       autoCorrect={autoCorrect}
       spellCheck={spellCheck}
-      className={cn(controlSurfaceVariants({ variant }), textareaVariants({ size }), className)}
+      className={cn(textareaVariants({ variant }), className)}
       {...props}
     />
   );

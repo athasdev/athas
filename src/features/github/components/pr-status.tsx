@@ -91,7 +91,6 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
           <Button
             type="button"
             variant="ghost"
-            size="xs"
             shape="pill"
             className="-ml-1.5 min-w-0 text-left"
           />
@@ -135,7 +134,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
                 </p>
               )}
             </div>
-            <Badge variant={getCheckBadgeVariant(check)} size="compact" className="capitalize">
+            <Badge variant={getCheckBadgeVariant(check)} className="capitalize">
               {(check.conclusion ?? check.status ?? "pending").toLowerCase()}
             </Badge>
           </button>
@@ -204,7 +203,7 @@ export const MergeStatusBadge = memo(
     const Icon = status.icon;
 
     return (
-      <Badge variant={status.variant} size="compact" className="gap-1">
+      <Badge variant={status.variant} className="gap-1">
         <Icon />
         <span>{status.text}</span>
       </Badge>
@@ -259,7 +258,6 @@ export const LabelBadges = memo(({ labels }: LabelBadgesProps) => {
       {labels.map((label, idx) => (
         <Badge
           key={idx}
-          size="compact"
           style={{
             backgroundColor: `#${label.color}20`,
             color: `#${label.color}`,

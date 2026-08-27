@@ -87,7 +87,6 @@ export function ChannelIconPicker({
                 <Tooltip key={option.id} content={option.label} side="top">
                   <Toggle
                     type="button"
-                    size="md"
                     pressed={selected === value}
                     onPressedChange={(pressed) => pressed && onSelect(value)}
                     aria-label={`Select ${option.label} icon`}
@@ -102,7 +101,7 @@ export function ChannelIconPicker({
       </div>
 
       {activeTab === "icon" ? (
-        <Button type="button" variant="ghost" size="sm" className="mt-2 w-full" onClick={onClear}>
+        <Button type="button" variant="ghost" className="mt-2 w-full" onClick={onClear}>
           Reset to default
         </Button>
       ) : null}
