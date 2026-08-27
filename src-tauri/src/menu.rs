@@ -903,14 +903,14 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "show_previous_window_tab",
          "Show Previous Tab",
          true,
-         Some("Ctrl+Shift+Tab"),
+         window_tab_accelerator(),
       )?)
       .item(&MenuItem::with_id(
          app,
          "show_next_window_tab",
          "Show Next Tab",
          true,
-         Some("Ctrl+Tab"),
+         window_tab_accelerator(),
       )?)
       .text("move_window_tab", "Move Tab to New Window")
       .text("merge_all_windows", "Merge All Windows")
@@ -1029,5 +1029,18 @@ fn command_palette_accelerator() -> Option<&'static str> {
    #[cfg(not(target_os = "macos"))]
    {
       None
+   }
+}
+
+#[cfg(target_os = "macos")]
+fn window_tab_accelerator() -> Option<&'static str> {
+   None
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod tests {
+   #[test]
+   fn window_tabs_leave_ctrl_tab_for_editor_navigation() {
+      assert_eq!(super::window_tab_accelerator(), None);
    }
 }

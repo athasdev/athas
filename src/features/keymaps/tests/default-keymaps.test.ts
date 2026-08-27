@@ -130,6 +130,11 @@ describe("default keymaps", () => {
     expectKeybinding("workbench.toggleActivePaneFullscreen", "cmd+k z");
   });
 
+  it("keeps Ctrl+Tab navigation in the frontend keymap", () => {
+    expectKeybinding("workbench.nextTabCtrlTab", "ctrl+tab");
+    expectKeybinding("workbench.previousTabCtrlTab", "ctrl+shift+tab");
+  });
+
   it("has registered commands for every default keybinding", () => {
     keymapRegistry.clear();
     registerCommands();
