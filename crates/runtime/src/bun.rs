@@ -1,10 +1,12 @@
-use crate::{RuntimeError, RuntimeStatus, process::configure_background_command};
+use crate::{
+   RuntimeError, RuntimeStatus,
+   downloader::{download_bytes, extract_wrapped_zip},
+   runtime_version::{check_runtime_version, managed_runtime_dir, parse_runtime_version},
+};
 use sha2::{Digest, Sha256};
 use std::{
-   fs::{self, File},
-   io::{self, Cursor},
+   fs,
    path::{Path, PathBuf},
-   process::Command,
 };
 
 /// Bun version to download if system version is not available
@@ -143,7 +145,7 @@ impl BunRuntime {
 
       let staged_runtime = Self::from_managed_path(staging.path())?;
       let staged_version = staged_runtime.check_version().await?;
-      let expected_version = Self::parse_version(BUN_VERSION)?;
+      let expected_version = parse_runtime_version(BUN_VERSION, false)?;
       if staged_version != expected_version {
          return Err(RuntimeError::VersionCheckFailed(format!(
             "Downloaded Bun reported {}.{}.{} instead of {}",
@@ -165,56 +167,12 @@ impl BunRuntime {
 
    /// Get the directory where managed Bun is stored
    fn get_managed_dir(managed_root: Option<&Path>) -> Result<PathBuf, RuntimeError> {
-      let root = managed_root.ok_or_else(|| {
-         RuntimeError::PathError("managed runtime root not configured".to_string())
-      })?;
-      Ok(root.join("bun"))
+      managed_runtime_dir(managed_root, "bun")
    }
 
    /// Check Bun version by running `bun --version`
    async fn check_version(&self) -> Result<(u32, u32, u32), RuntimeError> {
-      let mut command = Command::new(&self.binary_path);
-      let output = configure_background_command(&mut command)
-         .arg("--version")
-         .output()
-         .map_err(|e| RuntimeError::VersionCheckFailed(e.to_string()))?;
-
-      if !output.status.success() {
-         return Err(RuntimeError::VersionCheckFailed(
-            String::from_utf8_lossy(&output.stderr).to_string(),
-         ));
-      }
-
-      let version_str = String::from_utf8_lossy(&output.stdout);
-      Self::parse_version(&version_str)
-   }
-
-   /// Parse version string like "1.3.14" into (1, 3, 14)
-   fn parse_version(version_str: &str) -> Result<(u32, u32, u32), RuntimeError> {
-      let trimmed = version_str.trim();
-
-      let parts: Vec<&str> = trimmed.split('.').collect();
-      if parts.len() < 3 {
-         return Err(RuntimeError::VersionCheckFailed(format!(
-            "Invalid version format: {}",
-            version_str
-         )));
-      }
-
-      let major = parts[0]
-         .parse()
-         .map_err(|_| RuntimeError::VersionCheckFailed(format!("Invalid major: {}", parts[0])))?;
-      let minor = parts[1]
-         .parse()
-         .map_err(|_| RuntimeError::VersionCheckFailed(format!("Invalid minor: {}", parts[1])))?;
-      let patch = parts[2]
-         .split(|c: char| !c.is_ascii_digit())
-         .next()
-         .unwrap_or("0")
-         .parse()
-         .map_err(|_| RuntimeError::VersionCheckFailed(format!("Invalid patch: {}", parts[2])))?;
-
-      Ok((major, minor, patch))
+      check_runtime_version(&self.binary_path, false)
    }
 
    /// Get the path to the Bun binary
@@ -271,22 +229,7 @@ async fn download_bun(version: &str, target_dir: &Path) -> Result<(), RuntimeErr
    log::info!("Downloading Bun {} from {}", version, url);
 
    // Download the file
-   let response = reqwest::get(&url)
-      .await
-      .map_err(|e| RuntimeError::DownloadFailed(e.to_string()))?;
-
-   if !response.status().is_success() {
-      return Err(RuntimeError::DownloadFailed(format!(
-         "HTTP {} for {}",
-         response.status(),
-         url
-      )));
-   }
-
-   let bytes = response
-      .bytes()
-      .await
-      .map_err(|e| RuntimeError::DownloadFailed(e.to_string()))?;
+   let bytes = download_bytes(&url).await?;
 
    let expected_sha256 = bun_asset_sha256(version, &filename).ok_or_else(|| {
       RuntimeError::DownloadFailed(format!(
@@ -306,7 +249,7 @@ async fn download_bun(version: &str, target_dir: &Path) -> Result<(), RuntimeErr
    fs::create_dir_all(target_dir)?;
 
    // Bun is always distributed as a zip
-   extract_bun_zip(&bytes, target_dir)?;
+   extract_wrapped_zip(&bytes, target_dir)?;
 
    log::info!("Bun {} installed successfully to {:?}", version, target_dir);
    Ok(())
@@ -351,54 +294,6 @@ fn verify_sha256(bytes: &[u8], expected: &str) -> Result<(), RuntimeError> {
    Ok(())
 }
 
-/// Extract Bun zip archive
-fn extract_bun_zip(bytes: &[u8], target_dir: &Path) -> Result<(), RuntimeError> {
-   let cursor = Cursor::new(bytes);
-   let mut archive =
-      zip::ZipArchive::new(cursor).map_err(|e| RuntimeError::ExtractionFailed(e.to_string()))?;
-
-   for i in 0..archive.len() {
-      let mut file = archive
-         .by_index(i)
-         .map_err(|e| RuntimeError::ExtractionFailed(e.to_string()))?;
-
-      let outpath = match file.enclosed_name() {
-         Some(path) => {
-            // Bun zip has structure: bun-darwin-aarch64/bun
-            // We want to extract to: target_dir/bun
-            let components: Vec<_> = path.components().collect();
-            if components.len() <= 1 {
-               continue;
-            }
-            let relative_path: std::path::PathBuf = components[1..].iter().collect();
-            target_dir.join(relative_path)
-         }
-         None => continue,
-      };
-
-      if file.is_dir() {
-         fs::create_dir_all(&outpath)?;
-      } else {
-         if let Some(parent) = outpath.parent() {
-            fs::create_dir_all(parent)?;
-         }
-         let mut outfile = File::create(&outpath)?;
-         io::copy(&mut file, &mut outfile)?;
-      }
-
-      // Set executable permissions on Unix
-      #[cfg(unix)]
-      {
-         use std::os::unix::fs::PermissionsExt;
-         if let Some(mode) = file.unix_mode() {
-            fs::set_permissions(&outpath, fs::Permissions::from_mode(mode)).ok();
-         }
-      }
-   }
-
-   Ok(())
-}
-
 /// Get the expected Bun binary path within the extracted directory
 pub fn get_bun_binary_path(base_dir: &Path) -> PathBuf {
    if cfg!(windows) {
@@ -411,16 +306,6 @@ pub fn get_bun_binary_path(base_dir: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
    use super::*;
-
-   #[test]
-   fn test_parse_version() {
-      assert_eq!(BunRuntime::parse_version("1.3.14").unwrap(), (1, 3, 14));
-      assert_eq!(
-         BunRuntime::parse_version("1.4.0-canary.1").unwrap(),
-         (1, 4, 0)
-      );
-      assert_eq!(BunRuntime::parse_version("1.3.14\n").unwrap(), (1, 3, 14));
-   }
 
    #[test]
    fn has_checksums_for_supported_assets() {

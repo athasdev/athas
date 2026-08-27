@@ -17,6 +17,7 @@ interface GitFileItemProps {
   onContextMenu?: (e: MouseEvent) => void;
   onStage?: () => void;
   onUnstage?: () => void;
+  staged?: boolean;
   disabled?: boolean;
   showDirectory?: boolean;
   showFileIcon?: boolean;
@@ -33,6 +34,7 @@ export const GitFileItem = ({
   onContextMenu,
   onStage,
   onUnstage,
+  staged = file.staged,
   disabled,
   showDirectory = true,
   showFileIcon = false,
@@ -80,7 +82,7 @@ export const GitFileItem = ({
       }
       action={
         <Checkbox
-          checked={file.staged}
+          checked={staged}
           onCheckedChange={(checked) => {
             if (checked) {
               onStage?.();
@@ -89,7 +91,7 @@ export const GitFileItem = ({
             onUnstage?.();
           }}
           disabled={disabled}
-          aria-label={file.staged ? `Unstage ${fileName}` : `Stage ${fileName}`}
+          aria-label={staged ? `Unstage ${fileName}` : `Stage ${fileName}`}
         />
       }
       draggable={!!repoPath}
@@ -99,7 +101,7 @@ export const GitFileItem = ({
           type: "git-file-diff",
           repoPath,
           filePath: file.path,
-          staged: file.staged,
+          staged,
           status: file.status,
           name: fileName,
         });

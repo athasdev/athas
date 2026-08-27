@@ -1,12 +1,15 @@
 import type { ReactNode } from "react";
 
 export type NotificationType = "info" | "success" | "warning" | "error";
+export type NotificationCategory = "athas" | "agent";
+export type NotificationCategoryFilter = "all" | NotificationCategory | "github";
 
 export interface NotificationEntry {
   id: string;
   message: string;
   description?: string;
   type: NotificationType;
+  category: NotificationCategory;
   createdAt: number;
   updatedAt: number;
   read: boolean;
@@ -24,13 +27,3 @@ export interface ToastInput {
     onClick: () => void;
   };
 }
-
-export type NotificationFilter = "all" | NotificationEntry["type"];
-
-export type NotificationItemAction = {
-  id: string;
-  label: string;
-  icon: ReactNode;
-  onSelect: () => void;
-  variant?: "default" | "danger";
-};

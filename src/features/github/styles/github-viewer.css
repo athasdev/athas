@@ -4,7 +4,7 @@
 }
 
 .github-composer-title {
-  font-size: calc(var(--ui-text-base) * 1.5);
+  font-size: var(--ui-text-base);
   line-height: 1.3;
 }
 

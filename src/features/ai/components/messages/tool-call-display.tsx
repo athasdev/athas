@@ -3,11 +3,25 @@ import {
   GitDiffIcon as GitDiff,
   TerminalWindowIcon as TerminalSquare,
 } from "@/ui/icons";
-import { getAcpDiffOutputs, openAcpDiffOutput } from "@/features/ai/lib/acp-diff-output";
+import {
+  createAcpDiffViewNode,
+  getAcpDiffOutputs,
+  openAcpDiffOutput,
+  stripAcpDiffOutputs,
+} from "@/features/ai/lib/acp-diff-output";
+import {
+  getStructuredToolViews,
+  isStructuredToolViewEnvelope,
+  stripStructuredToolViews,
+} from "@/features/ai/lib/structured-tool-view";
 import {
   getAcpTerminalOutputs,
   openAcpTerminalOutput,
 } from "@/features/ai/lib/acp-terminal-output";
+import {
+  createAcpToolLocationTree,
+  OPEN_TOOL_LOCATION_COMMAND,
+} from "@/features/ai/lib/acp-tool-location-tree";
 import type { ToolCall } from "@/features/ai/types/ai-chat.types";
 import type {
   AcpToolCallLocation,
@@ -19,6 +33,8 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { getFileDiff } from "@/features/git/api/git-diff-api";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
+import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
+import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
 import { getBaseName, joinPath } from "@/utils/path-helpers";
 import { ChatActivityLine } from "../chat/chat-activity-line";
 
@@ -174,12 +190,6 @@ function formatDiffText(item: Record<string, unknown>): string {
     .join("\n");
 }
 
-function formatAcpDiffText(item: ReturnType<typeof getAcpDiffOutputs>[number]): string {
-  return [`diff: ${item.path}`, "--- before", item.oldText, "+++ after", item.newText]
-    .filter((line) => line.length > 0)
-    .join("\n");
-}
-
 function getOutputSummary(output: unknown): string | null {
   const diffItems = getDiffItems(output);
   if (diffItems.length > 0) {
@@ -192,14 +202,18 @@ function getOutputSummary(output: unknown): string | null {
     return terminalItems.length === 1 ? "terminal output" : `${terminalItems.length} terminals`;
   }
 
+  if (getStructuredToolViews(output).length > 0) return "interactive result";
+
   return null;
 }
 
 function getOutputText(output: unknown): string {
+  if (isStructuredToolViewEnvelope(output)) return "";
   if (!Array.isArray(output)) return formatValue(output);
 
   return output
     .map((item) => {
+      if (isStructuredToolViewEnvelope(item)) return "";
       if (!isRecord(item)) return formatValue(item);
       if (item.type === "content") return getContentText(item);
       if (item.type === "diff") return formatDiffText(item);
@@ -251,7 +265,7 @@ export function ToolCallGroupDisplay({
   const detail = getLatestToolSummary(latestToolCall, isStreaming);
 
   return (
-    <ChatActivityLine title={title} detail={detail}>
+    <ChatActivityLine title={title} detail={detail} detailsVariant="content">
       <div className="space-y-1">
         {toolCalls.map((toolCall, toolIndex) => (
           <ToolCallDisplay
@@ -283,17 +297,26 @@ function ToolCallDisplay({
 }: ToolCallDisplayProps) {
   const state = getStatus(isStreaming, error, protocolStatus);
   const detail = getToolCallDetail(toolName, input, output, state, protocolStatus);
+  const structuredViews = getStructuredToolViews(output);
+  const displayOutput = stripStructuredToolViews(output);
+  const hasStructuredViews = structuredViews.length > 0;
   const hasDetails =
     Boolean(input) ||
-    Boolean(output) ||
+    Boolean(displayOutput) ||
+    hasStructuredViews ||
     Boolean(error) ||
     Boolean(kind && kind !== "other") ||
     Boolean(locations?.length);
-  const diffItems = getDiffItems(output);
+  const diffItems = getDiffItems(displayOutput);
   const hasDiffOutput = diffItems.length > 0;
-  const terminalItems = getTerminalItems(output);
+  const nonDiffOutput = stripAcpDiffOutputs(displayOutput);
+  const diffViews = diffItems.map((item) =>
+    createAcpDiffViewNode(item, useProjectStore.getState().rootFolderPath),
+  );
+  const terminalItems = getTerminalItems(displayOutput);
   const hasTerminalOutput = terminalItems.length > 0;
   const toolPath = resolveToolPath(locations, input);
+  const locationTree = locations ? createAcpToolLocationTree(locations) : undefined;
   const hasActions = Boolean(toolPath || hasTerminalOutput);
   const actionButtons = hasActions ? (
     <span className="flex items-center gap-1">
@@ -301,7 +324,7 @@ function ToolCallDisplay({
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           tooltip="Open diff"
           onClick={(event) => {
             event.stopPropagation();
@@ -315,7 +338,7 @@ function ToolCallDisplay({
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           tooltip="Open file"
           onClick={(event) => {
             event.stopPropagation();
@@ -329,7 +352,7 @@ function ToolCallDisplay({
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           tooltip="Open terminal"
           onClick={(event) => {
             event.stopPropagation();
@@ -341,27 +364,61 @@ function ToolCallDisplay({
       ) : null}
     </span>
   ) : null;
+  const detailText = [
+    kind && kind !== "other" ? `kind: ${kind}\n` : "",
+    locations?.length && !locationTree
+      ? `locations:\n${locations
+          .map((location) => `  ${location.path}${location.line ? `:${location.line}` : ""}`)
+          .join("\n")}\n`
+      : "",
+    input ? `input:\n${formatValue(input)}\n` : "",
+    nonDiffOutput ? `output:\n${getOutputText(nonDiffOutput)}\n` : "",
+    error ? `error:\n${error}` : "",
+  ].join("");
 
   return (
-    <ChatActivityLine title={toolName} detail={detail} state={state} actions={actionButtons}>
+    <ChatActivityLine
+      title={toolName}
+      detail={detail}
+      state={state}
+      actions={actionButtons}
+      detailsVariant={hasStructuredViews || hasDiffOutput || locationTree ? "content" : "text"}
+    >
       {hasDetails ? (
-        <>
-          {kind && kind !== "other" ? `kind: ${kind}\n` : ""}
-          {locations?.length
-            ? `locations:\n${locations
-                .map((location) => `  ${location.path}${location.line ? `:${location.line}` : ""}`)
-                .join("\n")}\n`
-            : ""}
-          {input ? `input:\n${formatValue(input)}\n` : ""}
-          {output
-            ? `output:\n${
-                hasDiffOutput
-                  ? diffItems.map(formatAcpDiffText).join("\n\n")
-                  : getOutputText(output)
-              }\n`
-            : ""}
-          {error ? `error:\n${error}` : ""}
-        </>
+        hasStructuredViews || hasDiffOutput || locationTree ? (
+          <div className="flex min-w-0 flex-col gap-2">
+            {detailText ? (
+              <pre className="max-h-64 overflow-auto whitespace-pre-wrap font-mono ui-text-sm text-subtle-foreground/55">
+                {detailText}
+              </pre>
+            ) : null}
+            {diffViews.map((view, index) => (
+              <ExtensionViewRenderer
+                key={`${view.filePath}-diff-${index}`}
+                node={view}
+                execute={() => undefined}
+                surface="embedded"
+              />
+            ))}
+            {locationTree ? (
+              <ExtensionViewRenderer
+                node={locationTree}
+                execute={(action) => {
+                  const path = action.args?.[0];
+                  if (action.command === OPEN_TOOL_LOCATION_COMMAND && typeof path === "string") {
+                    return openToolPath(path);
+                  }
+                }}
+                surface="embedded"
+              />
+            ) : null}
+            {structuredViews.map((view, index) => (
+              <GenerativeUIRenderer key={`${toolName}-ui-${index}`} component={view} />
+            ))}
+          </div>
+        ) : (
+          detailText
+        )
       ) : null}
     </ChatActivityLine>
   );

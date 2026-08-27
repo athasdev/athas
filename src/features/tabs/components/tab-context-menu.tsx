@@ -1,4 +1,5 @@
 import {
+  ArrowSquareUpIcon as Share,
   ColumnsIcon as Columns2,
   CopyIcon as Copy,
   FolderOpenIcon as FolderOpen,
@@ -10,20 +11,17 @@ import {
   ArrowCounterClockwiseIcon as RotateCcw,
   RowsIcon as Rows2,
   TerminalWindowIcon as Terminal,
-  XIcon as X,
 } from "@/ui/icons";
+import { invoke } from "@tauri-apps/api/core";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { isVirtualContent } from "@/features/panes/types/pane-content.types";
-import {
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuShortcut,
-} from "@/ui/context-menu";
-import { menuSeparator, type MenuItem } from "@/ui/dropdown";
+import { ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from "@/ui/context-menu";
+import { menuSeparator, type MenuActionItem, type MenuItem } from "@/ui/dropdown";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
+import { IS_MAC } from "@/utils/platform";
+import { toast } from "sonner";
 
 interface TabContextMenuProps {
   buffer: PaneContent;
@@ -62,7 +60,7 @@ const TabContextMenu = ({
   isPaneLocked = false,
   onTogglePaneLocked,
 }: TabContextMenuProps) => {
-  const items: MenuItem[] = [
+  const tabItems: MenuActionItem[] = [
     {
       id: "pin",
       label: buffer.isPinned ? "Unpin Tab" : "Pin Tab",
@@ -79,7 +77,6 @@ const TabContextMenu = ({
           },
         ]
       : []),
-    menuSeparator("sep-1"),
     ...(paneId && onSplitRight
       ? [
           {
@@ -100,7 +97,6 @@ const TabContextMenu = ({
           },
         ]
       : []),
-    ...(paneId && (onSplitRight || onSplitDown) ? [menuSeparator("sep-2")] : []),
     ...(onTogglePaneLocked
       ? [
           {
@@ -109,40 +105,59 @@ const TabContextMenu = ({
             icon: isPaneLocked ? <LockOpen /> : <Lock />,
             onClick: onTogglePaneLocked,
           },
-          menuSeparator("sep-lock"),
         ]
       : []),
-    {
-      id: "copy-path",
-      label: "Copy Path",
-      icon: <Copy />,
-      onClick: async () => {
-        if (onCopyPath) {
-          onCopyPath(buffer.path);
-          return;
-        }
+  ];
+  const fileItems: MenuActionItem[] = [
+    ...(buffer.type !== "newTab"
+      ? [
+          {
+            id: "copy-path",
+            label: "Copy Path",
+            icon: <Copy />,
+            onClick: async () => {
+              if (onCopyPath) {
+                onCopyPath(buffer.path);
+                return;
+              }
 
-        try {
-          await writeClipboardText(buffer.path);
-        } catch (error) {
-          console.error("Failed to copy path:", error);
-        }
-      },
-    },
-    {
-      id: "copy-relative-path",
-      label: "Copy Relative Path",
-      icon: <Copy />,
-      onClick: () => onCopyRelativePath?.(buffer.path),
-    },
-    {
-      id: "reveal",
-      label: "Reveal in Finder",
-      icon: <FolderOpen />,
-      onClick: () => onRevealInFinder?.(buffer.path),
-    },
+              try {
+                await writeClipboardText(buffer.path);
+              } catch (error) {
+                console.error("Failed to copy path:", error);
+              }
+            },
+          },
+          {
+            id: "copy-relative-path",
+            label: "Copy Relative Path",
+            icon: <Copy />,
+            onClick: () => onCopyRelativePath?.(buffer.path),
+          },
+          {
+            id: "reveal",
+            label: "Reveal in Finder",
+            icon: <FolderOpen />,
+            onClick: () => onRevealInFinder?.(buffer.path),
+          },
+        ]
+      : []),
     ...(!isVirtualContent(buffer) && !buffer.path.includes("://")
       ? [
+          ...(IS_MAC
+            ? [
+                {
+                  id: "share",
+                  label: "Share…",
+                  icon: <Share />,
+                  onClick: () => {
+                    void invoke("show_share_picker", { path: buffer.path }).catch((error) => {
+                      toast.error(`Unable to share file: ${String(error)}`);
+                    });
+                  },
+                },
+              ]
+            : []),
           {
             id: "terminal",
             label: "Open in Terminal",
@@ -159,7 +174,7 @@ const TabContextMenu = ({
           },
         ]
       : []),
-    ...(buffer.type !== "extension"
+    ...(buffer.type !== "extension" && buffer.type !== "newTab"
       ? [
           {
             id: "reload",
@@ -169,12 +184,11 @@ const TabContextMenu = ({
           },
         ]
       : []),
-    menuSeparator("sep-3"),
+  ];
+  const closeItems: MenuActionItem[] = [
     {
       id: "close",
       label: "Close",
-      icon: <X />,
-      shortcut: "cmd+w",
       onClick: () => onCloseTab(buffer.id),
     },
     {
@@ -193,6 +207,10 @@ const TabContextMenu = ({
       onClick: onCloseAll,
     },
   ];
+  const groups = [tabItems, fileItems, closeItems].filter((group) => group.length > 0);
+  const items: MenuItem[] = groups.flatMap((group, index) =>
+    index === 0 ? group : [menuSeparator(`sep-${index}`), ...group],
+  );
 
   return (
     <ContextMenuContent>
@@ -203,7 +221,6 @@ const TabContextMenu = ({
           <ContextMenuItem key={item.id} disabled={item.disabled} onClick={item.onClick}>
             {item.icon}
             {item.label}
-            {item.shortcut && <ContextMenuShortcut shortcut={item.shortcut} />}
           </ContextMenuItem>
         ),
       )}

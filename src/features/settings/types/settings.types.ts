@@ -20,7 +20,6 @@ type EditorCursorStyle =
 type EditorCursorBlinking = "blink" | "smooth" | "phase" | "expand" | "solid";
 type TerminalCursorInactiveStyle = "outline" | "block" | "bar" | "underline" | "none";
 export type TabCloseButtonVisibility = "active" | "hover" | "always";
-export type WindowChromeDensity = "focused" | "comfortable";
 export type FileTreeSortOrder = "folders-first" | "name";
 export type SettingsSection =
   | "account"
@@ -51,6 +50,7 @@ export interface Settings {
   renderIndentGuides: boolean;
   highlightOccurrences: boolean;
   showMinimap: boolean;
+  showOutline: boolean;
   editorFontLigatures: boolean;
   editorItalicComments: boolean;
   editorStickyScroll: boolean;
@@ -85,7 +85,6 @@ export interface Settings {
   showStatusBar: boolean;
   showTabIcons: boolean;
   tabCloseButtonVisibility: TabCloseButtonVisibility;
-  windowChromeDensity: WindowChromeDensity;
   // Theme
   theme: Theme;
   iconTheme: string;
@@ -106,14 +105,13 @@ export interface Settings {
   aiModelId: string;
   aiCustomBaseUrl: string;
   aiCustomModelId: string;
-  aiChatWidth: number;
-  isAIChatVisible: boolean;
   aiCompletion: boolean;
   aiAutocompleteProvider: "openrouter" | "custom";
   aiAutocompleteModelId: string;
   aiAutocompleteCustomBaseUrl: string;
   aiAutocompleteCustomModelId: string;
   aiDefaultSessionMode: string;
+  aiAgentNotifications: boolean;
   aiSkills: AIChatSkill[];
   v0DesignSystems: V0DesignSystemProfile[];
   activeV0DesignSystemId: string;
@@ -128,6 +126,7 @@ export interface Settings {
   showActivityRailProjectIcons: boolean;
   collapsedActivityRailSections: string[];
   sidebarWidth: number;
+  rightSidebarWidth: number;
   showGitHubPullRequests: boolean;
   showGitHubIssues: boolean;
   showGitHubActions: boolean;

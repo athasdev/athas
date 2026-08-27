@@ -235,9 +235,33 @@ export function parseThemeFileJson(content: string): ThemeFile {
   return parseThemeFile(value);
 }
 
+function withGitColorFallbacks(
+  colors: Record<string, string>,
+  syntaxTokens: Record<string, string>,
+): Record<string, string> {
+  const syntaxColor = (name: string) => syntaxTokens[`--syntax-${name}`];
+  const modified =
+    colors["git-modified"] ?? colors.warning ?? syntaxColor("number") ?? colors.primary;
+
+  return {
+    ...colors,
+    "git-added": colors["git-added"] ?? colors.success ?? syntaxColor("string") ?? colors.primary,
+    "git-deleted":
+      colors["git-deleted"] ?? colors.destructive ?? syntaxColor("variable") ?? colors.primary,
+    "git-modified": modified,
+    "git-modified-staged": colors["git-modified-staged"] ?? modified,
+    "git-untracked":
+      colors["git-untracked"] ?? colors.info ?? syntaxColor("property") ?? colors.primary,
+    "git-renamed": colors["git-renamed"] ?? syntaxColor("variable") ?? colors.primary,
+  };
+}
+
 export function toThemeDefinition(theme: Theme): ThemeDefinition {
+  const normalizedColors = normalizeThemeColors(theme.colors);
+  const syntaxTokens = toSyntaxTokenVariables(theme.syntax, normalizedColors, theme.appearance);
+  const resolvedColors = withGitColorFallbacks(normalizedColors, syntaxTokens);
   const cssVariables: Record<string, string> = {};
-  for (const [key, value] of Object.entries(normalizeThemeColors(theme.colors))) {
+  for (const [key, value] of Object.entries(resolvedColors)) {
     cssVariables[`--${key}`] = value;
   }
 
@@ -248,7 +272,7 @@ export function toThemeDefinition(theme: Theme): ThemeDefinition {
     description: theme.description || "",
     category: isDark ? "Dark" : "Light",
     cssVariables,
-    syntaxTokens: toSyntaxTokenVariables(theme.syntax, theme.colors, theme.appearance),
+    syntaxTokens,
     isDark,
   };
 }

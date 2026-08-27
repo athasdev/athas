@@ -188,6 +188,18 @@ pub fn parse_cli_argv(argv: &[String], cwd: &Path) -> Vec<CliRequest> {
    parse_cli_args(argv.get(1..).unwrap_or_default(), cwd)
 }
 
+#[cfg(any(target_os = "macos", test))]
+pub fn parse_opened_urls(urls: &[tauri::Url]) -> Vec<CliRequest> {
+   urls
+      .iter()
+      .filter(|url| url.scheme() == "file")
+      .filter_map(|url| url.to_file_path().ok())
+      .filter_map(|path| {
+         parse_open_arg(path.to_string_lossy().as_ref(), Path::new("/")).map(CliRequest::from)
+      })
+      .collect()
+}
+
 #[cfg(test)]
 mod tests {
    fn to_deep_link_url(req: &OpenRequest) -> String {
@@ -223,6 +235,31 @@ mod tests {
       let (path, line) = split_path_and_line("foo.txt");
       assert_eq!(path, "foo.txt");
       assert_eq!(line, None);
+   }
+
+   #[test]
+   fn parses_macos_opened_file_urls() {
+      let manifest_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+      let url = tauri::Url::from_file_path(&manifest_path).expect("manifest path should be a URL");
+
+      assert_eq!(
+         parse_opened_urls(&[url]),
+         vec![CliRequest::Path {
+            path: manifest_path
+               .canonicalize()
+               .expect("manifest should exist")
+               .to_string_lossy()
+               .into_owned(),
+            is_directory: false,
+            line: None,
+         }]
+      );
+   }
+
+   #[test]
+   fn ignores_non_file_opened_urls() {
+      let url = tauri::Url::parse("athas://open?path=/tmp/file.txt").expect("valid URL");
+      assert!(parse_opened_urls(&[url]).is_empty());
    }
 
    #[test]

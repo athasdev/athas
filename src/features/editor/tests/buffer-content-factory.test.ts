@@ -60,6 +60,42 @@ describe("createPaneContent extension surfaces", () => {
   });
 });
 
+describe("createPaneContent custom view surfaces", () => {
+  it("creates a project-scoped setup tab", () => {
+    const content = createPaneContent("new-view", {
+      type: "customView",
+      projectPath: "/projects/athas",
+    });
+
+    expect(content).toMatchObject({
+      type: "customView",
+      name: "New Custom View",
+      path: "view://create/%2Fprojects%2Fathas",
+      projectPath: "/projects/athas",
+      viewId: undefined,
+      isPreview: false,
+    });
+  });
+
+  it("creates a stable tab for a saved view", () => {
+    const content = createPaneContent("release-view", {
+      type: "customView",
+      projectPath: "/projects/athas",
+      viewId: "release-downloads",
+      name: "Release downloads",
+    });
+
+    expect(content).toMatchObject({
+      type: "customView",
+      name: "Release downloads",
+      path: "view://%2Fprojects%2Fathas/release-downloads",
+      projectPath: "/projects/athas",
+      viewId: "release-downloads",
+      isPreview: false,
+    });
+  });
+});
+
 describe("createPaneContent web viewer surfaces", () => {
   it("preserves explicit access when the general web viewer feature is disabled", () => {
     const content = createPaneContent("github-notification", {
@@ -72,6 +108,26 @@ describe("createPaneContent web viewer surfaces", () => {
       type: "webViewer",
       url: "https://github.com/athasdev/athas/actions",
       allowWhenDisabled: true,
+    });
+  });
+});
+
+describe("createPaneContent SVG preview surfaces", () => {
+  it("keeps the preview linked to its editable source file", () => {
+    const content = createPaneContent("svg-preview", {
+      type: "svgPreview",
+      path: "/workspace/icon.svg:preview",
+      name: "icon.svg (Preview)",
+      content: "<svg />",
+      sourceFilePath: "/workspace/icon.svg",
+    });
+
+    expect(content).toMatchObject({
+      type: "svgPreview",
+      path: "/workspace/icon.svg:preview",
+      sourceFilePath: "/workspace/icon.svg",
+      content: "<svg />",
+      isPreview: false,
     });
   });
 });

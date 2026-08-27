@@ -1,7 +1,10 @@
 import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { invoke } from "@tauri-apps/api/core";
+import { getDirtyEditorBuffers } from "@/features/editor/utils/editor-buffer-selectors";
 import { isEditorContent, type PaneContent } from "@/features/panes/types/pane-content.types";
 import { showChoiceDialog } from "@/ui/dialog";
 import { toast } from "sonner";
+import { IS_MAC } from "@/utils/platform";
 
 export type ProjectTransitionAction =
   | "switching projects"
@@ -10,8 +13,7 @@ export type ProjectTransitionAction =
 
 type UnsavedProjectTransitionChoice = "cancel" | "discard" | "save";
 
-export const getDirtyEditorBuffers = (buffers: PaneContent[]) =>
-  buffers.filter((buffer) => isEditorContent(buffer) && buffer.isDirty);
+export { getDirtyEditorBuffers } from "@/features/editor/utils/editor-buffer-selectors";
 
 export const getUnsavedProjectTransitionMessage = (
   action: ProjectTransitionAction,
@@ -77,22 +79,36 @@ export const prepareProjectTransitionWithUnsavedBuffers = async (
     return true;
   }
 
-  const choice = await showChoiceDialog<UnsavedProjectTransitionChoice>(message, {
-    title: "Unsaved Changes",
-    choices: [
-      { value: "cancel", label: "Cancel", variant: "default" },
-      {
-        value: "discard",
-        label: dirtyBuffers.length === 1 ? "Don't Save" : "Discard All",
-        variant: "default",
-      },
-      {
-        value: "save",
-        label: dirtyBuffers.length === 1 ? "Save" : "Save All",
-        variant: "accent",
-      },
-    ],
-  });
+  const canUseNativeSheet =
+    IS_MAC && typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+  const choice = canUseNativeSheet
+    ? await invoke<"primary" | "secondary" | "cancel">("show_native_choice_sheet", {
+        message,
+        informativeText: "Unsaved changes will be lost if you continue without saving.",
+        primaryLabel: dirtyBuffers.length === 1 ? "Save" : "Save All",
+        secondaryLabel: dirtyBuffers.length === 1 ? "Don’t Save" : "Discard All",
+        cancelLabel: "Cancel",
+      }).then((nativeChoice): UnsavedProjectTransitionChoice => {
+        if (nativeChoice === "primary") return "save";
+        if (nativeChoice === "secondary") return "discard";
+        return "cancel";
+      })
+    : await showChoiceDialog<UnsavedProjectTransitionChoice>(message, {
+        title: "Unsaved Changes",
+        choices: [
+          { value: "cancel", label: "Cancel", variant: "default" },
+          {
+            value: "discard",
+            label: dirtyBuffers.length === 1 ? "Don't Save" : "Discard All",
+            variant: "default",
+          },
+          {
+            value: "save",
+            label: dirtyBuffers.length === 1 ? "Save" : "Save All",
+            variant: "accent",
+          },
+        ],
+      });
 
   if (choice === "discard") {
     return true;

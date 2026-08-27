@@ -1,21 +1,18 @@
 import { invoke } from "@tauri-apps/api/core";
-import { basename, dirname, extname, join } from "@tauri-apps/api/path";
-import { copyFile, readFile } from "@tauri-apps/plugin-fs";
+import { basename, dirname, extname } from "@tauri-apps/api/path";
+import { copyFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { immer } from "zustand/middleware/immer";
 import type { StoreApi } from "zustand";
 import { createStore } from "zustand/vanilla";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
-import {
-  buildPersistedEditorViewState,
-  restorePersistedEditorViewState,
-} from "@/features/editor/stores/editor-session-state";
+import { restorePersistedEditorViewState } from "@/features/editor/stores/editor-session-state";
 import {
   clearQueuedWorkspaceSessionSave,
   useBufferStore,
 } from "@/features/editor/stores/buffer.store";
-import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { getLineSlice } from "@/features/editor/utils/large-file";
 import { getAncestorDirectoryPaths } from "@/features/file-explorer/utils/file-explorer-tree-utils";
@@ -24,12 +21,12 @@ import { getGitStatus } from "@/features/git/api/git-status-api";
 import { useGitBlameStore } from "@/features/git/stores/git-blame.store";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
-import { connectionStore } from "@/features/remote/stores/remote-connection.store";
+import { ensureRemoteConnectionConnected } from "@/features/remote/services/remote-connection-client";
 import { buildRemoteRootPath, parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import type { BufferSession } from "@/features/window/stores/session.store";
+import type { BufferSession } from "@/features/workspace/types/workspace-session.types";
 import {
   getCurrentProjectUiState,
   persistCurrentProjectUiState,
@@ -43,10 +40,14 @@ import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.s
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { createTerminalEventChannel } from "@/features/terminal/utils/terminal-protocol";
 import { getFrontendTerminalSessionArgs } from "@/features/terminal/utils/frontend-terminal-session";
-import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { showAlertDialog, showPromptDialog } from "@/ui/dialog";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
+import { createWorkspaceSessionSaveQueue } from "@/features/workspace/persistence/workspace-session-save-queue";
+import {
+  buildWorkspaceBufferSnapshot,
+  isLocalFileInWorkspace,
+} from "@/features/workspace/persistence/workspace-session-codec";
 import { switchWorkspaceRuntime } from "@/features/workspace/services/workspace-lifecycle";
 import { scheduleWorkspacePrewarm } from "@/features/workspace/services/workspace-prewarm";
 import {
@@ -64,13 +65,7 @@ import {
 } from "@/utils/path-helpers";
 import type { FileEntry } from "../types/app.types";
 import type { FsActions, FsState } from "../types/interface.types";
-import {
-  createNewDirectory,
-  createNewFile,
-  deleteFileOrDirectory,
-  readDirectoryContents,
-  readFileContent,
-} from "../controllers/file-operations";
+import { readDirectoryContents } from "../controllers/file-operations";
 import {
   addFileToTree,
   findFileInTree,
@@ -81,18 +76,40 @@ import {
 import {
   getDatabaseTypeFromPath,
   getFilenameFromPath,
-  isBinaryContent,
   isBinaryFile,
   isKnownTextFile,
   isImageFile,
   isPdfFile,
 } from "../controllers/file-utils";
+import { resolveFileOpenPath, shouldResolveFileOpenSymlink } from "../controllers/file-open-path";
 import { useFileWatcherStore } from "../stores/file-watcher.store";
 import { fffListFiles, fffTrackAccess } from "@/features/file-search/lib/file-search-api";
 import { canUseNativeFileSearch } from "@/features/file-search/utils/file-search-paths";
 import { ensureWorkspaceFileSearch } from "@/features/file-search/services/workspace-file-search";
-import { cancelFileWatcherRefreshes } from "../services/file-watcher-refresh-scheduler";
-import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
+import {
+  createFileOpenResource,
+  inspectFileOpenResource,
+  readFileOpenText,
+} from "../services/file-open-resource";
+import { restoreWorkspaceSessionBuffer } from "../services/workspace-session-buffer-restore";
+import { restoreWorkspaceSessionFolders } from "../services/workspace-session-folder-restore";
+import { prepareWorkspaceClose } from "../services/workspace-close-guard";
+import { createWorkspaceBackgroundInitializer } from "../services/workspace-background-initializer";
+import { getWorkspaceEntryMutationProvider } from "../services/workspace-entry-mutation-provider";
+import { openLocalWorkspaceTransaction } from "../services/workspace-local-open";
+import { drainDeferredWorkspaceSessionBuffers } from "../services/workspace-deferred-session-restore";
+import { disposeWorkspaceResources } from "../services/workspace-disposal";
+import {
+  applyWorkspaceInitializationState,
+  type InitializedWorkspaceState,
+} from "../services/workspace-initialization-state";
+import {
+  initializeWorkspacePath,
+  resumeWorkspacePath,
+} from "../services/workspace-initialization-router";
+import { resetWorkspaceResources } from "../services/workspace-reset";
+import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
+import { getSymlinkInfo, openFolder, readDirectory } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
 import { useRecentFilesStore } from "../stores/recent-files.store";
 import {
@@ -104,20 +121,14 @@ import {
   getWslProjectName,
   type WslDirectoryEntry,
 } from "@/features/wsl/controllers/wsl-workspace";
-import { buildWslPath, parseWslPath, resolveWslTargetPath } from "@/features/wsl/utils/wsl-path";
+import { buildWslPath, parseWslPath } from "@/features/wsl/utils/wsl-path";
 import { shouldIgnore, updateDirectoryContents } from "../controllers/utils";
-import {
-  getDirtyEditorBuffers,
-  prepareProjectTransitionWithUnsavedBuffers,
-} from "../controllers/workspace-project-transition";
+import { prepareProjectTransitionWithUnsavedBuffers } from "../controllers/workspace-project-transition";
 import {
   buildWorkspaceRestoreBatch,
   buildWorkspaceRestorePlan,
-  getEditorWorkspaceScope,
-  isLocalFileInWorkspace,
   isWorkspaceFolderPath,
   normalizeWorkspaceFolders,
-  selectRestoredWorkspaceFolders,
 } from "../controllers/workspace-session";
 import type { WorkspaceSessionBuffer } from "../controllers/workspace-session";
 
@@ -143,19 +154,6 @@ const logWorkspaceOpenStep = (
 
   frontendTrace("error", "workspace-open", `${label}:error`, payload);
 };
-
-const inFlightFileReads = new Map<string, Promise<unknown>>();
-
-function readFileOnce<T>(key: string, loader: () => Promise<T>): Promise<T> {
-  const existing = inFlightFileReads.get(key) as Promise<T> | undefined;
-  if (existing) return existing;
-
-  const promise = loader().finally(() => {
-    inFlightFileReads.delete(key);
-  });
-  inFlightFileReads.set(key, promise);
-  return promise;
-}
 
 function waitForWorkspaceIdle(): Promise<void> {
   return new Promise((resolve) => {
@@ -205,77 +203,22 @@ const syncFffWorkspace = async (get: FileSystemGet): Promise<void> => {
 
 const readWorkspaceRootEntry = async (path: string): Promise<FileEntry> => {
   const projectName = getFolderName(path);
-  const entries = await readProviderDirectoryEntries(path);
+  const entries = await readWorkspaceDirectoryEntries(path);
   const fileTree = sortFileEntries(entries);
   return wrapWithRootFolder(fileTree, path, projectName)[0];
 };
 
-const toRemoteFileEntries = (
-  connectionId: string,
-  entries: Array<{ name: string; path: string; is_dir: boolean }>,
-): FileEntry[] =>
-  entries.map((entry) => ({
-    name: entry.name,
-    path: `remote://${connectionId}${entry.path}`,
-    isDir: entry.is_dir,
-    children: entry.is_dir ? [] : undefined,
-  }));
-
-const toWslFileEntries = (entries: WslDirectoryEntry[]): FileEntry[] =>
-  entries.map((entry) => ({
-    name: entry.name,
-    path: entry.path,
-    isDir: entry.is_dir,
-    children: entry.is_dir ? [] : undefined,
-    isSymlink: entry.is_symlink,
-    symlinkTarget: entry.target ?? undefined,
-  }));
-
-const readProviderDirectoryEntries = async (
-  path: string,
-  workspaceRoot = path,
-): Promise<FileEntry[]> => {
-  const remoteInfo = parseRemotePath(path);
-  if (remoteInfo) {
-    const entries = await invoke<
-      Array<{ name: string; path: string; is_dir: boolean; size: number }>
-    >("ssh_read_directory", {
-      connectionId: remoteInfo.connectionId,
-      path: remoteInfo.remotePath,
-    });
-    return toRemoteFileEntries(remoteInfo.connectionId, entries);
-  }
-
-  const wslInfo = parseWslPath(path);
-  if (wslInfo) {
-    const entries = await invoke<WslDirectoryEntry[]>("wsl_read_directory", {
-      distro: wslInfo.distro,
-      path: wslInfo.linuxPath,
-    });
-    return toWslFileEntries(entries);
-  }
-
-  return sortFileEntries(await readDirectoryContents(path, workspaceRoot));
-};
-
-const textFileDecoder = new TextDecoder("utf-8");
 const IMMEDIATE_SESSION_BUFFERS_TO_RESTORE = 1;
-const pendingWorkspaceSessionWrites = new Map<string, ReturnType<typeof setTimeout>>();
-
-const scheduleWorkspaceSessionWrite = (projectPath: string, write: () => void) => {
-  const pendingWrite = pendingWorkspaceSessionWrites.get(projectPath);
-  if (pendingWrite) {
-    clearTimeout(pendingWrite);
-  }
-
-  pendingWorkspaceSessionWrites.set(
-    projectPath,
-    setTimeout(() => {
-      pendingWorkspaceSessionWrites.delete(projectPath);
-      write();
-    }, 0),
-  );
-};
+type WorkspaceSessionSavePayload = Omit<
+  Parameters<typeof workspaceSessionRepository.save>[0],
+  "projectPath"
+>;
+const workspaceSessionWriteQueue = createWorkspaceSessionSaveQueue(
+  (projectPath: string, payload: WorkspaceSessionSavePayload) => {
+    workspaceSessionRepository.save({ projectPath, ...payload });
+  },
+  0,
+);
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error || "Unknown error");
@@ -311,55 +254,6 @@ const recordLocalFileAccess = (
   window.setTimeout(recordAccess, 50);
 };
 
-const serializeWorkspaceBuffer = (
-  buffer: PaneContent,
-  workspaceRootPath: string | undefined,
-  workspaceFolderPaths: string[] = [],
-): BufferSession | null => {
-  if (buffer.type === "editor" && !buffer.isVirtual) {
-    return {
-      type: "editor",
-      id: buffer.id,
-      name: buffer.name,
-      path: buffer.path,
-      isPinned: buffer.isPinned,
-      isPreview: buffer.isPreview,
-      workspaceScope: getEditorWorkspaceScope(buffer.path, workspaceRootPath, workspaceFolderPaths),
-      editorState: buildPersistedEditorViewState(buffer),
-    };
-  }
-
-  if (buffer.type === "terminal") {
-    return {
-      type: "terminal",
-      path: buffer.path,
-      name: buffer.name,
-      isPinned: buffer.isPinned,
-      sessionId: buffer.sessionId,
-      shell: buffer.shell,
-      initialCommand: buffer.initialCommand,
-      workingDirectory: buffer.workingDirectory,
-      remoteConnectionId: buffer.remoteConnectionId,
-    };
-  }
-
-  if (buffer.type === "webViewer") {
-    return {
-      type: "webViewer",
-      path: buffer.path,
-      name: buffer.name,
-      isPinned: buffer.isPinned,
-      url: buffer.url,
-      zoomLevel: buffer.zoomLevel,
-      profileKey: buffer.profileKey,
-      history: buffer.history,
-      historyIndex: buffer.historyIndex,
-    };
-  }
-
-  return null;
-};
-
 const restoreEditorSessionStateForPath = (
   bufferSession: BufferSession | WorkspaceSessionBuffer,
   workspaceId?: string,
@@ -376,30 +270,6 @@ const restoreEditorSessionStateForPath = (
   if (openedBuffer?.type === "editor") {
     restorePersistedEditorViewState(openedBuffer, bufferSession.editorState);
   }
-};
-
-const reconnectRemoteConnection = async (connectionId: string) => {
-  const connection = await connectionStore.getConnection(connectionId);
-  if (!connection) {
-    throw new Error("Remote connection not found.");
-  }
-
-  if (connection.isConnected) {
-    return connection;
-  }
-
-  await invoke("ssh_connect", {
-    connectionId: connection.id,
-    host: connection.host,
-    port: connection.port,
-    username: connection.username,
-    password: connection.password || null,
-    keyPath: connection.keyPath || null,
-    useSftp: connection.type === "sftp",
-  });
-
-  await connectionStore.updateConnectionStatus(connection.id, true, new Date().toISOString());
-  return connection;
 };
 
 type FileSystemStoreState = FsState & FsActions;
@@ -430,7 +300,7 @@ let scopedFileSystemStore: WorkspaceScopedStore<ScopedFileSystemStoreState>;
 const getScopedFileSystemStore = (workspaceId: string) =>
   scopedFileSystemStore.getStore(workspaceId);
 
-let workspaceServiceActivationVersion = 0;
+const workspaceBackgroundInitializer = createWorkspaceBackgroundInitializer();
 
 const initializeLocalWorkspaceInBackground = (
   workspaceId: string,
@@ -443,87 +313,94 @@ const initializeLocalWorkspaceInBackground = (
     maxGitStatusAgeMs?: number;
   } = {},
 ) => {
-  const activationVersion = ++workspaceServiceActivationVersion;
   const gitStore = useGitStore.getStore(workspaceId);
-  if (!options.preserveGitStatus) {
-    gitStore.getState().actions.setWorkspaceGitStatus(null, path);
-  }
-
-  void (async () => {
-    const backgroundInitStartedAt = performance.now();
-    logWorkspaceOpenStep("start", "backgroundInit", path);
-    try {
-      if (options.deferWatcher) {
-        await waitForWorkspaceIdle();
-      }
-      if (
-        activationVersion !== workspaceServiceActivationVersion ||
-        workspaceRuntimeRegistry.getActiveWorkspaceId() !== workspaceId ||
-        get().rootFolderPath !== path
-      ) {
-        return;
-      }
-
-      const watcherStartedAt = performance.now();
-      logWorkspaceOpenStep("start", "setProjectRoot", path);
-      await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot(path);
-      logWorkspaceOpenStep("end", "setProjectRoot", path, watcherStartedAt);
-
-      await waitForWorkspaceIdle();
-
-      if (
-        activationVersion !== workspaceServiceActivationVersion ||
-        workspaceRuntimeRegistry.getActiveWorkspaceId() !== workspaceId ||
-        get().rootFolderPath !== path
-      ) {
-        return;
-      }
-
+  void workspaceBackgroundInitializer.start({
+    path,
+    deferWatcher: options.deferWatcher,
+    preserveGitStatus: options.preserveGitStatus,
+    maxGitStatusAgeMs: options.maxGitStatusAgeMs,
+    waitForIdle: waitForWorkspaceIdle,
+    canContinue: () =>
+      workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId &&
+      get().rootFolderPath === path,
+    canCommitGitStatus: () => get().rootFolderPath === path,
+    shouldResetGitStatusAfterError: () => get().rootFolderPath === path,
+    resetGitStatus: () => gitStore.getState().actions.setWorkspaceGitStatus(null, path),
+    setProjectRoot: () =>
+      useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot(path),
+    startFileSearchSync: () => {
       void syncFffWorkspace(get);
-
-      await waitForWorkspaceIdle();
-
-      if (
-        activationVersion !== workspaceServiceActivationVersion ||
-        workspaceRuntimeRegistry.getActiveWorkspaceId() !== workspaceId ||
-        get().rootFolderPath !== path
-      ) {
-        return;
-      }
-
+    },
+    getGitStatusSnapshot: () => {
       const gitState = gitStore.getState();
-      if (
-        options.preserveGitStatus &&
-        gitState.currentWorkspaceRepoPath === path &&
-        Date.now() - gitState.workspaceGitStatusUpdatedAt < (options.maxGitStatusAgeMs ?? 15_000)
-      ) {
-        logWorkspaceOpenStep("end", "backgroundInit", path, backgroundInitStartedAt);
-        return;
-      }
-
-      const gitStatusStartedAt = performance.now();
-      logWorkspaceOpenStep("start", "getGitStatus", path);
-      const gitStatus = await getGitStatus(path);
-      logWorkspaceOpenStep("end", "getGitStatus", path, gitStatusStartedAt);
-
-      if (
-        activationVersion !== workspaceServiceActivationVersion ||
-        get().rootFolderPath !== path
-      ) {
-        return;
-      }
-
-      gitStore.getState().actions.setWorkspaceGitStatus(gitStatus, path);
-      logWorkspaceOpenStep("end", "backgroundInit", path, backgroundInitStartedAt);
-    } catch (error) {
-      if (get().rootFolderPath === path) {
-        gitStore.getState().actions.setWorkspaceGitStatus(null, path);
-      }
-      logWorkspaceOpenStep("error", "backgroundInit", path, backgroundInitStartedAt);
-      console.error(errorContext, error);
-    }
-  })();
+      return {
+        repoPath: gitState.currentWorkspaceRepoPath,
+        updatedAt: gitState.workspaceGitStatusUpdatedAt,
+      };
+    },
+    readGitStatus: () => getGitStatus(path),
+    commitGitStatus: (gitStatus) =>
+      gitStore.getState().actions.setWorkspaceGitStatus(gitStatus, path),
+    trace: (phase, step, startedAt) => logWorkspaceOpenStep(phase, step, path, startedAt),
+    onError: (error) => console.error(errorContext, error),
+  });
 };
+
+const resumeWorkspaceRuntimeServices = (workspaceId: string, path: string): Promise<void> => {
+  const targetStore = getScopedFileSystemStore(workspaceId).getState();
+  resumeWorkspacePath(path, {
+    resumeSession: () => targetStore.resumeWorkspaceSession(),
+    resumeLocalServices: () =>
+      initializeLocalWorkspaceInBackground(
+        workspaceId,
+        path,
+        () => targetStore,
+        "Failed to resume workspace services:",
+        {
+          deferWatcher: true,
+          preserveGitStatus: true,
+        },
+      ),
+    stopLocalServices: () => {
+      workspaceBackgroundInitializer.invalidate();
+      void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
+    },
+  });
+  return Promise.resolve();
+};
+
+const applyNonLocalWorkspaceState = (
+  workspaceId: string,
+  workspace: InitializedWorkspaceState,
+  set: ScopedFileSystemSet,
+) =>
+  applyWorkspaceInitializationState(workspace, {
+    addProjectTab: (path, name) =>
+      useWorkspaceTabsStore.getState().actions.addProjectTab(path, name),
+    getActiveProjectTabId: () => useWorkspaceTabsStore.getState().actions.getActiveProjectTab()?.id,
+    expandRoot: (path) =>
+      useFileTreeStore
+        .getStore(workspaceId)
+        .getState()
+        .actions.setExpandedPaths(new Set([path])),
+    setProjectMetadata: (path, name, activeProjectId) => {
+      const projectActions = useProjectStore.getStore(workspaceId).getState().actions;
+      projectActions.setRootFolderPath(path);
+      projectActions.setProjectName(name);
+      projectActions.setActiveProjectId(activeProjectId);
+    },
+    restoreUiState: (path) => restoreProjectUiState(path, workspaceId),
+    commitFileSystemState: ({ path, name, files }) => {
+      set((state) => {
+        state.isFileTreeLoading = false;
+        state.files = files;
+        state.rootFolderPath = path;
+        state.workspaceFolders = [{ path, name, isPrimary: true }];
+        state.filesVersion++;
+        state.projectFilesCache = undefined;
+      });
+    },
+  });
 
 const openLocalWorkspace = async (
   options: OpenLocalWorkspaceOptions,
@@ -541,154 +418,144 @@ const openLocalWorkspace = async (
   const currentBufferIds = isReplacingCurrentWorkspace
     ? bufferStore.getState().buffers.map((buffer) => buffer.id)
     : [];
-
-  try {
-    if (isReplacingCurrentWorkspace) {
+  const result = await openLocalWorkspaceTransaction({
+    replacingCurrentWorkspace: isReplacingCurrentWorkspace,
+    currentBufferIds,
+    prepareTransition: async () => {
       const currentBuffers = [...bufferStore.getState().buffers];
-      if (
-        !(await prepareProjectTransitionWithUnsavedBuffers("switching projects", currentBuffers))
-      ) {
-        logWorkspaceOpenStep("end", traceLabel, path, openStartedAt);
-        return false;
-      }
-
-      get().persistActiveProjectSession();
-      if (currentBufferIds.length > 0) {
-        bufferStore.getState().actions.closeBuffersBatch(currentBufferIds, true);
-      }
-    } else {
-      persistCurrentProjectUiState(currentRootPath, workspaceId);
-    }
-
-    set((state) => {
-      state.isFileTreeLoading = true;
-    });
-
-    const projectName = getFolderName(path);
-
-    const readDirectoryStartedAt = performance.now();
-    logWorkspaceOpenStep("start", "readDirectoryContents", path);
-    const entries = await readDirectoryContents(path);
-    logWorkspaceOpenStep("end", "readDirectoryContents", path, readDirectoryStartedAt);
-
-    const fileTree = sortFileEntries(entries);
-    const wrappedFileTree = wrapWithRootFolder(fileTree, path, projectName);
-
-    if (treeState === "expand-root") {
-      fileTreeStore.getState().actions.setExpandedPaths(new Set([path]));
-    } else {
-      fileTreeStore.getState().actions.collapseAll();
-    }
-
-    const { setRootFolderPath, setProjectName, setActiveProjectId } =
-      projectStore.getState().actions;
-    setRootFolderPath(path);
-    setProjectName(projectName);
-
-    if (restoreUiState) {
-      restoreProjectUiState(path, workspaceId);
-    }
-
-    const workspaceTab = useWorkspaceTabsStore
-      .getState()
-      .projectTabs.find((projectTab) => projectTab.id === workspaceId);
-    setActiveProjectId(workspaceId);
-    if (!prewarm) {
-      useRecentFoldersStore.getState().actions.addToRecents(path, {
-        activeProjectTabId: workspaceId,
-        customIcon: workspaceTab?.customIcon,
-        missing: false,
+      return await prepareProjectTransitionWithUnsavedBuffers("switching projects", currentBuffers);
+    },
+    persistCurrentSession: () => get().persistActiveProjectSession(),
+    closeCurrentBuffers: (bufferIds) =>
+      bufferStore.getState().actions.closeBuffersBatch(bufferIds, true),
+    persistCurrentUiState: () => persistCurrentProjectUiState(currentRootPath, workspaceId),
+    setLoading: (isLoading) => {
+      set((state) => {
+        state.isFileTreeLoading = isLoading;
       });
-      gitDiffCache.clear();
-    }
+    },
+    loadWorkspace: async () => {
+      const projectName = getFolderName(path);
+      const readDirectoryStartedAt = performance.now();
+      logWorkspaceOpenStep("start", "readDirectoryContents", path);
+      const entries = await readDirectoryContents(path);
+      logWorkspaceOpenStep("end", "readDirectoryContents", path, readDirectoryStartedAt);
 
-    set((state) => {
-      state.isFileTreeLoading = false;
-      state.files = wrappedFileTree;
-      state.rootFolderPath = path;
-      state.workspaceFolders = [{ path, name: projectName, isPrimary: true }];
-      state.filesVersion++;
-      state.projectFilesCache = undefined;
-    });
-  } catch (error) {
-    set((state) => {
-      state.isFileTreeLoading = false;
-    });
-    logWorkspaceOpenStep("error", traceLabel, path, openStartedAt);
-    console.error(`Failed to open folder: ${path}`, error);
-    toast.error(`Failed to open folder: ${path}`);
-    return false;
+      return {
+        projectName,
+        files: wrapWithRootFolder(sortFileEntries(entries), path, projectName),
+      };
+    },
+    applyWorkspace: ({ projectName, files }) => {
+      if (treeState === "expand-root") {
+        fileTreeStore.getState().actions.setExpandedPaths(new Set([path]));
+      } else {
+        fileTreeStore.getState().actions.collapseAll();
+      }
+
+      const { setRootFolderPath, setProjectName, setActiveProjectId } =
+        projectStore.getState().actions;
+      setRootFolderPath(path);
+      setProjectName(projectName);
+
+      if (restoreUiState) {
+        restoreProjectUiState(path, workspaceId);
+      }
+
+      const workspaceTab = useWorkspaceTabsStore
+        .getState()
+        .projectTabs.find((projectTab) => projectTab.id === workspaceId);
+      setActiveProjectId(workspaceId);
+      if (!prewarm) {
+        useRecentFoldersStore.getState().actions.addToRecents(path, {
+          activeProjectTabId: workspaceId,
+          customIcon: workspaceTab?.customIcon,
+          missing: false,
+        });
+        gitDiffCache.clear();
+      }
+
+      set((state) => {
+        state.isFileTreeLoading = false;
+        state.files = files;
+        state.rootFolderPath = path;
+        state.workspaceFolders = [{ path, name: projectName, isPrimary: true }];
+        state.filesVersion++;
+        state.projectFilesCache = undefined;
+      });
+    },
+    restoreSession: async () => {
+      const restoreStartedAt = performance.now();
+      logWorkspaceOpenStep("start", "restoreSession", path);
+      await get().restoreSession(path);
+      logWorkspaceOpenStep("end", "restoreSession", path, restoreStartedAt);
+    },
+    startBackgroundInitialization: () => {
+      if (prewarm) return;
+
+      initializeLocalWorkspaceInBackground(
+        workspaceId,
+        path,
+        get,
+        traceLabel === "handleOpenFolder"
+          ? "Failed to initialize workspace after opening folder:"
+          : "Failed to initialize workspace after opening folder by path:",
+      );
+    },
+    onOpenError: (error) => {
+      logWorkspaceOpenStep("error", traceLabel, path, openStartedAt);
+      console.error(`Failed to open folder: ${path}`, error);
+      toast.error(`Failed to open folder: ${path}`);
+    },
+    onRestoreError: (error) => {
+      logWorkspaceOpenStep("error", "restoreSession", path);
+      console.error("Failed to restore workspace session:", error);
+      toast.warning("Workspace opened, but saved tabs could not be restored.");
+    },
+  });
+
+  if (result !== "failed") {
+    logWorkspaceOpenStep("end", traceLabel, path, openStartedAt);
   }
+  return result === "opened";
+};
+
+type NonLocalWorkspaceKind = "remote" | "wsl";
+
+const nonLocalWorkspaceSessionMessages = {
+  remote: {
+    traceLabel: "remoteWorkspace:restoreSession",
+    errorMessage: "Failed to restore remote workspace session:",
+    warningMessage: "Remote workspace opened, but saved tabs could not be restored.",
+  },
+  wsl: {
+    traceLabel: "wslWorkspace:restoreSession",
+    errorMessage: "Failed to restore WSL workspace session:",
+    warningMessage: "WSL workspace opened, but saved tabs could not be restored.",
+  },
+} as const;
+
+const initializeNonLocalWorkspaceSession = async (
+  kind: NonLocalWorkspaceKind,
+  workspaceId: string,
+  path: string,
+  get: FileSystemGet,
+) => {
+  const messages = nonLocalWorkspaceSessionMessages[kind];
+  await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
+  useGitStore.getStore(workspaceId).getState().actions.setWorkspaceGitStatus(null, null);
 
   try {
     const restoreStartedAt = performance.now();
-    logWorkspaceOpenStep("start", "restoreSession", path);
+    logWorkspaceOpenStep("start", messages.traceLabel, path);
     await get().restoreSession(path);
-    logWorkspaceOpenStep("end", "restoreSession", path, restoreStartedAt);
+    logWorkspaceOpenStep("end", messages.traceLabel, path, restoreStartedAt);
   } catch (error) {
-    logWorkspaceOpenStep("error", "restoreSession", path);
-    console.error("Failed to restore workspace session:", error);
-    toast.warning("Workspace opened, but saved tabs could not be restored.");
-  }
-
-  if (!prewarm) {
-    initializeLocalWorkspaceInBackground(
-      workspaceId,
+    logWorkspaceOpenStep("error", messages.traceLabel, path);
+    console.error(messages.errorMessage, error);
+    toast.warning(messages.warningMessage);
+    frontendTrace("warn", "workspace-open", `${messages.traceLabel}:error`, {
       path,
-      get,
-      traceLabel === "handleOpenFolder"
-        ? "Failed to initialize workspace after opening folder:"
-        : "Failed to initialize workspace after opening folder by path:",
-    );
-  }
-
-  logWorkspaceOpenStep("end", traceLabel, path, openStartedAt);
-  return true;
-};
-
-const initializeRemoteWorkspaceSession = async (
-  workspaceId: string,
-  remotePath: string,
-  get: FileSystemGet,
-) => {
-  await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
-  useGitStore.getStore(workspaceId).getState().actions.setWorkspaceGitStatus(null, null);
-
-  try {
-    const restoreStartedAt = performance.now();
-    logWorkspaceOpenStep("start", "remoteWorkspace:restoreSession", remotePath);
-    await get().restoreSession(remotePath);
-    logWorkspaceOpenStep("end", "remoteWorkspace:restoreSession", remotePath, restoreStartedAt);
-  } catch (error) {
-    logWorkspaceOpenStep("error", "remoteWorkspace:restoreSession", remotePath);
-    console.error("Failed to restore remote workspace session:", error);
-    toast.warning("Remote workspace opened, but saved tabs could not be restored.");
-    frontendTrace("warn", "workspace-open", "remoteWorkspace:restoreSession:error", {
-      path: remotePath,
-      error: getErrorMessage(error),
-    });
-  }
-};
-
-const initializeWslWorkspaceSession = async (
-  workspaceId: string,
-  wslPath: string,
-  get: FileSystemGet,
-) => {
-  await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
-  useGitStore.getStore(workspaceId).getState().actions.setWorkspaceGitStatus(null, null);
-
-  try {
-    const restoreStartedAt = performance.now();
-    logWorkspaceOpenStep("start", "wslWorkspace:restoreSession", wslPath);
-    await get().restoreSession(wslPath);
-    logWorkspaceOpenStep("end", "wslWorkspace:restoreSession", wslPath, restoreStartedAt);
-  } catch (error) {
-    logWorkspaceOpenStep("error", "wslWorkspace:restoreSession", wslPath);
-    console.error("Failed to restore WSL workspace session:", error);
-    toast.warning("WSL workspace opened, but saved tabs could not be restored.");
-    frontendTrace("warn", "workspace-open", "wslWorkspace:restoreSession:error", {
-      path: wslPath,
       error: getErrorMessage(error),
     });
   }
@@ -779,20 +646,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               treeState: "expand-root",
               restoreUiState: false,
             }),
-          resume: async (workspaceId) => {
-            const targetStore = getScopedFileSystemStore(workspaceId).getState();
-            targetStore.resumeWorkspaceSession();
-            initializeLocalWorkspaceInBackground(
-              workspaceId,
-              selected,
-              () => targetStore,
-              "Failed to resume workspace services:",
-              {
-                deferWatcher: true,
-                preserveGitStatus: true,
-              },
-            );
-          },
+          resume: (workspaceId) => resumeWorkspaceRuntimeServices(workspaceId, selected),
         });
       },
 
@@ -816,96 +670,64 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       resetWorkspace: async () => {
-        // Reset all project-related state to return to welcome screen
-        set((state) => {
-          state.files = [];
-          state.isFileTreeLoading = false;
-          state.filesVersion++;
-          state.rootFolderPath = undefined;
-          state.workspaceFolders = [];
-          state.projectFilesCache = undefined;
+        const bufferStore = useBufferStore.getStore(workspaceId);
+        const { buffers, actions: bufferActions } = bufferStore.getState();
+        const projectActions = useProjectStore.getStore(workspaceId).getState().actions;
+
+        await resetWorkspaceResources({
+          bufferIds: buffers.map((buffer) => buffer.id),
+          resetFileSystemState: () => {
+            set((state) => {
+              state.files = [];
+              state.isFileTreeLoading = false;
+              state.filesVersion++;
+              state.rootFolderPath = undefined;
+              state.workspaceFolders = [];
+              state.projectFilesCache = undefined;
+            });
+          },
+          collapseFileTree: () =>
+            useFileTreeStore.getStore(workspaceId).getState().actions.collapseAll(),
+          resetProjectMetadata: () => {
+            projectActions.setRootFolderPath("");
+            projectActions.setProjectName("");
+          },
+          closeBuffer: bufferActions.closeBuffer,
+          stopFileWatcher: () =>
+            useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot(""),
+          resetGitState: () => useGitStore.getStore(workspaceId).getState().actions.reset(),
+          clearGitDiffCache: () => gitDiffCache.clear(),
+          clearGitBlame: () =>
+            useGitBlameStore.getStore(workspaceId).getState().actions.clearAllBlame(),
         });
-
-        // Clear tree UI state
-        useFileTreeStore.getStore(workspaceId).getState().actions.collapseAll();
-
-        // Reset project store
-        const { setRootFolderPath, setProjectName } = useProjectStore
-          .getStore(workspaceId)
-          .getState().actions;
-        setRootFolderPath("");
-        setProjectName("");
-
-        // Close all buffers
-        const { buffers, actions: bufferActions } = useBufferStore.getStore(workspaceId).getState();
-        buffers.forEach((buffer) => bufferActions.closeBuffer(buffer.id));
-
-        // Stop file watching
-        await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
-
-        // Reset git store completely
-        const { actions: gitActions } = useGitStore.getStore(workspaceId).getState();
-        gitActions.reset();
-
-        // Clear git diff cache
-        gitDiffCache.clear();
-
-        // Clear git blame data
-        useGitBlameStore.getStore(workspaceId).getState().actions.clearAllBlame();
       },
 
       restoreSession: async (projectPath: string, skipBufferPath?: string) => {
         const { session, terminals } = workspaceSessionRepository.load(projectPath);
         if (session?.workspaceFolders && session.workspaceFolders.length > 1) {
-          const foldersToRestore = normalizeWorkspaceFolders(projectPath, session.workspaceFolders);
           const currentRootPaths = new Set(
             get()
               .files.filter((file) => file.isDir)
               .map((file) => file.path),
           );
-          const restoredFolders = (
-            await Promise.all(
-              foldersToRestore.map(async (folder) => {
-                if (folder.path === projectPath || currentRootPaths.has(folder.path)) {
-                  return { path: folder.path, entry: null };
-                }
-
-                try {
-                  return {
-                    path: folder.path,
-                    entry: await readWorkspaceRootEntry(folder.path),
-                  };
-                } catch (error) {
-                  console.warn("Failed to restore workspace folder:", folder.path, error);
-                  toast.warning(`Could not restore workspace folder "${folder.name}".`);
-                  return null;
-                }
-              }),
-            )
-          ).filter(
-            (
-              result,
-            ): result is {
-              path: string;
-              entry: FileEntry | null;
-            } => result !== null,
-          );
-          const restoredRootEntries = restoredFolders
-            .map((result) => result.entry)
-            .filter((entry): entry is FileEntry => entry !== null);
-          const restoredWorkspaceFolders = selectRestoredWorkspaceFolders(
+          const restoredFolders = await restoreWorkspaceSessionFolders({
             projectPath,
-            foldersToRestore,
-            restoredFolders.map((result) => result.path),
-          );
+            workspaceFolders: session.workspaceFolders,
+            currentRootPaths,
+            readRootEntry: readWorkspaceRootEntry,
+            onFolderError: (folder, error) => {
+              console.warn("Failed to restore workspace folder:", folder.path, error);
+              toast.warning(`Could not restore workspace folder "${folder.name}".`);
+            },
+          });
 
           set((state) => {
-            if (restoredRootEntries.length > 0) {
-              state.files = [...state.files, ...restoredRootEntries];
+            if (restoredFolders.rootEntries.length > 0) {
+              state.files = [...state.files, ...restoredFolders.rootEntries];
               state.filesVersion++;
               state.projectFilesCache = undefined;
             }
-            state.workspaceFolders = restoredWorkspaceFolders;
+            state.workspaceFolders = restoredFolders.workspaceFolders;
           });
           void syncFffWorkspace(get);
         }
@@ -936,69 +758,37 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
           const restoreBuffers = async (buffers: typeof buffersToRestore) => {
             for (const buffer of buffers) {
-              if (buffer.type === "terminal") {
-                const restoredBufferId = bufferActions.openContent({
-                  type: "terminal",
-                  name: buffer.name,
-                  command: buffer.initialCommand,
-                  shell: buffer.shell,
-                  workingDirectory: buffer.workingDirectory,
-                  remoteConnectionId: buffer.remoteConnectionId,
-                  sessionId: buffer.sessionId,
-                  path: buffer.path,
+              if (buffer.type === "editor") {
+                frontendTrace("info", "workspace-open", "restoreSession:buffer:start", {
+                  projectPath,
+                  bufferPath: buffer.path,
                 });
-
-                if (buffer.isPinned) {
-                  bufferActions.handleTabPin(restoredBufferId);
-                }
-
-                continue;
               }
 
-              if (buffer.type === "webViewer") {
-                const restoredBufferId = bufferActions.openContent({
-                  type: "webViewer",
-                  url: buffer.url ?? "about:blank",
-                  zoomLevel: buffer.zoomLevel,
-                  profileKey: buffer.profileKey,
-                  history: buffer.history,
-                  historyIndex: buffer.historyIndex,
+              await restoreWorkspaceSessionBuffer(buffer, {
+                openContent: bufferActions.openContent,
+                openFile: async (path, isPreview) => {
+                  await get().handleFileSelect(
+                    path,
+                    false,
+                    undefined,
+                    undefined,
+                    undefined,
+                    isPreview,
+                  );
+                },
+                findBufferIdByPath: (path) =>
+                  getBufferByPath(bufferStore.getState().buffers, path)?.id ?? null,
+                pinBuffer: bufferActions.handleTabPin,
+                restoreEditorState: (bufferSession) =>
+                  restoreEditorSessionStateForPath(bufferSession, workspaceId),
+              });
+
+              if (buffer.type === "editor") {
+                frontendTrace("info", "workspace-open", "restoreSession:buffer:end", {
+                  projectPath,
+                  bufferPath: buffer.path,
                 });
-
-                if (buffer.isPinned) {
-                  bufferActions.handleTabPin(restoredBufferId);
-                }
-
-                continue;
-              }
-
-              frontendTrace("info", "workspace-open", "restoreSession:buffer:start", {
-                projectPath,
-                bufferPath: buffer.path,
-              });
-              // Use handleFileSelect to open the file (it handles reading content)
-              await get().handleFileSelect(
-                buffer.path,
-                false,
-                undefined,
-                undefined,
-                undefined,
-                buffer.isPreview,
-              );
-              restoreEditorSessionStateForPath(buffer, workspaceId);
-              frontendTrace("info", "workspace-open", "restoreSession:buffer:end", {
-                projectPath,
-                bufferPath: buffer.path,
-              });
-
-              // If it was pinned, we might need to handle that, but handleFileSelect doesn't support pinning arg.
-              // We can pin it after opening if needed.
-              if (buffer.isPinned) {
-                const newBuffers = bufferStore.getState().buffers;
-                const openedBuffer = getBufferByPath(newBuffers, buffer.path);
-                if (openedBuffer) {
-                  bufferActions.handleTabPin(openedBuffer.id);
-                }
               }
             }
           };
@@ -1036,50 +826,38 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
               isRestoringDeferredBuffers = true;
               void (async () => {
-                let restoredBufferCount = 0;
-
-                while (pendingSessionBuffers.length > 0) {
-                  await waitForWorkspaceIdle();
-                  if (
-                    get().rootFolderPath !== projectPath ||
-                    workspaceRuntimeRegistry.getActiveWorkspaceId() !== workspaceId
-                  ) {
-                    return;
-                  }
-
-                  const nextBuffer = pendingSessionBuffers[0];
-                  if (!nextBuffer) {
-                    break;
-                  }
-
-                  try {
-                    await restoreBuffers([nextBuffer]);
-                  } catch (error) {
+                const result = await drainDeferredWorkspaceSessionBuffers({
+                  pendingBuffers: pendingSessionBuffers,
+                  waitForIdle: waitForWorkspaceIdle,
+                  shouldContinue: () =>
+                    get().rootFolderPath === projectPath &&
+                    workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId,
+                  restoreBuffer: async (buffer) => restoreBuffers([buffer]),
+                  onBufferError: (buffer, error) => {
                     console.warn(
-                      `[workspace-open] failed to restore deferred tab ${nextBuffer.path}`,
+                      `[workspace-open] failed to restore deferred tab ${buffer.path}`,
                       error,
                     );
-                  }
-                  pendingSessionBuffers.shift();
-                  restoredBufferCount++;
-
-                  if (restorePlan.activeBufferPath) {
-                    const activeBuffer = getBufferByPath(
-                      bufferStore.getState().buffers,
-                      restorePlan.activeBufferPath,
-                    );
-                    if (activeBuffer) {
-                      bufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
+                  },
+                  afterBufferRestored: () => {
+                    if (restorePlan.activeBufferPath) {
+                      const activeBuffer = getBufferByPath(
+                        bufferStore.getState().buffers,
+                        restorePlan.activeBufferPath,
+                      );
+                      if (activeBuffer) {
+                        bufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
+                      }
                     }
-                  }
-                }
+                  },
+                });
 
-                if (pendingSessionBuffers.length === 0) {
+                if (result.completed) {
                   resumePendingSessionRestore = null;
                   restoreProjectPaneState(projectPath, workspaceId);
                   frontendTrace("info", "workspace-open", "restoreSession:deferred:end", {
                     projectPath,
-                    restoredBuffers: restoredBufferCount,
+                    restoredBuffers: result.restoredBufferCount,
                   });
                 }
               })()
@@ -1117,7 +895,6 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
         const uiState = getCurrentProjectUiState(workspaceId);
         const { buffers, activeBufferId } = useBufferStore.getStore(workspaceId).getState();
-        const activeBuffer = getBufferById(buffers, activeBufferId);
         const workspaceFolders = normalizeWorkspaceFolders(currentRootPath, get().workspaceFolders);
         const workspaceFolderPaths = workspaceFolders.map((folder) => folder.path);
         const terminals = serializeTerminals(
@@ -1129,26 +906,22 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             ? readPersistedAiWorkspaceSession()
             : undefined);
         deferredAiSession = undefined;
-        const openPersistedBuffers = buffers
-          .map((buffer) => serializeWorkspaceBuffer(buffer, currentRootPath, workspaceFolderPaths))
-          .filter((buffer): buffer is BufferSession => buffer !== null);
-        const openBufferPaths = new Set(openPersistedBuffers.map((buffer) => buffer.path));
-        const persistedBuffers = [
-          ...openPersistedBuffers,
-          ...pendingSessionBuffers.filter((buffer) => !openBufferPaths.has(buffer.path)),
-        ];
+        const bufferSnapshot = buildWorkspaceBufferSnapshot({
+          buffers,
+          activeBufferId,
+          pendingBuffers: pendingSessionBuffers,
+          workspaceRootPath: currentRootPath,
+          workspaceFolderPaths,
+          includeEditorId: true,
+        });
 
         clearQueuedWorkspaceSessionSave(currentRootPath);
-        scheduleWorkspaceSessionWrite(currentRootPath, () => {
-          workspaceSessionRepository.save({
-            projectPath: currentRootPath,
-            buffers: persistedBuffers,
-            activeBufferPath: activeBuffer?.path || null,
-            terminals,
-            aiSession,
-            workspaceFolders,
-            uiState,
-          });
+        workspaceSessionWriteQueue.schedule(currentRootPath, {
+          ...bufferSnapshot,
+          terminals,
+          aiSession,
+          workspaceFolders,
+          uiState,
         });
       },
 
@@ -1187,20 +960,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               treeState: "collapse-all",
               restoreUiState: true,
             }),
-          resume: async (workspaceId) => {
-            const targetStore = getScopedFileSystemStore(workspaceId).getState();
-            targetStore.resumeWorkspaceSession();
-            initializeLocalWorkspaceInBackground(
-              workspaceId,
-              path,
-              () => targetStore,
-              "Failed to resume workspace services:",
-              {
-                deferWatcher: true,
-                preserveGitStatus: true,
-              },
-            );
-          },
+          resume: (workspaceId) => resumeWorkspaceRuntimeServices(workspaceId, path),
         });
       },
 
@@ -1311,11 +1071,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             getScopedFileSystemStore(workspaceId)
               .getState()
               .initializeRemoteWorkspace(connectionId),
-          resume: async (workspaceId) => {
-            getScopedFileSystemStore(workspaceId).getState().resumeWorkspaceSession();
-            workspaceServiceActivationVersion++;
-            void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
-          },
+          resume: (workspaceId) => resumeWorkspaceRuntimeServices(workspaceId, path),
         });
       },
 
@@ -1327,7 +1083,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         });
 
         try {
-          const connection = await reconnectRemoteConnection(connectionId);
+          const connection = await ensureRemoteConnectionConnected(connectionId);
 
           // Read remote root directory
           const entries = await invoke<RemoteDirectoryEntry[]>("ssh_read_directory", {
@@ -1340,36 +1096,17 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             connection.name,
             entries,
           );
+          applyNonLocalWorkspaceState(
+            workspaceId,
+            {
+              path: remotePath,
+              name: connection.name,
+              files: wrappedFileTree,
+            },
+            set,
+          );
 
-          // Add project to workspace tabs
-          useWorkspaceTabsStore.getState().actions.addProjectTab(remotePath, connection.name);
-          const activeProjectTab = useWorkspaceTabsStore.getState().actions.getActiveProjectTab();
-
-          // Initialize tree UI state: expand remote root
-          useFileTreeStore
-            .getStore(workspaceId)
-            .getState()
-            .actions.setExpandedPaths(new Set([remotePath]));
-
-          // Update project store
-          const { setRootFolderPath, setProjectName, setActiveProjectId } = useProjectStore
-            .getStore(workspaceId)
-            .getState().actions;
-          setRootFolderPath(remotePath);
-          setProjectName(connection.name);
-          setActiveProjectId(activeProjectTab?.id);
-          restoreProjectUiState(remotePath, workspaceId);
-
-          set((state) => {
-            state.isFileTreeLoading = false;
-            state.files = wrappedFileTree;
-            state.rootFolderPath = remotePath;
-            state.workspaceFolders = [{ path: remotePath, name: connection.name, isPrimary: true }];
-            state.filesVersion++;
-            state.projectFilesCache = undefined;
-          });
-
-          await initializeRemoteWorkspaceSession(workspaceId, remotePath, get);
+          await initializeNonLocalWorkspaceSession("remote", workspaceId, remotePath, get);
 
           return true;
         } catch (error) {
@@ -1395,11 +1132,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             getScopedFileSystemStore(workspaceId)
               .getState()
               .initializeWslWorkspace(distro, normalizedLinuxPath),
-          resume: async (workspaceId) => {
-            getScopedFileSystemStore(workspaceId).getState().resumeWorkspaceSession();
-            workspaceServiceActivationVersion++;
-            void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
-          },
+          resume: (workspaceId) => resumeWorkspaceRuntimeServices(workspaceId, path),
         });
       },
 
@@ -1422,37 +1155,18 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             entries,
           );
           const projectName = getWslProjectName(distro, normalizedLinuxPath);
-
-          useWorkspaceTabsStore.getState().actions.addProjectTab(wslPath, projectName);
-          const activeProjectTab = useWorkspaceTabsStore.getState().actions.getActiveProjectTab();
-          useFileTreeStore
-            .getStore(workspaceId)
-            .getState()
-            .actions.setExpandedPaths(new Set([wslPath]));
-
-          const { setRootFolderPath, setProjectName, setActiveProjectId } = useProjectStore
-            .getStore(workspaceId)
-            .getState().actions;
-          setRootFolderPath(wslPath);
-          setProjectName(projectName);
-          setActiveProjectId(activeProjectTab?.id);
-          restoreProjectUiState(wslPath, workspaceId);
-
-          set((state) => {
-            state.isFileTreeLoading = false;
-            state.files = wrappedFileTree;
-            state.rootFolderPath = wslPath;
-            state.workspaceFolders = [{ path: wslPath, name: projectName, isPrimary: true }];
-            state.filesVersion++;
-            state.projectFilesCache = undefined;
-          });
+          const activeProjectId = applyNonLocalWorkspaceState(
+            workspaceId,
+            { path: wslPath, name: projectName, files: wrappedFileTree },
+            set,
+          );
 
           useRecentFoldersStore.getState().actions.addToRecents(wslPath, {
-            activeProjectTabId: activeProjectTab?.id,
+            activeProjectTabId: activeProjectId,
             missing: false,
           });
 
-          await initializeWslWorkspaceSession(workspaceId, wslPath, get);
+          await initializeNonLocalWorkspaceSession("wsl", workspaceId, wslPath, get);
 
           return true;
         } catch (error) {
@@ -1544,39 +1258,10 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             });
         }
         const selectedFileEntry = findFileInTree(get().files, path);
-        const shouldResolveSymlink =
-          selectedFileEntry?.isSymlink === true &&
-          !path.startsWith("diff://") &&
-          !path.startsWith("remote://");
+        const shouldResolveSymlink = shouldResolveFileOpenSymlink(path, selectedFileEntry);
         if (shouldResolveSymlink) {
           try {
-            const workspaceRoot = get().rootFolderPath;
-            const symlinkInfo = selectedFileEntry.symlinkTarget
-              ? { is_symlink: true, target: selectedFileEntry.symlinkTarget }
-              : await getSymlinkInfo(path, workspaceRoot);
-
-            if (symlinkInfo.is_symlink && symlinkInfo.target) {
-              const wslTargetPath = resolveWslTargetPath(path, symlinkInfo.target);
-              if (wslTargetPath) {
-                resolvedPath = wslTargetPath;
-              } else {
-                const pathSeparator = path.includes("\\") ? "\\" : "/";
-                const pathParts = path.split(pathSeparator);
-                pathParts.pop();
-                const parentDir = pathParts.join(pathSeparator);
-
-                if (
-                  symlinkInfo.target.startsWith(pathSeparator) ||
-                  symlinkInfo.target.match(/^[a-zA-Z]:/)
-                ) {
-                  resolvedPath = symlinkInfo.target;
-                } else {
-                  resolvedPath = workspaceRoot
-                    ? `${workspaceRoot}${pathSeparator}${symlinkInfo.target}`
-                    : `${parentDir}${pathSeparator}${symlinkInfo.target}`;
-                }
-              }
-            }
+            resolvedPath = await resolveFileOpenPath(path, selectedFileEntry, get().rootFolderPath);
           } catch (error) {
             console.error("Failed to resolve symlink:", error);
           }
@@ -1666,22 +1351,17 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           );
           fileOpenBenchmark.finish(path, "binary-buffer-opened");
         } else {
-          let preloadedLocalText: string | null = null;
+          let preloadedText: string | null = null;
 
-          const wslInfo = parseWslPath(path);
+          const fileOpenResource = createFileOpenResource(path, resolvedPath);
 
-          const resolvedKnownTextPath =
-            resolvedPath === path ? isKnownTextPath : isKnownTextFile(resolvedPath);
-
-          if (!path.startsWith("remote://") && !wslInfo && !resolvedKnownTextPath) {
+          if (fileOpenResource.shouldInspectBytes) {
             try {
-              const fileData = await readFileOnce(`local-bytes:${resolvedPath}`, () =>
-                readFile(resolvedPath),
-              );
+              const inspection = await inspectFileOpenResource(fileOpenResource);
 
               if (isStaleRequest()) return;
 
-              if (isBinaryContent(fileData)) {
+              if (inspection.isBinary) {
                 openBuffer(
                   path,
                   fileName,
@@ -1709,49 +1389,14 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
                 return;
               }
 
-              preloadedLocalText = textFileDecoder.decode(fileData);
+              preloadedText = inspection.preloadedText;
             } catch (error) {
-              console.error("Failed to inspect file bytes before opening:", error);
-            }
-          } else if (wslInfo && !resolvedKnownTextPath) {
-            try {
-              const fileData = await readFileOnce(
-                `wsl-bytes:${wslInfo.distro}:${wslInfo.linuxPath}`,
-                () =>
-                  invoke<number[]>("wsl_read_file_bytes", {
-                    distro: wslInfo.distro,
-                    filePath: wslInfo.linuxPath,
-                  }),
+              console.error(
+                fileOpenResource.provider.kind === "wsl"
+                  ? "Failed to inspect WSL file bytes before opening:"
+                  : "Failed to inspect file bytes before opening:",
+                error,
               );
-
-              if (isStaleRequest()) return;
-
-              const bytes = new Uint8Array(fileData);
-              if (isBinaryContent(bytes)) {
-                openBuffer(
-                  path,
-                  fileName,
-                  "",
-                  false,
-                  undefined,
-                  false,
-                  false,
-                  undefined,
-                  false,
-                  false,
-                  false,
-                  undefined,
-                  false,
-                  false,
-                  true,
-                );
-                fileOpenBenchmark.finish(path, "binary-sniff-buffer-opened");
-                return;
-              }
-
-              preloadedLocalText = textFileDecoder.decode(bytes);
-            } catch (error) {
-              console.error("Failed to inspect WSL file bytes before opening:", error);
             }
           }
 
@@ -1763,7 +1408,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           const hasExternalEditorCommand =
             settings.externalEditor !== "custom" || settings.customEditorCommand.trim().length > 0;
 
-          if (settings.externalEditor !== "none" && hasExternalEditorCommand && !wslInfo) {
+          if (settings.externalEditor !== "none" && hasExternalEditorCommand && !selectedWslInfo) {
             if (isStaleRequest()) return;
             try {
               const { rootFolderPath } = get();
@@ -1796,38 +1441,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             }
           }
 
-          let content: string;
-
-          // Check if this is a remote file
-          if (path.startsWith("remote://")) {
-            const match = path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
-            if (!match) return;
-
-            const connectionId = match[1];
-            const remotePath = match[2] || "/";
-
-            content = await readFileOnce(`remote-text:${connectionId}:${remotePath}`, () =>
-              invoke<string>("ssh_read_file", {
-                connectionId,
-                filePath: remotePath,
-              }),
-            );
-          } else if (wslInfo) {
-            content =
-              preloadedLocalText ??
-              (await readFileOnce(`wsl-text:${wslInfo.distro}:${wslInfo.linuxPath}`, () =>
-                invoke<string>("wsl_read_file", {
-                  distro: wslInfo.distro,
-                  filePath: wslInfo.linuxPath,
-                }),
-              ));
-          } else {
-            content =
-              preloadedLocalText ??
-              (await readFileOnce(`local-text:${resolvedPath}`, () =>
-                readFileContent(resolvedPath),
-              ));
-          }
+          const content = await readFileOpenText(fileOpenResource, preloadedText);
           fileOpenBenchmark.mark(path, "file-read", `${content.length} chars`);
 
           if (isStaleRequest()) return;
@@ -1910,7 +1524,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         if (!isCurrentlyExpanded) {
           // Expand: load children if not present
           if (!folder.children || folder.children.length === 0) {
-            const childEntries = await readProviderDirectoryEntries(
+            const childEntries = await readWorkspaceDirectoryEntries(
               folder.path,
               get().rootFolderPath ?? folder.path,
             );
@@ -1956,7 +1570,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           }
 
           if (!node.children || node.children.length === 0) {
-            const childEntries = await readProviderDirectoryEntries(
+            const childEntries = await readWorkspaceDirectoryEntries(
               ancestorPath,
               get().rootFolderPath ?? ancestorPath,
             );
@@ -2033,7 +1647,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
                   return;
                 }
 
-                const children = await readProviderDirectoryEntries(
+                const children = await readWorkspaceDirectoryEntries(
                   item.path,
                   get().rootFolderPath ?? item.path,
                 );
@@ -2243,7 +1857,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         }
 
         const entries = (
-          await readProviderDirectoryEntries(directoryPath, get().rootFolderPath ?? directoryPath)
+          await readWorkspaceDirectoryEntries(directoryPath, get().rootFolderPath ?? directoryPath)
         ).map((entry) => ({
           name: entry.name,
           path: entry.path,
@@ -2272,34 +1886,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           return;
         }
 
-        const remoteSource = parseRemotePath(oldPath);
-        const remoteTarget = parseRemotePath(newPath);
-        const wslSource = parseWslPath(oldPath);
-        const wslTarget = parseWslPath(newPath);
-        if (
-          remoteSource &&
-          remoteTarget &&
-          remoteSource.connectionId === remoteTarget.connectionId
-        ) {
-          await invoke("ssh_rename_path", {
-            connectionId: remoteSource.connectionId,
-            sourcePath: remoteSource.remotePath,
-            targetPath: remoteTarget.remotePath,
-          });
-        } else if (wslSource || wslTarget) {
-          if (!wslSource || !wslTarget || wslSource.distro !== wslTarget.distro) {
-            toast.error(
-              "Moving files between WSL distributions or local folders is not supported.",
-            );
-            return;
-          }
-
-          await invoke("wsl_rename_path", {
-            distro: wslSource.distro,
-            sourcePath: wslSource.linuxPath,
-            targetPath: wslTarget.linuxPath,
-          });
-        }
+        await getWorkspaceEntryMutationProvider(oldPath).movePath(oldPath, newPath);
 
         // Remove from old location
         let updatedFiles = removeFileFromTree(get().files, oldPath);
@@ -2490,22 +2077,10 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       createFile: async (directoryPath: string, fileName: string) => {
-        const remoteInfo = parseRemotePath(directoryPath);
-        const filePath = remoteInfo
-          ? (() => {
-              const normalizedDirectory = directoryPath.endsWith("/")
-                ? directoryPath.slice(0, -1)
-                : directoryPath;
-              return `${normalizedDirectory}/${fileName}`;
-            })()
-          : await createNewFile(directoryPath, fileName);
-
-        if (remoteInfo) {
-          await invoke("ssh_create_file", {
-            connectionId: remoteInfo.connectionId,
-            filePath: `${remoteInfo.remotePath.replace(/\/$/, "")}/${fileName}`,
-          });
-        }
+        const filePath = await getWorkspaceEntryMutationProvider(directoryPath).createFile(
+          directoryPath,
+          fileName,
+        );
 
         const newFile: FileEntry = {
           name: fileName,
@@ -2524,22 +2099,10 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       createDirectory: async (parentPath: string, folderName: string) => {
-        const remoteInfo = parseRemotePath(parentPath);
-        const folderPath = remoteInfo
-          ? (() => {
-              const normalizedParent = parentPath.endsWith("/")
-                ? parentPath.slice(0, -1)
-                : parentPath;
-              return `${normalizedParent}/${folderName}`;
-            })()
-          : await createNewDirectory(parentPath, folderName);
-
-        if (remoteInfo) {
-          await invoke("ssh_create_directory", {
-            connectionId: remoteInfo.connectionId,
-            directoryPath: `${remoteInfo.remotePath.replace(/\/$/, "")}/${folderName}`,
-          });
-        }
+        const folderPath = await getWorkspaceEntryMutationProvider(parentPath).createDirectory(
+          parentPath,
+          folderName,
+        );
 
         const newFolder: FileEntry = {
           name: folderName,
@@ -2557,18 +2120,8 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       deleteFile: async (path: string) => {
-        const remoteInfo = parseRemotePath(path);
         const entry = findFileInTree(get().files, path);
-
-        if (remoteInfo) {
-          await invoke("ssh_delete_path", {
-            connectionId: remoteInfo.connectionId,
-            targetPath: remoteInfo.remotePath,
-            isDirectory: !!entry?.isDir,
-          });
-        } else {
-          await deleteFileOrDirectory(path);
-        }
+        await getWorkspaceEntryMutationProvider(path).deletePath(path, !!entry?.isDir);
 
         const { buffers, actions } = useBufferStore.getStore(workspaceId).getState();
         buffers
@@ -2746,39 +2299,11 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
       handleRenamePath: async (path: string, newName?: string) => {
         if (newName) {
-          const remoteInfo = parseRemotePath(path);
-          const wslInfo = parseWslPath(path);
-
           try {
-            let targetPath: string;
-
-            if (remoteInfo) {
-              const segments = remoteInfo.remotePath.split("/");
-              segments.pop();
-              const remoteDir = segments.join("/") || "/";
-              const nextRemotePath = remoteDir === "/" ? `/${newName}` : `${remoteDir}/${newName}`;
-              targetPath = `remote://${remoteInfo.connectionId}${nextRemotePath}`;
-              await invoke("ssh_rename_path", {
-                connectionId: remoteInfo.connectionId,
-                sourcePath: remoteInfo.remotePath,
-                targetPath: nextRemotePath,
-              });
-            } else if (wslInfo) {
-              const segments = wslInfo.linuxPath.split("/");
-              segments.pop();
-              const wslDir = segments.join("/") || "/";
-              const nextLinuxPath = wslDir === "/" ? `/${newName}` : `${wslDir}/${newName}`;
-              targetPath = buildWslPath(wslInfo.distro, nextLinuxPath);
-              await invoke("wsl_rename_path", {
-                distro: wslInfo.distro,
-                sourcePath: wslInfo.linuxPath,
-                targetPath: nextLinuxPath,
-              });
-            } else {
-              const dir = await dirname(path);
-              targetPath = await join(dir, newName);
-              await renameFile(path, targetPath);
-            }
+            const targetPath = await getWorkspaceEntryMutationProvider(path).renamePath(
+              path,
+              newName,
+            );
 
             set((state) => {
               state.files = updateFileInTree(state.files, path, (item) => ({
@@ -2864,42 +2389,28 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               void settingsStore.actions.updateSetting("theme", projectTheme);
             }
           },
-          initialize: async (workspaceId, path, name) => {
+          initialize: (workspaceId, path) => {
             const targetStore = getScopedFileSystemStore(workspaceId).getState();
             targetStore.setIsSwitchingProject(true);
-
-            const remote = parseRemotePath(path);
-            const wsl = parseWslPath(path);
-            const initialized = remote
-              ? await targetStore.handleOpenRemoteProject(remote.connectionId, name)
-              : wsl
-                ? await targetStore.handleOpenWslProject(wsl.distro, wsl.linuxPath)
-                : await targetStore.handleOpenFolderByPath(path);
-
-            targetStore.setIsSwitchingProject(false);
-            return initialized;
+            return initializeWorkspacePath(path, {
+              initializeLocal: (localPath) =>
+                targetStore.initializeLocalWorkspace({
+                  workspaceId,
+                  path: localPath,
+                  traceLabel: "handleOpenFolderByPath",
+                  treeState: "collapse-all",
+                  restoreUiState: true,
+                }),
+              initializeRemote: (connectionId) =>
+                targetStore.initializeRemoteWorkspace(connectionId),
+              initializeWsl: (distro, linuxPath) =>
+                targetStore.initializeWslWorkspace(distro, linuxPath),
+            }).finally(() => targetStore.setIsSwitchingProject(false));
           },
           resume: async (workspaceId, path) => {
-            const targetStore = getScopedFileSystemStore(workspaceId).getState();
             const projectStore = useProjectStore.getStore(workspaceId).getState();
             projectStore.actions.setActiveProjectId(workspaceId);
-            targetStore.resumeWorkspaceSession();
-
-            if (parseRemotePath(path) || parseWslPath(path)) {
-              workspaceServiceActivationVersion++;
-              void useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");
-            } else {
-              initializeLocalWorkspaceInBackground(
-                workspaceId,
-                path,
-                () => targetStore,
-                "Failed to resume workspace services:",
-                {
-                  deferWatcher: true,
-                  preserveGitStatus: true,
-                },
-              );
-            }
+            await resumeWorkspaceRuntimeServices(workspaceId, path);
           },
         });
 
@@ -2932,62 +2443,30 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           return false;
         }
 
-        const workspaceBuffers = useBufferStore.getStore(projectId).getState().buffers;
-        if (getDirtyEditorBuffers(workspaceBuffers).length > 0) {
-          if (
-            workspaceRuntimeRegistry.getActiveWorkspaceId() !== projectId &&
-            !(await get().switchToProject(projectId))
-          ) {
-            return false;
-          }
-
-          if (
-            !(await prepareProjectTransitionWithUnsavedBuffers(
-              "closing this project",
-              useBufferStore.getStore(projectId).getState().buffers,
-            ))
-          ) {
-            return false;
-          }
-        }
+        const canClose = await prepareWorkspaceClose({
+          workspaceId: projectId,
+          getActiveWorkspaceId: workspaceRuntimeRegistry.getActiveWorkspaceId,
+          getBuffers: () => useBufferStore.getStore(projectId).getState().buffers,
+          switchToWorkspace: (workspaceId) => get().switchToProject(workspaceId),
+          confirmUnsavedBuffers: (buffers) =>
+            prepareProjectTransitionWithUnsavedBuffers("closing this project", buffers),
+        });
+        if (!canClose) return false;
 
         const { closeWorkspaceRuntime } =
           await import("@/features/workspace/services/workspace-lifecycle");
         return await closeWorkspaceRuntime(projectId, {
           persist: () =>
             getScopedFileSystemStore(projectId).getState().persistActiveProjectSession(),
-          dispose: async (path) => {
-            cancelFileWatcherRefreshes(projectId);
-            const terminalSessions = useTerminalStore.getStore(projectId).getState().sessions;
-            await Promise.all(
-              [...terminalSessions.values()].map(async (session) => {
-                if (!session.connectionId) {
-                  return;
-                }
-
-                const command = session.remoteConnectionId
-                  ? "close_remote_terminal"
-                  : "close_terminal";
-                await invoke(command, { id: session.connectionId }).catch((error) => {
-                  console.error("Failed to close terminal session:", error);
-                });
-              }),
-            );
-
-            const remote = parseRemotePath(path);
-            if (!remote) {
-              return;
-            }
-
-            await invoke("ssh_disconnect_only", {
-              connectionId: remote.connectionId,
-            }).catch((error) => {
-              console.error("Failed to disconnect remote workspace:", error);
-            });
-            await connectionStore
-              .updateConnectionStatus(remote.connectionId, false)
-              .catch(() => {});
-          },
+          dispose: (path) =>
+            disposeWorkspaceResources({
+              workspaceId: projectId,
+              path,
+              terminalConnections: useTerminalStore
+                .getStore(projectId)
+                .getState()
+                .sessions.values(),
+            }),
           switchTo: (nextWorkspaceId) => get().switchToProject(nextWorkspaceId),
           showWelcome: async () => {
             await useFileWatcherStore.getStore(workspaceId).getState().actions.setProjectRoot("");

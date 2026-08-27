@@ -45,7 +45,3 @@ export interface ExtensionDialog {
   width?: number;
   height?: number;
 }
-
-export interface Disposable {
-  dispose: () => void;
-}

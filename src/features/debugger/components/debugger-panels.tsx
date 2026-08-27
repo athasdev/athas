@@ -61,7 +61,7 @@ export function DebugSection({
           />
           <span className="min-w-0 flex-1 truncate font-medium ui-text-sm uppercase">{title}</span>
           {typeof count === "number" ? (
-            <Badge size="compact" variant="muted" className="h-5 tabular-nums">
+            <Badge variant="muted" className="h-5 tabular-nums">
               {count}
             </Badge>
           ) : null}
@@ -186,7 +186,7 @@ export function DebugBreakpointsList({
             className="opacity-0 group-hover:opacity-100"
             tooltip="Remove breakpoint"
             onClick={() => onRemove(breakpoint)}
-            size="icon-xs"
+            iconOnly
           >
             <Trash />
           </Button>

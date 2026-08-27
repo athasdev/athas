@@ -173,10 +173,10 @@ export const GeneralSettings = () => {
         <div className="flex flex-wrap justify-end gap-2">
           {available ? (
             <Button
+              shape="pill"
               onClick={downloadAndInstall}
               disabled={downloading || installing}
               variant="default"
-              size="sm"
             >
               {downloading
                 ? "Downloading..."
@@ -186,10 +186,10 @@ export const GeneralSettings = () => {
             </Button>
           ) : (
             <Button
+              shape="pill"
               onClick={handleCheckForUpdates}
               disabled={checking || downloading || installing}
               variant="default"
-              size="sm"
             >
               {checking ? "Checking..." : "Check"}
             </Button>
@@ -234,19 +234,19 @@ export const GeneralSettings = () => {
           ) : (
             <>
               <Button
+                shape="pill"
                 onClick={() => void handleInstallCli()}
                 disabled={cliInstalling || cliChecking}
                 variant="default"
-                size="sm"
               >
                 {cliInstalling ? "Installing..." : "Install"}
               </Button>
               <Button
+                shape="pill"
                 onClick={handleCopyInstallCommand}
                 disabled={cliChecking}
                 variant="default"
                 tooltip="Copy install command to clipboard"
-                size="sm"
               >
                 Copy
               </Button>
@@ -264,7 +264,7 @@ export const GeneralSettings = () => {
       </div>
 
       <SettingRow label="Import Settings" description="Import matching setup from another editor.">
-        <Button onClick={() => setIsImportDialogOpen(true)} variant="default" size="sm">
+        <Button shape="pill" onClick={() => setIsImportDialogOpen(true)} variant="default">
           Import
         </Button>
       </SettingRow>
@@ -273,7 +273,7 @@ export const GeneralSettings = () => {
         label="Report a Bug"
         description="Choose where to report an issue with environment details."
       >
-        <Button onClick={() => setIsReportBugDialogOpen(true)} variant="default" size="sm">
+        <Button shape="pill" onClick={() => setIsReportBugDialogOpen(true)} variant="default">
           Open
         </Button>
       </SettingRow>

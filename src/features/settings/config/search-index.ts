@@ -158,6 +158,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["minimap", "overview", "code", "preview", "display"],
   },
   {
+    id: "editor-show-outline",
+    tab: "editor",
+    section: "Display",
+    label: "Show Outline",
+    description: "Show symbols for the active editor in the right sidebar",
+    keywords: ["outline", "symbols", "sidebar", "structure", "display"],
+  },
+  {
     id: "editor-sticky-scroll",
     tab: "editor",
     section: "Editor",
@@ -538,30 +546,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show labels beside icons in the activity bar",
     keywords: ["activity", "bar", "rail", "expanded", "labels", "sidebar"],
   },
-  {
-    id: "appearance-window-chrome-density",
-    tab: "appearance",
-    section: "Layout",
-    label: "Window Chrome Density",
-    description: "Choose a focused or roomier scale for window controls and navigation",
-    keywords: ["window", "chrome", "density", "focused", "comfortable", "tabs", "sidebar"],
-  },
-  {
-    id: "appearance-activity-bar-width",
-    tab: "appearance",
-    section: "Layout",
-    label: "Activity Bar Width",
-    description: "Set the width of the expanded activity bar",
-    keywords: ["activity", "bar", "rail", "width", "size", "layout"],
-  },
-  {
-    id: "appearance-sidebar-width",
-    tab: "appearance",
-    section: "Layout",
-    label: "Sidebar Width",
-    description: "Set the default width used by left and right sidebars",
-    keywords: ["sidebar", "width", "size", "left", "right", "layout"],
-  },
   ...(!IS_MAC && !IS_WINDOWS && !IS_LINUX
     ? [
         {
@@ -608,9 +592,9 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   {
     id: "ai-provider-model",
     tab: "ai",
-    section: "Athas Agent",
+    section: "AI Chat",
     label: "Provider & Model",
-    description: "Choose the provider and model used by Athas Agent",
+    description: "Choose the provider and model used by direct AI chat",
     keywords: ["ai", "provider", "model", "llm", "service", "agent"],
   },
   {
@@ -644,6 +628,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Default Session Mode",
     description: "Default mode for ACP agent sessions",
     keywords: ["ai", "session", "mode", "default", "agent", "acp"],
+  },
+  {
+    id: "ai-agent-notifications",
+    tab: "ai",
+    section: "Notifications",
+    label: "Agent Notifications",
+    description: "Show native notifications when background agent work needs attention",
+    keywords: ["ai", "agent", "notification", "native", "system", "background", "permission"],
   },
   {
     id: "ai-autocomplete",
@@ -726,14 +718,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Toggle Secondary Sidebar",
     description: "Show/hide secondary sidebar",
     keywords: ["keyboard", "shortcut", "secondary", "sidebar", "toggle"],
-  },
-  {
-    id: "keyboard-go-to-line",
-    tab: "keyboard",
-    section: "Navigation",
-    label: "Go to Line",
-    description: "Jump to specific line",
-    keywords: ["keyboard", "shortcut", "go", "line", "jump", "navigate"],
   },
   {
     id: "keyboard-next-tab",

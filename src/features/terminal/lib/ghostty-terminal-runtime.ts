@@ -1,5 +1,6 @@
 import type { ISearchOptions } from "@xterm/addon-search";
-import type { ITerminalOptions } from "ghostty-web";
+import type { Ghostty, ITerminalOptions } from "ghostty-web";
+import ghosttyWasmUrl from "ghostty-web/ghostty-vt.wasm?url";
 import type {
   TerminalDisposable,
   TerminalFrontend,
@@ -17,16 +18,16 @@ interface SearchResults {
   resultCount: number;
 }
 
-let ghosttyInitialization: Promise<void> | null = null;
+let ghosttyInitialization: Promise<Ghostty> | null = null;
 
 export async function createGhosttyTerminalRuntime(
   options: ITerminalOptions,
 ): Promise<{ terminal: TerminalFrontend; addons: TerminalRuntimeAddons }> {
   const ghosttyWeb = await import("ghostty-web");
-  ghosttyInitialization ??= ghosttyWeb.init();
-  await ghosttyInitialization;
+  ghosttyInitialization ??= ghosttyWeb.Ghostty.load(ghosttyWasmUrl);
+  const ghostty = await ghosttyInitialization;
 
-  const terminal = new ghosttyWeb.Terminal(options);
+  const terminal = new ghosttyWeb.Terminal({ ...options, ghostty });
   const fitAddon = new ghosttyWeb.FitAddon();
   const searchAddon = new GhosttySearchAddon(terminal);
 

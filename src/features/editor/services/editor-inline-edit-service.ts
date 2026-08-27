@@ -15,6 +15,7 @@ const HOSTED_INLINE_EDIT_PROVIDER_ID = "openrouter";
 const DEFAULT_INLINE_EDIT_INSTRUCTION = "Improve this code while preserving behavior.";
 
 export interface InlineEditRequest {
+  feature?: "inline-edit" | "commit-message" | "github-draft" | "chat-title";
   provider?: string;
   model: string;
   beforeSelection: string;
@@ -81,7 +82,7 @@ export async function requestInlineEdit(
   }
 
   if (!response.ok) {
-    let message =
+    const message =
       body &&
       typeof body === "object" &&
       "error" in body &&

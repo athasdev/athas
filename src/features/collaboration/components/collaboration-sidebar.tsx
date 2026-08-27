@@ -26,8 +26,10 @@ import {
   type CollaborationChannelFilter,
   type CollaborationNotesFilter,
   type CollaborationPeopleFilter,
-  matchesCollaborationSearchQuery as matchesSearchQuery,
-  normalizeCollaborationSearchQuery as normalizeSearchQuery,
+  filterCollaborationChannels,
+  filterCollaborationNoteItems,
+  filterCollaborationParticipants,
+  filterCollaborationPrivateChatParticipants,
   NOTE_FILTER_OPTIONS,
   PEOPLE_FILTER_OPTIONS,
 } from "@/features/collaboration/lib/collaboration-sidebar-filters";
@@ -47,6 +49,7 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button } from "@/ui/button";
 import { Card, CardContent } from "@/ui/card";
+import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
 import {
   Dropdown,
@@ -62,7 +65,7 @@ import Input, { InlineRenameInput } from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
   SidebarHeader,
-  SidebarHeaderIconButton,
+  SidebarIconButton,
   SidebarSearchPopover,
   SidebarListEditor,
   SidebarListItem,
@@ -210,93 +213,43 @@ export function CollaborationSidebarView() {
     model?.notesItems.find(
       (item) => item.type === "folder" && item.path === selectedNoteFolderPath,
     ) ?? null;
-  const channelSearch = normalizeSearchQuery(deferredChannelSearchQuery);
-  const peopleSearch = normalizeSearchQuery(deferredPeopleSearchQuery);
-  const notesSearch = normalizeSearchQuery(deferredNotesSearchQuery);
-  const filteredChannels = useMemo(() => {
-    let channels = model?.channels ?? [];
-
-    if (channelFilter === "active") {
-      channels = selectedChannel
-        ? channels.filter((channel) => channel.id === selectedChannel.id)
-        : [];
-    } else if (channelFilter === "with-guests") {
-      channels = channels.filter((channel) => channel.guestCount > 0);
-    } else if (channelFilter === "empty") {
-      channels = channels.filter(
-        (channel) => channel.memberCount === 0 && channel.guestCount === 0,
-      );
-    }
-
-    if (!channelSearch) return channels;
-
-    return channels.filter((channel) =>
-      matchesSearchQuery(channelSearch, [
-        channel.slug,
-        channel.description,
-        channel.memberCount,
-        channel.guestCount,
-        channel.id,
-      ]),
-    );
-  }, [channelFilter, channelSearch, model?.channels, selectedChannel]);
-  const filteredParticipants = useMemo(() => {
-    let participants = model?.participants ?? [];
-
-    if (peopleFilter === "online") {
-      participants = participants.filter((participant) => participant.online);
-    } else if (peopleFilter === "offline") {
-      participants = participants.filter((participant) => !participant.online);
-    } else if (peopleFilter === "sharing") {
-      participants = participants.filter(
-        (participant) => participant.microphone || participant.screen,
-      );
-    } else if (peopleFilter === "has-file") {
-      participants = participants.filter((participant) => Boolean(participant.activeFilePath));
-    }
-
-    if (!peopleSearch) return participants;
-
-    return participants.filter((participant) =>
-      matchesSearchQuery(peopleSearch, [
-        participant.name,
-        participant.role,
-        participant.activeFilePath,
-        participant.online ? "online" : "offline",
-        participant.microphone ? "microphone" : null,
-        participant.screen ? "screen" : null,
-      ]),
-    );
-  }, [model?.participants, peopleFilter, peopleSearch]);
-  const filteredPrivateChatParticipants = useMemo(() => {
-    if (channelFilter !== "all") return [];
-
-    const participants = model?.participants ?? [];
-    if (!channelSearch) return participants;
-
-    return participants.filter((participant) =>
-      matchesSearchQuery(channelSearch, [
-        participant.name,
-        participant.role,
-        participant.online ? "online" : "offline",
-        participant.activeFilePath,
-      ]),
-    );
-  }, [channelFilter, channelSearch, model?.participants]);
-  const filteredNoteItems = useMemo(() => {
-    if (notesFilter === "secrets") return [];
-
-    const items = model?.notesItems ?? [];
-    if (!notesSearch) return items;
-
-    return items.filter((item) =>
-      matchesSearchQuery(notesSearch, [
-        item.path,
-        item.type,
-        item.type === "file" ? item.content : null,
-      ]),
-    );
-  }, [model?.notesItems, notesFilter, notesSearch]);
+  const filteredChannels = useMemo(
+    () =>
+      filterCollaborationChannels({
+        channels: model?.channels ?? [],
+        filter: channelFilter,
+        query: deferredChannelSearchQuery,
+        selectedChannelId: selectedChannel?.id,
+      }),
+    [channelFilter, deferredChannelSearchQuery, model?.channels, selectedChannel?.id],
+  );
+  const filteredParticipants = useMemo(
+    () =>
+      filterCollaborationParticipants({
+        participants: model?.participants ?? [],
+        filter: peopleFilter,
+        query: deferredPeopleSearchQuery,
+      }),
+    [deferredPeopleSearchQuery, model?.participants, peopleFilter],
+  );
+  const filteredPrivateChatParticipants = useMemo(
+    () =>
+      filterCollaborationPrivateChatParticipants({
+        participants: model?.participants ?? [],
+        channelFilter,
+        query: deferredChannelSearchQuery,
+      }),
+    [channelFilter, deferredChannelSearchQuery, model?.participants],
+  );
+  const filteredNoteItems = useMemo(
+    () =>
+      filterCollaborationNoteItems({
+        items: model?.notesItems ?? [],
+        filter: notesFilter,
+        query: deferredNotesSearchQuery,
+      }),
+    [deferredNotesSearchQuery, model?.notesItems, notesFilter],
+  );
   const remoteDeviceIds = useMemo(() => {
     if (!selectedChannel || !collaboration?.presence) return [];
     const localDeviceId = localDeviceIdRef.current ?? getCollaborationClientId();
@@ -979,6 +932,7 @@ export function CollaborationSidebarView() {
             id: "delete",
             label: "Delete",
             icon: <FileText />,
+            tone: "destructive" as const,
             disabled: !model.canEditNotes,
             onClick: () => void deleteNoteItem(item),
           },
@@ -1003,7 +957,7 @@ export function CollaborationSidebarView() {
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <SidebarHeaderIconButton
+                  <SidebarIconButton
                     active={channelFilter !== "all"}
                     tooltip="Filter channels"
                     tooltipSide="bottom"
@@ -1054,7 +1008,6 @@ export function CollaborationSidebarView() {
                           <Button
                             type="submit"
                             variant="ghost"
-                            size="xs"
                             disabled={!newChannelName.trim() || isSending}
                           >
                             Create
@@ -1065,7 +1018,6 @@ export function CollaborationSidebarView() {
                           autoFocus
                           value={newChannelName}
                           variant="ghost"
-                          size="xs"
                           placeholder="channel-name"
                           disabled={isSending}
                           className="min-w-0"
@@ -1134,7 +1086,7 @@ export function CollaborationSidebarView() {
                 </AccordionItem>
               </Accordion>
             ) : null}
-            {(channelSearch || channelFilter !== "all") &&
+            {(deferredChannelSearchQuery.trim() || channelFilter !== "all") &&
             filteredChannels.length === 0 &&
             filteredPrivateChatParticipants.length === 0 ? (
               <EmptyState layout="sidebar" message="No matching channels." />
@@ -1151,7 +1103,7 @@ export function CollaborationSidebarView() {
               tooltip="Back to Channels"
               tooltipSide="bottom"
               onClick={() => setOpenConversation(null)}
-              size="icon-sm"
+              iconOnly
             >
               <CaretLeft />
             </Button>
@@ -1162,7 +1114,6 @@ export function CollaborationSidebarView() {
                   type="button"
                   variant="ghost"
                   active={openChannel?.id === channel.id}
-                  size="sm"
                   className="max-w-32"
                   onClick={() => openChannelChat(channel.id)}
                   onContextMenu={(event) => channelsContextMenu.open(event, channel)}
@@ -1185,7 +1136,7 @@ export function CollaborationSidebarView() {
                       <div className="px-1 text-subtle-foreground ui-text-sm">{group.author}</div>
                       <div className="space-y-1">
                         {group.entries.map((entry) => (
-                          <Card key={entry.id} size="flush">
+                          <Card key={entry.id}>
                             <CardContent className="px-2.5 py-1.5">
                               {entry.kind === "document" ? (
                                 <span className="mb-0.5 flex items-center gap-1.5 text-subtle-foreground">
@@ -1231,7 +1182,7 @@ export function CollaborationSidebarView() {
               tooltip="Back to Channels"
               tooltipSide="bottom"
               onClick={() => setOpenConversation(null)}
-              size="icon-sm"
+              iconOnly
             >
               <CaretLeft />
             </Button>
@@ -1261,7 +1212,7 @@ export function CollaborationSidebarView() {
                       <CollaborationAvatar name={authorName} />
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="px-1 text-subtle-foreground ui-text-sm">{authorName}</div>
-                        <Card size="flush">
+                        <Card>
                           <CardContent className="px-2.5 py-1.5">{entry.body}</CardContent>
                         </Card>
                       </div>
@@ -1303,7 +1254,7 @@ export function CollaborationSidebarView() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <SidebarHeaderIconButton
+              <SidebarIconButton
                 active={peopleFilter !== "all"}
                 tooltip="Filter people"
                 tooltipSide="bottom"
@@ -1358,7 +1309,6 @@ export function CollaborationSidebarView() {
                     <Button
                       type="button"
                       variant="ghost"
-                      size="xs"
                       onClick={(event) => {
                         event.stopPropagation();
                         void openParticipantFile(participant.activeFilePath!);
@@ -1377,7 +1327,9 @@ export function CollaborationSidebarView() {
           <EmptyState
             layout="sidebar"
             message={
-              peopleSearch || peopleFilter !== "all" ? "No matching members." : "No members yet."
+              deferredPeopleSearchQuery.trim() || peopleFilter !== "all"
+                ? "No matching members."
+                : "No members yet."
             }
           />
         )}
@@ -1400,7 +1352,7 @@ export function CollaborationSidebarView() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <SidebarHeaderIconButton
+              <SidebarIconButton
                 active={notesFilter !== "notes"}
                 tooltip="Filter notes"
                 tooltipSide="bottom"
@@ -1543,22 +1495,22 @@ export function CollaborationSidebarView() {
         />
       </SidebarTabBar>
 
-      <Dropdown
+      <ContextMenuPopup
         isOpen={channelsContextMenu.isOpen}
         point={channelsContextMenu.position}
-        items={channelMenuItems}
+        groups={createContextMenuGroups(channelMenuItems)}
         onClose={channelsContextMenu.close}
       />
-      <Dropdown
+      <ContextMenuPopup
         isOpen={participantContextMenu.isOpen}
         point={participantContextMenu.position}
-        items={participantMenuItems}
+        groups={createContextMenuGroups(participantMenuItems)}
         onClose={participantContextMenu.close}
       />
-      <Dropdown
+      <ContextMenuPopup
         isOpen={notesContextMenu.isOpen}
         point={notesContextMenu.position}
-        items={noteMenuItems}
+        groups={createContextMenuGroups(noteMenuItems)}
         onClose={notesContextMenu.close}
       />
 

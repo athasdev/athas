@@ -3,7 +3,6 @@ import {
   ColumnsIcon as Columns,
   GlobeHemisphereWestIcon as Globe,
   ListIcon as Menu,
-  ChatCircleTextIcon as MessageSquare,
   RowsIcon as Rows,
   SidebarSimpleIcon as PanelBottom,
   SidebarSimpleIcon as PanelLeft,
@@ -14,7 +13,6 @@ import {
   MagnifyingGlassMinusIcon as ZoomOut,
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import { showPromptDialog } from "@/ui/dialog";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
@@ -30,7 +28,6 @@ interface ViewActionsParams {
   setBottomPaneActiveTab: (tab: BottomPaneTab) => void;
   settings: {
     activityRailExpanded: boolean;
-    isAIChatVisible: boolean;
     nativeMenuBar: boolean;
     compactMenuBar: boolean;
     webViewerEnabled: boolean;
@@ -132,18 +129,6 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       commandId: "workbench.toggleDiagnostics",
       action: () => {
         useBufferStore.getState().actions.openDiagnosticsBuffer();
-        onClose();
-      },
-    },
-    {
-      id: "toggle-ai-chat-view",
-      label: settings.isAIChatVisible ? "View: Hide AI Chat" : "View: Show AI Chat",
-      description: settings.isAIChatVisible ? "Hide AI chat panel" : "Show AI chat panel",
-      icon: <MessageSquare />,
-      category: "View",
-      commandId: "workbench.toggleAIChat",
-      action: () => {
-        useSettingsStore.getState().actions.toggleAIChatVisible();
         onClose();
       },
     },

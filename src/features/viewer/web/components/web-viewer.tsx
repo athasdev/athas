@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { WarningCircleIcon as AlertCircle } from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import {
   isWebViewerContent,
   type WebViewerContent,
@@ -855,15 +856,16 @@ export function WebViewer({
       />
 
       {(urlError || pageError) && (
-        <div className="ui-text-sm flex h-8 shrink-0 items-center gap-2 border-border border-b bg-destructive/6 px-3 text-muted-foreground">
-          <AlertCircle className="size-3.5 shrink-0 text-destructive" />
-          <span className="truncate">{urlError ?? pageError}</span>
-        </div>
+        <PaneContentHeader
+          leading={<AlertCircle className="text-destructive" />}
+          title={urlError ?? pageError}
+          className="bg-destructive/6"
+        />
       )}
 
-      <div className="min-h-0 flex-1 bg-background p-1.5">
-        <div className="relative h-full overflow-hidden rounded-lg border border-border/70 bg-background shadow-(--shadow-card)">
-          <div ref={containerRef} className="absolute inset-px overflow-hidden rounded-[7px]">
+      <div className="min-h-0 flex-1 bg-background">
+        <div className="relative h-full overflow-hidden bg-background">
+          <div ref={containerRef} className="absolute inset-0 overflow-hidden">
             {!currentUrl && !isLoading && (
               <Empty className="absolute inset-0 bg-background px-6">
                 <EmptyHeader>

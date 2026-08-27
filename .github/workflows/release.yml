@@ -30,6 +30,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.18.0
+        with:
+          node-version-file: .node-version
+          run-install: false
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -150,6 +156,13 @@ jobs:
           echo "Disk usage after cleanup:"
           df -h
 
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.18.0
+        with:
+          node-version-file: .node-version
+          cache: true
+          run-install: false
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -197,7 +210,7 @@ jobs:
         run: cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/cef --locked
 
       - name: Install frontend dependencies
-        run: bun install --ignore-scripts && bun scripts/postinstall.ts
+        run: vp install --ignore-scripts && bun scripts/postinstall.ts
 
       - name: Import Apple Certificate (macOS only)
         if: matrix.os == 'macos'
@@ -411,6 +424,12 @@ jobs:
     if: ${{ success() && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') }}
     steps:
       - uses: actions/checkout@v6
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.18.0
+        with:
+          node-version-file: .node-version
+          run-install: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2

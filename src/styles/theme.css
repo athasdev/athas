@@ -2,6 +2,23 @@
   --font-sans: var(--app-font-family);
   --font-mono: var(--editor-font-family);
   --leading-row: 1.35;
+  --leading-chrome: var(--athas-chrome-line-height);
+
+  --spacing-title-bar: var(--athas-title-bar-height);
+  --spacing-title-bar-leading: var(--athas-title-bar-leading-inset);
+  --spacing-footer: var(--athas-footer-height);
+  --spacing-pane-header: var(--athas-pane-header-height);
+  --spacing-tab-bar: var(--athas-tab-bar-height);
+  --spacing-tab: var(--athas-tab-height);
+  --spacing-tab-max: var(--athas-tab-max-width);
+  --spacing-sidebar-header: var(--athas-sidebar-header-height);
+  --spacing-workbench: var(--athas-workbench-gap);
+  --spacing-chrome-control: var(--athas-chrome-control-height);
+  --spacing-chrome-hit-target: var(--athas-chrome-hit-target);
+  --spacing-chrome-tight: var(--athas-chrome-gap-tight);
+  --spacing-chrome: var(--athas-chrome-gap);
+  --spacing-chrome-loose: var(--athas-chrome-gap-loose);
+  --spacing-chrome-inline: var(--athas-chrome-padding-inline);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -10,21 +27,26 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-chrome: var(--athas-chrome-radius);
+
+  --ease-smooth: var(--app-ease-smooth);
 
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-foreground: var(--foreground);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-subtle-foreground: var(--subtle-foreground);
+  --color-muted-foreground: var(--app-muted-foreground);
+  --color-subtle-foreground: var(--app-subtle-foreground);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
   --color-selected: var(--selected);
   --color-selection: var(--selection);
+  --color-scrollbar-thumb: var(--app-scrollbar-thumb);
+  --color-scrollbar-thumb-hover: var(--app-scrollbar-thumb-hover);
 
   --color-tab-hover: var(--tab-hover-bg);
 
-  --color-primary: var(--primary);
+  --color-primary: var(--app-primary);
 
   --color-cursor: var(--cursor);
   --color-cursor-vim-normal: var(--cursor-vim-normal);
@@ -90,21 +112,22 @@
 @layer base {
   :root {
     --app-font-family:
-      "Geist Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-      "Helvetica Neue", Arial, sans-serif;
+      system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+      sans-serif;
     --editor-font-family:
       "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
       monospace;
-    --app-ui-font-size: 15px;
+    --app-ui-font-size: 13px;
     --app-ui-scale: 1;
-    --ui-text-caption: 12px;
-    --ui-text-chrome: 13px;
-    --ui-text-sm: var(--app-ui-font-size);
     --ui-text-base: var(--app-ui-font-size);
+    --ui-text-sm: max(10px, calc(var(--app-ui-font-size) - 1px));
+    --ui-text-caption: max(10px, calc(var(--app-ui-font-size) - 3px));
+    --ui-text-chrome: var(--ui-text-sm);
     --athas-title-bar-height: 2rem;
+    --athas-title-bar-leading-inset: var(--athas-chrome-padding-inline);
     --athas-footer-height: 1.75rem;
-    --athas-pane-header-height: 2.75rem;
-    --athas-tab-bar-height: var(--athas-pane-header-height);
+    --athas-tab-bar-height: 2rem;
+    --athas-pane-header-height: var(--athas-tab-bar-height);
     --athas-tab-height: 1.75rem;
     --athas-tab-max-width: 12.5rem;
     --athas-sidebar-header-height: 2rem;
@@ -123,6 +146,10 @@
     --app-ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
     --app-ease-in-out: cubic-bezier(0.66, 0, 0.34, 1);
     --app-press-scale: 1;
+    --app-muted-foreground: var(--muted-foreground);
+    --app-subtle-foreground: var(--subtle-foreground);
+    --app-primary: var(--primary);
+    --athas-navigation-material: var(--surface);
     --border-strong: color-mix(in srgb, var(--border) 72%, var(--foreground) 28%);
     --success: var(--primary);
     --warning: var(--muted-foreground);
@@ -149,26 +176,30 @@
   }
 
   html.platform-macos {
-    --athas-title-bar-height: 2.25rem;
+    --athas-title-bar-height: 2.125rem;
+    --athas-title-bar-leading-inset: 4.75rem;
+  }
+
+  :root[data-increase-contrast="true"] {
+    --app-muted-foreground: color-mix(in srgb, var(--muted-foreground) 70%, var(--foreground) 30%);
+    --app-subtle-foreground: color-mix(
+      in srgb,
+      var(--subtle-foreground) 60%,
+      var(--foreground) 40%
+    );
+    --border: color-mix(in srgb, var(--border) 55%, var(--foreground) 45%);
+    --border-strong: color-mix(in srgb, var(--border) 25%, var(--foreground) 75%);
+  }
+
+  :root[data-differentiate-without-color="true"]
+    :is([aria-current="page"], [aria-selected="true"], [data-active="true"]) {
+    outline: 1px solid var(--border-strong);
+    outline-offset: -1px;
   }
 
   .athas-sidebar-rail {
     --athas-sidebar-rail-foreground: var(--muted-foreground);
     --subtle-foreground: var(--athas-sidebar-rail-foreground);
-  }
-
-  :root[data-window-chrome-density="comfortable"] {
-    --ui-text-caption: 13px;
-    --ui-text-chrome: 14px;
-    --athas-footer-height: 2rem;
-    --athas-tab-height: 2rem;
-    --athas-sidebar-header-height: 2.25rem;
-    --athas-chrome-control-height: 1.75rem;
-    --athas-chrome-hit-target: 2rem;
-    --athas-chrome-gap-tight: 4px;
-    --athas-chrome-gap: 6px;
-    --athas-chrome-gap-loose: 8px;
-    --athas-chrome-padding-inline: 10px;
   }
 
   :root[data-theme-type="dark"] {

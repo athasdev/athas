@@ -268,7 +268,7 @@ const GitTagManager = ({
       {!isCreateOpen ? (
         <div className="flex shrink-0 items-center justify-end px-2 pt-2">
           <div className="flex items-center justify-end gap-2">
-            <Button type="button" onClick={() => setIsCreateOpen(true)} size="xs" variant="accent">
+            <Button type="button" onClick={() => setIsCreateOpen(true)} variant="accent">
               <Plus />
               Add tag
             </Button>
@@ -297,7 +297,6 @@ const GitTagManager = ({
               placeholder="v1.0.0"
               value={newTagName}
               onChange={(e) => setNewTagName(e.target.value)}
-              size="sm"
             />
           </CommandFormField>
           <CommandFormField label="Target" htmlFor="git-tag-target">
@@ -307,7 +306,6 @@ const GitTagManager = ({
               placeholder="Commit SHA or ref"
               value={newTagCommit}
               onChange={(e) => setNewTagCommit(e.target.value)}
-              size="sm"
             />
           </CommandFormField>
           <CommandFormField label="Message" htmlFor="git-tag-message" span="full">
@@ -317,7 +315,6 @@ const GitTagManager = ({
               placeholder="Optional annotation"
               value={newTagMessage}
               onChange={(e) => setNewTagMessage(e.target.value)}
-              size="sm"
             />
           </CommandFormField>
           <CommandFormField span="full">
@@ -363,7 +360,6 @@ const GitTagManager = ({
                   title={tag.name}
                   description={tag.message}
                   contentLayout={tag.message ? "stacked" : "inline"}
-                  className="min-h-11"
                   accessory={
                     <>
                       {isExpanded ? (
@@ -392,7 +388,7 @@ const GitTagManager = ({
                           void handleCopy(tag.name, "Tag name");
                         }}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-subtle-foreground"
                         tooltip="Copy tag name"
                         aria-label={`Copy ${tag.name}`}
@@ -406,7 +402,7 @@ const GitTagManager = ({
                           void handleCopy(tag.commit, "Commit SHA");
                         }}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-subtle-foreground"
                         tooltip="Copy commit SHA"
                         aria-label={`Copy commit ${shortCommit}`}
@@ -427,7 +423,7 @@ const GitTagManager = ({
                         }}
                         disabled={!previousTag}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-subtle-foreground disabled:opacity-50"
                         tooltip="Compare with previous tag"
                         aria-label={`Compare ${tag.name} with previous tag`}
@@ -442,7 +438,7 @@ const GitTagManager = ({
                           handleClose();
                         }}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-subtle-foreground"
                         tooltip="Compare with HEAD"
                         aria-label={`Compare ${tag.name} with HEAD`}
@@ -457,7 +453,7 @@ const GitTagManager = ({
                         }}
                         disabled={actionLoading.has(`checkout:${tag.name}`)}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-subtle-foreground disabled:opacity-50"
                         tooltip="Checkout tag"
                         aria-label={`Checkout ${tag.name}`}
@@ -475,7 +471,7 @@ const GitTagManager = ({
                         }}
                         disabled={!selectedRemoteName || actionLoading.has(`Push tag:${tag.name}`)}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-subtle-foreground disabled:opacity-50"
                         tooltip={
                           selectedRemoteName ? `Push tag to ${selectedRemoteName}` : "No remote"
@@ -503,7 +499,7 @@ const GitTagManager = ({
                           !selectedRemoteName || actionLoading.has(`Delete remote tag:${tag.name}`)
                         }
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                         tooltip={
                           selectedRemoteName ? `Delete tag from ${selectedRemoteName}` : "No remote"
@@ -520,7 +516,7 @@ const GitTagManager = ({
                         }}
                         disabled={isActionLoading}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                         tooltip="Delete tag"
                         aria-label={`Delete ${tag.name}`}
@@ -563,7 +559,7 @@ const GitTagManager = ({
                         <span className="ui-text-base w-14 shrink-0 text-subtle-foreground">
                           Type
                         </span>
-                        <Badge variant="muted" size="compact" className="ui-text-base">
+                        <Badge variant="muted" className="ui-text-base">
                           {tag.is_annotated ? "Annotated" : "Lightweight"}
                         </Badge>
                       </div>
@@ -591,7 +587,6 @@ const GitTagManager = ({
             value={selectedRemote}
             onChange={setSelectedRemote}
             options={remotes.map((remote) => ({ value: remote.name, label: remote.name }))}
-            size="xs"
             variant="default"
             aria-label="Tag remote"
           />

@@ -23,14 +23,20 @@ function searchTextIncludes(value: string, normalizedQuery: string, compactQuery
   );
 }
 
-export function matchesSearchQuery(query: string, candidates: string[]) {
+export function matchesSearchQuery(
+  query: string,
+  candidates: readonly (string | null | undefined)[],
+) {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) return true;
 
   const compactQuery = compactSearchText(query);
 
-  return candidates.some((candidate) =>
-    searchTextIncludes(candidate, normalizedQuery, compactQuery),
+  return candidates.some(
+    (candidate) =>
+      candidate !== null &&
+      candidate !== undefined &&
+      searchTextIncludes(candidate, normalizedQuery, compactQuery),
   );
 }
 

@@ -376,9 +376,17 @@ impl CodexAppServer {
       self.write_message(&message).await
    }
 
-   pub async fn list_threads(&self, cwd: Option<String>, cursor: Option<String>) -> Result<Value> {
+   pub async fn list_threads(
+      &self,
+      cwd: Option<String>,
+      cursor: Option<String>,
+      limit: Option<usize>,
+   ) -> Result<Value> {
       let mut params = Map::new();
-      params.insert("limit".to_string(), json!(100));
+      params.insert(
+         "limit".to_string(),
+         json!(limit.unwrap_or(100).clamp(1, 100)),
+      );
       if let Some(cwd) = cwd {
          params.insert("cwd".to_string(), json!(cwd));
       }

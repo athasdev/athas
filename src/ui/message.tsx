@@ -125,7 +125,7 @@ function MessageAction({
     <Button
       type="button"
       variant="ghost"
-      size="icon-xs"
+      iconOnly
       tooltip={tooltip ?? label}
       aria-label={label}
       {...props}

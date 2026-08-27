@@ -305,13 +305,15 @@ function GitHubCreateViewContent({
 
     try {
       const enterprisePolicy = subscription?.enterprise?.policy;
-      const isPro = hasProductCapability(subscription, "hostedAi");
+      const hasIntelligence = hasProductCapability(subscription, "intelligence");
       if (enterprisePolicy?.managedMode && enterprisePolicy.aiCompletionEnabled === false) {
         setError("AI generation is disabled by your organization policy.");
         return;
       }
 
-      const useByok = enterprisePolicy ? enterprisePolicy.allowByok && !isPro : !isPro;
+      const useByok = enterprisePolicy
+        ? enterprisePolicy.allowByok && !hasIntelligence
+        : !hasIntelligence;
       const status = await getGitStatus(repoPath);
       const diffSummary =
         kind === "pull-request" ? summarizeDiffs(await getRefDiff(repoPath, base, head)) : "";
@@ -357,6 +359,7 @@ ${statusSummary}`;
       const { editedText } = await requestInlineEdit(
         {
           model: aiAutocompleteModelId,
+          feature: "github-draft",
           beforeSelection: "",
           selectedText: prompt,
           afterSelection: "",
@@ -402,7 +405,7 @@ ${statusSummary}`;
             </span>
           }
           actions={
-            <Button type="button" variant="ghost" size="xs" onClick={onClose}>
+            <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
           }
@@ -417,7 +420,7 @@ ${statusSummary}`;
                 <Activity />
                 <span>{repositoryName}</span>
               </div>
-              <h1 className="font-sans text-2xl leading-tight font-semibold tracking-tight text-foreground">
+              <h1 className="font-sans ui-text-base leading-tight font-semibold tracking-tight text-foreground">
                 Run workflow
               </h1>
               <p className="font-sans ui-text-sm text-subtle-foreground">
@@ -436,7 +439,6 @@ ${statusSummary}`;
                   onChange={setWorkflowId}
                   placeholder={isLoadingMetadata ? "Loading..." : "Choose workflow"}
                   searchable
-                  size="sm"
                   variant="ghost"
                   align="start"
                   className="min-w-0 flex-1"
@@ -453,7 +455,6 @@ ${statusSummary}`;
                   placeholder={isLoadingMetadata ? "Loading..." : "Choose branch or tag"}
                   searchable
                   allowCustomValue
-                  size="sm"
                   variant="ghost"
                   align="start"
                   className="min-w-0 flex-1"
@@ -472,7 +473,6 @@ ${statusSummary}`;
               <Button
                 type="button"
                 variant="accent"
-                size="sm"
                 disabled={!canSubmit || isSubmitting}
                 onClick={() => void handleSubmit()}
               >
@@ -499,7 +499,6 @@ ${statusSummary}`;
                 }}
                 placeholder={kind === "issue" ? "Issue title" : "Pull request title"}
                 variant="ghost"
-                size="md"
                 className="github-composer-title h-auto px-0 py-1 font-semibold tracking-tight"
                 autoFocus
               />
@@ -516,7 +515,6 @@ ${statusSummary}`;
                   placeholder={isLoadingMetadata ? "Loading..." : "Choose head"}
                   searchable
                   allowCustomValue
-                  size="xs"
                   variant="ghost"
                   align="start"
                   className="w-52"
@@ -532,7 +530,6 @@ ${statusSummary}`;
                   placeholder={isLoadingMetadata ? "Loading..." : "Choose base"}
                   searchable
                   allowCustomValue
-                  size="xs"
                   variant="ghost"
                   align="start"
                   className="w-52"
@@ -586,7 +583,6 @@ ${statusSummary}`;
                     ]}
                     onChange={setMilestone}
                     placeholder="Milestone"
-                    size="xs"
                     className="w-40"
                     searchable
                     aria-label="Issue milestone"
@@ -601,7 +597,6 @@ ${statusSummary}`;
                     ]}
                     onChange={setIssueType}
                     placeholder="Issue type"
-                    size="xs"
                     className="w-40"
                     searchable
                     aria-label="Issue type"
@@ -612,7 +607,6 @@ ${statusSummary}`;
                 <Button
                   type="button"
                   variant="ghost"
-                  size="xs"
                   disabled={isGenerating || isSubmitting}
                   onClick={() => void handleGenerateDraft()}
                 >
@@ -622,7 +616,6 @@ ${statusSummary}`;
                 <Button
                   type="button"
                   variant="accent"
-                  size="xs"
                   disabled={!canSubmit || isSubmitting}
                   onClick={() => void handleSubmit()}
                 >

@@ -1,14 +1,14 @@
-use crate::{RuntimeError, RuntimeStatus, downloader, process::configure_background_command};
-use std::{
-   path::{Path, PathBuf},
-   process::Command,
+use crate::{
+   RuntimeError, RuntimeStatus, downloader,
+   runtime_version::{check_runtime_version, managed_runtime_dir},
 };
+use std::path::{Path, PathBuf};
 
 /// Node.js version to download if system version is not available
-pub const NODE_VERSION: &str = "22.5.1";
+pub const NODE_VERSION: &str = "24.19.0";
 
 /// Minimum required Node.js version for LSP servers
-pub const MIN_NODE_VERSION: (u32, u32, u32) = (22, 0, 0);
+pub const MIN_NODE_VERSION: (u32, u32, u32) = (24, 0, 0);
 
 /// Manages Node.js runtime for running JS-based language servers
 pub struct NodeRuntime {
@@ -19,7 +19,7 @@ impl NodeRuntime {
    /// Get Node.js runtime, downloading if necessary
    ///
    /// Priority:
-   /// 1. Check system PATH for Node.js >= 22.0.0
+   /// 1. Check system PATH for Node.js >= 24.0.0
    /// 2. Check if Athas-managed Node.js exists
    /// 3. Download Node.js from nodejs.org
    pub async fn get_or_install(managed_root: Option<&Path>) -> Result<Self, RuntimeError> {
@@ -144,75 +144,16 @@ impl NodeRuntime {
 
    /// Get the directory where managed Node.js is stored
    fn get_managed_dir(managed_root: Option<&Path>) -> Result<PathBuf, RuntimeError> {
-      let root = managed_root.ok_or_else(|| {
-         RuntimeError::PathError("managed runtime root not configured".to_string())
-      })?;
-      Ok(root.join("node"))
+      managed_runtime_dir(managed_root, "node")
    }
 
    /// Check Node.js version by running `node --version`
    async fn check_version(&self) -> Result<(u32, u32, u32), RuntimeError> {
-      let mut command = Command::new(&self.binary_path);
-      let output = configure_background_command(&mut command)
-         .arg("--version")
-         .output()
-         .map_err(|e| RuntimeError::VersionCheckFailed(e.to_string()))?;
-
-      if !output.status.success() {
-         return Err(RuntimeError::VersionCheckFailed(
-            String::from_utf8_lossy(&output.stderr).to_string(),
-         ));
-      }
-
-      let version_str = String::from_utf8_lossy(&output.stdout);
-      Self::parse_version(&version_str)
-   }
-
-   /// Parse version string like "v22.5.1" into (22, 5, 1)
-   fn parse_version(version_str: &str) -> Result<(u32, u32, u32), RuntimeError> {
-      let trimmed = version_str.trim().trim_start_matches('v');
-
-      let parts: Vec<&str> = trimmed.split('.').collect();
-      if parts.len() < 3 {
-         return Err(RuntimeError::VersionCheckFailed(format!(
-            "Invalid version format: {}",
-            version_str
-         )));
-      }
-
-      let major = parts[0]
-         .parse()
-         .map_err(|_| RuntimeError::VersionCheckFailed(format!("Invalid major: {}", parts[0])))?;
-      let minor = parts[1]
-         .parse()
-         .map_err(|_| RuntimeError::VersionCheckFailed(format!("Invalid minor: {}", parts[1])))?;
-      let patch = parts[2]
-         .split(|c: char| !c.is_ascii_digit())
-         .next()
-         .unwrap_or("0")
-         .parse()
-         .map_err(|_| RuntimeError::VersionCheckFailed(format!("Invalid patch: {}", parts[2])))?;
-
-      Ok((major, minor, patch))
+      check_runtime_version(&self.binary_path, true)
    }
 
    /// Get the path to the Node.js binary
    pub fn binary_path(&self) -> &PathBuf {
       &self.binary_path
-   }
-}
-
-#[cfg(test)]
-mod tests {
-   use super::*;
-
-   #[test]
-   fn test_parse_version() {
-      assert_eq!(NodeRuntime::parse_version("v22.5.1").unwrap(), (22, 5, 1));
-      assert_eq!(NodeRuntime::parse_version("22.5.1").unwrap(), (22, 5, 1));
-      assert_eq!(
-         NodeRuntime::parse_version("v22.5.1-rc.1").unwrap(),
-         (22, 5, 1)
-      );
    }
 }

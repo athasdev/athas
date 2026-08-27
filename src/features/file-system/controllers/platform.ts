@@ -55,6 +55,10 @@ export async function readFile(path: string): Promise<string> {
   }
 }
 
+export async function getLocalDirectorySize(path: string): Promise<number> {
+  return await invoke<number>("get_local_directory_size", { path });
+}
+
 /**
  * Write content to a file
  * @param path The path to the file to write

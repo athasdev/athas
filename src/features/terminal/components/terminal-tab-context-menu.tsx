@@ -5,10 +5,9 @@ import {
   PushPinIcon as Pin,
   PushPinSlashIcon as PinOff,
   ArrowCounterClockwiseIcon as RotateCcw,
-  XIcon as X,
 } from "@/ui/icons";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { ContextMenuPopup, type ContextMenuGroupData } from "@/ui/context-menu";
 
 interface TerminalTabContextMenuProps {
   isOpen: boolean;
@@ -41,67 +40,77 @@ const TerminalTabContextMenu = ({
   onRename,
   onExport,
 }: TerminalTabContextMenuProps) => {
-  const items: MenuItem[] = terminal
+  const groups: ContextMenuGroupData[] = terminal
     ? [
         {
-          id: "pin",
-          label: terminal.isPinned ? "Unpin Terminal" : "Pin Terminal",
-          icon: terminal.isPinned ? <PinOff /> : <Pin />,
-          onClick: () => onPin(terminal.id),
-        },
-        { id: "sep-1", separator: true },
-        {
-          id: "duplicate",
-          label: "Duplicate Terminal",
-          icon: <Copy />,
-          onClick: () => onDuplicate(terminal.id),
+          id: "tab",
+          items: [
+            {
+              id: "pin",
+              label: terminal.isPinned ? "Unpin Terminal" : "Pin Terminal",
+              icon: terminal.isPinned ? <PinOff /> : <Pin />,
+              onClick: () => onPin(terminal.id),
+            },
+          ],
         },
         {
-          id: "clear",
-          label: "Clear Terminal",
-          icon: <RotateCcw />,
-          onClick: () => onClear(terminal.id),
+          id: "terminal",
+          items: [
+            {
+              id: "duplicate",
+              label: "Duplicate Terminal",
+              icon: <Copy />,
+              onClick: () => onDuplicate(terminal.id),
+            },
+            {
+              id: "clear",
+              label: "Clear Terminal",
+              icon: <RotateCcw />,
+              onClick: () => onClear(terminal.id),
+            },
+            {
+              id: "rename",
+              label: "Rename Terminal",
+              icon: <Edit />,
+              onClick: () => onRename(terminal.id),
+            },
+            {
+              id: "export",
+              label: "Export Output",
+              icon: <Download weight="fill" />,
+              onClick: () => onExport(terminal.id),
+            },
+          ],
         },
-        {
-          id: "rename",
-          label: "Rename Terminal",
-          icon: <Edit />,
-          shortcut: "f2",
-          onClick: () => onRename(terminal.id),
-        },
-        {
-          id: "export",
-          label: "Export Output",
-          icon: <Download weight="fill" />,
-          onClick: () => onExport(terminal.id),
-        },
-        { id: "sep-2", separator: true },
         {
           id: "close",
-          label: "Close Terminal",
-          icon: <X />,
-          shortcut: "cmd+w",
-          onClick: () => onCloseTab(terminal.id),
-        },
-        {
-          id: "close-others",
-          label: "Close Other Terminals",
-          onClick: () => onCloseOthers(terminal.id),
-        },
-        {
-          id: "close-all",
-          label: "Close All Terminals",
-          onClick: onCloseAll,
-        },
-        {
-          id: "close-right",
-          label: "Close Terminals to Right",
-          onClick: () => onCloseToRight(terminal.id),
+          items: [
+            {
+              id: "close",
+              label: "Close Terminal",
+              onClick: () => onCloseTab(terminal.id),
+            },
+            {
+              id: "close-others",
+              label: "Close Other Terminals",
+              onClick: () => onCloseOthers(terminal.id),
+            },
+            {
+              id: "close-all",
+              label: "Close All Terminals",
+              onClick: onCloseAll,
+            },
+            {
+              id: "close-right",
+              label: "Close Terminals to Right",
+              onClick: () => onCloseToRight(terminal.id),
+            },
+          ],
         },
       ]
     : [];
 
-  return <Dropdown isOpen={isOpen} point={position} items={items} onClose={onClose} />;
+  return <ContextMenuPopup isOpen={isOpen} point={position} groups={groups} onClose={onClose} />;
 };
 
 export default TerminalTabContextMenu;

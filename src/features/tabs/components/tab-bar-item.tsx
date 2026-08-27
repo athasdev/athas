@@ -4,11 +4,13 @@ import {
   GitBranchIcon as GitBranch,
   GitPullRequestIcon as GitPullRequest,
   GlobeHemisphereWestIcon as Globe,
+  GearSixIcon as Settings,
   MagnifyingGlassIcon as Search,
   ChatCircleTextIcon as MessageSquare,
   PackageIcon as Package,
   PushPinIcon as Pin,
   SparkleIcon as Sparkles,
+  SquaresFourIcon as Views,
   TerminalWindowIcon as Terminal,
   WarningCircleIcon as WarningCircle,
   XIcon as X,
@@ -21,7 +23,7 @@ import { shouldShowTabCloseButton } from "@/features/settings/lib/ui-preferences
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";
-import { TabBarTab } from "@/ui/tab-bar";
+import { TabItem } from "@/ui/tab-bar";
 import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
@@ -121,7 +123,7 @@ const TabBarItem = memo(function TabBarItem({
       {showDropIndicatorBefore ? (
         <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-primary" />
       ) : null}
-      <TabBarTab
+      <TabItem
         role="tab"
         aria-selected={isActive}
         aria-label={`${buffer.name}${buffer.type === "editor" && buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
@@ -138,7 +140,7 @@ const TabBarItem = memo(function TabBarItem({
           !isEditing ? (
             <Button
               type="button"
-              size="icon-xs"
+              iconOnly
               variant="ghost"
               onClick={(e) => {
                 e.stopPropagation();
@@ -166,7 +168,7 @@ const TabBarItem = memo(function TabBarItem({
           ) : null
         }
       >
-        {showTabIcons ? (
+        {showTabIcons && buffer.type !== "newTab" ? (
           <div className="grid size-3 shrink-0 place-content-center">
             {buffer.type === "extension" ? (
               <Package className="text-subtle-foreground" />
@@ -223,12 +225,16 @@ const TabBarItem = memo(function TabBarItem({
               ) : (
                 <Activity className="text-subtle-foreground" />
               )
+            ) : buffer.type === "customView" ? (
+              <Views className="text-subtle-foreground" />
             ) : buffer.type === "globalSearch" ? (
               <Search className="text-subtle-foreground" />
             ) : buffer.type === "diagnostics" ? (
               <WarningCircle className="text-subtle-foreground" />
             ) : buffer.type === "references" ? (
               <Search className="text-subtle-foreground" />
+            ) : buffer.type === "settings" ? (
+              <Settings className="text-subtle-foreground" />
             ) : (
               <ThemedFileIcon
                 fileName={getDiffIconName() ?? buffer.name}
@@ -275,7 +281,7 @@ const TabBarItem = memo(function TabBarItem({
             aria-label="Unsaved changes"
           />
         )}
-      </TabBarTab>
+      </TabItem>
     </div>
   );
 });

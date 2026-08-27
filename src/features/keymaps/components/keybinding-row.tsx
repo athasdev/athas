@@ -84,7 +84,6 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
               type="button"
               onClick={() => setIsEditing(true)}
               variant="default"
-              size="xs"
               className="ui-text-sm flex h-7 w-full items-center justify-start px-1.5 hover:border hover:border-primary"
               aria-label={`Edit keybinding for ${command.title}`}
             >
@@ -102,11 +101,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
         </TableCell>
 
         <TableCell>
-          <Badge
-            variant={isUserOverride ? "accent" : "default"}
-            size="compact"
-            className="h-6 min-w-17 px-2"
-          >
+          <Badge variant={isUserOverride ? "accent" : "default"} className="h-6 min-w-17 px-2">
             {sourceLabel}
           </Badge>
         </TableCell>
@@ -121,7 +116,6 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
                 className="ui-text-sm text-subtle-foreground hover:text-foreground"
                 tooltip="Reset to default"
                 aria-label="Reset to default keybinding"
-                size="xs"
               >
                 Reset
               </Button>
@@ -134,7 +128,6 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
                 className="ui-text-sm text-subtle-foreground hover:text-destructive"
                 tooltip="Remove keybinding"
                 aria-label="Remove keybinding"
-                size="xs"
               >
                 Remove
               </Button>

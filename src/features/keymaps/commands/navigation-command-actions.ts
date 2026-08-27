@@ -2,6 +2,7 @@ import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
+import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import {
   calculateOffsetFromContentPosition,
@@ -11,7 +12,6 @@ import {
 import { useReferencesStore } from "@/features/references/stores/references.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { showPromptDialog } from "@/ui/dialog";
 import { toast } from "sonner";
 
 type LspNavigationLocation = {
@@ -114,22 +114,6 @@ async function goToActiveLspLocation(
   }, 100);
 }
 
-export async function promptGoToLine(): Promise<void> {
-  const lineText = await showPromptDialog("Go to line", {
-    title: "Go to Line",
-    placeholder: "Line number",
-  });
-  if (!lineText) return;
-
-  const line = Number.parseInt(lineText, 10);
-  if (!Number.isFinite(line) || line < 1) {
-    toast.warning("Enter a valid line number.");
-    return;
-  }
-
-  window.dispatchEvent(new CustomEvent("menu-go-to-line", { detail: { line } }));
-}
-
 export function openOutlinePicker(): void {
   if (!useSettingsStore.getState().settings.coreFeatures.outline) return;
   useUIState.getState().openCommandPaletteView("outline");
@@ -137,9 +121,7 @@ export function openOutlinePicker(): void {
 
 export function openOutlineSidebar(): void {
   if (!useSettingsStore.getState().settings.coreFeatures.outline) return;
-  const uiState = useUIState.getState();
-  uiState.setIsSidebarVisible(true);
-  uiState.setActiveView("outline");
+  setOutlineVisibilityPreference(true);
 }
 
 export async function goToDefinition(): Promise<void> {

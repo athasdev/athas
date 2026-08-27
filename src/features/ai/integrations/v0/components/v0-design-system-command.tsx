@@ -429,7 +429,6 @@ export function V0DesignSystemCommandContent({
               onChange={(event) => setRegistryUrlInput(event.currentTarget.value)}
               onKeyDown={handleFormKeyDown}
               placeholder="https://example.com/r/registry.json"
-              size="xs"
               spellCheck={false}
             />
             <Input
@@ -437,14 +436,12 @@ export function V0DesignSystemCommandContent({
               onChange={(event) => setNameInput(event.currentTarget.value)}
               onKeyDown={handleFormKeyDown}
               placeholder="Name"
-              size="xs"
             />
             <Input
               value={descriptionInput}
               onChange={(event) => setDescriptionInput(event.currentTarget.value)}
               onKeyDown={handleFormKeyDown}
               placeholder="Notes"
-              size="xs"
             />
             {formError && <div className="ui-text-base text-destructive">{formError}</div>}
           </div>
@@ -508,7 +505,6 @@ export function V0DesignSystemCommandContent({
                 onMouseEnter={() => setSelectedIndex(index)}
                 isSelected={index === selectedIndex}
                 disabled={Boolean(savingRegistryUrl)}
-                className="h-8 gap-2 px-2 py-0"
               >
                 {row.kind === "suggestion" ? (
                   <Globe className="shrink-0 text-subtle-foreground" />
@@ -522,19 +518,19 @@ export function V0DesignSystemCommandContent({
                   </CommandItemMeta>
                 </div>
                 {isAdding ? (
-                  <Badge variant="accent" size="compact" className="shrink-0">
+                  <Badge variant="accent" className="shrink-0">
                     adding
                   </Badge>
                 ) : isCurrent ? (
-                  <Badge variant="accent" size="compact" className="shrink-0">
+                  <Badge variant="accent" className="shrink-0">
                     active
                   </Badge>
                 ) : row.kind === "profile" ? (
-                  <Badge variant="muted" size="compact" className="shrink-0">
+                  <Badge variant="muted" className="shrink-0">
                     saved
                   </Badge>
                 ) : row.kind === "suggestion" ? (
-                  <Badge variant="muted" size="compact" className="shrink-0">
+                  <Badge variant="muted" className="shrink-0">
                     add
                   </Badge>
                 ) : null}

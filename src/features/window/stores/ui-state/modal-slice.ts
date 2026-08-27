@@ -1,6 +1,9 @@
 import type { StateCreator } from "zustand";
 import type { CommandPaletteViewId } from "@/features/command-palette/types/view.types";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SettingsTab } from "./types/ui-state.types";
+
+export type ProjectPickerInitialStep = "picker" | "addRemote";
 
 interface ModalState {
   isQuickOpenVisible: boolean;
@@ -10,8 +13,11 @@ interface ModalState {
   isSettingsDialogVisible: boolean;
   isBranchManagerVisible: boolean;
   isProjectPickerVisible: boolean;
+  projectPickerInitialStep: ProjectPickerInitialStep;
   isDatabaseConnectionVisible: boolean;
   settingsInitialTab: SettingsTab | null;
+  settingsInitialSection: string | null;
+  settingsNavigationRequestId: number;
 }
 
 interface ModalActions {
@@ -22,9 +28,11 @@ interface ModalActions {
   setIsSettingsDialogVisible: (v: boolean) => void;
   setIsBranchManagerVisible: (v: boolean) => void;
   setIsProjectPickerVisible: (v: boolean) => void;
+  openProjectPicker: (initialStep?: ProjectPickerInitialStep) => void;
   setIsDatabaseConnectionVisible: (v: boolean) => void;
   setSettingsInitialTab: (tab: SettingsTab) => void;
-  openSettingsDialog: (tab?: SettingsTab) => void;
+  setSettingsInitialSection: (section: string | null) => void;
+  openSettingsDialog: (tab?: SettingsTab, section?: string) => void;
   hasOpenModal: () => boolean;
   closeTopModal: () => boolean;
 }
@@ -40,8 +48,11 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   isSettingsDialogVisible: false,
   isBranchManagerVisible: false,
   isProjectPickerVisible: false,
+  projectPickerInitialStep: "picker",
   isDatabaseConnectionVisible: false,
   settingsInitialTab: null,
+  settingsInitialSection: null,
+  settingsNavigationRequestId: 0,
 
   // Actions
   hasOpenModal: () => {
@@ -155,15 +166,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
 
   setIsSettingsDialogVisible: (v: boolean) => {
     if (v) {
-      set({
-        isSettingsDialogVisible: true,
-        isQuickOpenVisible: false,
-        isCommandPaletteVisible: false,
-        isGlobalSearchVisible: false,
-        isBranchManagerVisible: false,
-        isProjectPickerVisible: false,
-        isDatabaseConnectionVisible: false,
-      });
+      get().openSettingsDialog();
     } else {
       set({ isSettingsDialogVisible: v });
     }
@@ -187,18 +190,23 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
 
   setIsProjectPickerVisible: (v: boolean) => {
     if (v) {
-      set({
-        isProjectPickerVisible: true,
-        isQuickOpenVisible: false,
-        isCommandPaletteVisible: false,
-        isGlobalSearchVisible: false,
-        isSettingsDialogVisible: false,
-        isBranchManagerVisible: false,
-        isDatabaseConnectionVisible: false,
-      });
+      get().openProjectPicker();
     } else {
       set({ isProjectPickerVisible: v });
     }
+  },
+
+  openProjectPicker: (initialStep = "picker") => {
+    set({
+      isProjectPickerVisible: true,
+      projectPickerInitialStep: initialStep,
+      isQuickOpenVisible: false,
+      isCommandPaletteVisible: false,
+      isGlobalSearchVisible: false,
+      isSettingsDialogVisible: false,
+      isBranchManagerVisible: false,
+      isDatabaseConnectionVisible: false,
+    });
   },
 
   setIsDatabaseConnectionVisible: (v: boolean) => {
@@ -217,11 +225,21 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
     }
   },
 
-  setSettingsInitialTab: (tab: SettingsTab) => set({ settingsInitialTab: tab }),
+  setSettingsInitialTab: (tab: SettingsTab) =>
+    set((state) => ({
+      settingsInitialTab: tab,
+      settingsInitialSection: null,
+      settingsNavigationRequestId: state.settingsNavigationRequestId + 1,
+    })),
+  setSettingsInitialSection: (section: string | null) =>
+    set((state) => ({
+      settingsInitialSection: section,
+      settingsNavigationRequestId: state.settingsNavigationRequestId + 1,
+    })),
 
-  openSettingsDialog: (tab?: SettingsTab) =>
+  openSettingsDialog: (tab?: SettingsTab, section?: string) => {
     set({
-      isSettingsDialogVisible: true,
+      isSettingsDialogVisible: false,
       isQuickOpenVisible: false,
       isCommandPaletteVisible: false,
       isGlobalSearchVisible: false,
@@ -229,5 +247,9 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       isProjectPickerVisible: false,
       isDatabaseConnectionVisible: false,
       settingsInitialTab: tab ?? null,
-    }),
+      settingsInitialSection: section ?? null,
+      settingsNavigationRequestId: get().settingsNavigationRequestId + 1,
+    });
+    useBufferStore.getState().actions.openSettingsBuffer();
+  },
 });

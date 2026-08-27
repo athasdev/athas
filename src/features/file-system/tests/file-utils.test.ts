@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { isBinaryContent, isKnownTextFile } from "../controllers/file-utils";
+import { isBinaryContent, isImageFile, isKnownTextFile } from "../controllers/file-utils";
 
 describe("file utils", () => {
   it("treats recognized editor languages as text files", () => {
@@ -17,5 +17,11 @@ describe("file utils", () => {
 
     expect(isBinaryContent(luaSourceWithNullByte)).toBe(true);
     expect(isKnownTextFile("/project/scene.lua")).toBe(true);
+  });
+
+  it("routes SVG files to the text editor instead of the image viewer", () => {
+    expect(isKnownTextFile("/project/icon.svg")).toBe(true);
+    expect(isImageFile("/project/icon.svg")).toBe(false);
+    expect(isImageFile("/project/icon.png")).toBe(true);
   });
 });

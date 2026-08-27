@@ -22,9 +22,9 @@ use window_vibrancy::{
 };
 
 #[cfg(all(target_os = "macos", not(feature = "linux")))]
-const ATHAS_WINDOW_MATERIAL: NSVisualEffectMaterial = NSVisualEffectMaterial::Menu;
+const ATHAS_WINDOW_MATERIAL: NSVisualEffectMaterial = NSVisualEffectMaterial::Sidebar;
 #[cfg(all(target_os = "macos", not(feature = "linux")))]
-const ATHAS_WINDOW_STATE: NSVisualEffectState = NSVisualEffectState::Active;
+const ATHAS_WINDOW_STATE: NSVisualEffectState = NSVisualEffectState::FollowsWindowActiveState;
 #[cfg(all(target_os = "macos", not(feature = "linux")))]
 const EMBEDDED_WEBVIEW_CORNER_RADIUS: f64 = 7.0;
 #[cfg(target_os = "windows")]
@@ -230,6 +230,11 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
          None,
       ) {
          log::warn!("Failed to initialize macOS window vibrancy: {error}");
+      }
+      if let Ok(ns_window) = window.ns_window()
+         && let Err(error) = crate::bootstrap::macos::configure_window_tabbing(ns_window)
+      {
+         log::warn!("Failed to configure macOS window tabbing: {error}");
       }
    }
 
@@ -650,6 +655,122 @@ pub async fn create_app_window(
    result
 }
 
+#[command]
+pub async fn note_recent_document(
+   app: tauri::AppHandle<AthasRuntime>,
+   path: String,
+) -> Result<(), String> {
+   #[cfg(target_os = "macos")]
+   {
+      let path = PathBuf::from(path);
+      let (sender, receiver) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let _ = sender.send(crate::bootstrap::macos::note_recent_document(&path));
+      })
+      .map_err(|error| error.to_string())?;
+      receiver
+         .await
+         .map_err(|_| "Failed to register recent document on the main thread".to_string())??;
+      crate::menu::refresh_open_recent_submenu(&app)?;
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   let _ = (app, path);
+
+   Ok(())
+}
+
+#[command]
+pub async fn set_window_document_state(
+   window: tauri::WebviewWindow<AthasRuntime>,
+   title: String,
+   represented_path: Option<String>,
+   is_edited: bool,
+) -> Result<(), String> {
+   let app = window.app_handle().clone();
+   let (sender, receiver) = tokio::sync::oneshot::channel();
+   app.run_on_main_thread(move || {
+      let result = window.set_title(&title).map_err(|error| error.to_string());
+
+      #[cfg(target_os = "macos")]
+      let result = result.and_then(|_| {
+         let ns_window = window.ns_window().map_err(|error| error.to_string())?;
+         crate::bootstrap::macos::set_window_document_state(
+            ns_window,
+            represented_path.as_deref().map(Path::new),
+            is_edited,
+         )
+      });
+
+      #[cfg(not(target_os = "macos"))]
+      let result = {
+         let _ = (represented_path, is_edited);
+         result
+      };
+
+      let _ = sender.send(result);
+   })
+   .map_err(|error| error.to_string())?;
+
+   receiver
+      .await
+      .map_err(|_| "Failed to update window document state on the main thread".to_string())?
+}
+
+#[command]
+pub async fn show_native_choice_sheet(
+   window: tauri::WebviewWindow<AthasRuntime>,
+   message: String,
+   informative_text: String,
+   primary_label: String,
+   secondary_label: String,
+   cancel_label: String,
+) -> Result<String, String> {
+   #[cfg(target_os = "macos")]
+   {
+      let app = window.app_handle().clone();
+      let (sender, receiver) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let result = window
+            .ns_window()
+            .map_err(|error| error.to_string())
+            .and_then(|ns_window| {
+               crate::bootstrap::macos::show_native_choice_sheet(
+                  ns_window,
+                  &message,
+                  &informative_text,
+                  &primary_label,
+                  &secondary_label,
+                  &cancel_label,
+                  sender,
+               )
+            });
+         if let Err(error) = result {
+            log::error!("Failed to present native choice sheet: {error}");
+         }
+      })
+      .map_err(|error| error.to_string())?;
+
+      return receiver
+         .await
+         .map(str::to_string)
+         .map_err(|_| "Native choice sheet closed without a response".to_string());
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   {
+      let _ = (
+         window,
+         message,
+         informative_text,
+         primary_label,
+         secondary_label,
+         cancel_label,
+      );
+      Err("Native choice sheets are only available on macOS".to_string())
+   }
+}
+
 fn build_webview_bridge_script(
    webview_label: &str,
    parent_window_label: &str,
@@ -840,7 +961,6 @@ fn build_webview_bridge_script(
 }
 
 #[command]
-#[allow(clippy::too_many_arguments)]
 pub async fn create_embedded_webview(
    app: tauri::AppHandle<AthasRuntime>,
    window: tauri::WebviewWindow<AthasRuntime>,

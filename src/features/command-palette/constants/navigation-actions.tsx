@@ -4,13 +4,14 @@ import {
   BugBeetleIcon as BugBeetle,
   GitBranchIcon as GitBranch,
   GitPullRequestIcon as GitPullRequest,
-  HashIcon as Hash,
   ListBulletsIcon as ListBullets,
   PackageIcon as Package,
   MagnifyingGlassIcon as Search,
+  StackIcon as Views,
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
+import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
 import type {
   BottomPaneTab,
   SettingsTab,
@@ -82,6 +83,19 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       },
     },
     {
+      id: "view-show-views",
+      label: "View: Show Views",
+      description: "Switch to project custom views",
+      icon: <Views />,
+      category: "Navigation",
+      commandId: "workbench.showViews",
+      action: () => {
+        setIsSidebarVisible(true);
+        setActiveView("views");
+        onClose();
+      },
+    },
+    {
       id: "view-show-debugger",
       label: "View: Show Run and Debug",
       description: "Switch to debugger view",
@@ -104,8 +118,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
             category: "Navigation",
             commandId: "workbench.showOutline",
             action: () => {
-              setIsSidebarVisible(true);
-              setActiveView("outline");
+              setOutlineVisibilityPreference(true);
               onClose();
             },
           } satisfies Action,
@@ -132,18 +145,6 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       action: () => {
         onClose();
         useBufferStore.getState().actions.openExtensionsBuffer();
-      },
-    },
-    {
-      id: "go-to-line",
-      label: "Go: Go to Line",
-      description: "Jump to a specific line number",
-      icon: <Hash />,
-      category: "Navigation",
-      commandId: "editor.goToLine",
-      action: () => {
-        onClose();
-        window.dispatchEvent(new CustomEvent("menu-go-to-line"));
       },
     },
     {

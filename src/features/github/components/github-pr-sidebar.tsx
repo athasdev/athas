@@ -93,7 +93,7 @@ export function GitHubPRSidebar({
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
+            iconOnly
             onClick={onShowFiles}
             tooltip="Show changed files"
           >

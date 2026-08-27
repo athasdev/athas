@@ -14,7 +14,8 @@ import { useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { ImageFormatDialog } from "@/features/viewer/image/editor/components/image-format-dialog";
 import type { ImageFormat } from "@/features/viewer/image/editor/types/image-operation.types";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
+import type { MenuItem } from "@/ui/dropdown";
 import { writeClipboardText } from "@/utils/clipboard";
 
 interface ImageContextMenuProps {
@@ -109,7 +110,6 @@ export function ImageContextMenu({
       disabled: isProcessing,
       onClick: onRotate180,
     },
-    { id: "sep-1", separator: true },
     {
       id: "flip-horizontal",
       label: "Flip Horizontal",
@@ -180,7 +180,6 @@ export function ImageContextMenu({
           },
         ]
       : []),
-    { id: "sep-4", separator: true },
     {
       id: "reveal",
       label: "Show in Finder",
@@ -197,7 +196,12 @@ export function ImageContextMenu({
 
   return (
     <>
-      <Dropdown isOpen point={{ x, y }} items={items} onClose={onClose} />
+      <ContextMenuPopup
+        isOpen
+        point={{ x, y }}
+        groups={createContextMenuGroups(items)}
+        onClose={onClose}
+      />
 
       {formatDialogState.format && (
         <ImageFormatDialog

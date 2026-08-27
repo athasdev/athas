@@ -7,11 +7,16 @@ import type { ChatFollowUpAction } from "@/features/ai/lib/follow-up-actions";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { PastedImage } from "@/features/ai/types/chat-composer.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import type { GenerativeUIComponent } from "@/extensions/ui/types/generative-ui";
+import type { GenerativeUIView } from "@/extensions/ui/types/generative-ui";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
-export type AssistantResponsePhase = "waiting" | "thinking";
+export type AssistantResponsePhase = "starting" | "waiting" | "thinking";
+
+export interface AgentMessageSubmitResult {
+  accepted: boolean;
+  error?: string;
+}
 
 export interface ToolCall {
   id?: string;
@@ -48,7 +53,7 @@ export interface Message {
   toolCalls?: ToolCall[];
   images?: ImageContent[];
   resources?: ResourceContent[];
-  ui?: GenerativeUIComponent[];
+  ui?: GenerativeUIView[];
   followUpActions?: ChatFollowUpAction[];
 }
 
@@ -102,10 +107,12 @@ export interface AIChatInputBarProps {
   queueCount: number;
   selectedBufferIds: Set<string>;
   selectedFilesPaths: Set<string>;
+  selectedEditorContexts: EditorSelectionContext[];
   onToggleBufferSelection: (bufferId: string) => void;
   onToggleFileSelection: (filePath: string) => void;
   onSetSelectedBufferIds: (bufferIds: Set<string>) => void;
   onSetSelectedFilesPaths: (filePaths: Set<string>) => void;
+  onRemoveEditorContext: (contextId: string) => void;
   isActiveSurface?: boolean;
   presentation?: "default" | "initial";
   autoFocus?: boolean;

@@ -1,11 +1,19 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
+  getFileTreeFirstVisibleIndex,
   getFileTreeScrollTop,
   getFileTreeTotalHeight,
   getFileTreeVirtualRange,
 } from "../lib/file-tree-viewport";
 
 describe("file tree viewport geometry", () => {
+  test("finds the first row crossing the visible top edge", () => {
+    expect(getFileTreeFirstVisibleIndex({ rowCount: 100, rowHeight: 30, scrollTop: 0 })).toBe(0);
+    expect(getFileTreeFirstVisibleIndex({ rowCount: 100, rowHeight: 30, scrollTop: 33 })).toBe(0);
+    expect(getFileTreeFirstVisibleIndex({ rowCount: 100, rowHeight: 30, scrollTop: 34 })).toBe(1);
+    expect(getFileTreeFirstVisibleIndex({ rowCount: 0, rowHeight: 30, scrollTop: 0 })).toBe(-1);
+  });
+
   test("keeps total height independent from the rendered window", () => {
     const totalHeight = getFileTreeTotalHeight(1_000, 30);
 
@@ -90,5 +98,29 @@ describe("file tree viewport geometry", () => {
         viewportHeight: 180,
       }),
     ).toBe(2_828);
+  });
+
+  test("keeps revealed rows below sticky ancestors", () => {
+    expect(
+      getFileTreeScrollTop({
+        currentScrollTop: 600,
+        index: 18,
+        rowCount: 100,
+        rowHeight: 30,
+        viewportHeight: 180,
+        viewportStartOffset: 90,
+      }),
+    ).toBe(454);
+    expect(
+      getFileTreeScrollTop({
+        alignment: "start",
+        currentScrollTop: 0,
+        index: 18,
+        rowCount: 100,
+        rowHeight: 30,
+        viewportHeight: 180,
+        viewportStartOffset: 90,
+      }),
+    ).toBe(450);
   });
 });

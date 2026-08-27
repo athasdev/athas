@@ -1,4 +1,5 @@
 import { Menu as DropdownMenuPrimitive } from "@base-ui/react/menu";
+import { cva } from "class-variance-authority";
 import {
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
@@ -17,15 +18,33 @@ import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { CaretRightIcon, CheckIcon, MagnifyingGlassIcon as Search } from "@/ui/icons";
 import Keybinding from "@/features/keymaps/components/keybinding";
-import {
-  type MenuDensity,
-  menuItemVariants,
-  menuLabelVariants,
-  menuSeparatorVariants,
-  menuSurfaceVariants,
-} from "@/design-system/menu";
 
-export type DropdownDensity = MenuDensity;
+const menuSurfaceVariants = cva(
+  "max-h-(--available-height) w-fit min-w-32 max-w-[min(480px,calc(100vw-16px))] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-surface/98 p-1 font-sans text-subtle-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm ui-text-chrome",
+);
+
+const menuItemVariants = cva(
+  "relative flex w-full cursor-default items-center justify-start gap-2 whitespace-nowrap rounded-md px-2 py-1 text-left font-sans text-subtle-foreground outline-hidden select-none transition-colors hover:bg-accent focus:bg-accent/70 focus:text-foreground data-highlighted:bg-accent/70 data-highlighted:text-foreground data-selected:bg-selected disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50 ui-text-chrome [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  {
+    variants: {
+      tone: {
+        default: "",
+        accent: "text-primary",
+        destructive:
+          "hover:bg-destructive/8 hover:text-destructive focus:bg-destructive/10 focus:text-destructive data-[variant=destructive]:hover:bg-destructive/8 data-[variant=destructive]:hover:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive",
+      },
+    },
+    defaultVariants: {
+      tone: "default",
+    },
+  },
+);
+
+const menuLabelVariants = cva(
+  "px-2 py-0.5 font-sans font-medium text-subtle-foreground ui-text-chrome",
+);
+
+const menuSeparatorVariants = cva("-mx-1 my-0.5 h-px bg-border/60");
 
 export type MenuItemTone = "default" | "accent" | "destructive";
 
@@ -102,8 +121,6 @@ interface MenuItemsListProps {
   onItemSelect?: () => void;
   className?: string;
   focusIndex?: number;
-  density?: DropdownDensity;
-  showIcons?: boolean;
 }
 
 export function MenuItemsList({
@@ -111,8 +128,6 @@ export function MenuItemsList({
   onItemSelect,
   className,
   focusIndex = -1,
-  density = "compact",
-  showIcons = true,
 }: MenuItemsListProps) {
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -123,12 +138,28 @@ export function MenuItemsList({
   }, [focusIndex]);
 
   let selectableIdx = -1;
+  const iconVisibility = items.map(() => false);
+  let groupStart = 0;
+
+  for (let index = 0; index <= items.length; index++) {
+    const item = items[index];
+    if (item && !item.separator) continue;
+
+    const groupItems = items.slice(groupStart, index).filter(isMenuActionItem);
+    const showGroupIcons = groupItems.length > 0 && groupItems.every((entry) => entry.icon);
+    if (showGroupIcons) {
+      for (let groupIndex = groupStart; groupIndex < index; groupIndex++) {
+        iconVisibility[groupIndex] = true;
+      }
+    }
+    groupStart = index + 1;
+  }
 
   return (
     <div className={className}>
-      {items.map((item) => {
+      {items.map((item, itemIndex) => {
         if (item.separator) {
-          return <div key={item.id} className={menuSeparatorVariants({ density })} />;
+          return <div key={item.id} className={menuSeparatorVariants()} />;
         }
 
         selectableIdx++;
@@ -153,23 +184,14 @@ export function MenuItemsList({
             }}
             disabled={isDisabled}
             className={cn(
-              menuItemVariants({
-                density,
-                disabled: isDisabled,
-                focused: isFocused,
-                selected: item.selected,
-                tone: item.tone,
-              }),
+              menuItemVariants({ tone: item.tone }),
+              isFocused && "bg-accent",
+              item.selected && "bg-selected",
             )}
             aria-current={item.selected ? "true" : undefined}
           >
-            {showIcons && item.icon && (
-              <span
-                className={cn(
-                  "grid shrink-0 place-items-center [&>svg]:block",
-                  density === "compact" ? "size-4 [&>svg]:size-4" : "size-4.5 [&>svg]:size-4.5",
-                )}
-              >
+            {iconVisibility[itemIndex] && item.icon && (
+              <span className="grid size-4 shrink-0 place-items-center [&>svg]:block [&>svg]:size-4">
                 {item.icon}
               </span>
             )}
@@ -206,6 +228,7 @@ type AnchorAlign = "start" | "end";
 interface DropdownBaseProps {
   isOpen: boolean;
   onClose: () => void;
+  header?: ReactNode;
   className?: string;
   menuClassName?: string;
   style?: CSSProperties;
@@ -214,8 +237,6 @@ interface DropdownBaseProps {
   animated?: boolean;
   matchAnchorWidth?: boolean;
   anchorMinWidth?: number;
-  density?: DropdownDensity;
-  showIcons?: boolean;
 }
 
 interface AnchorPositioning {
@@ -295,6 +316,7 @@ export function Dropdown(props: DropdownProps) {
   const {
     isOpen,
     onClose,
+    header,
     className,
     menuClassName,
     style,
@@ -305,8 +327,6 @@ export function Dropdown(props: DropdownProps) {
     animated = true,
     matchAnchorWidth = false,
     anchorMinWidth = 0,
-    density: requestedDensity,
-    showIcons = true,
   } = props;
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -319,7 +339,6 @@ export function Dropdown(props: DropdownProps) {
   const [isPositioned, setIsPositioned] = useState(false);
 
   const isAnchorMode = "anchorRef" in props && props.anchorRef != null;
-  const density = requestedDensity ?? (isAnchorMode ? "compact" : "default");
   const anchorRef = isAnchorMode ? (props as AnchorPositioning).anchorRef : null;
   const anchorSide = isAnchorMode
     ? ((props as AnchorPositioning).anchorSide ?? "bottom")
@@ -620,7 +639,7 @@ export function Dropdown(props: DropdownProps) {
       isOpen={isOpen}
       contentRef={menuRef}
       portalContainer={portalContainer}
-      className={cn(menuSurfaceVariants({ density }), className)}
+      className={cn(menuSurfaceVariants(), className)}
       style={{ transformOrigin, visibility: isPositioned ? "visible" : "hidden", ...style }}
       animated={animated}
       initial={{
@@ -639,6 +658,7 @@ export function Dropdown(props: DropdownProps) {
       transition={quickTransition}
     >
       <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
+        {header}
         {searchable && (
           <div className="border-border/60 border-b px-1.5 pb-1.5 pt-0.5">
             <Input
@@ -662,22 +682,16 @@ export function Dropdown(props: DropdownProps) {
             items={getFilteredItems()}
             focusIndex={focusIndex}
             onItemSelect={closeOnSelect ? onClose : undefined}
-            density={density}
-            showIcons={showIcons}
           />
         )}
         {hasSections &&
           getFilteredSections().map((section, sectionIdx) => (
             <div key={section.id}>
-              {sectionIdx > 0 ? <div className={menuSeparatorVariants({ density })} /> : null}
-              {section.label && (
-                <div className={menuLabelVariants({ density })}>{section.label}</div>
-              )}
+              {sectionIdx > 0 ? <div className={menuSeparatorVariants()} /> : null}
+              {section.label && <div className={menuLabelVariants()}>{section.label}</div>}
               <MenuItemsList
                 items={section.items}
                 onItemSelect={closeOnSelect ? onClose : undefined}
-                density={density}
-                showIcons={showIcons}
               />
             </div>
           ))}
@@ -699,9 +713,9 @@ function DropdownMenuTrigger(props: DropdownMenuPrimitive.Trigger.Props) {
 }
 
 function DropdownMenuSearch({
+  className,
   onKeyDown,
   leftIcon = Search,
-  size = "xs",
   variant = "ghost",
   ...props
 }: InputProps) {
@@ -709,8 +723,8 @@ function DropdownMenuSearch({
     <Input
       data-slot="dropdown-menu-search"
       leftIcon={leftIcon}
-      size={size}
       variant={variant}
+      className={cn("ui-text-chrome", className)}
       aria-label={props["aria-label"] ?? props.placeholder ?? "Search menu"}
       onKeyDown={(event) => {
         event.stopPropagation();
@@ -749,7 +763,7 @@ function DropdownMenuContent({
         <DropdownMenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn(
-            menuSurfaceVariants({ density: "compact" }),
+            menuSurfaceVariants(),
             "z-10070 duration-75 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
             className,
           )}
@@ -768,10 +782,13 @@ function DropdownMenuItem({
   className,
   inset,
   variant = "default",
+  trailingAction,
+  children,
   ...props
 }: DropdownMenuPrimitive.Item.Props & {
   inset?: boolean;
   variant?: "default" | "destructive";
+  trailingAction?: ReactNode;
 }) {
   return (
     <DropdownMenuPrimitive.Item
@@ -779,12 +796,31 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        menuItemVariants({ density: "compact", tone: variant }),
+        menuItemVariants({ tone: variant }),
         "group/dropdown-menu-item data-inset:pl-8",
+        trailingAction && "group/dropdown-menu-row pr-8",
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+      {trailingAction ? (
+        <DropdownMenuTrailingAction>{trailingAction}</DropdownMenuTrailingAction>
+      ) : null}
+    </DropdownMenuPrimitive.Item>
+  );
+}
+
+function DropdownMenuTrailingAction({ children }: { children: ReactNode }) {
+  return (
+    <span
+      className="absolute right-1 z-10 flex opacity-0 transition-opacity group-hover/dropdown-menu-row:opacity-100 group-focus-within/dropdown-menu-row:opacity-100"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -799,7 +835,7 @@ function DropdownMenuCheckboxItem({
     <DropdownMenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
-      className={cn(menuItemVariants({ density: "compact" }), "pr-8 data-inset:pl-8", className)}
+      className={cn(menuItemVariants(), "pr-8 data-inset:pl-8", className)}
       checked={checked}
       {...props}
     >
@@ -821,21 +857,36 @@ function DropdownMenuRadioItem({
   className,
   children,
   inset,
+  trailingAction,
   ...props
-}: DropdownMenuPrimitive.RadioItem.Props & { inset?: boolean }) {
+}: DropdownMenuPrimitive.RadioItem.Props & { inset?: boolean; trailingAction?: ReactNode }) {
   return (
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
-      className={cn(menuItemVariants({ density: "compact" }), "pr-8 data-inset:pl-8", className)}
+      className={cn(
+        menuItemVariants(),
+        "pr-8 data-inset:pl-8",
+        trailingAction && "group/dropdown-menu-row",
+        className,
+      )}
       {...props}
     >
-      <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
+      <span
+        className={cn(
+          "pointer-events-none absolute right-2 flex size-4 items-center justify-center transition-opacity",
+          trailingAction &&
+            "group-hover/dropdown-menu-row:opacity-0 group-focus-within/dropdown-menu-row:opacity-0",
+        )}
+      >
         <DropdownMenuPrimitive.RadioItemIndicator>
           <CheckIcon />
         </DropdownMenuPrimitive.RadioItemIndicator>
       </span>
       {children}
+      {trailingAction ? (
+        <DropdownMenuTrailingAction>{trailingAction}</DropdownMenuTrailingAction>
+      ) : null}
     </DropdownMenuPrimitive.RadioItem>
   );
 }
@@ -849,7 +900,7 @@ function DropdownMenuLabel({
     <DropdownMenuPrimitive.GroupLabel
       data-slot="dropdown-menu-label"
       data-inset={inset}
-      className={cn(menuLabelVariants({ density: "compact" }), "data-inset:pl-8", className)}
+      className={cn(menuLabelVariants(), "data-inset:pl-8", className)}
       {...props}
     />
   );
@@ -859,7 +910,7 @@ function DropdownMenuSeparator({ className, ...props }: DropdownMenuPrimitive.Se
   return (
     <DropdownMenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn(menuSeparatorVariants({ density: "compact" }), className)}
+      className={cn(menuSeparatorVariants(), className)}
       {...props}
     />
   );
@@ -880,7 +931,7 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        menuItemVariants({ density: "compact" }),
+        menuItemVariants(),
         "data-inset:pl-8 data-open:bg-accent data-open:text-foreground",
         className,
       )}
@@ -919,4 +970,8 @@ export {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  menuItemVariants,
+  menuLabelVariants,
+  menuSeparatorVariants,
+  menuSurfaceVariants,
 };

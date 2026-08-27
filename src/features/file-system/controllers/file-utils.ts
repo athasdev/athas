@@ -34,7 +34,7 @@ export const getDatabaseTypeFromPath = (path: string): DatabaseType | null => {
  * Check if a file is an image based on its extension
  */
 export const isImageFile = (path: string): boolean => {
-  return isSupportedImageFile(path);
+  return !path.toLowerCase().endsWith(".svg") && isSupportedImageFile(path);
 };
 
 /**

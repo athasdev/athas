@@ -1,6 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type React from "react";
 import { useMemo, useRef } from "react";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { cn } from "@/utils/cn";
 
 interface CsvTableViewProps {
@@ -45,12 +46,11 @@ export function CsvTableView({
   return (
     <div className={cn("flex h-full min-h-0 flex-col overflow-hidden", className)}>
       {(actions || columns.length > 0) && (
-        <div className="flex items-center justify-between border-border border-b bg-surface px-2 py-1.5">
-          <div className="font-sans ui-text-sm text-subtle-foreground">
-            {rows.length} rows • {columns.length} columns
-          </div>
-          <div className="flex items-center gap-1">{actions}</div>
-        </div>
+        <PaneContentHeader
+          title={`${rows.length} rows`}
+          detail={`${columns.length} columns`}
+          actions={actions}
+        />
       )}
       <div ref={containerRef} className="flex-1 overflow-auto">
         {/* Header */}

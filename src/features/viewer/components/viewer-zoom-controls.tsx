@@ -20,16 +20,16 @@ export function ViewerZoomControls({
 }: ViewerZoomControlsProps) {
   return (
     <div className="flex items-center gap-2">
-      <Button onClick={onZoomOut} variant="ghost" tooltip="Zoom out" size="icon-xs">
+      <Button onClick={onZoomOut} variant="ghost" tooltip="Zoom out" iconOnly>
         <Minus />
       </Button>
       <span className="min-w-12.5 px-2 text-center font-sans text-subtle-foreground ui-text-sm">
         {Math.round(zoom * 100)}%
       </span>
-      <Button onClick={onZoomIn} variant="ghost" tooltip="Zoom in" size="icon-xs">
+      <Button onClick={onZoomIn} variant="ghost" tooltip="Zoom in" iconOnly>
         <Plus />
       </Button>
-      <Button onClick={onResetZoom} variant="ghost" tooltip="Reset zoom" size="icon-xs">
+      <Button onClick={onResetZoom} variant="ghost" tooltip="Reset zoom" iconOnly>
         <RotateCcw />
       </Button>
     </div>

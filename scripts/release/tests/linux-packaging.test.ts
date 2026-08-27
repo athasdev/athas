@@ -45,6 +45,15 @@ describe("Linux release packaging", () => {
     expect(script).toContain("dpkg-deb --root-owner-group");
   });
 
+  it("declares the X11 keyboard runtime dependency in native packages", () => {
+    const script = readRepoFile("scripts/release/packaging/linux/native.sh");
+    const patchFunction = script.slice(script.indexOf("patch_deb_dependencies()"));
+
+    expect(script).toContain('"libxkbcommon-x11-0",');
+    expect(script).toContain('"libxkbcommon-x11",');
+    expect(patchFunction).toContain("libxkbcommon-x11-0");
+  });
+
   it("loads CEF from stable and preview native package resource directories", () => {
     const buildScript = readRepoFile("src-tauri/build.rs");
     const packagingScript = readRepoFile("scripts/release/packaging/linux/native.sh");

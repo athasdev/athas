@@ -50,6 +50,11 @@ interface ChatWithMessages {
   tool_calls: ToolCallData[];
 }
 
+type SerializedChat = ReturnType<typeof chatToData>;
+
+const pendingChatSaves = new Map<string, SerializedChat>();
+const activeChatSaves = new Map<string, Promise<void>>();
+
 /**
  * Initialize the chat history database
  * Creates tables and indexes if they don't exist
@@ -144,7 +149,7 @@ function dataToChat(data: ChatWithMessages): Chat {
       role: msg.role as "user" | "assistant" | "system",
       content: msg.content,
       timestamp: new Date(msg.timestamp),
-      isStreaming: msg.is_streaming,
+      isStreaming: false,
       isToolUse: msg.is_tool_use,
       toolName: msg.tool_name || undefined,
       toolCalls: toolCallsMap.get(msg.id),
@@ -172,13 +177,33 @@ function dataToChat(data: ChatWithMessages): Chat {
  * Save a chat to the database
  */
 export const saveChatToDb = async (chat: Chat): Promise<void> => {
-  try {
-    const { chat: chatData, messages, tool_calls } = chatToData(chat);
-    await invoke("save_chat", { chat: chatData, messages, toolCalls: tool_calls });
-  } catch (error) {
-    console.error("Error saving chat to database:", error);
-    throw error;
-  }
+  pendingChatSaves.set(chat.id, chatToData(chat));
+  const activeSave = activeChatSaves.get(chat.id);
+  if (activeSave) return activeSave;
+
+  const save = (async () => {
+    try {
+      while (pendingChatSaves.has(chat.id)) {
+        const next = pendingChatSaves.get(chat.id);
+        pendingChatSaves.delete(chat.id);
+        if (!next) continue;
+
+        await invoke("save_chat", {
+          chat: next.chat,
+          messages: next.messages,
+          toolCalls: next.tool_calls,
+        });
+      }
+    } catch (error) {
+      console.error("Error saving chat to database:", error);
+      throw error;
+    } finally {
+      activeChatSaves.delete(chat.id);
+    }
+  })();
+
+  activeChatSaves.set(chat.id, save);
+  return save;
 };
 
 export const saveChatMetadataToDb = async (chat: Chat): Promise<void> => {

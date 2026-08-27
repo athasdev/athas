@@ -28,7 +28,6 @@ interface ConnectionFormProps {
   testStatus: "idle" | "success" | "error";
   testMessage: string;
   disabled?: boolean;
-  intro: string;
   idPrefix: string;
   formId?: string;
   nameInputRef?: Ref<HTMLInputElement>;
@@ -45,7 +44,6 @@ export default function ConnectionForm({
   testStatus,
   testMessage,
   disabled = false,
-  intro,
   idPrefix,
   formId,
   nameInputRef,
@@ -57,12 +55,10 @@ export default function ConnectionForm({
   };
 
   return (
-    <form id={formId} className="space-y-4" onSubmit={handleSubmit}>
-      <p className="ui-text-sm text-subtle-foreground">{intro}</p>
-
+    <form id={formId} className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={handleSubmit}>
       <Field>
         <FieldLabel htmlFor={`${idPrefix}-name`}>
-          Connection Name <span className="text-subtle-foreground">*</span>
+          Name <span className="text-subtle-foreground">*</span>
         </FieldLabel>
         <Input
           ref={nameInputRef}
@@ -71,13 +67,23 @@ export default function ConnectionForm({
           value={formData.name}
           onChange={(event) => onChange({ name: event.target.value })}
           placeholder="My Server"
-          size="md"
           disabled={disabled}
         />
       </Field>
 
-      <div className="grid grid-cols-12 gap-3">
-        <Field className="col-span-8">
+      <Field>
+        <FieldLabel htmlFor={`${idPrefix}-type`}>Type</FieldLabel>
+        <Select
+          id={`${idPrefix}-type`}
+          value={formData.type}
+          options={connectionTypeOptions}
+          onChange={(value) => onChange({ type: value as RemoteConnectionFormData["type"] })}
+          className="w-full"
+        />
+      </Field>
+
+      <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3 sm:col-span-2">
+        <Field>
           <FieldLabel htmlFor={`${idPrefix}-host`}>
             Host <span className="text-subtle-foreground">*</span>
           </FieldLabel>
@@ -87,11 +93,10 @@ export default function ConnectionForm({
             value={formData.host}
             onChange={(event) => onChange({ host: event.target.value })}
             placeholder="192.168.1.100"
-            size="md"
             disabled={disabled}
           />
         </Field>
-        <Field className="col-span-4">
+        <Field>
           <FieldLabel htmlFor={`${idPrefix}-port`}>Port</FieldLabel>
           <Input
             id={`${idPrefix}-port`}
@@ -101,22 +106,10 @@ export default function ConnectionForm({
             placeholder="22"
             min="1"
             max="65535"
-            size="md"
             disabled={disabled}
           />
         </Field>
       </div>
-
-      <Field>
-        <FieldLabel htmlFor={`${idPrefix}-type`}>Connection Type</FieldLabel>
-        <Select
-          id={`${idPrefix}-type`}
-          value={formData.type}
-          options={connectionTypeOptions}
-          onChange={(value) => onChange({ type: value as RemoteConnectionFormData["type"] })}
-          className="ui-text-sm"
-        />
-      </Field>
 
       <Field>
         <FieldLabel htmlFor={`${idPrefix}-username`}>
@@ -128,12 +121,25 @@ export default function ConnectionForm({
           value={formData.username}
           onChange={(event) => onChange({ username: event.target.value })}
           placeholder="root"
-          size="md"
           disabled={disabled}
         />
       </Field>
 
       <Field>
+        <FieldLabel htmlFor={`${idPrefix}-keypath`}>
+          Private Key <span className="text-subtle-foreground">(optional)</span>
+        </FieldLabel>
+        <Input
+          id={`${idPrefix}-keypath`}
+          type="text"
+          value={formData.keyPath}
+          onChange={(event) => onChange({ keyPath: event.target.value })}
+          placeholder="~/.ssh/id_ed25519"
+          disabled={disabled}
+        />
+      </Field>
+
+      <Field className="sm:col-span-2">
         <FieldLabel htmlFor={`${idPrefix}-password`}>
           Password <span className="text-subtle-foreground">(optional)</span>
         </FieldLabel>
@@ -144,7 +150,6 @@ export default function ConnectionForm({
             value={formData.password}
             onChange={(event) => onChange({ password: event.target.value })}
             placeholder="Leave empty to use key authentication"
-            size="md"
             disabled={disabled}
           />
           <InputGroupAddon align="inline-end">
@@ -154,7 +159,7 @@ export default function ConnectionForm({
               onClick={() => onShowPasswordChange((value) => !value)}
               aria-label={showPassword ? "Hide password" : "Show password"}
               tooltip={showPassword ? "Hide password" : "Show password"}
-              size="icon-sm"
+              iconOnly
             >
               {showPassword ? <EyeOff /> : <Eye />}
             </InputGroupButton>
@@ -163,43 +168,28 @@ export default function ConnectionForm({
       </Field>
 
       {formData.password ? (
-        <Field orientation="horizontal">
+        <Field orientation="horizontal" className="sm:col-span-2">
           <Checkbox
             id={`${idPrefix}-save-credentials`}
             checked={!!formData.saveCredentials}
             onCheckedChange={(checked) => onChange({ saveCredentials: checked })}
             disabled={disabled}
           />
-          <FieldLabel htmlFor={`${idPrefix}-save-credentials`} className="cursor-pointer">
+          <FieldLabel htmlFor={`${idPrefix}-save-credentials`}>
             Save password for future connections
           </FieldLabel>
         </Field>
       ) : null}
 
-      <Field>
-        <FieldLabel htmlFor={`${idPrefix}-keypath`}>
-          Private Key Path <span className="text-subtle-foreground">(optional)</span>
-        </FieldLabel>
-        <Input
-          id={`${idPrefix}-keypath`}
-          type="text"
-          value={formData.keyPath}
-          onChange={(event) => onChange({ keyPath: event.target.value })}
-          placeholder="~/.ssh/id_rsa"
-          size="md"
-          disabled={disabled}
-        />
-      </Field>
-
       {testStatus !== "idle" ? (
-        <Marker tone={testStatus === "success" ? "success" : "error"}>
+        <Marker tone={testStatus === "success" ? "success" : "error"} className="sm:col-span-2">
           <MarkerIcon>{testStatus === "success" ? <CheckCircle /> : <AlertCircle />}</MarkerIcon>
           <MarkerContent>{testMessage}</MarkerContent>
         </Marker>
       ) : null}
 
       {validationStatus === "valid" ? (
-        <Marker tone="success">
+        <Marker tone="success" className="sm:col-span-2">
           <MarkerIcon>
             <CheckCircle />
           </MarkerIcon>
@@ -208,7 +198,7 @@ export default function ConnectionForm({
       ) : null}
 
       {validationStatus === "invalid" ? (
-        <Marker tone="error">
+        <Marker tone="error" className="sm:col-span-2">
           <MarkerIcon>
             <AlertCircle />
           </MarkerIcon>

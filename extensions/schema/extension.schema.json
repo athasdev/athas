@@ -404,6 +404,15 @@
             "type": "string"
           }
         },
+        "argsByPlatform": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
         "envVars": {
           "type": "object",
           "additionalProperties": {
@@ -522,6 +531,9 @@
           "const": "read"
         },
         "openExternal": {
+          "type": "boolean"
+        },
+        "clipboardWrite": {
           "type": "boolean"
         }
       }

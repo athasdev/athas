@@ -9,6 +9,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { isEditorKeyboardTarget } from "@/features/keymaps/utils/editor-keyboard-target";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
+import { OPEN_NOTIFICATIONS_COMMAND_EVENT } from "@/features/notifications/constants/notifications-events";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { splitActiveEditorGroup } from "@/features/panes/utils/pane-command-actions";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
@@ -257,9 +258,6 @@ export function useMenuEventsWrapper() {
         }, 100);
       }
     },
-    onToggleAiChat: () => {
-      useSettingsStore.getState().actions.toggleAIChatVisible();
-    },
     onSplitEditor: () => {
       splitActiveEditorGroup("horizontal");
     },
@@ -273,9 +271,6 @@ export function useMenuEventsWrapper() {
       // In a full implementation, this would toggle vim keybinding mode in the editor
     },
     onQuickOpen: () => useUIState.getState().setIsQuickOpenVisible(true),
-    onGoToLine: () => {
-      void keymapRegistry.executeCommand("editor.goToLine");
-    },
     onNextTab: () => {
       void keymapRegistry.executeCommand("workbench.nextTab");
     },
@@ -337,6 +332,13 @@ export function useMenuEventsWrapper() {
       if (!hasUpdate) {
         showToast({ message: "You're on the latest version", type: "success" });
       }
+    },
+    onOpenGitHubNotifications: () => {
+      window.dispatchEvent(
+        new CustomEvent(OPEN_NOTIFICATIONS_COMMAND_EVENT, {
+          detail: { category: "github" },
+        }),
+      );
     },
     onOpenSettings: () => {
       useUIState.getState().openSettingsDialog("general");

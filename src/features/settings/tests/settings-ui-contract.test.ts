@@ -18,7 +18,7 @@ const settingsComponentFiles = [
     .map((name) => `${tabsDirectory}/${name}`),
 ];
 
-function collectButtonSizes(filePath: string) {
+function collectControlProps(filePath: string, tagName: "Button" | "Select") {
   const source = readFileSync(filePath, "utf8");
   const sourceFile = ts.createSourceFile(
     filePath,
@@ -27,23 +27,36 @@ function collectButtonSizes(filePath: string) {
     true,
     ts.ScriptKind.TSX,
   );
-  const sizes: Array<{ filePath: string; line: number; size: string | null }> = [];
+  const controls: Array<{
+    className: string | null;
+    filePath: string;
+    line: number;
+    shape: string | null;
+    size: string | null;
+    variant: string | null;
+  }> = [];
 
   const visit = (node: ts.Node) => {
     if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
       const openingElement = ts.isJsxElement(node) ? node.openingElement : node;
 
-      if (openingElement.tagName.getText(sourceFile) === "Button") {
-        const sizeAttribute = openingElement.attributes.properties.find(
-          (property): property is ts.JsxAttribute =>
-            ts.isJsxAttribute(property) && property.name.getText(sourceFile) === "size",
-        );
+      if (openingElement.tagName.getText(sourceFile) === tagName) {
+        const getAttribute = (name: string) =>
+          openingElement.attributes.properties.find(
+            (property): property is ts.JsxAttribute =>
+              ts.isJsxAttribute(property) && property.name.getText(sourceFile) === name,
+          );
         const position = sourceFile.getLineAndCharacterOfPosition(openingElement.getStart());
 
-        sizes.push({
+        controls.push({
+          className:
+            getAttribute("className")?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
           filePath,
           line: position.line + 1,
-          size: sizeAttribute?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
+          shape: getAttribute("shape")?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
+          size: getAttribute("size")?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
+          variant:
+            getAttribute("variant")?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
         });
       }
     }
@@ -52,7 +65,7 @@ function collectButtonSizes(filePath: string) {
   };
 
   visit(sourceFile);
-  return sizes;
+  return controls;
 }
 
 describe("settings UI contract", () => {
@@ -66,26 +79,93 @@ describe("settings UI contract", () => {
     }
   });
 
-  it("uses one standard size for text actions and explicit compact sizes for icon actions", () => {
-    const buttonSizes = settingsComponentFiles.flatMap(collectButtonSizes);
-    const invalidButtons = buttonSizes.filter(
-      ({ size }) => size !== "sm" && size !== "icon-sm" && size !== "icon-xs",
+  it("uses the canonical primitive geometry without local size selection", () => {
+    const buttons = settingsComponentFiles.flatMap((filePath) =>
+      collectControlProps(filePath, "Button"),
+    );
+    const selects = settingsComponentFiles.flatMap((filePath) =>
+      collectControlProps(filePath, "Select"),
     );
 
-    expect(invalidButtons).toEqual([]);
+    expect(buttons.filter(({ size }) => size !== null)).toEqual([]);
+    expect(selects.filter(({ size }) => size !== null)).toEqual([]);
+  });
+
+  it("uses pill-shaped Button surfaces for settings actions and selectors", () => {
+    const buttons = settingsComponentFiles.flatMap((filePath) =>
+      collectControlProps(filePath, "Button"),
+    );
+    const selects = settingsComponentFiles.flatMap((filePath) =>
+      collectControlProps(filePath, "Select"),
+    );
+
+    expect(buttons.filter(({ shape }) => shape !== "pill")).toEqual([]);
+    expect(
+      selects.filter(({ shape, variant }) => shape !== "pill" || variant !== "default"),
+    ).toEqual([]);
+  });
+
+  it("inherits shared control typography without tab-specific overrides", () => {
+    const controls = settingsComponentFiles.flatMap((filePath) => [
+      ...collectControlProps(filePath, "Button"),
+      ...collectControlProps(filePath, "Select"),
+    ]);
+
+    expect(controls.filter(({ className }) => className?.includes("ui-text-"))).toEqual([]);
   });
 
   it("keeps controls reachable without making the settings panel horizontally scrollable", () => {
-    const dialogSource = readFileSync(`${componentsDirectory}/settings-dialog.tsx`, "utf8");
+    const settingsViewSource = readFileSync(
+      `${componentsDirectory}/settings-workbench-view.tsx`,
+      "utf8",
+    );
     const sectionSource = readFileSync(`${componentsDirectory}/settings-section.tsx`, "utf8");
 
-    expect(dialogSource).toContain("@container/settings");
-    expect(dialogSource).toContain('orientation="vertical"');
-    expect(dialogSource).not.toContain('orientation="both"');
-    expect(dialogSource).toContain("overflow-x-hidden");
+    expect(settingsViewSource).toContain("@container/settings");
+    expect(settingsViewSource).toContain('orientation="vertical"');
+    expect(settingsViewSource).not.toContain('orientation="both"');
+    expect(settingsViewSource).toContain("overflow-x-hidden");
     expect(sectionSource).toContain("@max-[640px]/settings:flex-col");
     expect(sectionSource).toContain("@max-[640px]/settings:w-full");
     expect(sectionSource).toContain("@max-[640px]/settings:[&>div]:flex-wrap");
+  });
+
+  it("renders settings as a workbench surface with one keyboard-reachable scroll owner", () => {
+    const settingsViewSource = readFileSync(
+      `${componentsDirectory}/settings-workbench-view.tsx`,
+      "utf8",
+    );
+
+    expect(settingsViewSource).toContain("bg-background");
+    expect(settingsViewSource).not.toContain("<Dialog");
+    expect(settingsViewSource).not.toContain("<Card");
+    expect(settingsViewSource).not.toContain("tabIndex: -1");
+  });
+
+  it("keeps settings navigation inline in the workbench content", () => {
+    const settingsViewSource = readFileSync(
+      `${componentsDirectory}/settings-workbench-view.tsx`,
+      "utf8",
+    );
+    const sidebarPaneSource = readFileSync(
+      fileURLToPath(new URL("../../layout/components/sidebar/sidebar-pane.tsx", import.meta.url)),
+      "utf8",
+    );
+    const modalSliceSource = readFileSync(
+      fileURLToPath(new URL("../../window/stores/ui-state/modal-slice.ts", import.meta.url)),
+      "utf8",
+    );
+
+    expect(settingsViewSource).toContain("<Tabs");
+    expect(settingsViewSource).toContain("<TabsList");
+    expect(settingsViewSource).toContain("<TabsTrigger");
+    expect(settingsViewSource).toContain('aria-label="Settings sections"');
+    expect(settingsViewSource).toContain("overflow-x-auto");
+    expect(sidebarPaneSource).not.toContain("SettingsSidebar");
+    expect(modalSliceSource).not.toContain('setActiveView("settings")');
+    expect(modalSliceSource).not.toContain("setIsSidebarVisible(true)");
+    expect(settingsViewSource).toContain("settingsInitialSection");
+    expect(settingsViewSource).toContain('section.scrollIntoView({ block: "start"');
   });
 
   it("content-sizes AI selector triggers and menus in settings", () => {

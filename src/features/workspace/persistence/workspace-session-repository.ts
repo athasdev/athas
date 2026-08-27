@@ -6,12 +6,11 @@ import {
   serializeTerminals,
 } from "@/features/terminal/lib/terminal-session-storage";
 import type { PersistedTerminal, Terminal } from "@/features/terminal/types/terminal.types";
-import {
-  type BufferSession,
-  type ProjectUiSession,
-  useSessionStore,
-  type WorkspaceFolderSession,
-} from "@/features/window/stores/session.store";
+import { type ProjectUiSession, useSessionStore } from "@/features/window/stores/session.store";
+import type {
+  BufferSession,
+  WorkspaceFolderSession,
+} from "@/features/workspace/types/workspace-session.types";
 
 interface SaveWorkspaceSessionInput {
   projectPath: string;

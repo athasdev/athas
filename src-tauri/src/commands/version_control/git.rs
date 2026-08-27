@@ -233,23 +233,27 @@ pub fn git_remove_remote(repo_path: String, name: String) -> Result<(), String> 
 }
 
 #[tauri::command]
-pub fn git_add(repo_path: String, file_path: String) -> Result<(), String> {
-   git_backend::git_add(resolve_backend_path(repo_path), file_path)
+pub async fn git_add(repo_path: String, file_path: String) -> Result<(), String> {
+   let repo_path = resolve_backend_path(repo_path);
+   run_blocking(move || git_backend::git_add(repo_path, file_path)).await
 }
 
 #[tauri::command]
-pub fn git_reset(repo_path: String, file_path: String) -> Result<(), String> {
-   git_backend::git_reset(resolve_backend_path(repo_path), file_path)
+pub async fn git_reset(repo_path: String, file_path: String) -> Result<(), String> {
+   let repo_path = resolve_backend_path(repo_path);
+   run_blocking(move || git_backend::git_reset(repo_path, file_path)).await
 }
 
 #[tauri::command]
-pub fn git_add_all(repo_path: String) -> Result<(), String> {
-   git_backend::git_add_all(resolve_backend_path(repo_path))
+pub async fn git_add_all(repo_path: String) -> Result<(), String> {
+   let repo_path = resolve_backend_path(repo_path);
+   run_blocking(move || git_backend::git_add_all(repo_path)).await
 }
 
 #[tauri::command]
-pub fn git_reset_all(repo_path: String) -> Result<(), String> {
-   git_backend::git_reset_all(resolve_backend_path(repo_path))
+pub async fn git_reset_all(repo_path: String) -> Result<(), String> {
+   let repo_path = resolve_backend_path(repo_path);
+   run_blocking(move || git_backend::git_reset_all(repo_path)).await
 }
 
 #[tauri::command]

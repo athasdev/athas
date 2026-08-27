@@ -10,10 +10,7 @@ function ItemGroup({ className, ...props }: ComponentProps<"div">) {
     <div
       role="list"
       data-slot="item-group"
-      className={cn(
-        "group/item-group flex w-full flex-col gap-3 has-data-[size=sm]:gap-2.5 has-data-[size=xs]:gap-1",
-        className,
-      )}
+      className={cn("group/item-group flex w-full flex-col gap-1", className)}
       {...props}
     />
   );
@@ -31,7 +28,7 @@ function ItemSeparator({ className, ...props }: ComponentProps<typeof Separator>
 }
 
 const itemVariants = cva(
-  "group/item flex w-full flex-wrap items-center rounded-lg border font-sans ui-text-sm text-foreground outline-none transition-colors duration-(--app-duration-fast) focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 [a]:hover:bg-accent [button]:cursor-pointer [button]:hover:bg-accent",
+  "group/item flex w-full flex-wrap items-center gap-2 rounded-lg border px-2 py-1.5 font-sans ui-text-sm text-foreground outline-none transition-colors duration-fast focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 [a]:hover:bg-accent [button]:hover:bg-accent",
   {
     variants: {
       variant: {
@@ -39,15 +36,9 @@ const itemVariants = cva(
         outline: "border-border",
         muted: "border-transparent bg-surface/55",
       },
-      size: {
-        default: "gap-2.5 px-3 py-2.5",
-        sm: "gap-2 px-2.5 py-2",
-        xs: "gap-2 px-2 py-1.5",
-      },
     },
     defaultVariants: {
       variant: "default",
-      size: "default",
     },
   },
 );
@@ -55,18 +46,16 @@ const itemVariants = cva(
 function Item({
   className,
   variant = "default",
-  size = "default",
   render,
   ...props
 }: useRender.ComponentProps<"div"> & VariantProps<typeof itemVariants>) {
   return useRender({
     defaultTagName: "div",
-    props: mergeProps<"div">({ className: cn(itemVariants({ variant, size, className })) }, props),
+    props: mergeProps<"div">({ className: cn(itemVariants({ variant, className })) }, props),
     render,
     state: {
       slot: "item",
       variant,
-      size,
     },
   });
 }
@@ -78,8 +67,7 @@ const itemMediaVariants = cva(
       variant: {
         default: "bg-transparent",
         icon: "[&_svg:not([class*='size-'])]:size-4",
-        image:
-          "size-10 overflow-hidden rounded-md group-data-[size=sm]/item:size-8 group-data-[size=xs]/item:size-6 [&_img]:size-full [&_img]:object-cover",
+        image: "size-6 overflow-hidden rounded-md [&_img]:size-full [&_img]:object-cover",
       },
     },
     defaultVariants: {
@@ -108,7 +96,7 @@ function ItemContent({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="item-content"
       className={cn(
-        "flex min-w-0 flex-1 flex-col gap-1 group-data-[size=xs]/item:gap-0 [&+[data-slot=item-content]]:flex-none",
+        "flex min-w-0 flex-1 flex-col gap-0 [&+[data-slot=item-content]]:flex-none",
         className,
       )}
       {...props}

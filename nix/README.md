@@ -12,7 +12,7 @@ bun dev
 
 The shell matches the Linux/Tauri dependency set used by `scripts/setup/linux.sh`:
 
-- Bun, Node.js 22, nightly Rust, Cargo, Clippy, rustfmt, rust-analyzer, Zig 0.16
+- Bun, Node.js 24, nightly Rust, Cargo, Clippy, rustfmt, rust-analyzer, Zig 0.16
 - GCC, Clang, libclang, CMake, Make, Python 3
 - WebKitGTK 4.1, GTK 3, libsoup 3, libayatana-appindicator, librsvg
 - pkg-config, OpenSSL, patchelf, xdg-utils, file, Perl

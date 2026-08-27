@@ -11,7 +11,10 @@ function isTerminalFocused(): boolean {
 }
 
 export function showNewTab(): void {
-  if (isTerminalFocused()) return;
+  if (isTerminalFocused()) {
+    window.dispatchEvent(new CustomEvent("terminal-new"));
+    return;
+  }
   useBufferStore.getState().actions.showNewTabView();
 }
 
@@ -123,7 +126,7 @@ export function createNewFile(): void {
 }
 
 export function openProjectPicker(): void {
-  useUIState.getState().setIsProjectPickerVisible(true);
+  useUIState.getState().openProjectPicker();
 }
 
 export function openQuickOpen(): void {

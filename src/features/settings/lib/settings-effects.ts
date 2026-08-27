@@ -1,6 +1,7 @@
 import {
   cacheFontsForBootstrap,
   cacheThemeForBootstrap,
+  cacheWindowTransparencyForBootstrap,
 } from "@/features/settings/lib/appearance-bootstrap";
 import {
   resolveEffectiveTheme,
@@ -31,8 +32,19 @@ function getCurrentThemeType(): "light" | "dark" {
   return document.documentElement.getAttribute("data-theme-type") === "light" ? "light" : "dark";
 }
 
-function applyWindowTransparency(enabled: boolean) {
+let requestedWindowTransparency = false;
+
+function isEffectiveWindowTransparencyEnabled() {
+  return (
+    requestedWindowTransparency &&
+    document.documentElement.getAttribute("data-reduce-transparency") !== "true"
+  );
+}
+
+export function syncEffectiveWindowTransparency() {
   if (typeof document === "undefined") return;
+
+  const enabled = isEffectiveWindowTransparencyEnabled();
 
   document.documentElement.setAttribute(
     "data-window-transparency",
@@ -47,9 +59,13 @@ function applyWindowTransparency(enabled: boolean) {
   });
 }
 
-function applyUiPreferences(
-  settings: Pick<Settings, "reduceMotion" | "showStatusBar" | "windowChromeDensity">,
-) {
+function applyWindowTransparency(enabled: boolean) {
+  requestedWindowTransparency = enabled;
+  cacheWindowTransparencyForBootstrap(enabled);
+  syncEffectiveWindowTransparency();
+}
+
+function applyUiPreferences(settings: Pick<Settings, "reduceMotion" | "showStatusBar">) {
   if (typeof document === "undefined") return;
 
   for (const [name, value] of Object.entries(getUiRootAttributes(settings))) {
@@ -130,9 +146,7 @@ async function applyTheme(theme: Theme) {
 
 function syncNativeWindowAppearance(themeType: "light" | "dark") {
   const transparencyEnabled =
-    typeof document === "undefined"
-      ? true
-      : document.documentElement.getAttribute("data-window-transparency") !== "disabled";
+    typeof document === "undefined" ? true : isEffectiveWindowTransparencyEnabled();
 
   void invoke("set_native_window_appearance", { themeType, transparencyEnabled }).catch((error) => {
     console.warn("Failed to sync native window appearance", error);
@@ -228,7 +242,7 @@ export function applySettingSideEffect<K extends keyof Settings>(
     applyWindowTransparency(value as boolean);
   }
 
-  if (key === "reduceMotion" || key === "showStatusBar" || key === "windowChromeDensity") {
+  if (key === "reduceMotion" || key === "showStatusBar") {
     applyUiPreferences(getSettings());
   }
 }

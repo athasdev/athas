@@ -44,14 +44,18 @@ export const restoreProjectUiState = (projectPath: string | undefined, workspace
   const state = workspaceId ? useUIState.getStore(workspaceId).getState() : useUIState.getState();
   const legacyDebuggerSidebar = nextUiState.activeSidebarView === "debugger";
   const legacyToolBufferSidebar =
-    legacyDebuggerSidebar || nextUiState.activeSidebarView === "extensions";
+    legacyDebuggerSidebar ||
+    nextUiState.activeSidebarView === "extensions" ||
+    nextUiState.activeSidebarView === "settings";
+  const activeSidebarView =
+    nextUiState.activeSidebarView === "data-sources" ? "views" : nextUiState.activeSidebarView;
 
   state.setIsSidebarVisible(nextUiState.isSidebarVisible);
   state.setIsBottomPaneVisible(legacyDebuggerSidebar ? true : nextUiState.isBottomPaneVisible);
   state.setBottomPaneActiveTab(
     legacyDebuggerSidebar ? "debugger" : nextUiState.bottomPaneActiveTab,
   );
-  state.setActiveView(legacyToolBufferSidebar ? "files" : nextUiState.activeSidebarView);
+  state.setActiveView(legacyToolBufferSidebar ? "files" : activeSidebarView);
 };
 
 export const restoreProjectPaneState = (projectPath: string | undefined, workspaceId?: string) => {

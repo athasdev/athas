@@ -92,7 +92,7 @@ export function AcpPermissionPrompt({
           <span className="font-mono">{summary}</span>
         </div>
         {queuedCount > 0 ? (
-          <Badge variant="muted" size="compact" className="shrink-0">
+          <Badge variant="muted" className="shrink-0">
             +{queuedCount}
           </Badge>
         ) : null}
@@ -103,7 +103,6 @@ export function AcpPermissionPrompt({
                 key={option.id}
                 type="button"
                 variant={getOptionVariant(option)}
-                size="xs"
                 onClick={() =>
                   onRespond(
                     isApproval(option),

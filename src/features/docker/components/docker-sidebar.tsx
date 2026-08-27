@@ -1,24 +1,17 @@
 import {
   ArrowClockwiseIcon as Refresh,
-  ArrowFatLineDownIcon as Down,
   ArrowSquareOutIcon as OpenExternal,
   BugIcon as Bug,
-  DownloadSimpleIcon as Download,
   FileIcon,
-  FolderIcon,
-  MagnifyingGlassIcon as Search,
   PlayIcon as Play,
   StackIcon as ImageIcon,
   SlidersHorizontalIcon as Sliders,
   TrashIcon as Trash,
-  UploadSimpleIcon as Upload,
 } from "@/ui/icons";
-import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
-import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -32,21 +25,18 @@ import {
 } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
-import { Empty, EmptyDescription, EmptyState } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import Dialog, { showPromptDialog } from "@/ui/dialog";
-import Input from "@/ui/input";
-import Textarea from "@/ui/textarea";
+import { showPromptDialog } from "@/ui/dialog";
 import {
   SidebarSearchPopover,
   SidebarSectionLabel,
   SidebarTabBar,
   SidebarWorkspace,
 } from "@/ui/sidebar";
-import { SearchField } from "@/ui/search";
 import { cn } from "@/utils/cn";
 import {
   buildDockerImage,
@@ -54,24 +44,15 @@ import {
   copyToDockerContainer,
   deleteDockerEnvFile,
   getDockerComposeProject,
-  getDockerInventory,
   getDockerProjectConfig,
-  loginDockerRegistry,
-  listDockerContainerFiles,
   openDockerEnvFile,
   openDockerDevContainer,
-  pullDockerRegistryImage,
   pruneDockerResources,
-  pushDockerRegistryImage,
   runDockerComposeAction,
   runDockerContainerAction,
   runDockerImage,
   runDockerImageAction,
   saveDockerProjectConfig,
-  searchDockerRegistry,
-  startDockerContainerLogStream,
-  stopDockerContainerLogStream,
-  tagDockerImage,
 } from "../services/docker-api";
 import type {
   DockerBuildPreset,
@@ -87,33 +68,29 @@ import type {
   DockerContainerFileEntry,
   DockerImage,
   DockerPruneTarget,
-  DockerInventory,
-  DockerLogEvent,
-  DockerLogExitEvent,
   DockerProjectConfig,
-  DockerRegistrySearchResult,
   DockerRunPreset,
 } from "../types/docker.types";
 import {
-  formatDockerFileSize as formatFileSize,
   getDockerDebugCommand as dockerDebugCommand,
   getDockerErrorMessage as getErrorMessage,
   getDockerExecCommand as dockerExecCommand,
-  getDockerFileName as fileName,
   getDockerImageReference as getImageReference,
-  getParentContainerPath as parentContainerPath,
   includesDockerQuery as includesQuery,
   isDockerConnectionError,
-  isDockerErrorLogLine as isErrorLogLine,
   splitDockerConfigLines as splitConfigLines,
 } from "../utils/docker-sidebar-utils";
 import {
   DockerCapabilityNotice,
+  DockerCommandOutput,
   DockerInlineError,
   DockerUnavailableState,
 } from "./docker-sidebar-states";
+import { DockerImageDialog, type DockerImageDialogMode } from "./docker-image-dialog";
+import { DockerContainerDetail, type DockerContainerDetailTab } from "./docker-container-detail";
+import { DockerRegistrySection } from "./docker-registry-section";
+import { DockerComposeSection } from "./docker-compose-section";
 import {
-  ComposeServiceRow,
   ContainerRow,
   DockerActionMenu,
   DockerResourceRow,
@@ -121,6 +98,10 @@ import {
   NetworkRow,
   VolumeRow,
 } from "./docker-resource-rows";
+import { useDockerInventory } from "../hooks/use-docker-inventory";
+import { useDockerContainerLogs } from "../hooks/use-docker-container-logs";
+import { useDockerContainerFiles } from "../hooks/use-docker-container-files";
+import { useDockerRegistry } from "../hooks/use-docker-registry";
 
 type DockerSection =
   | "containers"
@@ -131,14 +112,9 @@ type DockerSection =
   | "volumes"
   | "networks"
   | "cleanup";
-type DockerLogFilter = "all" | "stdout" | "stderr" | "errors";
-type DockerLogLine = DockerLogEvent & { id: number };
-type DockerDialogMode = "build" | "run" | null;
-type DockerDetailTab = "logs" | "files";
 type DockerTab = "resources" | "compose" | "project" | "registry";
 type DockerContainerFilter = "all" | "running" | "stopped";
 
-const maxLogLines = 1_000;
 const dockerTabSections: Record<DockerTab, DockerSection[]> = {
   resources: ["containers", "images", "cleanup", "volumes", "networks"],
   compose: ["compose"],
@@ -167,13 +143,6 @@ const emptyProjectConfig: DockerProjectConfig = {
   devContainers: [],
 };
 
-const emptyInventory: DockerInventory = {
-  containers: [],
-  images: [],
-  volumes: [],
-  networks: [],
-};
-
 function openDebuggerPane() {
   const state = useUIState.getState();
   state.setBottomPaneActiveTab("debugger");
@@ -183,25 +152,66 @@ function openDebuggerPane() {
 export function DockerSidebar() {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
-  const [inventory, setInventory] = useState<DockerInventory>(emptyInventory);
+  const {
+    inventory,
+    selectedContainerId,
+    selectedContainer,
+    isLoading,
+    connectionError,
+    error,
+    loadInventory,
+    markDockerUnavailable,
+    handleDockerFailure,
+    clearError,
+    selectContainer,
+  } = useDockerInventory();
+  const [detailTab, setDetailTab] = useState<DockerContainerDetailTab>("logs");
+  const {
+    lines: logLines,
+    query: logQuery,
+    filter: logFilter,
+    streamId: logStreamId,
+    error: logError,
+    filteredLines: filteredLogLines,
+    clearLines: clearLogLines,
+    setQuery: setLogQuery,
+    setFilter: setLogFilter,
+  } = useDockerContainerLogs(selectedContainerId);
+  const {
+    path: containerPath,
+    files: containerFiles,
+    isLoading: isFilesLoading,
+    error: filesError,
+    loadFiles: loadContainerFiles,
+    setPath: setContainerPath,
+    clearError: clearFilesError,
+    reportError: reportFilesError,
+  } = useDockerContainerFiles(selectedContainerId, detailTab === "files");
+  const {
+    query: registryQuery,
+    results: registryResults,
+    error: registryError,
+    output: registryOutput,
+    isBusy: isRegistryBusy,
+    draft: registryDraft,
+    search: handleRegistrySearch,
+    login: handleRegistryLogin,
+    pull: handleRegistryPull,
+    push: handleRegistryPush,
+    tag: handleTagImage,
+    setQuery: setRegistryQuery,
+    setDraftField: setRegistryDraftField,
+    dismissError: dismissRegistryError,
+  } = useDockerRegistry({
+    onDockerUnavailable: markDockerUnavailable,
+    onInventoryChanged: loadInventory,
+  });
   const [composeProject, setComposeProject] = useState<DockerComposeProject>(emptyComposeProject);
   const [projectConfig, setProjectConfig] = useState<DockerProjectConfig>(emptyProjectConfig);
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState<DockerTab>("resources");
   const [containerFilter, setContainerFilter] = useState<DockerContainerFilter>("all");
   const [collapsedSections, setCollapsedSections] = useState<Set<DockerSection>>(() => new Set());
-  const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
-  const [logLines, setLogLines] = useState<DockerLogLine[]>([]);
-  const [logQuery, setLogQuery] = useState("");
-  const [logFilter, setLogFilter] = useState<DockerLogFilter>("all");
-  const [logStreamId, setLogStreamId] = useState<string | null>(null);
-  const [logError, setLogError] = useState<string | null>(null);
-  const [detailTab, setDetailTab] = useState<DockerDetailTab>("logs");
-  const [containerPath, setContainerPath] = useState("/");
-  const [containerFiles, setContainerFiles] = useState<DockerContainerFileEntry[]>([]);
-  const [isFilesLoading, setIsFilesLoading] = useState(false);
-  const [filesError, setFilesError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isComposeLoading, setIsComposeLoading] = useState(false);
   const [isProjectConfigLoading, setIsProjectConfigLoading] = useState(false);
   const [busyContainerId, setBusyContainerId] = useState<string | null>(null);
@@ -209,18 +219,11 @@ export function DockerSidebar() {
   const [busyDevContainerPath, setBusyDevContainerPath] = useState<string | null>(null);
   const [busyImageId, setBusyImageId] = useState<string | null>(null);
   const [busyPruneTarget, setBusyPruneTarget] = useState<DockerPruneTarget | null>(null);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [composeError, setComposeError] = useState<string | null>(null);
   const [projectConfigError, setProjectConfigError] = useState<string | null>(null);
   const [composeOutput, setComposeOutput] = useState<string | null>(null);
   const [dockerOutput, setDockerOutput] = useState<string | null>(null);
-  const [dialogMode, setDialogMode] = useState<DockerDialogMode>(null);
-  const [registryQuery, setRegistryQuery] = useState("");
-  const [registryResults, setRegistryResults] = useState<DockerRegistrySearchResult[]>([]);
-  const [registryError, setRegistryError] = useState<string | null>(null);
-  const [registryOutput, setRegistryOutput] = useState<string | null>(null);
-  const [isRegistryBusy, setIsRegistryBusy] = useState(false);
+  const [dialogMode, setDialogMode] = useState<DockerImageDialogMode | null>(null);
   const [buildDraft, setBuildDraft] = useState({
     contextPath: "",
     dockerfilePath: "",
@@ -236,40 +239,6 @@ export function DockerSidebar() {
     envFiles: "",
     command: "",
   });
-  const [registryDraft, setRegistryDraft] = useState({
-    registry: "",
-    username: "",
-    password: "",
-    image: "",
-    target: "",
-  });
-  const loadInventory = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const nextInventory = await getDockerInventory();
-      setConnectionError(null);
-      setInventory(nextInventory);
-      setSelectedContainerId((current) => {
-        if (current && nextInventory.containers.some((container) => container.id === current)) {
-          return current;
-        }
-        return nextInventory.containers[0]?.id ?? null;
-      });
-    } catch (loadError) {
-      setConnectionError(getErrorMessage(loadError));
-      setInventory(emptyInventory);
-      setSelectedContainerId(null);
-      setLogLines([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadInventory();
-  }, [loadInventory]);
-
   const loadComposeProject = useCallback(async () => {
     setIsComposeLoading(true);
     setComposeError(null);
@@ -319,141 +288,6 @@ export function DockerSidebar() {
     void loadProjectConfig();
   }, [activeTab, loadComposeProject, loadInventory, loadProjectConfig]);
 
-  const markDockerUnavailable = useCallback((message: string) => {
-    setConnectionError(message);
-    setError(null);
-    setInventory(emptyInventory);
-    setSelectedContainerId(null);
-    setLogLines([]);
-  }, []);
-
-  const handleDockerFailure = useCallback(
-    (failure: unknown) => {
-      const message = getErrorMessage(failure);
-      if (isDockerConnectionError(message)) {
-        markDockerUnavailable(message);
-        return;
-      }
-      setError(message);
-    },
-    [markDockerUnavailable],
-  );
-
-  const selectedContainer = useMemo(
-    () => inventory.containers.find((container) => container.id === selectedContainerId) ?? null,
-    [inventory.containers, selectedContainerId],
-  );
-
-  useEffect(() => {
-    setContainerPath("/");
-    setContainerFiles([]);
-    setFilesError(null);
-  }, [selectedContainer?.id]);
-
-  const loadContainerFiles = useCallback(async () => {
-    if (!selectedContainer) {
-      setContainerFiles([]);
-      return;
-    }
-
-    setIsFilesLoading(true);
-    setFilesError(null);
-    try {
-      const entries = await listDockerContainerFiles(selectedContainer.id, containerPath);
-      setContainerFiles(entries);
-    } catch (loadError) {
-      setFilesError(loadError instanceof Error ? loadError.message : String(loadError));
-      setContainerFiles([]);
-    } finally {
-      setIsFilesLoading(false);
-    }
-  }, [containerPath, selectedContainer]);
-
-  useEffect(() => {
-    if (!selectedContainer || detailTab !== "files") return;
-    void loadContainerFiles();
-  }, [detailTab, loadContainerFiles, selectedContainer]);
-
-  useEffect(() => {
-    if (!selectedContainer) {
-      setLogLines([]);
-      setLogError(null);
-      return;
-    }
-
-    let cancelled = false;
-    let activeStreamId: string | null = null;
-    let removeLogListener: (() => void) | null = null;
-    let removeExitListener: (() => void) | null = null;
-    let nextLogId = 0;
-
-    setLogLines([]);
-    setLogError(null);
-    setLogStreamId(null);
-
-    const startLogStream = async () => {
-      try {
-        removeLogListener = await listen<DockerLogEvent>("docker-container-log", (event) => {
-          const matchesStream = activeStreamId
-            ? event.payload.streamId === activeStreamId
-            : event.payload.containerId === selectedContainer.id;
-
-          if (cancelled || !matchesStream) return;
-
-          setLogLines((current) =>
-            current
-              .concat({
-                ...event.payload,
-                id: nextLogId++,
-              })
-              .slice(-maxLogLines),
-          );
-        });
-        removeExitListener = await listen<DockerLogExitEvent>(
-          "docker-container-log-exit",
-          (event) => {
-            const matchesStream = activeStreamId
-              ? event.payload.streamId === activeStreamId
-              : event.payload.containerId === selectedContainer.id;
-
-            if (cancelled || !matchesStream) return;
-
-            setLogStreamId(null);
-            if (event.payload.error) {
-              setLogError(event.payload.error);
-            } else if (event.payload.code && event.payload.code !== 0) {
-              setLogError(`Docker log stream exited with code ${event.payload.code}.`);
-            }
-          },
-        );
-
-        const nextStreamId = await startDockerContainerLogStream(selectedContainer.id, 300);
-        if (cancelled) {
-          void stopDockerContainerLogStream(nextStreamId);
-          return;
-        }
-        activeStreamId = nextStreamId;
-        setLogStreamId(nextStreamId);
-      } catch (logsError) {
-        if (!cancelled) {
-          setLogError(logsError instanceof Error ? logsError.message : String(logsError));
-        }
-      }
-    };
-
-    void startLogStream();
-
-    return () => {
-      cancelled = true;
-      removeLogListener?.();
-      removeExitListener?.();
-      setLogStreamId(null);
-      if (activeStreamId) {
-        void stopDockerContainerLogStream(activeStreamId);
-      }
-    };
-  }, [selectedContainer]);
-
   const normalizedQuery = query.trim().toLowerCase();
   const filteredContainers = inventory.containers.filter((container) => {
     if (containerFilter === "running" && container.state !== "running") return false;
@@ -495,21 +329,12 @@ export function DockerSidebar() {
     projectConfig.composePresets.length +
     projectConfig.debugPresets.length +
     projectConfig.workspaceDebugPresets.length;
-  const normalizedLogQuery = logQuery.trim().toLowerCase();
-  const filteredLogLines = logLines.filter((entry) => {
-    if (logFilter === "stdout" && entry.stream !== "stdout") return false;
-    if (logFilter === "stderr" && entry.stream !== "stderr") return false;
-    if (logFilter === "errors" && !isErrorLogLine(entry.line)) return false;
-    if (!normalizedLogQuery) return true;
-    return entry.line.toLowerCase().includes(normalizedLogQuery);
-  });
-
   const handleContainerAction = async (
     container: DockerContainer,
     action: DockerContainerAction,
   ) => {
     setBusyContainerId(container.id);
-    setError(null);
+    clearError();
     try {
       await runDockerContainerAction(container.id, action, action === "remove");
       await loadInventory();
@@ -611,7 +436,7 @@ export function DockerSidebar() {
     if (!contextPath) return;
 
     setBusyImageId("__build__");
-    setError(null);
+    clearError();
     setDockerOutput(null);
     try {
       const output = await buildDockerImage({
@@ -635,7 +460,7 @@ export function DockerSidebar() {
     if (!image) return;
 
     setBusyImageId(image);
-    setError(null);
+    clearError();
     setDockerOutput(null);
     try {
       const output = await runDockerImage({
@@ -861,7 +686,7 @@ export function DockerSidebar() {
 
   const handleImageRemove = async (image: DockerImage) => {
     setBusyImageId(image.id);
-    setError(null);
+    clearError();
     setDockerOutput(null);
     try {
       const output = await runDockerImageAction(image.id, "remove", false);
@@ -884,7 +709,7 @@ export function DockerSidebar() {
     if (confirmation?.trim().toLowerCase() !== "prune") return;
 
     setBusyPruneTarget(target);
-    setError(null);
+    clearError();
     setDockerOutput(null);
     try {
       const output = await pruneDockerResources(target, includeVolumes);
@@ -1072,7 +897,7 @@ export function DockerSidebar() {
     });
     if (!hostPath?.trim()) return;
 
-    setFilesError(null);
+    clearFilesError();
     setDockerOutput(null);
     try {
       const output = await copyFromDockerContainer({
@@ -1082,7 +907,7 @@ export function DockerSidebar() {
       });
       setDockerOutput(output.trim() || `Copied ${entry.path} to ${hostPath.trim()}.`);
     } catch (copyError) {
-      setFilesError(copyError instanceof Error ? copyError.message : String(copyError));
+      reportFilesError(copyError);
     }
   };
 
@@ -1103,7 +928,7 @@ export function DockerSidebar() {
     });
     if (!containerDestination?.trim()) return;
 
-    setFilesError(null);
+    clearFilesError();
     setDockerOutput(null);
     try {
       const output = await copyToDockerContainer({
@@ -1116,105 +941,7 @@ export function DockerSidebar() {
       );
       await loadContainerFiles();
     } catch (copyError) {
-      setFilesError(copyError instanceof Error ? copyError.message : String(copyError));
-    }
-  };
-
-  const handleRegistryFailure = (failure: unknown) => {
-    const message = getErrorMessage(failure);
-    if (isDockerConnectionError(message)) markDockerUnavailable(message);
-    setRegistryError(message);
-  };
-
-  const handleRegistrySearch = async () => {
-    const query = registryQuery.trim();
-    if (!query) return;
-
-    setIsRegistryBusy(true);
-    setRegistryError(null);
-    try {
-      const results = await searchDockerRegistry(query, 25);
-      setRegistryResults(results);
-    } catch (searchError) {
-      handleRegistryFailure(searchError);
-      setRegistryResults([]);
-    } finally {
-      setIsRegistryBusy(false);
-    }
-  };
-
-  const handleRegistryLogin = async () => {
-    if (!registryDraft.username.trim() || !registryDraft.password) return;
-
-    setIsRegistryBusy(true);
-    setRegistryError(null);
-    setRegistryOutput(null);
-    try {
-      const output = await loginDockerRegistry({
-        registry: registryDraft.registry.trim() || undefined,
-        username: registryDraft.username.trim(),
-        password: registryDraft.password,
-      });
-      setRegistryOutput(output.trim() || "Docker registry login completed.");
-      setRegistryDraft((current) => ({ ...current, password: "" }));
-    } catch (loginError) {
-      handleRegistryFailure(loginError);
-    } finally {
-      setIsRegistryBusy(false);
-    }
-  };
-
-  const handleRegistryPull = async (image: string) => {
-    const imageName = image.trim();
-    if (!imageName) return;
-
-    setIsRegistryBusy(true);
-    setRegistryError(null);
-    setRegistryOutput(null);
-    try {
-      const output = await pullDockerRegistryImage(imageName);
-      setRegistryOutput(output.trim() || `Pulled ${imageName}.`);
-      await loadInventory();
-    } catch (pullError) {
-      handleRegistryFailure(pullError);
-    } finally {
-      setIsRegistryBusy(false);
-    }
-  };
-
-  const handleRegistryPush = async () => {
-    const imageName = registryDraft.image.trim();
-    if (!imageName) return;
-
-    setIsRegistryBusy(true);
-    setRegistryError(null);
-    setRegistryOutput(null);
-    try {
-      const output = await pushDockerRegistryImage(imageName);
-      setRegistryOutput(output.trim() || `Pushed ${imageName}.`);
-    } catch (pushError) {
-      handleRegistryFailure(pushError);
-    } finally {
-      setIsRegistryBusy(false);
-    }
-  };
-
-  const handleTagImage = async () => {
-    const source = registryDraft.image.trim();
-    const target = registryDraft.target.trim();
-    if (!source || !target) return;
-
-    setIsRegistryBusy(true);
-    setRegistryError(null);
-    setRegistryOutput(null);
-    try {
-      const output = await tagDockerImage(source, target);
-      setRegistryOutput(output.trim() || `Tagged ${source} as ${target}.`);
-      await loadInventory();
-    } catch (tagError) {
-      handleRegistryFailure(tagError);
-    } finally {
-      setIsRegistryBusy(false);
+      reportFilesError(copyError);
     }
   };
 
@@ -1280,7 +1007,7 @@ export function DockerSidebar() {
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon-xs"
+                    iconOnly
                     active={containerFilter !== "all"}
                     tooltip="View options"
                     tooltipSide="bottom"
@@ -1323,7 +1050,7 @@ export function DockerSidebar() {
           <DockerInlineError
             title="Docker action failed"
             error={error}
-            onDismiss={() => setError(null)}
+            onDismiss={clearError}
             className="rounded-none border-x-0"
           />
         ) : null}
@@ -1370,7 +1097,7 @@ export function DockerSidebar() {
                       container={container}
                       busy={busyContainerId === container.id}
                       selected={selectedContainerId === container.id}
-                      onSelect={(nextContainer) => setSelectedContainerId(nextContainer.id)}
+                      onSelect={(nextContainer) => selectContainer(nextContainer.id)}
                       onAction={handleContainerAction}
                       onOpenTerminal={openContainerTerminal}
                       onDebug={(nextContainer) => void handleDebugContainer(nextContainer)}
@@ -1384,84 +1111,20 @@ export function DockerSidebar() {
               )}
               {renderSection(
                 "compose",
-                composeError ? (
-                  <Empty tone="error" role="alert">
-                    <EmptyDescription>{composeError}</EmptyDescription>
-                  </Empty>
-                ) : !rootFolderPath ? (
-                  <EmptyState
-                    layout="sidebar"
-                    message="Open a workspace to inspect Compose services"
-                  />
-                ) : composeProject.files.length === 0 ? (
-                  <EmptyState layout="sidebar" message="No Compose files in this workspace" />
-                ) : (
-                  <>
-                    <DockerResourceRow
-                      title="Compose project"
-                      description={composeProject.files.map(fileName).join(", ")}
-                      status={
-                        <Badge variant="muted" size="compact">
-                          {composeProject.services.length} services
-                        </Badge>
-                      }
-                      actions={
-                        <DockerActionMenu
-                          label="Compose project actions"
-                          actions={[
-                            {
-                              label: "Start with env files",
-                              icon: <FileIcon />,
-                              disabled:
-                                busyComposeService !== null || composeEnvFilePaths.length === 0,
-                              onSelect: () =>
-                                void handleComposeAction(null, "up", composeEnvFilePaths),
-                            },
-                            {
-                              label: "Save preset",
-                              disabled: busyComposeService !== null,
-                              onSelect: () => void handleSaveComposePreset(),
-                            },
-                            {
-                              label: "Stop project",
-                              icon: <Down />,
-                              disabled: busyComposeService !== null,
-                              separatorBefore: true,
-                              onSelect: () => void handleComposeAction(null, "down"),
-                            },
-                          ]}
-                        />
-                      }
-                    />
-                    {composeOutput ? (
-                      <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
-                        {composeOutput}
-                      </div>
-                    ) : null}
-                    {filteredComposeServices.length > 0 ? (
-                      filteredComposeServices.map((service) => (
-                        <ComposeServiceRow
-                          key={service.name}
-                          service={service}
-                          busy={busyComposeService === service.name}
-                          onAction={(nextService, action) =>
-                            void handleComposeAction(nextService, action)
-                          }
-                          onOpenUrl={openServiceUrl}
-                        />
-                      ))
-                    ) : (
-                      <EmptyState
-                        layout="sidebar"
-                        message={
-                          composeProject.services.length > 0
-                            ? "No matching Compose services"
-                            : "No Compose services found"
-                        }
-                      />
-                    )}
-                  </>
-                ),
+                <DockerComposeSection
+                  rootFolderPath={rootFolderPath}
+                  project={composeProject}
+                  services={filteredComposeServices}
+                  envFilePaths={composeEnvFilePaths}
+                  output={composeOutput}
+                  busyService={busyComposeService}
+                  onProjectAction={(action, envFiles) =>
+                    handleComposeAction(null, action, envFiles)
+                  }
+                  onSavePreset={handleSaveComposePreset}
+                  onServiceAction={handleComposeAction}
+                  onOpenUrl={openServiceUrl}
+                />,
                 filteredComposeServices.length,
               )}
               {renderSection(
@@ -1501,7 +1164,6 @@ export function DockerSidebar() {
                           <Button
                             type="button"
                             variant="ghost"
-                            size="xs"
                             className="h-6 px-1.5 ui-text-sm"
                             onClick={() => void handleOpenEnvFile()}
                           >
@@ -1511,7 +1173,6 @@ export function DockerSidebar() {
                           <Button
                             type="button"
                             variant="ghost"
-                            size="xs"
                             className="h-6 px-1.5 ui-text-sm"
                             onClick={() => void handleSaveDebugPreset()}
                           >
@@ -1824,7 +1485,6 @@ export function DockerSidebar() {
                     <Button
                       type="button"
                       variant="ghost"
-                      size="xs"
                       className="h-6 px-1.5 ui-text-sm"
                       disabled={busyImageId !== null}
                       onClick={openBuildDialog}
@@ -1833,11 +1493,7 @@ export function DockerSidebar() {
                       Build
                     </Button>
                   </div>
-                  {dockerOutput ? (
-                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
-                      {dockerOutput}
-                    </div>
-                  ) : null}
+                  <DockerCommandOutput output={dockerOutput} />
                   {filteredImages.length > 0 ? (
                     filteredImages.map((image) => (
                       <ImageRow
@@ -1856,203 +1512,24 @@ export function DockerSidebar() {
               )}
               {renderSection(
                 "registry",
-                <>
-                  {connectionError ? (
-                    <DockerCapabilityNotice>
-                      Search and login remain available. Start Docker to pull, push, or tag images.
-                    </DockerCapabilityNotice>
-                  ) : null}
-                  <div className="space-y-3 px-2 py-2">
-                    <div className="space-y-1">
-                      <SidebarSectionLabel className="h-5 px-0">Docker Hub</SidebarSectionLabel>
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <SearchField
-                          value={registryQuery}
-                          onChange={setRegistryQuery}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") void handleRegistrySearch();
-                          }}
-                          placeholder="Search images"
-                          aria-label="Search Docker Hub"
-                          size="xs"
-                          className="min-w-0 flex-1 rounded-lg"
-                        />
-                        <Button
-                          type="button"
-                          variant="default"
-                          size="xs"
-                          disabled={isRegistryBusy || !registryQuery.trim()}
-                          onClick={() => void handleRegistrySearch()}
-                        >
-                          {isRegistryBusy ? <Spinner compact /> : <Search />}
-                          Search
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <SidebarSectionLabel className="h-5 px-0">Image actions</SidebarSectionLabel>
-                      <Input
-                        value={registryDraft.image}
-                        onChange={(event) =>
-                          setRegistryDraft((current) => ({
-                            ...current,
-                            image: event.target.value,
-                          }))
-                        }
-                        placeholder="Image, for example nginx:latest"
-                        size="xs"
-                        className="w-full rounded-lg"
-                      />
-                      <Input
-                        value={registryDraft.target}
-                        onChange={(event) =>
-                          setRegistryDraft((current) => ({
-                            ...current,
-                            target: event.target.value,
-                          }))
-                        }
-                        placeholder="Target tag"
-                        size="xs"
-                        className="w-full rounded-lg"
-                      />
-                      <div className="flex flex-wrap items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          disabled={
-                            isRegistryBusy || !isDockerDaemonReady || !registryDraft.image.trim()
-                          }
-                          onClick={() => void handleRegistryPull(registryDraft.image)}
-                        >
-                          Pull
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          disabled={
-                            isRegistryBusy || !isDockerDaemonReady || !registryDraft.image.trim()
-                          }
-                          onClick={() => void handleRegistryPush()}
-                        >
-                          Push
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          disabled={
-                            isRegistryBusy ||
-                            !isDockerDaemonReady ||
-                            !registryDraft.image.trim() ||
-                            !registryDraft.target.trim()
-                          }
-                          onClick={() => void handleTagImage()}
-                        >
-                          Tag
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <SidebarSectionLabel className="h-5 px-0">Registry login</SidebarSectionLabel>
-                      <Input
-                        value={registryDraft.registry}
-                        onChange={(event) =>
-                          setRegistryDraft((current) => ({
-                            ...current,
-                            registry: event.target.value,
-                          }))
-                        }
-                        placeholder="Registry (optional)"
-                        size="xs"
-                        className="w-full rounded-lg"
-                      />
-                      <Input
-                        value={registryDraft.username}
-                        onChange={(event) =>
-                          setRegistryDraft((current) => ({
-                            ...current,
-                            username: event.target.value,
-                          }))
-                        }
-                        placeholder="Username"
-                        size="xs"
-                        className="w-full rounded-lg"
-                      />
-                      <Input
-                        value={registryDraft.password}
-                        onChange={(event) =>
-                          setRegistryDraft((current) => ({
-                            ...current,
-                            password: event.target.value,
-                          }))
-                        }
-                        type="password"
-                        placeholder="Password"
-                        size="xs"
-                        className="w-full rounded-lg"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="xs"
-                        disabled={
-                          isRegistryBusy ||
-                          !registryDraft.username.trim() ||
-                          !registryDraft.password
-                        }
-                        onClick={() => void handleRegistryLogin()}
-                      >
-                        Login
-                      </Button>
-                    </div>
-                  </div>
-                  {registryError ? (
-                    <DockerInlineError
-                      title="Registry action failed"
-                      error={registryError}
-                      onDismiss={() => setRegistryError(null)}
-                      className="mx-2 mb-1 w-auto"
-                    />
-                  ) : null}
-                  {registryOutput ? (
-                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
-                      {registryOutput}
-                    </div>
-                  ) : null}
-                  {registryResults.length > 0 ? (
-                    registryResults.map((result) => (
-                      <DockerResourceRow
-                        key={result.name}
-                        title={result.name}
-                        description={
-                          <>
-                            {result.starCount ? `${result.starCount} stars` : "Registry image"}
-                            {result.official === "[OK]" ? " · official" : ""}
-                            {result.automated === "[OK]" ? " · automated" : ""}
-                            {result.description ? ` · ${result.description}` : ""}
-                          </>
-                        }
-                        actions={
-                          <DockerActionMenu
-                            label={`Actions for ${result.name}`}
-                            actions={[
-                              {
-                                label: "Pull",
-                                icon: <Download />,
-                                disabled: isRegistryBusy || !isDockerDaemonReady,
-                                onSelect: () => void handleRegistryPull(result.name),
-                              },
-                            ]}
-                          />
-                        }
-                      />
-                    ))
-                  ) : (
-                    <EmptyState layout="sidebar" message="Search Docker Hub to find images" />
-                  )}
-                </>,
+                <DockerRegistrySection
+                  query={registryQuery}
+                  results={registryResults}
+                  error={registryError}
+                  output={registryOutput}
+                  draft={registryDraft}
+                  isBusy={isRegistryBusy}
+                  isDockerDaemonReady={isDockerDaemonReady}
+                  hasConnectionError={connectionError !== null}
+                  onQueryChange={setRegistryQuery}
+                  onDraftFieldChange={setRegistryDraftField}
+                  onSearch={handleRegistrySearch}
+                  onLogin={handleRegistryLogin}
+                  onPull={handleRegistryPull}
+                  onPush={handleRegistryPush}
+                  onTag={handleTagImage}
+                  onDismissError={dismissRegistryError}
+                />,
                 registryResults.length,
               )}
               {renderSection(
@@ -2071,7 +1548,6 @@ export function DockerSidebar() {
                       key={target}
                       type="button"
                       variant="ghost"
-                      size="xs"
                       className="h-7 justify-start px-2 ui-text-sm"
                       disabled={busyPruneTarget !== null}
                       onClick={() => void handlePrune(target, target === "system")}
@@ -2110,435 +1586,49 @@ export function DockerSidebar() {
             </ScrollArea>
 
             {activeTab === "resources" && selectedContainer ? (
-              <div className="max-h-72 shrink-0 border-t border-border/70 bg-surface/35">
-                <div className="flex h-8 items-center justify-between gap-2 px-2">
-                  <div className="min-w-0">
-                    <div className="truncate ui-text-sm font-medium text-foreground">
-                      {selectedContainer.name}
-                    </div>
-                    <div className="ui-text-sm text-subtle-foreground">
-                      {detailTab === "logs"
-                        ? logStreamId
-                          ? "Streaming logs"
-                          : "Logs stopped"
-                        : containerPath}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {(["logs", "files"] as DockerDetailTab[]).map((tab) => (
-                      <Button
-                        key={tab}
-                        type="button"
-                        variant={detailTab === tab ? "accent" : "ghost"}
-                        size="xs"
-                        className="h-6 px-1.5 ui-text-sm capitalize"
-                        onClick={() => setDetailTab(tab)}
-                      >
-                        {tab}
-                      </Button>
-                    ))}
-                    {detailTab === "logs" ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="xs"
-                        className="h-6 px-1.5 ui-text-sm"
-                        disabled={logLines.length === 0}
-                        onClick={() => setLogLines([])}
-                      >
-                        Clear
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="xs"
-                        className="h-6 px-1.5 ui-text-sm"
-                        onClick={() => void handleCopyToContainer()}
-                      >
-                        <Upload className="size-3.5" />
-                        Copy In
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                {detailTab === "logs" ? (
-                  <>
-                    <div className="flex items-center gap-1 border-t border-border/50 px-2 py-1">
-                      <div className="flex min-w-0 flex-1 items-center gap-1 rounded border border-border/70 bg-background px-1.5">
-                        <Search className="size-3.5 shrink-0 text-subtle-foreground" />
-                        <input
-                          value={logQuery}
-                          onChange={(event) => setLogQuery(event.target.value)}
-                          placeholder="Search logs"
-                          className="h-6 min-w-0 flex-1 bg-transparent ui-text-sm text-foreground outline-none placeholder:text-subtle-foreground"
-                        />
-                      </div>
-                      {(["all", "stderr", "errors"] as DockerLogFilter[]).map((filter) => (
-                        <Button
-                          key={filter}
-                          type="button"
-                          variant={logFilter === filter ? "accent" : "ghost"}
-                          size="xs"
-                          className="h-6 px-1.5 ui-text-sm capitalize"
-                          onClick={() => setLogFilter(filter)}
-                        >
-                          {filter === "stderr" ? "Err" : filter}
-                        </Button>
-                      ))}
-                    </div>
-                    {logError ? (
-                      <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-destructive">
-                        {logError}
-                      </div>
-                    ) : null}
-                    <div className="ui-text-sm max-h-36 overflow-auto border-t border-border/50 px-2 py-1 font-mono leading-4">
-                      {filteredLogLines.length > 0 ? (
-                        filteredLogLines.map((entry) => (
-                          <div
-                            key={entry.id}
-                            className={cn(
-                              "whitespace-pre-wrap wrap-break-word",
-                              entry.stream === "stderr"
-                                ? "text-destructive"
-                                : "text-subtle-foreground",
-                            )}
-                          >
-                            {entry.line}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-subtle-foreground">
-                          {logLines.length > 0 ? "No matching log lines." : "Waiting for logs."}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-1 border-t border-border/50 px-2 py-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="xs"
-                        className="h-6 px-1.5 ui-text-sm"
-                        disabled={containerPath === "/"}
-                        onClick={() => setContainerPath(parentContainerPath(containerPath))}
-                      >
-                        Up
-                      </Button>
-                      <div className="ui-text-sm min-w-0 flex-1 truncate rounded border border-border/70 bg-background px-2 py-1 font-mono text-subtle-foreground">
-                        {containerPath}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="ui-text-sm"
-                        disabled={isFilesLoading}
-                        onClick={() => void loadContainerFiles()}
-                      >
-                        {isFilesLoading ? <Spinner compact /> : <Refresh className="size-3.5" />}
-                      </Button>
-                    </div>
-                    {filesError ? (
-                      <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-destructive">
-                        {filesError}
-                      </div>
-                    ) : null}
-                    <div className="max-h-44 overflow-auto border-t border-border/50 py-1">
-                      {isFilesLoading ? (
-                        <div className="px-2 py-2 ui-text-sm text-subtle-foreground">
-                          Loading files...
-                        </div>
-                      ) : containerFiles.length > 0 ? (
-                        containerFiles.map((entry) => (
-                          <div
-                            key={entry.path}
-                            role="button"
-                            tabIndex={entry.isDirectory ? 0 : -1}
-                            className="flex w-full items-center gap-2 px-2 py-1 text-left hover:bg-accent"
-                            onClick={() => {
-                              if (entry.isDirectory) setContainerPath(entry.path);
-                            }}
-                            onKeyDown={(event) => {
-                              if (!entry.isDirectory) return;
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                setContainerPath(entry.path);
-                              }
-                            }}
-                          >
-                            {entry.isDirectory ? (
-                              <FolderIcon
-                                className="size-4 shrink-0 text-subtle-foreground"
-                                weight="duotone"
-                              />
-                            ) : (
-                              <FileIcon
-                                className="size-4 shrink-0 text-subtle-foreground"
-                                weight="duotone"
-                              />
-                            )}
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate ui-text-sm text-foreground">
-                                {entry.name}
-                              </div>
-                              <div className="truncate ui-text-sm text-subtle-foreground">
-                                {entry.isDirectory ? "Directory" : formatFileSize(entry.size)}
-                                {entry.mode ? ` · ${entry.mode}` : ""}
-                              </div>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-xs"
-                              className="ui-text-sm"
-                              tooltip="Copy to host"
-                              tooltipSide="left"
-                              aria-label={`Copy ${entry.name} to host`}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                void handleCopyFromContainer(entry);
-                              }}
-                            >
-                              <Download className="size-3.5" weight="fill" />
-                            </Button>
-                          </div>
-                        ))
-                      ) : (
-                        <EmptyState layout="sidebar" message="No files found." />
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
+              <DockerContainerDetail
+                container={selectedContainer}
+                activeTab={detailTab}
+                logStreamId={logStreamId}
+                logLines={logLines}
+                filteredLogLines={filteredLogLines}
+                logQuery={logQuery}
+                logFilter={logFilter}
+                logError={logError}
+                containerPath={containerPath}
+                containerFiles={containerFiles}
+                isFilesLoading={isFilesLoading}
+                filesError={filesError}
+                onTabChange={setDetailTab}
+                onClearLogs={clearLogLines}
+                onLogQueryChange={setLogQuery}
+                onLogFilterChange={setLogFilter}
+                onContainerPathChange={setContainerPath}
+                onRefreshFiles={loadContainerFiles}
+                onCopyToContainer={handleCopyToContainer}
+                onCopyFromContainer={handleCopyFromContainer}
+              />
             ) : null}
           </>
         )}
       </SidebarWorkspace>
 
       {dialogMode ? (
-        <Dialog
-          title={dialogMode === "build" ? "Build Docker Image" : "Run Docker Image"}
-          icon={dialogMode === "build" ? ImageIcon : Play}
+        <DockerImageDialog
+          mode={dialogMode}
+          buildDraft={buildDraft}
+          runDraft={runDraft}
+          hasWorkspace={Boolean(rootFolderPath)}
+          isDockerDaemonReady={isDockerDaemonReady}
+          connectionError={connectionError}
+          setBuildDraft={setBuildDraft}
+          setRunDraft={setRunDraft}
           onClose={() => setDialogMode(null)}
-          size="md"
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setDialogMode(null)}>
-                Cancel
-              </Button>
-              {dialogMode === "build" ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    onClick={() => void handleSaveBuildPreset()}
-                    disabled={!rootFolderPath || !buildDraft.contextPath.trim()}
-                  >
-                    Save Preset
-                  </Button>
-                  <Button
-                    onClick={handleBuildImage}
-                    disabled={!isDockerDaemonReady || !buildDraft.contextPath.trim()}
-                  >
-                    Build
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    onClick={() => void handleSaveRunPreset()}
-                    disabled={!rootFolderPath || !runDraft.image.trim()}
-                  >
-                    Save Preset
-                  </Button>
-                  <Button
-                    onClick={handleRunImage}
-                    disabled={!isDockerDaemonReady || !runDraft.image.trim()}
-                  >
-                    Run
-                  </Button>
-                </>
-              )}
-            </>
-          }
-        >
-          {(dialogMode === "build" || dialogMode === "run") && connectionError ? (
-            <DockerCapabilityNotice className="mx-0 mb-3">
-              Start Docker before{" "}
-              {dialogMode === "build" ? "building this image" : "running this image"}. You can still
-              save these values as a preset.
-            </DockerCapabilityNotice>
-          ) : null}
-          {dialogMode === "build" ? (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label htmlFor="docker-build-context" className="ui-text-sm block text-foreground">
-                  Context Path
-                </label>
-                <Input
-                  id="docker-build-context"
-                  value={buildDraft.contextPath}
-                  onChange={(event) =>
-                    setBuildDraft((current) => ({
-                      ...current,
-                      contextPath: event.target.value,
-                    }))
-                  }
-                  placeholder="/path/to/project"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-build-file" className="ui-text-sm block text-foreground">
-                  Dockerfile
-                </label>
-                <Input
-                  id="docker-build-file"
-                  value={buildDraft.dockerfilePath}
-                  onChange={(event) =>
-                    setBuildDraft((current) => ({
-                      ...current,
-                      dockerfilePath: event.target.value,
-                    }))
-                  }
-                  placeholder="/path/to/Dockerfile"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-build-tag" className="ui-text-sm block text-foreground">
-                  Tag
-                </label>
-                <Input
-                  id="docker-build-tag"
-                  value={buildDraft.tag}
-                  onChange={(event) =>
-                    setBuildDraft((current) => ({ ...current, tag: event.target.value }))
-                  }
-                  placeholder="my-app:latest"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-build-args" className="ui-text-sm block text-foreground">
-                  Build Args
-                </label>
-                <Textarea
-                  id="docker-build-args"
-                  value={buildDraft.buildArgs}
-                  onChange={(event) =>
-                    setBuildDraft((current) => ({
-                      ...current,
-                      buildArgs: event.target.value,
-                    }))
-                  }
-                  placeholder="NODE_ENV=production"
-                  className="min-h-20 font-mono"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label htmlFor="docker-run-image" className="ui-text-sm block text-foreground">
-                  Image
-                </label>
-                <Input
-                  id="docker-run-image"
-                  value={runDraft.image}
-                  onChange={(event) =>
-                    setRunDraft((current) => ({ ...current, image: event.target.value }))
-                  }
-                  placeholder="nginx:latest"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-run-name" className="ui-text-sm block text-foreground">
-                  Container Name
-                </label>
-                <Input
-                  id="docker-run-name"
-                  value={runDraft.name}
-                  onChange={(event) =>
-                    setRunDraft((current) => ({ ...current, name: event.target.value }))
-                  }
-                  placeholder="my-container"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label htmlFor="docker-run-ports" className="ui-text-sm block text-foreground">
-                    Ports
-                  </label>
-                  <Textarea
-                    id="docker-run-ports"
-                    value={runDraft.ports}
-                    onChange={(event) =>
-                      setRunDraft((current) => ({ ...current, ports: event.target.value }))
-                    }
-                    placeholder="8080:80"
-                    className="min-h-20 font-mono"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="docker-run-volumes" className="ui-text-sm block text-foreground">
-                    Volumes
-                  </label>
-                  <Textarea
-                    id="docker-run-volumes"
-                    value={runDraft.volumes}
-                    onChange={(event) =>
-                      setRunDraft((current) => ({ ...current, volumes: event.target.value }))
-                    }
-                    placeholder="/host:/container"
-                    className="min-h-20 font-mono"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-run-env" className="ui-text-sm block text-foreground">
-                  Environment
-                </label>
-                <Textarea
-                  id="docker-run-env"
-                  value={runDraft.env}
-                  onChange={(event) =>
-                    setRunDraft((current) => ({ ...current, env: event.target.value }))
-                  }
-                  placeholder="KEY=value"
-                  className="min-h-20 font-mono"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-run-env-files" className="ui-text-sm block text-foreground">
-                  Env Files
-                </label>
-                <Textarea
-                  id="docker-run-env-files"
-                  value={runDraft.envFiles}
-                  onChange={(event) =>
-                    setRunDraft((current) => ({ ...current, envFiles: event.target.value }))
-                  }
-                  placeholder=".env"
-                  className="min-h-16 font-mono"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="docker-run-command" className="ui-text-sm block text-foreground">
-                  Command
-                </label>
-                <Input
-                  id="docker-run-command"
-                  value={runDraft.command}
-                  onChange={(event) =>
-                    setRunDraft((current) => ({ ...current, command: event.target.value }))
-                  }
-                  placeholder="npm start"
-                />
-              </div>
-            </div>
-          )}
-        </Dialog>
+          onSaveBuildPreset={handleSaveBuildPreset}
+          onSaveRunPreset={handleSaveRunPreset}
+          onBuild={handleBuildImage}
+          onRun={handleRunImage}
+        />
       ) : null}
     </>
   );

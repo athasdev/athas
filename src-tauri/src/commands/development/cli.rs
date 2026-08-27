@@ -1,3 +1,4 @@
+#[cfg(target_os = "macos")]
 use crate::app_runtime::AppHandle;
 use std::fs;
 #[cfg(unix)]
@@ -58,6 +59,7 @@ pub fn check_cli_installed() -> Result<bool, String> {
 
 /// Shell script body shared by macOS install_cli_command and get_cli_install_command.
 /// Resolves file/folder arguments to absolute paths and opens them via deep-link URLs.
+#[cfg(target_os = "macos")]
 fn app_identifier_suffix(app: &AppHandle) -> Option<&'static str> {
    match app.config().identifier.as_str() {
       "com.code.athas.preview" => Some("preview"),
@@ -66,6 +68,7 @@ fn app_identifier_suffix(app: &AppHandle) -> Option<&'static str> {
    }
 }
 
+#[cfg(target_os = "macos")]
 fn deep_link_scheme(app: &AppHandle) -> &'static str {
    match app_identifier_suffix(app) {
       Some("preview") => "athas-preview",

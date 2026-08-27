@@ -21,6 +21,7 @@ describe("Git status accordions", () => {
     expect(markup).toContain("Untracked");
     expect(markup).toContain("app.ts");
     expect(markup).toContain("new-file.ts");
+    expect(markup).toContain('aria-label="Change actions"');
     expect(markup.match(/data-slot="accordion-trigger"/g)).toHaveLength(2);
   });
 });

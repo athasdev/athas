@@ -46,4 +46,11 @@ describe("settings import/export", () => {
 
     expect(imported?.wordWrap).toBe(true);
   });
+
+  it("preserves the shared sidebar width when importing legacy settings", () => {
+    const imported = parseSettingsImportJson(JSON.stringify({ sidebarWidth: 340 }));
+
+    expect(imported?.sidebarWidth).toBe(340);
+    expect(imported?.rightSidebarWidth).toBe(340);
+  });
 });

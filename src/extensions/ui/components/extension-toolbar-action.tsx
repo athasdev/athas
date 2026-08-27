@@ -19,7 +19,7 @@ export function ExtensionToolbarAction({ action }: ExtensionToolbarActionProps) 
         variant="ghost"
         className="text-subtle-foreground"
         aria-label={action.title}
-        size="icon-xs"
+        iconOnly
       >
         <DynamicIcon name={action.icon} />
       </Button>

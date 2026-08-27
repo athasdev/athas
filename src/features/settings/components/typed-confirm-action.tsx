@@ -50,7 +50,6 @@ export function TypedConfirmAction({
           value={value}
           onChange={(event) => setValue(event.target.value)}
           placeholder={`Type '${confirmWord}'`}
-          size="md"
           variant="default"
           className="w-28"
           onKeyDown={(event) => {
@@ -68,15 +67,15 @@ export function TypedConfirmAction({
           }}
         />
         <Button
+          shape="pill"
           type="button"
           variant={variant}
           disabled={isBusy || value.trim().toLowerCase() !== confirmWord}
           onClick={() => void handleConfirm()}
-          size="sm"
         >
           {isBusy ? (busyLabel ?? actionLabel) : actionLabel}
         </Button>
-        <Button type="button" variant="ghost" onClick={() => setIsConfirming(false)} size="sm">
+        <Button shape="pill" type="button" variant="ghost" onClick={() => setIsConfirming(false)}>
           Cancel
         </Button>
       </div>
@@ -85,12 +84,12 @@ export function TypedConfirmAction({
 
   return (
     <Button
+      shape="pill"
       type="button"
       variant={variant}
       disabled={isBusy}
       onClick={() => setIsConfirming(true)}
       tooltip={tooltip}
-      size="sm"
     >
       {isBusy ? (busyLabel ?? actionLabel) : actionLabel}
     </Button>

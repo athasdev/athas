@@ -40,7 +40,7 @@ export default function RunActionDialog({
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={onSave} disabled={!canSave} size="xs">
+          <Button onClick={onSave} disabled={!canSave}>
             {draft.id ? "Save changes" : "Add action"}
           </Button>
         </>

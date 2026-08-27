@@ -1,6 +1,7 @@
 import {
   CommandIcon,
   ArrowUpIcon as ArrowUp,
+  CodeBlockIcon as CodeBlock,
   DatabaseIcon as Database,
   FileTextIcon as FileText,
   MicrophoneIcon as Mic,
@@ -8,7 +9,7 @@ import {
   XIcon as X,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
+import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
 import {
   AI_CHAT_INSERT_SKILL_EVENT,
   type AIChatSkillInsertDetail,
@@ -70,10 +71,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
   queueCount,
   selectedBufferIds,
   selectedFilesPaths,
+  selectedEditorContexts,
   onToggleBufferSelection,
   onToggleFileSelection,
   onSetSelectedBufferIds,
   onSetSelectedFilesPaths,
+  onRemoveEditorContext,
   isActiveSurface = true,
   presentation = "default",
   autoFocus = false,
@@ -409,7 +412,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   }, [mentionState.active, updatePosition, getMentionDropdownPosition]);
 
   const mentionableFiles = useMemo(
-    () => allProjectFiles.filter((file) => !file.isDir && !shouldIgnoreFile(file.path)),
+    () => allProjectFiles.filter((file) => !file.isDir && !shouldIgnoreSearchFile(file.path)),
     [allProjectFiles],
   );
 
@@ -431,8 +434,19 @@ const AIChatInputBar = memo(function AIChatInputBar({
       path: filePath,
     }));
 
-    return [...bufferSelections, ...fileSelections];
-  }, [buffers, selectedBufferIds, selectedFilesPaths]);
+    const editorSelections = selectedEditorContexts.map((context) => ({
+      type: "selection" as const,
+      id: context.id,
+      name: `${context.fileName}:${
+        context.startLine === context.endLine
+          ? context.startLine
+          : `${context.startLine}-${context.endLine}`
+      }`,
+      path: context.filePath,
+    }));
+
+    return [...editorSelections, ...bufferSelections, ...fileSelections];
+  }, [buffers, selectedBufferIds, selectedEditorContexts, selectedFilesPaths]);
 
   // ResizeObserver to track container size changes
   useEffect(() => {
@@ -711,15 +725,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [getPlainTextFromDiv, handleInputChange],
   );
 
-  const insertSkillAtCursor = useCallback(
-    (skill: AIChatSkill) => {
-      if (!inputRef.current || !skill.content.trim()) return;
+  const insertSkillContentAtCursor = useCallback(
+    (content: string) => {
+      if (!inputRef.current || !content.trim()) return;
 
       const selection = window.getSelection();
       const range = document.createRange();
       const currentText = getPlainTextFromDiv();
       const prefix = currentText.trim().length > 0 && !/\s$/.test(currentText) ? "\n\n" : "";
-      const textNode = document.createTextNode(`${prefix}${skill.content.trim()} `);
+      const textNode = document.createTextNode(`${prefix}${content.trim()} `);
 
       inputRef.current.focus();
 
@@ -745,6 +759,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
       setHasInputText(true);
     },
     [getPlainTextFromDiv, handleInputChange],
+  );
+
+  const insertSkillAtCursor = useCallback(
+    (skill: AIChatSkill) => insertSkillContentAtCursor(skill.content),
+    [insertSkillContentAtCursor],
+  );
+
+  const insertCodexSkillAtCursor = useCallback(
+    (skillName: string) => insertSkillContentAtCursor(`$${skillName}`),
+    [insertSkillContentAtCursor],
   );
 
   useEffect(() => {
@@ -910,13 +934,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [hideSlashCommands, syncInputFromEditable],
   );
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = () => {
     const currentInput = inputValueRef.current;
     const currentImages = pastedImages;
     const hasContent = currentInput.trim() || currentImages.length > 0;
     if (!hasContent || !isInputEnabled) return;
 
-    // Clear input and images immediately after send is triggered
+    const result = onSendMessage(currentInput);
+    if (!result.accepted) return;
+
     setInput("");
     setHasInputText(false);
     clearPastedImages();
@@ -969,11 +995,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
       dragActive={isContextDragOver}
       className={cn(isInitialPresentation && "w-full")}
     >
-      <ChatComposerBody>
+      <ChatComposerBody variant={isInitialPresentation ? "plain" : "surface"}>
         {pastedImages.length > 0 && (
           <AttachmentGroup className={cn("px-3 pt-3", isInitialPresentation && "px-4 pt-4")}>
             {pastedImages.map((image) => (
-              <Attachment key={image.id} orientation="vertical" size="sm">
+              <Attachment key={image.id} orientation="vertical">
                 <AttachmentMedia variant="image">
                   <img src={image.dataUrl} alt={image.name} />
                 </AttachmentMedia>
@@ -1066,7 +1092,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   showSlashCommands(getSlashDropdownPosition(), "");
                 }}
                 variant="ghost"
-                size="icon-sm"
+                iconOnly
                 active={slashCommandState.active}
                 tooltip="Show slash commands"
                 aria-label="Show slash commands"
@@ -1087,6 +1113,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 void changeSessionConfigOption(optionId, value)
               }
               onSelectSkill={insertSkillAtCursor}
+              onSelectCodexSkill={insertCodexSkillAtCursor}
               onBeforeOpen={closeInlineMenus}
             />
 
@@ -1108,7 +1135,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
                       : "Start voice input"
               }
               aria-label={isListening ? "Stop voice input" : "Start voice input"}
-              size="sm"
             >
               <Mic size={12} className={cn(isListening && "animate-pulse")} />
             </Toggle>
@@ -1132,7 +1158,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               }
               shortcut={isStreaming ? "escape" : "enter"}
               aria-label={isStreaming ? "Stop generation" : "Send message"}
-              size="icon-sm"
+              iconOnly
             >
               {isStreaming ? <Stop /> : <ArrowUp />}
             </Button>
@@ -1148,12 +1174,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
             {selectedContextItems.map((item) => (
               <Attachment
                 key={`selected-${item.type}-${item.id}`}
-                size="xs"
                 data-context-chip
                 role="listitem"
                 tabIndex={0}
                 aria-label={`${item.name}. Press Delete to remove from context.`}
-                title={item.type === "file" ? item.path : item.name}
+                title={item.type === "buffer" ? item.name : item.path}
                 onKeyDown={(event) => {
                   if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
                     event.preventDefault();
@@ -1181,8 +1206,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     const nextFocusIndex = Math.max(0, Math.min(currentIndex, chips.length - 2));
                     if (item.type === "buffer") {
                       toggleBufferSelection(item.id);
-                    } else {
+                    } else if (item.type === "file") {
                       toggleFileSelection(item.id);
+                    } else {
+                      onRemoveEditorContext(item.id);
                     }
                     requestAnimationFrame(() => {
                       const nextChips = Array.from(
@@ -1199,7 +1226,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 }}
               >
                 <AttachmentMedia>
-                  {item.type === "buffer" ? (
+                  {item.type === "selection" ? (
+                    <CodeBlock />
+                  ) : item.type === "buffer" ? (
                     item.databaseType ? (
                       <Database />
                     ) : (
@@ -1222,8 +1251,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     onClick={() => {
                       if (item.type === "buffer") {
                         toggleBufferSelection(item.id);
-                      } else {
+                      } else if (item.type === "file") {
                         toggleFileSelection(item.id);
+                      } else {
+                        onRemoveEditorContext(item.id);
                       }
                     }}
                     aria-label={`Remove ${item.name} from context`}

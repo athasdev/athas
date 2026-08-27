@@ -1,4 +1,9 @@
 import type { UIExtensionRegistration } from "../../types/ui-extension";
+import type { ExtensionPermissions } from "@/extensions/types/extension-manifest";
+import {
+  parseGeneratedExtensionPermissions,
+  validateGeneratedExtensionPermissionUsage,
+} from "./generated-ui-extension-permissions";
 
 type GeneratedContributionType = NonNullable<UIExtensionRegistration["contributionType"]>;
 
@@ -8,6 +13,7 @@ export interface GeneratedUIExtension {
   description: string;
   contributionType: GeneratedContributionType;
   code: string;
+  permissions?: ExtensionPermissions;
 }
 
 const GENERATED_EXTENSIONS_STORAGE_KEY = "athas.generated-ui-extensions";
@@ -30,16 +36,32 @@ export function readStoredGeneratedExtensions(): GeneratedUIExtension[] {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
 
-    return parsed.filter(
-      (extension): extension is GeneratedUIExtension =>
-        extension &&
-        typeof extension === "object" &&
-        typeof extension.id === "string" &&
-        typeof extension.name === "string" &&
-        typeof extension.description === "string" &&
-        typeof extension.code === "string" &&
-        ["sidebar", "toolbar", "command"].includes(extension.contributionType),
-    );
+    return parsed.flatMap((extension) => {
+      if (
+        !extension ||
+        typeof extension !== "object" ||
+        typeof extension.id !== "string" ||
+        typeof extension.name !== "string" ||
+        typeof extension.description !== "string" ||
+        typeof extension.code !== "string" ||
+        !["sidebar", "toolbar", "command"].includes(extension.contributionType)
+      ) {
+        return [];
+      }
+
+      try {
+        const permissions = parseGeneratedExtensionPermissions(extension.permissions);
+        validateGeneratedExtensionPermissionUsage(extension.code, permissions);
+        return [
+          {
+            ...extension,
+            ...(Object.keys(permissions).length > 0 ? { permissions } : {}),
+          } as GeneratedUIExtension,
+        ];
+      } catch {
+        return [];
+      }
+    });
   } catch {
     return [];
   }

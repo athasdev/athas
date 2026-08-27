@@ -73,20 +73,26 @@ export function useCliOpen() {
       enqueuePayload(event.payload);
     });
 
-    void invoke<CliOpenPayload[]>("take_pending_cli_open_requests")
-      .then((payloads) => {
-        if (disposed) return;
-        for (const payload of payloads) {
-          enqueuePayload(payload);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load pending CLI open requests:", error);
-      });
+    const drainPendingRequests = () => {
+      void invoke<CliOpenPayload[]>("take_pending_cli_open_requests")
+        .then((payloads) => {
+          if (disposed) return;
+          for (const payload of payloads) {
+            enqueuePayload(payload);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to load pending CLI open requests:", error);
+        });
+    };
+
+    const unlistenPending = listen<void>("cli_open_requests_pending", drainPendingRequests);
+    drainPendingRequests();
 
     return () => {
       disposed = true;
       unlisten.then((fn) => fn());
+      unlistenPending.then((fn) => fn());
     };
   }, []);
 }

@@ -145,7 +145,7 @@ describe("buffer preview pane integration", () => {
     expect(pane?.pinnedBufferIds).toEqual([previewId]);
   });
 
-  it("opens a new tab placeholder in the active pane", async () => {
+  it("opens independent new tabs and only consumes the active one", async () => {
     const { useBufferStore } = await import("../stores/buffer.store");
     const bufferActions = useBufferStore.getState().actions;
     const paneActions = usePaneStore.getState().actions;
@@ -157,12 +157,33 @@ describe("buffer preview pane integration", () => {
       content: "",
     });
     const newTabId = bufferActions.openContent({ type: "newTab" });
+    const secondNewTabId = bufferActions.openContent({ type: "newTab" });
 
     const newTabBuffer = useBufferStore.getState().buffers.find((buffer) => buffer.id === newTabId);
     expect(newTabBuffer?.type).toBe("newTab");
-    expect(paneActions.getPaneById(ROOT_PANE_ID)?.bufferIds).toEqual([editorId, newTabId]);
-    expect(paneActions.getPaneById(ROOT_PANE_ID)?.activeBufferId).toBe(newTabId);
-    expect(useBufferStore.getState().activeBufferId).toBe(newTabId);
+    expect(paneActions.getPaneById(ROOT_PANE_ID)?.bufferIds).toEqual([
+      editorId,
+      newTabId,
+      secondNewTabId,
+    ]);
+    expect(paneActions.getPaneById(ROOT_PANE_ID)?.activeBufferId).toBe(secondNewTabId);
+
+    const replacementId = bufferActions.openContent({
+      type: "editor",
+      path: "/workspace/b.ts",
+      name: "b.ts",
+      content: "",
+    });
+
+    expect(paneActions.getPaneById(ROOT_PANE_ID)?.bufferIds).toEqual([
+      editorId,
+      newTabId,
+      replacementId,
+    ]);
+    expect(useBufferStore.getState().buffers.some((buffer) => buffer.id === newTabId)).toBe(true);
+    expect(useBufferStore.getState().buffers.some((buffer) => buffer.id === secondNewTabId)).toBe(
+      false,
+    );
   });
 
   it("opens tool buffers as singletons", async () => {
@@ -174,11 +195,14 @@ describe("buffer preview pane integration", () => {
     const firstReferencesId = bufferActions.openReferencesBuffer();
     const secondReferencesId = bufferActions.openReferencesBuffer();
     const diagnosticsId = bufferActions.openDiagnosticsBuffer();
+    const firstSettingsId = bufferActions.openSettingsBuffer();
+    const secondSettingsId = bufferActions.openSettingsBuffer();
     const firstExtensionsId = bufferActions.openExtensionsBuffer();
     const secondExtensionsId = bufferActions.openExtensionsBuffer();
 
     expect(secondSearchId).toBe(firstSearchId);
     expect(secondReferencesId).toBe(firstReferencesId);
+    expect(secondSettingsId).toBe(firstSettingsId);
     expect(secondExtensionsId).toBe(firstExtensionsId);
     expect(useBufferStore.getState().buffers).toEqual(
       expect.arrayContaining([
@@ -199,6 +223,12 @@ describe("buffer preview pane integration", () => {
           type: "diagnostics",
           path: "diagnostics://problems",
           name: "Diagnostics",
+        }),
+        expect.objectContaining({
+          id: firstSettingsId,
+          type: "settings",
+          path: "settings://preferences",
+          name: "Settings",
         }),
         expect.objectContaining({
           id: firstExtensionsId,

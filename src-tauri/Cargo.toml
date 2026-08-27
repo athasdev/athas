@@ -100,6 +100,7 @@ tauri = { version = "2", default-features = false, features = [
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-http = "2"
+tauri-plugin-notification = "2.3.3"
 tauri-plugin-log = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-os = "2"
@@ -126,7 +127,8 @@ nucleo-matcher = "0.3.1"
 toml = "0.8"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-deep-link = "2"
-agent-client-protocol = "0.14"
+tauri-plugin-drag = "2.1.1"
+agent-client-protocol = "2"
 async-trait = "0.1"
 tokio-util = { version = "0.7", features = ["compat"] }
 

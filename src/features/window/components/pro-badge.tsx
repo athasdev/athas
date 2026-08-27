@@ -7,7 +7,7 @@ interface ProBadgeProps {
 
 export function ProBadge({ className }: ProBadgeProps) {
   return (
-    <Badge variant="accent" size="compact" className={cn("font-medium tracking-wide", className)}>
+    <Badge variant="accent" className={cn("font-medium tracking-wide", className)}>
       PRO
     </Badge>
   );

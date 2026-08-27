@@ -337,10 +337,65 @@
 }
 
 .monaco-editor-shell .monaco-hover .hover-row.status-bar {
-  background: color-mix(in srgb, var(--surface) 68%, transparent);
-  color: var(--muted-foreground);
+  padding: 4px 6px !important;
+  background: var(--background);
+  color: var(--subtle-foreground);
   font-family: var(--app-font-family);
-  font-size: var(--ui-text-sm);
+  font-size: var(--ui-text-chrome);
+  line-height: var(--athas-chrome-line-height);
+}
+
+.monaco-editor-shell .monaco-hover .hover-row.status-bar .actions {
+  display: flex;
+  align-items: center;
+  gap: var(--athas-chrome-gap);
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.monaco-editor-shell .monaco-hover .hover-row.status-bar .actions .action-container {
+  display: flex;
+  min-width: 0;
+  height: var(--athas-chrome-control-height);
+  align-items: center;
+  margin-right: 0;
+  padding-inline: var(--athas-chrome-padding-inline);
+  border-radius: var(--athas-chrome-radius);
+  color: var(--subtle-foreground);
+  transition:
+    background-color var(--app-duration-fast) var(--app-ease-smooth),
+    color var(--app-duration-fast) var(--app-ease-smooth);
+}
+
+.monaco-editor-shell .monaco-hover .hover-row.status-bar .actions .action-container:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.monaco-editor-shell .monaco-hover .hover-row.status-bar .actions .action-container:focus-visible {
+  outline: 1px solid var(--primary);
+  outline-offset: -1px;
+}
+
+.monaco-editor-shell .monaco-hover .hover-row.status-bar .actions .action-container a {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  color: inherit !important;
+  text-decoration: none;
+}
+
+.monaco-editor-shell .monaco-hover .hover-row.status-bar .actions > :not(.action-container) {
+  display: flex;
+  min-width: 0;
+  height: var(--athas-chrome-control-height);
+  align-items: center;
+  overflow: hidden;
+  padding-inline: var(--athas-chrome-gap);
+  color: var(--subtle-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .monaco-editor-shell .zone-widget .zone-widget-container {

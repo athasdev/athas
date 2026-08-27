@@ -1,6 +1,5 @@
-import { LockIcon as Lock, WarningCircleIcon as WarningCircle } from "@/ui/icons";
+import { WarningCircleIcon as WarningCircle } from "@/ui/icons";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
-import { ProBadge } from "@/features/window/components/pro-badge";
 import { Alert, AlertDescription } from "@/ui/alert";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
@@ -29,28 +28,18 @@ export function ModelSelector({
   tooltip,
 }: ModelSelectorProps) {
   const isComposer = appearance === "composer";
-  const {
-    availableModels,
-    currentModelName,
-    hasHostedAi,
-    isCustomProvider,
-    isLoadingModels,
-    modelFetchError,
-  } = useAIModelOptions(providerId, modelId, onChange);
+  const { availableModels, currentModelName, isCustomProvider, isLoadingModels, modelFetchError } =
+    useAIModelOptions(providerId, modelId, onChange);
 
   return (
     <Select
       value={modelId}
       onChange={onChange}
       options={availableModels.map((model) => {
-        const locked = Boolean(model.proOnly && !hasHostedAi);
         return {
           value: model.id,
           label: model.name,
           keywords: [model.id],
-          disabled: locked,
-          icon: locked ? <Lock className="text-subtle-foreground" /> : undefined,
-          accessory: model.proOnly ? <ProBadge /> : undefined,
         };
       })}
       placeholder={currentModelName}
@@ -68,7 +57,6 @@ export function ModelSelector({
             : "No models found"
       }
       hideChevron={isComposer}
-      size="xs"
       variant={isComposer ? "ghost" : "default"}
       disabled={disabled}
       open={open}

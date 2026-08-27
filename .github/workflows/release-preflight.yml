@@ -17,6 +17,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.18.0
+        with:
+          node-version-file: .node-version
+          run-install: false
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:

@@ -1,0 +1,73 @@
+name: Agent Registry Freshness
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  validate:
+    if: github.repository == 'athasdev/athas'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Prepare generated extension CDN output
+        run: bun run extensions:prepare
+
+      - name: Verify agent registry freshness
+        id: freshness
+        run: |
+          log_file="$RUNNER_TEMP/agent-registry-freshness.log"
+          if bun run extensions:validate:agents 2>&1 | tee "$log_file"; then
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report stale agent manifests
+        if: steps.freshness.outputs.stale == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          issue_title="Sync official agent manifests with the ACP Registry"
+          issue_body="$RUNNER_TEMP/agent-registry-freshness.md"
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          {
+            echo "The scheduled agent registry check found stale official agent manifests."
+            echo
+            echo '```text'
+            cat "$RUNNER_TEMP/agent-registry-freshness.log"
+            echo '```'
+            echo
+            echo "Latest check: $run_url"
+          } > "$issue_body"
+
+          issue_number="$(gh issue list --state open --limit 100 --json number,title --jq '.[] | select(.title == "Sync official agent manifests with the ACP Registry") | .number' | head -n 1)"
+          if [ -n "$issue_number" ]; then
+            gh issue edit "$issue_number" --body-file "$issue_body"
+          else
+            gh issue create --title "$issue_title" --body-file "$issue_body"
+          fi
+
+          echo "Agent registry drift was reported in a GitHub issue." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Close resolved agent registry issue
+        if: steps.freshness.outputs.stale == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          issue_number="$(gh issue list --state open --limit 100 --json number,title --jq '.[] | select(.title == "Sync official agent manifests with the ACP Registry") | .number' | head -n 1)"
+          if [ -n "$issue_number" ]; then
+            gh issue close "$issue_number" --comment "The official agent manifests match the ACP Registry again."
+          fi
+
+          echo "Official agent manifests match the ACP Registry." >> "$GITHUB_STEP_SUMMARY"

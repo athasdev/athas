@@ -12,6 +12,7 @@ import {
   XIcon as X,
 } from "@/ui/icons";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import type { ProjectPickerInitialStep } from "@/features/window/stores/ui-state/modal-slice";
 import { memo, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -51,6 +52,7 @@ import NewProjectContent from "./new-project-content";
 
 interface ProjectPickerProps {
   isOpen: boolean;
+  initialStep?: ProjectPickerInitialStep;
   onClose: () => void;
 }
 
@@ -65,14 +67,16 @@ const createRemoteConnectionFormData = (): RemoteConnectionFormData => ({
   saveCredentials: false,
 });
 
-const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
+const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: ProjectPickerProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const remoteNameInputRef = useRef<HTMLInputElement>(null);
   const [connections, setConnections] = useState<RemoteConnection[]>([]);
   const [wslDistributions, setWslDistributions] = useState<WslDistribution[]>([]);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [commandStep, setCommandStep] = useState<"picker" | "newProject" | "addRemote">("picker");
+  const [commandStep, setCommandStep] = useState<"picker" | "newProject" | "addRemote">(
+    initialStep,
+  );
   const [remoteFormData, setRemoteFormData] = useState<RemoteConnectionFormData>(
     createRemoteConnectionFormData,
   );
@@ -122,7 +126,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
     if (isOpen) {
       setQuery("");
       setSelectedIndex(0);
-      setCommandStep("picker");
+      setCommandStep(initialStep);
       setRemoteFormData(createRemoteConnectionFormData());
       setShowRemotePassword(false);
       setRemoteValidationStatus("idle");
@@ -133,7 +137,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
       loadWslDistributions();
       window.setTimeout(() => inputRef.current?.focus(), 0);
     }
-  }, [isOpen, loadConnections, loadWslDistributions]);
+  }, [initialStep, isOpen, loadConnections, loadWslDistributions]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -599,7 +603,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
             ) : null}
           </CommandList>
         ) : (
-          <CommandList contentClassName="p-4">
+          <CommandList contentClassName="p-3">
             <ConnectionForm
               formId="project-picker-add-remote-form"
               idPrefix="project-picker-remote"
@@ -612,7 +616,6 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
               testStatus={remoteTestStatus}
               testMessage={remoteTestMessage}
               disabled={isRemoteSaving}
-              intro="Connect to remote servers via SSH or SFTP."
               nameInputRef={remoteNameInputRef}
               onSubmit={() => void handleSaveRemoteConnection()}
             />
@@ -643,14 +646,13 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
         ) : (
           <CommandFooter>
             <div className="flex w-full justify-end gap-2">
-              <Button type="button" onClick={handleBackToPicker} variant="ghost" size="xs">
+              <Button type="button" onClick={onClose} variant="ghost">
                 Cancel
               </Button>
               <Button
                 type="button"
                 onClick={() => void handleTestRemoteConnection()}
                 variant="ghost"
-                size="xs"
                 disabled={isRemoteTesting}
               >
                 {isRemoteTesting ? (
@@ -662,8 +664,8 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
               <Button
                 type="submit"
                 form="project-picker-add-remote-form"
+                variant="accent"
                 disabled={!isRemoteFormValid || isRemoteSaving}
-                size="xs"
               >
                 {isRemoteSaving ? "Saving..." : "Save Connection"}
               </Button>

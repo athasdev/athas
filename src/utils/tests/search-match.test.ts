@@ -12,6 +12,11 @@ describe("matchesSearchQuery", () => {
     expect(matchesSearchQuery("istanbul", ["Istanbul"])).toBe(true);
   });
 
+  it("ignores missing candidate values", () => {
+    expect(matchesSearchQuery("athas", [undefined, "Athas", null])).toBe(true);
+    expect(matchesSearchQuery("github", [undefined, null])).toBe(false);
+  });
+
   it("scores weighted matches across separators", () => {
     expect(
       scoreSearchQuery("prepush", [

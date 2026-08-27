@@ -15,7 +15,7 @@ import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import { EmptyState } from "@/ui/empty";
 import {
   SidebarHeader,
-  SidebarHeaderIconButton,
+  SidebarIconButton,
   SidebarSearchPopover,
   SidebarListItem,
   SidebarSectionLabel,
@@ -30,13 +30,11 @@ import { cn } from "@/utils/cn";
 import { ScrollArea } from "@/ui/scroll-area";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   clampFileNavigatorWidth,
   DEFAULT_FILE_NAVIGATOR_WIDTH,
   getFileNavigatorLayout,
 } from "@/features/file-explorer/lib/file-navigator-layout";
-import "../styles/file-explorer-tree.css";
 
 export type FileNavigatorViewMode = "flat" | "tree";
 type FileNavigatorSearchMode = "substring" | "fuzzy";
@@ -56,7 +54,6 @@ const RESIZE_STEP = 16;
 const MAX_NAVIGATOR_SYNC_ITEMS = 5_000;
 const FLAT_NAVIGATOR_VIRTUALIZATION_THRESHOLD = 100;
 const COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT = 28;
-const COMFORTABLE_COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT = 32;
 const DETAILED_FLAT_NAVIGATOR_ROW_HEIGHT = 48;
 const FLAT_NAVIGATOR_OVERSCAN = 10;
 
@@ -190,7 +187,6 @@ const FileNavigatorFlatRow = memo(function FileNavigatorFlatRow({
       }
       trailing={<FileNavigatorMetadata item={item} />}
       description={compactRows ? undefined : directoryPath}
-      className={cn(compactRows && "py-1 ui-text-sm")}
     >
       {fileName}
     </SidebarListItem>
@@ -301,8 +297,6 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   const [parentWidth, setParentWidth] = useState<number>();
   const [isResizing, setIsResizing] = useState(false);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(() => new Set());
-  const windowChromeDensity = useSettingsStore.use.settings().windowChromeDensity;
-
   useEffect(() => {
     setSearchQuery("");
   }, [searchResetKey]);
@@ -377,11 +371,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
     getScrollElement: () => navigatorScrollRef.current,
     getItemKey: (index) => flatItems[index]?.key ?? index,
     estimateSize: () =>
-      compactRows
-        ? windowChromeDensity === "comfortable"
-          ? COMFORTABLE_COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT
-          : COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT
-        : DETAILED_FLAT_NAVIGATOR_ROW_HEIGHT,
+      compactRows ? COMPACT_FLAT_NAVIGATOR_ROW_HEIGHT : DETAILED_FLAT_NAVIGATOR_ROW_HEIGHT,
     overscan: FLAT_NAVIGATOR_OVERSCAN,
   });
 
@@ -475,24 +465,18 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       aria-label={ariaLabel}
     >
       {onViewModeChange ? (
-        <SidebarHeader
-          className={cn(
-            surface === "plain" && "px-1",
-            surface === "panel" &&
-              "border-border/60 border-b bg-surface/92 px-(--athas-chrome-padding-inline)",
-          )}
-        >
+        <SidebarHeader>
           <SidebarSearchPopover
             value={searchQuery}
             onChange={setSearchQuery}
             aria-label="Search files"
           />
           <div
-            className="ml-auto flex shrink-0 items-center gap-(--athas-chrome-gap)"
+            className="ml-auto flex shrink-0 items-center gap-chrome"
             role="group"
             aria-label="File navigator view"
           >
-            <SidebarHeaderIconButton
+            <SidebarIconButton
               active={viewMode === "flat"}
               onClick={() => onViewModeChange("flat")}
               tooltip="Flat list"
@@ -500,8 +484,8 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               aria-label="Flat list"
             >
               <ListBullets />
-            </SidebarHeaderIconButton>
-            <SidebarHeaderIconButton
+            </SidebarIconButton>
+            <SidebarIconButton
               active={viewMode === "tree"}
               onClick={() => onViewModeChange("tree")}
               tooltip="File tree"
@@ -509,14 +493,14 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               aria-label="File tree"
             >
               <TreeStructure />
-            </SidebarHeaderIconButton>
+            </SidebarIconButton>
           </div>
         </SidebarHeader>
       ) : null}
 
       <ScrollArea
         className="min-h-0 flex-1"
-        contentClassName={surface === "panel" ? "px-(--athas-chrome-padding-inline) py-2" : "p-1"}
+        contentClassName={surface === "panel" ? "px-chrome-inline py-2" : "p-1"}
         reserveScrollbarGutter
         scrollbarVisibility={surface === "panel" ? "always" : "hover"}
         viewportProps={{ ref: navigatorScrollRef }}

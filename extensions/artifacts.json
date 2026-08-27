@@ -75,8 +75,8 @@
     },
     "athas.gitlab": {
       "downloadUrl": "https://athas.dev/extensions/packages/integration/gitlab/athas.gitlab.tar.gz",
-      "size": 11799,
-      "checksum": "cc6d72d21f7e4717ff135db9dc4a6239b961c4f9521090d44861663510130916"
+      "size": 12823,
+      "checksum": "feb3113b3a424834d6951abd3ec49a5b147bce25f029d8df70d4cedbdf725daf"
     },
     "athas.icon-theme.market": {
       "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/market/athas.icon-theme.market.tar.gz",
@@ -90,8 +90,8 @@
     },
     "athas.sentry": {
       "downloadUrl": "https://athas.dev/extensions/packages/integration/sentry/athas.sentry.tar.gz",
-      "size": 9751,
-      "checksum": "14ebb86bb2fd4d9e66276fced1c661f00206d0e04d291cf85a9f12fe6e3508d0"
+      "size": 10775,
+      "checksum": "a072c7e8db9bb33b9316c6a37bd0440f852ef5a052f113398919a9840eea2768"
     }
   }
 }

@@ -1,26 +1,16 @@
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
-import { restrictToHorizontalAxis, restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import {
-  SortableContext,
-  horizontalListSortingStrategy,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
+import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import {
-  TextAlignCenterIcon as AlignCenter,
   ArrowDownIcon as ArrowDown,
   ArrowUpIcon as ArrowUp,
-  CaretDownIcon as ChevronDown,
-  ArrowsOutIcon as Maximize,
   ArrowsOutIcon as Maximize2,
   ArrowsInIcon as Minimize2,
   PlusIcon as Plus,
   MagnifyingGlassIcon as Search,
   TerminalWindowIcon as TerminalIcon,
-  SidebarSimpleIcon as PanelLeft,
-  SidebarSimpleIcon as PanelRight,
-  RowsIcon as Rows3,
 } from "@/ui/icons";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -32,20 +22,19 @@ import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getOrCreatePaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
-import {
-  type TerminalTabLayout,
-  type TerminalTabSidebarPosition,
-  type TerminalWidthMode,
-  useTerminalStore,
-} from "@/features/terminal/stores/terminal.store";
+import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
 import { normalizeTerminalTitle } from "@/features/terminal/utils/terminal-title";
-import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
+import { ContextMenuPopup, type ContextMenuAction } from "@/ui/context-menu";
 import { Button } from "@/ui/button";
-import { EmptyState } from "@/ui/empty";
 import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
-import { cn } from "@/utils/cn";
 import {
   clearInternalTabDragData,
   resolveDropTarget,
@@ -60,12 +49,6 @@ interface ToolbarContextMenuProps {
   isOpen: boolean;
   position: { x: number; y: number };
   onClose: () => void;
-  currentMode: TerminalWidthMode;
-  currentLayout: TerminalTabLayout;
-  currentSidebarPosition: TerminalTabSidebarPosition;
-  onModeChange: (mode: TerminalWidthMode) => void;
-  onLayoutChange: (layout: TerminalTabLayout) => void;
-  onSidebarPositionChange: (position: TerminalTabSidebarPosition) => void;
   onNewTerminal?: () => void;
   onSearchTerminal?: () => void;
   onNextTerminal?: () => void;
@@ -78,12 +61,6 @@ const ToolbarContextMenu = ({
   isOpen,
   position,
   onClose,
-  currentMode,
-  currentLayout,
-  currentSidebarPosition,
-  onModeChange,
-  onLayoutChange,
-  onSidebarPositionChange,
   onNewTerminal,
   onSearchTerminal,
   onNextTerminal,
@@ -91,66 +68,13 @@ const ToolbarContextMenu = ({
   onFullScreen,
   isFullScreen,
 }: ToolbarContextMenuProps) => {
-  const modes: {
-    value: TerminalWidthMode;
-    label: string;
-    icon: React.ReactNode;
-  }[] = [
-    { value: "full", label: "Full Width", icon: <Maximize /> },
-    { value: "editor", label: "Editor Width", icon: <AlignCenter /> },
-  ];
-  const layouts: {
-    value: TerminalTabLayout;
-    label: string;
-    icon: React.ReactNode;
-  }[] = [
-    {
-      value: "horizontal",
-      label: "Horizontal Tabs",
-      icon: <Rows3 />,
-    },
-    {
-      value: "vertical",
-      label: "Vertical Tabs",
-      icon: <PanelLeft />,
-    },
-  ];
-  const modeItems: MenuItem[] = modes.map((mode) => ({
-    id: `mode-${mode.value}`,
-    label: mode.label,
-    icon: mode.icon,
-    onClick: () => onModeChange(mode.value),
-    selected: currentMode === mode.value,
-  }));
-  const layoutItems: MenuItem[] = layouts.map((layout) => ({
-    id: `layout-${layout.value}`,
-    label: layout.label,
-    icon: layout.icon,
-    onClick: () => onLayoutChange(layout.value),
-    selected: currentLayout === layout.value,
-  }));
-  const sidebarPositions: {
-    value: TerminalTabSidebarPosition;
-    label: string;
-    icon: React.ReactNode;
-  }[] = [
-    { value: "left", label: "Tabs on Left", icon: <PanelLeft /> },
-    { value: "right", label: "Tabs on Right", icon: <PanelRight /> },
-  ];
-  const sidebarPositionItems: MenuItem[] = sidebarPositions.map((pos) => ({
-    id: `sidebar-pos-${pos.value}`,
-    label: pos.label,
-    icon: pos.icon,
-    onClick: () => onSidebarPositionChange(pos.value),
-    selected: currentSidebarPosition === pos.value,
-  }));
-  const actionItems: MenuItem[] = [
+  const actionItems: ContextMenuAction[] = [
     ...(onNewTerminal
       ? [
           {
             id: "new-terminal",
             label: "New Terminal",
-            icon: <Plus />,
+            icon: <Plus weight="bold" />,
             onClick: onNewTerminal,
           },
         ]
@@ -198,28 +122,12 @@ const ToolbarContextMenu = ({
   ];
 
   return (
-    <Dropdown isOpen={isOpen} point={position} onClose={onClose} className="min-w-45">
-      <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">Terminal Width</div>
-      <MenuItemsList items={modeItems} onItemSelect={onClose} density="default" />
-      <div className="my-0.5 border-border/70 border-t" />
-      <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">Tab Layout</div>
-      <MenuItemsList items={layoutItems} onItemSelect={onClose} density="default" />
-      {currentLayout === "vertical" && (
-        <>
-          <div className="my-0.5 border-border/70 border-t" />
-          <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">
-            Tab Position
-          </div>
-          <MenuItemsList items={sidebarPositionItems} onItemSelect={onClose} density="default" />
-        </>
-      )}
-      {actionItems.length > 0 && (
-        <>
-          <div className="my-0.5 border-border/70 border-t" />
-          <MenuItemsList items={actionItems} onItemSelect={onClose} density="default" />
-        </>
-      )}
-    </Dropdown>
+    <ContextMenuPopup
+      isOpen={isOpen}
+      point={position}
+      groups={[{ id: "terminal-actions", items: actionItems }]}
+      onClose={onClose}
+    />
   );
 };
 
@@ -231,8 +139,7 @@ interface TerminalTabBarProps {
   onTabReorder?: (fromIndex: number, toIndex: number) => void;
   onTabPin?: (terminalId: string) => void;
   onTabRename?: (terminalId: string, name: string) => void;
-  onNewTerminal?: () => void;
-  onNewTerminalWithProfile?: (profileId?: string) => void;
+  onNewTerminal?: (profileId?: string) => void;
   onTabCreate?: (directory: string, shell?: string, profileId?: string) => void;
   onCloseOtherTabs?: (terminalId: string) => void;
   onCloseAllTabs?: () => void;
@@ -242,7 +149,6 @@ interface TerminalTabBarProps {
   onPrevTerminal?: () => void;
   onFullScreen?: () => void;
   isFullScreen?: boolean;
-  orientation?: TerminalTabLayout;
 }
 
 const TerminalTabBar = ({
@@ -254,7 +160,6 @@ const TerminalTabBar = ({
   onTabPin,
   onTabRename,
   onNewTerminal,
-  onNewTerminalWithProfile,
   onTabCreate,
   onCloseOtherTabs,
   onCloseAllTabs,
@@ -264,7 +169,6 @@ const TerminalTabBar = ({
   onPrevTerminal,
   onFullScreen,
   isFullScreen = false,
-  orientation = "horizontal",
 }: TerminalTabBarProps) => {
   const [editingTerminalId, setEditingTerminalId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -280,14 +184,6 @@ const TerminalTabBar = ({
     position: { x: number; y: number };
   }>({ isOpen: false, position: { x: 0, y: 0 } });
 
-  const widthMode = useTerminalStore((state) => state.widthMode);
-  const setWidthMode = useTerminalStore((state) => state.actions.setWidthMode);
-  const tabLayout = useTerminalStore((state) => state.tabLayout);
-  const setTabLayout = useTerminalStore((state) => state.actions.setTabLayout);
-  const tabSidebarWidth = useTerminalStore((state) => state.tabSidebarWidth);
-  const setTabSidebarWidth = useTerminalStore((state) => state.actions.setTabSidebarWidth);
-  const tabSidebarPosition = useTerminalStore((state) => state.tabSidebarPosition);
-  const setTabSidebarPosition = useTerminalStore((state) => state.actions.setTabSidebarPosition);
   const sessions = useTerminalStore((state) => state.sessions);
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
@@ -295,14 +191,9 @@ const TerminalTabBar = ({
 
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const profileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
   const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
   const { getClickCapture, releaseClickSuppression, suppressNextClick } = useTabDragClickGuard();
-  const [profileMenu, setProfileMenu] = useState<{
-    isOpen: boolean;
-    position: { x: number; y: number };
-  }>({ isOpen: false, position: { x: 0, y: 0 } });
 
   useEffect(() => {
     void useTerminalShellsStore.getState().actions.loadShells();
@@ -344,7 +235,7 @@ const TerminalTabBar = ({
       e.key,
       currentIndex,
       sortedTerminals.length,
-      orientation,
+      "horizontal",
     );
     if (nextIndex !== null) {
       const nextTerminal = sortedTerminals[nextIndex];
@@ -426,20 +317,6 @@ const TerminalTabBar = ({
     setToolbarContextMenu({ isOpen: false, position: { x: 0, y: 0 } });
   };
 
-  const closeProfileMenu = () => {
-    setProfileMenu({ isOpen: false, position: { x: 0, y: 0 } });
-  };
-
-  const openProfileMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    setProfileMenu({
-      isOpen: true,
-      position: { x: rect.right - 220, y: rect.bottom + 8 },
-    });
-  };
-
   // Sort terminals: pinned tabs first, then regular tabs
   const sortedTerminals = [...terminals].sort((a, b) => {
     if (a.isPinned && !b.isPinned) return -1;
@@ -449,17 +326,12 @@ const TerminalTabBar = ({
   const sortedTerminalIds = sortedTerminals.map((terminal) => terminal.id);
   const terminalProfiles = getAllTerminalProfiles(availableShells, customProfiles);
   const terminalToolbarActions = (
-    <div
-      className={cn(
-        "flex shrink-0 items-center gap-1",
-        orientation === "vertical" ? "px-1.5 py-1" : "h-8 pl-1",
-      )}
-    >
+    <div className="flex h-8 shrink-0 items-center gap-1 pl-1">
       {onSearchTerminal && (
         <Button
           onClick={onSearchTerminal}
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           tooltip="Find in Terminal"
           commandId="terminal.find"
           tooltipSide="bottom"
@@ -468,37 +340,37 @@ const TerminalTabBar = ({
           <Search />
         </Button>
       )}
-      <div className="flex shrink-0 items-center gap-0.5">
-        <Button
-          onClick={onNewTerminal}
-          variant="ghost"
-          size="icon-xs"
-          tooltip="New Terminal"
-          commandId="terminal.new"
-          tooltipSide="bottom"
-          aria-label="New terminal"
-        >
-          <Plus />
-        </Button>
-        {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
-          <Button
-            ref={profileMenuButtonRef}
-            onClick={openProfileMenu}
-            variant="ghost"
-            size="icon-xs"
-            tooltip="Choose Terminal Profile"
-            tooltipSide="bottom"
-            aria-label="Choose terminal profile"
+      {onNewTerminal && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                iconOnly
+                tooltip="New Terminal"
+                commandId="terminal.new"
+                tooltipSide="bottom"
+                aria-label="New terminal"
+              />
+            }
           >
-            <ChevronDown />
-          </Button>
-        )}
-      </div>
+            <Plus weight="bold" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {terminalProfiles.map((profile) => (
+              <DropdownMenuItem key={profile.id} onClick={() => onNewTerminal(profile.id)}>
+                {profile.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
       {onFullScreen && (
         <Button
           onClick={onFullScreen}
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           tooltip={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
           commandId="workbench.toggleActivePaneFullscreen"
           tooltipSide="bottom"
@@ -509,8 +381,6 @@ const TerminalTabBar = ({
       )}
     </div>
   );
-  const sortableStrategy =
-    orientation === "vertical" ? verticalListSortingStrategy : horizontalListSortingStrategy;
   const pinnedTerminals = sortedTerminals.filter((terminal) => terminal.isPinned);
   const regularTerminals = sortedTerminals.filter((terminal) => !terminal.isPinned);
   const getDirectoryLabel = (directory?: string) => {
@@ -543,16 +413,6 @@ const TerminalTabBar = ({
     if (dirLabel) return dirLabel;
     return terminal.name;
   };
-  const profileMenuItems: MenuItem[] = terminalProfiles.map((profile) => ({
-    id: profile.id,
-    label: profile.name,
-    icon: <TerminalIcon className="text-subtle-foreground" />,
-    onClick: () => {
-      onNewTerminalWithProfile?.(profile.id);
-      closeProfileMenu();
-    },
-  }));
-
   const getClientPoint = (event: Event) => {
     const candidate = event as Partial<MouseEvent>;
     if (typeof candidate.clientX === "number" && typeof candidate.clientY === "number") {
@@ -576,8 +436,8 @@ const TerminalTabBar = ({
     const rect = tabBarRef.current?.getBoundingClientRect();
     if (!rect) return false;
 
-    const horizontalSlop = orientation === "vertical" ? 24 : 24;
-    const verticalSlop = orientation === "vertical" ? 24 : 64;
+    const horizontalSlop = 24;
+    const verticalSlop = 64;
     return (
       point.x < rect.left - horizontalSlop ||
       point.x > rect.right + horizontalSlop ||
@@ -697,7 +557,7 @@ const TerminalTabBar = ({
   return (
     <>
       <TabDndContext
-        modifiers={[orientation === "vertical" ? restrictToVerticalAxis : restrictToHorizontalAxis]}
+        modifiers={[restrictToHorizontalAxis]}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
@@ -705,48 +565,22 @@ const TerminalTabBar = ({
       >
         <TabBarSurface
           ref={tabBarRef}
-          orientation={orientation}
-          className={cn(
-            orientation === "vertical" ? "" : "justify-between",
-            "scrollbar-hidden overscroll-x-contain",
-          )}
-          style={orientation === "vertical" ? { width: tabSidebarWidth } : undefined}
+          className="scrollbar-none justify-between overscroll-x-contain"
           role="tablist"
           aria-label="Terminal tabs"
           onContextMenu={handleToolbarContextMenu}
         >
-          {orientation === "vertical" && terminalToolbarActions}
-
           {/* Tab list */}
-          <SortableContext items={sortedTerminalIds} strategy={sortableStrategy}>
-            <div
-              className={cn(
-                "min-w-0 flex-1 overflow-hidden",
-                orientation === "vertical"
-                  ? "flex flex-col gap-0.5 px-1.5 py-1"
-                  : "flex items-center gap-0.5",
+          <SortableContext items={sortedTerminalIds} strategy={horizontalListSortingStrategy}>
+            <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-hidden">
+              {terminals.length === 0 && (
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <TerminalIcon className="text-subtle-foreground" />
+                  <span className="font-sans ui-text-sm text-subtle-foreground">No terminals</span>
+                </div>
               )}
-            >
-              {terminals.length === 0 &&
-                (orientation === "vertical" ? (
-                  <EmptyState layout="sidebar" message="No terminals" />
-                ) : (
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <TerminalIcon className="text-subtle-foreground" />
-                    <span className="font-sans ui-text-sm text-subtle-foreground">
-                      No terminals
-                    </span>
-                  </div>
-                ))}
               {pinnedTerminals.length > 0 && (
-                <div
-                  className={cn(
-                    "shrink-0",
-                    orientation === "vertical"
-                      ? "flex flex-col gap-0.5 pb-0.5"
-                      : "flex items-center gap-0.5 pr-0.5",
-                  )}
-                >
+                <div className="flex shrink-0 items-center gap-0.5 pr-0.5">
                   {pinnedTerminals.map((terminal) => {
                     const index = sortedTerminals.findIndex((item) => item.id === terminal.id);
 
@@ -754,7 +588,6 @@ const TerminalTabBar = ({
                       <SortableTab
                         key={terminal.id}
                         id={terminal.id}
-                        orientation={orientation}
                         tabRef={(el) => {
                           tabRefs.current[index] = el;
                         }}
@@ -765,7 +598,6 @@ const TerminalTabBar = ({
                           <TerminalTabBarItem
                             terminal={terminal}
                             displayName={getTerminalDisplayName(terminal)}
-                            orientation={orientation}
                             isActive={terminal.id === activeTerminalId}
                             isDraggedTab={isDragging}
                             showDropIndicatorBefore={false}
@@ -789,23 +621,14 @@ const TerminalTabBar = ({
               )}
 
               <div
-                className={cn(
-                  "scrollbar-hidden min-w-0 flex-1",
-                  orientation === "vertical"
-                    ? "flex flex-col gap-0.5 overflow-y-auto overflow-x-hidden"
-                    : "flex items-center gap-0.5 overflow-x-auto overflow-y-hidden",
-                )}
+                className="scrollbar-none flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden"
                 data-tab-container
                 onWheel={(e) => {
                   const container = e.currentTarget;
                   if (!container) return;
 
-                  if (orientation === "vertical") {
-                    container.scrollTop += e.deltaY !== 0 ? e.deltaY : e.deltaX;
-                  } else {
-                    const deltaX = e.deltaX !== 0 ? e.deltaX : e.deltaY;
-                    container.scrollLeft += deltaX;
-                  }
+                  const deltaX = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+                  container.scrollLeft += deltaX;
                   e.preventDefault();
                 }}
               >
@@ -816,7 +639,6 @@ const TerminalTabBar = ({
                     <SortableTab
                       key={terminal.id}
                       id={terminal.id}
-                      orientation={orientation}
                       tabRef={(el) => {
                         tabRefs.current[index] = el;
                       }}
@@ -827,7 +649,6 @@ const TerminalTabBar = ({
                         <TerminalTabBarItem
                           terminal={terminal}
                           displayName={getTerminalDisplayName(terminal)}
-                          orientation={orientation}
                           isActive={terminal.id === activeTerminalId}
                           isDraggedTab={isDragging}
                           showDropIndicatorBefore={false}
@@ -851,42 +672,7 @@ const TerminalTabBar = ({
             </div>
           </SortableContext>
 
-          {/* Horizontal mode - Action buttons on the right */}
-          {orientation === "horizontal" && terminalToolbarActions}
-
-          {/* Resize handle for vertical sidebar */}
-          {orientation === "vertical" && (
-            <div
-              className={cn(
-                "absolute top-0 z-10 h-full w-1 cursor-col-resize hover:bg-primary/40 active:bg-primary/60",
-                tabSidebarPosition === "right" ? "left-0" : "right-0",
-              )}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                const startX = e.clientX;
-                const startWidth = tabSidebarWidth;
-                const directionMultiplier = tabSidebarPosition === "right" ? -1 : 1;
-
-                const onMouseMove = (ev: MouseEvent) => {
-                  setTabSidebarWidth(startWidth + (ev.clientX - startX) * directionMultiplier);
-                };
-                const onMouseUp = () => {
-                  document.removeEventListener("mousemove", onMouseMove);
-                  document.removeEventListener("mouseup", onMouseUp);
-                  document.body.style.cursor = "";
-                  document.body.style.userSelect = "";
-                };
-
-                document.body.style.cursor = "col-resize";
-                document.body.style.userSelect = "none";
-                document.addEventListener("mousemove", onMouseMove);
-                document.addEventListener("mouseup", onMouseUp);
-              }}
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Resize terminal sidebar"
-            />
-          )}
+          {terminalToolbarActions}
         </TabBarSurface>
       </TabDndContext>
 
@@ -961,12 +747,6 @@ const TerminalTabBar = ({
             isOpen={toolbarContextMenu.isOpen}
             position={toolbarContextMenu.position}
             onClose={closeToolbarContextMenu}
-            currentMode={widthMode}
-            currentLayout={tabLayout}
-            currentSidebarPosition={tabSidebarPosition}
-            onModeChange={setWidthMode}
-            onLayoutChange={setTabLayout}
-            onSidebarPositionChange={setTabSidebarPosition}
             onNewTerminal={onNewTerminal}
             onSearchTerminal={onSearchTerminal}
             onNextTerminal={onNextTerminal}
@@ -974,22 +754,6 @@ const TerminalTabBar = ({
             onFullScreen={onFullScreen}
             isFullScreen={isFullScreen}
           />
-          <Dropdown
-            isOpen={profileMenu.isOpen}
-            point={profileMenu.position}
-            onClose={closeProfileMenu}
-            className="w-55"
-          >
-            <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">
-              New Terminal
-            </div>
-            <div className="my-0.5 border-border/70 border-t" />
-            <MenuItemsList
-              items={profileMenuItems}
-              onItemSelect={closeProfileMenu}
-              density="default"
-            />
-          </Dropdown>
         </>,
         document.body,
       )}

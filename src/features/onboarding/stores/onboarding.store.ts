@@ -6,6 +6,7 @@ import {
   resolveOnboardingContext,
   type OnboardingContext,
 } from "@/features/onboarding/lib/onboarding-state";
+import { initializeSettingsStore } from "@/features/settings/stores/settings.store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 interface OnboardingStoreState {
@@ -32,6 +33,7 @@ const useOnboardingStoreBase = create<OnboardingStoreState>()((set, get) => ({
         return;
       }
 
+      await initializeSettingsStore();
       const context = await resolveOnboardingContext();
 
       set({

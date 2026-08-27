@@ -67,7 +67,6 @@ const ProjectIconPicker = memo(
       <Dialog
         title="Select project icon"
         onClose={onClose}
-        size="sm"
         headerActions={
           currentIcon ? (
             <Tooltip content="Remove icon" side="bottom">
@@ -75,15 +74,15 @@ const ProjectIconPicker = memo(
                 onClick={handleRemoveIcon}
                 variant="ghost"
                 aria-label="Remove custom icon"
-                size="icon-xs"
+                iconOnly
               >
                 <Trash2 />
               </Button>
             </Tooltip>
           ) : undefined
         }
+        size="sm"
         classNames={{
-          modal: "max-w-90",
           content: "p-3",
         }}
       >
@@ -114,7 +113,7 @@ const ProjectIconPicker = memo(
                     currentIcon === icon.path ? "border-primary bg-primary/10" : "border-border/50"
                   }`}
                   aria-label={`Select ${icon.name} as project icon`}
-                  size="icon"
+                  iconOnly
                 >
                   <img
                     src={icon.src}

@@ -5,16 +5,12 @@ on:
     branches: [main]
     paths:
       - "extensions/**"
-      - "src/extensions/**"
       - ".github/workflows/extensions.yml"
   pull_request:
     paths:
       - "extensions/**"
-      - "src/extensions/**"
       - ".github/workflows/extensions.yml"
   workflow_dispatch:
-  schedule:
-    - cron: "17 6 * * *"
 
 jobs:
   validate:
@@ -33,19 +29,55 @@ jobs:
       - name: Validate extensions
         run: bun run extensions:validate
 
-      - name: Verify agent registry freshness
-        run: bun run extensions:validate:agents
-
       - name: Check generated source changes
         run: |
-          git diff --exit-code extensions src/extensions package.json .gitignore || (
+          git diff --exit-code extensions package.json .gitignore || (
             echo "Extension source or generated metadata changed. Run the extension scripts locally."
             exit 1
           )
 
-  deploy:
+  package-databases:
     if: github.repository == 'athasdev/athas' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: validate
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: extension-database-sidecars
+
+      - name: Prepare generated extension CDN output
+        run: bun run extensions:prepare
+
+      - name: Build database sidecar packages
+        run: |
+          test "$(uname -m)" = "arm64"
+          bun run extensions:package:databases --build --platform darwin-arm64 --target-dir target/database-sidecars
+          bun run extensions:stage
+          bun run extensions:catalog
+
+      - name: Validate packaged extensions
+        run: |
+          bun run extensions:validate
+          bun run extensions:verify-cdn --local
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extensions-cdn
+          path: extensions/generated/cdn/
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    if: github.repository == 'athasdev/athas' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [validate, package-databases]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,8 +86,10 @@ jobs:
         with:
           bun-version: 1.3.14
 
-      - name: Prepare generated extension CDN output
-        run: bun run extensions:prepare
+      - uses: actions/download-artifact@v4
+        with:
+          name: extensions-cdn
+          path: extensions/generated/cdn/
 
       - name: Deploy extensions CDN
         uses: burnett01/rsync-deployments@7.0.2

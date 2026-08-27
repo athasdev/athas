@@ -20,7 +20,7 @@ describe("font family resolution", () => {
     const { mono, sans } = getTypographyFontFallbacks(false);
 
     expect(buildFontFamilyStack(DEFAULT_MONO_FONT_FAMILY, mono)).toBe(`"Geist Mono", ${mono}`);
-    expect(buildFontFamilyStack(`"${DEFAULT_UI_FONT_FAMILY}"`, sans)).toBe(`"Geist Sans", ${sans}`);
+    expect(buildFontFamilyStack(`"${DEFAULT_UI_FONT_FAMILY}"`, sans)).toBe(`system-ui, ${sans}`);
   });
 
   it("preserves configured full font stacks", () => {

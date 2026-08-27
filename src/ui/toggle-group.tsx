@@ -9,16 +9,17 @@ export interface ToggleGroupOption<Value extends string = string> {
   value: Value;
   label: string;
   icon?: ReactNode;
+  disabled?: boolean;
 }
 
 interface ToggleGroupCommonProps<Value extends string> {
   options: ToggleGroupOption<Value>[];
   ariaLabel: string;
-  size?: "xs" | "sm" | "md";
   variant?: "default" | "segmented";
   className?: string;
   wrap?: boolean;
   iconOnly?: boolean;
+  disabled?: boolean;
 }
 
 interface SingleToggleGroupProps<Value extends string> extends ToggleGroupCommonProps<Value> {
@@ -53,14 +54,9 @@ const toggleGroupVariants = cva(
 );
 
 const toggleGroupItemVariants = cva(
-  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-1 rounded-md font-sans text-subtle-foreground outline-none transition-[transform,background-color,color] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent/50 hover:text-foreground active:scale-(--app-press-scale) focus-visible:ring-2 focus-visible:ring-primary/20 data-disabled:pointer-events-none data-disabled:opacity-50 data-pressed:bg-accent/80 data-pressed:text-foreground",
+  "inline-flex min-h-6 shrink-0 items-center justify-center gap-1 rounded-md px-2.5 font-sans ui-text-sm text-subtle-foreground outline-none transition-[transform,background-color,color] duration-fast ease-smooth hover:bg-accent/50 hover:text-foreground active:scale-press focus-visible:ring-2 focus-visible:ring-primary/20 data-disabled:pointer-events-none data-disabled:opacity-50 data-pressed:bg-accent/80 data-pressed:text-foreground",
   {
     variants: {
-      size: {
-        xs: "min-h-6 px-2.5 ui-text-sm",
-        sm: "min-h-7 px-2.5 ui-text-sm",
-        md: "min-h-8 px-3 ui-text-base",
-      },
       variant: {
         default: "",
         segmented: "rounded-none border-border/60 border-r last:border-r-0",
@@ -71,7 +67,6 @@ const toggleGroupItemVariants = cva(
       },
     },
     defaultVariants: {
-      size: "xs",
       variant: "default",
       iconOnly: false,
     },
@@ -86,11 +81,11 @@ export function ToggleGroup<Value extends string>(props: ToggleGroupProps<Value>
   const {
     options,
     ariaLabel,
-    size = "xs",
     variant = "default",
     className,
     wrap = true,
     iconOnly = false,
+    disabled = false,
   } = props;
   const values = props.type === "multiple" ? props.value : [props.value];
 
@@ -116,9 +111,10 @@ export function ToggleGroup<Value extends string>(props: ToggleGroupProps<Value>
         const item = (
           <TogglePrimitive
             value={option.value}
+            disabled={disabled || option.disabled}
             data-slot="toggle-group-item"
             aria-label={iconOnly ? option.label : undefined}
-            className={toggleGroupItemVariants({ size, variant, iconOnly })}
+            className={toggleGroupItemVariants({ variant, iconOnly })}
           >
             {option.icon}
             {iconOnly ? (

@@ -113,7 +113,6 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
             <Button
               type="button"
               variant="ghost"
-              size="sm"
               className="w-fit max-w-full min-w-0 justify-start text-left"
               title={activeRepoTitle ?? undefined}
             />
@@ -165,7 +164,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
                     </span>
                   </span>
                   {manualRepoPaths.includes(repoPath) ? (
-                    <Badge variant="muted" size="compact" className="mr-4">
+                    <Badge variant="muted" className="mr-4">
                       Added
                     </Badge>
                   ) : null}

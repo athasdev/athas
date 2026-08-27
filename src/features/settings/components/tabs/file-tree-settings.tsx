@@ -67,14 +67,13 @@ export const FileTreeSettings = () => {
           canReset={settings.fileTreeSortOrder !== getDefaultSetting("fileTreeSortOrder")}
         >
           <Select
+            shape="pill"
             value={settings.fileTreeSortOrder}
             options={[
               { value: "folders-first", label: "Folders First" },
               { value: "name", label: "Name" },
             ]}
             onChange={(value) => updateSetting("fileTreeSortOrder", value as FileTreeSortOrder)}
-            className={SETTINGS_CONTROL_WIDTHS.default}
-            size="sm"
             variant="default"
           />
         </SettingRow>
@@ -93,7 +92,6 @@ export const FileTreeSettings = () => {
             value={settings.fileTreeIndentSize}
             onChange={(val) => updateSetting("fileTreeIndentSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
-            size="md"
           />
         </SettingRow>
 
@@ -110,7 +108,6 @@ export const FileTreeSettings = () => {
           <Switch
             checked={settings.showFileIconsInFileTree}
             onChange={(checked) => updateSetting("showFileIconsInFileTree", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -130,7 +127,6 @@ export const FileTreeSettings = () => {
           <Switch
             checked={settings.showIndentGuidesInFileTree}
             onChange={(checked) => updateSetting("showIndentGuidesInFileTree", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -147,7 +143,6 @@ export const FileTreeSettings = () => {
           <Switch
             checked={settings.compactFoldersInFileTree}
             onChange={(checked) => updateSetting("compactFoldersInFileTree", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -164,7 +159,6 @@ export const FileTreeSettings = () => {
           <Switch
             checked={settings.hideRootFolderInFileTree}
             onChange={(checked) => updateSetting("hideRootFolderInFileTree", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -184,7 +178,6 @@ export const FileTreeSettings = () => {
           <Switch
             checked={settings.showHiddenFilesInFileTree}
             onChange={(checked) => updateSetting("showHiddenFilesInFileTree", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -205,7 +198,6 @@ export const FileTreeSettings = () => {
           <Switch
             checked={!settings.showGitignoredFilesInFileTree}
             onChange={(checked) => updateSetting("showGitignoredFilesInFileTree", !checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -222,7 +214,6 @@ export const FileTreeSettings = () => {
           <Switch
             checked={settings.showGitStatusInFileTree}
             onChange={(checked) => updateSetting("showGitStatusInFileTree", checked)}
-            size="sm"
           />
         </SettingRow>
       </Section>
@@ -245,7 +236,6 @@ export const FileTreeSettings = () => {
           <Switch
             checked={settings.autoRevealActiveFileInFileTree}
             onChange={(checked) => updateSetting("autoRevealActiveFileInFileTree", checked)}
-            size="sm"
           />
         </SettingRow>
 
@@ -262,7 +252,6 @@ export const FileTreeSettings = () => {
           <Switch
             checked={settings.confirmBeforeFileDelete}
             onChange={(checked) => updateSetting("confirmBeforeFileDelete", checked)}
-            size="sm"
           />
         </SettingRow>
       </Section>
@@ -291,7 +280,6 @@ export const FileTreeSettings = () => {
             }}
             placeholder="*.log, *.tmp, **/*.bak"
             rows={2}
-            size="md"
             className="w-48 max-w-full resize-none"
           />
         </SettingRow>
@@ -319,7 +307,6 @@ export const FileTreeSettings = () => {
             }}
             placeholder="node_modules, .git, build/"
             rows={2}
-            size="md"
             className="w-48 max-w-full resize-none"
           />
         </SettingRow>

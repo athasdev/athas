@@ -6,26 +6,23 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 export const buttonVariants = cva(
-  "font-sans ui-text-sm inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap leading-row transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-(--app-duration-fast) ease-(--app-ease-smooth) select-none outline-none active:scale-(--app-press-scale) focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "h-7 rounded-chrome font-sans ui-text-sm inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap leading-row transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-fast ease-smooth select-none outline-none active:scale-press focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default: "border-0 bg-accent text-foreground hover:bg-selected",
         accent:
           "border border-primary/30 bg-primary/12 text-primary hover:bg-primary/20 data-[active=true]:border-primary/45 data-[active=true]:bg-primary/24",
+        "accent-ghost":
+          "border-0 bg-transparent text-primary hover:bg-primary/10 data-[active=true]:bg-primary/12",
         ghost:
           "border-0 bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground",
         danger:
           "border-0 bg-transparent text-foreground hover:bg-destructive/10 hover:text-destructive data-[active=true]:bg-destructive/12 data-[active=true]:text-destructive",
       },
-      size: {
-        default: "h-8 rounded-(--athas-chrome-radius) px-3",
-        xs: "h-6 gap-1 rounded-(--athas-chrome-radius) px-1.5",
-        sm: "h-7 rounded-(--athas-chrome-radius) px-2.5",
-        lg: "h-9 rounded-(--athas-chrome-radius) px-4",
-        icon: "size-8 rounded-full p-0",
-        "icon-xs": "size-6 rounded-full p-0",
-        "icon-sm": "size-7 rounded-full p-0",
+      iconOnly: {
+        true: "w-7 rounded-full p-0",
+        false: "px-2.5",
       },
       shape: {
         default: "",
@@ -34,18 +31,18 @@ export const buttonVariants = cva(
     },
     defaultVariants: {
       variant: "default",
-      size: "default",
+      iconOnly: false,
       shape: "default",
     },
   },
 );
 
 export type ButtonVariant = NonNullable<VariantProps<typeof buttonVariants>["variant"]>;
-export type ButtonSize = NonNullable<VariantProps<typeof buttonVariants>["size"]>;
 
 export type ButtonProps = useRender.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
+  Omit<VariantProps<typeof buttonVariants>, "iconOnly"> & {
     active?: boolean;
+    iconOnly?: boolean;
     tooltip?: string;
     shortcut?: string;
     commandId?: string;
@@ -55,7 +52,7 @@ export type ButtonProps = useRender.ComponentProps<"button"> &
 export function Button({
   className,
   variant = "default",
-  size = "default",
+  iconOnly = false,
   shape = "default",
   active,
   render,
@@ -77,9 +74,9 @@ export function Button({
     props: {
       "data-slot": "button",
       "data-variant": variant,
-      "data-size": size,
+      "data-icon-only": iconOnly || undefined,
       "data-active": active,
-      className: cn(buttonVariants({ variant, size, shape }), className),
+      className: cn(buttonVariants({ variant, iconOnly, shape }), className),
       "aria-label": ariaLabel ?? (tooltip ? tooltip : undefined),
       ...props,
     },

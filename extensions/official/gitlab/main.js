@@ -6,7 +6,6 @@ let api;
 let state = {
   config: { baseUrl: "https://gitlab.com", project: "" },
   token: "",
-  tokenInput: "",
   connected: false,
   loading: false,
   error: "",
@@ -81,46 +80,74 @@ function setupView() {
     { title: "GitLab" },
     ui.section(
       "Connect",
-      ui.text(
-        "Use a personal access token with read_api access. Credentials stay in Athas secure storage.",
-      ),
-      ui.input({
-        label: "GitLab URL",
-        value: state.config.baseUrl,
-        placeholder: "https://gitlab.com",
-        inputType: "url",
-        onChange: ui.action(command("setField"), "baseUrl"),
-      }),
-      ui.input({
-        label: "Project path (optional)",
-        value: state.config.project,
-        placeholder: "group/project",
-        onChange: ui.action(command("setField"), "project"),
-      }),
-      ui.input({
-        label: "Personal access token",
-        value: state.tokenInput,
-        placeholder: "glpat-…",
-        inputType: "password",
-        onChange: ui.action(command("setField"), "token"),
+      ui.callout({
+        title: "Credentials stay local",
+        description: "Use a personal access token with read_api access.",
+        tone: "info",
       }),
       state.error ? ui.error("Could not connect", state.error) : null,
-      ui.button("Connect", ui.action(command("connect")), { tone: "accent" }),
+      ui.form(
+        {
+          submitLabel: "Connect",
+          pendingLabel: "Connecting",
+          onSubmit: ui.action(command("connect")),
+        },
+        ui.input({
+          name: "baseUrl",
+          required: true,
+          label: "GitLab URL",
+          value: state.config.baseUrl,
+          placeholder: "https://gitlab.com",
+          inputType: "url",
+        }),
+        ui.input({
+          name: "project",
+          label: "Project path (optional)",
+          value: state.config.project,
+          placeholder: "group/project",
+        }),
+        ui.input({
+          name: "token",
+          required: true,
+          label: "Personal access token",
+          placeholder: "glpat-…",
+          inputType: "password",
+        }),
+      ),
     ),
   );
 }
 
-function statusTone(status) {
+function pipelineState(status) {
   if (status === "success") return "success";
   if (status === "failed" || status === "canceled") return "error";
-  if (status === "running" || status === "pending") return "warning";
-  return "muted";
+  if (status === "running" || status === "pending") return "running";
+  return "default";
 }
 
 function overviewView() {
   const { ui } = api;
   if (state.loading) return ui.screen({ title: "GitLab" }, ui.loading("Loading project"));
   if (state.error && !state.connected) return setupView();
+  const pipelineBreakdown = [
+    {
+      label: "Succeeded",
+      value: state.pipelines.filter((pipeline) => pipeline.status === "success").length,
+      tone: "success",
+    },
+    {
+      label: "Running",
+      value: state.pipelines.filter((pipeline) => ["running", "pending"].includes(pipeline.status))
+        .length,
+      tone: "accent",
+    },
+    {
+      label: "Failed",
+      value: state.pipelines.filter((pipeline) => ["failed", "canceled"].includes(pipeline.status))
+        .length,
+      tone: "error",
+    },
+  ].filter((item) => item.value > 0);
   return ui.screen(
     {
       title: state.project || "GitLab",
@@ -130,6 +157,17 @@ function overviewView() {
       ],
     },
     state.error ? ui.error("Refresh failed", state.error) : null,
+    ui.section(
+      "Overview",
+      ui.row(
+        ui.metric({ label: "Merge requests", value: state.mergeRequests.length }),
+        ui.metric({ label: "Issues", value: state.issues.length }),
+        ui.metric({ label: "Pipelines", value: state.pipelines.length }),
+      ),
+      pipelineBreakdown.length
+        ? ui.barChart({ label: "Pipeline outcomes", items: pipelineBreakdown })
+        : null,
+    ),
     ui.section(
       "Merge requests",
       state.mergeRequests.length
@@ -162,15 +200,15 @@ function overviewView() {
     ui.section(
       "Pipelines",
       state.pipelines.length
-        ? ui.list(
-            ...state.pipelines.map((item) =>
-              ui.listItem({
-                title: `#${item.id} ${item.ref}`,
-                badges: [{ label: item.status, tone: statusTone(item.status) }],
-                onSelect: ui.action(command("open"), item.web_url),
-              }),
-            ),
-          )
+        ? ui.activity({
+            items: state.pipelines.map((item) => ({
+              title: `Pipeline #${item.id}`,
+              description: item.ref,
+              meta: item.status,
+              state: pipelineState(item.status),
+              onSelect: ui.action(command("open"), item.web_url),
+            })),
+          })
         : ui.empty("No recent pipelines"),
     ),
   );
@@ -183,26 +221,21 @@ export async function activate(extensionApi) {
   state.connected = Boolean(state.token);
 
   api.commands.register({
-    id: command("setField"),
-    title: "Update GitLab setting",
-    run(field, value) {
-      if (field === "token") state.tokenInput = String(value);
-      else state.config = { ...state.config, [field]: String(value) };
-      invalidate();
-    },
-  });
-  api.commands.register({
     id: command("connect"),
     title: "Connect GitLab",
-    async run() {
-      if (!state.tokenInput && !state.token) {
+    async run(values) {
+      const form = values && typeof values === "object" ? values : {};
+      const token = String(form.token || "");
+      if (!token) {
         state.error = "Enter a personal access token.";
         invalidate();
         return;
       }
-      state.token = state.tokenInput || state.token;
-      state.tokenInput = "";
-      state.config.baseUrl = cleanBaseUrl(state.config.baseUrl);
+      state.token = token;
+      state.config = {
+        baseUrl: cleanBaseUrl(String(form.baseUrl || "https://gitlab.com")),
+        project: String(form.project || ""),
+      };
       await api.secrets.set("token", state.token);
       await api.storage.set("config", state.config);
       await refresh();

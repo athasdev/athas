@@ -234,7 +234,7 @@ export default function RunActionsButton() {
             aria-expanded={isMenuOpen}
             aria-haspopup="menu"
             aria-label="Run project action"
-            size="icon-xs"
+            iconOnly
           >
             <PlayIcon />
           </Button>
@@ -260,7 +260,7 @@ export default function RunActionsButton() {
                 type="button"
                 onClick={refresh}
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
                 disabled={isDiscovering || !workspacePath}
                 aria-label="Rescan project actions"
               >

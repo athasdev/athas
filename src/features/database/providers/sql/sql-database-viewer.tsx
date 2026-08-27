@@ -164,9 +164,10 @@ export default function SqlDatabaseViewer({
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-surface text-foreground">
+    <div className="flex h-full flex-col overflow-hidden bg-background text-foreground">
       <TableToolbar
         fileName={store.fileName}
+        selectedObjectName={store.selectedTable}
         dbInfo={store.dbInfo}
         selectedObjectKind={store.selectedObjectKind}
         subscriptionInfo={store.subscriptionInfo}
@@ -206,7 +207,7 @@ export default function SqlDatabaseViewer({
         }
       />
 
-      <div className="flex min-h-0 flex-1 gap-2 p-2 pt-1.5">
+      <div className="flex min-h-0 flex-1">
         <TableSidebar
           tables={store.tables}
           selectedTable={store.selectedTable}
@@ -233,7 +234,7 @@ export default function SqlDatabaseViewer({
           onClearHistory={actions.clearSqlHistory}
         />
 
-        <div className={databasePanelClassName("flex-1 border border-border/70 bg-background")}>
+        <div className={databasePanelClassName("flex-1 border-border/70 border-l")}>
           <QueryBar
             searchTerm={canMutateRows ? store.searchTerm : ""}
             setSearchTerm={actions.setSearchTerm}

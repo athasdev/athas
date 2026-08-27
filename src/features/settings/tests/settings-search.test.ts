@@ -37,8 +37,9 @@ describe("settings search", () => {
   it("finds interface and layout settings", () => {
     expect(searchSettings("reduce motion")[0]?.id).toBe("appearance-reduce-motion");
     expect(searchSettings("tab close buttons")[0]?.id).toBe("appearance-tab-close-buttons");
-    expect(searchSettings("window chrome density")[0]?.id).toBe("appearance-window-chrome-density");
-    expect(searchSettings("sidebar width")[0]?.id).toBe("appearance-sidebar-width");
+    expect(searchSettings("window chrome density")).toEqual([]);
+    expect(searchSettings("activity bar width")).toEqual([]);
+    expect(searchSettings("sidebar width")).toEqual([]);
   });
 
   it("finds file tree display and behavior settings", () => {
@@ -47,6 +48,10 @@ describe("settings search", () => {
       "file-tree-auto-reveal-active-file",
     );
     expect(searchSettings("confirm before delete")[0]?.id).toBe("file-tree-confirm-before-delete");
+  });
+
+  it("finds native agent notifications", () => {
+    expect(searchSettings("native notifications")[0]?.id).toBe("ai-agent-notifications");
   });
 
   it("creates stable DOM target keys for labels and sections", () => {

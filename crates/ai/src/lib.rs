@@ -5,6 +5,7 @@ mod runtime;
 
 pub use acp::{
    AcpAgentBridge, AcpAgentStatus, AcpSessionInfo, AcpSessionList, AgentConfig, AgentRuntime,
+   SessionConfigValue,
 };
 pub use chat_history::{
    ChatData, ChatHistoryRepository, ChatStats, ChatWithMessages, MessageData, ToolCallData,

@@ -7,6 +7,7 @@ import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import {
   SidebarListItem,
+  SidebarPanel,
   SidebarScrollArea,
   SidebarSectionLabel,
   SidebarTitleBar,
@@ -76,13 +77,12 @@ export const GitCommitFilesPanel = memo(function GitCommitFilesPanel({
   const avatarUrl = getGitAuthorAvatarUrl(commit, account);
 
   return (
-    <>
+    <SidebarPanel>
       <SidebarTitleBar
         title={
           <Button
             type="button"
             variant="ghost"
-            size="sm"
             onClick={onBack}
             className="max-w-full justify-start px-1.5"
             aria-label="Back to Source Control history"
@@ -168,6 +168,6 @@ export const GitCommitFilesPanel = memo(function GitCommitFilesPanel({
           )}
         </SidebarScrollArea>
       )}
-    </>
+    </SidebarPanel>
   );
 });

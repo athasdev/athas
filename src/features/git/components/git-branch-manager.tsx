@@ -551,11 +551,10 @@ const GitBranchManager = ({
         onClick={() => void handleOpenDropdown()}
         disabled={isLoading}
         variant="ghost"
-        size={triggerSurface === "footer" ? "xs" : "default"}
         className={cn(
           "inline-flex max-w-full shrink overflow-hidden px-2 text-subtle-foreground hover:bg-accent/80",
           triggerSurface === "footer" && "font-medium",
-          isDropdownOpen ? "bg-accent/80" : "cursor-pointer",
+          isDropdownOpen && "bg-accent/80",
         )}
         aria-label="Search branches"
       >
@@ -796,10 +795,7 @@ function BranchRow({
       disabled={isLoading}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={cn(
-        "min-h-9",
-        isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground",
-      )}
+      className={isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground"}
       accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
       action={
         !isCurrent ? (
@@ -815,7 +811,7 @@ function BranchRow({
             }}
             disabled={isLoading}
             variant="ghost"
-            size="icon-xs"
+            iconOnly
             className={cn(
               "text-git-deleted opacity-100 transition-opacity sm:opacity-0",
               "hover:bg-git-deleted/10 hover:opacity-80 hover:text-git-deleted",
@@ -867,10 +863,7 @@ function RepositoryRow({
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={cn(
-        "min-h-9",
-        isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground",
-      )}
+      className={isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground"}
       accessory={
         <>
           {isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
@@ -914,10 +907,7 @@ function WorktreeRow({
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={cn(
-        "min-h-9",
-        isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground",
-      )}
+      className={isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground"}
       accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
     />
   );

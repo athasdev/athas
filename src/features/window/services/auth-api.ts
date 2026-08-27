@@ -30,7 +30,13 @@ export interface AuthUser {
   created_at: string;
 }
 
-export type ProductCapability = "hostedAi" | "settingsSync" | "collaboration" | "enterprisePolicy";
+export type ProductCapability =
+  | "intelligence"
+  | "hostedAi"
+  | "settingsSync"
+  | "cloudWorkspaces"
+  | "collaboration"
+  | "enterprisePolicy";
 
 type ProductCapabilities = Record<ProductCapability, boolean>;
 
@@ -290,13 +296,25 @@ function parseSubscriptionInfoResponse(payload: unknown): SubscriptionInfo | nul
     ...(payload as unknown as SubscriptionInfo),
     status: payload.status,
     capabilities: {
+      intelligence:
+        typeof capabilities.intelligence === "boolean"
+          ? capabilities.intelligence
+          : typeof capabilities.hostedAi === "boolean"
+            ? capabilities.hostedAi
+            : payload.status === "pro",
       hostedAi:
         typeof capabilities.hostedAi === "boolean"
           ? capabilities.hostedAi
-          : payload.status === "pro",
+          : typeof capabilities.intelligence === "boolean"
+            ? capabilities.intelligence
+            : payload.status === "pro",
       settingsSync:
         typeof capabilities.settingsSync === "boolean"
           ? capabilities.settingsSync
+          : payload.status === "pro",
+      cloudWorkspaces:
+        typeof capabilities.cloudWorkspaces === "boolean"
+          ? capabilities.cloudWorkspaces
           : payload.status === "pro",
       collaboration:
         typeof capabilities.collaboration === "boolean"

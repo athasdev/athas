@@ -81,7 +81,6 @@ import {
   goToTypeDefinition,
   openOutlinePicker,
   openOutlineSidebar,
-  promptGoToLine,
 } from "./navigation-command-actions";
 import { restartAllLanguageServers, stopAllLanguageServers } from "./lsp-command-actions";
 import {
@@ -97,7 +96,7 @@ import {
   showThemeSelector,
   showWhatsNew,
   toggleActivitySidebar,
-  toggleAIChat,
+  toggleViewsSidebar,
   toggleFilesSidebar,
   toggleDockerSidebar,
   toggleGitHubSidebar,
@@ -645,6 +644,12 @@ const viewCommands: Command[] = [
     execute: toggleGitHubSidebar,
   },
   {
+    id: "workbench.showViews",
+    title: "Show Views",
+    category: "View",
+    execute: toggleViewsSidebar,
+  },
+  {
     id: "workbench.showDocker",
     title: "Show Docker",
     category: "View",
@@ -690,13 +695,6 @@ const viewCommands: Command[] = [
     title: "What's New",
     category: "Help",
     execute: showWhatsNew,
-  },
-  {
-    id: "workbench.toggleAIChat",
-    title: "Toggle Agent",
-    category: "View",
-    keybinding: "cmd+r",
-    execute: toggleAIChat,
   },
   {
     id: "workbench.toggleMinimap",
@@ -773,13 +771,6 @@ const switchPrevTab = () => {
 };
 
 const navigationCommands: Command[] = [
-  {
-    id: "editor.goToLine",
-    title: "Go to Line",
-    category: "Navigation",
-    keybinding: "cmd+g",
-    execute: promptGoToLine,
-  },
   {
     id: "editor.showOutline",
     title: "Go to Symbol in Editor",

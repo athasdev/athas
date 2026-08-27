@@ -6,6 +6,9 @@ export function useChatState() {
     currentChatId: useAIChatStore((state) => state.currentChatId),
     hasApiKey: useAIChatStore((state) => state.hasApiKey),
     pendingAgentLaunchRequest: useAIChatStore((state) => state.pendingAgentLaunchRequest),
+    agentRuns: useAIChatStore((state) => state.agentRuns),
+    agentMessageQueues: useAIChatStore((state) => state.agentMessageQueues),
+    chatMessageLoadStates: useAIChatStore((state) => state.chatMessageLoadStates),
     mode: useAIChatStore((state) => state.mode),
     outputStyle: useAIChatStore((state) => state.outputStyle),
   };
@@ -18,6 +21,11 @@ export function useChatActions() {
     setPendingAgentLaunchRequest: useAIChatStore(
       (state) => state.actions.setPendingAgentLaunchRequest,
     ),
+    startAgentRun: useAIChatStore((state) => state.actions.startAgentRun),
+    updateAgentRun: useAIChatStore((state) => state.actions.updateAgentRun),
+    finishAgentRun: useAIChatStore((state) => state.actions.finishAgentRun),
+    enqueueAgentMessage: useAIChatStore((state) => state.actions.enqueueAgentMessage),
+    dequeueAgentMessage: useAIChatStore((state) => state.actions.dequeueAgentMessage),
     createNewChat: useAIChatStore((state) => state.actions.createNewChat),
     ensureChatSession: useAIChatStore((state) => state.actions.ensureChatSession),
     ensureChatForAgent: useAIChatStore((state) => state.actions.ensureChatForAgent),

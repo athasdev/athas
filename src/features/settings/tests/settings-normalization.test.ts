@@ -83,19 +83,21 @@ describe("settings normalization", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       tabCloseButtonVisibility: "missing" as never,
-      windowChromeDensity: "missing" as never,
+      windowChromeDensity: "comfortable",
       activityRailWidth: 400,
       sidebarWidth: 100,
-    });
+      rightSidebarWidth: 900,
+    } as ReturnType<typeof getDefaultSettingsSnapshot> & { windowChromeDensity: string });
 
     expect(normalized.tabCloseButtonVisibility).toBe("active");
-    expect(normalized.windowChromeDensity).toBe("focused");
+    expect(normalized).not.toHaveProperty("windowChromeDensity");
     expect(normalized.activityRailWidth).toBe(320);
     expect(normalized.sidebarWidth).toBe(140);
+    expect(normalized.rightSidebarWidth).toBe(600);
     expect(normalizeSettingValue("tabCloseButtonVisibility", "hover")).toBe("hover");
-    expect(normalizeSettingValue("windowChromeDensity", "comfortable")).toBe("comfortable");
     expect(normalizeSettingValue("activityRailWidth", 120)).toBe(140);
     expect(normalizeSettingValue("sidebarWidth", 900)).toBe(600);
+    expect(normalizeSettingValue("rightSidebarWidth", 100)).toBe(140);
   });
 
   it("preserves and canonicalizes custom Ollama LAN endpoints", () => {
@@ -116,7 +118,7 @@ describe("settings normalization", () => {
       hiddenSidebarActivityItems: ["search", "", "search", "extension.example"] as string[],
     });
 
-    expect(normalized.hiddenSidebarActivityItems).toEqual(["search", "extension.example"]);
+    expect(normalized.hiddenSidebarActivityItems).toEqual(["extension.example"]);
     expect(
       normalizeSettingValue("hiddenSidebarActivityItems", [
         "git",
@@ -267,6 +269,21 @@ describe("settings normalization", () => {
 
     expect(normalized.aiProviderId).toBe("extension-provider");
     expect(normalized.aiModelId).toBe("extension-model");
+  });
+
+  it("only enables agent notifications for an explicit boolean setting", () => {
+    expect(
+      normalizeSettings({
+        ...getDefaultSettingsSnapshot(),
+        aiAgentNotifications: "true" as never,
+      }).aiAgentNotifications,
+    ).toBe(false);
+    expect(
+      normalizeSettings({
+        ...getDefaultSettingsSnapshot(),
+        aiAgentNotifications: true,
+      }).aiAgentNotifications,
+    ).toBe(true);
   });
 
   it("preserves supported marketplace skill metadata", () => {

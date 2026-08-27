@@ -27,7 +27,7 @@ export default function CellRenderer({
 
   if (value === null || value === undefined) {
     return (
-      <Badge variant="muted" size="compact" onContextMenu={handleContextMenu}>
+      <Badge variant="muted" onContextMenu={handleContextMenu}>
         NULL
       </Badge>
     );
@@ -70,7 +70,6 @@ export default function CellRenderer({
       <Button
         onClick={() => onFkClick(columnName, value)}
         variant="ghost"
-        size="xs"
         className="block h-auto truncate p-0 text-left font-normal text-primary underline decoration-accent/40"
         tooltip={`FK: ${foreignKey.to_table}.${foreignKey.to_column}`}
         onContextMenu={handleContextMenu}
@@ -134,7 +133,6 @@ function ExpandedCellValue({
           <Button
             type="button"
             variant="ghost"
-            size="xs"
             className={cn(
               "block h-auto max-w-70 truncate p-0 text-left font-normal text-primary",
               primary && "text-foreground",

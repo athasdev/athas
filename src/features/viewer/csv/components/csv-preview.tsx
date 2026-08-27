@@ -1,9 +1,7 @@
 import { DownloadIcon as Download, FileCodeIcon as FileJson, RowsIcon as Rows } from "@/ui/icons";
 import { useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import Select from "@/ui/select";
 import { parseCsv } from "../lib/csv-utils";
@@ -38,9 +36,6 @@ export function CsvPreview() {
       : activeBuffer;
     return sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
   });
-  const fontSize = useEditorSettingsStore.use.fontSize();
-  const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
-
   const [delimiter, setDelimiter] = useState<Delim | "auto">("auto");
   const [hasHeader, setHasHeader] = useState(true);
 
@@ -77,10 +72,7 @@ export function CsvPreview() {
   };
 
   return (
-    <div
-      className="flex h-full flex-col overflow-hidden bg-background"
-      style={{ fontSize: `${fontSize}px`, fontFamily: `${uiFontFamily}, sans-serif` }}
-    >
+    <div className="flex h-full flex-col overflow-hidden bg-background">
       <CsvTableView
         columns={headers}
         rows={rows}
@@ -107,7 +99,6 @@ export function CsvPreview() {
                 { value: ";", label: "Semicolon" },
                 { value: "|", label: "Pipe" },
               ]}
-              size="xs"
               className="min-w-24 rounded border-border px-1"
               title="Change delimiter"
             />
@@ -116,7 +107,6 @@ export function CsvPreview() {
             <Button
               onClick={() => setHasHeader((v) => !v)}
               variant="default"
-              size="xs"
               className="h-6 gap-1 text-subtle-foreground"
               tooltip="Toggle header row"
             >
@@ -129,7 +119,6 @@ export function CsvPreview() {
               variant="default"
               className="h-6 gap-1 text-subtle-foreground"
               tooltip="Copy as CSV"
-              size="xs"
             >
               <Download weight="fill" /> CSV
             </Button>
@@ -140,7 +129,6 @@ export function CsvPreview() {
               variant="default"
               className="h-6 gap-1 text-subtle-foreground"
               tooltip="Copy as JSON"
-              size="xs"
             >
               <FileJson /> JSON
             </Button>

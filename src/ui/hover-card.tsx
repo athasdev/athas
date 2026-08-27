@@ -1,5 +1,4 @@
 import { PreviewCard as HoverCardPrimitive } from "@base-ui/react/preview-card";
-import { floatingSurface } from "@/design-system/overlay";
 import { cn } from "@/utils/cn";
 
 function HoverCard(props: HoverCardPrimitive.Root.Props) {
@@ -36,8 +35,7 @@ function HoverCardContent({
         <HoverCardPrimitive.Popup
           data-slot="hover-card-content"
           className={cn(
-            floatingSurface(),
-            "z-10070 w-64 origin-(--transform-origin) p-3 transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+            "z-10070 w-64 origin-(--transform-origin) rounded-lg bg-surface/98 p-3 font-sans text-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0 ui-text-chrome",
             className,
           )}
           {...props}

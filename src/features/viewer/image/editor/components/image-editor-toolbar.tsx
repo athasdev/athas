@@ -80,7 +80,6 @@ export function ImageEditorToolbar({
         <Button
           onClick={() => setShowEditMenu(!showEditMenu)}
           variant="ghost"
-          size="xs"
           disabled={isProcessing}
           tooltip="Edit operations"
         >
@@ -106,7 +105,6 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleEdit(onResize)}
                   variant="ghost"
-                  size="xs"
                   className={menuItemClass}
                 >
                   <Image />
@@ -117,7 +115,6 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleEdit(onRotateCW)}
                   variant="ghost"
-                  size="xs"
                   className={menuItemClass}
                 >
                   <RotateCw />
@@ -127,7 +124,6 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleEdit(onRotateCCW)}
                   variant="ghost"
-                  size="xs"
                   className={menuItemClass}
                 >
                   <RotateCcw />
@@ -137,7 +133,6 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleEdit(onRotate180)}
                   variant="ghost"
-                  size="xs"
                   className={menuItemClass}
                 >
                   <RotateCw />
@@ -148,7 +143,6 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleEdit(onFlipHorizontal)}
                   variant="ghost"
-                  size="xs"
                   className={menuItemClass}
                 >
                   <FlipHorizontal />
@@ -158,7 +152,6 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleEdit(onFlipVertical)}
                   variant="ghost"
-                  size="xs"
                   className={menuItemClass}
                 >
                   <FlipVertical />
@@ -175,7 +168,6 @@ export function ImageEditorToolbar({
         <Button
           onClick={() => setShowConvertMenu(!showConvertMenu)}
           variant="ghost"
-          size="xs"
           disabled={isProcessing}
           tooltip="Convert format"
         >
@@ -201,7 +193,6 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleFormatSelect("png")}
                   variant="ghost"
-                  size="xs"
                   className={menuItemClass}
                 >
                   <Image />
@@ -211,7 +202,6 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleFormatSelect("jpeg")}
                   variant="ghost"
-                  size="xs"
                   className={menuItemClass}
                 >
                   <Image />
@@ -221,7 +211,6 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleFormatSelect("webp")}
                   variant="ghost"
-                  size="xs"
                   className={menuItemClass}
                 >
                   <Image />
@@ -231,7 +220,6 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleFormatSelect("avif")}
                   variant="ghost"
-                  size="xs"
                   className={menuItemClass}
                 >
                   <Image />
@@ -252,7 +240,7 @@ export function ImageEditorToolbar({
         variant="ghost"
         disabled={!canUndo || isProcessing}
         tooltip="Undo last operation"
-        size="icon-xs"
+        iconOnly
       >
         <Undo2 />
       </Button>
@@ -265,7 +253,7 @@ export function ImageEditorToolbar({
           disabled={isProcessing}
           tooltip="Save changes"
           className="text-primary"
-          size="icon-xs"
+          iconOnly
         >
           <Save />
         </Button>

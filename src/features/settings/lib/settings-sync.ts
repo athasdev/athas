@@ -28,6 +28,7 @@ type SyncableSettingsKey =
   | "renderIndentGuides"
   | "highlightOccurrences"
   | "showMinimap"
+  | "showOutline"
   | "editorFontLigatures"
   | "editorItalicComments"
   | "editorStickyScroll"
@@ -54,7 +55,6 @@ type SyncableSettingsKey =
   | "showStatusBar"
   | "showTabIcons"
   | "tabCloseButtonVisibility"
-  | "windowChromeDensity"
   | "theme"
   | "iconTheme"
   | "syncSystemTheme"
@@ -72,8 +72,6 @@ type SyncableSettingsKey =
   | "aiModelId"
   | "aiCustomBaseUrl"
   | "aiCustomModelId"
-  | "aiChatWidth"
-  | "isAIChatVisible"
   | "aiCompletion"
   | "aiAutocompleteProvider"
   | "aiAutocompleteModelId"
@@ -93,6 +91,7 @@ type SyncableSettingsKey =
   | "showActivityRailProjectIcons"
   | "collapsedActivityRailSections"
   | "sidebarWidth"
+  | "rightSidebarWidth"
   | "showGitHubPullRequests"
   | "showGitHubIssues"
   | "showGitHubActions"
@@ -154,6 +153,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "renderIndentGuides",
   "highlightOccurrences",
   "showMinimap",
+  "showOutline",
   "editorFontLigatures",
   "editorItalicComments",
   "editorStickyScroll",
@@ -180,7 +180,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "showStatusBar",
   "showTabIcons",
   "tabCloseButtonVisibility",
-  "windowChromeDensity",
   "theme",
   "iconTheme",
   "syncSystemTheme",
@@ -198,8 +197,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "aiModelId",
   "aiCustomBaseUrl",
   "aiCustomModelId",
-  "aiChatWidth",
-  "isAIChatVisible",
   "aiCompletion",
   "aiAutocompleteProvider",
   "aiAutocompleteModelId",
@@ -219,6 +216,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "showActivityRailProjectIcons",
   "collapsedActivityRailSections",
   "sidebarWidth",
+  "rightSidebarWidth",
   "showGitHubPullRequests",
   "showGitHubIssues",
   "showGitHubActions",

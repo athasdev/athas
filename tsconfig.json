@@ -8,6 +8,8 @@
 
     /* Bundler mode */
     "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "allowJs": true,
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -21,7 +23,7 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "scripts", "extensions"],
   "exclude": ["**/*.stories.tsx", "**/*.stories.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

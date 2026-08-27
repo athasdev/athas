@@ -24,6 +24,8 @@ export interface StreamRequest {
 export interface ProviderModel {
   id: string;
   name: string;
+  contextWindow?: number;
+  maxOutputTokens?: number;
   maxTokens?: number;
 }
 

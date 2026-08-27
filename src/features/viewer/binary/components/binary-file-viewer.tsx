@@ -1,11 +1,9 @@
 import { readFile } from "@tauri-apps/plugin-fs";
 import { useEffect, useState } from "react";
-import { ViewerFooter } from "@/features/viewer/components/viewer-footer";
-import { ViewerHeader } from "@/features/viewer/components/viewer-header";
+import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
-import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
-import { FileIcon } from "@/ui/icons";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { formatFileSize } from "@/utils/format-file-size";
@@ -55,43 +53,34 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
 
   return (
     <ViewerLayout className="flex flex-col">
-      <ViewerHeader
-        icon={<FileIcon className="shrink-0 text-foreground" />}
-        title={
-          <span title={fileName}>
-            {fileName} {ext && <>&#8226; {ext}</>}
-          </span>
-        }
+      <PaneContentHeader
+        context={<FilePathBreadcrumb filePath={filePath} />}
         detail={metadata.fileType}
       />
 
-      <ScrollArea className="min-h-0 flex-1" contentClassName="p-4">
-        <div className="mx-auto max-w-2xl space-y-4">
-          <Card className="gap-0 border-border/60 py-0">
-            <CardHeader className="border-border/40 border-b py-2.5">
-              <CardTitle>File Information</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-x-6 gap-y-2 py-4">
+      <ScrollArea className="min-h-0 flex-1" contentClassName="px-4">
+        <div className="mx-auto max-w-2xl divide-y divide-border/60">
+          <section className="py-4">
+            <h2 className="ui-text-sm mb-3 text-foreground">File Information</h2>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
               <InfoRow label="Type" value={metadata.fileType} />
               <InfoRow label="Size" value={formatFileSize(metadata.fileSize)} />
               <InfoRow label="Extension" value={`.${ext.toLowerCase()}`} />
               <InfoRow label="Path" value={relativePath} />
-            </CardContent>
-          </Card>
+            </div>
+          </section>
 
           {metadata.wasmMetadata && (
-            <Card className="gap-0 border-border/60 py-0">
-              <CardHeader className="border-border/40 border-b py-2.5">
-                <CardTitle>WebAssembly Module</CardTitle>
-              </CardHeader>
-              <CardContent className="py-4">
+            <section className="py-4">
+              <h2 className="ui-text-sm mb-3 text-foreground">WebAssembly Module</h2>
+              <div>
                 <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-2">
                   <InfoRow label="WASM Version" value={`${metadata.wasmMetadata.version}`} />
                   <InfoRow label="Sections" value={`${metadata.wasmMetadata.sections.length}`} />
                 </div>
 
                 {metadata.wasmMetadata.sections.length > 0 && (
-                  <div className="mt-3 overflow-hidden rounded-md border border-border/40">
+                  <div className="mt-3 overflow-hidden border-y border-border/40">
                     <Table>
                       <TableHeader className="static bg-background/50">
                         <TableRow>
@@ -118,33 +107,20 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
                     </Table>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </section>
           )}
 
-          <Card className="gap-0 border-border/60 py-0">
-            <CardHeader className="border-border/40 border-b py-2.5">
-              <CardTitle>Hex Preview</CardTitle>
-            </CardHeader>
-            <CardContent className="overflow-auto py-4">
+          <section className="py-4">
+            <h2 className="ui-text-sm mb-3 text-foreground">Hex Preview</h2>
+            <div className="overflow-auto">
               <pre className="ui-text-sm font-mono text-subtle-foreground leading-4.5">
                 {metadata.hexPreview}
               </pre>
-            </CardContent>
-          </Card>
+            </div>
+          </section>
         </div>
       </ScrollArea>
-
-      <ViewerFooter
-        endContent={
-          <span className="truncate" title={relativePath}>
-            {relativePath}
-          </span>
-        }
-      >
-        <span>{metadata.fileType}</span>
-        <span>{formatFileSize(metadata.fileSize)}</span>
-      </ViewerFooter>
     </ViewerLayout>
   );
 }

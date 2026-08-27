@@ -8,12 +8,12 @@ use super::{
    process::{stop_child_tree, terminate_process_group},
    types::{
       AcpAgentCapabilities, AcpAgentStatus, AcpEvent, AcpSessionInfo, AcpSessionList, AgentConfig,
-      SessionConfigOption,
+      SessionConfigOption, SessionConfigValue,
    },
    workspace_path::{path_to_string, resolve_workspace_path},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
-use agent_client_protocol::schema as acp;
+use agent_client_protocol::schema::v1 as acp;
 use anyhow::{Context, Result, bail};
 use athas_terminal::TerminalManager;
 use std::{path::PathBuf, sync::Arc, thread};
@@ -240,7 +240,11 @@ impl AcpWorker {
       Ok(())
    }
 
-   pub(super) async fn set_config_option(&mut self, config_id: &str, value: &str) -> Result<()> {
+   pub(super) async fn set_config_option(
+      &mut self,
+      config_id: &str,
+      value: &SessionConfigValue,
+   ) -> Result<()> {
       self.ensure_process_alive().await?;
 
       let connection = self.connection.as_ref().context("No active connection")?;
@@ -250,6 +254,12 @@ impl AcpWorker {
          .as_ref()
          .context("No app handle available")?;
 
+      let value = match value {
+         SessionConfigValue::String(value) => {
+            acp::SessionConfigOptionValue::value_id(value.clone())
+         }
+         SessionConfigValue::Boolean(value) => acp::SessionConfigOptionValue::boolean(*value),
+      };
       let request =
          acp::SetSessionConfigOptionRequest::new(session_id.clone(), config_id.to_string(), value);
 
@@ -659,14 +669,18 @@ impl AcpAgentBridge {
    }
 
    /// Set a session configuration option for the active agent
-   pub async fn set_session_config_option(&self, config_id: &str, value: &str) -> Result<()> {
+   pub async fn set_session_config_option(
+      &self,
+      config_id: &str,
+      value: SessionConfigValue,
+   ) -> Result<()> {
       let (response_tx, response_rx) = oneshot::channel();
 
       self
          .command_tx
          .send(AcpCommand::SetConfigOption {
             config_id: config_id.to_string(),
-            value: value.to_string(),
+            value,
             response_tx,
          })
          .await

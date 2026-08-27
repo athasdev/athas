@@ -142,10 +142,6 @@ const TAB_CLOSE_BUTTON_VISIBILITY_MODES = new Set<Settings["tabCloseButtonVisibi
   "hover",
   "always",
 ]);
-const WINDOW_CHROME_DENSITIES = new Set<Settings["windowChromeDensity"]>([
-  "focused",
-  "comfortable",
-]);
 const FILE_TREE_SORT_ORDERS = new Set<Settings["fileTreeSortOrder"]>(["folders-first", "name"]);
 const EXTERNAL_EDITOR_MODES = new Set<Settings["externalEditor"]>([
   "none",
@@ -265,12 +261,6 @@ function normalizeTabCloseButtonVisibility(value: unknown): Settings["tabCloseBu
   return TAB_CLOSE_BUTTON_VISIBILITY_MODES.has(value as Settings["tabCloseButtonVisibility"])
     ? (value as Settings["tabCloseButtonVisibility"])
     : defaultSettings.tabCloseButtonVisibility;
-}
-
-function normalizeWindowChromeDensity(value: unknown): Settings["windowChromeDensity"] {
-  return WINDOW_CHROME_DENSITIES.has(value as Settings["windowChromeDensity"])
-    ? (value as Settings["windowChromeDensity"])
-    : defaultSettings.windowChromeDensity;
 }
 
 function normalizeFileTreeSortOrder(value: unknown): Settings["fileTreeSortOrder"] {
@@ -420,6 +410,7 @@ function normalizeAISettings(settings: Settings): Settings {
     normalizedSettings.aiAutocompleteCustomBaseUrl?.trim() || "";
   normalizedSettings.aiAutocompleteCustomModelId =
     normalizedSettings.aiAutocompleteCustomModelId?.trim() || "";
+  normalizedSettings.aiAgentNotifications = normalizedSettings.aiAgentNotifications === true;
   normalizedSettings.aiSkills = normalizeAISkills(normalizedSettings.aiSkills);
   normalizedSettings.v0DesignSystems = normalizeV0DesignSystems(
     (normalizedSettings as { v0DesignSystems?: unknown }).v0DesignSystems,
@@ -450,6 +441,7 @@ export function normalizeSettings(settings: Settings): Settings {
   };
   delete (normalizedSettings.coreFeatures as { athasEditorEngine?: unknown }).athasEditorEngine;
   delete (normalizedSettings.coreFeatures as { energyEdge?: unknown }).energyEdge;
+  delete (normalizedSettings as Settings & { windowChromeDensity?: unknown }).windowChromeDensity;
 
   if (
     persistedGitPanelMode === "none" ||
@@ -498,9 +490,6 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.tabCloseButtonVisibility = normalizeTabCloseButtonVisibility(
     (normalizedSettings as { tabCloseButtonVisibility?: unknown }).tabCloseButtonVisibility,
   );
-  normalizedSettings.windowChromeDensity = normalizeWindowChromeDensity(
-    (normalizedSettings as { windowChromeDensity?: unknown }).windowChromeDensity,
-  );
   normalizedSettings.fileTreeSortOrder = normalizeFileTreeSortOrder(
     (normalizedSettings as { fileTreeSortOrder?: unknown }).fileTreeSortOrder,
   );
@@ -513,6 +502,12 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.sidebarWidth = normalizeBoundedWidth(
     normalizedSettings.sidebarWidth,
     defaultSettings.sidebarWidth,
+    SIDEBAR_WIDTH_MIN,
+    SIDEBAR_WIDTH_MAX,
+  );
+  normalizedSettings.rightSidebarWidth = normalizeBoundedWidth(
+    normalizedSettings.rightSidebarWidth,
+    defaultSettings.rightSidebarWidth,
     SIDEBAR_WIDTH_MIN,
     SIDEBAR_WIDTH_MAX,
   );
@@ -545,7 +540,7 @@ export function normalizeSettings(settings: Settings): Settings {
   );
   normalizedSettings.hiddenSidebarActivityItems = normalizeStringList(
     normalizedSettings.hiddenSidebarActivityItems,
-  );
+  ).filter((itemId) => itemId !== "search");
   normalizedSettings.collapsedActivityRailSections = normalizeStringList(
     normalizedSettings.collapsedActivityRailSections,
   );
@@ -609,10 +604,6 @@ export function normalizeSettingValue<K extends keyof Settings>(
     return normalizeTabCloseButtonVisibility(value) as Settings[K];
   }
 
-  if (key === "windowChromeDensity") {
-    return normalizeWindowChromeDensity(value) as Settings[K];
-  }
-
   if (key === "fileTreeSortOrder") {
     return normalizeFileTreeSortOrder(value) as Settings[K];
   }
@@ -626,10 +617,12 @@ export function normalizeSettingValue<K extends keyof Settings>(
     ) as Settings[K];
   }
 
-  if (key === "sidebarWidth") {
+  if (key === "sidebarWidth" || key === "rightSidebarWidth") {
+    const fallback =
+      key === "sidebarWidth" ? defaultSettings.sidebarWidth : defaultSettings.rightSidebarWidth;
     return normalizeBoundedWidth(
       value,
-      defaultSettings.sidebarWidth,
+      fallback,
       SIDEBAR_WIDTH_MIN,
       SIDEBAR_WIDTH_MAX,
     ) as Settings[K];

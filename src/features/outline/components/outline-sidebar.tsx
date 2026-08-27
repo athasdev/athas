@@ -30,12 +30,7 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { EmptyState } from "@/ui/empty";
-import {
-  SidebarHeader,
-  SidebarHeaderIconButton,
-  SidebarSearchPopover,
-  SidebarPanel,
-} from "@/ui/sidebar";
+import { SidebarHeader, SidebarIconButton, SidebarSearchPopover, SidebarPanel } from "@/ui/sidebar";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Spinner } from "@/ui/spinner";
 import { useDocumentOutline } from "../hooks/use-document-outline";
@@ -278,7 +273,7 @@ export function OutlineSidebar() {
 
   return (
     <SidebarPanel onKeyDownCapture={handleSidebarKeyDown}>
-      <SidebarHeader className="px-3">
+      <SidebarHeader>
         <SidebarSearchPopover
           value={query}
           onChange={setQuery}
@@ -295,7 +290,7 @@ export function OutlineSidebar() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <SidebarHeaderIconButton
+              <SidebarIconButton
                 active={!areAllFiltersSelected}
                 tooltip="Filter outline"
                 tooltipSide="bottom"

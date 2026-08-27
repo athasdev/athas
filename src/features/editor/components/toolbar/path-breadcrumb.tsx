@@ -1,4 +1,4 @@
-import { Fragment, type MouseEvent } from "react";
+import { Fragment, type MouseEvent, type ReactNode } from "react";
 import { Button } from "@/ui/button";
 import {
   Breadcrumb,
@@ -12,7 +12,9 @@ import { cn } from "@/utils/cn";
 
 interface PathBreadcrumbProps {
   segments: string[];
-  interactive?: boolean;
+  icons?: ReactNode[];
+  interactive?: boolean | ((index: number) => boolean);
+  ariaLabel?: string;
   onSegmentClick?: (index: number, event: MouseEvent<HTMLButtonElement>) => void;
   setSegmentRef?: (index: number, element: HTMLButtonElement | null) => void;
   className?: string;
@@ -20,7 +22,9 @@ interface PathBreadcrumbProps {
 
 export function PathBreadcrumb({
   segments,
+  icons,
   interactive = false,
+  ariaLabel = "File path",
   onSegmentClick,
   setSegmentRef,
   className,
@@ -29,48 +33,60 @@ export function PathBreadcrumb({
 
   return (
     <Breadcrumb
-      aria-label="File path"
+      aria-label={ariaLabel}
       className={cn("min-w-0 overflow-x-auto scrollbar-none", className)}
     >
       <BreadcrumbList className="flex-nowrap gap-0">
         {segments.map((segment, index) => {
           const isLast = index === segments.length - 1;
+          const isInteractive =
+            typeof interactive === "function" ? interactive(index) : interactive;
+          const content = (
+            <>
+              {icons?.[index] ? (
+                <span className="flex shrink-0 items-center">{icons[index]}</span>
+              ) : null}
+              <span className="truncate">{segment}</span>
+            </>
+          );
 
           return (
             <Fragment key={`${segment}-${index}`}>
               {index > 0 ? <BreadcrumbSeparator className="shrink-0" /> : null}
               <BreadcrumbItem className="shrink-0 gap-0">
-                {interactive ? (
+                {isInteractive ? (
                   <BreadcrumbLink
                     render={
                       <Button
                         ref={(element) => setSegmentRef?.(index, element)}
                         onClick={(event) => onSegmentClick?.(index, event)}
                         variant="ghost"
-                        size="xs"
                         className="px-1"
                         data-slot="breadcrumb-segment"
                       />
                     }
                     className={cn(
-                      "min-w-0 whitespace-nowrap",
+                      "min-w-0 gap-1 whitespace-nowrap",
                       isLast
-                        ? "font-medium text-foreground hover:text-foreground"
+                        ? "text-foreground hover:text-foreground"
                         : "text-subtle-foreground hover:text-foreground",
                     )}
                   >
-                    {segment}
+                    {content}
                   </BreadcrumbLink>
                 ) : isLast ? (
-                  <BreadcrumbPage data-slot="breadcrumb-segment" className="truncate px-1">
-                    {segment}
+                  <BreadcrumbPage
+                    data-slot="breadcrumb-segment"
+                    className="flex min-w-0 items-center gap-1 px-1"
+                  >
+                    {content}
                   </BreadcrumbPage>
                 ) : (
                   <span
                     data-slot="breadcrumb-segment"
-                    className="truncate px-1 text-subtle-foreground"
+                    className="flex min-w-0 items-center gap-1 px-1 text-subtle-foreground"
                   >
-                    {segment}
+                    {content}
                   </span>
                 )}
               </BreadcrumbItem>

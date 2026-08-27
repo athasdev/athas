@@ -2,7 +2,10 @@ export interface ExtensionWorkerEvent {
   type: "event";
   event:
     | "sidebar.registerView"
+    | "toolbar.registerAction"
     | "commands.register"
+    | "dialogs.open"
+    | "dialogs.close"
     | "views.invalidate"
     | "ready"
     | "activation.error";
@@ -33,6 +36,8 @@ export interface ExtensionWorkerResponse {
 export interface ExtensionWorkerActivate {
   type: "activate";
   entryPointUrl: string;
+  extensionId: string;
+  compatibility?: "generated";
 }
 
 export type ExtensionWorkerMessage =

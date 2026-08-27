@@ -1,6 +1,7 @@
-import { CaretLeftIcon as CaretLeft, PaletteIcon as Palette } from "@/ui/icons";
-import type React from "react";
+import { CaretLeftIcon as CaretLeft } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { IconThemeGraphic } from "@/extensions/icon-themes/components/icon-theme-graphic";
+import type { IconResult, IconThemeDefinition } from "@/extensions/icon-themes/icon-theme.types";
 import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
 import {
   CommandEmpty,
@@ -17,7 +18,7 @@ interface IconThemeInfo {
   id: string;
   name: string;
   description: string;
-  icon?: React.ReactNode;
+  previewIcon: IconResult | null;
 }
 
 interface IconThemeSelectorContentProps {
@@ -26,6 +27,21 @@ interface IconThemeSelectorContentProps {
   onClose: () => void;
   onThemeChange: (theme: string) => void;
   currentTheme?: string;
+}
+
+function getRepresentativeIcon(theme: IconThemeDefinition): IconResult | null {
+  const candidates: Array<[string, boolean]> = [
+    ["index.ts", false],
+    ["package.json", false],
+    ["src", true],
+  ];
+
+  for (const [fileName, isDir] of candidates) {
+    const result = theme.getFileIcon(fileName, isDir);
+    if (result.svg || result.url || result.component) return result;
+  }
+
+  return null;
 }
 
 export const IconThemeSelectorContent = ({
@@ -51,7 +67,7 @@ export const IconThemeSelectorContent = ({
         id: theme.id,
         name: theme.name,
         description: theme.description,
-        icon: <Palette />,
+        previewIcon: getRepresentativeIcon(theme),
       })),
     [registeredThemes],
   );
@@ -178,21 +194,38 @@ export const IconThemeSelectorContent = ({
           onChange={setQuery}
           onKeyDown={handleKeyDown}
           placeholder="Search icon themes..."
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded="true"
+          aria-controls="icon-theme-selector-results"
+          aria-activedescendant={
+            filteredThemes.length ? `icon-theme-selector-option-${selectedIndex}` : undefined
+          }
         />
       </CommandHeader>
 
-      <CommandList ref={resultsRef}>
+      <CommandList
+        ref={resultsRef}
+        id="icon-theme-selector-results"
+        role="listbox"
+        aria-label="Icon themes"
+      >
         {filteredThemes.length === 0 ? (
           <CommandEmpty>No icon themes found</CommandEmpty>
         ) : (
           filteredThemes.map((theme, index) => {
             const isSelected = index === selectedIndex;
-            const isCurrent = theme.id === currentTheme;
+            const isCurrent = theme.id === initialTheme;
             const isPreviewing = previewTheme !== null;
 
             return (
               <CommandItemRow
                 key={theme.id}
+                as="div"
+                id={`icon-theme-selector-option-${index}`}
+                role="option"
+                tabIndex={-1}
+                aria-selected={isSelected}
                 data-index={index}
                 onClick={() => {
                   didCommitRef.current = true;
@@ -213,8 +246,11 @@ export const IconThemeSelectorContent = ({
                   }
                 }}
                 isSelected={isSelected}
-                icon={theme.icon || <Palette />}
+                icon={<IconThemeGraphic result={theme.previewIcon} className="size-4" />}
+                iconVariant="framed"
+                contentLayout="stacked"
                 title={theme.name}
+                description={theme.description}
                 accessory={
                   isCurrent && !isPreviewing ? (
                     <CommandItemBadge>current</CommandItemBadge>

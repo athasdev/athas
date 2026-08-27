@@ -17,7 +17,7 @@ const buttonGroupVariants = cva(
         default:
           "rounded-full bg-accent *:data-[slot=button]:bg-transparent *:data-[slot=button]:hover:bg-selected",
         accent:
-          "overflow-hidden rounded-full border border-primary/25 bg-primary/10 *:data-[slot=button]:text-primary *:data-[slot=button]:hover:bg-primary/10 *:data-[slot=button-group-separator]:bg-primary/25",
+          "overflow-hidden rounded-full bg-primary/10 *:data-[slot=button]:text-primary *:data-[slot=button]:hover:bg-primary/10 *:data-[slot=button-group-separator]:bg-primary/25",
         ghost: "rounded-full bg-transparent",
       },
     },

@@ -9,6 +9,7 @@ import {
 } from "@/features/terminal/constants/terminal-events";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
+import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
 import type { TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
@@ -63,7 +64,6 @@ const TerminalContainer = ({
     (state) => state.settings.terminalDefaultProfileId,
   );
   const terminalDefaultShellId = useSettingsStore((state) => state.settings.terminalDefaultShellId);
-  const tabLayout = useTerminalStore((state) => state.tabLayout);
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
 
@@ -77,10 +77,7 @@ const TerminalContainer = ({
       if (options.preserveSession) return;
 
       if (session?.connectionId) {
-        const closeCommand = session.remoteConnectionId
-          ? "close_remote_terminal"
-          : "close_terminal";
-        void invoke(closeCommand, { id: session.connectionId }).catch((error) => {
+        void closeTerminalConnection(session).catch((error) => {
           console.error("Failed to close terminal session:", error);
         });
       }
@@ -615,7 +612,6 @@ const TerminalContainer = ({
     onTabPin: handleTabPin,
     onTabRename: handleTabRename,
     onNewTerminal: handleNewTerminal,
-    onNewTerminalWithProfile: handleNewTerminal,
     onTabCreate: handleTabCreate,
     onCloseOtherTabs: handleCloseOtherTabs,
     onCloseAllTabs: handleCloseAllTabs,
@@ -650,7 +646,7 @@ const TerminalContainer = ({
                       ? terminal.splitDirection === "down"
                         ? "h-1/2 w-full border-border border-b"
                         : "h-full w-1/2 border-border border-r"
-                      : "h-full w-full",
+                      : "size-full",
                   )}
                 >
                   <TerminalSession
@@ -697,34 +693,16 @@ const TerminalContainer = ({
     </div>
   );
 
-  const isVertical = tabLayout === "vertical";
-  const tabSidebarPosition = useTerminalStore((state) => state.tabSidebarPosition);
-
   return (
     <div
       className={`terminal-container flex h-full flex-col overflow-hidden ${className}`}
       data-terminal-container="active"
     >
-      <div className={cn("min-h-0 flex-1", isVertical ? "flex flex-row" : "flex flex-col")}>
-        {(!isVertical || tabSidebarPosition === "left") && (
-          <TerminalTabBar {...terminalTabBarProps} orientation={tabLayout} />
-        )}
-
-        <div
-          className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background",
-            isVertical &&
-              (tabSidebarPosition === "left"
-                ? "border-border/60 border-l"
-                : "border-border/60 border-r"),
-          )}
-        >
+      <div className="flex min-h-0 flex-1 flex-col">
+        <TerminalTabBar {...terminalTabBarProps} />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
           {terminalSessions}
         </div>
-
-        {isVertical && tabSidebarPosition === "right" && (
-          <TerminalTabBar {...terminalTabBarProps} orientation={tabLayout} />
-        )}
       </div>
     </div>
   );

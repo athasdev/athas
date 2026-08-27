@@ -166,7 +166,7 @@ function CodeBlock({
                 variant="ghost"
                 onClick={() => void copyTextToClipboard(code)}
                 tooltip="Copy code"
-                size="icon"
+                iconOnly
               >
                 <Copy className="text-subtle-foreground" size={12} />
               </Button>
@@ -404,7 +404,7 @@ type MarkdownTable = {
 const INLINE_CODE_CLASS_NAME =
   "font-mono inline whitespace-break-spaces rounded bg-surface/80 px-1 py-0 text-[0.95em] leading-[inherit] text-foreground align-baseline";
 const INLINE_LINK_CLASS_NAME =
-  "inline cursor-pointer wrap-break-word font-[inherit] leading-[inherit] text-primary hover:underline";
+  "inline wrap-break-word font-[inherit] leading-[inherit] text-primary hover:underline";
 
 function splitMarkdownTableRow(line: string): string[] {
   let value = line.trim();

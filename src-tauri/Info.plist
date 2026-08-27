@@ -12,5 +12,23 @@
   <string>Athas needs access to project files on Desktop so terminals, Git, and editor tools can run inside your workspace.</string>
   <key>NSDownloadsFolderUsageDescription</key>
   <string>Athas needs access to project files in Downloads so terminals, Git, and editor tools can run inside your workspace.</string>
+  <key>NSServices</key>
+  <array>
+    <dict>
+      <key>NSMenuItem</key>
+      <dict>
+        <key>default</key>
+        <string>Open in Athas</string>
+      </dict>
+      <key>NSMessage</key>
+      <string>openInAthas</string>
+      <key>NSPortName</key>
+      <string>Athas</string>
+      <key>NSSendTypes</key>
+      <array>
+        <string>NSFilenamesPboardType</string>
+      </array>
+    </dict>
+  </array>
 </dict>
 </plist>

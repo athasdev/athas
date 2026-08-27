@@ -16,7 +16,6 @@ use athas_terminal::{TerminalEvent, TerminalInput, TerminalSize};
 use tauri::{Emitter, State, ipc::Channel};
 
 #[tauri::command]
-#[allow(clippy::too_many_arguments)]
 pub async fn ssh_connect(
    app: crate::app_runtime::AppHandle,
    connection_id: String,
@@ -154,7 +153,6 @@ pub async fn ssh_copy_path(
 }
 
 #[tauri::command]
-#[allow(clippy::too_many_arguments)]
 pub async fn create_remote_terminal(
    app_handle: crate::app_runtime::AppHandle,
    host: String,

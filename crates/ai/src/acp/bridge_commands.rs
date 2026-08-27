@@ -1,7 +1,7 @@
 use super::{
    bridge::AcpWorker,
    client::PermissionResponse,
-   types::{AcpAgentStatus, AcpSessionList, AgentConfig},
+   types::{AcpAgentStatus, AcpSessionList, AgentConfig, SessionConfigValue},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
 use anyhow::Result;
@@ -31,7 +31,7 @@ pub(super) enum AcpCommand {
    },
    SetConfigOption {
       config_id: String,
-      value: String,
+      value: SessionConfigValue,
       response_tx: oneshot::Sender<Result<()>>,
    },
    ListSessions {

@@ -11,11 +11,8 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { Empty, EmptyDescription } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
-import {
-  PaneChip,
-  PaneIconButton,
-  paneHeaderClassName,
-} from "@/features/panes/components/pane-chrome";
+import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
+import { Button } from "@/ui/button";
 import { useReferencesStore } from "../stores/references.store";
 import type { Reference } from "../types/reference.types";
 
@@ -71,31 +68,33 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className={paneHeaderClassName("justify-between border-border/70 border-b")}>
-        <div className="flex items-center gap-1.5">
-          <span className="font-sans ui-text-sm font-medium text-foreground">References</span>
-          {query && <PaneChip>{query.symbol}</PaneChip>}
-          <PaneChip>{isLoading ? "..." : references.length}</PaneChip>
-        </div>
-        <div className="flex items-center gap-0.5">
-          {onFullScreen && (
-            <PaneIconButton
-              onClick={onFullScreen}
-              tooltip={isFullScreen ? "Exit fullscreen" : "Fullscreen"}
-              commandId="workbench.toggleActivePaneFullscreen"
+      <PaneContentHeader
+        title="References"
+        detail={`${query ? `${query.symbol} · ` : ""}${isLoading ? "Finding…" : references.length}`}
+        actions={
+          <>
+            {onFullScreen && (
+              <Button
+                onClick={onFullScreen}
+                tooltip={isFullScreen ? "Exit fullscreen" : "Fullscreen"}
+                commandId="workbench.toggleActivePaneFullscreen"
+                variant="ghost"
+                iconOnly
+              >
+                {isFullScreen ? <Minimize2 /> : <Maximize2 />}
+              </Button>
+            )}
+            <Button
+              onClick={() => useReferencesStore.getState().actions.clear()}
+              tooltip="Clear references"
+              variant="ghost"
+              iconOnly
             >
-              {isFullScreen ? <Minimize2 /> : <Maximize2 />}
-            </PaneIconButton>
-          )}
-          <PaneIconButton
-            onClick={() => useReferencesStore.getState().actions.clear()}
-            tooltip="Clear references"
-          >
-            <X />
-          </PaneIconButton>
-        </div>
-      </div>
+              <X />
+            </Button>
+          </>
+        }
+      />
 
       {/* Content */}
       <ScrollArea className="flex-1">
@@ -127,7 +126,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
                     <ChevronDown size={12} className="shrink-0 text-subtle-foreground" />
                   )}
                   <FileCode size={12} className="shrink-0 text-primary" />
-                  <span className="font-sans ui-text-sm truncate font-medium text-foreground">
+                  <span className="font-sans ui-text-sm truncate text-foreground">
                     {group.fileName}
                   </span>
                   <span className="font-sans ui-text-sm shrink-0 text-subtle-foreground">

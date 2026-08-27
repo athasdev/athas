@@ -11,8 +11,8 @@ import {
   type Icon as AppIcon,
 } from "@/ui/icons";
 import { forwardRef, type ComponentProps, type ReactNode, type RefObject } from "react";
-import { menuSurfaceVariants } from "@/design-system/menu";
 import { Button } from "@/ui/button";
+import { menuSurfaceVariants } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { Toggle } from "@/ui/toggle";
 import { cn } from "@/utils/cn";
@@ -87,7 +87,7 @@ export function SearchPopover({
   className,
 }: SearchPopoverProps) {
   return (
-    <div className={cn(menuSurfaceVariants({ density: "compact" }), "w-80", className)}>
+    <div className={cn(menuSurfaceVariants(), "w-80", className)}>
       <div className="flex items-center gap-1.5">
         {leadingControl}
 
@@ -100,7 +100,6 @@ export function SearchPopover({
             onKeyDown={onKeyDown}
             placeholder={placeholder}
             leftIcon={Search}
-            size="md"
             className="pr-8"
           />
           {value && (
@@ -108,7 +107,7 @@ export function SearchPopover({
               type="button"
               onClick={() => onChange("")}
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className="-translate-y-1/2 absolute top-1/2 right-1"
               aria-label="Clear search"
             >
@@ -130,13 +129,7 @@ export function SearchPopover({
 
         {extraActions}
 
-        <Button
-          type="button"
-          onClick={onClose}
-          variant="ghost"
-          aria-label="Close search"
-          size="icon-xs"
-        >
+        <Button type="button" onClick={onClose} variant="ghost" aria-label="Close search" iconOnly>
           <X />
         </Button>
       </div>
@@ -152,7 +145,6 @@ export function SearchPopover({
                 pressed={option.active}
                 tooltip={option.label}
                 aria-label={option.label}
-                size="xs"
               >
                 {option.icon}
               </Toggle>
@@ -168,7 +160,7 @@ export function SearchPopover({
                   disabled={!canNavigate}
                   variant="ghost"
                   aria-label="Previous match"
-                  size="icon-xs"
+                  iconOnly
                 >
                   <ChevronUp />
                 </Button>
@@ -180,7 +172,7 @@ export function SearchPopover({
                   disabled={!canNavigate}
                   variant="ghost"
                   aria-label="Next match"
-                  size="icon-xs"
+                  iconOnly
                 >
                   <ChevronDown />
                 </Button>
@@ -215,7 +207,7 @@ export function SearchReplaceToggle({
       variant="ghost"
       tooltip={label}
       aria-label={label}
-      size="icon-xs"
+      iconOnly
     >
       <ChevronRight className={cn("transition-transform", isExpanded && "rotate-90")} />
     </Button>
@@ -256,7 +248,6 @@ export function SearchReplaceRow({
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
         placeholder="Replace with..."
-        size="md"
         className="flex-1"
       />
 
@@ -310,7 +301,6 @@ export function SearchInput({
           onKeyDown={onKeyDown}
           placeholder={placeholder}
           leftIcon={Search}
-          size="md"
           className="pr-8"
         />
         {value && (
@@ -318,7 +308,7 @@ export function SearchInput({
             type="button"
             onClick={() => onChange("")}
             variant="ghost"
-            size="icon-xs"
+            iconOnly
             className="-translate-y-1/2 absolute top-1/2 right-1"
             aria-label="Clear search"
           >
@@ -337,7 +327,6 @@ export function SearchInput({
               pressed={option.active}
               tooltip={option.label}
               aria-label={option.label}
-              size="xs"
             >
               {option.icon}
             </Toggle>

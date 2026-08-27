@@ -22,11 +22,7 @@ function footerControlClassName(tone: FooterControlTone = "default", busy = fals
 
 export function FooterControlBadge({ children }: { children: ReactNode }) {
   return (
-    <Badge
-      variant="accent"
-      size="compact"
-      className="min-h-3 min-w-3 px-0.5 leading-3 text-background"
-    >
+    <Badge variant="accent" className="min-h-3 min-w-3 px-0.5 leading-3 text-background">
       {children}
     </Badge>
   );
@@ -55,7 +51,6 @@ export function FooterTabControl({
     <Button
       type="button"
       variant="ghost"
-      size="xs"
       active={active}
       tooltip={tooltip}
       tooltipSide="top"

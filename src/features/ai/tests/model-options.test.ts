@@ -28,9 +28,9 @@ describe("model options", () => {
         isLoading: false,
       }),
     ).toEqual([
-      { id: "shared", name: "Shared fetched", maxTokens: 8192, proOnly: true },
+      { id: "shared", name: "Shared fetched", maxOutputTokens: 8192, proOnly: true },
       { id: "static", name: "Static" },
-      { id: "dynamic", name: "Dynamic", maxTokens: 4096 },
+      { id: "dynamic", name: "Dynamic", maxOutputTokens: 4096 },
       { id: "custom", name: "Custom" },
     ]);
   });

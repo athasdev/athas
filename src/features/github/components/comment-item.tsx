@@ -55,7 +55,7 @@ export const CommentItem = memo(
     };
 
     return (
-      <Card variant="default" size="flush" className="bg-surface/35">
+      <Card variant="default" className="bg-surface/35">
         <div className="flex items-center gap-2 border-border/60 border-b px-3 py-2.5">
           <GitHubAvatar login={authorLogin} size={40} className="size-6" />
           <div className="ui-text-sm flex min-w-0 flex-1 items-center gap-2">
@@ -70,7 +70,7 @@ export const CommentItem = memo(
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon-xs"
+                    iconOnly
                     aria-label="Comment actions"
                     disabled={isBusy}
                   />
@@ -105,7 +105,6 @@ export const CommentItem = memo(
                 <Button
                   type="button"
                   variant="ghost"
-                  size="xs"
                   disabled={isBusy}
                   onClick={() => setIsEditing(false)}
                 >
@@ -114,7 +113,6 @@ export const CommentItem = memo(
                 <Button
                   type="button"
                   variant="accent"
-                  size="xs"
                   disabled={isBusy || !draft.trim()}
                   onClick={() => {
                     void onEdit(draft).then((saved) => {

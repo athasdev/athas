@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-use tauri::menu::{
-   AboutMetadata, HELP_SUBMENU_ID, MenuBuilder, MenuItem, Submenu, SubmenuBuilder,
-   WINDOW_SUBMENU_ID,
-};
+use std::sync::{LazyLock, Mutex};
+#[cfg(target_os = "macos")]
+use tauri::menu::{AboutMetadata, MenuItemKind, PredefinedMenuItem, WINDOW_SUBMENU_ID};
+use tauri::menu::{CheckMenuItem, HELP_SUBMENU_ID, MenuBuilder, MenuItem, Submenu, SubmenuBuilder};
 use tauri_plugin_store::StoreExt;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -10,6 +10,131 @@ pub struct ThemeData {
    pub id: String,
    pub name: String,
    pub category: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeMenuState {
+   pub close_folder_enabled: bool,
+   pub save_enabled: bool,
+   pub save_as_enabled: bool,
+   pub activity_bar_visible: bool,
+   pub sidebar_visible: bool,
+   pub terminal_visible: bool,
+   pub minimap_visible: bool,
+   pub word_wrap: bool,
+   pub line_numbers: bool,
+   pub whitespace_visible: bool,
+}
+
+static LAST_NATIVE_MENU_STATE: LazyLock<Mutex<Option<NativeMenuState>>> =
+   LazyLock::new(|| Mutex::new(None));
+
+fn set_normal_menu_item_enabled<R: tauri::Runtime>(
+   submenu: &Submenu<R>,
+   id: &str,
+   enabled: bool,
+) -> Result<(), String> {
+   if let Some(tauri::menu::MenuItemKind::MenuItem(item)) = submenu.get(id) {
+      item
+         .set_enabled(enabled)
+         .map_err(|error| error.to_string())?;
+   }
+   Ok(())
+}
+
+fn set_normal_menu_item_text<R: tauri::Runtime>(
+   submenu: &Submenu<R>,
+   id: &str,
+   text: &str,
+) -> Result<(), String> {
+   if let Some(tauri::menu::MenuItemKind::MenuItem(item)) = submenu.get(id) {
+      item.set_text(text).map_err(|error| error.to_string())?;
+   }
+   Ok(())
+}
+
+fn set_check_menu_item<R: tauri::Runtime>(
+   submenu: &Submenu<R>,
+   id: &str,
+   checked: bool,
+) -> Result<(), String> {
+   if let Some(tauri::menu::MenuItemKind::Check(item)) = submenu.get(id) {
+      item
+         .set_checked(checked)
+         .map_err(|error| error.to_string())?;
+   }
+   Ok(())
+}
+
+fn apply_native_menu_state(
+   app: &crate::app_runtime::AppHandle,
+   state: &NativeMenuState,
+) -> Result<(), String> {
+   let Some(menu) = app.menu() else {
+      return Ok(());
+   };
+
+   if let Some(tauri::menu::MenuItemKind::Submenu(file_menu)) = menu.get("file_menu") {
+      set_normal_menu_item_enabled(&file_menu, "close_folder", state.close_folder_enabled)?;
+      set_normal_menu_item_enabled(&file_menu, "save", state.save_enabled)?;
+      set_normal_menu_item_enabled(&file_menu, "save_as", state.save_as_enabled)?;
+   }
+
+   if let Some(tauri::menu::MenuItemKind::Submenu(view_menu)) = menu.get("view_menu") {
+      set_normal_menu_item_text(
+         &view_menu,
+         "toggle_activity_sidebar",
+         if state.activity_bar_visible {
+            "Hide Activity Bar"
+         } else {
+            "Show Activity Bar"
+         },
+      )?;
+      set_normal_menu_item_text(
+         &view_menu,
+         "toggle_sidebar",
+         if state.sidebar_visible {
+            "Hide Sidebar"
+         } else {
+            "Show Sidebar"
+         },
+      )?;
+      set_normal_menu_item_text(
+         &view_menu,
+         "toggle_terminal",
+         if state.terminal_visible {
+            "Hide Terminal"
+         } else {
+            "Show Terminal"
+         },
+      )?;
+      set_check_menu_item(&view_menu, "command_toggle_minimap", state.minimap_visible)?;
+      set_check_menu_item(&view_menu, "command_toggle_word_wrap", state.word_wrap)?;
+      set_check_menu_item(
+         &view_menu,
+         "command_toggle_line_numbers",
+         state.line_numbers,
+      )?;
+      set_check_menu_item(
+         &view_menu,
+         "command_toggle_render_whitespace",
+         state.whitespace_visible,
+      )?;
+   }
+
+   Ok(())
+}
+
+#[tauri::command]
+pub fn sync_native_menu_state(
+   app: crate::app_runtime::AppHandle,
+   state: NativeMenuState,
+) -> Result<(), String> {
+   *LAST_NATIVE_MENU_STATE
+      .lock()
+      .map_err(|_| "Native menu state lock poisoned".to_string())? = Some(state.clone());
+   apply_native_menu_state(&app, &state)
 }
 
 #[tauri::command]
@@ -23,6 +148,13 @@ pub async fn rebuild_menu_themes(
          .map_err(|e| format!("Failed to create menu: {}", e))?;
       app.set_menu(new_menu)
          .map_err(|e| format!("Failed to set menu: {}", e))?;
+      if let Some(state) = LAST_NATIVE_MENU_STATE
+         .lock()
+         .map_err(|_| "Native menu state lock poisoned".to_string())?
+         .clone()
+      {
+         apply_native_menu_state(&app, &state)?;
+      }
    } else {
       log::info!("Native menu bar is disabled, skipping menu rebuild");
    }
@@ -49,7 +181,7 @@ pub async fn toggle_menu_bar(
       }
 
       log::info!("Native menu bar is disabled on this platform");
-      return Ok(());
+      Ok(())
    }
 
    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
@@ -162,6 +294,114 @@ fn build_app_submenu<R: tauri::Runtime>(
       .build()
 }
 
+#[cfg(target_os = "macos")]
+fn recent_document_title(path: &std::path::Path) -> String {
+   path
+      .file_name()
+      .and_then(|name| name.to_str())
+      .filter(|name| !name.is_empty())
+      .map(str::to_string)
+      .unwrap_or_else(|| path.display().to_string())
+}
+
+#[cfg(target_os = "macos")]
+fn build_open_recent_submenu<R: tauri::Runtime>(
+   app: &tauri::AppHandle<R>,
+) -> Result<Submenu<R>, tauri::Error> {
+   let paths = crate::bootstrap::macos::recent_documents().unwrap_or_else(|error| {
+      log::warn!("Failed to read macOS recent documents: {error}");
+      Vec::new()
+   });
+   let mut builder = SubmenuBuilder::with_id(app, "open_recent", "Open Recent");
+
+   if paths.is_empty() {
+      builder = builder.item(&MenuItem::with_id(
+         app,
+         "no_recent_documents",
+         "No Recent Projects",
+         false,
+         None::<String>,
+      )?);
+   } else {
+      for (index, path) in paths.iter().enumerate() {
+         builder = builder.text(format!("open_recent:{index}"), recent_document_title(path));
+      }
+      builder = builder
+         .separator()
+         .text("clear_recent_documents", "Clear Menu");
+   }
+
+   builder.build()
+}
+
+#[cfg(target_os = "macos")]
+pub fn refresh_open_recent_submenu(
+   app: &tauri::AppHandle<crate::app_runtime::AthasRuntime>,
+) -> Result<(), String> {
+   let Some(menu) = app.menu() else {
+      return Ok(());
+   };
+   let Some(MenuItemKind::Submenu(file_menu)) = menu.get("file_menu") else {
+      return Ok(());
+   };
+   let Some(MenuItemKind::Submenu(open_recent)) = file_menu.get("open_recent") else {
+      return Ok(());
+   };
+
+   while open_recent
+      .remove_at(0)
+      .map_err(|error| error.to_string())?
+      .is_some()
+   {}
+
+   let paths = crate::bootstrap::macos::recent_documents()?;
+   if paths.is_empty() {
+      let item = MenuItem::with_id(
+         app,
+         "no_recent_documents",
+         "No Recent Projects",
+         false,
+         None::<String>,
+      )
+      .map_err(|error| error.to_string())?;
+      open_recent
+         .append(&item)
+         .map_err(|error| error.to_string())?;
+   } else {
+      for (index, path) in paths.iter().enumerate() {
+         let item = MenuItem::with_id(
+            app,
+            format!("open_recent:{index}"),
+            recent_document_title(path),
+            true,
+            None::<String>,
+         )
+         .map_err(|error| error.to_string())?;
+         open_recent
+            .append(&item)
+            .map_err(|error| error.to_string())?;
+      }
+      let separator = PredefinedMenuItem::separator(app).map_err(|error| error.to_string())?;
+      open_recent
+         .append(&separator)
+         .map_err(|error| error.to_string())?;
+      let clear = MenuItem::with_id(
+         app,
+         "clear_recent_documents",
+         "Clear Menu",
+         true,
+         None::<String>,
+      )
+      .map_err(|error| error.to_string())?;
+      open_recent
+         .append(&clear)
+         .map_err(|error| error.to_string())?;
+   }
+
+   Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
 pub fn create_menu<R: tauri::Runtime>(
    app: &tauri::AppHandle<R>,
 ) -> Result<tauri::menu::Menu<R>, tauri::Error> {
@@ -174,8 +414,11 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
 ) -> Result<tauri::menu::Menu<R>, tauri::Error> {
    let close_tab_accelerator = close_tab_accelerator();
 
+   #[cfg(target_os = "macos")]
+   let open_recent_menu = build_open_recent_submenu(app)?;
+
    // Unified File menu for all platforms - clean and consistent
-   let file_menu_builder = SubmenuBuilder::new(app, "File")
+   let file_menu_builder = SubmenuBuilder::with_id(app, "file_menu", "File")
       .item(&MenuItem::with_id(
          app,
          "command_new_tab",
@@ -204,7 +447,12 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "Open Folder",
          true,
          Some("CmdOrCtrl+O"),
-      )?)
+      )?);
+
+   #[cfg(target_os = "macos")]
+   let file_menu_builder = file_menu_builder.item(&open_recent_menu);
+
+   let file_menu_builder = file_menu_builder
       .item(&MenuItem::with_id(
          app,
          "close_folder",
@@ -363,27 +611,34 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    let theme_menu = build_theme_submenu(app, themes)?;
 
    // View menu
-   let view_menu = SubmenuBuilder::new(app, "View")
+   let view_menu = SubmenuBuilder::with_id(app, "view_menu", "View")
       .item(&MenuItem::with_id(
          app,
          "toggle_activity_sidebar",
-         "Toggle Activity Sidebar",
+         "Show/Hide Activity Bar",
          true,
          Some("CmdOrCtrl+B"),
       )?)
       .item(&MenuItem::with_id(
          app,
          "toggle_sidebar",
-         "Toggle Secondary Sidebar",
+         "Show/Hide Secondary Sidebar",
          true,
          Some("CmdOrCtrl+E"),
       )?)
       .item(&MenuItem::with_id(
          app,
          "toggle_terminal",
-         "Toggle Terminal",
+         "Show/Hide Terminal",
          true,
          Some("CmdOrCtrl+J"),
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "open_github_notifications",
+         "GitHub Notifications",
+         true,
+         None::<String>,
       )?)
       .separator()
       .item(&MenuItem::with_id(
@@ -419,19 +674,38 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       .text("command_debugger", "Run and Debug")
       .separator()
       .text("split_editor", "Split Editor")
-      .text("command_toggle_minimap", "Toggle Minimap")
-      .item(&MenuItem::with_id(
+      .item(&CheckMenuItem::with_id(
+         app,
+         "command_toggle_minimap",
+         "Minimap",
+         true,
+         false,
+         None::<String>,
+      )?)
+      .item(&CheckMenuItem::with_id(
          app,
          "command_toggle_word_wrap",
-         "Toggle Word Wrap",
+         "Word Wrap",
          true,
+         false,
          Some("Alt+Z"),
       )?)
-      .text("command_toggle_line_numbers", "Toggle Line Numbers")
-      .text(
+      .item(&CheckMenuItem::with_id(
+         app,
+         "command_toggle_line_numbers",
+         "Line Numbers",
+         true,
+         true,
+         None::<String>,
+      )?)
+      .item(&CheckMenuItem::with_id(
+         app,
          "command_toggle_render_whitespace",
-         "Toggle Render Whitespace",
-      )
+         "Render Whitespace",
+         true,
+         false,
+         None::<String>,
+      )?)
       .separator()
       .text("command_zoom_in", "Zoom In")
       .text("command_zoom_out", "Zoom Out")
@@ -448,13 +722,6 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "Quick Open",
          true,
          Some("CmdOrCtrl+P"),
-      )?)
-      .item(&MenuItem::with_id(
-         app,
-         "go_to_line",
-         "Go to Line",
-         true,
-         Some("CmdOrCtrl+G"),
       )?)
       .separator()
       .item(&MenuItem::with_id(
@@ -555,13 +822,6 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    let ai_menu = SubmenuBuilder::new(app, "Agent")
       .item(&MenuItem::with_id(
          app,
-         "toggle_ai_chat",
-         "Toggle Agent",
-         true,
-         Some("CmdOrCtrl+R"),
-      )?)
-      .item(&MenuItem::with_id(
-         app,
          "command_new_agent",
          "New Agent",
          true,
@@ -623,6 +883,23 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          true,
          Some("Cmd+Shift+W"),
       )?)
+      .separator()
+      .item(&MenuItem::with_id(
+         app,
+         "show_previous_window_tab",
+         "Show Previous Tab",
+         true,
+         window_tab_accelerator(),
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "show_next_window_tab",
+         "Show Next Tab",
+         true,
+         window_tab_accelerator(),
+      )?)
+      .text("move_window_tab", "Move Tab to New Window")
+      .text("merge_all_windows", "Merge All Windows")
       .build()?;
 
    #[cfg(not(target_os = "macos"))]
@@ -738,5 +1015,18 @@ fn command_palette_accelerator() -> Option<&'static str> {
    #[cfg(not(target_os = "macos"))]
    {
       None
+   }
+}
+
+#[cfg(target_os = "macos")]
+fn window_tab_accelerator() -> Option<&'static str> {
+   None
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod tests {
+   #[test]
+   fn window_tabs_leave_ctrl_tab_for_editor_navigation() {
+      assert_eq!(super::window_tab_accelerator(), None);
    }
 }

@@ -3,6 +3,15 @@ use std::{collections::HashMap, fs, path::Path, process::Command};
 use tauri::State;
 use tokio::sync::RwLock;
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SystemAccessibilityPreferences {
+   reduce_transparency: bool,
+   increase_contrast: bool,
+   differentiate_without_color: bool,
+   reduce_motion: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TomlTheme {
    pub id: String,
@@ -31,15 +40,14 @@ fn get_system_theme_sync() -> String {
       if let Ok(output) = Command::new("gsettings")
          .args(["get", "org.gnome.desktop.interface", "color-scheme"])
          .output()
+         && output.status.success()
       {
-         if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let theme = stdout.trim().replace('\'', "").replace('\"', "");
-            match theme.as_str() {
-               "prefer-dark" => return "dark".to_string(),
-               "prefer-light" => return "light".to_string(),
-               _ => {} // Continue to fallback
-            }
+         let stdout = String::from_utf8_lossy(&output.stdout);
+         let theme = stdout.trim().replace(['\'', '\"'], "");
+         match theme.as_str() {
+            "prefer-dark" => return "dark".to_string(),
+            "prefer-light" => return "light".to_string(),
+            _ => {} // Continue to fallback
          }
       }
 
@@ -47,12 +55,11 @@ fn get_system_theme_sync() -> String {
       if let Ok(output) = Command::new("gsettings")
          .args(["get", "org.gnome.desktop.interface", "gtk-theme"])
          .output()
+         && output.status.success()
       {
-         if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout).to_lowercase();
-            if stdout.contains("dark") || stdout.contains("adwaita-dark") {
-               return "dark".to_string();
-            }
+         let stdout = String::from_utf8_lossy(&output.stdout).to_lowercase();
+         if stdout.contains("dark") || stdout.contains("adwaita-dark") {
+            return "dark".to_string();
          }
       }
 
@@ -67,12 +74,11 @@ fn get_system_theme_sync() -> String {
             "ColorScheme",
          ])
          .output()
+         && output.status.success()
       {
-         if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout).to_lowercase();
-            if stdout.contains("dark") || stdout.contains("breeze dark") {
-               return "dark".to_string();
-            }
+         let stdout = String::from_utf8_lossy(&output.stdout).to_lowercase();
+         if stdout.contains("dark") || stdout.contains("breeze dark") {
+            return "dark".to_string();
          }
       }
 
@@ -127,6 +133,42 @@ fn get_system_theme_sync() -> String {
 #[tauri::command]
 pub async fn get_system_theme() -> Result<String, String> {
    Ok(get_system_theme_sync())
+}
+
+#[tauri::command]
+pub async fn get_system_accessibility_preferences(
+   app: crate::app_runtime::AppHandle,
+) -> Result<SystemAccessibilityPreferences, String> {
+   #[cfg(target_os = "macos")]
+   {
+      let (sender, receiver) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let _ = sender.send(crate::bootstrap::macos::accessibility_preferences());
+      })
+      .map_err(|error| error.to_string())?;
+      let (reduce_transparency, increase_contrast, differentiate_without_color, reduce_motion) =
+         receiver.await.map_err(|_| {
+            "Failed to read accessibility preferences on the main thread".to_string()
+         })??;
+
+      Ok(SystemAccessibilityPreferences {
+         reduce_transparency,
+         increase_contrast,
+         differentiate_without_color,
+         reduce_motion,
+      })
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   {
+      let _ = app;
+      Ok(SystemAccessibilityPreferences {
+         reduce_transparency: false,
+         increase_contrast: false,
+         differentiate_without_color: false,
+         reduce_motion: false,
+      })
+   }
 }
 
 pub fn load_theme_from_toml(toml_path: &Path) -> Result<Vec<TomlTheme>, String> {

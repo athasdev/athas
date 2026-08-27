@@ -1,5 +1,15 @@
 import { describe, expect, test } from "vite-plus/test";
-import { getActiveSidebarView, resolveSidebarPaneClick } from "../utils/sidebar-pane-utils";
+import {
+  getActiveSidebarView,
+  getSidebarPaneLevel,
+  resolveSidebarPaneClick,
+} from "../utils/sidebar-pane-utils";
+
+describe("getSidebarPaneLevel", () => {
+  test("keeps ordinary workbench views in the primary sidebar", () => {
+    expect(getSidebarPaneLevel("files")).toBe("primary");
+  });
+});
 
 describe("getActiveSidebarView", () => {
   test("defaults to files when no alternate pane is active", () => {
@@ -47,6 +57,26 @@ describe("getActiveSidebarView", () => {
         activeSidebarView: "collaboration",
       }),
     ).toBe("collaboration");
+  });
+
+  test("returns custom views when the module sidebar is active", () => {
+    expect(
+      getActiveSidebarView({
+        isGitViewActive: false,
+        isGitHubPRsViewActive: false,
+        activeSidebarView: "views",
+      }),
+    ).toBe("views");
+  });
+
+  test("falls back to files for the removed settings sidebar", () => {
+    expect(
+      getActiveSidebarView({
+        isGitViewActive: false,
+        isGitHubPRsViewActive: false,
+        activeSidebarView: "settings",
+      }),
+    ).toBe("files");
   });
 });
 
@@ -146,6 +176,23 @@ describe("resolveSidebarPaneClick", () => {
     ).toEqual({
       nextIsSidebarVisible: true,
       nextView: "collaboration",
+    });
+  });
+
+  test("opens custom views as a primary secondary-sidebar view", () => {
+    expect(
+      resolveSidebarPaneClick(
+        {
+          isSidebarVisible: true,
+          isGitViewActive: false,
+          isGitHubPRsViewActive: false,
+          activeSidebarView: "files",
+        },
+        "views",
+      ),
+    ).toEqual({
+      nextIsSidebarVisible: true,
+      nextView: "views",
     });
   });
 });

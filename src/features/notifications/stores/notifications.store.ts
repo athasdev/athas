@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import type { NotificationEntry, NotificationType } from "../types/notifications.types";
+import type {
+  NotificationCategory,
+  NotificationEntry,
+  NotificationType,
+} from "../types/notifications.types";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 const MAX_NOTIFICATIONS = 20;
@@ -12,6 +16,7 @@ interface NotificationsState {
       message: string;
       description?: string;
       type: NotificationType;
+      category?: NotificationCategory;
     }) => void;
     markAllRead: () => void;
     remove: (id: string) => void;
@@ -31,11 +36,13 @@ export const useNotificationsStore = createSelectors(
             ? {
                 ...existing,
                 ...notification,
+                category: notification.category ?? existing.category ?? "athas",
                 updatedAt: now,
                 read: false,
               }
             : {
                 ...notification,
+                category: notification.category ?? "athas",
                 createdAt: now,
                 updatedAt: now,
                 read: false,

@@ -26,29 +26,34 @@ import {
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
+import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
+import { EditorSelectionAgentAction } from "@/features/editor/components/selection/editor-selection-agent-action";
 import { InlineEditPopover } from "@/features/editor/inline-edit/inline-edit-popover";
 import { useInlineEdit } from "@/features/editor/inline-edit/use-inline-edit";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
+import { getInlineGitBlamePresentation } from "@/features/git/utils/git-blame-decoration";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordStartupMilestone } from "@/features/bootstrap/startup-performance";
 import { useVimStore } from "@/features/vim/stores/vim.store";
-import { formatRelativeTime } from "@/utils/date";
+import { AnchoredTooltip } from "@/ui/tooltip";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
 import { getRelativePath, pathStartsWithRoot } from "@/utils/path-helpers";
 import EditorContextMenu from "../context-menu/context-menu";
+import { toggleCaseText } from "../utils/text-operations";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import type { EditorContentChangeOptions, Position, Range } from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
+import { createEditorSelectionContext } from "../utils/editor-agent-context";
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { getLanguageIdFromPath } from "../utils/language-id";
-import { toggleCaseText } from "../utils/text-operations";
 import { editorAPI } from "../extensions/api";
 import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import { syncContainedEditorFontOptions } from "../engines/monaco/contained-editors";
@@ -84,6 +89,11 @@ registerMonacoCodeLensProvider();
 
 const EMPTY_DIAGNOSTICS: Diagnostic[] = [];
 const INACTIVE_CURSOR_POSITION: Position = { line: 0, column: 0, offset: 0 };
+
+interface SelectionAgentActionState {
+  anchorRect: { x: number; y: number; width: number; height: number };
+  context: EditorSelectionContext;
+}
 
 interface MonacoEditorProps {
   bufferId?: string;
@@ -149,6 +159,8 @@ export function MonacoEditor({
   const gitBlameRenderFrameRef = useRef<number | null>(null);
   const renderedGitBlameKeyRef = useRef<string | null>(null);
   const renderInlineGitBlameRef = useRef<() => void>(() => {});
+  const syncSelectionAgentActionRef = useRef<() => void>(() => {});
+  const isPointerSelectingRef = useRef(false);
   const latestContentChangeRef = useRef(onContentChange);
   const isActiveSurfaceRef = useRef(isActiveSurface);
   const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
@@ -160,6 +172,8 @@ export function MonacoEditor({
   const filePath = buffer?.path ?? "";
   const languageId = buffer?.languageOverride ?? getLanguageIdFromPath(filePath);
   const monacoLanguageId = toMonacoLanguageId(languageId);
+  const [selectionAgentAction, setSelectionAgentAction] =
+    useState<SelectionAgentActionState | null>(null);
   const {
     fontFamily,
     fontSize,
@@ -241,9 +255,13 @@ export function MonacoEditor({
       return;
     }
 
-    const content = blameLine.is_uncommitted
-      ? "  Uncommitted changes"
-      : `  ${blameLine.author}, ${formatRelativeTime(blameLine.time)}`;
+    const presentation = getInlineGitBlamePresentation(blameLine);
+    if (!presentation) {
+      clearDecoration();
+      return;
+    }
+
+    const { text: content, hoverMarkdown } = presentation;
     const decorationKey = `${filePath}:${lineNumber}:${blameLine.commit_hash}:${content}`;
     if (renderedGitBlameKeyRef.current === decorationKey) return;
 
@@ -252,12 +270,13 @@ export function MonacoEditor({
       {
         range: new MonacoRange(lineNumber, column, lineNumber, column),
         options: {
+          hoverMessage: { value: hoverMarkdown },
           after: {
             content,
             inlineClassName: "monaco-inline-git-blame",
             cursorStops: monacoEditor.InjectedTextCursorStops.None,
           },
-          showIfCollapsed: false,
+          showIfCollapsed: true,
         },
       },
     ]);
@@ -289,6 +308,75 @@ export function MonacoEditor({
 
   latestContentChangeRef.current = onContentChange;
   isActiveSurfaceRef.current = isActiveSurface;
+
+  syncSelectionAgentActionRef.current = () => {
+    const editor = editorRef.current;
+    const model = modelRef.current;
+    const container = containerRef.current;
+    const selection = editor?.getSelection();
+
+    if (
+      !editor ||
+      !model ||
+      !container ||
+      !buffer ||
+      !isActiveSurfaceRef.current ||
+      isPointerSelectingRef.current ||
+      readOnly ||
+      isPreviewMode ||
+      inlineEditRequested ||
+      !selection ||
+      selection.isEmpty()
+    ) {
+      setSelectionAgentAction(null);
+      return;
+    }
+
+    const editorRange = toEditorRange(model, selection);
+    const context = editorRange
+      ? createEditorSelectionContext(
+          { ...buffer, content: model.getValue() },
+          editorRange,
+          languageId || "text",
+        )
+      : null;
+    if (!context) {
+      setSelectionAgentAction(null);
+      return;
+    }
+
+    const startPosition = editor.getScrolledVisiblePosition(selection.getStartPosition());
+    const endPosition = editor.getScrolledVisiblePosition(selection.getEndPosition());
+    const visiblePosition = startPosition ?? endPosition;
+    if (!visiblePosition) {
+      setSelectionAgentAction(null);
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const isSingleVisibleLine =
+      selection.startLineNumber === selection.endLineNumber && startPosition && endPosition;
+    const left = isSingleVisibleLine
+      ? Math.min(startPosition.left, endPosition.left)
+      : visiblePosition.left;
+    const width = isSingleVisibleLine
+      ? Math.max(Math.abs(endPosition.left - startPosition.left), 1)
+      : 1;
+
+    setSelectionAgentAction({
+      anchorRect: {
+        x: containerRect.left + left,
+        y: containerRect.top + visiblePosition.top,
+        width,
+        height: visiblePosition.height,
+      },
+      context,
+    });
+  };
+
+  useEffect(() => {
+    syncSelectionAgentActionRef.current();
+  }, [inlineEditRequested, isActiveSurface, isPreviewMode, readOnly]);
 
   const lineNumberFormatter = useCallback(
     (lineNumber: number) => {
@@ -439,22 +527,11 @@ export function MonacoEditor({
     x: number;
     y: number;
   } | null>(null);
+  const [copyTooltipAnchor, setCopyTooltipAnchor] = useState<HTMLElement | null>(null);
 
   const executeEditorCommand = useCallback((commandId: string) => {
     void keymapRegistry.executeCommand(commandId);
   }, []);
-
-  const triggerMonacoAction = useCallback(
-    (actionId: string) => {
-      const editor = editorRef.current;
-      if (!editor) return;
-
-      editor.trigger("athas-context-menu", actionId, null);
-      editor.focus();
-      syncCursorAndSelection();
-    },
-    [syncCursorAndSelection],
-  );
 
   const toggleMonacoSelectionCase = useCallback(() => {
     const editor = editorRef.current;
@@ -669,6 +746,7 @@ export function MonacoEditor({
     };
     const hoverMutationObserver = new MutationObserver((mutations) => {
       if (mutationsContainMonacoHoverWidget(mutations)) scheduleMonacoHoverClamp();
+      setCopyTooltipAnchor((current) => (current && !container.contains(current) ? null : current));
     });
     hoverMutationObserver.observe(container, {
       childList: true,
@@ -677,6 +755,38 @@ export function MonacoEditor({
     const hoverResizeObserver = new ResizeObserver(scheduleMonacoHoverClamp);
     hoverResizeObserver.observe(container);
     scheduleMonacoHoverClamp();
+
+    let copyTooltipTimer: number | null = null;
+    const clearCopyTooltipTimer = () => {
+      if (copyTooltipTimer === null) return;
+      window.clearTimeout(copyTooltipTimer);
+      copyTooltipTimer = null;
+    };
+    const getCopyButton = (target: EventTarget | null) =>
+      target instanceof Element ? target.closest<HTMLElement>(".hover-copy-button") : null;
+    const showCopyTooltip = (event: Event) => {
+      const copyButton = getCopyButton(event.target);
+      if (!copyButton || !container.contains(copyButton)) return;
+      if (event.type === "mouseover") event.stopPropagation();
+      clearCopyTooltipTimer();
+      copyTooltipTimer = window.setTimeout(() => {
+        copyTooltipTimer = null;
+        if (!container.contains(copyButton)) return;
+        setCopyTooltipAnchor(copyButton);
+      }, 150);
+    };
+    const hideCopyTooltip = (event: Event) => {
+      const copyButton = getCopyButton(event.target);
+      if (!copyButton) return;
+      const relatedTarget = event instanceof MouseEvent ? event.relatedTarget : null;
+      if (relatedTarget instanceof Node && copyButton.contains(relatedTarget)) return;
+      clearCopyTooltipTimer();
+      setCopyTooltipAnchor((current) => (current === copyButton ? null : current));
+    };
+    container.addEventListener("mouseover", showCopyTooltip, true);
+    container.addEventListener("mouseout", hideCopyTooltip, true);
+    container.addEventListener("focusin", showCopyTooltip, true);
+    container.addEventListener("focusout", hideCopyTooltip, true);
 
     let bottomScrollPadding = getEditorBottomScrollPadding(container.clientHeight);
     const syncBottomScrollPadding = (viewportHeight: number) => {
@@ -729,8 +839,18 @@ export function MonacoEditor({
     };
 
     window.addEventListener("keydown", handleWindowSelectAllShortcut, true);
+    const handleSelectionMouseUp = () => {
+      if (!isPointerSelectingRef.current) return;
+      isPointerSelectingRef.current = false;
+      syncSelectionAgentActionRef.current();
+    };
+    window.addEventListener("mouseup", handleSelectionMouseUp, true);
 
     const disposables = [
+      editor.onMouseDown(() => {
+        isPointerSelectingRef.current = true;
+        setSelectionAgentAction(null);
+      }),
       editor.onContextMenu((event) => {
         event.event.preventDefault();
         event.event.stopPropagation();
@@ -795,20 +915,24 @@ export function MonacoEditor({
             : undefined,
         );
         syncCursorAndSelection();
+        syncSelectionAgentActionRef.current();
       }),
       editor.onDidChangeCursorSelection(() => {
         syncCursorAndSelection();
         scheduleInlineGitBlameRender();
+        syncSelectionAgentActionRef.current();
       }),
       editor.onDidScrollChange((event) => {
         const viewKey = viewStateKey ?? activeBufferId ?? null;
         setScrollForBuffer(viewKey, event.scrollTop, event.scrollLeft);
         onScrollOffsetChange?.(event.scrollTop, event.scrollLeft);
+        syncSelectionAgentActionRef.current();
       }),
       editor.onDidLayoutChange((info) => {
         setViewportHeight(info.height);
         syncBottomScrollPadding(info.height);
         scheduleMonacoHoverClamp();
+        syncSelectionAgentActionRef.current();
       }),
     ];
 
@@ -835,8 +959,10 @@ export function MonacoEditor({
           );
         }
       }
+      syncSelectionAgentActionRef.current();
     });
     scheduleInlineGitBlameRender();
+    syncSelectionAgentActionRef.current();
 
     return () => {
       if (benchmarkRafId !== null) cancelAnimationFrame(benchmarkRafId);
@@ -848,11 +974,18 @@ export function MonacoEditor({
       unsubscribeCursor();
       unsubscribeSelection();
       window.removeEventListener("keydown", handleWindowSelectAllShortcut, true);
+      window.removeEventListener("mouseup", handleSelectionMouseUp, true);
       for (const disposable of disposables) {
         disposable.dispose();
       }
       hoverMutationObserver.disconnect();
       hoverResizeObserver.disconnect();
+      clearCopyTooltipTimer();
+      setCopyTooltipAnchor(null);
+      container.removeEventListener("mouseover", showCopyTooltip, true);
+      container.removeEventListener("mouseout", hideCopyTooltip, true);
+      container.removeEventListener("focusin", showCopyTooltip, true);
+      container.removeEventListener("focusout", hideCopyTooltip, true);
       if (hoverClampRaf !== null) {
         cancelAnimationFrame(hoverClampRaf);
       }
@@ -1460,8 +1593,21 @@ export function MonacoEditor({
           data-line-number-start={lineNumberStart}
           data-line-number-map={lineNumberMap?.length ?? undefined}
         />
+        {selectionAgentAction ? (
+          <EditorSelectionAgentAction
+            anchorRect={selectionAgentAction.anchorRect}
+            onClose={() => setSelectionAgentAction(null)}
+            onSelect={() => {
+              openNewAgentChat(undefined, {
+                editorSelections: [selectionAgentAction.context],
+              });
+              setSelectionAgentAction(null);
+            }}
+          />
+        ) : null}
         <InlineEditPopover state={inlineEditState} selection={selection} />
       </div>
+      <AnchoredTooltip anchor={copyTooltipAnchor} content="Copy" />
       {contextMenuPosition &&
         createPortal(
           <EditorContextMenu
@@ -1481,14 +1627,6 @@ export function MonacoEditor({
                 : undefined
             }
             onFind={() => executeEditorCommand("workbench.showFind")}
-            onGoToLine={() => executeEditorCommand("editor.goToLine")}
-            onDuplicate={canEdit ? () => executeEditorCommand("editor.duplicateLine") : undefined}
-            onSelectNextOccurrence={() => executeEditorCommand("editor.selectNextOccurrence")}
-            onSelectAllOccurrences={() => executeEditorCommand("editor.selectAllOccurrences")}
-            onIndent={canEdit ? () => triggerMonacoAction("editor.action.indentLines") : undefined}
-            onOutdent={
-              canEdit ? () => triggerMonacoAction("editor.action.outdentLines") : undefined
-            }
             onToggleComment={
               canEdit ? () => executeEditorCommand("editor.toggleComment") : undefined
             }
@@ -1497,17 +1635,10 @@ export function MonacoEditor({
               canEdit ? () => executeEditorCommand("editor.formatSelection") : undefined
             }
             onToggleCase={canEdit ? toggleMonacoSelectionCase : undefined}
-            onMoveLineUp={canEdit ? () => executeEditorCommand("editor.moveLineUp") : undefined}
-            onMoveLineDown={canEdit ? () => executeEditorCommand("editor.moveLineDown") : undefined}
             onGoToDefinition={() => executeEditorCommand("editor.goToDefinition")}
-            onGoToTypeDefinition={() => executeEditorCommand("editor.goToTypeDefinition")}
             onFindReferences={() => executeEditorCommand("editor.goToReferences")}
             onRenameSymbol={canEdit ? () => executeEditorCommand("editor.renameSymbol") : undefined}
             onQuickFix={canEdit ? () => executeEditorCommand("editor.quickFix") : undefined}
-            onShowHover={() => executeEditorCommand("editor.showHover")}
-            onTriggerSuggest={
-              canEdit ? () => executeEditorCommand("editor.triggerSuggest") : undefined
-            }
           />,
           document.body,
         )}

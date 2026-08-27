@@ -21,12 +21,7 @@ export function getChatPreferencesModel({
           option,
           category: classifySessionConfigOption(option),
         }))
-        .filter(
-          ({ option, category }) =>
-            option.kind.options.length > 0 &&
-            (category === "model" || category === "mode" || category === "thought_level"),
-        )
-        .slice(0, 3);
+        .filter(({ option }) => option.kind.type === "boolean" || option.kind.options.length > 0);
   const hasAcpConfigModeOption = acpConfigOptions.some(({ category }) => category === "mode");
 
   return {

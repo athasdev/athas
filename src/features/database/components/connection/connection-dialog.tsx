@@ -205,10 +205,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
     <Dialog
       onClose={onClose}
       title="Connect to Database"
-      classNames={{
-        modal: "max-w-md",
-        content: "space-y-4",
-      }}
+      classNames={{ content: "space-y-4" }}
       footer={
         <>
           {installedDbTypes.length > 0 && !isFileBased && (
@@ -219,7 +216,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               disabled={isTesting || isConnecting}
               className="gap-1.5"
               aria-label="Test connection"
-              size="xs"
             >
               {isTesting ? <Spinner label="Testing" compact /> : <PlugZap />}
               Test
@@ -231,7 +227,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             disabled={installedDbTypes.length === 0 || isConnecting || validationError !== null}
             className="gap-1.5"
             aria-label={isFileBased ? "Open database" : "Connect"}
-            size="xs"
           >
             {isConnecting && <Spinner label="Connecting" compact />}
             {isFileBased ? "Open Database" : "Connect"}
@@ -296,7 +291,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   variant="ghost"
                   className="gap-1.5"
                   onClick={handleBrowseDatabaseFile}
-                  size="xs"
                 >
                   <FolderOpen />
                   Browse
@@ -365,10 +359,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   onCheckedChange={(checked) => updateConnectionField(setSaveCredential, checked)}
                   aria-label="Save password securely"
                 />
-                <FieldLabel
-                  htmlFor="db-conn-save-password"
-                  className="cursor-pointer text-subtle-foreground"
-                >
+                <FieldLabel htmlFor="db-conn-save-password" className="text-subtle-foreground">
                   Save password securely
                 </FieldLabel>
               </Field>

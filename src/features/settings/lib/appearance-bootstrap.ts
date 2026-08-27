@@ -10,7 +10,7 @@ import {
   DEFAULT_UI_FONT_FAMILY,
   getTypographyFontFallbacks,
 } from "@/features/settings/config/typography-defaults";
-import { IS_WINDOWS } from "@/utils/platform";
+import { applyPlatformClass, IS_WINDOWS } from "@/utils/platform";
 import { buildFontFamilyStack, normalizeConfiguredFontFamily } from "./font-family-resolution";
 import { getUiFontScale, normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "./ui-font-size";
 
@@ -25,6 +25,7 @@ export interface AppearanceBootstrapCache {
   editorFontFamily: string;
   uiFontFamily: string;
   uiFontSize: number;
+  windowTransparency: boolean;
 }
 
 export const ATHAS_BOOTSTRAP_DEFAULTS = {
@@ -51,6 +52,7 @@ export const DEFAULT_APPEARANCE_BOOTSTRAP_CACHE: AppearanceBootstrapCache = {
   editorFontFamily: DEFAULT_MONO_FONT_FAMILY,
   uiFontFamily: DEFAULT_UI_FONT_FAMILY,
   uiFontSize: UI_FONT_SIZE_DEFAULT,
+  windowTransparency: false,
 };
 
 function sanitizeVarMap(value: unknown): Record<string, string> {
@@ -104,6 +106,7 @@ function parseBootstrapCache(raw: unknown): AppearanceBootstrapCache | null {
     editorFontFamily,
     uiFontFamily,
     uiFontSize,
+    windowTransparency: record.windowTransparency === true,
   };
 }
 
@@ -133,8 +136,10 @@ export function applyBootstrapAppearance(cache: AppearanceBootstrapCache): void 
   if (typeof document === "undefined") return;
 
   const root = document.documentElement;
+  applyPlatformClass(root);
   root.setAttribute("data-theme", cache.themeId);
   root.setAttribute("data-theme-type", cache.themeType);
+  root.setAttribute("data-window-transparency", cache.windowTransparency ? "enabled" : "disabled");
 
   for (const [key, value] of Object.entries(cache.cssVariables)) {
     root.style.setProperty(key, value);
@@ -171,8 +176,17 @@ export function cacheThemeForBootstrap(theme: ThemeDefinition): void {
     editorFontFamily: existing.editorFontFamily,
     uiFontFamily: existing.uiFontFamily,
     uiFontSize: existing.uiFontSize,
+    windowTransparency: existing.windowTransparency,
   };
   writeAppearanceBootstrapCache(next);
+}
+
+export function cacheWindowTransparencyForBootstrap(enabled: boolean): void {
+  const existing = readAppearanceBootstrapCache() || DEFAULT_APPEARANCE_BOOTSTRAP_CACHE;
+  writeAppearanceBootstrapCache({
+    ...existing,
+    windowTransparency: enabled,
+  });
 }
 
 export function cacheFontsForBootstrap(

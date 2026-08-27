@@ -1,17 +1,25 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { EXTENSION_VIEW_LIMITS } from "@/extensions/ui/services/extension-view-schema";
+import type { ExtensionViewNode } from "@/extensions/ui/types/extension-view";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff, GitDiffLine } from "@/features/git/types/git.types";
 import { countDiffStats } from "@/features/git/utils/git-diff-helpers";
 import { useProjectStore } from "@/features/window/stores/project.store";
 
-interface AcpDiffOutput {
+export interface AcpDiffOutput {
   path: string;
   oldText: string;
   newText: string;
 }
 
+type ExtensionDiffNode = Extract<ExtensionViewNode, { type: "diff" }>;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object";
+}
+
+function isAcpDiffOutput(value: unknown): value is Record<string, unknown> & { path: string } {
+  return isRecord(value) && value.type === "diff" && typeof value.path === "string";
 }
 
 function normalizePath(path: string): string {
@@ -31,17 +39,29 @@ function getBaseName(path: string): string {
   return path.split("/").pop() || path;
 }
 
-export function getAcpDiffOutputs(output: unknown): AcpDiffOutput[] {
-  if (!Array.isArray(output)) return [];
+function getLanguageHint(path: string): string | undefined {
+  const fileName = getBaseName(path);
+  const separator = fileName.lastIndexOf(".");
+  return separator > 0 && separator < fileName.length - 1
+    ? fileName.slice(separator + 1)
+    : undefined;
+}
 
-  return output
-    .filter(isRecord)
-    .filter((item) => item.type === "diff" && typeof item.path === "string")
-    .map((item) => ({
-      path: item.path as string,
-      oldText: typeof item.oldText === "string" ? item.oldText : "",
-      newText: typeof item.newText === "string" ? item.newText : "",
-    }));
+export function getAcpDiffOutputs(output: unknown): AcpDiffOutput[] {
+  const items = Array.isArray(output) ? output : [output];
+
+  return items.filter(isAcpDiffOutput).map((item) => ({
+    path: item.path as string,
+    oldText: typeof item.oldText === "string" ? item.oldText : "",
+    newText: typeof item.newText === "string" ? item.newText : "",
+  }));
+}
+
+export function stripAcpDiffOutputs(output: unknown): unknown {
+  if (isAcpDiffOutput(output)) return undefined;
+  if (!Array.isArray(output)) return output;
+  const remaining = output.filter((item) => !isAcpDiffOutput(item));
+  return remaining.length > 0 ? remaining : undefined;
 }
 
 function createHunkHeader(oldLines: string[], newLines: string[]): GitDiffLine {
@@ -75,6 +95,56 @@ function createDiffLines(oldText: string, newText: string): GitDiffLine[] {
   }
 
   return lines;
+}
+
+function previewLineBudget(removedCount: number, addedCount: number) {
+  const contentBudget = EXTENSION_VIEW_LIMITS.maxDiffLines - 1;
+  if (removedCount + addedCount <= contentBudget) {
+    return { removed: removedCount, added: addedCount };
+  }
+
+  let removed = Math.min(removedCount, Math.floor(contentBudget / 2));
+  let added = Math.min(addedCount, contentBudget - removed);
+  const unused = contentBudget - removed - added;
+  if (unused > 0) {
+    const extraRemoved = Math.min(unused, removedCount - removed);
+    removed += extraRemoved;
+    added += Math.min(unused - extraRemoved, addedCount - added);
+  }
+  return { removed, added };
+}
+
+export function createAcpDiffViewNode(
+  diff: AcpDiffOutput,
+  rootFolderPath?: string | null,
+): ExtensionDiffNode {
+  const oldLines = diff.oldText.length > 0 ? diff.oldText.split("\n") : [];
+  const newLines = diff.newText.length > 0 ? diff.newText.split("\n") : [];
+  const budget = previewLineBudget(oldLines.length, newLines.length);
+  const lines: ExtensionDiffNode["lines"] = [
+    {
+      type: "header",
+      content: `-1,${Math.max(oldLines.length, 1)} +1,${Math.max(newLines.length, 1)}`,
+    },
+    ...oldLines.slice(0, budget.removed).map((content, index) => ({
+      type: "removed" as const,
+      content,
+      oldLine: index + 1,
+    })),
+    ...newLines.slice(0, budget.added).map((content, index) => ({
+      type: "added" as const,
+      content,
+      newLine: index + 1,
+    })),
+  ];
+
+  return {
+    type: "diff",
+    filePath: toRelativeDisplayPath(diff.path, rootFolderPath),
+    language: getLanguageHint(diff.path),
+    lines,
+    truncated: budget.removed < oldLines.length || budget.added < newLines.length,
+  };
 }
 
 function toGitDiff(diff: AcpDiffOutput, rootFolderPath?: string | null): GitDiff {

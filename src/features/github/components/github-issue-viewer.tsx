@@ -415,7 +415,6 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   onClick={() => void updateIssueState("closed", "completed")}
                   disabled={Boolean(mutationKey)}
                   variant="ghost"
-                  size="xs"
                 >
                   {mutationKey === "state" ? <Spinner label="Closing" compact /> : <CheckCircle />}
                   Close
@@ -426,7 +425,6 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   onClick={() => void updateIssueState("open", "reopened")}
                   disabled={!details || Boolean(mutationKey)}
                   variant="ghost"
-                  size="xs"
                 >
                   {mutationKey === "state" ? <Spinner label="Reopening" compact /> : <CircleDot />}
                   Reopen
@@ -547,7 +545,6 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                     const issueType = issueTypes.find((item) => item.name === value) ?? null;
                     void updateIssue({ issueType });
                   }}
-                  size="xs"
                   variant="ghost"
                   className="w-full"
                   align="start"
@@ -570,7 +567,6 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                       milestones.find((item) => item.number.toString() === value) ?? null;
                     void updateIssue({ milestone });
                   }}
-                  size="xs"
                   variant="ghost"
                   className="w-full"
                   align="start"
@@ -718,7 +714,6 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                     <Button
                       type="button"
                       variant="accent"
-                      size="xs"
                       disabled={
                         details.locked || !commentBody.trim() || mutationKey === "new-comment"
                       }

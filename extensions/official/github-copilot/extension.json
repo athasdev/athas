@@ -16,7 +16,8 @@
       "args": ["--acp"],
       "install": {
         "runtime": "node",
-        "package": "@github/copilot",
+        "package": "@github/copilot@1.0.80",
+        "version": "1.0.80",
         "command": "copilot"
       }
     }

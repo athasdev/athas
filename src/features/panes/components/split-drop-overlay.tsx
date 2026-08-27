@@ -67,7 +67,7 @@ export function SplitDropOverlay({ activeZoneOverride, onDrop, visible }: SplitD
       {effectiveZone && (
         <div
           className={cn(
-            "pointer-events-none absolute border-2 border-primary bg-primary/14 shadow-[0_0_0_1px_var(--primary)] transition-[inset,width,height,opacity,transform] duration-(--app-duration-fast) ease-(--app-ease-smooth)",
+            "pointer-events-none absolute border-2 border-primary bg-primary/14 shadow-[0_0_0_1px_var(--primary)] transition-[inset,width,height,opacity,transform] duration-fast ease-smooth",
             zoneStyles[effectiveZone],
           )}
         />

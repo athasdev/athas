@@ -22,9 +22,9 @@ const tabsListVariants = cva(
   {
     variants: {
       variant: {
-        default: "gap-(--athas-chrome-gap-tight) bg-transparent",
-        line: "gap-(--athas-chrome-gap) bg-transparent",
-        bare: "gap-(--athas-chrome-gap) bg-transparent",
+        default: "gap-chrome-tight bg-transparent",
+        line: "gap-chrome bg-transparent",
+        bare: "gap-chrome bg-transparent",
       },
     },
     defaultVariants: {
@@ -48,31 +48,14 @@ function TabsList({
   );
 }
 
-const tabsTriggerVariants = cva(
-  "relative inline-flex flex-1 select-none items-center justify-center gap-(--athas-chrome-gap-loose) whitespace-nowrap rounded-full border border-transparent font-sans font-normal text-subtle-foreground outline-none transition-[background-color,border-color,color,box-shadow] duration-(--app-duration-fast) ease-(--app-ease-smooth) hover:bg-accent/50 hover:text-foreground focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 data-active:bg-accent/80 data-active:text-foreground group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent group-data-[variant=bare]/tabs-list:bg-transparent group-data-[variant=bare]/tabs-list:data-active:bg-accent/80 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
-  {
-    variants: {
-      size: {
-        xs: "ui-text-chrome h-(--athas-chrome-control-height) px-2",
-        sm: "ui-text-chrome h-(--athas-tab-height) px-2.5",
-        md: "min-h-8 px-3 ui-text-base",
-      },
-    },
-    defaultVariants: {
-      size: "sm",
-    },
-  },
-);
-
-function TabsTrigger({
-  className,
-  size = "sm",
-  ...props
-}: TabsPrimitive.Tab.Props & VariantProps<typeof tabsTriggerVariants>) {
+function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
   return (
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
-      className={cn(tabsTriggerVariants({ size }), className)}
+      className={cn(
+        "relative inline-flex h-chrome-control flex-1 select-none items-center justify-center gap-chrome-loose whitespace-nowrap rounded-full border border-transparent px-2 font-sans font-normal ui-text-chrome text-subtle-foreground outline-none transition-[background-color,border-color,color,box-shadow] duration-fast ease-smooth hover:bg-accent/50 hover:text-foreground focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 data-active:bg-accent/80 data-active:text-foreground group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent group-data-[variant=bare]/tabs-list:bg-transparent group-data-[variant=bare]/tabs-list:data-active:bg-accent/80 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+        className,
+      )}
       {...props}
     />
   );
@@ -88,4 +71,4 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   );
 }
 
-export { Tabs, TabsContent, TabsList, TabsTrigger, tabsListVariants, tabsTriggerVariants };
+export { Tabs, TabsContent, TabsList, TabsTrigger, tabsListVariants };

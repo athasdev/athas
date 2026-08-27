@@ -1,7 +1,7 @@
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 
 const MONACO_HOVER_MIN_WIDTH = 120;
-const MONACO_HOVER_MAX_WIDTH = 720;
+const MONACO_HOVER_MAX_WIDTH = 500;
 const MONACO_HOVER_MIN_HEIGHT = 48;
 const MONACO_HOVER_WIDGET_SELECTOR =
   '[widgetid="editor.contrib.resizableContentHoverWidget"], [widgetid="editor.contrib.modesGlyphHoverWidget"]';

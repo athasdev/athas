@@ -1,8 +1,7 @@
-import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { Dropdown } from "@/ui/dropdown";
+import { ContextMenuPopup } from "@/ui/context-menu";
 import {
-  buildEditorContextMenuItems,
+  buildEditorContextMenuGroups,
   type EditorContextMenuHandlers,
 } from "./editor-context-menu-items";
 
@@ -20,20 +19,12 @@ const EditorContextMenu = ({ isOpen, position, onClose, ...handlers }: EditorCon
   })();
   if (!isOpen) return null;
 
-  const items = buildEditorContextMenuItems({
+  const groups = buildEditorContextMenuGroups({
     hasSelection,
     ...handlers,
   });
 
-  return (
-    <Dropdown
-      isOpen={isOpen}
-      point={position}
-      items={items}
-      onClose={onClose}
-      style={{ zIndex: EDITOR_CONSTANTS.Z_INDEX.CONTEXT_MENU }}
-    />
-  );
+  return <ContextMenuPopup isOpen={isOpen} point={position} groups={groups} onClose={onClose} />;
 };
 
 export default EditorContextMenu;

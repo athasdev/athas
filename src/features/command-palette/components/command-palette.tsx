@@ -1,5 +1,10 @@
 import { appDataDir } from "@tauri-apps/api/path";
-import { ClockCounterClockwiseIcon as History, PuzzlePieceIcon as Puzzle } from "@/ui/icons";
+import {
+  ArrowDownIcon as ArrowDown,
+  ArrowUpIcon as ArrowUp,
+  MagnifyingGlassIcon as Search,
+  PuzzlePieceIcon as Puzzle,
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
@@ -33,14 +38,18 @@ import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import Command, {
   CommandEmpty,
+  CommandFooter,
   CommandHeader,
   CommandInput,
+  CommandItemBadge,
   CommandItemRow,
   CommandList,
+  CommandTabs,
   useCommandListNavigation,
 } from "@/ui/command";
+import { Kbd, KbdGroup } from "@/ui/kbd";
+import { SearchMatchHighlight } from "@/ui/search-match-highlight";
 import Keybinding from "@/features/keymaps/components/keybinding";
-import { matchesSearchQuery } from "@/utils/search-match";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createDatabaseActions } from "../constants/database-actions";
 import { createFileActions } from "../constants/file-actions";
@@ -55,6 +64,12 @@ import { createViewActions } from "../constants/view-actions";
 import { createWindowActions } from "../constants/window-actions";
 import type { Action } from "../types/action.types";
 import type { CommandPaletteViewId } from "../types/view.types";
+import {
+  commandPaletteFilters,
+  flattenCommandPaletteSections,
+  getCommandPaletteSections,
+  type CommandPaletteFilter,
+} from "../utils/command-palette-results";
 import { useActionsStore } from "../stores/action-history.store";
 import { useCommandPaletteViews } from "../services/command-palette-view-registry";
 
@@ -84,6 +99,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   };
 
   const [query, setQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<CommandPaletteFilter>("all");
   const [viewStack, setViewStack] = useState<CommandPaletteViewId[]>(["root"]);
   const [activeInitialView, setActiveInitialView] = useState<CommandPaletteViewId>("root");
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -134,7 +150,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const formatOnSave = useSettingsStore((state) => state.settings.formatOnSave);
   const iconTheme = useSettingsStore((state) => state.settings.iconTheme);
   const inlayHints = useSettingsStore((state) => state.settings.inlayHints);
-  const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
   const lineNumbers = useSettingsStore((state) => state.settings.lineNumbers);
   const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
@@ -189,7 +204,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       formatOnSave,
       iconTheme,
       inlayHints,
-      isAIChatVisible,
       lineNumbers,
       nativeMenuBar,
       parameterHints,
@@ -217,7 +231,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       formatOnSave,
       iconTheme,
       inlayHints,
-      isAIChatVisible,
       lineNumbers,
       nativeMenuBar,
       parameterHints,
@@ -254,7 +267,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       setBottomPaneActiveTab,
       settings: {
         activityRailExpanded: commandSettings.activityRailExpanded,
-        isAIChatVisible: commandSettings.isAIChatVisible,
         nativeMenuBar: commandSettings.nativeMenuBar,
         compactMenuBar: commandSettings.compactMenuBar,
         webViewerEnabled: commandSettings.coreFeatures.webViewer,
@@ -314,26 +326,24 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     ...createGenerateActions({
       onClose,
     }),
-    ...Array.from(extensionCommands.values()).map(
-      (command): Action => ({
-        id: `extension-command:${command.id}`,
-        label: command.title,
-        description: command.category
-          ? `${command.category} extension command`
-          : "Installed extension command",
-        icon: <Puzzle />,
-        category: command.category ?? "Extensions",
-        action: () => {
-          onClose();
-          void Promise.resolve(command.execute()).catch((error) => {
-            showToast({
-              message: error instanceof Error ? error.message : "Extension command failed",
-              type: "error",
-            });
+    ...Array.from(extensionCommands.values()).map((command): Action => ({
+      id: `extension-command:${command.id}`,
+      label: command.title,
+      description: command.category
+        ? `${command.category} extension command`
+        : "Installed extension command",
+      icon: <Puzzle />,
+      category: command.category ?? "Extensions",
+      action: () => {
+        onClose();
+        void Promise.resolve(command.execute()).catch((error) => {
+          showToast({
+            message: error instanceof Error ? error.message : "Extension command failed",
+            type: "error",
           });
-        },
-      }),
-    ),
+        });
+      },
+    })),
     ...createWindowActions({
       onClose,
     }),
@@ -386,34 +396,24 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     }),
   ];
 
-  // Filter actions based on query
-  const filteredActions = allActions.filter(
-    (action) =>
-      !query.trim() ||
-      matchesSearchQuery(query, [action.label, action.description ?? "", action.category]),
-  );
-
-  const prioritizedActions = useMemo(() => {
-    if (!commandSettings.coreFeatures.persistentCommands) return filteredActions;
-    if (!filteredActions) return [];
-
-    const remaining = filteredActions.filter((action) => !lastEnteredActions.includes(action.id));
-
-    const prioritized = lastEnteredActions
-      .map((id) => filteredActions.find((a) => a.id === id))
-      .filter((a): a is Action => !!a); // Filter out undefined and assure it is of type Action
-
-    return [...prioritized, ...remaining];
-  }, [commandSettings.coreFeatures.persistentCommands, filteredActions, lastEnteredActions]);
+  const commandSections = getCommandPaletteSections({
+    actions: allActions,
+    filter: activeFilter,
+    query,
+    recentActionIds: lastEnteredActions,
+    showRecent: commandSettings.coreFeatures.persistentCommands,
+  });
+  const paletteActions = flattenCommandPaletteSections(commandSections);
+  const actionIndexes = new Map(paletteActions.map((action, index) => [action.id, index]));
 
   const handleActionSelect = useCallback(
     (index: number) => {
-      const action = prioritizedActions[index];
+      const action = paletteActions[index];
       if (!action) return;
       action.action();
       pushAction(action.id);
     },
-    [prioritizedActions, pushAction],
+    [paletteActions, pushAction],
   );
 
   const {
@@ -421,30 +421,26 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     setSelectedIndex,
     onInputKeyDown: handleCommandKeyDown,
   } = useCommandListNavigation({
-    itemCount: prioritizedActions.length,
-    resetKey: `${currentView}:${query}`,
+    itemCount: paletteActions.length,
+    resetKey: `${currentView}:${activeFilter}:${query}`,
     onSelect: handleActionSelect,
   });
 
   // Reset state when visibility changes
   useEffect(() => {
     setQuery("");
+    setActiveFilter("all");
     setActiveInitialView(commandPaletteInitialView);
     setViewStack(initialViewStack);
   }, [commandPaletteInitialView, initialViewStack]);
 
   // Scroll selected item into view
   useEffect(() => {
-    if (resultsRef.current && filteredActions.length > 0) {
-      const selectedElement = resultsRef.current.children[selectedIndex] as HTMLElement;
-      if (selectedElement) {
-        selectedElement.scrollIntoView({
-          block: "nearest",
-          behavior: "smooth",
-        });
-      }
-    }
-  }, [selectedIndex, filteredActions.length]);
+    const selectedElement = resultsRef.current?.querySelector(
+      `[data-command-item-index="${selectedIndex}"]`,
+    );
+    selectedElement?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selectedIndex, paletteActions.length]);
 
   const extensionView = extensionViews.get(currentView);
 
@@ -499,42 +495,123 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
             onClose={onClose}
             showClearButton={commandSettings.coreFeatures.persistentCommands}
           >
+            <Search className="size-4 shrink-0 text-subtle-foreground" />
             <CommandInput
               value={query}
               onChange={setQuery}
               onKeyDown={handleCommandKeyDown}
-              placeholder="Type a command..."
+              placeholder="Search commands and actions..."
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="true"
+              aria-controls="command-palette-results"
+              aria-activedescendant={
+                paletteActions.length ? `command-palette-option-${selectedIndex}` : undefined
+              }
             />
+            <Kbd>Return</Kbd>
           </CommandHeader>
 
-          <CommandList ref={resultsRef}>
-            {filteredActions.length === 0 ? (
+          <CommandTabs
+            ariaLabel="Command categories"
+            items={commandPaletteFilters.map((filter) => ({
+              id: filter.id,
+              label: filter.label,
+              isActive: filter.id === activeFilter,
+              onSelect: () => setActiveFilter(filter.id),
+            }))}
+          />
+
+          <CommandList
+            ref={resultsRef}
+            id="command-palette-results"
+            role="listbox"
+            aria-label="Command results"
+          >
+            {paletteActions.length === 0 ? (
               <CommandEmpty>No commands found</CommandEmpty>
             ) : (
-              prioritizedActions.map((action, index) => {
-                const isRecent =
-                  commandSettings.coreFeatures.persistentCommands &&
-                  lastEnteredActions.includes(action.id);
-                const binding = action.commandId
-                  ? keymapRegistry.getKeybinding(action.commandId)?.key
-                  : undefined;
-                return (
-                  <CommandItemRow
-                    key={action.id}
-                    onClick={() => {
-                      action.action();
-                      pushAction(action.id);
-                    }}
-                    onMouseEnter={() => setSelectedIndex(index)}
-                    isSelected={index === selectedIndex}
-                    icon={isRecent ? <History /> : undefined}
-                    title={action.label}
-                    accessory={binding ? <Keybinding binding={binding} /> : undefined}
-                  />
-                );
-              })
+              commandSections.map((section) => (
+                <section key={section.id} aria-labelledby={`command-section-${section.id}`}>
+                  <div
+                    id={`command-section-${section.id}`}
+                    className="px-2.5 pt-2 pb-1 font-medium text-subtle-foreground ui-text-chrome"
+                  >
+                    {section.label}
+                  </div>
+                  {section.actions.map((action) => {
+                    const index = actionIndexes.get(action.id) ?? 0;
+                    const isSelected = index === selectedIndex;
+                    const isRecent =
+                      commandSettings.coreFeatures.persistentCommands &&
+                      lastEnteredActions.includes(action.id);
+                    const binding = action.commandId
+                      ? keymapRegistry.getKeybinding(action.commandId)?.key
+                      : undefined;
+
+                    return (
+                      <CommandItemRow
+                        key={action.id}
+                        as="div"
+                        id={`command-palette-option-${index}`}
+                        role="option"
+                        tabIndex={-1}
+                        aria-selected={isSelected}
+                        data-command-item-index={index}
+                        onClick={() => {
+                          action.action();
+                          pushAction(action.id);
+                        }}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                        isSelected={isSelected}
+                        icon={action.icon}
+                        iconVariant="framed"
+                        contentLayout="stacked"
+                        title={<SearchMatchHighlight text={action.label} query={query} />}
+                        description={
+                          <>
+                            <span>{action.category}</span>
+                            <span aria-hidden="true"> · </span>
+                            <SearchMatchHighlight text={action.description} query={query} />
+                          </>
+                        }
+                        accessory={
+                          <>
+                            {isRecent ? <CommandItemBadge>Recent</CommandItemBadge> : null}
+                            {binding ? (
+                              <Keybinding binding={binding} />
+                            ) : isSelected ? (
+                              <Kbd>Return</Kbd>
+                            ) : null}
+                          </>
+                        }
+                      />
+                    );
+                  })}
+                </section>
+              ))
             )}
           </CommandList>
+
+          <CommandFooter>
+            <KbdGroup>
+              <Kbd>
+                <ArrowUp />
+              </Kbd>
+              <Kbd>
+                <ArrowDown />
+              </Kbd>
+              <span className="text-subtle-foreground ui-text-chrome">Navigate</span>
+            </KbdGroup>
+            <KbdGroup>
+              <Kbd>Return</Kbd>
+              <span className="text-subtle-foreground ui-text-chrome">Run</span>
+            </KbdGroup>
+            <KbdGroup>
+              <Kbd>Esc</Kbd>
+              <span className="text-subtle-foreground ui-text-chrome">Close</span>
+            </KbdGroup>
+          </CommandFooter>
         </>
       )}
     </Command>

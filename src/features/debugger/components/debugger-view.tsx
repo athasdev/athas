@@ -60,7 +60,7 @@ function DebugStatusBadge({ status }: { status: "idle" | "running" | "paused" })
   const variant = status === "paused" ? "default" : status === "running" ? "accent" : "muted";
 
   return (
-    <Badge variant={variant} size="compact" className="gap-1.5 capitalize">
+    <Badge variant={variant} className="gap-1.5 capitalize">
       <DebugSessionStatusIcon status={status} />
       {status}
     </Badge>
@@ -320,7 +320,7 @@ export default function DebuggerView() {
           commandId="debug.toggleBreakpoint"
           onClick={toggleCurrentLineBreakpoint}
           disabled={!activeFile}
-          size="icon-xs"
+          iconOnly
         >
           <ListBullets />
         </Button>
@@ -335,7 +335,6 @@ export default function DebuggerView() {
                 value={selectedConfig.id}
                 onChange={(value) => debuggerActions.setActiveConfigId(value)}
                 options={allConfigs.map((config) => ({ value: config.id, label: config.name }))}
-                size="sm"
                 variant="default"
                 searchable
                 aria-label="Debug configuration"
@@ -349,7 +348,6 @@ export default function DebuggerView() {
                   value={customCommand}
                   onChange={(event) => setCustomCommand(event.target.value)}
                   placeholder="Command to run"
-                  size="sm"
                 />
               ) : (
                 <div className="font-sans min-h-8 truncate rounded-lg border border-border/60 bg-surface/70 px-2 py-1.5 font-mono ui-text-sm text-subtle-foreground">
@@ -374,7 +372,7 @@ export default function DebuggerView() {
                 disabled={!canSendAdapterThreadRequest}
                 onClick={() => void sendAdapterThreadRequest(isPaused ? "continue" : "pause")}
                 aria-label={isPaused ? "Continue debugging" : "Pause debugging"}
-                size="icon"
+                iconOnly
               >
                 {isPaused ? <Play /> : <Pause />}
               </Button>
@@ -384,7 +382,7 @@ export default function DebuggerView() {
                 disabled={!isActiveSession}
                 onClick={stopDebugging}
                 commandId="debug.stop"
-                size="icon"
+                iconOnly
               >
                 <Square />
               </Button>
@@ -396,7 +394,6 @@ export default function DebuggerView() {
                 tooltip="Step over"
                 disabled={!canStep}
                 onClick={() => void sendAdapterThreadRequest("next")}
-                size="xs"
               >
                 Over
               </Button>
@@ -405,7 +402,6 @@ export default function DebuggerView() {
                 tooltip="Step into"
                 disabled={!canStep}
                 onClick={() => void sendAdapterThreadRequest("stepIn")}
-                size="xs"
               >
                 Into
               </Button>
@@ -414,7 +410,6 @@ export default function DebuggerView() {
                 tooltip="Step out"
                 disabled={!canStep}
                 onClick={() => void sendAdapterThreadRequest("stepOut")}
-                size="xs"
               >
                 Out
               </Button>
@@ -432,11 +427,7 @@ export default function DebuggerView() {
               <div className="flex items-center gap-2">
                 <DebugSessionStatusIcon status={activeSession.status} />
                 <span className="truncate font-medium">{activeSession.name}</span>
-                {stoppedState ? (
-                  <Badge variant="warning" size="compact">
-                    Paused
-                  </Badge>
-                ) : null}
+                {stoppedState ? <Badge variant="warning">Paused</Badge> : null}
               </div>
               <div className="mt-1 line-clamp-2 ui-text-sm text-subtle-foreground">
                 {stoppedState?.description || stoppedState?.reason || activeSession.command}
@@ -492,7 +483,7 @@ export default function DebuggerView() {
                   variant="ghost"
                   tooltip="Clear console"
                   onClick={debuggerActions.clearAdapterTranscript}
-                  size="icon-xs"
+                  iconOnly
                 >
                   <Trash />
                 </Button>
@@ -528,7 +519,7 @@ export default function DebuggerView() {
                   variant="ghost"
                   tooltip="Clear breakpoints"
                   onClick={debuggerActions.clearBreakpoints}
-                  size="icon-xs"
+                  iconOnly
                 >
                   <Trash />
                 </Button>

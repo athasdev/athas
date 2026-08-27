@@ -17,13 +17,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 async function initializeStoreDefaults(store: Store) {
   const entries = new Map(await store.entries<unknown>());
   const changes: Array<[string, unknown]> = [];
+  const legacySidebarWidth = entries.get("sidebarWidth");
 
   for (const [key, defaultValue] of Object.entries(defaultSettings)) {
     const currentValue = entries.get(key);
     let nextValue = currentValue;
 
     if (currentValue === null || currentValue === undefined) {
-      nextValue = defaultValue;
+      nextValue = key === "rightSidebarWidth" ? (legacySidebarWidth ?? defaultValue) : defaultValue;
     } else if (isRecord(defaultValue)) {
       nextValue = isRecord(currentValue) ? { ...defaultValue, ...currentValue } : defaultValue;
     }

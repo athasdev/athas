@@ -1,4 +1,7 @@
-use super::exec_guard::{validate_exec_command, validate_exec_env};
+use super::{
+   exec_guard::{validate_exec_command, validate_exec_env},
+   extension_command::build_extension_command,
+};
 use athas_runtime::process::configure_background_command;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -73,34 +76,19 @@ async fn format_with_generic(
       validate_exec_env(env).map_err(|e| format!("Invalid formatter config: {}", e))?;
    }
 
-   // Substitute template variables in command and args
-   let command = substitute_variables(&config.command, file_path, workspace_folder);
-
-   let args: Vec<String> = if let Some(arg_list) = &config.args {
-      arg_list
-         .iter()
-         .map(|arg| substitute_variables(arg, file_path, workspace_folder))
-         .collect()
-   } else {
-      vec![]
-   };
-
    // Determine input/output methods (default to stdin/stdout)
    let input_method = config.input_method.as_deref().unwrap_or("stdin");
    let output_method = config.output_method.as_deref().unwrap_or("stdout");
 
    // Build command
-   let mut cmd = Command::new(&command);
-   configure_background_command(&mut cmd);
-   cmd.args(&args);
-
-   // Add environment variables if specified
-   if let Some(env) = &config.env {
-      for (key, value) in env {
-         let value = substitute_variables(value, file_path, workspace_folder);
-         cmd.env(key, value);
-      }
-   }
+   let mut cmd = build_extension_command(
+      &config.command,
+      config.args.as_deref(),
+      config.env.as_ref(),
+      file_path,
+      workspace_folder,
+   );
+   let command_name = cmd.get_program().to_string_lossy().into_owned();
 
    // Configure stdin/stdout
    if input_method == "stdin" {
@@ -161,58 +149,9 @@ async fn format_with_generic(
       Err(e) => Ok(FormatResponse {
          formatted_content: content.to_string(),
          success: false,
-         error: Some(format!("Formatter not available: {} - {}", command, e)),
+         error: Some(format!("Formatter not available: {} - {}", command_name, e)),
       }),
    }
-}
-
-/// Substitute template variables in a string
-fn substitute_variables(
-   template: &str,
-   file_path: Option<&str>,
-   workspace_folder: Option<&str>,
-) -> String {
-   let mut result = template.to_string();
-
-   if let Some(path) = file_path {
-      result = result.replace("${file}", path);
-      result = result.replace(
-         "${fileBasename}",
-         std::path::Path::new(path)
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or(path),
-      );
-      result = result.replace(
-         "${fileBasenameNoExtension}",
-         std::path::Path::new(path)
-            .file_stem()
-            .and_then(|n| n.to_str())
-            .unwrap_or(path),
-      );
-      result = result.replace(
-         "${fileDirname}",
-         std::path::Path::new(path)
-            .parent()
-            .and_then(|p| p.to_str())
-            .unwrap_or(""),
-      );
-      result = result.replace(
-         "${fileExtname}",
-         std::path::Path::new(path)
-            .extension()
-            .and_then(|e| e.to_str())
-            .map(|e| format!(".{}", e))
-            .unwrap_or_default()
-            .as_str(),
-      );
-   }
-
-   if let Some(workspace) = workspace_folder {
-      result = result.replace("${workspaceFolder}", workspace);
-   }
-
-   result
 }
 
 /// Format code using Prettier
@@ -241,56 +180,7 @@ async fn format_with_prettier(content: &str, language: &str) -> Result<FormatRes
    .stdout(std::process::Stdio::piped())
    .stderr(std::process::Stdio::piped());
 
-   match cmd.spawn() {
-      Ok(mut child) => {
-         // Write content to stdin
-         if let Some(stdin) = child.stdin.take() {
-            use std::io::Write;
-            let mut stdin = stdin;
-            if let Err(e) = stdin.write_all(content.as_bytes()) {
-               return Ok(FormatResponse {
-                  formatted_content: content.to_string(),
-                  success: false,
-                  error: Some(format!("Failed to write to prettier stdin: {}", e)),
-               });
-            }
-         }
-
-         // Wait for the process to complete
-         match child.wait_with_output() {
-            Ok(output) => {
-               if output.status.success() {
-                  let formatted = String::from_utf8_lossy(&output.stdout);
-                  Ok(FormatResponse {
-                     formatted_content: formatted.to_string(),
-                     success: true,
-                     error: None,
-                  })
-               } else {
-                  let error_msg = String::from_utf8_lossy(&output.stderr);
-                  Ok(FormatResponse {
-                     formatted_content: content.to_string(),
-                     success: false,
-                     error: Some(format!("Prettier error: {}", error_msg)),
-                  })
-               }
-            }
-            Err(e) => Ok(FormatResponse {
-               formatted_content: content.to_string(),
-               success: false,
-               error: Some(format!("Failed to run prettier: {}", e)),
-            }),
-         }
-      }
-      Err(e) => {
-         // Prettier not available, return original content
-         Ok(FormatResponse {
-            formatted_content: content.to_string(),
-            success: false,
-            error: Some(format!("Prettier not available: {}", e)),
-         })
-      }
-   }
+   Ok(run_stdin_formatter(cmd, content, "prettier", "Prettier"))
 }
 
 /// Format Rust code using rustfmt
@@ -302,52 +192,7 @@ async fn format_with_rustfmt(content: &str) -> Result<FormatResponse, String> {
       .stdout(std::process::Stdio::piped())
       .stderr(std::process::Stdio::piped());
 
-   match cmd.spawn() {
-      Ok(mut child) => {
-         // Write content to stdin
-         if let Some(stdin) = child.stdin.take() {
-            use std::io::Write;
-            let mut stdin = stdin;
-            if let Err(e) = stdin.write_all(content.as_bytes()) {
-               return Ok(FormatResponse {
-                  formatted_content: content.to_string(),
-                  success: false,
-                  error: Some(format!("Failed to write to rustfmt stdin: {}", e)),
-               });
-            }
-         }
-
-         match child.wait_with_output() {
-            Ok(output) => {
-               if output.status.success() {
-                  let formatted = String::from_utf8_lossy(&output.stdout);
-                  Ok(FormatResponse {
-                     formatted_content: formatted.to_string(),
-                     success: true,
-                     error: None,
-                  })
-               } else {
-                  let error_msg = String::from_utf8_lossy(&output.stderr);
-                  Ok(FormatResponse {
-                     formatted_content: content.to_string(),
-                     success: false,
-                     error: Some(format!("rustfmt error: {}", error_msg)),
-                  })
-               }
-            }
-            Err(e) => Ok(FormatResponse {
-               formatted_content: content.to_string(),
-               success: false,
-               error: Some(format!("Failed to run rustfmt: {}", e)),
-            }),
-         }
-      }
-      Err(e) => Ok(FormatResponse {
-         formatted_content: content.to_string(),
-         success: false,
-         error: Some(format!("rustfmt not available: {}", e)),
-      }),
-   }
+   Ok(run_stdin_formatter(cmd, content, "rustfmt", "rustfmt"))
 }
 
 /// Format Go code using gofmt
@@ -358,51 +203,62 @@ async fn format_with_gofmt(content: &str) -> Result<FormatResponse, String> {
       .stdout(std::process::Stdio::piped())
       .stderr(std::process::Stdio::piped());
 
-   match cmd.spawn() {
-      Ok(mut child) => {
-         // Write content to stdin
-         if let Some(stdin) = child.stdin.take() {
-            use std::io::Write;
-            let mut stdin = stdin;
-            if let Err(e) = stdin.write_all(content.as_bytes()) {
-               return Ok(FormatResponse {
-                  formatted_content: content.to_string(),
-                  success: false,
-                  error: Some(format!("Failed to write to gofmt stdin: {}", e)),
-               });
-            }
-         }
+   Ok(run_stdin_formatter(cmd, content, "gofmt", "gofmt"))
+}
 
-         match child.wait_with_output() {
-            Ok(output) => {
-               if output.status.success() {
-                  let formatted = String::from_utf8_lossy(&output.stdout);
-                  Ok(FormatResponse {
-                     formatted_content: formatted.to_string(),
-                     success: true,
-                     error: None,
-                  })
-               } else {
-                  let error_msg = String::from_utf8_lossy(&output.stderr);
-                  Ok(FormatResponse {
-                     formatted_content: content.to_string(),
-                     success: false,
-                     error: Some(format!("gofmt error: {}", error_msg)),
-                  })
-               }
-            }
-            Err(e) => Ok(FormatResponse {
-               formatted_content: content.to_string(),
-               success: false,
-               error: Some(format!("Failed to run gofmt: {}", e)),
-            }),
-         }
+fn run_stdin_formatter(
+   mut command: Command,
+   content: &str,
+   command_name: &str,
+   display_name: &str,
+) -> FormatResponse {
+   let mut child = match command.spawn() {
+      Ok(child) => child,
+      Err(error) => {
+         return FormatResponse {
+            formatted_content: content.to_string(),
+            success: false,
+            error: Some(format!("{display_name} not available: {error}")),
+         };
       }
-      Err(e) => Ok(FormatResponse {
+   };
+
+   if let Some(mut stdin) = child.stdin.take()
+      && let Err(error) = stdin.write_all(content.as_bytes())
+   {
+      return FormatResponse {
          formatted_content: content.to_string(),
          success: false,
-         error: Some(format!("gofmt not available: {}", e)),
-      }),
+         error: Some(format!("Failed to write to {command_name} stdin: {error}")),
+      };
+   }
+
+   let output = match child.wait_with_output() {
+      Ok(output) => output,
+      Err(error) => {
+         return FormatResponse {
+            formatted_content: content.to_string(),
+            success: false,
+            error: Some(format!("Failed to run {command_name}: {error}")),
+         };
+      }
+   };
+
+   if output.status.success() {
+      FormatResponse {
+         formatted_content: String::from_utf8_lossy(&output.stdout).to_string(),
+         success: true,
+         error: None,
+      }
+   } else {
+      FormatResponse {
+         formatted_content: content.to_string(),
+         success: false,
+         error: Some(format!(
+            "{display_name} error: {}",
+            String::from_utf8_lossy(&output.stderr)
+         )),
+      }
    }
 }
 

@@ -66,6 +66,20 @@ const ACP_REGISTRY_AGENT_ALIASES: Record<string, string> = {
   "kimi-cli": "kimi",
 };
 
+function currentPlatformArch(): string {
+  const platform =
+    process.platform === "darwin" ? "darwin" : process.platform === "win32" ? "win32" : "linux";
+  const arch = process.arch === "arm64" ? "arm64" : "x64";
+  return `${platform}-${arch}`;
+}
+
+function registryPlatformArch(platformArch: string): string {
+  return platformArch
+    .replace(/^win32-/, "windows-")
+    .replace(/-arm64$/, "-aarch64")
+    .replace(/-x64$/, "-x86_64");
+}
+
 function error(extension: string, message: string) {
   errors.push({ extension, message });
 }
@@ -394,7 +408,13 @@ async function validateExtension(folder: string): Promise<void> {
       error(folder, "Integration extension must declare a 'permissions' object");
     } else {
       const permissionRecord = permissions as Record<string, unknown>;
-      const supportedPermissions = new Set(["network", "secrets", "workspace", "openExternal"]);
+      const supportedPermissions = new Set([
+        "network",
+        "secrets",
+        "workspace",
+        "openExternal",
+        "clipboardWrite",
+      ]);
       for (const key of Object.keys(permissionRecord)) {
         if (!supportedPermissions.has(key)) error(folder, `Unsupported permission '${key}'`);
       }
@@ -418,6 +438,12 @@ async function validateExtension(folder: string): Promise<void> {
         typeof permissionRecord.openExternal !== "boolean"
       ) {
         error(folder, "Integration 'openExternal' permission must be boolean");
+      }
+      if (
+        permissionRecord.clipboardWrite !== undefined &&
+        typeof permissionRecord.clipboardWrite !== "boolean"
+      ) {
+        error(folder, "Integration 'clipboardWrite' permission must be boolean");
       }
     }
   }
@@ -537,7 +563,7 @@ async function validateAgentsAgainstAcpRegistry(extensionFolders: string[]): Pro
         version: string;
         distribution?: {
           npx?: { package?: string; args?: string[] };
-          binary?: Record<string, { args?: string[] }>;
+          binary?: Record<string, { archive?: string; args?: string[] }>;
         };
       }>;
     };
@@ -557,6 +583,12 @@ async function validateAgentsAgainstAcpRegistry(extensionFolders: string[]): Pro
         }
 
         const install = agent.install as Record<string, unknown> | undefined;
+        if (install?.version !== registryAgent.version) {
+          error(
+            folder,
+            `Agent '${agentId}' declares version '${String(install?.version)}', but the ACP Registry uses '${registryAgent.version}'`,
+          );
+        }
         const packageName = typeof install?.package === "string" ? install.package : undefined;
         const registryPackage = registryAgent.distribution?.npx?.package;
         if (
@@ -570,11 +602,16 @@ async function validateAgentsAgainstAcpRegistry(extensionFolders: string[]): Pro
           );
         }
 
-        const configuredArgs = Array.isArray(agent.args) ? agent.args : [];
+        const platformArgs = agent.argsByPlatform as Record<string, unknown> | undefined;
+        const configuredArgs = Array.isArray(platformArgs?.[currentPlatformArch()])
+          ? platformArgs[currentPlatformArch()]
+          : Array.isArray(agent.args)
+            ? agent.args
+            : [];
+        const registryPlatform = registryPlatformArch(currentPlatformArch());
         const registryArgs =
           registryAgent.distribution?.npx?.args ??
-          Object.values(registryAgent.distribution?.binary ?? {}).find((entry) => entry.args)
-            ?.args ??
+          registryAgent.distribution?.binary?.[registryPlatform]?.args ??
           [];
         if (JSON.stringify(configuredArgs) !== JSON.stringify(registryArgs)) {
           error(
@@ -584,17 +621,19 @@ async function validateAgentsAgainstAcpRegistry(extensionFolders: string[]): Pro
         }
 
         if (install?.runtime === "binary") {
-          const downloadUrls = Object.values(
-            (install.downloadUrls as Record<string, unknown> | undefined) ?? {},
-          ).filter((url): url is string => typeof url === "string");
-          if (
-            downloadUrls.length === 0 ||
-            downloadUrls.some((url) => !url.includes(`/${registryAgent.version}/`))
-          ) {
-            error(
-              folder,
-              `Agent '${agentId}' binary URLs do not use ACP Registry version ${registryAgent.version}`,
-            );
+          const downloadUrls = (install.downloadUrls as Record<string, unknown> | undefined) ?? {};
+          if (Object.keys(downloadUrls).length === 0) {
+            error(folder, `Agent '${agentId}' does not declare binary download URLs`);
+          }
+          for (const [platform, url] of Object.entries(downloadUrls)) {
+            const registryUrl =
+              registryAgent.distribution?.binary?.[registryPlatformArch(platform)]?.archive;
+            if (typeof url !== "string" || url !== registryUrl) {
+              error(
+                folder,
+                `Agent '${agentId}' binary URL for ${platform} does not match the ACP Registry`,
+              );
+            }
           }
         }
       }

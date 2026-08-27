@@ -162,7 +162,6 @@ export function EmojiPicker({
     <Tooltip key={emoji} content={getEmojiLabel(emoji)} side="top">
       <Toggle
         type="button"
-        size="md"
         pressed={selected === emoji}
         onPressedChange={(pressed) => pressed && handleSelect(emoji)}
         aria-label={`Select ${getEmojiLabel(emoji)}`}
@@ -179,7 +178,6 @@ export function EmojiPicker({
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Search emoji..."
         aria-label="Search emoji"
-        size="xs"
         leftIcon={Search}
       />
 
@@ -209,7 +207,7 @@ export function EmojiPicker({
       ) : null}
 
       {onClear ? (
-        <Button type="button" variant="ghost" size="sm" className="mt-2 w-full" onClick={onClear}>
+        <Button type="button" variant="ghost" className="mt-2 w-full" onClick={onClear}>
           {clearLabel}
         </Button>
       ) : null}

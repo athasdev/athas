@@ -2,6 +2,7 @@ export type SidebarView =
   | "files"
   | "git"
   | "github-prs"
+  | "views"
   | "docker"
   | "outline"
   | "databases"
@@ -36,6 +37,7 @@ export function getActiveSidebarView({
 }: Omit<SidebarPaneState, "isSidebarVisible">): SidebarView {
   if (isGitViewActive) return "git";
   if (isGitHubPRsViewActive) return "github-prs";
+  if (activeSidebarView === "settings") return "files";
   return activeSidebarView ?? "files";
 }
 

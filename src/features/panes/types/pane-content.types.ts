@@ -30,14 +30,17 @@ export type PaneContentType =
   | "githubIssue"
   | "githubAction"
   | "githubForm"
+  | "customView"
   | "markdownDocument"
   | "markdownPreview"
   | "htmlPreview"
   | "csvPreview"
+  | "svgPreview"
   | "externalEditor"
   | "globalSearch"
   | "diagnostics"
   | "references"
+  | "settings"
   | "extensions"
   | "extension"
   | "onboarding";
@@ -158,6 +161,12 @@ export interface GitHubFormContent extends PaneContentBase {
   defaultHead?: string;
 }
 
+export interface CustomViewContent extends PaneContentBase {
+  type: "customView";
+  projectPath: string;
+  viewId?: string;
+}
+
 export interface MarkdownDocumentContent extends PaneContentBase {
   type: "markdownDocument";
   content: string;
@@ -181,6 +190,12 @@ export interface CsvPreviewContent extends PaneContentBase {
   sourceFilePath: string;
 }
 
+export interface SvgPreviewContent extends PaneContentBase {
+  type: "svgPreview";
+  content: string;
+  sourceFilePath: string;
+}
+
 interface ExternalEditorContent extends PaneContentBase {
   type: "externalEditor";
   terminalConnectionId: string;
@@ -196,6 +211,10 @@ interface DiagnosticsContent extends PaneContentBase {
 
 interface ReferencesContent extends PaneContentBase {
   type: "references";
+}
+
+interface SettingsContent extends PaneContentBase {
+  type: "settings";
 }
 
 export interface ExtensionsContent extends PaneContentBase {
@@ -231,14 +250,17 @@ export type PaneContent =
   | GitHubIssueContent
   | GitHubActionContent
   | GitHubFormContent
+  | CustomViewContent
   | MarkdownDocumentContent
   | MarkdownPreviewContent
   | HtmlPreviewContent
   | CsvPreviewContent
+  | SvgPreviewContent
   | ExternalEditorContent
   | GlobalSearchContent
   | DiagnosticsContent
   | ReferencesContent
+  | SettingsContent
   | ExtensionsContent
   | ExtensionContent
   | OnboardingContent;
@@ -265,10 +287,12 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "githubIssue",
   "githubAction",
   "githubForm",
+  "customView",
   "markdownDocument",
   "globalSearch",
   "diagnostics",
   "references",
+  "settings",
   "extensions",
   "extension",
   "onboarding",
@@ -294,14 +318,16 @@ export function hasTextContent(
   | MarkdownDocumentContent
   | MarkdownPreviewContent
   | HtmlPreviewContent
-  | CsvPreviewContent {
+  | CsvPreviewContent
+  | SvgPreviewContent {
   return (
     c.type === "editor" ||
     c.type === "diff" ||
     c.type === "markdownDocument" ||
     c.type === "markdownPreview" ||
     c.type === "htmlPreview" ||
-    c.type === "csvPreview"
+    c.type === "csvPreview" ||
+    c.type === "svgPreview"
   );
 }
 
@@ -392,6 +418,12 @@ export type OpenContentSpec =
       defaultHead?: string;
     }
   | {
+      type: "customView";
+      projectPath: string;
+      viewId?: string;
+      name?: string;
+    }
+  | {
       type: "markdownDocument";
       documentId: string;
       content?: string;
@@ -418,6 +450,13 @@ export type OpenContentSpec =
       sourceFilePath: string;
     }
   | {
+      type: "svgPreview";
+      path: string;
+      name: string;
+      content: string;
+      sourceFilePath: string;
+    }
+  | {
       type: "externalEditor";
       path: string;
       name: string;
@@ -431,6 +470,9 @@ export type OpenContentSpec =
     }
   | {
       type: "references";
+    }
+  | {
+      type: "settings";
     }
   | {
       type: "extensions";

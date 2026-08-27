@@ -48,7 +48,7 @@ export default function ChatHistoryDropdown({
           <Button
             type="button"
             variant="ghost"
-            size="icon-xs"
+            iconOnly
             tooltip="Agent History"
             tooltipSide="bottom"
             aria-label="Agent history"

@@ -24,7 +24,7 @@ import { buildContextPrompt } from "../utils/ai-context-builder";
 
 interface AcpHandlers {
   onChunk: (chunk: string) => void;
-  onComplete: () => void;
+  onComplete: (result?: AgentCompletionResult) => void;
   onError: (error: string, canReconnect?: boolean) => void;
   onNewMessage?: () => void;
   onToolUse?: (event: Extract<AcpEvent, { type: "tool_start" }>) => void;
@@ -97,8 +97,11 @@ export class AcpStreamHandler {
   ): Promise<void> {
     try {
       AcpStreamHandler.activeHandler = this;
-      await this.setupListeners();
       await this.ensureAgentRunning();
+      if (!this.activeSessionId) {
+        throw new Error(`${this.agentId} did not create an active session`);
+      }
+      await this.setupListeners();
       this.awaitingFirstResponse = true;
       await withTimeout(
         invoke("send_acp_prompt", { prompt: this.buildPrompt(userMessage, context, images) }),
@@ -325,7 +328,20 @@ export class AcpStreamHandler {
 
   private handleAcpEvent(event: AcpEvent): void {
     if (this.cancelled) return;
-    if (hasSessionId(event) && this.activeSessionId && event.sessionId !== this.activeSessionId) {
+    if (event.type === "status_changed") {
+      if (event.status.agentId !== this.agentId) return;
+      if (
+        this.activeSessionId &&
+        event.status.sessionId &&
+        event.status.sessionId !== this.activeSessionId
+      ) {
+        return;
+      }
+    } else if (
+      !hasSessionId(event) ||
+      !this.activeSessionId ||
+      event.sessionId !== this.activeSessionId
+    ) {
       return;
     }
     this.markPromptActivity(event);
@@ -420,7 +436,7 @@ export class AcpStreamHandler {
     if (event.stopReason === "cancelled") {
       // User cancelled the prompt
       this.cleanup();
-      this.handlers.onComplete();
+      this.handlers.onComplete({ outcome: "cancelled" });
       return;
     }
     // Treat all other stop reasons as completion in case no session_complete arrives
@@ -572,7 +588,7 @@ export class AcpStreamHandler {
     this.sessionComplete = true;
     this.pendingNewMessage = false;
     this.cleanup();
-    this.handlers.onComplete();
+    this.handlers.onComplete({ outcome: "completed" });
   }
 
   private handleError(event: Extract<AcpEvent, { type: "error" }>): void {
@@ -649,7 +665,7 @@ export class AcpStreamHandler {
     this.cancelled = true;
     this.pendingNewMessage = false;
     this.cleanup();
-    this.handlers.onComplete();
+    this.handlers.onComplete({ outcome: "cancelled" });
   }
 
   // Static method to respond to permission requests

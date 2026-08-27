@@ -3,16 +3,13 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { AppUpdateControl } from "@/features/layout/components/app-update-control";
-import { GitHubNotificationsMenu } from "@/features/github/components/github-notifications-menu";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import { orderChromeItems, type ChromeItem } from "@/features/layout/utils/chrome-items";
 import RunActionsButton from "@/features/run-actions/components/run-actions-button";
-import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
-import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import { ChromeBar, ChromeGroup } from "@/ui/chrome";
@@ -28,7 +25,6 @@ import {
   FolderOpenIcon,
   ListIcon,
   SidebarSimpleIcon,
-  SparkleIcon,
   TrashIcon,
   WindowExpandIcon,
 } from "@/ui/icons";
@@ -36,41 +32,22 @@ import { Toggle } from "@/ui/toggle";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
-import { AccountMenu } from "../account-menu";
 import ProjectPicker from "../project-picker";
-import { WindowControls } from "./window-controls";
 import WindowMenuBar from "../window-menu-bar";
+import { WindowControls } from "./window-controls";
 
 interface TitleBarProps {
   showMinimal?: boolean;
-}
-
-function placeAgentBeforeAccount(items: Array<ChromeItem<HeaderTrailingItemId>>) {
-  const accountIndex = items.findIndex((item) => item.id === "account");
-  if (accountIndex < 0) return items;
-
-  const nextItems = [...items];
-  const itemIndex = nextItems.findIndex((item) => item.id === "ai-chat");
-  const nextAccountIndex = nextItems.findIndex((item) => item.id === "account");
-  if (itemIndex < 0 || nextAccountIndex < 0 || itemIndex === nextAccountIndex - 1) {
-    return nextItems;
-  }
-
-  const [item] = nextItems.splice(itemIndex, 1);
-  const insertionIndex = nextItems.findIndex((candidate) => candidate.id === "account");
-  nextItems.splice(insertionIndex, 0, item);
-
-  return nextItems;
+  activityBarExpanded?: boolean;
+  onActivityBarExpandedChange?: (expanded: boolean) => void;
 }
 
 function TitleBarTrailingActions({ items }: { items: Array<ChromeItem<HeaderTrailingItemId>> }) {
   return (
     <ChromeGroup gap="tight">
-      <GitHubNotificationsMenu />
-      <AppUpdateControl />
       {items.map((item) =>
         item.content ? (
-          <div key={item.id} className="flex min-h-(--athas-chrome-control-height) items-center">
+          <div key={item.id} className="flex min-h-chrome-control items-center">
             {item.content}
           </div>
         ) : null,
@@ -79,11 +56,15 @@ function TitleBarTrailingActions({ items }: { items: Array<ChromeItem<HeaderTrai
   );
 }
 
-const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
+const TitleBar = ({
+  showMinimal = false,
+  activityBarExpanded: controlledActivityBarExpanded,
+  onActivityBarExpandedChange,
+}: TitleBarProps) => {
   const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
-  const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
   const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
+  const effectiveActivityBarExpanded = controlledActivityBarExpanded ?? activityRailExpanded;
   const headerTrailingItemsOrder = useSettingsStore(
     (state) => state.settings.headerTrailingItemsOrder,
   );
@@ -91,7 +72,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
-  const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
+  const openProjectPicker = useUIState((state) => state.openProjectPicker);
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isCompactMenuVisible, setIsCompactMenuVisible] = useState(false);
@@ -213,7 +194,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
         <WindowExpandIcon />
         New Window
       </ContextMenuItem>
-      <ContextMenuItem onClick={() => setIsProjectPickerVisible(true)}>
+      <ContextMenuItem onClick={() => openProjectPicker()}>
         <FilesIcon />
         Add Project
       </ContextMenuItem>
@@ -245,7 +226,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
             <Button
               onClick={handleCompactMenuToggle}
               variant="ghost"
-              size="icon-xs"
+              iconOnly
               className={isCompactMenuVisible ? "bg-accent/70 text-foreground" : undefined}
               aria-label="Menu"
               aria-expanded={isCompactMenuVisible}
@@ -270,13 +251,15 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const sidebarToggle = (
     <Toggle
       type="button"
-      pressed={activityRailExpanded}
-      tooltip={activityRailExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
+      pressed={effectiveActivityBarExpanded}
+      tooltip={effectiveActivityBarExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
       commandId="workbench.toggleActivitySidebar"
       tooltipSide="bottom"
-      onPressedChange={(pressed) => void updateSetting("activityRailExpanded", pressed)}
-      aria-label={activityRailExpanded ? "Collapse activity bar" : "Expand activity bar"}
-      size="xs"
+      onPressedChange={(pressed) => {
+        if (onActivityBarExpandedChange) onActivityBarExpandedChange(pressed);
+        else void updateSetting("activityRailExpanded", pressed);
+      }}
+      aria-label={effectiveActivityBarExpanded ? "Collapse activity bar" : "Expand activity bar"}
     >
       <SidebarSimpleIcon />
     </Toggle>
@@ -284,41 +267,15 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
 
   const headerTrailingItems: Array<ChromeItem<HeaderTrailingItemId>> = [
     { id: "run-actions", label: "Run actions", content: <RunActionsButton /> },
-    {
-      id: "ai-chat",
-      label: "Agent",
-      content: (
-        <Button
-          type="button"
-          variant="ghost"
-          active={isAIChatVisible}
-          tooltip="Toggle Agent"
-          tooltipSide="bottom"
-          commandId="workbench.toggleAIChat"
-          onClick={() => {
-            useSettingsStore.getState().actions.toggleAIChatVisible();
-          }}
-          aria-label="Toggle Agent"
-          size="icon-xs"
-        >
-          <SparkleIcon />
-        </Button>
-      ),
-    },
-    {
-      id: "account",
-      label: "Account",
-      content: <AccountMenu className={!isMacOS ? "mr-1" : undefined} />,
-    },
   ];
-  const orderedTrailingItems = placeAgentBeforeAccount(
-    orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
-  );
+  const orderedTrailingItems = orderChromeItems(headerTrailingItems, headerTrailingItemsOrder);
 
   if (showMinimal) {
     return (
       <ChromeBar
         region="title"
+        role="toolbar"
+        aria-label="Window toolbar"
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
         className="athas-title-bar relative z-50 justify-between select-none"
@@ -340,10 +297,12 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
     return (
       <ContextMenu>
         <ContextMenuTrigger
+          role="toolbar"
+          aria-label="Window toolbar"
           onContextMenu={handleTitleBarContextMenu}
           className={cn(
-            "athas-title-bar font-sans ui-text-chrome relative z-50 flex h-(--athas-title-bar-height) items-center justify-between gap-(--athas-chrome-gap) bg-transparent pr-(--athas-chrome-padding-inline) text-subtle-foreground",
-            isFullscreen ? "pl-2" : "pl-23.5",
+            "athas-title-bar font-sans ui-text-chrome relative z-50 flex h-title-bar items-center justify-between gap-chrome bg-transparent pr-chrome-inline text-subtle-foreground",
+            isFullscreen ? "pl-2" : "pl-title-bar-leading",
           )}
           data-tauri-drag-region
           onMouseDown={handleTitleBarMouseDown}
@@ -365,10 +324,12 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   return (
     <ContextMenu>
       <ContextMenuTrigger
+        role="toolbar"
+        aria-label="Window toolbar"
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
         onContextMenu={handleTitleBarContextMenu}
-        className="athas-title-bar font-sans ui-text-chrome relative z-50 flex h-(--athas-title-bar-height) items-center justify-between gap-(--athas-chrome-gap) bg-transparent px-(--athas-chrome-padding-inline) text-subtle-foreground"
+        className="athas-title-bar font-sans ui-text-chrome relative z-50 flex h-title-bar items-center justify-between gap-chrome bg-transparent px-chrome-inline text-subtle-foreground"
       >
         <ChromeGroup data-tauri-drag-region grow>
           <ChromeGroup className="pointer-events-auto">
@@ -393,28 +354,26 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   );
 };
 
-const TitleBarWithSettings = (props: TitleBarProps) => {
-  const isSettingsDialogVisible = useUIState((state) => state.isSettingsDialogVisible);
+const TitleBarWithOverlays = (props: TitleBarProps) => {
   const isProjectPickerVisible = useUIState((state) => state.isProjectPickerVisible);
-  const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
+  const projectPickerInitialStep = useUIState((state) => state.projectPickerInitialStep);
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
 
   return (
     <>
       <TitleBar {...props} />
-      <SettingsDialog
-        isOpen={isSettingsDialogVisible}
-        onClose={() => setIsSettingsDialogVisible(false)}
-      />
       {createPortal(
-        <ProjectPicker
-          isOpen={isProjectPickerVisible}
-          onClose={() => setIsProjectPickerVisible(false)}
-        />,
+        isProjectPickerVisible ? (
+          <ProjectPicker
+            isOpen
+            initialStep={projectPickerInitialStep}
+            onClose={() => setIsProjectPickerVisible(false)}
+          />
+        ) : null,
         document.body,
       )}
     </>
   );
 };
 
-export default TitleBarWithSettings;
+export default TitleBarWithOverlays;

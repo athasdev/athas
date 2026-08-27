@@ -6,15 +6,14 @@ import {
   TableIcon as Table,
 } from "@/ui/icons";
 import {
-  SidebarHeaderIconButton,
+  SidebarIconButton,
   SidebarListItem,
   SidebarPanel,
+  SidebarScrollArea,
   SidebarSectionLabel,
   SidebarTitleBar,
 } from "@/ui/sidebar";
 import { EmptyState } from "@/ui/empty";
-import { ScrollArea } from "@/ui/scroll-area";
-import { cn } from "@/utils/cn";
 import { getDatabaseObjectOwner, groupDatabaseObjects } from "../lib/database-catalog";
 import type { DatabaseObjectKind, TableInfo } from "../types/common.types";
 import SqlHistoryList from "./sql-history-list";
@@ -54,49 +53,48 @@ export default function TableSidebar({
   } satisfies Record<DatabaseObjectKind, typeof Table>;
 
   return (
-    <SidebarPanel className="w-64 overflow-hidden">
-      <SidebarTitleBar title={`Objects (${tables.length})`} className="group">
-        <SidebarHeaderIconButton
+    <SidebarPanel className="w-64 shrink-0">
+      <SidebarTitleBar title={`Objects (${tables.length})`}>
+        <SidebarIconButton
           onClick={onCreateTable}
-          className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
           aria-label="Create table"
           tooltip="Create table"
           tooltipSide="bottom"
         >
           <Plus />
-        </SidebarHeaderIconButton>
+        </SidebarIconButton>
       </SidebarTitleBar>
-      <ScrollArea className="flex-1" contentClassName="space-y-1 p-2">
-        {objectGroups.length === 0 ? (
-          <EmptyState layout="sidebar" message="No database objects" />
-        ) : null}
-        {objectGroups.map((group, index) => {
-          const Icon = groupIcon[group.kind];
-          return (
-            <div key={group.kind}>
-              <SidebarSectionLabel className={cn("px-2.5 py-1 uppercase", index > 0 && "mt-2")}>
-                {group.label}
-              </SidebarSectionLabel>
-              {group.objects.map((t) => {
-                const owner = getDatabaseObjectOwner(t);
-                return (
-                  <SidebarListItem
-                    key={t.name}
-                    onClick={() => onSelectTable(t.name)}
-                    onContextMenu={(e) => onTableContextMenu(e, t.name, group.kind)}
-                    active={selectedTable === t.name}
-                    aria-label={`Select ${group.kind} ${t.name}`}
-                    leading={<Icon className="mt-0.5 shrink-0" />}
-                    description={owner ? `on ${owner}` : undefined}
-                  >
-                    {t.name}
-                  </SidebarListItem>
-                );
-              })}
-            </div>
-          );
-        })}
-      </ScrollArea>
+      <SidebarScrollArea className="min-h-0 flex-1">
+        <div className="space-y-1">
+          {objectGroups.length === 0 ? (
+            <EmptyState layout="sidebar" message="No database objects" />
+          ) : null}
+          {objectGroups.map((group, index) => {
+            const Icon = groupIcon[group.kind];
+            return (
+              <div key={group.kind} className={index > 0 ? "mt-chrome-loose" : undefined}>
+                <SidebarSectionLabel>{group.label}</SidebarSectionLabel>
+                {group.objects.map((table) => {
+                  const owner = getDatabaseObjectOwner(table);
+                  return (
+                    <SidebarListItem
+                      key={table.name}
+                      onClick={() => onSelectTable(table.name)}
+                      onContextMenu={(event) => onTableContextMenu(event, table.name, group.kind)}
+                      active={selectedTable === table.name}
+                      aria-label={`Select ${group.kind} ${table.name}`}
+                      leading={<Icon />}
+                      description={owner ? `on ${owner}` : undefined}
+                    >
+                      {table.name}
+                    </SidebarListItem>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </SidebarScrollArea>
       <SqlHistoryList
         queries={sqlHistory}
         compact

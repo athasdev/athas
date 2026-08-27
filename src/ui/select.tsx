@@ -2,7 +2,6 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import type { ComponentType, CSSProperties, ReactElement, ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
-import { menuItemVariants, menuSurfaceVariants } from "@/design-system/menu";
 import { Button } from "@/ui/button";
 import {
   Combobox,
@@ -12,6 +11,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/ui/combobox";
+import { menuItemVariants, menuSurfaceVariants } from "@/ui/dropdown";
 import {
   CaretDownIcon as ChevronDown,
   CheckIcon as Check,
@@ -19,7 +19,6 @@ import {
   type Icon as AppIcon,
 } from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
-import { controlIconSizes } from "@/utils/control-variants";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 
@@ -43,8 +42,8 @@ export interface SelectProps {
   menuMinWidth?: number;
   menuAnimated?: boolean;
   disabled?: boolean;
-  size?: "xs" | "sm" | "md";
   variant?: "default" | "ghost";
+  shape?: "default" | "pill";
   align?: "default" | "start";
   searchable?: boolean;
   searchableTrigger?: "menu" | "input";
@@ -63,12 +62,6 @@ export interface SelectProps {
   "aria-label"?: string;
 }
 
-const selectTriggerSizeClassName = {
-  xs: "ui-text-sm",
-  sm: "ui-text-sm",
-  md: "ui-text-base",
-};
-
 function isIconComponent(
   icon: SelectProps["leftIcon"],
 ): icon is ComponentType<{ size?: number; className?: string }> {
@@ -77,23 +70,14 @@ function isIconComponent(
   );
 }
 
-function renderTriggerIcon(icon: SelectProps["leftIcon"], size: "xs" | "sm" | "md") {
+function renderTriggerIcon(icon: SelectProps["leftIcon"]) {
   if (!icon) return null;
   if (!isIconComponent(icon)) {
     return <span className="shrink-0 text-current">{icon}</span>;
   }
 
   const Icon = icon;
-  return <Icon size={controlIconSizes[size]} className="shrink-0 text-current" />;
-}
-
-function getButtonSize(size: "xs" | "sm" | "md", iconOnly: boolean) {
-  if (iconOnly) {
-    if (size === "md") return "icon" as const;
-    return size === "sm" ? ("icon-sm" as const) : ("icon-xs" as const);
-  }
-
-  return size === "md" ? ("default" as const) : size;
+  return <Icon size={12} className="shrink-0 text-current" />;
 }
 
 function SelectTriggerContent({
@@ -101,7 +85,6 @@ function SelectTriggerContent({
   placeholder,
   value,
   leftIcon,
-  size,
   iconOnly,
   hideChevron,
 }: {
@@ -109,11 +92,10 @@ function SelectTriggerContent({
   placeholder: string;
   value: string;
   leftIcon: SelectProps["leftIcon"];
-  size: "xs" | "sm" | "md";
   iconOnly: boolean;
   hideChevron: boolean;
 }) {
-  const triggerIcon = renderTriggerIcon(leftIcon, size);
+  const triggerIcon = renderTriggerIcon(leftIcon);
 
   return (
     <>
@@ -135,9 +117,7 @@ function SelectTriggerContent({
           </span>
         </span>
       )}
-      {!hideChevron ? (
-        <ChevronDown size={controlIconSizes[size]} className="shrink-0 text-subtle-foreground" />
-      ) : null}
+      {!hideChevron ? <ChevronDown size={12} className="shrink-0 text-subtle-foreground" /> : null}
     </>
   );
 }
@@ -163,8 +143,8 @@ function PlainSelect({
   menuMinWidth,
   menuAnimated,
   disabled,
-  size,
   variant,
+  shape,
   align,
   openDirection,
   leftIcon,
@@ -178,8 +158,8 @@ function PlainSelect({
   ariaLabel,
 }: SelectProps & {
   placeholder: string;
-  size: "xs" | "sm" | "md";
   variant: "default" | "ghost";
+  shape: "default" | "pill";
   menuAnimated: boolean;
   hideChevron: boolean;
   iconOnly: boolean;
@@ -192,7 +172,7 @@ function PlainSelect({
     ? ({ minWidth: menuMinWidth } satisfies CSSProperties)
     : undefined;
   const node = (
-    <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-36", className)}>
+    <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-fit max-w-72", className)}>
       <SelectPrimitive.Root
         value={value || null}
         onValueChange={(nextValue) => {
@@ -209,11 +189,10 @@ function PlainSelect({
           data-setting-primary-control="true"
           data-prevent-dialog-escape={open ? "true" : undefined}
           aria-label={ariaLabel}
-          render={<Button variant={variant} size={getButtonSize(size, iconOnly)} />}
+          render={<Button variant={variant} iconOnly={iconOnly} shape={shape} />}
           className={cn(
             !iconOnly &&
               "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
-            !iconOnly && selectTriggerSizeClassName[size],
             align === "start" && "justify-start",
           )}
         >
@@ -222,7 +201,6 @@ function PlainSelect({
             placeholder={placeholder}
             value={value}
             leftIcon={leftIcon}
-            size={size}
             iconOnly={iconOnly}
             hideChevron={hideChevron}
           />
@@ -240,21 +218,21 @@ function PlainSelect({
               data-prevent-dialog-escape="true"
               style={popupStyle}
               className={cn(
-                menuSurfaceVariants({ density: "compact" }),
+                menuSurfaceVariants(),
                 "w-(--anchor-width) max-w-(--available-width) min-w-36 overflow-hidden text-foreground duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
                 !menuAnimated && "duration-0 data-ending-style:transform-none",
                 menuWidth === "content" && "w-fit min-w-0 max-w-(--available-width)",
               )}
             >
               {menuHeader}
-              <SelectPrimitive.List className="custom-scrollbar-thin max-h-96 overflow-y-auto overscroll-contain">
+              <SelectPrimitive.List className="scrollbar-thin max-h-96 overflow-y-auto overscroll-contain">
                 {options.map((option) => (
                   <SelectPrimitive.Item
                     key={option.value}
                     value={option.value}
                     label={option.label}
                     disabled={option.disabled}
-                    className={menuItemVariants({ density: "compact" })}
+                    className={menuItemVariants()}
                   >
                     {option.icon ? (
                       <span className="size-3 shrink-0 text-subtle-foreground">{option.icon}</span>
@@ -290,8 +268,8 @@ function SearchableSelect({
   menuMinWidth,
   menuAnimated,
   disabled,
-  size,
   variant,
+  shape,
   align,
   searchableTrigger,
   openDirection,
@@ -309,8 +287,8 @@ function SearchableSelect({
   emptyLabel = "No matching options",
 }: SelectProps & {
   placeholder: string;
-  size: "xs" | "sm" | "md";
   variant: "default" | "ghost";
+  shape: "default" | "pill";
   searchableTrigger: "menu" | "input";
   menuAnimated: boolean;
   hideChevron: boolean;
@@ -391,7 +369,7 @@ function SearchableSelect({
       modal={false}
     >
       {searchableTrigger === "input" ? (
-        <div className={cn("min-w-0 w-36", className)}>
+        <div className={cn("min-w-0 w-fit max-w-72", className)}>
           <ComboboxInput
             id={id}
             title={title}
@@ -400,26 +378,28 @@ function SearchableSelect({
             aria-label={ariaLabel}
             placeholder={selectedOption?.label || placeholder}
             leftIcon={componentIcon}
-            size={size}
-            variant={variant}
+            variant={variant === "default" ? "button" : "ghost"}
+            shape={shape}
             className="w-full"
-            inputClassName="font-normal"
+            inputClassName={cn(
+              "field-sizing-content min-w-20 max-w-full font-normal",
+              selectedOption && "placeholder:text-foreground",
+            )}
             showTrigger={!hideChevron}
           />
         </div>
       ) : (
-        <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-36", className)}>
+        <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-fit max-w-72", className)}>
           <ComboboxPrimitive.Trigger
             id={id}
             title={title}
             data-setting-primary-control="true"
             data-prevent-dialog-escape={open ? "true" : undefined}
             aria-label={ariaLabel}
-            render={<Button variant={variant} size={getButtonSize(size, iconOnly)} />}
+            render={<Button variant={variant} iconOnly={iconOnly} shape={shape} />}
             className={cn(
               !iconOnly &&
                 "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
-              !iconOnly && selectTriggerSizeClassName[size],
               align === "start" && "justify-start",
             )}
           >
@@ -428,7 +408,6 @@ function SearchableSelect({
               placeholder={placeholder}
               value={value}
               leftIcon={leftIcon}
-              size={size}
               iconOnly={iconOnly}
               hideChevron={hideChevron}
             />
@@ -453,7 +432,6 @@ function SearchableSelect({
             <ComboboxInput
               ref={searchInputRef}
               leftIcon={Search}
-              size={size}
               variant="ghost"
               placeholder="Search..."
               aria-label="Search options"
@@ -479,8 +457,8 @@ export default function Select({
   menuMinWidth = 0,
   menuAnimated = true,
   disabled = false,
-  size = "sm",
   variant = "ghost",
+  shape = "default",
   align = "default",
   searchable = false,
   searchableTrigger = "menu",
@@ -513,8 +491,8 @@ export default function Select({
     menuMinWidth,
     menuAnimated,
     disabled,
-    size,
     variant,
+    shape,
     align,
     searchableTrigger,
     allowCustomValue,

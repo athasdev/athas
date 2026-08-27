@@ -1,6 +1,5 @@
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog";
 import type { ComponentProps } from "react";
-import { overlayBackdrop, overlaySurface, overlaySurfaceTransition } from "@/design-system/overlay";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
@@ -20,27 +19,23 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
   return (
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
-      className={cn(overlayBackdrop(), "z-9998", className)}
+      className={cn(
+        "fixed inset-0 z-9998 bg-black/20 transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+        className,
+      )}
       {...props}
     />
   );
 }
 
-function AlertDialogContent({
-  className,
-  size = "default",
-  ...props
-}: AlertDialogPrimitive.Popup.Props & { size?: "default" | "sm" }) {
+function AlertDialogContent({ className, ...props }: AlertDialogPrimitive.Popup.Props) {
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Popup
         data-slot="alert-dialog-content"
-        data-size={size}
         className={cn(
-          overlaySurface(),
-          overlaySurfaceTransition(),
-          "group/alert-dialog-content fixed top-1/2 left-1/2 z-9999 grid w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 p-4 data-[size=sm]:max-w-xs",
+          "group/alert-dialog-content fixed top-1/2 left-1/2 z-9999 grid w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-background p-4 text-foreground shadow-(--shadow-dialog) ring-1 ring-border/70 outline-none transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
           className,
         )}
         {...props}
@@ -54,7 +49,7 @@ function AlertDialogHeader({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="alert-dialog-header"
       className={cn(
-        "grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-3 sm:group-data-[size=default]/alert-dialog-content:place-items-start sm:group-data-[size=default]/alert-dialog-content:text-left",
+        "grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-3 sm:place-items-start sm:text-left",
         className,
       )}
       {...props}
@@ -67,7 +62,7 @@ function AlertDialogFooter({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="alert-dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-[inherit] border-border border-t bg-surface/55 p-4 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
+        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-[inherit] border-border border-t bg-surface/55 p-4 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}
@@ -80,7 +75,7 @@ function AlertDialogMedia({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="alert-dialog-media"
       className={cn(
-        "mb-2 inline-flex size-9 items-center justify-center rounded-lg bg-accent text-subtle-foreground sm:group-data-[size=default]/alert-dialog-content:row-span-2 [&_svg:not([class*='size-'])]:size-5",
+        "mb-2 inline-flex size-9 items-center justify-center rounded-lg bg-accent text-subtle-foreground sm:row-span-2 [&_svg:not([class*='size-'])]:size-5",
         className,
       )}
       {...props}
@@ -118,14 +113,13 @@ function AlertDialogAction({ className, ...props }: ButtonProps) {
 function AlertDialogCancel({
   className,
   variant = "default",
-  size = "default",
   ...props
-}: AlertDialogPrimitive.Close.Props & Pick<ComponentProps<typeof Button>, "variant" | "size">) {
+}: AlertDialogPrimitive.Close.Props & Pick<ComponentProps<typeof Button>, "variant">) {
   return (
     <AlertDialogPrimitive.Close
       data-slot="alert-dialog-cancel"
       className={className}
-      render={<Button variant={variant} size={size} />}
+      render={<Button variant={variant} />}
       {...props}
     />
   );

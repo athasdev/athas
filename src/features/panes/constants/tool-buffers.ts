@@ -2,7 +2,7 @@ import type { PaneContent, PaneContentType } from "@/features/panes/types/pane-c
 
 export type SingletonToolBufferType = Extract<
   PaneContentType,
-  "globalSearch" | "diagnostics" | "references" | "extensions"
+  "globalSearch" | "diagnostics" | "references" | "settings" | "extensions"
 >;
 
 export const SINGLETON_TOOL_BUFFER_METADATA: Record<
@@ -20,6 +20,10 @@ export const SINGLETON_TOOL_BUFFER_METADATA: Record<
   references: {
     path: "references://results",
     name: "References",
+  },
+  settings: {
+    path: "settings://preferences",
+    name: "Settings",
   },
   extensions: {
     path: "extensions://marketplace",

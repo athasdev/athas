@@ -2,11 +2,13 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import {
   ArrowClockwiseIcon as Refresh,
   CheckIcon as Check,
+  PackageIcon as Package,
   PlusIcon as Plus,
+  TagIcon as Tag,
+  UserIcon as User,
   WarningCircleIcon as Warning,
   XCircleIcon as Unavailable,
 } from "@/ui/icons";
-import Badge from "@/ui/badge";
 import { Card, CardContent, CardTitle } from "@/ui/card";
 import { Spinner } from "@/ui/spinner";
 import { ExtensionIcon } from "./extension-catalog-icon";
@@ -52,8 +54,7 @@ export function ExtensionCatalogCard({
 
   return (
     <Card
-      variant="muted"
-      size="sm"
+      variant="ghost"
       className="min-w-0 cursor-default transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
       onClick={onSelect}
       onContextMenu={(event) => onContextMenu(event, extension)}
@@ -61,28 +62,30 @@ export function ExtensionCatalogCard({
       role="button"
       tabIndex={0}
     >
-      <CardContent className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-start gap-x-3">
+      <CardContent className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_1.25rem] items-center gap-x-3">
         <ExtensionIcon extension={extension} />
         <div className="min-w-0">
           <CardTitle className="truncate">{extension.name}</CardTitle>
-          <div className="mt-2 flex min-w-0 items-center gap-2 text-subtle-foreground ui-text-sm">
-            <Badge variant="muted" size="compact">
+          <div className="mt-1 flex min-w-0 items-center gap-3 text-subtle-foreground ui-text-sm">
+            <span className="flex shrink-0 items-center gap-1">
+              <Tag className="size-3.5" />
               {getCategoryLabel(extension.category)}
-            </Badge>
-            {extension.publisher ? <span className="truncate">{extension.publisher}</span> : null}
-            {extension.version ? (
-              <span className="ml-auto shrink-0">v{extension.version}</span>
+            </span>
+            {extension.publisher ? (
+              <span className="flex min-w-0 items-center gap-1">
+                <User className="size-3.5 shrink-0" />
+                <span className="truncate">{extension.publisher}</span>
+              </span>
+            ) : null}
+            {extension.isBundled ? (
+              <span className="flex shrink-0 items-center gap-1">
+                <Package className="size-3.5" />
+                Built-in
+              </span>
             ) : null}
           </div>
         </div>
-        <div className="flex min-w-5 items-center justify-end gap-2">
-          {extension.isBundled ? (
-            <Badge variant="accent" size="compact">
-              Built-in
-            </Badge>
-          ) : null}
-          <span className="flex size-5 items-center justify-center">{status}</span>
-        </div>
+        <span className="flex size-5 items-center justify-center justify-self-end">{status}</span>
       </CardContent>
     </Card>
   );

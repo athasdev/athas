@@ -10,12 +10,17 @@ describe("default settings", () => {
     expect(getDefaultSettingsSnapshot().openFoldersInNewWindow).toBe(true);
   });
 
+  it("requires users to opt in to native agent notifications", () => {
+    expect(getDefaultSettingsSnapshot().aiAgentNotifications).toBe(false);
+  });
+
   it("preserves the established editor and terminal interaction behavior", () => {
     const settings = getDefaultSettingsSnapshot();
 
     expect(settings.editorFontLigatures).toBe(false);
     expect(settings.editorItalicComments).toBe(false);
     expect(settings.editorStickyScroll).toBe(false);
+    expect(settings.showOutline).toBe(false);
     expect(settings.editorBracketPairColorization).toBe(true);
     expect(settings.editorSmoothScrolling).toBe(false);
     expect(settings.editorScrollBeyondLastLine).toBe(false);
@@ -34,7 +39,7 @@ describe("default settings", () => {
     expect(settings.showStatusBar).toBe(true);
     expect(settings.showTabIcons).toBe(true);
     expect(settings.tabCloseButtonVisibility).toBe("active");
-    expect(settings.windowChromeDensity).toBe("focused");
+    expect(settings.headerTrailingItemsOrder).toEqual(["run-actions"]);
     expect(settings.activityRailExpanded).toBe(false);
     expect(settings.activityRailWidth).toBe(180);
     expect(settings.showActivityRailProjectSwitcher).toBe(true);
@@ -45,6 +50,7 @@ describe("default settings", () => {
     expect(settings.hiddenSidebarActivityItems).toEqual([]);
     expect(settings.collapsedActivityRailSections).toEqual([]);
     expect(settings.sidebarWidth).toBe(220);
+    expect(settings.rightSidebarWidth).toBe(220);
   });
 
   it("preserves established file-tree behavior", () => {

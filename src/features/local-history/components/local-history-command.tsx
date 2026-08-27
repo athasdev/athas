@@ -424,7 +424,7 @@ export function LocalHistoryCommandContent({
               onClick={() => void openSnapshot(entry)}
               onMouseEnter={() => setSelectedIndex(index)}
               className={cn(
-                "mb-1 flex min-h-12 w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent",
+                "mb-1 flex min-h-12 w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent",
                 index === selectedIndex
                   ? "bg-selected text-foreground"
                   : "bg-transparent text-foreground",
@@ -467,7 +467,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void openSnapshot(entry);
                   }}
-                  size="icon"
+                  iconOnly
                 >
                   <Eye />
                 </Button>
@@ -479,7 +479,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void compareWithCurrent(entry);
                   }}
-                  size="icon"
+                  iconOnly
                 >
                   <ArrowsLeftRight />
                 </Button>
@@ -491,7 +491,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void compareWithPrevious(entry);
                   }}
-                  size="icon"
+                  iconOnly
                 >
                   <ClockCounterClockwise />
                 </Button>
@@ -503,7 +503,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void restoreSnapshot(entry);
                   }}
-                  size="icon"
+                  iconOnly
                 >
                   <ArrowCounterClockwise />
                 </Button>
@@ -516,7 +516,7 @@ export function LocalHistoryCommandContent({
                     setRenamingEntryId(entry.id);
                     setRenameValue(entry.label ?? "");
                   }}
-                  size="icon"
+                  iconOnly
                 >
                   <PencilSimple />
                 </Button>
@@ -528,7 +528,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void deleteSnapshot(entry);
                   }}
-                  size="icon"
+                  iconOnly
                 >
                   <Trash />
                 </Button>

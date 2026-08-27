@@ -31,6 +31,16 @@ export const currentPlatform: Platform = detectPlatform();
 export const IS_MAC: boolean = currentPlatform === "macos";
 export const IS_WINDOWS: boolean = currentPlatform === "windows";
 export const IS_LINUX: boolean = currentPlatform === "linux";
+export const PLATFORM_CLASS_NAME = IS_MAC
+  ? "platform-macos"
+  : IS_WINDOWS
+    ? "platform-windows"
+    : "platform-other";
+
+export function applyPlatformClass(root?: Element): void {
+  const target = root ?? (typeof document === "undefined" ? null : document.documentElement);
+  target?.classList.add(PLATFORM_CLASS_NAME);
+}
 
 export function isMac(): boolean {
   return IS_MAC;

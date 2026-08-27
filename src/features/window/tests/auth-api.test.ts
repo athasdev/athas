@@ -122,8 +122,10 @@ describe("auth-api desktop auth parsers", () => {
     const parsed = __test__.parseSubscriptionInfoResponse({
       status: "pro",
       capabilities: {
+        intelligence: false,
         hostedAi: false,
         settingsSync: true,
+        cloudWorkspaces: true,
         collaboration: false,
         enterprisePolicy: true,
       },
@@ -132,8 +134,10 @@ describe("auth-api desktop auth parsers", () => {
     });
 
     expect(parsed?.capabilities).toEqual({
+      intelligence: false,
       hostedAi: false,
       settingsSync: true,
+      cloudWorkspaces: true,
       collaboration: false,
       enterprisePolicy: true,
     });

@@ -33,4 +33,10 @@ describe("classifySessionConfigOption", () => {
     expect(classifySessionConfigOption(selectOption({ name: "Model" }))).toBe("model");
     expect(classifySessionConfigOption(selectOption({ category: "_vendor" }))).toBe("other");
   });
+
+  it("preserves model configuration as its own ACP category", () => {
+    expect(classifySessionConfigOption(selectOption({ category: "model_config" }))).toBe(
+      "model_config",
+    );
+  });
 });

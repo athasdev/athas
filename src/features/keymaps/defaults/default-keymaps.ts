@@ -383,12 +383,6 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "cmd+0", command: "workbench.zoomReset", source: "default" },
 
   // Navigation
-  {
-    key: "cmd+g",
-    command: "editor.goToLine",
-    source: "default",
-    when: "editorFocus",
-  },
   { key: "cmd+alt+right", command: "workbench.nextTab", source: "default" },
   { key: "cmd+alt+left", command: "workbench.previousTab", source: "default" },
   { key: "ctrl+tab", command: "workbench.nextTabCtrlTab", source: "default" },
@@ -465,7 +459,6 @@ export const defaultKeymaps: Keybinding[] = [
     command: "workbench.commandPalette",
     source: "default",
   },
-  { key: "cmd+r", command: "workbench.toggleAIChat", source: "default" },
   { key: "cmd+shift+m", command: "workbench.toggleMinimap", source: "default" },
   {
     key: "alt+z",

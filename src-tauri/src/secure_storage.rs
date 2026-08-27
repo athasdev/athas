@@ -1,17 +1,58 @@
 use crate::app_runtime::AppHandle;
 use serde_json::{Map, Value};
 use std::{
+   collections::HashMap,
    fs,
    fs::OpenOptions,
    io::{ErrorKind, Write},
    path::{Path, PathBuf},
+   sync::{LazyLock, Mutex},
 };
 use tauri::Manager;
 
 const SECURE_STORE_FILE: &str = "secure.json";
+type SecretCache = HashMap<(String, String), String>;
+
+static SECRET_CACHE: LazyLock<Mutex<SecretCache>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn keychain_service(app: &AppHandle) -> &str {
    app.config().identifier.as_str()
+}
+
+fn secret_cache_key(app: &AppHandle, key: &str) -> (String, String) {
+   (keychain_service(app).to_string(), key.to_string())
+}
+
+fn secret_cache() -> std::sync::MutexGuard<'static, SecretCache> {
+   SECRET_CACHE
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+fn get_secret_with_cache<Load>(
+   cache: &Mutex<SecretCache>,
+   service: &str,
+   key: &str,
+   load: Load,
+) -> Result<Option<String>, String>
+where
+   Load: FnOnce() -> Result<Option<String>, String>,
+{
+   let mut cache = cache
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+   let cache_key = (service.to_string(), key.to_string());
+
+   if let Some(value) = cache.get(&cache_key) {
+      return Ok(Some(value.clone()));
+   }
+
+   let value = load()?;
+   if let Some(value) = &value {
+      cache.insert(cache_key, value.clone());
+   }
+
+   Ok(value)
 }
 
 fn keyring_entry(app: &AppHandle, key: &str) -> Result<keyring::Entry, String> {
@@ -51,7 +92,7 @@ fn secure_store_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 fn load_store_from_path(path: &Path) -> Result<Map<String, Value>, String> {
-   match fs::read_to_string(&path) {
+   match fs::read_to_string(path) {
       Ok(contents) => {
          if contents.trim().is_empty() {
             return Ok(Map::new());
@@ -187,6 +228,9 @@ fn get_keychain_password(app: &AppHandle, key: &str) -> Result<Option<String>, S
 }
 
 pub fn store_secret(app: &AppHandle, key: &str, value: &str) -> Result<(), String> {
+   let cache_key = secret_cache_key(app, key);
+   secret_cache().remove(&cache_key);
+
    store_secret_with_operations(
       key,
       value,
@@ -194,44 +238,51 @@ pub fn store_secret(app: &AppHandle, key: &str, value: &str) -> Result<(), Strin
       |key| get_keychain_password(app, key),
       |key| store_delete(app, key),
       |key, value| store_set(app, key, value),
-   )
+   )?;
+
+   secret_cache().insert(cache_key, value.to_string());
+   Ok(())
 }
 
 pub fn get_secret(app: &AppHandle, key: &str) -> Result<Option<String>, String> {
-   match keyring_entry(app, key) {
-      Ok(entry) => match entry.get_password() {
-         Ok(value) => {
-            if let Err(error) = store_delete(app, key) {
+   get_secret_with_cache(&SECRET_CACHE, keychain_service(app), key, || {
+      match keyring_entry(app, key) {
+         Ok(entry) => match entry.get_password() {
+            Ok(value) => {
+               if let Err(error) = store_delete(app, key) {
+                  log::warn!(
+                     "Failed to remove stale secure.json fallback for key '{}': {}",
+                     key,
+                     error
+                  );
+               }
+               return Ok(Some(value));
+            }
+            Err(keyring::Error::NoEntry) => {}
+            Err(error) => {
                log::warn!(
-                  "Failed to remove stale secure.json fallback for key '{}': {}",
+                  "Failed to read key '{}' from keychain, falling back to secure.json: {}",
                   key,
                   error
                );
             }
-            return Ok(Some(value));
-         }
-         Err(keyring::Error::NoEntry) => {}
+         },
          Err(error) => {
             log::warn!(
-               "Failed to read key '{}' from keychain, falling back to secure.json: {}",
+               "Keychain entry initialization failed for key '{}', falling back to secure.json: {}",
                key,
                error
             );
          }
-      },
-      Err(error) => {
-         log::warn!(
-            "Keychain entry initialization failed for key '{}', falling back to secure.json: {}",
-            key,
-            error
-         );
       }
-   }
 
-   store_get(app, key)
+      store_get(app, key)
+   })
 }
 
 pub fn remove_secret(app: &AppHandle, key: &str) -> Result<(), String> {
+   secret_cache().remove(&secret_cache_key(app, key));
+
    if let Ok(entry) = keyring_entry(app, key) {
       match entry.delete_credential() {
          Ok(()) | Err(keyring::Error::NoEntry) => {}
@@ -308,7 +359,49 @@ fn write_secure_store_file(path: &Path, contents: &[u8]) -> std::io::Result<()> 
 #[cfg(test)]
 mod tests {
    use super::*;
-   use std::{cell::RefCell, rc::Rc};
+   use std::{
+      cell::RefCell,
+      rc::Rc,
+      sync::atomic::{AtomicUsize, Ordering},
+   };
+
+   #[test]
+   fn secret_cache_reuses_loaded_values_for_the_same_service_and_key() {
+      let cache = Mutex::new(HashMap::new());
+      let loads = AtomicUsize::new(0);
+
+      let first = get_secret_with_cache(&cache, "com.code.athas.preview", "github_token", || {
+         loads.fetch_add(1, Ordering::Relaxed);
+         Ok(Some("secret".to_string()))
+      });
+      let second = get_secret_with_cache(&cache, "com.code.athas.preview", "github_token", || {
+         loads.fetch_add(1, Ordering::Relaxed);
+         Ok(Some("different".to_string()))
+      });
+
+      assert_eq!(first, Ok(Some("secret".to_string())));
+      assert_eq!(second, Ok(Some("secret".to_string())));
+      assert_eq!(loads.load(Ordering::Relaxed), 1);
+   }
+
+   #[test]
+   fn secret_cache_does_not_cache_missing_values() {
+      let cache = Mutex::new(HashMap::new());
+      let loads = AtomicUsize::new(0);
+
+      let first = get_secret_with_cache(&cache, "com.code.athas.preview", "github_token", || {
+         loads.fetch_add(1, Ordering::Relaxed);
+         Ok(None)
+      });
+      let second = get_secret_with_cache(&cache, "com.code.athas.preview", "github_token", || {
+         loads.fetch_add(1, Ordering::Relaxed);
+         Ok(Some("secret".to_string()))
+      });
+
+      assert_eq!(first, Ok(None));
+      assert_eq!(second, Ok(Some("secret".to_string())));
+      assert_eq!(loads.load(Ordering::Relaxed), 2);
+   }
 
    #[test]
    fn store_secret_removes_plaintext_fallback_when_keychain_succeeds() {

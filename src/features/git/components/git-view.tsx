@@ -24,8 +24,7 @@ import { Spinner } from "@/ui/spinner";
 import { showAlertDialog } from "@/ui/dialog";
 import {
   SidebarFooter,
-  SidebarHeaderIconButton,
-  SidebarPanel,
+  SidebarIconButton,
   SidebarTabPanels,
   SidebarTabBar,
   SidebarWorkspace,
@@ -629,7 +628,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   };
 
   const renderActionsButton = () => (
-    <SidebarHeaderIconButton
+    <SidebarIconButton
       onClick={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         setGitActionsMenuAnchor({
@@ -646,7 +645,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       tooltip="Git Actions"
     >
       <MoreHorizontal />
-    </SidebarHeaderIconButton>
+    </SidebarIconButton>
   );
 
   const renderGitActionsMenu = ({
@@ -830,16 +829,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   if (selectedHistoryCommit) {
     return (
-      <SidebarPanel className="font-sans ui-text-sm select-none">
-        <GitCommitFilesPanel
-          commit={selectedHistoryCommit}
-          files={selectedHistoryCommitFiles}
-          selectedFilePath={selectedHistoryFilePath}
-          isLoading={isLoadingHistoryCommitFiles}
-          onBack={handleBackFromHistoryCommit}
-          onSelectFile={handleSelectHistoryCommitFile}
-        />
-      </SidebarPanel>
+      <GitCommitFilesPanel
+        commit={selectedHistoryCommit}
+        files={selectedHistoryCommitFiles}
+        selectedFilePath={selectedHistoryFilePath}
+        isLoading={isLoadingHistoryCommitFiles}
+        onBack={handleBackFromHistoryCommit}
+        onSelectFile={handleSelectHistoryCommitFile}
+      />
     );
   }
 
@@ -871,7 +868,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               <Button
                 type="button"
                 variant="default"
-                size="xs"
                 className="min-w-0 flex-1"
                 onClick={() => void handleRemoteAction(primaryRemoteAction)}
                 disabled={!activeRepoPath || isRemoteActionLoading}
@@ -883,7 +879,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               <Button
                 type="button"
                 variant="default"
-                size="icon-xs"
+                iconOnly
                 onClick={() => setIsSyncMenuOpen((open) => !open)}
                 disabled={!activeRepoPath || isRemoteActionLoading}
                 active={isSyncMenuOpen}
@@ -905,7 +901,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             {renderActionsButton()}
           </>
         }
-        className="font-sans ui-text-sm select-none"
       >
         <SidebarTabBar items={gitTabs} value={activeTab} onChange={setActiveTab}>
           <SidebarTabPanels
@@ -996,7 +991,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                       setCommitDiffSearchQuery("");
                     }}
                     disabled={isLoadingCommitDiff}
-                    className="min-h-9"
                   />
                 );
               })}
@@ -1031,7 +1025,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                   description={`compare with ${gitStatus.branch}`}
                   onClick={() => void handleViewBranchDiff(branch)}
                   disabled={isLoadingBranchDiff}
-                  className="min-h-9"
                 />
               ))}
             </div>
@@ -1073,7 +1066,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                   }
                   contentLayout="inline"
                   disabled={isActionLoading}
-                  className="group/stash min-h-9 text-subtle-foreground hover:text-foreground"
+                  className="group/stash text-subtle-foreground hover:text-foreground"
                   onClick={() => {
                     void handleViewStashDiff(stash.index);
                     setShowStashList(false);
@@ -1093,7 +1086,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         }}
                         disabled={isActionLoading}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-subtle-foreground disabled:opacity-50"
                         tooltip="Apply stash"
                       >
@@ -1111,7 +1104,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         }}
                         disabled={isActionLoading}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-subtle-foreground disabled:opacity-50"
                         tooltip="Pop stash"
                       >
@@ -1129,7 +1122,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         }}
                         disabled={isActionLoading}
                         variant="ghost"
-                        size="icon-xs"
+                        iconOnly
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                         tooltip="Drop stash"
                       >

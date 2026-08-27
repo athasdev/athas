@@ -407,3 +407,12 @@ export function getGuideAncestorRows(
 
   return ancestors;
 }
+
+export function getStickyAncestorRows(
+  rows: readonly VisibleFileTreeRow[],
+  rowIndex: number,
+): VisibleFileTreeRow[] {
+  return getGuideAncestorRows(rows, rowIndex).filter(
+    (row): row is VisibleFileTreeRow => row !== null,
+  );
+}

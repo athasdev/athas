@@ -55,6 +55,43 @@ export function useExtensionCatalogActions(settings: ExtensionCatalogActionSetti
   }, [loadAgents]);
 
   const handleUpdate = async (extension: UnifiedExtension) => {
+    if (extension.category === "agent") {
+      const agentId = extension.agentId ?? extension.id.replace(/^agent:/, "");
+      setInstallingAgentIds((current) => new Set(current).add(agentId));
+
+      try {
+        const updatedAgent = await invoke<AgentConfig>("update_acp_agent", { agentId });
+        setAgents((current) => {
+          const next = new Map(current.map((agent) => [agent.id, agent]));
+          next.set(updatedAgent.id, updatedAgent);
+          return Array.from(next.values());
+        });
+        void loadAgents();
+        showToast({
+          message: `${extension.name} updated successfully`,
+          description: updatedAgent.installedVersion
+            ? `Installed version ${updatedAgent.installedVersion}`
+            : undefined,
+          type: "success",
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error(`Failed to update ${extension.name}:`, error);
+        showToast({
+          message: `Failed to update ${extension.name}: ${getErrorMessage(error)}`,
+          type: "error",
+          duration: 5000,
+        });
+      } finally {
+        setInstallingAgentIds((current) => {
+          const next = new Set(current);
+          next.delete(agentId);
+          return next;
+        });
+      }
+      return;
+    }
+
     if (extension.category === "skill") {
       if (!extension.skill || !extension.marketplaceSkill) return;
 

@@ -1,13 +1,14 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { moveFile } from "@/features/file-system/controllers/platform";
 import type { FileEntry } from "@/features/file-system/types/app.types";
+import { startNativeFileDrag } from "@/features/file-explorer/utils/start-native-file-drag";
 import { dispatchSidebarResourceDropOnAI } from "@/features/sidebar/utils/sidebar-resource-drag";
 import {
   setInternalTabDragHover,
   setInternalTabDragHoverTarget,
 } from "@/features/tabs/utils/internal-tab-drag";
 import { getDirName, getPathSeparator, joinPath } from "@/utils/path-helpers";
+import { IS_MAC } from "@/utils/platform";
 
 interface DragState {
   isDragging: boolean;
@@ -25,9 +26,23 @@ const initialDragState: DragState = {
   mousePosition: { x: 0, y: 0 },
 };
 
+type FileMoveHandler = (oldPath: string, newPath: string) => void | Promise<void>;
+
+export async function executeFileExplorerMove(
+  oldPath: string,
+  newPath: string,
+  onFileMove?: FileMoveHandler,
+) {
+  if (!onFileMove) {
+    throw new Error("File move handler is unavailable.");
+  }
+
+  await onFileMove(oldPath, newPath);
+}
+
 export function useFileExplorerDragDrop(
   rootFolderPath: string | undefined,
-  onFileMove?: (oldPath: string, newPath: string) => void,
+  onFileMove?: FileMoveHandler,
   onAutoExpandDirectory?: (path: string) => void,
   onMoveError?: (message: string) => void,
 ) {
@@ -250,8 +265,7 @@ export function useFileExplorerDragDrop(
         const newPath = joinPath(targetPath, sourceName);
 
         try {
-          await moveFile(sourcePath, newPath);
-          onFileMove?.(sourcePath, newPath);
+          await executeFileExplorerMove(sourcePath, newPath, onFileMove);
         } catch (error) {
           console.error("Failed to move file:", error);
           const message = error instanceof Error ? error.message : String(error);
@@ -288,6 +302,13 @@ export function useFileExplorerDragDrop(
   const startDrag = useCallback((e: React.MouseEvent, file: FileEntry) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (IS_MAC && e.altKey) {
+      void startNativeFileDrag(file.path, file.name).catch((error) => {
+        console.error("Failed to start native file drag:", error);
+      });
+      return;
+    }
 
     setDragState({
       isDragging: true,

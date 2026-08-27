@@ -1,10 +1,10 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$MinimumNodeVersion = [version]"22.0.0"
+$MinimumNodeVersion = [version]"24.0.0"
 $MinimumBunVersion = [version]"1.3.14"
 $MinimumRustVersion = [version]"1.80.0"
-$NodeWingetId = "OpenJS.NodeJS.22"
+$NodeWingetId = "OpenJS.NodeJS.24"
 $BunWingetId = "Oven-sh.Bun"
 $RustupWingetId = "Rustlang.Rustup"
 $PerlWingetId = "StrawberryPerl.StrawberryPerl"
@@ -173,11 +173,11 @@ function Ensure-Node {
         return
     }
 
-    Install-WithWinget -PackageId $NodeWingetId -DisplayName "Node.js 22"
+    Install-WithWinget -PackageId $NodeWingetId -DisplayName "Node.js 24"
 
     $nodeVersion = Get-NodeVersion
     if (-not (Test-MinimumVersion $nodeVersion $MinimumNodeVersion)) {
-        throw "Node.js 22+ is required, but setup could not verify the installed version."
+        throw "Node.js 24+ is required, but setup could not verify the installed version."
     }
 
     Write-Success "Node.js is ready (v$nodeVersion)"

@@ -46,11 +46,9 @@ async function setupMenuListeners(handlers: any) {
     ),
     currentWindow.listen("menu_toggle_sidebar", () => currentHandlers.current.onToggleSidebar()),
     currentWindow.listen("menu_toggle_terminal", () => currentHandlers.current.onToggleTerminal()),
-    currentWindow.listen("menu_toggle_ai_chat", () => currentHandlers.current.onToggleAiChat()),
     currentWindow.listen("menu_split_editor", () => currentHandlers.current.onSplitEditor()),
     currentWindow.listen("menu_toggle_vim", () => currentHandlers.current.onToggleVim()),
     currentWindow.listen("menu_quick_open", () => currentHandlers.current.onQuickOpen()),
-    currentWindow.listen("menu_go_to_line", () => currentHandlers.current.onGoToLine()),
     currentWindow.listen("menu_next_tab", () => currentHandlers.current.onNextTab()),
     currentWindow.listen("menu_prev_tab", () => currentHandlers.current.onPrevTab()),
     currentWindow.listen("menu_theme_change", (event) =>
@@ -65,6 +63,9 @@ async function setupMenuListeners(handlers: any) {
     currentWindow.listen("menu_report_bug", () => currentHandlers.current.onReportBug()),
     currentWindow.listen("menu_request_feature", () => currentHandlers.current.onRequestFeature()),
     currentWindow.listen("menu_check_updates", () => currentHandlers.current.onCheckForUpdates()),
+    currentWindow.listen("menu_open_github_notifications", () =>
+      currentHandlers.current.onOpenGitHubNotifications(),
+    ),
     currentWindow.listen("menu_open_settings", () => currentHandlers.current.onOpenSettings()),
     currentWindow.listen("menu_open_extensions", () => currentHandlers.current.onOpenExtensions()),
     currentWindow.listen("menu_toggle_menu_bar", () => currentHandlers.current.onToggleMenuBar()),
@@ -93,11 +94,9 @@ interface UseMenuEventsProps {
   onToggleActivitySidebar: () => void;
   onToggleSidebar: () => void;
   onToggleTerminal: () => void;
-  onToggleAiChat: () => void;
   onSplitEditor: () => void;
   onToggleVim: () => void;
   onQuickOpen: () => void;
-  onGoToLine: () => void;
   onNextTab: () => void;
   onPrevTab: () => void;
   onThemeChange: (theme: string) => void;
@@ -108,6 +107,7 @@ interface UseMenuEventsProps {
   onReportBug: () => void | Promise<void>;
   onRequestFeature: () => void | Promise<void>;
   onCheckForUpdates: () => void | Promise<void>;
+  onOpenGitHubNotifications: () => void;
   onOpenSettings: () => void | Promise<void>;
   onOpenExtensions: () => void | Promise<void>;
   onToggleMenuBar: () => void;

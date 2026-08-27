@@ -28,7 +28,7 @@ export function GitHubInlineTitle({ value, onSave }: GitHubInlineTitleProps) {
         onClick={() => setIsEditing(true)}
         aria-label="Edit title"
       >
-        <span className="block font-sans text-2xl leading-tight font-semibold tracking-tight text-foreground">
+        <span className="block font-sans ui-text-base leading-tight font-semibold tracking-tight text-foreground">
           {value}
         </span>
       </button>
@@ -72,7 +72,6 @@ export function GitHubInlineTitle({ value, onSave }: GitHubInlineTitleProps) {
           }
         }}
         variant="ghost"
-        size="md"
         className="github-composer-title h-auto px-0 py-0.5 font-semibold tracking-tight"
         aria-label="Title"
         disabled={isSaving}
@@ -171,7 +170,6 @@ export function GitHubInlineMarkdown({
         <Button
           type="button"
           variant="ghost"
-          size="xs"
           disabled={isSaving}
           onClick={() => {
             setDraft(value);
@@ -180,13 +178,7 @@ export function GitHubInlineMarkdown({
         >
           Cancel
         </Button>
-        <Button
-          type="button"
-          variant="accent"
-          size="xs"
-          disabled={isSaving}
-          onClick={() => void save()}
-        >
+        <Button type="button" variant="accent" disabled={isSaving} onClick={() => void save()}>
           {isSaving ? <Spinner label="Saving" compact /> : null}
           Save
         </Button>

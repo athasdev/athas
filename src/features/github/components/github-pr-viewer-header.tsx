@@ -105,11 +105,10 @@ export function GitHubPRViewerHeader({
       }
     >
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-(--athas-chrome-gap)">
+        <div className="flex min-w-0 items-center gap-chrome">
           <Button
             type="button"
             variant="ghost"
-            size="xs"
             shape="pill"
             active={activeView === "activity"}
             aria-pressed={activeView === "activity"}
@@ -122,7 +121,6 @@ export function GitHubPRViewerHeader({
           <Button
             type="button"
             variant="ghost"
-            size="xs"
             shape="pill"
             active={activeView === "files"}
             aria-pressed={activeView === "files"}
@@ -133,10 +131,10 @@ export function GitHubPRViewerHeader({
           </Button>
         </div>
         <div className="flex items-center gap-1">
-          <Button onClick={onComment} disabled={isClosed} variant="ghost" size="xs" shape="pill">
+          <Button onClick={onComment} disabled={isClosed} variant="ghost" shape="pill">
             Comment
           </Button>
-          <Button onClick={onMerge} disabled={!canMerge} variant="accent" size="xs" shape="pill">
+          <Button onClick={onMerge} disabled={!canMerge} variant="accent" shape="pill">
             Merge
           </Button>
         </div>

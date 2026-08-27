@@ -6,6 +6,7 @@ import {
   ArrowRightIcon as ArrowRight,
   ArrowsOutIcon as Maximize2,
   ArrowsInIcon as Minimize2,
+  DotsThreeIcon as MoreHorizontal,
   PlusIcon as Plus,
   SidebarSimpleIcon as PanelLeftClose,
 } from "@/ui/icons";
@@ -35,6 +36,12 @@ import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-d
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
 import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
@@ -76,10 +83,9 @@ const TabBar = ({
     return pane ? new Set(pane.bufferIds) : null;
   }, [pane?.bufferIds]);
   const buffers = useBufferStore((state) => {
-    const visibleBuffers = paneBufferIdSet
+    return paneBufferIdSet
       ? state.buffers.filter((buffer) => paneBufferIdSet.has(buffer.id))
       : state.buffers;
-    return visibleBuffers.filter((buffer) => buffer.type !== "newTab");
   });
   const globalActiveBufferId = useBufferStore((state) => (pane ? null : state.activeBufferId));
   const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;
@@ -660,7 +666,7 @@ const TabBar = ({
         <TabBarSurface
           ref={tabBarRef}
           data-tab-bar-pane-id={paneId ?? ""}
-          className="scrollbar-hidden overscroll-x-contain"
+          className="scrollbar-none overscroll-x-contain"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
@@ -675,7 +681,7 @@ const TabBar = ({
               tooltipSide="bottom"
               commandId="navigation.goBack"
               aria-label="Go back to previous location"
-              size="icon-xs"
+              iconOnly
             >
               <ArrowLeft />
             </Button>
@@ -688,14 +694,14 @@ const TabBar = ({
               tooltipSide="bottom"
               commandId="navigation.goForward"
               aria-label="Go forward to next location"
-              size="icon-xs"
+              iconOnly
             >
               <ArrowRight />
             </Button>
           </div>
 
           <SortableContext items={sortedBufferIds} strategy={horizontalListSortingStrategy}>
-            <div className="scrollbar-hidden flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-contain">
+            <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-contain">
               {sortedBuffers.map((buffer, index) => (
                 <SortableTab
                   key={buffer.id}
@@ -704,6 +710,7 @@ const TabBar = ({
                     tabRefs.current[index] = el;
                   }}
                   disabled={editingBufferId === buffer.id}
+                  motionDrag
                   onClickCapture={getClickCapture(buffer.id)}
                 >
                   {({ isDragging }) => (
@@ -801,7 +808,7 @@ const TabBar = ({
                 type="button"
                 onClick={handleShowNewTab}
                 variant="ghost"
-                size="icon-xs"
+                iconOnly
                 tooltip="New Tab"
                 commandId="workbench.newTab"
                 tooltipSide="bottom"
@@ -810,32 +817,35 @@ const TabBar = ({
                 <Plus weight="bold" />
               </Button>
             )}
-            {paneId && !disablePaneActions && !isBottomPane && isInSplit && (
-              <Button
-                type="button"
-                onClick={() => closePane(paneId)}
-                variant="ghost"
-                size="icon-xs"
-                tooltip="Close Split"
-                tooltipSide="bottom"
-                aria-label="Close split pane"
-              >
-                <PanelLeftClose />
-              </Button>
-            )}
             {paneId && !disablePaneActions && !isBottomPane && (
-              <Button
-                type="button"
-                onClick={handleTogglePaneFullscreen}
-                variant="ghost"
-                tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
-                commandId="workbench.toggleActivePaneFullscreen"
-                tooltipSide="bottom"
-                aria-label="Toggle editor full screen"
-                size="icon-xs"
-              >
-                {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      iconOnly
+                      tooltip="Pane actions"
+                      tooltipSide="bottom"
+                      aria-label="Pane actions"
+                    />
+                  }
+                >
+                  <MoreHorizontal />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleTogglePaneFullscreen}>
+                    {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
+                    {isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
+                  </DropdownMenuItem>
+                  {isInSplit ? (
+                    <DropdownMenuItem onClick={() => closePane(paneId)}>
+                      <PanelLeftClose />
+                      Close split
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </TabBarSurface>

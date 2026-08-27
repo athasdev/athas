@@ -138,7 +138,6 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
             placeholder="origin"
             value={newRemoteName}
             onChange={(e) => setNewRemoteName(e.target.value)}
-            size="sm"
           />
         </CommandFormField>
         <CommandFormField label="URL" htmlFor="git-remote-url">
@@ -148,7 +147,6 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
             placeholder="https://github.com/owner/repository.git"
             value={newRemoteUrl}
             onChange={(e) => setNewRemoteUrl(e.target.value)}
-            size="sm"
           />
         </CommandFormField>
       </CommandForm>

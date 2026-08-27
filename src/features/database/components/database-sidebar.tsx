@@ -447,7 +447,6 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                   <Button
                     type="button"
                     variant="ghost"
-                    size="xs"
                     onClick={() => {
                       useBufferStore.getState().actions.openExtensionsBuffer();
                     }}

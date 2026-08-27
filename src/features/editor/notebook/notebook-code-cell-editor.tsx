@@ -252,7 +252,7 @@ export function NotebookCodeCellEditor({
 
   return (
     <div className="monaco-editor-shell overflow-hidden bg-background" style={shellStyle}>
-      <div ref={containerRef} className="h-full w-full" />
+      <div ref={containerRef} className="size-full" />
     </div>
   );
 }

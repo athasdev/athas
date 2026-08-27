@@ -2,9 +2,43 @@ use super::path_guard::{require_path_under_home, require_symlink_container_under
 use crate::app_runtime::AppHandle;
 use serde::Serialize;
 use std::{fs, path::Path, time::Instant};
+#[cfg(target_os = "macos")]
+use tauri::Manager;
 use tauri::command;
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
+
+fn calculate_directory_size(path: &Path) -> Result<u64, String> {
+   if !path.is_dir() {
+      return Err("Path is not a directory".to_string());
+   }
+
+   let mut size = 0_u64;
+   for entry in WalkDir::new(path).follow_links(false) {
+      let Ok(entry) = entry else {
+         continue;
+      };
+      if !entry.file_type().is_file() {
+         continue;
+      }
+      let Ok(metadata) = entry.metadata() else {
+         continue;
+      };
+      size = size.saturating_add(metadata.len());
+   }
+
+   Ok(size)
+}
+
+#[command]
+pub async fn get_local_directory_size(path: String) -> Result<u64, String> {
+   tauri::async_runtime::spawn_blocking(move || {
+      let resolved = require_path_under_home(&path)?;
+      calculate_directory_size(&resolved)
+   })
+   .await
+   .map_err(|error| format!("Directory size task failed: {error}"))?
+}
 
 #[command]
 pub async fn read_local_file(path: String) -> Result<tauri::ipc::Response, String> {
@@ -59,6 +93,36 @@ pub async fn read_local_file(path: String) -> Result<tauri::ipc::Response, Strin
    Ok(tauri::ipc::Response::new(bytes))
 }
 
+#[cfg(test)]
+mod directory_size_tests {
+   use super::calculate_directory_size;
+   use std::fs;
+   use tempfile::tempdir;
+
+   #[test]
+   fn calculates_nested_file_sizes() {
+      let directory = tempdir().expect("temp directory");
+      let nested = directory.path().join("nested");
+      fs::create_dir(&nested).expect("nested directory");
+      fs::write(directory.path().join("first.txt"), b"athas").expect("first file");
+      fs::write(nested.join("second.txt"), b"editor").expect("second file");
+
+      assert_eq!(calculate_directory_size(directory.path()), Ok(11));
+   }
+
+   #[test]
+   fn rejects_files() {
+      let directory = tempdir().expect("temp directory");
+      let file = directory.path().join("file.txt");
+      fs::write(&file, b"athas").expect("file");
+
+      assert_eq!(
+         calculate_directory_size(&file),
+         Err("Path is not a directory".to_string())
+      );
+   }
+}
+
 #[command]
 pub fn open_file_external(path: String) -> Result<(), String> {
    // Canonicalize and confine to $HOME so the platform opener cannot be
@@ -88,6 +152,64 @@ pub fn open_file_external(path: String) -> Result<(), String> {
          .spawn()
          .map_err(|e| e.to_string())?;
    }
+   Ok(())
+}
+
+#[command]
+pub async fn toggle_quick_look(app: AppHandle, path: String) -> Result<(), String> {
+   let resolved = require_path_under_home(&path)?;
+   if !resolved.is_file() {
+      return Err("Quick Look is only available for local files".to_string());
+   }
+
+   #[cfg(target_os = "macos")]
+   {
+      let (sender, receiver) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let _ = sender.send(crate::bootstrap::macos::toggle_quick_look(&resolved));
+      })
+      .map_err(|error| error.to_string())?;
+      receiver
+         .await
+         .map_err(|_| "Failed to open Quick Look on the main thread".to_string())??;
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   let _ = (app, resolved);
+
+   Ok(())
+}
+
+#[command]
+pub async fn show_share_picker(
+   window: tauri::WebviewWindow<crate::app_runtime::AthasRuntime>,
+   path: String,
+) -> Result<(), String> {
+   let resolved = require_path_under_home(&path)?;
+   if !resolved.is_file() {
+      return Err("Share is only available for local files".to_string());
+   }
+
+   #[cfg(target_os = "macos")]
+   {
+      let app = window.app_handle().clone();
+      let (sender, receiver) = tokio::sync::oneshot::channel();
+      app.run_on_main_thread(move || {
+         let result = window
+            .ns_view()
+            .map_err(|error| error.to_string())
+            .and_then(|ns_view| crate::bootstrap::macos::show_share_picker(ns_view, &resolved));
+         let _ = sender.send(result);
+      })
+      .map_err(|error| error.to_string())?;
+      receiver
+         .await
+         .map_err(|_| "Failed to open Share Sheet on the main thread".to_string())??;
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   let _ = (window, resolved);
+
    Ok(())
 }
 

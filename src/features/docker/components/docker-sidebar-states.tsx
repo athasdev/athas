@@ -74,14 +74,13 @@ export function DockerUnavailableState({
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent className="flex-row justify-center gap-1.5">
-        <Button type="button" variant="default" size="sm" disabled={isRetrying} onClick={onRetry}>
+        <Button type="button" variant="default" disabled={isRetrying} onClick={onRetry}>
           {isRetrying ? <Spinner compact /> : <Refresh />}
           Retry
         </Button>
         <Button
           type="button"
           variant="ghost"
-          size="sm"
           onClick={() => openDockerConnectionDetailsBuffer(error)}
         >
           <OpenExternal />
@@ -113,7 +112,7 @@ export function DockerInlineError({
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
+          iconOnly
           tooltip="Dismiss"
           tooltipSide="left"
           aria-label={`Dismiss ${title.toLowerCase()}`}
@@ -138,5 +137,19 @@ export function DockerCapabilityNotice({
       <WarningCircle />
       <AlertDescription>{children}</AlertDescription>
     </Alert>
+  );
+}
+
+export function DockerCommandOutput({ output }: { output: string | null }) {
+  if (!output) return null;
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="ui-text-sm mx-2 mb-1 max-h-16 select-text overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground"
+    >
+      {output}
+    </div>
   );
 }

@@ -28,8 +28,8 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import {
-  Dropdown,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
@@ -41,7 +41,7 @@ import {
 import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import {
-  SidebarHeaderIconButton,
+  SidebarIconButton,
   SidebarSearchPopover,
   SidebarScrollArea,
   SidebarSection,
@@ -710,7 +710,7 @@ const GitHubPRsView = memo(() => {
                 onChange={setSearchQuery}
                 aria-label="Search GitHub"
               />
-              <SidebarHeaderIconButton
+              <SidebarIconButton
                 disabled={!effectiveRepoPath}
                 tooltip={
                   activeSection === "pull-requests"
@@ -737,11 +737,11 @@ const GitHubPRsView = memo(() => {
                 }}
               >
                 <Plus />
-              </SidebarHeaderIconButton>
+              </SidebarIconButton>
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <SidebarHeaderIconButton
+                    <SidebarIconButton
                       active={!isActiveFilterDefault}
                       tooltip={`Filter: ${activeFilterLabel}`}
                       tooltipSide="bottom"
@@ -885,16 +885,16 @@ const GitHubPRsView = memo(() => {
             </SidebarTabBar>
           </>
         )}
-        <Dropdown
+        <ContextMenuPopup
           isOpen={prContextMenu.isOpen}
           point={prContextMenu.position}
-          items={prContextMenuItems}
+          groups={createContextMenuGroups(prContextMenuItems)}
           onClose={prContextMenu.close}
         />
-        <Dropdown
+        <ContextMenuPopup
           isOpen={sectionContextMenu.isOpen}
           point={sectionContextMenu.position}
-          items={sectionContextMenuItems}
+          groups={createContextMenuGroups(sectionContextMenuItems)}
           onClose={sectionContextMenu.close}
         />
       </SidebarWorkspace>

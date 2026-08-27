@@ -16,14 +16,24 @@ export const ChatComposer = forwardRef<
   );
 
   if (standalone) {
-    return <div ref={ref} data-ai-element="prompt-input" className={rootClassName} {...props} />;
+    return (
+      <div
+        ref={ref}
+        data-ai-element="prompt-input"
+        className={cn(
+          "rounded-2xl border border-border/60 bg-surface/55 shadow-(--shadow-card)",
+          rootClassName,
+        )}
+        {...props}
+      />
+    );
   }
 
   return (
     <div
       ref={ref}
       data-ai-element="prompt-input"
-      className={cn("mx-2 mb-2 shrink-0", rootClassName)}
+      className={cn("mx-auto mb-2 w-[calc(100%-1rem)] max-w-4xl shrink-0", rootClassName)}
       {...props}
     />
   );
@@ -31,13 +41,15 @@ export const ChatComposer = forwardRef<
 
 export function ChatComposerBody({
   className,
+  variant = "surface",
   ...props
-}: Omit<ComponentProps<typeof SidebarComposerBody>, "variant">) {
+}: ComponentProps<typeof SidebarComposerBody>) {
   return (
     <SidebarComposerBody
       data-ai-element="prompt-input-body"
+      variant={variant}
       className={cn(
-        "transition-[border-color,background-color,box-shadow] duration-(--app-duration-fast)",
+        "transition-[border-color,background-color,box-shadow] duration-fast",
         className,
       )}
       {...props}

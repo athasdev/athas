@@ -11,7 +11,7 @@ export function createGenerateActions({ onClose }: GenerateActionsParams): Actio
     {
       id: "generate-extension",
       label: "Generate: Extension",
-      description: "Generate a hosted UI extension from a prompt",
+      description: "Generate a UI extension with Athas Intelligence",
       icon: <Sparkles />,
       category: "Generate",
       action: () => {

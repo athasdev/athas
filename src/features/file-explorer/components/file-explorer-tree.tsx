@@ -1,4 +1,5 @@
 import ignore from "ignore";
+import { invoke } from "@tauri-apps/api/core";
 import {
   CursorClickIcon as CursorClick,
   EyeIcon as Eye,
@@ -22,6 +23,7 @@ import {
   filterFileTreeEntries,
   filterFileTreeForFffHits,
   getGuideAncestorRows,
+  getStickyAncestorRows,
   type FilterFileTreeForSearchResult,
 } from "@/features/file-explorer/lib/visible-file-tree-rows";
 import {
@@ -61,10 +63,11 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import { SidebarHeader, SidebarHeaderIconButton, SidebarSearchPopover } from "@/ui/sidebar";
+import { SidebarHeader, SidebarIconButton, SidebarSearchPopover } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
+import { IS_MAC } from "@/utils/platform";
 import {
   getDirName,
   getRelativePath,
@@ -82,7 +85,6 @@ import {
 import { FileExplorerViewport, type FileExplorerViewportHandle } from "./file-explorer-viewport";
 import { FileExplorerTreeItem } from "./file-explorer-tree-item";
 import type { FileTreeGuideTarget } from "./file-explorer-tree-item";
-import "../styles/file-explorer-tree.css";
 
 const ALWAYS_HIDDEN_FILE_NAMES = new Set([".ds_store"]);
 const OPEN_ALL_FILES_LIMIT = 1_000;
@@ -124,7 +126,7 @@ interface FileExplorerTreeProps {
   onRefreshDirectory?: (path: string, options?: { force?: boolean }) => void;
   onRevealInFinder?: (path: string) => void;
   onUploadFile?: (directoryPath: string) => void;
-  onFileMove?: (oldPath: string, newPath: string) => void;
+  onFileMove?: (oldPath: string, newPath: string) => void | Promise<void>;
 }
 
 interface FileExplorerAlertDialogState {
@@ -485,6 +487,14 @@ function FileExplorerTreeComponent({
     expandedPathsOverride: displayedExpandedPaths,
     rootFolderPath,
   });
+  const getStickyRowIndexes = useCallback(
+    (firstVisibleIndex: number) =>
+      getStickyAncestorRows(visibleRows, firstVisibleIndex).flatMap((row) => {
+        const index = visibleRowIndexByPath.get(row.file.path);
+        return index === undefined ? [] : [index];
+      }),
+    [visibleRowIndexByPath, visibleRows],
+  );
 
   useLayoutEffect(() => {
     const wasSearchActive = wasTreeSearchActiveRef.current;
@@ -1239,6 +1249,15 @@ function FileExplorerTreeComponent({
             }
             break;
           }
+          case " ": {
+            if (!IS_MAC || !current || isDir || mod || e.altKey || e.shiftKey) break;
+            e.preventDefault();
+            e.stopPropagation();
+            void invoke("toggle_quick_look", { path: current.path }).catch((error) => {
+              console.error("Failed to toggle Quick Look:", error);
+            });
+            break;
+          }
           case "F2": {
             if (!current) break;
             e.preventDefault();
@@ -1261,7 +1280,7 @@ function FileExplorerTreeComponent({
       onMouseLeave={handleContainerMouseLeave}
     >
       <SidebarHeader
-        className="justify-end px-3"
+        className="justify-end"
         onClick={(event) => event.stopPropagation()}
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -1293,7 +1312,7 @@ function FileExplorerTreeComponent({
           }}
         />
         {treeSearchQuery.length > 0 ? (
-          <SidebarHeaderIconButton
+          <SidebarIconButton
             tooltip="Clear search"
             tooltipSide="bottom"
             aria-label="Clear search"
@@ -1303,12 +1322,12 @@ function FileExplorerTreeComponent({
             }}
           >
             <X />
-          </SidebarHeaderIconButton>
+          </SidebarIconButton>
         ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <SidebarHeaderIconButton
+              <SidebarIconButton
                 tooltip="File explorer preferences"
                 tooltipSide="bottom"
                 aria-label="File explorer preferences"
@@ -1479,6 +1498,7 @@ function FileExplorerTreeComponent({
         rowCount={visibleRows.length}
         rowHeight={rowHeight}
         getRowKey={(index) => getVisibleFileTreeRowKey(visibleRows, index)}
+        getStickyIndexes={getStickyRowIndexes}
         emptyState={
           !rootFolderPath ? (
             <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
@@ -1565,12 +1585,7 @@ function FileExplorerTreeComponent({
           icon={AlertTriangle}
           onClose={() => setAlertDialog(null)}
           footer={
-            <Button
-              onClick={() => setAlertDialog(null)}
-              variant="accent"
-              size="xs"
-              className="ui-text-base"
-            >
+            <Button onClick={() => setAlertDialog(null)} variant="accent" className="ui-text-base">
               OK
             </Button>
           }

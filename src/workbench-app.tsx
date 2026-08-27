@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { MotionConfig } from "motion/react";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
+import { useSystemAccessibility } from "@/features/settings/hooks/use-system-accessibility";
 import { initializeAppBootstrap } from "@/features/bootstrap/initialize-app-bootstrap";
 import {
   recordStartupMilestone,
@@ -13,6 +14,7 @@ import {
   traceWindowOpenAfterFrame,
 } from "@/features/window/utils/window-open-diagnostics";
 import { NotificationRecorder } from "@/features/notifications/components/notification-recorder";
+import { useNativeNotificationIntegration } from "@/features/notifications/hooks/use-native-notification-integration";
 
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/window/components/zoom-indicator";
@@ -23,6 +25,8 @@ import { DialogServiceProvider } from "@/ui/dialog";
 
 function WorkbenchApp() {
   useAppBootstrap();
+  useSystemAccessibility();
+  useNativeNotificationIntegration();
   const reduceMotion = useSettingsStore((state) => state.settings.reduceMotion);
 
   useEffect(() => {

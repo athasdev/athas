@@ -514,12 +514,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
             }
             actions={
               detailsError && !isLoadingDetails ? (
-                <Button
-                  onClick={handleRefresh}
-                  variant="ghost"
-                  className="text-subtle-foreground"
-                  size="xs"
-                >
+                <Button onClick={handleRefresh} variant="ghost" className="text-subtle-foreground">
                   Retry
                 </Button>
               ) : null

@@ -56,7 +56,7 @@ function ReviewFileProgress({ current, total }: { current: number; total: number
           strokeDasharray="1"
           strokeDashoffset={1 - progress}
           strokeLinecap="round"
-          className="stroke-primary transition-[stroke-dashoffset] duration-(--app-duration-normal) ease-(--app-ease-smooth)"
+          className="stroke-primary transition-[stroke-dashoffset] duration-normal ease-smooth"
         />
       </svg>
       <span className="ui-text-sm text-foreground tabular-nums">
@@ -117,7 +117,6 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
           onClick={() => previousItem && onSelect(previousItem.key)}
           disabled={!previousItem}
           tooltip="Previous changed file"
@@ -135,7 +134,6 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
           onClick={() => nextItem && onSelect(nextItem.key)}
           disabled={!nextItem}
           tooltip="Next changed file"
