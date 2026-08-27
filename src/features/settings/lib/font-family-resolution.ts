@@ -21,6 +21,9 @@ export function buildFontFamilyStack(primary: string, fallback: string): string 
   if (trimmed.includes(",")) return trimmed;
 
   const normalized = trimmed.replace(/^(['"])(.*)\1$/, "$2");
+  if (["system-ui", "ui-sans-serif", "sans-serif", "serif", "monospace"].includes(normalized)) {
+    return `${normalized}, ${fallback}`;
+  }
   return `"${normalized}", ${fallback}`;
 }
 
@@ -35,6 +38,12 @@ export function resolveAvailableFontFamily(
 
   if (!primaryFontFamily) {
     return fallback;
+  }
+
+  if (
+    ["system-ui", "ui-sans-serif", "sans-serif", "serif", "monospace"].includes(primaryFontFamily)
+  ) {
+    return normalizedFontFamily;
   }
 
   const available = new Set(

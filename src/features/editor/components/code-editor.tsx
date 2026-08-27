@@ -573,7 +573,7 @@ const CodeEditor = ({
           )}
 
           {/* Main editor - absolute positioned to fill container */}
-          <div className="absolute inset-0 bg-editor">
+          <div className="absolute inset-0 bg-background">
             {showMarkdownPreview ? (
               <MarkdownPreview />
             ) : showHtmlPreview ? (

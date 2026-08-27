@@ -1,4 +1,7 @@
-import { DEFAULT_UI_FONT_SIZE } from "@/features/settings/config/typography-defaults";
+import {
+  DEFAULT_UI_FONT_SIZE,
+  UI_FONT_SCALE_BASE_SIZE,
+} from "@/features/settings/config/typography-defaults";
 
 export const UI_FONT_SIZE_MIN = 10;
 export const UI_FONT_SIZE_MAX = 24;
@@ -29,5 +32,5 @@ export function formatUiFontSize(value: number): string {
 
 export function getUiFontScale(value: number): number {
   const normalized = normalizeUiFontSize(value);
-  return Number((normalized / UI_FONT_SIZE_DEFAULT).toFixed(UI_FONT_SCALE_PRECISION));
+  return Number((normalized / UI_FONT_SCALE_BASE_SIZE).toFixed(UI_FONT_SCALE_PRECISION));
 }

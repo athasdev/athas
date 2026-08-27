@@ -25,6 +25,12 @@ const FONT_CACHE_KEY = "athas_font_cache_v2";
 const FONT_CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 const FALLBACK_FONTS: FontInfo[] = [
   {
+    name: "System UI",
+    family: "system-ui",
+    style: "Regular",
+    is_monospace: false,
+  },
+  {
     name: "Geist Sans",
     family: "Geist Sans",
     style: "Regular",

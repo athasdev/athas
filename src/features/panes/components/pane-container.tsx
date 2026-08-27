@@ -1098,8 +1098,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       data-pane-container
       data-pane-id={pane.id}
       className={cn(
-        "relative flex size-full flex-col overflow-hidden",
-        pane.id === BOTTOM_PANE_ID || paneBuffers.length === 0 ? "bg-background" : "bg-editor",
+        "relative flex size-full flex-col overflow-hidden bg-background",
         isActivePane && "ring-1 ring-primary/30",
         (isDragOver || internalHoverZone) && "ring-2 ring-primary",
       )}

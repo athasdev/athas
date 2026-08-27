@@ -22,8 +22,10 @@ function collectSourceFiles(directory: URL): URL[] {
 describe("UI typography contract", () => {
   it("derives every interface text tier from the configured UI font size", () => {
     expect(themeStyles).toContain("--ui-text-base: var(--app-ui-font-size);");
-    expect(themeStyles).toContain("--ui-text-sm: var(--app-ui-font-size);");
-    expect(themeStyles).toContain("--ui-text-caption: var(--ui-text-sm);");
+    expect(themeStyles).toContain("--ui-text-sm: max(10px, calc(var(--app-ui-font-size) - 1px));");
+    expect(themeStyles).toContain(
+      "--ui-text-caption: max(10px, calc(var(--app-ui-font-size) - 3px));",
+    );
     expect(themeStyles).toContain("--ui-text-chrome: var(--ui-text-sm);");
   });
 

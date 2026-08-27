@@ -196,7 +196,7 @@ export function PdfViewer({ filePath }: PdfViewerProps) {
       {/* Main Content */}
       <div
         ref={containerRef}
-        className="absolute inset-x-0 top-7 bottom-7 flex justify-center overflow-auto bg-editor p-8"
+        className="absolute inset-x-0 top-7 bottom-7 flex justify-center overflow-auto bg-background p-8"
         onClick={handleLinkClick}
       >
         {error ? (

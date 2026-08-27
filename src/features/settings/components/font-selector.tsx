@@ -16,6 +16,12 @@ import { cn } from "@/utils/cn";
 // Bundled fonts that are always available
 const BUNDLED_FONTS: FontInfo[] = [
   {
+    name: "System UI",
+    family: "system-ui",
+    style: "Regular",
+    is_monospace: false,
+  },
+  {
     name: "Geist Sans",
     family: "Geist Sans",
     style: "Regular",
@@ -85,7 +91,12 @@ export const FontSelector = ({
   // Convert fonts to dropdown options
   const fontOptions = fonts.map((font: FontInfo, index) => ({
     value: font.family,
-    label: index < uniqueBundledFonts.length ? `${font.family} (bundled)` : font.family,
+    label:
+      font.family === "system-ui"
+        ? "System UI (recommended)"
+        : index < uniqueBundledFonts.length
+          ? `${font.family} (bundled)`
+          : font.family,
   }));
 
   // Add custom font option only for real system fonts that validate successfully.

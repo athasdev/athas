@@ -1,4 +1,3 @@
-import "@/features/sidebar/styles/sidebar-tree.css";
 import { ChevronDownIcon as ChevronDown, ChevronRightIcon as ChevronRight } from "@/ui/icons";
 import type React from "react";
 import { forwardRef, useCallback } from "react";
@@ -25,7 +24,7 @@ function SidebarTreeGuides({
   if (depth <= 0) return null;
 
   return (
-    <div className="file-tree-guides">
+    <div className="file-tree-guides pointer-events-none absolute inset-0 z-1">
       {Array.from({ length: depth }, (_, level) => {
         const startsHere = previousDepth <= level;
         const endsHere = nextDepth <= level;
@@ -33,9 +32,9 @@ function SidebarTreeGuides({
         return (
           <span
             key={level}
-            className="file-tree-guide"
+            className="file-tree-guide pointer-events-auto absolute w-[7px] -translate-x-[3px] opacity-90 before:absolute before:inset-y-0 before:left-[3px] before:w-px before:bg-subtle-foreground/18"
             style={{
-              left: `calc(${baseIndent + level * indentSize}px + var(--file-tree-guide-icon-offset, 7px))`,
+              left: `calc(${baseIndent + level * indentSize}px + 7px)`,
               top: startsHere ? "4px" : "0",
               bottom: endsHere ? "4px" : "0",
             }}
@@ -211,7 +210,10 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
   ) {
     return (
       <div
-        className={cn("file-tree-item flex w-full min-w-0 items-center", containerClassName)}
+        className={cn(
+          "file-tree-item relative flex w-full min-w-full items-center before:pointer-events-none before:absolute before:inset-0 before:z-0 before:rounded-chrome before:bg-transparent hover:before:bg-accent/68",
+          containerClassName,
+        )}
         data-sidebar-tree-row=""
         data-active={active ? "true" : undefined}
         data-depth={depth}
@@ -237,7 +239,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
           data-depth={depth}
           tabIndex={tabIndex}
           className={cn(
-            "file-tree-row font-sans ui-text-sm flex w-full min-w-0 flex-1 select-none items-center whitespace-nowrap rounded-chrome border border-transparent bg-transparent text-left text-foreground outline-none transition-colors duration-fast ease-smooth hover:bg-accent focus-visible:border-primary/40 gap-1.5 px-1.5 py-1 leading-row",
+            "file-tree-row font-sans ui-text-sm flex w-full min-w-0 flex-1 select-none items-center whitespace-nowrap rounded-chrome border border-transparent bg-transparent text-left text-foreground outline-none transition-colors duration-fast ease-smooth focus-visible:border-primary/40 gap-1.5 px-1.5 py-1 leading-row",
             active && "bg-selected",
             action && "pr-0",
             className,
