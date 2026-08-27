@@ -3,13 +3,12 @@ import { memo, useCallback } from "react";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";
-import { TabBarTab } from "@/ui/tab-bar";
+import { TabItem } from "@/ui/tab-bar";
 import { cn } from "@/utils/cn";
 
 interface TerminalTabBarItemProps {
   terminal: Terminal;
   displayName: string;
-  orientation?: "horizontal" | "vertical";
   isActive: boolean;
   isDraggedTab: boolean;
   showDropIndicatorBefore: boolean;
@@ -29,7 +28,6 @@ interface TerminalTabBarItemProps {
 const TerminalTabBarItem = memo(function TerminalTabBarItem({
   terminal,
   displayName,
-  orientation = "horizontal",
   isActive,
   isDraggedTab,
   showDropIndicatorBefore,
@@ -59,17 +57,10 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
     <>
       {showDropIndicatorBefore && (
         <div className="relative">
-          <div
-            className={cn(
-              "drop-indicator absolute z-20 bg-primary",
-              orientation === "vertical"
-                ? "top-0 right-1 left-1 h-0.5"
-                : "top-1 bottom-1 left-0 w-0.5",
-            )}
-          />
+          <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-primary" />
         </div>
       )}
-      <TabBarTab
+      <TabItem
         ref={tabRef}
         role="tab"
         aria-selected={isActive}
@@ -77,8 +68,6 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
-        orientation={orientation}
-        className={isEditing ? "pr-2" : undefined}
         onClick={isEditing ? undefined : onClick}
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
@@ -151,7 +140,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
             {displayName}
           </span>
         )}
-      </TabBarTab>
+      </TabItem>
     </>
   );
 });

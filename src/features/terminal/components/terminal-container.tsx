@@ -64,7 +64,6 @@ const TerminalContainer = ({
     (state) => state.settings.terminalDefaultProfileId,
   );
   const terminalDefaultShellId = useSettingsStore((state) => state.settings.terminalDefaultShellId);
-  const tabLayout = useTerminalStore((state) => state.tabLayout);
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
 
@@ -613,7 +612,6 @@ const TerminalContainer = ({
     onTabPin: handleTabPin,
     onTabRename: handleTabRename,
     onNewTerminal: handleNewTerminal,
-    onNewTerminalWithProfile: handleNewTerminal,
     onTabCreate: handleTabCreate,
     onCloseOtherTabs: handleCloseOtherTabs,
     onCloseAllTabs: handleCloseAllTabs,
@@ -695,34 +693,16 @@ const TerminalContainer = ({
     </div>
   );
 
-  const isVertical = tabLayout === "vertical";
-  const tabSidebarPosition = useTerminalStore((state) => state.tabSidebarPosition);
-
   return (
     <div
       className={`terminal-container flex h-full flex-col overflow-hidden ${className}`}
       data-terminal-container="active"
     >
-      <div className={cn("min-h-0 flex-1", isVertical ? "flex flex-row" : "flex flex-col")}>
-        {(!isVertical || tabSidebarPosition === "left") && (
-          <TerminalTabBar {...terminalTabBarProps} orientation={tabLayout} />
-        )}
-
-        <div
-          className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background",
-            isVertical &&
-              (tabSidebarPosition === "left"
-                ? "border-border/60 border-l"
-                : "border-border/60 border-r"),
-          )}
-        >
+      <div className="flex min-h-0 flex-1 flex-col">
+        <TerminalTabBar {...terminalTabBarProps} />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
           {terminalSessions}
         </div>
-
-        {isVertical && tabSidebarPosition === "right" && (
-          <TerminalTabBar {...terminalTabBarProps} orientation={tabLayout} />
-        )}
       </div>
     </div>
   );

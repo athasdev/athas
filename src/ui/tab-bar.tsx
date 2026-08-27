@@ -58,7 +58,6 @@ export interface SortableTabProps extends Pick<
   "className" | "style" | "onClickCapture"
 > {
   id: UniqueIdentifier;
-  orientation?: "horizontal" | "vertical";
   disabled?: boolean;
   motionDrag?: boolean;
   tabRef?: RefCallback<HTMLDivElement>;
@@ -67,7 +66,6 @@ export interface SortableTabProps extends Pick<
 
 export function SortableTab({
   id,
-  orientation = "horizontal",
   disabled = false,
   motionDrag = false,
   tabRef,
@@ -92,8 +90,7 @@ export function SortableTab({
     tabRef?.(element);
   };
   const tabClassName = cn(
-    "relative flex min-w-0 items-stretch will-change-transform",
-    orientation === "vertical" ? "w-full" : "shrink-0",
+    "relative flex min-w-0 shrink-0 items-stretch will-change-transform",
     !disabled && "touch-none",
     isDragging && "z-10 cursor-grabbing",
     className,
@@ -183,99 +180,44 @@ export function useTabDragClickGuard() {
   return { getClickCapture, releaseClickSuppression, suppressNextClick };
 }
 
-export type TabVariant = "default" | "connected" | "main";
-export type TabBarOrientation = "horizontal" | "vertical";
-
-export interface TabProps extends HTMLAttributes<HTMLDivElement> {
+export interface TabItemProps extends HTMLAttributes<HTMLDivElement> {
   isActive: boolean;
   isDragged?: boolean;
   action?: ReactNode;
-  variant?: TabVariant;
   children: ReactNode;
 }
 
-export interface TabBarTabProps extends Omit<TabProps, "variant"> {
-  orientation?: TabBarOrientation;
-  appearance?: "standard" | "main";
-}
-
-const tabVariants = cva(
-  "group/tab ui-text-chrome relative flex min-h-chrome-control shrink-0 select-none items-center gap-chrome-loose whitespace-nowrap rounded-chrome px-2 text-subtle-foreground outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-fast ease-smooth hover:bg-accent/70 hover:text-foreground active:scale-press",
+const tabItemVariants = cva(
+  "group/tab ui-text-chrome relative isolate flex h-tab min-h-tab min-w-20 max-w-tab-max w-fit shrink-0 select-none items-center gap-chrome-loose whitespace-nowrap rounded-chrome border-0 bg-transparent pr-6 pl-2 text-subtle-foreground outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-fast ease-smooth active:scale-100 before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-transparent before:content-['']",
   {
     variants: {
-      variant: {
-        default:
-          "border border-transparent focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-        connected:
-          "min-h-tab rounded-chrome border-0 active:scale-100 focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-        main: "isolate min-h-tab rounded-chrome border-0 bg-transparent active:scale-100 before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-transparent before:content-['']",
-      },
       active: {
-        true: "",
-        false: "",
+        true: "z-10 text-foreground before:bg-accent/70",
+        false: "text-subtle-foreground/85 hover:text-foreground hover:before:bg-tab-hover/60",
       },
       dragged: {
-        true: "opacity-40",
+        true: "shadow-(--shadow-drag)",
         false: "opacity-100",
       },
     },
     defaultVariants: {
-      variant: "default",
       active: false,
       dragged: false,
     },
-    compoundVariants: [
-      {
-        variant: "default",
-        active: true,
-        className: "bg-background/45 text-foreground",
-      },
-      {
-        variant: "default",
-        active: false,
-        className: "text-subtle-foreground/90 hover:bg-accent hover:text-foreground",
-      },
-      {
-        variant: "connected",
-        active: true,
-        className: "z-10 bg-background text-foreground shadow-none",
-      },
-      {
-        variant: "connected",
-        active: false,
-        className: "text-subtle-foreground/85 hover:bg-tab-hover/60 hover:text-foreground",
-      },
-      {
-        variant: "main",
-        active: true,
-        className: "z-10 text-foreground before:bg-accent/70",
-      },
-      {
-        variant: "main",
-        active: false,
-        className:
-          "text-subtle-foreground/85 hover:bg-transparent hover:text-foreground hover:before:bg-tab-hover/60",
-      },
-      {
-        variant: "main",
-        dragged: true,
-        className: "opacity-100 shadow-(--shadow-drag)",
-      },
-    ],
   },
 );
 
-export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
-  { isActive, isDragged = false, action, variant = "default", children, className, ...props },
+export const TabItem = forwardRef<HTMLDivElement, TabItemProps>(function TabItem(
+  { isActive, isDragged = false, action, children, className, ...props },
   ref,
 ) {
   return (
     <div
       ref={ref}
-      data-slot="tab"
+      data-slot="tab-item"
       data-active={isActive}
       className={cn(
-        tabVariants({ variant, active: isActive, dragged: isDragged }),
+        tabItemVariants({ active: isActive, dragged: isDragged }),
         action && "pr-7",
         className,
       )}
@@ -287,59 +229,18 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
   );
 });
 
-const tabBarSurfaceVariants = cva("relative flex overflow-hidden", {
-  variants: {
-    orientation: {
-      horizontal:
-        "h-tab-bar min-h-tab-bar shrink-0 items-center gap-chrome bg-background px-chrome-inline",
-      vertical: "h-full min-h-0 flex-col bg-background py-chrome",
-    },
+export const TabBarSurface = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+  function TabBarSurface({ className, ...props }, ref) {
+    return (
+      <div
+        ref={ref}
+        data-slot="tab-bar"
+        className={cn(
+          "relative flex h-tab-bar min-h-tab-bar shrink-0 items-center gap-chrome overflow-hidden bg-background px-chrome-inline",
+          className,
+        )}
+        {...props}
+      />
+    );
   },
-  defaultVariants: {
-    orientation: "horizontal",
-  },
-});
-
-const tabBarTabVariants = cva("ui-text-chrome", {
-  variants: {
-    orientation: {
-      horizontal: "h-tab min-w-20 max-w-tab-max w-fit pl-2 pr-6",
-      vertical: "min-h-tab w-full max-w-none justify-start pl-2 pr-6",
-    },
-  },
-  defaultVariants: {
-    orientation: "horizontal",
-  },
-});
-
-export const TabBarTab = forwardRef<HTMLDivElement, TabBarTabProps>(function TabBarTab(
-  { className, orientation = "horizontal", appearance = "standard", ...props },
-  ref,
-) {
-  return (
-    <Tab
-      ref={ref}
-      variant={
-        appearance === "main" ? "main" : orientation === "horizontal" ? "connected" : "default"
-      }
-      className={cn(tabBarTabVariants({ orientation }), className)}
-      data-slot="tab-bar-tab"
-      {...props}
-    />
-  );
-});
-
-export const TabBarSurface = forwardRef<
-  HTMLDivElement,
-  HTMLAttributes<HTMLDivElement> & { orientation?: TabBarOrientation }
->(function TabBarSurface({ className, orientation = "horizontal", ...props }, ref) {
-  return (
-    <div
-      ref={ref}
-      data-slot="tab-bar"
-      data-orientation={orientation}
-      className={cn(tabBarSurfaceVariants({ orientation }), className)}
-      {...props}
-    />
-  );
-});
+);
