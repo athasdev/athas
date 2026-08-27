@@ -57,7 +57,7 @@ export function SidebarListActionRow({
       {...props}
     >
       {children}
-      <span className="pointer-events-none absolute right-1 z-10 flex items-center gap-chrome-tight bg-linear-to-l from-accent from-60% to-transparent pl-6 opacity-0 transition-opacity duration-fast ease-smooth group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100 group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100">
+      <span className="pointer-events-none absolute right-0 z-10 flex items-center gap-chrome-tight bg-[linear-gradient(to_left,transparent_0,var(--color-accent)_var(--athas-chrome-gap),var(--color-accent)_60%,transparent_100%)] pr-1 pl-6 opacity-0 transition-opacity duration-fast ease-smooth group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100 group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100">
         {actions}
       </span>
     </div>
