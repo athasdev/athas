@@ -19,6 +19,7 @@
       "id": "material",
       "name": "Material Icons",
       "description": "Material Design file icons.",
+      "preview": { "fileName": "index.ts", "kind": "file" },
       "iconDefinitions": {
         "folder": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path fill=\"#fbc02d\" d=\"M10 4l2 2h8c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2h6z\"/></svg>",
         "folderOpen": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path fill=\"#f9a825\" d=\"M2 6c0-1.1.9-2 2-2h6l2 2h8c1.1 0 2 .9 2 2v2H2V6z\"/><path fill=\"#fbc02d\" d=\"M3.2 20c-.8 0-1.4-.7-1.2-1.5L3.7 10h18.1c.8 0 1.4.7 1.2 1.5l-1.5 7.1c-.2.8-.8 1.4-1.7 1.4H3.2z\"/></svg>",

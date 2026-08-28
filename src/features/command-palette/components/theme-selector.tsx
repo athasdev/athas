@@ -3,8 +3,9 @@ import {
   GearSixIcon as Settings,
   UploadIcon as Upload,
 } from "@/ui/icons";
-import type { ThemeDefinition } from "@/extensions/themes/theme.types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getThemeAppearancePreview } from "@/extensions/appearance/appearance-preview";
+import { AppearancePreviewGraphic } from "@/extensions/appearance/components/appearance-preview";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { chooseThemeFile, uploadTheme } from "@/features/settings/utils/theme-upload";
@@ -20,7 +21,6 @@ import {
 } from "@/ui/command";
 import { toast } from "sonner";
 import { matchesSearchQuery } from "@/utils/search-match";
-import { getThemePreviewColors } from "../utils/theme-preview";
 
 interface ThemeSelectorContentProps {
   isActive: boolean;
@@ -29,21 +29,6 @@ interface ThemeSelectorContentProps {
   onThemeChange: (theme: string) => void;
   currentTheme?: string;
 }
-
-const ThemeColorPreview = ({ theme }: { theme: ThemeDefinition }) => (
-  <span
-    className="flex size-6 overflow-hidden rounded-md border border-border/70"
-    aria-label={`${theme.name} color palette`}
-  >
-    {getThemePreviewColors(theme).map((color, index) => (
-      <span
-        key={`${color}-${index}`}
-        className="h-full min-w-0 flex-1"
-        style={{ background: color }}
-      />
-    ))}
-  </span>
-);
 
 const clampSelectedIndex = (index: number, size: number): number => {
   if (size <= 0) return 0;
@@ -66,7 +51,14 @@ export const ThemeSelectorContent = ({
   const activeThemeSnapshotRef = useRef<string | undefined>(undefined);
   const didCommitRef = useRef(false);
 
-  const themes = useMemo(() => registeredThemes, [registeredThemes]);
+  const themes = useMemo(
+    () =>
+      registeredThemes.map((theme) => ({
+        ...theme,
+        preview: getThemeAppearancePreview(theme),
+      })),
+    [registeredThemes],
+  );
 
   // Filter themes based on query
   const filteredThemes = themes.filter(
@@ -275,7 +267,9 @@ export const ThemeSelectorContent = ({
                   setSelectedIndex(index);
                 }}
                 isSelected={isSelected}
-                icon={<ThemeColorPreview theme={theme} />}
+                icon={
+                  theme.preview ? <AppearancePreviewGraphic preview={theme.preview} /> : undefined
+                }
                 contentLayout="stacked"
                 title={theme.name}
                 description={theme.description || theme.category}

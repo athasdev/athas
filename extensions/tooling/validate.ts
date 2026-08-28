@@ -358,6 +358,19 @@ async function validateExtension(folder: string): Promise<void> {
     if (!icon.iconDefinitions || typeof icon.iconDefinitions !== "object") {
       error(folder, `Icon '${icon.id}' missing 'iconDefinitions' map`);
     }
+    if (icon.preview !== undefined) {
+      const preview = icon.preview as Record<string, unknown>;
+      if (!preview || typeof preview !== "object" || Array.isArray(preview)) {
+        error(folder, `Icon '${icon.id}' preview must be an object`);
+      } else {
+        if (typeof preview.fileName !== "string" || !preview.fileName.trim()) {
+          error(folder, `Icon '${icon.id}' preview missing 'fileName'`);
+        }
+        if (preview.kind !== "file" && preview.kind !== "folder") {
+          error(folder, `Icon '${icon.id}' preview has invalid 'kind'`);
+        }
+      }
+    }
   }
 
   const skills = getContributionArray(manifest, "skills");

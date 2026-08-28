@@ -18,6 +18,7 @@
       "id": "symbols",
       "name": "Symbols Icons",
       "description": "Modern file and folder icons from the Symbols icon theme.",
+      "preview": { "fileName": "index.ts", "kind": "file" },
       "iconDefinitions": {
         "folder": "./icons/folders/folder.svg",
         "folder-assets": "./icons/folders/folder-assets.svg",
@@ -1584,10 +1585,5 @@
       "defaultFolder": "folder",
       "defaultFolderOpen": "folder-open"
     }
-  ],
-  "installation": {
-    "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/symbols/athas.icon-theme.symbols.tar.gz",
-    "size": 2772119,
-    "checksum": "006c0065214e2e3ea1ad872ccf6c5c3a6b403bc234c8caaa79ca88de326049ce"
-  }
+  ]
 }

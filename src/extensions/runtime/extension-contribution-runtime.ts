@@ -116,6 +116,12 @@ function toIconThemeDefinition(
     id: contribution.id,
     name: contribution.name,
     description: contribution.description || "",
+    preview: contribution.preview
+      ? {
+          fileName: contribution.preview.fileName,
+          isDirectory: contribution.preview.kind === "folder",
+        }
+      : undefined,
     getFileIcon: (fileName, isDir, isExpanded = false) => {
       const iconDefinitions = getIconDefinitionsForAppearance(contribution);
       const normalizedName = fileName.split(/[\\/]/).pop()?.toLowerCase() || fileName.toLowerCase();

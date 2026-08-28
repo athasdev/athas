@@ -13,8 +13,94 @@ import {
 import { isMarketplaceSkillInstalled } from "@/features/ai/lib/skill-library";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
+import {
+  getIconThemeAppearancePreview,
+  getThemeAppearancePreview,
+  type AppearancePreview,
+} from "@/extensions/appearance/appearance-preview";
+import { getIconThemePreviewDefinitions } from "@/extensions/icon-themes/icon-theme-preview";
+import { resolveBundledIconThemeAsset } from "@/extensions/icon-themes/bundled-icon-theme-assets";
+import { toThemeDefinition } from "@/extensions/themes/theme-file";
+import type { IconResult } from "@/extensions/icon-themes/icon-theme.types";
+import type {
+  IconThemeContribution,
+  ThemeContribution,
+} from "@/extensions/types/extension-manifest";
 import type { UnifiedExtension } from "./extension-catalog-types";
 import { isBuiltInDatabaseProvider, resolvePackageSize } from "./extension-catalog-utils";
+
+function firstAppearancePreview(
+  options: Array<{ id: string; preview?: AppearancePreview }>,
+  selectedId: string,
+) {
+  return options.find((option) => option.id === selectedId)?.preview ?? options[0]?.preview;
+}
+
+function themeAppearanceOption(theme: ThemeContribution) {
+  const definition = themeRegistry.getTheme(theme.id) ?? toThemeDefinition(theme);
+  return {
+    id: theme.id,
+    name: theme.name,
+    description: theme.description,
+    preview: getThemeAppearancePreview(definition),
+  };
+}
+
+function resolveIconDefinition(
+  extensionId: string,
+  artworkUrl: string | null | undefined,
+  definition: string,
+): IconResult | undefined {
+  if (definition.trim().startsWith("<svg")) return { svg: definition };
+  if (/^(?:https?:|data:|asset:)/.test(definition)) return { url: definition };
+
+  const bundledAsset = resolveBundledIconThemeAsset(extensionId, definition);
+  if (bundledAsset) return { url: bundledAsset };
+
+  if (!artworkUrl || !/^(?:https?:|asset:)/.test(artworkUrl)) return undefined;
+
+  try {
+    return { url: new URL(definition.replace(/^\.\//, ""), artworkUrl).toString() };
+  } catch {
+    return undefined;
+  }
+}
+
+function iconThemeAppearanceOption(
+  extensionId: string,
+  artworkUrl: string | null | undefined,
+  contribution: IconThemeContribution,
+) {
+  const registeredTheme = iconThemeRegistry.getTheme(contribution.id);
+  let preview = registeredTheme ? getIconThemeAppearancePreview(registeredTheme) : undefined;
+
+  if (!preview) {
+    const definitions = getIconThemePreviewDefinitions(contribution);
+    const currentThemeId = themeRegistry.getCurrentTheme();
+    const currentTheme = currentThemeId ? themeRegistry.getTheme(currentThemeId) : undefined;
+    const definition =
+      currentTheme && !currentTheme.isDark && definitions?.light
+        ? definitions.light
+        : definitions?.default;
+    const icon = definition
+      ? resolveIconDefinition(extensionId, artworkUrl, definition)
+      : undefined;
+    preview = icon
+      ? {
+          kind: "icon-theme",
+          label: `${contribution.name} icon theme preview`,
+          icon,
+        }
+      : undefined;
+  }
+
+  return {
+    id: contribution.id,
+    name: contribution.name,
+    description: contribution.description,
+    preview,
+  };
+}
 
 export function buildExtensionCatalog({
   availableExtensions,
@@ -120,6 +206,7 @@ export function buildExtensionCatalog({
       const themeIds = themeContributions.map((theme) => theme.id);
       const activeThemeId = themeIds.find((candidate) => candidate === selectedThemeId);
       const extensionThemeId = activeThemeId ?? themeIds[0] ?? ext.manifest.id;
+      const appearanceOptions = themeContributions.map(themeAppearanceOption);
       allExtensions.push({
         id: ext.manifest.id,
         name: ext.manifest.displayName,
@@ -133,14 +220,11 @@ export function buildExtensionCatalog({
         isMarketplace: true,
         isBundled: false,
         icon: ext.manifest.icon,
+        appearancePreview: firstAppearancePreview(appearanceOptions, extensionThemeId),
         runtimeIssues: ext.runtimeIssues,
         packageSize: resolvePackageSize(ext.manifest),
         selectionId: extensionThemeId,
-        appearanceOptions: themeContributions.map((theme) => ({
-          id: theme.id,
-          name: theme.name,
-          description: theme.description,
-        })),
+        appearanceOptions,
         contributionSummary: themeContributions.map((theme) => `theme:${theme.id}`),
       });
     }
@@ -150,6 +234,9 @@ export function buildExtensionCatalog({
       const iconThemeIds = iconContributions.map((theme) => theme.id);
       const activeIconThemeId = iconThemeIds.find((candidate) => candidate === selectedIconThemeId);
       const extensionIconThemeId = activeIconThemeId ?? iconThemeIds[0] ?? ext.manifest.id;
+      const appearanceOptions = iconContributions.map((theme) =>
+        iconThemeAppearanceOption(ext.manifest.id, ext.manifest.icon, theme),
+      );
       allExtensions.push({
         id: ext.manifest.id,
         name: ext.manifest.displayName,
@@ -163,14 +250,11 @@ export function buildExtensionCatalog({
         isMarketplace: true,
         isBundled: false,
         icon: ext.manifest.icon,
+        appearancePreview: firstAppearancePreview(appearanceOptions, extensionIconThemeId),
         runtimeIssues: ext.runtimeIssues,
         packageSize: resolvePackageSize(ext.manifest),
         selectionId: extensionIconThemeId,
-        appearanceOptions: iconContributions.map((theme) => ({
-          id: theme.id,
-          name: theme.name,
-          description: theme.description,
-        })),
+        appearanceOptions,
         contributionSummary: iconContributions.map((theme) => `icon:${theme.id}`),
       });
     }
@@ -221,6 +305,7 @@ export function buildExtensionCatalog({
       return;
     }
 
+    const preview = getThemeAppearancePreview(theme);
     allExtensions.push({
       id: theme.id,
       name: theme.name,
@@ -231,11 +316,13 @@ export function buildExtensionCatalog({
       isActive: selectedThemeId === theme.id,
       version: "1.0.0",
       selectionId: theme.id,
+      appearancePreview: preview,
       appearanceOptions: [
         {
           id: theme.id,
           name: theme.name,
           description: theme.description,
+          preview,
         },
       ],
     });
@@ -264,6 +351,9 @@ export function buildExtensionCatalog({
     )?.id;
     const extensionIconThemeId = activeIconThemeId ?? iconContributions[0]?.id ?? manifest.id;
 
+    const appearanceOptions = iconContributions.map((theme) =>
+      iconThemeAppearanceOption(manifest.id, manifest.icon, theme),
+    );
     allExtensions.push({
       id: manifest.id,
       name: manifest.displayName,
@@ -277,12 +367,9 @@ export function buildExtensionCatalog({
       isMarketplace: false,
       isBundled: true,
       icon: manifest.icon,
+      appearancePreview: firstAppearancePreview(appearanceOptions, extensionIconThemeId),
       selectionId: extensionIconThemeId,
-      appearanceOptions: iconContributions.map((theme) => ({
-        id: theme.id,
-        name: theme.name,
-        description: theme.description,
-      })),
+      appearanceOptions,
       contributionSummary: iconContributions.map((theme) => `icon:${theme.id}`),
     });
 
@@ -296,6 +383,7 @@ export function buildExtensionCatalog({
       return;
     }
 
+    const preview = getIconThemeAppearancePreview(iconTheme);
     allExtensions.push({
       id: iconTheme.id,
       name: iconTheme.name,
@@ -306,11 +394,13 @@ export function buildExtensionCatalog({
       isActive: selectedIconThemeId === iconTheme.id,
       version: "1.0.0",
       selectionId: iconTheme.id,
+      appearancePreview: preview,
       appearanceOptions: [
         {
           id: iconTheme.id,
           name: iconTheme.name,
           description: iconTheme.description,
+          preview,
         },
       ],
     });

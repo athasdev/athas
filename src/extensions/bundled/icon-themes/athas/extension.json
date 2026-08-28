@@ -15,6 +15,7 @@
       "id": "athas-icons",
       "name": "Athas Icons",
       "description": "Calm outline and duotone icons designed for the Athas interface.",
+      "preview": { "fileName": "index.ts", "kind": "file" },
       "iconDefinitions": {
         "file": "./icons/files/file.svg",
         "text": "./icons/files/text.svg",

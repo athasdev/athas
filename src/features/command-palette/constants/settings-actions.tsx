@@ -11,6 +11,7 @@ import {
   LightbulbIcon as Lightbulb,
   ChatCircleTextIcon as MessageSquare,
   PaletteIcon as Palette,
+  SquaresFourIcon as SquaresFour,
   FloppyDiskIcon as Save,
   MagnifyingGlassIcon as Search,
   GearSixIcon as Settings,
@@ -245,7 +246,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       id: "icon-theme",
       label: "Preferences: Icon Theme",
       description: "Choose an icon theme",
-      icon: <Palette />,
+      icon: <SquaresFour />,
       category: "Theme",
       action: () => {
         pushPaletteView("icon-theme");

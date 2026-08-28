@@ -1,10 +1,14 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { SERVICE_DEFAULTS } from "@/config/service-defaults";
+import { getIconThemePreviewDefinitions } from "@/extensions/icon-themes/icon-theme-preview";
+import type { IconThemeContribution } from "@/extensions/types/extension-manifest";
 import {
   GENERATED_CDN_DIR,
+  ATHAS_ROOT,
   getContributionArray,
   getExtensionCdnPath,
+  getExtensionSourceDir,
   getReservedBuiltInThemeContribution,
   listExtensionFolders,
   readDeployableExtensionManifest,
@@ -36,6 +40,7 @@ type RegistryEntry = {
   publisher: string;
   category: string;
   icon: string;
+  appearancePreviews?: CatalogAppearancePreview[];
   downloads: number;
   rating: number;
   manifestUrl: string;
@@ -62,12 +67,28 @@ type IndexEntry = {
     | "Agents"
     | "Integrations"
     | "Skills";
-  icon: string;
-  manifestUrl: string;
+  icon?: string;
+  appearancePreviews?: CatalogAppearancePreview[];
+  manifestUrl?: string;
   downloads: number;
   rating: number;
   size?: number;
+  distribution?: "marketplace" | "built-in";
 };
+
+type CatalogAppearancePreview =
+  | {
+      id: string;
+      name: string;
+      description?: string;
+      preview: { kind: "theme"; colors: string[] };
+    }
+  | {
+      id: string;
+      name: string;
+      description?: string;
+      preview: { kind: "icon-theme"; icon: string; lightIcon?: string };
+    };
 
 const registryPath = join(GENERATED_CDN_DIR, "registry.json");
 const indexPath = join(GENERATED_CDN_DIR, "index.json");
@@ -110,8 +131,151 @@ function resolveInstallSize(manifest: ExtensionManifest): number | undefined {
   return typeof size === "number" && size > 0 ? size : undefined;
 }
 
+async function resolveExtensionArtwork(
+  folder: string,
+  cdnPath: string,
+  manifest: ExtensionManifest,
+): Promise<string> {
+  const icon = optionalString(manifest.icon) ?? "icon.svg";
+  if (/^(?:https?:|data:)/.test(icon)) return icon;
+  if (icon.startsWith("asset:")) {
+    throw new Error(`Extension ${manifest.id} uses an app-only asset URL for catalog artwork`);
+  }
+
+  const relativeIcon = icon.replace(/^\.\//, "");
+  try {
+    await access(join(getExtensionSourceDir(folder), relativeIcon));
+  } catch {
+    throw new Error(`Extension ${manifest.id} catalog artwork does not exist: ${relativeIcon}`);
+  }
+
+  return `${cdnBaseUrl}/${cdnPath}/${relativeIcon}`;
+}
+
 function withTrailingNewline(json: unknown): string {
   return `${JSON.stringify(json, null, 2)}\n`;
+}
+
+function optionalRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function buildThemePreviews(themes: Array<Record<string, unknown>>): CatalogAppearancePreview[] {
+  return themes.flatMap((theme) => {
+    const colors = optionalRecord(theme.colors);
+    const syntax = optionalRecord(theme.syntax);
+    const previewColors = [
+      optionalString(colors.primary),
+      optionalString(syntax.keyword),
+      optionalString(syntax.string),
+      optionalString(colors.surface),
+      optionalString(colors.foreground),
+      optionalString(colors.background),
+    ]
+      .filter((color): color is string => Boolean(color))
+      .slice(0, 4);
+    const id = optionalString(theme.id);
+    const name = optionalString(theme.name);
+
+    if (!id || !name || previewColors.length === 0) return [];
+
+    return [
+      {
+        id,
+        name,
+        description: optionalString(theme.description),
+        preview: { kind: "theme", colors: previewColors },
+      },
+    ];
+  });
+}
+
+function resolveCatalogPreviewIcon(cdnPath: string, definition: string): string | undefined {
+  if (definition.trim().startsWith("<svg")) {
+    return `data:image/svg+xml,${encodeURIComponent(definition)}`;
+  }
+  if (/^(?:https?:|data:)/.test(definition)) return definition;
+  if (definition.startsWith("asset:")) return undefined;
+  return `${cdnBaseUrl}/${cdnPath}/${definition.replace(/^\.\//, "")}`;
+}
+
+function buildIconThemePreviews(
+  cdnPath: string,
+  icons: Array<Record<string, unknown>>,
+): CatalogAppearancePreview[] {
+  return icons.flatMap((icon) => {
+    const contribution = icon as unknown as IconThemeContribution;
+    const definitions = getIconThemePreviewDefinitions(contribution);
+    const id = optionalString(icon.id);
+    const name = optionalString(icon.name);
+    const previewIcon = definitions
+      ? resolveCatalogPreviewIcon(cdnPath, definitions.default)
+      : undefined;
+
+    if (!id || !name || !previewIcon) return [];
+
+    const lightIcon = definitions?.light
+      ? resolveCatalogPreviewIcon(cdnPath, definitions.light)
+      : undefined;
+
+    return [
+      {
+        id,
+        name,
+        description: optionalString(icon.description),
+        preview: {
+          kind: "icon-theme",
+          icon: previewIcon,
+          ...(lightIcon ? { lightIcon } : {}),
+        },
+      },
+    ];
+  });
+}
+
+async function loadBuiltInThemeIndexEntries(): Promise<IndexEntry[]> {
+  const themeDirectory = join(ATHAS_ROOT, "src/extensions/themes/builtin");
+  const fileNames = (await readdir(themeDirectory))
+    .filter((fileName) => fileName.endsWith(".json"))
+    .sort();
+  const entries: IndexEntry[] = [];
+
+  for (const fileName of fileNames) {
+    const themeFile = JSON.parse(await readFile(join(themeDirectory, fileName), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    const author = optionalString(themeFile.author) ?? "Athas";
+    const themes = Array.isArray(themeFile.themes)
+      ? (themeFile.themes as Array<Record<string, unknown>>)
+      : [];
+
+    for (const appearance of buildThemePreviews(themes)) {
+      entries.push({
+        id: appearance.id,
+        name: appearance.name,
+        description:
+          appearance.description ??
+          optionalString(themeFile.description) ??
+          `${appearance.name} color theme`,
+        version: "built-in",
+        author,
+        category: "Themes",
+        appearancePreviews: [appearance],
+        downloads: 0,
+        rating: 0,
+        distribution: "built-in",
+      });
+    }
+  }
+
+  return entries;
 }
 
 async function buildCatalog() {
@@ -173,6 +337,11 @@ async function buildCatalog() {
     const displayName = manifest.displayName || manifest.name;
     const isLanguage = registryCategory === "language";
     const cdnPath = getExtensionCdnPath(folder, manifest);
+    const artwork = await resolveExtensionArtwork(folder, cdnPath, manifest);
+    const appearancePreviews = [
+      ...buildThemePreviews(themes),
+      ...buildIconThemePreviews(cdnPath, icons),
+    ];
 
     registryEntries.push({
       id: manifest.id,
@@ -185,7 +354,8 @@ async function buildCatalog() {
       version: manifest.version || "1.0.0",
       publisher: manifest.publisher || "Athas",
       category: registryCategory,
-      icon: `${cdnBaseUrl}/${cdnPath}/icon.svg`,
+      icon: artwork,
+      appearancePreviews: appearancePreviews.length > 0 ? appearancePreviews : undefined,
       downloads: 0,
       rating: 0,
       manifestUrl: `${cdnBaseUrl}/${cdnPath}/extension.json`,
@@ -213,7 +383,7 @@ async function buildCatalog() {
     extensions: registryEntries,
   };
 
-  const indexEntries: IndexEntry[] = registryEntries.map((entry) => ({
+  const marketplaceIndexEntries: IndexEntry[] = registryEntries.map((entry) => ({
     id: entry.id,
     name: entry.displayName || entry.name || entry.id,
     description: entry.description,
@@ -221,16 +391,19 @@ async function buildCatalog() {
     author: entry.publisher,
     category: normalizeIndexCategory(entry.category),
     icon: entry.icon,
+    appearancePreviews: entry.appearancePreviews,
     manifestUrl: entry.manifestUrl,
     downloads: entry.downloads,
     rating: entry.rating,
     size: entry.size,
+    distribution: "marketplace",
   }));
+  const indexEntries = [...marketplaceIndexEntries, ...(await loadBuiltInThemeIndexEntries())];
 
   return {
     registryOutput: withTrailingNewline(registryFile),
     indexOutput: withTrailingNewline(indexEntries),
-    count: registryEntries.length,
+    count: indexEntries.length,
   };
 }
 
@@ -247,7 +420,7 @@ if (checkOnly) {
     process.exit(1);
   }
 
-  console.log(`Extensions catalog check passed (${count} extensions).`);
+  console.log(`Extensions catalog check passed (${count} entries).`);
   process.exit(0);
 }
 
@@ -255,6 +428,6 @@ await mkdir(GENERATED_CDN_DIR, { recursive: true });
 await writeFile(registryPath, registryOutput, "utf8");
 await writeFile(indexPath, indexOutput, "utf8");
 
-console.log(`Wrote extensions catalog (${count} extensions).`);
+console.log(`Wrote extensions catalog (${count} entries).`);
 console.log(`- ${registryPath}`);
 console.log(`- ${indexPath}`);

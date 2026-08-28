@@ -19,6 +19,7 @@
       "id": "market-icons",
       "name": "Athas File Icons",
       "description": "Colorful file and folder icons for Athas.",
+      "preview": { "fileName": "index.ts", "kind": "file" },
       "iconDefinitions": {
         "file": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path fill=\"#64748b\" d=\"M6 2h8l4 4v16H6z\"/><path fill=\"#cbd5e1\" d=\"M14 2v5h4z\"/></svg>",
         "folder": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path fill=\"#f59e0b\" d=\"M3 6h7l2 2h9v11H3z\"/></svg>",

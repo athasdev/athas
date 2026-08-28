@@ -1,5 +1,6 @@
 import type { ExtensionRuntimeIssue } from "@/extensions/registry/extension-store-types";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
+import type { AppearancePreview } from "@/extensions/appearance/appearance-preview";
 
 export type ExtensionCategory =
   | "language"
@@ -15,6 +16,7 @@ export interface AppearanceOption {
   id: string;
   name: string;
   description?: string;
+  preview?: AppearancePreview;
 }
 
 export interface UnifiedExtension {
@@ -36,6 +38,7 @@ export interface UnifiedExtension {
   marketplaceSkill?: MarketplaceSkill;
   agentId?: string;
   icon?: string | null;
+  appearancePreview?: AppearancePreview;
   canInstall?: boolean;
   hasUpdate?: boolean;
   installedVersion?: string | null;

@@ -284,6 +284,10 @@ export interface IconThemeContribution {
   id: string;
   name: string;
   description?: string;
+  preview?: {
+    fileName: string;
+    kind: "file" | "folder";
+  };
   iconDefinitions: Record<string, string>;
   lightIconDefinitions?: Record<string, string>;
   fileExtensions?: Record<string, string>;

@@ -18,6 +18,7 @@
       "id": "symbols",
       "name": "Symbols Icons",
       "description": "Modern file and folder icons from the Symbols icon theme.",
+      "preview": { "fileName": "index.ts", "kind": "file" },
       "iconDefinitions": {
         "folder": "./icons/folders/folder.svg",
         "folder-assets": "./icons/folders/folder-assets.svg",

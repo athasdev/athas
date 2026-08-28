@@ -8,7 +8,6 @@ export interface ThemeDefinition {
   name: string;
   description: string;
   category: "System" | "Light" | "Dark";
-  icon?: React.ReactNode;
   cssVariables: Record<string, string>;
   syntaxTokens?: Record<string, string>;
   isDark?: boolean;

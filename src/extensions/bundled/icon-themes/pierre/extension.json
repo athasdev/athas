@@ -23,6 +23,7 @@
       "id": "pierre-icons-minimal",
       "name": "Pierre Icons (Minimal)",
       "description": "Monochrome file, folder, text, and image icons.",
+      "preview": { "fileName": "index.ts", "kind": "file" },
       "iconDefinitions": {
         "file-duo": "./icons/file-duo.svg",
         "file-text-duo": "./icons/file-text-duo.svg",
@@ -91,6 +92,7 @@
       "id": "pierre-icons",
       "name": "Pierre Icons",
       "description": "Monochrome core language and file icons.",
+      "preview": { "fileName": "index.ts", "kind": "file" },
       "iconDefinitions": {
         "file-duo": "./icons/file-duo.svg",
         "file-text-duo": "./icons/file-text-duo.svg",
@@ -288,6 +290,7 @@
       "id": "pierre-icons-complete",
       "name": "Pierre Icons (Complete)",
       "description": "Colored language, framework, tooling, and configuration icons.",
+      "preview": { "fileName": "index.ts", "kind": "file" },
       "iconDefinitions": {
         "file-duo": "./icons/file-duo.svg",
         "file-text-duo": "./icons/file-text-duo.svg",

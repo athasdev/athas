@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/ui/card";
 import { Spinner } from "@/ui/spinner";
 import MarkdownRenderer from "@/features/ai/components/messages/markdown-renderer";
 import { hasSkillLocalOverride } from "@/features/ai/lib/skill-library";
+import { AppearancePreviewGraphic } from "@/extensions/appearance/components/appearance-preview";
 import { ExtensionIcon } from "./extension-catalog-icon";
 import type { UnifiedExtension } from "./extension-catalog-types";
 import {
@@ -117,6 +118,7 @@ export function ExtensionDetailView({
                   key={option.id}
                   className="flex min-w-0 items-center gap-3 rounded-lg border border-border/65 bg-background px-3 py-2"
                 >
+                  {option.preview ? <AppearancePreviewGraphic preview={option.preview} /> : null}
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium text-foreground ui-text-sm">
                       {option.name}

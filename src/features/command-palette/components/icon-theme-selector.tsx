@@ -1,7 +1,10 @@
 import { CaretLeftIcon as CaretLeft } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IconThemeGraphic } from "@/extensions/icon-themes/components/icon-theme-graphic";
-import type { IconResult, IconThemeDefinition } from "@/extensions/icon-themes/icon-theme.types";
+import {
+  getIconThemeAppearancePreview,
+  type AppearancePreview,
+} from "@/extensions/appearance/appearance-preview";
+import { AppearancePreviewGraphic } from "@/extensions/appearance/components/appearance-preview";
 import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
 import {
   CommandEmpty,
@@ -18,7 +21,7 @@ interface IconThemeInfo {
   id: string;
   name: string;
   description: string;
-  previewIcon: IconResult | null;
+  preview?: AppearancePreview;
 }
 
 interface IconThemeSelectorContentProps {
@@ -27,21 +30,6 @@ interface IconThemeSelectorContentProps {
   onClose: () => void;
   onThemeChange: (theme: string) => void;
   currentTheme?: string;
-}
-
-function getRepresentativeIcon(theme: IconThemeDefinition): IconResult | null {
-  const candidates: Array<[string, boolean]> = [
-    ["index.ts", false],
-    ["package.json", false],
-    ["src", true],
-  ];
-
-  for (const [fileName, isDir] of candidates) {
-    const result = theme.getFileIcon(fileName, isDir);
-    if (result.svg || result.url || result.component) return result;
-  }
-
-  return null;
 }
 
 export const IconThemeSelectorContent = ({
@@ -67,7 +55,7 @@ export const IconThemeSelectorContent = ({
         id: theme.id,
         name: theme.name,
         description: theme.description,
-        previewIcon: getRepresentativeIcon(theme),
+        preview: getIconThemeAppearancePreview(theme),
       })),
     [registeredThemes],
   );
@@ -246,8 +234,9 @@ export const IconThemeSelectorContent = ({
                   }
                 }}
                 isSelected={isSelected}
-                icon={<IconThemeGraphic result={theme.previewIcon} className="size-4" />}
-                iconVariant="framed"
+                icon={
+                  theme.preview ? <AppearancePreviewGraphic preview={theme.preview} /> : undefined
+                }
                 contentLayout="stacked"
                 title={theme.name}
                 description={theme.description}

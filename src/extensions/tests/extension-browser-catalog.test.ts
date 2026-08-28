@@ -111,8 +111,20 @@ describe("extension browser catalog", () => {
     const theme = manifest({
       id: "athas.example-theme",
       themes: [
-        { id: "example-dark", name: "Example Dark", appearance: "dark", colors: {} },
-        { id: "example-light", name: "Example Light", appearance: "light", colors: {} },
+        {
+          id: "example-dark",
+          name: "Example Dark",
+          appearance: "dark",
+          colors: { primary: "#111111", surface: "#222222", background: "#000000" },
+          syntax: { keyword: "#333333", string: "#444444" },
+        },
+        {
+          id: "example-light",
+          name: "Example Light",
+          appearance: "light",
+          colors: { primary: "#eeeeee", surface: "#ffffff", background: "#f5f5f5" },
+          syntax: { keyword: "#cccccc", string: "#dddddd" },
+        },
       ],
     });
 
@@ -129,6 +141,10 @@ describe("extension browser catalog", () => {
       category: "theme",
       isActive: true,
       selectionId: "example-light",
+      appearancePreview: {
+        kind: "theme",
+        colors: ["#eeeeee", "#cccccc", "#dddddd", "#ffffff"],
+      },
     });
   });
 
@@ -171,6 +187,9 @@ describe("extension browser catalog", () => {
           extension.appearanceOptions?.some((option) => option.id === "symbols"),
         ),
       ).toHaveLength(1);
+      expect(
+        result.find((extension) => extension.id === "athas.icon-theme.symbols")?.appearancePreview,
+      ).toMatchObject({ kind: "icon-theme" });
     } finally {
       iconThemeRegistry.unregisterTheme(symbols.id);
     }
