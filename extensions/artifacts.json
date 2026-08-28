@@ -81,12 +81,12 @@
     "athas.icon-theme.market": {
       "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/market/athas.icon-theme.market.tar.gz",
       "size": 5655,
-      "checksum": "01d9b43fe9840d7edd39f127ee30074bfb2c05109c540d5d4f415c02062ff22b"
+      "checksum": "0e249947f07a399c0c85f0be878faff08310aa469741c1eb87f9fd76e2ec0579"
     },
     "athas.icon-theme.symbols": {
       "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/symbols/athas.icon-theme.symbols.tar.gz",
       "size": 4759935,
-      "checksum": "6dd85ca53be39b77cc51cd16085bd188e7b9cf2ba3adbc91bcc7d91c77c21c5b"
+      "checksum": "2c4c3431090536fde236edc746f8dd221b7b7ffde05b13304ff410e6e2425740"
     },
     "athas.sentry": {
       "downloadUrl": "https://athas.dev/extensions/packages/integration/sentry/athas.sentry.tar.gz",
