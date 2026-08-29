@@ -70,6 +70,7 @@ import { toMonacoLanguageId } from "../engines/monaco/language";
 import { ensureMonacoLanguageTokenizer } from "../engines/monaco/language-contributions";
 import { acquireMonacoModel } from "../engines/monaco/model-lifecycle";
 import { getEditorBottomScrollPadding } from "../engines/monaco/scroll-padding";
+import { getMonacoScrollbarOptions } from "../engines/monaco/scrollbar-options";
 import {
   clampMonacoPosition,
   createModelUri,
@@ -668,13 +669,7 @@ export function MonacoEditor({
       overviewRulerLanes: 0,
       fixedOverflowWidgets: true,
       "semanticHighlighting.enabled": false,
-      scrollbar: {
-        vertical: scrollable ? "auto" : "hidden",
-        horizontal: scrollable ? "auto" : "hidden",
-        handleMouseWheel: scrollable,
-        alwaysConsumeMouseWheel: scrollable,
-        useShadows: false,
-      },
+      scrollbar: getMonacoScrollbarOptions(scrollable),
     });
 
     editorRef.current = editor;
@@ -1360,13 +1355,7 @@ export function MonacoEditor({
         vimModeEnabled && vimCurrentMode === "normal" ? "solid" : editorCursorBlinking,
       "semanticHighlighting.enabled":
         isActiveSurface && !readOnly && !isPreviewMode && semanticTokens,
-      scrollbar: {
-        vertical: scrollable ? "auto" : "hidden",
-        horizontal: scrollable ? "auto" : "hidden",
-        handleMouseWheel: scrollable,
-        alwaysConsumeMouseWheel: scrollable,
-        useShadows: false,
-      },
+      scrollbar: getMonacoScrollbarOptions(scrollable),
     });
     if (container) syncContainedEditorFontOptions(container, fontOptions);
 

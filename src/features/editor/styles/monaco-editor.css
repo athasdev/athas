@@ -1,14 +1,18 @@
 .monaco-editor-shell {
   --vscode-editor-background: var(--background);
-  --athas-monaco-widget-background: color-mix(in srgb, var(--surface) 92%, var(--background));
-  --athas-monaco-widget-border: color-mix(in srgb, var(--border) 82%, transparent);
-  --athas-monaco-widget-hover: color-mix(in srgb, var(--accent) 68%, transparent);
+  --athas-monaco-widget-background: color-mix(in srgb, var(--surface) 98%, transparent);
+  --athas-monaco-widget-border: color-mix(in srgb, var(--border) 50%, transparent);
+  --athas-monaco-widget-hover: var(--accent);
 }
 
 .monaco-editor-shell .monaco-editor,
 .monaco-editor-shell .monaco-editor-background,
 .monaco-editor-shell .monaco-editor .margin {
   background-color: var(--background);
+}
+
+.monaco-editor-shell .monaco-scrollable-element > .scrollbar {
+  background: transparent !important;
 }
 
 .monaco-editor-shell .monaco-scrollable-element > .scrollbar > .slider {
@@ -167,13 +171,16 @@
 }
 
 .monaco-editor-shell .monaco-editor .find-widget {
-  padding: 0 0.375rem;
-  border-color: var(--athas-monaco-widget-border);
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  background: var(--athas-monaco-widget-background);
-  color: var(--foreground);
-  box-shadow: var(--shadow-popover);
+  margin-top: var(--athas-chrome-gap-loose);
+  margin-right: var(--athas-chrome-gap-loose);
+  padding: 0 4px;
+  border: 1px solid var(--athas-monaco-widget-border) !important;
+  border-radius: var(--radius-lg);
+  background: var(--athas-monaco-widget-background) !important;
+  color: var(--foreground) !important;
+  box-shadow: var(--shadow-card);
   font-family: var(--app-font-family);
+  backdrop-filter: blur(8px);
 }
 
 .monaco-editor-shell .monaco-editor .find-widget > .find-part,
@@ -183,21 +190,49 @@
 
 .monaco-editor-shell .monaco-editor .find-widget .monaco-inputbox,
 .monaco-editor-shell .monaco-editor .find-widget .monaco-inputbox .input {
-  border-radius: var(--radius-md);
-  background: var(--background);
-  color: var(--foreground);
+  border-radius: var(--athas-chrome-radius);
+  background: var(--surface) !important;
+  color: var(--foreground) !important;
+  font-family: var(--app-font-family);
 }
 
-.monaco-editor-shell .monaco-editor .find-widget .matchesCount,
-.monaco-editor-shell .monaco-editor .find-widget.no-results .matchesCount {
+.monaco-editor-shell .monaco-editor .find-widget .matchesCount {
   color: var(--subtle-foreground) !important;
+}
+
+.monaco-editor-shell .monaco-editor .find-widget.no-results .matchesCount {
+  color: var(--warning) !important;
 }
 
 .monaco-editor-shell .monaco-editor .find-widget .button,
 .monaco-editor-shell .monaco-editor .find-widget .codicon-find-selection,
 .monaco-editor-shell .monaco-editor .suggest-details .codicon-close {
-  border-radius: var(--athas-chrome-radius);
+  border-radius: 999px;
   color: var(--subtle-foreground);
+}
+
+.monaco-editor-shell .monaco-editor .find-widget .button {
+  box-sizing: border-box;
+  width: var(--athas-chrome-control-height);
+  height: var(--athas-chrome-control-height);
+  padding: 4px;
+}
+
+.monaco-editor-shell .monaco-editor .find-widget .monaco-custom-toggle {
+  border-color: transparent !important;
+  border-radius: 999px;
+  background: transparent !important;
+  color: var(--subtle-foreground) !important;
+}
+
+.monaco-editor-shell .monaco-editor .find-widget .monaco-custom-toggle:hover {
+  background: var(--athas-monaco-widget-hover) !important;
+  color: var(--foreground) !important;
+}
+
+.monaco-editor-shell .monaco-editor .find-widget .monaco-custom-toggle.checked {
+  background: var(--selected) !important;
+  color: var(--foreground) !important;
 }
 
 .monaco-editor-shell .monaco-editor .find-widget .button:not(.disabled):hover,
@@ -208,9 +243,14 @@
 }
 
 .monaco-editor-shell .monaco-editor .find-widget .button:focus-visible,
+.monaco-editor-shell .monaco-editor .find-widget .monaco-custom-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  outline-offset: 0;
+}
+
 .monaco-editor-shell .monaco-editor .find-widget .monaco-inputbox.synthetic-focus {
-  outline: 1px solid var(--primary);
-  outline-offset: -1px;
+  outline: none;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-strong) 35%, transparent);
 }
 
 .monaco-editor-shell .monaco-editor .sticky-widget {

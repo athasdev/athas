@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { toMonacoLanguageId } from "../engines/monaco/language";
 import { defineActiveMonacoTheme, defineMonacoTheme } from "../engines/monaco/theme";
+import { monacoCodeCellScrollbarOptions } from "../engines/monaco/scrollbar-options";
 import { useMonacoEditorSettings } from "../engines/monaco/use-monaco-editor-settings";
 
 interface NotebookCodeCellEditorProps {
@@ -105,11 +106,7 @@ export function NotebookCodeCellEditor({
       contextmenu: true,
       theme: defineActiveMonacoTheme(themeId, editorItalicComments),
       fixedOverflowWidgets: true,
-      scrollbar: {
-        vertical: "hidden",
-        horizontal: "auto",
-        alwaysConsumeMouseWheel: false,
-      },
+      scrollbar: monacoCodeCellScrollbarOptions,
     });
 
     editorRef.current = editor;
