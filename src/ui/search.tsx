@@ -271,6 +271,7 @@ interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
   onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  onFocus?: (event: React.FocusEvent<HTMLInputElement>) => void;
   placeholder: string;
   inputRef?: RefObject<HTMLInputElement | null>;
   matchLabel?: string | null;
@@ -283,6 +284,7 @@ export function SearchInput({
   value,
   onChange,
   onKeyDown,
+  onFocus,
   placeholder,
   inputRef,
   matchLabel,
@@ -299,6 +301,7 @@ export function SearchInput({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
+          onFocus={onFocus}
           placeholder={placeholder}
           leftIcon={Search}
           className="pr-8"

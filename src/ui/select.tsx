@@ -1,5 +1,6 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
+import { cva } from "class-variance-authority";
 import type { ComponentType, CSSProperties, ReactElement, ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";
@@ -37,12 +38,13 @@ export interface SelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  width?: "content" | "full";
   menuWidth?: "anchor" | "content";
   menuHeader?: ReactNode;
   menuMinWidth?: number;
   menuAnimated?: boolean;
   disabled?: boolean;
-  variant?: "default" | "ghost";
+  variant?: "default" | "ghost" | "surface";
   shape?: "default" | "pill";
   align?: "default" | "start";
   searchable?: boolean;
@@ -61,6 +63,18 @@ export interface SelectProps {
   onOpenChange?: (open: boolean) => void;
   "aria-label"?: string;
 }
+
+const selectContainerVariants = cva("min-w-0", {
+  variants: {
+    width: {
+      content: "w-fit max-w-72",
+      full: "w-full max-w-full",
+    },
+  },
+  defaultVariants: {
+    width: "content",
+  },
+});
 
 function isIconComponent(
   icon: SelectProps["leftIcon"],
@@ -138,6 +152,7 @@ function PlainSelect({
   onChange,
   placeholder,
   className,
+  width,
   menuWidth,
   menuHeader,
   menuMinWidth,
@@ -158,7 +173,7 @@ function PlainSelect({
   ariaLabel,
 }: SelectProps & {
   placeholder: string;
-  variant: "default" | "ghost";
+  variant: "default" | "ghost" | "surface";
   shape: "default" | "pill";
   menuAnimated: boolean;
   hideChevron: boolean;
@@ -172,7 +187,9 @@ function PlainSelect({
     ? ({ minWidth: menuMinWidth } satisfies CSSProperties)
     : undefined;
   const node = (
-    <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-fit max-w-72", className)}>
+    <div
+      className={cn(selectContainerVariants({ width: iconOnly ? "content" : width }), className)}
+    >
       <SelectPrimitive.Root
         value={value || null}
         onValueChange={(nextValue) => {
@@ -189,10 +206,18 @@ function PlainSelect({
           data-setting-primary-control="true"
           data-prevent-dialog-escape={open ? "true" : undefined}
           aria-label={ariaLabel}
-          render={<Button variant={variant} iconOnly={iconOnly} shape={shape} />}
+          render={
+            <Button
+              variant={variant === "surface" ? "ghost" : variant}
+              iconOnly={iconOnly}
+              shape={shape}
+            />
+          }
           className={cn(
             !iconOnly &&
               "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
+            variant === "surface" &&
+              "bg-surface text-foreground hover:bg-surface hover:text-foreground focus-visible:ring-1 focus-visible:ring-border-strong/35",
             align === "start" && "justify-start",
           )}
         >
@@ -221,7 +246,7 @@ function PlainSelect({
                 menuSurfaceVariants(),
                 "w-(--anchor-width) max-w-(--available-width) min-w-36 overflow-hidden text-foreground duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
                 !menuAnimated && "duration-0 data-ending-style:transform-none",
-                menuWidth === "content" && "w-fit min-w-0 max-w-(--available-width)",
+                menuWidth === "content" && "w-max min-w-(--anchor-width) max-w-(--available-width)",
               )}
             >
               {menuHeader}
@@ -263,6 +288,7 @@ function SearchableSelect({
   onChange,
   placeholder,
   className,
+  width,
   menuWidth,
   menuHeader,
   menuMinWidth,
@@ -287,7 +313,7 @@ function SearchableSelect({
   emptyLabel = "No matching options",
 }: SelectProps & {
   placeholder: string;
-  variant: "default" | "ghost";
+  variant: "default" | "ghost" | "surface";
   shape: "default" | "pill";
   searchableTrigger: "menu" | "input";
   menuAnimated: boolean;
@@ -369,7 +395,7 @@ function SearchableSelect({
       modal={false}
     >
       {searchableTrigger === "input" ? (
-        <div className={cn("min-w-0 w-fit max-w-72", className)}>
+        <div className={cn(selectContainerVariants({ width }), className)}>
           <ComboboxInput
             id={id}
             title={title}
@@ -378,28 +404,41 @@ function SearchableSelect({
             aria-label={ariaLabel}
             placeholder={selectedOption?.label || placeholder}
             leftIcon={componentIcon}
-            variant={variant === "default" ? "button" : "ghost"}
+            variant={variant === "default" ? "button" : variant === "surface" ? "surface" : "ghost"}
             shape={shape}
             className="w-full"
             inputClassName={cn(
-              "field-sizing-content min-w-20 max-w-full font-normal",
+              "field-sizing-content min-w-0 max-w-full font-normal",
               selectedOption && "placeholder:text-foreground",
             )}
             showTrigger={!hideChevron}
           />
         </div>
       ) : (
-        <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-fit max-w-72", className)}>
+        <div
+          className={cn(
+            selectContainerVariants({ width: iconOnly ? "content" : width }),
+            className,
+          )}
+        >
           <ComboboxPrimitive.Trigger
             id={id}
             title={title}
             data-setting-primary-control="true"
             data-prevent-dialog-escape={open ? "true" : undefined}
             aria-label={ariaLabel}
-            render={<Button variant={variant} iconOnly={iconOnly} shape={shape} />}
+            render={
+              <Button
+                variant={variant === "surface" ? "ghost" : variant}
+                iconOnly={iconOnly}
+                shape={shape}
+              />
+            }
             className={cn(
               !iconOnly &&
                 "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
+              variant === "surface" &&
+                "bg-surface text-foreground hover:bg-surface hover:text-foreground focus-visible:ring-1 focus-visible:ring-border-strong/35",
               align === "start" && "justify-start",
             )}
           >
@@ -424,7 +463,7 @@ function SearchableSelect({
         className={cn(
           "z-10070",
           !menuAnimated && "duration-0 data-ending-style:transform-none",
-          menuWidth === "content" && "w-fit min-w-0 max-w-(--available-width)",
+          menuWidth === "content" && "w-max min-w-(--anchor-width) max-w-(--available-width)",
         )}
       >
         {searchableTrigger === "menu" ? (
@@ -452,7 +491,8 @@ function SearchableSelect({
 export default function Select({
   placeholder = "Select...",
   className = "",
-  menuWidth = "anchor",
+  width = "content",
+  menuWidth,
   menuHeader,
   menuMinWidth = 0,
   menuAnimated = true,
@@ -482,11 +522,13 @@ export default function Select({
     if (openProp === undefined) setUncontrolledOpen(resolvedOpen);
     onOpenChange?.(resolvedOpen);
   };
+  const resolvedMenuWidth = menuWidth ?? (width === "full" ? "anchor" : "content");
   const sharedProps = {
     ...props,
     placeholder,
     className,
-    menuWidth,
+    width,
+    menuWidth: resolvedMenuWidth,
     menuHeader,
     menuMinWidth,
     menuAnimated,

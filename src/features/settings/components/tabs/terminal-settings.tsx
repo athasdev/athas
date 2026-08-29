@@ -15,7 +15,7 @@ import { Empty, EmptyDescription } from "@/ui/empty";
 import { Field, FieldDescription, FieldLabel } from "@/ui/field";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
@@ -248,7 +248,7 @@ export const TerminalSettings = () => {
                           shell: value === DEFAULT_SHELL_OPTION_VALUE ? undefined : value,
                         })
                       }
-                      className="w-full"
+                      width="full"
                       variant="default"
                       searchable
                       searchableTrigger="input"
@@ -338,7 +338,6 @@ export const TerminalSettings = () => {
             max="32"
             value={settings.terminalFontSize}
             onChange={(val) => updateSetting("terminalFontSize", val)}
-            className={SETTINGS_CONTROL_WIDTHS.number}
           />
         </SettingRow>
 
@@ -356,7 +355,6 @@ export const TerminalSettings = () => {
             step={0.1}
             value={settings.terminalLineHeight}
             onChange={(val) => updateSetting("terminalLineHeight", val)}
-            className={SETTINGS_CONTROL_WIDTHS.number}
           />
         </SettingRow>
 
@@ -374,7 +372,6 @@ export const TerminalSettings = () => {
             step={0.1}
             value={settings.terminalLetterSpacing}
             onChange={(val) => updateSetting("terminalLetterSpacing", val)}
-            className={SETTINGS_CONTROL_WIDTHS.number}
           />
         </SettingRow>
 
@@ -392,7 +389,6 @@ export const TerminalSettings = () => {
             step={1000}
             value={settings.terminalScrollback}
             onChange={(val) => updateSetting("terminalScrollback", val)}
-            className={SETTINGS_CONTROL_WIDTHS.default}
           />
         </SettingRow>
       </Section>
@@ -508,7 +504,6 @@ export const TerminalSettings = () => {
             max="6"
             value={settings.terminalCursorWidth}
             onChange={(val) => updateSetting("terminalCursorWidth", val)}
-            className={SETTINGS_CONTROL_WIDTHS.number}
           />
         </SettingRow>
 

@@ -4,10 +4,7 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Select from "@/ui/select";
 import { Spinner } from "@/ui/spinner";
-import Section, {
-  SETTINGS_CONTROL_WIDTHS,
-  SettingRow,
-} from "@/features/settings/components/settings-section";
+import Section, { SettingRow } from "@/features/settings/components/settings-section";
 import {
   CodexIntegrationService,
   getCodexSettings,
@@ -117,7 +114,6 @@ export function CodexSettings() {
           }))}
           placeholder="Codex default"
           onChange={(model) => update({ model })}
-          className={SETTINGS_CONTROL_WIDTHS.xwide}
           searchable
         />
       </SettingRow>
@@ -126,7 +122,6 @@ export function CodexSettings() {
           value={settings.effort ?? "medium"}
           options={effortOptions}
           onChange={(effort) => update({ effort })}
-          className={SETTINGS_CONTROL_WIDTHS.wide}
         />
       </SettingRow>
       <SettingRow label="Workspace access" description="Filesystem sandbox used by Codex">
@@ -134,7 +129,6 @@ export function CodexSettings() {
           value={settings.sandbox ?? "workspace-write"}
           options={sandboxOptions}
           onChange={(sandbox) => update({ sandbox })}
-          className={SETTINGS_CONTROL_WIDTHS.wide}
         />
       </SettingRow>
       <SettingRow label="Approvals" description="When Codex asks before running an action">
@@ -142,7 +136,6 @@ export function CodexSettings() {
           value={settings.approvalPolicy ?? "on-request"}
           options={approvalOptions}
           onChange={(approvalPolicy) => update({ approvalPolicy })}
-          className={SETTINGS_CONTROL_WIDTHS.wide}
         />
       </SettingRow>
       <SettingRow

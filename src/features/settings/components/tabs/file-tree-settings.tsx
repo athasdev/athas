@@ -5,7 +5,7 @@ import type { FileTreeSortOrder } from "@/features/settings/types/settings.types
 import NumberInput from "@/ui/number-input";
 import Select from "@/ui/select";
 import Textarea from "@/ui/textarea";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 import Switch from "@/ui/switch";
 
 export const FileTreeSettings = () => {
@@ -91,7 +91,6 @@ export const FileTreeSettings = () => {
             max="32"
             value={settings.fileTreeIndentSize}
             onChange={(val) => updateSetting("fileTreeIndentSize", val)}
-            className={SETTINGS_CONTROL_WIDTHS.numberCompact}
           />
         </SettingRow>
 

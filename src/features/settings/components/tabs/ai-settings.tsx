@@ -31,7 +31,7 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { ToggleGroup } from "@/ui/toggle-group";
@@ -604,7 +604,6 @@ export const AISettings = () => {
                 }
               }}
               placeholder="http://localhost:11434/v1"
-              className={SETTINGS_CONTROL_WIDTHS.xwide}
               spellCheck={false}
               leftIcon={Globe}
             />
@@ -623,7 +622,6 @@ export const AISettings = () => {
                 value={customChatApiKeyInput}
                 onChange={(event) => setCustomChatApiKeyInput(event.currentTarget.value)}
                 placeholder={hasCustomChatApiKey ? "Saved" : "API key"}
-                className={SETTINGS_CONTROL_WIDTHS.wide}
                 spellCheck={false}
                 autoComplete="off"
                 disabled={isSavingCustomChatApiKey}
@@ -923,7 +921,6 @@ export const AISettings = () => {
                     }
                   }}
                   placeholder="qwen2.5-coder:7b"
-                  className={SETTINGS_CONTROL_WIDTHS.xwide}
                   disabled={!aiCompletionAllowedByPolicy}
                 />
               ) : (
@@ -993,7 +990,6 @@ export const AISettings = () => {
                       }
                     }}
                     placeholder="http://localhost:11434/v1"
-                    className={SETTINGS_CONTROL_WIDTHS.xwide}
                     disabled={!aiCompletionAllowedByPolicy}
                   />
                 </SettingRow>
@@ -1013,7 +1009,6 @@ export const AISettings = () => {
                         setCustomAutocompleteApiKeyInput(event.currentTarget.value)
                       }
                       placeholder={hasCustomAutocompleteApiKey ? "Saved" : "API key"}
-                      className={SETTINGS_CONTROL_WIDTHS.wide}
                       disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
                     />
                     <Button

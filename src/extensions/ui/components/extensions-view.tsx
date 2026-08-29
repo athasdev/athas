@@ -1,6 +1,5 @@
 import {
   BrainIcon as Brain,
-  CaretDownIcon as CaretDown,
   ExtensionsIcon as Extensions,
   PackageIcon as Package,
   PlusIcon as Plus,
@@ -26,8 +25,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   useDropdownMenu,
@@ -37,9 +34,10 @@ import { EmptyState } from "@/ui/empty";
 import { SearchInput } from "@/ui/search";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
+import { WorkbenchCategoryNav, WorkbenchPageHeader } from "@/ui/workbench-page";
 import { buildExtensionCatalog } from "./build-extension-catalog";
 import { ExtensionCatalogCard } from "./extension-catalog-card";
+import { ExtensionCategoryIcon } from "./extension-catalog-icon";
 import {
   EXTENSION_CATEGORIES,
   type ExtensionCategory,
@@ -155,9 +153,17 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const activeFilter = isExtensionFilter(settings.extensionsActiveTab)
     ? settings.extensionsActiveTab
     : "all";
-  const activeFilterLabel =
-    EXTENSION_FILTERS.find((filter) => filter.id === activeFilter)?.label ?? "All";
   const activeCategory = EXTENSION_CATEGORIES.find((category) => category.id === activeFilter)?.id;
+  const extensionCategories = EXTENSION_FILTERS.map((filter) => ({
+    id: filter.id,
+    label: filter.label,
+    icon:
+      filter.id === "all" ? (
+        <Extensions weight="duotone" />
+      ) : (
+        <ExtensionCategoryIcon category={filter.id} />
+      ),
+  }));
   const visibleExtensions = extensions.filter((extension) => {
     const matchesCategory = activeFilter === "all" || extension.category === activeFilter;
     const matchesSearch =
@@ -333,123 +339,82 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
 
   return (
     <div className="@container/extensions font-sans flex h-full min-h-0 min-w-0 flex-col bg-background">
-      <header className="shrink-0">
-        <EditorBreadcrumb
-          filePathOverride="Extensions"
-          showPath={false}
-          showDefaultActions={false}
-          extraLeftContent={
-            <ExtensionsBreadcrumb
-              category={activeCategory}
-              onOpenCatalog={handleOpenCatalog}
-              onOpenCategory={handleOpenCategory}
-            />
-          }
-          rightContent={
-            <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="ghost" />}>
-                <Plus />
-                Add
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSearchQuery("");
-                    void updateSetting("extensionsActiveTab", "all");
-                  }}
-                >
-                  <Package />
-                  Browse Extensions
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setEditingSkillId(undefined);
-                    setIsSkillsCommandOpen(true);
-                  }}
-                >
-                  <Brain />
-                  Create Skill
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => useGenerateStore.getState().actions.openExtensionGeneration()}
-                >
-                  <Sparkles />
-                  Generate Extension
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          }
-        />
-
-        <div className="mx-auto w-full max-w-6xl px-5 py-4 @max-[480px]/extensions:px-3 @max-[480px]/extensions:py-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
-            <SearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search extensions..."
-              className="min-w-64 max-w-xl @max-[480px]/extensions:min-w-full"
-            />
-            <div className="ml-auto shrink-0 text-subtle-foreground ui-text-sm" role="status">
-              {resultLabel}
-              {updateCount > 0
-                ? ` · ${updateCount} update${updateCount === 1 ? "" : "s"}`
-                : ` · ${installedCount} installed`}
-            </div>
-          </div>
-
-          <Tabs
-            className="mt-3 @max-[720px]/extensions:hidden"
+      <WorkbenchPageHeader
+        breadcrumb={
+          <EditorBreadcrumb
+            filePathOverride="Extensions"
+            showPath={false}
+            showDefaultActions={false}
+            extraLeftContent={
+              <ExtensionsBreadcrumb
+                category={activeCategory}
+                onOpenCatalog={handleOpenCatalog}
+                onOpenCategory={handleOpenCategory}
+              />
+            }
+            rightContent={
+              <DropdownMenu>
+                <DropdownMenuTrigger render={<Button variant="ghost" />}>
+                  <Plus />
+                  Add
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSearchQuery("");
+                      void updateSetting("extensionsActiveTab", "all");
+                    }}
+                  >
+                    <Package />
+                    Browse Extensions
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setEditingSkillId(undefined);
+                      setIsSkillsCommandOpen(true);
+                    }}
+                  >
+                    <Brain />
+                    Create Skill
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => useGenerateStore.getState().actions.openExtensionGeneration()}
+                  >
+                    <Sparkles />
+                    Generate Extension
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            }
+          />
+        }
+        search={
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search extensions..."
+          />
+        }
+        status={
+          <span role="status">
+            {resultLabel}
+            {updateCount > 0
+              ? ` · ${updateCount} update${updateCount === 1 ? "" : "s"}`
+              : ` · ${installedCount} installed`}
+          </span>
+        }
+        categories={
+          <WorkbenchCategoryNav
+            items={extensionCategories}
             value={activeFilter}
             onValueChange={(value) =>
               void updateSetting("extensionsActiveTab", value as Settings["extensionsActiveTab"])
             }
-          >
-            <TabsList variant="bare" className="max-w-full flex-wrap justify-start">
-              {EXTENSION_FILTERS.map((filter) => (
-                <TabsTrigger key={filter.id} value={filter.id}>
-                  {filter.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-
-          <div className="mt-3 hidden @max-[720px]/extensions:block">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="default"
-                    className="w-full justify-between"
-                    aria-label="Extension category"
-                  />
-                }
-              >
-                <span>{activeFilterLabel}</span>
-                <CaretDown />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-(--anchor-width)">
-                <DropdownMenuRadioGroup
-                  value={activeFilter}
-                  onValueChange={(value) =>
-                    void updateSetting(
-                      "extensionsActiveTab",
-                      value as Settings["extensionsActiveTab"],
-                    )
-                  }
-                >
-                  {EXTENSION_FILTERS.map((filter) => (
-                    <DropdownMenuRadioItem key={filter.id} value={filter.id} closeOnClick>
-                      {filter.label}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </header>
+            ariaLabel="Extension categories"
+          />
+        }
+      />
 
       <ScrollArea className="min-h-0 flex-1">
         <main className="mx-auto w-full max-w-6xl px-5 py-5 @max-[480px]/extensions:px-3 @max-[480px]/extensions:py-3">

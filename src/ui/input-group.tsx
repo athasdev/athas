@@ -5,15 +5,33 @@ import Input, { type InputProps } from "@/ui/input";
 import Textarea from "@/ui/textarea";
 import { cn } from "@/utils/cn";
 
-function InputGroup({ className, ...props }: ComponentProps<"div">) {
+const inputGroupVariants = cva(
+  "group/input-group relative flex min-h-7 w-full min-w-0 items-center rounded-chrome bg-surface text-foreground outline-none transition-colors has-disabled:opacity-50 has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-border-strong/35 has-[[data-slot][aria-invalid=true]]:border-destructive has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto",
+  {
+    variants: {
+      variant: {
+        default:
+          "border border-border has-[[data-slot=input-group-control]:focus-visible]:border-border-strong",
+        surface: "border-0",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  },
+);
+
+function InputGroup({
+  className,
+  variant = "default",
+  ...props
+}: ComponentProps<"div"> & VariantProps<typeof inputGroupVariants>) {
   return (
     <div
       data-slot="input-group"
+      data-variant={variant}
       role="group"
-      className={cn(
-        "group/input-group relative flex min-h-7 w-full min-w-0 items-center rounded-chrome border border-border bg-surface text-foreground outline-none transition-colors has-disabled:opacity-50 has-[[data-slot=input-group-control]:focus-visible]:border-border-strong has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-border-strong/35 has-[[data-slot][aria-invalid=true]]:border-destructive has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto",
-        className,
-      )}
+      className={cn(inputGroupVariants({ variant }), className)}
       {...props}
     />
   );

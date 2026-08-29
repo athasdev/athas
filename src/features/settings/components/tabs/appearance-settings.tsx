@@ -18,10 +18,9 @@ import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/
 import type { TabCloseButtonVisibility } from "@/features/settings/types/settings.types";
 import { Button } from "@/ui/button";
 import NumberInput from "@/ui/number-input";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
-import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { FontSelector } from "../font-selector";
 import { toast } from "sonner";
@@ -345,7 +344,7 @@ export const AppearanceSettings = () => {
             step={String(UI_FONT_SIZE_STEP)}
             value={settings.uiFontSize}
             onChange={(value) => updateSetting("uiFontSize", value)}
-            className={cn(SETTINGS_CONTROL_WIDTHS.number, "tabular-nums")}
+            className="tabular-nums"
             aria-label={`UI font size: ${formatUiFontSize(settings.uiFontSize)} pixels`}
           />
         </SettingRow>

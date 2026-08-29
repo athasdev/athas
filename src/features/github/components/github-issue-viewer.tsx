@@ -546,7 +546,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                     void updateIssue({ issueType });
                   }}
                   variant="ghost"
-                  className="w-full"
+                  width="full"
                   align="start"
                   aria-label="Issue type"
                 />
@@ -568,7 +568,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                     void updateIssue({ milestone });
                   }}
                   variant="ghost"
-                  className="w-full"
+                  width="full"
                   align="start"
                   aria-label="Issue milestone"
                 />

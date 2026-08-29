@@ -357,7 +357,7 @@ export function ExtensionSelectControl({ node, execute }: ExtensionControlProps<
         placeholder={node.placeholder}
         disabled={node.disabled}
         variant="default"
-        className="w-full"
+        width="full"
         aria-label={node.label ?? node.placeholder ?? "Select an option"}
         onChange={(nextValue) => {
           setValue(nextValue);

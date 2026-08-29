@@ -13,7 +13,7 @@ import {
 import { cn } from "@/utils/cn";
 
 const Combobox = ComboboxPrimitive.Root;
-type ComboboxVariant = "default" | "ghost" | "button";
+type ComboboxVariant = "default" | "ghost" | "button" | "surface";
 type ComboboxShape = "default" | "pill";
 
 const comboboxInputGroupVariants = cva(
@@ -26,6 +26,8 @@ const comboboxInputGroupVariants = cva(
         ghost: "border-0 bg-transparent focus-within:ring-0",
         button:
           "border-0 bg-accent text-foreground hover:bg-selected focus-within:ring-2 focus-within:ring-primary/20",
+        surface:
+          "border-0 bg-surface text-foreground focus-within:ring-1 focus-within:ring-border-strong/35",
       },
       shape: {
         default: "rounded-chrome",

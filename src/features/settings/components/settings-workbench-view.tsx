@@ -1,5 +1,5 @@
-import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import EditorBreadcrumb from "@/features/editor/components/toolbar/breadcrumb";
 import { SETTINGS_TAB_ITEMS } from "@/features/settings/config/settings-tabs";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
@@ -13,12 +13,11 @@ import {
 } from "@/features/settings/lib/settings-search";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
-import { ChromeBar } from "@/ui/chrome";
 import { Dropdown } from "@/ui/dropdown";
 import { Empty, EmptyDescription } from "@/ui/empty";
-import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
+import { SearchInput } from "@/ui/search";
+import { WorkbenchCategoryNav, WorkbenchPageHeader } from "@/ui/workbench-page";
 import type { SearchResult } from "../types/search.types";
 
 import { AdvancedSettings } from "./tabs/advanced-settings";
@@ -33,6 +32,7 @@ import { GitSettings } from "./tabs/git-settings";
 import { KeyboardSettings } from "./tabs/keyboard-settings";
 import { FileTreeSettings } from "./tabs/file-tree-settings";
 import { TerminalSettings } from "./tabs/terminal-settings";
+import { SettingsBreadcrumb } from "./settings-breadcrumb";
 
 const SettingsWorkbenchView = () => {
   const {
@@ -264,16 +264,25 @@ const SettingsWorkbenchView = () => {
 
   const activePanelId = `settings-panel-${activeTab}`;
   const activeTabId = `settings-tab-${activeTab}`;
+  const settingsCategories = visibleTabs.map((item) => {
+    const Icon = item.icon;
+    return {
+      id: item.id,
+      label: item.label,
+      icon: <Icon weight="duotone" />,
+      tabId: `settings-tab-${item.id}`,
+      panelId: `settings-panel-${item.id}`,
+    };
+  });
 
   const searchInput = (
-    <div ref={searchInputAnchorRef} className="w-56 shrink-0 max-[720px]:w-44 max-[520px]:w-32">
-      <Input
-        type="text"
+    <div ref={searchInputAnchorRef} className="w-full">
+      <SearchInput
         placeholder="Search settings..."
         value={searchQuery}
-        onChange={(event) => {
-          setSearchQuery(event.target.value);
-          setIsSearchDropdownOpen(event.target.value.trim().length > 0);
+        onChange={(value) => {
+          setSearchQuery(value);
+          setIsSearchDropdownOpen(value.trim().length > 0);
         }}
         onFocus={() => {
           if (searchQuery.trim()) setIsSearchDropdownOpen(true);
@@ -290,9 +299,6 @@ const SettingsWorkbenchView = () => {
           event.preventDefault();
           navigateToSearchResult(firstResult);
         }}
-        leftIcon={Search}
-        shape="pill"
-        className="w-full"
       />
     </div>
   );
@@ -300,35 +306,30 @@ const SettingsWorkbenchView = () => {
   return (
     <>
       <div className="@container/settings flex size-full min-w-0 flex-col overflow-hidden bg-background">
-        <ChromeBar region="content" emphasis="primary" className="min-w-0 bg-background">
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => handleTabChange(value as SettingsTab)}
-            className="min-w-0 flex-1 gap-0"
-          >
-            <div className="scrollbar-none min-w-0 overflow-x-auto">
-              <TabsList variant="bare" aria-label="Settings sections">
-                {visibleTabs.map((item) => {
-                  const Icon = item.icon;
-
-                  return (
-                    <TabsTrigger
-                      key={item.id}
-                      id={`settings-tab-${item.id}`}
-                      value={item.id}
-                      aria-controls={`settings-panel-${item.id}`}
-                      className="w-fit flex-none"
-                    >
-                      <Icon weight="duotone" />
-                      <span>{item.label}</span>
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-            </div>
-          </Tabs>
-          {searchInput}
-        </ChromeBar>
+        <WorkbenchPageHeader
+          breadcrumb={
+            <EditorBreadcrumb
+              filePathOverride="Settings"
+              showPath={false}
+              showDefaultActions={false}
+              extraLeftContent={
+                <SettingsBreadcrumb
+                  activeTab={activeTab}
+                  onOpenRoot={() => handleTabChange("general")}
+                />
+              }
+            />
+          }
+          search={searchInput}
+          categories={
+            <WorkbenchCategoryNav
+              items={settingsCategories}
+              value={activeTab}
+              onValueChange={handleTabChange}
+              ariaLabel="Settings sections"
+            />
+          }
+        />
 
         <ScrollArea
           orientation="vertical"
@@ -349,7 +350,7 @@ const SettingsWorkbenchView = () => {
         isOpen={isSearchDropdownOpen && searchQuery.trim().length > 0}
         anchorRef={searchInputAnchorRef}
         anchorSide="bottom"
-        anchorAlign="end"
+        anchorAlign="start"
         onClose={() => setIsSearchDropdownOpen(false)}
         matchAnchorWidth
         className="min-w-0"

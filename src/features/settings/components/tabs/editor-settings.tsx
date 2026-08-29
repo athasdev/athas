@@ -4,7 +4,7 @@ import { getAllLanguages } from "@/features/editor/utils/language-id";
 import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { FontSelector } from "../font-selector";
@@ -91,7 +91,6 @@ export const EditorSettings = () => {
             max="32"
             value={settings.fontSize}
             onChange={(val) => updateSetting("fontSize", val)}
-            className={SETTINGS_CONTROL_WIDTHS.numberCompact}
           />
         </SettingRow>
 
@@ -135,7 +134,6 @@ export const EditorSettings = () => {
             step={0.1}
             value={settings.editorLineHeight}
             onChange={(val) => updateSetting("editorLineHeight", val)}
-            className={SETTINGS_CONTROL_WIDTHS.numberCompact}
           />
         </SettingRow>
 
@@ -150,7 +148,6 @@ export const EditorSettings = () => {
             max="8"
             value={settings.tabSize}
             onChange={(val) => updateSetting("tabSize", val)}
-            className={SETTINGS_CONTROL_WIDTHS.numberCompact}
           />
         </SettingRow>
         <SettingRow
@@ -385,7 +382,6 @@ export const EditorSettings = () => {
             max="100"
             value={settings.maxOpenTabs}
             onChange={(val) => updateSetting("maxOpenTabs", val)}
-            className={SETTINGS_CONTROL_WIDTHS.numberCompact}
           />
         </SettingRow>
 

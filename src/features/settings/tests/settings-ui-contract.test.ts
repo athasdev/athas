@@ -34,6 +34,7 @@ function collectControlProps(filePath: string, tagName: "Button" | "Select") {
     shape: string | null;
     size: string | null;
     variant: string | null;
+    width: string | null;
   }> = [];
 
   const visit = (node: ts.Node) => {
@@ -57,6 +58,7 @@ function collectControlProps(filePath: string, tagName: "Button" | "Select") {
           size: getAttribute("size")?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
           variant:
             getAttribute("variant")?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
+          width: getAttribute("width")?.initializer?.getText(sourceFile).replace(/"/g, "") ?? null,
         });
       }
     }
@@ -114,6 +116,18 @@ describe("settings UI contract", () => {
     expect(controls.filter(({ className }) => className?.includes("ui-text-"))).toEqual([]);
   });
 
+  it("content-sizes selectors unless a form layout explicitly requests full width", () => {
+    const selects = settingsComponentFiles.flatMap((filePath) =>
+      collectControlProps(filePath, "Select"),
+    );
+    const widthUtility = /(^|[\s"'`])(w|min-w|max-w)-/;
+
+    expect(selects.filter(({ className }) => className && widthUtility.test(className))).toEqual(
+      [],
+    );
+    expect(selects.filter(({ width }) => width !== null && width !== "full")).toEqual([]);
+  });
+
   it("keeps controls reachable without making the settings panel horizontally scrollable", () => {
     const settingsViewSource = readFileSync(
       `${componentsDirectory}/settings-workbench-view.tsx`,
@@ -156,11 +170,11 @@ describe("settings UI contract", () => {
       "utf8",
     );
 
-    expect(settingsViewSource).toContain("<Tabs");
-    expect(settingsViewSource).toContain("<TabsList");
-    expect(settingsViewSource).toContain("<TabsTrigger");
-    expect(settingsViewSource).toContain('aria-label="Settings sections"');
-    expect(settingsViewSource).toContain("overflow-x-auto");
+    expect(settingsViewSource).toContain("<WorkbenchPageHeader");
+    expect(settingsViewSource).toContain("<WorkbenchCategoryNav");
+    expect(settingsViewSource).toContain("<SettingsBreadcrumb");
+    expect(settingsViewSource).toContain("<SearchInput");
+    expect(settingsViewSource).toContain('ariaLabel="Settings sections"');
     expect(sidebarPaneSource).not.toContain("SettingsSidebar");
     expect(modalSliceSource).not.toContain('setActiveView("settings")');
     expect(modalSliceSource).not.toContain("setIsSidebarVisible(true)");

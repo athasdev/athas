@@ -248,7 +248,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
           label: PROVIDER_REGISTRY[type].label,
         }))}
         variant="default"
-        className="w-full"
+        width="full"
       />
 
       <Tabs value={mode} onValueChange={(value) => handleModeChange(value as "form" | "string")}>

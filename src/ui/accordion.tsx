@@ -12,7 +12,7 @@ const accordionTriggerVariants = cva(
     variants: {
       variant: {
         chrome:
-          "athas-chrome-control ui-text-caption h-tab w-fit gap-chrome-tight rounded-chrome px-2 text-subtle-foreground/80 hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground",
+          "athas-chrome-control ui-text-chrome h-tab w-fit gap-chrome-tight rounded-chrome px-2 text-subtle-foreground/80 hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground",
         section:
           "ui-text-base w-full justify-between gap-2 rounded-lg px-1 py-1.5 text-foreground hover:bg-accent/40 focus-visible:bg-accent/40",
       },
