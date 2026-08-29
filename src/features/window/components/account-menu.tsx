@@ -115,15 +115,13 @@ export const AccountMenu = memo(function AccountMenu({ expanded }: AccountMenuPr
     githubAccountStatus === "connected" ? githubCurrentUser || user?.github_username : null;
   const accountName = user?.name || githubLogin || user?.email || "Account";
   const accountDetail = githubLogin ? `@${githubLogin}` : user?.email;
-  const accountAvatarUrl = isAuthenticated
-    ? getGitHubAvatarUrl(
-        {
-          login: githubLogin,
-          avatarUrl: user?.avatar_url,
-        },
-        64,
-      )
-    : undefined;
+  const accountAvatarUrl = getGitHubAvatarUrl(
+    {
+      login: githubLogin,
+      avatarUrl: user?.avatar_url,
+    },
+    64,
+  );
 
   const signedOutAccountItems: MenuItem[] = [
     {
@@ -263,13 +261,7 @@ export const AccountMenu = memo(function AccountMenu({ expanded }: AccountMenuPr
       <div ref={triggerRef} className="w-full">
         {expanded ? (
           <SidebarListItem
-            leading={
-              isAuthenticated ? (
-                <Avatar name={accountName} src={accountAvatarUrl} className="size-4" />
-              ) : (
-                <UserIcon />
-              )
-            }
+            leading={<Avatar name={accountName} src={accountAvatarUrl} className="size-4" />}
             active={isOpen}
             onClick={() => setIsOpen((open) => !open)}
             aria-expanded={isOpen}
@@ -287,11 +279,7 @@ export const AccountMenu = memo(function AccountMenu({ expanded }: AccountMenuPr
               aria-haspopup="menu"
               aria-label="Account"
             >
-              {isAuthenticated ? (
-                <Avatar name={accountName} src={accountAvatarUrl} className="size-4" />
-              ) : (
-                <UserIcon />
-              )}
+              <Avatar name={accountName} src={accountAvatarUrl} className="size-4" />
             </SidebarIconButton>
           </Tooltip>
         )}

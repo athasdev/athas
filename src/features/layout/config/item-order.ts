@@ -2,6 +2,7 @@ export const HEADER_TRAILING_ITEM_IDS = ["run-actions"] as const;
 export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "files",
   "git",
+  "review",
   "github-prs",
   "views",
   "docker",

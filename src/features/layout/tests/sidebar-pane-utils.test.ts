@@ -3,6 +3,7 @@ import {
   getActiveSidebarView,
   getSidebarPaneLevel,
   resolveSidebarPaneClick,
+  shouldOpenSidebarSubview,
 } from "../utils/sidebar-pane-utils";
 
 describe("getSidebarPaneLevel", () => {
@@ -194,5 +195,16 @@ describe("resolveSidebarPaneClick", () => {
       nextIsSidebarVisible: true,
       nextView: "views",
     });
+  });
+});
+
+describe("shouldOpenSidebarSubview", () => {
+  test("does not toggle an already open parent pane when selecting a child section", () => {
+    expect(shouldOpenSidebarSubview(true, true)).toBe(false);
+  });
+
+  test("opens the parent pane when it is hidden or another pane is active", () => {
+    expect(shouldOpenSidebarSubview(false, true)).toBe(true);
+    expect(shouldOpenSidebarSubview(true, false)).toBe(true);
   });
 });

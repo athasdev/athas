@@ -17,6 +17,30 @@ const items: ActivityNavigationItem[] = [
   },
 ];
 
+const dockerItems: ActivityNavigationItem[] = [
+  {
+    id: "docker",
+    label: "Docker",
+    icon: <span>docker icon</span>,
+    active: true,
+    onClick: () => {},
+    ariaLabel: "Docker",
+    submenuItems: [
+      {
+        id: "resources",
+        label: "Resources",
+        active: true,
+        onClick: () => {},
+      },
+      {
+        id: "compose",
+        label: "Compose",
+        onClick: () => {},
+      },
+    ],
+  },
+];
+
 describe("activity navigation", () => {
   it("uses an icon-only navigation contract in the collapsed rail", () => {
     const markup = renderToStaticMarkup(<ActivityRailNavigation items={items} />);
@@ -33,5 +57,24 @@ describe("activity navigation", () => {
     expect(markup).toContain('data-slot="activity-sidebar-navigation"');
     expect(markup).toContain(">Files</span>");
     expect(markup).toContain('data-slot="sidebar-list-item"');
+  });
+
+  it("shows the active view sections inline in the expanded sidebar", () => {
+    const markup = renderToStaticMarkup(<ActivitySidebarNavigation items={dockerItems} />);
+
+    expect(markup).toContain('data-slot="activity-sidebar-subnavigation"');
+    expect(markup).toContain('aria-label="Docker sections"');
+    expect(markup).toContain(">Resources</span>");
+    expect(markup).toContain(">Compose</span>");
+    expect(markup).toContain('aria-label="Docker: Resources"');
+    expect(markup).toContain('aria-current="page"');
+  });
+
+  it("hides inline sections when their parent view is inactive", () => {
+    const inactiveDockerItems = dockerItems.map((item) => ({ ...item, active: false }));
+    const markup = renderToStaticMarkup(<ActivitySidebarNavigation items={inactiveDockerItems} />);
+
+    expect(markup).not.toContain('data-slot="activity-sidebar-subnavigation"');
+    expect(markup).not.toContain(">Resources</span>");
   });
 });

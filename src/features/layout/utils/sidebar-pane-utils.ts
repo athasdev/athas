@@ -1,6 +1,7 @@
 export type SidebarView =
   | "files"
   | "git"
+  | "review"
   | "github-prs"
   | "views"
   | "docker"
@@ -65,4 +66,8 @@ export function resolveSidebarPaneClick(
     nextIsSidebarVisible: true,
     nextView: clickedView,
   };
+}
+
+export function shouldOpenSidebarSubview(isSidebarVisible: boolean, isParentViewActive: boolean) {
+  return !isSidebarVisible || !isParentViewActive;
 }

@@ -15,6 +15,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { type GitActivitySection, useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
@@ -22,13 +23,7 @@ import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { showAlertDialog } from "@/ui/dialog";
-import {
-  SidebarFooter,
-  SidebarIconButton,
-  SidebarTabPanels,
-  SidebarTabBar,
-  SidebarWorkspace,
-} from "@/ui/sidebar";
+import { SidebarFooter, SidebarIconButton, SidebarToolbar, SidebarWorkspace } from "@/ui/sidebar";
 import { toast } from "sonner";
 import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -78,7 +73,6 @@ interface GitFileDiffStats {
   deletions: number;
 }
 
-type GitSidebarTab = "changes" | "history";
 const GIT_VIEW_BRANCH_MANAGER_EVENT = "athas:open-git-view-branch-manager";
 type GitRemoteAction = "push" | "pull" | "fetch";
 
@@ -90,7 +84,7 @@ const REMOTE_ACTION_LABELS: Record<GitRemoteAction, { present: string; past: str
 
 type GitPaletteAction =
   | { type: "select-repository" }
-  | { type: "show-tab"; tab: GitSidebarTab }
+  | { type: "show-tab"; tab: GitActivitySection }
   | { type: "manage-branches"; tab?: "branches" | "worktrees" | "repositories" }
   | { type: "show-branch-diff" }
   | { type: "manage-remotes" }
@@ -134,10 +128,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     (state) => state.settings.rememberLastGitPanelMode,
   );
   const gitLastPanelMode = useSettingsStore((state) => state.settings.gitLastPanelMode);
-  const gitSidebarTabOrder = useSettingsStore((state) => state.settings.gitSidebarTabOrder);
   const openDiffOnClick = useSettingsStore((state) => state.settings.openDiffOnClick);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
-  const [activeTab, setActiveTab] = useState<GitSidebarTab>("changes");
+  const gitSection = useSidebarStore.use.gitSection();
+  const setGitSection = useSidebarStore.use.actions().setGitSection;
   const [historySearchQuery, setHistorySearchQuery] = useState("");
   const [historySearchScope, setHistorySearchScope] = useState<HistorySearchScope>("all");
   const [selectedHistoryCommit, setSelectedHistoryCommit] = useState<GitCommit | null>(null);
@@ -460,15 +454,15 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   useEffect(() => {
     if (!rememberLastGitPanelMode) return;
-    setActiveTab(gitLastPanelMode);
-  }, [rememberLastGitPanelMode, gitLastPanelMode]);
+    setGitSection(gitLastPanelMode);
+  }, [rememberLastGitPanelMode, gitLastPanelMode, setGitSection]);
 
   useEffect(() => {
     if (!rememberLastGitPanelMode) return;
-    if (gitLastPanelMode !== activeTab) {
-      void updateSetting("gitLastPanelMode", activeTab);
+    if (gitLastPanelMode !== gitSection) {
+      void updateSetting("gitLastPanelMode", gitSection);
     }
-  }, [activeTab, rememberLastGitPanelMode, gitLastPanelMode, updateSetting]);
+  }, [gitSection, rememberLastGitPanelMode, gitLastPanelMode, updateSetting]);
 
   const handleOpenBranchManager = useCallback(
     (tab: "branches" | "worktrees" | "repositories" = "branches") => {
@@ -509,7 +503,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
       if (detail.type === "show-tab") {
         handleBackFromHistoryCommit();
-        setActiveTab(detail.tab);
+        setGitSection(detail.tab);
         return;
       }
 
@@ -558,6 +552,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     handleOpenBranchManager,
     handleSelectRepository,
     handleShowBranchDiffList,
+    setGitSection,
   ]);
 
   useEffect(() => {
@@ -725,29 +720,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return branchDiffBranches.filter((branch) => matchesSearchQuery(query, [branch]));
   }, [branchDiffBranches, branchDiffSearchQuery]);
 
-  const gitTabOrder: GitSidebarTab[] = ["changes", "history"];
-  const gitTabs: Array<{
-    id: GitSidebarTab;
-    label: string;
-  }> = [...gitSidebarTabOrder]
-    .filter((id): id is GitSidebarTab => id === "changes" || id === "history")
-    .sort((a, b) => gitTabOrder.indexOf(a) - gitTabOrder.indexOf(b))
-    .map((id) => {
-      const tabMap: Record<GitSidebarTab, { id: GitSidebarTab; label: string }> = {
-        changes: {
-          id: "changes",
-          label: "Changes",
-        },
-        history: {
-          id: "history",
-          label: "History",
-        },
-      };
-
-      return tabMap[id];
-    })
-    .filter(Boolean);
-
   if (!activeRepoPath) {
     return (
       <>
@@ -856,14 +828,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         }
         actions={
           <>
-            {activeTab === "history" ? (
-              <GitCommitHistoryControls
-                searchQuery={historySearchQuery}
-                searchScope={historySearchScope}
-                onSearchQueryChange={setHistorySearchQuery}
-                onSearchScopeChange={setHistorySearchScope}
-              />
-            ) : null}
             <ButtonGroup ref={syncMenuAnchorRef} className="min-w-0 max-w-full">
               <Button
                 type="button"
@@ -902,46 +866,45 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           </>
         }
       >
-        <SidebarTabBar items={gitTabs} value={activeTab} onChange={setActiveTab}>
-          <SidebarTabPanels
-            className="flex-1"
-            items={[
-              {
-                id: "changes",
-                content: (
-                  <GitStatusPanel
-                    files={visibleGitFiles}
-                    fileDiffStats={fileDiffStats}
-                    onFileSelect={handleGitFileClick}
-                    onOpenFile={handleOpenOriginalFile}
-                    onViewDiff={(scope) => void handleViewWorkingTreeDiff(scope)}
-                    onShowCommitDiffPicker={handleShowCommitDiffList}
-                    onShowBranchDiffPicker={() => void handleShowBranchDiffList()}
-                    onShowStashDiffPicker={() => {
-                      setShowStashList(true);
-                      setStashSearchQuery("");
-                    }}
-                    onRefresh={refreshAfterAction}
-                    repoPath={activeRepoPath}
-                  />
-                ),
-              },
-              {
-                id: "history",
-                content: (
-                  <GitCommitHistory
-                    onSelectCommit={(commit) => void handleSelectHistoryCommit(commit)}
-                    repoPath={activeRepoPath}
-                    ahead={gitStatus.ahead}
-                    behind={gitStatus.behind}
-                    searchQuery={historySearchQuery}
-                    searchScope={historySearchScope}
-                  />
-                ),
-              },
-            ].filter((item) => gitTabs.some((tab) => tab.id === item.id))}
-          />
-
+        <div className="flex min-h-0 flex-1 flex-col">
+          {gitSection === "history" ? (
+            <SidebarToolbar className="justify-end">
+              <GitCommitHistoryControls
+                searchQuery={historySearchQuery}
+                searchScope={historySearchScope}
+                onSearchQueryChange={setHistorySearchQuery}
+                onSearchScopeChange={setHistorySearchScope}
+              />
+            </SidebarToolbar>
+          ) : null}
+          <div className="min-h-0 flex-1">
+            {gitSection === "changes" ? (
+              <GitStatusPanel
+                files={visibleGitFiles}
+                fileDiffStats={fileDiffStats}
+                onFileSelect={handleGitFileClick}
+                onOpenFile={handleOpenOriginalFile}
+                onViewDiff={(scope) => void handleViewWorkingTreeDiff(scope)}
+                onShowCommitDiffPicker={handleShowCommitDiffList}
+                onShowBranchDiffPicker={() => void handleShowBranchDiffList()}
+                onShowStashDiffPicker={() => {
+                  setShowStashList(true);
+                  setStashSearchQuery("");
+                }}
+                onRefresh={refreshAfterAction}
+                repoPath={activeRepoPath}
+              />
+            ) : (
+              <GitCommitHistory
+                onSelectCommit={(commit) => void handleSelectHistoryCommit(commit)}
+                repoPath={activeRepoPath}
+                ahead={gitStatus.ahead}
+                behind={gitStatus.behind}
+                searchQuery={historySearchQuery}
+                searchScope={historySearchScope}
+              />
+            )}
+          </div>
           <SidebarFooter>
             <GitCommitPanel
               stagedFilesCount={stagedFiles.length}
@@ -953,7 +916,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               onCommitSuccess={refreshAfterAction}
             />
           </SidebarFooter>
-        </SidebarTabBar>
+        </div>
       </SidebarWorkspace>
 
       {renderGitActionsMenu({ hasGitRepo: !!gitStatus, onRefresh: refreshAfterAction })}

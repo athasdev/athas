@@ -28,15 +28,14 @@ import { ScrollArea } from "@/ui/scroll-area";
 import { EmptyState } from "@/ui/empty";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import {
+  type DockerActivitySection,
+  useSidebarStore,
+} from "@/features/layout/stores/sidebar.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { showPromptDialog } from "@/ui/dialog";
-import {
-  SidebarSearchPopover,
-  SidebarSectionLabel,
-  SidebarTabBar,
-  SidebarWorkspace,
-} from "@/ui/sidebar";
+import { SidebarSearchPopover, SidebarSectionLabel, SidebarWorkspace } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import {
   buildDockerImage,
@@ -112,21 +111,14 @@ type DockerSection =
   | "volumes"
   | "networks"
   | "cleanup";
-type DockerTab = "resources" | "compose" | "project" | "registry";
 type DockerContainerFilter = "all" | "running" | "stopped";
 
-const dockerTabSections: Record<DockerTab, DockerSection[]> = {
+const dockerSectionGroups: Record<DockerActivitySection, DockerSection[]> = {
   resources: ["containers", "images", "cleanup", "volumes", "networks"],
   compose: ["compose"],
   project: ["project"],
   registry: ["registry"],
 };
-const dockerTabs: Array<{ id: DockerTab; label: string }> = [
-  { id: "resources", label: "Resources" },
-  { id: "compose", label: "Compose" },
-  { id: "project", label: "Project" },
-  { id: "registry", label: "Registry" },
-];
 const emptyComposeProject: DockerComposeProject = {
   workspacePath: null,
   files: [],
@@ -209,7 +201,7 @@ export function DockerSidebar() {
   const [composeProject, setComposeProject] = useState<DockerComposeProject>(emptyComposeProject);
   const [projectConfig, setProjectConfig] = useState<DockerProjectConfig>(emptyProjectConfig);
   const [query, setQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<DockerTab>("resources");
+  const activeSection = useSidebarStore.use.dockerSection();
   const [containerFilter, setContainerFilter] = useState<DockerContainerFilter>("all");
   const [collapsedSections, setCollapsedSections] = useState<Set<DockerSection>>(() => new Set());
   const [isComposeLoading, setIsComposeLoading] = useState(false);
@@ -276,17 +268,17 @@ export function DockerSidebar() {
   }, [loadProjectConfig]);
 
   const refreshDocker = useCallback(() => {
-    if (activeTab === "resources" || activeTab === "registry") {
+    if (activeSection === "resources" || activeSection === "registry") {
       void loadInventory();
       return;
     }
-    if (activeTab === "compose") {
+    if (activeSection === "compose") {
       void loadComposeProject();
       void loadInventory();
       return;
     }
     void loadProjectConfig();
-  }, [activeTab, loadComposeProject, loadInventory, loadProjectConfig]);
+  }, [activeSection, loadComposeProject, loadInventory, loadProjectConfig]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredContainers = inventory.containers.filter((container) => {
@@ -946,18 +938,18 @@ export function DockerSidebar() {
   };
 
   const isDockerDaemonReady = !isLoading && connectionError === null;
-  const isActiveTabLoading =
-    activeTab === "resources" || activeTab === "registry"
+  const isActiveSectionLoading =
+    activeSection === "resources" || activeSection === "registry"
       ? isLoading
-      : activeTab === "compose"
+      : activeSection === "compose"
         ? isComposeLoading
         : isProjectConfigLoading;
 
   const renderSection = (section: DockerSection, rows: ReactNode, filteredCount?: number) => {
     const title = section === "cleanup" ? "Cleanup" : section[0].toUpperCase() + section.slice(1);
-    const isVisible = dockerTabSections[activeTab].includes(section);
+    const isVisible = dockerSectionGroups[activeSection].includes(section);
     const isCollapsed = collapsedSections.has(section);
-    const hasSectionHeader = activeTab === "resources";
+    const hasSectionHeader = activeSection === "resources";
 
     if (!hasSectionHeader) {
       return (
@@ -1034,8 +1026,8 @@ export function DockerSidebar() {
                   </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem disabled={isActiveTabLoading} onClick={refreshDocker}>
-                  {isActiveTabLoading ? <Spinner compact /> : <Refresh />}
+                <DropdownMenuItem disabled={isActiveSectionLoading} onClick={refreshDocker}>
+                  {isActiveSectionLoading ? <Spinner compact /> : <Refresh />}
                   Refresh
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -1044,9 +1036,7 @@ export function DockerSidebar() {
         }
         className="font-sans select-none"
       >
-        <SidebarTabBar items={dockerTabs} value={activeTab} onChange={setActiveTab} />
-
-        {activeTab === "resources" && error && !connectionError ? (
+        {activeSection === "resources" && error && !connectionError ? (
           <DockerInlineError
             title="Docker action failed"
             error={error}
@@ -1055,18 +1045,18 @@ export function DockerSidebar() {
           />
         ) : null}
 
-        {activeTab === "resources" && connectionError ? (
+        {activeSection === "resources" && connectionError ? (
           <DockerUnavailableState
             error={connectionError}
             isRetrying={isLoading}
             onRetry={() => void loadInventory()}
           />
-        ) : activeTab === "resources" && isLoading ? (
+        ) : activeSection === "resources" && isLoading ? (
           <EmptyState
             layout="sidebar"
             message={<Spinner label="Loading Docker resources" showLabel compact />}
           />
-        ) : activeTab === "compose" && composeError ? (
+        ) : activeSection === "compose" && composeError ? (
           <DockerUnavailableState
             error={composeError}
             title={
@@ -1080,7 +1070,7 @@ export function DockerSidebar() {
             isRetrying={isComposeLoading}
             onRetry={() => void loadComposeProject()}
           />
-        ) : activeTab === "compose" && isComposeLoading ? (
+        ) : activeSection === "compose" && isComposeLoading ? (
           <EmptyState
             layout="sidebar"
             message={<Spinner label="Loading Docker Compose" showLabel compact />}
@@ -1585,7 +1575,7 @@ export function DockerSidebar() {
               )}
             </ScrollArea>
 
-            {activeTab === "resources" && selectedContainer ? (
+            {activeSection === "resources" && selectedContainer ? (
               <DockerContainerDetail
                 container={selectedContainer}
                 activeTab={detailTab}

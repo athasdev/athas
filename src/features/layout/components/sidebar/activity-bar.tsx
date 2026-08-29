@@ -12,6 +12,7 @@ import { useActivityBarVisibility } from "@/features/layout/hooks/use-activity-b
 import { useActivityNavigationItems } from "@/features/layout/hooks/use-activity-navigation-items";
 import { useActivityProjectCarousel } from "@/features/layout/hooks/use-activity-project-carousel";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
+import { OnboardingChecklist } from "@/features/onboarding/components/onboarding-checklist";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { AccountMenu } from "@/features/window/components/account-menu";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -33,6 +34,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
   const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
+  const openSettingsBuffer = useBufferStore.use.actions().openSettingsBuffer;
   const isExtensionsBufferActive = useBufferStore((state) => {
     const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
     return activeBuffer?.type === "extensions" || activeBuffer?.type === "extension";
@@ -178,6 +180,15 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
                 onSelectProject={handleProjectSelect}
               />
             ) : null}
+            <OnboardingChecklist
+              expanded={expanded}
+              hasProject={Boolean(carouselProject)}
+              onOpenProject={() => openProjectPicker()}
+              onStartAgent={handleNewAgent}
+              onOpenTerminal={handleNewTerminal}
+              onOpenCommandPalette={() => useUIState.getState().setIsCommandPaletteVisible(true)}
+              onOpenSettings={openSettingsBuffer}
+            />
             <DiagnosticsActivityControl expanded={expanded} />
             <AppUpdateControl expanded={expanded} />
             <AccountMenu expanded={expanded} />

@@ -18,6 +18,9 @@ describe("workspace-scoped stores", () => {
     workspaceRuntimeRegistry.activateWorkspace({ id: "workspace-a", name: "A", path: "/a" });
     useProjectStore.getState().actions.setRootFolderPath("/a");
     useSidebarStore.getState().actions.updateActivePath("/a/src/main.ts");
+    useSidebarStore.getState().actions.setGitSection("history");
+    useSidebarStore.getState().actions.setGitHubSection("actions");
+    useSidebarStore.getState().actions.setDockerSection("compose");
     useFileTreeStore.getState().actions.setExpandedPaths(new Set(["/a/src"]));
     useTerminalTabsStore.getState().actions.dispatch({
       type: "CREATE_TERMINAL",
@@ -27,6 +30,9 @@ describe("workspace-scoped stores", () => {
     workspaceRuntimeRegistry.activateWorkspace({ id: "workspace-b", name: "B", path: "/b" });
     expect(useProjectStore.getState().rootFolderPath).toBeUndefined();
     expect(useSidebarStore.getState().activePath).toBeUndefined();
+    expect(useSidebarStore.getState().gitSection).toBe("changes");
+    expect(useSidebarStore.getState().githubSection).toBe("pull-requests");
+    expect(useSidebarStore.getState().dockerSection).toBe("resources");
     expect(useFileTreeStore.getState().actions.getExpandedPaths()).toEqual(new Set());
     expect(useTerminalTabsStore.getState().terminals).toEqual([]);
 
@@ -35,6 +41,9 @@ describe("workspace-scoped stores", () => {
 
     expect(useProjectStore.getState().rootFolderPath).toBe("/a");
     expect(useSidebarStore.getState().activePath).toBe("/a/src/main.ts");
+    expect(useSidebarStore.getState().gitSection).toBe("history");
+    expect(useSidebarStore.getState().githubSection).toBe("actions");
+    expect(useSidebarStore.getState().dockerSection).toBe("compose");
     expect(useFileTreeStore.getState().actions.getExpandedPaths()).toEqual(new Set(["/a/src"]));
     expect(useTerminalTabsStore.getState().activeTerminalId).toBe("terminal-a");
   });

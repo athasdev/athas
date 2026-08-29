@@ -1,6 +1,15 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { normalizeItemOrder } from "@/features/layout/config/item-order";
-import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
+import {
+  type DockerActivitySection,
+  type GitActivitySection,
+  type GitHubActivitySection,
+  useSidebarStore,
+} from "@/features/layout/stores/sidebar.store";
+import {
+  shouldOpenSidebarSubview,
+  type SidebarView,
+} from "@/features/layout/utils/sidebar-pane-utils";
 import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
@@ -8,7 +17,9 @@ import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import {
   BoxIcon,
   ChatCircleTextIcon,
+  CloudArrowDownIcon,
   ClockCounterClockwiseIcon,
+  CubeIcon,
   ExtensionsIcon,
   FilesIcon,
   FolderOpenIcon,
@@ -17,6 +28,7 @@ import {
   GitPullRequestIcon,
   GithubLogoIcon,
   LightningIcon,
+  ListChecksIcon,
   NodesIcon,
   StackIcon as LayersIcon,
 } from "@/ui/icons";
@@ -25,6 +37,7 @@ export interface ActivityNavigationSubmenuItem {
   id: string;
   label: string;
   icon?: ReactNode;
+  active?: boolean;
   separatorBefore?: boolean;
   onClick: () => void;
 }
@@ -51,6 +64,10 @@ interface ActivityNavigationItemOptions {
   isExtensionsActive: boolean;
 }
 
+type GitNavigationAction =
+  | { type: "show-tab"; tab: GitActivitySection }
+  | { type: "manage-branches"; tab: "repositories" | "branches" | "worktrees" };
+
 function orderItems<T extends { id: string }>(items: T[], orderedIds: string[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
   const orderedItems = orderedIds
@@ -74,17 +91,26 @@ export function useActivityNavigationItems({
   const sidebarActivityItemsOrder = useSettingsStore(
     (state) => state.settings.sidebarActivityItemsOrder,
   );
+  const gitSidebarTabOrder = useSettingsStore((state) => state.settings.gitSidebarTabOrder);
+  const githubSidebarSectionOrder = useSettingsStore(
+    (state) => state.settings.githubSidebarSectionOrder,
+  );
+  const gitSection = useSidebarStore.use.gitSection();
+  const githubSection = useSidebarStore.use.githubSection();
+  const dockerSection = useSidebarStore.use.dockerSection();
+  const { setGitSection, setGitHubSection, setDockerSection } = useSidebarStore.use.actions();
   const isBufferOwnedSurfaceActive = isExtensionsActive;
   const isPrimarySidebarItemActive = isSidebarVisible && !isBufferOwnedSurfaceActive;
 
   const openGitSubview = useCallback(
-    (detail: unknown) => {
-      onViewChange("git");
+    (detail: GitNavigationAction) => {
+      if (detail.type === "show-tab") setGitSection(detail.tab);
+      if (shouldOpenSidebarSubview(isSidebarVisible, isGitViewActive)) onViewChange("git");
       window.setTimeout(() => {
         window.dispatchEvent(new CustomEvent("athas:git-palette-action", { detail }));
       }, 0);
     },
-    [onViewChange],
+    [isGitViewActive, isSidebarVisible, onViewChange, setGitSection],
   );
 
   const openGitHubSubview = useCallback(
@@ -95,7 +121,10 @@ export function useActivityNavigationItems({
         actions: "showGitHubActions",
       } as const;
 
-      onViewChange("github-prs");
+      setGitHubSection(section);
+      if (shouldOpenSidebarSubview(isSidebarVisible, isGitHubPRsViewActive)) {
+        onViewChange("github-prs");
+      }
       void (async () => {
         const settingKey = settingBySection[section];
         const settingsStore = useSettingsStore.getState();
@@ -111,8 +140,55 @@ export function useActivityNavigationItems({
         }, 0);
       })();
     },
-    [onViewChange],
+    [isGitHubPRsViewActive, isSidebarVisible, onViewChange, setGitHubSection],
   );
+
+  const openDockerSubview = useCallback(
+    (section: DockerActivitySection) => {
+      setDockerSection(section);
+      if (shouldOpenSidebarSubview(isSidebarVisible, activeSidebarView === "docker")) {
+        onViewChange("docker");
+      }
+    },
+    [activeSidebarView, isSidebarVisible, onViewChange, setDockerSection],
+  );
+
+  const gitSectionItems = useMemo(
+    () =>
+      gitSidebarTabOrder
+        .filter((section): section is GitActivitySection =>
+          ["changes", "history"].includes(section),
+        )
+        .map((section) => ({
+          id: section,
+          label: section === "changes" ? "Changes" : "History",
+          icon: section === "changes" ? <GitDiffIcon /> : <ClockCounterClockwiseIcon />,
+          active: gitSection === section,
+          onClick: () => openGitSubview({ type: "show-tab", tab: section }),
+        })),
+    [gitSection, gitSidebarTabOrder, openGitSubview],
+  );
+
+  const githubSectionItems = useMemo(() => {
+    const labels: Record<GitHubActivitySection, string> = {
+      "pull-requests": "Pull Requests",
+      issues: "Issues",
+      actions: "Actions",
+    };
+    const icons: Record<GitHubActivitySection, ReactNode> = {
+      "pull-requests": <GitPullRequestIcon />,
+      issues: <ChatCircleTextIcon />,
+      actions: <LightningIcon />,
+    };
+
+    return githubSidebarSectionOrder.map((section) => ({
+      id: section,
+      label: labels[section],
+      icon: icons[section],
+      active: githubSection === section,
+      onClick: () => openGitHubSubview(section),
+    }));
+  }, [githubSection, githubSidebarSectionOrder, openGitHubSubview]);
 
   const items = useMemo<ActivityNavigationItem[]>(
     () => [
@@ -140,38 +216,51 @@ export function useActivityNavigationItems({
               ariaLabel: "Git Source Control",
               shortcut: "Mod+Shift+G",
               submenuItems: [
-                {
-                  id: "changes",
-                  label: "Changes",
-                  icon: <GitDiffIcon />,
-                  onClick: () => openGitSubview({ type: "show-tab", tab: "changes" }),
-                },
-                {
-                  id: "history",
-                  label: "History",
-                  icon: <ClockCounterClockwiseIcon />,
-                  onClick: () => openGitSubview({ type: "show-tab", tab: "history" }),
-                },
+                ...gitSectionItems,
                 {
                   id: "repositories",
                   label: "Repositories",
                   icon: <FolderOpenIcon />,
                   separatorBefore: true,
-                  onClick: () => openGitSubview({ type: "manage-branches", tab: "repositories" }),
+                  onClick: () =>
+                    openGitSubview({
+                      type: "manage-branches",
+                      tab: "repositories",
+                    }),
                 },
                 {
                   id: "branches",
                   label: "Branches",
                   icon: <GitBranchIcon />,
-                  onClick: () => openGitSubview({ type: "manage-branches", tab: "branches" }),
+                  onClick: () =>
+                    openGitSubview({
+                      type: "manage-branches",
+                      tab: "branches",
+                    }),
                 },
                 {
                   id: "worktrees",
                   label: "Worktrees",
                   icon: <NodesIcon />,
-                  onClick: () => openGitSubview({ type: "manage-branches", tab: "worktrees" }),
+                  onClick: () =>
+                    openGitSubview({
+                      type: "manage-branches",
+                      tab: "worktrees",
+                    }),
                 },
               ],
+            } satisfies ActivityNavigationItem,
+          ]
+        : []),
+      ...(coreFeatures.git
+        ? [
+            {
+              id: "review",
+              label: "Review",
+              icon: <ListChecksIcon />,
+              active: isPrimarySidebarItemActive && activeSidebarView === "review",
+              onClick: () => onViewChange("review"),
+              ariaLabel: "Review code changes",
             } satisfies ActivityNavigationItem,
           ]
         : []),
@@ -184,26 +273,7 @@ export function useActivityNavigationItems({
               active: isPrimarySidebarItemActive && isGitHubPRsViewActive,
               onClick: () => onViewChange("github-prs"),
               ariaLabel: "GitHub",
-              submenuItems: [
-                {
-                  id: "pull-requests",
-                  label: "Pull Requests",
-                  icon: <GitPullRequestIcon />,
-                  onClick: () => openGitHubSubview("pull-requests"),
-                },
-                {
-                  id: "issues",
-                  label: "Issues",
-                  icon: <ChatCircleTextIcon />,
-                  onClick: () => openGitHubSubview("issues"),
-                },
-                {
-                  id: "actions",
-                  label: "Actions",
-                  icon: <LightningIcon />,
-                  onClick: () => openGitHubSubview("actions"),
-                },
-              ],
+              submenuItems: githubSectionItems,
             } satisfies ActivityNavigationItem,
           ]
         : []),
@@ -224,6 +294,36 @@ export function useActivityNavigationItems({
               active: isPrimarySidebarItemActive && activeSidebarView === "docker",
               onClick: () => onViewChange("docker"),
               ariaLabel: "Docker",
+              submenuItems: [
+                {
+                  id: "resources",
+                  label: "Resources",
+                  icon: <CubeIcon />,
+                  active: dockerSection === "resources",
+                  onClick: () => openDockerSubview("resources"),
+                },
+                {
+                  id: "compose",
+                  label: "Compose",
+                  icon: <NodesIcon />,
+                  active: dockerSection === "compose",
+                  onClick: () => openDockerSubview("compose"),
+                },
+                {
+                  id: "project",
+                  label: "Project",
+                  icon: <FolderOpenIcon />,
+                  active: dockerSection === "project",
+                  onClick: () => openDockerSubview("project"),
+                },
+                {
+                  id: "registry",
+                  label: "Registry",
+                  icon: <CloudArrowDownIcon />,
+                  active: dockerSection === "registry",
+                  onClick: () => openDockerSubview("registry"),
+                },
+              ],
             } satisfies ActivityNavigationItem,
           ]
         : []),
@@ -252,14 +352,17 @@ export function useActivityNavigationItems({
       coreFeatures.docker,
       coreFeatures.git,
       coreFeatures.github,
+      dockerSection,
       extensionViews,
+      githubSectionItems,
+      gitSectionItems,
       isExtensionsActive,
       isGitHubPRsViewActive,
       isGitViewActive,
       isPrimarySidebarItemActive,
       onOpenExtensions,
+      openDockerSubview,
       onViewChange,
-      openGitHubSubview,
       openGitSubview,
     ],
   );

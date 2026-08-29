@@ -5,6 +5,7 @@ import {
   GitBranchIcon as GitBranch,
   GitPullRequestIcon as GitPullRequest,
   ListBulletsIcon as ListBullets,
+  ListChecksIcon as ListChecks,
   PackageIcon as Package,
   MagnifyingGlassIcon as Search,
   StackIcon as Views,
@@ -26,7 +27,7 @@ interface NavigationActionsParams {
   setIsQuickOpenVisible: (v: boolean) => void;
   openCommandPaletteView?: (view: "outline") => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
-  coreFeatures: { outline: boolean };
+  coreFeatures: { git: boolean; outline: boolean };
   onClose: () => void;
 }
 
@@ -82,6 +83,22 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
         onClose();
       },
     },
+    ...(coreFeatures.git
+      ? [
+          {
+            id: "view-show-review",
+            label: "View: Show Review",
+            description: "Review collected working-tree changes and commits",
+            icon: <ListChecks />,
+            category: "Navigation",
+            action: () => {
+              setIsSidebarVisible(true);
+              setActiveView("review");
+              onClose();
+            },
+          } satisfies Action,
+        ]
+      : []),
     {
       id: "view-show-views",
       label: "View: Show Views",

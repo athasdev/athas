@@ -6,12 +6,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import {
-  SidebarIconButton,
-  SidebarListItem,
-  SidebarListMenuItem,
-  SidebarMenuContent,
-} from "@/ui/sidebar";
+import { SidebarIconButton, SidebarListItem, SidebarMenuContent } from "@/ui/sidebar";
+import { Separator } from "@/ui/separator";
 import Tooltip from "@/ui/tooltip";
 
 function ActivityNavigationMenu({ item }: { item: ActivityNavigationItem }) {
@@ -70,30 +66,43 @@ function ActivityNavigationList({
           );
         }
 
-        return item.submenuItems?.length ? (
-          <SidebarListMenuItem
-            key={item.id}
-            active={item.active}
-            leading={item.icon}
-            onClick={item.onClick}
-            aria-label={item.ariaLabel}
-            aria-current={item.active ? "page" : undefined}
-            menuLabel={`Choose ${item.label} view`}
-            menu={<ActivityNavigationMenu item={item} />}
-          >
-            {item.label}
-          </SidebarListMenuItem>
-        ) : (
-          <SidebarListItem
-            key={item.id}
-            active={item.active}
-            leading={item.icon}
-            onClick={item.onClick}
-            aria-label={item.ariaLabel}
-            aria-current={item.active ? "page" : undefined}
-          >
-            {item.label}
-          </SidebarListItem>
+        return (
+          <div key={item.id} className="flex w-full min-w-0 flex-col gap-chrome-tight">
+            <SidebarListItem
+              active={item.active}
+              leading={item.icon}
+              onClick={item.onClick}
+              aria-label={item.ariaLabel}
+              aria-current={item.active ? "page" : undefined}
+            >
+              {item.label}
+            </SidebarListItem>
+            {item.active && item.submenuItems?.length ? (
+              <div
+                data-slot="activity-sidebar-subnavigation"
+                role="group"
+                aria-label={`${item.label} sections`}
+                className="flex w-full min-w-0 flex-col gap-chrome-tight pl-4"
+              >
+                {item.submenuItems.map((submenuItem) => (
+                  <Fragment key={submenuItem.id}>
+                    {submenuItem.separatorBefore ? (
+                      <Separator className="my-chrome-tight opacity-60" />
+                    ) : null}
+                    <SidebarListItem
+                      active={submenuItem.active}
+                      leading={submenuItem.icon}
+                      onClick={submenuItem.onClick}
+                      aria-label={`${item.label}: ${submenuItem.label}`}
+                      aria-current={submenuItem.active ? "page" : undefined}
+                    >
+                      {submenuItem.label}
+                    </SidebarListItem>
+                  </Fragment>
+                ))}
+              </div>
+            ) : null}
+          </div>
         );
       })}
     </nav>
