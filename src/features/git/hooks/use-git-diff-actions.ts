@@ -2,27 +2,19 @@ import { useCallback, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { showAlertDialog } from "@/ui/dialog";
 import { getCommitDiff, getFileDiff, getRefDiff, getStashDiff } from "../api/git-diff-api";
-import {
-  loadWorkingTreeDiffsProgressively,
-  type WorkingTreeDiffEntry,
-  type WorkingTreeDiffScope,
+import type {
+  WorkingTreeDiffEntry,
+  WorkingTreeDiffScope,
 } from "../services/working-tree-diff-loader";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitCommit, GitDiff, GitFile } from "../types/git.types";
 import { countDiffStats } from "../utils/git-diff-helpers";
 import { createSingleFileWorkingTreeDiff } from "../utils/working-tree-multi-diff";
-
-const WORKING_TREE_TITLES: Record<WorkingTreeDiffScope, string> = {
-  all: "Uncommitted Changes",
-  unstaged: "Unstaged Changes",
-  staged: "Staged Changes",
-};
-
-const WORKING_TREE_EMPTY_LABELS: Record<WorkingTreeDiffScope, string> = {
-  all: "tracked changes",
-  unstaged: "unstaged tracked changes",
-  staged: "staged changes",
-};
+import {
+  openWorkingTreeDiffBuffer,
+  WORKING_TREE_EMPTY_LABELS,
+  WORKING_TREE_TITLES,
+} from "../utils/open-working-tree-diff-buffer";
 
 function openDiffBuffer(
   virtualPath: string,
@@ -165,30 +157,10 @@ export function useGitDiffActions({
           return;
         }
 
-        const title = WORKING_TREE_TITLES[scope];
-        const multiDiff: MultiFileDiff = {
-          title,
+        openWorkingTreeDiffBuffer({
           repoPath: activeRepoPath,
-          commitHash: "working-tree",
-          files: [],
-          totalFiles: 0,
-          totalAdditions: 0,
-          totalDeletions: 0,
-          fileKeys: [],
-          isLoading: true,
-          indexingProgress: {
-            processed: 0,
-            total: diffEntries.length,
-            label: "Indexing",
-          },
-        };
-        const bufferId = openDiffBuffer(`diff://working-tree/${scope}`, title, multiDiff);
-
-        void loadWorkingTreeDiffsProgressively({
-          repoPath: activeRepoPath,
-          bufferId,
-          title,
-          diffEntries,
+          files: diffEntries.map(([, file]) => file),
+          scope,
         });
       } catch (error) {
         console.error("Error getting working tree diff:", error);

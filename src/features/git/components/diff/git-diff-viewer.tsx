@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { ReviewHunkSession } from "@/features/review/components/review-hunk-session";
 import { useDiffData } from "../../hooks/use-git-diff-data";
 import {
   ViewerErrorState,
@@ -26,6 +27,9 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
   }, [rawDiffData]);
 
   if (multiFileDiff) {
+    if (multiFileDiff.reviewSession) {
+      return <ReviewHunkSession multiDiff={multiFileDiff} />;
+    }
     return <GitDiffEditorStack multiDiff={multiFileDiff} />;
   }
 

@@ -118,4 +118,9 @@ export interface MultiFileDiff {
     total: number;
     label?: string;
   };
+  reviewSession?: {
+    id: string;
+    sourceKind: "working-tree" | "commit";
+    sourceFingerprint?: string;
+  };
 }

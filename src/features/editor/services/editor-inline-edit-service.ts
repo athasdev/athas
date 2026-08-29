@@ -15,7 +15,13 @@ const HOSTED_INLINE_EDIT_PROVIDER_ID = "openrouter";
 const DEFAULT_INLINE_EDIT_INSTRUCTION = "Improve this code while preserving behavior.";
 
 export interface InlineEditRequest {
-  feature?: "inline-edit" | "commit-message" | "github-draft" | "chat-title";
+  feature?:
+    | "inline-edit"
+    | "commit-message"
+    | "github-draft"
+    | "chat-title"
+    | "review-summary"
+    | "review-insight";
   provider?: string;
   model: string;
   beforeSelection: string;
