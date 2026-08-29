@@ -35,6 +35,8 @@ const PasswordPromptDialog = ({
 
   if (!isOpen || !connection) return null;
 
+  const connectionAddress = `${connection.username ? `${connection.username}@` : ""}${connection.host}:${connection.port}`;
+
   const handleConnect = async () => {
     if (!password.trim()) {
       setErrorMessage("Password is required");
@@ -92,7 +94,7 @@ const PasswordPromptDialog = ({
         <p className="ui-text-sm text-subtle-foreground">
           Enter the password for{" "}
           <span className="font-medium text-foreground">{connection.name}</span> (
-          {connection.username}@{connection.host}:{connection.port})
+          {connectionAddress})
         </p>
 
         <Field data-invalid={Boolean(errorMessage)}>

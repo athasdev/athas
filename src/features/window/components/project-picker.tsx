@@ -1,5 +1,6 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { open } from "@tauri-apps/plugin-dialog";
 import {
   ArrowLeftIcon as ArrowLeft,
   FolderIcon as Folder,
@@ -18,11 +19,15 @@ import { useRecentFoldersStore } from "@/features/file-system/stores/recent-fold
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders.types";
 import { showPromptDialog } from "@/ui/dialog";
-import ConnectionForm from "@/features/remote/components/connection-form";
+import ConnectionForm, {
+  hasValidRemoteEndpoint,
+  isRemoteConnectionFormValid,
+} from "@/features/remote/components/connection-form";
 import PasswordPromptDialog from "@/features/remote/components/password-prompt-dialog";
 import {
   connectRemoteConnection,
   loadRemoteConnections,
+  saveAndConnectRemoteConnection,
   testRemoteConnection,
 } from "@/features/remote/services/remote-connection-actions";
 import type {
@@ -284,13 +289,25 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
     setRemoteTestMessage("");
   };
 
-  const isRemoteFormValid =
-    remoteFormData.name.trim() && remoteFormData.host.trim() && remoteFormData.username.trim();
+  const handleChooseRemoteKey = async () => {
+    const selectedPath = await open({
+      title: "Choose a private key",
+      multiple: false,
+      directory: false,
+    });
+
+    if (typeof selectedPath === "string") {
+      updateRemoteFormData({ keyPath: selectedPath });
+    }
+  };
+
+  const canTestRemoteConnection = hasValidRemoteEndpoint(remoteFormData);
+  const isRemoteFormValid = isRemoteConnectionFormValid(remoteFormData);
 
   const handleTestRemoteConnection = async () => {
-    if (!remoteFormData.host.trim() || !remoteFormData.username.trim()) {
+    if (!remoteFormData.host.trim()) {
       setRemoteTestStatus("error");
-      setRemoteTestMessage("Host and username are required to test.");
+      setRemoteTestMessage("Host is required to test.");
       return;
     }
 
@@ -323,19 +340,17 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
     setRemoteErrorMessage("");
 
     try {
-      await connectionStore.saveConnection({
+      await saveAndConnectRemoteConnection({
         id: `conn-${Date.now()}`,
         ...remoteFormData,
+        isConnected: false,
       });
       await loadConnections();
-      setRemoteValidationStatus("valid");
-      window.setTimeout(() => {
-        handleBackToPicker();
-      }, 600);
+      onClose();
     } catch (error) {
-      console.error("Failed to save connection:", error);
+      console.error("Failed to save and connect:", error);
       setRemoteValidationStatus("invalid");
-      setRemoteErrorMessage("Failed to save connection. Please try again.");
+      setRemoteErrorMessage(getFriendlyRemoteError(error));
     } finally {
       setIsRemoteSaving(false);
     }
@@ -419,9 +434,10 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
       <Command
         isVisible={isOpen}
         onClose={onClose}
+        className={commandStep === "addRemote" ? "w-[min(44rem,calc(100vw-2rem))]" : undefined}
         title={
           commandStep === "addRemote"
-            ? "New Remote Connection"
+            ? "Add Remote Connection"
             : commandStep === "newProject"
               ? "New Project"
               : "Open Project"
@@ -449,7 +465,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Server className="shrink-0 text-subtle-foreground" />
               <span className="min-w-0 truncate font-sans ui-text-base font-medium text-foreground">
-                New Remote Connection
+                Add Remote Connection
               </span>
             </div>
           </CommandHeader>
@@ -538,7 +554,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
                               ? "Connecting..."
                               : statusMap[connection.id] === "error"
                                 ? "Connection failed"
-                                : `${connection.username}@${connection.host}`}
+                                : `${connection.username ? `${connection.username}@` : ""}${connection.host}`}
                           </span>
                         </>
                       }
@@ -603,7 +619,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
             ) : null}
           </CommandList>
         ) : (
-          <CommandList contentClassName="p-3">
+          <CommandList contentClassName="p-4">
             <ConnectionForm
               formId="project-picker-add-remote-form"
               idPrefix="project-picker-remote"
@@ -615,9 +631,10 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
               errorMessage={remoteErrorMessage}
               testStatus={remoteTestStatus}
               testMessage={remoteTestMessage}
-              disabled={isRemoteSaving}
+              disabled={isRemoteSaving || isRemoteTesting}
               nameInputRef={remoteNameInputRef}
               onSubmit={() => void handleSaveRemoteConnection()}
+              onChooseKey={() => void handleChooseRemoteKey()}
             />
           </CommandList>
         )}
@@ -645,18 +662,16 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
           </CommandFooter>
         ) : (
           <CommandFooter>
-            <div className="flex w-full justify-end gap-2">
-              <Button type="button" onClick={onClose} variant="ghost">
-                Cancel
-              </Button>
+            <div className="ml-auto flex items-center gap-1.5">
               <Button
                 type="button"
-                onClick={() => void handleTestRemoteConnection()}
                 variant="ghost"
-                disabled={isRemoteTesting}
+                shape="pill"
+                onClick={() => void handleTestRemoteConnection()}
+                disabled={!canTestRemoteConnection || isRemoteTesting || isRemoteSaving}
               >
                 {isRemoteTesting ? (
-                  <Spinner label="Testing" showLabel compact />
+                  <Spinner label="Testing connection" showLabel compact />
                 ) : (
                   "Test Connection"
                 )}
@@ -664,10 +679,14 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
               <Button
                 type="submit"
                 form="project-picker-add-remote-form"
-                variant="accent"
-                disabled={!isRemoteFormValid || isRemoteSaving}
+                shape="pill"
+                disabled={!isRemoteFormValid || isRemoteSaving || isRemoteTesting}
               >
-                {isRemoteSaving ? "Saving..." : "Save Connection"}
+                {isRemoteSaving ? (
+                  <Spinner label="Connecting" showLabel compact />
+                ) : (
+                  "Save & Connect"
+                )}
               </Button>
             </div>
           </CommandFooter>

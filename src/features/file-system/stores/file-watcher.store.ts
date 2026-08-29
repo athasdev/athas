@@ -14,6 +14,10 @@ const createFileWatcherStore = () =>
       actions: {
         // Set the project root and start watching it
         setProjectRoot: async (path: string) => {
+          if (!path.trim()) {
+            return;
+          }
+
           try {
             await invoke("set_project_root", { path });
           } catch (error) {

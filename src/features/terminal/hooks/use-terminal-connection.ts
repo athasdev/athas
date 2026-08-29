@@ -53,6 +53,7 @@ export function useTerminalConnection({
   const initialCommandSentForConnectionRef = useRef<string | null>(null);
   const onTerminalExitRef = useRef(onTerminalExit);
   const lastExitInfoRef = useRef<{ exitCode?: number | null; signal?: string | null } | null>(null);
+  const hadTerminalErrorRef = useRef(false);
   const lastSizeRef = useRef<TerminalSize | null>(null);
   const queuedOutputBytesRef = useRef(0);
   const outputPausedRef = useRef(false);
@@ -132,6 +133,7 @@ export function useTerminalConnection({
   useEffect(() => {
     currentConnectionIdRef.current = connectionId ?? null;
     lastExitInfoRef.current = null;
+    hadTerminalErrorRef.current = false;
     lastSizeRef.current = null;
     queuedOutputBytesRef.current = 0;
     outputPausedRef.current = false;
@@ -193,6 +195,7 @@ export function useTerminalConnection({
       }
 
       if (event.event === "error") {
+        hadTerminalErrorRef.current = true;
         terminal.writeln(`\r\n\x1b[31mError: ${event.message}\x1b[0m`);
         return;
       }
@@ -204,6 +207,11 @@ export function useTerminalConnection({
 
       void closeTerminalConnection({ connectionId, remoteConnectionId }).catch(() => {});
       releaseTerminalEventChannel(connectionId);
+
+      if (hadTerminalErrorRef.current) {
+        terminal.writeln("\x1b[90mOpen a new terminal tab or close this one manually.\x1b[0m");
+        return;
+      }
 
       const exitCode = lastExitInfoRef.current?.exitCode;
       const signal = lastExitInfoRef.current?.signal;

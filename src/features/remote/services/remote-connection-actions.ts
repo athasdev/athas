@@ -18,10 +18,26 @@ export async function connectRemoteConnection(
 
   const { handleOpenRemoteProject } = useFileSystemStore.getState();
   if (handleOpenRemoteProject) {
-    await handleOpenRemoteProject(connection.id, connection.name);
+    const opened = await handleOpenRemoteProject(connection.id, connection.name);
+    if (!opened) {
+      throw new Error("Failed to open remote workspace.");
+    }
   }
 
   toast.success(`Connected to ${connection.name}`);
+}
+
+export async function saveAndConnectRemoteConnection(connection: RemoteConnection): Promise<void> {
+  try {
+    await connectionStore.saveConnection(connection);
+    await connectRemoteConnection(connection);
+  } catch (error) {
+    await Promise.allSettled([
+      invoke("ssh_disconnect_only", { connectionId: connection.id }),
+      connectionStore.deleteConnection(connection.id),
+    ]);
+    throw error;
+  }
 }
 
 export async function testRemoteConnection(connection: {

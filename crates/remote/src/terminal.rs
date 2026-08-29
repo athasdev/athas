@@ -12,6 +12,8 @@ use std::{
 use tauri::ipc::Channel as TauriChannel;
 use uuid::Uuid;
 
+const MAX_TRANSIENT_READ_FAILURES: u8 = 10;
+
 pub(super) async fn create_remote_terminal(
    host: String,
    port: u16,
@@ -169,6 +171,7 @@ fn spawn_terminal_reader(
 ) {
    thread::spawn(move || {
       let mut buffer = vec![0u8; 65536];
+      let mut transient_read_failures = 0;
 
       loop {
          if !reader_control.wait_until_resumed() {
@@ -210,6 +213,7 @@ fn spawn_terminal_reader(
                break;
             }
             Ok((n, false, _, _)) => {
+               transient_read_failures = 0;
                if on_event
                   .send(TerminalEvent::Output {
                      data: buffer[..n].to_vec(),
@@ -227,6 +231,13 @@ fn spawn_terminal_reader(
                }
                thread::sleep(Duration::from_millis(10));
             }
+            Err((kind, false, _, _, error))
+               if is_transient_read_error(kind, &error)
+                  && transient_read_failures < MAX_TRANSIENT_READ_FAILURES =>
+            {
+               transient_read_failures += 1;
+               thread::sleep(Duration::from_millis(25));
+            }
             Err((_, _, _, _, error)) => {
                let _ = on_event.send(TerminalEvent::Error { message: error });
                let _ = on_event.send(TerminalEvent::Closed);
@@ -241,6 +252,10 @@ fn spawn_terminal_reader(
    });
 }
 
+fn is_transient_read_error(kind: std::io::ErrorKind, message: &str) -> bool {
+   kind == std::io::ErrorKind::WouldBlock || message.eq_ignore_ascii_case("transport read")
+}
+
 fn remote_exit_status(channel: &ssh2::Channel) -> (Option<u32>, Option<String>) {
    let exit_code = channel
       .exit_status()
@@ -251,4 +266,25 @@ fn remote_exit_status(channel: &ssh2::Channel) -> (Option<u32>, Option<String>) 
       .ok()
       .and_then(|details| details.exit_signal);
    (exit_code, signal)
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn retries_non_blocking_and_transport_read_errors() {
+      assert!(is_transient_read_error(
+         std::io::ErrorKind::WouldBlock,
+         "operation would block"
+      ));
+      assert!(is_transient_read_error(
+         std::io::ErrorKind::Other,
+         "transport read"
+      ));
+      assert!(!is_transient_read_error(
+         std::io::ErrorKind::ConnectionReset,
+         "connection reset"
+      ));
+   }
 }
