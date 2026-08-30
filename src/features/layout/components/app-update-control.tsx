@@ -33,7 +33,7 @@ export function AppUpdateControl() {
       },
       {
         id: "release-notes",
-        label: "View Release Notes",
+        label: "View release notes",
         icon: <FileTextIcon />,
         onClick: onViewReleaseNotes,
         disabled: updateBusy,
