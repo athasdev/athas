@@ -1,5 +1,5 @@
+import { ExtensionSparkline } from "@/extensions/ui/components/extension-sparkline";
 import { Progress, ProgressLabel, ProgressValue } from "@/ui/progress";
-import { Sparkline } from "@/ui/sparkline";
 import type { ExtensionViewNode, ExtensionViewTone } from "../types/extension-view";
 
 type SparklineNode = Extract<ExtensionViewNode, { type: "sparkline" }>;
@@ -20,7 +20,7 @@ export function ExtensionViewSparkline({ node }: { node: SparklineNode }) {
           <span className="shrink-0 tabular-nums text-subtle-foreground">{node.detail}</span>
         ) : null}
       </div>
-      <Sparkline
+      <ExtensionSparkline
         values={node.values}
         label={`${node.label}: ${valueSummary}`}
         tone={chartTone(node.tone)}

@@ -2,7 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import { cn } from "@/utils/cn";
 
-const sparklineVariants = cva("h-8 w-full overflow-visible", {
+const extensionSparklineVariants = cva("h-8 w-full overflow-visible", {
   variants: {
     tone: {
       default: "text-foreground/65",
@@ -40,21 +40,21 @@ function sparklinePath(values: number[]): string {
     .join(" ");
 }
 
-interface SparklineProps
+interface ExtensionSparklineProps
   extends
     Omit<ComponentProps<"svg">, "children" | "values">,
-    VariantProps<typeof sparklineVariants> {
+    VariantProps<typeof extensionSparklineVariants> {
   values: number[];
   label: string;
 }
 
-export function Sparkline({
+export function ExtensionSparkline({
   values,
   label,
   tone = "default",
   className,
   ...props
-}: SparklineProps) {
+}: ExtensionSparklineProps) {
   return (
     <svg
       viewBox="0 0 100 32"
@@ -62,7 +62,7 @@ export function Sparkline({
       role="img"
       aria-label={label}
       data-slot="sparkline"
-      className={cn(sparklineVariants({ tone }), className)}
+      className={cn(extensionSparklineVariants({ tone }), className)}
       {...props}
     >
       <title>{label}</title>
