@@ -224,7 +224,7 @@ function ComboboxActionItem({
     <button
       data-slot="combobox-action-item"
       type={type}
-      className={cn(menuItemVariants(), "hover:bg-accent active:scale-press", className)}
+      className={cn(menuItemVariants(), "hover:bg-accent", className)}
       {...props}
     />
   );

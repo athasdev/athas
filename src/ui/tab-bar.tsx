@@ -188,7 +188,7 @@ export interface TabItemProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const tabItemVariants = cva(
-  "group/tab ui-text-chrome relative isolate flex h-tab min-h-tab min-w-20 max-w-tab-max w-fit shrink-0 select-none items-center gap-chrome-loose whitespace-nowrap rounded-chrome border-0 bg-transparent pr-6 pl-2 text-subtle-foreground outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-fast ease-smooth active:scale-100 before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-transparent before:content-['']",
+  "group/tab ui-text-chrome relative isolate flex h-tab min-h-tab min-w-20 max-w-tab-max w-fit shrink-0 select-none items-center gap-chrome-loose whitespace-nowrap rounded-chrome border-0 bg-transparent pr-6 pl-2 text-subtle-foreground outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-fast ease-smooth before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-transparent before:content-['']",
   {
     variants: {
       active: {

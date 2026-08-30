@@ -54,7 +54,7 @@ const toggleGroupVariants = cva(
 );
 
 const toggleGroupItemVariants = cva(
-  "inline-flex min-h-6 shrink-0 items-center justify-center gap-1 rounded-md px-2.5 font-sans ui-text-sm text-subtle-foreground outline-none transition-[transform,background-color,color] duration-fast ease-smooth hover:bg-accent/50 hover:text-foreground active:scale-press focus-visible:ring-2 focus-visible:ring-primary/20 data-disabled:pointer-events-none data-disabled:opacity-50 data-pressed:bg-accent/80 data-pressed:text-foreground",
+  "inline-flex min-h-6 shrink-0 items-center justify-center gap-1 rounded-md px-2.5 font-sans ui-text-sm text-subtle-foreground outline-none transition-[background-color,color] duration-fast ease-smooth hover:bg-accent/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/20 data-disabled:pointer-events-none data-disabled:opacity-50 data-pressed:bg-accent/80 data-pressed:text-foreground",
   {
     variants: {
       variant: {

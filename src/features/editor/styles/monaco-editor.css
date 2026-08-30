@@ -555,17 +555,12 @@
   outline: none;
   transition:
     background-color var(--app-duration-fast) var(--app-ease-smooth),
-    color var(--app-duration-fast) var(--app-ease-smooth),
-    transform var(--app-duration-fast) var(--app-ease-smooth);
+    color var(--app-duration-fast) var(--app-ease-smooth);
 }
 
 .monaco-editor-shell .peekview-widget .head .peekview-actions .action-label:hover {
   background: var(--athas-monaco-widget-hover);
   color: var(--foreground) !important;
-}
-
-.monaco-editor-shell .peekview-widget .head .peekview-actions .action-label:active {
-  transform: scale(var(--app-press-scale));
 }
 
 .monaco-editor-shell .peekview-widget .head .peekview-actions .action-label:focus-visible {

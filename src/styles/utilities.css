@@ -22,10 +22,6 @@
   transition-duration: var(--app-duration-normal);
 }
 
-@utility scale-press {
-  scale: var(--app-press-scale);
-}
-
 @utility scrollbar-none {
   &::-webkit-scrollbar {
     display: none !important;

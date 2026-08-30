@@ -285,17 +285,12 @@
   box-shadow: none;
   transition:
     background-color var(--app-duration-fast) var(--app-ease-smooth),
-    color var(--app-duration-fast) var(--app-ease-smooth),
-    transform var(--app-duration-fast) var(--app-ease-smooth);
+    color var(--app-duration-fast) var(--app-ease-smooth);
 }
 
 .github-markdown-floating-toolbar button:hover {
   background: var(--accent);
   color: var(--foreground);
-}
-
-.github-markdown-floating-toolbar button:active {
-  transform: scale(var(--app-press-scale));
 }
 
 .github-markdown-floating-toolbar button[data-state="on"],

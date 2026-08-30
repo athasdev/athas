@@ -143,7 +143,6 @@
     --app-duration-normal: 200ms;
     --app-ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
     --app-ease-in-out: cubic-bezier(0.66, 0, 0.34, 1);
-    --app-press-scale: 1;
     --app-muted-foreground: var(--muted-foreground);
     --app-subtle-foreground: var(--subtle-foreground);
     --app-primary: var(--primary);
