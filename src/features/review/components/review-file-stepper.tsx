@@ -4,6 +4,7 @@ import { memo, useEffect, useMemo } from "react";
 import type { FileNavigatorItem } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { Button } from "@/ui/button";
 import { Kbd } from "@/ui/kbd";
+import { ProgressCircle } from "@/ui/progress";
 import { quickTransition } from "@/utils/motion";
 
 interface ReviewFileStepperProps {
@@ -36,29 +37,13 @@ function isEditableTarget(target: EventTarget | null) {
 }
 
 function ReviewFileProgress({ current, total }: { current: number; total: number }) {
-  const progress = total > 0 ? current / total : 0;
-
   return (
     <span
       className="inline-flex shrink-0 items-center gap-1.5"
       role="status"
       aria-label={`File ${current} of ${total}`}
     >
-      <svg viewBox="0 0 28 28" className="size-4 -rotate-90" aria-hidden="true">
-        <circle cx="14" cy="14" r="11.5" fill="none" strokeWidth="2" className="stroke-border" />
-        <circle
-          cx="14"
-          cy="14"
-          r="11.5"
-          fill="none"
-          strokeWidth="2"
-          pathLength="1"
-          strokeDasharray="1"
-          strokeDashoffset={1 - progress}
-          strokeLinecap="round"
-          className="stroke-primary transition-[stroke-dashoffset] duration-normal ease-smooth"
-        />
-      </svg>
+      <ProgressCircle value={total > 0 ? (current / total) * 100 : 0} />
       <span className="ui-text-sm text-foreground tabular-nums">
         {current}/{total}
       </span>

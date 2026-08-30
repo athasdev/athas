@@ -5,9 +5,9 @@ import {
   type OnboardingChecklistTaskId,
 } from "@/features/onboarding/lib/onboarding-checklist";
 import { useOnboardingChecklistStore } from "@/features/onboarding/stores/onboarding-checklist.store";
-import { CaretDownIcon, CheckCircleIcon, CircleIcon, ListChecksIcon } from "@/ui/icons";
+import { CaretDownIcon, CheckCircleIcon, CircleIcon } from "@/ui/icons";
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/ui/popover";
-import { Progress } from "@/ui/progress";
+import { ProgressCircle } from "@/ui/progress";
 import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
@@ -65,22 +65,17 @@ function ChecklistItems({
 function ChecklistBody({
   tasks,
   completedTaskIds,
-  progressLabel,
-  percentage,
   onSelect,
   header,
 }: {
   tasks: ChecklistTask[];
   completedTaskIds: Set<OnboardingChecklistTaskId>;
-  progressLabel: string;
-  percentage: number;
   onSelect: (task: ChecklistTask) => void;
   header?: ReactNode;
 }) {
   return (
     <div className="flex w-full flex-col gap-chrome">
       {header}
-      <Progress value={percentage} aria-label={progressLabel} />
       <ChecklistItems tasks={tasks} completedTaskIds={completedTaskIds} onSelect={onSelect} />
     </div>
   );
@@ -139,14 +134,12 @@ export function OnboardingChecklist({
             />
           }
         >
-          {progress.complete ? <CheckCircleIcon className="text-success" /> : <ListChecksIcon />}
+          <ProgressCircle value={progress.percentage} />
         </PopoverTrigger>
         <PopoverContent side="right" align="end" className="w-64">
           <ChecklistBody
             tasks={tasks}
             completedTaskIds={completedIds}
-            percentage={progress.percentage}
-            progressLabel={progressLabel}
             onSelect={handleSelect}
             header={
               <PopoverHeader>
@@ -166,9 +159,7 @@ export function OnboardingChecklist({
     <div className="w-full">
       <SidebarListItem
         active={isOpen}
-        leading={
-          progress.complete ? <CheckCircleIcon className="text-success" /> : <ListChecksIcon />
-        }
+        leading={<ProgressCircle value={progress.percentage} />}
         trailing={
           <span className="flex items-center gap-chrome-tight">
             <span className="tabular-nums">
@@ -187,13 +178,7 @@ export function OnboardingChecklist({
       </SidebarListItem>
       {isOpen ? (
         <div id="activity-onboarding-checklist" className="pt-chrome-tight pl-chrome">
-          <ChecklistBody
-            tasks={tasks}
-            completedTaskIds={completedIds}
-            percentage={progress.percentage}
-            progressLabel={progressLabel}
-            onSelect={handleSelect}
-          />
+          <ChecklistBody tasks={tasks} completedTaskIds={completedIds} onSelect={handleSelect} />
         </div>
       ) : null}
     </div>

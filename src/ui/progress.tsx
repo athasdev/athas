@@ -1,5 +1,6 @@
 import { Progress as ProgressPrimitive } from "@base-ui/react/progress";
 import { cva, type VariantProps } from "class-variance-authority";
+import type { SVGProps } from "react";
 import { cn } from "@/utils/cn";
 
 const progressIndicatorVariants = cva(
@@ -90,4 +91,35 @@ function ProgressValue({ className, ...props }: ProgressPrimitive.Value.Props) {
   );
 }
 
-export { Progress, ProgressIndicator, ProgressLabel, ProgressTrack, ProgressValue };
+interface ProgressCircleProps extends Omit<SVGProps<SVGSVGElement>, "value"> {
+  value: number;
+}
+
+function ProgressCircle({ className, value, ...props }: ProgressCircleProps) {
+  const progress = Math.min(100, Math.max(0, value)) / 100;
+
+  return (
+    <svg
+      viewBox="0 0 28 28"
+      className={cn("size-4 -rotate-90", className)}
+      aria-hidden="true"
+      {...props}
+    >
+      <circle cx="14" cy="14" r="11.5" fill="none" strokeWidth="2" className="stroke-border" />
+      <circle
+        cx="14"
+        cy="14"
+        r="11.5"
+        fill="none"
+        strokeWidth="2"
+        pathLength="1"
+        strokeDasharray="1"
+        strokeDashoffset={1 - progress}
+        strokeLinecap="round"
+        className="stroke-primary transition-[stroke-dashoffset] duration-normal ease-smooth"
+      />
+    </svg>
+  );
+}
+
+export { Progress, ProgressCircle, ProgressIndicator, ProgressLabel, ProgressTrack, ProgressValue };
