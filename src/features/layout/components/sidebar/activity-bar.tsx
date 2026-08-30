@@ -94,24 +94,26 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
     onToggleDebugger: handleDebuggerToggle,
     onOpenDatabases: handleOpenDatabases,
   });
-  const visibleActivityNavigationItems = [
-    ...(coreFeatures.search
-      ? [
-          {
-            id: "search",
-            label: "Search",
-            icon: <MagnifyingGlassIcon />,
-            active: isGlobalSearchBufferActive,
-            onClick: openGlobalSearchBuffer,
-            ariaLabel: "Search",
-            shortcut: "Mod+Shift+F",
-          },
-        ]
-      : []),
-    ...activityNavigationItems.filter(
-      (item) => !activityBarVisibility.hiddenNavigationItemIds.includes(item.id),
-    ),
-  ];
+  const visibleNavigationItems = activityNavigationItems.filter(
+    (item) => !activityBarVisibility.hiddenNavigationItemIds.includes(item.id),
+  );
+  const filesNavigationIndex = visibleNavigationItems.findIndex((item) => item.id === "files");
+  const searchInsertionIndex = Math.max(filesNavigationIndex + 1, 0);
+  const visibleActivityNavigationItems = coreFeatures.search
+    ? [
+        ...visibleNavigationItems.slice(0, searchInsertionIndex),
+        {
+          id: "search",
+          label: "Search",
+          icon: <MagnifyingGlassIcon />,
+          active: isGlobalSearchBufferActive,
+          onClick: openGlobalSearchBuffer,
+          ariaLabel: "Search",
+          shortcut: "Mod+Shift+F",
+        },
+        ...visibleNavigationItems.slice(searchInsertionIndex),
+      ]
+    : visibleNavigationItems;
   const alignProjectCarouselToCurrent = useCallback(() => {
     const container = railContentRef.current;
     const currentPanel = container?.querySelector<HTMLElement>(

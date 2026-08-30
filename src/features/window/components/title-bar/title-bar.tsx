@@ -79,7 +79,7 @@ const TitleBar = ({
   const usesNativeWindowChrome = useNativeWindowChrome();
   const showAppWindowControls = !isMacOS && !usesNativeWindowChrome;
   const shouldUseNativeMenuBar = !isWindows && !isLinux && nativeMenuBar;
-  const macTitleBarControlAlignment = isFullscreen ? undefined : "translate-y-0.5";
+  const macTitleBarControlAlignment = isFullscreen ? undefined : "-translate-y-0.5";
 
   useEffect(() => {
     const initWindow = async () => {

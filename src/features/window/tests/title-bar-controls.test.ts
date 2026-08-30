@@ -46,10 +46,17 @@ describe("title bar controls", () => {
   it("removes the relocated controls from the activity sidebar", () => {
     expect(activityBarSource).toContain('id: "search"');
     expect(activityBarSource).toContain("<MagnifyingGlassIcon />");
+    expect(activityBarSource).toContain(
+      'visibleNavigationItems.findIndex((item) => item.id === "files")',
+    );
     expect(activityBarSource).not.toContain("<ProjectSwitcher");
     expect(activityBarSource).not.toContain("<NotificationsTrigger");
     expect(activityBarSource).not.toContain("<AppUpdateControl");
     expect(activityBarSource).not.toContain("<RunActionsButton");
     expect(activityBarSource).not.toContain("<AccountMenu");
+  });
+
+  it("aligns macOS controls with the native traffic lights", () => {
+    expect(titleBarSource).toContain('isFullscreen ? undefined : "-translate-y-0.5"');
   });
 });
