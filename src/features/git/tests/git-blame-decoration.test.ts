@@ -29,12 +29,16 @@ describe("inline Git blame presentation", () => {
 
     expect(getInlineGitBlamePresentation(createBlameLine())).toEqual({
       text: "  Athas Developer, yesterday",
-      hoverMarkdown:
-        "**Restore inline blame hover**\n\nAthas Developer \\<developer@athas\\.dev\\> · yesterday\n\n`abcdef1`",
+      author: "Athas Developer",
+      email: "developer@athas.dev",
+      relativeTime: "yesterday",
+      commitSummary: "Restore inline blame hover",
+      commitHash: "abcdef1234567890",
+      shortHash: "abcdef1",
     });
   });
 
-  it("escapes commit metadata before placing it in Markdown", () => {
+  it("preserves commit metadata for the design-system hover card", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2023-11-15T22:13:20Z"));
 
@@ -46,7 +50,11 @@ describe("inline Git blame presentation", () => {
       }),
     );
 
-    expect(presentation?.hoverMarkdown).toContain("**Fix \\*hover\\* \\[card\\]**");
-    expect(presentation?.hoverMarkdown).toContain("\\[Athas\\] · yesterday");
+    expect(presentation).toMatchObject({
+      author: "[Athas]",
+      email: null,
+      relativeTime: "yesterday",
+      commitSummary: "Fix *hover* [card]",
+    });
   });
 });

@@ -39,4 +39,10 @@ describe("getGitAuthorAvatarUrl", () => {
   it("leaves unknown authors to the initials fallback", () => {
     expect(getGitAuthorAvatarUrl(commit, null)).toBeNull();
   });
+
+  it("accepts blame author identities without commit-list metadata", () => {
+    expect(getGitAuthorAvatarUrl({ email: "12345+octocat@users.noreply.github.com" }, null)).toBe(
+      "https://github.com/octocat.png?size=64",
+    );
+  });
 });

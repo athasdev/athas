@@ -36,8 +36,12 @@ import { InlineEditPopover } from "@/features/editor/inline-edit/inline-edit-pop
 import { useInlineEdit } from "@/features/editor/inline-edit/use-inline-edit";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { InlineGitBlameCard } from "@/features/git/components/inline-git-blame-card";
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
-import { getInlineGitBlamePresentation } from "@/features/git/utils/git-blame-decoration";
+import {
+  getInlineGitBlamePresentation,
+  type InlineGitBlamePresentation,
+} from "@/features/git/utils/git-blame-decoration";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { recordStartupMilestone } from "@/features/bootstrap/startup-performance";
@@ -182,6 +186,8 @@ export function MonacoEditor({
   const gitBlameDecorationRef = useRef<string[]>([]);
   const gitBlameRenderFrameRef = useRef<number | null>(null);
   const renderedGitBlameKeyRef = useRef<string | null>(null);
+  const inlineGitBlamePresentationRef = useRef<InlineGitBlamePresentation | null>(null);
+  const inlineGitBlameCloseTimerRef = useRef<number | null>(null);
   const renderInlineGitBlameRef = useRef<() => void>(() => {});
   const syncSelectionAgentActionRef = useRef<() => void>(() => {});
   const isPointerSelectingRef = useRef(false);
@@ -198,6 +204,10 @@ export function MonacoEditor({
   const monacoLanguageId = toMonacoLanguageId(languageId);
   const [selectionAgentAction, setSelectionAgentAction] =
     useState<SelectionAgentActionState | null>(null);
+  const [inlineGitBlameCard, setInlineGitBlameCard] = useState<{
+    anchor: HTMLElement;
+    presentation: InlineGitBlamePresentation;
+  } | null>(null);
   const {
     fontFamily,
     fontSize,
@@ -263,6 +273,25 @@ export function MonacoEditor({
     content,
   );
 
+  const cancelInlineGitBlameClose = useCallback(() => {
+    if (inlineGitBlameCloseTimerRef.current === null) return;
+    window.clearTimeout(inlineGitBlameCloseTimerRef.current);
+    inlineGitBlameCloseTimerRef.current = null;
+  }, []);
+
+  const closeInlineGitBlameCard = useCallback(() => {
+    cancelInlineGitBlameClose();
+    setInlineGitBlameCard(null);
+  }, [cancelInlineGitBlameClose]);
+
+  const scheduleInlineGitBlameClose = useCallback(() => {
+    cancelInlineGitBlameClose();
+    inlineGitBlameCloseTimerRef.current = window.setTimeout(() => {
+      inlineGitBlameCloseTimerRef.current = null;
+      setInlineGitBlameCard(null);
+    }, 120);
+  }, [cancelInlineGitBlameClose]);
+
   const renderInlineGitBlame = useCallback(() => {
     const editor = editorRef.current;
     const model = modelRef.current;
@@ -270,6 +299,8 @@ export function MonacoEditor({
 
     const clearDecoration = () => {
       renderedGitBlameKeyRef.current = null;
+      inlineGitBlamePresentationRef.current = null;
+      closeInlineGitBlameCard();
       if (gitBlameDecorationRef.current.length === 0) return;
       gitBlameDecorationRef.current = editor.deltaDecorations(gitBlameDecorationRef.current, []);
     };
@@ -298,7 +329,8 @@ export function MonacoEditor({
       return;
     }
 
-    const { text: content, hoverMarkdown } = presentation;
+    inlineGitBlamePresentationRef.current = presentation;
+    const { text: content } = presentation;
     const decorationKey = `${filePath}:${lineNumber}:${blameLine.commit_hash}:${content}`;
     if (renderedGitBlameKeyRef.current === decorationKey) return;
 
@@ -307,7 +339,6 @@ export function MonacoEditor({
       {
         range: new MonacoRange(lineNumber, column, lineNumber, column),
         options: {
-          hoverMessage: { value: hoverMarkdown },
           after: {
             content,
             inlineClassName: "monaco-inline-git-blame",
@@ -318,7 +349,7 @@ export function MonacoEditor({
       },
     ]);
     renderedGitBlameKeyRef.current = decorationKey;
-  }, [filePath, getBlameForLine, inlineGitBlameEnabled, isActiveSurface]);
+  }, [closeInlineGitBlameCard, filePath, getBlameForLine, inlineGitBlameEnabled, isActiveSurface]);
   renderInlineGitBlameRef.current = renderInlineGitBlame;
 
   const scheduleInlineGitBlameRender = useCallback(() => {
@@ -820,6 +851,30 @@ export function MonacoEditor({
     container.addEventListener("focusin", showCopyTooltip, true);
     container.addEventListener("focusout", hideCopyTooltip, true);
 
+    const getInlineGitBlameAnchor = (target: EventTarget | null) =>
+      target instanceof Element ? target.closest<HTMLElement>(".monaco-inline-git-blame") : null;
+    const showInlineGitBlameCard = (event: Event) => {
+      const anchor = getInlineGitBlameAnchor(event.target);
+      const presentation = inlineGitBlamePresentationRef.current;
+      if (!anchor || !presentation || !container.contains(anchor)) return;
+
+      cancelInlineGitBlameClose();
+      setInlineGitBlameCard((current) =>
+        current?.anchor === anchor && current.presentation === presentation
+          ? current
+          : { anchor, presentation },
+      );
+    };
+    const hideInlineGitBlameCard = (event: Event) => {
+      const anchor = getInlineGitBlameAnchor(event.target);
+      if (!anchor) return;
+      const relatedTarget = event instanceof MouseEvent ? event.relatedTarget : null;
+      if (relatedTarget instanceof Node && anchor.contains(relatedTarget)) return;
+      scheduleInlineGitBlameClose();
+    };
+    container.addEventListener("mouseover", showInlineGitBlameCard, true);
+    container.addEventListener("mouseout", hideInlineGitBlameCard, true);
+
     let bottomScrollPadding = getEditorBottomScrollPadding(container.clientHeight);
     const syncBottomScrollPadding = (viewportHeight: number) => {
       const nextBottomScrollPadding = getEditorBottomScrollPadding(viewportHeight);
@@ -1065,6 +1120,10 @@ export function MonacoEditor({
       container.removeEventListener("mouseout", hideCopyTooltip, true);
       container.removeEventListener("focusin", showCopyTooltip, true);
       container.removeEventListener("focusout", hideCopyTooltip, true);
+      container.removeEventListener("mouseover", showInlineGitBlameCard, true);
+      container.removeEventListener("mouseout", hideInlineGitBlameCard, true);
+      cancelInlineGitBlameClose();
+      setInlineGitBlameCard(null);
       if (hoverClampRaf !== null) {
         cancelAnimationFrame(hoverClampRaf);
       }
@@ -1077,6 +1136,7 @@ export function MonacoEditor({
       breakpointHoverDecorationRef.current = [];
       hoveredBreakpointLineRef.current = null;
       renderedGitBlameKeyRef.current = null;
+      inlineGitBlamePresentationRef.current = null;
       createdEditorDisposable.dispose();
       if (editorRef.current === editor) editorRef.current = null;
       if (modelRef.current === model) modelRef.current = null;
@@ -1086,6 +1146,7 @@ export function MonacoEditor({
   }, [
     activeBufferId,
     autoCompletion,
+    cancelInlineGitBlameClose,
     editorBracketPairColorization,
     editorCursorBlinking,
     editorCursorStyle,
@@ -1112,6 +1173,7 @@ export function MonacoEditor({
     renderWhitespace,
     scrollable,
     scheduleInlineGitBlameRender,
+    scheduleInlineGitBlameClose,
     selectEntireModel,
     setScrollForBuffer,
     setViewportHeight,
@@ -1736,6 +1798,15 @@ export function MonacoEditor({
         <InlineEditPopover state={inlineEditState} selection={selection} />
       </div>
       <AnchoredTooltip anchor={copyTooltipAnchor} content="Copy" />
+      {inlineGitBlameCard ? (
+        <InlineGitBlameCard
+          anchor={inlineGitBlameCard.anchor}
+          presentation={inlineGitBlameCard.presentation}
+          onClose={closeInlineGitBlameCard}
+          onPointerEnter={cancelInlineGitBlameClose}
+          onPointerLeave={scheduleInlineGitBlameClose}
+        />
+      ) : null}
       {contextMenuPosition &&
         createPortal(
           <EditorContextMenu

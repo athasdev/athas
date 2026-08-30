@@ -1,7 +1,7 @@
 import type { AuthUser } from "@/features/window/services/auth-api";
-import type { GitCommit } from "../types/git.types";
 
 type GitAuthorAccount = Pick<AuthUser, "email" | "avatar_url" | "github_username">;
+type GitAuthorIdentity = { email?: string };
 
 function getGitHubLoginFromEmail(email: string) {
   const match = email
@@ -15,8 +15,8 @@ function getGitHubAvatarUrl(login: string) {
   return `https://github.com/${encodeURIComponent(login)}.png?size=64`;
 }
 
-export function getGitAuthorAvatarUrl(commit: GitCommit, account: GitAuthorAccount | null) {
-  const commitEmail = commit.email?.trim().toLowerCase() || "";
+export function getGitAuthorAvatarUrl(author: GitAuthorIdentity, account: GitAuthorAccount | null) {
+  const commitEmail = author.email?.trim().toLowerCase() || "";
   const accountEmail = account?.email.trim().toLowerCase() || "";
 
   if (account && commitEmail && commitEmail === accountEmail) {
