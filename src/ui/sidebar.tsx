@@ -204,11 +204,11 @@ export function SidebarSectionHeader({
   onToggle?: () => void;
 }) {
   return (
-    <div className="flex min-h-chrome-control w-full min-w-0 items-center justify-between gap-chrome-tight">
+    <div className="flex min-h-chrome-control min-w-0 items-center justify-between gap-chrome-tight">
       <button
         type="button"
         className={cn(
-          "athas-chrome-control font-sans ui-text-sm flex min-h-chrome-control w-full min-w-0 items-center gap-chrome rounded-chrome px-1.5 py-0.5 font-normal select-none text-left text-subtle-foreground/80 transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[1em]",
+          "athas-chrome-control font-sans ui-text-sm flex min-h-chrome-control min-w-0 items-center gap-chrome rounded-chrome px-1.5 py-0.5 font-normal select-none text-left text-subtle-foreground/80 transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[1em]",
           className,
         )}
         aria-expanded={expanded}

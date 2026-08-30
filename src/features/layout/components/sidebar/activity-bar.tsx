@@ -164,7 +164,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
         }}
       >
         <div
-          className="athas-sidebar-rail absolute inset-y-0 left-0 flex flex-col overflow-hidden pb-1.5"
+          className="athas-sidebar-rail absolute inset-y-0 left-0 flex flex-col overflow-hidden py-1.5"
           style={{ width: railPanelWidth }}
         >
           <div
