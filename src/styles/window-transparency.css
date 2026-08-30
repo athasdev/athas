@@ -9,6 +9,7 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
   --athas-glass-control-border: color-mix(in srgb, var(--border) 26%, transparent);
   --athas-glass-popover-bg: color-mix(in srgb, var(--background) 62%, transparent);
   --athas-glass-popover-border: color-mix(in srgb, var(--border) 50%, transparent);
+  --athas-glass-island-bg: var(--athas-glass-popover-bg);
   --athas-chrome-icon-color: color-mix(in srgb, var(--muted-foreground) 78%, transparent);
   --athas-chrome-icon-hover-color: var(--foreground);
   --athas-chrome-icon-active-color: var(--foreground);
@@ -53,10 +54,26 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
   backdrop-filter: none;
 }
 
+html.platform-macos:not([data-window-transparency="disabled"])
+  :is(.athas-resizable-pane, .athas-sidebar-rail) {
+  background: transparent !important;
+}
+
 html.platform-windows:not([data-window-transparency="disabled"])
   :is(.athas-resizable-pane, .athas-sidebar-rail) {
   -webkit-backdrop-filter: blur(18px) saturate(1.08);
   backdrop-filter: blur(18px) saturate(1.08);
+}
+
+html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
+  .athas-glass-island {
+  background: var(--athas-glass-island-bg) !important;
+}
+
+html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
+  .athas-glass-island
+  :is(.monaco-editor-shell, .monaco-editor, .monaco-editor-background, .monaco-editor .margin) {
+  background-color: transparent !important;
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
@@ -136,6 +153,7 @@ html[data-window-transparency="disabled"] .athas-resizable-pane {
 
 html[data-reduce-transparency="true"] {
   --athas-navigation-material: var(--surface);
+  --athas-glass-island-bg: var(--background);
 }
 
 html[data-reduce-transparency="true"]
