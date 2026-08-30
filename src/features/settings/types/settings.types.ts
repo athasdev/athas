@@ -1,5 +1,4 @@
 import type { CoreFeaturesState } from "./feature.types";
-import type { V0DesignSystemProfile } from "@/features/ai/integrations/v0/types/v0-design-system.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import type {
   FooterLeadingItemId,
@@ -20,6 +19,16 @@ type EditorCursorBlinking = "blink" | "smooth" | "phase" | "expand" | "solid";
 type TerminalCursorInactiveStyle = "outline" | "block" | "bar" | "underline" | "none";
 export type TabCloseButtonVisibility = "active" | "hover" | "always";
 export type FileTreeSortOrder = "folders-first" | "name";
+export interface LegacyV0DesignSystemProfile {
+  readonly id: string;
+  readonly name: string;
+  readonly registryUrl: string;
+  readonly description?: string;
+  readonly homepage?: string;
+  readonly tailwindConfigPath?: string;
+  readonly globalsCssPath?: string;
+  readonly componentsJsonPath?: string;
+}
 export type SettingsSection =
   | "account"
   | "general"
@@ -111,7 +120,7 @@ export interface Settings {
   aiDefaultSessionMode: string;
   aiAgentNotifications: boolean;
   aiSkills: AIChatSkill[];
-  v0DesignSystems: V0DesignSystemProfile[];
+  v0DesignSystems: LegacyV0DesignSystemProfile[];
   activeV0DesignSystemId: string;
   ollamaBaseUrl: string;
   // Layout

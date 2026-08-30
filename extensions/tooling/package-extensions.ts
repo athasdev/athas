@@ -28,8 +28,14 @@ function shouldPackage(manifest: Record<string, unknown>) {
     getContributionArray(manifest, "icons").length > 0;
   const isExecutableIntegration =
     getContributionArray(manifest, "integrations").length > 0 && typeof manifest.main === "string";
+  const isExecutableAIProvider =
+    getContributionArray(manifest, "aiProviders").length > 0 && typeof manifest.main === "string";
 
-  return (isPureAssetExtension || isExecutableIntegration) && !hasNativeSidecar && !isLanguage;
+  return (
+    (isPureAssetExtension || isExecutableIntegration || isExecutableAIProvider) &&
+    !hasNativeSidecar &&
+    !isLanguage
+  );
 }
 
 async function sha256(path: string) {

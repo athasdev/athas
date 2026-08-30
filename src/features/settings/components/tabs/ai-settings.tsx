@@ -27,7 +27,6 @@ import { TypedConfirmAction } from "@/features/settings/components/typed-confirm
 import { Spinner } from "@/ui/spinner";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -86,7 +85,6 @@ export const AISettings = () => {
     })),
   );
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
-  const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const subscription = useAuthStore((state) => state.subscription);
   const { showToast } = useToast();
   const enterprisePolicy = subscription?.enterprise?.policy;
@@ -566,13 +564,15 @@ export const AISettings = () => {
             <SettingRow
               key={action.id}
               label={action.label}
-              description={action.getDescription?.() || "Configure provider extension"}
+              description={
+                action.getDescription?.() || action.description || "Configure provider extension"
+              }
             >
               <Button
                 shape="pill"
                 type="button"
                 variant="default"
-                onClick={() => openCommandPaletteView(action.commandPaletteViewId)}
+                onClick={() => void action.execute()}
                 className="w-fit"
               >
                 <Icon />

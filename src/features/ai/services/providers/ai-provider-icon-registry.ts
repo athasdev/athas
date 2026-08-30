@@ -1,6 +1,8 @@
-import { useSyncExternalStore, type ComponentType, type SVGProps } from "react";
+import { createElement, useSyncExternalStore, type ComponentType, type SVGProps } from "react";
 
-export type AIProviderIconComponent = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
+export type AIProviderIconComponent = ComponentType<
+  Pick<SVGProps<SVGSVGElement>, "className"> & { size?: number }
+>;
 
 const icons = new Map<string, AIProviderIconComponent>();
 const providerIdsByExtension = new Map<string, Set<string>>();
@@ -29,6 +31,38 @@ export function registerAIProviderIcon(params: {
   providerIdsByExtension.set(params.extensionId, providerIds);
 
   emitChange();
+}
+
+export function registerAIProviderIconUrl(params: {
+  extensionId: string;
+  providerId: string;
+  url: string;
+}): void {
+  const ExtensionProviderIcon = ({ size = 14, className }: { size?: number; className?: string }) =>
+    createElement("span", {
+      "aria-hidden": true,
+      className,
+      style: {
+        backgroundColor: "currentColor",
+        display: "inline-block",
+        height: size,
+        maskImage: `url(${JSON.stringify(params.url)})`,
+        maskPosition: "center",
+        maskRepeat: "no-repeat",
+        maskSize: "contain",
+        width: size,
+        WebkitMaskImage: `url(${JSON.stringify(params.url)})`,
+        WebkitMaskPosition: "center",
+        WebkitMaskRepeat: "no-repeat",
+        WebkitMaskSize: "contain",
+      },
+    });
+
+  registerAIProviderIcon({
+    extensionId: params.extensionId,
+    providerId: params.providerId,
+    icon: ExtensionProviderIcon,
+  });
 }
 
 export function unregisterAIProviderIconsByExtension(extensionId: string): void {

@@ -1,6 +1,11 @@
 {
   "version": 1,
   "installations": {
+    "athas.ai.v0": {
+      "downloadUrl": "https://athas.dev/extensions/packages/ai/v0/athas.ai.v0.tar.gz",
+      "size": 18967,
+      "checksum": "64abb2ea8144748a95a6d66b72dba8079d1e5951bd051f104f5628d051406866"
+    },
     "athas.database.duckdb": {
       "downloadUrl": "https://athas.dev/extensions/database/duckdb/darwin-arm64.tar.gz",
       "size": 12337474,
@@ -92,6 +97,11 @@
       "downloadUrl": "https://athas.dev/extensions/packages/integration/sentry/athas.sentry.tar.gz",
       "size": 10775,
       "checksum": "a072c7e8db9bb33b9316c6a37bd0440f852ef5a052f113398919a9840eea2768"
+    },
+    "athas.theme.vercel": {
+      "downloadUrl": "https://athas.dev/extensions/packages/theme/vercel/athas.theme.vercel.tar.gz",
+      "size": 6167,
+      "checksum": "d62e198efe741e612752e4cc69c28c9b3eeae366e49c2325be13d696e7b73d27"
     }
   }
 }

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   toastWarning: vi.fn(),
   toastError: vi.fn(),
   toastInfo: vi.fn(),
+  updateSetting: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -32,6 +33,14 @@ vi.mock("@/features/git/stores/git-repository.store", () => ({
 }));
 vi.mock("@/features/window/stores/project.store", () => ({
   useProjectStore: { getState: () => ({ rootFolderPath: null }) },
+}));
+vi.mock("@/features/settings/stores/settings.store", () => ({
+  useSettingsStore: {
+    getState: () => ({
+      settings: { v0DesignSystems: [{ id: "legacy" }] },
+      actions: { updateSetting: mocks.updateSetting },
+    }),
+  },
 }));
 
 import {
@@ -59,6 +68,7 @@ describe("extension host services", () => {
     mocks.toastWarning.mockReset();
     mocks.toastError.mockReset();
     mocks.toastInfo.mockReset();
+    mocks.updateSetting.mockReset();
     clearExtensionHostServiceState(manifest.id);
   });
 
@@ -108,6 +118,29 @@ describe("extension host services", () => {
       ),
     ).rejects.toThrow("exceeds the 100000 character limit");
     expect(mocks.writeClipboardText).toHaveBeenCalledTimes(1);
+  });
+
+  it("only exposes explicitly allowed settings for extension migrations", async () => {
+    await expect(
+      callExtensionHostService(manifest.id, manifest, "settings.get", ["v0DesignSystems"]),
+    ).rejects.toThrow("does not have settings access permission");
+
+    await expect(
+      callExtensionHostService(
+        manifest.id,
+        { ...manifest, permissions: { settings: ["v0DesignSystems"] } },
+        "settings.get",
+        ["v0DesignSystems"],
+      ),
+    ).resolves.toEqual([{ id: "legacy" }]);
+
+    await callExtensionHostService(
+      manifest.id,
+      { ...manifest, permissions: { settings: ["v0DesignSystems"] } },
+      "settings.set",
+      ["v0DesignSystems", []],
+    );
+    expect(mocks.updateSetting).toHaveBeenCalledWith("v0DesignSystems", []);
   });
 
   it("shows semantic notifications and rate limits noisy extensions", async () => {

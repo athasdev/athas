@@ -6,6 +6,8 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getRemotes } from "@/features/git/api/git-remotes-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import type { Settings } from "@/features/settings/types/settings.types";
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
 import { writeClipboardText } from "@/utils/clipboard";
 import type {
@@ -139,6 +141,23 @@ export async function callExtensionHostService(
     case "storage.delete":
       localStorage.removeItem(`${STORAGE_PREFIX}${extensionId}:${String(params[0])}`);
       return undefined;
+    case "settings.get": {
+      const key = String(params[0]);
+      requirePermission(manifest.permissions?.settings?.includes(key) === true, "settings access");
+      return (useSettingsStore.getState().settings as unknown as Record<string, unknown>)[key];
+    }
+    case "settings.set": {
+      const key = String(params[0]);
+      requirePermission(manifest.permissions?.settings?.includes(key) === true, "settings access");
+      const settings = useSettingsStore.getState().settings;
+      if (!(key in settings)) throw new Error(`Unknown setting: ${key}`);
+      const updateSetting = useSettingsStore.getState().actions.updateSetting as (
+        setting: keyof Settings,
+        value: Settings[keyof Settings],
+      ) => Promise<void>;
+      await updateSetting(key as keyof Settings, params[1] as Settings[keyof Settings]);
+      return undefined;
+    }
     case "workspace.getCurrent": {
       requirePermission(manifest.permissions?.workspace === "read", "workspace read");
       const rootPath = useProjectStore.getState().rootFolderPath ?? null;

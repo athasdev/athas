@@ -172,7 +172,8 @@ async function validateInstallPackage(
     getContributionArray(manifest, "databases").length > 0 ||
     getContributionArray(manifest, "themes").length > 0 ||
     getContributionArray(manifest, "icons").length > 0 ||
-    getContributionArray(manifest, "integrations").length > 0;
+    getContributionArray(manifest, "integrations").length > 0 ||
+    getContributionArray(manifest, "aiProviders").length > 0;
 
   if (!requiresPackage) return;
 
@@ -291,6 +292,7 @@ async function validateExtension(folder: string): Promise<void> {
     getContributionArray(manifest, "themes").length +
     getContributionArray(manifest, "icons").length +
     getContributionArray(manifest, "integrations").length +
+    getContributionArray(manifest, "aiProviders").length +
     getContributionArray(manifest, "skills").length;
 
   if (contributionCount === 0) {
@@ -393,6 +395,7 @@ async function validateExtension(folder: string): Promise<void> {
   }
 
   const integrations = getContributionArray(manifest, "integrations");
+  const aiProviders = getContributionArray(manifest, "aiProviders");
   for (const integration of integrations) {
     if (!integration.id) error(folder, "Integration contribution missing 'id'");
     if (!integration.name) error(folder, `Integration '${integration.id}' missing 'name'`);
@@ -404,26 +407,42 @@ async function validateExtension(folder: string): Promise<void> {
       error(folder, `Integration '${integration.id}' has invalid 'kind'`);
     }
   }
-  if (integrations.length > 0) {
+  for (const provider of aiProviders) {
+    if (!provider.id) error(folder, "AI provider contribution missing 'id'");
+    if (!provider.name) error(folder, `AI provider '${provider.id}' missing 'name'`);
+    if (!provider.apiUrl) error(folder, `AI provider '${provider.id}' missing 'apiUrl'`);
+    if (!Array.isArray(provider.models) || provider.models.length === 0) {
+      error(folder, `AI provider '${provider.id}' must declare at least one model`);
+    }
+    if (
+      provider.transport !== undefined &&
+      !["browser", "tauri"].includes(String(provider.transport))
+    ) {
+      error(folder, `AI provider '${provider.id}' has invalid 'transport'`);
+    }
+  }
+
+  if (integrations.length > 0 || aiProviders.length > 0) {
     if (typeof manifest.main !== "string" || manifest.main.length === 0) {
-      error(folder, "Integration extension missing 'main' entrypoint");
+      error(folder, "Executable extension missing 'main' entrypoint");
     } else if (
       isAbsolute(manifest.main) ||
       manifest.main.split(/[\\/]/).some((segment) => segment === "..")
     ) {
-      error(folder, "Integration extension 'main' must be a safe relative path");
+      error(folder, "Executable extension 'main' must be a safe relative path");
     } else if (!(await fileExists(join(extensionDir, manifest.main)))) {
-      error(folder, `Integration entrypoint not found: ${manifest.main}`);
+      error(folder, `Extension entrypoint not found: ${manifest.main}`);
     }
 
     const permissions = manifest.permissions;
     if (!permissions || typeof permissions !== "object" || Array.isArray(permissions)) {
-      error(folder, "Integration extension must declare a 'permissions' object");
+      error(folder, "Executable extension must declare a 'permissions' object");
     } else {
       const permissionRecord = permissions as Record<string, unknown>;
       const supportedPermissions = new Set([
         "network",
         "secrets",
+        "settings",
         "workspace",
         "openExternal",
         "clipboardWrite",
@@ -442,6 +461,13 @@ async function validateExtension(folder: string): Promise<void> {
       }
       if (permissionRecord.secrets !== undefined && typeof permissionRecord.secrets !== "boolean") {
         error(folder, "Integration 'secrets' permission must be boolean");
+      }
+      if (
+        permissionRecord.settings !== undefined &&
+        (!Array.isArray(permissionRecord.settings) ||
+          permissionRecord.settings.some((key) => typeof key !== "string" || !key.trim()))
+      ) {
+        error(folder, "Extension 'settings' permission must contain setting keys");
       }
       if (permissionRecord.workspace !== undefined && permissionRecord.workspace !== "read") {
         error(folder, "Integration 'workspace' permission must be 'read'");

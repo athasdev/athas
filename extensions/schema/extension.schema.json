@@ -530,6 +530,12 @@
         "secrets": {
           "type": "boolean"
         },
+        "settings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "workspace": {
           "const": "read"
         },

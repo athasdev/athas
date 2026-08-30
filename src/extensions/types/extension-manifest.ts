@@ -239,6 +239,7 @@ export interface AIProviderContribution {
   apiUrl: string;
   requiresApiKey: boolean;
   requiresAuth?: boolean;
+  transport?: "browser" | "tauri";
   maxTokens?: number;
   apiKeyUrl?: string;
   apiKeyPlaceholder?: string;
@@ -266,6 +267,7 @@ export interface SkillContribution {
 export interface ExtensionPermissions {
   network?: string[];
   secrets?: boolean;
+  settings?: string[];
   workspace?: "read";
   openExternal?: boolean;
   clipboardWrite?: boolean;

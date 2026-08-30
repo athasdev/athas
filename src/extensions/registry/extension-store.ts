@@ -1,10 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
-import {
-  getBundledContributionExtensions,
-  isBundledContributionExtension,
-} from "../bundled/bundled-contribution-extensions";
 import { getDatabaseProviderExtensions } from "../database/database-provider-extensions";
 import { extensionInstaller } from "../installer/extension-installer";
 import { getPackagedLanguageExtensions } from "../languages/language-packager";
@@ -34,7 +30,6 @@ import { resolveInstalledExtensionId } from "./installed-extension-resolution";
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
 import type { ExtensionManifest } from "../types/extension-manifest";
 import { getManifestDatabaseContributions } from "../types/extension-contributions";
-import { readInstalledBundledContributionExtensionIds } from "./bundled-contribution-install-state";
 import {
   recordExtensionLifecycleTelemetry,
   recordExtensionRegistrySync,
@@ -87,14 +82,12 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           const languageExtensions: ExtensionManifest[] = mergeMarketplaceLanguageExtensions(
             getPackagedLanguageExtensions(),
           );
-          const bundledContributionExtensions = getBundledContributionExtensions();
           const marketplaceExtensions = await loadMarketplaceContributionExtensions();
           const extensionById = new Map<string, ExtensionManifest>();
 
           for (const manifest of [
             ...languageExtensions,
             ...getDatabaseProviderExtensions(),
-            ...bundledContributionExtensions,
             ...marketplaceExtensions,
           ]) {
             if (isRetiredExtensionId(manifest.id)) continue;
@@ -105,7 +98,6 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
           // Check which extensions are installed
           const installed = get().installedExtensions;
-          const installedBundledContributions = readInstalledBundledContributionExtensionIds();
 
           for (const manifest of extensions) {
             const existing = extensionRegistry.getExtension(manifest.id);
@@ -114,11 +106,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             }
 
             const isBuiltInDatabase = isBuiltInDatabaseExtension(manifest);
-            const isBundledContributionInstalled =
-              isBundledContributionExtension(manifest) &&
-              installedBundledContributions.has(manifest.id);
-            const isInstalled =
-              installed.has(manifest.id) || isBuiltInDatabase || isBundledContributionInstalled;
+            const isInstalled = installed.has(manifest.id) || isBuiltInDatabase;
             const isEnabled = installed.get(manifest.id)?.enabled ?? isInstalled;
             extensionRegistry.registerExtension(manifest, {
               isBundled: isBuiltInDatabase,
@@ -131,11 +119,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             // Add all language extensions as installable
             for (const manifest of extensions) {
               const isBuiltInDatabase = isBuiltInDatabaseExtension(manifest);
-              const isBundledContributionInstalled =
-                isBundledContributionExtension(manifest) &&
-                installedBundledContributions.has(manifest.id);
-              const isInstalled =
-                installed.has(manifest.id) || isBuiltInDatabase || isBundledContributionInstalled;
+              const isInstalled = installed.has(manifest.id) || isBuiltInDatabase;
               state.availableExtensions.set(manifest.id, {
                 manifest,
                 isInstalled,
@@ -162,16 +146,11 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
         try {
           const availableExtensions = get().availableExtensions;
-          const {
-            backendInstalled,
-            indexedDBInstalled,
-            bundledContributionInstalled,
-            runtimeIssues,
-          } = await loadInstalledExtensionsSnapshot(availableExtensions);
+          const { backendInstalled, indexedDBInstalled, runtimeIssues } =
+            await loadInstalledExtensionsSnapshot(availableExtensions);
           const installedExtensions = buildInstalledExtensionsMap({
             backendInstalled,
             indexedDBInstalled,
-            bundledContributionInstalled,
             availableExtensions,
           });
 

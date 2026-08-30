@@ -247,7 +247,10 @@ export const getChatCompletionStream = async (
 
     const contextPrompt = buildContextPrompt(context);
     let systemPrompt = systemPromptOverride || buildSystemPrompt(contextPrompt, mode, outputStyle);
-    const providerSystemPromptContext = buildProviderSystemPromptContext(providerId, settings);
+    const providerSystemPromptContext = await buildProviderSystemPromptContext(
+      providerId,
+      settings,
+    );
     if (providerSystemPromptContext) {
       systemPrompt = `${systemPrompt}\n\n${providerSystemPromptContext}`;
     }
@@ -285,9 +288,11 @@ export const getChatCompletionStream = async (
       apiKey: apiKey || undefined,
     };
 
-    const headers = providerImpl.buildHeaders(apiKey || undefined);
-    const payload = providerImpl.buildPayload(streamRequest);
-    const url = providerImpl.buildUrl ? providerImpl.buildUrl(streamRequest) : provider.apiUrl;
+    const headers = await providerImpl.buildHeaders(apiKey || undefined);
+    const payload = await providerImpl.buildPayload(streamRequest);
+    const url = providerImpl.buildUrl
+      ? await providerImpl.buildUrl(streamRequest)
+      : provider.apiUrl;
 
     console.log(`Making ${provider.name} streaming chat request with model ${model.name}...`);
 

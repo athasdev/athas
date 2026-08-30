@@ -1,6 +1,6 @@
 import { getProviderById } from "@/features/ai/types/providers.types";
 import { normalizeOllamaBaseUrl } from "@/features/ai/lib/ollama-endpoint";
-import { normalizeV0DesignSystems } from "@/features/ai/integrations/v0/lib/v0-design-systems";
+import { normalizeLegacyV0DesignSystems } from "@/features/settings/lib/legacy-v0-settings";
 import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
 import {
   DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
@@ -412,7 +412,7 @@ function normalizeAISettings(settings: Settings): Settings {
     normalizedSettings.aiAutocompleteCustomModelId?.trim() || "";
   normalizedSettings.aiAgentNotifications = normalizedSettings.aiAgentNotifications === true;
   normalizedSettings.aiSkills = normalizeAISkills(normalizedSettings.aiSkills);
-  normalizedSettings.v0DesignSystems = normalizeV0DesignSystems(
+  normalizedSettings.v0DesignSystems = normalizeLegacyV0DesignSystems(
     (normalizedSettings as { v0DesignSystems?: unknown }).v0DesignSystems,
   );
   normalizedSettings.activeV0DesignSystemId =
@@ -651,7 +651,7 @@ export function normalizeSettingValue<K extends keyof Settings>(
   }
 
   if (key === "v0DesignSystems") {
-    return normalizeV0DesignSystems(value) as Settings[K];
+    return normalizeLegacyV0DesignSystems(value) as Settings[K];
   }
 
   if (key === "activeV0DesignSystemId") {

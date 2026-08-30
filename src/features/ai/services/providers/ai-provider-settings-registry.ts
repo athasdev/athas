@@ -1,15 +1,14 @@
 import { useSyncExternalStore } from "react";
-import type { CommandPaletteViewId } from "@/features/command-palette/types/view.types";
-
 export interface AIProviderSettingsAction {
   id: string;
   extensionId: string;
   providerId: string;
   label: string;
   buttonLabel: string;
-  commandPaletteViewId: CommandPaletteViewId;
+  description?: string;
   icon?: "palette" | "sparkles";
   getDescription?: () => string;
+  execute: () => void | Promise<void>;
 }
 
 const actions = new Map<string, AIProviderSettingsAction>();

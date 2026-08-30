@@ -17,14 +17,17 @@ import {
 const providers = new Map<string, AIProvider>();
 const extensionProviderIds = new Map<string, Set<string>>();
 const providerFetchModes = new Map<string, boolean>();
-const providerSystemPromptBuilders = new Map<string, (settings: Settings) => string>();
+const providerSystemPromptBuilders = new Map<
+  string,
+  (settings: Settings) => string | Promise<string>
+>();
 
 export interface AIProviderRuntimeContribution {
   extensionId: string;
   provider: ModelProvider;
   createProvider: (config: ProviderConfig) => AIProvider;
   useTauriFetch?: boolean;
-  buildSystemPromptContext?: (settings: Settings) => string;
+  buildSystemPromptContext?: (settings: Settings) => string | Promise<string>;
 }
 
 function initializeProviders(): void {
@@ -190,8 +193,11 @@ export function shouldUseTauriFetchForProvider(providerId: string): boolean {
   );
 }
 
-export function buildProviderSystemPromptContext(providerId: string, settings: Settings): string {
-  return providerSystemPromptBuilders.get(providerId)?.(settings) ?? "";
+export async function buildProviderSystemPromptContext(
+  providerId: string,
+  settings: Settings,
+): Promise<string> {
+  return (await providerSystemPromptBuilders.get(providerId)?.(settings)) ?? "";
 }
 
 export function getProvider(providerId: string): AIProvider | undefined {

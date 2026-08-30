@@ -33,12 +33,6 @@ function writeInstalledBundledContributionExtensionIds(extensionIds: Set<string>
   );
 }
 
-export function markBundledContributionExtensionInstalled(extensionId: string): void {
-  const extensionIds = readInstalledBundledContributionExtensionIds();
-  extensionIds.add(extensionId);
-  writeInstalledBundledContributionExtensionIds(extensionIds);
-}
-
 export function markBundledContributionExtensionUninstalled(extensionId: string): void {
   const extensionIds = readInstalledBundledContributionExtensionIds();
   extensionIds.delete(extensionId);

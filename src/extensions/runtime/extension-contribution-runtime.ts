@@ -11,10 +11,6 @@ import type { ExtensionManifest } from "../types/extension-manifest";
 import { getManifestIconContributions } from "../types/extension-contributions";
 import { isRetiredExtensionId } from "../registry/retired-extensions";
 import { uiExtensionHost } from "../ui/services/ui-extension-host";
-import {
-  activateBundledContributionModule,
-  deactivateBundledContributionModule,
-} from "../bundled/bundled-contribution-modules";
 
 const activeExtensionIds = new Set<string>();
 const activationPromises = new Map<string, Promise<void>>();
@@ -242,15 +238,11 @@ async function activateExtensionContributionsOnce(
       );
     }
 
-    await activateBundledContributionModule(extensionId, manifest);
     if (manifest.main) {
       await uiExtensionHost.loadExtension(manifest, resolvedExtensionPath);
     }
   } catch (error) {
-    await Promise.allSettled([
-      uiExtensionHost.unloadExtension(extensionId),
-      deactivateBundledContributionModule(extensionId, manifest),
-    ]);
+    await uiExtensionHost.unloadExtension(extensionId).catch(() => undefined);
     themeRegistry.unregisterThemesByExtension(extensionId);
     iconThemeRegistry.unregisterThemesByExtension(extensionId);
     throw error;
@@ -265,7 +257,6 @@ export async function deactivateExtensionContributions(
 
   try {
     await uiExtensionHost.unloadExtension(extensionId);
-    await deactivateBundledContributionModule(extensionId, manifest);
     fallbackThemeIfNeeded(getThemeContributions(manifest));
     fallbackIconThemeIfNeeded(getIconThemeContributions(manifest));
     themeRegistry.unregisterThemesByExtension(extensionId);

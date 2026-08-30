@@ -19,6 +19,17 @@ const listenToHost = workerScope.addEventListener.bind(workerScope);
 const views = new Map<string, () => unknown | Promise<unknown>>();
 const commands = new Map<string, ExtensionHandler>();
 const toolbarActions = new Map<string, ExtensionHandler>();
+const aiProviders = new Map<
+  string,
+  {
+    buildHeaders: ExtensionHandler;
+    buildPayload: ExtensionHandler;
+    buildUrl?: ExtensionHandler;
+    validateApiKey: ExtensionHandler;
+    getModels?: ExtensionHandler;
+    getSystemPromptContext?: ExtensionHandler;
+  }
+>();
 const viewInvalidationCounts = new Map<string, number>();
 const viewInlineActionIds = new Map<string, Set<string>>();
 const pending = new Map<number, PendingRequest>();
@@ -236,7 +247,15 @@ const api = Object.freeze({
   }),
   commands: Object.freeze({
     register(
-      configOrId: { id: string; title?: string; category?: string; run: ExtensionHandler } | string,
+      configOrId:
+        | {
+            id: string;
+            title?: string;
+            category?: string;
+            palette?: boolean;
+            run: ExtensionHandler;
+          }
+        | string,
       legacyTitle?: string,
       legacyHandler?: ExtensionHandler,
       legacyCategory?: string,
@@ -247,6 +266,7 @@ const api = Object.freeze({
               id: configOrId,
               title: legacyTitle,
               category: legacyCategory,
+              palette: true,
               run: legacyHandler,
             }
           : configOrId;
@@ -255,11 +275,13 @@ const api = Object.freeze({
       }
       const id = contributionId(config.id);
       commands.set(id, config.run);
-      sendEvent("commands.register", {
-        id,
-        title: String(config.title || id),
-        category: config.category,
-      });
+      if (config.palette !== false) {
+        sendEvent("commands.register", {
+          id,
+          title: String(config.title || id),
+          category: config.category,
+        });
+      }
       return Object.freeze({ dispose: () => commands.delete(id) });
     },
     execute(command: string, ...args: unknown[]) {
@@ -288,6 +310,54 @@ const api = Object.freeze({
   }),
   opener: Object.freeze({
     openExternal: (url: string) => hostCall("opener.openExternal", url),
+  }),
+  settings: Object.freeze({
+    get: (key: string) => hostCall("settings.get", key),
+    set: (key: string, value: unknown) => hostCall("settings.set", key, value),
+  }),
+  ai: Object.freeze({
+    registerProvider(config: {
+      id: string;
+      buildHeaders: ExtensionHandler;
+      buildPayload: ExtensionHandler;
+      buildUrl?: ExtensionHandler;
+      validateApiKey: ExtensionHandler;
+      getModels?: ExtensionHandler;
+      getSystemPromptContext?: ExtensionHandler;
+    }) {
+      if (
+        !config ||
+        typeof config.id !== "string" ||
+        typeof config.buildHeaders !== "function" ||
+        typeof config.buildPayload !== "function" ||
+        typeof config.validateApiKey !== "function"
+      ) {
+        throw new Error(
+          "ai.registerProvider requires id, buildHeaders, buildPayload, and validateApiKey",
+        );
+      }
+      aiProviders.set(config.id, config);
+      sendEvent("ai.registerProvider", { providerId: config.id });
+      return Object.freeze({ dispose: () => aiProviders.delete(config.id) });
+    },
+    registerSettingsAction(config: {
+      id: string;
+      providerId: string;
+      label: string;
+      buttonLabel?: string;
+      description?: string;
+      icon?: "palette" | "sparkles";
+      commandId: string;
+    }) {
+      if (!config || typeof config.id !== "string" || typeof config.commandId !== "string") {
+        throw new Error("ai.registerSettingsAction requires id and commandId");
+      }
+      sendEvent("ai.registerSettingsAction", {
+        ...config,
+        id: contributionId(config.id),
+        commandId: contributionId(config.commandId),
+      });
+    },
   }),
   ui: Object.freeze({
     action,
@@ -725,6 +795,20 @@ listenToHost("message", (event: MessageEvent<ExtensionWorkerInboundMessage>) => 
         const handler = toolbarActions.get(String(message.params[0]));
         if (!handler) throw new Error(`Unknown toolbar action: ${message.params[0]}`);
         return handler();
+      }
+      if (message.method.startsWith("aiProvider.")) {
+        const providerId = String(message.params[0]);
+        const provider = aiProviders.get(providerId);
+        if (!provider) throw new Error(`Unknown external AI provider: ${providerId}`);
+        const hook = message.method.slice("aiProvider.".length) as keyof typeof provider;
+        const handler = provider[hook];
+        if (typeof handler !== "function") {
+          if (hook === "buildUrl") return undefined;
+          if (hook === "getModels") return [];
+          if (hook === "getSystemPromptContext") return "";
+          throw new Error(`External AI provider ${providerId} does not implement ${hook}`);
+        }
+        return handler(...message.params.slice(1));
       }
       if (message.method === "deactivate") {
         return extensionModule?.deactivate?.();

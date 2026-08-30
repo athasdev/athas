@@ -66,6 +66,7 @@ type IndexEntry = {
     | "Databases"
     | "Agents"
     | "Integrations"
+    | "AI"
     | "Skills";
   icon?: string;
   appearancePreviews?: CatalogAppearancePreview[];
@@ -103,6 +104,7 @@ function normalizeIndexCategory(raw?: string): IndexEntry["category"] {
   if (value === "agent" || value === "agents") return "Agents";
   if (value === "skill" || value === "skills") return "Skills";
   if (value === "integration" || value === "integrations") return "Integrations";
+  if (value === "ai") return "AI";
   if (value === "theme" || value === "themes") return "Themes";
   return "Languages";
 }
@@ -114,6 +116,7 @@ function normalizeRegistryCategory(raw?: string): string {
   if (normalized.includes("agent")) return "agent";
   if (normalized.includes("skill")) return "skill";
   if (normalized.includes("integration")) return "integration";
+  if (normalized === "ai") return "ai";
   if (normalized.includes("theme")) return "theme";
   return "language";
 }
@@ -301,6 +304,7 @@ async function buildCatalog() {
     const themes = getContributionArray(manifest, "themes");
     const icons = getContributionArray(manifest, "icons");
     const integrations = getContributionArray(manifest, "integrations");
+    const aiProviders = getContributionArray(manifest, "aiProviders");
     const skills = getContributionArray(manifest, "skills");
 
     const reservedTheme = themes.find(getReservedBuiltInThemeContribution);
@@ -317,6 +321,7 @@ async function buildCatalog() {
       themes.length === 0 &&
       icons.length === 0 &&
       integrations.length === 0 &&
+      aiProviders.length === 0 &&
       skills.length === 0
     ) {
       throw new Error(`No extension contributions declared in ${manifestPath}`);

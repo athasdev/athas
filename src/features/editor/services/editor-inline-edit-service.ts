@@ -176,9 +176,9 @@ async function requestProviderInlineEdit(
     apiKey: apiKey || undefined,
   };
 
-  const headers = provider.buildHeaders(apiKey || undefined);
-  const payload = provider.buildPayload(streamRequest);
-  const url = provider.buildUrl ? provider.buildUrl(streamRequest) : provider.apiUrl;
+  const headers = await provider.buildHeaders(apiKey || undefined);
+  const payload = await provider.buildPayload(streamRequest);
+  const url = provider.buildUrl ? await provider.buildUrl(streamRequest) : provider.apiUrl;
   const needsTauriFetch =
     request.provider === "gemini" ||
     request.provider === "ollama" ||

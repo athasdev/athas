@@ -231,10 +231,15 @@ export function getExtensionCdnPath(folder: string, manifest: ExtensionManifestR
   const themes = getContributionArray(manifest, "themes");
   const icons = getContributionArray(manifest, "icons");
   const integrations = getContributionArray(manifest, "integrations");
+  const aiProviders = getContributionArray(manifest, "aiProviders");
   const skills = getContributionArray(manifest, "skills");
 
   if (integrations.length > 0 && typeof integrations[0].id === "string") {
     return `integration/${integrations[0].id}`;
+  }
+
+  if (aiProviders.length > 0 && typeof aiProviders[0].id === "string") {
+    return `ai/${aiProviders[0].id}`;
   }
 
   if (skills.length > 0) {
@@ -257,7 +262,9 @@ export function getExtensionCdnPath(folder: string, manifest: ExtensionManifestR
   if (themes.length > 0) {
     const themeSlug = slug.startsWith("theme-")
       ? slug.slice("theme-".length)
-      : String(themes[0].id);
+      : slug.endsWith("-theme")
+        ? slug.slice(0, -"-theme".length)
+        : String(themes[0].id);
     return `theme/${themeSlug}`;
   }
 

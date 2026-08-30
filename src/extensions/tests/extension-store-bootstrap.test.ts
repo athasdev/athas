@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { ExtensionManifest } from "../types/extension-manifest";
-import { buildInstalledExtensionsMap } from "@/extensions/registry/extension-store-bootstrap";
+import {
+  buildInstalledExtensionsMap,
+  migrateBundledContributionInstallations,
+} from "@/extensions/registry/extension-store-bootstrap";
 import type { AvailableExtension } from "@/extensions/registry/extension-store-types";
+
+const mocks = vi.hoisted(() => ({ invoke: vi.fn() }));
+
+vi.mock("@tauri-apps/api/core", () => ({ invoke: mocks.invoke }));
 
 function createAvailableExtension(manifest: ExtensionManifest): AvailableExtension {
   return {
@@ -14,6 +21,11 @@ function createAvailableExtension(manifest: ExtensionManifest): AvailableExtensi
 }
 
 describe("extension-store bootstrap", () => {
+  afterEach(() => {
+    mocks.invoke.mockReset();
+    vi.unstubAllGlobals();
+  });
+
   it("drops retired installed extensions before activation state is built", () => {
     const availableExtensions = new Map<string, AvailableExtension>([
       [
@@ -47,7 +59,12 @@ describe("extension-store bootstrap", () => {
           version: "1.0.0",
           publisher: "Athas",
           categories: ["Theme"],
-          installation: { type: "bundled" },
+          installation: {
+            downloadUrl:
+              "https://athas.dev/extensions/packages/theme/vercel/athas.theme.vercel.tar.gz",
+            size: 100,
+            checksum: "checksum",
+          },
           themes: [
             {
               id: "vercel-light",
@@ -72,11 +89,59 @@ describe("extension-store bootstrap", () => {
         },
       ],
       indexedDBInstalled: [{ languageId: "athas.theme.market", version: "1.0.0" }],
-      bundledContributionInstalled: ["athas.theme.market", "athas.theme.vercel"],
       availableExtensions,
     });
 
     expect(installedExtensions.has("athas.theme.market")).toBe(false);
-    expect(installedExtensions.has("athas.theme.vercel")).toBe(true);
+    expect(installedExtensions.has("athas.theme.vercel")).toBe(false);
+  });
+
+  it("migrates installed bundled contributions to downloaded extension packages", async () => {
+    const values = new Map([
+      ["athas.installedBundledContributionExtensions", JSON.stringify(["athas.ai.v0"])],
+    ]);
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (key: string) => values.get(key) ?? null,
+        setItem: (key: string, value: string) => values.set(key, value),
+      },
+    });
+
+    const manifest: ExtensionManifest = {
+      id: "athas.ai.v0",
+      name: "v0",
+      displayName: "v0",
+      description: "External v0 provider",
+      version: "1.0.0",
+      publisher: "Athas",
+      categories: ["AI"],
+      installation: {
+        downloadUrl: "https://athas.dev/extensions/packages/ai/v0/athas.ai.v0.tar.gz",
+        size: 100,
+        checksum: "checksum",
+      },
+    };
+    const installed = {
+      id: manifest.id,
+      name: manifest.displayName,
+      version: manifest.version,
+      installed_at: "2026-08-30T00:00:00.000Z",
+      enabled: true,
+    };
+    mocks.invoke.mockResolvedValueOnce(undefined).mockResolvedValueOnce([installed]);
+
+    await expect(
+      migrateBundledContributionInstallations(
+        new Map([[manifest.id, createAvailableExtension(manifest)]]),
+        [],
+      ),
+    ).resolves.toEqual([installed]);
+    expect(mocks.invoke).toHaveBeenNthCalledWith(1, "install_extension", {
+      extensionId: manifest.id,
+      url: manifest.installation?.downloadUrl,
+      checksum: manifest.installation?.checksum,
+      size: manifest.installation?.size,
+    });
+    expect(values.get("athas.installedBundledContributionExtensions")).toBe("[]");
   });
 });

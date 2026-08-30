@@ -1,0 +1,41 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.ai.v0",
+  "name": "v0",
+  "displayName": "v0",
+  "description": "Generate apps with v0 and optional shadcn registry design-system context.",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "categories": ["AI"],
+  "activationEvents": ["onAIProvider:v0"],
+  "aiProviders": [
+    {
+      "id": "v0",
+      "name": "v0",
+      "apiUrl": "https://api.v0.dev/v1/chats",
+      "requiresApiKey": true,
+      "transport": "tauri",
+      "maxTokens": 50000,
+      "apiKeyUrl": "https://v0.dev/chat/settings/keys",
+      "apiKeyPlaceholder": "v0_xxxxxxxxxxxxxxxxxxxx",
+      "models": [
+        { "id": "v0-auto", "name": "v0 Auto", "maxTokens": 50000 },
+        { "id": "v0-mini", "name": "v0 Mini", "maxTokens": 50000 },
+        { "id": "v0-pro", "name": "v0 Pro", "maxTokens": 50000 },
+        { "id": "v0-max", "name": "v0 Max", "maxTokens": 50000 },
+        { "id": "v0-max-fast", "name": "v0 Max Fast", "maxTokens": 50000 }
+      ]
+    }
+  ],
+  "main": "main.js",
+  "permissions": {
+    "network": ["https://*"],
+    "settings": ["v0DesignSystems", "activeV0DesignSystemId"]
+  },
+  "icon": "icon.svg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas"
+  }
+}

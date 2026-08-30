@@ -7,6 +7,8 @@ export interface ExtensionWorkerEvent {
     | "dialogs.open"
     | "dialogs.close"
     | "views.invalidate"
+    | "ai.registerProvider"
+    | "ai.registerSettingsAction"
     | "ready"
     | "activation.error";
   payload?: Record<string, unknown>;

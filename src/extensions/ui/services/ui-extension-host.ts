@@ -10,6 +10,11 @@ import {
 } from "./extension-host-services";
 import { parseExtensionViewNode } from "./extension-view-schema";
 import type { ExtensionWorkerMessage } from "./ui-extension-worker";
+import {
+  registerExternalAIProvider,
+  registerExternalAIProviderSettingsAction,
+  unregisterExternalAIProviders,
+} from "@/features/ai/services/providers/external-ai-provider";
 
 interface LoadedExtension {
   extensionId: string;
@@ -135,6 +140,7 @@ class UIExtensionHost {
       const message = error instanceof Error ? error.message : "Unknown error";
       actions.updateExtensionState(extensionId, "error", message);
       this.disposeWorker(loaded);
+      unregisterExternalAIProviders(extensionId);
       this.loaded.delete(extensionId);
       throw error;
     }
@@ -229,6 +235,28 @@ class UIExtensionHost {
       actions.closeDialog(assertNamespaced(loaded.extensionId, payload.id));
     } else if (message.event === "views.invalidate") {
       actions.invalidateSidebarView(assertNamespaced(loaded.extensionId, payload.viewId));
+    } else if (message.event === "ai.registerProvider") {
+      const providerId = String(payload.providerId ?? "");
+      registerExternalAIProvider({
+        extensionId: loaded.extensionId,
+        manifest: loaded.manifest,
+        providerId,
+        request: (method, params) => this.request(loaded.extensionId, method, params ?? []),
+      });
+    } else if (message.event === "ai.registerSettingsAction") {
+      const id = assertNamespaced(loaded.extensionId, payload.id);
+      const commandId = assertNamespaced(loaded.extensionId, payload.commandId);
+      registerExternalAIProviderSettingsAction({
+        id,
+        extensionId: loaded.extensionId,
+        manifest: loaded.manifest,
+        providerId: String(payload.providerId ?? ""),
+        label: String(payload.label ?? "Provider settings"),
+        buttonLabel: String(payload.buttonLabel ?? "Configure"),
+        description: typeof payload.description === "string" ? payload.description : undefined,
+        icon: payload.icon === "sparkles" ? "sparkles" : "palette",
+        execute: () => this.executeCommand(loaded.extensionId, commandId),
+      });
     }
   }
 
@@ -275,6 +303,7 @@ class UIExtensionHost {
       await this.request(extensionId, "deactivate", []).catch(() => undefined);
     }
     this.disposeWorker(loaded);
+    unregisterExternalAIProviders(extensionId);
     useUIExtensionStore.getState().actions.cleanupExtension(extensionId);
     this.loaded.delete(extensionId);
   }

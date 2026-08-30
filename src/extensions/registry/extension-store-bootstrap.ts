@@ -2,8 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { extensionInstaller } from "../installer/extension-installer";
-import { isBundledContributionExtension } from "../bundled/bundled-contribution-extensions";
-import { readInstalledBundledContributionExtensionIds } from "./bundled-contribution-install-state";
+import {
+  markBundledContributionExtensionUninstalled,
+  readInstalledBundledContributionExtensionIds,
+} from "./bundled-contribution-install-state";
 import { readDisabledExtensionIds } from "./extension-enabled-state";
 import { initializeLanguagePackager } from "../languages/language-packager";
 import { extensionRegistry } from "./extension-registry";
@@ -19,6 +21,8 @@ import type {
   ExtensionInstallationMetadata,
   ExtensionRuntimeIssue,
 } from "./extension-store-types";
+import { PLATFORM_ARCH } from "@/utils/platform";
+import type { ExtensionManifest, PlatformPackage } from "../types/extension-manifest";
 
 interface IndexedDbInstalledExtension {
   languageId: string;
@@ -26,12 +30,70 @@ interface IndexedDbInstalledExtension {
   version: string;
 }
 
+function bundledMigrationPackage(manifest: ExtensionManifest): PlatformPackage | undefined {
+  const installation = manifest.installation;
+  const platformPackage = installation?.platformArch?.[PLATFORM_ARCH];
+  if (platformPackage) return platformPackage;
+  if (
+    typeof installation?.downloadUrl !== "string" ||
+    typeof installation.size !== "number" ||
+    typeof installation.checksum !== "string"
+  ) {
+    return undefined;
+  }
+  return {
+    downloadUrl: installation.downloadUrl,
+    size: installation.size,
+    checksum: installation.checksum,
+  };
+}
+
+export async function migrateBundledContributionInstallations(
+  availableExtensions: Map<string, AvailableExtension>,
+  backendInstalled: ExtensionInstallationMetadata[],
+): Promise<ExtensionInstallationMetadata[]> {
+  const installedIds = new Set(backendInstalled.map((extension) => extension.id));
+  let installedExternalPackage = false;
+
+  for (const extensionId of readInstalledBundledContributionExtensionIds()) {
+    if (installedIds.has(extensionId)) {
+      markBundledContributionExtensionUninstalled(extensionId);
+      continue;
+    }
+
+    const extension = availableExtensions.get(extensionId);
+    if (!extension || extension.manifest.installation?.type === "bundled") continue;
+    const extensionPackage = bundledMigrationPackage(extension.manifest);
+    if (!extensionPackage) continue;
+
+    try {
+      await invoke("install_extension", {
+        extensionId,
+        url: extensionPackage.downloadUrl,
+        checksum: extensionPackage.checksum,
+        size: extensionPackage.size,
+      });
+      markBundledContributionExtensionUninstalled(extensionId);
+      installedExternalPackage = true;
+    } catch (error) {
+      console.warn(`Could not migrate bundled extension ${extensionId}:`, error);
+    }
+  }
+
+  if (!installedExternalPackage) return backendInstalled;
+
+  try {
+    return await invoke<ExtensionInstallationMetadata[]>("list_installed_extensions");
+  } catch {
+    return backendInstalled;
+  }
+}
+
 export async function loadInstalledExtensionsSnapshot(
   availableExtensions: Map<string, AvailableExtension>,
 ): Promise<{
   backendInstalled: ExtensionInstallationMetadata[];
   indexedDBInstalled: IndexedDbInstalledExtension[];
-  bundledContributionInstalled: string[];
   runtimeIssues: Map<string, ExtensionRuntimeIssue[]>;
 }> {
   let backendInstalled: ExtensionInstallationMetadata[] = [];
@@ -43,8 +105,11 @@ export async function loadInstalledExtensionsSnapshot(
     // Backend command may not exist yet, continue with IndexedDB check.
   }
 
+  backendInstalled = await migrateBundledContributionInstallations(
+    availableExtensions,
+    backendInstalled,
+  );
   const indexedDBInstalled = await extensionInstaller.listInstalled();
-  const bundledContributionInstalled = Array.from(readInstalledBundledContributionExtensionIds());
   const disabledExtensionIds = readDisabledExtensionIds();
 
   await Promise.all(
@@ -97,7 +162,6 @@ export async function loadInstalledExtensionsSnapshot(
   return {
     backendInstalled,
     indexedDBInstalled,
-    bundledContributionInstalled,
     runtimeIssues,
   };
 }
@@ -105,15 +169,9 @@ export async function loadInstalledExtensionsSnapshot(
 export function buildInstalledExtensionsMap(params: {
   backendInstalled: ExtensionInstallationMetadata[];
   indexedDBInstalled: IndexedDbInstalledExtension[];
-  bundledContributionInstalled: string[];
   availableExtensions: Map<string, AvailableExtension>;
 }): Map<string, ExtensionInstallationMetadata> {
-  const {
-    backendInstalled,
-    indexedDBInstalled,
-    bundledContributionInstalled,
-    availableExtensions,
-  } = params;
+  const { backendInstalled, indexedDBInstalled, availableExtensions } = params;
   const disabledExtensionIds = readDisabledExtensionIds();
   const installedExtensions = new Map(
     backendInstalled
@@ -126,25 +184,6 @@ export function buildInstalledExtensionsMap(params: {
         },
       ]),
   );
-
-  for (const extensionId of bundledContributionInstalled) {
-    if (isRetiredExtensionId(extensionId)) {
-      continue;
-    }
-
-    const extension = availableExtensions.get(extensionId);
-    if (!extension || !isBundledContributionExtension(extension.manifest)) {
-      continue;
-    }
-
-    installedExtensions.set(extensionId, {
-      id: extensionId,
-      name: extension.manifest.displayName,
-      version: extension.manifest.version,
-      installed_at: new Date().toISOString(),
-      enabled: !disabledExtensionIds.has(extensionId),
-    });
-  }
 
   for (const installed of indexedDBInstalled) {
     const extensionId = resolveInstalledExtensionId(installed, availableExtensions);
