@@ -281,7 +281,7 @@ export function MainLayout() {
         }}
       />
 
-      <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden">
+      <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden pb-workbench">
         <div className="flex flex-1 flex-row overflow-hidden pr-workbench" style={{ minHeight: 0 }}>
           <ActivityBar expanded={renderedActivityRailExpanded} />
           <ResizablePane
