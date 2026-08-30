@@ -448,7 +448,6 @@ const GitHubActionsView = memo(
                 <SidebarSection
                   key={group.id}
                   title={group.title}
-                  count={group.items.length}
                   defaultExpanded={group.defaultExpanded}
                   forceExpanded={forceListSectionsExpanded}
                 >

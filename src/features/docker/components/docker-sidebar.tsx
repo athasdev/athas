@@ -945,7 +945,7 @@ export function DockerSidebar() {
         ? isComposeLoading
         : isProjectConfigLoading;
 
-  const renderSection = (section: DockerSection, rows: ReactNode, filteredCount?: number) => {
+  const renderSection = (section: DockerSection, rows: ReactNode) => {
     const title = section === "cleanup" ? "Cleanup" : section[0].toUpperCase() + section.slice(1);
     const isVisible = dockerSectionGroups[activeSection].includes(section);
     const isCollapsed = collapsedSections.has(section);
@@ -974,7 +974,7 @@ export function DockerSidebar() {
         className={cn("min-w-0 pt-2 first:pt-0", !isVisible && "hidden")}
       >
         <AccordionItem value={section}>
-          <AccordionTrigger count={filteredCount}>{title}</AccordionTrigger>
+          <AccordionTrigger>{title}</AccordionTrigger>
           <AccordionContent>{rows}</AccordionContent>
         </AccordionItem>
       </Accordion>
@@ -1097,7 +1097,6 @@ export function DockerSidebar() {
                 ) : (
                   <EmptyState layout="sidebar" message="No matching containers" />
                 ),
-                filteredContainers.length,
               )}
               {renderSection(
                 "compose",
@@ -1115,7 +1114,6 @@ export function DockerSidebar() {
                   onServiceAction={handleComposeAction}
                   onOpenUrl={openServiceUrl}
                 />,
-                filteredComposeServices.length,
               )}
               {renderSection(
                 "project",
@@ -1463,7 +1461,6 @@ export function DockerSidebar() {
                     )}
                   </>
                 ),
-                projectConfigItemCount,
               )}
               {renderSection(
                 "images",
@@ -1498,7 +1495,6 @@ export function DockerSidebar() {
                     <EmptyState layout="sidebar" message="No matching images" />
                   )}
                 </>,
-                filteredImages.length,
               )}
               {renderSection(
                 "registry",
@@ -1520,7 +1516,6 @@ export function DockerSidebar() {
                   onTag={handleTagImage}
                   onDismissError={dismissRegistryError}
                 />,
-                registryResults.length,
               )}
               {renderSection(
                 "cleanup",
@@ -1551,7 +1546,6 @@ export function DockerSidebar() {
                     </Button>
                   ))}
                 </div>,
-                5,
               )}
               {renderSection(
                 "volumes",
@@ -1560,7 +1554,6 @@ export function DockerSidebar() {
                 ) : (
                   <EmptyState layout="sidebar" message="No matching volumes" />
                 ),
-                filteredVolumes.length,
               )}
               {renderSection(
                 "networks",
@@ -1571,7 +1564,6 @@ export function DockerSidebar() {
                 ) : (
                   <EmptyState layout="sidebar" message="No matching networks" />
                 ),
-                filteredNetworks.length,
               )}
             </ScrollArea>
 

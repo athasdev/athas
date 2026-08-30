@@ -248,7 +248,7 @@ function ReviewSidebarContent() {
               <div className="flex flex-col gap-2">
                 {RISK_SECTIONS.map(({ id, title }) =>
                   groupedByRisk[id].length > 0 ? (
-                    <SidebarSection key={id} title={title} count={groupedByRisk[id].length}>
+                    <SidebarSection key={id} title={title}>
                       {renderCards(groupedByRisk[id])}
                     </SidebarSection>
                   ) : null,

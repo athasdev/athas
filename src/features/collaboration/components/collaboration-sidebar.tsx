@@ -987,7 +987,7 @@ export function CollaborationSidebarView() {
               onValueChange={(value) => setIsChannelsSectionCollapsed(!value.includes("channels"))}
             >
               <AccordionItem value="channels">
-                <AccordionTrigger count={filteredChannels.length}>Channels</AccordionTrigger>
+                <AccordionTrigger>Channels</AccordionTrigger>
                 <AccordionContent>
                   {isCreatingChannel ? (
                     <form
@@ -1066,9 +1066,7 @@ export function CollaborationSidebarView() {
                 }
               >
                 <AccordionItem value="private-chats">
-                  <AccordionTrigger count={filteredPrivateChatParticipants.length}>
-                    Private chats
-                  </AccordionTrigger>
+                  <AccordionTrigger>Private chats</AccordionTrigger>
                   <AccordionContent>
                     {filteredPrivateChatParticipants.map((participant) => (
                       <SidebarListItem

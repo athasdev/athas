@@ -671,9 +671,7 @@ const GitStatusPanel = ({
             >
               {trackedFiles.length > 0 ? (
                 <AccordionItem value="tracked">
-                  <AccordionTrigger count={trackedFiles.length} sticky>
-                    {SECTION_LABELS.tracked}
-                  </AccordionTrigger>
+                  <AccordionTrigger>{SECTION_LABELS.tracked}</AccordionTrigger>
                   <AccordionContent>
                     <SidebarTree label="Tracked files">
                       {gitChangesFolderView
@@ -685,9 +683,7 @@ const GitStatusPanel = ({
               ) : null}
               {untrackedFiles.length > 0 ? (
                 <AccordionItem value="untracked">
-                  <AccordionTrigger count={untrackedFiles.length} sticky>
-                    {SECTION_LABELS.untracked}
-                  </AccordionTrigger>
+                  <AccordionTrigger>{SECTION_LABELS.untracked}</AccordionTrigger>
                   <AccordionContent>
                     <SidebarTree label="Untracked files">
                       {gitChangesFolderView

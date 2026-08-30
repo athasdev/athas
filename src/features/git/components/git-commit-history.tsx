@@ -282,7 +282,7 @@ const GitCommitHistory = ({
         ) : (
           <>
             {commitGroups.map((group) => (
-              <SidebarSection key={group.label} title={group.label} count={group.commits.length}>
+              <SidebarSection key={group.label} title={group.label}>
                 {group.commits.map((commit) => (
                   <CommitItem
                     key={commit.hash}

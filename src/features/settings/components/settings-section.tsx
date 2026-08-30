@@ -53,11 +53,7 @@ export default function Section({ title, description, children, className }: Sec
       data-settings-section-key={sectionKey}
     >
       <AccordionItem value={sectionKey} className="space-y-0">
-        <AccordionTrigger
-          variant="section"
-          className="settings-section-header mb-2"
-          data-settings-section-trigger=""
-        >
+        <AccordionTrigger className="settings-section-header mb-2" data-settings-section-trigger="">
           <span className="flex min-w-0 flex-col">
             <span>{title}</span>
             {description ? (

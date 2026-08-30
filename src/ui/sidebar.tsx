@@ -1,7 +1,6 @@
 import { CaretDownIcon as CaretDown } from "@/ui/icons";
 import { forwardRef, type ComponentProps, type ReactNode, useEffect, useState } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
-import Badge from "@/ui/badge";
 import { ChromeBar } from "@/ui/chrome";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
@@ -178,7 +177,6 @@ export function SidebarSectionStack({ className, ...props }: ComponentProps<"div
 export function SidebarSectionHeader({
   children,
   action,
-  count,
   expanded = true,
   onToggle,
   className,
@@ -186,7 +184,6 @@ export function SidebarSectionHeader({
 }: Omit<ComponentProps<"button">, "children"> & {
   children: ReactNode;
   action?: ReactNode;
-  count?: ReactNode;
   expanded?: boolean;
   onToggle?: () => void;
 }) {
@@ -209,11 +206,6 @@ export function SidebarSectionHeader({
             !expanded && "-rotate-90",
           )}
         />
-        {count !== undefined ? (
-          <Badge variant="muted" className="shrink-0">
-            {count}
-          </Badge>
-        ) : null}
       </button>
       {action ? <span className="flex shrink-0 items-center">{action}</span> : null}
     </div>
@@ -222,14 +214,12 @@ export function SidebarSectionHeader({
 
 export function SidebarSection({
   title,
-  count,
   action,
   children,
   defaultExpanded = true,
   forceExpanded = false,
 }: {
   title: ReactNode;
-  count?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   defaultExpanded?: boolean;
@@ -251,9 +241,7 @@ export function SidebarSection({
       className="pt-2 first:pt-0"
     >
       <AccordionItem value="section">
-        <AccordionTrigger count={count} action={action}>
-          {title}
-        </AccordionTrigger>
+        <AccordionTrigger action={action}>{title}</AccordionTrigger>
         <AccordionContent>{children}</AccordionContent>
       </AccordionItem>
     </Accordion>
