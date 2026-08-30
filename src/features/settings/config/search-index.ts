@@ -264,6 +264,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["file", "folder", "icon", "theme", "display"],
   },
   {
+    id: "file-tree-show-folder-arrows",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Show Folder Arrows",
+    description: "Show expand and collapse arrows beside folders",
+    keywords: ["folder", "arrow", "chevron", "expand", "collapse", "disclosure", "tree"],
+  },
+  {
     id: "file-tree-show-indent-guides",
     tab: "file-explorer",
     section: "Display",

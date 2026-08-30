@@ -56,6 +56,7 @@ describe("default settings", () => {
     expect(settings.fileTreeSortOrder).toBe("folders-first");
     expect(settings.autoRevealActiveFileInFileTree).toBe(true);
     expect(settings.showFileIconsInFileTree).toBe(true);
+    expect(settings.showFolderArrowsInFileTree).toBe(false);
     expect(settings.showIndentGuidesInFileTree).toBe(true);
     expect(settings.confirmBeforeFileDelete).toBe(true);
   });

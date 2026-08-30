@@ -114,6 +114,7 @@ type SyncableSettingsKey =
   | "hideRootFolderInFileTree"
   | "autoRevealActiveFileInFileTree"
   | "showFileIconsInFileTree"
+  | "showFolderArrowsInFileTree"
   | "showIndentGuidesInFileTree"
   | "confirmBeforeFileDelete"
   | "showHiddenFilesInFileTree"
@@ -234,6 +235,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "hideRootFolderInFileTree",
   "autoRevealActiveFileInFileTree",
   "showFileIconsInFileTree",
+  "showFolderArrowsInFileTree",
   "showIndentGuidesInFileTree",
   "confirmBeforeFileDelete",
   "showHiddenFilesInFileTree",

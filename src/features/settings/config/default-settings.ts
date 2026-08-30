@@ -155,6 +155,7 @@ export const defaultSettings: Settings = {
   hideRootFolderInFileTree: false,
   autoRevealActiveFileInFileTree: true,
   showFileIconsInFileTree: true,
+  showFolderArrowsInFileTree: false,
   showIndentGuidesInFileTree: true,
   confirmBeforeFileDelete: true,
   showHiddenFilesInFileTree: true,

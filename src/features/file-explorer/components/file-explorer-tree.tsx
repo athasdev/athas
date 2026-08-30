@@ -204,6 +204,7 @@ function FileExplorerTreeComponent({
       hiddenFilePatterns: state.settings.hiddenFilePatterns,
       hideRootFolderInFileTree: state.settings.hideRootFolderInFileTree,
       showFileIconsInFileTree: state.settings.showFileIconsInFileTree,
+      showFolderArrowsInFileTree: state.settings.showFolderArrowsInFileTree,
       showGitignoredFilesInFileTree: state.settings.showGitignoredFilesInFileTree,
       showGitStatusInFileTree: state.settings.showGitStatusInFileTree,
       showHiddenFilesInFileTree: state.settings.showHiddenFilesInFileTree,
@@ -1386,6 +1387,15 @@ function FileExplorerTreeComponent({
                   File Icons
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
+                  checked={fileTreeSettings.showFolderArrowsInFileTree}
+                  closeOnClick={false}
+                  onCheckedChange={(checked) =>
+                    void updateSetting("showFolderArrowsInFileTree", checked)
+                  }
+                >
+                  Folder Arrows
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
                   checked={fileTreeSettings.showIndentGuidesInFileTree}
                   closeOnClick={false}
                   onCheckedChange={(checked) =>
@@ -1558,6 +1568,7 @@ function FileExplorerTreeComponent({
               nextDepth={nextRow?.depth ?? 0}
               indentSize={fileTreeSettings.fileTreeIndentSize}
               showIcon={fileTreeSettings.showFileIconsInFileTree}
+              showFolderArrows={fileTreeSettings.showFolderArrowsInFileTree}
               showIndentGuides={fileTreeSettings.showIndentGuidesInFileTree}
               isExpanded={row.isExpanded}
               isActive={highlightedPath === row.file.path}

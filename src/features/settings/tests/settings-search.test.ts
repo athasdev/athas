@@ -44,6 +44,7 @@ describe("settings search", () => {
 
   it("finds file tree display and behavior settings", () => {
     expect(searchSettings("sort order")[0]?.id).toBe("file-tree-sort-order");
+    expect(searchSettings("folder arrows")[0]?.id).toBe("file-tree-show-folder-arrows");
     expect(searchSettings("auto reveal active file")[0]?.id).toBe(
       "file-tree-auto-reveal-active-file",
     );

@@ -184,6 +184,7 @@ export interface Settings {
   hideRootFolderInFileTree: boolean;
   autoRevealActiveFileInFileTree: boolean;
   showFileIconsInFileTree: boolean;
+  showFolderArrowsInFileTree: boolean;
   showIndentGuidesInFileTree: boolean;
   confirmBeforeFileDelete: boolean;
   showHiddenFilesInFileTree: boolean;

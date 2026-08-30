@@ -173,6 +173,7 @@ type SidebarTreeRowProps = Omit<React.ComponentPropsWithoutRef<"button">, "child
   guides?: React.ReactNode;
   description?: React.ReactNode;
   onToggle?: (event: React.MouseEvent<HTMLSpanElement>) => void;
+  disclosureVisible?: boolean;
   reserveDisclosureSpace?: boolean;
   showDisclosure?: boolean;
   showGuides?: boolean;
@@ -197,6 +198,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
       guides,
       description,
       onToggle,
+      disclosureVisible = true,
       reserveDisclosureSpace = false,
       showDisclosure = expanded !== undefined,
       showGuides = true,
@@ -249,7 +251,8 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
         >
           {showDisclosure || reserveDisclosureSpace ? (
             <SidebarTreeDisclosure
-              visible={showDisclosure}
+              visible={showDisclosure && disclosureVisible}
+              reserveSpace={reserveDisclosureSpace || disclosureVisible}
               expanded={expanded}
               onClick={onToggle}
             />
@@ -284,6 +287,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
 interface SidebarTreeDisclosureProps {
   expanded?: boolean;
   visible?: boolean;
+  reserveSpace?: boolean;
   onClick?: (event: React.MouseEvent<HTMLSpanElement>) => void;
   className?: string;
 }
@@ -291,6 +295,7 @@ interface SidebarTreeDisclosureProps {
 export function SidebarTreeDisclosure({
   expanded = false,
   visible = true,
+  reserveSpace = true,
   onClick,
   className,
 }: SidebarTreeDisclosureProps) {
@@ -301,6 +306,7 @@ export function SidebarTreeDisclosure({
       className={cn(
         "mr-0.5 flex size-4 shrink-0 items-center justify-center rounded text-subtle-foreground transition-colors",
         !visible && "pointer-events-none text-transparent",
+        !visible && !reserveSpace && "absolute mr-0 size-0 overflow-hidden",
         className,
       )}
       onClick={(event) => {

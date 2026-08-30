@@ -20,6 +20,7 @@ export const FileTreeSettings = () => {
       hiddenFilePatterns: state.settings.hiddenFilePatterns,
       hideRootFolderInFileTree: state.settings.hideRootFolderInFileTree,
       showFileIconsInFileTree: state.settings.showFileIconsInFileTree,
+      showFolderArrowsInFileTree: state.settings.showFolderArrowsInFileTree,
       showGitignoredFilesInFileTree: state.settings.showGitignoredFilesInFileTree,
       showGitStatusInFileTree: state.settings.showGitStatusInFileTree,
       showHiddenFilesInFileTree: state.settings.showHiddenFilesInFileTree,
@@ -107,6 +108,25 @@ export const FileTreeSettings = () => {
           <Switch
             checked={settings.showFileIconsInFileTree}
             onChange={(checked) => updateSetting("showFileIconsInFileTree", checked)}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show Folder Arrows"
+          description="Show expand and collapse arrows beside folders"
+          onReset={() =>
+            updateSetting(
+              "showFolderArrowsInFileTree",
+              getDefaultSetting("showFolderArrowsInFileTree"),
+            )
+          }
+          canReset={
+            settings.showFolderArrowsInFileTree !== getDefaultSetting("showFolderArrowsInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.showFolderArrowsInFileTree}
+            onChange={(checked) => updateSetting("showFolderArrowsInFileTree", checked)}
           />
         </SettingRow>
 

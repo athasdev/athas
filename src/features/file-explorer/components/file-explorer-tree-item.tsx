@@ -48,6 +48,7 @@ interface FileExplorerTreeItemProps {
   nextDepth: number;
   indentSize: number;
   showIcon: boolean;
+  showFolderArrows: boolean;
   showIndentGuides: boolean;
   isExpanded: boolean;
   isActive: boolean;
@@ -93,6 +94,7 @@ function FileExplorerTreeItemComponent({
   nextDepth,
   indentSize,
   showIcon,
+  showFolderArrows,
   showIndentGuides,
   isExpanded,
   isActive,
@@ -155,7 +157,7 @@ function FileExplorerTreeItemComponent({
             paddingLeft: `${paddingLeft}px`,
           }}
         >
-          <SidebarTreeDisclosure visible={false} />
+          {showFolderArrows ? <SidebarTreeDisclosure visible={false} /> : null}
           {showIcon ? (
             <ThemedFileIcon
               fileName={file.isDir ? "folder" : "file"}
@@ -206,7 +208,8 @@ function FileExplorerTreeItemComponent({
       nextDepth={nextDepth}
       expanded={file.isDir ? isExpanded : undefined}
       showDisclosure={file.isDir}
-      reserveDisclosureSpace={!file.isDir}
+      disclosureVisible={showFolderArrows}
+      reserveDisclosureSpace={showFolderArrows && !file.isDir}
       guides={renderTreeGuides()}
       containerClassName="h-(--file-tree-row-height)"
       data-file-path={file.path}
@@ -262,6 +265,7 @@ export const FileExplorerTreeItem = memo(
     prev.nextDepth === next.nextDepth &&
     prev.indentSize === next.indentSize &&
     prev.showIcon === next.showIcon &&
+    prev.showFolderArrows === next.showFolderArrows &&
     prev.showIndentGuides === next.showIndentGuides &&
     prev.isExpanded === next.isExpanded &&
     prev.isActive === next.isActive &&
