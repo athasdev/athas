@@ -185,16 +185,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const canOpenCommitFile = Boolean(multiDiff.repoPath ?? rootFolderPath) && isCommitDiff;
   const commitAuthor = multiDiff.commitAuthor?.trim() || "Unknown author";
   const commitAvatarUrl = isCommitDiff
-    ? getGitAuthorAvatarUrl(
-        {
-          hash: multiDiff.commitHash,
-          message: multiDiff.commitMessage || multiDiff.title || "Commit",
-          author: commitAuthor,
-          email: multiDiff.commitEmail,
-          date: multiDiff.commitDate || "",
-        },
-        account,
-      )
+    ? getGitAuthorAvatarUrl({ email: multiDiff.commitEmail }, account)
     : null;
   const handleOpenCommitFile = useCallback(
     async (sectionKey: string) => {
