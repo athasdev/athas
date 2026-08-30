@@ -176,7 +176,12 @@ export function SidebarListItem({
       {...props}
     >
       {leading ? (
-        <span className={cn("flex shrink-0 items-center justify-center", description && "mt-0.5")}>
+        <span
+          className={cn(
+            "flex size-[1em] shrink-0 items-center justify-center",
+            description && "mt-0.5",
+          )}
+        >
           {leading}
         </span>
       ) : null}
