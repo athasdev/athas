@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { CaretDownIcon as CaretDown } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -8,10 +7,11 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
+import { CaretDownIcon as CaretDown } from "@/ui/icons";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
-interface WorkbenchPageHeaderProps {
+interface ResourcePageHeaderProps {
   breadcrumb: ReactNode;
   search: ReactNode;
   categories: ReactNode;
@@ -19,25 +19,25 @@ interface WorkbenchPageHeaderProps {
   className?: string;
 }
 
-export function WorkbenchPageHeader({
+export function ResourcePageHeader({
   breadcrumb,
   search,
   categories,
   status,
   className,
-}: WorkbenchPageHeaderProps) {
+}: ResourcePageHeaderProps) {
   return (
     <header
-      data-slot="workbench-page-header"
-      className={cn("@container/workbench shrink-0 bg-background", className)}
+      data-slot="resource-page-header"
+      className={cn("@container/resource shrink-0 bg-background", className)}
     >
       {breadcrumb}
-      <div className="w-full px-5 py-4 @max-[480px]/workbench:px-3 @max-[480px]/workbench:py-3">
+      <div className="w-full px-5 py-4 @max-[480px]/resource:px-3 @max-[480px]/resource:py-3">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <div className="min-w-64 max-w-xl flex-1 @max-[480px]/workbench:min-w-full">{search}</div>
+          <div className="min-w-64 max-w-xl flex-1 @max-[480px]/resource:min-w-full">{search}</div>
           {status ? (
             <div
-              data-slot="workbench-page-status"
+              data-slot="resource-page-status"
               className="ml-auto shrink-0 font-sans text-subtle-foreground ui-text-sm"
             >
               {status}
@@ -50,7 +50,7 @@ export function WorkbenchPageHeader({
   );
 }
 
-export interface WorkbenchCategoryItem<TValue extends string> {
+export interface ResourceCategoryItem<TValue extends string> {
   id: TValue;
   label: string;
   icon?: ReactNode;
@@ -58,29 +58,29 @@ export interface WorkbenchCategoryItem<TValue extends string> {
   panelId?: string;
 }
 
-interface WorkbenchCategoryNavProps<TValue extends string> {
-  items: WorkbenchCategoryItem<TValue>[];
+interface ResourceCategoryNavProps<TValue extends string> {
+  items: ResourceCategoryItem<TValue>[];
   value: TValue;
   onValueChange: (value: TValue) => void;
   ariaLabel: string;
   className?: string;
 }
 
-export function WorkbenchCategoryNav<TValue extends string>({
+export function ResourceCategoryNav<TValue extends string>({
   items,
   value,
   onValueChange,
   ariaLabel,
   className,
-}: WorkbenchCategoryNavProps<TValue>) {
+}: ResourceCategoryNavProps<TValue>) {
   const activeItem = items.find((item) => item.id === value) ?? items[0];
 
   return (
-    <div data-slot="workbench-category-nav" className={cn("min-w-0", className)}>
+    <div data-slot="resource-category-nav" className={cn("min-w-0", className)}>
       <Tabs
         value={value}
         onValueChange={(nextValue) => onValueChange(nextValue as TValue)}
-        className="@max-[720px]/workbench:hidden"
+        className="@max-[720px]/resource:hidden"
       >
         <div className="scrollbar-none min-w-0 overflow-x-auto">
           <TabsList variant="bare" aria-label={ariaLabel}>
@@ -100,7 +100,7 @@ export function WorkbenchCategoryNav<TValue extends string>({
         </div>
       </Tabs>
 
-      <div className="hidden @max-[720px]/workbench:block">
+      <div className="hidden @max-[720px]/resource:block">
         <DropdownMenu>
           <DropdownMenuTrigger
             render={

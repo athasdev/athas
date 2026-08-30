@@ -34,7 +34,7 @@ import { EmptyState } from "@/ui/empty";
 import { SearchInput } from "@/ui/search";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
-import { WorkbenchCategoryNav, WorkbenchPageHeader } from "@/ui/workbench-page";
+import { ResourceCategoryNav, ResourcePageHeader } from "@/ui/resource";
 import { buildExtensionCatalog } from "./build-extension-catalog";
 import { ExtensionCatalogCard } from "./extension-catalog-card";
 import { ExtensionCategoryIcon } from "./extension-catalog-icon";
@@ -339,7 +339,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
 
   return (
     <div className="@container/extensions font-sans flex h-full min-h-0 min-w-0 flex-col bg-background">
-      <WorkbenchPageHeader
+      <ResourcePageHeader
         breadcrumb={
           <EditorBreadcrumb
             filePathOverride="Extensions"
@@ -405,7 +405,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
           </span>
         }
         categories={
-          <WorkbenchCategoryNav
+          <ResourceCategoryNav
             items={extensionCategories}
             value={activeFilter}
             onValueChange={(value) =>

@@ -156,7 +156,7 @@ describe("settings UI contract", () => {
     expect(settingsViewSource).not.toContain("tabIndex: -1");
   });
 
-  it("keeps settings navigation inline in the workbench content", () => {
+  it("keeps settings navigation inline in the resource content", () => {
     const settingsViewSource = readFileSync(
       `${componentsDirectory}/settings-workbench-view.tsx`,
       "utf8",
@@ -170,8 +170,8 @@ describe("settings UI contract", () => {
       "utf8",
     );
 
-    expect(settingsViewSource).toContain("<WorkbenchPageHeader");
-    expect(settingsViewSource).toContain("<WorkbenchCategoryNav");
+    expect(settingsViewSource).toContain("<ResourcePageHeader");
+    expect(settingsViewSource).toContain("<ResourceCategoryNav");
     expect(settingsViewSource).toContain("<SettingsBreadcrumb");
     expect(settingsViewSource).toContain("<SearchInput");
     expect(settingsViewSource).toContain('ariaLabel="Settings sections"');

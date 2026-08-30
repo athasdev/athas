@@ -10,11 +10,11 @@ const extensionControlsPath = fileURLToPath(
 );
 
 describe("extensions UI contract", () => {
-  it("uses the shared workbench header, search, breadcrumb, and category navigation", () => {
+  it("uses the shared resource header, search, breadcrumb, and category navigation", () => {
     const source = readFileSync(extensionsViewPath, "utf8");
 
-    expect(source).toContain("<WorkbenchPageHeader");
-    expect(source).toContain("<WorkbenchCategoryNav");
+    expect(source).toContain("<ResourcePageHeader");
+    expect(source).toContain("<ResourceCategoryNav");
     expect(source).toContain("<ExtensionsBreadcrumb");
     expect(source).toContain("<SearchInput");
     expect(source).toContain('ariaLabel="Extension categories"');

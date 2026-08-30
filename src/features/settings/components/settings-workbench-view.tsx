@@ -17,7 +17,7 @@ import { Dropdown } from "@/ui/dropdown";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import { ScrollArea } from "@/ui/scroll-area";
 import { SearchInput } from "@/ui/search";
-import { WorkbenchCategoryNav, WorkbenchPageHeader } from "@/ui/workbench-page";
+import { ResourceCategoryNav, ResourcePageHeader } from "@/ui/resource";
 import type { SearchResult } from "../types/search.types";
 
 import { AdvancedSettings } from "./tabs/advanced-settings";
@@ -306,7 +306,7 @@ const SettingsWorkbenchView = () => {
   return (
     <>
       <div className="@container/settings flex size-full min-w-0 flex-col overflow-hidden bg-background">
-        <WorkbenchPageHeader
+        <ResourcePageHeader
           breadcrumb={
             <EditorBreadcrumb
               filePathOverride="Settings"
@@ -322,7 +322,7 @@ const SettingsWorkbenchView = () => {
           }
           search={searchInput}
           categories={
-            <WorkbenchCategoryNav
+            <ResourceCategoryNav
               items={settingsCategories}
               value={activeTab}
               onValueChange={handleTabChange}
