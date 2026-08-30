@@ -15,7 +15,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSearch,
@@ -617,9 +616,9 @@ const GitBranchManager = ({
               ))}
             </DropdownMenuRadioGroup>
           ) : (
-            <DropdownMenuLabel>
+            <DropdownMenuItem disabled>
               {branchQuery.trim() ? "No branches match" : "No branches found"}
-            </DropdownMenuLabel>
+            </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => void handlePromptCreateBranch()}>

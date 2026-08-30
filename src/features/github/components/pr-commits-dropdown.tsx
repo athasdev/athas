@@ -5,7 +5,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSearch,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
@@ -103,9 +102,9 @@ export function PRCommitsDropdown({ commits, repoPath }: PRCommitsDropdownProps)
             </DropdownMenuItem>
           ))
         ) : (
-          <DropdownMenuLabel>
+          <DropdownMenuItem disabled>
             {commits.length === 0 ? "No commits" : "No commits match"}
-          </DropdownMenuLabel>
+          </DropdownMenuItem>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

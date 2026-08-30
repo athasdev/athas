@@ -3,6 +3,7 @@ import type { ActivityNavigationItem } from "@/features/layout/hooks/use-activit
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -41,22 +42,24 @@ function ActivityNavigationVisibilityMenu({ item }: { item: ActivityNavigationIt
         <DotsThreeIcon className="rotate-90" />
       </DropdownMenuTrigger>
       <SidebarMenuContent>
-        <DropdownMenuLabel>Visible Items</DropdownMenuLabel>
-        {item.submenuItems?.map((submenuItem) => (
-          <Fragment key={submenuItem.id}>
-            {submenuItem.separatorBefore ? <DropdownMenuSeparator /> : null}
-            <DropdownMenuCheckboxItem
-              checked={!item.hiddenSubmenuItemIds?.includes(submenuItem.id)}
-              closeOnClick={false}
-              onCheckedChange={(checked) =>
-                item.onSubmenuItemVisibleChange?.(submenuItem.id, checked)
-              }
-            >
-              {submenuItem.icon}
-              {submenuItem.label}
-            </DropdownMenuCheckboxItem>
-          </Fragment>
-        ))}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Visible Items</DropdownMenuLabel>
+          {item.submenuItems?.map((submenuItem) => (
+            <Fragment key={submenuItem.id}>
+              {submenuItem.separatorBefore ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuCheckboxItem
+                checked={!item.hiddenSubmenuItemIds?.includes(submenuItem.id)}
+                closeOnClick={false}
+                onCheckedChange={(checked) =>
+                  item.onSubmenuItemVisibleChange?.(submenuItem.id, checked)
+                }
+              >
+                {submenuItem.icon}
+                {submenuItem.label}
+              </DropdownMenuCheckboxItem>
+            </Fragment>
+          ))}
+        </DropdownMenuGroup>
       </SidebarMenuContent>
     </DropdownMenu>
   );
