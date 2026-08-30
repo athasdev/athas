@@ -10,7 +10,7 @@ import {
   canCreatePostgresSubscription,
   initialCreatePostgresSubscriptionForm,
   normalizeCreatePostgresSubscriptionParams,
-} from "./create-subscription-form";
+} from "../utils/create-subscription-form";
 
 interface CreateSubscriptionDialogProps {
   isOpen: boolean;

@@ -4,7 +4,7 @@ import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
 import {
   getClosedRemoteConnections,
   getProjectRemoteConnectionId,
-} from "../components/sidebar/project-switcher-items";
+} from "../utils/project-switcher-items";
 
 const remoteConnection = (id: string): RemoteConnection => ({
   id,

@@ -40,11 +40,8 @@ import {
   getWorkspaceDatabaseFiles,
   type WorkspaceDatabaseFile,
 } from "../utils/workspace-database-files";
-import { buildSavedConnectionConfig } from "./connection/connection-config";
-import {
-  getInstalledDatabaseTypes,
-  validateConnectionInput,
-} from "./connection/connection-validation";
+import { buildSavedConnectionConfig } from "../utils/connection-config";
+import { getInstalledDatabaseTypes, validateConnectionInput } from "../utils/connection-validation";
 
 function getBaseName(path: string) {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path;

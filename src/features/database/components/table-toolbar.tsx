@@ -14,7 +14,7 @@ import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadc
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { Button } from "@/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
-import { databaseChipClassName } from "./database-surface";
+import { databaseChipClassName } from "../utils/database-surface";
 import { formatQueryResultSummary } from "../lib/query-result-summary";
 import type {
   DatabaseInfo,

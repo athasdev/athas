@@ -3,7 +3,7 @@ import {
   canCreatePostgresSubscription,
   initialCreatePostgresSubscriptionForm,
   normalizeCreatePostgresSubscriptionParams,
-} from "@/features/database/providers/postgres/components/create-subscription-form";
+} from "@/features/database/providers/postgres/utils/create-subscription-form";
 
 describe("create postgres subscription form", () => {
   it("provides the default subscription options", () => {

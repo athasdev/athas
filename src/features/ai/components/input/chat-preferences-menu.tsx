@@ -50,7 +50,7 @@ import {
 } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { matchesSearchQuery } from "@/utils/search-match";
-import { getChatPreferencesModel } from "./chat-preferences-model";
+import { getChatPreferencesModel } from "@/features/ai/utils/chat-preferences-model";
 
 const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
   { id: "chat", label: "Ask" },

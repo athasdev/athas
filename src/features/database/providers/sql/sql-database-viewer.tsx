@@ -11,7 +11,7 @@ import QueryBar from "../../components/query-bar";
 import SchemaView from "../../components/schema-view";
 import TableSidebar from "../../components/table-sidebar";
 import TableToolbar from "../../components/table-toolbar";
-import { databasePanelClassName } from "../../components/database-surface";
+import { databasePanelClassName } from "../../utils/database-surface";
 import {
   buildQueryResultExportFilename,
   serializeQueryResultToCsv,

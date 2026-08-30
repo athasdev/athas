@@ -5,7 +5,7 @@ import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-i
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { Empty, EmptyDescription } from "@/ui/empty";
-import { buildHtmlPreviewDocument } from "./html-preview-document";
+import { buildHtmlPreviewDocument } from "@/features/editor/utils/html-preview-document";
 
 export function HtmlPreview() {
   const { hasSourceBuffer, sourceContent, sourcePath } = useBufferStore(

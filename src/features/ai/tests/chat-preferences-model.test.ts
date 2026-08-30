@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getChatPreferencesModel } from "../components/input/chat-preferences-model";
+import { getChatPreferencesModel } from "../utils/chat-preferences-model";
 import type { SessionConfigOption } from "../types/acp.types";
 
 function option(id: string, category: SessionConfigOption["category"]): SessionConfigOption {

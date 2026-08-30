@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   getInstalledDatabaseTypes,
   validateConnectionInput,
-} from "@/features/database/components/connection/connection-validation";
+} from "@/features/database/utils/connection-validation";
 
 describe("database connection validation", () => {
   it("returns built-in database provider types in registry order", () => {

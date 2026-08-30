@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { buildSavedConnectionConfig } from "@/features/database/components/connection/connection-config";
+import { buildSavedConnectionConfig } from "@/features/database/utils/connection-config";
 
 describe("database connection config", () => {
   it("normalizes form connection fields before saving or connecting", () => {

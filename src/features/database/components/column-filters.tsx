@@ -2,7 +2,7 @@ import { PlusIcon as Plus, XIcon as X } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
-import { databaseCardClassName } from "./database-surface";
+import { databaseCardClassName } from "../utils/database-surface";
 import type { ColumnFilter, ColumnInfo, FilterOperator } from "../types/common.types";
 
 const FILTER_OPERATORS: { value: FilterOperator; label: string }[] = [
