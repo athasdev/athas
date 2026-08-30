@@ -25,7 +25,6 @@ interface ActivityBarMenuProps {
   navigationItems: ActivityNavigationItem[];
   hiddenNavigationItemIds: string[];
   coreFeatures: CoreFeaturesState;
-  showProjectSwitcher: boolean;
   showAgentHistory: boolean;
   showTerminals: boolean;
   showProjectDots: boolean;
@@ -37,7 +36,6 @@ interface ActivityBarMenuProps {
   onSearch: () => void;
   onOpenExtensions: () => void;
   onNavigationItemVisibleChange: (itemId: string, visible: boolean) => void;
-  onProjectSwitcherVisibleChange: (visible: boolean) => void;
   onAgentHistoryVisibleChange: (visible: boolean) => void;
   onTerminalsVisibleChange: (visible: boolean) => void;
   onProjectDotsVisibleChange: (visible: boolean) => void;
@@ -48,7 +46,6 @@ export function ActivityBarMenu({
   navigationItems,
   hiddenNavigationItemIds,
   coreFeatures,
-  showProjectSwitcher,
   showAgentHistory,
   showTerminals,
   showProjectDots,
@@ -60,7 +57,6 @@ export function ActivityBarMenu({
   onSearch,
   onOpenExtensions,
   onNavigationItemVisibleChange,
-  onProjectSwitcherVisibleChange,
   onAgentHistoryVisibleChange,
   onTerminalsVisibleChange,
   onProjectDotsVisibleChange,
@@ -106,13 +102,6 @@ export function ActivityBarMenu({
         </ContextMenuSubTrigger>
         <ContextMenuSubContent>
           <ContextMenuGroup>
-            <ContextMenuCheckboxItem
-              checked={showProjectSwitcher}
-              onCheckedChange={onProjectSwitcherVisibleChange}
-            >
-              <FolderIcon />
-              Project Switcher
-            </ContextMenuCheckboxItem>
             {navigationItems.map((item) => (
               <ContextMenuCheckboxItem
                 key={item.id}

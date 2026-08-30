@@ -6,7 +6,7 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 export const buttonVariants = cva(
-  "h-7 rounded-chrome font-sans ui-text-sm inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap leading-row transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-fast ease-smooth select-none outline-none active:scale-press focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "rounded-chrome font-sans inline-flex shrink-0 items-center justify-center whitespace-nowrap leading-row transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-fast ease-smooth select-none outline-none active:scale-press focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -21,8 +21,13 @@ export const buttonVariants = cva(
           "border-0 bg-transparent text-foreground hover:bg-destructive/10 hover:text-destructive data-[active=true]:bg-destructive/12 data-[active=true]:text-destructive",
       },
       iconOnly: {
-        true: "w-7 rounded-full p-0",
+        true: "rounded-full p-0",
         false: "px-2.5",
+      },
+      size: {
+        default: "h-7 gap-1.5 ui-text-sm [&_svg:not([class*='size-'])]:size-3.5",
+        chrome:
+          "h-chrome-control gap-chrome px-1.5 ui-text-chrome [&_svg:not([class*='size-'])]:size-[1em]",
       },
       shape: {
         default: "",
@@ -32,8 +37,13 @@ export const buttonVariants = cva(
     defaultVariants: {
       variant: "default",
       iconOnly: false,
+      size: "default",
       shape: "default",
     },
+    compoundVariants: [
+      { iconOnly: true, size: "default", className: "w-7" },
+      { iconOnly: true, size: "chrome", className: "w-chrome-control" },
+    ],
   },
 );
 
@@ -53,6 +63,7 @@ export function Button({
   className,
   variant = "default",
   iconOnly = false,
+  size = "default",
   shape = "default",
   active,
   render,
@@ -76,7 +87,7 @@ export function Button({
       "data-variant": variant,
       "data-icon-only": iconOnly || undefined,
       "data-active": active,
-      className: cn(buttonVariants({ variant, iconOnly, shape }), className),
+      className: cn(buttonVariants({ variant, iconOnly, size, shape }), className),
       "aria-label": ariaLabel ?? (tooltip ? tooltip : undefined),
       ...props,
     },

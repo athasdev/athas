@@ -2,22 +2,19 @@ import { memo, useCallback, useLayoutEffect, useRef } from "react";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { DiagnosticsActivityControl } from "@/features/diagnostics/components/diagnostics-activity-control";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { AppUpdateControl } from "@/features/layout/components/app-update-control";
 import { ActivityBarMenu } from "@/features/layout/components/sidebar/activity-bar-menu";
 import { ActivityProjectDots } from "@/features/layout/components/sidebar/activity-project-dots";
 import { ActivityProjectPanel } from "@/features/layout/components/sidebar/activity-project-panel";
-import { ActivityProjectToolbar } from "@/features/layout/components/sidebar/activity-project-toolbar";
 import { useActivityBarResize } from "@/features/layout/hooks/use-activity-bar-resize";
 import { useActivityBarVisibility } from "@/features/layout/hooks/use-activity-bar-visibility";
 import { useActivityNavigationItems } from "@/features/layout/hooks/use-activity-navigation-items";
 import { useActivityProjectCarousel } from "@/features/layout/hooks/use-activity-project-carousel";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { OnboardingChecklist } from "@/features/onboarding/components/onboarding-checklist";
-import RunActionsButton from "@/features/run-actions/components/run-actions-button";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { AccountMenu } from "@/features/window/components/account-menu";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
+import { MagnifyingGlassIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
 interface ActivityBarProps {
@@ -44,6 +41,10 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
   const isExtensionsBufferActive = useBufferStore((state) => {
     const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
     return activeBuffer?.type === "extensions" || activeBuffer?.type === "extension";
+  });
+  const isGlobalSearchBufferActive = useBufferStore((state) => {
+    const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
+    return activeBuffer?.type === "globalSearch";
   });
   const handleNewAgent = useNewAgentAction();
   const handleNewTerminal = useCallback(() => {
@@ -93,9 +94,24 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
     onToggleDebugger: handleDebuggerToggle,
     onOpenDatabases: handleOpenDatabases,
   });
-  const visibleActivityNavigationItems = activityNavigationItems.filter(
-    (item) => !activityBarVisibility.hiddenNavigationItemIds.includes(item.id),
-  );
+  const visibleActivityNavigationItems = [
+    ...(coreFeatures.search
+      ? [
+          {
+            id: "search",
+            label: "Search",
+            icon: <MagnifyingGlassIcon />,
+            active: isGlobalSearchBufferActive,
+            onClick: openGlobalSearchBuffer,
+            ariaLabel: "Search",
+            shortcut: "Mod+Shift+F",
+          },
+        ]
+      : []),
+    ...activityNavigationItems.filter(
+      (item) => !activityBarVisibility.hiddenNavigationItemIds.includes(item.id),
+    ),
+  ];
   const alignProjectCarouselToCurrent = useCallback(() => {
     const container = railContentRef.current;
     const currentPanel = container?.querySelector<HTMLElement>(
@@ -146,20 +162,9 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
         }}
       >
         <div
-          className="athas-sidebar-rail absolute inset-y-0 left-0 flex flex-col overflow-hidden"
+          className="athas-sidebar-rail absolute inset-y-0 left-0 flex flex-col overflow-hidden pb-1.5"
           style={{ width: railPanelWidth }}
         >
-          <ActivityProjectToolbar
-            expanded={expanded}
-            project={carouselProject}
-            projects={projectTabs}
-            isSwitchingProject={isSwitchingProject}
-            showProjectSwitcher={activityBarVisibility.projectSwitcher}
-            showSearch={coreFeatures.search}
-            onSelectProject={handleProjectSelect}
-            onAddRemote={() => openProjectPicker("addRemote")}
-            onSearch={openGlobalSearchBuffer}
-          />
           <div
             ref={railContentRef}
             onScroll={projectCarouselEnabled ? handleProjectScroll : undefined}
@@ -186,16 +191,8 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
           </div>
           <div
             data-slot="activity-sidebar-footer"
-            className="relative z-20 flex w-full shrink-0 flex-col items-center gap-chrome-tight px-chrome-inline pb-1.5"
+            className="relative z-20 flex w-full shrink-0 flex-col items-center gap-chrome-tight px-chrome-inline"
           >
-            {expanded && projectCarouselEnabled && activityBarVisibility.projectDots ? (
-              <ActivityProjectDots
-                projects={projectTabs}
-                activeProjectId={carouselProject?.id}
-                isSwitchingProject={isSwitchingProject}
-                onSelectProject={handleProjectSelect}
-              />
-            ) : null}
             <OnboardingChecklist
               expanded={expanded}
               hasProject={Boolean(carouselProject)}
@@ -205,10 +202,15 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
               onOpenCommandPalette={() => useUIState.getState().setIsCommandPaletteVisible(true)}
               onOpenSettings={openSettingsBuffer}
             />
+            {expanded && projectCarouselEnabled && activityBarVisibility.projectDots ? (
+              <ActivityProjectDots
+                projects={projectTabs}
+                activeProjectId={carouselProject?.id}
+                isSwitchingProject={isSwitchingProject}
+                onSelectProject={handleProjectSelect}
+              />
+            ) : null}
             <DiagnosticsActivityControl expanded={expanded} />
-            <AppUpdateControl expanded={expanded} />
-            <RunActionsButton expanded={expanded} />
-            <AccountMenu expanded={expanded} />
           </div>
         </div>
         {expanded ? (
@@ -228,7 +230,6 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
         navigationItems={activityNavigationItems}
         hiddenNavigationItemIds={activityBarVisibility.hiddenNavigationItemIds}
         coreFeatures={coreFeatures}
-        showProjectSwitcher={activityBarVisibility.projectSwitcher}
         showAgentHistory={activityBarVisibility.agentHistory}
         showTerminals={activityBarVisibility.terminals}
         showProjectDots={activityBarVisibility.projectDots}
@@ -240,9 +241,6 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
         onSearch={openGlobalSearchBuffer}
         onOpenExtensions={openExtensionsBuffer}
         onNavigationItemVisibleChange={activityBarVisibility.setNavigationItemVisible}
-        onProjectSwitcherVisibleChange={(visible) =>
-          activityBarVisibility.setItemVisible("projectSwitcher", visible)
-        }
         onAgentHistoryVisibleChange={(visible) =>
           activityBarVisibility.setItemVisible("agentHistory", visible)
         }

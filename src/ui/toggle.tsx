@@ -5,16 +5,21 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 const toggleVariants = cva(
-  "inline-flex size-7 shrink-0 items-center justify-center rounded-full border border-transparent font-sans font-medium ui-text-sm text-subtle-foreground outline-none transition-[transform,background-color,border-color,color,box-shadow] duration-fast ease-smooth hover:bg-accent hover:text-foreground active:scale-press focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 data-pressed:bg-selected data-pressed:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "inline-flex shrink-0 items-center justify-center rounded-full border border-transparent font-sans font-medium ui-text-sm text-subtle-foreground outline-none transition-[transform,background-color,border-color,color,box-shadow] duration-fast ease-smooth hover:bg-accent hover:text-foreground active:scale-press focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 data-pressed:bg-selected data-pressed:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default: "bg-transparent",
         outline: "border-border bg-surface/55",
       },
+      size: {
+        default: "size-7 [&_svg:not([class*='size-'])]:size-3.5",
+        chrome: "size-chrome-control [&_svg:not([class*='size-'])]:size-[1em]",
+      },
     },
     defaultVariants: {
       variant: "default",
+      size: "default",
     },
   },
 );
@@ -22,6 +27,7 @@ const toggleVariants = cva(
 function Toggle({
   className,
   variant = "default",
+  size = "default",
   tooltip,
   tooltipSide,
   shortcut,
@@ -40,7 +46,7 @@ function Toggle({
   const element = (
     <TogglePrimitive
       data-slot="toggle"
-      className={cn(toggleVariants({ variant }), className)}
+      className={cn(toggleVariants({ variant, size }), className)}
       aria-label={ariaLabel ?? tooltip}
       {...props}
     />

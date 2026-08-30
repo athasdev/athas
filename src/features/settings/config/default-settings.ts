@@ -97,7 +97,6 @@ export const defaultSettings: Settings = {
   // Layout
   activityRailExpanded: false,
   activityRailWidth: 180,
-  showActivityRailProjectSwitcher: true,
   showActivityRailAgentHistory: true,
   showActivityRailTerminals: true,
   showActivityRailProjectIcons: true,

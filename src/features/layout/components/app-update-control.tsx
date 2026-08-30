@@ -1,16 +1,12 @@
 import { useMemo, useRef, useState } from "react";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
+import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { CalendarIcon, ClockIcon, DownloadIcon, FileTextIcon, XCircleIcon } from "@/ui/icons";
-import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
 
-interface AppUpdateControlProps {
-  expanded: boolean;
-}
-
-export function AppUpdateControl({ expanded }: AppUpdateControlProps) {
+export function AppUpdateControl() {
   const {
     showUpdateIndicator,
     downloading,
@@ -79,13 +75,6 @@ export function AppUpdateControl({ expanded }: AppUpdateControlProps) {
 
   if (!showUpdateIndicator || !updateInfo) return null;
 
-  const updateLabel = downloading
-    ? `${downloadProgress?.percentage ?? 0}%`
-    : installing
-      ? "Installing"
-      : updateError
-        ? "Update failed"
-        : "Update available";
   const updateTooltip = updateError
     ? updateError
     : downloading
@@ -95,16 +84,13 @@ export function AppUpdateControl({ expanded }: AppUpdateControlProps) {
         : `Update available: ${updateInfo.version}`;
 
   return (
-    <div ref={updateMenuRef} className="w-full">
-      {expanded ? (
-        <SidebarListItem
-          leading={
-            updateBusy ? (
-              <Spinner label={downloading ? "Downloading" : "Installing"} compact />
-            ) : (
-              <DownloadIcon />
-            )
-          }
+    <div ref={updateMenuRef}>
+      <Tooltip content={updateTooltip} side="bottom">
+        <Button
+          type="button"
+          variant="ghost"
+          iconOnly
+          size="chrome"
           active={isUpdateMenuOpen}
           disabled={updateBusy}
           onClick={() => setIsUpdateMenuOpen((open) => !open)}
@@ -112,32 +98,19 @@ export function AppUpdateControl({ expanded }: AppUpdateControlProps) {
           aria-expanded={isUpdateMenuOpen}
           aria-label={updateTooltip}
         >
-          {updateLabel}
-        </SidebarListItem>
-      ) : (
-        <Tooltip content={updateTooltip} side="right">
-          <SidebarIconButton
-            active={isUpdateMenuOpen}
-            disabled={updateBusy}
-            onClick={() => setIsUpdateMenuOpen((open) => !open)}
-            aria-haspopup="menu"
-            aria-expanded={isUpdateMenuOpen}
-            aria-label={updateTooltip}
-          >
-            {updateBusy ? (
-              <Spinner label={downloading ? "Downloading" : "Installing"} compact />
-            ) : (
-              <DownloadIcon />
-            )}
-          </SidebarIconButton>
-        </Tooltip>
-      )}
+          {updateBusy ? (
+            <Spinner label={downloading ? "Downloading" : "Installing"} compact />
+          ) : (
+            <DownloadIcon />
+          )}
+        </Button>
+      </Tooltip>
       <Dropdown
         isOpen={isUpdateMenuOpen}
         onClose={() => setIsUpdateMenuOpen(false)}
         anchorRef={updateMenuRef}
-        anchorSide="top"
-        anchorAlign="start"
+        anchorSide="bottom"
+        anchorAlign="end"
         items={updateMenuItems}
         className="min-w-52"
       />

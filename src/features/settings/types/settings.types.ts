@@ -123,7 +123,6 @@ export interface Settings {
   // Layout
   activityRailExpanded: boolean;
   activityRailWidth: number;
-  showActivityRailProjectSwitcher: boolean;
   showActivityRailAgentHistory: boolean;
   showActivityRailTerminals: boolean;
   showActivityRailProjectIcons: boolean;

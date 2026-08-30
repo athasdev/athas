@@ -40,7 +40,6 @@ describe("default settings", () => {
     expect(settings.tabCloseButtonVisibility).toBe("active");
     expect(settings.activityRailExpanded).toBe(false);
     expect(settings.activityRailWidth).toBe(180);
-    expect(settings.showActivityRailProjectSwitcher).toBe(true);
     expect(settings.showActivityRailAgentHistory).toBe(true);
     expect(settings.showActivityRailTerminals).toBe(true);
     expect(settings.showActivityRailProjectIcons).toBe(true);

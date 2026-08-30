@@ -3,7 +3,6 @@ import type { CoreFeaturesState } from "@/features/settings/types/feature.types"
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 const VISIBILITY_SETTING_BY_ITEM = {
-  projectSwitcher: "showActivityRailProjectSwitcher",
   agentHistory: "showActivityRailAgentHistory",
   terminals: "showActivityRailTerminals",
   projectDots: "showActivityRailProjectIcons",
@@ -18,9 +17,6 @@ export function useActivityBarVisibility(coreFeatures: CoreFeaturesState) {
   const hiddenNavigationItemIds = useMemo(
     () => storedHiddenNavigationItemIds.filter((itemId) => itemId !== "search"),
     [storedHiddenNavigationItemIds],
-  );
-  const projectSwitcher = useSettingsStore(
-    (state) => state.settings.showActivityRailProjectSwitcher,
   );
   const agentHistory = useSettingsStore((state) => state.settings.showActivityRailAgentHistory);
   const terminals = useSettingsStore((state) => state.settings.showActivityRailTerminals);
@@ -55,14 +51,12 @@ export function useActivityBarVisibility(coreFeatures: CoreFeaturesState) {
 
   const hasHiddenItems =
     hiddenNavigationItemIds.length > 0 ||
-    !projectSwitcher ||
     !agentHistory ||
     (coreFeatures.terminal && !terminals) ||
     !projectDots;
 
   return {
     hiddenNavigationItemIds,
-    projectSwitcher,
     agentHistory,
     terminals,
     projectDots,

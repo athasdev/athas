@@ -8,14 +8,10 @@ import {
 import { useGitHubNotifications } from "@/features/notifications/hooks/use-github-notifications";
 import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
 import type { NotificationCategoryFilter } from "@/features/notifications/types/notifications.types";
+import { Button } from "@/ui/button";
 import { BellIcon } from "@/ui/icons";
-import { SidebarIconButton } from "@/ui/sidebar";
 
-interface NotificationsTriggerProps {
-  tooltipSide?: "bottom" | "right";
-}
-
-export const NotificationsTrigger = ({ tooltipSide = "bottom" }: NotificationsTriggerProps) => {
+export const NotificationsTrigger = () => {
   const notifications = useNotificationsStore.use.notifications();
   const github = useGitHubNotifications();
   const [isCommandVisible, setIsCommandVisible] = useState(false);
@@ -45,14 +41,18 @@ export const NotificationsTrigger = ({ tooltipSide = "bottom" }: NotificationsTr
 
   return (
     <>
-      <SidebarIconButton
+      <Button
+        type="button"
+        variant="ghost"
+        iconOnly
+        size="chrome"
         onClick={() => {
           setInitialCategory("all");
           setIsCommandVisible(true);
         }}
         active={isCommandVisible}
         tooltip={tooltip}
-        tooltipSide={tooltipSide}
+        tooltipSide="bottom"
         shortcut={shortcut}
         aria-label={tooltip}
         className="relative"
@@ -61,7 +61,7 @@ export const NotificationsTrigger = ({ tooltipSide = "bottom" }: NotificationsTr
         {unreadCount > 0 ? (
           <span className="absolute top-0 right-0 size-1.5 rounded-full bg-primary ring-1 ring-background" />
         ) : null}
-      </SidebarIconButton>
+      </Button>
       <NotificationsCommand
         isVisible={isCommandVisible}
         initialCategory={initialCategory}

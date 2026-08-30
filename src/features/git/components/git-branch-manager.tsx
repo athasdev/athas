@@ -19,7 +19,7 @@ import {
   CommandTabs,
   useCommandListNavigation,
 } from "@/ui/command";
-import { GitBranchIcon, FolderOpenIcon, NodesIcon } from "@/ui/icons";
+import { ChevronExpandYIcon, GitBranchIcon, FolderOpenIcon, NodesIcon } from "@/ui/icons";
 import { showConfirmDialog } from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
@@ -42,6 +42,7 @@ interface GitBranchManagerProps {
   onRepositoryChange?: (repoPath: string | null) => void;
   paletteTarget?: boolean;
   openEventName?: string;
+  triggerMode?: "repository" | "branch";
 }
 
 type GitBranchManagerTab = "branches" | "worktrees" | "repositories";
@@ -130,6 +131,7 @@ const GitBranchManager = ({
   onRepositoryChange,
   paletteTarget = false,
   openEventName = "athas:open-branch-manager",
+  triggerMode = "repository",
 }: GitBranchManagerProps) => {
   const [branches, setBranches] = useState<string[]>([]);
   const [worktrees, setWorktrees] = useState<GitWorktree[]>([]);
@@ -442,6 +444,10 @@ const GitBranchManager = ({
     if (!repoPath || isDropdownOpen) return;
     setActiveTab("branches");
     setIsDropdownOpen(true);
+    if (triggerMode === "branch") {
+      await loadBranches();
+      return;
+    }
     await Promise.all([loadBranches(), loadWorktrees()]);
   };
 
@@ -551,22 +557,37 @@ const GitBranchManager = ({
         onClick={() => void handleOpenDropdown()}
         disabled={isLoading}
         variant="ghost"
+        size={triggerMode === "branch" ? "chrome" : "default"}
         className={cn(
           "w-fit max-w-full min-w-0 shrink justify-start overflow-hidden text-left hover:bg-accent/80",
+          triggerMode === "branch" && "max-w-48",
           isDropdownOpen && "bg-accent/80",
         )}
         title={selectorRepoPath ?? undefined}
-        aria-label={`Switch repository or branch. ${activeRepositoryLabel}, branch ${currentBranch}`}
+        aria-label={
+          triggerMode === "branch"
+            ? `Switch branch. Current branch: ${currentBranch}`
+            : `Switch repository or branch. ${activeRepositoryLabel}, branch ${currentBranch}`
+        }
       >
-        <FolderOpenIcon />
-        <span className="flex min-w-0 flex-1 flex-col items-start overflow-hidden leading-none">
-          <span className="max-w-full truncate font-medium text-foreground ui-text-sm">
-            {activeRepositoryLabel}
-          </span>
-          <span className="max-w-full truncate font-normal text-subtle-foreground ui-text-caption">
-            {currentBranch}
-          </span>
-        </span>
+        {triggerMode === "branch" ? (
+          <>
+            <span className="min-w-0 truncate">{currentBranch}</span>
+            <ChevronExpandYIcon className="text-subtle-foreground" />
+          </>
+        ) : (
+          <>
+            <FolderOpenIcon />
+            <span className="flex min-w-0 flex-1 flex-col items-start overflow-hidden leading-none">
+              <span className="max-w-full truncate font-medium text-foreground ui-text-sm">
+                {activeRepositoryLabel}
+              </span>
+              <span className="max-w-full truncate font-normal text-subtle-foreground ui-text-caption">
+                {currentBranch}
+              </span>
+            </span>
+          </>
+        )}
       </Button>
 
       <GitCommandSurface
@@ -592,7 +613,11 @@ const GitBranchManager = ({
                   availableRepoPaths.length === 1 ? "y" : "ies"
                 }`
         }
-        headerAddon={<CommandTabs items={tabItems} ariaLabel="Git selector sections" />}
+        headerAddon={
+          triggerMode === "repository" ? (
+            <CommandTabs items={tabItems} ariaLabel="Git selector sections" />
+          ) : undefined
+        }
       >
         <CommandList>
           {activeTab === "branches" && !createBranchName && filteredBranches.length === 0 ? (

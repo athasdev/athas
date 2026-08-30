@@ -3,7 +3,14 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import GitBranchManager from "@/features/git/components/git-branch-manager";
+import { useGitStore } from "@/features/git/stores/git.store";
+import { AppUpdateControl } from "@/features/layout/components/app-update-control";
+import { ProjectSwitcher } from "@/features/layout/components/project-switcher";
+import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
+import RunActionsButton from "@/features/run-actions/components/run-actions-button";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { AccountMenu } from "@/features/window/components/account-menu";
 import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
@@ -51,7 +58,13 @@ const TitleBar = ({
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const switchToProject = useFileSystemStore((state) => state.switchToProject);
+  const isSwitchingProject = useFileSystemStore((state) => state.isSwitchingProject);
+  const currentBranch = useGitStore((state) => state.workspaceGitStatus?.branch);
+  const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
+  const activeProject = projectTabs.find((project) => project.isActive);
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
@@ -66,6 +79,7 @@ const TitleBar = ({
   const usesNativeWindowChrome = useNativeWindowChrome();
   const showAppWindowControls = !isMacOS && !usesNativeWindowChrome;
   const shouldUseNativeMenuBar = !isWindows && !isLinux && nativeMenuBar;
+  const macTitleBarControlAlignment = isFullscreen ? undefined : "translate-y-0.5";
 
   useEffect(() => {
     const initWindow = async () => {
@@ -168,6 +182,17 @@ const TitleBar = ({
     setIsCompactMenuVisible(false);
   }, []);
 
+  const handleProjectSelect = useCallback(
+    (projectId: string) => {
+      void switchToProject(projectId);
+    },
+    [switchToProject],
+  );
+
+  const handleBranchChange = useCallback(() => {
+    if (rootFolderPath) void refreshWorkspaceGitStatus(rootFolderPath);
+  }, [refreshWorkspaceGitStatus, rootFolderPath]);
+
   const titleBarContextMenuContent = (
     <ContextMenuContent>
       <ContextMenuItem onClick={() => void createAppWindow()}>
@@ -207,6 +232,7 @@ const TitleBar = ({
               onClick={handleCompactMenuToggle}
               variant="ghost"
               iconOnly
+              size="chrome"
               className={isCompactMenuVisible ? "bg-accent/70 text-foreground" : undefined}
               aria-label="Menu"
               aria-expanded={isCompactMenuVisible}
@@ -235,6 +261,7 @@ const TitleBar = ({
       tooltip={effectiveActivityBarExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
       commandId="workbench.toggleActivitySidebar"
       tooltipSide="bottom"
+      size="chrome"
       onPressedChange={(pressed) => {
         if (onActivityBarExpandedChange) onActivityBarExpandedChange(pressed);
         else void updateSetting("activityRailExpanded", pressed);
@@ -243,6 +270,40 @@ const TitleBar = ({
     >
       <SidebarSimpleIcon />
     </Toggle>
+  );
+
+  const workspaceSelectors = (
+    <ChromeGroup gap="tight" className="min-w-0 shrink overflow-hidden">
+      <ProjectSwitcher
+        project={activeProject}
+        projects={projectTabs}
+        isSwitchingProject={isSwitchingProject}
+        onSelectProject={handleProjectSelect}
+        onAddRemote={() => openProjectPicker("addRemote")}
+      />
+      {currentBranch && rootFolderPath ? (
+        <>
+          <span aria-hidden="true" className="shrink-0 text-subtle-foreground/60">
+            /
+          </span>
+          <GitBranchManager
+            currentBranch={currentBranch}
+            repoPath={rootFolderPath}
+            triggerMode="branch"
+            onBranchChange={handleBranchChange}
+          />
+        </>
+      ) : null}
+    </ChromeGroup>
+  );
+
+  const trailingControls = (
+    <ChromeGroup gap="tight" className="pointer-events-auto h-full">
+      <AppUpdateControl />
+      <RunActionsButton />
+      <NotificationsTrigger />
+      <AccountMenu />
+    </ChromeGroup>
   );
 
   if (showMinimal) {
@@ -282,12 +343,13 @@ const TitleBar = ({
           data-tauri-drag-region
           onMouseDown={handleTitleBarMouseDown}
         >
-          <ChromeGroup className="pointer-events-auto h-full">
+          <ChromeGroup className={cn("pointer-events-auto h-full", macTitleBarControlAlignment)}>
             {menuItem}
             {sidebarToggle}
+            {workspaceSelectors}
           </ChromeGroup>
 
-          <ChromeGroup className="h-full" />
+          <div className={cn("h-full", macTitleBarControlAlignment)}>{trailingControls}</div>
         </ContextMenuTrigger>
         {titleBarContextMenuContent}
       </ContextMenu>
@@ -308,9 +370,11 @@ const TitleBar = ({
           <ChromeGroup className="pointer-events-auto">
             {menuItem}
             {sidebarToggle}
+            {workspaceSelectors}
           </ChromeGroup>
         </ChromeGroup>
         <ChromeGroup className="z-20">
+          {trailingControls}
           {showAppWindowControls && (
             <WindowControls
               currentWindow={currentWindow}

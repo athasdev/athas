@@ -11,6 +11,7 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Avatar } from "@/ui/avatar";
 import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
 import { Dropdown, type DropdownSection, type MenuItem } from "@/ui/dropdown";
 import {
   BookOpenIcon,
@@ -25,14 +26,9 @@ import {
   UserIcon,
   UsersThreeIcon,
 } from "@/ui/icons";
-import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
 
 const COMMUNITY_URL = "https://discord.gg/DD8F38wFMv";
-
-interface AccountMenuProps {
-  expanded: boolean;
-}
 
 function isBlockingModalOpen() {
   const state = useUIState.getState();
@@ -46,7 +42,7 @@ function isBlockingModalOpen() {
   );
 }
 
-export const AccountMenu = memo(function AccountMenu({ expanded }: AccountMenuProps) {
+export const AccountMenu = memo(function AccountMenu() {
   const services = getServiceUrls();
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -258,37 +254,28 @@ export const AccountMenu = memo(function AccountMenu({ expanded }: AccountMenuPr
 
   return (
     <>
-      <div ref={triggerRef} className="w-full">
-        {expanded ? (
-          <SidebarListItem
-            leading={<Avatar name={accountName} src={accountAvatarUrl} className="size-4" />}
-            active={isOpen}
+      <div ref={triggerRef}>
+        <Tooltip content={tooltipLabel} side="bottom">
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            size="chrome"
             onClick={() => setIsOpen((open) => !open)}
+            active={isOpen}
             aria-expanded={isOpen}
             aria-haspopup="menu"
             aria-label="Account"
           >
-            {accountName}
-          </SidebarListItem>
-        ) : (
-          <Tooltip content={tooltipLabel} side="right">
-            <SidebarIconButton
-              onClick={() => setIsOpen((open) => !open)}
-              active={isOpen}
-              aria-expanded={isOpen}
-              aria-haspopup="menu"
-              aria-label="Account"
-            >
-              <Avatar name={accountName} src={accountAvatarUrl} className="size-4" />
-            </SidebarIconButton>
-          </Tooltip>
-        )}
+            <Avatar name={accountName} src={accountAvatarUrl} className="size-4" />
+          </Button>
+        </Tooltip>
       </div>
       <Dropdown
         isOpen={isOpen}
         anchorRef={triggerRef}
-        anchorSide="top"
-        anchorAlign="start"
+        anchorSide="bottom"
+        anchorAlign="end"
         onClose={() => setIsOpen(false)}
         className="w-fit min-w-64 max-w-72"
         header={

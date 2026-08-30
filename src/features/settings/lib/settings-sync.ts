@@ -83,7 +83,6 @@ type SyncableSettingsKey =
   | "ollamaBaseUrl"
   | "activityRailExpanded"
   | "activityRailWidth"
-  | "showActivityRailProjectSwitcher"
   | "showActivityRailAgentHistory"
   | "showActivityRailTerminals"
   | "showActivityRailProjectIcons"
@@ -204,7 +203,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "ollamaBaseUrl",
   "activityRailExpanded",
   "activityRailWidth",
-  "showActivityRailProjectSwitcher",
   "showActivityRailAgentHistory",
   "showActivityRailTerminals",
   "showActivityRailProjectIcons",

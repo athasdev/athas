@@ -15,6 +15,7 @@ import { findBestProjectIcon } from "@/features/window/utils/project-icons";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -22,21 +23,21 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import { ChevronExpandYIcon, FolderOpenIcon, ImageIcon, RemoteIcon, XIcon } from "@/ui/icons";
-import { SidebarIconButton, SidebarListItem, SidebarMenuContent } from "@/ui/sidebar";
 import { showConfirmDialog } from "@/ui/dialog";
 import { toast } from "sonner";
-import { getClosedRemoteConnections, getProjectRemoteConnectionId } from "./project-switcher-items";
-import { getProjectNameFromPath, isRemoteProjectPath, ProjectGlyph } from "./project-glyph";
+import {
+  getClosedRemoteConnections,
+  getProjectRemoteConnectionId,
+} from "./sidebar/project-switcher-items";
+import { getProjectNameFromPath, isRemoteProjectPath, ProjectGlyph } from "./sidebar/project-glyph";
 
-export function ActivityProjectSwitcher({
-  expanded,
+export function ProjectSwitcher({
   project,
   projects,
   isSwitchingProject,
   onSelectProject,
   onAddRemote,
 }: {
-  expanded: boolean;
   project?: ProjectTab;
   projects: ProjectTab[];
   isSwitchingProject: boolean;
@@ -83,17 +84,13 @@ export function ActivityProjectSwitcher({
     let cancelled = false;
 
     findBestProjectIcon(projectPath).then((iconFile) => {
-      if (!cancelled) {
-        setDetectedIconPath(iconFile?.path);
-      }
+      if (!cancelled) setDetectedIconPath(iconFile?.path);
     });
 
     return () => {
       cancelled = true;
     };
   }, [displayProject, displayProjectKey, customIcon, isRemote, projectPath]);
-
-  const projectGlyph = <ProjectGlyph projectPath={projectPath} iconPath={displayIconPath} />;
 
   const handleConnectRemote = async (connectionId: string, providedPassword?: string) => {
     const connection = remoteConnections.find((candidate) => candidate.id === connectionId);
@@ -181,23 +178,20 @@ export function ActivityProjectSwitcher({
       >
         <DropdownMenuTrigger
           render={
-            expanded ? (
-              <SidebarListItem
-                leading={projectGlyph}
-                trailing={<ChevronExpandYIcon />}
-                width="content"
-                aria-label="Switch project"
-              >
-                {projectName}
-              </SidebarListItem>
-            ) : (
-              <SidebarIconButton aria-label="Switch project" title={projectName}>
-                {projectGlyph}
-              </SidebarIconButton>
-            )
+            <Button
+              variant="ghost"
+              size="chrome"
+              className="min-w-0 max-w-48 shrink"
+              aria-label={`Switch project. Current project: ${projectName}`}
+              title={projectPath || projectName}
+            >
+              <ProjectGlyph projectPath={projectPath} iconPath={displayIconPath} />
+              <span className="min-w-0 truncate">{projectName}</span>
+              <ChevronExpandYIcon className="text-subtle-foreground" />
+            </Button>
           }
         />
-        <SidebarMenuContent>
+        <DropdownMenuContent side="bottom" align="start">
           {projects.length > 0 || closedRemoteConnections.length > 0 ? (
             <>
               <DropdownMenuRadioGroup
@@ -268,7 +262,7 @@ export function ActivityProjectSwitcher({
             <RemoteIcon />
             Add remote…
           </DropdownMenuItem>
-        </SidebarMenuContent>
+        </DropdownMenuContent>
       </DropdownMenu>
       {iconPickerProject ? (
         <ProjectIconPicker
