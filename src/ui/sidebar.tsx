@@ -462,7 +462,6 @@ export const SidebarSearchPopover = forwardRef<
           <SidebarIconButton
             active={isOpen || value.length > 0}
             tooltip={label}
-            tooltipSide="bottom"
             aria-label={label}
           />
         }

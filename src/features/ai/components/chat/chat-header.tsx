@@ -153,7 +153,6 @@ export function ChatHeader({
                 iconOnly
                 onClick={onToggleMessageSearch}
                 tooltip="Search messages"
-                tooltipSide="bottom"
                 aria-label="Search messages"
               >
                 <Search />
@@ -174,7 +173,6 @@ export function ChatHeader({
                 onClick={handleNewAgent}
                 tooltip="New Agent"
                 commandId="workbench.agentLauncher"
-                tooltipSide="bottom"
                 aria-label="New Agent"
               >
                 <Plus />

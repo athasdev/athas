@@ -131,7 +131,6 @@ export function OnboardingChecklist({
             <SidebarIconButton
               active={isOpen}
               tooltip={`Getting started, ${progressLabel}`}
-              tooltipSide="right"
               aria-label={`Getting started, ${progressLabel}`}
             />
           }

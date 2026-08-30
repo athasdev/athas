@@ -159,7 +159,7 @@ export function EmojiPicker({
   };
 
   const renderEmojiButton = (emoji: string) => (
-    <Tooltip key={emoji} content={getEmojiLabel(emoji)} side="top">
+    <Tooltip key={emoji} content={getEmojiLabel(emoji)}>
       <Toggle
         type="button"
         pressed={selected === emoji}

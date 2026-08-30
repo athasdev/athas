@@ -100,7 +100,7 @@ function ActivityNavigationList({
           );
 
           return (
-            <Tooltip key={item.id} content={item.label} shortcut={item.shortcut} side="right">
+            <Tooltip key={item.id} content={item.label} shortcut={item.shortcut}>
               {control}
             </Tooltip>
           );

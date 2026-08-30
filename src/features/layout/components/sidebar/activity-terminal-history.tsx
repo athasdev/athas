@@ -57,7 +57,6 @@ export function ActivityTerminalRow({
         <SidebarIconButton
           key="rename"
           tooltip="Rename terminal"
-          tooltipSide="right"
           onClick={(event) => {
             event.stopPropagation();
             setRenameValue(name);
@@ -71,7 +70,6 @@ export function ActivityTerminalRow({
           active={pinned}
           aria-pressed={pinned}
           tooltip={pinned ? "Unpin terminal" : "Pin terminal"}
-          tooltipSide="right"
           onClick={(event) => {
             event.stopPropagation();
             onPinChange();
@@ -83,7 +81,6 @@ export function ActivityTerminalRow({
           key="close"
           tone="danger"
           tooltip="Close terminal"
-          tooltipSide="right"
           onClick={(event) => {
             event.stopPropagation();
             onClose();
@@ -118,7 +115,6 @@ export function ActivityTerminalHistory() {
         terminalItems.length > 0 ? (
           <SidebarIconButton
             tooltip="New Terminal"
-            tooltipSide="right"
             commandId="terminal.new"
             aria-label="New Terminal"
             onClick={handleNewTerminal}

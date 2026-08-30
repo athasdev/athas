@@ -114,7 +114,6 @@ export function DockerInlineError({
           variant="ghost"
           iconOnly
           tooltip="Dismiss"
-          tooltipSide="left"
           aria-label={`Dismiss ${title.toLowerCase()}`}
           onClick={onDismiss}
         >

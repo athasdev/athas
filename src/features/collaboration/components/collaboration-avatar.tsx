@@ -22,7 +22,7 @@ export function PresenceStatusDot({ online }: { online: boolean }) {
   if (!online) return null;
 
   return (
-    <Tooltip content="Online" side="top">
+    <Tooltip content="Online">
       <span className="block size-2 rounded-full bg-primary" />
     </Tooltip>
   );

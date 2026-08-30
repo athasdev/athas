@@ -33,7 +33,6 @@ export function CollaborationMediaFooter({
           variant={micState === "error" ? "danger" : "ghost"}
           active={micState === "active"}
           tooltip={micState === "active" ? "Stop Mic" : "Start Mic"}
-          tooltipSide="top"
           onClick={onToggleMic}
           iconOnly
         >
@@ -44,7 +43,6 @@ export function CollaborationMediaFooter({
           variant={screenState === "error" ? "danger" : "ghost"}
           active={screenState === "active"}
           tooltip={screenState === "active" ? "Stop Screen Share" : "Share Screen"}
-          tooltipSide="top"
           onClick={onToggleScreenShare}
           iconOnly
         >

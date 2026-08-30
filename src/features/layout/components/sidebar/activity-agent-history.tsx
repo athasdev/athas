@@ -28,12 +28,7 @@ function NewAgentIconButton() {
   const handleNewAgent = useNewAgentAction();
 
   return (
-    <SidebarIconButton
-      tooltip="New Agent"
-      tooltipSide="right"
-      aria-label="New Agent"
-      onClick={handleNewAgent}
-    >
+    <SidebarIconButton tooltip="New Agent" aria-label="New Agent" onClick={handleNewAgent}>
       <PlusIcon />
     </SidebarIconButton>
   );

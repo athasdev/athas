@@ -80,7 +80,6 @@ export default function Breadcrumb({
             onClick={handleSearchClick}
             commandId="workbench.showFind"
             tooltip="Find in file"
-            tooltipSide="bottom"
           >
             <Search />
           </BreadcrumbActionButton>

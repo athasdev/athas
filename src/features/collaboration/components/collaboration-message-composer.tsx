@@ -58,7 +58,6 @@ export function CollaborationMessageComposer({
             variant="ghost"
             disabled={disabled || isSending}
             tooltip="Share Documents"
-            tooltipSide="top"
             onClick={onShareDocuments}
             iconOnly
           >
@@ -72,7 +71,6 @@ export function CollaborationMessageComposer({
           variant="accent"
           disabled={isSubmitDisabled}
           tooltip={isSending ? "Sending" : "Send"}
-          tooltipSide="top"
           onClick={onSubmit}
           iconOnly
         >

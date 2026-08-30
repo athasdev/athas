@@ -1002,7 +1002,6 @@ export function DockerSidebar() {
                     iconOnly
                     active={containerFilter !== "all"}
                     tooltip="View options"
-                    tooltipSide="bottom"
                     aria-label="Docker view options"
                   />
                 }

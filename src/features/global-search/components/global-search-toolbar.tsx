@@ -172,7 +172,6 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
                 pressed={fileNavigatorVisible}
                 onPressedChange={onFileNavigatorVisibleChange}
                 tooltip={fileNavigatorVisible ? "Hide result files" : "Show result files"}
-                tooltipSide="bottom"
               >
                 <Files />
               </Toggle>

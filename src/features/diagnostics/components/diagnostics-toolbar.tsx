@@ -77,7 +77,6 @@ export function DiagnosticsToolbar({
             active={activeFilterCount > 0}
             onClick={onOpenFilters}
             tooltip={activeFilterCount > 0 ? `Filters (${activeFilterCount})` : "Filter problems"}
-            tooltipSide="bottom"
             aria-label="Filter problems"
           >
             <Filter />
@@ -90,7 +89,6 @@ export function DiagnosticsToolbar({
               pressed={fileNavigatorVisible}
               onPressedChange={onFileNavigatorVisibleChange}
               tooltip={fileNavigatorVisible ? "Hide problem files" : "Show problem files"}
-              tooltipSide="bottom"
             >
               <Files />
             </Toggle>

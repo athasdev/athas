@@ -167,17 +167,12 @@ function ReviewSidebarContent() {
             {reviewedInSession}/{reviewScopeSize}
           </span>
           {queueChangeSets.length > 1 ? (
-            <SidebarIconButton
-              tooltip="Mark all reviewed"
-              tooltipSide="bottom"
-              onClick={markAllReviewed}
-            >
+            <SidebarIconButton tooltip="Mark all reviewed" onClick={markAllReviewed}>
               <CheckIcon />
             </SidebarIconButton>
           ) : null}
           <SidebarIconButton
             tooltip="Refresh review queue"
-            tooltipSide="bottom"
             disabled={!activeRepoPath || isLoading}
             onClick={() => void refresh()}
           >
@@ -200,7 +195,7 @@ function ReviewSidebarContent() {
       >
         <TabsList variant="bare" className="grid w-full grid-cols-3" aria-label="Review view">
           {MODE_ITEMS.map(({ id, label, icon: Icon }) => (
-            <Tooltip key={id} content={label} side="bottom" triggerClassName="w-full">
+            <Tooltip key={id} content={label} triggerClassName="w-full">
               <TabsTrigger value={id} aria-label={`${label} review view`} className="w-full">
                 <Icon />
                 <span className="sr-only">{label}</span>

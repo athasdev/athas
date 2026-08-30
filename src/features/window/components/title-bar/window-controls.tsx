@@ -54,7 +54,6 @@ export function WindowControls({
         size="chrome"
         tooltip="Minimize"
         commandId="window.minimize.alt"
-        tooltipSide="bottom"
         aria-label="Minimize"
       >
         <Minus weight="bold" />
@@ -67,7 +66,6 @@ export function WindowControls({
         size="chrome"
         tooltip={isMaximized ? "Restore" : "Maximize"}
         commandId="window.maximize"
-        tooltipSide="bottom"
         aria-label={isMaximized ? "Restore" : "Maximize"}
       >
         {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
@@ -80,7 +78,6 @@ export function WindowControls({
         size="chrome"
         tooltip="Close"
         commandId="workbench.closeWindow"
-        tooltipSide="bottom"
         aria-label="Close"
       >
         <X weight="bold" />

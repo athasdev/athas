@@ -293,7 +293,6 @@ export function OutlineSidebar() {
               <SidebarIconButton
                 active={!areAllFiltersSelected}
                 tooltip="Filter outline"
-                tooltipSide="bottom"
                 aria-label="Filter outline"
               />
             }

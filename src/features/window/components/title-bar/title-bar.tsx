@@ -227,7 +227,7 @@ const TitleBar = ({
     !isMacOS && !shouldUseNativeMenuBar ? (
       compactMenuBar ? (
         <div className="relative">
-          <Tooltip content="Menu" side="bottom">
+          <Tooltip content="Menu">
             <Button
               onClick={handleCompactMenuToggle}
               variant="ghost"
@@ -260,7 +260,6 @@ const TitleBar = ({
       pressed={effectiveActivityBarExpanded}
       tooltip={effectiveActivityBarExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
       commandId="workbench.toggleActivitySidebar"
-      tooltipSide="bottom"
       size="chrome"
       onPressedChange={(pressed) => {
         if (onActivityBarExpandedChange) onActivityBarExpandedChange(pressed);

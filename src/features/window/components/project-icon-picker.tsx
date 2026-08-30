@@ -69,7 +69,7 @@ const ProjectIconPicker = memo(
         onClose={onClose}
         headerActions={
           currentIcon ? (
-            <Tooltip content="Remove icon" side="bottom">
+            <Tooltip content="Remove icon">
               <Button
                 onClick={handleRemoveIcon}
                 variant="ghost"
@@ -104,7 +104,7 @@ const ProjectIconPicker = memo(
         ) : (
           <div className="grid grid-cols-6 gap-1.5">
             {icons.map((icon) => (
-              <Tooltip key={icon.path} content={relativePath(icon.path, projectPath)} side="bottom">
+              <Tooltip key={icon.path} content={relativePath(icon.path, projectPath)}>
                 <Button
                   type="button"
                   variant="ghost"

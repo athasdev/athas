@@ -55,12 +55,7 @@ export default function TableSidebar({
   return (
     <SidebarPanel className="w-64 shrink-0">
       <SidebarTitleBar title={`Objects (${tables.length})`}>
-        <SidebarIconButton
-          onClick={onCreateTable}
-          aria-label="Create table"
-          tooltip="Create table"
-          tooltipSide="bottom"
-        >
+        <SidebarIconButton onClick={onCreateTable} aria-label="Create table" tooltip="Create table">
           <Plus />
         </SidebarIconButton>
       </SidebarTitleBar>

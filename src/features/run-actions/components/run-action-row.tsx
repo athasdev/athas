@@ -1,4 +1,3 @@
-import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { CodeIcon, MagicWandIcon, PenIcon, PlayIcon, TerminalIcon, TrashIcon } from "@/ui/icons";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";
@@ -21,24 +20,32 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
   const detail = action.command ?? action.description;
 
   return (
-    <Item className="min-h-11 flex-nowrap px-1.5 py-1 hover:bg-accent focus-within:bg-accent">
+    <Item size="compact" className="flex-nowrap hover:bg-accent focus-within:bg-accent">
       <button
         type="button"
         onClick={onRun}
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left outline-none"
+        className="flex min-w-0 flex-1 items-center gap-1.5 rounded-chrome px-1 text-left outline-none"
       >
-        <ItemMedia className="grid size-6 rounded-md bg-surface text-subtle-foreground">
+        <ItemMedia variant="icon" className="text-subtle-foreground">
           <SourceIcon source={action.source} />
         </ItemMedia>
         <ItemContent>
-          <ItemTitle className="gap-1.5 font-normal">
+          <ItemTitle className="gap-1.5 font-normal leading-row">
             <span className="truncate">{action.name}</span>
-            <Badge variant={action.source === "lsp" ? "accent" : "muted"}>
+            <span
+              className={
+                action.source === "lsp"
+                  ? "shrink-0 text-primary ui-text-chrome"
+                  : "shrink-0 text-subtle-foreground ui-text-chrome"
+              }
+            >
               {action.sourceLabel}
-            </Badge>
+            </span>
           </ItemTitle>
           {detail ? (
-            <ItemDescription className="block truncate font-mono">{detail}</ItemDescription>
+            <ItemDescription className="block truncate font-mono leading-row ui-text-chrome">
+              {detail}
+            </ItemDescription>
           ) : null}
         </ItemContent>
       </button>
@@ -51,6 +58,7 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
               onClick={onEdit}
               variant="ghost"
               iconOnly
+              size="chrome"
               className="text-subtle-foreground"
               aria-label={`Edit ${action.name}`}
             >
@@ -63,6 +71,7 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
               onClick={onDelete}
               variant="ghost"
               iconOnly
+              size="chrome"
               className="text-subtle-foreground hover:text-destructive"
               aria-label={`Delete ${action.name}`}
             >

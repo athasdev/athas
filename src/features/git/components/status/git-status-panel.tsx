@@ -591,7 +591,6 @@ const GitStatusPanel = ({
                   onClick={handleStashAllUnstaged}
                   disabled={isLoading}
                   tooltip="Stash all unstaged changes"
-                  tooltipSide="bottom"
                   aria-label="Stash all unstaged changes"
                 >
                   <Archive />
@@ -602,7 +601,6 @@ const GitStatusPanel = ({
                   onClick={handleStageAll}
                   disabled={isLoading || isStageLoading}
                   tooltip="Stage all changes"
-                  tooltipSide="bottom"
                   aria-label="Stage all changes"
                 >
                   <Plus />
@@ -613,7 +611,6 @@ const GitStatusPanel = ({
                   onClick={handleUnstageAll}
                   disabled={isLoading || isStageLoading}
                   tooltip="Unstage all changes"
-                  tooltipSide="bottom"
                   aria-label="Unstage all changes"
                 >
                   <Minus />
@@ -624,11 +621,7 @@ const GitStatusPanel = ({
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <SidebarIconButton
-                      tooltip="Change actions"
-                      tooltipSide="bottom"
-                      aria-label="Change actions"
-                    />
+                    <SidebarIconButton tooltip="Change actions" aria-label="Change actions" />
                   }
                 >
                   <MoreHorizontal />

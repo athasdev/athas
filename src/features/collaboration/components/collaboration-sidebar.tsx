@@ -960,7 +960,6 @@ export function CollaborationSidebarView() {
                   <SidebarIconButton
                     active={channelFilter !== "all"}
                     tooltip="Filter channels"
-                    tooltipSide="bottom"
                     aria-label="Filter channels"
                   />
                 }
@@ -1046,7 +1045,7 @@ export function CollaborationSidebarView() {
                         </span>
                       }
                       trailing={
-                        <Tooltip content={`${channel.memberCount} members`} side="top">
+                        <Tooltip content={`${channel.memberCount} members`}>
                           <span className="ui-text-sm">{channel.memberCount}</span>
                         </Tooltip>
                       }
@@ -1099,7 +1098,6 @@ export function CollaborationSidebarView() {
               type="button"
               variant="ghost"
               tooltip="Back to Channels"
-              tooltipSide="bottom"
               onClick={() => setOpenConversation(null)}
               iconOnly
             >
@@ -1178,7 +1176,6 @@ export function CollaborationSidebarView() {
               type="button"
               variant="ghost"
               tooltip="Back to Channels"
-              tooltipSide="bottom"
               onClick={() => setOpenConversation(null)}
               iconOnly
             >
@@ -1255,7 +1252,6 @@ export function CollaborationSidebarView() {
               <SidebarIconButton
                 active={peopleFilter !== "all"}
                 tooltip="Filter people"
-                tooltipSide="bottom"
                 aria-label="Filter people"
               />
             }
@@ -1353,7 +1349,6 @@ export function CollaborationSidebarView() {
               <SidebarIconButton
                 active={notesFilter !== "notes"}
                 tooltip="Filter notes"
-                tooltipSide="bottom"
                 aria-label="Filter notes"
               />
             }
