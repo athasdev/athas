@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
   buildDebugCommand,
+  buildDebugTerminalCommand,
   createGeneratedDebugConfig,
   inferDebuggerRuntime,
   normalizeLaunchConfigs,
@@ -14,6 +15,7 @@ describe("debugger command helpers", () => {
     expect(inferDebuggerRuntime({ path: "/repo/app.py", name: "app.py" })).toBe("python");
     expect(inferDebuggerRuntime({ path: "/repo/main.go", name: "main.go" })).toBe("go");
     expect(inferDebuggerRuntime({ path: "/repo/src/main.rs", name: "main.rs" })).toBe("rust");
+    expect(inferDebuggerRuntime({ path: "/repo/src/Main.java", name: "Main.java" })).toBe("java");
   });
 
   test("builds a bun inspector command for generated typescript configs", () => {
@@ -23,6 +25,15 @@ describe("debugger command helpers", () => {
     );
 
     expect(buildDebugCommand(config)).toBe("bun --inspect-brk /repo/src/main.ts");
+  });
+
+  test("quotes debug adapter terminal arguments unless they are shell-ready", () => {
+    expect(buildDebugTerminalCommand(["java", "-cp", "/tmp/my app", "Main"])).toBe(
+      "java -cp '/tmp/my app' Main",
+    );
+    expect(buildDebugTerminalCommand(["java", "-cp '/tmp/my app' Main"], true)).toBe(
+      "java -cp '/tmp/my app' Main",
+    );
   });
 
   test("normalizes launch.json style configs", () => {
@@ -79,5 +90,34 @@ describe("debugger command helpers", () => {
     expect(resolved.cwd).toBe("/repo");
     expect(resolved.program).toBe("/repo/src/app.js");
     expect(resolved.args).toEqual(["app.js"]);
+  });
+
+  test("preserves and resolves Java debug adapter configuration", () => {
+    const [config] = normalizeLaunchConfigs({
+      configurations: [
+        {
+          name: "Launch Java",
+          type: "java",
+          request: "launch",
+          mainClass: "com.example.Main",
+          projectName: "demo",
+          vmArgs: ["-Dworkspace=${workspaceFolder}"],
+          stepFilters: { skipClasses: ["$JDK", "java.*"] },
+          env: { PROFILE: "debug" },
+          adapterCommand: "java-debug-adapter",
+        },
+      ],
+    });
+
+    const resolved = resolveDebugConfigVariables(config!, null, "/repo");
+
+    expect(resolved.runtime).toBe("java");
+    expect(resolved.env).toEqual({ PROFILE: "debug" });
+    expect(resolved.adapterConfiguration).toMatchObject({
+      mainClass: "com.example.Main",
+      projectName: "demo",
+      vmArgs: ["-Dworkspace=/repo"],
+      stepFilters: { skipClasses: ["$JDK", "java.*"] },
+    });
   });
 });

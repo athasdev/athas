@@ -1,17 +1,17 @@
-export const HEADER_TRAILING_ITEM_IDS = ["run-actions"] as const;
 export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "files",
   "git",
   "review",
   "github-prs",
   "views",
+  "debugger",
+  "databases",
   "docker",
   "extensions",
 ] as const;
-export const FOOTER_LEADING_ITEM_IDS = ["branch", "terminal", "debugger", "extensions"] as const;
-export const FOOTER_TRAILING_ITEM_IDS = ["databases", "collaboration"] as const;
+export const FOOTER_LEADING_ITEM_IDS = ["branch", "terminal", "extensions"] as const;
+export const FOOTER_TRAILING_ITEM_IDS = ["collaboration"] as const;
 
-export type HeaderTrailingItemId = (typeof HEADER_TRAILING_ITEM_IDS)[number];
 export type SidebarActivityItemId = (typeof SIDEBAR_ACTIVITY_ITEM_IDS)[number];
 export type FooterLeadingItemId = (typeof FOOTER_LEADING_ITEM_IDS)[number];
 export type FooterTrailingItemId = (typeof FOOTER_TRAILING_ITEM_IDS)[number];

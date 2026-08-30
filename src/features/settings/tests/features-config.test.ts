@@ -28,6 +28,19 @@ describe("features config", () => {
     });
   });
 
+  it("keeps Debugger stable and on by default", () => {
+    const feature = createCoreFeaturesList(defaultSettings.coreFeatures).find(
+      (item) => item.id === "debugger",
+    );
+
+    expect(feature).toMatchObject({
+      name: "Debugger",
+      description: "Run and debug files with launch configurations and breakpoints",
+      enabled: true,
+    });
+    expect(feature).not.toHaveProperty("status");
+  });
+
   it("keeps Web Viewer experimental and off by default", () => {
     const feature = createCoreFeaturesList(defaultSettings.coreFeatures).find(
       (item) => item.id === "webViewer",

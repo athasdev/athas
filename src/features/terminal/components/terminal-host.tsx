@@ -143,6 +143,7 @@ function TerminalPortal({ sessionId }: { sessionId: string }) {
       isVisible={slot?.isVisible ?? true}
       shell={slot?.shell}
       initialCommand={slot?.initialCommand}
+      environment={slot?.environment}
       workingDirectory={slot?.workingDirectory}
       remoteConnectionId={slot?.remoteConnectionId}
       onTerminalExit={slot?.onTerminalExit}

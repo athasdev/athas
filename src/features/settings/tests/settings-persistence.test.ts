@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { getDefaultSettingsSnapshot } from "@/features/settings/config/default-settings";
+import {
+  SETTINGS_SCHEMA_VERSION,
+  SETTINGS_SCHEMA_VERSION_KEY,
+} from "@/features/settings/lib/settings-migrations";
 
 const storeMocks = vi.hoisted(() => ({
   entries: vi.fn(),
@@ -29,7 +33,10 @@ describe("settings persistence", () => {
       save: storeMocks.save,
       set: storeMocks.set,
     };
-    storeMocks.entries.mockResolvedValue(Object.entries(settings));
+    storeMocks.entries.mockResolvedValue([
+      ...Object.entries(settings),
+      [SETTINGS_SCHEMA_VERSION_KEY, SETTINGS_SCHEMA_VERSION],
+    ]);
     storeMocks.load.mockResolvedValue(store);
 
     await expect(loadSettingsFromStore()).resolves.toEqual(settings);
@@ -78,5 +85,52 @@ describe("settings persistence", () => {
     expect(loaded.showOutline).toBe(false);
     expect(storeMocks.set).toHaveBeenCalledWith("showOutline", false);
     expect(storeMocks.save).toHaveBeenCalledTimes(1);
+  });
+
+  it("enables Debugger when migrating existing settings", async () => {
+    const { loadSettingsFromStore } = await import("@/features/settings/lib/settings-persistence");
+    const settings = getDefaultSettingsSnapshot();
+    settings.coreFeatures.debugger = false;
+    const store = {
+      entries: storeMocks.entries,
+      save: storeMocks.save,
+      set: storeMocks.set,
+    };
+    storeMocks.entries.mockResolvedValue(Object.entries(settings));
+    storeMocks.load.mockResolvedValue(store);
+
+    const loaded = await loadSettingsFromStore();
+
+    expect(loaded.coreFeatures.debugger).toBe(true);
+    expect(storeMocks.set).toHaveBeenCalledWith("coreFeatures", {
+      ...settings.coreFeatures,
+      debugger: true,
+    });
+    expect(storeMocks.set).toHaveBeenCalledWith(
+      SETTINGS_SCHEMA_VERSION_KEY,
+      SETTINGS_SCHEMA_VERSION,
+    );
+  });
+
+  it("preserves Debugger preferences after the settings migration", async () => {
+    const { loadSettingsFromStore } = await import("@/features/settings/lib/settings-persistence");
+    const settings = getDefaultSettingsSnapshot();
+    settings.coreFeatures.debugger = false;
+    const store = {
+      entries: storeMocks.entries,
+      save: storeMocks.save,
+      set: storeMocks.set,
+    };
+    storeMocks.entries.mockResolvedValue([
+      ...Object.entries(settings),
+      [SETTINGS_SCHEMA_VERSION_KEY, SETTINGS_SCHEMA_VERSION],
+    ]);
+    storeMocks.load.mockResolvedValue(store);
+
+    const loaded = await loadSettingsFromStore();
+
+    expect(loaded.coreFeatures.debugger).toBe(false);
+    expect(storeMocks.set).not.toHaveBeenCalled();
+    expect(storeMocks.save).not.toHaveBeenCalled();
   });
 });

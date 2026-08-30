@@ -11,6 +11,7 @@ import { Dropdown } from "@/ui/dropdown";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import { ArrowClockwiseIcon as RefreshIcon, PlayIcon, PlusIcon } from "@/ui/icons";
 import { SearchField } from "@/ui/search";
+import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import Tooltip from "@/ui/tooltip";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -76,7 +77,7 @@ function RunActionSection({
   );
 }
 
-export default function RunActionsButton() {
+export default function RunActionsButton({ expanded }: { expanded: boolean }) {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const allCustomActions = useRunActionsStore.use.runActions();
@@ -224,27 +225,38 @@ export default function RunActionsButton() {
 
   return (
     <>
-      <div ref={triggerRef} className="pointer-events-auto">
-        <Tooltip content="Run project action" side="bottom">
-          <Button
-            type="button"
+      <div ref={triggerRef} className="pointer-events-auto w-full">
+        {expanded ? (
+          <SidebarListItem
+            leading={<PlayIcon />}
             onClick={() => setIsMenuOpen((open) => !open)}
-            variant="ghost"
             active={isMenuOpen}
             aria-expanded={isMenuOpen}
             aria-haspopup="menu"
             aria-label="Run project action"
-            iconOnly
           >
-            <PlayIcon />
-          </Button>
-        </Tooltip>
+            Run actions
+          </SidebarListItem>
+        ) : (
+          <Tooltip content="Run actions" side="right">
+            <SidebarIconButton
+              onClick={() => setIsMenuOpen((open) => !open)}
+              active={isMenuOpen}
+              aria-expanded={isMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Run project action"
+            >
+              <PlayIcon />
+            </SidebarIconButton>
+          </Tooltip>
+        )}
       </div>
 
       <Dropdown
         isOpen={isMenuOpen}
         anchorRef={triggerRef}
-        anchorAlign="end"
+        anchorSide="top"
+        anchorAlign="start"
         onClose={closeMenu}
         closeOnSelect={false}
         className="w-90 max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl p-0"

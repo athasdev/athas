@@ -16,10 +16,12 @@ import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import {
   BoxIcon,
+  BugBeetleIcon,
   ChatCircleTextIcon,
   CloudArrowDownIcon,
   ClockCounterClockwiseIcon,
   CubeIcon,
+  DatabaseIcon,
   ExtensionsIcon,
   FilesIcon,
   FolderOpenIcon,
@@ -62,6 +64,10 @@ interface ActivityNavigationItemOptions {
   onViewChange: (view: SidebarView) => void;
   onOpenExtensions: () => void;
   isExtensionsActive: boolean;
+  isDebuggerActive: boolean;
+  isDatabasesActive: boolean;
+  onToggleDebugger: () => void;
+  onOpenDatabases: () => void;
 }
 
 type GitNavigationAction =
@@ -86,6 +92,10 @@ export function useActivityNavigationItems({
   onViewChange,
   onOpenExtensions,
   isExtensionsActive,
+  isDebuggerActive,
+  isDatabasesActive,
+  onToggleDebugger,
+  onOpenDatabases,
 }: ActivityNavigationItemOptions) {
   const extensionViews = useExtensionViews();
   const sidebarActivityItemsOrder = useSettingsStore(
@@ -285,6 +295,27 @@ export function useActivityNavigationItems({
         onClick: () => onViewChange("views"),
         ariaLabel: "Views",
       },
+      ...(coreFeatures.debugger
+        ? [
+            {
+              id: "debugger",
+              label: "Run and Debug",
+              icon: <BugBeetleIcon />,
+              active: isDebuggerActive,
+              onClick: onToggleDebugger,
+              ariaLabel: "Run and Debug",
+              shortcut: "Mod+Shift+D",
+            } satisfies ActivityNavigationItem,
+          ]
+        : []),
+      {
+        id: "databases",
+        label: "Databases",
+        icon: <DatabaseIcon />,
+        active: isDatabasesActive,
+        onClick: onOpenDatabases,
+        ariaLabel: "Databases",
+      },
       ...(coreFeatures.docker
         ? [
             {
@@ -349,6 +380,7 @@ export function useActivityNavigationItems({
     ],
     [
       activeSidebarView,
+      coreFeatures.debugger,
       coreFeatures.docker,
       coreFeatures.git,
       coreFeatures.github,
@@ -357,10 +389,14 @@ export function useActivityNavigationItems({
       githubSectionItems,
       gitSectionItems,
       isExtensionsActive,
+      isDatabasesActive,
+      isDebuggerActive,
       isGitHubPRsViewActive,
       isGitViewActive,
       isPrimarySidebarItemActive,
       onOpenExtensions,
+      onOpenDatabases,
+      onToggleDebugger,
       openDockerSubview,
       onViewChange,
       openGitSubview,

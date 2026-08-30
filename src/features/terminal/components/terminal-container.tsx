@@ -443,8 +443,9 @@ const TerminalContainer = ({
         command: string;
         name?: string;
         workingDirectory?: string;
+        environment?: Record<string, string>;
       }>;
-      const { command, name, workingDirectory } = customEvent.detail;
+      const { command, name, workingDirectory, environment } = customEvent.detail;
       const terminalDirectory = workingDirectory || currentDirectory;
 
       // Show bottom pane and switch to terminal tab
@@ -457,6 +458,7 @@ const TerminalContainer = ({
       const newTerminalId = createTerminal({
         name: terminalName,
         currentDirectory: terminalDirectory,
+        environment,
       });
 
       if (newTerminalId) {

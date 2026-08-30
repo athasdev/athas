@@ -39,6 +39,8 @@ describe("orderChromeItems", () => {
       "review",
       "github-prs",
       "views",
+      "debugger",
+      "databases",
       "docker",
       "extensions",
     ]);

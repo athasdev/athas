@@ -1,21 +1,24 @@
 import {
-  CaretRightIcon as CaretRight,
   CircleIcon as Circle,
   PauseIcon as Pause,
+  PencilIcon as Pencil,
   StackIcon as Stack,
   TrashIcon as Trash,
 } from "@/ui/icons";
-import { cva } from "class-variance-authority";
-import type { ReactNode } from "react";
 import { useState } from "react";
-import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Checkbox } from "@/ui/checkbox";
 import { EmptyState } from "@/ui/empty";
+import Input from "@/ui/input";
+import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/ui/popover";
 import { Spinner } from "@/ui/spinner";
-import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import { getBaseName } from "@/utils/path-helpers";
-import type { DebugBreakpoint, DebugStackFrame } from "../types/debugger.types";
+import type {
+  DebugBreakpoint,
+  DebugExceptionBreakpointFilter,
+  DebugStackFrame,
+} from "../types/debugger.types";
 
 export const EMPTY_DEBUG_SECTION_MESSAGES = {
   stack: "Start a session to see frames.",
@@ -23,63 +26,6 @@ export const EMPTY_DEBUG_SECTION_MESSAGES = {
   console: "Adapter output appears here.",
   breakpoints: "Click a gutter line or toggle the current line.",
 };
-
-const debugSectionVariants = cva(
-  "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-surface/30",
-);
-
-export function DebugSection({
-  title,
-  count,
-  children,
-  defaultOpen = true,
-  action,
-  className,
-  contentClassName,
-}: {
-  title: string;
-  count?: number;
-  children: ReactNode;
-  defaultOpen?: boolean;
-  action?: ReactNode;
-  className?: string;
-  contentClassName?: string;
-}) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
-  return (
-    <section className={cn(debugSectionVariants(), className)}>
-      <div className="flex h-8 shrink-0 items-center gap-1 border-border/60 border-b px-1.5">
-        <button
-          type="button"
-          className="font-sans flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1 text-left text-subtle-foreground hover:bg-accent/60 hover:text-foreground"
-          onClick={() => setIsOpen((current) => !current)}
-        >
-          <CaretRight
-            size={12}
-            className={cn("shrink-0 transition-transform", isOpen && "rotate-90")}
-          />
-          <span className="min-w-0 flex-1 truncate font-medium ui-text-sm uppercase">{title}</span>
-          {typeof count === "number" ? (
-            <Badge variant="muted" className="h-5 tabular-nums">
-              {count}
-            </Badge>
-          ) : null}
-        </button>
-        {action ? <div className="shrink-0">{action}</div> : null}
-      </div>
-      {isOpen ? (
-        <ScrollArea
-          className="min-h-0 flex-1"
-          contentClassName={contentClassName}
-          orientation="both"
-        >
-          {children}
-        </ScrollArea>
-      ) : null}
-    </section>
-  );
-}
 
 export function DebugSessionStatusIcon({ status }: { status: "idle" | "running" | "paused" }) {
   if (status === "running") {
@@ -140,15 +86,24 @@ export function DebugBreakpointsList({
   breakpoints,
   onOpen,
   onToggle,
+  onUpdateOptions,
   onRemove,
+  showEmptyState = true,
 }: {
   breakpoints: DebugBreakpoint[];
   onOpen: (breakpoint: DebugBreakpoint) => Promise<void>;
   onToggle: (breakpoint: DebugBreakpoint) => void;
+  onUpdateOptions: (
+    breakpoint: DebugBreakpoint,
+    options: Pick<DebugBreakpoint, "condition" | "hitCondition" | "logMessage">,
+  ) => void;
   onRemove: (breakpoint: DebugBreakpoint) => void;
+  showEmptyState?: boolean;
 }) {
   if (breakpoints.length === 0) {
-    return <EmptyState layout="sidebar" message={EMPTY_DEBUG_SECTION_MESSAGES.breakpoints} />;
+    return showEmptyState ? (
+      <EmptyState layout="sidebar" message={EMPTY_DEBUG_SECTION_MESSAGES.breakpoints} />
+    ) : null;
   }
 
   return (
@@ -161,11 +116,14 @@ export function DebugBreakpointsList({
           <button
             type="button"
             aria-label={breakpoint.enabled ? "Disable breakpoint" : "Enable breakpoint"}
+            title={breakpoint.message}
             className={cn(
               "size-3 rounded-full border",
-              breakpoint.enabled
+              breakpoint.enabled && breakpoint.verified !== false
                 ? "border-destructive bg-destructive"
-                : "border-subtle-foreground bg-transparent",
+                : breakpoint.enabled
+                  ? "border-warning bg-warning/30"
+                  : "border-subtle-foreground bg-transparent",
             )}
             onClick={() => onToggle(breakpoint)}
           />
@@ -181,6 +139,10 @@ export function DebugBreakpointsList({
               Line {breakpoint.line + 1}
             </div>
           </button>
+          <BreakpointOptions
+            breakpoint={breakpoint}
+            onUpdate={(options) => onUpdateOptions(breakpoint, options)}
+          />
           <Button
             variant="ghost"
             className="opacity-0 group-hover:opacity-100"
@@ -193,5 +155,115 @@ export function DebugBreakpointsList({
         </div>
       ))}
     </div>
+  );
+}
+
+export function DebugExceptionBreakpointsList({
+  filters,
+  enabledFilters,
+  onToggle,
+}: {
+  filters: DebugExceptionBreakpointFilter[];
+  enabledFilters: Set<string>;
+  onToggle: (filter: DebugExceptionBreakpointFilter, enabled: boolean) => void;
+}) {
+  if (filters.length === 0) return null;
+
+  return (
+    <div className="border-border/60 border-b py-1">
+      {filters.map((filter) => (
+        <label
+          key={filter.filter}
+          className="font-sans flex items-start gap-2 px-3 py-1.5 ui-text-sm hover:bg-accent/70"
+          title={filter.description}
+        >
+          <Checkbox
+            checked={enabledFilters.has(filter.filter)}
+            onCheckedChange={(checked) => onToggle(filter, checked === true)}
+            aria-label={`${filter.label} exception breakpoint`}
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block text-foreground">{filter.label}</span>
+            {filter.description ? (
+              <span className="block truncate text-subtle-foreground ui-text-sm">
+                {filter.description}
+              </span>
+            ) : null}
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function BreakpointOptions({
+  breakpoint,
+  onUpdate,
+}: {
+  breakpoint: DebugBreakpoint;
+  onUpdate: (options: Pick<DebugBreakpoint, "condition" | "hitCondition" | "logMessage">) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [condition, setCondition] = useState(breakpoint.condition ?? "");
+  const [hitCondition, setHitCondition] = useState(breakpoint.hitCondition ?? "");
+  const [logMessage, setLogMessage] = useState(breakpoint.logMessage ?? "");
+
+  const save = () => {
+    onUpdate({
+      condition: condition.trim() || undefined,
+      hitCondition: hitCondition.trim() || undefined,
+      logMessage: logMessage.trim() || undefined,
+    });
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button
+            variant="ghost"
+            className="opacity-0 group-hover:opacity-100"
+            tooltip="Edit breakpoint"
+            iconOnly
+          />
+        }
+      >
+        <Pencil />
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80">
+        <PopoverTitle>Breakpoint options</PopoverTitle>
+        <label className="flex flex-col gap-1 text-subtle-foreground ui-text-sm">
+          Condition
+          <Input
+            value={condition}
+            onChange={(event) => setCondition(event.target.value)}
+            placeholder="count > 10"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-subtle-foreground ui-text-sm">
+          Hit count
+          <Input
+            value={hitCondition}
+            onChange={(event) => setHitCondition(event.target.value)}
+            placeholder="5 or >= 5"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-subtle-foreground ui-text-sm">
+          Log message
+          <Input
+            value={logMessage}
+            onChange={(event) => setLogMessage(event.target.value)}
+            placeholder="value = {value}"
+          />
+        </label>
+        <div className="flex justify-end gap-1">
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={save}>Save</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -13,7 +13,7 @@ describe("settings import/export", () => {
     });
 
     expect(payload.format).toBe("athas.settings");
-    expect(payload.version).toBe(1);
+    expect(payload.version).toBe(2);
     expect(payload.settings.fontSize).toBe(15);
   });
 
@@ -40,11 +40,35 @@ describe("settings import/export", () => {
         settings: {
           ...defaultSettings,
           wordWrap: true,
+          coreFeatures: {
+            ...defaultSettings.coreFeatures,
+            debugger: false,
+          },
         },
       }),
     );
 
     expect(imported?.wordWrap).toBe(true);
+    expect(imported?.coreFeatures.debugger).toBe(true);
+  });
+
+  it("preserves Debugger preferences from the current settings schema", () => {
+    const imported = parseSettingsImportJson(
+      JSON.stringify({
+        format: "athas.settings",
+        version: 2,
+        exportedAt: "2026-08-29T00:00:00.000Z",
+        settings: {
+          ...defaultSettings,
+          coreFeatures: {
+            ...defaultSettings.coreFeatures,
+            debugger: false,
+          },
+        },
+      }),
+    );
+
+    expect(imported?.coreFeatures.debugger).toBe(false);
   });
 
   it("preserves the shared sidebar width when importing legacy settings", () => {

@@ -8,6 +8,7 @@ export interface TerminalSlotProps {
   isVisible: boolean;
   shell?: string;
   initialCommand?: string;
+  environment?: Record<string, string>;
   workingDirectory?: string;
   remoteConnectionId?: string;
   onTerminalExit?: (sessionId: string) => void;

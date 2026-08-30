@@ -142,6 +142,15 @@ describe("settings normalization", () => {
     expect(normalized.externalEditor).toBe("helix");
   });
 
+  it("drops the retired title bar action order", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      headerTrailingItemsOrder: ["run-actions"],
+    } as never);
+
+    expect("headerTrailingItemsOrder" in normalized).toBe(false);
+  });
+
   it("normalizes unsupported remembered settings tabs", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
@@ -183,12 +192,15 @@ describe("settings normalization", () => {
       iconTheme: "colorful-material",
     });
 
-    expect(normalized.iconTheme).toBe("symbols");
-    expect(normalizeSettingValue("iconTheme", "colorful-material")).toBe("symbols");
-    expect(normalizeSettingValue("iconTheme", "seti")).toBe("symbols");
-    expect(normalizeSettingValue("iconTheme", "athas-icons-dimmed")).toBe("athas-icons");
-    expect(normalizeSettingValue("iconTheme", "athas-icons-light")).toBe("athas-icons");
-    expect(normalizeSettingValue("iconTheme", "athas-file-icons")).toBe("athas-icons");
+    expect(normalized.iconTheme).toBe("pierre-icons-complete");
+    expect(normalizeSettingValue("iconTheme", "colorful-material")).toBe("pierre-icons-complete");
+    expect(normalizeSettingValue("iconTheme", "material")).toBe("pierre-icons-complete");
+    expect(normalizeSettingValue("iconTheme", "seti")).toBe("pierre-icons-complete");
+    expect(normalizeSettingValue("iconTheme", "symbols")).toBe("pierre-icons-complete");
+    expect(normalizeSettingValue("iconTheme", "athas-icons")).toBe("pierre-icons-complete");
+    expect(normalizeSettingValue("iconTheme", "athas-icons-dimmed")).toBe("pierre-icons-complete");
+    expect(normalizeSettingValue("iconTheme", "athas-icons-light")).toBe("pierre-icons-complete");
+    expect(normalizeSettingValue("iconTheme", "athas-file-icons")).toBe("pierre-icons-complete");
   });
 
   it("drops retired core feature flags", () => {

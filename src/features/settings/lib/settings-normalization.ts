@@ -16,7 +16,6 @@ import { normalizeConfiguredFontFamily } from "@/features/settings/lib/font-fami
 import {
   FOOTER_LEADING_ITEM_IDS,
   FOOTER_TRAILING_ITEM_IDS,
-  HEADER_TRAILING_ITEM_IDS,
   SIDEBAR_ACTIVITY_ITEM_IDS,
   normalizeItemOrder,
 } from "@/features/layout/config/item-order";
@@ -203,17 +202,18 @@ function normalizeStringList(value: unknown): string[] {
 
 function normalizeIconTheme(value: string): string {
   if (
+    value === "athas-icons" ||
     value === "athas-icons-dimmed" ||
     value === "athas-icons-light" ||
     value === "athas-file-icons" ||
     value === "athas-file-icons-dark" ||
-    value === "athas-file-icons-light"
+    value === "athas-file-icons-light" ||
+    value === "colorful-material" ||
+    value === "material" ||
+    value === "seti" ||
+    value === "symbols"
   ) {
-    return "athas-icons";
-  }
-
-  if (value === "colorful-material" || value === "seti") {
-    return "symbols";
+    return "pierre-icons-complete";
   }
 
   return value;
@@ -520,6 +520,8 @@ export function normalizeSettings(settings: Settings): Settings {
     normalizedSettings.fileTreeIndentSize,
   );
   delete (normalizedSettings as { fileTreeDensity?: unknown }).fileTreeDensity;
+  delete (normalizedSettings as Settings & { headerTrailingItemsOrder?: unknown })
+    .headerTrailingItemsOrder;
   normalizedSettings.lastSettingsTab = normalizeSettingsSection(
     (normalizedSettings as { lastSettingsTab?: unknown }).lastSettingsTab,
   );
@@ -530,10 +532,6 @@ export function normalizeSettings(settings: Settings): Settings {
 
   normalizedSettings.iconTheme = normalizeIconTheme(normalizedSettings.iconTheme);
 
-  normalizedSettings.headerTrailingItemsOrder = normalizeItemOrder(
-    normalizedSettings.headerTrailingItemsOrder,
-    HEADER_TRAILING_ITEM_IDS,
-  );
   normalizedSettings.sidebarActivityItemsOrder = normalizeItemOrder(
     normalizedSettings.sidebarActivityItemsOrder,
     SIDEBAR_ACTIVITY_ITEM_IDS,

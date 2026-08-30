@@ -1,8 +1,10 @@
 import {
   sendDebugAdapterRequest,
+  sendDebugAdapterResponse,
   subscribeDebuggerEvents,
 } from "@/features/debugger/services/debug-adapter-service";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
+import { buildDebugTerminalCommand } from "@/features/debugger/utils/debugger-command";
 import type {
   DebugProtocolMessage,
   DebugScope,
@@ -47,7 +49,70 @@ async function handleDebugProtocolMessage(payload: DebugProtocolMessage) {
 
   if (message.type === "response") {
     await handleDebugResponse(payload.sessionId, message);
+    return;
   }
+
+  if (message.type === "request") {
+    await handleDebugRequest(payload.sessionId, message);
+  }
+}
+
+async function handleDebugRequest(sessionId: string, message: Record<string, unknown>) {
+  const requestSeq = typeof message.seq === "number" ? message.seq : null;
+  const command = typeof message.command === "string" ? message.command : "";
+  if (requestSeq === null || !command) return;
+
+  if (command !== "runInTerminal") {
+    await sendDebugAdapterResponse(
+      sessionId,
+      requestSeq,
+      command,
+      false,
+      undefined,
+      `Unsupported debug adapter request: ${command}`,
+    );
+    return;
+  }
+
+  const request = asRecord(message.arguments);
+  const args = Array.isArray(request?.args)
+    ? request.args.filter((arg): arg is string => typeof arg === "string")
+    : [];
+  const terminalCommand = buildDebugTerminalCommand(
+    args,
+    request?.argsCanBeInterpretedByShell === true,
+  );
+  if (!terminalCommand) {
+    await sendDebugAdapterResponse(
+      sessionId,
+      requestSeq,
+      command,
+      false,
+      undefined,
+      "The debug adapter did not provide a terminal command",
+    );
+    return;
+  }
+
+  const rawEnvironment = asRecord(request?.env);
+  const environment = rawEnvironment
+    ? Object.fromEntries(
+        Object.entries(rawEnvironment).filter(
+          (entry): entry is [string, string] => typeof entry[1] === "string",
+        ),
+      )
+    : undefined;
+  window.dispatchEvent(
+    new CustomEvent("create-terminal-with-command", {
+      detail: {
+        command: terminalCommand,
+        name: typeof request?.title === "string" ? request.title : "Debug Console",
+        workingDirectory: typeof request?.cwd === "string" ? request.cwd : undefined,
+        environment,
+      },
+    }),
+  );
+  await sendDebugAdapterResponse(sessionId, requestSeq, command, true, {});
 }
 
 async function handleDebugEvent(sessionId: string, message: Record<string, unknown>) {
@@ -75,6 +140,46 @@ async function handleDebugEvent(sessionId: string, message: Record<string, unkno
   if (event === "continued") {
     actions.setSessionStatus("running");
     actions.setStoppedState(null);
+    return;
+  }
+
+  if (event === "output") {
+    const output = typeof body?.output === "string" ? body.output : "";
+    if (output) {
+      actions.recordAdapterOutput({
+        sessionId,
+        stream: typeof body?.category === "string" ? body.category : "console",
+        data: output,
+      });
+    }
+    return;
+  }
+
+  if (event === "thread") {
+    await requestThreads(sessionId);
+    return;
+  }
+
+  if (event === "breakpoint") {
+    const breakpoint = asRecord(body?.breakpoint);
+    const adapterId = typeof breakpoint?.id === "number" ? breakpoint.id : undefined;
+    const source = asRecord(breakpoint?.source);
+    const filePath = typeof source?.path === "string" ? source.path : undefined;
+    const line = typeof breakpoint?.line === "number" ? breakpoint.line - 1 : undefined;
+    const localBreakpoint = useDebuggerStore
+      .getState()
+      .breakpoints.find(
+        (candidate) =>
+          (adapterId !== undefined && candidate.adapterId === adapterId) ||
+          (filePath === candidate.filePath && line === candidate.line),
+      );
+    if (localBreakpoint) {
+      actions.updateBreakpointAdapterState(localBreakpoint.id, {
+        adapterId,
+        verified: typeof breakpoint?.verified === "boolean" ? breakpoint.verified : undefined,
+        message: typeof breakpoint?.message === "string" ? breakpoint.message : undefined,
+      });
+    }
     return;
   }
 
@@ -118,6 +223,24 @@ async function handleDebugResponse(sessionId: string, message: Record<string, un
     if (typeof firstThreadId === "number") {
       await requestStackTrace(sessionId, firstThreadId);
     }
+    return;
+  }
+
+  if (command === "initialize") {
+    store.actions.setAdapterCapabilities(body ?? {});
+    return;
+  }
+
+  if (command === "setBreakpoints" && context?.command === "setBreakpoints") {
+    const adapterBreakpoints = Array.isArray(body?.breakpoints) ? body.breakpoints : [];
+    context.breakpointIds.forEach((breakpointId, index) => {
+      const breakpoint = asRecord(adapterBreakpoints[index]);
+      store.actions.updateBreakpointAdapterState(breakpointId, {
+        adapterId: typeof breakpoint?.id === "number" ? breakpoint.id : undefined,
+        verified: typeof breakpoint?.verified === "boolean" ? breakpoint.verified : undefined,
+        message: typeof breakpoint?.message === "string" ? breakpoint.message : undefined,
+      });
+    });
     return;
   }
 

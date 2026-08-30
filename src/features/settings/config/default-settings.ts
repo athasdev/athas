@@ -7,7 +7,6 @@ import {
 import {
   FOOTER_LEADING_ITEM_IDS,
   FOOTER_TRAILING_ITEM_IDS,
-  HEADER_TRAILING_ITEM_IDS,
   SIDEBAR_ACTIVITY_ITEM_IDS,
 } from "@/features/layout/config/item-order";
 import type { Settings } from "@/features/settings/types/settings.types";
@@ -71,14 +70,13 @@ export const defaultSettings: Settings = {
   tabCloseButtonVisibility: "active",
   // Theme
   theme: "athas-dark",
-  iconTheme: "athas-icons",
+  iconTheme: "pierre-icons-complete",
   syncSystemTheme: false,
   autoThemeLight: "athas-light",
   autoThemeDark: "athas-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
   windowTransparency: false,
-  headerTrailingItemsOrder: [...HEADER_TRAILING_ITEM_IDS],
   sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],
   hiddenSidebarActivityItems: [],
   footerLeadingItemsOrder: [...FOOTER_LEADING_ITEM_IDS],
@@ -138,7 +136,7 @@ export const defaultSettings: Settings = {
     ghosttyTerminal: false,
     search: true,
     diagnostics: true,
-    debugger: false,
+    debugger: true,
     docker: true,
     outline: true,
     aiChat: true,
@@ -198,7 +196,6 @@ export function getDefaultSettingsSnapshot(): Settings {
     enterpriseAllowedExtensionIds: [...defaultSettings.enterpriseAllowedExtensionIds],
     hiddenFilePatterns: [...defaultSettings.hiddenFilePatterns],
     hiddenDirectoryPatterns: [...defaultSettings.hiddenDirectoryPatterns],
-    headerTrailingItemsOrder: [...defaultSettings.headerTrailingItemsOrder],
     sidebarActivityItemsOrder: [...defaultSettings.sidebarActivityItemsOrder],
     hiddenSidebarActivityItems: [...defaultSettings.hiddenSidebarActivityItems],
     collapsedActivityRailSections: [...defaultSettings.collapsedActivityRailSections],

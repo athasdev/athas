@@ -9,6 +9,7 @@ export interface Terminal {
   shell?: string;
   profileId?: string;
   initialCommand?: string;
+  environment?: Record<string, string>;
   createdAt: Date;
   lastActivity?: Date;
   connectionId?: string;
@@ -85,6 +86,7 @@ export type TerminalAction =
         remoteConnectionId?: string;
         profileId?: string;
         initialCommand?: string;
+        environment?: Record<string, string>;
         customName?: boolean;
       };
     }

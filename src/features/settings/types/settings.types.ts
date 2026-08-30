@@ -4,7 +4,6 @@ import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import type {
   FooterLeadingItemId,
   FooterTrailingItemId,
-  HeaderTrailingItemId,
   SidebarActivityItemId,
 } from "@/features/layout/config/item-order";
 
@@ -94,7 +93,6 @@ export interface Settings {
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
   windowTransparency: boolean;
-  headerTrailingItemsOrder: HeaderTrailingItemId[];
   sidebarActivityItemsOrder: Array<SidebarActivityItemId | string>;
   hiddenSidebarActivityItems: string[];
   footerLeadingItemsOrder: FooterLeadingItemId[];

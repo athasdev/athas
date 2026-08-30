@@ -93,6 +93,7 @@ const TerminalSession = ({
           isVisible={isVisible}
           shell={terminal.shell}
           initialCommand={terminal.initialCommand}
+          environment={terminal.environment}
           workingDirectory={terminal.currentDirectory}
           remoteConnectionId={terminal.remoteConnectionId}
           onTerminalExit={onTerminalExit}

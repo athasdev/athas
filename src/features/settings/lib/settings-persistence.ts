@@ -4,6 +4,12 @@ import {
   defaultSettings,
   getDefaultSettingsSnapshot,
 } from "@/features/settings/config/default-settings";
+import {
+  getSettingsSchemaVersion,
+  migrateSettingsRecord,
+  SETTINGS_SCHEMA_VERSION,
+  SETTINGS_SCHEMA_VERSION_KEY,
+} from "@/features/settings/lib/settings-migrations";
 import type { Settings } from "@/features/settings/types/settings.types";
 
 let storeInstance: Store | null = null;
@@ -15,11 +21,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 async function initializeStoreDefaults(store: Store) {
-  const entries = new Map(await store.entries<unknown>());
+  const persistedEntries = new Map(await store.entries<unknown>());
+  const persistedSchemaVersion = getSettingsSchemaVersion(
+    persistedEntries.get(SETTINGS_SCHEMA_VERSION_KEY),
+  );
+  const entries = new Map(
+    Object.entries(
+      migrateSettingsRecord(Object.fromEntries(persistedEntries), persistedSchemaVersion),
+    ),
+  );
   const changes: Array<[string, unknown]> = [];
   const legacySidebarWidth = entries.get("sidebarWidth");
 
   for (const [key, defaultValue] of Object.entries(defaultSettings)) {
+    const persistedValue = persistedEntries.get(key);
     const currentValue = entries.get(key);
     let nextValue = currentValue;
 
@@ -30,7 +45,12 @@ async function initializeStoreDefaults(store: Store) {
     }
 
     entries.set(key, nextValue);
-    if (!isEqual(currentValue, nextValue)) changes.push([key, nextValue]);
+    if (!isEqual(persistedValue, nextValue)) changes.push([key, nextValue]);
+  }
+
+  if (persistedSchemaVersion < SETTINGS_SCHEMA_VERSION) {
+    entries.set(SETTINGS_SCHEMA_VERSION_KEY, SETTINGS_SCHEMA_VERSION);
+    changes.push([SETTINGS_SCHEMA_VERSION_KEY, SETTINGS_SCHEMA_VERSION]);
   }
 
   if (changes.length > 0) {

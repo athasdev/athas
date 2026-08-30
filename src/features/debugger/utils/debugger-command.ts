@@ -23,6 +23,10 @@ const joinCommand = (parts: Array<string | undefined>) =>
     .map(quoteShellArg)
     .join(" ");
 
+export function buildDebugTerminalCommand(args: string[], interpretedByShell = false): string {
+  return interpretedByShell ? args.join(" ") : joinCommand(args);
+}
+
 export function inferDebuggerRuntime(file?: DebuggableFile | null): DebuggerRuntime {
   if (!file?.path) return "custom";
 
@@ -31,6 +35,7 @@ export function inferDebuggerRuntime(file?: DebuggableFile | null): DebuggerRunt
   if (extension === "py") return "python";
   if (extension === "rs" || file.name === "Cargo.toml") return "rust";
   if (extension === "go") return "go";
+  if (extension === "java") return "java";
 
   return "custom";
 }
@@ -49,6 +54,20 @@ export function createGeneratedDebugConfig(
       runtime: "custom",
       cwd,
       command: "",
+      source: "generated",
+    };
+  }
+
+  if (runtime === "java") {
+    return {
+      id: "generated-java",
+      name: `Debug ${file.name}`,
+      runtime,
+      type: "java",
+      request: "launch",
+      cwd,
+      program: file.path,
+      adapterConfiguration: { mainClass: file.path },
       source: "generated",
     };
   }
@@ -77,6 +96,8 @@ export function buildDebugCommand(config: DebugLaunchConfig): string {
       return joinCommand(["cargo", "run", ...args]);
     case "go":
       return joinCommand(["dlv", "debug", config.program, "--", ...args]);
+    case "java":
+      return joinCommand(["java", config.program, ...args]);
     case "custom":
       return config.command?.trim() ?? "";
   }
@@ -94,6 +115,16 @@ export function resolveDebugConfigVariables(
       .replace(/\$\{fileBasename\}/g, file?.path ? getBaseName(file.path) : "")
       .replace(/\$\{fileDirname\}/g, file?.path ? getDirName(file.path) : "");
 
+  const resolveUnknownValue = (value: unknown): unknown => {
+    if (typeof value === "string") return resolveValue(value);
+    if (Array.isArray(value)) return value.map(resolveUnknownValue);
+    if (!value || typeof value !== "object") return value;
+
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nestedValue]) => [key, resolveUnknownValue(nestedValue)]),
+    );
+  };
+
   return {
     ...config,
     program: config.program ? resolveValue(config.program) : config.program,
@@ -104,6 +135,9 @@ export function resolveDebugConfigVariables(
       ? resolveValue(config.adapterCommand)
       : config.adapterCommand,
     adapterArgs: config.adapterArgs?.map(resolveValue),
+    adapterConfiguration: config.adapterConfiguration
+      ? (resolveUnknownValue(config.adapterConfiguration) as Record<string, unknown>)
+      : undefined,
     env: config.env
       ? Object.fromEntries(
           Object.entries(config.env).map(([key, value]) => [key, resolveValue(value)]),
@@ -146,6 +180,12 @@ export function normalizeLaunchConfigs(raw: unknown): DebugLaunchConfig[] {
         : undefined;
       const request = config.request === "attach" ? "attach" : "launch";
       const type = typeof config.type === "string" ? config.type : undefined;
+      const env = isStringRecord(config.env) ? config.env : undefined;
+      const adapterConfiguration = Object.fromEntries(
+        Object.entries(config).filter(
+          ([key]) => !["adapterCommand", "adapterArgs", "command", "runtime"].includes(key),
+        ),
+      );
 
       return {
         id: `workspace-${index}-${name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}`,
@@ -159,6 +199,8 @@ export function normalizeLaunchConfigs(raw: unknown): DebugLaunchConfig[] {
         args,
         adapterCommand,
         adapterArgs,
+        adapterConfiguration,
+        env,
         source: "workspace",
       };
     })
@@ -176,7 +218,13 @@ function normalizeRuntime(value: string): DebuggerRuntime {
   if (normalized.includes("python") || normalized.includes("debugpy")) return "python";
   if (normalized.includes("rust") || normalized.includes("lldb")) return "rust";
   if (normalized.includes("go") || normalized.includes("delve")) return "go";
+  if (normalized.includes("java")) return "java";
   return "custom";
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.values(value).every((item) => typeof item === "string");
 }
 
 function stripJsonComments(content: string): string {

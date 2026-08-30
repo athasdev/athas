@@ -43,6 +43,7 @@ export const useTerminalTabs = () => {
       remoteConnectionId,
       profileId,
       initialCommand,
+      environment,
     }: {
       name: string;
       currentDirectory: string;
@@ -50,6 +51,7 @@ export const useTerminalTabs = () => {
       remoteConnectionId?: string;
       profileId?: string;
       initialCommand?: string;
+      environment?: Record<string, string>;
     }): string => {
       // Generate the terminal ID here so we can return it
       const terminalId = generateTerminalId(name);
@@ -65,6 +67,7 @@ export const useTerminalTabs = () => {
           remoteConnectionId: resolvedRemoteConnectionId,
           profileId,
           initialCommand,
+          environment,
         },
       });
       return terminalId;

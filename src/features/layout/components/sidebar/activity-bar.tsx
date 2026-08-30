@@ -13,6 +13,7 @@ import { useActivityNavigationItems } from "@/features/layout/hooks/use-activity
 import { useActivityProjectCarousel } from "@/features/layout/hooks/use-activity-project-carousel";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { OnboardingChecklist } from "@/features/onboarding/components/onboarding-checklist";
+import RunActionsButton from "@/features/run-actions/components/run-actions-button";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { AccountMenu } from "@/features/window/components/account-menu";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -31,6 +32,11 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const activeSidebarView = useUIState((state) => state.activeSidebarView);
+  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
+  const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
+  const isCommandPaletteVisible = useUIState((state) => state.isCommandPaletteVisible);
+  const commandPaletteInitialView = useUIState((state) => state.commandPaletteInitialView);
+  const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
   const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
@@ -56,6 +62,16 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
       );
     }, 0);
   }, [openSidebarView]);
+  const handleDebuggerToggle = useCallback(() => {
+    const uiState = useUIState.getState();
+    const showingDebugger =
+      !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "debugger";
+    uiState.setBottomPaneActiveTab("debugger");
+    uiState.setIsBottomPaneVisible(showingDebugger);
+  }, []);
+  const handleOpenDatabases = useCallback(() => {
+    openCommandPaletteView("databases");
+  }, [openCommandPaletteView]);
   const railContentRef = useRef<HTMLDivElement>(null);
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const activityBarVisibility = useActivityBarVisibility(coreFeatures);
@@ -72,6 +88,10 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
     onViewChange: handleSidebarViewChange,
     onOpenExtensions: openExtensionsBuffer,
     isExtensionsActive: isExtensionsBufferActive,
+    isDebuggerActive: isBottomPaneVisible && bottomPaneActiveTab === "debugger",
+    isDatabasesActive: isCommandPaletteVisible && commandPaletteInitialView === "databases",
+    onToggleDebugger: handleDebuggerToggle,
+    onOpenDatabases: handleOpenDatabases,
   });
   const visibleActivityNavigationItems = activityNavigationItems.filter(
     (item) => !activityBarVisibility.hiddenNavigationItemIds.includes(item.id),
@@ -191,6 +211,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
             />
             <DiagnosticsActivityControl expanded={expanded} />
             <AppUpdateControl expanded={expanded} />
+            <RunActionsButton expanded={expanded} />
             <AccountMenu expanded={expanded} />
           </div>
         </div>

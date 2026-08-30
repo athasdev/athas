@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
    collections::HashMap,
-   io::{BufRead, BufReader, Write},
+   io::{BufRead, BufReader, Read, Write},
+   net::{Shutdown, TcpStream},
    process::{Child, Command, Stdio},
    sync::{
       Arc, Mutex,
@@ -21,12 +22,15 @@ type DebugEventEmitter = Arc<dyn Fn(&str, Value) + Send + Sync>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DebugAdapterLaunch {
+   #[serde(default)]
    pub command: String,
    #[serde(default)]
    pub args: Vec<String>,
    pub cwd: Option<String>,
    #[serde(default)]
    pub env: HashMap<String, String>,
+   pub host: Option<String>,
+   pub port: Option<u16>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,8 +67,13 @@ pub struct DebugSessionEnded {
 struct DebugSessionHandle {
    info: DebugSessionInfo,
    stdin_tx: Sender<String>,
-   child: Arc<Mutex<Child>>,
+   transport: DebugSessionTransport,
    request_counter: AtomicU64,
+}
+
+enum DebugSessionTransport {
+   Process(Arc<Mutex<Child>>),
+   Socket(Arc<TcpStream>),
 }
 
 pub struct DebugManager {
@@ -83,8 +92,18 @@ impl DebugManager {
    }
 
    pub fn start_session(&self, launch: DebugAdapterLaunch) -> Result<DebugSessionInfo> {
+      if let Some(port) = launch.port {
+         return self.start_socket_session(launch, port);
+      }
+
+      self.start_process_session(launch)
+   }
+
+   fn start_process_session(&self, launch: DebugAdapterLaunch) -> Result<DebugSessionInfo> {
       if launch.command.trim().is_empty() {
-         return Err(anyhow!("Debug adapter command cannot be empty"));
+         return Err(anyhow!(
+            "Debug adapter command cannot be empty when no TCP port is provided"
+         ));
       }
 
       let session_id = Uuid::new_v4().to_string();
@@ -133,8 +152,8 @@ impl DebugManager {
          cwd: launch.cwd,
       };
 
-      spawn_stdin_writer(stdin, stdin_rx);
-      spawn_stdout_reader(Arc::clone(&self.emitter), session_id.clone(), stdout);
+      spawn_message_writer(stdin, stdin_rx);
+      spawn_protocol_reader(Arc::clone(&self.emitter), session_id.clone(), stdout);
       spawn_stderr_reader(Arc::clone(&self.emitter), session_id.clone(), stderr);
 
       self
@@ -146,7 +165,7 @@ impl DebugManager {
             DebugSessionHandle {
                info: info.clone(),
                stdin_tx,
-               child: Arc::clone(&child),
+               transport: DebugSessionTransport::Process(Arc::clone(&child)),
                request_counter: AtomicU64::new(1),
             },
          );
@@ -156,6 +175,61 @@ impl DebugManager {
          Arc::clone(&self.sessions),
          info.id.clone(),
          child,
+      );
+
+      Ok(info)
+   }
+
+   fn start_socket_session(
+      &self,
+      launch: DebugAdapterLaunch,
+      port: u16,
+   ) -> Result<DebugSessionInfo> {
+      let host = launch.host.as_deref().unwrap_or("127.0.0.1");
+      let socket = TcpStream::connect((host, port))
+         .with_context(|| format!("Failed to connect to debug adapter at {host}:{port}"))?;
+      socket
+         .set_nodelay(true)
+         .context("Failed to configure debug adapter TCP connection")?;
+
+      let writer = socket
+         .try_clone()
+         .context("Failed to clone debug adapter TCP writer")?;
+      let reader = socket
+         .try_clone()
+         .context("Failed to clone debug adapter TCP reader")?;
+      let socket = Arc::new(socket);
+      let (stdin_tx, stdin_rx) = channel::<String>();
+      let session_id = Uuid::new_v4().to_string();
+      let endpoint = format!("tcp://{host}:{port}");
+      let info = DebugSessionInfo {
+         id: session_id.clone(),
+         command: endpoint,
+         args: Vec::new(),
+         cwd: launch.cwd,
+      };
+
+      spawn_message_writer(writer, stdin_rx);
+
+      self
+         .sessions
+         .lock()
+         .map_err(|_| anyhow!("Failed to lock debug sessions"))?
+         .insert(
+            session_id.clone(),
+            DebugSessionHandle {
+               info: info.clone(),
+               stdin_tx,
+               transport: DebugSessionTransport::Socket(Arc::clone(&socket)),
+               request_counter: AtomicU64::new(1),
+            },
+         );
+
+      spawn_socket_reader(
+         Arc::clone(&self.emitter),
+         Arc::clone(&self.sessions),
+         session_id,
+         reader,
       );
 
       Ok(info)
@@ -190,7 +264,7 @@ impl DebugManager {
       Ok(seq)
    }
 
-   pub fn send_raw_message(&self, session_id: &str, message: Value) -> Result<()> {
+   pub fn send_raw_message(&self, session_id: &str, mut message: Value) -> Result<()> {
       let sessions = self
          .sessions
          .lock()
@@ -198,6 +272,18 @@ impl DebugManager {
       let session = sessions
          .get(session_id)
          .ok_or_else(|| anyhow!("Debug session not found"))?;
+
+      if let Some(message) = message.as_object_mut()
+         && !message.contains_key("seq")
+      {
+         message.insert(
+            "seq".to_string(),
+            session
+               .request_counter
+               .fetch_add(1, Ordering::SeqCst)
+               .into(),
+         );
+      }
 
       session
          .stdin_tx
@@ -215,8 +301,15 @@ impl DebugManager {
          .remove(session_id)
          .ok_or_else(|| anyhow!("Debug session not found"))?;
 
-      if let Ok(mut child) = session.child.lock() {
-         let _ = child.kill();
+      match session.transport {
+         DebugSessionTransport::Process(child) => {
+            if let Ok(mut child) = child.lock() {
+               let _ = child.kill();
+            }
+         }
+         DebugSessionTransport::Socket(socket) => {
+            let _ = socket.shutdown(Shutdown::Both);
+         }
       }
 
       emit_session_ended(&self.emitter, session_id, "stopped");
@@ -244,29 +337,29 @@ fn encode_protocol_message(message: &Value) -> Result<String> {
    ))
 }
 
-fn spawn_stdin_writer(
-   mut stdin: std::process::ChildStdin,
+fn spawn_message_writer(
+   mut writer: impl Write + Send + 'static,
    stdin_rx: std::sync::mpsc::Receiver<String>,
 ) {
    thread::spawn(move || {
       while let Ok(message) = stdin_rx.recv() {
-         if stdin.write_all(message.as_bytes()).is_err() {
+         if writer.write_all(message.as_bytes()).is_err() {
             break;
          }
-         if stdin.flush().is_err() {
+         if writer.flush().is_err() {
             break;
          }
       }
    });
 }
 
-fn spawn_stdout_reader(
+fn spawn_protocol_reader(
    emitter: DebugEventEmitter,
    session_id: String,
-   stdout: std::process::ChildStdout,
+   input: impl Read + Send + 'static,
 ) {
    thread::spawn(move || {
-      let mut reader = BufReader::new(stdout);
+      let mut reader = BufReader::new(input);
 
       loop {
          match read_protocol_message(&mut reader) {
@@ -280,17 +373,48 @@ fn spawn_stdout_reader(
                   },
                );
             }
-            Ok(None) => {
-               emit_session_ended(&emitter, &session_id, "adapter stdout closed");
-               break;
-            }
+            Ok(None) => break,
             Err(error) => {
                log::warn!("Debug adapter stdout read error: {error}");
-               emit_session_ended(&emitter, &session_id, "adapter stdout read error");
                break;
             }
          }
       }
+   });
+}
+
+fn spawn_socket_reader(
+   emitter: DebugEventEmitter,
+   sessions: Arc<Mutex<HashMap<String, DebugSessionHandle>>>,
+   session_id: String,
+   input: impl Read + Send + 'static,
+) {
+   thread::spawn(move || {
+      let mut reader = BufReader::new(input);
+      let reason = loop {
+         match read_protocol_message(&mut reader) {
+            Ok(Some(message)) => {
+               emit_payload(
+                  &emitter,
+                  "debugger_message",
+                  DebugProtocolMessage {
+                     session_id: session_id.clone(),
+                     message,
+                  },
+               );
+            }
+            Ok(None) => break "adapter TCP connection closed".to_string(),
+            Err(error) => {
+               log::warn!("Debug adapter TCP read error: {error}");
+               break "adapter TCP read error".to_string();
+            }
+         }
+      };
+
+      if let Ok(mut sessions) = sessions.lock() {
+         sessions.remove(&session_id);
+      }
+      emit_session_ended(&emitter, &session_id, &reason);
    });
 }
 

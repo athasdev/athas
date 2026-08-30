@@ -1,4 +1,4 @@
-export type DebuggerRuntime = "bun" | "node" | "python" | "rust" | "go" | "custom";
+export type DebuggerRuntime = "bun" | "node" | "python" | "rust" | "go" | "java" | "custom";
 
 type DebugSessionStatus = "idle" | "running" | "paused";
 
@@ -7,6 +7,12 @@ export interface DebugBreakpoint {
   filePath: string;
   line: number;
   enabled: boolean;
+  condition?: string;
+  hitCondition?: string;
+  logMessage?: string;
+  adapterId?: number;
+  verified?: boolean;
+  message?: string;
   createdAt: number;
 }
 
@@ -23,6 +29,7 @@ export interface DebugLaunchConfig {
   env?: Record<string, string>;
   adapterCommand?: string;
   adapterArgs?: string[];
+  adapterConfiguration?: Record<string, unknown>;
   source: "generated" | "workspace" | "user";
 }
 
@@ -43,10 +50,12 @@ export interface DebuggableFile {
 }
 
 export interface DebugAdapterLaunch {
-  command: string;
+  command?: string;
   args?: string[];
   cwd?: string;
   env?: Record<string, string>;
+  host?: string;
+  port?: number;
 }
 
 export interface DebugAdapterSessionInfo {
@@ -54,6 +63,7 @@ export interface DebugAdapterSessionInfo {
   command: string;
   args: string[];
   cwd?: string;
+  capabilities?: DebugAdapterCapabilities;
 }
 
 export interface DebugProtocolMessage {
@@ -104,6 +114,17 @@ export interface DebugStoppedState {
   description?: string;
 }
 
+export type DebugAdapterCapabilities = Record<string, unknown>;
+
+export interface DebugExceptionBreakpointFilter {
+  filter: string;
+  label: string;
+  description?: string;
+  default?: boolean;
+  supportsCondition?: boolean;
+  conditionDescription?: string;
+}
+
 export interface DebugWatchExpression {
   id: string;
   expression: string;
@@ -120,6 +141,8 @@ export interface DebugWatchResult {
 }
 
 export type DebugRequestContext =
+  | { command: "initialize" }
+  | { command: "setBreakpoints"; filePath: string; breakpointIds: string[] }
   | { command: "threads" }
   | { command: "stackTrace"; threadId: number }
   | { command: "scopes"; frameId: number }

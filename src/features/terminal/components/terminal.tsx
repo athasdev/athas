@@ -69,6 +69,7 @@ interface TerminalEmulatorProps {
   onTerminalExit?: (sessionId: string) => void;
   shell?: string;
   initialCommand?: string;
+  environment?: Record<string, string>;
   workingDirectory?: string;
   remoteConnectionId?: string;
 }
@@ -83,6 +84,7 @@ export const TerminalEmulator = ({
   onTerminalExit,
   shell,
   initialCommand,
+  environment,
   workingDirectory,
   remoteConnectionId,
 }: TerminalEmulatorProps) => {
@@ -481,6 +483,7 @@ export const TerminalEmulator = ({
                   (wslInfo ? getWslShellId(wslInfo.distro) : undefined),
                 wslDistribution: wslInfo?.distro,
                 wslWorkingDirectory: wslInfo?.linuxPath,
+                environment,
                 size,
               },
               onEvent: events.channel,

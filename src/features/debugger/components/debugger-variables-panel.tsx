@@ -1,9 +1,10 @@
 import { CaretRightIcon as CaretRight } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/ui/empty";
+import { showPromptDialog } from "@/ui/dialog";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
-import { sendDebugAdapterRequest } from "../services/debug-adapter-service";
+import { sendDebugAdapterRequest, setDebugVariable } from "../services/debug-adapter-service";
 import { useDebuggerStore } from "../stores/debugger.store";
 import type { DebugRequestContext, DebugScope, DebugVariable } from "../types/debugger.types";
 import { EMPTY_DEBUG_SECTION_MESSAGES } from "./debugger-panels";
@@ -14,6 +15,7 @@ interface DebugVariablesPanelProps {
   scopes: DebugScope[];
   variablesByReference: Record<number, DebugVariable[]>;
   pendingRequests: Record<number, DebugRequestContext>;
+  canSetVariables: boolean;
 }
 
 export function DebugVariablesPanel({
@@ -22,6 +24,7 @@ export function DebugVariablesPanel({
   scopes,
   variablesByReference,
   pendingRequests,
+  canSetVariables,
 }: DebugVariablesPanelProps) {
   const debuggerActions = useDebuggerStore.use.actions();
   const [expandedVariableReferences, setExpandedVariableReferences] = useState<Set<number>>(
@@ -68,6 +71,30 @@ export function DebugVariablesPanel({
     }
   };
 
+  const editVariable = async (variable: DebugVariable, parentReference: number) => {
+    if (!activeSessionId || !canSetVariables) return;
+
+    const value = await showPromptDialog(`Set ${variable.name}:`, {
+      title: "Set Variable",
+      defaultValue: variable.value,
+    });
+    if (value === null) return;
+
+    const updatedVariable = await setDebugVariable(
+      activeSessionId,
+      parentReference,
+      variable.name,
+      value,
+    );
+    const variables = variablesByReference[parentReference] ?? [];
+    debuggerActions.setVariables(
+      parentReference,
+      variables.map((candidate) =>
+        candidate.name === variable.name ? updatedVariable : candidate,
+      ),
+    );
+  };
+
   const renderVariables = (variables: DebugVariable[], parentReference: number, depth = 0) =>
     variables.map((variable, index) => {
       const canExpand = variable.variablesReference > 0;
@@ -100,13 +127,19 @@ export function DebugVariablesPanel({
               />
               <span className="truncate">{variable.name}</span>
             </button>
-            <span className="truncate font-mono text-foreground">
+            <button
+              type="button"
+              className="truncate text-left font-mono text-foreground disabled:cursor-default"
+              disabled={!canSetVariables || isLoading}
+              title={canSetVariables ? `Set ${variable.name}` : undefined}
+              onDoubleClick={() => void editVariable(variable, parentReference)}
+            >
               {isLoading ? (
                 <Spinner label="Loading variable" compact />
               ) : (
                 variable.value || variable.type || ""
               )}
-            </span>
+            </button>
           </div>
           {isExpanded && childVariables.length > 0
             ? renderVariables(childVariables, variable.variablesReference, depth + 1)

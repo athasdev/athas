@@ -22,6 +22,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
         remoteConnectionId,
         profileId,
         initialCommand,
+        environment,
         customName,
       } = action.payload;
       if (id && state.terminals.some((terminal) => terminal.id === id)) {
@@ -52,6 +53,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
         shell,
         profileId,
         initialCommand,
+        environment,
         remoteConnectionId,
         customName: customName ?? false,
         createdAt: new Date(),

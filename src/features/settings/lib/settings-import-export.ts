@@ -2,15 +2,19 @@ import {
   defaultSettings,
   getDefaultSettingsSnapshot,
 } from "@/features/settings/config/default-settings";
+import {
+  getSettingsSchemaVersion,
+  migrateSettingsRecord,
+  SETTINGS_SCHEMA_VERSION,
+} from "@/features/settings/lib/settings-migrations";
 import { normalizeSettings } from "@/features/settings/lib/settings-normalization";
 import type { Settings } from "@/features/settings/types/settings.types";
 
 const SETTINGS_EXPORT_FORMAT = "athas.settings";
-const SETTINGS_EXPORT_VERSION = 1;
 
 export interface SettingsExportPayload {
   format: typeof SETTINGS_EXPORT_FORMAT;
-  version: typeof SETTINGS_EXPORT_VERSION;
+  version: typeof SETTINGS_SCHEMA_VERSION;
   exportedAt: string;
   settings: Settings;
 }
@@ -39,22 +43,26 @@ function pickSettings(value: unknown): Partial<Settings> | null {
   return settings;
 }
 
-function getSettingsCandidate(value: unknown): unknown {
-  if (
-    isRecord(value) &&
-    value.format === SETTINGS_EXPORT_FORMAT &&
-    value.version === SETTINGS_EXPORT_VERSION
-  ) {
-    return value.settings;
+function getSettingsCandidate(value: unknown): {
+  settings: unknown;
+  schemaVersion: number;
+} | null {
+  if (isRecord(value) && value.format === SETTINGS_EXPORT_FORMAT) {
+    const schemaVersion = getSettingsSchemaVersion(value.version);
+    if (schemaVersion === 0 || schemaVersion > SETTINGS_SCHEMA_VERSION) {
+      return null;
+    }
+
+    return { settings: value.settings, schemaVersion };
   }
 
-  return value;
+  return { settings: value, schemaVersion: 0 };
 }
 
 export function createSettingsExportPayload(settings: Settings): SettingsExportPayload {
   return {
     format: SETTINGS_EXPORT_FORMAT,
-    version: SETTINGS_EXPORT_VERSION,
+    version: SETTINGS_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
     settings: cloneSettings(settings),
   };
@@ -62,21 +70,27 @@ export function createSettingsExportPayload(settings: Settings): SettingsExportP
 
 export function parseSettingsImportJson(jsonString: string): Settings | null {
   const parsed = JSON.parse(jsonString);
-  const importedSettings = pickSettings(getSettingsCandidate(parsed));
+  const candidate = getSettingsCandidate(parsed);
+  const importedSettings = candidate ? pickSettings(candidate.settings) : null;
 
   if (!importedSettings || Object.keys(importedSettings).length === 0) {
     return null;
   }
 
+  const migratedSettings = migrateSettingsRecord(
+    importedSettings as Record<string, unknown>,
+    candidate?.schemaVersion ?? 0,
+  ) as Partial<Settings>;
+
   if (
-    importedSettings.rightSidebarWidth === undefined &&
-    importedSettings.sidebarWidth !== undefined
+    migratedSettings.rightSidebarWidth === undefined &&
+    migratedSettings.sidebarWidth !== undefined
   ) {
-    importedSettings.rightSidebarWidth = importedSettings.sidebarWidth;
+    migratedSettings.rightSidebarWidth = migratedSettings.sidebarWidth;
   }
 
   return normalizeSettings({
     ...getDefaultSettingsSnapshot(),
-    ...importedSettings,
+    ...migratedSettings,
   });
 }

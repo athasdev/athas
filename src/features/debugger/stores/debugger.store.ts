@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type {
   DebugBreakpoint,
+  DebugAdapterCapabilities,
   DebugLaunchConfig,
   DebugProcessOutput,
   DebugProtocolMessage,
@@ -39,12 +40,21 @@ interface DebuggerState {
   variablesByReference: Record<number, DebugVariable[]>;
   stoppedState: DebugStoppedState | null;
   pendingRequests: Record<number, DebugRequestContext>;
+  adapterCapabilities: DebugAdapterCapabilities;
   actions: {
     hydrate: () => void;
     setWorkspaceConfigs: (configs: DebugLaunchConfig[]) => void;
     setActiveConfigId: (configId: string | null) => void;
     toggleBreakpoint: (filePath: string, line: number) => void;
     setBreakpointEnabled: (breakpointId: string, enabled: boolean) => void;
+    updateBreakpointAdapterState: (
+      breakpointId: string,
+      adapterState: Pick<DebugBreakpoint, "adapterId" | "verified" | "message">,
+    ) => void;
+    updateBreakpointOptions: (
+      breakpointId: string,
+      options: Pick<DebugBreakpoint, "condition" | "hitCondition" | "logMessage">,
+    ) => void;
     removeBreakpoint: (breakpointId: string) => void;
     clearBreakpoints: () => void;
     addWatchExpression: (expression: string) => DebugWatchExpression | null;
@@ -61,6 +71,7 @@ interface DebuggerState {
     recordSessionEnded: (event: DebugSessionEnded) => void;
     registerAdapterRequest: (seq: number, context: DebugRequestContext) => void;
     clearAdapterRequest: (seq: number) => void;
+    setAdapterCapabilities: (capabilities: DebugAdapterCapabilities) => void;
     setThreads: (threads: DebugThread[]) => void;
     setStackFrames: (frames: DebugStackFrame[]) => void;
     selectStackFrame: (frameId: number | null) => void;
@@ -164,6 +175,7 @@ export const useDebuggerStore = createSelectors(
     variablesByReference: {},
     stoppedState: null,
     pendingRequests: {},
+    adapterCapabilities: {},
     actions: {
       hydrate: () => {
         set({
@@ -209,6 +221,24 @@ export const useDebuggerStore = createSelectors(
         set((state) => {
           const nextBreakpoints = state.breakpoints.map((breakpoint) =>
             breakpoint.id === breakpointId ? { ...breakpoint, enabled } : breakpoint,
+          );
+          saveBreakpoints(nextBreakpoints);
+          return { breakpoints: nextBreakpoints };
+        });
+      },
+
+      updateBreakpointAdapterState: (breakpointId, adapterState) => {
+        set((state) => ({
+          breakpoints: state.breakpoints.map((breakpoint) =>
+            breakpoint.id === breakpointId ? { ...breakpoint, ...adapterState } : breakpoint,
+          ),
+        }));
+      },
+
+      updateBreakpointOptions: (breakpointId, options) => {
+        set((state) => {
+          const nextBreakpoints = state.breakpoints.map((breakpoint) =>
+            breakpoint.id === breakpointId ? { ...breakpoint, ...options } : breakpoint,
           );
           saveBreakpoints(nextBreakpoints);
           return { breakpoints: nextBreakpoints };
@@ -308,6 +338,7 @@ export const useDebuggerStore = createSelectors(
           watchResults: {},
           stoppedState: null,
           pendingRequests: {},
+          adapterCapabilities: {},
         });
       },
 
@@ -364,6 +395,10 @@ export const useDebuggerStore = createSelectors(
           delete nextPendingRequests[seq];
           return { pendingRequests: nextPendingRequests };
         });
+      },
+
+      setAdapterCapabilities: (adapterCapabilities) => {
+        set({ adapterCapabilities });
       },
 
       setThreads: (threads) => {

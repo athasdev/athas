@@ -3,9 +3,6 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
-import { orderChromeItems, type ChromeItem } from "@/features/layout/utils/chrome-items";
-import RunActionsButton from "@/features/run-actions/components/run-actions-button";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -42,20 +39,6 @@ interface TitleBarProps {
   onActivityBarExpandedChange?: (expanded: boolean) => void;
 }
 
-function TitleBarTrailingActions({ items }: { items: Array<ChromeItem<HeaderTrailingItemId>> }) {
-  return (
-    <ChromeGroup gap="tight">
-      {items.map((item) =>
-        item.content ? (
-          <div key={item.id} className="flex min-h-chrome-control items-center">
-            {item.content}
-          </div>
-        ) : null,
-      )}
-    </ChromeGroup>
-  );
-}
-
 const TitleBar = ({
   showMinimal = false,
   activityBarExpanded: controlledActivityBarExpanded,
@@ -65,9 +48,6 @@ const TitleBar = ({
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
   const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
   const effectiveActivityBarExpanded = controlledActivityBarExpanded ?? activityRailExpanded;
-  const headerTrailingItemsOrder = useSettingsStore(
-    (state) => state.settings.headerTrailingItemsOrder,
-  );
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
@@ -265,11 +245,6 @@ const TitleBar = ({
     </Toggle>
   );
 
-  const headerTrailingItems: Array<ChromeItem<HeaderTrailingItemId>> = [
-    { id: "run-actions", label: "Run actions", content: <RunActionsButton /> },
-  ];
-  const orderedTrailingItems = orderChromeItems(headerTrailingItems, headerTrailingItemsOrder);
-
   if (showMinimal) {
     return (
       <ChromeBar
@@ -312,9 +287,7 @@ const TitleBar = ({
             {sidebarToggle}
           </ChromeGroup>
 
-          <ChromeGroup className="h-full">
-            <TitleBarTrailingActions items={orderedTrailingItems} />
-          </ChromeGroup>
+          <ChromeGroup className="h-full" />
         </ContextMenuTrigger>
         {titleBarContextMenuContent}
       </ContextMenu>
@@ -338,8 +311,6 @@ const TitleBar = ({
           </ChromeGroup>
         </ChromeGroup>
         <ChromeGroup className="z-20">
-          <TitleBarTrailingActions items={orderedTrailingItems} />
-
           {showAppWindowControls && (
             <WindowControls
               currentWindow={currentWindow}

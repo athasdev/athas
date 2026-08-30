@@ -39,7 +39,6 @@ describe("default settings", () => {
     expect(settings.showStatusBar).toBe(true);
     expect(settings.showTabIcons).toBe(true);
     expect(settings.tabCloseButtonVisibility).toBe("active");
-    expect(settings.headerTrailingItemsOrder).toEqual(["run-actions"]);
     expect(settings.activityRailExpanded).toBe(false);
     expect(settings.activityRailWidth).toBe(180);
     expect(settings.showActivityRailProjectSwitcher).toBe(true);

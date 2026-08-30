@@ -1,6 +1,10 @@
 import type { Settings } from "@/features/settings/types/settings.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
+  migrateSettingsRecord,
+  SETTINGS_SCHEMA_VERSION,
+} from "@/features/settings/lib/settings-migrations";
+import {
   useSettingsSyncStore,
   type SettingsSyncSource,
 } from "@/features/settings/stores/settings-sync.store";
@@ -12,7 +16,6 @@ import {
 } from "@/features/window/services/auth-api";
 
 const SETTINGS_SYNC_META_KEY = "athas.settingsSync.meta";
-const SETTINGS_SYNC_SCHEMA_VERSION = 1;
 const SETTINGS_SYNC_PUSH_DEBOUNCE_MS = 1500;
 
 type SyncableSettingsKey =
@@ -62,7 +65,6 @@ type SyncableSettingsKey =
   | "autoThemeDark"
   | "compactMenuBar"
   | "windowTransparency"
-  | "headerTrailingItemsOrder"
   | "sidebarActivityItemsOrder"
   | "hiddenSidebarActivityItems"
   | "footerLeadingItemsOrder"
@@ -187,7 +189,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "autoThemeDark",
   "compactMenuBar",
   "windowTransparency",
-  "headerTrailingItemsOrder",
   "sidebarActivityItemsOrder",
   "hiddenSidebarActivityItems",
   "footerLeadingItemsOrder",
@@ -348,7 +349,9 @@ async function applyRemoteSnapshot(snapshot: CloudSettingsSyncSnapshot) {
   try {
     const success = useSettingsStore
       .getState()
-      .actions.updateSettingsFromJSON(JSON.stringify(snapshot.settings));
+      .actions.updateSettingsFromJSON(
+        JSON.stringify(migrateSettingsRecord(snapshot.settings, snapshot.schemaVersion)),
+      );
     if (!success) {
       throw new Error("Could not apply cloud settings.");
     }
@@ -388,7 +391,7 @@ async function pushLocalSnapshot(source: SettingsSyncSource = "local") {
 
   useSettingsSyncStore.getState().actions.startSync();
   const snapshot = await pushSettingsSyncSnapshot({
-    schemaVersion: SETTINGS_SYNC_SCHEMA_VERSION,
+    schemaVersion: SETTINGS_SCHEMA_VERSION,
     settings: payload,
   });
   lastUploadedPayloadJson = payloadJson;
