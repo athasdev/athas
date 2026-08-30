@@ -89,7 +89,6 @@ export function AppUpdateControl() {
         <Button
           type="button"
           variant="ghost"
-          iconOnly
           size="chrome"
           active={isUpdateMenuOpen}
           disabled={updateBusy}
@@ -103,6 +102,7 @@ export function AppUpdateControl() {
           ) : (
             <DownloadIcon />
           )}
+          <span>Update available</span>
         </Button>
       </Tooltip>
       <Dropdown
