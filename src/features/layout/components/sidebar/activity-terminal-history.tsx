@@ -10,7 +10,7 @@ import {
   PlusIcon,
   PushPinIcon,
   PushPinSlashIcon,
-  TerminalIcon,
+  TerminalWindowIcon,
   XIcon,
 } from "@/ui/icons";
 import { InlineRenameInput } from "@/ui/input";
@@ -35,7 +35,7 @@ export function ActivityTerminalRow({
 
   if (isRenaming) {
     return (
-      <SidebarListEditor leading={<TerminalIcon />}>
+      <SidebarListEditor leading={<TerminalWindowIcon />}>
         <InlineRenameInput
           className="select-text"
           value={renameValue}
@@ -93,7 +93,7 @@ export function ActivityTerminalRow({
         </SidebarIconButton>,
       ]}
     >
-      <SidebarListItem active={active} leading={<TerminalIcon />} onClick={onOpen}>
+      <SidebarListItem active={active} leading={<TerminalWindowIcon />} onClick={onOpen}>
         {name}
       </SidebarListItem>
     </SidebarListActionRow>
@@ -130,7 +130,7 @@ export function ActivityTerminalHistory() {
     >
       {terminalItems.length === 0 ? (
         <SidebarListItem
-          leading={<TerminalIcon />}
+          leading={<TerminalWindowIcon />}
           aria-label="New Terminal"
           onClick={handleNewTerminal}
         >

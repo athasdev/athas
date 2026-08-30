@@ -18,7 +18,7 @@ import {
   MagnifyingGlassIcon,
   NodesIcon,
   SparkleIcon,
-  TerminalIcon,
+  TerminalWindowIcon,
 } from "@/ui/icons";
 
 interface ActivityBarMenuProps {
@@ -79,7 +79,7 @@ export function ActivityBarMenu({
         </ContextMenuItem>
         {coreFeatures.terminal ? (
           <ContextMenuItem onClick={onNewTerminal}>
-            <TerminalIcon />
+            <TerminalWindowIcon />
             New Terminal
           </ContextMenuItem>
         ) : null}
@@ -139,7 +139,7 @@ export function ActivityBarMenu({
                 checked={showTerminals}
                 onCheckedChange={onTerminalsVisibleChange}
               >
-                <TerminalIcon />
+                <TerminalWindowIcon />
                 Terminals
               </ContextMenuCheckboxItem>
             ) : null}

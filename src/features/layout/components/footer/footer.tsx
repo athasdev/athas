@@ -11,11 +11,10 @@ import type {
 import { orderChromeItems, type ChromeItem } from "@/features/layout/utils/chrome-items";
 import { useFooterGitBranchItem } from "./footer-git-branch-item";
 import { FooterControlBadge, FooterTabControl } from "./footer-tab-control";
-import { ExtensionsIcon, TerminalWindowIcon, UsersThreeIcon } from "@/ui/icons";
+import { ExtensionsIcon, UsersThreeIcon } from "@/ui/icons";
 import { ChromeBar, ChromeGroup } from "@/ui/chrome";
 
 const Footer = () => {
-  const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
   const teamCollaborationEnabled = useSettingsStore(
     (state) => state.settings.coreFeatures.teamCollaboration,
   );
@@ -27,10 +26,6 @@ const Footer = () => {
   );
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
-  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
-  const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
-  const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
-  const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
   const hasTeamsCollaborationAccess = useAuthStore(
     (state) => state.subscription?.collaboration?.enabled === true,
   );
@@ -46,26 +41,6 @@ const Footer = () => {
   const extensionUpdatesCount = useExtensionStore.use.extensionsWithUpdates().size;
   const footerLeadingItemsSource: Array<ChromeItem<FooterLeadingItemId> | null> = [
     branchItem,
-    terminalEnabled
-      ? {
-          id: "terminal",
-          label: "Terminal",
-          content: (
-            <FooterTabControl
-              tooltip="Toggle Terminal"
-              active={isBottomPaneVisible && bottomPaneActiveTab === "terminal"}
-              commandId="workbench.toggleTerminal"
-              onClick={() => {
-                setBottomPaneActiveTab("terminal");
-                const showingTerminal = !isBottomPaneVisible || bottomPaneActiveTab !== "terminal";
-                setIsBottomPaneVisible(showingTerminal);
-              }}
-            >
-              <TerminalWindowIcon />
-            </FooterTabControl>
-          ),
-        }
-      : null,
     extensionUpdatesCount > 0
       ? {
           id: "extensions",

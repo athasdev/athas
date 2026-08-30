@@ -9,7 +9,7 @@ export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "docker",
   "extensions",
 ] as const;
-export const FOOTER_LEADING_ITEM_IDS = ["branch", "terminal", "extensions"] as const;
+export const FOOTER_LEADING_ITEM_IDS = ["branch", "extensions"] as const;
 export const FOOTER_TRAILING_ITEM_IDS = ["collaboration"] as const;
 
 export type SidebarActivityItemId = (typeof SIDEBAR_ACTIVITY_ITEM_IDS)[number];
