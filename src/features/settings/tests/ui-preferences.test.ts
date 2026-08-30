@@ -6,23 +6,19 @@ describe("UI preferences", () => {
     expect(
       getUiRootAttributes({
         reduceMotion: true,
-        showStatusBar: false,
       }),
     ).toEqual({
       "data-reduce-motion": "true",
-      "data-status-bar": "hidden",
     });
   });
 
-  it("keeps system motion behavior and the status bar by default", () => {
+  it("keeps system motion behavior by default", () => {
     expect(
       getUiRootAttributes({
         reduceMotion: false,
-        showStatusBar: true,
       }),
     ).toEqual({
       "data-reduce-motion": "system",
-      "data-status-bar": "visible",
     });
   });
 

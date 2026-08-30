@@ -1,11 +1,6 @@
 import type { CoreFeaturesState } from "./feature.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
-import type {
-  FooterLeadingItemId,
-  FooterTrailingItemId,
-  GitSidebarTabId,
-  SidebarActivityItemId,
-} from "@/features/layout/config/item-order";
+import type { GitSidebarTabId, SidebarActivityItemId } from "@/features/layout/config/item-order";
 
 export type Theme = string;
 export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
@@ -91,7 +86,6 @@ export interface Settings {
   uiFontFamily: string;
   uiFontSize: number;
   reduceMotion: boolean;
-  showStatusBar: boolean;
   showTabIcons: boolean;
   tabCloseButtonVisibility: TabCloseButtonVisibility;
   // Theme
@@ -105,8 +99,6 @@ export interface Settings {
   windowTransparency: boolean;
   sidebarActivityItemsOrder: Array<SidebarActivityItemId | string>;
   hiddenSidebarActivityItems: string[];
-  footerLeadingItemsOrder: FooterLeadingItemId[];
-  footerTrailingItemsOrder: FooterTrailingItemId[];
   openFoldersInNewWindow: boolean;
   // AI
   aiProviderId: string;

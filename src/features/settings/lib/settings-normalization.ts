@@ -14,8 +14,6 @@ import {
 } from "@/features/settings/config/typography-defaults";
 import { normalizeConfiguredFontFamily } from "@/features/settings/lib/font-family-resolution";
 import {
-  FOOTER_LEADING_ITEM_IDS,
-  FOOTER_TRAILING_ITEM_IDS,
   GIT_SIDEBAR_TAB_IDS,
   SIDEBAR_ACTIVITY_ITEM_IDS,
   normalizeItemOrder,
@@ -444,6 +442,14 @@ export function normalizeSettings(settings: Settings): Settings {
   delete (normalizedSettings.coreFeatures as { athasEditorEngine?: unknown }).athasEditorEngine;
   delete (normalizedSettings.coreFeatures as { energyEdge?: unknown }).energyEdge;
   delete (normalizedSettings as Settings & { windowChromeDensity?: unknown }).windowChromeDensity;
+  const legacyFooterSettings = normalizedSettings as Settings & {
+    footerLeadingItemsOrder?: unknown;
+    footerTrailingItemsOrder?: unknown;
+    showStatusBar?: unknown;
+  };
+  delete legacyFooterSettings.footerLeadingItemsOrder;
+  delete legacyFooterSettings.footerTrailingItemsOrder;
+  delete legacyFooterSettings.showStatusBar;
 
   if (
     persistedGitPanelMode === "none" ||
@@ -543,15 +549,6 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.collapsedActivityRailSections = normalizeStringList(
     normalizedSettings.collapsedActivityRailSections,
   );
-  normalizedSettings.footerLeadingItemsOrder = normalizeItemOrder(
-    normalizedSettings.footerLeadingItemsOrder,
-    FOOTER_LEADING_ITEM_IDS,
-  );
-  normalizedSettings.footerTrailingItemsOrder = normalizeItemOrder(
-    normalizedSettings.footerTrailingItemsOrder,
-    FOOTER_TRAILING_ITEM_IDS,
-  );
-
   return normalizedSettings;
 }
 

@@ -116,10 +116,6 @@
     -moz-user-select: none !important;
   }
 
-  html[data-status-bar="hidden"] {
-    --athas-footer-height: 0rem;
-  }
-
   html[data-reduce-motion="true"] *,
   html[data-reduce-motion="true"] *::before,
   html[data-reduce-motion="true"] *::after {

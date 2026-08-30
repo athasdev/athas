@@ -8,7 +8,6 @@ export const chromeBarVariants = cva(
     variants: {
       region: {
         title: "h-title-bar gap-chrome bg-transparent px-chrome-inline",
-        footer: "h-footer gap-chrome bg-transparent px-chrome-inline",
         tabs: "h-tab-bar min-h-tab-bar gap-chrome bg-background px-chrome-inline",
         content: "h-7 min-h-7 gap-chrome bg-background px-chrome-inline",
         status: "h-7 min-h-7 gap-chrome-loose bg-background px-chrome-inline",

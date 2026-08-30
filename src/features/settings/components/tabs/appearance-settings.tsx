@@ -40,7 +40,6 @@ export const AppearanceSettings = () => {
       nativeMenuBar: state.settings.nativeMenuBar,
       openFoldersInNewWindow: state.settings.openFoldersInNewWindow,
       reduceMotion: state.settings.reduceMotion,
-      showStatusBar: state.settings.showStatusBar,
       showTabIcons: state.settings.showTabIcons,
       syncSystemTheme: state.settings.syncSystemTheme,
       tabCloseButtonVisibility: state.settings.tabCloseButtonVisibility,
@@ -360,18 +359,6 @@ export const AppearanceSettings = () => {
           <Switch
             checked={settings.reduceMotion}
             onChange={(checked) => updateSetting("reduceMotion", checked)}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Show Status Bar"
-          description="Show app controls and status information along the bottom edge"
-          onReset={() => updateSetting("showStatusBar", getDefaultSetting("showStatusBar"))}
-          canReset={settings.showStatusBar !== getDefaultSetting("showStatusBar")}
-        >
-          <Switch
-            checked={settings.showStatusBar}
-            onChange={(checked) => updateSetting("showStatusBar", checked)}
           />
         </SettingRow>
 

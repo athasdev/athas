@@ -1,11 +1,10 @@
 import type { Settings } from "@/features/settings/types/settings.types";
 
-type UiRootPreferences = Pick<Settings, "reduceMotion" | "showStatusBar">;
+type UiRootPreferences = Pick<Settings, "reduceMotion">;
 
 export function getUiRootAttributes(settings: UiRootPreferences) {
   return {
     "data-reduce-motion": settings.reduceMotion ? "true" : "system",
-    "data-status-bar": settings.showStatusBar ? "visible" : "hidden",
   } as const;
 }
 

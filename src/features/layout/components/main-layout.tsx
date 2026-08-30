@@ -25,7 +25,6 @@ import { frontendTrace } from "@/utils/frontend-trace";
 import { recordStartupMilestone } from "@/features/bootstrap/startup-performance";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
-import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
 import { ActivityBar, COLLAPSED_ACTIVITY_BAR_WIDTH } from "./sidebar/activity-bar";
 import { SidebarPane } from "./sidebar/sidebar-pane";
@@ -80,7 +79,6 @@ export function MainLayout() {
   const activityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
   const rightSidebarWidth = useSettingsStore((state) => state.settings.rightSidebarWidth);
-  const showStatusBar = useSettingsStore((state) => state.settings.showStatusBar);
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const renderedRightSidebarVisible = isRightSidebarVisible && !responsiveLayout.narrow;
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
@@ -341,8 +339,6 @@ export function MainLayout() {
           </div>
         )}
       </div>
-
-      {showStatusBar ? <Footer /> : null}
 
       {/* Global modals and overlays */}
       {deferredSurfacesReady ? (

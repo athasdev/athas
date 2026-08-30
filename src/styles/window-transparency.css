@@ -65,9 +65,7 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-title-bar,
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-footer-bar {
+  .athas-title-bar {
   background: transparent !important;
   border-color: transparent;
   -webkit-backdrop-filter: none;

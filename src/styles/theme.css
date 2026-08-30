@@ -6,7 +6,6 @@
 
   --spacing-title-bar: var(--athas-title-bar-height);
   --spacing-title-bar-leading: var(--athas-title-bar-leading-inset);
-  --spacing-footer: var(--athas-footer-height);
   --spacing-pane-header: var(--athas-pane-header-height);
   --spacing-tab-bar: var(--athas-tab-bar-height);
   --spacing-tab: var(--athas-tab-height);
@@ -125,7 +124,6 @@
     --ui-text-chrome: var(--ui-text-sm);
     --athas-title-bar-height: 2rem;
     --athas-title-bar-leading-inset: var(--athas-chrome-padding-inline);
-    --athas-footer-height: 1.75rem;
     --athas-tab-bar-height: 2rem;
     --athas-pane-header-height: var(--athas-tab-bar-height);
     --athas-tab-height: 1.75rem;

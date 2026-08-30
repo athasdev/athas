@@ -5,8 +5,6 @@ import {
   DEFAULT_UI_FONT_FAMILY,
 } from "@/features/settings/config/typography-defaults";
 import {
-  FOOTER_LEADING_ITEM_IDS,
-  FOOTER_TRAILING_ITEM_IDS,
   GIT_SIDEBAR_TAB_IDS,
   SIDEBAR_ACTIVITY_ITEM_IDS,
 } from "@/features/layout/config/item-order";
@@ -66,7 +64,6 @@ export const defaultSettings: Settings = {
   uiFontFamily: DEFAULT_UI_FONT_FAMILY,
   uiFontSize: UI_FONT_SIZE_DEFAULT,
   reduceMotion: false,
-  showStatusBar: true,
   showTabIcons: true,
   tabCloseButtonVisibility: "active",
   // Theme
@@ -80,8 +77,6 @@ export const defaultSettings: Settings = {
   windowTransparency: false,
   sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],
   hiddenSidebarActivityItems: [],
-  footerLeadingItemsOrder: [...FOOTER_LEADING_ITEM_IDS],
-  footerTrailingItemsOrder: [...FOOTER_TRAILING_ITEM_IDS],
   openFoldersInNewWindow: true,
   // AI
   aiProviderId: DEFAULT_AI_PROVIDER_ID,
@@ -199,8 +194,6 @@ export function getDefaultSettingsSnapshot(): Settings {
     sidebarActivityItemsOrder: [...defaultSettings.sidebarActivityItemsOrder],
     hiddenSidebarActivityItems: [...defaultSettings.hiddenSidebarActivityItems],
     collapsedActivityRailSections: [...defaultSettings.collapsedActivityRailSections],
-    footerLeadingItemsOrder: [...defaultSettings.footerLeadingItemsOrder],
-    footerTrailingItemsOrder: [...defaultSettings.footerTrailingItemsOrder],
     aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),
     v0DesignSystems: defaultSettings.v0DesignSystems.map((profile) => ({ ...profile })),
     uiFontSize: normalizeUiFontSize(defaultSettings.uiFontSize),

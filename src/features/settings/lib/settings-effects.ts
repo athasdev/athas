@@ -65,7 +65,7 @@ function applyWindowTransparency(enabled: boolean) {
   syncEffectiveWindowTransparency();
 }
 
-function applyUiPreferences(settings: Pick<Settings, "reduceMotion" | "showStatusBar">) {
+function applyUiPreferences(settings: Pick<Settings, "reduceMotion">) {
   if (typeof document === "undefined") return;
 
   for (const [name, value] of Object.entries(getUiRootAttributes(settings))) {
@@ -242,7 +242,7 @@ export function applySettingSideEffect<K extends keyof Settings>(
     applyWindowTransparency(value as boolean);
   }
 
-  if (key === "reduceMotion" || key === "showStatusBar") {
+  if (key === "reduceMotion") {
     applyUiPreferences(getSettings());
   }
 }

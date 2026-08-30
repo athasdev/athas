@@ -55,7 +55,6 @@ type SyncableSettingsKey =
   | "uiFontFamily"
   | "uiFontSize"
   | "reduceMotion"
-  | "showStatusBar"
   | "showTabIcons"
   | "tabCloseButtonVisibility"
   | "theme"
@@ -67,8 +66,6 @@ type SyncableSettingsKey =
   | "windowTransparency"
   | "sidebarActivityItemsOrder"
   | "hiddenSidebarActivityItems"
-  | "footerLeadingItemsOrder"
-  | "footerTrailingItemsOrder"
   | "openFoldersInNewWindow"
   | "aiProviderId"
   | "aiModelId"
@@ -178,7 +175,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "uiFontFamily",
   "uiFontSize",
   "reduceMotion",
-  "showStatusBar",
   "showTabIcons",
   "tabCloseButtonVisibility",
   "theme",
@@ -190,8 +186,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "windowTransparency",
   "sidebarActivityItemsOrder",
   "hiddenSidebarActivityItems",
-  "footerLeadingItemsOrder",
-  "footerTrailingItemsOrder",
   "openFoldersInNewWindow",
   "aiProviderId",
   "aiModelId",

@@ -100,6 +100,23 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("rightSidebarWidth", 100)).toBe(140);
   });
 
+  it("drops removed footer settings", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      footerLeadingItemsOrder: ["branch"],
+      footerTrailingItemsOrder: ["collaboration"],
+      showStatusBar: false,
+    } as ReturnType<typeof getDefaultSettingsSnapshot> & {
+      footerLeadingItemsOrder: string[];
+      footerTrailingItemsOrder: string[];
+      showStatusBar: boolean;
+    });
+
+    expect(normalized).not.toHaveProperty("footerLeadingItemsOrder");
+    expect(normalized).not.toHaveProperty("footerTrailingItemsOrder");
+    expect(normalized).not.toHaveProperty("showStatusBar");
+  });
+
   it("preserves and canonicalizes custom Ollama LAN endpoints", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),

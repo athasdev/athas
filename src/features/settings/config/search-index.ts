@@ -515,14 +515,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["motion", "animation", "accessibility", "reduce", "interface"],
   },
   {
-    id: "appearance-show-status-bar",
-    tab: "appearance",
-    section: "Interface",
-    label: "Show Status Bar",
-    description: "Show app controls and status information along the bottom edge",
-    keywords: ["status", "footer", "bottom", "bar", "interface", "hide"],
-  },
-  {
     id: "appearance-show-tab-icons",
     tab: "appearance",
     section: "Interface",

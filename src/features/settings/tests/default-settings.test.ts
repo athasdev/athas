@@ -36,7 +36,6 @@ describe("default settings", () => {
     const settings = getDefaultSettingsSnapshot();
 
     expect(settings.reduceMotion).toBe(false);
-    expect(settings.showStatusBar).toBe(true);
     expect(settings.showTabIcons).toBe(true);
     expect(settings.tabCloseButtonVisibility).toBe("active");
     expect(settings.activityRailExpanded).toBe(false);
