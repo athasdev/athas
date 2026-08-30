@@ -17,8 +17,11 @@ import { normalizeDatabaseError } from "../../lib/database-errors";
 import type { DatabaseType } from "../../types/provider.types";
 import { PROVIDER_REGISTRY } from "../../providers/provider-registry";
 import { useConnectionStore } from "../../stores/connection.store";
-import { buildSavedConnectionConfig } from "./connection-config";
-import { getInstalledDatabaseTypes, validateConnectionInput } from "./connection-validation";
+import { buildSavedConnectionConfig } from "../../utils/connection-config";
+import {
+  getInstalledDatabaseTypes,
+  validateConnectionInput,
+} from "../../utils/connection-validation";
 
 interface ConnectionDialogProps {
   isOpen: boolean;

@@ -31,7 +31,10 @@ import {
 } from "@/ui/icons";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { AIFileSelector } from "../mentions/ai-file-selector";
-import { getGitContextFiles, groupContextBuffers } from "./context-selector-model";
+import {
+  getGitContextFiles,
+  groupContextBuffers,
+} from "@/features/ai/utils/context-selector-model";
 
 function getBufferContextDescription(buffer: PaneContent) {
   if (buffer.type === "webViewer") return buffer.url;

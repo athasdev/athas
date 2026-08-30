@@ -15,7 +15,7 @@ import {
   mapForeignKeysByColumn,
 } from "../lib/database-schema";
 import type { ColumnInfo, ForeignKeyInfo } from "../types/common.types";
-import { databaseCardClassName } from "./database-surface";
+import { databaseCardClassName } from "../utils/database-surface";
 
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
   int: { icon: Hash, color: "text-primary" },

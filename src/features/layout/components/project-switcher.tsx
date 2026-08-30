@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import {
   getClosedRemoteConnections,
   getProjectRemoteConnectionId,
-} from "./sidebar/project-switcher-items";
+} from "@/features/layout/utils/project-switcher-items";
 import { getProjectNameFromPath, isRemoteProjectPath, ProjectGlyph } from "./sidebar/project-glyph";
 
 export function ProjectSwitcher({

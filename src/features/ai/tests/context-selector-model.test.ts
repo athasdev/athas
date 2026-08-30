@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import {
-  getGitContextFiles,
-  groupContextBuffers,
-} from "../components/selectors/context-selector-model";
+import { getGitContextFiles, groupContextBuffers } from "../utils/context-selector-model";
 
 function createBuffer(type: PaneContent["type"], id: string): PaneContent {
   return {

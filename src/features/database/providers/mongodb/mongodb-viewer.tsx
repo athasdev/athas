@@ -24,7 +24,7 @@ import {
   databaseChipClassName,
   databaseCodeBlockClassName,
   databasePanelClassName,
-} from "../../components/database-surface";
+} from "../../utils/database-surface";
 import { getMongoDocumentDisplayIndex } from "./mongodb-pagination";
 import { createMongoDbStore } from "./stores/mongodb.store";
 

@@ -9,7 +9,7 @@ import { Button } from "@/ui/button";
 import { formatSqlHistoryPreview } from "../lib/sql-history";
 import { writeDatabaseClipboardText } from "../utils/clipboard";
 import { cn } from "@/utils/cn";
-import { databaseCardClassName } from "./database-surface";
+import { databaseCardClassName } from "../utils/database-surface";
 
 interface SqlHistoryListProps {
   queries: string[];

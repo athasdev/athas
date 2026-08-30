@@ -17,10 +17,7 @@ import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
-import {
-  databaseCodeBlockClassName,
-  databasePanelClassName,
-} from "../../components/database-surface";
+import { databaseCodeBlockClassName, databasePanelClassName } from "../../utils/database-surface";
 import { createRedisStore } from "./stores/redis.store";
 
 const TYPE_COLORS: Record<string, string> = {

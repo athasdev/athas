@@ -5,7 +5,7 @@ import { Button } from "@/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/ui/input-group";
 import Textarea from "@/ui/textarea";
 import { cn } from "@/utils/cn";
-import { databaseCardClassName } from "./database-surface";
+import { databaseCardClassName } from "../utils/database-surface";
 import type { ColumnInfo, TableInfo } from "../types/common.types";
 import {
   applySqlCompletion,
