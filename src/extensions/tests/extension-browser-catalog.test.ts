@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vite-plus/test";
 import { bundledExtensionManifests } from "@/extensions/bundled/bundled-extension-manifests";
-import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { buildExtensionCatalog } from "@/extensions/ui/components/build-extension-catalog";
 import type { AvailableExtension } from "@/extensions/registry/extension-store-types";
 import type { ExtensionManifest } from "@/extensions/types/extension-manifest";
 
-function available(manifest: ExtensionManifest): AvailableExtension {
+function available(manifest: ExtensionManifest, isInstalled = true): AvailableExtension {
   return {
     manifest,
-    isInstalled: true,
+    isInstalled,
     isEnabled: true,
     isInstalling: false,
   };
@@ -72,7 +71,7 @@ describe("extension browser catalog", () => {
       marketplaceSkills: [],
       aiSkills: [],
       selectedThemeId: "athas-dark",
-      selectedIconThemeId: "athas-icons",
+      selectedIconThemeId: "pierre-icons-complete",
     });
 
     expect(result.find((extension) => extension.id === "agent:example-agent")).toMatchObject({
@@ -96,7 +95,7 @@ describe("extension browser catalog", () => {
       marketplaceSkills: [],
       aiSkills: [],
       selectedThemeId: "athas-dark",
-      selectedIconThemeId: "athas-icons",
+      selectedIconThemeId: "pierre-icons-complete",
     });
 
     expect(result.find((extension) => extension.id === language.id)).toMatchObject({
@@ -134,7 +133,7 @@ describe("extension browser catalog", () => {
       marketplaceSkills: [],
       aiSkills: [],
       selectedThemeId: "example-light",
-      selectedIconThemeId: "athas-icons",
+      selectedIconThemeId: "pierre-icons-complete",
     });
 
     expect(result.find((extension) => extension.id === theme.id)).toMatchObject({
@@ -148,50 +147,47 @@ describe("extension browser catalog", () => {
     });
   });
 
-  it("keeps bundled icon themes visible without duplicating catalog contributions", () => {
-    const symbols = {
-      id: "symbols",
-      name: "Symbols Icons",
-      description: "Symbols icon theme",
-      getFileIcon: () => ({}),
-    };
-    const symbolsManifest = bundledExtensionManifests.find(
-      ({ manifest: extensionManifest }) => extensionManifest.id === "athas.icon-theme.symbols",
+  it("bundles only Pierre while keeping other icon themes downloadable", () => {
+    const pierreManifest = bundledExtensionManifests.find(
+      ({ manifest: extensionManifest }) => extensionManifest.id === "athas.icon-theme.pierre",
     )?.manifest;
-
-    expect(symbolsManifest).toBeDefined();
-    iconThemeRegistry.registerTheme(symbols, {
-      extensionId: "athas.icon-theme.symbols",
+    const symbolsManifest = manifest({
+      id: "athas.icon-theme.symbols",
+      categories: ["Icon Theme"],
+      icons: [
+        {
+          id: "symbols",
+          name: "Symbols Icons",
+          iconDefinitions: { file: "./icons/file.svg" },
+          defaultFile: "file",
+        },
+      ],
     });
 
-    try {
-      const result = buildExtensionCatalog({
-        availableExtensions: new Map([[symbolsManifest!.id, available(symbolsManifest!)]]),
-        agents: [],
-        marketplaceSkills: [],
-        aiSkills: [],
-        selectedThemeId: "athas-dark",
-        selectedIconThemeId: "athas-icons",
-      });
+    expect(bundledExtensionManifests.map(({ manifest: bundled }) => bundled.id)).toEqual([
+      "athas.icon-theme.pierre",
+    ]);
+    expect(pierreManifest).toBeDefined();
+    const result = buildExtensionCatalog({
+      availableExtensions: new Map([[symbolsManifest.id, available(symbolsManifest, false)]]),
+      agents: [],
+      marketplaceSkills: [],
+      aiSkills: [],
+      selectedThemeId: "athas-dark",
+      selectedIconThemeId: "pierre-icons-complete",
+    });
 
-      expect(
-        result.find((extension) => extension.id === "athas.icon-theme.athas-icons"),
-      ).toMatchObject({
-        category: "icon-theme",
-        isActive: true,
-        isBundled: true,
-        selectionId: "athas-icons",
-      });
-      expect(
-        result.filter((extension) =>
-          extension.appearanceOptions?.some((option) => option.id === "symbols"),
-        ),
-      ).toHaveLength(1);
-      expect(
-        result.find((extension) => extension.id === "athas.icon-theme.symbols")?.appearancePreview,
-      ).toMatchObject({ kind: "icon-theme" });
-    } finally {
-      iconThemeRegistry.unregisterTheme(symbols.id);
-    }
+    expect(result.find((extension) => extension.id === "athas.icon-theme.pierre")).toMatchObject({
+      category: "icon-theme",
+      isActive: true,
+      isBundled: true,
+      selectionId: "pierre-icons-complete",
+    });
+    expect(result.find((extension) => extension.id === "athas.icon-theme.symbols")).toMatchObject({
+      category: "icon-theme",
+      isBundled: false,
+      isInstalled: false,
+      selectionId: "symbols",
+    });
   });
 });

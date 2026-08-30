@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="2 2 20 20" role="img" aria-label="PowerPoint" shape-rendering="geometricPrecision">
-  <path d="M6.5 2.8h7.15l5.85 5.85V19.2a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#C96E50" opacity=".16"/>
-  <path d="M6.5 2.8h7.15l5.85 5.85V19.2a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="none" stroke="#C96E50" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M13.65 2.8v4.35a1.5 1.5 0 0 0 1.5 1.5h4.35Z" fill="#FFD0BD" opacity=".24"/>
-  <path d="M13.65 2.8v4.35a1.5 1.5 0 0 0 1.5 1.5h4.35" fill="none" stroke="#C96E50" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M7.5 9h9M7.5 12h9M7.5 15h5.4" stroke="#FFD0BD" stroke-width="1.5" stroke-linecap="round"/><text x="12" y="18.3" text-anchor="middle" font-family="Arial,sans-serif" font-size="4" font-weight="700" fill="#FFD0BD">PPT</text>
-</svg>

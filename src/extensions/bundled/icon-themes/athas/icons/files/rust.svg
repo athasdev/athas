@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="2 2 20 20" role="img" aria-label="Rust" shape-rendering="geometricPrecision">
-  <path d="M6.5 2.8h7.15l5.85 5.85V19.2a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#CF7852" opacity=".16"/>
-  <path d="M6.5 2.8h7.15l5.85 5.85V19.2a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="none" stroke="#CF7852" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M13.65 2.8v4.35a1.5 1.5 0 0 0 1.5 1.5h4.35Z" fill="#F4C8B3" opacity=".24"/>
-  <path d="M13.65 2.8v4.35a1.5 1.5 0 0 0 1.5 1.5h4.35" fill="none" stroke="#CF7852" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="12" cy="12" r="5.1" fill="none" stroke="#F4C8B3" stroke-width="1.45"/><path d="M9.4 15.2V8.8H13c1.4 0 2.3.8 2.3 2 0 .9-.5 1.5-1.3 1.8l1.7 2.6h-2.1L12.2 13h-1v2.2zM11.2 11.5h1.5c.5 0 .8-.3.8-.7s-.3-.7-.8-.7h-1.5z" fill="#F4C8B3"/>
-</svg>

@@ -17,10 +17,10 @@ function manifest(id: string): ExtensionManifest {
 
 describe("extension runtime candidates", () => {
   it("activates bundled registry extensions even when they are absent from the catalog", () => {
-    const athasIcons = manifest("athas.icon-theme.athas-icons");
+    const pierreIcons = manifest("athas.icon-theme.pierre");
     const registered: BundledExtension = {
-      manifest: athasIcons,
-      path: "/bundled/icon-themes/athas",
+      manifest: pierreIcons,
+      path: "/bundled/icon-themes/pierre",
       isBundled: true,
       isEnabled: true,
       state: "installed",
@@ -28,23 +28,23 @@ describe("extension runtime candidates", () => {
 
     expect(buildExtensionRuntimeCandidates([], [registered])).toEqual([
       {
-        manifest: athasIcons,
-        path: "/bundled/icon-themes/athas",
+        manifest: pierreIcons,
+        path: "/bundled/icon-themes/pierre",
       },
     ]);
   });
 
   it("deduplicates catalog entries against their registered runtime extension", () => {
-    const symbols = manifest("athas.icon-theme.symbols");
+    const pierreIcons = manifest("athas.icon-theme.pierre");
     const available: AvailableExtension = {
-      manifest: symbols,
+      manifest: pierreIcons,
       isInstalled: true,
       isEnabled: true,
       isInstalling: false,
     };
     const registered: BundledExtension = {
-      manifest: symbols,
-      path: "/bundled/icon-themes/symbols",
+      manifest: pierreIcons,
+      path: "/bundled/icon-themes/pierre",
       isBundled: true,
       isEnabled: true,
       state: "installed",
@@ -52,8 +52,8 @@ describe("extension runtime candidates", () => {
 
     expect(buildExtensionRuntimeCandidates([available], [registered])).toEqual([
       {
-        manifest: symbols,
-        path: "/bundled/icon-themes/symbols",
+        manifest: pierreIcons,
+        path: "/bundled/icon-themes/pierre",
       },
     ]);
   });

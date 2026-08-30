@@ -1,4 +1,3 @@
-import { getVisibleIconThemes } from "@/extensions/icon-themes/icon-theme-normalization";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { bundledExtensionManifests } from "@/extensions/bundled/bundled-extension-manifests";
 import type { AvailableExtension } from "@/extensions/registry/extension-store-types";
@@ -378,7 +377,7 @@ export function buildExtensionCatalog({
     }
   }
 
-  getVisibleIconThemes(iconThemeRegistry.getAllThemes()).forEach((iconTheme) => {
+  iconThemeRegistry.getAllThemes().forEach((iconTheme) => {
     if (catalogedIconThemeIds.has(iconTheme.id) || iconThemeRegistry.getThemeSource(iconTheme.id)) {
       return;
     }

@@ -78,10 +78,10 @@
       "size": 12823,
       "checksum": "feb3113b3a424834d6951abd3ec49a5b147bce25f029d8df70d4cedbdf725daf"
     },
-    "athas.icon-theme.market": {
-      "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/market/athas.icon-theme.market.tar.gz",
-      "size": 5655,
-      "checksum": "0e249947f07a399c0c85f0be878faff08310aa469741c1eb87f9fd76e2ec0579"
+    "athas.icon-theme.material": {
+      "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/material/athas.icon-theme.material.tar.gz",
+      "size": 531519,
+      "checksum": "d708c01ec254d9e7d7613d682f958ac4ec59eb7f64212aae6bc19ac0e57daae7"
     },
     "athas.icon-theme.symbols": {
       "downloadUrl": "https://athas.dev/extensions/packages/icon-theme/symbols/athas.icon-theme.symbols.tar.gz",
