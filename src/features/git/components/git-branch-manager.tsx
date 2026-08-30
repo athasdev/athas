@@ -42,7 +42,6 @@ interface GitBranchManagerProps {
   onRepositoryChange?: (repoPath: string | null) => void;
   paletteTarget?: boolean;
   openEventName?: string;
-  triggerSurface?: "default" | "footer";
 }
 
 type GitBranchManagerTab = "branches" | "worktrees" | "repositories";
@@ -131,7 +130,6 @@ const GitBranchManager = ({
   onRepositoryChange,
   paletteTarget = false,
   openEventName = "athas:open-branch-manager",
-  triggerSurface = "default",
 }: GitBranchManagerProps) => {
   const [branches, setBranches] = useState<string[]>([]);
   const [worktrees, setWorktrees] = useState<GitWorktree[]>([]);
@@ -167,8 +165,10 @@ const GitBranchManager = ({
   );
   const { showToast } = useToast();
   const activeBranch = currentBranch ?? "";
-  const triggerText = activeBranch;
-  const triggerTextWidthCh = Math.min(Math.max(triggerText.length + 1, 6), 40);
+  const selectorRepoPath = activeRepoPath ?? repoPath;
+  const activeRepositoryLabel = selectorRepoPath
+    ? getFolderName(selectorRepoPath)
+    : "Select Repository";
   const filteredBranches = useMemo(
     () => getFilteredBranches(branches, activeBranch, branchQuery),
     [activeBranch, branchQuery, branches],
@@ -552,18 +552,20 @@ const GitBranchManager = ({
         disabled={isLoading}
         variant="ghost"
         className={cn(
-          "inline-flex max-w-full shrink overflow-hidden px-2 text-subtle-foreground hover:bg-accent/80",
-          triggerSurface === "footer" && "font-medium",
+          "w-fit max-w-full min-w-0 shrink justify-start overflow-hidden text-left hover:bg-accent/80",
           isDropdownOpen && "bg-accent/80",
         )}
-        aria-label="Search branches"
+        title={selectorRepoPath ?? undefined}
+        aria-label={`Switch repository or branch. ${activeRepositoryLabel}, branch ${currentBranch}`}
       >
-        <GitBranchIcon className="shrink-0" />
-        <span
-          className="min-w-0 truncate font-normal"
-          style={{ maxWidth: `${triggerTextWidthCh}ch` }}
-        >
-          {currentBranch}
+        <FolderOpenIcon />
+        <span className="flex min-w-0 flex-1 flex-col items-start overflow-hidden leading-none">
+          <span className="max-w-full truncate font-medium text-foreground ui-text-sm">
+            {activeRepositoryLabel}
+          </span>
+          <span className="max-w-full truncate font-normal text-subtle-foreground ui-text-caption">
+            {currentBranch}
+          </span>
         </span>
       </Button>
 
