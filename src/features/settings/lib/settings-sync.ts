@@ -89,7 +89,6 @@ type SyncableSettingsKey =
   | "showActivityRailProjectSwitcher"
   | "showActivityRailAgentHistory"
   | "showActivityRailTerminals"
-  | "showActivityRailWorktrees"
   | "showActivityRailProjectIcons"
   | "collapsedActivityRailSections"
   | "sidebarWidth"
@@ -213,7 +212,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "showActivityRailProjectSwitcher",
   "showActivityRailAgentHistory",
   "showActivityRailTerminals",
-  "showActivityRailWorktrees",
   "showActivityRailProjectIcons",
   "collapsedActivityRailSections",
   "sidebarWidth",

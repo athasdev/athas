@@ -130,7 +130,6 @@ export interface Settings {
   showActivityRailProjectSwitcher: boolean;
   showActivityRailAgentHistory: boolean;
   showActivityRailTerminals: boolean;
-  showActivityRailWorktrees: boolean;
   showActivityRailProjectIcons: boolean;
   collapsedActivityRailSections: string[];
   sidebarWidth: number;

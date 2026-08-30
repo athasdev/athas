@@ -5,7 +5,6 @@ import {
 } from "@/features/layout/components/sidebar/activity-navigation";
 import { ActivityPinnedItems } from "@/features/layout/components/sidebar/activity-pinned-items";
 import { ActivityTerminalHistory } from "@/features/layout/components/sidebar/activity-terminal-history";
-import { ActivityWorktreeHistory } from "@/features/layout/components/sidebar/activity-worktree-history";
 import type { ActivityNavigationItem } from "@/features/layout/hooks/use-activity-navigation-items";
 import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
 import { Spinner } from "@/ui/spinner";
@@ -19,8 +18,6 @@ interface ActivityProjectPanelProps {
   navigationItems: ActivityNavigationItem[];
   showAgents: boolean;
   showTerminals: boolean;
-  showWorktrees: boolean;
-  onNewWorktree: () => void;
 }
 
 export function ActivityProjectPanel({
@@ -31,8 +28,6 @@ export function ActivityProjectPanel({
   navigationItems,
   showAgents,
   showTerminals,
-  showWorktrees,
-  onNewWorktree,
 }: ActivityProjectPanelProps) {
   return (
     <div
@@ -66,9 +61,6 @@ export function ActivityProjectPanel({
               />
               {showAgents ? <ActivityAgentHistory workspacePath={project.path} /> : null}
               {showTerminals ? <ActivityTerminalHistory /> : null}
-              {showWorktrees ? (
-                <ActivityWorktreeHistory repoPath={project.path} onNewWorktree={onNewWorktree} />
-              ) : null}
             </>
           ) : null}
         </div>

@@ -1,4 +1,4 @@
-export type ActivitySidebarSectionId = "agents" | "terminals" | "worktrees";
+export type ActivitySidebarSectionId = "agents" | "terminals";
 
 export function isActivitySidebarSectionCollapsed(
   collapsedSectionIds: string[],

@@ -6,7 +6,6 @@ const VISIBILITY_SETTING_BY_ITEM = {
   projectSwitcher: "showActivityRailProjectSwitcher",
   agentHistory: "showActivityRailAgentHistory",
   terminals: "showActivityRailTerminals",
-  worktrees: "showActivityRailWorktrees",
   projectDots: "showActivityRailProjectIcons",
 } as const;
 
@@ -25,7 +24,6 @@ export function useActivityBarVisibility(coreFeatures: CoreFeaturesState) {
   );
   const agentHistory = useSettingsStore((state) => state.settings.showActivityRailAgentHistory);
   const terminals = useSettingsStore((state) => state.settings.showActivityRailTerminals);
-  const worktrees = useSettingsStore((state) => state.settings.showActivityRailWorktrees);
   const projectDots = useSettingsStore((state) => state.settings.showActivityRailProjectIcons);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
 
@@ -60,7 +58,6 @@ export function useActivityBarVisibility(coreFeatures: CoreFeaturesState) {
     !projectSwitcher ||
     !agentHistory ||
     (coreFeatures.terminal && !terminals) ||
-    (coreFeatures.git && !worktrees) ||
     !projectDots;
 
   return {
@@ -68,7 +65,6 @@ export function useActivityBarVisibility(coreFeatures: CoreFeaturesState) {
     projectSwitcher,
     agentHistory,
     terminals,
-    worktrees,
     projectDots,
     hasHiddenItems,
     setNavigationItemVisible,

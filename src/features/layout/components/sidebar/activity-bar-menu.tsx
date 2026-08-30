@@ -28,7 +28,6 @@ interface ActivityBarMenuProps {
   showProjectSwitcher: boolean;
   showAgentHistory: boolean;
   showTerminals: boolean;
-  showWorktrees: boolean;
   showProjectDots: boolean;
   hasHiddenItems: boolean;
   onNewAgent: () => void;
@@ -41,7 +40,6 @@ interface ActivityBarMenuProps {
   onProjectSwitcherVisibleChange: (visible: boolean) => void;
   onAgentHistoryVisibleChange: (visible: boolean) => void;
   onTerminalsVisibleChange: (visible: boolean) => void;
-  onWorktreesVisibleChange: (visible: boolean) => void;
   onProjectDotsVisibleChange: (visible: boolean) => void;
   onShowAll: () => void;
 }
@@ -53,7 +51,6 @@ export function ActivityBarMenu({
   showProjectSwitcher,
   showAgentHistory,
   showTerminals,
-  showWorktrees,
   showProjectDots,
   hasHiddenItems,
   onNewAgent,
@@ -66,7 +63,6 @@ export function ActivityBarMenu({
   onProjectSwitcherVisibleChange,
   onAgentHistoryVisibleChange,
   onTerminalsVisibleChange,
-  onWorktreesVisibleChange,
   onProjectDotsVisibleChange,
   onShowAll,
 }: ActivityBarMenuProps) {
@@ -141,15 +137,6 @@ export function ActivityBarMenu({
               >
                 <TerminalWindowIcon />
                 Terminals
-              </ContextMenuCheckboxItem>
-            ) : null}
-            {coreFeatures.git ? (
-              <ContextMenuCheckboxItem
-                checked={showWorktrees}
-                onCheckedChange={onWorktreesVisibleChange}
-              >
-                <NodesIcon />
-                Worktrees
               </ContextMenuCheckboxItem>
             ) : null}
             <ContextMenuCheckboxItem

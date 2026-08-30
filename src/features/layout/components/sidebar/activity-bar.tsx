@@ -181,8 +181,6 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
                 navigationItems={visibleActivityNavigationItems}
                 showAgents={activityBarVisibility.agentHistory}
                 showTerminals={coreFeatures.terminal && activityBarVisibility.terminals}
-                showWorktrees={coreFeatures.git && activityBarVisibility.worktrees}
-                onNewWorktree={handleNewWorktree}
               />
             ))}
           </div>
@@ -233,7 +231,6 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
         showProjectSwitcher={activityBarVisibility.projectSwitcher}
         showAgentHistory={activityBarVisibility.agentHistory}
         showTerminals={activityBarVisibility.terminals}
-        showWorktrees={activityBarVisibility.worktrees}
         showProjectDots={activityBarVisibility.projectDots}
         hasHiddenItems={activityBarVisibility.hasHiddenItems}
         onNewAgent={handleNewAgent}
@@ -251,9 +248,6 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
         }
         onTerminalsVisibleChange={(visible) =>
           activityBarVisibility.setItemVisible("terminals", visible)
-        }
-        onWorktreesVisibleChange={(visible) =>
-          activityBarVisibility.setItemVisible("worktrees", visible)
         }
         onProjectDotsVisibleChange={(visible) =>
           activityBarVisibility.setItemVisible("projectDots", visible)
