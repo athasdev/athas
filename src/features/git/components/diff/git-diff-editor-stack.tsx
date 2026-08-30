@@ -442,7 +442,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               active={isFindVisible}
               onClick={() => setIsFindVisible(!isFindVisible)}
               tooltip="Search changes"
-              tooltipSide="bottom"
               aria-label="Search changes"
             >
               <Search />
@@ -453,7 +452,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 active={viewMode === "unified"}
                 onClick={() => setViewMode("unified")}
                 tooltip="Unified view"
-                tooltipSide="bottom"
                 aria-label="Unified view"
               >
                 <Rows3 weight="duotone" />
@@ -463,14 +461,13 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 active={viewMode === "split"}
                 onClick={() => setViewMode("split")}
                 tooltip="Split view"
-                tooltipSide="bottom"
                 aria-label="Split view"
               >
                 <Columns2 weight="duotone" />
               </BreadcrumbActionButton>
             </div>
             <DropdownMenu>
-              <Tooltip content="Diff actions" side="bottom">
+              <Tooltip content="Diff actions">
                 <DropdownMenuTrigger
                   render={
                     <Button type="button" variant="ghost" iconOnly aria-label="Diff actions" />

@@ -36,9 +36,14 @@ const itemVariants = cva(
         outline: "border-border",
         muted: "border-transparent bg-surface/55",
       },
+      size: {
+        default: "",
+        compact: "min-h-chrome-control rounded-md px-1 py-0.5",
+      },
     },
     defaultVariants: {
       variant: "default",
+      size: "default",
     },
   },
 );
@@ -46,16 +51,18 @@ const itemVariants = cva(
 function Item({
   className,
   variant = "default",
+  size = "default",
   render,
   ...props
 }: useRender.ComponentProps<"div"> & VariantProps<typeof itemVariants>) {
   return useRender({
     defaultTagName: "div",
-    props: mergeProps<"div">({ className: cn(itemVariants({ variant, className })) }, props),
+    props: mergeProps<"div">({ className: cn(itemVariants({ variant, size, className })) }, props),
     render,
     state: {
       slot: "item",
       variant,
+      size,
     },
   });
 }

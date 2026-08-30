@@ -233,7 +233,6 @@ export function DockerContainerDetail({
                     iconOnly
                     className="ui-text-sm"
                     tooltip="Copy to host"
-                    tooltipSide="left"
                     aria-label={`Copy ${entry.name} to host`}
                     onClick={(event) => {
                       event.stopPropagation();

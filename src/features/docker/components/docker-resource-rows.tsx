@@ -52,14 +52,7 @@ export function DockerActionMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            type="button"
-            variant="ghost"
-            iconOnly
-            tooltip={label}
-            tooltipSide="left"
-            aria-label={label}
-          />
+          <Button type="button" variant="ghost" iconOnly tooltip={label} aria-label={label} />
         }
       >
         <More />
@@ -181,7 +174,6 @@ function ContainerActions({
             variant="ghost"
             iconOnly
             tooltip="Container actions"
-            tooltipSide="left"
             aria-label={`Actions for ${container.name}`}
           />
         }
@@ -330,7 +322,6 @@ function ComposeServiceActions({
             variant="ghost"
             iconOnly
             tooltip="Service actions"
-            tooltipSide="left"
             aria-label={`Actions for ${service.name}`}
           />
         }
@@ -433,7 +424,6 @@ export function ImageRow({
                 variant="ghost"
                 iconOnly
                 tooltip="Image actions"
-                tooltipSide="left"
                 aria-label={`Actions for ${label}`}
               />
             }

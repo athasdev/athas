@@ -13,7 +13,7 @@ export function ExtensionToolbarAction({ action }: ExtensionToolbarActionProps) 
   }
 
   return (
-    <Tooltip content={action.title} side="bottom">
+    <Tooltip content={action.title}>
       <Button
         onClick={action.onClick}
         variant="ghost"

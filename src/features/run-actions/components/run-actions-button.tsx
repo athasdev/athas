@@ -12,7 +12,6 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import { ArrowClockwiseIcon as RefreshIcon, PlayIcon, PlusIcon } from "@/ui/icons";
 import { SearchField } from "@/ui/search";
 import { Spinner } from "@/ui/spinner";
-import Tooltip from "@/ui/tooltip";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { useRunActionDiscovery } from "../hooks/use-run-action-discovery";
 import { useRunActionsStore } from "../stores/run-actions.store";
@@ -59,9 +58,9 @@ function RunActionSection({
   if (actions.length === 0) return null;
 
   return (
-    <section>
-      <div className="px-2.5 pt-2 pb-1 font-medium text-subtle-foreground ui-text-sm">{label}</div>
-      <div className="space-y-0.5 px-1">
+    <section className="py-0.5">
+      <div className="px-2 py-0.5 font-medium text-subtle-foreground ui-text-chrome">{label}</div>
+      <div className="px-1">
         {actions.map((action) => (
           <RunActionRow
             key={action.id}
@@ -138,7 +137,7 @@ export default function RunActionsButton() {
     [customRunActions, query],
   );
   const firstVisibleAction =
-    visibleLspActions[0] ?? visibleProjectActions[0] ?? visibleCustomActions[0];
+    visibleCustomActions[0] ?? visibleLspActions[0] ?? visibleProjectActions[0];
   const hasVisibleActions = Boolean(firstVisibleAction);
 
   const closeMenu = () => setIsMenuOpen(false);
@@ -225,21 +224,19 @@ export default function RunActionsButton() {
   return (
     <>
       <div ref={triggerRef} className="pointer-events-auto">
-        <Tooltip content="Run actions" side="bottom">
-          <Button
-            type="button"
-            variant="ghost"
-            iconOnly
-            size="chrome"
-            onClick={() => setIsMenuOpen((open) => !open)}
-            active={isMenuOpen}
-            aria-expanded={isMenuOpen}
-            aria-haspopup="menu"
-            aria-label="Run project action"
-          >
-            <PlayIcon />
-          </Button>
-        </Tooltip>
+        <Button
+          type="button"
+          variant="ghost"
+          iconOnly
+          size="chrome"
+          tooltip="Run actions"
+          onClick={() => setIsMenuOpen((open) => !open)}
+          active={isMenuOpen}
+          aria-expanded={isMenuOpen}
+          aria-haspopup="menu"
+        >
+          <PlayIcon />
+        </Button>
       </div>
 
       <Dropdown
@@ -249,34 +246,16 @@ export default function RunActionsButton() {
         anchorAlign="end"
         onClose={closeMenu}
         closeOnSelect={false}
-        className="w-90 max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl p-0"
+        className="w-80 max-w-[calc(100vw-1rem)] overflow-hidden p-0"
       >
-        <div className="border-border/70 border-b bg-surface/35 px-3 pt-2.5 pb-2">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <div className="font-medium text-foreground ui-text-sm">Run</div>
-              <div className="truncate text-subtle-foreground ui-text-sm">{workspaceLabel}</div>
-            </div>
-            <Tooltip content="Rescan project actions" side="left">
-              <Button
-                type="button"
-                onClick={refresh}
-                variant="ghost"
-                iconOnly
-                disabled={isDiscovering || !workspacePath}
-                aria-label="Rescan project actions"
-              >
-                {isDiscovering ? <Spinner label="Scanning" compact /> : <RefreshIcon />}
-              </Button>
-            </Tooltip>
-          </div>
-
+        <div className="flex items-center gap-1 p-1">
           <SearchField
             ref={searchInputRef}
             value={query}
             onChange={setQuery}
             placeholder="Filter actions"
-            className="h-8 bg-background"
+            className="bg-background"
+            containerClassName="min-w-0 flex-1"
             onKeyDown={(event) => {
               if (event.key === "Enter" && firstVisibleAction) {
                 event.preventDefault();
@@ -284,16 +263,31 @@ export default function RunActionsButton() {
               }
             }}
           />
+          <Button
+            type="button"
+            onClick={refresh}
+            variant="ghost"
+            iconOnly
+            size="chrome"
+            tooltip="Rescan project actions"
+            disabled={isDiscovering || !workspacePath}
+          >
+            {isDiscovering ? <Spinner label="Scanning" compact /> : <RefreshIcon />}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            size="chrome"
+            tooltip="New custom action"
+            onClick={() => openDialog()}
+          >
+            <PlusIcon />
+          </Button>
         </div>
 
         <div className="max-h-[min(420px,60vh)] overflow-y-auto overscroll-contain">
           <div className="py-1">
-            <RunActionSection label="Current file" actions={visibleLspActions} onRun={runAction} />
-            <RunActionSection
-              label="Detected in project"
-              actions={visibleProjectActions}
-              onRun={runAction}
-            />
             <RunActionSection
               label="Custom"
               actions={visibleCustomActions}
@@ -303,9 +297,15 @@ export default function RunActionsButton() {
               }
               onDelete={(action) => void handleDelete(action)}
             />
+            <RunActionSection label="Current file" actions={visibleLspActions} onRun={runAction} />
+            <RunActionSection
+              label="Detected in project"
+              actions={visibleProjectActions}
+              onRun={runAction}
+            />
 
             {!hasVisibleActions && isDiscovering ? (
-              <Empty className="min-h-0 flex-none rounded-none px-6 py-8">
+              <Empty className="min-h-0 flex-none rounded-none px-4 py-5">
                 <EmptyDescription>
                   <Spinner label="Scanning project actions" showLabel compact />
                 </EmptyDescription>
@@ -313,7 +313,7 @@ export default function RunActionsButton() {
             ) : null}
 
             {!hasVisibleActions && !isDiscovering ? (
-              <Empty className="min-h-0 flex-none rounded-none px-6 py-8">
+              <Empty className="min-h-0 flex-none rounded-none px-4 py-5">
                 <EmptyHeader>
                   <EmptyTitle>
                     {query ? "No matching actions" : "No runnable actions found"}
@@ -328,18 +328,6 @@ export default function RunActionsButton() {
               </Empty>
             ) : null}
           </div>
-        </div>
-
-        <div className="border-border/70 border-t p-1.5">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => openDialog()}
-            className="ui-text-sm h-8 w-full justify-start gap-2"
-          >
-            <PlusIcon className="text-subtle-foreground" />
-            <span>New custom action</span>
-          </Button>
         </div>
       </Dropdown>
 

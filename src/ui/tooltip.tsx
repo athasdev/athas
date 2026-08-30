@@ -7,7 +7,6 @@ import { cn } from "@/utils/cn";
 interface TooltipProps {
   content: string;
   children: React.ReactNode;
-  side?: "top" | "bottom" | "left" | "right";
   shortcut?: string;
   triggerClassName?: string;
 }
@@ -31,14 +30,13 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
 function TooltipContent({
   anchor,
   content,
-  side,
   shortcut,
-}: Pick<TooltipProps, "content" | "side" | "shortcut"> & { anchor?: Element }) {
+}: Pick<TooltipProps, "content" | "shortcut"> & { anchor?: Element }) {
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Positioner
         anchor={anchor}
-        side={side}
+        side="top"
         sideOffset={4}
         collisionPadding={8}
         positionMethod={anchor ? "fixed" : undefined}
@@ -59,23 +57,17 @@ function TooltipContent({
   );
 }
 
-export function AnchoredTooltip({ anchor, content, side = "top", shortcut }: AnchoredTooltipProps) {
+export function AnchoredTooltip({ anchor, content, shortcut }: AnchoredTooltipProps) {
   if (!anchor) return null;
 
   return (
     <TooltipPrimitive.Root open disableHoverablePopup>
-      <TooltipContent anchor={anchor} content={content} side={side} shortcut={shortcut} />
+      <TooltipContent anchor={anchor} content={content} shortcut={shortcut} />
     </TooltipPrimitive.Root>
   );
 }
 
-export default function Tooltip({
-  content,
-  children,
-  side = "top",
-  shortcut,
-  triggerClassName,
-}: TooltipProps) {
+export default function Tooltip({ content, children, shortcut, triggerClassName }: TooltipProps) {
   return (
     <TooltipPrimitive.Root disableHoverablePopup>
       <TooltipPrimitive.Trigger
@@ -83,7 +75,7 @@ export default function Tooltip({
       >
         {children}
       </TooltipPrimitive.Trigger>
-      <TooltipContent content={content} side={side} shortcut={shortcut} />
+      <TooltipContent content={content} shortcut={shortcut} />
     </TooltipPrimitive.Root>
   );
 }

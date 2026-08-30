@@ -678,7 +678,6 @@ const TabBar = ({
               disabled={!canGoBack}
               variant="ghost"
               tooltip="Go Back"
-              tooltipSide="bottom"
               commandId="navigation.goBack"
               aria-label="Go back to previous location"
               iconOnly
@@ -691,7 +690,6 @@ const TabBar = ({
               disabled={!canGoForward}
               variant="ghost"
               tooltip="Go Forward"
-              tooltipSide="bottom"
               commandId="navigation.goForward"
               aria-label="Go forward to next location"
               iconOnly
@@ -811,7 +809,6 @@ const TabBar = ({
                 iconOnly
                 tooltip="New Tab"
                 commandId="workbench.newTab"
-                tooltipSide="bottom"
                 aria-label="New tab"
               >
                 <Plus weight="bold" />
@@ -826,7 +823,6 @@ const TabBar = ({
                       variant="ghost"
                       iconOnly
                       tooltip="Pane actions"
-                      tooltipSide="bottom"
                       aria-label="Pane actions"
                     />
                   }

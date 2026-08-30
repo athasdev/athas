@@ -52,7 +52,6 @@ export default function ChatHistoryDropdown({
             variant="ghost"
             iconOnly
             tooltip="Agent History"
-            tooltipSide="bottom"
             aria-label="Agent history"
           />
         }

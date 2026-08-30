@@ -110,7 +110,6 @@ export function AcpPermissionPrompt({
                   )
                 }
                 tooltip={getOptionTooltip(option)}
-                tooltipSide="top"
               >
                 {getOptionLabel(option)}
               </Button>

@@ -57,7 +57,7 @@ export function ReviewChangeCard({
   const row = (
     <SidebarListItem
       leading={
-        <Tooltip content={riskTooltip} side="right">
+        <Tooltip content={riskTooltip}>
           <span
             className={`flex items-center justify-center ${RISK_ICON_TONES[changeSet.risk]}`}
             aria-label={RISK_LABELS[changeSet.risk]}
@@ -101,7 +101,6 @@ export function ReviewChangeCard({
         <SidebarIconButton
           key="reviewed"
           tooltip="Mark reviewed"
-          tooltipSide="left"
           onClick={(event) => {
             event.stopPropagation();
             onMarkReviewed();

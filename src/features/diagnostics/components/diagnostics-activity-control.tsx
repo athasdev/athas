@@ -44,7 +44,7 @@ export function DiagnosticsActivityControl({ expanded }: { expanded: boolean }) 
   }
 
   return (
-    <Tooltip content={status.tooltip} side="right">
+    <Tooltip content={status.tooltip}>
       <SidebarIconButton
         active={isActive}
         tone={status.tone}

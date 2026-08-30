@@ -77,7 +77,6 @@ export function GitCommitHistoryControls({
             <SidebarIconButton
               active={searchScope !== "all"}
               tooltip={`Filter: ${HISTORY_SEARCH_SCOPE_LABELS[searchScope]}`}
-              tooltipSide="bottom"
               aria-label="Filter history"
             />
           }

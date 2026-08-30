@@ -1314,7 +1314,6 @@ function FileExplorerTreeComponent({
         {treeSearchQuery.length > 0 ? (
           <SidebarIconButton
             tooltip="Clear search"
-            tooltipSide="bottom"
             aria-label="Clear search"
             onClick={() => {
               setTreeSearchQuery("");
@@ -1329,7 +1328,6 @@ function FileExplorerTreeComponent({
             render={
               <SidebarIconButton
                 tooltip="File explorer preferences"
-                tooltipSide="bottom"
                 aria-label="File explorer preferences"
               />
             }

@@ -460,7 +460,6 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
           )}
           aria-label="Language server status"
           tooltip={config.title}
-          tooltipSide="bottom"
         >
           <span className="flex size-full items-center justify-center">{config.icon}</span>
         </Button>
@@ -604,7 +603,6 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
             isViewMenuOpen && "border-border/60 bg-accent/80 text-foreground",
           )}
           tooltip="Editor preferences"
-          tooltipSide="bottom"
         >
           <span className="flex size-full items-center justify-center">
             <SlidersHorizontal weight="duotone" />

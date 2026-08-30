@@ -321,7 +321,7 @@ export const TerminalSettings = () => {
               searchableTrigger="input"
               placeholder="Select font..."
             />
-            <Tooltip content={FONT_HELP_TEXT} side="left">
+            <Tooltip content={FONT_HELP_TEXT}>
               <Info className="size-4 cursor-help text-subtle-foreground transition-colors hover:text-foreground" />
             </Tooltip>
           </div>

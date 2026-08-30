@@ -84,7 +84,7 @@ export function ChannelIconPicker({
               const Icon = option.icon;
               const value = `icon:${option.id}`;
               return (
-                <Tooltip key={option.id} content={option.label} side="top">
+                <Tooltip key={option.id} content={option.label}>
                   <Toggle
                     type="button"
                     pressed={selected === value}

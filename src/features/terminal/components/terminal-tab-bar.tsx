@@ -334,7 +334,6 @@ const TerminalTabBar = ({
           iconOnly
           tooltip="Find in Terminal"
           commandId="terminal.find"
-          tooltipSide="bottom"
           aria-label="Find in terminal"
         >
           <Search />
@@ -350,7 +349,6 @@ const TerminalTabBar = ({
                 iconOnly
                 tooltip="New Terminal"
                 commandId="terminal.new"
-                tooltipSide="bottom"
                 aria-label="New terminal"
               />
             }
@@ -373,7 +371,6 @@ const TerminalTabBar = ({
           iconOnly
           tooltip={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
           commandId="workbench.toggleActivePaneFullscreen"
-          tooltipSide="bottom"
           aria-label={isFullScreen ? "Exit full screen terminal" : "Full screen terminal"}
         >
           {isFullScreen ? <Minimize2 /> : <Maximize2 />}

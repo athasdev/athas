@@ -64,7 +64,6 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
       actions={
         <SidebarIconButton
           tooltip="Create View"
-          tooltipSide="bottom"
           aria-label="Create View"
           disabled={!projectPath}
           onClick={() => openView()}
@@ -92,7 +91,6 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
                     key="delete"
                     tone="danger"
                     tooltip="Delete View"
-                    tooltipSide="right"
                     onClick={(event) => {
                       event.stopPropagation();
                       removeView(view.id);

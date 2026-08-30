@@ -255,7 +255,7 @@ export const AccountMenu = memo(function AccountMenu() {
   return (
     <>
       <div ref={triggerRef}>
-        <Tooltip content={tooltipLabel} side="bottom">
+        <Tooltip content={tooltipLabel}>
           <Button
             type="button"
             variant="ghost"

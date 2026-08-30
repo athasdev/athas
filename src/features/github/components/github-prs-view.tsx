@@ -699,7 +699,6 @@ const GitHubPRsView = memo(() => {
                       ? "New Issue"
                       : "Run Workflow"
                 }
-                tooltipSide="bottom"
                 onClick={() => {
                   const nextKind =
                     activeSection === "pull-requests"
@@ -724,7 +723,6 @@ const GitHubPRsView = memo(() => {
                     <SidebarIconButton
                       active={!isActiveFilterDefault}
                       tooltip={`Filter: ${activeFilterLabel}`}
-                      tooltipSide="bottom"
                       aria-label={`Filter GitHub ${activeSection}`}
                     />
                   }

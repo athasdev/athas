@@ -467,7 +467,6 @@ function NotebookCellView({
                 onClick={() => onRun(cellIndex)}
                 disabled={isRunning}
                 tooltip={isRunning ? "Running cell" : "Run cell"}
-                tooltipSide="bottom"
               >
                 <Play weight="duotone" />
               </Button>
@@ -478,7 +477,6 @@ function NotebookCellView({
               className="text-subtle-foreground hover:text-foreground"
               onClick={() => onTypeChange(cellIndex, isCode ? "markdown" : "code")}
               tooltip={isCode ? "Convert to Markdown" : "Convert to Code"}
-              tooltipSide="bottom"
             >
               {isCode ? <Text /> : <Code />}
             </Button>
@@ -488,7 +486,6 @@ function NotebookCellView({
               className="text-subtle-foreground hover:text-foreground"
               onClick={() => onInsertBelow(cellIndex, isCode ? "code" : "markdown")}
               tooltip="Insert cell below"
-              tooltipSide="bottom"
             >
               <Plus />
             </Button>
@@ -498,7 +495,6 @@ function NotebookCellView({
               className="text-subtle-foreground hover:text-foreground"
               onClick={() => onDelete(cellIndex)}
               tooltip="Delete cell"
-              tooltipSide="bottom"
             >
               <Trash weight="duotone" />
             </Button>
@@ -508,7 +504,6 @@ function NotebookCellView({
               className="text-subtle-foreground hover:text-foreground"
               onClick={() => onEditToggle(cellIndex)}
               tooltip={isEditing ? "Preview cell" : "Edit cell"}
-              tooltipSide="bottom"
             >
               {isEditing ? <Eye weight="duotone" /> : <Edit weight="duotone" />}
             </Button>

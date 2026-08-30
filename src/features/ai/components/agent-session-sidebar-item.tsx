@@ -68,7 +68,6 @@ export function AgentSessionSidebarItem({
             active={pinned}
             aria-pressed={pinned}
             tooltip={pinned ? "Unpin session" : "Pin session"}
-            tooltipSide="top"
             onClick={(event) => {
               event.stopPropagation();
               onPinChange(!pinned);
@@ -80,7 +79,6 @@ export function AgentSessionSidebarItem({
             key="archive"
             tone="danger"
             tooltip="Archive session"
-            tooltipSide="top"
             onClick={(event) => {
               event.stopPropagation();
               onArchive();

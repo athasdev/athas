@@ -85,7 +85,7 @@ export function AppUpdateControl() {
 
   return (
     <div ref={updateMenuRef}>
-      <Tooltip content={updateTooltip} side="bottom">
+      <Tooltip content={updateTooltip}>
         <Button
           type="button"
           variant="ghost"

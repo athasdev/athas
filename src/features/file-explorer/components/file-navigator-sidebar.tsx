@@ -480,7 +480,6 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               active={viewMode === "flat"}
               onClick={() => onViewModeChange("flat")}
               tooltip="Flat list"
-              tooltipSide="bottom"
               aria-label="Flat list"
             >
               <ListBullets />
@@ -489,7 +488,6 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               active={viewMode === "tree"}
               onClick={() => onViewModeChange("tree")}
               tooltip="File tree"
-              tooltipSide="bottom"
               aria-label="File tree"
             >
               <TreeStructure />

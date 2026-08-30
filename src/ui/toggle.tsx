@@ -29,7 +29,6 @@ function Toggle({
   variant = "default",
   size = "default",
   tooltip,
-  tooltipSide,
   shortcut,
   commandId,
   "aria-label": ariaLabel,
@@ -37,7 +36,6 @@ function Toggle({
 }: TogglePrimitive.Props &
   VariantProps<typeof toggleVariants> & {
     tooltip?: string;
-    tooltipSide?: "top" | "bottom" | "left" | "right";
     shortcut?: string;
     commandId?: string;
   }) {
@@ -55,7 +53,7 @@ function Toggle({
   if (!tooltip) return element;
 
   return (
-    <Tooltip content={tooltip} shortcut={effectiveShortcut} side={tooltipSide}>
+    <Tooltip content={tooltip} shortcut={effectiveShortcut}>
       {element}
     </Tooltip>
   );

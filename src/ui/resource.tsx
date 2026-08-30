@@ -284,7 +284,7 @@ export function ResourceViewerActionsMenu({
 }) {
   return (
     <DropdownMenu>
-      <Tooltip content={label} side="bottom">
+      <Tooltip content={label}>
         <DropdownMenuTrigger
           render={<Button type="button" variant="ghost" iconOnly aria-label={label} />}
         >

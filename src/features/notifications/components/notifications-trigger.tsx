@@ -52,7 +52,6 @@ export const NotificationsTrigger = () => {
         }}
         active={isCommandVisible}
         tooltip={tooltip}
-        tooltipSide="bottom"
         shortcut={shortcut}
         aria-label={tooltip}
         className="relative"
