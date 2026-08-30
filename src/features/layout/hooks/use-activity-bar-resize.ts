@@ -4,7 +4,6 @@ import {
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
-  type RefObject,
 } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
@@ -15,15 +14,7 @@ const MAX_ACTIVITY_BAR_WIDTH = 320;
 const clampActivityBarWidth = (width: number) =>
   Math.min(MAX_ACTIVITY_BAR_WIDTH, Math.max(MIN_ACTIVITY_BAR_WIDTH, Math.round(width)));
 
-export function useActivityBarResize({
-  expanded,
-  contentRef,
-  onPreview,
-}: {
-  expanded: boolean;
-  contentRef: RefObject<HTMLDivElement | null>;
-  onPreview: () => void;
-}) {
+export function useActivityBarResize({ expanded }: { expanded: boolean }) {
   const configuredWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const [width, setWidth] = useState(() =>
@@ -45,22 +36,16 @@ export function useActivityBarResize({
     };
   }, []);
 
-  const previewWidth = useCallback(
-    (nextWidth: number) => {
-      const clampedWidth = clampActivityBarWidth(nextWidth);
-      const expandedWidth = `calc(${clampedWidth}px + var(--athas-workbench-gap))`;
+  const previewWidth = useCallback((nextWidth: number) => {
+    const clampedWidth = clampActivityBarWidth(nextWidth);
 
-      if (resizeFrameRef.current !== null) cancelAnimationFrame(resizeFrameRef.current);
+    if (resizeFrameRef.current !== null) cancelAnimationFrame(resizeFrameRef.current);
 
-      resizeFrameRef.current = requestAnimationFrame(() => {
-        if (sidebarRef.current) sidebarRef.current.style.width = expandedWidth;
-        if (contentRef.current) contentRef.current.style.width = `${clampedWidth}px`;
-        onPreview();
-        resizeFrameRef.current = null;
-      });
-    },
-    [contentRef, onPreview],
-  );
+    resizeFrameRef.current = requestAnimationFrame(() => {
+      setWidth(clampedWidth);
+      resizeFrameRef.current = null;
+    });
+  }, []);
 
   const handleResizeStart = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -81,12 +66,7 @@ export function useActivityBarResize({
 
       const finishResize = (clientX: number) => {
         const nextWidth = clampActivityBarWidth(startWidth + clientX - startX);
-        const expandedWidth = `calc(${nextWidth}px + var(--athas-workbench-gap))`;
         setWidth(nextWidth);
-
-        if (sidebarRef.current) sidebarRef.current.style.width = expandedWidth;
-        if (contentRef.current) contentRef.current.style.width = `${nextWidth}px`;
-
         void updateSetting("activityRailWidth", nextWidth);
       };
 
@@ -113,7 +93,7 @@ export function useActivityBarResize({
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
-    [contentRef, expanded, previewWidth, updateSetting, width],
+    [expanded, previewWidth, updateSetting, width],
   );
 
   return { width, isResizing, sidebarRef, handleResizeStart };

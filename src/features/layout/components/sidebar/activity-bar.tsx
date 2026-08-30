@@ -112,8 +112,6 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
     handleResizeStart,
   } = useActivityBarResize({
     expanded,
-    contentRef: railContentRef,
-    onPreview: alignProjectCarouselToCurrent,
   });
   const railPanelWidth = expanded ? activityRailWidth : COLLAPSED_ACTIVITY_BAR_WIDTH;
   const {
