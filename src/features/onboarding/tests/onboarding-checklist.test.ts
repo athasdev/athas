@@ -1,4 +1,7 @@
-import { beforeEach, describe, expect, it } from "vite-plus/test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { OnboardingChecklist } from "../components/onboarding-checklist";
 import {
   getOnboardingChecklistProgress,
   isOnboardingChecklistTaskId,
@@ -8,6 +11,7 @@ import { useOnboardingChecklistStore } from "../stores/onboarding-checklist.stor
 
 describe("onboarding checklist", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     useOnboardingChecklistStore.setState({ completedTaskIds: [] });
   });
 
@@ -51,6 +55,26 @@ describe("onboarding checklist", () => {
       percentage: 100,
       complete: true,
     });
+  });
+
+  it("hides the checklist after every starter action is done", () => {
+    vi.spyOn(useOnboardingChecklistStore.use, "completedTaskIds").mockReturnValue(
+      ONBOARDING_CHECKLIST_TASKS.map((task) => task.id),
+    );
+
+    const markup = renderToStaticMarkup(
+      createElement(OnboardingChecklist, {
+        expanded: true,
+        hasProject: true,
+        onOpenProject: () => {},
+        onStartAgent: () => {},
+        onOpenTerminal: () => {},
+        onOpenCommandPalette: () => {},
+        onOpenSettings: () => {},
+      }),
+    );
+
+    expect(markup).toBe("");
   });
 
   it("rejects unknown persisted task IDs", () => {

@@ -121,6 +121,8 @@ export function OnboardingChecklist({
     if (!expanded) setIsOpen(false);
   };
 
+  if (progress.complete) return null;
+
   if (!expanded) {
     return (
       <Popover open={isOpen} onOpenChange={setIsOpen}>
