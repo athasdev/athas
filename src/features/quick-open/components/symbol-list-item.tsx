@@ -11,7 +11,7 @@ import {
 } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { CommandItemBadge, CommandItemRow } from "@/ui/command";
-import { SearchMatchHighlight } from "@/ui/search-match-highlight";
+import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import type { SymbolItem } from "../hooks/use-symbol-search";
 
 const SYMBOL_ICONS: Record<string, ReactNode> = {

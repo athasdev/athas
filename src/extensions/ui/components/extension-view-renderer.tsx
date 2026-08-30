@@ -1,9 +1,9 @@
 import { Fragment } from "react";
+import { ExtensionDiffPreview } from "@/extensions/ui/components/extension-diff-preview";
 import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
 import { EmptyState } from "@/ui/empty";
-import { DiffPreview } from "@/ui/diff-preview";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/ui/item";
 import { Progress, ProgressLabel, ProgressValue } from "@/ui/progress";
 import { ScrollArea } from "@/ui/scroll-area";
@@ -257,7 +257,7 @@ function renderNode(
       );
     case "diff":
       return (
-        <DiffPreview
+        <ExtensionDiffPreview
           key={key}
           filePath={node.filePath}
           oldPath={node.oldPath}

@@ -1,36 +1,32 @@
+import type {
+  ExtensionViewDiffLineType,
+  ExtensionViewNode,
+} from "@/extensions/ui/types/extension-view";
 import { cn } from "@/utils/cn";
 
-export type DiffPreviewLineType = "context" | "added" | "removed" | "header";
+type ExtensionDiffNode = Extract<ExtensionViewNode, { type: "diff" }>;
+type ExtensionDiffPreviewProps = Omit<ExtensionDiffNode, "type">;
 
-export interface DiffPreviewLine {
-  type: DiffPreviewLineType;
-  content: string;
-  oldLine?: number;
-  newLine?: number;
-}
-
-interface DiffPreviewProps {
-  filePath: string;
-  oldPath?: string;
-  language?: string;
-  lines: DiffPreviewLine[];
-  truncated?: boolean;
-}
-
-const lineClassNames: Record<DiffPreviewLineType, string> = {
+const lineClassNames: Record<ExtensionViewDiffLineType, string> = {
   added: "bg-git-added/14 shadow-[inset_2px_0_0_var(--git-added)]",
   removed: "bg-git-deleted/14 shadow-[inset_2px_0_0_var(--git-deleted)]",
   context: "bg-background",
   header: "bg-surface/60 text-subtle-foreground",
 };
 
-function lineMarker(type: DiffPreviewLineType): string {
+function lineMarker(type: ExtensionViewDiffLineType): string {
   if (type === "added") return "+";
   if (type === "removed") return "-";
   return " ";
 }
 
-export function DiffPreview({ filePath, oldPath, language, lines, truncated }: DiffPreviewProps) {
+export function ExtensionDiffPreview({
+  filePath,
+  oldPath,
+  language,
+  lines,
+  truncated,
+}: ExtensionDiffPreviewProps) {
   const additions = lines.filter((line) => line.type === "added").length;
   const deletions = lines.filter((line) => line.type === "removed").length;
 

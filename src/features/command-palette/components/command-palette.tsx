@@ -48,7 +48,7 @@ import Command, {
   useCommandListNavigation,
 } from "@/ui/command";
 import { Kbd, KbdGroup } from "@/ui/kbd";
-import { SearchMatchHighlight } from "@/ui/search-match-highlight";
+import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import Keybinding from "@/features/keymaps/components/keybinding";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createDatabaseActions } from "../constants/database-actions";

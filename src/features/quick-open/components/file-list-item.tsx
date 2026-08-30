@@ -1,7 +1,7 @@
 import { ClockIcon } from "@/ui/icons";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { CommandItemBadge, CommandItemRow } from "@/ui/command";
-import { SearchMatchHighlight } from "@/ui/search-match-highlight";
+import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import { getDirectoryPath } from "@/utils/path-helpers";
 import type { FileCategory, FileItem } from "@/features/file-search/types/file-search.types";
 
