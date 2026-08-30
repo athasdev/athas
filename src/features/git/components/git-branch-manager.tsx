@@ -581,7 +581,7 @@ const GitBranchManager = ({
           <span className="min-w-0 truncate">{currentBranch}</span>
           <ChevronExpandYIcon className="text-subtle-foreground" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-64">
+        <DropdownMenuContent align="start" viewport="searchable" className="w-64">
           <DropdownMenuSearch
             value={branchQuery}
             onChange={(event) => setBranchQuery(event.target.value)}

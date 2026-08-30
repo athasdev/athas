@@ -21,6 +21,17 @@ import Keybinding from "@/features/keymaps/components/keybinding";
 
 const menuSurfaceVariants = cva(
   "max-h-(--available-height) w-fit min-w-32 max-w-[min(480px,calc(100vw-16px))] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-surface/98 p-1 font-sans text-subtle-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm ui-text-chrome",
+  {
+    variants: {
+      viewport: {
+        default: "",
+        searchable: "max-h-80 scrollbar-gutter-stable",
+      },
+    },
+    defaultVariants: {
+      viewport: "default",
+    },
+  },
 );
 
 const menuItemVariants = cva(
@@ -714,6 +725,7 @@ function DropdownMenuTrigger(props: DropdownMenuPrimitive.Trigger.Props) {
 
 function DropdownMenuSearch({
   className,
+  containerClassName,
   onKeyDown,
   leftIcon = Search,
   variant = "ghost",
@@ -724,6 +736,7 @@ function DropdownMenuSearch({
       data-slot="dropdown-menu-search"
       leftIcon={leftIcon}
       variant={variant}
+      containerClassName={cn("sticky top-0 z-20 bg-surface/98", containerClassName)}
       className={cn("ui-text-chrome", className)}
       aria-label={props["aria-label"] ?? props.placeholder ?? "Search menu"}
       onKeyDown={(event) => {
@@ -739,7 +752,9 @@ type DropdownMenuContentProps = DropdownMenuPrimitive.Popup.Props &
   Pick<
     DropdownMenuPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "collisionPadding"
-  >;
+  > & {
+    viewport?: "default" | "searchable";
+  };
 
 function DropdownMenuContent({
   className,
@@ -748,6 +763,7 @@ function DropdownMenuContent({
   side = "bottom",
   sideOffset = 4,
   collisionPadding = 8,
+  viewport = "default",
   ...props
 }: DropdownMenuContentProps) {
   return (
@@ -763,7 +779,7 @@ function DropdownMenuContent({
         <DropdownMenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn(
-            menuSurfaceVariants(),
+            menuSurfaceVariants({ viewport }),
             "z-10070 duration-75 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
             className,
           )}
@@ -935,6 +951,7 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       nativeButton={appearance === "action"}
+      openOnHover={appearance === "item"}
       className={cn(
         appearance === "item" && menuItemVariants(),
         appearance === "item" && "data-inset:pl-8 data-open:bg-accent data-open:text-foreground",

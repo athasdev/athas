@@ -220,7 +220,7 @@ export function ProjectSwitcher({
             </Button>
           }
         />
-        <DropdownMenuContent side="bottom" align="start" className="w-64">
+        <DropdownMenuContent side="bottom" align="start" viewport="searchable" className="w-64">
           <DropdownMenuSearch
             value={query}
             onChange={(event) => setQuery(event.target.value)}

@@ -18,6 +18,10 @@ const branchManagerSource = readFileSync(
   fileURLToPath(new URL("../../git/components/git-branch-manager.tsx", import.meta.url)),
   "utf8",
 );
+const dropdownSource = readFileSync(
+  fileURLToPath(new URL("../../../ui/dropdown.tsx", import.meta.url)),
+  "utf8",
+);
 
 describe("title bar controls", () => {
   it("places project and branch selectors after the activity sidebar toggle", () => {
@@ -68,9 +72,16 @@ describe("title bar controls", () => {
   it("uses searchable anchored menus for title bar project and branch selection", () => {
     expect(projectSwitcherSource).toContain("<DropdownMenuSearch");
     expect(projectSwitcherSource).toContain('placeholder="Search projects"');
+    expect(projectSwitcherSource).toContain('viewport="searchable"');
     expect(branchManagerSource).toContain('if (triggerMode === "branch")');
     expect(branchManagerSource).toContain('placeholder="Search branches"');
+    expect(branchManagerSource).toContain('viewport="searchable"');
     expect(branchManagerSource).toContain("<BranchDropdownActions");
     expect(branchManagerSource).toContain("New branch…");
+    expect(dropdownSource).toContain('searchable: "max-h-80 scrollbar-gutter-stable"');
+    expect(dropdownSource).toContain(
+      'containerClassName={cn("sticky top-0 z-20 bg-surface/98", containerClassName)}',
+    );
+    expect(dropdownSource).toContain('openOnHover={appearance === "item"}');
   });
 });
