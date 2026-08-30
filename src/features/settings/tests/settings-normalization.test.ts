@@ -154,6 +154,18 @@ describe("settings normalization", () => {
     ).toEqual(["agents", "terminals"]);
   });
 
+  it("normalizes hidden Source Control submenu items", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      hiddenGitSidebarItems: ["worktrees", "unknown", "tags", "worktrees"] as never,
+    });
+
+    expect(normalized.hiddenGitSidebarItems).toEqual(["worktrees", "tags"]);
+    expect(
+      normalizeSettingValue("hiddenGitSidebarItems", ["stashes", 42, "stashes"] as never),
+    ).toEqual(["stashes"]);
+  });
+
   it("drops legacy editor engine settings", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),

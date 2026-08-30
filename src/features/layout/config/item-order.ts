@@ -9,9 +9,19 @@ export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "extensions",
 ] as const;
 export const GIT_SIDEBAR_TAB_IDS = ["changes", "history", "review"] as const;
+export const GIT_SIDEBAR_ITEM_IDS = [
+  ...GIT_SIDEBAR_TAB_IDS,
+  "repositories",
+  "branches",
+  "worktrees",
+  "remotes",
+  "tags",
+  "stashes",
+] as const;
 
 export type SidebarActivityItemId = (typeof SIDEBAR_ACTIVITY_ITEM_IDS)[number];
 export type GitSidebarTabId = (typeof GIT_SIDEBAR_TAB_IDS)[number];
+export type GitSidebarItemId = (typeof GIT_SIDEBAR_ITEM_IDS)[number];
 
 export function normalizeItemOrder<T extends string>(
   persistedOrder: readonly T[] | undefined,

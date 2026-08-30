@@ -1,5 +1,10 @@
 import { useCallback, useMemo, type ReactNode } from "react";
-import { GIT_SIDEBAR_TAB_IDS, normalizeItemOrder } from "@/features/layout/config/item-order";
+import {
+  GIT_SIDEBAR_ITEM_IDS,
+  GIT_SIDEBAR_TAB_IDS,
+  type GitSidebarItemId,
+  normalizeItemOrder,
+} from "@/features/layout/config/item-order";
 import {
   type DockerActivitySection,
   type GitActivitySection,
@@ -16,6 +21,7 @@ import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import {
   BoxIcon,
+  ArchiveIcon,
   BugBeetleIcon,
   ChatCircleTextIcon,
   CloudArrowDownIcon,
@@ -31,8 +37,10 @@ import {
   GithubLogoIcon,
   LightningIcon,
   ListChecksIcon,
+  NetworkIcon,
   NodesIcon,
   StackIcon as LayersIcon,
+  TagIcon,
 } from "@/ui/icons";
 
 export interface ActivityNavigationSubmenuItem {
@@ -53,6 +61,8 @@ export interface ActivityNavigationItem {
   ariaLabel: string;
   shortcut?: string;
   submenuItems?: ActivityNavigationSubmenuItem[];
+  hiddenSubmenuItemIds?: string[];
+  onSubmenuItemVisibleChange?: (itemId: string, visible: boolean) => void;
 }
 
 interface ActivityNavigationItemOptions {
@@ -72,7 +82,10 @@ interface ActivityNavigationItemOptions {
 
 type GitNavigationAction =
   | { type: "show-tab"; tab: GitActivitySection }
-  | { type: "manage-branches"; tab: "repositories" | "branches" | "worktrees" };
+  | { type: "manage-branches"; tab: "repositories" | "branches" | "worktrees" }
+  | { type: "manage-remotes" }
+  | { type: "manage-tags" }
+  | { type: "view-stashes" };
 
 function orderItems<T extends { id: string }>(items: T[], orderedIds: string[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -102,6 +115,7 @@ export function useActivityNavigationItems({
     (state) => state.settings.sidebarActivityItemsOrder,
   );
   const gitSidebarTabOrder = useSettingsStore((state) => state.settings.gitSidebarTabOrder);
+  const hiddenGitSidebarItems = useSettingsStore((state) => state.settings.hiddenGitSidebarItems);
   const githubSidebarSectionOrder = useSettingsStore(
     (state) => state.settings.githubSidebarSectionOrder,
   );
@@ -122,6 +136,18 @@ export function useActivityNavigationItems({
     },
     [isGitViewActive, isSidebarVisible, onViewChange, setGitSection],
   );
+
+  const setGitSubmenuItemVisible = useCallback((itemId: string, visible: boolean) => {
+    if (!GIT_SIDEBAR_ITEM_IDS.includes(itemId as GitSidebarItemId)) return;
+
+    const settingsStore = useSettingsStore.getState();
+    const currentHiddenItems = settingsStore.settings.hiddenGitSidebarItems;
+    const nextHiddenItems = visible
+      ? currentHiddenItems.filter((hiddenItemId) => hiddenItemId !== itemId)
+      : Array.from(new Set([...currentHiddenItems, itemId as GitSidebarItemId]));
+
+    void settingsStore.actions.updateSetting("hiddenGitSidebarItems", nextHiddenItems);
+  }, []);
 
   const openGitHubSubview = useCallback(
     (section: "pull-requests" | "issues" | "actions") => {
@@ -182,6 +208,51 @@ export function useActivityNavigationItems({
     [gitSection, gitSidebarTabOrder, openGitSubview],
   );
 
+  const gitSubmenuItems = useMemo<ActivityNavigationSubmenuItem[]>(
+    () => [
+      ...gitSectionItems,
+      {
+        id: "repositories",
+        label: "Repositories",
+        icon: <FolderOpenIcon />,
+        separatorBefore: true,
+        onClick: () => openGitSubview({ type: "manage-branches", tab: "repositories" }),
+      },
+      {
+        id: "branches",
+        label: "Branches",
+        icon: <GitBranchIcon />,
+        onClick: () => openGitSubview({ type: "manage-branches", tab: "branches" }),
+      },
+      {
+        id: "worktrees",
+        label: "Worktrees",
+        icon: <NodesIcon />,
+        onClick: () => openGitSubview({ type: "manage-branches", tab: "worktrees" }),
+      },
+      {
+        id: "remotes",
+        label: "Remotes",
+        icon: <NetworkIcon />,
+        separatorBefore: true,
+        onClick: () => openGitSubview({ type: "manage-remotes" }),
+      },
+      {
+        id: "tags",
+        label: "Tags",
+        icon: <TagIcon />,
+        onClick: () => openGitSubview({ type: "manage-tags" }),
+      },
+      {
+        id: "stashes",
+        label: "Stashes",
+        icon: <ArchiveIcon />,
+        onClick: () => openGitSubview({ type: "view-stashes" }),
+      },
+    ],
+    [gitSectionItems, openGitSubview],
+  );
+
   const githubSectionItems = useMemo(() => {
     const labels: Record<GitHubActivitySection, string> = {
       "pull-requests": "Pull Requests",
@@ -228,40 +299,9 @@ export function useActivityNavigationItems({
               onClick: () => onViewChange("git"),
               ariaLabel: "Git Source Control",
               shortcut: "Mod+Shift+G",
-              submenuItems: [
-                ...gitSectionItems,
-                {
-                  id: "repositories",
-                  label: "Repositories",
-                  icon: <FolderOpenIcon />,
-                  separatorBefore: true,
-                  onClick: () =>
-                    openGitSubview({
-                      type: "manage-branches",
-                      tab: "repositories",
-                    }),
-                },
-                {
-                  id: "branches",
-                  label: "Branches",
-                  icon: <GitBranchIcon />,
-                  onClick: () =>
-                    openGitSubview({
-                      type: "manage-branches",
-                      tab: "branches",
-                    }),
-                },
-                {
-                  id: "worktrees",
-                  label: "Worktrees",
-                  icon: <NodesIcon />,
-                  onClick: () =>
-                    openGitSubview({
-                      type: "manage-branches",
-                      tab: "worktrees",
-                    }),
-                },
-              ],
+              submenuItems: gitSubmenuItems,
+              hiddenSubmenuItemIds: hiddenGitSidebarItems,
+              onSubmenuItemVisibleChange: setGitSubmenuItemVisible,
             } satisfies ActivityNavigationItem,
           ]
         : []),
@@ -378,7 +418,8 @@ export function useActivityNavigationItems({
       dockerSection,
       extensionViews,
       githubSectionItems,
-      gitSectionItems,
+      gitSubmenuItems,
+      hiddenGitSidebarItems,
       isExtensionsActive,
       isDatabasesActive,
       isDebuggerActive,
@@ -391,6 +432,7 @@ export function useActivityNavigationItems({
       openDockerSubview,
       onViewChange,
       openGitSubview,
+      setGitSubmenuItemVisible,
     ],
   );
 

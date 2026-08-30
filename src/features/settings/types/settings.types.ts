@@ -1,6 +1,10 @@
 import type { CoreFeaturesState } from "./feature.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
-import type { GitSidebarTabId, SidebarActivityItemId } from "@/features/layout/config/item-order";
+import type {
+  GitSidebarItemId,
+  GitSidebarTabId,
+  SidebarActivityItemId,
+} from "@/features/layout/config/item-order";
 
 export type Theme = string;
 export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
@@ -200,6 +204,7 @@ export interface Settings {
   rememberLastGitPanelMode: boolean;
   gitLastPanelMode: GitSidebarTabId;
   gitSidebarTabOrder: GitSidebarTabId[];
+  hiddenGitSidebarItems: GitSidebarItemId[];
   githubSidebarSectionOrder: Array<"pull-requests" | "issues" | "actions">;
   enableInlineGitBlame: boolean;
   // Telemetry

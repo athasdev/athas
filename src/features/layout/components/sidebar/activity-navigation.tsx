@@ -2,11 +2,19 @@ import { Fragment } from "react";
 import type { ActivityNavigationItem } from "@/features/layout/hooks/use-activity-navigation-items";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import { SidebarIconButton, SidebarListItem, SidebarMenuContent } from "@/ui/sidebar";
+import { DotsThreeIcon } from "@/ui/icons";
+import {
+  SidebarIconButton,
+  SidebarListActionRow,
+  SidebarListItem,
+  SidebarMenuContent,
+} from "@/ui/sidebar";
 import { Separator } from "@/ui/separator";
 import Tooltip from "@/ui/tooltip";
 
@@ -20,6 +28,38 @@ function ActivityNavigationMenu({ item }: { item: ActivityNavigationItem }) {
       </DropdownMenuItem>
     </Fragment>
   ));
+}
+
+function ActivityNavigationVisibilityMenu({ item }: { item: ActivityNavigationItem }) {
+  if (!item.onSubmenuItemVisibleChange) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<SidebarIconButton aria-label={`More actions for ${item.label}`} />}
+      >
+        <DotsThreeIcon className="rotate-90" />
+      </DropdownMenuTrigger>
+      <SidebarMenuContent>
+        <DropdownMenuLabel>Visible Items</DropdownMenuLabel>
+        {item.submenuItems?.map((submenuItem) => (
+          <Fragment key={submenuItem.id}>
+            {submenuItem.separatorBefore ? <DropdownMenuSeparator /> : null}
+            <DropdownMenuCheckboxItem
+              checked={!item.hiddenSubmenuItemIds?.includes(submenuItem.id)}
+              closeOnClick={false}
+              onCheckedChange={(checked) =>
+                item.onSubmenuItemVisibleChange?.(submenuItem.id, checked)
+              }
+            >
+              {submenuItem.icon}
+              {submenuItem.label}
+            </DropdownMenuCheckboxItem>
+          </Fragment>
+        ))}
+      </SidebarMenuContent>
+    </DropdownMenu>
+  );
 }
 
 function ActivityNavigationList({
@@ -66,27 +106,40 @@ function ActivityNavigationList({
           );
         }
 
+        const navigationItem = (
+          <SidebarListItem
+            active={item.active}
+            leading={item.icon}
+            onClick={item.onClick}
+            aria-label={item.ariaLabel}
+            aria-current={item.active ? "page" : undefined}
+          >
+            {item.label}
+          </SidebarListItem>
+        );
+        const visibleSubmenuItems = item.submenuItems?.filter(
+          (submenuItem) => !item.hiddenSubmenuItemIds?.includes(submenuItem.id),
+        );
+
         return (
           <div key={item.id} className="flex w-full min-w-0 flex-col gap-chrome-tight">
-            <SidebarListItem
-              active={item.active}
-              leading={item.icon}
-              onClick={item.onClick}
-              aria-label={item.ariaLabel}
-              aria-current={item.active ? "page" : undefined}
-            >
-              {item.label}
-            </SidebarListItem>
-            {item.active && item.submenuItems?.length ? (
+            {item.onSubmenuItemVisibleChange ? (
+              <SidebarListActionRow actions={<ActivityNavigationVisibilityMenu item={item} />}>
+                {navigationItem}
+              </SidebarListActionRow>
+            ) : (
+              navigationItem
+            )}
+            {item.active && visibleSubmenuItems?.length ? (
               <div
                 data-slot="activity-sidebar-subnavigation"
                 role="group"
                 aria-label={`${item.label} sections`}
                 className="flex w-full min-w-0 flex-col gap-chrome-tight pl-4"
               >
-                {item.submenuItems.map((submenuItem) => (
+                {visibleSubmenuItems.map((submenuItem, index) => (
                   <Fragment key={submenuItem.id}>
-                    {submenuItem.separatorBefore ? (
+                    {submenuItem.separatorBefore && index > 0 ? (
                       <Separator className="my-chrome-tight opacity-60" />
                     ) : null}
                     <SidebarListItem

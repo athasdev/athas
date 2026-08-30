@@ -14,12 +14,13 @@ import {
 } from "@/features/settings/config/typography-defaults";
 import { normalizeConfiguredFontFamily } from "@/features/settings/lib/font-family-resolution";
 import {
+  GIT_SIDEBAR_ITEM_IDS,
   GIT_SIDEBAR_TAB_IDS,
   SIDEBAR_ACTIVITY_ITEM_IDS,
   normalizeItemOrder,
 } from "@/features/layout/config/item-order";
 import { normalizeUiFontSize } from "@/features/settings/lib/ui-font-size";
-import type { GitSidebarTabId } from "@/features/layout/config/item-order";
+import type { GitSidebarItemId, GitSidebarTabId } from "@/features/layout/config/item-order";
 import type { Settings, SettingsSection } from "@/features/settings/types/settings.types";
 
 const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
@@ -462,6 +463,11 @@ export function normalizeSettings(settings: Settings): Settings {
     normalizedSettings.gitSidebarTabOrder,
     GIT_SIDEBAR_TAB_IDS,
   );
+  normalizedSettings.hiddenGitSidebarItems = normalizeStringList(
+    normalizedSettings.hiddenGitSidebarItems,
+  ).filter((itemId): itemId is GitSidebarItemId =>
+    GIT_SIDEBAR_ITEM_IDS.includes(itemId as GitSidebarItemId),
+  );
 
   normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
   normalizedSettings.fontFamily = normalizeConfiguredFontFamily(
@@ -626,6 +632,12 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "hiddenSidebarActivityItems" || key === "collapsedActivityRailSections") {
     return normalizeStringList(value) as Settings[K];
+  }
+
+  if (key === "hiddenGitSidebarItems") {
+    return normalizeStringList(value).filter((itemId): itemId is GitSidebarItemId =>
+      GIT_SIDEBAR_ITEM_IDS.includes(itemId as GitSidebarItemId),
+    ) as Settings[K];
   }
 
   if (key === "fileTreeIndentSize") {

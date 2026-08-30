@@ -45,6 +45,7 @@ describe("default settings", () => {
     expect(settings.showActivityRailTerminals).toBe(true);
     expect(settings.showActivityRailProjectIcons).toBe(true);
     expect(settings.hiddenSidebarActivityItems).toEqual([]);
+    expect(settings.hiddenGitSidebarItems).toEqual([]);
     expect(settings.collapsedActivityRailSections).toEqual([]);
     expect(settings.sidebarWidth).toBe(220);
     expect(settings.rightSidebarWidth).toBe(220);

@@ -175,6 +175,7 @@ export const defaultSettings: Settings = {
   rememberLastGitPanelMode: false,
   gitLastPanelMode: "changes",
   gitSidebarTabOrder: [...GIT_SIDEBAR_TAB_IDS],
+  hiddenGitSidebarItems: [],
   githubSidebarSectionOrder: ["pull-requests", "issues", "actions"],
   enableInlineGitBlame: true,
   // Telemetry
@@ -193,6 +194,7 @@ export function getDefaultSettingsSnapshot(): Settings {
     hiddenDirectoryPatterns: [...defaultSettings.hiddenDirectoryPatterns],
     sidebarActivityItemsOrder: [...defaultSettings.sidebarActivityItemsOrder],
     hiddenSidebarActivityItems: [...defaultSettings.hiddenSidebarActivityItems],
+    hiddenGitSidebarItems: [...defaultSettings.hiddenGitSidebarItems],
     collapsedActivityRailSections: [...defaultSettings.collapsedActivityRailSections],
     aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),
     v0DesignSystems: defaultSettings.v0DesignSystems.map((profile) => ({ ...profile })),

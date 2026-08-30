@@ -134,6 +134,7 @@ type SyncableSettingsKey =
   | "rememberLastGitPanelMode"
   | "gitLastPanelMode"
   | "gitSidebarTabOrder"
+  | "hiddenGitSidebarItems"
   | "githubSidebarSectionOrder"
   | "enableInlineGitBlame"
   | "telemetry";
@@ -254,6 +255,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "rememberLastGitPanelMode",
   "gitLastPanelMode",
   "gitSidebarTabOrder",
+  "hiddenGitSidebarItems",
   "githubSidebarSectionOrder",
   "enableInlineGitBlame",
   "telemetry",

@@ -1,4 +1,4 @@
-export const SETTINGS_SCHEMA_VERSION = 2;
+export const SETTINGS_SCHEMA_VERSION = 3;
 export const SETTINGS_SCHEMA_VERSION_KEY = "settingsSchemaVersion";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -20,6 +20,17 @@ export function migrateSettingsRecord(
       ...(isRecord(migratedSettings.coreFeatures) ? migratedSettings.coreFeatures : {}),
       debugger: true,
     };
+  }
+
+  if (schemaVersion < 3) {
+    const hiddenGitSidebarItems = Array.isArray(migratedSettings.hiddenGitSidebarItems)
+      ? migratedSettings.hiddenGitSidebarItems
+      : [];
+    migratedSettings.hiddenGitSidebarItems =
+      migratedSettings.showActivityRailWorktrees === false
+        ? Array.from(new Set([...hiddenGitSidebarItems, "worktrees"]))
+        : hiddenGitSidebarItems;
+    delete migratedSettings.showActivityRailWorktrees;
   }
 
   return migratedSettings;

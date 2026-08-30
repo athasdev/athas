@@ -41,6 +41,23 @@ const dockerItems: ActivityNavigationItem[] = [
   },
 ];
 
+const sourceControlItems: ActivityNavigationItem[] = [
+  {
+    id: "git",
+    label: "Source Control",
+    icon: <span>git icon</span>,
+    active: true,
+    onClick: () => {},
+    ariaLabel: "Git Source Control",
+    submenuItems: [
+      { id: "changes", label: "Changes", onClick: () => {} },
+      { id: "worktrees", label: "Worktrees", onClick: () => {} },
+    ],
+    hiddenSubmenuItemIds: ["worktrees"],
+    onSubmenuItemVisibleChange: () => {},
+  },
+];
+
 describe("activity navigation", () => {
   it("uses an icon-only navigation contract in the collapsed rail", () => {
     const markup = renderToStaticMarkup(<ActivityRailNavigation items={items} />);
@@ -76,5 +93,13 @@ describe("activity navigation", () => {
 
     expect(markup).not.toContain('data-slot="activity-sidebar-subnavigation"');
     expect(markup).not.toContain(">Resources</span>");
+  });
+
+  it("shows submenu visibility controls and hides deselected rows", () => {
+    const markup = renderToStaticMarkup(<ActivitySidebarNavigation items={sourceControlItems} />);
+
+    expect(markup).toContain('aria-label="More actions for Source Control"');
+    expect(markup).toContain(">Changes</span>");
+    expect(markup).not.toContain(">Worktrees</span>");
   });
 });

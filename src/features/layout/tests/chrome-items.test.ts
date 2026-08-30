@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vite-plus/test";
-import { GIT_SIDEBAR_TAB_IDS, SIDEBAR_ACTIVITY_ITEM_IDS } from "../config/item-order";
+import {
+  GIT_SIDEBAR_ITEM_IDS,
+  GIT_SIDEBAR_TAB_IDS,
+  SIDEBAR_ACTIVITY_ITEM_IDS,
+} from "../config/item-order";
 import { orderChromeItems, type ChromeItem } from "../utils/chrome-items";
 
 type ItemId = "first" | "second" | "third";
@@ -39,5 +43,16 @@ describe("orderChromeItems", () => {
       "extensions",
     ]);
     expect(GIT_SIDEBAR_TAB_IDS).toEqual(["changes", "history", "review"]);
+    expect(GIT_SIDEBAR_ITEM_IDS).toEqual([
+      "changes",
+      "history",
+      "review",
+      "repositories",
+      "branches",
+      "worktrees",
+      "remotes",
+      "tags",
+      "stashes",
+    ]);
   });
 });
