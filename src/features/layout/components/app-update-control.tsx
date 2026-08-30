@@ -3,7 +3,7 @@ import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
-import { CalendarIcon, ClockIcon, DownloadIcon, FileTextIcon, XCircleIcon } from "@/ui/icons";
+import { ClockIcon, DownloadIcon, FileTextIcon } from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
 
 export function AppUpdateControl() {
@@ -15,9 +15,7 @@ export function AppUpdateControl() {
     updateInfo,
     downloadProgress,
     onDownload: downloadAndInstall,
-    onDismiss: dismissUpdate,
     onRemindLater,
-    onSkipVersion,
     onViewReleaseNotes,
   } = useAutoUpdate();
   const [isUpdateMenuOpen, setIsUpdateMenuOpen] = useState(false);
@@ -42,35 +40,13 @@ export function AppUpdateControl() {
       },
       {
         id: "download-later",
-        label: "Download Later",
+        label: "Download later",
         icon: <ClockIcon />,
-        onClick: dismissUpdate,
-        disabled: updateBusy,
-      },
-      {
-        id: "remind-later",
-        label: "Remind Me Tomorrow",
-        icon: <CalendarIcon />,
         onClick: onRemindLater,
         disabled: updateBusy,
       },
-      {
-        id: "skip-version",
-        label: `Skip ${updateInfo?.version ?? "Version"}`,
-        icon: <XCircleIcon />,
-        onClick: onSkipVersion,
-        disabled: updateBusy,
-      },
     ],
-    [
-      dismissUpdate,
-      downloadAndInstall,
-      onRemindLater,
-      onSkipVersion,
-      onViewReleaseNotes,
-      updateBusy,
-      updateInfo?.version,
-    ],
+    [downloadAndInstall, onRemindLater, onViewReleaseNotes, updateBusy, updateInfo?.version],
   );
 
   if (!showUpdateIndicator || !updateInfo) return null;
