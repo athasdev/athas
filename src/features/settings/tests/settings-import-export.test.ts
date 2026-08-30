@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { defaultSettings } from "@/features/settings/config/default-settings";
+import { SETTINGS_SCHEMA_VERSION } from "@/features/settings/lib/settings-migrations";
 import {
   createSettingsExportPayload,
   parseSettingsImportJson,
@@ -13,7 +14,7 @@ describe("settings import/export", () => {
     });
 
     expect(payload.format).toBe("athas.settings");
-    expect(payload.version).toBe(2);
+    expect(payload.version).toBe(SETTINGS_SCHEMA_VERSION);
     expect(payload.settings.fontSize).toBe(15);
   });
 
