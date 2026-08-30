@@ -11,6 +11,39 @@
   background-color: var(--background);
 }
 
+.monaco-editor-shell[data-breakpoint-gutter] .monaco-editor .glyph-margin {
+  cursor: pointer;
+}
+
+.monaco-editor-shell .monaco-editor .debug-breakpoint-glyph {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.monaco-editor-shell .monaco-editor .debug-breakpoint-glyph::before {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--destructive);
+  content: "";
+}
+
+.monaco-editor-shell .monaco-editor .debug-breakpoint-glyph-preview::before {
+  opacity: 0.45;
+}
+
+.monaco-editor-shell .monaco-editor .debug-breakpoint-glyph-disabled::before {
+  border: 1px solid var(--muted-foreground);
+  background: transparent;
+}
+
+.monaco-editor-shell .monaco-editor .debug-breakpoint-glyph-unverified::before {
+  border: 1px solid var(--destructive);
+  background: transparent;
+}
+
 .monaco-editor-shell .monaco-scrollable-element > .scrollbar {
   background: transparent !important;
 }

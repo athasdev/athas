@@ -30,6 +30,7 @@ import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
+import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { EditorSelectionAgentAction } from "@/features/editor/components/selection/editor-selection-agent-action";
 import { InlineEditPopover } from "@/features/editor/inline-edit/inline-edit-popover";
 import { useInlineEdit } from "@/features/editor/inline-edit/use-inline-edit";
@@ -90,6 +91,24 @@ registerMonacoCodeLensProvider();
 
 const EMPTY_DIAGNOSTICS: Diagnostic[] = [];
 const INACTIVE_CURSOR_POSITION: Position = { line: 0, column: 0, offset: 0 };
+
+function createBreakpointHoverDecorations(
+  hoveredLine: number | null,
+  breakpointLines: ReadonlySet<number>,
+): Monaco.editor.IModelDeltaDecoration[] {
+  if (hoveredLine === null || breakpointLines.has(hoveredLine)) return [];
+
+  return [
+    {
+      range: new MonacoRange(hoveredLine + 1, 1, hoveredLine + 1, 1),
+      options: {
+        glyphMarginClassName: "debug-breakpoint-glyph debug-breakpoint-glyph-preview",
+        glyphMarginHoverMessage: { value: "Add breakpoint" },
+        stickiness: monacoEditor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+      },
+    },
+  ];
+}
 
 interface SelectionAgentActionState {
   anchorRect: { x: number; y: number; width: number; height: number };
@@ -156,6 +175,10 @@ export function MonacoEditor({
   const previousContentRef = useRef("");
   const pendingLocalContentSnapshotsRef = useRef<string[]>([]);
   const decorationsRef = useRef<string[]>([]);
+  const breakpointDecorationRef = useRef<string[]>([]);
+  const breakpointHoverDecorationRef = useRef<string[]>([]);
+  const hoveredBreakpointLineRef = useRef<number | null>(null);
+  const breakpointLinesRef = useRef<Set<number>>(new Set());
   const gitBlameDecorationRef = useRef<string[]>([]);
   const gitBlameRenderFrameRef = useRef<number | null>(null);
   const renderedGitBlameKeyRef = useRef<string | null>(null);
@@ -200,12 +223,25 @@ export function MonacoEditor({
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
   const codeLens = useSettingsStore((state) => state.settings.codeLens);
   const semanticTokens = useSettingsStore((state) => state.settings.semanticTokens);
+  const debuggerEnabled = useSettingsStore((state) => state.settings.coreFeatures.debugger);
   const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const vimCurrentMode = useVimStore.use.mode();
+  const breakpoints = useDebuggerStore.use.breakpoints();
+  const breakpointsForFile = useMemo(
+    () => breakpoints.filter((breakpoint) => breakpoint.filePath === filePath),
+    [breakpoints, filePath],
+  );
+  const showBreakpointGutter =
+    debuggerEnabled &&
+    Boolean(filePath) &&
+    !buffer?.isVirtual &&
+    !readOnly &&
+    !isPreviewMode &&
+    !lineNumberMap;
   const inlineEditRequested = useInlineEditToolbarStore.use.isVisible();
   const cursorPosition = useEditorStateStore((state) =>
     isActiveSurface && vimModeEnabled && vimRelativeLineNumbers
@@ -648,6 +684,7 @@ export function MonacoEditor({
       smoothScrolling: editorSmoothScrolling,
       scrollBeyondLastLine: editorScrollBeyondLastLine,
       padding: { bottom: getEditorBottomScrollPadding(container.clientHeight) },
+      glyphMargin: showBreakpointGutter,
       lineNumbers: lineNumbers ? lineNumberFormatter : "off",
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
@@ -842,7 +879,54 @@ export function MonacoEditor({
     window.addEventListener("mouseup", handleSelectionMouseUp, true);
 
     const disposables = [
-      editor.onMouseDown(() => {
+      editor.onMouseMove((event) => {
+        const isBreakpointGutterTarget =
+          event.target.type === monacoEditor.MouseTargetType.GUTTER_GLYPH_MARGIN ||
+          event.target.type === monacoEditor.MouseTargetType.GUTTER_LINE_NUMBERS;
+        const hoveredLine =
+          showBreakpointGutter && isBreakpointGutterTarget && event.target.position
+            ? event.target.position.lineNumber - 1
+            : null;
+
+        if (hoveredBreakpointLineRef.current === hoveredLine) return;
+        hoveredBreakpointLineRef.current = hoveredLine;
+
+        const decorations = createBreakpointHoverDecorations(
+          hoveredLine,
+          breakpointLinesRef.current,
+        );
+
+        breakpointHoverDecorationRef.current = editor.deltaDecorations(
+          breakpointHoverDecorationRef.current,
+          decorations,
+        );
+      }),
+      editor.onMouseLeave(() => {
+        hoveredBreakpointLineRef.current = null;
+        breakpointHoverDecorationRef.current = editor.deltaDecorations(
+          breakpointHoverDecorationRef.current,
+          [],
+        );
+      }),
+      editor.onMouseDown((event) => {
+        if (
+          showBreakpointGutter &&
+          event.event.leftButton &&
+          event.target.type === monacoEditor.MouseTargetType.GUTTER_GLYPH_MARGIN &&
+          event.target.position
+        ) {
+          event.event.preventDefault();
+          event.event.stopPropagation();
+          breakpointHoverDecorationRef.current = editor.deltaDecorations(
+            breakpointHoverDecorationRef.current,
+            [],
+          );
+          useDebuggerStore
+            .getState()
+            .actions.toggleBreakpoint(filePath, event.target.position.lineNumber - 1);
+          return;
+        }
+
         isPointerSelectingRef.current = true;
         setSelectionAgentAction(null);
       }),
@@ -989,6 +1073,9 @@ export function MonacoEditor({
         gitBlameRenderFrameRef.current = null;
       }
       gitBlameDecorationRef.current = [];
+      breakpointDecorationRef.current = [];
+      breakpointHoverDecorationRef.current = [];
+      hoveredBreakpointLineRef.current = null;
       renderedGitBlameKeyRef.current = null;
       createdEditorDisposable.dispose();
       if (editorRef.current === editor) editorRef.current = null;
@@ -1028,12 +1115,61 @@ export function MonacoEditor({
     selectEntireModel,
     setScrollForBuffer,
     setViewportHeight,
+    showBreakpointGutter,
     syncCursorAndSelection,
     tabSize,
     themeId,
     viewStateKey,
     wordWrap,
   ]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    const model = modelRef.current;
+    if (!editor || !model || model.isDisposed()) return;
+
+    breakpointLinesRef.current = new Set(breakpointsForFile.map((breakpoint) => breakpoint.line));
+
+    const decorations: Monaco.editor.IModelDeltaDecoration[] = showBreakpointGutter
+      ? breakpointsForFile
+          .filter((breakpoint) => breakpoint.line >= 0 && breakpoint.line < model.getLineCount())
+          .map((breakpoint) => {
+            let glyphMarginClassName = "debug-breakpoint-glyph";
+            if (!breakpoint.enabled) {
+              glyphMarginClassName += " debug-breakpoint-glyph-disabled";
+            } else if (breakpoint.verified === false) {
+              glyphMarginClassName += " debug-breakpoint-glyph-unverified";
+            }
+
+            return {
+              range: new MonacoRange(breakpoint.line + 1, 1, breakpoint.line + 1, 1),
+              options: {
+                glyphMarginClassName,
+                glyphMarginHoverMessage: {
+                  value:
+                    breakpoint.message ??
+                    (breakpoint.enabled ? "Breakpoint" : "Disabled breakpoint"),
+                },
+                stickiness: monacoEditor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+              },
+            };
+          })
+      : [];
+
+    breakpointDecorationRef.current = editor.deltaDecorations(
+      breakpointDecorationRef.current,
+      decorations,
+    );
+
+    const hoveredLine = hoveredBreakpointLineRef.current;
+    const hoverDecorations = showBreakpointGutter
+      ? createBreakpointHoverDecorations(hoveredLine, breakpointLinesRef.current)
+      : [];
+    breakpointHoverDecorationRef.current = editor.deltaDecorations(
+      breakpointHoverDecorationRef.current,
+      hoverDecorations,
+    );
+  }, [breakpointsForFile, showBreakpointGutter]);
 
   useLayoutEffect(() => {
     if (!isActiveSurface) return;
@@ -1331,6 +1467,7 @@ export function MonacoEditor({
       tabSize,
       readOnly: readOnly || isPreviewMode,
       domReadOnly: readOnly || isPreviewMode,
+      glyphMargin: showBreakpointGutter,
       lineNumbers: lineNumbers ? lineNumberFormatter : "off",
       minimap: { enabled: minimapEnabled },
       fontLigatures: editorFontLigatures,
@@ -1394,6 +1531,7 @@ export function MonacoEditor({
     renderWhitespace,
     scrollable,
     semanticTokens,
+    showBreakpointGutter,
     tabSize,
     themeId,
     vimCurrentMode,
@@ -1555,6 +1693,7 @@ export function MonacoEditor({
     <>
       <div
         className={`monaco-editor-shell absolute inset-0 min-h-0 bg-background ${className ?? ""}`}
+        data-breakpoint-gutter={showBreakpointGutter ? "" : undefined}
         style={shellStyle}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
