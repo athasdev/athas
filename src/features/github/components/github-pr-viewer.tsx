@@ -6,6 +6,7 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
+import { ResourceDetailLayout, ResourceViewer, ResourceViewerHeader } from "@/ui/resource";
 import { toast } from "sonner";
 import type { Label, PullRequestDetails } from "../types/github.types";
 import type { Commit, FilePatchState, TabType } from "../types/github-pr-viewer.types";
@@ -36,7 +37,6 @@ import {
 } from "./github-pr-inline-action";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubInlineTitle } from "./github-inline-editors";
-import { GitHubDetailLayout, GitHubViewerHeader, GitHubViewerShell } from "./github-viewer-shell";
 
 interface GitHubPRViewerProps {
   prNumber: number;
@@ -498,9 +498,9 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
 
   if (!selectedPRDetails) {
     return (
-      <GitHubViewerShell
+      <ResourceViewer
         header={
-          <GitHubViewerHeader
+          <ResourceViewerHeader
             title={prBuffer?.name || `PR #${prNumber}`}
             meta={detailsError && !isLoadingDetails ? detailsError : `Pull request #${prNumber}`}
             leading={
@@ -525,7 +525,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
         {detailsError && !isLoadingDetails ? null : (
           <ViewerLoadingState label={`Loading PR #${prNumber}`} layout="section" />
         )}
-      </GitHubViewerShell>
+      </ResourceViewer>
     );
   }
 
@@ -546,7 +546,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
         : null;
   const repositoryUrl = pr.url.replace(/\/pull\/\d+$/, "");
   return (
-    <GitHubViewerShell
+    <ResourceViewer
       scrollMode={activeTab === "files" ? "workspace" : "content"}
       contentClassName={
         activeTab === "files" ? "flex min-h-0 flex-1 flex-col px-0 pb-0 sm:px-0" : undefined
@@ -589,7 +589,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       )}
 
       {activeTab === "activity" && (
-        <GitHubDetailLayout
+        <ResourceDetailLayout
           sidebar={
             <GitHubPRSidebar
               pr={pr}
@@ -640,7 +640,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
               onBodySave={(body) => updatePR({ body })}
             />
           </div>
-        </GitHubDetailLayout>
+        </ResourceDetailLayout>
       )}
 
       {activeTab === "files" && (
@@ -660,7 +660,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
           />
         </div>
       )}
-    </GitHubViewerShell>
+    </ResourceViewer>
   );
 });
 

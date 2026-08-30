@@ -4,11 +4,11 @@ import {
   GitPullRequestIcon as GitPullRequest,
 } from "@/ui/icons";
 import { Button } from "@/ui/button";
+import { ResourceDetailSection, ResourceDetailSidebar } from "@/ui/resource";
 import type { Label, PullRequestDetails } from "../types/github.types";
 import { getTimeAgo } from "../utils/github-viewer-utils";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
-import { GitHubDetailSection, GitHubDetailSidebar } from "./github-viewer-shell";
 import { CIStatusIndicator, LabelBadges, LinkedIssuesList, MergeStatusBadge } from "./pr-status";
 
 interface GitHubPRSidebarProps {
@@ -37,23 +37,23 @@ export function GitHubPRSidebar({
   const isClosed = pr.state === "closed";
 
   return (
-    <GitHubDetailSidebar>
-      <GitHubDetailSection label="Status">
+    <ResourceDetailSidebar>
+      <ResourceDetailSection label="Status">
         <div className="flex items-center gap-2">
           <GitPullRequest className={isClosed ? "text-destructive" : "text-success"} />
           <span className="capitalize">{pr.isDraft ? "Draft" : pr.state}</span>
         </div>
-      </GitHubDetailSection>
+      </ResourceDetailSection>
 
-      <GitHubDetailSection label="Merge">
+      <ResourceDetailSection label="Merge">
         <MergeStatusBadge
           mergeStateStatus={pr.mergeStateStatus}
           mergeable={pr.mergeable}
           reviewDecision={pr.reviewDecision}
         />
-      </GitHubDetailSection>
+      </ResourceDetailSection>
 
-      <GitHubDetailSection label="Reviewers">
+      <ResourceDetailSection label="Reviewers">
         {pr.reviewRequests.length > 0 ? (
           <div className="space-y-2">
             {pr.reviewRequests.map((reviewer) => (
@@ -74,9 +74,9 @@ export function GitHubPRSidebar({
         ) : (
           <span className="text-subtle-foreground">{reviewSummary ?? "No reviewers"}</span>
         )}
-      </GitHubDetailSection>
+      </ResourceDetailSection>
 
-      <GitHubDetailSection label="Checks">
+      <ResourceDetailSection label="Checks">
         {pr.statusChecks.length > 0 ? (
           <CIStatusIndicator checks={pr.statusChecks} />
         ) : (
@@ -85,9 +85,9 @@ export function GitHubPRSidebar({
             <span>{checksSummary}</span>
           </div>
         )}
-      </GitHubDetailSection>
+      </ResourceDetailSection>
 
-      <GitHubDetailSection
+      <ResourceDetailSection
         label="Changes"
         action={
           <Button
@@ -108,18 +108,18 @@ export function GitHubPRSidebar({
             <span className="text-git-deleted">-{pr.deletions}</span>
           </span>
         </div>
-      </GitHubDetailSection>
+      </ResourceDetailSection>
 
-      <GitHubDetailSection label="Activity">
+      <ResourceDetailSection label="Activity">
         <div className="space-y-1 text-subtle-foreground">
           <p>{`${pr.commits.length} commits`}</p>
           <p>{`${commentCount} comments`}</p>
           <p>{`Opened ${getTimeAgo(pr.createdAt)}`}</p>
           <p>{`Updated ${getTimeAgo(pr.updatedAt)}`}</p>
         </div>
-      </GitHubDetailSection>
+      </ResourceDetailSection>
 
-      <GitHubDetailSection
+      <ResourceDetailSection
         label="Assignees"
         action={
           <GitHubAssigneePicker
@@ -151,15 +151,15 @@ export function GitHubPRSidebar({
         ) : (
           <span className="text-subtle-foreground">No assignees</span>
         )}
-      </GitHubDetailSection>
+      </ResourceDetailSection>
 
       {pr.linkedIssues.length > 0 ? (
-        <GitHubDetailSection label="Linked issues">
+        <ResourceDetailSection label="Linked issues">
           <LinkedIssuesList issues={pr.linkedIssues} />
-        </GitHubDetailSection>
+        </ResourceDetailSection>
       ) : null}
 
-      <GitHubDetailSection
+      <ResourceDetailSection
         label="Labels"
         action={
           <GitHubLabelPicker
@@ -176,7 +176,7 @@ export function GitHubPRSidebar({
         ) : (
           <span className="text-subtle-foreground">No labels</span>
         )}
-      </GitHubDetailSection>
-    </GitHubDetailSidebar>
+      </ResourceDetailSection>
+    </ResourceDetailSidebar>
   );
 }

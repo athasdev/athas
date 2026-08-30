@@ -16,6 +16,16 @@ import {
 } from "@/features/viewer/components/viewer-state";
 import { Button } from "@/ui/button";
 import { DropdownMenuItem } from "@/ui/dropdown";
+import {
+  ResourceContentSection,
+  ResourceDetailLayout,
+  ResourceDetailSection,
+  ResourceDetailSidebar,
+  ResourceViewer,
+  ResourceViewerActionsMenu,
+  ResourceViewerHeader,
+  ResourceViewerTitle,
+} from "@/ui/resource";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
 import Select from "@/ui/select";
@@ -40,16 +50,6 @@ import { GitHubInlineMarkdown, GitHubInlineTitle } from "./github-inline-editors
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 import { LabelBadges } from "./pr-status";
-import {
-  GitHubContentSection,
-  GitHubDetailLayout,
-  GitHubDetailSection,
-  GitHubDetailSidebar,
-  GitHubViewerActionsMenu,
-  GitHubViewerHeader,
-  GitHubViewerShell,
-  GitHubViewerTitle,
-} from "./github-viewer-shell";
 
 interface GitHubIssueViewerProps {
   issueNumber: number;
@@ -386,11 +386,12 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
   );
 
   return (
-    <GitHubViewerShell
+    <ResourceViewer
       header={
-        <GitHubViewerHeader
+        <ResourceViewerHeader
           title={
-            <GitHubViewerTitle
+            <ResourceViewerTitle
+              ariaLabel="GitHub issue"
               kind="Issue"
               number={issueNumber}
               title={details?.title ?? buffer?.name ?? "Loading issue"}
@@ -430,7 +431,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   Reopen
                 </Button>
               )}
-              <GitHubViewerActionsMenu label="Issue actions">
+              <ResourceViewerActionsMenu label="Issue actions">
                 {details?.state.toLowerCase() === "open" ? (
                   <DropdownMenuItem
                     disabled={Boolean(mutationKey)}
@@ -484,7 +485,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
                 <DropdownMenuItem onClick={handleCopyIssueLink}>Copy link</DropdownMenuItem>
-              </GitHubViewerActionsMenu>
+              </ResourceViewerActionsMenu>
             </>
           }
         />
@@ -498,10 +499,10 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
           layout="section"
         />
       ) : details ? (
-        <GitHubDetailLayout
+        <ResourceDetailLayout
           sidebar={
-            <GitHubDetailSidebar>
-              <GitHubDetailSection label="Status">
+            <ResourceDetailSidebar>
+              <ResourceDetailSection label="Status">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <CircleDot
@@ -529,9 +530,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                     </div>
                   ) : null}
                 </div>
-              </GitHubDetailSection>
+              </ResourceDetailSection>
 
-              <GitHubDetailSection label="Type">
+              <ResourceDetailSection label="Type">
                 <Select
                   value={details.issueType?.name ?? "none"}
                   options={[
@@ -550,9 +551,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   align="start"
                   aria-label="Issue type"
                 />
-              </GitHubDetailSection>
+              </ResourceDetailSection>
 
-              <GitHubDetailSection label="Milestone">
+              <ResourceDetailSection label="Milestone">
                 <Select
                   value={details.milestone?.number.toString() ?? "none"}
                   options={[
@@ -572,9 +573,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   align="start"
                   aria-label="Issue milestone"
                 />
-              </GitHubDetailSection>
+              </ResourceDetailSection>
 
-              <GitHubDetailSection
+              <ResourceDetailSection
                 label="Assignees"
                 action={
                   <GitHubAssigneePicker
@@ -609,9 +610,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 ) : (
                   <span className="text-subtle-foreground">Unassigned</span>
                 )}
-              </GitHubDetailSection>
+              </ResourceDetailSection>
 
-              <GitHubDetailSection
+              <ResourceDetailSection
                 label="Labels"
                 action={
                   <GitHubLabelPicker
@@ -630,9 +631,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 ) : (
                   <span className="text-subtle-foreground">No labels</span>
                 )}
-              </GitHubDetailSection>
+              </ResourceDetailSection>
 
-              <GitHubDetailSection label="Activity">
+              <ResourceDetailSection label="Activity">
                 <div className="space-y-1 text-subtle-foreground">
                   <p>{`${details.comments.length} comments`}</p>
                   <p>{`Opened ${getTimeAgo(details.createdAt)}`}</p>
@@ -640,8 +641,8 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   {details.closedAt ? <p>{`Closed ${getTimeAgo(details.closedAt)}`}</p> : null}
                   {details.closedBy ? <p>{`Closed by ${details.closedBy.login}`}</p> : null}
                 </div>
-              </GitHubDetailSection>
-            </GitHubDetailSidebar>
+              </ResourceDetailSection>
+            </ResourceDetailSidebar>
           }
         >
           <div className="space-y-8">
@@ -660,7 +661,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               </div>
             </section>
 
-            <GitHubContentSection title="Description">
+            <ResourceContentSection title="Description">
               <GitHubInlineMarkdown
                 value={details.body}
                 emptyLabel="No description provided"
@@ -668,9 +669,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 repoPath={repoPath}
                 onSave={(body) => updateIssue({ body })}
               />
-            </GitHubContentSection>
+            </ResourceContentSection>
 
-            <GitHubContentSection title="Activity">
+            <ResourceContentSection title="Activity">
               <div className="w-full space-y-3">
                 {details.comments.length > 0 ? (
                   visibleComments.map((comment, index) => (
@@ -729,13 +730,13 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   </div>
                 </div>
               </div>
-            </GitHubContentSection>
+            </ResourceContentSection>
           </div>
-        </GitHubDetailLayout>
+        </ResourceDetailLayout>
       ) : (
         <ViewerLoadingState label="Loading issue" layout="section" />
       )}
-    </GitHubViewerShell>
+    </ResourceViewer>
   );
 });
 

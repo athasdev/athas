@@ -4,8 +4,8 @@ import {
   ViewerLoadingState,
   ViewerState,
 } from "@/features/viewer/components/viewer-state";
+import { ResourceContentSection } from "@/ui/resource";
 import { CommentItem } from "./comment-item";
-import { GitHubContentSection } from "./github-viewer-shell";
 import { GitHubInlineMarkdown } from "./github-inline-editors";
 
 interface ActivityItemComment {
@@ -80,7 +80,7 @@ export function PRActivityPanel({
 
   return (
     <div className="w-full min-w-0 space-y-8">
-      <GitHubContentSection title="Description">
+      <ResourceContentSection title="Description">
         <GitHubInlineMarkdown
           value={body}
           emptyLabel="No description provided"
@@ -88,9 +88,9 @@ export function PRActivityPanel({
           repoPath={repoPath}
           onSave={onBodySave}
         />
-      </GitHubContentSection>
+      </ResourceContentSection>
 
-      <GitHubContentSection title="Activity">
+      <ResourceContentSection title="Activity">
         {isLoadingContent && activityItems.length === 0 ? (
           <ViewerLoadingState label="Loading activity" layout="section" className="min-h-0" />
         ) : contentError ? (
@@ -120,7 +120,7 @@ export function PRActivityPanel({
             ) : null}
           </div>
         )}
-      </GitHubContentSection>
+      </ResourceContentSection>
     </div>
   );
 }

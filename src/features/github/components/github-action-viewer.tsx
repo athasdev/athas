@@ -17,6 +17,15 @@ import { Empty, EmptyDescription } from "@/ui/empty";
 import { DropdownMenuItem } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";
+import {
+  ResourceMetadataItem,
+  ResourceMetadataList,
+  ResourceViewer,
+  ResourceViewerActionsMenu,
+  ResourceViewerBody,
+  ResourceViewerHeader,
+  ResourceViewerTitle,
+} from "@/ui/resource";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import { toast } from "sonner";
@@ -30,15 +39,6 @@ import type {
 } from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
 import { copyToClipboard } from "../utils/github-viewer-utils";
-import {
-  GitHubMetadataItem,
-  GitHubMetadataList,
-  GitHubViewerActionsMenu,
-  GitHubViewerBody,
-  GitHubViewerHeader,
-  GitHubViewerShell,
-  GitHubViewerTitle,
-} from "./github-viewer-shell";
 
 interface GitHubActionViewerProps {
   runId?: number;
@@ -604,11 +604,12 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
   }, []);
 
   return (
-    <GitHubViewerShell
+    <ResourceViewer
       header={
-        <GitHubViewerHeader
+        <ResourceViewerHeader
           title={
-            <GitHubViewerTitle
+            <ResourceViewerTitle
+              ariaLabel="GitHub action run"
               kind="Workflow run"
               number={resolvedRunId ?? undefined}
               title={runTitle}
@@ -641,7 +642,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
             </>
           }
           actions={
-            <GitHubViewerActionsMenu label="Action run actions">
+            <ResourceViewerActionsMenu label="Action run actions">
               <DropdownMenuItem
                 disabled={isLoading && Boolean(details)}
                 onClick={() =>
@@ -652,7 +653,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
               <DropdownMenuItem onClick={handleCopyRunLink}>Copy link</DropdownMenuItem>
-            </GitHubViewerActionsMenu>
+            </ResourceViewerActionsMenu>
           }
         />
       }
@@ -667,14 +668,14 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
           layout="section"
         />
       ) : details ? (
-        <GitHubViewerBody className="space-y-4">
-          <GitHubMetadataList>
+        <ResourceViewerBody className="space-y-4">
+          <ResourceMetadataList>
             {runSummaryItems.map((item) => (
-              <GitHubMetadataItem key={item.label} label={item.label} mono={item.mono}>
+              <ResourceMetadataItem key={item.label} label={item.label} mono={item.mono}>
                 {item.value}
-              </GitHubMetadataItem>
+              </ResourceMetadataItem>
             ))}
-          </GitHubMetadataList>
+          </ResourceMetadataList>
 
           <div className="space-y-2">
             {visibleJobs.map((job) => {
@@ -875,11 +876,11 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
               </div>
             ) : null}
           </div>
-        </GitHubViewerBody>
+        </ResourceViewerBody>
       ) : (
         <ViewerLoadingState label="Loading action run" layout="section" />
       )}
-    </GitHubViewerShell>
+    </ResourceViewer>
   );
 });
 

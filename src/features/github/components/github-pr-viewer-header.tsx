@@ -1,14 +1,14 @@
 import { Button } from "@/ui/button";
 import { DropdownMenuItem } from "@/ui/dropdown";
 import { FilesIcon, InfoIcon } from "@/ui/icons";
+import {
+  ResourceViewerActionsMenu,
+  ResourceViewerHeader,
+  ResourceViewerTitle,
+} from "@/ui/resource";
 import type { Commit } from "../types/github-pr-viewer.types";
 import type { PullRequestDetails } from "../types/github.types";
 import { getTimeAgo } from "../utils/github-viewer-utils";
-import {
-  GitHubViewerActionsMenu,
-  GitHubViewerHeader,
-  GitHubViewerTitle,
-} from "./github-viewer-shell";
 import { PRCommitsDropdown } from "./pr-commits-dropdown";
 
 interface GitHubPRViewerHeaderProps {
@@ -60,9 +60,10 @@ export function GitHubPRViewerHeader({
   const canMerge = !isClosed && !pr.isDraft && pr.mergeable !== "CONFLICTING";
 
   return (
-    <GitHubViewerHeader
+    <ResourceViewerHeader
       title={
-        <GitHubViewerTitle
+        <ResourceViewerTitle
+          ariaLabel="GitHub pull request"
           kind="Pull request"
           number={pr.number}
           title={pr.title}
@@ -84,7 +85,7 @@ export function GitHubPRViewerHeader({
         </>
       }
       actions={
-        <GitHubViewerActionsMenu label="Pull request actions">
+        <ResourceViewerActionsMenu label="Pull request actions">
           <DropdownMenuItem disabled={isRefreshingDetails} onClick={onRefresh}>
             {isRefreshingDetails ? "Refreshing..." : "Refresh"}
           </DropdownMenuItem>
@@ -101,7 +102,7 @@ export function GitHubPRViewerHeader({
           <DropdownMenuItem onClick={onOpenInBrowser}>Open on GitHub</DropdownMenuItem>
           <DropdownMenuItem onClick={onCopyPRLink}>Copy link</DropdownMenuItem>
           <DropdownMenuItem onClick={onCopyBranchName}>Copy branch name</DropdownMenuItem>
-        </GitHubViewerActionsMenu>
+        </ResourceViewerActionsMenu>
       }
     >
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
@@ -139,6 +140,6 @@ export function GitHubPRViewerHeader({
           </Button>
         </div>
       </div>
-    </GitHubViewerHeader>
+    </ResourceViewerHeader>
   );
 }

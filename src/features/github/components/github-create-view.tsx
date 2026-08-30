@@ -1,3 +1,4 @@
+import "../styles/github-viewer.css";
 import { invoke } from "@tauri-apps/api/core";
 import {
   ChatCircleTextIcon as Issue,
@@ -20,6 +21,7 @@ import { hasProductCapability } from "@/features/window/lib/product-capabilities
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import Input from "@/ui/input";
+import { ResourceViewer, ResourceViewerHeader } from "@/ui/resource";
 import Select from "@/ui/select";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
@@ -37,7 +39,6 @@ import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { getRepositoryDisplayName } from "../utils/github-viewer-utils";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
-import { GitHubViewerHeader, GitHubViewerShell } from "./github-viewer-shell";
 
 export type GitHubCreateKind = "pull-request" | "issue" | "action";
 
@@ -386,9 +387,9 @@ ${statusSummary}`;
   };
 
   return (
-    <GitHubViewerShell
+    <ResourceViewer
       header={
-        <GitHubViewerHeader
+        <ResourceViewerHeader
           title={
             <span className="flex min-w-0 items-center gap-2">
               {kind === "pull-request" ? (
@@ -627,6 +628,6 @@ ${statusSummary}`;
           </div>
         )}
       </div>
-    </GitHubViewerShell>
+    </ResourceViewer>
   );
 }
