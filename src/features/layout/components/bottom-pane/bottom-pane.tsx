@@ -53,6 +53,10 @@ const BottomPane = ({
   const [isInternalHoverTarget, setIsInternalHoverTarget] = useState(false);
   const paneFrameRef = useRef<HTMLDivElement>(null);
 
+  const closeBottomPane = useCallback(() => {
+    setIsFullScreen(false);
+    useUIState.getState().setIsBottomPaneVisible(false);
+  }, []);
   useEffect(() => {
     const syncHover = () => {
       setIsInternalHoverTarget(getInternalTabDragHover().paneId === BOTTOM_PANE_ID);
@@ -205,7 +209,7 @@ const BottomPane = ({
     <div
       onMouseDown={handleMouseDown}
       className={cn(
-        "group relative flex h-workbench w-full shrink-0 cursor-ns-resize items-center justify-center",
+        "group relative z-20 flex h-workbench w-full shrink-0 cursor-ns-resize",
         "transition-colors duration-fast ease-smooth hover:bg-primary/8",
         embedded && "border-border/70 border-r bg-background",
         embedded && roundLeftEdge && "border-l",
@@ -217,7 +221,7 @@ const BottomPane = ({
     >
       <div
         className={cn(
-          "h-px w-full bg-transparent transition-colors duration-fast ease-smooth group-hover:bg-primary",
+          "absolute inset-x-0 -top-px h-px bg-transparent transition-colors duration-fast ease-smooth group-hover:bg-primary",
           isResizing && "bg-primary",
         )}
       />
@@ -252,7 +256,11 @@ const BottomPane = ({
 
         {debuggerEnabled && bottomPaneActiveTab === "debugger" && (
           <div className="h-full">
-            <DebuggerView />
+            <DebuggerView
+              isFullScreen={isFullScreen}
+              onFullScreen={() => setIsFullScreen(!isFullScreen)}
+              onClose={closeBottomPane}
+            />
           </div>
         )}
 

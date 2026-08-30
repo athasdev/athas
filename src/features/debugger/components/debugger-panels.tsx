@@ -1,5 +1,6 @@
 import {
   CircleIcon as Circle,
+  FolderOpenIcon as FolderOpen,
   PauseIcon as Pause,
   PencilIcon as Pencil,
   StackIcon as Stack,
@@ -8,6 +9,13 @@ import {
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/ui/popover";
@@ -109,50 +117,67 @@ export function DebugBreakpointsList({
   return (
     <div className="py-1">
       {breakpoints.map((breakpoint) => (
-        <div
-          key={breakpoint.id}
-          className="group font-sans flex items-center gap-2 px-3 py-1.5 ui-text-sm hover:bg-accent/70"
-        >
-          <button
-            type="button"
-            aria-label={breakpoint.enabled ? "Disable breakpoint" : "Enable breakpoint"}
-            title={breakpoint.message}
-            className={cn(
-              "size-3 rounded-full border",
-              breakpoint.enabled && breakpoint.verified !== false
-                ? "border-destructive bg-destructive"
-                : breakpoint.enabled
-                  ? "border-warning bg-warning/30"
-                  : "border-subtle-foreground bg-transparent",
-            )}
-            onClick={() => onToggle(breakpoint)}
-          />
-          <button
-            type="button"
-            className="min-w-0 flex-1 text-left"
-            onClick={() => void onOpen(breakpoint)}
+        <ContextMenu key={breakpoint.id}>
+          <ContextMenuTrigger
+            className="group font-sans flex items-center gap-2 px-3 py-1.5 ui-text-sm hover:bg-accent/70"
+            onContextMenu={(event) => event.stopPropagation()}
           >
-            <div className="truncate text-foreground">
-              {getBaseName(breakpoint.filePath, "file")}
-            </div>
-            <div className="truncate ui-text-sm text-subtle-foreground">
-              Line {breakpoint.line + 1}
-            </div>
-          </button>
-          <BreakpointOptions
-            breakpoint={breakpoint}
-            onUpdate={(options) => onUpdateOptions(breakpoint, options)}
-          />
-          <Button
-            variant="ghost"
-            className="opacity-0 group-hover:opacity-100"
-            tooltip="Remove breakpoint"
-            onClick={() => onRemove(breakpoint)}
-            iconOnly
-          >
-            <Trash />
-          </Button>
-        </div>
+            <button
+              type="button"
+              aria-label={breakpoint.enabled ? "Disable breakpoint" : "Enable breakpoint"}
+              title={breakpoint.message}
+              className={cn(
+                "size-3 rounded-full border",
+                breakpoint.enabled && breakpoint.verified !== false
+                  ? "border-destructive bg-destructive"
+                  : breakpoint.enabled
+                    ? "border-warning bg-warning/30"
+                    : "border-subtle-foreground bg-transparent",
+              )}
+              onClick={() => onToggle(breakpoint)}
+            />
+            <button
+              type="button"
+              className="min-w-0 flex-1 text-left"
+              onClick={() => void onOpen(breakpoint)}
+            >
+              <div className="truncate text-foreground">
+                {getBaseName(breakpoint.filePath, "file")}
+              </div>
+              <div className="truncate ui-text-sm text-subtle-foreground">
+                Line {breakpoint.line + 1}
+              </div>
+            </button>
+            <BreakpointOptions
+              breakpoint={breakpoint}
+              onUpdate={(options) => onUpdateOptions(breakpoint, options)}
+            />
+            <Button
+              variant="ghost"
+              className="opacity-0 group-hover:opacity-100"
+              tooltip="Remove breakpoint"
+              onClick={() => onRemove(breakpoint)}
+              iconOnly
+            >
+              <Trash />
+            </Button>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem onClick={() => void onOpen(breakpoint)}>
+              <FolderOpen />
+              Go to Breakpoint
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => onToggle(breakpoint)}>
+              <Circle />
+              {breakpoint.enabled ? "Disable Breakpoint" : "Enable Breakpoint"}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem variant="destructive" onClick={() => onRemove(breakpoint)}>
+              <Trash />
+              Remove Breakpoint
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
       ))}
     </div>
   );

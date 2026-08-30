@@ -1,12 +1,18 @@
 import {
-  BugIcon as Bug,
+  ArrowBendDownLeftIcon as ArrowBendDownLeft,
+  ArrowDownIcon as ArrowDown,
+  ArrowUpIcon as ArrowUp,
   ArrowsClockwiseIcon as ArrowsClockwise,
+  ArrowsInIcon as Minimize,
+  ArrowsOutIcon as Maximize,
+  BugIcon as Bug,
+  CircleIcon as Circle,
   FolderOpenIcon as FolderOpen,
-  ListBulletsIcon as ListBullets,
   PauseIcon as Pause,
   PlayIcon as Play,
   SquareIcon as Square,
   TrashIcon as Trash,
+  XIcon as X,
 } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -18,10 +24,18 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import Select from "@/ui/select";
+import { TabBarSurface } from "@/ui/tab-bar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import { joinPath } from "@/utils/path-helpers";
@@ -54,6 +68,11 @@ import { DebugVariablesPanel } from "./debugger-variables-panel";
 
 type DebuggerPanel = "stack" | "variables" | "watch" | "console" | "breakpoints";
 
+interface DebuggerViewProps {
+  isFullScreen: boolean;
+  onClose: () => void;
+  onFullScreen: () => void;
+}
 const getActiveDebuggableFile = (state: ReturnType<typeof useBufferStore.getState>) => {
   const activeBuffer = state.activeBufferId
     ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
@@ -78,7 +97,7 @@ function DebugStatusBadge({ status }: { status: "idle" | "running" | "paused" })
   );
 }
 
-export default function DebuggerView() {
+export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: DebuggerViewProps) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const activeFile = useBufferStore(getActiveDebuggableFile);
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
@@ -444,24 +463,142 @@ export default function DebuggerView() {
   });
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
-      <div className="flex h-10 shrink-0 items-center gap-2 border-border/70 border-b px-3">
-        <Bug size={16} className="text-subtle-foreground" weight="duotone" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-medium ui-text-sm">Run and Debug</div>
-        </div>
-        {activeSession ? <DebugStatusBadge status={activeSession.status} /> : null}
-        <Button
-          variant="ghost"
-          tooltip="Toggle breakpoint on current line"
-          commandId="debug.toggleBreakpoint"
-          onClick={toggleCurrentLineBreakpoint}
-          disabled={!activeFile}
-          iconOnly
+    <Tabs
+      value={activePanel}
+      onValueChange={(value) => setActivePanel(value as DebuggerPanel)}
+      className="h-full min-h-0 gap-0 bg-background text-foreground"
+    >
+      <ContextMenu>
+        <ContextMenuTrigger
+          render={<TabBarSurface className="scrollbar-none justify-between overscroll-x-contain" />}
         >
-          <ListBullets />
-        </Button>
-      </div>
+          <Bug className="text-subtle-foreground" weight="duotone" />
+          <div className="scrollbar-none min-w-0 flex-1 overflow-x-auto">
+            <TabsList variant="bare" aria-label="Debugger panels">
+              <TabsTrigger value="stack" className="w-fit flex-none">
+                Call Stack
+                <Badge variant="muted" className="tabular-nums">
+                  {stackFrames.length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="variables" className="w-fit flex-none">
+                Variables
+                <Badge variant="muted" className="tabular-nums">
+                  {scopes.length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="watch" className="w-fit flex-none">
+                Watch
+                <Badge variant="muted" className="tabular-nums">
+                  {watchExpressions.length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="console" className="w-fit flex-none">
+                Console
+                <Badge variant="muted" className="tabular-nums">
+                  {activeAdapterOutput.length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="breakpoints" className="w-fit flex-none">
+                Breakpoints
+                <Badge variant="muted" className="tabular-nums">
+                  {sortedBreakpoints.length + enabledExceptionFilters.size}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          {activeSession ? <DebugStatusBadge status={activeSession.status} /> : null}
+          {activePanel === "console" && activeAdapterOutput.length > 0 ? (
+            <Button
+              variant="ghost"
+              tooltip="Clear console"
+              onClick={debuggerActions.clearAdapterTranscript}
+              iconOnly
+            >
+              <Trash />
+            </Button>
+          ) : null}
+          {activePanel === "breakpoints" && sortedBreakpoints.length > 0 ? (
+            <Button
+              variant="ghost"
+              tooltip="Clear breakpoints"
+              onClick={debuggerActions.clearBreakpoints}
+              iconOnly
+            >
+              <Trash />
+            </Button>
+          ) : null}
+          <Button
+            variant="ghost"
+            tooltip="Toggle breakpoint at cursor"
+            commandId="debug.toggleBreakpoint"
+            onClick={toggleCurrentLineBreakpoint}
+            disabled={!activeFile}
+            iconOnly
+          >
+            <Circle />
+          </Button>
+          <Button
+            variant="ghost"
+            tooltip={isFullScreen ? "Exit full screen Run and Debug" : "Full screen Run and Debug"}
+            commandId="workbench.toggleActivePaneFullscreen"
+            onClick={onFullScreen}
+            aria-label={
+              isFullScreen ? "Exit full screen Run and Debug" : "Full screen Run and Debug"
+            }
+            iconOnly
+          >
+            {isFullScreen ? <Minimize /> : <Maximize />}
+          </Button>
+          <Button
+            variant="ghost"
+            tooltip="Close Run and Debug"
+            onClick={onClose}
+            aria-label="Close Run and Debug"
+            iconOnly
+          >
+            <X />
+          </Button>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            disabled={!canStartDebugging || isActiveSession}
+            onClick={() => void startDebugging()}
+          >
+            <Play />
+            Start Debugging
+          </ContextMenuItem>
+          <ContextMenuItem
+            disabled={!canSendAdapterThreadRequest}
+            onClick={() => void sendAdapterThreadRequest(isPaused ? "continue" : "pause")}
+          >
+            {isPaused ? <Play /> : <Pause />}
+            {isPaused ? "Continue Debugging" : "Pause Debugging"}
+          </ContextMenuItem>
+          <ContextMenuItem disabled={!isActiveSession} onClick={() => void stopDebugging()}>
+            <Square />
+            Stop Debugging
+          </ContextMenuItem>
+          <ContextMenuItem disabled={!canStartDebugging} onClick={() => void restartDebugging()}>
+            <ArrowsClockwise />
+            Restart Debugging
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem disabled={!activeFile} onClick={toggleCurrentLineBreakpoint}>
+            <Circle />
+            Toggle Breakpoint at Cursor
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onClick={onFullScreen}>
+            {isFullScreen ? <Minimize /> : <Maximize />}
+            {isFullScreen ? "Exit Full Screen" : "Full Screen"}
+          </ContextMenuItem>
+          <ContextMenuItem onClick={onClose}>
+            <X />
+            Close Run and Debug
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
         <aside className="flex min-h-0 flex-col border-border/70 border-r">
@@ -493,19 +630,20 @@ export default function DebuggerView() {
               )}
             </div>
 
-            <div className="grid grid-cols-[1fr_auto_auto] gap-1.5">
+            <div className="flex items-center gap-1.5">
               <Button
                 variant="accent"
+                tooltip="Start debugging"
                 onClick={startDebugging}
                 disabled={!canStartDebugging || isActiveSession}
                 commandId="debug.start"
+                iconOnly
               >
                 <Play />
-                Start
               </Button>
               <Button
                 variant="default"
-                tooltip={isPaused ? "Continue" : "Pause"}
+                tooltip={isPaused ? "Continue debugging" : "Pause debugging"}
                 disabled={!canSendAdapterThreadRequest}
                 onClick={() => void sendAdapterThreadRequest(isPaused ? "continue" : "pause")}
                 aria-label={isPaused ? "Continue debugging" : "Pause debugging"}
@@ -515,7 +653,7 @@ export default function DebuggerView() {
               </Button>
               <Button
                 variant="danger"
-                tooltip="Stop"
+                tooltip="Stop debugging"
                 disabled={!isActiveSession}
                 onClick={() => void stopDebugging()}
                 commandId="debug.stop"
@@ -523,51 +661,54 @@ export default function DebuggerView() {
               >
                 <Square />
               </Button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-1.5">
               <Button
                 variant="default"
                 tooltip="Step over"
                 disabled={!canStep}
                 onClick={() => void sendAdapterThreadRequest("next")}
+                iconOnly
               >
-                Over
+                <ArrowBendDownLeft />
               </Button>
               <Button
                 variant="default"
                 tooltip="Step into"
                 disabled={!canStep}
                 onClick={() => void sendAdapterThreadRequest("stepIn")}
+                iconOnly
               >
-                Into
+                <ArrowDown />
               </Button>
               <Button
                 variant="default"
                 tooltip="Step out"
                 disabled={!canStep}
                 onClick={() => void sendAdapterThreadRequest("stepOut")}
+                iconOnly
               >
-                Out
+                <ArrowUp />
               </Button>
-            </div>
-
-            <Button
-              variant="default"
-              disabled={!canStartDebugging}
-              onClick={() => void restartDebugging()}
-              commandId="debug.restart"
-            >
-              <ArrowsClockwise />
-              Restart
-            </Button>
-
-            {isAdapterSession && resolvedActiveConfig.runtime === "java" ? (
-              <Button variant="default" onClick={() => void hotCodeReplace()}>
+              <Button
+                variant="default"
+                tooltip="Restart debugging"
+                disabled={!canStartDebugging}
+                onClick={() => void restartDebugging()}
+                commandId="debug.restart"
+                iconOnly
+              >
                 <ArrowsClockwise />
-                Apply Java Changes
               </Button>
-            ) : null}
+              {isAdapterSession && resolvedActiveConfig.runtime === "java" ? (
+                <Button
+                  variant="default"
+                  tooltip="Apply Java changes"
+                  onClick={() => void hotCodeReplace()}
+                  iconOnly
+                >
+                  <ArrowsClockwise />
+                </Button>
+              ) : null}
+            </div>
 
             {startError ? (
               <Alert tone="error">
@@ -599,68 +740,7 @@ export default function DebuggerView() {
           </div>
         </aside>
 
-        <Tabs
-          value={activePanel}
-          onValueChange={(value) => setActivePanel(value as DebuggerPanel)}
-          className="min-h-0 gap-0"
-        >
-          <div className="flex h-pane-header shrink-0 items-center gap-2 border-border/70 border-b px-chrome-inline">
-            <div className="scrollbar-none min-w-0 flex-1 overflow-x-auto">
-              <TabsList variant="bare" aria-label="Debugger panels">
-                <TabsTrigger value="stack" className="w-fit flex-none">
-                  Call Stack
-                  <Badge variant="muted" className="h-5 tabular-nums">
-                    {stackFrames.length}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="variables" className="w-fit flex-none">
-                  Variables
-                  <Badge variant="muted" className="h-5 tabular-nums">
-                    {scopes.length}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="watch" className="w-fit flex-none">
-                  Watch
-                  <Badge variant="muted" className="h-5 tabular-nums">
-                    {watchExpressions.length}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="console" className="w-fit flex-none">
-                  Console
-                  <Badge variant="muted" className="h-5 tabular-nums">
-                    {activeAdapterOutput.length}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="breakpoints" className="w-fit flex-none">
-                  Breakpoints
-                  <Badge variant="muted" className="h-5 tabular-nums">
-                    {sortedBreakpoints.length + enabledExceptionFilters.size}
-                  </Badge>
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            {activePanel === "console" && activeAdapterOutput.length > 0 ? (
-              <Button
-                variant="ghost"
-                tooltip="Clear console"
-                onClick={debuggerActions.clearAdapterTranscript}
-                iconOnly
-              >
-                <Trash />
-              </Button>
-            ) : null}
-            {activePanel === "breakpoints" && sortedBreakpoints.length > 0 ? (
-              <Button
-                variant="ghost"
-                tooltip="Clear breakpoints"
-                onClick={debuggerActions.clearBreakpoints}
-                iconOnly
-              >
-                <Trash />
-              </Button>
-            ) : null}
-          </div>
-
+        <div className="flex min-h-0 min-w-0 flex-col">
           <TabsContent value="stack">
             <ScrollArea className="h-full" orientation="both">
               <DebugStackFrames
@@ -747,8 +827,8 @@ export default function DebuggerView() {
               />
             </ScrollArea>
           </TabsContent>
-        </Tabs>
+        </div>
       </div>
-    </div>
+    </Tabs>
   );
 }

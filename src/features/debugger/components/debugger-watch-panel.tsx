@@ -8,6 +8,13 @@ import { sendDebugAdapterRequest } from "../services/debug-adapter-service";
 import { useDebuggerStore } from "../stores/debugger.store";
 import type { DebugRequestContext } from "../types/debugger.types";
 import { Button } from "@/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
 
@@ -126,41 +133,62 @@ export function DebugWatchPanel({
             const isPending = pendingExpressionIds.has(watchExpression.id);
 
             return (
-              <div
-                key={watchExpression.id}
-                className="group rounded-lg border border-border/60 bg-surface/40 px-2 py-1.5"
-              >
-                <div className="flex items-start gap-2">
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 truncate text-left font-mono ui-text-sm text-foreground"
+              <ContextMenu key={watchExpression.id}>
+                <ContextMenuTrigger
+                  className="group rounded-lg border border-border/60 bg-surface/40 px-2 py-1.5"
+                  onContextMenu={(event) => event.stopPropagation()}
+                >
+                  <div className="flex items-start gap-2">
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 truncate text-left font-mono ui-text-sm text-foreground"
+                      onClick={() =>
+                        void evaluateExpression(watchExpression.id, watchExpression.expression)
+                      }
+                    >
+                      {watchExpression.expression}
+                    </button>
+                    <Button
+                      variant="ghost"
+                      className="opacity-0 group-hover:opacity-100"
+                      tooltip="Remove watch"
+                      onClick={() => debuggerActions.removeWatchExpression(watchExpression.id)}
+                      iconOnly
+                    >
+                      <Trash />
+                    </Button>
+                  </div>
+                  <div className="mt-1 truncate font-mono ui-text-sm text-subtle-foreground">
+                    {isPending
+                      ? "Evaluating..."
+                      : result?.error
+                        ? result.error
+                        : result?.value || "Not evaluated"}
+                    {result?.type && !result.error ? (
+                      <span className="ml-1 text-subtle-foreground/70">({result.type})</span>
+                    ) : null}
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem
+                    disabled={!activeSessionId || !isPaused}
                     onClick={() =>
                       void evaluateExpression(watchExpression.id, watchExpression.expression)
                     }
                   >
-                    {watchExpression.expression}
-                  </button>
-                  <Button
-                    variant="ghost"
-                    className="opacity-0 group-hover:opacity-100"
-                    tooltip="Remove watch"
+                    <ArrowsClockwise />
+                    Refresh Watch
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem
+                    variant="destructive"
                     onClick={() => debuggerActions.removeWatchExpression(watchExpression.id)}
-                    iconOnly
                   >
                     <Trash />
-                  </Button>
-                </div>
-                <div className="mt-1 truncate font-mono ui-text-sm text-subtle-foreground">
-                  {isPending
-                    ? "Evaluating..."
-                    : result?.error
-                      ? result.error
-                      : result?.value || "Not evaluated"}
-                  {result?.type && !result.error ? (
-                    <span className="ml-1 text-subtle-foreground/70">({result.type})</span>
-                  ) : null}
-                </div>
-              </div>
+                    Remove Watch
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             );
           })}
         </div>
