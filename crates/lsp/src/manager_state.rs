@@ -166,6 +166,15 @@ impl WorkspaceClients {
          .collect()
    }
 
+   pub(super) fn get_client_by_id(&self, client_id: &str) -> Option<LspClient> {
+      let mut clients = self.inner.lock().unwrap();
+      Self::prune_dead_instances(&mut clients);
+      clients
+         .values()
+         .find(|instance| instance.client.id() == client_id)
+         .map(|instance| instance.client.clone())
+   }
+
    pub(super) fn shutdown_all(&self) {
       let mut clients = self.inner.lock().unwrap();
       for ((workspace, server_name), mut instance) in clients.drain() {

@@ -36,6 +36,7 @@ interface ExternalToolConfig {
   downloadUrl?: string;
   args?: string[];
   env?: Record<string, string>;
+  initializationOptions?: Record<string, unknown>;
 }
 
 interface ExternalLanguageManifest {
@@ -139,6 +140,7 @@ function createLspConfig(manifest: ExternalLanguageManifest): LspConfiguration |
     server: defaultCommand(lsp.name),
     args: lsp.args || [],
     env: lsp.env,
+    initializationOptions: lsp.initializationOptions,
     fileExtensions,
     languageIds,
   };

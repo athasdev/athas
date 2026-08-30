@@ -5,7 +5,7 @@ use futures_util::StreamExt;
 use serde_json::Value;
 use std::{
    env, fs,
-   io::Cursor,
+   io::{Cursor, Read},
    path::{Component, Path, PathBuf},
    process::Command,
 };
@@ -18,6 +18,10 @@ use zip::ZipArchive;
 /// Maximum size for a managed binary tool download. Most single-file tools are
 /// small, but SDK-backed language servers such as Dart include runtime assets.
 const MAX_BINARY_DOWNLOAD_BYTES: u64 = 512 * 1024 * 1024;
+const JAVA_DEBUG_VSIX_URL: &str = "https://marketplace.visualstudio.com/_apis/public/gallery/\
+publishers/vscjava/vsextensions/vscode-java-debug/latest/vspackage";
+const JAVA_DEBUG_BUNDLE_NAME: &str = "com.microsoft.java.debug.plugin.jar";
+const MANAGED_JAVA_MAJOR: u32 = 21;
 
 /// Validate that a binary download URL uses an acceptable scheme and host.
 ///
@@ -195,6 +199,153 @@ impl ToolInstaller {
          "{} (system tool not found in PATH or known toolchain locations)",
          command_name
       )))
+   }
+
+   fn java_major_version(java_path: &Path) -> Option<u32> {
+      let mut command = Command::new(java_path);
+      let output = configure_background_command(&mut command)
+         .arg("-version")
+         .output()
+         .ok()?;
+      let version_output = format!(
+         "{}\n{}",
+         String::from_utf8_lossy(&output.stdout),
+         String::from_utf8_lossy(&output.stderr)
+      );
+      parse_java_major_version(&version_output)
+   }
+
+   pub fn find_java_executable(minimum_major: u32) -> Result<PathBuf, ToolError> {
+      let mut candidates = Vec::new();
+      if let Some(java_home) = env::var_os("JAVA_HOME") {
+         candidates.push(
+            PathBuf::from(java_home)
+               .join("bin")
+               .join(Self::bin_file_name("java")),
+         );
+      }
+
+      if cfg!(target_os = "macos") {
+         if let Some(java_home) = Self::command_stdout_path(
+            "/usr/libexec/java_home",
+            &["-v", &minimum_major.to_string()],
+         ) {
+            candidates.push(java_home.join("bin").join("java"));
+         }
+         candidates.extend([
+            PathBuf::from(format!(
+               "/opt/homebrew/opt/openjdk@{minimum_major}/bin/java"
+            )),
+            PathBuf::from(format!("/usr/local/opt/openjdk@{minimum_major}/bin/java")),
+         ]);
+      }
+
+      if cfg!(target_os = "linux")
+         && let Ok(entries) = fs::read_dir("/usr/lib/jvm")
+      {
+         candidates.extend(entries.filter_map(|entry| {
+            entry
+               .ok()
+               .map(|entry| entry.path().join("bin").join("java"))
+         }));
+      }
+
+      if let Ok(path) = which::which("java") {
+         candidates.push(path);
+      }
+
+      candidates
+         .into_iter()
+         .find(|path| {
+            path.exists()
+               && Self::java_major_version(path).is_some_and(|major| major >= minimum_major)
+         })
+         .ok_or_else(|| {
+            ToolError::NotFound(format!(
+               "Java {minimum_major} or newer is required to run the Java language server"
+            ))
+         })
+   }
+
+   fn managed_java_install_dir(app_handle: &AppHandle) -> Result<PathBuf, ToolError> {
+      Ok(Self::get_tools_dir(app_handle)?
+         .join("java")
+         .join(format!("temurin-{MANAGED_JAVA_MAJOR}")))
+   }
+
+   fn existing_managed_java(app_handle: &AppHandle) -> Result<Option<PathBuf>, ToolError> {
+      let install_dir = Self::managed_java_install_dir(app_handle)?;
+      if !install_dir.exists() {
+         return Ok(None);
+      }
+
+      let java = Self::pick_binary(&install_dir, "java")?;
+      Ok(Self::java_major_version(&java)
+         .is_some_and(|major| major >= MANAGED_JAVA_MAJOR)
+         .then_some(java))
+   }
+
+   fn temurin_download_url() -> String {
+      let os = match std::env::consts::OS {
+         "macos" => "mac",
+         "windows" => "windows",
+         _ => "linux",
+      };
+      let arch = match std::env::consts::ARCH {
+         "aarch64" => "aarch64",
+         _ => "x64",
+      };
+
+      format!(
+         "https://api.adoptium.net/v3/binary/latest/{MANAGED_JAVA_MAJOR}/ga/{os}/{arch}/jdk/\
+          hotspot/normal/eclipse"
+      )
+   }
+
+   pub async fn get_or_install_java_executable(
+      app_handle: &AppHandle,
+   ) -> Result<PathBuf, ToolError> {
+      if let Ok(java) = Self::find_java_executable(MANAGED_JAVA_MAJOR) {
+         return Ok(java);
+      }
+      if let Some(java) = Self::existing_managed_java(app_handle)? {
+         return Ok(java);
+      }
+
+      let url = Self::temurin_download_url();
+      log::info!(
+         "Downloading managed Temurin {} from {}",
+         MANAGED_JAVA_MAJOR,
+         url
+      );
+      let bytes = Self::download_bytes(&url).await?;
+      let staging_dir = tempfile::tempdir()
+         .map_err(|e| ToolError::InstallationFailed(format!("Failed to create temp dir: {}", e)))?;
+      let archive_name = if cfg!(windows) {
+         "temurin.zip"
+      } else {
+         "temurin.tar.gz"
+      };
+      Self::extract_archive(&bytes, archive_name, staging_dir.path())?;
+      let java = Self::install_extracted_binary(
+         staging_dir.path(),
+         &Self::managed_java_install_dir(app_handle)?,
+         "java",
+         "java",
+      )?;
+
+      let major = Self::java_major_version(&java).ok_or_else(|| {
+         ToolError::InstallationFailed(
+            "Could not determine the managed Java runtime version".to_string(),
+         )
+      })?;
+      if major < MANAGED_JAVA_MAJOR {
+         return Err(ToolError::InstallationFailed(format!(
+            "Managed Java runtime is version {major}, expected {MANAGED_JAVA_MAJOR} or newer"
+         )));
+      }
+
+      Ok(java)
    }
 
    fn default_node_bin_name(name: &str) -> String {
@@ -1402,12 +1553,19 @@ impl ToolInstaller {
       command_name: &str,
       url: &str,
    ) -> Result<PathBuf, ToolError> {
-      validate_binary_download_url(url)?;
-
       let install_dir = Self::binary_install_dir(app_handle, name)?;
 
       log::info!("Downloading {} from {}", name, url);
+      let bytes = Self::download_bytes(url).await?;
 
+      let staging_dir = tempfile::tempdir()
+         .map_err(|e| ToolError::InstallationFailed(format!("Failed to create temp dir: {}", e)))?;
+      Self::extract_archive(&bytes, url, staging_dir.path())?;
+      Self::install_extracted_binary(staging_dir.path(), &install_dir, name, command_name)
+   }
+
+   async fn download_bytes(url: &str) -> Result<Vec<u8>, ToolError> {
+      validate_binary_download_url(url)?;
       let response = reqwest::get(url)
          .await
          .map_err(|e| ToolError::DownloadFailed(e.to_string()))?;
@@ -1430,7 +1588,7 @@ impl ToolInstaller {
       }
 
       let mut stream = response.bytes_stream();
-      let mut bytes: Vec<u8> = Vec::new();
+      let mut bytes = Vec::new();
       while let Some(chunk) = stream.next().await {
          let chunk = chunk.map_err(|e| ToolError::DownloadFailed(e.to_string()))?;
          if bytes.len() as u64 + chunk.len() as u64 > MAX_BINARY_DOWNLOAD_BYTES {
@@ -1442,10 +1600,67 @@ impl ToolInstaller {
          bytes.extend_from_slice(&chunk);
       }
 
-      let staging_dir = tempfile::tempdir()
-         .map_err(|e| ToolError::InstallationFailed(format!("Failed to create temp dir: {}", e)))?;
-      Self::extract_archive(&bytes, url, staging_dir.path())?;
-      Self::install_extracted_binary(staging_dir.path(), &install_dir, name, command_name)
+      Ok(bytes)
+   }
+
+   pub async fn ensure_java_debug_bundle(app_handle: &AppHandle) -> Result<PathBuf, ToolError> {
+      let bundle_path = Self::java_debug_bundle_path(app_handle)?;
+      if bundle_path.exists() {
+         return Ok(bundle_path);
+      }
+
+      let downloaded = Self::download_bytes(JAVA_DEBUG_VSIX_URL).await?;
+      let mut archive_bytes = downloaded;
+      if archive_bytes.starts_with(&[0x1f, 0x8b]) {
+         let mut decoded = Vec::new();
+         GzDecoder::new(Cursor::new(&archive_bytes))
+            .read_to_end(&mut decoded)
+            .map_err(|e| {
+               ToolError::InstallationFailed(format!(
+                  "Failed to decode Java debug extension package: {}",
+                  e
+               ))
+            })?;
+         archive_bytes = decoded;
+      }
+
+      let mut archive = ZipArchive::new(Cursor::new(archive_bytes)).map_err(|e| {
+         ToolError::InstallationFailed(format!(
+            "Failed to read Java debug extension package: {}",
+            e
+         ))
+      })?;
+      let bundle_index = (0..archive.len()).find(|index| {
+         archive
+            .by_index(*index)
+            .map(|entry| {
+               let name = entry.name();
+               name.starts_with("extension/server/com.microsoft.java.debug.plugin-")
+                  && name.ends_with(".jar")
+            })
+            .unwrap_or(false)
+      });
+      let bundle_index = bundle_index.ok_or_else(|| {
+         ToolError::InstallationFailed(
+            "Java debug extension package does not contain the debugger bundle".to_string(),
+         )
+      })?;
+      let mut bundle = archive.by_index(bundle_index).map_err(|e| {
+         ToolError::InstallationFailed(format!("Failed to read Java debug bundle: {}", e))
+      })?;
+
+      if let Some(parent) = bundle_path.parent() {
+         fs::create_dir_all(parent)?;
+      }
+      let mut output = fs::File::create(&bundle_path)?;
+      std::io::copy(&mut bundle, &mut output)?;
+      Ok(bundle_path)
+   }
+
+   pub fn java_debug_bundle_path(app_handle: &AppHandle) -> Result<PathBuf, ToolError> {
+      Ok(Self::binary_install_dir(app_handle, "jdtls")?
+         .join("java-debug")
+         .join(JAVA_DEBUG_BUNDLE_NAME))
    }
 
    /// Check if a tool is installed
@@ -1643,6 +1858,17 @@ impl ToolInstaller {
          }
          _ => Self::get_tool_path(app_handle, config),
       }
+   }
+}
+
+fn parse_java_major_version(output: &str) -> Option<u32> {
+   let version = output.split('"').nth(1)?;
+   let mut parts = version.split(['.', '-']);
+   let first = parts.next()?.parse::<u32>().ok()?;
+   if first == 1 {
+      parts.next()?.parse().ok()
+   } else {
+      Some(first)
    }
 }
 

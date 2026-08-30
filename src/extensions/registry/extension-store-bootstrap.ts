@@ -68,7 +68,11 @@ export async function loadInstalledExtensionsSnapshot(
         const resolvedTools = await resolveToolPaths(languageId, extension, {
           repairMissing: true,
         });
-        const runtimeManifest = buildRuntimeManifest(extension, resolvedTools.toolPaths);
+        const runtimeManifest = buildRuntimeManifest(
+          extension,
+          resolvedTools.toolPaths,
+          resolvedTools.lspBundles,
+        );
         extensionRegistry.registerExtension(runtimeManifest, {
           isBundled: false,
           isEnabled: true,

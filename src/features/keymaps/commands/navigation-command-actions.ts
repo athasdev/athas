@@ -1,6 +1,7 @@
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { getJavaClassFileName, isJavaClassFileUri } from "@/features/editor/lsp/java-class-file";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
@@ -11,15 +12,14 @@ import {
 } from "@/features/editor/utils/position";
 import { useReferencesStore } from "@/features/references/stores/references.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { showChoiceDialog } from "@/ui/dialog";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { toast } from "sonner";
+import type { CallHierarchyItem, Range, TypeHierarchyItem } from "vscode-languageserver-protocol";
 
 type LspNavigationLocation = {
   uri: string;
-  range: {
-    start: { line: number; character: number };
-    end: { line: number; character: number };
-  };
+  range: Range;
 };
 
 type LspNavigationClient = {
@@ -40,57 +40,61 @@ type LspNavigationClient = {
   ) => Promise<LspNavigationLocation[] | null>;
 };
 
-async function goToActiveLspLocation(
-  label: string,
-  resolveLocations: (
-    lspClient: LspNavigationClient,
-    filePath: string,
-    line: number,
-    character: number,
-  ) => Promise<LspNavigationLocation[] | null>,
-): Promise<void> {
+function getActiveEditorContext() {
+  const bufferStore = useBufferStore.getState();
+  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+
+  if (!activeBuffer || activeBuffer.type !== "editor" || !activeBuffer.path) return null;
+
+  return {
+    activeBuffer,
+    bufferStore,
+    editorState: useEditorStateStore.getState(),
+  };
+}
+
+async function navigateToLspLocation(target: LspNavigationLocation): Promise<void> {
+  const context = getActiveEditorContext();
+  if (!context) return;
+
+  const { activeBuffer, bufferStore, editorState } = context;
   const [{ LspClient }, { readFileContent }, { filePathFromUri }] = await Promise.all([
     import("@/features/editor/lsp/lsp-client"),
     import("@/features/file-system/controllers/file-operations"),
     import("@/features/editor/lsp/workspace-edit"),
   ]);
 
-  const lspClient = LspClient.getInstance();
-  const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
-  const editorState = useEditorStateStore.getState();
-  const cursorPosition = editorState.cursorPosition;
-
-  if (!activeBuffer || activeBuffer.type !== "editor" || !activeBuffer.path) return;
-
-  const locations = await resolveLocations(
-    lspClient,
-    activeBuffer.path,
-    cursorPosition.line,
-    cursorPosition.column,
-  );
-
-  if (!locations || locations.length === 0) {
-    toast.info(`No ${label} found.`);
-    return;
-  }
-
   useJumpListStore.getState().actions.pushEntry({
     bufferId: activeBuffer.id,
     filePath: activeBuffer.path,
-    line: cursorPosition.line,
-    column: cursorPosition.column,
-    offset: cursorPosition.offset,
+    line: editorState.cursorPosition.line,
+    column: editorState.cursorPosition.column,
+    offset: editorState.cursorPosition.offset,
     scrollTop: editorState.scrollTop,
     scrollLeft: editorState.scrollLeft,
   });
 
-  const target = locations[0];
-  const filePath = filePathFromUri(target.uri);
+  const isJavaClassFile = isJavaClassFileUri(target.uri);
+  const filePath = isJavaClassFile ? target.uri : filePathFromUri(target.uri);
   const existingBuffer = bufferStore.buffers.find((b) => b.path === filePath);
 
   if (existingBuffer) {
     bufferStore.actions.setActiveBuffer(existingBuffer.id);
+  } else if (isJavaClassFile) {
+    const content = await LspClient.getInstance().getJavaClassFileContents(
+      activeBuffer.path,
+      target.uri,
+    );
+    const bufferId = bufferStore.actions.openContent({
+      type: "editor",
+      path: target.uri,
+      name: getJavaClassFileName(target.uri),
+      content,
+      isVirtual: true,
+      readOnly: true,
+      language: "java",
+    });
+    bufferStore.actions.setActiveBuffer(bufferId);
   } else {
     const content = await readFileContent(filePath);
     const fileName = filePath.split("/").pop() || "untitled";
@@ -112,6 +116,66 @@ async function goToActiveLspLocation(
       offset,
     });
   }, 100);
+}
+
+async function goToActiveLspLocation(
+  label: string,
+  resolveLocations: (
+    lspClient: LspNavigationClient,
+    filePath: string,
+    line: number,
+    character: number,
+  ) => Promise<LspNavigationLocation[] | null>,
+): Promise<void> {
+  const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+
+  const lspClient = LspClient.getInstance();
+  const context = getActiveEditorContext();
+  if (!context) return;
+
+  const { activeBuffer, editorState } = context;
+  const cursorPosition = editorState.cursorPosition;
+
+  const locations = await resolveLocations(
+    lspClient,
+    activeBuffer.path,
+    cursorPosition.line,
+    cursorPosition.column,
+  );
+
+  if (!locations || locations.length === 0) {
+    toast.info(`No ${label} found.`);
+    return;
+  }
+
+  await navigateToLspLocation(locations[0]);
+}
+
+function hierarchyItemLabel(direction: string, item: CallHierarchyItem | TypeHierarchyItem) {
+  const detail = item.detail ? ` — ${item.detail}` : "";
+  return `${direction} ${item.name}${detail}`;
+}
+
+async function chooseHierarchyItem<T extends CallHierarchyItem | TypeHierarchyItem>(
+  title: string,
+  message: string,
+  items: Array<{ direction: string; item: T }>,
+): Promise<T | null> {
+  if (items.length === 0) {
+    toast.info(`No ${title.toLowerCase()} entries found.`);
+    return null;
+  }
+
+  const boundedItems = items.slice(0, 50);
+  const selected = await showChoiceDialog(message, {
+    title,
+    choices: boundedItems.map(({ direction, item }, index) => ({
+      value: String(index),
+      label: hierarchyItemLabel(direction, item),
+    })),
+  });
+
+  return selected === null ? null : (boundedItems[Number(selected)]?.item ?? null);
 }
 
 export function openOutlinePicker(): void {
@@ -230,6 +294,72 @@ export async function goToReferences(): Promise<void> {
   });
 
   referencesActions.setReferences(origin, converted);
+}
+
+export async function showCallHierarchy(): Promise<void> {
+  const context = getActiveEditorContext();
+  if (!context) return;
+
+  const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+  const { activeBuffer, editorState } = context;
+  const cursorPosition = editorState.cursorPosition;
+  const lspClient = LspClient.getInstance();
+  const roots = await lspClient.prepareCallHierarchy(
+    activeBuffer.path,
+    cursorPosition.line,
+    cursorPosition.column,
+  );
+
+  if (roots.length === 0) {
+    toast.info("No call hierarchy found at the cursor.");
+    return;
+  }
+
+  const [incomingCalls, outgoingCalls] = await Promise.all([
+    lspClient.getIncomingCalls(activeBuffer.path, roots[0]),
+    lspClient.getOutgoingCalls(activeBuffer.path, roots[0]),
+  ]);
+  const selected = await chooseHierarchyItem("Call Hierarchy", "Choose a related call:", [
+    ...incomingCalls.map(({ from }) => ({ direction: "Caller:", item: from })),
+    ...outgoingCalls.map(({ to }) => ({ direction: "Callee:", item: to })),
+  ]);
+
+  if (selected) {
+    await navigateToLspLocation({ uri: selected.uri, range: selected.selectionRange });
+  }
+}
+
+export async function showTypeHierarchy(): Promise<void> {
+  const context = getActiveEditorContext();
+  if (!context) return;
+
+  const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+  const { activeBuffer, editorState } = context;
+  const cursorPosition = editorState.cursorPosition;
+  const lspClient = LspClient.getInstance();
+  const roots = await lspClient.prepareTypeHierarchy(
+    activeBuffer.path,
+    cursorPosition.line,
+    cursorPosition.column,
+  );
+
+  if (roots.length === 0) {
+    toast.info("No type hierarchy found at the cursor.");
+    return;
+  }
+
+  const [supertypes, subtypes] = await Promise.all([
+    lspClient.getSupertypes(activeBuffer.path, roots[0]),
+    lspClient.getSubtypes(activeBuffer.path, roots[0]),
+  ]);
+  const selected = await chooseHierarchyItem("Type Hierarchy", "Choose a related type:", [
+    ...supertypes.map((item) => ({ direction: "Supertype:", item })),
+    ...subtypes.map((item) => ({ direction: "Subtype:", item })),
+  ]);
+
+  if (selected) {
+    await navigateToLspLocation({ uri: selected.uri, range: selected.selectionRange });
+  }
 }
 
 export async function goBack(): Promise<void> {

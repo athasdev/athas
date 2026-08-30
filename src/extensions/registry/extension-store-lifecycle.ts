@@ -160,7 +160,11 @@ export async function installExtensionLifecycle(params: {
     const resolvedTools = await resolveToolPaths(primaryLanguageId, extension.manifest, {
       ensureInstalled: true,
     });
-    const runtimeManifest = buildRuntimeManifest(extension.manifest, resolvedTools.toolPaths);
+    const runtimeManifest = buildRuntimeManifest(
+      extension.manifest,
+      resolvedTools.toolPaths,
+      resolvedTools.lspBundles,
+    );
 
     if (extension.manifest.lsp && !runtimeManifest.lsp) {
       const runtimeIssue =
@@ -278,7 +282,11 @@ export async function enableExtensionLifecycle(params: {
     const resolvedTools = await resolveToolPaths(primaryLanguageId, extension.manifest, {
       ensureInstalled: false,
     });
-    const runtimeManifest = buildRuntimeManifest(extension.manifest, resolvedTools.toolPaths);
+    const runtimeManifest = buildRuntimeManifest(
+      extension.manifest,
+      resolvedTools.toolPaths,
+      resolvedTools.lspBundles,
+    );
 
     extensionRegistry.registerExtension(runtimeManifest, {
       isBundled: false,

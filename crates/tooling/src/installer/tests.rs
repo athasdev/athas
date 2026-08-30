@@ -1,6 +1,28 @@
 use super::*;
 
 #[test]
+fn parses_modern_and_legacy_java_versions() {
+   assert_eq!(
+      parse_java_major_version(r#"openjdk version "21.0.8" 2025-07-15"#),
+      Some(21)
+   );
+   assert_eq!(
+      parse_java_major_version(r#"java version "1.8.0_491""#),
+      Some(8)
+   );
+   assert_eq!(parse_java_major_version("invalid"), None);
+}
+
+#[test]
+fn builds_managed_temurin_download_url_for_the_current_platform() {
+   let url = ToolInstaller::temurin_download_url();
+
+   assert!(url.starts_with("https://api.adoptium.net/v3/binary/latest/21/ga/"));
+   assert!(url.ends_with("/jdk/hotspot/normal/eclipse"));
+   assert!(!url.contains(char::is_whitespace));
+}
+
+#[test]
 fn normalizes_versioned_node_package_specs() {
    assert_eq!(
       ToolInstaller::node_package_identity("opencode-ai@1.18.21"),

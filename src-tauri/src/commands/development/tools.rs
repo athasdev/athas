@@ -150,6 +150,12 @@ pub async fn install_language_tools(
    // Install LSP
    if let Some(config) = resolved_tools.get(&ToolType::Lsp) {
       status.lsp = Some(match ToolInstaller::install(&app_handle, config).await {
+         Ok(_) if language_id == "java" => {
+            match ToolInstaller::ensure_java_debug_bundle(&app_handle).await {
+               Ok(_) => ToolStatus::Installed,
+               Err(e) => ToolStatus::Failed(e.to_string()),
+            }
+         }
          Ok(_) => ToolStatus::Installed,
          Err(e) => ToolStatus::Failed(e.to_string()),
       });
@@ -198,9 +204,21 @@ pub async fn install_tool(
    })?;
 
    match ToolInstaller::install(&app_handle, &config).await {
+      Ok(_) if language_id == "java" && tool_type == ToolType::Lsp => {
+         match ToolInstaller::ensure_java_debug_bundle(&app_handle).await {
+            Ok(_) => Ok(ToolStatus::Installed),
+            Err(e) => Ok(ToolStatus::Failed(e.to_string())),
+         }
+      }
       Ok(_) => Ok(ToolStatus::Installed),
       Err(e) => Ok(ToolStatus::Failed(e.to_string())),
    }
+}
+
+#[tauri::command]
+pub fn get_java_debug_bundle_path(app_handle: AppHandle) -> Result<Option<String>, String> {
+   let path = ToolInstaller::java_debug_bundle_path(&app_handle).map_err(|e| e.to_string())?;
+   Ok(path.exists().then(|| path.to_string_lossy().to_string()))
 }
 
 /// Get the status of all tools for a language

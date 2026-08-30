@@ -16,6 +16,17 @@ pub struct LspDiagnosticContext {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct LspCodeActionContext {
+   pub start_line: u32,
+   pub start_column: u32,
+   pub end_line: u32,
+   pub end_column: u32,
+   #[serde(default)]
+   pub diagnostics: Vec<LspDiagnosticContext>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LspCodeActionItem {
    pub id: String,
    pub title: String,

@@ -8,6 +8,7 @@ use super::{
 };
 use anyhow::{Context, Result, bail};
 use lsp_types::*;
+use serde_json::Value;
 use std::{
    fs,
    path::{Path, PathBuf},
@@ -371,6 +372,8 @@ impl LspManager {
       file_path: &str,
       line: u32,
       character: u32,
+      trigger_kind: Option<u8>,
+      trigger_character: Option<String>,
    ) -> Result<Vec<CompletionItem>> {
       let start_time = Instant::now();
 
@@ -387,8 +390,12 @@ impl LspManager {
             position: Position { line, character },
          },
          context: Some(CompletionContext {
-            trigger_kind: CompletionTriggerKind::INVOKED,
-            trigger_character: None,
+            trigger_kind: match trigger_kind {
+               Some(2) => CompletionTriggerKind::TRIGGER_CHARACTER,
+               Some(3) => CompletionTriggerKind::TRIGGER_FOR_INCOMPLETE_COMPLETIONS,
+               _ => CompletionTriggerKind::INVOKED,
+            },
+            trigger_character,
          }),
          work_done_progress_params: Default::default(),
          partial_result_params: Default::default(),
@@ -420,6 +427,17 @@ impl LspManager {
       );
 
       Ok(items)
+   }
+
+   pub async fn resolve_completion_item(
+      &self,
+      file_path: &str,
+      item: CompletionItem,
+   ) -> Result<CompletionItem> {
+      let client = self
+         .get_client_for_file(file_path)
+         .context("No LSP client for this file")?;
+      client.completion_item_resolve(item).await
    }
 
    pub async fn get_hover(
@@ -784,6 +802,245 @@ impl LspManager {
       }
    }
 
+   pub async fn get_folding_ranges(&self, file_path: &str) -> Result<Vec<FoldingRange>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(vec![]);
+      };
+      let params = FoldingRangeParams {
+         text_document: manager_support::text_document_identifier(file_path)?,
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_folding_range(params).await {
+         Ok(Some(ranges)) => Ok(ranges),
+         Ok(None) => Ok(vec![]),
+         Err(error)
+            if manager_support::is_unsupported_method(&error, "textDocument/foldingRange") =>
+         {
+            Ok(vec![])
+         }
+         Err(error) => Err(error),
+      }
+   }
+
+   pub async fn get_selection_ranges(
+      &self,
+      file_path: &str,
+      positions: Vec<Position>,
+   ) -> Result<Vec<SelectionRange>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(vec![]);
+      };
+      let params = SelectionRangeParams {
+         text_document: manager_support::text_document_identifier(file_path)?,
+         positions,
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_selection_range(params).await {
+         Ok(Some(ranges)) => Ok(ranges),
+         Ok(None) => Ok(vec![]),
+         Err(error)
+            if manager_support::is_unsupported_method(&error, "textDocument/selectionRange") =>
+         {
+            Ok(vec![])
+         }
+         Err(error) => Err(error),
+      }
+   }
+
+   pub async fn get_document_highlights(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Vec<DocumentHighlight>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(vec![]);
+      };
+      let params = DocumentHighlightParams {
+         text_document_position_params: TextDocumentPositionParams {
+            text_document: manager_support::text_document_identifier(file_path)?,
+            position: Position { line, character },
+         },
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_document_highlight(params).await {
+         Ok(Some(highlights)) => Ok(highlights),
+         Ok(None) => Ok(vec![]),
+         Err(error)
+            if manager_support::is_unsupported_method(&error, "textDocument/documentHighlight") =>
+         {
+            Ok(vec![])
+         }
+         Err(error) => Err(error),
+      }
+   }
+
+   pub async fn prepare_call_hierarchy(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Vec<CallHierarchyItem>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(vec![]);
+      };
+      let params = CallHierarchyPrepareParams {
+         text_document_position_params: TextDocumentPositionParams {
+            text_document: manager_support::text_document_identifier(file_path)?,
+            position: Position { line, character },
+         },
+         work_done_progress_params: Default::default(),
+      };
+      Ok(client
+         .text_document_prepare_call_hierarchy(params)
+         .await?
+         .unwrap_or_default())
+   }
+
+   pub async fn get_incoming_calls(
+      &self,
+      file_path: &str,
+      item: CallHierarchyItem,
+   ) -> Result<Vec<CallHierarchyIncomingCall>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(vec![]);
+      };
+      Ok(client
+         .call_hierarchy_incoming_calls(CallHierarchyIncomingCallsParams {
+            item,
+            work_done_progress_params: Default::default(),
+            partial_result_params: Default::default(),
+         })
+         .await?
+         .unwrap_or_default())
+   }
+
+   pub async fn get_outgoing_calls(
+      &self,
+      file_path: &str,
+      item: CallHierarchyItem,
+   ) -> Result<Vec<CallHierarchyOutgoingCall>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(vec![]);
+      };
+      Ok(client
+         .call_hierarchy_outgoing_calls(CallHierarchyOutgoingCallsParams {
+            item,
+            work_done_progress_params: Default::default(),
+            partial_result_params: Default::default(),
+         })
+         .await?
+         .unwrap_or_default())
+   }
+
+   pub async fn prepare_type_hierarchy(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Vec<TypeHierarchyItem>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(vec![]);
+      };
+      let params = TypeHierarchyPrepareParams {
+         text_document_position_params: TextDocumentPositionParams {
+            text_document: manager_support::text_document_identifier(file_path)?,
+            position: Position { line, character },
+         },
+         work_done_progress_params: Default::default(),
+      };
+      Ok(client
+         .text_document_prepare_type_hierarchy(params)
+         .await?
+         .unwrap_or_default())
+   }
+
+   pub async fn get_supertypes(
+      &self,
+      file_path: &str,
+      item: TypeHierarchyItem,
+   ) -> Result<Vec<TypeHierarchyItem>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(vec![]);
+      };
+      Ok(client
+         .type_hierarchy_supertypes(TypeHierarchySupertypesParams {
+            item,
+            work_done_progress_params: Default::default(),
+            partial_result_params: Default::default(),
+         })
+         .await?
+         .unwrap_or_default())
+   }
+
+   pub async fn get_subtypes(
+      &self,
+      file_path: &str,
+      item: TypeHierarchyItem,
+   ) -> Result<Vec<TypeHierarchyItem>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(vec![]);
+      };
+      Ok(client
+         .type_hierarchy_subtypes(TypeHierarchySubtypesParams {
+            item,
+            work_done_progress_params: Default::default(),
+            partial_result_params: Default::default(),
+         })
+         .await?
+         .unwrap_or_default())
+   }
+
+   pub async fn format_on_type(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+      trigger_character: String,
+      tab_size: u32,
+      insert_spaces: bool,
+   ) -> Result<Vec<TextEdit>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(vec![]);
+      };
+      let params = DocumentOnTypeFormattingParams {
+         text_document_position: TextDocumentPositionParams {
+            text_document: manager_support::text_document_identifier(file_path)?,
+            position: Position { line, character },
+         },
+         ch: trigger_character,
+         options: FormattingOptions {
+            tab_size,
+            insert_spaces,
+            ..Default::default()
+         },
+      };
+
+      match client.text_document_on_type_formatting(params).await {
+         Ok(Some(edits)) => Ok(edits),
+         Ok(None) => Ok(vec![]),
+         Err(error)
+            if manager_support::is_unsupported_method(&error, "textDocument/onTypeFormatting") =>
+         {
+            Ok(vec![])
+         }
+         Err(error) => Err(error),
+      }
+   }
+
+   pub fn get_on_type_formatting_trigger_characters(&self, file_path: &str) -> Vec<String> {
+      self
+         .get_client_for_file(file_path)
+         .map(|client| client.on_type_formatting_trigger_characters())
+         .unwrap_or_default()
+   }
+
    pub async fn get_signature_help(
       &self,
       file_path: &str,
@@ -964,7 +1221,8 @@ impl LspManager {
    pub async fn get_code_actions(
       &self,
       file_path: &str,
-      diagnostic: Diagnostic,
+      range: Range,
+      diagnostics: Vec<Diagnostic>,
    ) -> Result<Vec<CodeActionOrCommand>> {
       let Some(client) = self.get_client_for_file(file_path) else {
          return Ok(vec![]);
@@ -979,9 +1237,9 @@ impl LspManager {
 
       let params = CodeActionParams {
          text_document,
-         range: diagnostic.range,
+         range,
          context: CodeActionContext {
-            diagnostics: vec![diagnostic],
+            diagnostics,
             only: None,
             trigger_kind: Some(CodeActionTriggerKind::INVOKED),
          },
@@ -1069,6 +1327,41 @@ impl LspManager {
             }
          }
       }
+   }
+
+   pub async fn execute_command(
+      &self,
+      file_path: &str,
+      command: String,
+      arguments: Vec<Value>,
+   ) -> Result<Option<Value>> {
+      let client = self
+         .get_client_for_file(file_path)
+         .ok_or_else(|| anyhow::anyhow!("No active LSP client for this file"))?;
+      let params = manager_support::execute_command_params(command, arguments);
+
+      client.workspace_execute_command(params).await
+   }
+
+   pub fn respond_workspace_edit(
+      &self,
+      client_id: &str,
+      request_id: Value,
+      applied: bool,
+      failure_reason: Option<String>,
+   ) -> Result<()> {
+      let client = self
+         .workspace_clients
+         .get_client_by_id(client_id)
+         .ok_or_else(|| anyhow::anyhow!("Language server is no longer available"))?;
+      client.respond_workspace_edit(request_id, applied, failure_reason)
+   }
+
+   pub async fn get_java_class_file_contents(&self, file_path: &str, uri: Url) -> Result<String> {
+      let client = self
+         .get_client_for_file(file_path)
+         .ok_or_else(|| anyhow::anyhow!("No active Java language server for this file"))?;
+      client.java_class_file_contents(uri).await
    }
 
    pub fn notify_document_open(

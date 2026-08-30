@@ -62,7 +62,9 @@ export function isWorkspaceEdit(value: unknown): value is WorkspaceEdit {
     isObject(value.changes) &&
     Object.values(value.changes).every((edits) => Array.isArray(edits) && edits.every(isTextEdit));
   const hasDocumentChanges =
-    Array.isArray(value.documentChanges) && value.documentChanges.some(isTextDocumentEdit);
+    Array.isArray(value.documentChanges) &&
+    value.documentChanges.length > 0 &&
+    value.documentChanges.every(isTextDocumentEdit);
 
   return hasChanges || hasDocumentChanges;
 }
@@ -76,6 +78,12 @@ export function filePathFromUri(uri: string): string {
   } catch {
     return decodeURIComponent(uri.replace(/^file:\/\//, ""));
   }
+}
+
+export function fileUriFromPath(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, "/");
+  const pathname = normalized.startsWith("/") ? normalized : `/${normalized}`;
+  return `file://${encodeURI(pathname).replace(/#/g, "%23").replace(/\?/g, "%3F")}`;
 }
 
 function buildLineStartOffsets(content: string): number[] {

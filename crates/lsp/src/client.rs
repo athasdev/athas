@@ -23,6 +23,13 @@ use tokio::sync::oneshot;
 
 type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>>;
 pub type LspServerEnv = HashMap<String, String>;
+static NEXT_CLIENT_ID: AtomicU64 = AtomicU64::new(1);
+
+#[derive(Default)]
+struct LspServerContext {
+   root_uri: Option<Url>,
+   settings: Value,
+}
 
 fn find_node_modules_dir(server_path: &Path) -> Option<PathBuf> {
    server_path
@@ -96,13 +103,23 @@ fn is_node_script_server(server_path: &Path) -> bool {
    has_javascript_extension(server_path) || has_node_shebang(server_path)
 }
 
+fn configuration_value(settings: &Value, section: &str) -> Value {
+   section
+      .split('.')
+      .try_fold(settings, |current, key| current.get(key))
+      .cloned()
+      .unwrap_or(Value::Null)
+}
+
 #[derive(Clone)]
 pub struct LspClient {
+   id: String,
    request_counter: Arc<AtomicU64>,
    stdin_tx: Sender<String>,
    pending_requests: PendingRequests,
    capabilities: Arc<Mutex<Option<ServerCapabilities>>>,
    is_running: Arc<AtomicBool>,
+   server_context: Arc<Mutex<LspServerContext>>,
 }
 
 impl LspClient {
@@ -188,10 +205,15 @@ impl LspClient {
       let stderr = child.stderr.take().context("Failed to get stderr")?;
 
       let (stdin_tx, stdin_rx) = bounded::<String>(100);
+      let client_id = format!("lsp-{}", NEXT_CLIENT_ID.fetch_add(1, Ordering::SeqCst));
       let pending_requests = Arc::new(Mutex::new(HashMap::new()));
       let pending_requests_clone = Arc::clone(&pending_requests);
       let app_handle_clone = app_handle.clone();
+      let server_request_app_handle = app_handle.clone();
+      let server_request_client_id = client_id.clone();
       let server_request_stdin_tx = stdin_tx.clone();
+      let server_context = Arc::new(Mutex::new(LspServerContext::default()));
+      let server_context_clone = Arc::clone(&server_context);
       let is_running = Arc::new(AtomicBool::new(true));
       let is_running_clone = Arc::clone(&is_running);
 
@@ -313,7 +335,13 @@ impl LspClient {
                }
 
                if message.get("id").is_some() && message.get("method").is_some() {
-                  Self::handle_server_request(message, &server_request_stdin_tx);
+                  Self::handle_server_request(
+                     message,
+                     &server_request_stdin_tx,
+                     &server_context_clone,
+                     &server_request_app_handle,
+                     &server_request_client_id,
+                  );
                } else if message.get("id").is_some() {
                   Self::handle_response(message, &pending_requests_clone);
                } else if message.get("method").is_some() {
@@ -324,11 +352,13 @@ impl LspClient {
       });
 
       let client = Self {
+         id: client_id,
          request_counter: Arc::new(AtomicU64::new(1)),
          stdin_tx,
          pending_requests,
          capabilities: Arc::new(Mutex::new(None)),
          is_running,
+         server_context,
       };
 
       // Don't initialize here - we'll do it separately to avoid runtime issues
@@ -343,6 +373,15 @@ impl LspClient {
       initialization_options: Option<Value>,
    ) -> Result<()> {
       log::info!("Initializing LSP server with root_uri: {}", root_uri);
+
+      if let Ok(mut context) = self.server_context.lock() {
+         context.root_uri = Some(root_uri.clone());
+         context.settings = initialization_options
+            .as_ref()
+            .and_then(|options| options.get("settings"))
+            .cloned()
+            .unwrap_or(Value::Null);
+      }
 
       // Build client capabilities with text document sync and diagnostics support
       let text_document_capabilities = TextDocumentClientCapabilities {
@@ -360,6 +399,18 @@ impl LspClient {
                documentation_format: Some(vec![MarkupKind::Markdown, MarkupKind::PlainText]),
                deprecated_support: Some(true),
                preselect_support: Some(true),
+               tag_support: Some(TagSupport {
+                  value_set: vec![CompletionItemTag::DEPRECATED],
+               }),
+               insert_replace_support: Some(true),
+               resolve_support: Some(CompletionItemCapabilityResolveSupport {
+                  properties: vec![
+                     "documentation".to_string(),
+                     "detail".to_string(),
+                     "additionalTextEdits".to_string(),
+                     "command".to_string(),
+                  ],
+               }),
                ..Default::default()
             }),
             ..Default::default()
@@ -442,6 +493,25 @@ impl LspClient {
             hierarchical_document_symbol_support: Some(true),
             tag_support: None,
          }),
+         document_highlight: Some(DynamicRegistrationClientCapabilities {
+            dynamic_registration: Some(true),
+         }),
+         folding_range: Some(FoldingRangeClientCapabilities {
+            dynamic_registration: Some(true),
+            range_limit: None,
+            line_folding_only: Some(false),
+            folding_range_kind: None,
+            folding_range: None,
+         }),
+         selection_range: Some(SelectionRangeClientCapabilities {
+            dynamic_registration: Some(true),
+         }),
+         call_hierarchy: Some(DynamicRegistrationClientCapabilities {
+            dynamic_registration: Some(true),
+         }),
+         type_hierarchy: Some(DynamicRegistrationClientCapabilities {
+            dynamic_registration: Some(true),
+         }),
          references: Some(DynamicRegistrationClientCapabilities {
             dynamic_registration: Some(true),
          }),
@@ -481,6 +551,11 @@ impl LspClient {
          capabilities: ClientCapabilities {
             text_document: Some(text_document_capabilities),
             workspace: Some(WorkspaceClientCapabilities {
+               apply_edit: Some(true),
+               workspace_edit: Some(WorkspaceEditClientCapabilities {
+                  document_changes: Some(true),
+                  ..Default::default()
+               }),
                configuration: Some(true),
                execute_command: Some(DynamicRegistrationClientCapabilities {
                   dynamic_registration: Some(true),
@@ -559,33 +634,86 @@ impl LspClient {
       }
    }
 
-   fn handle_server_request(request: Value, stdin_tx: &Sender<String>) {
+   fn handle_server_request(
+      request: Value,
+      stdin_tx: &Sender<String>,
+      server_context: &Arc<Mutex<LspServerContext>>,
+      app_handle: &Option<AppHandle>,
+      client_id: &str,
+   ) {
       let id = request.get("id").cloned().unwrap_or(Value::Null);
       let method = request.get("method").and_then(|method| method.as_str());
 
       let response = match method {
          Some("workspace/configuration") => {
-            let item_count = request
+            let items = request
                .get("params")
                .and_then(|params| params.get("items"))
                .and_then(|items| items.as_array())
-               .map(|items| items.len())
-               .unwrap_or(0);
-            Self::send_server_response(stdin_tx, id, Value::Array(vec![Value::Null; item_count]))
+               .cloned()
+               .unwrap_or_default();
+            let settings = server_context
+               .lock()
+               .map(|context| context.settings.clone())
+               .unwrap_or(Value::Null);
+            let values = items
+               .iter()
+               .map(|item| {
+                  item
+                     .get("section")
+                     .and_then(Value::as_str)
+                     .map(|section| configuration_value(&settings, section))
+                     .unwrap_or(Value::Null)
+               })
+               .collect();
+            Self::send_server_response(stdin_tx, id, Value::Array(values))
          }
-         Some("workspace/workspaceFolders") => Self::send_server_response(stdin_tx, id, json!([])),
+         Some("workspace/workspaceFolders") => {
+            let folders = server_context
+               .lock()
+               .ok()
+               .and_then(|context| context.root_uri.clone())
+               .map(|root_uri| {
+                  let name = root_uri
+                     .path_segments()
+                     .and_then(|mut segments| segments.rfind(|segment| !segment.is_empty()))
+                     .unwrap_or("workspace");
+                  json!([{ "uri": root_uri, "name": name }])
+               })
+               .unwrap_or_else(|| json!([]));
+            Self::send_server_response(stdin_tx, id, folders)
+         }
          Some("client/registerCapability" | "client/unregisterCapability") => {
             Self::send_server_response(stdin_tx, id, Value::Null)
          }
          Some("window/showMessageRequest") => Self::send_server_response(stdin_tx, id, Value::Null),
-         Some("workspace/applyEdit") => Self::send_server_response(
-            stdin_tx,
-            id,
-            json!({
-               "applied": false,
-               "failureReason": "Athas does not support server-initiated workspace edits yet",
-            }),
-         ),
+         Some("workspace/applyEdit") => {
+            let edit = request
+               .get("params")
+               .and_then(|params| params.get("edit"))
+               .cloned();
+
+            match (app_handle, edit) {
+               (Some(app), Some(edit)) => app
+                  .emit(
+                     "lsp://workspace-edit",
+                     json!({
+                        "clientId": client_id,
+                        "requestId": id,
+                        "edit": edit,
+                     }),
+                  )
+                  .map_err(anyhow::Error::from),
+               _ => Self::send_server_response(
+                  stdin_tx,
+                  id,
+                  json!({
+                     "applied": false,
+                     "failureReason": "The workspace edit request was invalid",
+                  }),
+               ),
+            }
+         }
          Some(method_name) => Self::send_server_error(
             stdin_tx,
             id,
@@ -598,6 +726,26 @@ impl LspClient {
       if let Err(error) = response {
          log::warn!("Failed to respond to LSP server request: {}", error);
       }
+   }
+
+   pub fn id(&self) -> &str {
+      &self.id
+   }
+
+   pub fn respond_workspace_edit(
+      &self,
+      request_id: Value,
+      applied: bool,
+      failure_reason: Option<String>,
+   ) -> Result<()> {
+      Self::send_server_response(
+         &self.stdin_tx,
+         request_id,
+         json!({
+            "applied": applied,
+            "failureReason": failure_reason,
+         }),
+      )
    }
 
    fn handle_notification(notification: Value, app_handle: &Option<AppHandle>) {
@@ -682,6 +830,13 @@ impl LspClient {
       R::Params: serde::Serialize,
       R::Result: serde::de::DeserializeOwned,
    {
+      let response = self
+         .request_value(R::METHOD, serde_json::to_value(params)?)
+         .await?;
+      serde_json::from_value(response).context("Failed to deserialize response")
+   }
+
+   pub async fn request_value(&self, method: &str, params: Value) -> Result<Value> {
       if !self.is_running.load(Ordering::SeqCst) {
          bail!("LSP server is not running");
       }
@@ -694,11 +849,11 @@ impl LspClient {
       let request = json!({
           "jsonrpc": "2.0",
           "id": id,
-          "method": R::METHOD,
+          "method": method,
           "params": params,
       });
 
-      log::debug!("LSP Request {}: {}", id, R::METHOD);
+      log::debug!("LSP Request {}: {}", id, method);
 
       let msg = format!(
          "Content-Length: {}\r\n\r\n{}",
@@ -708,8 +863,7 @@ impl LspClient {
 
       self.stdin_tx.send(msg).context("Failed to send request")?;
 
-      let response = rx.await.context("Request cancelled")??;
-      serde_json::from_value(response).context("Failed to deserialize response")
+      rx.await.context("Request cancelled")?
    }
 
    pub fn notify<N>(&self, params: N::Params) -> Result<()>
@@ -765,6 +919,10 @@ impl LspClient {
          Err(e) => log::error!("LSP completion request failed: {}", e),
       }
       result
+   }
+
+   pub async fn completion_item_resolve(&self, item: CompletionItem) -> Result<CompletionItem> {
+      self.request::<request::ResolveCompletionItem>(item).await
    }
 
    pub async fn text_document_hover(&self, params: HoverParams) -> Result<Option<Hover>> {
@@ -913,6 +1071,84 @@ impl LspClient {
       self.request::<request::RangeFormatting>(params).await
    }
 
+   pub async fn text_document_folding_range(
+      &self,
+      params: FoldingRangeParams,
+   ) -> Result<Option<Vec<FoldingRange>>> {
+      self.request::<request::FoldingRangeRequest>(params).await
+   }
+
+   pub async fn text_document_selection_range(
+      &self,
+      params: SelectionRangeParams,
+   ) -> Result<Option<Vec<SelectionRange>>> {
+      self.request::<request::SelectionRangeRequest>(params).await
+   }
+
+   pub async fn text_document_document_highlight(
+      &self,
+      params: DocumentHighlightParams,
+   ) -> Result<Option<Vec<DocumentHighlight>>> {
+      self
+         .request::<request::DocumentHighlightRequest>(params)
+         .await
+   }
+
+   pub async fn text_document_prepare_call_hierarchy(
+      &self,
+      params: CallHierarchyPrepareParams,
+   ) -> Result<Option<Vec<CallHierarchyItem>>> {
+      self.request::<request::CallHierarchyPrepare>(params).await
+   }
+
+   pub async fn call_hierarchy_incoming_calls(
+      &self,
+      params: CallHierarchyIncomingCallsParams,
+   ) -> Result<Option<Vec<CallHierarchyIncomingCall>>> {
+      self
+         .request::<request::CallHierarchyIncomingCalls>(params)
+         .await
+   }
+
+   pub async fn call_hierarchy_outgoing_calls(
+      &self,
+      params: CallHierarchyOutgoingCallsParams,
+   ) -> Result<Option<Vec<CallHierarchyOutgoingCall>>> {
+      self
+         .request::<request::CallHierarchyOutgoingCalls>(params)
+         .await
+   }
+
+   pub async fn text_document_prepare_type_hierarchy(
+      &self,
+      params: TypeHierarchyPrepareParams,
+   ) -> Result<Option<Vec<TypeHierarchyItem>>> {
+      self.request::<request::TypeHierarchyPrepare>(params).await
+   }
+
+   pub async fn type_hierarchy_supertypes(
+      &self,
+      params: TypeHierarchySupertypesParams,
+   ) -> Result<Option<Vec<TypeHierarchyItem>>> {
+      self
+         .request::<request::TypeHierarchySupertypes>(params)
+         .await
+   }
+
+   pub async fn type_hierarchy_subtypes(
+      &self,
+      params: TypeHierarchySubtypesParams,
+   ) -> Result<Option<Vec<TypeHierarchyItem>>> {
+      self.request::<request::TypeHierarchySubtypes>(params).await
+   }
+
+   pub async fn text_document_on_type_formatting(
+      &self,
+      params: DocumentOnTypeFormattingParams,
+   ) -> Result<Option<Vec<TextEdit>>> {
+      self.request::<request::OnTypeFormatting>(params).await
+   }
+
    pub fn signature_help_trigger_characters(&self) -> Vec<String> {
       self
          .capabilities
@@ -921,6 +1157,21 @@ impl LspClient {
          .as_ref()
          .and_then(|capabilities| capabilities.signature_help_provider.as_ref())
          .and_then(|provider| provider.trigger_characters.clone())
+         .unwrap_or_default()
+   }
+
+   pub fn on_type_formatting_trigger_characters(&self) -> Vec<String> {
+      self
+         .capabilities
+         .lock()
+         .unwrap()
+         .as_ref()
+         .and_then(|capabilities| capabilities.document_on_type_formatting_provider.as_ref())
+         .map(|provider| {
+            std::iter::once(provider.first_trigger_character.clone())
+               .chain(provider.more_trigger_character.clone().unwrap_or_default())
+               .collect()
+         })
          .unwrap_or_default()
    }
 
@@ -949,6 +1200,13 @@ impl LspClient {
       self.request::<request::ExecuteCommand>(params).await
    }
 
+   pub async fn java_class_file_contents(&self, uri: Url) -> Result<String> {
+      let response = self
+         .request_value("java/classFileContents", json!({ "uri": uri }))
+         .await?;
+      serde_json::from_value(response).context("Failed to deserialize Java class file contents")
+   }
+
    pub fn text_document_did_open(&self, params: DidOpenTextDocumentParams) -> Result<()> {
       self.notify::<notification::DidOpenTextDocument>(params)
    }
@@ -970,6 +1228,26 @@ impl LspClient {
 mod tests {
    use super::*;
    use std::{env, ffi::OsStr, fs};
+
+   #[test]
+   fn resolves_nested_workspace_configuration_sections() {
+      let settings = json!({
+         "java": {
+            "format": { "enabled": true },
+            "signatureHelp": { "enabled": true }
+         }
+      });
+
+      assert_eq!(
+         configuration_value(&settings, "java.format"),
+         json!({ "enabled": true })
+      );
+      assert_eq!(
+         configuration_value(&settings, "java.signatureHelp.enabled"),
+         json!(true)
+      );
+      assert_eq!(configuration_value(&settings, "java.missing"), Value::Null);
+   }
 
    #[test]
    fn patches_node_package_env_from_js_entrypoint() {
@@ -1036,5 +1314,30 @@ mod tests {
       );
       assert_eq!(workspace_cwd(Some(&file_path)), None);
       assert_eq!(workspace_cwd(None), None);
+   }
+
+   #[test]
+   fn responds_to_server_workspace_edits() {
+      let (stdin_tx, stdin_rx) = bounded(1);
+      let client = LspClient {
+         id: "test-client".to_string(),
+         request_counter: Arc::new(AtomicU64::new(1)),
+         stdin_tx,
+         pending_requests: Arc::new(Mutex::new(HashMap::new())),
+         capabilities: Arc::new(Mutex::new(None)),
+         is_running: Arc::new(AtomicBool::new(true)),
+         server_context: Arc::new(Mutex::new(LspServerContext::default())),
+      };
+
+      client
+         .respond_workspace_edit(json!(42), false, Some("Unsupported edit".to_string()))
+         .unwrap();
+
+      let framed = stdin_rx.recv().unwrap();
+      let payload = framed.split("\r\n\r\n").nth(1).unwrap();
+      let response: Value = serde_json::from_str(payload).unwrap();
+      assert_eq!(response["id"], json!(42));
+      assert_eq!(response["result"]["applied"], json!(false));
+      assert_eq!(response["result"]["failureReason"], "Unsupported edit");
    }
 }

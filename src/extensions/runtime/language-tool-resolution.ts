@@ -13,6 +13,7 @@ type ToolIssueMap = Partial<Record<LanguageToolType, string>>;
 
 interface ResolvedToolPathsResult {
   toolPaths: ToolPathMap;
+  lspBundles: string[];
   issues: ExtensionRuntimeIssue[];
 }
 
@@ -129,12 +130,25 @@ export async function resolveToolPaths(
     issues.linter ||= "Linter binary could not be resolved. Reinstall the language tools.";
   }
 
+  let javaDebugBundle =
+    languageId === "java"
+      ? await invoke<string | null>("get_java_debug_bundle_path").catch(() => null)
+      : null;
+  if (languageId === "java" && options.repairMissing && toolPaths.lsp && !javaDebugBundle) {
+    issues = { ...(await installLanguageTools(languageId, manifest)), ...issues };
+    javaDebugBundle = await invoke<string | null>("get_java_debug_bundle_path").catch(() => null);
+  }
+  if (languageId === "java" && toolPaths.lsp && !javaDebugBundle) {
+    issues.lsp ||= "Java debugger bundle is missing. Reinstall the Java language tools.";
+  }
+
   return {
     toolPaths: {
       ...(toolPaths.lsp ? { lsp: toolPaths.lsp } : {}),
       ...(toolPaths.formatter ? { formatter: toolPaths.formatter } : {}),
       ...(toolPaths.linter ? { linter: toolPaths.linter } : {}),
     },
+    lspBundles: javaDebugBundle ? [javaDebugBundle] : [],
     issues: buildRuntimeIssues(toolConfig, issues),
   };
 }
@@ -142,6 +156,7 @@ export async function resolveToolPaths(
 export function buildRuntimeManifest(
   manifest: ExtensionManifest,
   toolPaths: ToolPathMap,
+  lspBundles: string[] = [],
 ): ExtensionManifest {
   const managedTools = getLanguageToolConfigSet(manifest);
   const languages = getManifestLanguageContributions(manifest);
@@ -152,7 +167,22 @@ export function buildRuntimeManifest(
 
   if (runtimeManifest.lsp && managedTools?.lsp) {
     if (toolPaths.lsp) {
-      runtimeManifest.lsp = { ...runtimeManifest.lsp, server: { default: toolPaths.lsp } };
+      const initializationOptions = runtimeManifest.lsp.initializationOptions ?? {};
+      const configuredBundles = Array.isArray(initializationOptions.bundles)
+        ? initializationOptions.bundles.filter(
+            (bundle): bundle is string => typeof bundle === "string",
+          )
+        : [];
+      runtimeManifest.lsp = {
+        ...runtimeManifest.lsp,
+        server: { default: toolPaths.lsp },
+        initializationOptions: {
+          ...initializationOptions,
+          ...(lspBundles.length
+            ? { bundles: Array.from(new Set([...configuredBundles, ...lspBundles])) }
+            : {}),
+        },
+      };
     } else {
       delete runtimeManifest.lsp;
     }

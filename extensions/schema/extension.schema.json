@@ -511,6 +511,9 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "initializationOptions": {
+          "type": "object"
         }
       }
     },

@@ -1,6 +1,13 @@
-import { Emitter, languages, Range as MonacoRange, Uri } from "monaco-editor";
+import {
+  Emitter,
+  editor as monacoEditor,
+  languages,
+  Range as MonacoRange,
+  Uri,
+} from "monaco-editor";
 import type * as Monaco from "monaco-editor";
-import type { CompletionItem, Hover } from "vscode-languageserver-protocol";
+import { toast } from "sonner";
+import type { CompletionItem, Hover, SelectionRange } from "vscode-languageserver-protocol";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { formatHoverContents } from "@/features/editor/lsp/hover-content";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
@@ -16,6 +23,20 @@ import { filePathFromAthasModelUri } from "./model-uri";
 import { createMonacoSemanticTokenProvider } from "./semantic-token-provider";
 
 let providersRegistered = false;
+const EXECUTE_LSP_CODE_ACTION_COMMAND = "athas.executeLspCodeAction";
+const EXECUTE_LSP_COMPLETION_COMMAND = "athas.executeLspCompletionCommand";
+
+interface ExecuteLspCodeActionPayload {
+  filePath: string;
+  actionPayload: unknown;
+  title: string;
+}
+
+interface ExecuteLspCompletionCommandPayload {
+  filePath: string;
+  command: string;
+  arguments?: unknown[];
+}
 
 function filePathFromModel(model: Monaco.editor.ITextModel): string {
   if (model.uri.scheme === "file") {
@@ -46,6 +67,20 @@ function toMonacoTextEdit(edit: LspTextEdit): Monaco.languages.TextEdit {
     range: toMonacoRange(edit.range),
     text: edit.newText,
   };
+}
+
+function toMonacoSelectionRanges(
+  selectionRange: SelectionRange,
+): Monaco.languages.SelectionRange[] {
+  const ranges: Monaco.languages.SelectionRange[] = [];
+  let current: SelectionRange | undefined = selectionRange;
+
+  while (current) {
+    ranges.push({ range: toMonacoRange(current.range) });
+    current = current.parent;
+  }
+
+  return ranges;
 }
 
 function completionLabelText(label: CompletionItem["label"]): string {
@@ -117,24 +152,60 @@ function markupDocumentation(
   return undefined;
 }
 
-function toCompletionItem(
+export function toMonacoCompletionItem(
   item: CompletionItem,
-  range: Monaco.IRange,
+  fallbackRange: Monaco.IRange | Monaco.languages.CompletionItemRanges,
+  filePath?: string,
 ): Monaco.languages.CompletionItem {
   const label = completionLabelText(item.label);
   const insertText =
     item.textEdit && "newText" in item.textEdit ? item.textEdit.newText : item.insertText || label;
+  const range = item.textEdit
+    ? "insert" in item.textEdit
+      ? {
+          insert: toMonacoRange(item.textEdit.insert),
+          replace: toMonacoRange(item.textEdit.replace),
+        }
+      : toMonacoRange(item.textEdit.range)
+    : fallbackRange;
+  const tags =
+    item.tags?.includes(1) || item.deprecated
+      ? [languages.CompletionItemTag.Deprecated]
+      : undefined;
 
   return {
-    label,
+    label: item.labelDetails
+      ? {
+          label,
+          detail: item.labelDetails.detail,
+          description: item.labelDetails.description,
+        }
+      : label,
     kind: mapCompletionKind(item.kind),
+    tags,
     detail: item.detail,
     documentation: markupDocumentation(item.documentation),
     insertText,
-    range: item.textEdit && "range" in item.textEdit ? toMonacoRange(item.textEdit.range) : range,
+    range,
     sortText: item.sortText,
     filterText: item.filterText,
+    preselect: item.preselect,
     commitCharacters: item.commitCharacters,
+    additionalTextEdits: item.additionalTextEdits?.map(toMonacoTextEdit),
+    command:
+      item.command && filePath
+        ? {
+            id: EXECUTE_LSP_COMPLETION_COMMAND,
+            title: item.command.title,
+            arguments: [
+              {
+                filePath,
+                command: item.command.command,
+                arguments: item.command.arguments,
+              } satisfies ExecuteLspCompletionCommandPayload,
+            ],
+          }
+        : undefined,
     insertTextRules:
       item.insertTextFormat === 2
         ? languages.CompletionItemInsertTextRule.InsertAsSnippet
@@ -159,6 +230,13 @@ function codeActionKind(kind: string | undefined): string {
 function getPayloadEdit(payload: unknown): unknown {
   if (!payload || typeof payload !== "object") return null;
   return (payload as { edit?: unknown }).edit;
+}
+
+function withoutPayloadEdit(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object") return payload;
+  const copy = { ...(payload as Record<string, unknown>) };
+  delete copy.edit;
+  return copy;
 }
 
 function toWorkspaceEdit(edit: unknown): Monaco.languages.WorkspaceEdit | undefined {
@@ -190,6 +268,14 @@ export function registerMonacoLspProviders() {
 
   const selector = Array.from(MONACO_HIGHLIGHT_LANGUAGE_IDS);
   const lspClient = LspClient.getInstance();
+  const completionSources = new WeakMap<
+    Monaco.languages.CompletionItem,
+    {
+      filePath: string;
+      item: CompletionItem;
+      fallbackRange: Monaco.IRange | Monaco.languages.CompletionItemRanges;
+    }
+  >();
   const semanticTokensChanged = new Emitter<void>();
   useLspStore.subscribe((state, previousState) => {
     const currentStatus = state.lspStatus;
@@ -212,9 +298,79 @@ export function registerMonacoLspProviders() {
     }),
   );
 
+  languages.registerFoldingRangeProvider(selector, {
+    async provideFoldingRanges(model) {
+      if (!isLspModel(model)) return [];
+
+      const ranges = await lspClient.getFoldingRanges(filePathFromModel(model));
+      return ranges.map((range) => ({
+        start: range.startLine + 1,
+        end: range.endLine + 1,
+        kind: range.kind ? languages.FoldingRangeKind.fromValue(range.kind) : undefined,
+      }));
+    },
+  });
+
+  languages.registerSelectionRangeProvider(selector, {
+    async provideSelectionRanges(model, positions) {
+      if (!isLspModel(model)) return [];
+
+      const ranges = await lspClient.getSelectionRanges(
+        filePathFromModel(model),
+        positions.map((position) => ({
+          line: position.lineNumber - 1,
+          character: position.column - 1,
+        })),
+      );
+      return ranges.map(toMonacoSelectionRanges);
+    },
+  });
+
+  languages.registerDocumentHighlightProvider(selector, {
+    async provideDocumentHighlights(model, position) {
+      if (!isLspModel(model)) return [];
+
+      const highlights = await lspClient.getDocumentHighlights(
+        filePathFromModel(model),
+        position.lineNumber - 1,
+        position.column - 1,
+      );
+      return highlights.map((highlight) => ({
+        range: toMonacoRange(highlight.range),
+        kind:
+          highlight.kind === 2
+            ? languages.DocumentHighlightKind.Read
+            : highlight.kind === 3
+              ? languages.DocumentHighlightKind.Write
+              : languages.DocumentHighlightKind.Text,
+      }));
+    },
+  });
+
+  languages.registerOnTypeFormattingEditProvider(selector, {
+    autoFormatTriggerCharacters: [";", "\n", "}"],
+    async provideOnTypeFormattingEdits(model, position, ch, options) {
+      if (!isLspModel(model)) return [];
+
+      const filePath = filePathFromModel(model);
+      const triggerCharacters = await lspClient.getOnTypeFormattingTriggerCharacters(filePath);
+      if (!triggerCharacters.includes(ch)) return [];
+
+      const edits = await lspClient.formatOnType(
+        filePath,
+        position.lineNumber - 1,
+        position.column - 1,
+        ch,
+        options.tabSize,
+        options.insertSpaces,
+      );
+      return edits.map(toMonacoTextEdit);
+    },
+  });
+
   languages.registerCompletionItemProvider(selector, {
-    triggerCharacters: [".", ":", "<", '"', "'", "/", "@", "#"],
-    async provideCompletionItems(model, position) {
+    triggerCharacters: [".", ":", "<", '"', "'", "/", "@", "#", "*", " "],
+    async provideCompletionItems(model, position, context) {
       if (!isLspModel(model)) return { suggestions: [] };
 
       const filePath = filePathFromModel(model);
@@ -222,6 +378,8 @@ export function registerMonacoLspProviders() {
         filePath,
         position.lineNumber - 1,
         position.column - 1,
+        context.triggerKind + 1,
+        context.triggerCharacter,
       );
       const word = model.getWordUntilPosition(position);
       const range = new MonacoRange(
@@ -232,8 +390,21 @@ export function registerMonacoLspProviders() {
       );
 
       return {
-        suggestions: completions.map((item) => toCompletionItem(item, range)),
+        suggestions: completions.map((item) => {
+          const suggestion = toMonacoCompletionItem(item, range, filePath);
+          completionSources.set(suggestion, { filePath, item, fallbackRange: range });
+          return suggestion;
+        }),
       };
+    },
+    async resolveCompletionItem(item) {
+      const source = completionSources.get(item);
+      if (!source) return item;
+
+      const resolved = await lspClient.resolveCompletionItem(source.filePath, source.item);
+      const suggestion = toMonacoCompletionItem(resolved, source.fallbackRange, source.filePath);
+      completionSources.set(suggestion, { ...source, item: resolved });
+      return suggestion;
     },
   });
 
@@ -378,39 +549,84 @@ export function registerMonacoLspProviders() {
   });
 
   languages.registerCodeActionProvider(selector, {
-    async provideCodeActions(model, _range, context) {
+    async provideCodeActions(model, range, context) {
       if (!isLspModel(model)) return { actions: [], dispose: () => {} };
 
       const filePath = filePathFromModel(model);
-      const actions: Monaco.languages.CodeAction[] = [];
-      for (const marker of context.markers.slice(0, 3)) {
-        const diagnostic = {
-          severity: marker.severity === 8 ? "error" : marker.severity === 4 ? "warning" : "info",
-          filePath,
-          line: marker.startLineNumber - 1,
-          column: marker.startColumn - 1,
-          endLine: marker.endLineNumber - 1,
-          endColumn: marker.endColumn - 1,
-          message: marker.message,
-          source: marker.source,
-          code: typeof marker.code === "string" ? marker.code : undefined,
-        } as const;
-        const lspActions = await lspClient.getCodeActions(filePath, diagnostic);
-        for (const action of lspActions) {
-          if (action.disabledReason) continue;
+      const diagnostics = context.markers.map(
+        (marker) =>
+          ({
+            severity: marker.severity === 8 ? "error" : marker.severity === 4 ? "warning" : "info",
+            filePath,
+            line: marker.startLineNumber - 1,
+            column: marker.startColumn - 1,
+            endLine: marker.endLineNumber - 1,
+            endColumn: marker.endColumn - 1,
+            message: marker.message,
+            source: marker.source,
+            code: typeof marker.code === "string" ? marker.code : undefined,
+          }) as const,
+      );
+      const lspActions = await lspClient.getCodeActions(
+        filePath,
+        {
+          startLine: range.startLineNumber - 1,
+          startColumn: range.startColumn - 1,
+          endLine: range.endLineNumber - 1,
+          endColumn: range.endColumn - 1,
+        },
+        diagnostics,
+      );
+      const actions = lspActions
+        .filter((action) => !action.disabledReason)
+        .map((action): Monaco.languages.CodeAction => {
           const edit = toWorkspaceEdit(getPayloadEdit(action.payload));
-          if (!edit) continue;
-          actions.push({
+          const command = action.hasCommand
+            ? {
+                id: EXECUTE_LSP_CODE_ACTION_COMMAND,
+                title: action.title,
+                arguments: [
+                  {
+                    filePath,
+                    actionPayload: edit ? withoutPayloadEdit(action.payload) : action.payload,
+                    title: action.title,
+                  } satisfies ExecuteLspCodeActionPayload,
+                ],
+              }
+            : undefined;
+
+          return {
             title: action.title,
             kind: codeActionKind(action.kind),
-            diagnostics: [marker],
+            diagnostics: context.markers,
             isPreferred: action.isPreferred,
             edit,
-          });
-        }
-      }
+            command,
+          };
+        })
+        .filter((action) => action.edit || action.command);
 
       return { actions, dispose: () => {} };
+    },
+  });
+
+  monacoEditor.addCommand({
+    id: EXECUTE_LSP_COMPLETION_COMMAND,
+    run: (_accessor, payload: ExecuteLspCompletionCommandPayload | undefined) => {
+      if (!payload?.filePath || !payload.command) return;
+      void lspClient.executeCommand(payload.filePath, payload.command, payload.arguments);
+    },
+  });
+
+  monacoEditor.addCommand({
+    id: EXECUTE_LSP_CODE_ACTION_COMMAND,
+    run: (_accessor, payload: ExecuteLspCodeActionPayload | undefined) => {
+      if (!payload?.filePath || !payload.actionPayload) return;
+      void lspClient.applyCodeAction(payload.filePath, payload.actionPayload).then((result) => {
+        if (!result.applied) {
+          toast.error(result.reason || `Failed to run ${payload.title}`);
+        }
+      });
     },
   });
 }

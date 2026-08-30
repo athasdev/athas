@@ -179,6 +179,30 @@ describe("extension-store runtime manifest", () => {
     expect(runtimeManifest.lsp?.server.default).toBe("/tmp/athas-tools/bin/marksman");
   });
 
+  it("adds managed language server bundles to initialization options", () => {
+    const manifest = createManifest({
+      lsp: {
+        name: "jdtls",
+        runtime: "binary",
+        server: { default: "jdtls" },
+        initializationOptions: { settings: { java: { autobuild: { enabled: true } } } },
+        fileExtensions: [".java"],
+        languageIds: ["java"],
+      },
+    });
+
+    const runtimeManifest = buildRuntimeManifest(
+      manifest,
+      { lsp: "/tmp/athas-tools/jdtls/bin/jdtls" },
+      ["/tmp/athas-tools/jdtls/java-debug/com.microsoft.java.debug.plugin.jar"],
+    );
+
+    expect(runtimeManifest.lsp?.initializationOptions).toMatchObject({
+      bundles: ["/tmp/athas-tools/jdtls/java-debug/com.microsoft.java.debug.plugin.jar"],
+      settings: { java: { autobuild: { enabled: true } } },
+    });
+  });
+
   it("preserves companion packages when rewriting managed LSP commands", () => {
     const manifest = createManifest({
       lsp: {

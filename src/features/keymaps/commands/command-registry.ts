@@ -10,6 +10,7 @@ import {
 } from "@/features/panes/utils/pane-command-actions";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
+  restartDebugSession,
   startGeneratedDebugSession,
   stopDebugSession,
   toggleActiveBreakpoint,
@@ -81,8 +82,15 @@ import {
   goToTypeDefinition,
   openOutlinePicker,
   openOutlineSidebar,
+  showCallHierarchy,
+  showTypeHierarchy,
 } from "./navigation-command-actions";
-import { restartAllLanguageServers, stopAllLanguageServers } from "./lsp-command-actions";
+import {
+  organizeJavaImports,
+  refreshJavaProject,
+  restartAllLanguageServers,
+  stopAllLanguageServers,
+} from "./lsp-command-actions";
 import {
   openCommandPalette,
   openDiagnosticsBuffer,
@@ -295,6 +303,18 @@ const terminalCommands: Command[] = [
 ];
 
 const lspCommands: Command[] = [
+  {
+    id: "java.organizeImports",
+    title: "Java: Organize Imports",
+    category: "Java",
+    execute: organizeJavaImports,
+  },
+  {
+    id: "java.refreshProject",
+    title: "Java: Refresh Project",
+    category: "Java",
+    execute: refreshJavaProject,
+  },
   {
     id: "lsp.restartAllServers",
     title: "Language Server: Restart All Servers",
@@ -677,6 +697,12 @@ const viewCommands: Command[] = [
     execute: stopDebugSession,
   },
   {
+    id: "debug.restart",
+    title: "Restart Debugging",
+    category: "Debug",
+    execute: restartDebugSession,
+  },
+  {
     id: "debug.toggleBreakpoint",
     title: "Toggle Breakpoint",
     category: "Debug",
@@ -867,6 +893,18 @@ const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "shift+F12",
     execute: goToReferences,
+  },
+  {
+    id: "editor.showCallHierarchy",
+    title: "Show Call Hierarchy",
+    category: "Navigation",
+    execute: showCallHierarchy,
+  },
+  {
+    id: "editor.showTypeHierarchy",
+    title: "Show Type Hierarchy",
+    category: "Navigation",
+    execute: showTypeHierarchy,
   },
   {
     id: "editor.goToBracket",
