@@ -160,7 +160,7 @@ describe("settings normalization", () => {
       hiddenGitSidebarItems: ["worktrees", "unknown", "tags", "worktrees"] as never,
     });
 
-    expect(normalized.hiddenGitSidebarItems).toEqual(["worktrees", "tags"]);
+    expect(normalized.hiddenGitSidebarItems).toEqual(["tags"]);
     expect(
       normalizeSettingValue("hiddenGitSidebarItems", ["stashes", 42, "stashes"] as never),
     ).toEqual(["stashes"]);

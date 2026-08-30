@@ -51,9 +51,9 @@ const sourceControlItems: ActivityNavigationItem[] = [
     ariaLabel: "Git Source Control",
     submenuItems: [
       { id: "changes", label: "Changes", onClick: () => {} },
-      { id: "worktrees", label: "Worktrees", onClick: () => {} },
+      { id: "stashes", label: "Stashes", onClick: () => {} },
     ],
-    hiddenSubmenuItemIds: ["worktrees"],
+    hiddenSubmenuItemIds: ["stashes"],
     onSubmenuItemVisibleChange: () => {},
   },
 ];
@@ -100,6 +100,6 @@ describe("activity navigation", () => {
 
     expect(markup).toContain('aria-label="More actions for Source Control"');
     expect(markup).toContain(">Changes</span>");
-    expect(markup).not.toContain(">Worktrees</span>");
+    expect(markup).not.toContain(">Stashes</span>");
   });
 });

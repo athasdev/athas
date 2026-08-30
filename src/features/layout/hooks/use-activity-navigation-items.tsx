@@ -82,7 +82,6 @@ interface ActivityNavigationItemOptions {
 
 type GitNavigationAction =
   | { type: "show-tab"; tab: GitActivitySection }
-  | { type: "manage-branches"; tab: "repositories" | "branches" | "worktrees" }
   | { type: "manage-remotes" }
   | { type: "manage-tags" }
   | { type: "view-stashes" };
@@ -212,29 +211,9 @@ export function useActivityNavigationItems({
     () => [
       ...gitSectionItems,
       {
-        id: "repositories",
-        label: "Repositories",
-        icon: <FolderOpenIcon />,
-        separatorBefore: true,
-        onClick: () => openGitSubview({ type: "manage-branches", tab: "repositories" }),
-      },
-      {
-        id: "branches",
-        label: "Branches",
-        icon: <GitBranchIcon />,
-        onClick: () => openGitSubview({ type: "manage-branches", tab: "branches" }),
-      },
-      {
-        id: "worktrees",
-        label: "Worktrees",
-        icon: <NodesIcon />,
-        onClick: () => openGitSubview({ type: "manage-branches", tab: "worktrees" }),
-      },
-      {
         id: "remotes",
         label: "Remotes",
         icon: <NetworkIcon />,
-        separatorBefore: true,
         onClick: () => openGitSubview({ type: "manage-remotes" }),
       },
       {
