@@ -97,7 +97,7 @@ tauri = { version = "2", default-features = false, features = [
   "test",
   "unstable",
 ] }
-tauri-plugin-dialog = "2"
+tauri-plugin-dialog = { version = "2", default-features = false, features = ["xdg-portal"] }
 tauri-plugin-fs = "2"
 tauri-plugin-http = "2"
 tauri-plugin-notification = "2.3.3"

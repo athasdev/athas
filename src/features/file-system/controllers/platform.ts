@@ -123,50 +123,59 @@ export async function deletePath(path: string): Promise<void> {
  * Open a folder selection dialog
  */
 export async function openFolder(): Promise<string | null> {
-  if (IS_LINUX) {
+  try {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+    });
+
+    return selected as string | null;
+  } catch (error) {
+    if (!IS_LINUX) throw error;
+
+    console.warn("Native folder dialog failed, using the Athas folder picker:", error);
     return useLinuxFolderPickerStore.getState().actions.open();
   }
-
-  const selected = await open({
-    directory: true,
-    multiple: false,
-  });
-
-  return selected as string | null;
 }
 
 /**
  * Open a file selection dialog
  */
 export async function openFile(): Promise<string | null> {
-  if (IS_LINUX) {
+  try {
+    const selected = await open({
+      directory: false,
+      multiple: false,
+    });
+
+    return selected as string | null;
+  } catch (error) {
+    if (!IS_LINUX) throw error;
+
+    console.warn("Native file dialog failed, using path entry:", error);
     return promptForPath("File path");
   }
-
-  const selected = await open({
-    directory: false,
-    multiple: false,
-  });
-
-  return selected as string | null;
 }
 
 /**
  * Open a file selection dialog that allows selecting multiple files.
  */
 export async function openFiles(): Promise<string[]> {
-  if (IS_LINUX) {
+  try {
+    const selected = await open({
+      directory: false,
+      multiple: true,
+    });
+
+    if (!selected) return [];
+    return Array.isArray(selected) ? selected : [selected];
+  } catch (error) {
+    if (!IS_LINUX) throw error;
+
+    console.warn("Native file dialog failed, using path entry:", error);
     const selected = await promptForPath("File path");
     return selected ? [selected] : [];
   }
-
-  const selected = await open({
-    directory: false,
-    multiple: true,
-  });
-
-  if (!selected) return [];
-  return Array.isArray(selected) ? selected : [selected];
 }
 
 /**

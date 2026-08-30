@@ -162,6 +162,9 @@ await Bun.write(
               "libpango-1.0-0",
               "libcairo2",
               "libgdk-pixbuf-2.0-0",
+              "xdg-desktop-portal",
+              "xdg-desktop-portal-gtk",
+              "zenity",
             ],
           },
           rpm: {
@@ -186,6 +189,9 @@ await Bun.write(
               "pango",
               "cairo",
               "gdk-pixbuf2",
+              "xdg-desktop-portal",
+              "xdg-desktop-portal-gtk",
+              "zenity",
             ],
           },
         },
@@ -215,7 +221,7 @@ if [[ ":${actual_rpath}:" != *":${expected_cef_rpath}:"* ]]; then
 fi
 
 patch_deb_dependencies() {
-  local depends="libgtk-3-0, libnss3, libnspr4, libasound2, libx11-6, libxcomposite1, libxdamage1, libxrandr2, libgbm1, libatk-bridge2.0-0, libxkbcommon0, libxkbcommon-x11-0, libdrm2, libxcb1, libxfixes3, libxext6, libglib2.0-0, libpango-1.0-0, libcairo2, libgdk-pixbuf-2.0-0"
+  local depends="libgtk-3-0, libnss3, libnspr4, libasound2, libx11-6, libxcomposite1, libxdamage1, libxrandr2, libgbm1, libatk-bridge2.0-0, libxkbcommon0, libxkbcommon-x11-0, libdrm2, libxcb1, libxfixes3, libxext6, libglib2.0-0, libpango-1.0-0, libcairo2, libgdk-pixbuf-2.0-0, xdg-desktop-portal, xdg-desktop-portal-gtk, zenity"
   local deb
 
   while IFS= read -r deb; do

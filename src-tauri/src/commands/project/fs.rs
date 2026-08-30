@@ -5,7 +5,6 @@ use std::{fs, path::Path, time::Instant};
 #[cfg(target_os = "macos")]
 use tauri::Manager;
 use tauri::command;
-use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
 
 fn calculate_directory_size(path: &Path) -> Result<u64, String> {
@@ -211,24 +210,6 @@ pub async fn show_share_picker(
    let _ = (window, resolved);
 
    Ok(())
-}
-
-#[command]
-pub async fn open_folder_dialog(app: AppHandle) -> Result<Option<String>, String> {
-   tauri::async_runtime::spawn_blocking(move || {
-      app.dialog()
-         .file()
-         .blocking_pick_folder()
-         .map(|path| {
-            path
-               .into_path()
-               .map(|path| path.to_string_lossy().to_string())
-               .map_err(|e| format!("Failed to resolve selected folder path: {}", e))
-         })
-         .transpose()
-   })
-   .await
-   .map_err(|e| format!("Folder dialog task failed: {}", e))?
 }
 
 #[derive(Serialize)]

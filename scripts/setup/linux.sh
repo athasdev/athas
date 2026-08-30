@@ -75,22 +75,22 @@ install_system_deps() {
     case $DISTRO in
         "ubuntu")
             sudo apt-get update
-            sudo apt-get install -y build-essential curl wget file xz-utils libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev pkg-config
+            sudo apt-get install -y build-essential curl wget file xz-utils libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev pkg-config xdg-desktop-portal xdg-desktop-portal-gtk zenity
             # Deps for git2 and ssh2
             sudo apt-get install -y libssl-dev pkgconf perl
             ;;
         "fedora")
-            sudo dnf install -y gcc gcc-c++ make curl wget file xz openssl-devel gtk3-devel webkit2gtk4.1-devel libsoup3-devel libayatana-appindicator-gtk3-devel librsvg2-devel pkgconf-pkg-config
+            sudo dnf install -y gcc gcc-c++ make curl wget file xz openssl-devel gtk3-devel webkit2gtk4.1-devel libsoup3-devel libayatana-appindicator-gtk3-devel librsvg2-devel pkgconf-pkg-config xdg-desktop-portal xdg-desktop-portal-gtk zenity
             # Deps for git2 and ssh2
             sudo dnf install -y openssl-devel pkgconf perl-FindBin perl-IPC-Cmd perl
             ;;
         "arch")
-            sudo pacman -S --needed --noconfirm base-devel curl wget file xz openssl gtk3 webkit2gtk-4.1 libsoup3 libayatana-appindicator librsvg pkgconf
+            sudo pacman -S --needed --noconfirm base-devel curl wget file xz openssl gtk3 webkit2gtk-4.1 libsoup3 libayatana-appindicator librsvg pkgconf xdg-desktop-portal xdg-desktop-portal-gtk zenity
             # Deps for git2 and ssh2
             sudo pacman -S --needed --noconfirm openssl pkgconf perl
             ;;
         "opensuse")
-            sudo zypper install -y gcc gcc-c++ make curl wget file xz libopenssl-devel gtk3-devel webkit2gtk3-devel libsoup3-devel libayatana-appindicator3-devel librsvg-devel pkg-config
+            sudo zypper install -y gcc gcc-c++ make curl wget file xz libopenssl-devel gtk3-devel webkit2gtk3-devel libsoup3-devel libayatana-appindicator3-devel librsvg-devel pkg-config xdg-desktop-portal xdg-desktop-portal-gtk zenity
             # Deps for git2 and ssh2
             sudo zypper install -y openssl-devel pkgconf perl-FindBin perl-IPC-Cmd perl
             ;;

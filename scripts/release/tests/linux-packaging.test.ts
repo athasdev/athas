@@ -30,6 +30,22 @@ describe("Linux release packaging", () => {
     expect(windowCommands.split(alloyRuntime)).toHaveLength(3);
   });
 
+  it("uses the XDG portal dialog backend without changing the CEF runtime", () => {
+    const cargoManifest = readRepoFile("src-tauri/Cargo.toml");
+    const dialogDependency = cargoManifest
+      .split("\n")
+      .find((line) => line.startsWith("tauri-plugin-dialog ="));
+    const linuxFeature = cargoManifest.match(/linux = \[[\s\S]*?\n\]/)?.[0];
+
+    expect(dialogDependency).toBeDefined();
+    expect(dialogDependency).toContain('version = "2"');
+    expect(dialogDependency).toContain("default-features = false");
+    expect(dialogDependency).toContain('"xdg-portal"');
+    expect(dialogDependency).not.toContain('"gtk3"');
+    expect(linuxFeature).toContain('"tauri/cef"');
+    expect(linuxFeature).toContain('"dep:tauri-runtime-cef"');
+  });
+
   it("does not ship an unusable setuid helper in per-user tarballs", () => {
     const script = readRepoFile("scripts/release/packaging/linux/tarball.sh");
     const cefFiles = script.match(/cef_files=\(\n([\s\S]*?)\n\)/)?.[1];
@@ -52,6 +68,53 @@ describe("Linux release packaging", () => {
     expect(script).toContain('"libxkbcommon-x11-0",');
     expect(script).toContain('"libxkbcommon-x11",');
     expect(patchFunction).toContain("libxkbcommon-x11-0");
+  });
+
+  it("installs the portal file chooser and its fallback in native packages", () => {
+    const script = readRepoFile("scripts/release/packaging/linux/native.sh");
+    const debDependencies = script.match(/deb: \{\n\s+depends: \[([\s\S]*?)\n\s+\],/)?.[1];
+    const rpmDependencies = script.match(/rpm: \{\n\s+depends: \[([\s\S]*?)\n\s+\],/)?.[1];
+    const patchFunction = script.slice(script.indexOf("patch_deb_dependencies()"));
+
+    for (const dependencies of [debDependencies, rpmDependencies]) {
+      expect(dependencies).toBeDefined();
+      expect(dependencies).toContain('"xdg-desktop-portal"');
+      expect(dependencies).toContain('"xdg-desktop-portal-gtk"');
+      expect(dependencies).toContain('"zenity"');
+    }
+
+    expect(patchFunction).toContain("xdg-desktop-portal");
+    expect(patchFunction).toContain("xdg-desktop-portal-gtk");
+    expect(patchFunction).toContain("zenity");
+  });
+
+  it("installs native dialog runtime dependencies in Linux development environments", () => {
+    const setupScript = readRepoFile("scripts/setup/linux.sh");
+    const primaryInstallCommands = setupScript
+      .split("\n")
+      .filter(
+        (line) =>
+          /sudo (apt-get|dnf|pacman|zypper)/.test(line) && line.includes("xdg-desktop-portal"),
+      );
+
+    expect(primaryInstallCommands).toHaveLength(4);
+    for (const command of primaryInstallCommands) {
+      expect(command).toContain("xdg-desktop-portal");
+      expect(command).toContain("xdg-desktop-portal-gtk");
+      expect(command).toContain("zenity");
+    }
+  });
+
+  it("keeps the dialog plugin, permission, and Athas fallback surface connected", () => {
+    const main = readRepoFile("src-tauri/src/main.rs");
+    const capability = JSON.parse(readRepoFile("src-tauri/capabilities/main.json"));
+    const mainLayout = readRepoFile("src/features/layout/components/main-layout.tsx");
+    const platformController = readRepoFile("src/features/file-system/controllers/platform.ts");
+
+    expect(main).toContain(".plugin(tauri_plugin_dialog::init())");
+    expect(capability.permissions).toContain("dialog:allow-open");
+    expect(mainLayout).toContain("<LinuxFolderPickerDialog />");
+    expect(platformController).toContain("useLinuxFolderPickerStore.getState().actions.open()");
   });
 
   it("loads CEF from stable and preview native package resource directories", () => {
