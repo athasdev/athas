@@ -24,7 +24,7 @@ import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { showAlertDialog } from "@/ui/dialog";
-import { SidebarFooter, SidebarIconButton, SidebarToolbar, SidebarWorkspace } from "@/ui/sidebar";
+import { SidebarFooter, SidebarIconButton, SidebarWorkspace } from "@/ui/sidebar";
 import { toast } from "sonner";
 import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -816,6 +816,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   return (
     <>
       <SidebarWorkspace
+        actionsLayout="content"
         title={
           <GitBranchManager
             currentBranch={gitStatus.branch}
@@ -864,20 +865,18 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               className="min-w-33"
             />
             {renderActionsButton()}
-          </>
-        }
-      >
-        <div className="flex min-h-0 flex-1 flex-col">
-          {gitSection === "history" ? (
-            <SidebarToolbar className="justify-end">
+            {gitSection === "history" ? (
               <GitCommitHistoryControls
                 searchQuery={historySearchQuery}
                 searchScope={historySearchScope}
                 onSearchQueryChange={setHistorySearchQuery}
                 onSearchScopeChange={setHistorySearchScope}
               />
-            </SidebarToolbar>
-          ) : null}
+            ) : null}
+          </>
+        }
+      >
+        <div className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1">
             {gitSection === "changes" ? (
               <GitStatusPanel

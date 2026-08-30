@@ -36,17 +36,21 @@ export function SidebarPanel({
 export function SidebarWorkspace({
   title,
   actions,
+  actionsLayout,
   children,
   className,
   ...props
 }: Omit<ComponentProps<"div">, "title"> & {
   title: ReactNode;
   actions?: ReactNode;
+  actionsLayout?: "constrained" | "content";
   children: ReactNode;
 }) {
   return (
     <SidebarPanel className={className} {...props}>
-      <SidebarTitleBar title={title}>{actions}</SidebarTitleBar>
+      <SidebarTitleBar title={title} actionsLayout={actionsLayout}>
+        {actions}
+      </SidebarTitleBar>
       {children}
     </SidebarPanel>
   );
@@ -62,11 +66,13 @@ export function SidebarScrollArea({
 export function SidebarTitleBar({
   title,
   children,
+  actionsLayout = "constrained",
   className,
   ...props
 }: Omit<ComponentProps<"div">, "title"> & {
   title: ReactNode;
   children?: ReactNode;
+  actionsLayout?: "constrained" | "content";
 }) {
   const titleClassName = "min-w-0 flex-1 truncate font-medium text-foreground ui-text-base";
 
@@ -84,7 +90,14 @@ export function SidebarTitleBar({
         <div className={titleClassName}>{title}</div>
       )}
       {children ? (
-        <div className="flex max-w-[50%] shrink-0 items-center gap-1">{children}</div>
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-1",
+            actionsLayout === "constrained" ? "max-w-[50%]" : "max-w-full",
+          )}
+        >
+          {children}
+        </div>
       ) : null}
     </div>
   );
