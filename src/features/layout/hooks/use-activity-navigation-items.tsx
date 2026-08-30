@@ -1,5 +1,5 @@
 import { useCallback, useMemo, type ReactNode } from "react";
-import { normalizeItemOrder } from "@/features/layout/config/item-order";
+import { GIT_SIDEBAR_TAB_IDS, normalizeItemOrder } from "@/features/layout/config/item-order";
 import {
   type DockerActivitySection,
   type GitActivitySection,
@@ -165,17 +165,20 @@ export function useActivityNavigationItems({
 
   const gitSectionItems = useMemo(
     () =>
-      gitSidebarTabOrder
-        .filter((section): section is GitActivitySection =>
-          ["changes", "history"].includes(section),
-        )
-        .map((section) => ({
-          id: section,
-          label: section === "changes" ? "Changes" : "History",
-          icon: section === "changes" ? <GitDiffIcon /> : <ClockCounterClockwiseIcon />,
-          active: gitSection === section,
-          onClick: () => openGitSubview({ type: "show-tab", tab: section }),
-        })),
+      normalizeItemOrder(gitSidebarTabOrder, GIT_SIDEBAR_TAB_IDS).map((section) => ({
+        id: section,
+        label: section === "changes" ? "Changes" : section === "history" ? "History" : "Review",
+        icon:
+          section === "changes" ? (
+            <GitDiffIcon />
+          ) : section === "history" ? (
+            <ClockCounterClockwiseIcon />
+          ) : (
+            <ListChecksIcon />
+          ),
+        active: gitSection === section,
+        onClick: () => openGitSubview({ type: "show-tab", tab: section }),
+      })),
     [gitSection, gitSidebarTabOrder, openGitSubview],
   );
 
@@ -259,18 +262,6 @@ export function useActivityNavigationItems({
                     }),
                 },
               ],
-            } satisfies ActivityNavigationItem,
-          ]
-        : []),
-      ...(coreFeatures.git
-        ? [
-            {
-              id: "review",
-              label: "Review",
-              icon: <ListChecksIcon />,
-              active: isPrimarySidebarItemActive && activeSidebarView === "review",
-              onClick: () => onViewChange("review"),
-              ariaLabel: "Review code changes",
             } satisfies ActivityNavigationItem,
           ]
         : []),

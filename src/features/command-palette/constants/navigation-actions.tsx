@@ -11,6 +11,7 @@ import {
   StackIcon as Views,
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
 import type {
@@ -87,13 +88,21 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       ? [
           {
             id: "view-show-review",
-            label: "View: Show Review",
-            description: "Review collected working-tree changes and commits",
+            label: "Source Control: Show Review",
+            description: "Open review checkpoints in Source Control",
             icon: <ListChecks />,
             category: "Navigation",
             action: () => {
+              useSidebarStore.getState().actions.setGitSection("review");
               setIsSidebarVisible(true);
-              setActiveView("review");
+              setActiveView("git");
+              window.setTimeout(() => {
+                window.dispatchEvent(
+                  new CustomEvent("athas:git-palette-action", {
+                    detail: { type: "show-tab", tab: "review" },
+                  }),
+                );
+              }, 0);
               onClose();
             },
           } satisfies Action,

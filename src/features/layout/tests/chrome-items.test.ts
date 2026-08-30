@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vite-plus/test";
-import { FOOTER_TRAILING_ITEM_IDS, SIDEBAR_ACTIVITY_ITEM_IDS } from "../config/item-order";
+import {
+  FOOTER_TRAILING_ITEM_IDS,
+  GIT_SIDEBAR_TAB_IDS,
+  SIDEBAR_ACTIVITY_ITEM_IDS,
+} from "../config/item-order";
 import { orderChromeItems, type ChromeItem } from "../utils/chrome-items";
 
 type ItemId = "first" | "second" | "third";
@@ -32,11 +36,10 @@ describe("orderChromeItems", () => {
     expect(FOOTER_TRAILING_ITEM_IDS).not.toContain("notifications");
   });
 
-  test("keeps Review beside Source Control in the default activity order", () => {
+  test("moves Review from the activity rail into Source Control", () => {
     expect(SIDEBAR_ACTIVITY_ITEM_IDS).toEqual([
       "files",
       "git",
-      "review",
       "github-prs",
       "views",
       "debugger",
@@ -44,5 +47,6 @@ describe("orderChromeItems", () => {
       "docker",
       "extensions",
     ]);
+    expect(GIT_SIDEBAR_TAB_IDS).toEqual(["changes", "history", "review"]);
   });
 });

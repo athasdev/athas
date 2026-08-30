@@ -16,10 +16,12 @@ import { normalizeConfiguredFontFamily } from "@/features/settings/lib/font-fami
 import {
   FOOTER_LEADING_ITEM_IDS,
   FOOTER_TRAILING_ITEM_IDS,
+  GIT_SIDEBAR_TAB_IDS,
   SIDEBAR_ACTIVITY_ITEM_IDS,
   normalizeItemOrder,
 } from "@/features/layout/config/item-order";
 import { normalizeUiFontSize } from "@/features/settings/lib/ui-font-size";
+import type { GitSidebarTabId } from "@/features/layout/config/item-order";
 import type { Settings, SettingsSection } from "@/features/settings/types/settings.types";
 
 const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
@@ -445,16 +447,15 @@ export function normalizeSettings(settings: Settings): Settings {
 
   if (
     persistedGitPanelMode === "none" ||
-    (persistedGitPanelMode && !["changes", "history"].includes(persistedGitPanelMode))
+    (persistedGitPanelMode &&
+      !GIT_SIDEBAR_TAB_IDS.includes(persistedGitPanelMode as GitSidebarTabId))
   ) {
     normalizedSettings.gitLastPanelMode = "changes";
   }
-  normalizedSettings.gitSidebarTabOrder = normalizedSettings.gitSidebarTabOrder.filter(
-    (item): item is "changes" | "history" => item === "changes" || item === "history",
+  normalizedSettings.gitSidebarTabOrder = normalizeItemOrder(
+    normalizedSettings.gitSidebarTabOrder,
+    GIT_SIDEBAR_TAB_IDS,
   );
-  if (normalizedSettings.gitSidebarTabOrder.length === 0) {
-    normalizedSettings.gitSidebarTabOrder = ["changes", "history"];
-  }
 
   normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
   normalizedSettings.fontFamily = normalizeConfiguredFontFamily(
@@ -538,7 +539,7 @@ export function normalizeSettings(settings: Settings): Settings {
   );
   normalizedSettings.hiddenSidebarActivityItems = normalizeStringList(
     normalizedSettings.hiddenSidebarActivityItems,
-  ).filter((itemId) => itemId !== "search");
+  ).filter((itemId) => itemId !== "search" && itemId !== "review");
   normalizedSettings.collapsedActivityRailSections = normalizeStringList(
     normalizedSettings.collapsedActivityRailSections,
   );

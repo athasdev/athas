@@ -15,6 +15,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { ReviewSidebarPanel } from "@/features/review/components/review-sidebar";
 import { type GitActivitySection, useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
@@ -894,7 +895,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 onRefresh={refreshAfterAction}
                 repoPath={activeRepoPath}
               />
-            ) : (
+            ) : gitSection === "history" ? (
               <GitCommitHistory
                 onSelectCommit={(commit) => void handleSelectHistoryCommit(commit)}
                 repoPath={activeRepoPath}
@@ -903,19 +904,23 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 searchQuery={historySearchQuery}
                 searchScope={historySearchScope}
               />
+            ) : (
+              <ReviewSidebarPanel />
             )}
           </div>
-          <SidebarFooter>
-            <GitCommitPanel
-              stagedFilesCount={stagedFiles.length}
-              stagedFiles={stagedFiles}
-              currentBranch={gitStatus.branch}
-              repoPath={activeRepoPath}
-              ahead={gitStatus.ahead}
-              behind={gitStatus.behind}
-              onCommitSuccess={refreshAfterAction}
-            />
-          </SidebarFooter>
+          {gitSection !== "review" ? (
+            <SidebarFooter>
+              <GitCommitPanel
+                stagedFilesCount={stagedFiles.length}
+                stagedFiles={stagedFiles}
+                currentBranch={gitStatus.branch}
+                repoPath={activeRepoPath}
+                ahead={gitStatus.ahead}
+                behind={gitStatus.behind}
+                onCommitSuccess={refreshAfterAction}
+              />
+            </SidebarFooter>
+          ) : null}
         </div>
       </SidebarWorkspace>
 

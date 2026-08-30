@@ -115,7 +115,13 @@ describe("settings normalization", () => {
   it("normalizes hidden activity sidebar items", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
-      hiddenSidebarActivityItems: ["search", "", "search", "extension.example"] as string[],
+      hiddenSidebarActivityItems: [
+        "search",
+        "review",
+        "",
+        "search",
+        "extension.example",
+      ] as string[],
     });
 
     expect(normalized.hiddenSidebarActivityItems).toEqual(["extension.example"]);
@@ -225,7 +231,7 @@ describe("settings normalization", () => {
     });
 
     expect(normalized.gitLastPanelMode).toBe("changes");
-    expect(normalized.gitSidebarTabOrder).toEqual(["changes", "history"]);
+    expect(normalized.gitSidebarTabOrder).toEqual(["changes", "history", "review"]);
   });
 
   it("preserves custom AI provider settings and mirrors the custom model into chat model", () => {

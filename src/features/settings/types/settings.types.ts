@@ -3,6 +3,7 @@ import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import type {
   FooterLeadingItemId,
   FooterTrailingItemId,
+  GitSidebarTabId,
   SidebarActivityItemId,
 } from "@/features/layout/config/item-order";
 
@@ -206,8 +207,8 @@ export interface Settings {
   compactGitStatusBadges: boolean;
   collapseEmptyGitSections: boolean;
   rememberLastGitPanelMode: boolean;
-  gitLastPanelMode: "changes" | "history";
-  gitSidebarTabOrder: Array<"changes" | "history">;
+  gitLastPanelMode: GitSidebarTabId;
+  gitSidebarTabOrder: GitSidebarTabId[];
   githubSidebarSectionOrder: Array<"pull-requests" | "issues" | "actions">;
   enableInlineGitBlame: boolean;
   // Telemetry

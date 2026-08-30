@@ -1,7 +1,6 @@
 export type SidebarView =
   | "files"
   | "git"
-  | "review"
   | "github-prs"
   | "views"
   | "docker"

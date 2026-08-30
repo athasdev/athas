@@ -1,7 +1,6 @@
 export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "files",
   "git",
-  "review",
   "github-prs",
   "views",
   "debugger",
@@ -9,10 +8,12 @@ export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "docker",
   "extensions",
 ] as const;
+export const GIT_SIDEBAR_TAB_IDS = ["changes", "history", "review"] as const;
 export const FOOTER_LEADING_ITEM_IDS = ["branch", "extensions"] as const;
 export const FOOTER_TRAILING_ITEM_IDS = ["collaboration"] as const;
 
 export type SidebarActivityItemId = (typeof SIDEBAR_ACTIVITY_ITEM_IDS)[number];
+export type GitSidebarTabId = (typeof GIT_SIDEBAR_TAB_IDS)[number];
 export type FooterLeadingItemId = (typeof FOOTER_LEADING_ITEM_IDS)[number];
 export type FooterTrailingItemId = (typeof FOOTER_TRAILING_ITEM_IDS)[number];
 

@@ -7,6 +7,7 @@ import {
 import {
   FOOTER_LEADING_ITEM_IDS,
   FOOTER_TRAILING_ITEM_IDS,
+  GIT_SIDEBAR_TAB_IDS,
   SIDEBAR_ACTIVITY_ITEM_IDS,
 } from "@/features/layout/config/item-order";
 import type { Settings } from "@/features/settings/types/settings.types";
@@ -179,7 +180,7 @@ export const defaultSettings: Settings = {
   collapseEmptyGitSections: false,
   rememberLastGitPanelMode: false,
   gitLastPanelMode: "changes",
-  gitSidebarTabOrder: ["changes", "history"],
+  gitSidebarTabOrder: [...GIT_SIDEBAR_TAB_IDS],
   githubSidebarSectionOrder: ["pull-requests", "issues", "actions"],
   enableInlineGitBlame: true,
   // Telemetry

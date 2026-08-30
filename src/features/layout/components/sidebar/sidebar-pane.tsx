@@ -11,7 +11,6 @@ import {
   type SidebarView,
 } from "@/features/layout/utils/sidebar-pane-utils";
 import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
-import { ReviewSidebar } from "@/features/review/components/review-sidebar";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ViewsSidebar } from "@/features/views/components/views-sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -68,7 +67,6 @@ export const SidebarPane = memo(
           ]
         : []),
       ...(coreFeatures.github ? [{ id: "github-prs" as const, content: <GitHubPRsView /> }] : []),
-      ...(coreFeatures.git ? [{ id: "review" as const, content: <ReviewSidebar /> }] : []),
       {
         id: "views",
         content: <ViewsSidebar projectPath={rootFolderPath ?? null} />,
