@@ -923,22 +923,27 @@ function DropdownMenuSub(props: DropdownMenuPrimitive.SubmenuRoot.Props) {
 function DropdownMenuSubTrigger({
   className,
   inset,
+  appearance = "item",
   children,
   ...props
-}: DropdownMenuPrimitive.SubmenuTrigger.Props & { inset?: boolean }) {
+}: DropdownMenuPrimitive.SubmenuTrigger.Props & {
+  inset?: boolean;
+  appearance?: "item" | "action";
+}) {
   return (
     <DropdownMenuPrimitive.SubmenuTrigger
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
+      nativeButton={appearance === "action"}
       className={cn(
-        menuItemVariants(),
-        "data-inset:pl-8 data-open:bg-accent data-open:text-foreground",
+        appearance === "item" && menuItemVariants(),
+        appearance === "item" && "data-inset:pl-8 data-open:bg-accent data-open:text-foreground",
         className,
       )}
       {...props}
     >
       {children}
-      <CaretRightIcon className="ml-auto" />
+      {appearance === "item" ? <CaretRightIcon className="ml-auto" /> : null}
     </DropdownMenuPrimitive.SubmenuTrigger>
   );
 }

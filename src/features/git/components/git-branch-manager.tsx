@@ -1,6 +1,8 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   CheckIcon as Check,
+  CopyIcon as Copy,
+  DotsThreeIcon as DotsThree,
   PlusIcon as Plus,
   ArrowClockwiseIcon as RefreshCw,
   TrashIcon as Trash2,
@@ -9,6 +11,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSearch,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import {
   CommandEmpty,
   CommandFooter,
@@ -20,10 +36,11 @@ import {
   useCommandListNavigation,
 } from "@/ui/command";
 import { ChevronExpandYIcon, GitBranchIcon, FolderOpenIcon, NodesIcon } from "@/ui/icons";
-import { showConfirmDialog } from "@/ui/dialog";
+import { showConfirmDialog, showPromptDialog } from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
 import { matchesSearchQuery } from "@/utils/search-match";
+import { writeClipboardText } from "@/utils/clipboard";
 import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../api/git-branches-api";
 import { resolveRepositoryPath } from "../api/git-repo-api";
 import { createStash } from "../api/git-stash-api";
@@ -234,9 +251,9 @@ const GitBranchManager = ({
   useEffect(() => {
     if (repoPath && isDropdownOpen) {
       void loadBranches();
-      void loadWorktrees();
+      if (triggerMode === "repository") void loadWorktrees();
     }
-  }, [repoPath, isDropdownOpen, loadBranches, loadWorktrees]);
+  }, [repoPath, isDropdownOpen, loadBranches, loadWorktrees, triggerMode]);
 
   useEffect(() => {
     const handleOpenFromPalette = (event: Event) => {
@@ -345,12 +362,12 @@ const GitBranchManager = ({
     }
   };
 
-  const handleCreateBranch = async (branchName: string) => {
+  const handleCreateBranch = async (branchName: string, fromBranch = currentBranch) => {
     if (!repoPath || !branchName.trim()) return;
 
     setIsLoading(true);
     try {
-      const success = await createBranch(repoPath, branchName.trim(), currentBranch);
+      const success = await createBranch(repoPath, branchName.trim(), fromBranch);
       if (success) {
         setBranchQuery("");
         setIsDropdownOpen(false);
@@ -361,6 +378,17 @@ const GitBranchManager = ({
     }
   };
 
+  const handlePromptCreateBranch = async (fromBranch = currentBranch) => {
+    setIsDropdownOpen(false);
+    const branchName = await showPromptDialog("Enter a name for the new branch.", {
+      title: fromBranch ? `New Branch from ${fromBranch}` : "New Branch",
+      defaultValue: createBranchName ?? "",
+      placeholder: "feature/name",
+      confirmLabel: "Create",
+    });
+    if (!branchName?.trim()) return;
+    await handleCreateBranch(branchName, fromBranch);
+  };
   const handleWorktreeChange = (worktreePath: string) => {
     if (!worktreePath || worktreePath === repoPath) {
       setIsDropdownOpen(false);
@@ -526,6 +554,90 @@ const GitBranchManager = ({
     return null;
   }
 
+  if (triggerMode === "branch") {
+    return (
+      <DropdownMenu
+        open={isDropdownOpen}
+        onOpenChange={(open) => {
+          setActiveTab("branches");
+          setIsDropdownOpen(open);
+        }}
+      >
+        <DropdownMenuTrigger
+          render={
+            <Button
+              data-branch-manager-trigger="true"
+              disabled={isLoading}
+              variant="ghost"
+              size="chrome"
+              className={cn(
+                "max-w-48 min-w-0 shrink justify-start overflow-hidden text-left",
+                isDropdownOpen && "bg-accent/80",
+              )}
+              title={selectorRepoPath ?? undefined}
+              aria-label={`Switch branch. Current branch: ${currentBranch}`}
+            />
+          }
+        >
+          <span className="min-w-0 truncate">{currentBranch}</span>
+          <ChevronExpandYIcon className="text-subtle-foreground" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-64">
+          <DropdownMenuSearch
+            value={branchQuery}
+            onChange={(event) => setBranchQuery(event.target.value)}
+            placeholder="Search branches"
+            autoFocus
+          />
+          {filteredBranches.length > 0 ? (
+            <DropdownMenuRadioGroup
+              value={currentBranch}
+              onValueChange={(branch) => void handleBranchChange(branch)}
+            >
+              {filteredBranches.map((branch) => (
+                <DropdownMenuRadioItem
+                  key={branch}
+                  value={branch}
+                  disabled={isLoading}
+                  closeOnClick={branch !== currentBranch}
+                  trailingAction={
+                    <BranchDropdownActions
+                      branch={branch}
+                      isCurrent={branch === currentBranch}
+                      isLoading={isLoading}
+                      onCreateFrom={() => void handlePromptCreateBranch(branch)}
+                      onCopy={() => void writeClipboardText(branch)}
+                      onDelete={() => void handleDeleteBranch(branch)}
+                    />
+                  }
+                >
+                  <GitBranchIcon />
+                  <span className="min-w-0 flex-1 truncate">{branch}</span>
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          ) : (
+            <DropdownMenuLabel>
+              {branchQuery.trim() ? "No branches match" : "No branches found"}
+            </DropdownMenuLabel>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => void handlePromptCreateBranch()}>
+            <Plus />
+            New branch…
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            closeOnClick={false}
+            disabled={isLoading}
+            onClick={() => void loadBranches()}
+          >
+            <RefreshCw />
+            Refresh branches
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
   const tabItems = [
     {
       id: "repositories",
@@ -557,37 +669,23 @@ const GitBranchManager = ({
         onClick={() => void handleOpenDropdown()}
         disabled={isLoading}
         variant="ghost"
-        size={triggerMode === "branch" ? "chrome" : "default"}
+        size="default"
         className={cn(
           "w-fit max-w-full min-w-0 shrink justify-start overflow-hidden text-left hover:bg-accent/80",
-          triggerMode === "branch" && "max-w-48",
           isDropdownOpen && "bg-accent/80",
         )}
         title={selectorRepoPath ?? undefined}
-        aria-label={
-          triggerMode === "branch"
-            ? `Switch branch. Current branch: ${currentBranch}`
-            : `Switch repository or branch. ${activeRepositoryLabel}, branch ${currentBranch}`
-        }
+        aria-label={`Switch repository or branch. ${activeRepositoryLabel}, branch ${currentBranch}`}
       >
-        {triggerMode === "branch" ? (
-          <>
-            <span className="min-w-0 truncate">{currentBranch}</span>
-            <ChevronExpandYIcon className="text-subtle-foreground" />
-          </>
-        ) : (
-          <>
-            <FolderOpenIcon />
-            <span className="flex min-w-0 flex-1 flex-col items-start overflow-hidden leading-none">
-              <span className="max-w-full truncate font-medium text-foreground ui-text-sm">
-                {activeRepositoryLabel}
-              </span>
-              <span className="max-w-full truncate font-normal text-subtle-foreground ui-text-caption">
-                {currentBranch}
-              </span>
-            </span>
-          </>
-        )}
+        <FolderOpenIcon />
+        <span className="flex min-w-0 flex-1 flex-col items-start overflow-hidden leading-none">
+          <span className="max-w-full truncate font-medium text-foreground ui-text-sm">
+            {activeRepositoryLabel}
+          </span>
+          <span className="max-w-full truncate font-normal text-subtle-foreground ui-text-caption">
+            {currentBranch}
+          </span>
+        </span>
       </Button>
 
       <GitCommandSurface
@@ -613,11 +711,7 @@ const GitBranchManager = ({
                   availableRepoPaths.length === 1 ? "y" : "ies"
                 }`
         }
-        headerAddon={
-          triggerMode === "repository" ? (
-            <CommandTabs items={tabItems} ariaLabel="Git selector sections" />
-          ) : undefined
-        }
+        headerAddon={<CommandTabs items={tabItems} ariaLabel="Git selector sections" />}
       >
         <CommandList>
           {activeTab === "branches" && !createBranchName && filteredBranches.length === 0 ? (
@@ -856,6 +950,56 @@ function BranchRow({
   );
 }
 
+function BranchDropdownActions({
+  branch,
+  isCurrent,
+  isLoading,
+  onCreateFrom,
+  onCopy,
+  onDelete,
+}: {
+  branch: string;
+  isCurrent: boolean;
+  isLoading: boolean;
+  onCreateFrom: () => void;
+  onCopy: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger
+        appearance="action"
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            size="chrome"
+            aria-label={`More actions for ${branch}`}
+          />
+        }
+      >
+        <DotsThree />
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="min-w-44">
+        <DropdownMenuItem disabled={isLoading} onClick={onCreateFrom}>
+          <Plus />
+          New branch from…
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onCopy}>
+          <Copy />
+          Copy branch name
+        </DropdownMenuItem>
+        {!isCurrent ? (
+          <DropdownMenuItem variant="destructive" disabled={isLoading} onClick={onDelete}>
+            <Trash2 />
+            Delete branch…
+          </DropdownMenuItem>
+        ) : null}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+}
 function RepositoryRow({
   repoPath,
   workspaceRootPath,

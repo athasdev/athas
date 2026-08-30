@@ -19,16 +19,28 @@ import {
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSearch,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import { ChevronExpandYIcon, FolderOpenIcon, ImageIcon, RemoteIcon, XIcon } from "@/ui/icons";
+import {
+  ChevronExpandYIcon,
+  DotsThreeIcon,
+  FolderOpenIcon,
+  ImageIcon,
+  RemoteIcon,
+  TrashIcon,
+} from "@/ui/icons";
 import { showConfirmDialog } from "@/ui/dialog";
 import { toast } from "sonner";
 import {
   getClosedRemoteConnections,
   getProjectRemoteConnectionId,
 } from "@/features/layout/utils/project-switcher-items";
+import { matchesSearchQuery } from "@/utils/search-match";
 import { getProjectNameFromPath, isRemoteProjectPath, ProjectGlyph } from "./sidebar/project-glyph";
 
 export function ProjectSwitcher({
@@ -49,6 +61,7 @@ export function ProjectSwitcher({
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const removeFromRecents = useRecentFoldersStore((state) => state.actions.removeFromRecents);
   const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [remoteConnections, setRemoteConnections] = useState<RemoteConnection[]>([]);
   const [connectingRemoteId, setConnectingRemoteId] = useState<string | null>(null);
   const [passwordPromptConnection, setPasswordPromptConnection] = useState<RemoteConnection | null>(
@@ -67,6 +80,21 @@ export function ProjectSwitcher({
     () => getClosedRemoteConnections(projects, remoteConnections),
     [projects, remoteConnections],
   );
+  const filteredProjects = useMemo(
+    () =>
+      projects.filter((availableProject) =>
+        matchesSearchQuery(query, [availableProject.name, availableProject.path]),
+      ),
+    [projects, query],
+  );
+  const filteredRemoteConnections = useMemo(
+    () =>
+      closedRemoteConnections.filter((connection) =>
+        matchesSearchQuery(query, [connection.name, connection.host, connection.username]),
+      ),
+    [closedRemoteConnections, query],
+  );
+  const hasProjectMatches = filteredProjects.length > 0 || filteredRemoteConnections.length > 0;
 
   const refreshRemoteConnections = useCallback(async () => {
     try {
@@ -174,6 +202,7 @@ export function ProjectSwitcher({
         onOpenChange={(open) => {
           setIsOpen(open);
           if (open) void refreshRemoteConnections();
+          else setQuery("");
         }}
       >
         <DropdownMenuTrigger
@@ -191,29 +220,35 @@ export function ProjectSwitcher({
             </Button>
           }
         />
-        <DropdownMenuContent side="bottom" align="start">
-          {projects.length > 0 || closedRemoteConnections.length > 0 ? (
+        <DropdownMenuContent side="bottom" align="start" className="w-64">
+          <DropdownMenuSearch
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search projects"
+            autoFocus
+          />
+          {hasProjectMatches ? (
             <>
               <DropdownMenuRadioGroup
                 value={displayProject?.id ?? ""}
                 onValueChange={onSelectProject}
               >
-                {projects.map((availableProject) => (
+                {filteredProjects.map((availableProject) => (
                   <DropdownMenuRadioItem
                     key={availableProject.id}
                     value={availableProject.id}
                     disabled={isSwitchingProject}
                     closeOnClick
                     trailingAction={
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        iconOnly
-                        aria-label={`Remove ${availableProject.name} from Athas`}
-                        onClick={() => void handleRemoveProject(availableProject)}
-                      >
-                        <XIcon />
-                      </Button>
+                      <ProjectRowActions
+                        projectName={availableProject.name}
+                        onSelectIcon={
+                          isRemoteProjectPath(availableProject.path)
+                            ? undefined
+                            : () => setIconPickerProject(availableProject)
+                        }
+                        onRemove={() => void handleRemoveProject(availableProject)}
+                      />
                     }
                   >
                     <ProjectGlyph
@@ -224,21 +259,16 @@ export function ProjectSwitcher({
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
-              {closedRemoteConnections.map((connection) => (
+              {filteredRemoteConnections.map((connection) => (
                 <DropdownMenuItem
                   key={connection.id}
                   disabled={connectingRemoteId === connection.id}
                   onClick={() => void handleConnectRemote(connection.id)}
                   trailingAction={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      iconOnly
-                      aria-label={`Remove ${connection.name} from Athas`}
-                      onClick={() => void handleRemoveRemoteConnection(connection)}
-                    >
-                      <XIcon />
-                    </Button>
+                    <ProjectRowActions
+                      projectName={connection.name}
+                      onRemove={() => void handleRemoveRemoteConnection(connection)}
+                    />
                   }
                 >
                   <RemoteIcon />
@@ -248,16 +278,13 @@ export function ProjectSwitcher({
               <DropdownMenuSeparator />
             </>
           ) : null}
+          {!hasProjectMatches && query.trim() ? (
+            <DropdownMenuItem disabled>No projects match</DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem onClick={() => void handleOpenFolder()}>
             <FolderOpenIcon />
             Open project…
           </DropdownMenuItem>
-          {displayProject && !isRemote ? (
-            <DropdownMenuItem onClick={() => setIconPickerProject(displayProject)}>
-              <ImageIcon />
-              Select project icon…
-            </DropdownMenuItem>
-          ) : null}
           <DropdownMenuItem onClick={onAddRemote}>
             <RemoteIcon />
             Add remote…
@@ -279,5 +306,45 @@ export function ProjectSwitcher({
         onConnect={handleConnectRemote}
       />
     </>
+  );
+}
+function ProjectRowActions({
+  projectName,
+  onSelectIcon,
+  onRemove,
+}: {
+  projectName: string;
+  onSelectIcon?: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger
+        appearance="action"
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            size="chrome"
+            aria-label={`More actions for ${projectName}`}
+          />
+        }
+      >
+        <DotsThreeIcon />
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="min-w-44">
+        {onSelectIcon ? (
+          <DropdownMenuItem onClick={onSelectIcon}>
+            <ImageIcon />
+            Select project icon…
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuItem variant="destructive" onClick={onRemove}>
+          <TrashIcon />
+          Remove from Athas…
+        </DropdownMenuItem>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }

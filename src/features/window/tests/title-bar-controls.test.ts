@@ -14,6 +14,10 @@ const projectSwitcherSource = readFileSync(
   fileURLToPath(new URL("../../layout/components/project-switcher.tsx", import.meta.url)),
   "utf8",
 );
+const branchManagerSource = readFileSync(
+  fileURLToPath(new URL("../../git/components/git-branch-manager.tsx", import.meta.url)),
+  "utf8",
+);
 
 describe("title bar controls", () => {
   it("places project and branch selectors after the activity sidebar toggle", () => {
@@ -56,7 +60,17 @@ describe("title bar controls", () => {
     expect(activityBarSource).not.toContain("<AccountMenu");
   });
 
-  it("aligns macOS controls with the native traffic lights", () => {
-    expect(titleBarSource).toContain('isFullscreen ? undefined : "-translate-y-0.5"');
+  it("keeps macOS control alignment stable across fullscreen transitions", () => {
+    expect(titleBarSource).toContain('isFullscreen ? "pl-2" : "pl-title-bar-leading"');
+    expect(titleBarSource).not.toContain("macTitleBarControlAlignment");
+    expect(titleBarSource).not.toContain("translate-y");
+  });
+  it("uses searchable anchored menus for title bar project and branch selection", () => {
+    expect(projectSwitcherSource).toContain("<DropdownMenuSearch");
+    expect(projectSwitcherSource).toContain('placeholder="Search projects"');
+    expect(branchManagerSource).toContain('if (triggerMode === "branch")');
+    expect(branchManagerSource).toContain('placeholder="Search branches"');
+    expect(branchManagerSource).toContain("<BranchDropdownActions");
+    expect(branchManagerSource).toContain("New branch…");
   });
 });

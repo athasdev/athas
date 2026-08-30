@@ -79,7 +79,6 @@ const TitleBar = ({
   const usesNativeWindowChrome = useNativeWindowChrome();
   const showAppWindowControls = !isMacOS && !usesNativeWindowChrome;
   const shouldUseNativeMenuBar = !isWindows && !isLinux && nativeMenuBar;
-  const macTitleBarControlAlignment = isFullscreen ? undefined : "-translate-y-0.5";
 
   useEffect(() => {
     const initWindow = async () => {
@@ -342,13 +341,13 @@ const TitleBar = ({
           data-tauri-drag-region
           onMouseDown={handleTitleBarMouseDown}
         >
-          <ChromeGroup className={cn("pointer-events-auto h-full", macTitleBarControlAlignment)}>
+          <ChromeGroup className="pointer-events-auto h-full">
             {menuItem}
             {sidebarToggle}
             {workspaceSelectors}
           </ChromeGroup>
 
-          <div className={cn("h-full", macTitleBarControlAlignment)}>{trailingControls}</div>
+          <div className="h-full">{trailingControls}</div>
         </ContextMenuTrigger>
         {titleBarContextMenuContent}
       </ContextMenu>
