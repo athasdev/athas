@@ -20,7 +20,7 @@ const bubbleVariants = cva(
         default:
           "*:data-[slot=bubble-content]:bg-primary/15 *:data-[slot=bubble-content]:text-foreground",
         secondary:
-          "*:data-[slot=bubble-content]:bg-surface *:data-[slot=bubble-content]:text-foreground [&>[data-slot=bubble-content]:is(button,a):hover]:bg-accent",
+          "*:data-[slot=bubble-content]:bg-accent *:data-[slot=bubble-content]:text-foreground [&>[data-slot=bubble-content]:is(button,a):hover]:bg-selected",
         muted:
           "*:data-[slot=bubble-content]:bg-accent/70 *:data-[slot=bubble-content]:text-foreground",
         outline:
@@ -62,7 +62,7 @@ function BubbleContent({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="bubble-content"
       className={cn(
-        "w-fit max-w-full min-w-0 overflow-hidden rounded-xl border border-transparent px-3 py-2 leading-relaxed wrap-break-word group-data-[align=end]/bubble:self-end",
+        "w-fit max-w-full min-w-0 overflow-hidden rounded-2xl border border-transparent px-3 py-2.5 leading-relaxed wrap-break-word group-data-[align=end]/bubble:self-end",
         className,
       )}
       {...props}

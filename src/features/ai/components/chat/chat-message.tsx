@@ -5,7 +5,9 @@ import {
 } from "@/ui/icons";
 import type { FormEvent, ReactNode } from "react";
 import { memo, useCallback, useState } from "react";
+import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { MessageAction, MessageResponse } from "@/ui/message";
+import { ThinkingOrb, type ThinkingOrbProps } from "@/ui/thinking-orb";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message as AIMessage } from "@/features/ai/types/ai-chat.types";
@@ -28,7 +30,6 @@ import Textarea from "@/ui/textarea";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
 import { ToolCallGroupDisplay } from "../messages/tool-call-display";
-import { ChatLoadingIndicator } from "./chat-loading-indicator";
 
 interface ChatMessageProps {
   message: AIMessage;
@@ -69,6 +70,22 @@ function HighlightedPlainText({ text, query }: { text: string; query: string }) 
         );
       })}
     </>
+  );
+}
+
+function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
+  const isStarting = phase === "starting";
+  const isThinking = phase === "thinking";
+  const label = isStarting ? "Starting agent…" : isThinking ? "Thinking…" : "Waiting for response…";
+  const state: ThinkingOrbProps["state"] = isThinking ? "breathing" : "connecting";
+
+  return (
+    <Marker role="status" className="w-fit">
+      <MarkerIcon className="size-5">
+        <ThinkingOrb state={state} size={20} aria-hidden="true" />
+      </MarkerIcon>
+      <MarkerContent className="text-shimmer">{label}</MarkerContent>
+    </Marker>
   );
 }
 
@@ -164,19 +181,11 @@ export const ChatMessage = memo(function ChatMessage({
           {isEditing ? null : (
             <MessageFooter>
               <span>{messageTime}</span>
-              <MessageAction
-                onClick={() => void copyText(message.content)}
-                label="Copy prompt"
-                className="hover:bg-transparent hover:text-subtle-foreground"
-              >
+              <MessageAction onClick={() => void copyText(message.content)} label="Copy prompt">
                 <CopySimple className="size-3.5" />
               </MessageAction>
               {canEditUserMessage && onEditUserMessage ? (
-                <MessageAction
-                  onClick={startEditing}
-                  label="Edit prompt"
-                  className="hover:bg-transparent hover:text-subtle-foreground"
-                >
+                <MessageAction onClick={startEditing} label="Edit prompt">
                   <PencilSimple className="size-3.5" />
                 </MessageAction>
               ) : null}
@@ -201,15 +210,7 @@ export const ChatMessage = memo(function ChatMessage({
     (!message.content || message.content.trim().length === 0) &&
     (!message.toolCalls || message.toolCalls.length === 0)
   ) {
-    const isStarting = message.responsePhase === "starting";
-    const isThinking = message.responsePhase === "thinking";
-    return (
-      <ChatLoadingIndicator
-        label={isStarting ? "Starting agent…" : isThinking ? "Thinking…" : "Waiting for response…"}
-        state={isThinking ? "breathing" : "connecting"}
-        compact
-      />
-    );
+    return <ChatResponseStatus phase={message.responsePhase} />;
   }
 
   return (
@@ -298,12 +299,8 @@ export const ChatMessage = memo(function ChatMessage({
           </BubbleContent>
         </Bubble>
         {message.content.trim() ? (
-          <MessageFooter className="opacity-100 transition-opacity md:opacity-0 md:group-hover/message:opacity-100 md:group-focus-within/message:opacity-100">
-            <MessageAction
-              onClick={() => void copyText(message.content)}
-              label="Copy response"
-              className="hover:bg-transparent hover:text-subtle-foreground"
-            >
+          <MessageFooter>
+            <MessageAction onClick={() => void copyText(message.content)} label="Copy response">
               <CopySimple className="size-3.5" />
             </MessageAction>
           </MessageFooter>

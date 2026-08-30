@@ -19,8 +19,8 @@ import {
   ClockCounterClockwiseIcon as History,
   TrashIcon as Trash,
 } from "@/ui/icons";
+import { matchesSearchQuery } from "@/utils/search-match";
 import { ProviderIcon } from "../icons/provider-icons";
-import { filterChatHistory } from "./chat-history-model";
 
 interface ChatHistoryDropdownProps {
   chats: Chat[];
@@ -39,7 +39,9 @@ export default function ChatHistoryDropdown({
 }: ChatHistoryDropdownProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
-  const filteredChats = filterChatHistory(chats, deferredSearchQuery);
+  const filteredChats = chats.filter((chat) =>
+    matchesSearchQuery(deferredSearchQuery, [chat.title, chat.agentId || "custom"]),
+  );
 
   return (
     <DropdownMenu onOpenChange={(open) => !open && setSearchQuery("")}>

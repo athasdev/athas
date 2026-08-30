@@ -49,7 +49,7 @@ function MessageContent({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="message-content"
       className={cn(
-        "flex w-full min-w-0 flex-col gap-1 wrap-break-word group-data-[align=end]/message:*:data-slot:self-end",
+        "flex w-full min-w-0 flex-col gap-1.5 wrap-break-word group-data-[align=end]/message:*:data-slot:self-end",
         className,
       )}
       {...props}
@@ -75,7 +75,7 @@ function MessageFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="message-footer"
       className={cn(
-        "flex max-w-full min-w-0 items-center gap-1.5 px-3 font-medium text-subtle-foreground/55 ui-text-sm group-has-data-[variant=ghost]/message:px-0 group-data-[align=end]/message:justify-end",
+        "flex min-h-6 max-w-full min-w-0 items-center gap-0.5 px-2 text-subtle-foreground/60 transition-opacity duration-fast ui-text-sm group-has-data-[variant=ghost]/message:px-0 group-data-[align=end]/message:justify-end md:pointer-events-none md:opacity-0 md:group-hover/message:pointer-events-auto md:group-hover/message:opacity-100 md:group-focus-within/message:pointer-events-auto md:group-focus-within/message:opacity-100",
         className,
       )}
       {...props}
@@ -114,6 +114,7 @@ function MessageAction({
   tooltip,
   icon: Icon = Copy,
   children,
+  className,
   ...props
 }: Omit<ButtonProps, "tooltip"> & {
   label: string;
@@ -128,6 +129,7 @@ function MessageAction({
       iconOnly
       tooltip={tooltip ?? label}
       aria-label={label}
+      className={cn("size-6", className)}
       {...props}
     >
       {children ?? <Icon className="size-3.5" />}

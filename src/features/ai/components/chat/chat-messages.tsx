@@ -105,7 +105,7 @@ export const ChatMessages = memo(function ChatMessages({
 
   return (
     <MessageScrollerContent
-      className="mx-auto w-full max-w-4xl"
+      className="mx-auto w-full max-w-3xl"
       aria-busy={messages.some((message) => message.isStreaming)}
     >
       {timelineItems.map((item) => {
@@ -139,7 +139,7 @@ export const ChatMessages = memo(function ChatMessages({
             ? previousMessageIsToolOnly
               ? "px-4 py-1"
               : "px-4 pt-2 pb-1"
-            : "px-4 py-2",
+            : "px-4 py-3",
           isPlanMessage ? "pt-2" : "",
         ]
           .filter(Boolean)

@@ -37,8 +37,8 @@ export function ChatActivityLine({
   const summary = detail ? `${title}: ${detail}` : title;
 
   return (
-    <div data-ai-element="activity-marker" className="select-none">
-      <div className="flex min-w-0 items-center gap-1">
+    <div data-ai-element="activity-marker" className="py-0.5 select-none">
+      <div className="flex min-w-0 items-center gap-1.5">
         <Marker
           render={canExpand ? <button type="button" /> : undefined}
           role={state === "running" ? "status" : undefined}
@@ -64,11 +64,11 @@ export function ChatActivityLine({
         {actions ? <span className="shrink-0">{actions}</span> : null}
       </div>
       {canExpand && isExpanded && detailsVariant === "text" ? (
-        <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap pl-6 font-mono ui-text-sm text-subtle-foreground/55">
+        <pre className="mt-1.5 max-h-64 overflow-auto whitespace-pre-wrap pl-6 font-mono ui-text-sm text-subtle-foreground/55">
           {children}
         </pre>
       ) : canExpand && isExpanded ? (
-        <div className="mt-1 min-w-0 pl-6">{children}</div>
+        <div className="mt-1.5 min-w-0 pl-6">{children}</div>
       ) : null}
     </div>
   );

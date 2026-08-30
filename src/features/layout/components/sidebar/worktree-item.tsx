@@ -48,7 +48,6 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
         <SidebarIconButton
           key="new-window"
           tooltip="Open in New Window"
-          tooltipSide="top"
           onClick={(event) => {
             event.stopPropagation();
             openWorktreeInNewWindow();
@@ -59,7 +58,6 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
         <SidebarIconButton
           key="copy"
           tooltip="Copy Path"
-          tooltipSide="top"
           onClick={(event) => {
             event.stopPropagation();
             void writeClipboardText(worktree.path);
@@ -72,7 +70,6 @@ export function WorktreeItem({ repoPath, worktree }: WorktreeItemProps) {
             key="remove"
             tone="danger"
             tooltip="Remove Worktree"
-            tooltipSide="top"
             onClick={(event) => {
               event.stopPropagation();
               void handleRemove();
