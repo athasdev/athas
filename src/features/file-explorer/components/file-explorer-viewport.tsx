@@ -17,6 +17,7 @@ import {
   getFileTreeVirtualRange,
   type FileTreeScrollAlignment,
 } from "@/features/file-explorer/lib/file-tree-viewport";
+import { SidebarTreeScrollArea } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
 export interface FileExplorerViewportHandle {
@@ -207,19 +208,17 @@ export const FileExplorerViewport = forwardRef<
   const stickyIndexSet = useMemo(() => new Set(stickyIndexes), [stickyIndexes]);
 
   return (
-    <div
-      ref={scrollRef}
-      className={cn(
-        "file-tree-container relative overflow-x-hidden overflow-y-auto overscroll-none scroll-auto scrollbar-gutter-both font-sans [overflow-anchor:none]",
-        className,
-      )}
+    <SidebarTreeScrollArea
+      className={cn("file-tree-container font-sans", className)}
+      contentPadding="inline"
+      viewportClassName="overscroll-none scroll-auto [overflow-anchor:none]"
+      viewportProps={{ ref: scrollRef, ...props }}
       style={
         {
           "--file-tree-row-height": `${rowHeight}px`,
           ...style,
         } as React.CSSProperties
       }
-      {...props}
     >
       {stickyIndexes.length > 0 ? (
         <div
@@ -262,6 +261,6 @@ export const FileExplorerViewport = forwardRef<
         )}
       </div>
       {emptyState}
-    </div>
+    </SidebarTreeScrollArea>
   );
 });

@@ -63,7 +63,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import { SidebarHeader, SidebarIconButton, SidebarSearchPopover } from "@/ui/sidebar";
+import { SidebarHeader, SidebarIconButton, SidebarPanel, SidebarSearchPopover } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
@@ -1096,9 +1096,9 @@ function FileExplorerTreeComponent({
   }, [activePath]);
 
   return (
-    <div
+    <SidebarPanel
       className={cn(
-        "relative flex min-h-0 min-w-0 flex-1 select-none flex-col overflow-hidden p-0",
+        "flex-1 select-none",
         dragState.dragOverPath === "__ROOT__" &&
           "border-2! border-dashed! border-primary! bg-primary! bg-opacity-10!",
       )}
@@ -1281,7 +1281,7 @@ function FileExplorerTreeComponent({
       onMouseLeave={handleContainerMouseLeave}
     >
       <SidebarHeader
-        className="justify-end"
+        variant="hover-actions"
         onClick={(event) => event.stopPropagation()}
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -1670,7 +1670,7 @@ function FileExplorerTreeComponent({
           </p>
         </Dialog>
       )}
-    </div>
+    </SidebarPanel>
   );
 }
 

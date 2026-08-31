@@ -7,6 +7,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button, type ButtonProps } from "@/ui/button";
 import { ChromeBar } from "@/ui/chrome";
@@ -26,9 +27,10 @@ export function SidebarPanel({
   return (
     <div
       className={cn(
-        "flex size-full min-h-0 min-w-0 flex-col overflow-hidden bg-background",
+        "group/sidebar-panel relative flex size-full min-h-0 min-w-0 flex-col overflow-hidden bg-background",
         className,
       )}
+      data-slot="sidebar-panel"
       {...props}
     >
       {children}
@@ -64,6 +66,35 @@ export function SidebarScrollArea({
   ...props
 }: Omit<ComponentProps<typeof ScrollArea>, "contentClassName">) {
   return <ScrollArea className={className} contentClassName="px-chrome-inline py-2" {...props} />;
+}
+
+const sidebarTreeScrollContentVariants = cva("", {
+  variants: {
+    padding: {
+      all: "p-1",
+      inline: "px-1",
+    },
+  },
+  defaultVariants: {
+    padding: "all",
+  },
+});
+
+export function SidebarTreeScrollArea({
+  className,
+  contentPadding = "all",
+  ...props
+}: Omit<ComponentProps<typeof ScrollArea>, "contentClassName" | "reserveScrollbarGutter"> & {
+  contentPadding?: "all" | "inline";
+}) {
+  return (
+    <ScrollArea
+      className={className}
+      contentClassName={sidebarTreeScrollContentVariants({ padding: contentPadding })}
+      reserveScrollbarGutter
+      {...props}
+    />
+  );
 }
 
 export function SidebarTitleBar({
@@ -138,18 +169,32 @@ export const SidebarFooter = forwardRef<
   );
 });
 
+const sidebarHeaderVariants = cva("select-none", {
+  variants: {
+    variant: {
+      default: "sticky top-0 z-20 h-sidebar-header py-1 backdrop-blur-sm",
+      "hover-actions":
+        "pointer-events-none absolute top-0 right-0 z-30 h-sidebar-header w-fit max-w-full justify-end py-1 opacity-0 backdrop-blur-sm transition-opacity duration-fast ease-smooth group-hover/sidebar-panel:pointer-events-auto group-hover/sidebar-panel:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+  },
+});
+
 export function SidebarHeader({
   children,
   className,
+  variant = "default",
   ...props
-}: ComponentProps<"div"> & { children: ReactNode }) {
+}: ComponentProps<"div"> &
+  VariantProps<typeof sidebarHeaderVariants> & {
+    children: ReactNode;
+  }) {
   return (
     <ChromeBar
       region="sidebar"
-      className={cn(
-        "sticky top-0 z-20 h-sidebar-header select-none py-1 backdrop-blur-sm",
-        className,
-      )}
+      className={cn(sidebarHeaderVariants({ variant }), className)}
       {...props}
     >
       {children}
