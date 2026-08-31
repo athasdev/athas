@@ -17,9 +17,78 @@
 - Collaboration
 - Enterprise policy controls (managed mode + extension allowlist)
 
-## Download
+## Installation
 
-Get the latest version from the [releases page](https://github.com/athasdev/athas/releases).
+### Quick install
+
+macOS and Linux:
+
+```bash
+curl -fsSL https://athas.dev/install.sh | sh
+```
+
+Windows (PowerShell):
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://athas.dev/install.ps1 | iex"
+```
+
+The install scripts detect your operating system and architecture, download the latest stable
+release, and verify its SHA256 checksum when one is available. You can review the
+[macOS and Linux script](https://athas.dev/install.sh) or
+[Windows script](https://athas.dev/install.ps1) before running it.
+
+To install the latest preview release on macOS or Linux:
+
+```bash
+curl -fsSL https://athas.dev/install.sh | sh -s -- --preview
+```
+
+### Package managers
+
+Homebrew on macOS:
+
+```bash
+brew install --cask athas
+```
+
+WinGet on Windows:
+
+```powershell
+winget install --id=athasdev.Athas -e
+```
+
+Scoop on Windows:
+
+```powershell
+scoop bucket add athas https://github.com/athasdev/scoop-athas
+scoop install athas
+```
+
+### Manual download
+
+Prebuilt packages for macOS, Windows, and Linux are available on the
+[GitHub Releases page](https://github.com/athasdev/athas/releases). Linux releases include native
+`.deb` and `.rpm` packages as well as a portable `.tar.gz` bundle.
+
+See the [installation guide](https://athas.dev/docs/installation) for detailed platform steps,
+install locations, and uninstall instructions.
+
+## Development
+
+To build Athas from source, install [Node.js 24](https://nodejs.org),
+[Bun 1.3.14](https://bun.sh), and [Rust](https://rustup.rs), then run:
+
+```bash
+git clone https://github.com/athasdev/athas.git
+cd athas
+bun setup
+bun dev
+```
+
+`bun setup` installs the project dependencies and checks the native requirements for your
+platform. See the [contributing guide](CONTRIBUTING.md) for validation commands and contribution
+guidelines.
 
 ## Documentation
 
