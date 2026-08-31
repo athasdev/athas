@@ -30,13 +30,8 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { EmptyState } from "@/ui/empty";
-import {
-  SidebarHeader,
-  SidebarIconButton,
-  SidebarPanel,
-  SidebarSearchPopover,
-  SidebarTreeScrollArea,
-} from "@/ui/sidebar";
+import { SidebarHeader, SidebarIconButton, SidebarSearchPopover, SidebarPanel } from "@/ui/sidebar";
+import { ScrollArea } from "@/ui/scroll-area";
 import { Spinner } from "@/ui/spinner";
 import { useDocumentOutline } from "../hooks/use-document-outline";
 import { getOutlineRevealScrollTop } from "../utils/outline-scroll";
@@ -278,7 +273,7 @@ export function OutlineSidebar() {
 
   return (
     <SidebarPanel onKeyDownCapture={handleSidebarKeyDown}>
-      <SidebarHeader variant="hover-actions">
+      <SidebarHeader>
         <SidebarSearchPopover
           value={query}
           onChange={setQuery}
@@ -329,7 +324,7 @@ export function OutlineSidebar() {
         </DropdownMenu>
       </SidebarHeader>
 
-      <SidebarTreeScrollArea
+      <ScrollArea
         className="min-h-0 min-w-0 flex-1"
         viewportClassName="overscroll-contain"
         viewportProps={{
@@ -340,6 +335,7 @@ export function OutlineSidebar() {
             scrollPaddingBlock: "4px",
           },
         }}
+        contentClassName="p-1"
       >
         {!isSupported ? (
           <EmptyState
@@ -426,7 +422,7 @@ export function OutlineSidebar() {
             </ContextMenu>
           ))
         )}
-      </SidebarTreeScrollArea>
+      </ScrollArea>
     </SidebarPanel>
   );
 }
