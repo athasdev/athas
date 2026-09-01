@@ -28,7 +28,8 @@ interface NavigationActionsParams {
   setIsQuickOpenVisible: (v: boolean) => void;
   openCommandPaletteView?: (view: "outline") => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
-  coreFeatures: { git: boolean; outline: boolean };
+  coreFeatures: { git: boolean };
+  hasActiveEditor: boolean;
   onClose: () => void;
 }
 
@@ -41,6 +42,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     setIsQuickOpenVisible,
     openCommandPaletteView,
     coreFeatures,
+    hasActiveEditor,
     onClose,
   } = params;
 
@@ -134,7 +136,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
         onClose();
       },
     },
-    ...(coreFeatures.outline
+    ...(hasActiveEditor
       ? [
           {
             id: "view-show-outline",

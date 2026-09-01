@@ -19,7 +19,6 @@ export interface CoreFeaturesState {
   diagnostics: boolean;
   debugger: boolean;
   docker: boolean;
-  outline: boolean;
   aiChat: boolean;
   teamCollaboration: boolean;
   breadcrumbs: boolean;

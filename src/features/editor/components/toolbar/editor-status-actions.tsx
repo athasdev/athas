@@ -14,10 +14,7 @@ import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/buil
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
-import {
-  applyOutlineVisibilityPreference,
-  setOutlineVisibilityPreference,
-} from "@/features/outline/actions/outline-visibility";
+import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
 import { Spinner } from "@/ui/spinner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
@@ -61,7 +58,6 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
   const breadcrumbsEnabled = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
-  const outlineEnabled = useSettingsStore((state) => state.settings.coreFeatures.outline);
   const showMinimap = useSettingsStore((state) => state.settings.showMinimap);
   const showOutline = useSettingsStore((state) => state.settings.showOutline);
   const lineNumbers = useSettingsStore((state) => state.settings.lineNumbers);
@@ -132,11 +128,6 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
         : null;
     }),
   );
-
-  useEffect(() => {
-    if (activeBuffer?.type !== "editor") return;
-    applyOutlineVisibilityPreference(outlineEnabled && showOutline);
-  }, [activeBuffer?.id, activeBuffer?.type, outlineEnabled, showOutline]);
 
   const lspClient = LspClient.getInstance();
   const activeServerEntries = lspClient.getActiveServerEntries();
@@ -305,7 +296,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
       shortcut: minimapShortcut,
       onToggle: () => updateSetting("showMinimap", !showMinimap),
     },
-    ...(outlineEnabled && activeBuffer?.type === "editor"
+    ...(activeBuffer?.type === "editor"
       ? [
           {
             id: "outline",

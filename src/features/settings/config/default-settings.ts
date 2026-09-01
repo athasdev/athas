@@ -132,7 +132,6 @@ export const defaultSettings: Settings = {
     diagnostics: true,
     debugger: true,
     docker: true,
-    outline: true,
     aiChat: true,
     teamCollaboration: true,
     breadcrumbs: true,

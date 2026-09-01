@@ -219,6 +219,7 @@ describe("settings normalization", () => {
 
     expect(normalized.coreFeatures.webViewer).toBe(false);
     expect(normalized.coreFeatures.ghosttyTerminal).toBe(false);
+    expect(normalized.coreFeatures).not.toHaveProperty("outline");
   });
 
   it("migrates legacy icon theme aliases", () => {

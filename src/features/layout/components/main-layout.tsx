@@ -3,6 +3,7 @@ import { useChatInitialization } from "@/features/ai/hooks/use-chat-initializati
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
@@ -24,6 +25,7 @@ import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { recordStartupMilestone } from "@/features/bootstrap/startup-performance";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
+import { isSidebarViewAvailable } from "@/features/layout/utils/sidebar-pane-utils";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import { ResizablePane } from "./resizable-pane";
 import { ActivityBar, COLLAPSED_ACTIVITY_BAR_WIDTH } from "./sidebar/activity-bar";
@@ -79,9 +81,18 @@ export function MainLayout() {
   const activityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
   const rightSidebarWidth = useSettingsStore((state) => state.settings.rightSidebarWidth);
+  const showOutline = useSettingsStore((state) => state.settings.showOutline);
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
-  const renderedRightSidebarVisible = isRightSidebarVisible && !responsiveLayout.narrow;
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
+  const setIsRightSidebarVisible = useUIState((state) => state.setIsRightSidebarVisible);
+  const hasActiveEditor = useBufferStore((state) => {
+    const activeBuffer = getBufferById(state.buffers, state.activeBufferId);
+    return activeBuffer?.type === "editor";
+  });
+  const renderedRightSidebarVisible =
+    isRightSidebarVisible &&
+    !responsiveLayout.narrow &&
+    isSidebarViewAvailable(activeRightSidebarView, hasActiveEditor && showOutline);
   const isDatabaseConnectionVisible = useUIState((state) => state.isDatabaseConnectionVisible);
   const setIsDatabaseConnectionVisible = useUIState(
     (state) => state.setIsDatabaseConnectionVisible,
@@ -137,6 +148,21 @@ export function MainLayout() {
     terminalWidthMode === "editor" && deferredSurfacesReady && isBottomPaneVisible;
   const roundMainContentLeftEdge = !renderedSidebarVisible;
   const roundMainContentRightEdge = !renderedRightSidebarVisible;
+  useEffect(() => {
+    if (activeRightSidebarView !== "outline") return;
+
+    const shouldShowOutline = hasActiveEditor && showOutline;
+    if (isRightSidebarVisible !== shouldShowOutline) {
+      setIsRightSidebarVisible(shouldShowOutline);
+    }
+  }, [
+    activeRightSidebarView,
+    hasActiveEditor,
+    isRightSidebarVisible,
+    setIsRightSidebarVisible,
+    showOutline,
+  ]);
+
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => setDeferredSurfacesReady(true), 0);

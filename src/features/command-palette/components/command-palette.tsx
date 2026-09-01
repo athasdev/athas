@@ -307,6 +307,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       openCommandPaletteView,
       openSettingsDialog,
       coreFeatures: commandSettings.coreFeatures,
+      hasActiveEditor: activeBuffer?.type === "editor",
       onClose,
     }),
     ...createPaneActions({

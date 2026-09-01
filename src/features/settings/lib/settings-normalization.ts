@@ -440,6 +440,11 @@ export function normalizeSettings(settings: Settings): Settings {
     ...defaultSettings.coreFeatures,
     ...normalizedSettings.coreFeatures,
   };
+  delete (
+    normalizedSettings.coreFeatures as typeof normalizedSettings.coreFeatures & {
+      outline?: unknown;
+    }
+  ).outline;
   delete (normalizedSettings.coreFeatures as { athasEditorEngine?: unknown }).athasEditorEngine;
   delete (normalizedSettings.coreFeatures as { energyEdge?: unknown }).energyEdge;
   delete (normalizedSettings as Settings & { windowChromeDensity?: unknown }).windowChromeDensity;

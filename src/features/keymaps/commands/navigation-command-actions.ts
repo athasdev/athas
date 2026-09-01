@@ -11,7 +11,6 @@ import {
   getLineTextsFromContent,
 } from "@/features/editor/utils/position";
 import { useReferencesStore } from "@/features/references/stores/references.store";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { showChoiceDialog } from "@/ui/dialog";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { toast } from "sonner";
@@ -179,12 +178,12 @@ async function chooseHierarchyItem<T extends CallHierarchyItem | TypeHierarchyIt
 }
 
 export function openOutlinePicker(): void {
-  if (!useSettingsStore.getState().settings.coreFeatures.outline) return;
+  if (!getActiveEditorContext()) return;
   useUIState.getState().openCommandPaletteView("outline");
 }
 
 export function openOutlineSidebar(): void {
-  if (!useSettingsStore.getState().settings.coreFeatures.outline) return;
+  if (!getActiveEditorContext()) return;
   setOutlineVisibilityPreference(true);
 }
 

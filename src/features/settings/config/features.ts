@@ -5,7 +5,6 @@ import {
   GitBranchIcon as GitBranch,
   GitPullRequestIcon as GitPullRequest,
   GlobeHemisphereWestIcon as Globe,
-  ListBulletsIcon as ListBullets,
   ChatCircleTextIcon as MessageSquare,
   NavigationArrowIcon as Navigation,
   MagnifyingGlassIcon as Search,
@@ -72,13 +71,6 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     description: "Run and debug files with launch configurations and breakpoints",
     icon: BugBeetle,
     enabled: coreFeatures.debugger,
-  },
-  {
-    id: "outline",
-    name: "Outline",
-    description: "Document symbols and quick navigation for the active file",
-    icon: ListBullets,
-    enabled: coreFeatures.outline,
   },
   {
     id: "aiChat",

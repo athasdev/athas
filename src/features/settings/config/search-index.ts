@@ -908,14 +908,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["debug", "debugger", "breakpoint", "launch", "run"],
   },
   {
-    id: "features-outline",
-    tab: "advanced",
-    section: "Features",
-    label: "Outline",
-    description: "Document symbols and quick navigation for the active file",
-    keywords: ["outline", "symbols", "navigation", "document", "active file"],
-  },
-  {
     id: "features-ai-chat",
     tab: "advanced",
     section: "Features",

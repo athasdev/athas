@@ -30,6 +30,10 @@ export function getSidebarPaneLevel(view: SidebarView): SidebarPaneLevel {
   return "primary";
 }
 
+export function isSidebarViewAvailable(view: SidebarView, outlineAvailable: boolean): boolean {
+  return view !== "outline" || outlineAvailable;
+}
+
 export function getActiveSidebarView({
   isGitViewActive,
   isGitHubPRsViewActive,

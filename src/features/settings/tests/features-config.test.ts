@@ -16,16 +16,12 @@ describe("features config", () => {
     });
   });
 
-  it("includes Outline in core features", () => {
+  it("keeps Outline out of Advanced feature toggles", () => {
     const feature = createCoreFeaturesList(defaultSettings.coreFeatures).find(
       (item) => item.id === "outline",
     );
 
-    expect(feature).toMatchObject({
-      name: "Outline",
-      description: "Document symbols and quick navigation for the active file",
-      enabled: true,
-    });
+    expect(feature).toBeUndefined();
   });
 
   it("keeps Debugger stable and on by default", () => {

@@ -73,7 +73,7 @@ export const SidebarPane = memo(
       },
       ...(coreFeatures.docker ? [{ id: "docker" as const, content: <DockerSidebar /> }] : []),
       { id: "files", content: <FileExplorerPane /> },
-      ...(coreFeatures.outline ? [{ id: "outline" as const, content: <OutlineSidebar /> }] : []),
+      { id: "outline", content: <OutlineSidebar /> },
       ...(hasTeamsCollaborationAccess && coreFeatures.teamCollaboration
         ? [
             {

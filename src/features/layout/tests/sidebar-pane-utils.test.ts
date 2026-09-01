@@ -2,6 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 import {
   getActiveSidebarView,
   getSidebarPaneLevel,
+  isSidebarViewAvailable,
   resolveSidebarPaneClick,
   shouldOpenSidebarSubview,
 } from "../utils/sidebar-pane-utils";
@@ -9,6 +10,17 @@ import {
 describe("getSidebarPaneLevel", () => {
   test("keeps ordinary workbench views in the primary sidebar", () => {
     expect(getSidebarPaneLevel("files")).toBe("primary");
+  });
+});
+
+describe("isSidebarViewAvailable", () => {
+  test("shows Outline only for an active editor tab", () => {
+    expect(isSidebarViewAvailable("outline", true)).toBe(true);
+    expect(isSidebarViewAvailable("outline", false)).toBe(false);
+  });
+
+  test("keeps other sidebar views available without an active editor", () => {
+    expect(isSidebarViewAvailable("databases", false)).toBe(true);
   });
 });
 
