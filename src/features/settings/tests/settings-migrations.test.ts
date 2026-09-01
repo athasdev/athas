@@ -14,4 +14,16 @@ describe("settings migrations", () => {
 
     expect(migrated.hiddenGitSidebarItems).toEqual([]);
   });
+
+  it("disables compact folders for settings created before the new default", () => {
+    const migrated = migrateSettingsRecord({ compactFoldersInFileTree: true }, 3);
+
+    expect(migrated.compactFoldersInFileTree).toBe(false);
+  });
+
+  it("preserves a compact folders opt-in after the migration", () => {
+    const migrated = migrateSettingsRecord({ compactFoldersInFileTree: true }, 4);
+
+    expect(migrated.compactFoldersInFileTree).toBe(true);
+  });
 });

@@ -133,4 +133,51 @@ describe("settings persistence", () => {
     expect(storeMocks.set).not.toHaveBeenCalled();
     expect(storeMocks.save).not.toHaveBeenCalled();
   });
+
+  it("disables compact folders when migrating existing settings", async () => {
+    const { loadSettingsFromStore } = await import("@/features/settings/lib/settings-persistence");
+    const settings = getDefaultSettingsSnapshot();
+    settings.compactFoldersInFileTree = true;
+    const store = {
+      entries: storeMocks.entries,
+      save: storeMocks.save,
+      set: storeMocks.set,
+    };
+    storeMocks.entries.mockResolvedValue([
+      ...Object.entries(settings),
+      [SETTINGS_SCHEMA_VERSION_KEY, 3],
+    ]);
+    storeMocks.load.mockResolvedValue(store);
+
+    const loaded = await loadSettingsFromStore();
+
+    expect(loaded.compactFoldersInFileTree).toBe(false);
+    expect(storeMocks.set).toHaveBeenCalledWith("compactFoldersInFileTree", false);
+    expect(storeMocks.set).toHaveBeenCalledWith(
+      SETTINGS_SCHEMA_VERSION_KEY,
+      SETTINGS_SCHEMA_VERSION,
+    );
+  });
+
+  it("preserves a compact folders opt-in after the settings migration", async () => {
+    const { loadSettingsFromStore } = await import("@/features/settings/lib/settings-persistence");
+    const settings = getDefaultSettingsSnapshot();
+    settings.compactFoldersInFileTree = true;
+    const store = {
+      entries: storeMocks.entries,
+      save: storeMocks.save,
+      set: storeMocks.set,
+    };
+    storeMocks.entries.mockResolvedValue([
+      ...Object.entries(settings),
+      [SETTINGS_SCHEMA_VERSION_KEY, SETTINGS_SCHEMA_VERSION],
+    ]);
+    storeMocks.load.mockResolvedValue(store);
+
+    const loaded = await loadSettingsFromStore();
+
+    expect(loaded.compactFoldersInFileTree).toBe(true);
+    expect(storeMocks.set).not.toHaveBeenCalled();
+    expect(storeMocks.save).not.toHaveBeenCalled();
+  });
 });

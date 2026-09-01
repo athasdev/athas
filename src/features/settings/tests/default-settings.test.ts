@@ -54,6 +54,7 @@ describe("default settings", () => {
     const settings = getDefaultSettingsSnapshot();
 
     expect(settings.fileTreeSortOrder).toBe("folders-first");
+    expect(settings.compactFoldersInFileTree).toBe(false);
     expect(settings.autoRevealActiveFileInFileTree).toBe(true);
     expect(settings.showFileIconsInFileTree).toBe(true);
     expect(settings.showFolderArrowsInFileTree).toBe(false);

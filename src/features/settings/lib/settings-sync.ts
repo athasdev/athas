@@ -1,9 +1,6 @@
 import type { Settings } from "@/features/settings/types/settings.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import {
-  migrateSettingsRecord,
-  SETTINGS_SCHEMA_VERSION,
-} from "@/features/settings/lib/settings-migrations";
+import { SETTINGS_SCHEMA_VERSION } from "@/features/settings/lib/settings-migrations";
 import {
   useSettingsSyncStore,
   type SettingsSyncSource,
@@ -341,11 +338,18 @@ function hydrateSettingsSyncStore() {
 async function applyRemoteSnapshot(snapshot: CloudSettingsSyncSnapshot) {
   isApplyingRemoteSnapshot = true;
   try {
+    const importPayload =
+      snapshot.schemaVersion > 0
+        ? {
+            format: "athas.settings",
+            version: snapshot.schemaVersion,
+            exportedAt: snapshot.updatedAt,
+            settings: snapshot.settings,
+          }
+        : snapshot.settings;
     const success = useSettingsStore
       .getState()
-      .actions.updateSettingsFromJSON(
-        JSON.stringify(migrateSettingsRecord(snapshot.settings, snapshot.schemaVersion)),
-      );
+      .actions.updateSettingsFromJSON(JSON.stringify(importPayload));
     if (!success) {
       throw new Error("Could not apply cloud settings.");
     }

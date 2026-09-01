@@ -57,7 +57,7 @@ describe("settings import/export", () => {
     const imported = parseSettingsImportJson(
       JSON.stringify({
         format: "athas.settings",
-        version: 2,
+        version: SETTINGS_SCHEMA_VERSION,
         exportedAt: "2026-08-29T00:00:00.000Z",
         settings: {
           ...defaultSettings,
@@ -70,6 +70,38 @@ describe("settings import/export", () => {
     );
 
     expect(imported?.coreFeatures.debugger).toBe(false);
+  });
+
+  it("disables compact folders when importing settings from the previous schema", () => {
+    const imported = parseSettingsImportJson(
+      JSON.stringify({
+        format: "athas.settings",
+        version: 3,
+        exportedAt: "2026-08-30T00:00:00.000Z",
+        settings: {
+          ...defaultSettings,
+          compactFoldersInFileTree: true,
+        },
+      }),
+    );
+
+    expect(imported?.compactFoldersInFileTree).toBe(false);
+  });
+
+  it("preserves a compact folders opt-in from the current settings schema", () => {
+    const imported = parseSettingsImportJson(
+      JSON.stringify({
+        format: "athas.settings",
+        version: SETTINGS_SCHEMA_VERSION,
+        exportedAt: "2026-08-31T00:00:00.000Z",
+        settings: {
+          ...defaultSettings,
+          compactFoldersInFileTree: true,
+        },
+      }),
+    );
+
+    expect(imported?.compactFoldersInFileTree).toBe(true);
   });
 
   it("preserves the shared sidebar width when importing legacy settings", () => {

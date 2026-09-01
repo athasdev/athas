@@ -1,4 +1,4 @@
-export const SETTINGS_SCHEMA_VERSION = 3;
+export const SETTINGS_SCHEMA_VERSION = 4;
 export const SETTINGS_SCHEMA_VERSION_KEY = "settingsSchemaVersion";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -31,6 +31,10 @@ export function migrateSettingsRecord(
         ? Array.from(new Set([...hiddenGitSidebarItems, "worktrees"]))
         : hiddenGitSidebarItems;
     delete migratedSettings.showActivityRailWorktrees;
+  }
+
+  if (schemaVersion < 4) {
+    migratedSettings.compactFoldersInFileTree = false;
   }
 
   return migratedSettings;

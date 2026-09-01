@@ -150,7 +150,7 @@ export const defaultSettings: Settings = {
   //// File tree
   fileTreeSortOrder: "folders-first",
   fileTreeIndentSize: 16,
-  compactFoldersInFileTree: true,
+  compactFoldersInFileTree: false,
   hideRootFolderInFileTree: false,
   autoRevealActiveFileInFileTree: true,
   showFileIconsInFileTree: true,
