@@ -33,8 +33,8 @@ const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "claude-fable-5",
-        name: "Claude Fable 5",
+        id: "claude-fable-5-1",
+        name: "Claude Fable 5.1",
         contextWindow: 1000000,
         maxOutputTokens: 128000,
       },
@@ -169,7 +169,7 @@ const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "mistral-medium-2604",
+        id: "mistral-medium-3-5",
         name: "Mistral Medium 3.5",
         contextWindow: 262144,
         maxOutputTokens: 131072,
@@ -203,6 +203,12 @@ const AI_PROVIDERS: ModelProvider[] = [
       {
         id: "qwen3.8-max",
         name: "Qwen 3.8 Max",
+        contextWindow: 1000000,
+        maxOutputTokens: 131072,
+      },
+      {
+        id: "qwen3.8-flash",
+        name: "Qwen 3.8 Flash",
         contextWindow: 1000000,
         maxOutputTokens: 131072,
       },

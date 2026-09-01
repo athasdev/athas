@@ -26,7 +26,7 @@ describe("OpenAI GPT-5.6 models", () => {
 
   it("keeps other provider fallbacks on current model families", () => {
     expect(getProviderById("anthropic")?.models.map((model) => model.id)).toEqual(
-      expect.arrayContaining(["claude-fable-5", "claude-opus-5", "claude-sonnet-5"]),
+      expect.arrayContaining(["claude-fable-5-1", "claude-opus-5", "claude-sonnet-5"]),
     );
     expect(getProviderById("gemini")?.models[0]).toMatchObject({
       id: "gemini-3.7-flash",
@@ -37,8 +37,17 @@ describe("OpenAI GPT-5.6 models", () => {
       id: "grok-4.6",
       contextWindow: 500000,
     });
+    expect(getProviderById("mistral")?.models[0]).toMatchObject({
+      id: "mistral-medium-3-5",
+      contextWindow: 262144,
+    });
     expect(getProviderById("qwen")?.models[0]).toMatchObject({
       id: "qwen3.8-max",
+      contextWindow: 1000000,
+      maxOutputTokens: 131072,
+    });
+    expect(getProviderById("qwen")?.models[1]).toMatchObject({
+      id: "qwen3.8-flash",
       contextWindow: 1000000,
       maxOutputTokens: 131072,
     });

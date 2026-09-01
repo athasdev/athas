@@ -11,7 +11,7 @@ import {
 import type { Settings } from "@/features/settings/types/settings.types";
 
 export const DEFAULT_AI_PROVIDER_ID = "anthropic";
-export const DEFAULT_AI_MODEL_ID = "claude-sonnet-4-6";
+export const DEFAULT_AI_MODEL_ID = "claude-sonnet-5";
 const DEFAULT_AI_CUSTOM_BASE_URL = "";
 const DEFAULT_AI_CUSTOM_MODEL_ID = "";
 export const DEFAULT_AI_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";

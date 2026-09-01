@@ -25,9 +25,12 @@ import type { Settings, SettingsSection } from "@/features/settings/types/settin
 
 const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
   anthropic: {
-    "claude-opus-4-7": "claude-opus-4-8",
-    "claude-opus-4-6": "claude-opus-4-8",
-    "claude-sonnet-4-5": "claude-sonnet-4-6",
+    "claude-fable-5": "claude-fable-5-1",
+    "claude-opus-4-8": "claude-opus-5",
+    "claude-opus-4-7": "claude-opus-5",
+    "claude-opus-4-6": "claude-opus-5",
+    "claude-sonnet-4-6": "claude-sonnet-5",
+    "claude-sonnet-4-5": "claude-sonnet-5",
   },
   deepseek: {
     "deepseek-chat": "deepseek-v4-flash",
@@ -55,13 +58,14 @@ const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
   mistral: {
     "mistral-large-3-25-12": "mistral-large-2512",
     "mistral-large-2512": "mistral-large-2512",
-    "mistral-medium-3-1-25-08": "mistral-medium-2604",
-    "mistral-medium-2508": "mistral-medium-2604",
-    "mistral-medium-2505": "mistral-medium-2604",
+    "mistral-medium-2604": "mistral-medium-3-5",
+    "mistral-medium-3-1-25-08": "mistral-medium-3-5",
+    "mistral-medium-2508": "mistral-medium-3-5",
+    "mistral-medium-2505": "mistral-medium-3-5",
     "mistral-small-4-0-26-03": "mistral-small-2603",
     "mistral-small-2506": "mistral-small-2603",
     "codestral-25-08": "codestral-2508",
-    "devstral-2-25-12": "mistral-medium-2604",
+    "devstral-2-25-12": "mistral-medium-3-5",
   },
   openai: {
     "gpt-5.2": "gpt-5.5",

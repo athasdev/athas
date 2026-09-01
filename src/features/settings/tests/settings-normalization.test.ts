@@ -286,6 +286,14 @@ describe("settings normalization", () => {
     expect(
       normalizeSettings({
         ...getDefaultSettingsSnapshot(),
+        aiProviderId: "anthropic",
+        aiModelId: "claude-fable-5",
+      }).aiModelId,
+    ).toBe("claude-fable-5-1");
+
+    expect(
+      normalizeSettings({
+        ...getDefaultSettingsSnapshot(),
         aiProviderId: "deepseek",
         aiModelId: "deepseek-reasoner",
       }).aiModelId,
@@ -297,7 +305,7 @@ describe("settings normalization", () => {
         aiProviderId: "mistral",
         aiModelId: "mistral-medium-3-1-25-08",
       }).aiModelId,
-    ).toBe("mistral-medium-2604");
+    ).toBe("mistral-medium-3-5");
 
     expect(
       normalizeSettings({

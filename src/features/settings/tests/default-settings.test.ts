@@ -14,6 +14,13 @@ describe("default settings", () => {
     expect(getDefaultSettingsSnapshot().aiAgentNotifications).toBe(false);
   });
 
+  it("defaults Anthropic chat to Claude Sonnet 5", () => {
+    const settings = getDefaultSettingsSnapshot();
+
+    expect(settings.aiProviderId).toBe("anthropic");
+    expect(settings.aiModelId).toBe("claude-sonnet-5");
+  });
+
   it("preserves the established editor and terminal interaction behavior", () => {
     const settings = getDefaultSettingsSnapshot();
 
