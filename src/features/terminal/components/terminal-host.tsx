@@ -74,7 +74,6 @@ function TerminalPortal({ sessionId }: { sessionId: string }) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   if (!wrapperRef.current && typeof document !== "undefined") {
     const wrapper = document.createElement("div");
-    wrapper.style.display = "flex";
     wrapper.style.flexDirection = "column";
     wrapper.style.height = "100%";
     wrapper.style.width = "100%";
@@ -85,32 +84,25 @@ function TerminalPortal({ sessionId }: { sessionId: string }) {
   }
 
   // Reparent the wrapper into the active slot whenever the slot changes.
-  // When no slot exists, park it offscreen so the terminal stays mounted + sized.
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
 
     if (slotEl) {
-      // Append to slot — moves DOM if currently elsewhere.
+      wrapper.style.display = slot?.isVisible ? "flex" : "none";
       slotEl.appendChild(wrapper);
     } else {
-      // No slot: park offscreen so xterm stays alive without being visible.
       let park = document.querySelector<HTMLDivElement>("[data-terminal-park]");
       if (!park) {
         park = document.createElement("div");
         park.setAttribute("data-terminal-park", "");
-        park.style.position = "fixed";
-        park.style.left = "-9999px";
-        park.style.top = "0";
-        park.style.width = "800px";
-        park.style.height = "600px";
-        park.style.pointerEvents = "none";
-        park.style.opacity = "0";
+        park.style.display = "none";
         document.body.appendChild(park);
       }
+      wrapper.style.display = "none";
       park.appendChild(wrapper);
     }
-  }, [slotEl]);
+  }, [slot?.isVisible, slotEl]);
 
   // Tear down wrapper on session end.
   useEffect(() => {

@@ -114,7 +114,6 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-pdf": "^10.4.1",
-    "react-scan": "^0.5.7",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "thinking-orbs": "0.2.0",

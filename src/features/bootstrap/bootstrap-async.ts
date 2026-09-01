@@ -16,14 +16,6 @@ const foundationalBootstrapSteps = [
     },
   },
   {
-    name: "wasm tokenizer",
-    run: async () => {
-      const { initializeWasmTokenizer } =
-        await import("@/features/editor/lib/wasm-parser/wasm-parser-api");
-      await initializeWasmTokenizer();
-    },
-  },
-  {
     name: "telemetry",
     run: async () => {
       const { initializeTelemetry } = await import("@/features/telemetry/services/telemetry");

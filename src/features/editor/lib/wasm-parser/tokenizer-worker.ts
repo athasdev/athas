@@ -74,20 +74,6 @@ async function getLoadedParser(
   return wasmParserLoader.loadParser(config);
 }
 
-async function preloadLanguages(languageIds: string[]): Promise<void> {
-  if (languageIds.length === 0) return;
-
-  await Promise.allSettled(
-    Array.from(new Set(languageIds)).map(async (languageId) => {
-      try {
-        await getLoadedParser(languageId);
-      } catch (error) {
-        logger.debug("TokenizerWorker", `Warmup preload failed for ${languageId}`, error);
-      }
-    }),
-  );
-}
-
 async function tokenizeEmbeddedContent(
   content: string,
   languageId: string,
@@ -343,14 +329,6 @@ self.onmessage = async (event: MessageEvent<TokenizerWorkerRequest>) => {
 
   try {
     switch (message.type) {
-      case "warmup":
-        await wasmParserLoader.initialize();
-        await preloadLanguages(message.languages ?? []);
-        (self as DedicatedWorkerGlobalScope).postMessage({
-          id: message.id,
-          ok: true,
-        } satisfies TokenizerWorkerResponse);
-        return;
       case "reset":
         (self as DedicatedWorkerGlobalScope).postMessage(
           handleReset(message) satisfies TokenizerWorkerResponse,

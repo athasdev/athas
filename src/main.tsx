@@ -1,12 +1,13 @@
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import App from "./App.tsx";
+import { installDevelopmentPerformanceMeasureCleanup } from "./features/bootstrap/performance-measure-retention.ts";
 import { recordStartupMilestone } from "./features/bootstrap/startup-performance.ts";
 import { initializeFrontendTerminalSession } from "./features/terminal/utils/frontend-terminal-session.ts";
 import { traceWindowOpen } from "./features/window/utils/window-open-diagnostics.ts";
 
-if (import.meta.env.VITE_REACT_SCAN === "true") {
-  void import("react-scan").then(({ scan }) => scan({ enabled: true }));
+if (import.meta.env.DEV) {
+  installDevelopmentPerformanceMeasureCleanup();
 }
 
 traceWindowOpen("frontend:entry");

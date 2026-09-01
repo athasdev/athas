@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import type { HistoryEntry } from "@/features/editor/types/history.types";
-import { useHistoryStore } from "@/features/editor/stores/history.store";
+import {
+  MAX_HISTORY_BYTES_PER_BUFFER,
+  useHistoryStore,
+} from "@/features/editor/stores/history.store";
 
 function entry(content: string): HistoryEntry {
   return {
@@ -49,5 +52,18 @@ describe("history store", () => {
     pushHistory("buffer-1", entry("same content"));
 
     expect(getHistoryState("buffer-1")?.past).toHaveLength(1);
+  });
+
+  it("evicts old snapshots when a buffer exceeds its byte budget", () => {
+    const { pushHistory, getHistoryState } = useHistoryStore.getState().actions;
+    const snapshot = "a".repeat(Math.ceil(MAX_HISTORY_BYTES_PER_BUFFER / 6));
+
+    pushHistory("buffer-1", entry(`${snapshot}1`));
+    pushHistory("buffer-1", entry(`${snapshot}2`));
+    pushHistory("buffer-1", entry(`${snapshot}3`));
+
+    expect(
+      getHistoryState("buffer-1")?.past.map(({ content }) => content[content.length - 1]),
+    ).toEqual(["2", "3"]);
   });
 });

@@ -146,8 +146,6 @@ interface PaneContainerProps {
 const DEFAULT_CAROUSEL_CARD_WIDTH = 640;
 const MIN_CAROUSEL_CARD_WIDTH = 320;
 const CAROUSEL_OUTER_GAP_PX = 160;
-const MAX_MOUNTED_EDITOR_BUFFERS = 8;
-
 type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type" | "readOnly">;
 type PaneRenderBuffer = Exclude<Buffer, EditorContent> | EditorBufferShell;
 type PaneRenderState = {
@@ -340,7 +338,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const [isCarouselResizing, setIsCarouselResizing] = useState(false);
   const [draggedCarouselBufferId, setDraggedCarouselBufferId] = useState<string | null>(null);
   const [carouselDropBufferId, setCarouselDropBufferId] = useState<string | null>(null);
-  const [recentEditorBufferIds, setRecentEditorBufferIds] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const carouselViewportRef = useRef<HTMLDivElement>(null);
   const lastCarouselBufferIdRef = useRef<string | null>(null);
@@ -375,32 +372,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       };
     }),
   );
-
-  useEffect(() => {
-    const openEditorBufferIds = paneBuffers
-      .filter(isStandardEditorBuffer)
-      .map((buffer) => buffer.id);
-    const openEditorBufferIdSet = new Set(openEditorBufferIds);
-    const activeEditorBufferId =
-      activeBuffer && isStandardEditorBuffer(activeBuffer) ? activeBuffer.id : null;
-
-    setRecentEditorBufferIds((current) => {
-      const next = [
-        ...(activeEditorBufferId ? [activeEditorBufferId] : []),
-        ...current.filter(
-          (bufferId) => bufferId !== activeEditorBufferId && openEditorBufferIdSet.has(bufferId),
-        ),
-      ].slice(0, MAX_MOUNTED_EDITOR_BUFFERS);
-
-      if (
-        next.length === current.length &&
-        next.every((bufferId, index) => bufferId === current[index])
-      ) {
-        return current;
-      }
-      return next;
-    });
-  }, [activeBuffer, paneBuffers]);
 
   const handlePaneClick = useCallback(() => {
     if (!isActivePane) {
@@ -919,11 +890,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     setCarouselDropBufferId(null);
   }, []);
 
-  const shouldRenderCarousel = horizontalBufferCarousel && paneBuffers.length > 1;
+  const shouldRenderCarousel =
+    isWorkspaceSurfaceActive && horizontalBufferCarousel && paneBuffers.length > 1;
   const mountedEditorBuffers = paneBuffers.filter(
     (buffer): buffer is EditorBufferShell =>
-      isStandardEditorBuffer(buffer) &&
-      (buffer.id === activeBuffer?.id || recentEditorBufferIds.includes(buffer.id)),
+      isWorkspaceSurfaceActive && isStandardEditorBuffer(buffer) && buffer.id === activeBuffer?.id,
   );
 
   const renderActiveBuffer = useCallback(
@@ -1244,8 +1215,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
             </div>
           ) : (
             <>
-              {/* Keep terminal and webviewer buffers always mounted to preserve
-                  PTY sessions and embedded webview state. */}
               {paneBuffers
                 .filter(
                   (
@@ -1253,16 +1222,13 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                   ): b is
                     | import("../types/pane-content.types").TerminalContent
                     | import("../types/pane-content.types").WebViewerContent =>
-                    b.type === "terminal" || (webViewerEnabled && b.type === "webViewer"),
+                    isWorkspaceSurfaceActive &&
+                    b.id === activeBuffer?.id &&
+                    (b.type === "terminal" || (webViewerEnabled && b.type === "webViewer")),
                 )
                 .map((b) => {
-                  const isActive = b.id === activeBuffer?.id;
                   return (
-                    <div
-                      key={b.id}
-                      className="absolute inset-0"
-                      style={isActive ? undefined : { visibility: "hidden" }}
-                    >
+                    <div key={b.id} className="absolute inset-0">
                       {b.type === "terminal" ? (
                         <TerminalTab
                           sessionId={b.sessionId}
@@ -1272,8 +1238,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           initialCommand={b.initialCommand}
                           workingDirectory={b.workingDirectory}
                           remoteConnectionId={b.remoteConnectionId}
-                          isActive={isActive && isActivePane}
-                          isVisible={isActive}
+                          isActive={isActivePane}
+                          isVisible={isWorkspaceSurfaceActive}
                         />
                       ) : (
                         <WebViewer
@@ -1282,8 +1248,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           profileKey={b.profileKey}
                           history={b.history}
                           historyIndex={b.historyIndex}
-                          isActive={isActive && isActivePane}
-                          isVisible={isActive}
+                          isActive={isActivePane}
+                          isVisible={isWorkspaceSurfaceActive}
                         />
                       )}
                     </div>
@@ -1306,7 +1272,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                   </div>
                 );
               })}
-              {activeBuffer &&
+              {isWorkspaceSurfaceActive &&
+                activeBuffer &&
                 activeBuffer.type !== "terminal" &&
                 (activeBuffer.type !== "webViewer" || !webViewerEnabled) &&
                 !isStandardEditorBuffer(activeBuffer) &&

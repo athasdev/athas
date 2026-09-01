@@ -6,7 +6,6 @@ export interface ViewportRangePayload {
 }
 
 export type TokenizerWorkerRequest =
-  | { id: number; type: "warmup"; languages?: string[] }
   | { id: number; type: "reset"; bufferId: string }
   | {
       id: number;

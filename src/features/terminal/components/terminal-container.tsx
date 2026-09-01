@@ -624,74 +624,60 @@ const TerminalContainer = ({
     onFullScreen,
     isFullScreen,
   };
+  const activeTerminal = terminals.find((terminal) => terminal.id === activeTerminalId);
+  const companionTerminal = activeTerminal?.splitWithId
+    ? terminals.find((terminal) => terminal.id === activeTerminal.splitWithId)
+    : undefined;
 
   const terminalSessions = (
     <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      {(() => {
-        return (
-          <div className="flex h-full min-h-0 flex-col">
-            {terminals.map((terminal) => (
-              <div
-                key={terminal.id}
-                className={cn(
-                  "h-full min-h-0",
-                  terminal.splitDirection === "down" ? "flex-col" : "flex-row",
-                )}
-                style={{
-                  display: terminal.id === activeTerminalId ? "flex" : "none",
-                }}
-              >
-                <div
-                  className={cn(
-                    "min-h-0 min-w-0",
-                    terminal.splitMode && terminal.splitWithId
-                      ? terminal.splitDirection === "down"
-                        ? "h-1/2 w-full border-border border-b"
-                        : "h-full w-1/2 border-border border-r"
-                      : "size-full",
-                  )}
-                >
-                  <TerminalSession
-                    key={terminal.id}
-                    terminal={terminal}
-                    isActive={terminal.id === activeTerminalId}
-                    isVisible={isTerminalPaneVisible && terminal.id === activeTerminalId}
-                    onDirectoryChange={handleDirectoryChange}
-                    onActivity={handleActivity}
-                    onRegisterRef={registerTerminalRef}
-                    onTerminalExit={closeTerminal}
-                  />
-                </div>
-                {terminal.splitMode &&
-                  terminal.splitWithId &&
-                  (() => {
-                    const companionTerminal = terminals.find((t) => t.id === terminal.splitWithId);
-                    if (!companionTerminal) return null;
-                    return (
-                      <div
-                        className={cn(
-                          "min-h-0 min-w-0",
-                          terminal.splitDirection === "down" ? "h-1/2 w-full" : "h-full w-1/2",
-                        )}
-                      >
-                        <TerminalSession
-                          key={companionTerminal.id}
-                          terminal={companionTerminal}
-                          isActive={false}
-                          isVisible={isTerminalPaneVisible}
-                          onDirectoryChange={handleDirectoryChange}
-                          onActivity={handleActivity}
-                          onRegisterRef={registerTerminalRef}
-                          onTerminalExit={closeTerminal}
-                        />
-                      </div>
-                    );
-                  })()}
-              </div>
-            ))}
+      {activeTerminal && (
+        <div
+          className={cn(
+            "flex h-full min-h-0",
+            activeTerminal.splitDirection === "down" ? "flex-col" : "flex-row",
+          )}
+        >
+          <div
+            className={cn(
+              "min-h-0 min-w-0",
+              activeTerminal.splitMode && companionTerminal
+                ? activeTerminal.splitDirection === "down"
+                  ? "h-1/2 w-full border-border border-b"
+                  : "h-full w-1/2 border-border border-r"
+                : "size-full",
+            )}
+          >
+            <TerminalSession
+              terminal={activeTerminal}
+              isActive
+              isVisible={isTerminalPaneVisible}
+              onDirectoryChange={handleDirectoryChange}
+              onActivity={handleActivity}
+              onRegisterRef={registerTerminalRef}
+              onTerminalExit={closeTerminal}
+            />
           </div>
-        );
-      })()}
+          {activeTerminal.splitMode && companionTerminal && (
+            <div
+              className={cn(
+                "min-h-0 min-w-0",
+                activeTerminal.splitDirection === "down" ? "h-1/2 w-full" : "h-full w-1/2",
+              )}
+            >
+              <TerminalSession
+                terminal={companionTerminal}
+                isActive={false}
+                isVisible={isTerminalPaneVisible}
+                onDirectoryChange={handleDirectoryChange}
+                onActivity={handleActivity}
+                onRegisterRef={registerTerminalRef}
+                onTerminalExit={closeTerminal}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 

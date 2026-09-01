@@ -55,11 +55,6 @@ class TokenizerWorkerClient {
     });
   }
 
-  async warmup(languages?: string[]): Promise<void> {
-    const id = ++this.requestId;
-    await this.post({ id, type: "warmup", languages });
-  }
-
   async reset(bufferId: string): Promise<void> {
     const id = ++this.requestId;
     await this.post({ id, type: "reset", bufferId });

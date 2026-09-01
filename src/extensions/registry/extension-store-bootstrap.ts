@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { extensionInstaller } from "../installer/extension-installer";
 import {
   markBundledContributionExtensionUninstalled,
@@ -265,12 +264,6 @@ export async function initializeExtensionStoreBootstrap(params: {
     });
 
     progressListenerInitialized = true;
-  }
-
-  try {
-    await wasmParserLoader.initialize();
-  } catch (error) {
-    console.error("Failed to initialize WASM parser loader:", error);
   }
 
   await initializeLanguagePackager();

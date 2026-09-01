@@ -25,6 +25,7 @@ interface HistoryActions {
 }
 
 const DEFAULT_MAX_HISTORY_SIZE = 100;
+export const MAX_HISTORY_BYTES_PER_BUFFER = 8 * 1024 * 1024;
 
 const createDefaultHistoryState = (maxHistorySize = DEFAULT_MAX_HISTORY_SIZE): HistoryState => ({
   past: [],
@@ -43,6 +44,29 @@ function cloneHistoryEntry(entry: HistoryEntry): HistoryEntry {
         }
       : undefined,
   };
+}
+
+function getHistoryEntryBytes(entry: HistoryEntry): number {
+  return entry.content.length * 2;
+}
+
+function trimHistoryToByteBudget(history: HistoryState): void {
+  let retainedBytes = [...history.past, ...history.future].reduce(
+    (total, entry) => total + getHistoryEntryBytes(entry),
+    0,
+  );
+
+  while (retainedBytes > MAX_HISTORY_BYTES_PER_BUFFER) {
+    const removablePastEntry = history.past.length > 1 ? history.past.shift() : undefined;
+    if (removablePastEntry) {
+      retainedBytes -= getHistoryEntryBytes(removablePastEntry);
+      continue;
+    }
+
+    const removableFutureEntry = history.future.length > 1 ? history.future.shift() : undefined;
+    if (!removableFutureEntry) break;
+    retainedBytes -= getHistoryEntryBytes(removableFutureEntry);
+  }
 }
 
 export const useHistoryStore = createSelectors(
@@ -74,6 +98,7 @@ export const useHistoryStore = createSelectors(
             if (history.past.length > history.maxHistorySize) {
               history.past.shift();
             }
+            trimHistoryToByteBudget(history);
           });
         },
 
@@ -94,6 +119,7 @@ export const useHistoryStore = createSelectors(
                   hist.future.push(cloneHistoryEntry(currentEntry));
                 }
                 entry = cloneHistoryEntry(lastEntry);
+                trimHistoryToByteBudget(hist);
               }
             }
           });
@@ -118,6 +144,7 @@ export const useHistoryStore = createSelectors(
                   hist.past.push(cloneHistoryEntry(currentEntry));
                 }
                 entry = cloneHistoryEntry(nextEntry);
+                trimHistoryToByteBudget(hist);
               }
             }
           });
