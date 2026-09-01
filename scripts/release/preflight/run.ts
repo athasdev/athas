@@ -421,10 +421,14 @@ async function main() {
       }
 
       // sqlx-mysql currently pulls rsa 0.9.x, and RUSTSEC-2023-0071 has no
-      // fixed upgrade available upstream. Keep the audit actionable by allowing
-      // this one tracked advisory while still failing on newly fixable RustSec
-      // vulnerabilities.
-      const result = await $`cargo audit --no-fetch --ignore RUSTSEC-2023-0071`.quiet().nothrow();
+      // fixed upgrade available upstream. RUSTSEC-2026-0235 is present only as
+      // an inactive optional rust_decimal dependency; no enabled feature builds
+      // rkyv. Keep the audit actionable while still failing on newly applicable
+      // RustSec vulnerabilities.
+      const result =
+        await $`cargo audit --no-fetch --ignore RUSTSEC-2023-0071 --ignore RUSTSEC-2026-0235`
+          .quiet()
+          .nothrow();
       if (result.exitCode !== 0) {
         const output = result.stderr.toString();
         const vulnMatch = output.match(/(\d+) vulnerabilit/);
