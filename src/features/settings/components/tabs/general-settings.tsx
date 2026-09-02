@@ -134,8 +134,7 @@ export const GeneralSettings = () => {
   };
 
   const buildBugReport = async () => {
-    const version = await getVersion();
-    const os = await import("@tauri-apps/plugin-os");
+    const [version, os] = await Promise.all([getVersion(), import("@tauri-apps/plugin-os")]);
     const plat = os.platform();
     const ver = os.version();
 

@@ -56,8 +56,6 @@ export function useDockerContainerFiles(containerId: string | null, enabled: boo
     initialDockerContainerFilesState,
   );
   const requestIdRef = useRef(0);
-  const currentContainerIdRef = useRef(containerId);
-  currentContainerIdRef.current = containerId;
 
   useEffect(() => {
     requestIdRef.current += 1;
@@ -72,18 +70,12 @@ export function useDockerContainerFiles(containerId: string | null, enabled: boo
     dispatch({ type: "load-started" });
     try {
       const files = await listDockerContainerFiles(requestedContainerId, state.path);
-      if (
-        requestId !== requestIdRef.current ||
-        requestedContainerId !== currentContainerIdRef.current
-      ) {
+      if (requestId !== requestIdRef.current) {
         return;
       }
       dispatch({ type: "load-succeeded", files });
     } catch (error) {
-      if (
-        requestId !== requestIdRef.current ||
-        requestedContainerId !== currentContainerIdRef.current
-      ) {
+      if (requestId !== requestIdRef.current) {
         return;
       }
       dispatch({ type: "load-failed", error: getDockerErrorMessage(error) });

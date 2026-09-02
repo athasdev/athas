@@ -5,7 +5,7 @@
  * This is the SINGLE source of truth for all keyboard handling.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { logger } from "@/features/editor/utils/logger";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
@@ -42,7 +42,17 @@ function isCloseWindowShortcut(event: KeyboardEvent) {
 export function useKeymaps() {
   const contexts = useKeymapStore.use.contexts();
   const [chordState, setChordState] = useState<ParsedKey[]>([]);
-  const chordTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (chordState.length === 0) return;
+
+    const chordTimeout = setTimeout(() => {
+      setChordState([]);
+      logger.debug("Keymaps", "Chord timeout - reset");
+    }, CHORD_TIMEOUT);
+
+    return () => clearTimeout(chordTimeout);
+  }, [chordState]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -191,10 +201,6 @@ export function useKeymaps() {
 
           // Clear chord state
           setChordState([]);
-          if (chordTimeoutRef.current) {
-            clearTimeout(chordTimeoutRef.current);
-            chordTimeoutRef.current = null;
-          }
 
           // Execute command
           keymapRegistry.executeCommand(keybinding.command, keybinding.args);
@@ -210,17 +216,6 @@ export function useKeymaps() {
           const newChordState = [...chordState, eventKey];
           setChordState(newChordState);
 
-          // Set timeout to reset chord state
-          if (chordTimeoutRef.current) {
-            clearTimeout(chordTimeoutRef.current);
-          }
-
-          chordTimeoutRef.current = setTimeout(() => {
-            setChordState([]);
-            chordTimeoutRef.current = null;
-            logger.debug("Keymaps", "Chord timeout - reset");
-          }, CHORD_TIMEOUT);
-
           logger.debug("Keymaps", `Chord partial match: ${keybinding.key} (waiting for next key)`);
           return;
         }
@@ -229,10 +224,6 @@ export function useKeymaps() {
       // No match - clear chord state if any
       if (chordState.length > 0) {
         setChordState([]);
-        if (chordTimeoutRef.current) {
-          clearTimeout(chordTimeoutRef.current);
-          chordTimeoutRef.current = null;
-        }
       }
     };
 
@@ -240,9 +231,6 @@ export function useKeymaps() {
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown, true);
-      if (chordTimeoutRef.current) {
-        clearTimeout(chordTimeoutRef.current);
-      }
     };
   }, [contexts, chordState]);
 

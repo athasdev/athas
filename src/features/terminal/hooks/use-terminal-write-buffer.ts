@@ -15,8 +15,10 @@ export function useTerminalWriteBuffer({
   const getConnectionIdRef = useRef(getConnectionId);
   const writeChunkRef = useRef(writeChunk);
 
-  getConnectionIdRef.current = getConnectionId;
-  writeChunkRef.current = writeChunk;
+  useEffect(() => {
+    getConnectionIdRef.current = getConnectionId;
+    writeChunkRef.current = writeChunk;
+  }, [getConnectionId, writeChunk]);
 
   const flush = useCallback((): Promise<void> => {
     if (flushPromiseRef.current) return flushPromiseRef.current;

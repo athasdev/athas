@@ -147,15 +147,19 @@ export default function SqlDatabaseViewer({
       type: "text/csv;charset=utf-8;",
     });
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    const objectUrl = URL.createObjectURL(blob);
+    link.href = objectUrl;
     link.download = buildQueryResultExportFilename({
       isCustomQuery: store.isCustomQuery,
       selectedTable: store.selectedTable,
       page: store.currentPage,
       totalPages: store.totalPages,
     });
-    link.click();
-    URL.revokeObjectURL(link.href);
+    try {
+      link.click();
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
   };
 
   const copyAsJSON = async () => {

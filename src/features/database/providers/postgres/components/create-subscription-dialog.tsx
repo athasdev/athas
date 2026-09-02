@@ -175,7 +175,7 @@ export default function CreateSubscriptionDialog({
             Enable failover slot sync
           </label>
         </div>
-        <button type="submit" className="hidden" />
+        <button type="submit" className="hidden" aria-label="Create subscription" />
       </form>
     </Dialog>
   );

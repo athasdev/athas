@@ -280,6 +280,7 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
         <iframe
           title="PDF output"
           src={`data:application/pdf;base64,${pdf}`}
+          sandbox="allow-same-origin"
           className="h-105 w-full rounded-md border border-border bg-surface"
         />
       );
@@ -414,7 +415,7 @@ function NotebookCellView({
       ref={setCellRef}
       style={style}
       tabIndex={0}
-      aria-selected={isSelected}
+      aria-current={isSelected ? "true" : undefined}
       className={cn(
         "group relative mb-4 grid grid-cols-[58px_minmax(0,1fr)] gap-2.5 rounded-md border border-transparent py-1 pr-1 outline-none transition-colors",
         isSelected && "border-primary/45 bg-primary/5",
@@ -520,6 +521,7 @@ function NotebookCellView({
             />
           ) : (
             <textarea
+              aria-label="Cell source"
               className="m-0 block min-h-23 w-full resize-y rounded-md border border-border bg-surface p-2.5 font-mono ui-text-sm leading-[1.55] text-foreground outline-none focus:border-primary"
               value={source}
               spellCheck={isMarkdown}

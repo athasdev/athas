@@ -1206,6 +1206,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                       className="absolute top-0 right-0 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary/20"
                       onMouseDown={handleCarouselResizeStart}
                       role="separator"
+                      tabIndex={0}
                       aria-orientation="vertical"
                       aria-label="Resize buffer carousel cards"
                     />

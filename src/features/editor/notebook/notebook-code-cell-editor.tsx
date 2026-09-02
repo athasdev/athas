@@ -61,7 +61,9 @@ export function NotebookCodeCellEditor({
     [id, monacoLanguage],
   );
 
-  onChangeRef.current = onChange;
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     const container = containerRef.current;

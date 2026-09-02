@@ -596,12 +596,9 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
     void copyToClipboard(selectedStepLogs, "Step logs copied");
   }, [selectedStepLogs]);
   const handleToggleLogSearch = useCallback(() => {
-    setIsLogSearchVisible((current) => {
-      const next = !current;
-      if (!next) setLogSearchQuery("");
-      return next;
-    });
-  }, []);
+    if (isLogSearchVisible) setLogSearchQuery("");
+    setIsLogSearchVisible(!isLogSearchVisible);
+  }, [isLogSearchVisible]);
 
   return (
     <ResourceViewer

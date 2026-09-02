@@ -19,15 +19,13 @@ export function useResponsiveWorkbenchLayout(preferredActivityBarExpanded: boole
   useEffect(() => {
     const sync = () => {
       const next = getResponsiveWorkbenchLayout(window.innerWidth);
-      setLayout((current) => {
-        if (current.compact !== next.compact) setCompactActivityBarOverride(null);
-        return next;
-      });
+      if (layout.compact !== next.compact) setCompactActivityBarOverride(null);
+      setLayout(next);
     };
 
     window.addEventListener("resize", sync);
     return () => window.removeEventListener("resize", sync);
-  }, []);
+  }, [layout.compact]);
 
   const activityBarExpanded = layout.compact
     ? (compactActivityBarOverride ?? false)

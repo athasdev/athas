@@ -27,7 +27,10 @@ export function filePathFromAthasModelUri(path: string, query: string): string {
   const filePath = new URLSearchParams(query).get("file");
   if (filePath) return filePath;
 
-  const decodedPath = decodeURIComponent(path);
+  let decodedPath = path;
+  try {
+    decodedPath = decodeURIComponent(path);
+  } catch {}
   if (/^\/[A-Za-z]:\//.test(decodedPath)) return decodedPath.slice(1);
   return decodedPath;
 }

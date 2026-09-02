@@ -79,7 +79,7 @@ export const useSymbolSearch = (query: string, isActive: boolean) => {
         .filter(({ score }) => score > 0)
         .sort((a, b) => b.score - a.score)
         .map(({ symbol }) => symbol)
-    : symbols.sort((a, b) => {
+    : [...symbols].sort((a, b) => {
         const kindDiff = (SYMBOL_KIND_ORDER[a.kind] ?? 99) - (SYMBOL_KIND_ORDER[b.kind] ?? 99);
         if (kindDiff !== 0) return kindDiff;
         return a.line - b.line;

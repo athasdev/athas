@@ -74,7 +74,6 @@ const GlobalSearchBuffer = () => {
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
   const sourceContentByPathRef = useRef(sourceContentByPath);
   const activeSearchKeyRef = useRef("");
-  sourceContentByPathRef.current = sourceContentByPath;
   const {
     query,
     setQuery,
@@ -103,7 +102,10 @@ const GlobalSearchBuffer = () => {
     refreshSearch,
     loadMoreResults: loadMoreBackendResults,
   } = useContentSearch();
-  activeSearchKeyRef.current = searchKey;
+  useEffect(() => {
+    sourceContentByPathRef.current = sourceContentByPath;
+    activeSearchKeyRef.current = searchKey;
+  }, [searchKey, sourceContentByPath]);
   const trimmedQuery = query.trim();
   const trimmedDebouncedQuery = debouncedQuery.trim();
   const isResultNavigationDisabled = isSearchPending || isSearching || isIndexing;

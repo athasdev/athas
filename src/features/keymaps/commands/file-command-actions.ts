@@ -23,8 +23,10 @@ export async function saveActiveFile(): Promise<void> {
 }
 
 export async function saveActiveFileAs(): Promise<void> {
-  const { save } = await import("@tauri-apps/plugin-dialog");
-  const { invoke } = await import("@tauri-apps/api/core");
+  const [{ save }, { invoke }] = await Promise.all([
+    import("@tauri-apps/plugin-dialog"),
+    import("@tauri-apps/api/core"),
+  ]);
   const bufferStore = useBufferStore.getState();
   const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
 

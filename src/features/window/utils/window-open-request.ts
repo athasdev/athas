@@ -164,8 +164,10 @@ async function handleWindowOpenRequest(request: WindowOpenRequest) {
     return;
   }
 
-  const { getSymlinkInfo } = await import("@/features/file-system/controllers/platform");
-  const { toast } = await import("sonner");
+  const [{ getSymlinkInfo }, { toast }] = await Promise.all([
+    import("@/features/file-system/controllers/platform"),
+    import("sonner"),
+  ]);
 
   let pathTarget: ReturnType<typeof resolveWindowOpenPathTarget>;
   try {

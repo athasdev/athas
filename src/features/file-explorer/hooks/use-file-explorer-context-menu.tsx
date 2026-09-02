@@ -309,6 +309,7 @@ export function useFileExplorerContextMenu({
           onClick: async () => {
             try {
               const response = await fetch(contextMenu.path);
+              if (!response.ok) throw new Error(`Failed to read file: ${response.status}`);
               const content = await response.text();
               await writeClipboardText(content);
             } catch {}

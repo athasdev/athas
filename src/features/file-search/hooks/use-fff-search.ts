@@ -2,6 +2,16 @@ import { useEffect, useState } from "react";
 import { fffSearchFiles, type FffSearchHit } from "../lib/file-search-api";
 import { getNativeWorkspaceRootPaths } from "../utils/file-search-paths";
 
+function parseSearchRootPaths(searchKey: string) {
+  try {
+    const parsed = JSON.parse(searchKey);
+    if (!Array.isArray(parsed) || !Array.isArray(parsed[0])) return [];
+    return parsed[0].filter((path): path is string => typeof path === "string");
+  } catch {
+    return [];
+  }
+}
+
 export const useFffSearch = (
   query: string,
   enabled: boolean,
@@ -27,7 +37,8 @@ export const useFffSearch = (
   useEffect(() => {
     if (!searchKey) return;
 
-    const [currentRootPaths] = JSON.parse(searchKey) as [string[], string, number];
+    const currentRootPaths = parseSearchRootPaths(searchKey);
+    if (currentRootPaths.length === 0) return;
     let cancelled = false;
 
     fffSearchFiles(trimmedQuery, currentRootPaths, limit)

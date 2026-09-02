@@ -460,9 +460,11 @@ export async function runQuickFixForActiveEditor(): Promise<void> {
     return;
   }
 
-  const { useDiagnosticsStore } = await import("@/features/diagnostics/stores/diagnostics.store");
-  const { selectDiagnosticForQuickFix, selectPreferredCodeAction } =
-    await import("@/features/diagnostics/utils/quick-fix");
+  const [{ useDiagnosticsStore }, { selectDiagnosticForQuickFix, selectPreferredCodeAction }] =
+    await Promise.all([
+      import("@/features/diagnostics/stores/diagnostics.store"),
+      import("@/features/diagnostics/utils/quick-fix"),
+    ]);
   const diagnostics = useDiagnosticsStore
     .getState()
     .actions.getDiagnosticsForFile(activeBuffer.path);

@@ -218,6 +218,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
         {expanded ? (
           <div
             role="separator"
+            tabIndex={0}
             aria-label="Resize activity rail"
             aria-orientation="vertical"
             className="group absolute top-0 right-0 z-20 flex h-full w-workbench cursor-col-resize items-center justify-center hover:bg-primary/8"

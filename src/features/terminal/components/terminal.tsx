@@ -104,6 +104,7 @@ export const TerminalEmulator = ({
   const session = useTerminalStore((state) => state.sessions.get(sessionId));
   const connectionId = session?.connectionId;
   const hadExistingConnectionOnMountRef = useRef(Boolean(session?.connectionId));
+  const terminalInputCleanupRef = useRef<() => void>(() => {});
 
   const terminalThemeId = useSettingsStore((state) => state.settings.theme);
   const terminalFontFamily = useSettingsStore((state) => state.settings.terminalFontFamily);
@@ -380,9 +381,9 @@ export const TerminalEmulator = ({
         return activeEngine === "ghostty" ? !shouldProcess : shouldProcess;
       });
 
-      if (terminal.textarea) {
-        terminal.textarea.spellcheck = false;
-        terminal.textarea.addEventListener("beforeinput", (event) => {
+      const textarea = terminal.textarea;
+      if (textarea) {
+        const handleBeforeInput = (event: InputEvent) => {
           if (event.inputType === "insertReplacementText" || event.inputType === "insertFromDrop") {
             const text = event.dataTransfer?.getData("text/plain") ?? event.data;
             if (!text || !currentConnectionIdRef.current) return;
@@ -390,20 +391,24 @@ export const TerminalEmulator = ({
             event.preventDefault();
             writeBuffered(text);
           }
-        });
+        };
 
-        terminal.textarea.addEventListener(
-          "paste",
-          (event) => {
-            const text = event.clipboardData?.getData("text/plain");
-            if (!text || !currentConnectionIdRef.current) return;
+        const handlePaste = (event: ClipboardEvent) => {
+          const text = event.clipboardData?.getData("text/plain");
+          if (!text || !currentConnectionIdRef.current) return;
 
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            void pasteIntoTerminal(terminal, text);
-          },
-          true,
-        );
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          void pasteIntoTerminal(terminal, text);
+        };
+
+        textarea.spellcheck = false;
+        textarea.addEventListener("beforeinput", handleBeforeInput);
+        textarea.addEventListener("paste", handlePaste, true);
+        terminalInputCleanupRef.current = () => {
+          textarea.removeEventListener("beforeinput", handleBeforeInput);
+          textarea.removeEventListener("paste", handlePaste, true);
+        };
       }
 
       if (activeEngine === "xterm") {
@@ -531,6 +536,7 @@ export const TerminalEmulator = ({
   }, [
     currentConnectionIdRef,
     engine,
+    environment,
     fitTerminal,
     getSession,
     getTerminalTheme,
@@ -684,6 +690,8 @@ export const TerminalEmulator = ({
   // other layout changes from killing running terminal processes.
   useEffect(() => {
     return () => {
+      terminalInputCleanupRef.current();
+      terminalInputCleanupRef.current = () => {};
       if (fitFrameRef.current !== null) {
         cancelAnimationFrame(fitFrameRef.current);
         fitFrameRef.current = null;
@@ -965,7 +973,7 @@ export const TerminalEmulator = ({
       serialize: () => (terminalRef.current ? addonsRef.current?.serializeAddon.serialize() : ""),
       resize: () => fitTerminal(),
     }),
-    [fitTerminal, getSession, isInitialized, sessionId],
+    [fitTerminal],
   );
 
   return (

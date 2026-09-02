@@ -25,6 +25,16 @@ function isWebviewNotFoundError(error: unknown) {
   return typeof error === "string" && error.includes("Webview not found:");
 }
 
+function listenForEvent(
+  target: EventTarget,
+  type: string,
+  listener: EventListener,
+  options?: AddEventListenerOptions | boolean,
+) {
+  target.addEventListener(type, listener, options);
+  return () => target.removeEventListener(type, listener, options);
+}
+
 export function useEmbeddedWebview({
   bufferId,
   initialUrl,
@@ -184,6 +194,7 @@ export function useEmbeddedWebview({
         setError(null);
         setWebviewLabel(label);
       } catch (error) {
+        if (!isMountedRef.current || lifecycleId !== lifecycleIdRef.current) return;
         console.error("Failed to create embedded webview:", error);
         setError(error instanceof Error ? error.message : "Couldn't create webview.");
         onLoadStateChange(false);
@@ -200,7 +211,6 @@ export function useEmbeddedWebview({
   useEffect(() => {
     if (!webviewLabel || !containerRef.current || !isVisible) return;
 
-    const scrollParents: Array<Element | Window> = [];
     let animationFrameId: number | null = null;
     let lastBounds = "";
 
@@ -280,12 +290,15 @@ export function useEmbeddedWebview({
     });
     resizeObserver.observe(containerRef.current);
 
-    window.addEventListener("resize", scheduleUpdatePosition);
-    document.addEventListener("fullscreenchange", scheduleUpdatePosition);
-    for (const parent of getScrollParents(containerRef.current)) {
-      scrollParents.push(parent);
-      parent.addEventListener("scroll", scheduleUpdatePosition, { passive: true });
-    }
+    const removeResizeListener = listenForEvent(window, "resize", scheduleUpdatePosition);
+    const removeFullscreenListener = listenForEvent(
+      document,
+      "fullscreenchange",
+      scheduleUpdatePosition,
+    );
+    const removeScrollListeners = getScrollParents(containerRef.current).map((parent) =>
+      listenForEvent(parent, "scroll", scheduleUpdatePosition, { passive: true }),
+    );
 
     scheduleUpdatePosition();
 
@@ -294,11 +307,9 @@ export function useEmbeddedWebview({
         window.cancelAnimationFrame(animationFrameId);
       }
       resizeObserver.disconnect();
-      window.removeEventListener("resize", scheduleUpdatePosition);
-      document.removeEventListener("fullscreenchange", scheduleUpdatePosition);
-      for (const parent of scrollParents) {
-        parent.removeEventListener("scroll", scheduleUpdatePosition);
-      }
+      removeResizeListener();
+      removeFullscreenListener();
+      for (const removeScrollListener of removeScrollListeners) removeScrollListener();
     };
   }, [
     containerRef,
@@ -379,7 +390,7 @@ export function useEmbeddedWebview({
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("click", handleOverlayChange);
     };
-  }, [isVisible, syncWebviewVisibility, webviewLabel]);
+  }, [containerRef, isVisible, syncWebviewVisibility, webviewLabel]);
 
   return { error, resetWebview, webviewLabel };
 }

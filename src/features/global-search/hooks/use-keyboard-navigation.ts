@@ -36,17 +36,7 @@ export const useKeyboardNavigation = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevResultsLengthRef = useRef(allResults.length);
-
-  const allResultsRef = useRef(allResults);
-  const onCloseRef = useRef(onClose);
-  const onSelectRef = useRef(onSelect);
-  const scrollToIndexRef = useRef(scrollToIndex);
   const previousResetKeyRef = useRef(resetKey);
-
-  allResultsRef.current = allResults;
-  onCloseRef.current = onClose;
-  onSelectRef.current = onSelect;
-  scrollToIndexRef.current = scrollToIndex;
 
   useEffect(() => {
     if (resetKey !== undefined && previousResetKeyRef.current !== resetKey) {
@@ -72,13 +62,13 @@ export const useKeyboardNavigation = ({
 
       if (event.key === KEY_ESCAPE || (event.key === KEY_K && (event.metaKey || event.ctrlKey))) {
         event.preventDefault();
-        onCloseRef.current();
+        onClose();
         return;
       }
 
       if (event.metaKey || event.ctrlKey || event.altKey) return;
 
-      const totalItems = allResultsRef.current.length;
+      const totalItems = allResults.length;
       if (totalItems === 0) return;
 
       if (event.key === KEY_ARROW_DOWN) {
@@ -89,16 +79,11 @@ export const useKeyboardNavigation = ({
         setSelectedIndex((prev) => (prev - 1 + totalItems) % totalItems);
       } else if (event.key === KEY_ENTER) {
         event.preventDefault();
-        setSelectedIndex((current) => {
-          const item = allResultsRef.current[current];
-          if (item) {
-            onSelectRef.current(item.path);
-          }
-          return current;
-        });
+        const item = allResults[selectedIndex];
+        if (item) onSelect(item.path);
       }
     },
-    [isVisible],
+    [allResults, isVisible, onClose, onSelect, selectedIndex],
   );
 
   useEffect(() => {
@@ -111,8 +96,8 @@ export const useKeyboardNavigation = ({
   useEffect(() => {
     if (!isVisible) return;
 
-    if (scrollToIndexRef.current) {
-      scrollToIndexRef.current(selectedIndex);
+    if (scrollToIndex) {
+      scrollToIndex(selectedIndex);
       return;
     }
 
@@ -128,7 +113,7 @@ export const useKeyboardNavigation = ({
         block: "nearest",
       });
     }
-  }, [selectedIndex, isVisible]);
+  }, [isVisible, scrollToIndex, selectedIndex]);
 
   return { selectedIndex, scrollContainerRef, handleKeyDown };
 };

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 import {
   fetchHighlightQuery,
@@ -200,13 +200,7 @@ export function useDiffHighlighting(
   lines: GitDiffLine[],
   filePath: string,
 ): Map<number, HighlightToken[]> {
-  const nextInput = useMemo(() => createDiffHighlightInput(lines, filePath), [filePath, lines]);
-  const inputRef = useRef(nextInput);
-  if (inputRef.current.key !== nextInput.key) {
-    inputRef.current = nextInput;
-  }
-
-  const input = inputRef.current;
+  const input = useMemo(() => createDiffHighlightInput(lines, filePath), [filePath, lines]);
   const [tokenState, setTokenState] = useState<DiffTokenState>({
     key: "",
     tokenMap: new Map(),
@@ -277,6 +271,7 @@ export function useDiffHighlighting(
           tokenMap: merged.size > 0 ? merged : fallbackTokenMap,
         });
       } catch {
+        if (cancelled) return;
         setTokenState({ key, tokenMap: fallbackTokenMap });
       }
     }

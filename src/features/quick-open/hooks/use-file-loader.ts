@@ -18,6 +18,11 @@ const toQuickOpenFiles = (files: readonly Pick<FffIndexedFile, "name" | "path">[
       isDir: false,
     }));
 
+function startPolling(callback: () => void, interval: number) {
+  const intervalId = setInterval(callback, interval);
+  return () => clearInterval(intervalId);
+}
+
 export const useFileLoader = (isVisible: boolean) => {
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
@@ -40,9 +45,11 @@ export const useFileLoader = (isVisible: boolean) => {
 
     const isAlreadyLoaded = loadedForRootRef.current === workspaceKey;
     let cancelled = false;
-    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    let pollInFlight = false;
 
     const pollNativeIndex = async () => {
+      if (pollInFlight) return;
+      pollInFlight = true;
       try {
         const status = await fffScanStatus(nativeRootPaths);
         if (cancelled) return;
@@ -52,13 +59,13 @@ export const useFileLoader = (isVisible: boolean) => {
         setFiles(toQuickOpenFiles(indexedFiles));
         setIsIndexing(status.is_scanning);
 
-        if (status.is_scanning) {
-          pollTimer = setTimeout(() => void pollNativeIndex(), 150);
-        }
+        if (!status.is_scanning) stopPolling();
       } catch (error) {
         if (cancelled) return;
         console.error("Failed to read project index:", error);
         setIsIndexing(false);
+      } finally {
+        pollInFlight = false;
       }
     };
 
@@ -89,9 +96,12 @@ export const useFileLoader = (isVisible: boolean) => {
       }
     };
 
+    const stopPolling =
+      nativeRootPaths.length > 0 ? startPolling(() => void pollNativeIndex(), 150) : () => {};
+
     const cleanup = () => {
       cancelled = true;
-      if (pollTimer) clearTimeout(pollTimer);
+      stopPolling();
     };
 
     if (isAlreadyLoaded) {

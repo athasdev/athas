@@ -48,6 +48,7 @@ export const ExternalEditorTerminal = ({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const isInitializingRef = useRef(false);
   const hasExecutedCommandRef = useRef(false);
+  const commandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resizeRafRef = useRef<number | null>(null);
   const lastSizeRef = useRef<TerminalSize | null>(null);
   const queuedOutputBytesRef = useRef(0);
@@ -275,7 +276,8 @@ export const ExternalEditorTerminal = ({
     if (!hasExecutedCommandRef.current) {
       hasExecutedCommandRef.current = true;
       const command = getEditorCommand(filePath);
-      setTimeout(() => {
+      commandTimerRef.current = setTimeout(() => {
+        commandTimerRef.current = null;
         write(`${command}\n`);
       }, 200);
     }
@@ -301,6 +303,10 @@ export const ExternalEditorTerminal = ({
       void flush();
       if (resizeRafRef.current) {
         cancelAnimationFrame(resizeRafRef.current);
+      }
+      if (commandTimerRef.current) {
+        clearTimeout(commandTimerRef.current);
+        commandTimerRef.current = null;
       }
 
       if (xtermRef.current) {

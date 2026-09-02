@@ -56,11 +56,13 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
   const fileExt = fileName.split(".").pop()?.toUpperCase() || "";
 
   useEffect(() => {
+    let cancelled = false;
     const loadImageSrc = async () => {
       let fileSize = 0;
 
       const applyImageSource = async (src: string) => {
         const dims = await getImageDimensions(src);
+        if (cancelled) return;
         setInitialImageSrc(src);
         setImageDimensions(dims);
         setOriginalSize(fileSize || getDataURLSize(src));
@@ -82,12 +84,16 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
         try {
           await applyImageSource(convertFileSrc(filePath));
         } catch (fallbackError) {
+          if (cancelled) return;
           console.error("Fallback also failed:", fallbackError);
         }
       }
     };
 
-    loadImageSrc();
+    void loadImageSrc();
+    return () => {
+      cancelled = true;
+    };
   }, [filePath]);
 
   // Only initialize operations once we have the image loaded

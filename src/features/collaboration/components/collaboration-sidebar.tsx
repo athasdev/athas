@@ -167,7 +167,7 @@ export function CollaborationSidebarView() {
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const remoteSharesRef = useRef<RemoteMediaShare[]>([]);
   const lastMediaSignalIdRef = useRef(0);
-  const localDeviceIdRef = useRef<string | null>(null);
+  const [localDeviceId] = useState(getCollaborationClientId);
   const [remoteShares, setRemoteShares] = useState<RemoteMediaShare[]>([]);
   const channelContextMenu = useDropdownMenu<SidebarChannel>();
   const channelsContextMenu = useDropdownMenu<SidebarChannel>();
@@ -252,8 +252,6 @@ export function CollaborationSidebarView() {
   );
   const remoteDeviceIds = useMemo(() => {
     if (!selectedChannel || !collaboration?.presence) return [];
-    const localDeviceId = localDeviceIdRef.current ?? getCollaborationClientId();
-    localDeviceIdRef.current = localDeviceId;
     return Array.from(
       new Set(
         collaboration.presence
@@ -266,12 +264,10 @@ export function CollaborationSidebarView() {
           .map((presence) => presence.deviceId),
       ),
     );
-  }, [collaboration?.presence, selectedChannel]);
+  }, [collaboration?.presence, localDeviceId, selectedChannel]);
   const hasLocalMedia = mediaState.microphone || mediaState.screen;
   const hasRemoteMedia = useMemo(() => {
     if (!selectedChannel || !collaboration?.presence) return false;
-    const localDeviceId = localDeviceIdRef.current ?? getCollaborationClientId();
-    localDeviceIdRef.current = localDeviceId;
     return collaboration.presence.some(
       (presence) =>
         presence.status === "online" &&
@@ -279,7 +275,7 @@ export function CollaborationSidebarView() {
         presence.deviceId !== localDeviceId &&
         /\b(?:mic|screen)\b/.test(presence.cursorLabel ?? ""),
     );
-  }, [collaboration?.presence, selectedChannel]);
+  }, [collaboration?.presence, localDeviceId, selectedChannel]);
   const shouldPollMediaSignals = Boolean(selectedChannel && (hasLocalMedia || hasRemoteMedia));
 
   useEffect(() => {
@@ -305,26 +301,23 @@ export function CollaborationSidebarView() {
 
   const setRemoteShareList = useCallback(
     (updater: (shares: RemoteMediaShare[]) => RemoteMediaShare[]) => {
-      setRemoteShares((shares) => {
-        const nextShares = updater(shares);
-        const nextDeviceIds = new Set(nextShares.map((share) => share.deviceId));
-        for (const share of shares) {
-          if (!nextDeviceIds.has(share.deviceId)) {
-            stopMediaStream(share.stream);
-          }
+      const shares = remoteSharesRef.current;
+      const nextShares = updater(shares);
+      const nextDeviceIds = new Set(nextShares.map((share) => share.deviceId));
+      for (const share of shares) {
+        if (!nextDeviceIds.has(share.deviceId)) {
+          stopMediaStream(share.stream);
         }
-        remoteSharesRef.current = nextShares;
-        return nextShares;
-      });
+      }
+      remoteSharesRef.current = nextShares;
+      setRemoteShares(nextShares);
     },
     [],
   );
 
   const getLocalDeviceId = useCallback(() => {
-    const deviceId = localDeviceIdRef.current ?? getCollaborationClientId();
-    localDeviceIdRef.current = deviceId;
-    return deviceId;
-  }, []);
+    return localDeviceId;
+  }, [localDeviceId]);
 
   const getLocalTracks = useCallback(
     () => [

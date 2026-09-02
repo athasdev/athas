@@ -59,19 +59,25 @@ export function PdfViewer({ filePath }: PdfViewerProps) {
 
   // Load file content
   useEffect(() => {
+    let cancelled = false;
     const loadFile = async () => {
       try {
         setFileData(null);
         setError(null);
         const data = await readFile(filePath);
+        if (cancelled) return;
         setFileData(data);
       } catch (err) {
+        if (cancelled) return;
         console.error("Failed to read PDF file:", err);
         setError("Failed to load PDF file.");
       }
     };
 
-    loadFile();
+    void loadFile();
+    return () => {
+      cancelled = true;
+    };
   }, [filePath]);
 
   // Handle wheel zoom

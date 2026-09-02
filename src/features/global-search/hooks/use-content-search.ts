@@ -416,10 +416,12 @@ export const useContentSearch = () => {
 
     const pollingRequestId = requestIdRef.current;
     let disposed = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
     let failureCount = 0;
+    let pollInFlight = false;
 
     const pollScanStatus = async () => {
+      if (pollInFlight) return;
+      pollInFlight = true;
       try {
         const status = await fffScanStatus(nativeRootPaths);
         if (disposed || pollingRequestId !== requestIdRef.current) return;
@@ -429,31 +431,30 @@ export const useContentSearch = () => {
         setIndexedFiles(status.indexed_files);
         failureCount = 0;
 
-        if (status.is_scanning) {
-          timer = setTimeout(pollScanStatus, INDEX_STATUS_POLL_DELAY);
-          return;
-        }
+        if (status.is_scanning) return;
 
+        clearInterval(timer);
         void performSearch();
       } catch (statusError) {
         if (disposed || pollingRequestId !== requestIdRef.current) return;
         console.error("Search index status error:", statusError);
         failureCount++;
         if (failureCount >= 3) {
+          clearInterval(timer);
           setIsIndexing(false);
           setError(`Search indexing failed: ${getErrorMessage(statusError)}`);
           setResultsSearchKey(searchKey);
-          return;
         }
-        timer = setTimeout(pollScanStatus, INDEX_STATUS_POLL_DELAY);
+      } finally {
+        pollInFlight = false;
       }
     };
 
-    timer = setTimeout(pollScanStatus, INDEX_STATUS_POLL_DELAY);
+    const timer = setInterval(() => void pollScanStatus(), INDEX_STATUS_POLL_DELAY);
 
     return () => {
       disposed = true;
-      if (timer) clearTimeout(timer);
+      clearInterval(timer);
     };
   }, [debouncedQuery, isIndexing, nativeRootPaths, performSearch, rootFolderPath, searchKey]);
 

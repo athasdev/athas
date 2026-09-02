@@ -2,7 +2,7 @@
  * Editor Layout Hook - Provides dynamic layout values for positioning calculations
  */
 
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useEditorViewStore } from "@/features/editor/stores/view.store";
 import { calculateTotalGutterWidth } from "@/features/editor/utils/gutter";
@@ -35,20 +35,7 @@ export function useEditorLayout() {
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const fontSize = baseFontSize * zoomLevel;
 
-  // Cache the canvas measurement to avoid recalculating on every render
-  const charWidthCacheRef = useRef<{ fontSize: number; fontFamily: string; width: number } | null>(
-    null,
-  );
-
-  const charWidth = useMemo(() => {
-    const cache = charWidthCacheRef.current;
-    if (cache && cache.fontSize === fontSize && cache.fontFamily === fontFamily) {
-      return cache.width;
-    }
-    const width = measureCharWidth(fontSize, fontFamily);
-    charWidthCacheRef.current = { fontSize, fontFamily, width };
-    return width;
-  }, [fontSize, fontFamily]);
+  const charWidth = useMemo(() => measureCharWidth(fontSize, fontFamily), [fontFamily, fontSize]);
 
   const gutterWidth = useMemo(() => {
     const totalLines = lineCount || 100;

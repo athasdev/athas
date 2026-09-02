@@ -567,7 +567,7 @@ export function WebViewer({
       const { openUrl } = await import("@tauri-apps/plugin-opener");
       await openUrl(currentUrl);
     } catch {
-      window.open(currentUrl, "_blank");
+      window.open(currentUrl, "_blank", "noopener,noreferrer");
     }
   }, [currentUrl]);
 

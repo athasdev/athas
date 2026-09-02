@@ -26,6 +26,7 @@ export function useKeymapContext() {
 
   // Track editor focus
   useEffect(() => {
+    let focusTimer: ReturnType<typeof setTimeout> | null = null;
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
       const isEditorFocus = isEditorKeyboardTarget(target);
@@ -39,7 +40,8 @@ export function useKeymapContext() {
 
     const handleFocusOut = () => {
       // Small delay to check if focus moved to another element
-      setTimeout(() => {
+      if (focusTimer) clearTimeout(focusTimer);
+      focusTimer = setTimeout(() => {
         const activeElement = document.activeElement as HTMLElement;
         if (!activeElement) {
           setContexts({
@@ -63,6 +65,7 @@ export function useKeymapContext() {
     document.addEventListener("focusout", handleFocusOut);
 
     return () => {
+      if (focusTimer) clearTimeout(focusTimer);
       document.removeEventListener("focusin", handleFocusIn);
       document.removeEventListener("focusout", handleFocusOut);
     };

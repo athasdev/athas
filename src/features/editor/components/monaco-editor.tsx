@@ -350,7 +350,9 @@ export function MonacoEditor({
     ]);
     renderedGitBlameKeyRef.current = decorationKey;
   }, [closeInlineGitBlameCard, filePath, getBlameForLine, inlineGitBlameEnabled, isActiveSurface]);
-  renderInlineGitBlameRef.current = renderInlineGitBlame;
+  useLayoutEffect(() => {
+    renderInlineGitBlameRef.current = renderInlineGitBlame;
+  }, [renderInlineGitBlame]);
 
   const scheduleInlineGitBlameRender = useCallback(() => {
     if (gitBlameRenderFrameRef.current !== null) return;
@@ -374,10 +376,12 @@ export function MonacoEditor({
     [activeBufferId, filePath, modelDisplayPath],
   );
 
-  latestContentChangeRef.current = onContentChange;
-  isActiveSurfaceRef.current = isActiveSurface;
+  useLayoutEffect(() => {
+    latestContentChangeRef.current = onContentChange;
+    isActiveSurfaceRef.current = isActiveSurface;
+  }, [isActiveSurface, onContentChange]);
 
-  syncSelectionAgentActionRef.current = () => {
+  const syncSelectionAgentAction = useCallback(() => {
     const editor = editorRef.current;
     const model = modelRef.current;
     const container = containerRef.current;
@@ -388,7 +392,7 @@ export function MonacoEditor({
       !model ||
       !container ||
       !buffer ||
-      !isActiveSurfaceRef.current ||
+      !isActiveSurface ||
       isPointerSelectingRef.current ||
       readOnly ||
       isPreviewMode ||
@@ -440,11 +444,15 @@ export function MonacoEditor({
       },
       context,
     });
-  };
+  }, [buffer, inlineEditRequested, isActiveSurface, isPreviewMode, languageId, readOnly]);
+
+  useLayoutEffect(() => {
+    syncSelectionAgentActionRef.current = syncSelectionAgentAction;
+  }, [syncSelectionAgentAction]);
 
   useEffect(() => {
-    syncSelectionAgentActionRef.current();
-  }, [inlineEditRequested, isActiveSurface, isPreviewMode, readOnly]);
+    syncSelectionAgentAction();
+  }, [syncSelectionAgentAction]);
 
   const lineNumberFormatter = useCallback(
     (lineNumber: number) => {

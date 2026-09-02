@@ -116,7 +116,9 @@ interface UseMenuEventsProps {
 export function useMenuEvents(props: UseMenuEventsProps) {
   const handlersRef = useRef(props);
 
-  handlersRef.current = props;
+  useEffect(() => {
+    handlersRef.current = props;
+  }, [props]);
 
   useEffect(() => {
     setupMenuListeners(handlersRef);

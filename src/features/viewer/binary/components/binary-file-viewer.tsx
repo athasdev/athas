@@ -27,20 +27,26 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
   const relativePath = getRelativePath(filePath, rootFolderPath);
 
   useEffect(() => {
+    let cancelled = false;
     const loadMetadata = async () => {
       setLoading(true);
       setError(null);
       try {
         const data = await readFile(filePath);
+        if (cancelled) return;
         setMetadata(getBinaryMetadata(data, filePath));
       } catch (err) {
+        if (cancelled) return;
         setError(`Failed to read file: ${err}`);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    loadMetadata();
+    void loadMetadata();
+    return () => {
+      cancelled = true;
+    };
   }, [filePath]);
 
   if (loading) {

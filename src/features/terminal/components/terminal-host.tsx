@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useTerminalSlotsStore } from "../stores/terminal-slots.store";
@@ -71,8 +71,8 @@ function TerminalPortal({ sessionId }: { sessionId: string }) {
   const slot = useTerminalSlotsStore((state) => state.slots.get(sessionId));
 
   // Stable wrapper that hosts the terminal DOM for the lifetime of this session.
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-  if (!wrapperRef.current && typeof document !== "undefined") {
+  const [wrapper] = useState(() => {
+    if (typeof document === "undefined") return null;
     const wrapper = document.createElement("div");
     wrapper.style.flexDirection = "column";
     wrapper.style.height = "100%";
@@ -80,12 +80,11 @@ function TerminalPortal({ sessionId }: { sessionId: string }) {
     wrapper.style.minHeight = "0";
     wrapper.style.minWidth = "0";
     wrapper.setAttribute("data-terminal-wrapper", sessionId);
-    wrapperRef.current = wrapper;
-  }
+    return wrapper;
+  });
 
   // Reparent the wrapper into the active slot whenever the slot changes.
   useEffect(() => {
-    const wrapper = wrapperRef.current;
     if (!wrapper) return;
 
     if (slotEl) {
@@ -102,18 +101,16 @@ function TerminalPortal({ sessionId }: { sessionId: string }) {
       wrapper.style.display = "none";
       park.appendChild(wrapper);
     }
-  }, [slot?.isVisible, slotEl]);
+  }, [slot?.isVisible, slotEl, wrapper]);
 
   // Tear down wrapper on session end.
   useEffect(() => {
     return () => {
-      const wrapper = wrapperRef.current;
       if (wrapper?.parentNode) {
         wrapper.parentNode.removeChild(wrapper);
       }
-      wrapperRef.current = null;
     };
-  }, []);
+  }, [wrapper]);
 
   // After slot swap, kick the frontend to refit + repaint — TUIs (CC etc.) need
   // a SIGWINCH-like nudge to redraw at the new column count.
@@ -125,7 +122,7 @@ function TerminalPortal({ sessionId }: { sessionId: string }) {
     return () => cancelAnimationFrame(id);
   }, [slotEl, sessionId]);
 
-  if (!wrapperRef.current) return null;
+  if (!wrapper) return null;
 
   return createPortal(
     <TerminalEmulator
@@ -142,6 +139,6 @@ function TerminalPortal({ sessionId }: { sessionId: string }) {
       onTerminalRef={slot?.onTerminalRef}
       onReady={slot?.onReady}
     />,
-    wrapperRef.current,
+    wrapper,
   );
 }

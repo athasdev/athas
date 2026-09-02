@@ -46,7 +46,7 @@ export function HtmlPreview() {
         title="HTML Preview"
         srcDoc={iframeContent}
         className="size-full border-none"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+        sandbox="allow-scripts allow-forms allow-popups allow-modals"
       />
     </div>
   );

@@ -126,5 +126,6 @@ export async function blobToDataURL(blob: Blob): Promise<string> {
  */
 export async function dataURLToBlob(dataURL: string): Promise<Blob> {
   const response = await fetch(dataURL);
+  if (!response.ok) throw new Error(`Failed to read data URL: ${response.status}`);
   return response.blob();
 }

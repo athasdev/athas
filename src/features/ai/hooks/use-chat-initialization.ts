@@ -7,9 +7,17 @@ export function useChatInitialization() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const initRef = useRef(false);
+  const mountedRef = useRef(false);
 
   const initializeDatabase = useAIChatStore((state) => state.actions.initializeDatabase);
   const loadChatsFromDatabase = useAIChatStore((state) => state.actions.loadChatsFromDatabase);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     // Prevent double initialization in strict mode
@@ -34,13 +42,15 @@ export function useChatInitialization() {
         // Step 3: Load chats from database
         await loadChatsFromDatabase();
 
+        if (!mountedRef.current) return;
         setIsInitialized(true);
       } catch (err) {
+        if (!mountedRef.current) return;
         const errorMsg = `Failed to initialize chat storage: ${err}`;
         console.error(errorMsg);
         setError(errorMsg);
       } finally {
-        setIsLoading(false);
+        if (mountedRef.current) setIsLoading(false);
       }
     }
 

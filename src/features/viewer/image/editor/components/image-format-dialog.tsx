@@ -93,6 +93,7 @@ export function ImageFormatDialog({
 
   useEffect(() => {
     if (!isOpen || !currentImageSrc) return;
+    let cancelled = false;
 
     const estimateSize = async () => {
       setIsEstimating(true);
@@ -101,17 +102,22 @@ export function ImageFormatDialog({
           format,
           quality: config.supportsQuality ? selectedQuality : undefined,
         });
+        if (cancelled) return;
         const size = result.blob.size;
         setEstimatedSize(size);
       } catch (error) {
+        if (cancelled) return;
         console.error("Failed to estimate size:", error);
         setEstimatedSize(null);
       } finally {
-        setIsEstimating(false);
+        if (!cancelled) setIsEstimating(false);
       }
     };
 
-    estimateSize();
+    void estimateSize();
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, currentImageSrc, format, selectedQuality, config.supportsQuality]);
 
   const handleConvert = () => {

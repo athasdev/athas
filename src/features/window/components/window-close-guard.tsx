@@ -16,6 +16,27 @@ interface PendingWindowClose {
   fileName: string;
 }
 
+type CloseRequestedHandler = Parameters<ReturnType<typeof getCurrentWindow>["onCloseRequested"]>[0];
+
+async function listenForCloseGuard(
+  handleCloseRequested: CloseRequestedHandler,
+  continueCloseOrPrompt: () => Promise<void>,
+) {
+  const currentWindow = getCurrentWindow();
+  const currentWebviewWindow = getCurrentWebviewWindow();
+  const [unlistenClose, unlistenQuit, unlistenMenuCloseWindow] = await Promise.all([
+    currentWindow.onCloseRequested(handleCloseRequested),
+    currentWebviewWindow.listen("menu_quit_app", () => void continueCloseOrPrompt()),
+    currentWebviewWindow.listen("menu_close_window", () => void continueCloseOrPrompt()),
+  ]);
+
+  return () => {
+    unlistenClose();
+    unlistenQuit();
+    unlistenMenuCloseWindow();
+  };
+}
+
 function getBlockingDirtyBuffer(discardedBufferIds: Set<string>) {
   return useBufferStore
     .getState()
@@ -54,68 +75,54 @@ export function WindowCloseGuard() {
     await getCurrentWindow().close();
   }, [persistSessionSnapshot]);
 
+  const handleCloseRequested = useCallback<CloseRequestedHandler>(
+    (event) => {
+      if (IS_LINUX && consumeCloseRequestSuppression()) {
+        event.preventDefault();
+        return;
+      }
+
+      if (closeInProgressRef.current) {
+        persistSessionSnapshot();
+        return;
+      }
+
+      const dirtyBuffer = getBlockingDirtyBuffer(discardedBufferIdsRef.current);
+      if (!dirtyBuffer) {
+        persistSessionSnapshot();
+        return;
+      }
+
+      event.preventDefault();
+      setPendingClose({
+        bufferId: dirtyBuffer.id,
+        fileName: dirtyBuffer.name,
+      });
+    },
+    [persistSessionSnapshot],
+  );
+
   useEffect(() => {
     let disposed = false;
-    let unlistenClose: (() => void) | undefined;
-    let unlistenQuit: (() => void) | undefined;
-    let unlistenMenuCloseWindow: (() => void) | undefined;
+    let unlistenCloseGuard: (() => void) | undefined;
 
-    const setupCloseGuard = async () => {
-      const currentWindow = getCurrentWindow();
-      const currentWebviewWindow = getCurrentWebviewWindow();
-
-      unlistenClose = await currentWindow.onCloseRequested((event) => {
-        if (IS_LINUX && consumeCloseRequestSuppression()) {
-          event.preventDefault();
-          return;
-        }
-
-        if (closeInProgressRef.current) {
-          persistSessionSnapshot();
-          return;
-        }
-
-        const dirtyBuffer = getBlockingDirtyBuffer(discardedBufferIdsRef.current);
-        if (!dirtyBuffer) {
-          persistSessionSnapshot();
-          return;
-        }
-
-        event.preventDefault();
-        setPendingClose({
-          bufferId: dirtyBuffer.id,
-          fileName: dirtyBuffer.name,
-        });
-      });
-
-      unlistenQuit = await currentWebviewWindow.listen("menu_quit_app", () => {
-        void continueCloseOrPrompt();
-      });
-
-      unlistenMenuCloseWindow = await currentWebviewWindow.listen("menu_close_window", () => {
-        void continueCloseOrPrompt();
-      });
-
+    void listenForCloseGuard(handleCloseRequested, continueCloseOrPrompt).then((unlisten) => {
       if (disposed) {
-        unlistenClose();
-        unlistenQuit();
-        unlistenMenuCloseWindow();
+        unlisten();
+        return;
       }
-    };
-
-    void setupCloseGuard();
+      unlistenCloseGuard = unlisten;
+    });
     window.addEventListener("beforeunload", persistActiveProjectSession);
     window.addEventListener(REQUEST_WINDOW_CLOSE_EVENT, continueCloseOrPrompt);
 
     return () => {
       disposed = true;
-      unlistenClose?.();
-      unlistenQuit?.();
-      unlistenMenuCloseWindow?.();
+      unlistenCloseGuard?.();
       window.removeEventListener("beforeunload", persistActiveProjectSession);
       window.removeEventListener(REQUEST_WINDOW_CLOSE_EVENT, continueCloseOrPrompt);
     };
-  }, [continueCloseOrPrompt, persistActiveProjectSession, persistSessionSnapshot]);
+  }, [continueCloseOrPrompt, handleCloseRequested, persistActiveProjectSession]);
 
   const handleSaveAndContinue = useCallback(async () => {
     if (!pendingClose) return;

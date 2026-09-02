@@ -44,9 +44,12 @@ export function GitHubInlineTitle({ value, onSave }: GitHubInlineTitleProps) {
     }
 
     setIsSaving(true);
-    const saved = await onSave(nextValue);
-    setIsSaving(false);
-    if (saved) setIsEditing(false);
+    try {
+      const saved = await onSave(nextValue);
+      if (saved) setIsEditing(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -151,9 +154,12 @@ export function GitHubInlineMarkdown({
       return;
     }
     setIsSaving(true);
-    const saved = await onSave(draft);
-    setIsSaving(false);
-    if (saved) setIsEditing(false);
+    try {
+      const saved = await onSave(draft);
+      if (saved) setIsEditing(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

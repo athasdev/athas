@@ -34,6 +34,24 @@ interface CloseTerminalOptions {
   preserveSession?: boolean;
 }
 
+function createTimeoutRegistry() {
+  const timeoutIds = new Set<ReturnType<typeof setTimeout>>();
+
+  return {
+    schedule(callback: () => void, delay: number) {
+      const timeoutId = setTimeout(() => {
+        timeoutIds.delete(timeoutId);
+        callback();
+      }, delay);
+      timeoutIds.add(timeoutId);
+    },
+    clear() {
+      for (const timeoutId of timeoutIds) clearTimeout(timeoutId);
+      timeoutIds.clear();
+    },
+  };
+}
+
 const TerminalContainer = ({
   currentDirectory = "/",
   className = "",
@@ -438,6 +456,7 @@ const TerminalContainer = ({
 
   // Listen for create-terminal-with-command event (used by agent install buttons)
   useEffect(() => {
+    const focusTimers = createTimeoutRegistry();
     const handleCreateTerminalWithCommand = (event: Event) => {
       const customEvent = event as CustomEvent<{
         command: string;
@@ -466,7 +485,7 @@ const TerminalContainer = ({
         pendingCommandsRef.current.set(newTerminalId, `${command}\n`);
 
         // Focus the terminal after creation
-        setTimeout(() => {
+        focusTimers.schedule(() => {
           const terminalRef = terminalSessionRefs.current.get(newTerminalId);
           if (terminalRef) {
             terminalRef.focus();
@@ -476,8 +495,10 @@ const TerminalContainer = ({
     };
 
     window.addEventListener("create-terminal-with-command", handleCreateTerminalWithCommand);
-    return () =>
+    return () => {
+      focusTimers.clear();
       window.removeEventListener("create-terminal-with-command", handleCreateTerminalWithCommand);
+    };
   }, [
     createTerminal,
     currentDirectory,
@@ -488,6 +509,7 @@ const TerminalContainer = ({
 
   // Listen for terminal-ready events to execute pending commands
   useEffect(() => {
+    const commandTimers = createTimeoutRegistry();
     const handleTerminalReady = (event: Event) => {
       const customEvent = event as CustomEvent<{
         terminalId: string;
@@ -499,7 +521,7 @@ const TerminalContainer = ({
       const pendingCommand = pendingCommandsRef.current.get(terminalId);
       if (pendingCommand && connectionId) {
         // Small delay to ensure shell prompt is ready
-        setTimeout(() => {
+        commandTimers.schedule(() => {
           invoke(remoteConnectionId ? "remote_terminal_write" : "terminal_write", {
             id: connectionId,
             input: { kind: "text", data: pendingCommand },
@@ -510,7 +532,10 @@ const TerminalContainer = ({
     };
 
     window.addEventListener("terminal-ready", handleTerminalReady);
-    return () => window.removeEventListener("terminal-ready", handleTerminalReady);
+    return () => {
+      commandTimers.clear();
+      window.removeEventListener("terminal-ready", handleTerminalReady);
+    };
   }, []);
 
   useEffect(() => {

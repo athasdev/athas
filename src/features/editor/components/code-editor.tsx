@@ -170,7 +170,9 @@ const CodeEditor = ({
 
   // Extract values from active buffer or use defaults
   const value = activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
-  valueRef.current = value;
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
   const filePath = activeBuffer?.path || "";
   const onChange = activeBuffer
     ? (onContentChange ?? (isActiveSurface ? handleContentChange : () => {}))
@@ -459,6 +461,7 @@ const CodeEditor = ({
   // Handle go-to-line events (from search results, diagnostics, vim, etc.)
   useEffect(() => {
     if (!isActiveSurface) return;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
     const goToLine = (lineNumber: number, columnNumber?: number) => {
       if (!editorRef.current) return false;
 
@@ -491,12 +494,14 @@ const CodeEditor = ({
 
       // Try immediately, then retry if content not ready yet
       if (!goToLine(lineNumber, columnNumber)) {
-        setTimeout(() => goToLine(lineNumber, columnNumber), 150);
+        if (retryTimer) clearTimeout(retryTimer);
+        retryTimer = setTimeout(() => goToLine(lineNumber, columnNumber), 150);
       }
     };
 
     window.addEventListener("menu-go-to-line", handleGoToLine as EventListener);
     return () => {
+      if (retryTimer) clearTimeout(retryTimer);
       window.removeEventListener("menu-go-to-line", handleGoToLine as EventListener);
     };
   }, [filePath, isActiveSurface]);

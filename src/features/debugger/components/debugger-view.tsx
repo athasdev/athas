@@ -241,19 +241,25 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
       setLaunchLoadError(null);
       return;
     }
+    let cancelled = false;
 
     const loadLaunchConfig = async () => {
       setLaunchLoadError(null);
       try {
         const content = await readFileContent(joinPath(rootFolderPath, ".vscode", "launch.json"));
+        if (cancelled) return;
         debuggerActions.setWorkspaceConfigs(parseDebugLaunchJson(content));
       } catch {
+        if (cancelled) return;
         debuggerActions.setWorkspaceConfigs([]);
         setLaunchLoadError("No launch.json found");
       }
     };
 
     void loadLaunchConfig();
+    return () => {
+      cancelled = true;
+    };
   }, [debuggerActions, rootFolderPath]);
 
   const startDebugging = async () => {

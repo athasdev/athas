@@ -57,10 +57,12 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
   }
 
   if (collaborationNoteTarget) {
-    const { updateCollaborationChannelNote } = await import("@/features/window/services/auth-api");
-    const { useAuthStore } = await import("@/features/window/stores/auth.store");
-    const { updateCollaborationNoteFile } =
-      await import("@/features/collaboration/lib/collaboration-sidebar-model");
+    const [{ updateCollaborationChannelNote }, { useAuthStore }, { updateCollaborationNoteFile }] =
+      await Promise.all([
+        import("@/features/window/services/auth-api"),
+        import("@/features/window/stores/auth.store"),
+        import("@/features/collaboration/lib/collaboration-sidebar-model"),
+      ]);
     const { subscription, actions } = useAuthStore.getState();
     const collaboration = subscription?.collaboration;
     const channelNote = collaboration?.channelNotes.find(

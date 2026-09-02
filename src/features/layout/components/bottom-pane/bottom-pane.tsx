@@ -216,6 +216,7 @@ const BottomPane = ({
         isResizing && "bg-primary/8",
       )}
       role="separator"
+      tabIndex={0}
       aria-orientation="horizontal"
       aria-label="Resize bottom pane"
     >

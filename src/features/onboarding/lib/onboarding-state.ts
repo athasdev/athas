@@ -50,8 +50,10 @@ export function resolveOnboardingContextFromState(
 }
 
 export async function resolveOnboardingContext(): Promise<OnboardingContext | null> {
-  const currentVersion = await getVersion();
-  const persistedState = await readPersistedOnboardingState();
+  const [currentVersion, persistedState] = await Promise.all([
+    getVersion(),
+    readPersistedOnboardingState(),
+  ]);
   return resolveOnboardingContextFromState(currentVersion, persistedState);
 }
 
