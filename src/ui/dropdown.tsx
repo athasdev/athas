@@ -830,7 +830,7 @@ function DropdownMenuItem({
 function DropdownMenuTrailingAction({ children }: { children: ReactNode }) {
   return (
     <span
-      className="absolute right-1 z-10 flex opacity-0 transition-opacity group-hover/dropdown-menu-row:opacity-100 group-focus-within/dropdown-menu-row:opacity-100"
+      className="absolute right-1 z-10 flex opacity-0 transition-opacity group-hover/dropdown-menu-row:opacity-100 group-focus-within/dropdown-menu-row:opacity-100 has-data-[popup-open]:opacity-100"
       onPointerDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
@@ -892,7 +892,7 @@ function DropdownMenuRadioItem({
         className={cn(
           "pointer-events-none absolute right-2 flex size-4 items-center justify-center transition-opacity",
           trailingAction &&
-            "group-hover/dropdown-menu-row:opacity-0 group-focus-within/dropdown-menu-row:opacity-0",
+            "group-hover/dropdown-menu-row:opacity-0 group-focus-within/dropdown-menu-row:opacity-0 group-has-data-[popup-open]/dropdown-menu-row:opacity-0",
         )}
       >
         <DropdownMenuPrimitive.RadioItemIndicator>
@@ -951,7 +951,7 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       nativeButton={appearance === "action"}
-      openOnHover={appearance === "item"}
+      openOnHover
       className={cn(
         appearance === "item" && menuItemVariants(),
         appearance === "item" && "data-inset:pl-8 data-open:bg-accent data-open:text-foreground",

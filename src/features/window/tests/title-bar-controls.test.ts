@@ -82,6 +82,7 @@ describe("title bar controls", () => {
     expect(dropdownSource).toContain(
       'containerClassName={cn("sticky top-0 z-20 bg-surface/98", containerClassName)}',
     );
-    expect(dropdownSource).toContain('openOnHover={appearance === "item"}');
+    expect(dropdownSource).toContain("openOnHover");
+    expect(dropdownSource).toContain("has-data-[popup-open]:opacity-100");
   });
 });
