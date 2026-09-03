@@ -196,7 +196,13 @@ export const CommandHeader = ({
   const clearActionsStack = useActionsStore.use.actions().clearStack;
 
   return (
-    <div data-command-header className={cn("border-border border-b", className)}>
+    <div
+      data-command-header
+      className={cn(
+        "relative z-20 shrink-0 overflow-clip border-border border-b bg-background",
+        className,
+      )}
+    >
       <div className={cn(commandHeaderContentClassName, contentClassName)}>
         {children}
         {showClearButton && (
@@ -225,7 +231,7 @@ export const CommandList = ({
   ...props
 }: CommandListProps) => (
   <ScrollArea
-    className={cn("flex min-h-0 flex-1", className)}
+    className={cn("isolate flex min-h-0 flex-1", className)}
     viewportClassName="h-auto min-h-0 flex-1 overscroll-contain"
     contentClassName={cn("p-1.5", contentClassName)}
     viewportProps={{ ref, ...props }}
@@ -322,7 +328,10 @@ interface CommandFooterProps {
 }
 
 export const CommandFooter = ({ children }: CommandFooterProps) => (
-  <div data-command-footer className="sticky bottom-0 border-border border-t bg-background p-2">
+  <div
+    data-command-footer
+    className="relative z-20 shrink-0 overflow-clip border-border border-t bg-background p-2"
+  >
     <div className="flex flex-wrap items-center gap-1.5">{children}</div>
   </div>
 );
@@ -470,7 +479,10 @@ export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) =
     <Tabs
       value={activeItemId}
       onValueChange={(value) => items.find((item) => item.id === value)?.onSelect()}
-      className={cn("shrink-0 gap-0 bg-background px-2 pt-2", className)}
+      className={cn(
+        "relative z-20 shrink-0 gap-0 overflow-clip bg-background px-2 pt-2",
+        className,
+      )}
     >
       <TabsList variant="bare" aria-label={ariaLabel}>
         {items.map((item) => (

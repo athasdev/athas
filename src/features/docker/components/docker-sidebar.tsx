@@ -2,7 +2,11 @@ import {
   ArrowClockwiseIcon as Refresh,
   ArrowSquareOutIcon as OpenExternal,
   BugIcon as Bug,
+  CloudArrowDownIcon,
+  CubeIcon,
   FileIcon,
+  FolderOpenIcon,
+  NodesIcon,
   PlayIcon as Play,
   StackIcon as ImageIcon,
   SlidersHorizontalIcon as Sliders,
@@ -35,7 +39,12 @@ import {
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { showPromptDialog } from "@/ui/dialog";
-import { SidebarSearchPopover, SidebarSectionLabel, SidebarWorkspace } from "@/ui/sidebar";
+import {
+  SidebarNavigation,
+  SidebarSearchPopover,
+  SidebarSectionLabel,
+  SidebarWorkspace,
+} from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import {
   buildDockerImage,
@@ -202,6 +211,7 @@ export function DockerSidebar() {
   const [projectConfig, setProjectConfig] = useState<DockerProjectConfig>(emptyProjectConfig);
   const [query, setQuery] = useState("");
   const activeSection = useSidebarStore.use.dockerSection();
+  const setActiveSection = useSidebarStore.use.actions().setDockerSection;
   const [containerFilter, setContainerFilter] = useState<DockerContainerFilter>("all");
   const [collapsedSections, setCollapsedSections] = useState<Set<DockerSection>>(() => new Set());
   const [isComposeLoading, setIsComposeLoading] = useState(false);
@@ -1035,6 +1045,51 @@ export function DockerSidebar() {
         }
         className="font-sans select-none"
       >
+        <SidebarNavigation
+          label="Docker sections"
+          groups={[
+            {
+              id: "docker",
+              title: "Docker",
+              items: [
+                {
+                  id: "resources",
+                  label: "Resources",
+                  leading: <CubeIcon />,
+                  trailing:
+                    inventory.containers.length + inventory.images.length > 0
+                      ? inventory.containers.length + inventory.images.length
+                      : undefined,
+                  active: activeSection === "resources",
+                  onClick: () => setActiveSection("resources"),
+                },
+                {
+                  id: "compose",
+                  label: "Compose",
+                  leading: <NodesIcon />,
+                  trailing: composeProject.services.length || undefined,
+                  active: activeSection === "compose",
+                  onClick: () => setActiveSection("compose"),
+                },
+                {
+                  id: "project",
+                  label: "Project",
+                  leading: <FolderOpenIcon />,
+                  trailing: projectConfigItemCount || undefined,
+                  active: activeSection === "project",
+                  onClick: () => setActiveSection("project"),
+                },
+                {
+                  id: "registry",
+                  label: "Registry",
+                  leading: <CloudArrowDownIcon />,
+                  active: activeSection === "registry",
+                  onClick: () => setActiveSection("registry"),
+                },
+              ],
+            },
+          ]}
+        />
         {activeSection === "resources" && error && !connectionError ? (
           <DockerInlineError
             title="Docker action failed"

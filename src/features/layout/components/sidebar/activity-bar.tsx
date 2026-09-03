@@ -10,6 +10,7 @@ import { useActivityBarVisibility } from "@/features/layout/hooks/use-activity-b
 import { useActivityNavigationItems } from "@/features/layout/hooks/use-activity-navigation-items";
 import { useActivityProjectCarousel } from "@/features/layout/hooks/use-activity-project-carousel";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
+import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
 import { OnboardingChecklist } from "@/features/onboarding/components/onboarding-checklist";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -20,8 +21,6 @@ import { cn } from "@/utils/cn";
 interface ActivityBarProps {
   expanded: boolean;
 }
-
-export const COLLAPSED_ACTIVITY_BAR_WIDTH = 40;
 
 export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
   const { openSidebarView } = useSidebarPaneController();
@@ -74,6 +73,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
     openCommandPaletteView("databases");
   }, [openCommandPaletteView]);
   const railContentRef = useRef<HTMLDivElement>(null);
+  const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const activityBarVisibility = useActivityBarVisibility(coreFeatures);
   const handleSidebarViewChange = (view: typeof activeSidebarView) => {
@@ -131,7 +131,8 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
   } = useActivityBarResize({
     expanded,
   });
-  const railPanelWidth = expanded ? activityRailWidth : COLLAPSED_ACTIVITY_BAR_WIDTH;
+  const collapsedRailWidth = getCollapsedActivityBarWidth(uiFontSize);
+  const railPanelWidth = expanded ? activityRailWidth : collapsedRailWidth;
   const {
     enabled: projectCarouselEnabled,
     projects: projectTabs,
@@ -153,7 +154,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
 
   const renderedRailWidth = expanded
     ? `calc(${activityRailWidth}px + var(--athas-workbench-gap))`
-    : `${COLLAPSED_ACTIVITY_BAR_WIDTH}px`;
+    : `${collapsedRailWidth}px`;
   return (
     <ContextMenu>
       <ContextMenuTrigger

@@ -1,6 +1,7 @@
 import { Menu as DropdownMenuPrimitive } from "@base-ui/react/menu";
 import { cva } from "class-variance-authority";
 import {
+  type ComponentProps,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
@@ -12,6 +13,7 @@ import {
   useState,
 } from "react";
 import Input, { type InputProps } from "@/ui/input";
+import { ScrollArea } from "@/ui/scroll-area";
 import { quickTransition } from "@/utils/motion";
 import { FloatingPopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
@@ -20,12 +22,12 @@ import { CaretRightIcon, CheckIcon, MagnifyingGlassIcon as Search } from "@/ui/i
 import Keybinding from "@/features/keymaps/components/keybinding";
 
 const menuSurfaceVariants = cva(
-  "max-h-(--available-height) w-fit min-w-32 max-w-[min(480px,calc(100vw-16px))] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-surface/98 p-1 font-sans text-subtle-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm ui-text-chrome",
+  "max-h-(--available-height) w-fit min-w-32 max-w-[min(480px,calc(100vw-16px))] origin-(--transform-origin) rounded-lg bg-surface/98 font-sans text-subtle-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm ui-text-chrome",
   {
     variants: {
       viewport: {
-        default: "",
-        searchable: "max-h-80 scrollbar-gutter-stable",
+        default: "overflow-x-hidden overflow-y-auto p-1",
+        searchable: "flex max-h-80 flex-col overflow-hidden p-0",
       },
     },
     defaultVariants: {
@@ -732,17 +734,50 @@ function DropdownMenuSearch({
   ...props
 }: InputProps) {
   return (
-    <Input
+    <div
       data-slot="dropdown-menu-search"
-      leftIcon={leftIcon}
-      variant={variant}
-      containerClassName={cn("sticky top-0 z-20 bg-surface/98", containerClassName)}
-      className={cn("ui-text-chrome", className)}
-      aria-label={props["aria-label"] ?? props.placeholder ?? "Search menu"}
-      onKeyDown={(event) => {
-        event.stopPropagation();
-        onKeyDown?.(event);
-      }}
+      className="sticky top-0 z-20 shrink-0 overflow-clip border-border/60 border-b bg-surface p-1"
+    >
+      <Input
+        leftIcon={leftIcon}
+        variant={variant}
+        containerClassName={containerClassName}
+        className={cn("ui-text-chrome", className)}
+        aria-label={props["aria-label"] ?? props.placeholder ?? "Search menu"}
+        onKeyDown={(event) => {
+          event.stopPropagation();
+          onKeyDown?.(event);
+        }}
+        {...props}
+      />
+    </div>
+  );
+}
+
+function DropdownMenuViewport({
+  className,
+  contentClassName,
+  ...props
+}: Omit<ComponentProps<typeof ScrollArea>, "viewportClassName">) {
+  return (
+    <ScrollArea
+      data-slot="dropdown-menu-viewport"
+      className={cn("isolate flex min-h-0 flex-1", className)}
+      viewportClassName="h-auto min-h-0 flex-1 overscroll-contain scrollbar-gutter-stable"
+      contentClassName={cn("p-1", contentClassName)}
+      {...props}
+    />
+  );
+}
+
+function DropdownMenuFooter({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dropdown-menu-footer"
+      className={cn(
+        "relative z-20 shrink-0 overflow-clip border-border/60 border-t bg-surface p-1",
+        className,
+      )}
       {...props}
     />
   );
@@ -799,12 +834,14 @@ function DropdownMenuItem({
   inset,
   variant = "default",
   trailingAction,
+  trailingActionVisibility = "hover",
   children,
   ...props
 }: DropdownMenuPrimitive.Item.Props & {
   inset?: boolean;
   variant?: "default" | "destructive";
   trailingAction?: ReactNode;
+  trailingActionVisibility?: "hover" | "always";
 }) {
   return (
     <DropdownMenuPrimitive.Item
@@ -821,16 +858,29 @@ function DropdownMenuItem({
     >
       {children}
       {trailingAction ? (
-        <DropdownMenuTrailingAction>{trailingAction}</DropdownMenuTrailingAction>
+        <DropdownMenuTrailingAction visibility={trailingActionVisibility}>
+          {trailingAction}
+        </DropdownMenuTrailingAction>
       ) : null}
     </DropdownMenuPrimitive.Item>
   );
 }
 
-function DropdownMenuTrailingAction({ children }: { children: ReactNode }) {
+function DropdownMenuTrailingAction({
+  children,
+  visibility,
+}: {
+  children: ReactNode;
+  visibility: "hover" | "always";
+}) {
   return (
     <span
-      className="absolute right-1 z-10 flex opacity-0 transition-opacity group-hover/dropdown-menu-row:opacity-100 group-focus-within/dropdown-menu-row:opacity-100 has-data-[popup-open]:opacity-100"
+      className={cn(
+        "absolute right-1 z-10 flex transition-opacity",
+        visibility === "always"
+          ? "opacity-100"
+          : "opacity-0 group-hover/dropdown-menu-row:opacity-100 group-focus-within/dropdown-menu-row:opacity-100 has-data-[popup-open]:opacity-100",
+      )}
       onPointerDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
@@ -874,8 +924,13 @@ function DropdownMenuRadioItem({
   children,
   inset,
   trailingAction,
+  trailingActionVisibility = "hover",
   ...props
-}: DropdownMenuPrimitive.RadioItem.Props & { inset?: boolean; trailingAction?: ReactNode }) {
+}: DropdownMenuPrimitive.RadioItem.Props & {
+  inset?: boolean;
+  trailingAction?: ReactNode;
+  trailingActionVisibility?: "hover" | "always";
+}) {
   return (
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
@@ -893,6 +948,7 @@ function DropdownMenuRadioItem({
           "pointer-events-none absolute right-2 flex size-4 items-center justify-center transition-opacity",
           trailingAction &&
             "group-hover/dropdown-menu-row:opacity-0 group-focus-within/dropdown-menu-row:opacity-0 group-has-data-[popup-open]/dropdown-menu-row:opacity-0",
+          trailingAction && trailingActionVisibility === "always" && "opacity-0",
         )}
       >
         <DropdownMenuPrimitive.RadioItemIndicator>
@@ -901,7 +957,9 @@ function DropdownMenuRadioItem({
       </span>
       {children}
       {trailingAction ? (
-        <DropdownMenuTrailingAction>{trailingAction}</DropdownMenuTrailingAction>
+        <DropdownMenuTrailingAction visibility={trailingActionVisibility}>
+          {trailingAction}
+        </DropdownMenuTrailingAction>
       ) : null}
     </DropdownMenuPrimitive.RadioItem>
   );
@@ -980,6 +1038,7 @@ export {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuFooter,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -992,6 +1051,7 @@ export {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  DropdownMenuViewport,
   menuItemVariants,
   menuLabelVariants,
   menuSeparatorVariants,

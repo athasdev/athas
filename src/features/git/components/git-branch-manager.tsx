@@ -14,15 +14,16 @@ import { Button } from "@/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuFooter,
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSearch,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  DropdownMenuViewport,
 } from "@/ui/dropdown";
 import {
   CommandEmpty,
@@ -588,51 +589,54 @@ const GitBranchManager = ({
             placeholder="Search branches"
             autoFocus
           />
-          {filteredBranches.length > 0 ? (
-            <DropdownMenuRadioGroup
-              value={currentBranch}
-              onValueChange={(branch) => void handleBranchChange(branch)}
-            >
-              {filteredBranches.map((branch) => (
-                <DropdownMenuRadioItem
-                  key={branch}
-                  value={branch}
-                  disabled={isLoading}
-                  closeOnClick={branch !== currentBranch}
-                  trailingAction={
-                    <BranchDropdownActions
-                      branch={branch}
-                      isCurrent={branch === currentBranch}
-                      isLoading={isLoading}
-                      onCreateFrom={() => void handlePromptCreateBranch(branch)}
-                      onCopy={() => void writeClipboardText(branch)}
-                      onDelete={() => void handleDeleteBranch(branch)}
-                    />
-                  }
-                >
-                  <GitBranchIcon />
-                  <span className="min-w-0 flex-1 truncate">{branch}</span>
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          ) : (
-            <DropdownMenuItem disabled>
-              {branchQuery.trim() ? "No branches match" : "No branches found"}
+          <DropdownMenuViewport>
+            {filteredBranches.length > 0 ? (
+              <DropdownMenuRadioGroup
+                value={currentBranch}
+                onValueChange={(branch) => void handleBranchChange(branch)}
+              >
+                {filteredBranches.map((branch) => (
+                  <DropdownMenuRadioItem
+                    key={branch}
+                    value={branch}
+                    disabled={isLoading}
+                    closeOnClick={branch !== currentBranch}
+                    trailingAction={
+                      <BranchDropdownActions
+                        branch={branch}
+                        isCurrent={branch === currentBranch}
+                        isLoading={isLoading}
+                        onCreateFrom={() => void handlePromptCreateBranch(branch)}
+                        onCopy={() => void writeClipboardText(branch)}
+                        onDelete={() => void handleDeleteBranch(branch)}
+                      />
+                    }
+                  >
+                    <GitBranchIcon />
+                    <span className="min-w-0 flex-1 truncate">{branch}</span>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            ) : (
+              <DropdownMenuItem disabled>
+                {branchQuery.trim() ? "No branches match" : "No branches found"}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuViewport>
+          <DropdownMenuFooter>
+            <DropdownMenuItem onClick={() => void handlePromptCreateBranch()}>
+              <Plus />
+              New branch…
             </DropdownMenuItem>
-          )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => void handlePromptCreateBranch()}>
-            <Plus />
-            New branch…
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            closeOnClick={false}
-            disabled={isLoading}
-            onClick={() => void loadBranches()}
-          >
-            <RefreshCw />
-            Refresh branches
-          </DropdownMenuItem>
+            <DropdownMenuItem
+              closeOnClick={false}
+              disabled={isLoading}
+              onClick={() => void loadBranches()}
+            >
+              <RefreshCw />
+              Refresh branches
+            </DropdownMenuItem>
+          </DropdownMenuFooter>
         </DropdownMenuContent>
       </DropdownMenu>
     );

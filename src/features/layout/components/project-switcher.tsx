@@ -16,15 +16,16 @@ import { Button } from "@/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuFooter,
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSearch,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  DropdownMenuViewport,
 } from "@/ui/dropdown";
 import {
   ChevronExpandYIcon,
@@ -227,68 +228,71 @@ export function ProjectSwitcher({
             placeholder="Search projects"
             autoFocus
           />
-          {hasProjectMatches ? (
-            <>
-              <DropdownMenuRadioGroup
-                value={displayProject?.id ?? ""}
-                onValueChange={onSelectProject}
-              >
-                {filteredProjects.map((availableProject) => (
-                  <DropdownMenuRadioItem
-                    key={availableProject.id}
-                    value={availableProject.id}
-                    disabled={isSwitchingProject}
-                    closeOnClick
+          <DropdownMenuViewport>
+            {hasProjectMatches ? (
+              <>
+                <DropdownMenuRadioGroup
+                  value={displayProject?.id ?? ""}
+                  onValueChange={onSelectProject}
+                >
+                  {filteredProjects.map((availableProject) => (
+                    <DropdownMenuRadioItem
+                      key={availableProject.id}
+                      value={availableProject.id}
+                      disabled={isSwitchingProject}
+                      closeOnClick
+                      trailingAction={
+                        <ProjectRowActions
+                          projectName={availableProject.name}
+                          onSelectIcon={
+                            isRemoteProjectPath(availableProject.path)
+                              ? undefined
+                              : () => setIconPickerProject(availableProject)
+                          }
+                          onRemove={() => void handleRemoveProject(availableProject)}
+                        />
+                      }
+                    >
+                      <ProjectGlyph
+                        projectPath={availableProject.path}
+                        iconPath={availableProject.customIcon}
+                      />
+                      <span className="min-w-0 flex-1 truncate">{availableProject.name}</span>
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+                {filteredRemoteConnections.map((connection) => (
+                  <DropdownMenuItem
+                    key={connection.id}
+                    disabled={connectingRemoteId === connection.id}
+                    onClick={() => void handleConnectRemote(connection.id)}
                     trailingAction={
                       <ProjectRowActions
-                        projectName={availableProject.name}
-                        onSelectIcon={
-                          isRemoteProjectPath(availableProject.path)
-                            ? undefined
-                            : () => setIconPickerProject(availableProject)
-                        }
-                        onRemove={() => void handleRemoveProject(availableProject)}
+                        projectName={connection.name}
+                        onRemove={() => void handleRemoveRemoteConnection(connection)}
                       />
                     }
                   >
-                    <ProjectGlyph
-                      projectPath={availableProject.path}
-                      iconPath={availableProject.customIcon}
-                    />
-                    <span className="min-w-0 flex-1 truncate">{availableProject.name}</span>
-                  </DropdownMenuRadioItem>
+                    <RemoteIcon />
+                    <span className="min-w-0 flex-1 truncate">{connection.name}</span>
+                  </DropdownMenuItem>
                 ))}
-              </DropdownMenuRadioGroup>
-              {filteredRemoteConnections.map((connection) => (
-                <DropdownMenuItem
-                  key={connection.id}
-                  disabled={connectingRemoteId === connection.id}
-                  onClick={() => void handleConnectRemote(connection.id)}
-                  trailingAction={
-                    <ProjectRowActions
-                      projectName={connection.name}
-                      onRemove={() => void handleRemoveRemoteConnection(connection)}
-                    />
-                  }
-                >
-                  <RemoteIcon />
-                  <span className="min-w-0 flex-1 truncate">{connection.name}</span>
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-            </>
-          ) : null}
-          {!hasProjectMatches && query.trim() ? (
-            <DropdownMenuItem disabled>No projects match</DropdownMenuItem>
-          ) : null}
-          <DropdownMenuItem onClick={() => void handleOpenFolder()}>
-            <FolderOpenIcon />
-            Open project…
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={onAddRemote}>
-            <RemoteIcon />
-            Add remote…
-          </DropdownMenuItem>
+              </>
+            ) : null}
+            {!hasProjectMatches && query.trim() ? (
+              <DropdownMenuItem disabled>No projects match</DropdownMenuItem>
+            ) : null}
+          </DropdownMenuViewport>
+          <DropdownMenuFooter>
+            <DropdownMenuItem onClick={() => void handleOpenFolder()}>
+              <FolderOpenIcon />
+              Open project…
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onAddRemote}>
+              <RemoteIcon />
+              Add remote…
+            </DropdownMenuItem>
+          </DropdownMenuFooter>
         </DropdownMenuContent>
       </DropdownMenu>
       {iconPickerProject ? (

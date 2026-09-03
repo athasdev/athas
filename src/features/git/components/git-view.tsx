@@ -14,6 +14,7 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
+import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ReviewSidebarPanel } from "@/features/review/components/review-sidebar";
 import { type GitActivitySection, useSidebarStore } from "@/features/layout/stores/sidebar.store";
@@ -62,6 +63,7 @@ import GitCommandSurface from "./git-command-surface";
 import GitRemoteManager from "./git-remote-manager";
 import GitTagManager from "./git-tag-manager";
 import GitStatusPanel from "./status/git-status-panel";
+import { SourceControlNavigation } from "./source-control-navigation";
 
 interface GitViewProps {
   repoPath?: string;
@@ -124,6 +126,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   const [showRemoteManager, setShowRemoteManager] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
+  const hiddenGitSidebarItems = useSettingsStore((state) => state.settings.hiddenGitSidebarItems);
+  const gitSidebarTabOrder = useSettingsStore((state) => state.settings.gitSidebarTabOrder);
   const showUntrackedFiles = useSettingsStore((state) => state.settings.showUntrackedFiles);
   const rememberLastGitPanelMode = useSettingsStore(
     (state) => state.settings.rememberLastGitPanelMode,
@@ -236,6 +240,22 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     setSelectedHistoryFilePath(null);
     setIsLoadingHistoryCommitFiles(false);
   }, []);
+  const handleSelectGitSection = useCallback(
+    (section: GitActivitySection) => {
+      handleBackFromHistoryCommit();
+      setGitSection(section);
+    },
+    [handleBackFromHistoryCommit, setGitSection],
+  );
+  const handleGitSidebarItemVisibleChange = useCallback(
+    (itemId: GitSidebarItemId, visible: boolean) => {
+      const nextHiddenItems = visible
+        ? hiddenGitSidebarItems.filter((hiddenItemId) => hiddenItemId !== itemId)
+        : Array.from(new Set([...hiddenGitSidebarItems, itemId]));
+      void updateSetting("hiddenGitSidebarItems", nextHiddenItems);
+    },
+    [hiddenGitSidebarItems, updateSetting],
+  );
   const handleSelectHistoryCommit = useCallback(
     async (commit: GitCommit) => {
       const requestId = historyCommitRequestRef.current + 1;
@@ -644,6 +664,33 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     </SidebarIconButton>
   );
 
+  const renderSourceControlNavigation = () => (
+    <SourceControlNavigation
+      activeSection={gitSection}
+      sectionOrder={gitSidebarTabOrder}
+      hiddenItemIds={hiddenGitSidebarItems}
+      changeCount={visibleGitFiles.length}
+      commitCount={commits.length}
+      activeRepositoryItem={
+        showRemoteManager
+          ? "remotes"
+          : showTagManager
+            ? "tags"
+            : showStashList
+              ? "stashes"
+              : undefined
+      }
+      onSectionChange={handleSelectGitSection}
+      onOpenRemotes={() => setShowRemoteManager(true)}
+      onOpenTags={() => setShowTagManager(true)}
+      onOpenStashes={() => {
+        setShowStashList(true);
+        setStashSearchQuery("");
+      }}
+      onItemVisibleChange={handleGitSidebarItemVisibleChange}
+    />
+  );
+
   const renderGitActionsMenu = ({
     hasGitRepo,
     onRefresh,
@@ -725,6 +772,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return (
       <>
         <SidebarWorkspace title="Source Control" actions={renderActionsButton()}>
+          {renderSourceControlNavigation()}
           <EmptyState
             layout="sidebar"
             title="No repository selected"
@@ -756,6 +804,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return (
       <>
         <SidebarWorkspace title="Source Control" actions={renderActionsButton()}>
+          {renderSourceControlNavigation()}
           <EmptyState
             layout="sidebar"
             message={<Spinner label="Loading Git status" showLabel compact />}
@@ -770,6 +819,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return (
       <>
         <SidebarWorkspace title="Source Control" actions={renderActionsButton()}>
+          {renderSourceControlNavigation()}
           <EmptyState
             layout="sidebar"
             title="Not a Git repository"
@@ -876,6 +926,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           </>
         }
       >
+        {renderSourceControlNavigation()}
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1">
             {gitSection === "changes" ? (

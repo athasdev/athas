@@ -264,6 +264,68 @@ export function SidebarSection({
   );
 }
 
+export interface SidebarNavigationItem {
+  id: string;
+  label: ReactNode;
+  leading?: ReactNode;
+  trailing?: ReactNode;
+  active?: boolean;
+  disabled?: boolean;
+  ariaLabel?: string;
+  onClick: () => void;
+}
+
+export interface SidebarNavigationGroup {
+  id: string;
+  title: ReactNode;
+  items: SidebarNavigationItem[];
+  action?: ReactNode;
+  defaultExpanded?: boolean;
+}
+
+export function SidebarNavigation({
+  label,
+  groups,
+  className,
+}: {
+  label: string;
+  groups: SidebarNavigationGroup[];
+  className?: string;
+}) {
+  return (
+    <ScrollArea
+      className={cn("max-h-[45%] shrink-0 border-border/70 border-b", className)}
+      contentClassName="px-chrome-inline py-2"
+    >
+      <nav aria-label={label} data-slot="secondary-sidebar-navigation">
+        {groups.map((group) => (
+          <SidebarSection
+            key={group.id}
+            title={group.title}
+            action={group.action}
+            defaultExpanded={group.defaultExpanded}
+          >
+            {group.items.map((item) => (
+              <SidebarListItem
+                key={item.id}
+                active={item.active}
+                disabled={item.disabled}
+                leading={item.leading}
+                trailing={item.trailing}
+                onClick={item.onClick}
+                aria-label={item.ariaLabel}
+                aria-current={item.active ? "page" : undefined}
+              >
+                {item.label}
+              </SidebarListItem>
+            ))}
+          </SidebarSection>
+        ))}
+      </nav>
+    </ScrollArea>
+  );
+}
+
 export function SidebarSectionLabel({
   children,
   leading,

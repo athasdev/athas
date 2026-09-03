@@ -26,9 +26,10 @@ import { frontendTrace } from "@/utils/frontend-trace";
 import { recordStartupMilestone } from "@/features/bootstrap/startup-performance";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import { isSidebarViewAvailable } from "@/features/layout/utils/sidebar-pane-utils";
+import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import { ResizablePane } from "./resizable-pane";
-import { ActivityBar, COLLAPSED_ACTIVITY_BAR_WIDTH } from "./sidebar/activity-bar";
+import { ActivityBar } from "./sidebar/activity-bar";
 import { SidebarPane } from "./sidebar/sidebar-pane";
 import { useResponsiveWorkbenchLayout } from "../hooks/use-responsive-workbench-layout";
 
@@ -79,6 +80,7 @@ export function MainLayout() {
   const renderedActivityRailExpanded = responsiveLayout.activityBarExpanded;
   const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
   const activityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
+  const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
   const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
   const rightSidebarWidth = useSettingsStore((state) => state.settings.rightSidebarWidth);
   const showOutline = useSettingsStore((state) => state.settings.showOutline);
@@ -99,7 +101,7 @@ export function MainLayout() {
   );
   const renderedActivityRailWidth = renderedActivityRailExpanded
     ? activityRailWidth
-    : COLLAPSED_ACTIVITY_BAR_WIDTH;
+    : getCollapsedActivityBarWidth(uiFontSize);
   const leftPaneReservedWidth =
     renderedActivityRailWidth + (renderedRightSidebarVisible ? rightSidebarWidth : 0);
   const rightPaneReservedWidth =

@@ -71,17 +71,23 @@ describe("title bar controls", () => {
   });
   it("uses searchable anchored menus for title bar project and branch selection", () => {
     expect(projectSwitcherSource).toContain("<DropdownMenuSearch");
+    expect(projectSwitcherSource).toContain("<DropdownMenuViewport>");
+    expect(projectSwitcherSource).toContain("<DropdownMenuFooter>");
     expect(projectSwitcherSource).toContain('placeholder="Search projects"');
     expect(projectSwitcherSource).toContain('viewport="searchable"');
     expect(branchManagerSource).toContain('if (triggerMode === "branch")');
     expect(branchManagerSource).toContain('placeholder="Search branches"');
     expect(branchManagerSource).toContain('viewport="searchable"');
+    expect(branchManagerSource).toContain("<DropdownMenuViewport>");
+    expect(branchManagerSource).toContain("<DropdownMenuFooter>");
     expect(branchManagerSource).toContain("<BranchDropdownActions");
     expect(branchManagerSource).toContain("New branch…");
-    expect(dropdownSource).toContain('searchable: "max-h-80 scrollbar-gutter-stable"');
+    expect(dropdownSource).toContain('searchable: "flex max-h-80 flex-col overflow-hidden p-0"');
     expect(dropdownSource).toContain(
-      'containerClassName={cn("sticky top-0 z-20 bg-surface/98", containerClassName)}',
+      'className="sticky top-0 z-20 shrink-0 overflow-clip border-border/60 border-b bg-surface p-1"',
     );
+    expect(dropdownSource).toContain('data-slot="dropdown-menu-viewport"');
+    expect(dropdownSource).toContain('data-slot="dropdown-menu-footer"');
     expect(dropdownSource).toContain("openOnHover");
     expect(dropdownSource).toContain("has-data-[popup-open]:opacity-100");
   });
