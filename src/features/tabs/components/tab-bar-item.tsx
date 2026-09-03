@@ -1,4 +1,5 @@
 import {
+  ArrowsClockwiseIcon as Continuous,
   PulseIcon as Activity,
   DatabaseIcon as Database,
   GitBranchIcon as GitBranch,
@@ -233,6 +234,8 @@ const TabBarItem = memo(function TabBarItem({
               <WarningCircle className="text-subtle-foreground" />
             ) : buffer.type === "references" ? (
               <Search className="text-subtle-foreground" />
+            ) : buffer.type === "continuousAgents" ? (
+              <Continuous className="text-subtle-foreground" />
             ) : buffer.type === "settings" ? (
               <Settings className="text-subtle-foreground" />
             ) : (

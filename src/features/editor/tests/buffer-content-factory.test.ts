@@ -60,6 +60,19 @@ describe("createPaneContent extension surfaces", () => {
   });
 });
 
+describe("createPaneContent continuous agent surfaces", () => {
+  it("creates the singleton continuous agents resource", () => {
+    const content = createPaneContent("continuous-agents", { type: "continuousAgents" });
+
+    expect(content).toMatchObject({
+      type: "continuousAgents",
+      name: "Continuous Agents",
+      path: "continuous-agents://workspace",
+      isPreview: false,
+    });
+  });
+});
+
 describe("createPaneContent custom view surfaces", () => {
   it("creates a project-scoped setup tab", () => {
     const content = createPaneContent("new-view", {

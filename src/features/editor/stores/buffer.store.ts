@@ -151,6 +151,7 @@ interface BufferActions {
   openGlobalSearchBuffer: () => string;
   openDiagnosticsBuffer: () => string;
   openReferencesBuffer: () => string;
+  openContinuousAgentsBuffer: () => string;
   openSettingsBuffer: () => string;
   openExtensionsBuffer: () => string;
   openExtensionBuffer: (extensionId: string, name: string) => string;
@@ -809,6 +810,7 @@ const createBufferStore = (workspaceId: string) => {
             case "globalSearch":
             case "diagnostics":
             case "references":
+            case "continuousAgents":
             case "settings":
             case "extensions": {
               const existing = buffers.find((b) => b.type === spec.type);
@@ -1061,6 +1063,10 @@ const createBufferStore = (workspaceId: string) => {
 
         openReferencesBuffer: (): string => {
           return get().actions.openContent({ type: "references" });
+        },
+
+        openContinuousAgentsBuffer: (): string => {
+          return get().actions.openContent({ type: "continuousAgents" });
         },
 
         openSettingsBuffer: (): string => {

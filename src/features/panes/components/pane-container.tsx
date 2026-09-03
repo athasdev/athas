@@ -80,6 +80,7 @@ const DiagnosticsBuffer = lazy(
   () => import("@/features/diagnostics/components/diagnostics-buffer"),
 );
 const ReferencesBuffer = lazy(() => import("@/features/references/components/references-buffer"));
+const ContinuousAgentsResource = lazy(() => import("@/features/ai/continuous-agents/resource"));
 const SettingsWorkbenchView = lazy(
   () => import("@/features/settings/components/settings-workbench-view"),
 );
@@ -973,6 +974,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "references":
           return <ReferencesBuffer />;
+
+        case "continuousAgents":
+          return <ContinuousAgentsResource />;
 
         case "settings":
           return <SettingsWorkbenchView />;

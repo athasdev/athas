@@ -1,4 +1,5 @@
 import { useCallback, type ReactNode } from "react";
+import { ContinuousAgentsCallout } from "@/features/ai/continuous-agents/continuous-agents-callout";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -101,6 +102,8 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
       </EmptyHeader>
 
       {children}
+
+      <ContinuousAgentsCallout />
 
       {showQuickActions ? (
         <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">

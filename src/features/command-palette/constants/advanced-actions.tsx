@@ -1,7 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   ArrowClockwiseIcon as RefreshCw,
+  ArrowsClockwiseIcon as Continuous,
   SparkleIcon as Sparkles,
   SquareIcon as Square,
   TerminalWindowIcon as Terminal,
@@ -45,6 +47,17 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       commandId: "workbench.agentLauncher",
       action: () => {
         openNewAgentChat();
+        onClose();
+      },
+    },
+    {
+      id: "ai-continuous-agents",
+      label: "AI: Continuous Agents",
+      description: "Create and manage recurring workspace goals",
+      icon: <Continuous />,
+      category: "AI",
+      action: () => {
+        useBufferStore.getState().actions.openContinuousAgentsBuffer();
         onClose();
       },
     },

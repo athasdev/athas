@@ -199,11 +199,14 @@ describe("buffer preview pane integration", () => {
     const secondSettingsId = bufferActions.openSettingsBuffer();
     const firstExtensionsId = bufferActions.openExtensionsBuffer();
     const secondExtensionsId = bufferActions.openExtensionsBuffer();
+    const firstContinuousAgentsId = bufferActions.openContinuousAgentsBuffer();
+    const secondContinuousAgentsId = bufferActions.openContinuousAgentsBuffer();
 
     expect(secondSearchId).toBe(firstSearchId);
     expect(secondReferencesId).toBe(firstReferencesId);
     expect(secondSettingsId).toBe(firstSettingsId);
     expect(secondExtensionsId).toBe(firstExtensionsId);
+    expect(secondContinuousAgentsId).toBe(firstContinuousAgentsId);
     expect(useBufferStore.getState().buffers).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -235,6 +238,12 @@ describe("buffer preview pane integration", () => {
           type: "extensions",
           path: "extensions://marketplace",
           name: "Extensions",
+        }),
+        expect.objectContaining({
+          id: firstContinuousAgentsId,
+          type: "continuousAgents",
+          path: "continuous-agents://workspace",
+          name: "Continuous Agents",
         }),
       ]),
     );

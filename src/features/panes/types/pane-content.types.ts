@@ -40,6 +40,7 @@ export type PaneContentType =
   | "globalSearch"
   | "diagnostics"
   | "references"
+  | "continuousAgents"
   | "settings"
   | "extensions"
   | "extension"
@@ -213,6 +214,10 @@ interface ReferencesContent extends PaneContentBase {
   type: "references";
 }
 
+interface ContinuousAgentsContent extends PaneContentBase {
+  type: "continuousAgents";
+}
+
 interface SettingsContent extends PaneContentBase {
   type: "settings";
 }
@@ -260,6 +265,7 @@ export type PaneContent =
   | GlobalSearchContent
   | DiagnosticsContent
   | ReferencesContent
+  | ContinuousAgentsContent
   | SettingsContent
   | ExtensionsContent
   | ExtensionContent
@@ -292,6 +298,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "globalSearch",
   "diagnostics",
   "references",
+  "continuousAgents",
   "settings",
   "extensions",
   "extension",
@@ -470,6 +477,9 @@ export type OpenContentSpec =
     }
   | {
       type: "references";
+    }
+  | {
+      type: "continuousAgents";
     }
   | {
       type: "settings";

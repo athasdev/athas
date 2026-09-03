@@ -22,6 +22,7 @@ import { Toaster } from "./ui/sonner";
 import { TooltipProvider } from "./ui/tooltip";
 import { WindowResizeBorder } from "./features/window/components/window-resize-border";
 import { DialogServiceProvider } from "@/ui/dialog";
+import { ContinuousAgentsRuntime } from "@/features/ai/continuous-agents/continuous-agents-runtime";
 
 function WorkbenchApp() {
   useAppBootstrap();
@@ -84,6 +85,7 @@ function WorkbenchApp() {
             <ZoomIndicator />
             <Toaster />
             <NotificationRecorder />
+            <ContinuousAgentsRuntime />
           </div>
         </TooltipProvider>
       </DialogServiceProvider>
