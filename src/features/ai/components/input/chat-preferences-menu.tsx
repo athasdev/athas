@@ -13,6 +13,7 @@ import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-reg
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
 import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
+import type { AgentOption } from "@/features/ai/lib/agent-options";
 import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
 import type { AgentType, ChatMode } from "@/features/ai/types/ai-chat.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
@@ -131,6 +132,54 @@ function MenuSearchInput({
   );
 }
 
+function AgentRowAction({
+  option,
+  onAction,
+  onSetup,
+}: {
+  option: AgentOption;
+  onAction: () => void;
+  onSetup: () => void;
+}) {
+  if (option.action) {
+    const actionLabel = option.action === "update" ? "Update" : "Install";
+    const busyLabel = option.action === "update" ? "Updating" : "Installing";
+    return (
+      <Button
+        type="button"
+        variant={option.action === "update" ? "accent-ghost" : "ghost"}
+        size="chrome"
+        disabled={option.isBusy}
+        aria-label={`${actionLabel} ${option.name}`}
+        onClick={onAction}
+      >
+        {option.isBusy ? <Spinner label={`${busyLabel} ${option.name}`} compact /> : null}
+        {option.isBusy ? busyLabel : actionLabel}
+      </Button>
+    );
+  }
+
+  if (option.needsSetup) {
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        size="chrome"
+        aria-label={`Set up ${option.name}`}
+        onClick={onSetup}
+      >
+        Set up
+      </Button>
+    );
+  }
+
+  if (!option.isInstalled) {
+    return <span className="px-1.5 text-subtle-foreground ui-text-chrome">Unavailable</span>;
+  }
+
+  return null;
+}
+
 function ProviderPreferencesSubmenu({
   currentAgentId,
   providerId,
@@ -142,7 +191,8 @@ function ProviderPreferencesSubmenu({
   onAgentChange: (agentId: AgentType) => void;
   onProviderChange: (providerId: string) => void;
 }) {
-  const { options, installAgent } = useAgentOptions(currentAgentId);
+  const { options, isLoading, loadError, refresh, runAgentAction } =
+    useAgentOptions(currentAgentId);
   const providers = useAvailableProviders();
   const [query, setQuery] = useState("");
   const agentOptions = options.filter((option) => option.id !== "custom");
@@ -172,8 +222,22 @@ function ProviderPreferencesSubmenu({
         <PreferenceLabel>Provider</PreferenceLabel>
         <CurrentValue>{currentName}</CurrentValue>
       </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="min-w-56">
+      <DropdownMenuSubContent className="min-w-64">
         <MenuSearchInput value={query} onChange={setQuery} placeholder="Search providers..." />
+        {isLoading ? (
+          <DropdownMenuItem disabled>
+            <Spinner label="Checking agents" compact />
+            Checking agents…
+          </DropdownMenuItem>
+        ) : null}
+        {loadError ? (
+          <DropdownMenuItem closeOnClick={false} title={loadError} onClick={() => void refresh()}>
+            <Warning />
+            <span className="min-w-0 flex-1 truncate">Some agents could not be checked</span>
+            <Retry />
+            Retry
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuRadioGroup
           value={selectedValue}
           onValueChange={(value) => {
@@ -191,7 +255,11 @@ function ProviderPreferencesSubmenu({
               onAgentChange(option.id);
               return;
             }
-            if (option.canInstall) void installAgent(option.id, option.name);
+            if (option.action === "install") {
+              void runAgentAction(option.id, option.name, "install");
+              return;
+            }
+            if (option.needsSetup) useUIState.getState().openSettingsDialog("ai");
           }}
         >
           {filteredAgents.length > 0 ? (
@@ -201,20 +269,34 @@ function ProviderPreferencesSubmenu({
                 <DropdownMenuRadioItem
                   key={option.id}
                   value={`agent:${option.id}`}
-                  disabled={option.isInstalling || (!option.isInstalled && !option.canInstall)}
+                  disabled={
+                    option.isBusy ||
+                    (!option.isInstalled && !option.canInstall && !option.needsSetup)
+                  }
+                  closeOnClick={option.isInstalled}
                   title={option.description}
+                  aria-busy={option.isBusy || undefined}
+                  onClick={() => {
+                    if (option.isCurrent && option.action === "update") {
+                      void runAgentAction(option.id, option.name, "update");
+                    }
+                  }}
+                  trailingAction={
+                    option.action || option.needsSetup || !option.isInstalled ? (
+                      <AgentRowAction
+                        option={option}
+                        onAction={() => {
+                          if (!option.action) return;
+                          void runAgentAction(option.id, option.name, option.action);
+                        }}
+                        onSetup={() => useUIState.getState().openSettingsDialog("ai")}
+                      />
+                    ) : undefined
+                  }
+                  trailingActionVisibility="always"
                 >
                   <ProviderIcon providerId={option.id} size={14} />
                   <span className="min-w-0 flex-1 truncate">{option.name}</span>
-                  {!option.isInstalled ? (
-                    option.isInstalling ? (
-                      <Spinner label={`Installing ${option.name}`} compact />
-                    ) : (
-                      <span className="text-subtle-foreground ui-text-chrome">Install</span>
-                    )
-                  ) : option.updateAvailable ? (
-                    <span className="text-subtle-foreground ui-text-chrome">Update available</span>
-                  ) : null}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuGroup>

@@ -1,7 +1,10 @@
 use super::types::{
    CodexIntegrationStatus, CodexProtocolEvent, CodexRequestDecision, CodexThreadSettings,
 };
-use crate::runtime::AthasAppHandle as AppHandle;
+use crate::{
+   executable_path::{find_executable, user_shell_path},
+   runtime::AthasAppHandle as AppHandle,
+};
 use anyhow::{Context, Result, anyhow, bail};
 use serde_json::{Map, Value, json};
 use std::{
@@ -18,7 +21,7 @@ use tauri::Emitter;
 use tokio::{
    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
    process::{Child, ChildStdin, Command},
-   sync::{Mutex, OnceCell, RwLock, oneshot},
+   sync::{Mutex, RwLock, oneshot},
    task::JoinHandle,
 };
 
@@ -46,7 +49,6 @@ pub struct CodexAppServer {
    app_handle: AppHandle,
    process: Arc<Mutex<Option<CodexProcess>>>,
    status: Arc<RwLock<CodexIntegrationStatus>>,
-   installation: Arc<OnceCell<Option<CodexInstallation>>>,
    start_lock: Arc<Mutex<()>>,
    next_request_id: Arc<AtomicU64>,
 }
@@ -57,7 +59,6 @@ impl CodexAppServer {
          app_handle,
          process: Arc::new(Mutex::new(None)),
          status: Arc::new(RwLock::new(CodexIntegrationStatus::default())),
-         installation: Arc::new(OnceCell::new()),
          start_lock: Arc::new(Mutex::new(())),
          next_request_id: Arc::new(AtomicU64::new(1)),
       }
@@ -73,31 +74,17 @@ impl CodexAppServer {
    }
 
    async fn detect_installation(&self) -> Option<CodexInstallation> {
-      let installation = self
-         .installation
-         .get_or_init(|| async {
-            tokio::task::spawn_blocking(|| {
-               let binary = detect_codex_binary()?;
-               let version = read_codex_version(&binary);
-               Some(CodexInstallation { binary, version })
-            })
-            .await
-            .unwrap_or(None)
-         })
-         .await
-         .clone();
+      let installation = tokio::task::spawn_blocking(|| {
+         let binary = find_executable("codex")?;
+         let version = read_codex_version(&binary);
+         Some(CodexInstallation { binary, version })
+      })
+      .await
+      .unwrap_or(None);
 
-      if let Some(installation) = installation.as_ref() {
-         self
-            .update_status(|status| {
-               status.installed = true;
-               status.version = installation.version.clone();
-               if !status.running && status.state == "unavailable" {
-                  status.state = "stopped".to_string();
-               }
-            })
-            .await;
-      }
+      self
+         .update_status(|status| reconcile_installation_status(status, installation.as_ref()))
+         .await;
 
       installation
    }
@@ -891,26 +878,19 @@ fn insert_optional(params: &mut Map<String, Value>, key: &str, value: Option<&St
    }
 }
 
-fn detect_codex_binary() -> Option<PathBuf> {
-   if let Ok(path) = which::which("codex") {
-      return Some(path);
+fn reconcile_installation_status(
+   status: &mut CodexIntegrationStatus,
+   installation: Option<&CodexInstallation>,
+) {
+   status.installed = installation.is_some();
+   status.version = installation.and_then(|installation| installation.version.clone());
+   if !status.running {
+      status.state = if installation.is_some() {
+         "stopped".to_string()
+      } else {
+         "unavailable".to_string()
+      };
    }
-
-   let home = std::env::var_os("HOME").map(PathBuf::from);
-   let mut candidates = Vec::new();
-   if let Some(home) = home {
-      candidates.extend([
-         home.join(".bun/bin/codex"),
-         home.join(".local/bin/codex"),
-         home.join(".npm-global/bin/codex"),
-         home.join("Library/pnpm/codex"),
-      ]);
-   }
-   candidates.extend([
-      PathBuf::from("/opt/homebrew/bin/codex"),
-      PathBuf::from("/usr/local/bin/codex"),
-   ]);
-   candidates.into_iter().find(|path| path.is_file())
 }
 
 fn read_codex_version(binary: &Path) -> Option<String> {
@@ -921,21 +901,6 @@ fn read_codex_version(binary: &Path) -> Option<String> {
       .filter(|output| output.status.success())
       .and_then(|output| String::from_utf8(output.stdout).ok())
       .map(|version| version.trim().to_string())
-}
-
-fn user_shell_path() -> Option<String> {
-   if cfg!(target_os = "windows") {
-      return None;
-   }
-   let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
-   std::process::Command::new(shell)
-      .args(["-ilc", "echo $PATH"])
-      .output()
-      .ok()
-      .filter(|output| output.status.success())
-      .and_then(|output| String::from_utf8(output.stdout).ok())
-      .map(|path| path.trim().to_string())
-      .filter(|path| !path.is_empty())
 }
 
 fn configure_background_process(command: &mut Command) {
@@ -954,6 +919,25 @@ fn configure_background_process(command: &mut Command) {
 #[cfg(test)]
 mod tests {
    use super::*;
+
+   #[test]
+   fn refreshes_codex_installation_status_in_both_directions() {
+      let installation = CodexInstallation {
+         binary: PathBuf::from("codex"),
+         version: Some("codex-cli 1.2.3".to_string()),
+      };
+      let mut status = CodexIntegrationStatus::default();
+
+      reconcile_installation_status(&mut status, Some(&installation));
+      assert!(status.installed);
+      assert_eq!(status.version.as_deref(), Some("codex-cli 1.2.3"));
+      assert_eq!(status.state, "stopped");
+
+      reconcile_installation_status(&mut status, None);
+      assert!(!status.installed);
+      assert_eq!(status.version, None);
+      assert_eq!(status.state, "unavailable");
+   }
 
    #[test]
    fn applies_only_present_thread_settings() {

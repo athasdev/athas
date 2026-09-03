@@ -16,8 +16,8 @@
       "args": [],
       "install": {
         "runtime": "node",
-        "package": "@agentclientprotocol/claude-agent-acp@0.70.0",
-        "version": "0.70.0",
+        "package": "@agentclientprotocol/claude-agent-acp@0.73.0",
+        "version": "0.73.0",
         "command": "claude-agent-acp"
       }
     }

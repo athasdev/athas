@@ -31,8 +31,8 @@ describe("agent extension manifests", () => {
         binaryName: "claude-agent-acp",
         install: expect.objectContaining({
           runtime: "node",
-          package: "@agentclientprotocol/claude-agent-acp@0.70.0",
-          version: "0.70.0",
+          package: "@agentclientprotocol/claude-agent-acp@0.73.0",
+          version: "0.73.0",
           command: "claude-agent-acp",
         }),
       }),
@@ -57,11 +57,12 @@ describe("agent extension manifests", () => {
       runtime: "binary",
       command: "kimi",
       downloadUrls: {
-        "darwin-arm64": expect.stringContaining("/1.49.0/kimi-1.49.0-aarch64-apple-darwin"),
-        "linux-arm64": expect.stringContaining("/1.49.0/kimi-1.49.0-aarch64-unknown-linux-gnu"),
-        "linux-x64": expect.stringContaining("/1.49.0/kimi-1.49.0-x86_64-unknown-linux-gnu"),
-        "win32-arm64": expect.stringContaining("/1.49.0/kimi-1.49.0-aarch64-pc-windows-msvc"),
-        "win32-x64": expect.stringContaining("/1.49.0/kimi-1.49.0-x86_64-pc-windows-msvc"),
+        "darwin-arm64": expect.stringContaining("/1.50.0/kimi-1.50.0-aarch64-apple-darwin"),
+        "darwin-x64": expect.stringContaining("/1.50.0/kimi-1.50.0-x86_64-apple-darwin"),
+        "linux-arm64": expect.stringContaining("/1.50.0/kimi-1.50.0-aarch64-unknown-linux-gnu"),
+        "linux-x64": expect.stringContaining("/1.50.0/kimi-1.50.0-x86_64-unknown-linux-gnu"),
+        "win32-arm64": expect.stringContaining("/1.50.0/kimi-1.50.0-aarch64-pc-windows-msvc"),
+        "win32-x64": expect.stringContaining("/1.50.0/kimi-1.50.0-x86_64-pc-windows-msvc"),
       },
     });
   });
@@ -81,8 +82,8 @@ describe("agent extension manifests", () => {
         args: ["--acp"],
         install: expect.objectContaining({
           runtime: "node",
-          package: "@github/copilot@1.0.80",
-          version: "1.0.80",
+          package: "@github/copilot@1.0.82",
+          version: "1.0.82",
           command: "copilot",
         }),
       }),
@@ -104,8 +105,8 @@ describe("agent extension manifests", () => {
         args: ["--acp"],
         install: expect.objectContaining({
           runtime: "node",
-          package: "@google/gemini-cli@0.56.0",
-          version: "0.56.0",
+          package: "@google/gemini-cli@0.58.0",
+          version: "0.58.0",
           command: "gemini",
         }),
       }),

@@ -1,6 +1,7 @@
 pub mod acp;
 pub mod chat_history;
 pub mod codex;
+mod executable_path;
 mod runtime;
 
 pub use acp::{

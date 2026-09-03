@@ -1,38 +1,17 @@
 use super::types::AgentConfig;
-use crate::runtime::AthasAppHandle as AppHandle;
+use crate::{executable_path::find_executable, runtime::AthasAppHandle as AppHandle};
 use semver::Version;
 use std::{
    collections::HashMap,
-   env, fs,
+   fs,
    path::{Path, PathBuf},
    process::Command,
-   sync::OnceLock,
    time::Instant,
 };
 use tauri::Manager;
 
 /// Cache duration for binary detection (60 seconds)
 const DETECTION_CACHE_SECONDS: u64 = 60;
-
-/// Get the user's login shell PATH. Bundled apps inherit a minimal PATH,
-/// so we source the full one from the user's shell and cache it.
-pub(crate) fn user_shell_path() -> Option<&'static str> {
-   static CACHED: OnceLock<Option<String>> = OnceLock::new();
-   CACHED
-      .get_or_init(|| {
-         if cfg!(target_os = "windows") {
-            return None;
-         }
-         let shell = env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
-         let output = Command::new(&shell)
-            .args(["-ilc", "echo $PATH"])
-            .output()
-            .ok()?;
-         let path = String::from_utf8(output.stdout).ok()?.trim().to_string();
-         if path.is_empty() { None } else { Some(path) }
-      })
-      .as_deref()
-}
 
 /// Registry of ACP-compatible agents loaded from extension manifests.
 #[derive(Clone)]
@@ -94,7 +73,7 @@ impl AgentRegistry {
             continue;
          }
 
-         if let Some(path) = find_binary(&config.binary_name) {
+         if let Some(path) = find_executable(&config.binary_name) {
             config.installed = true;
             config.installed_version = detect_binary_version(&path);
             config.binary_path = Some(path.to_string_lossy().to_string());
@@ -192,163 +171,11 @@ fn wrapper_file_name(agent_id: &str) -> String {
    }
 }
 
-fn find_binary(binary_name: &str) -> Option<PathBuf> {
-   if let Ok(path) = which::which(binary_name) {
-      return Some(path);
-   }
-
-   let mut candidates: Vec<PathBuf> = Vec::new();
-
-   // PATH entries from the current process
-   if let Some(paths) = env::var_os("PATH") {
-      candidates.extend(env::split_paths(&paths));
-   }
-
-   // Bundled apps inherit a restricted PATH. Source the user's login shell
-   // to get the full PATH (cached for the process lifetime).
-   if let Some(shell_path) = user_shell_path() {
-      candidates.extend(env::split_paths(&std::ffi::OsString::from(shell_path)));
-   }
-
-   // Common global bin locations
-   if let Some(home) = env::var_os("HOME") {
-      let home = PathBuf::from(home);
-      candidates.push(home.join(".local/bin"));
-      candidates.push(home.join(".npm-global/bin"));
-      candidates.push(home.join(".yarn/bin"));
-      candidates.push(home.join(".config/yarn/global/node_modules/.bin"));
-      candidates.push(home.join(".bun/bin"));
-      candidates.push(home.join(".pnpm"));
-      candidates.push(home.join("Library/pnpm"));
-      candidates.push(home.join("Library/pnpm/bin"));
-      candidates.push(home.join(".cargo/bin"));
-      candidates.push(home.join("go/bin"));
-      candidates.push(home.join(".asdf/shims"));
-      candidates.push(home.join(".local/share/mise/shims"));
-
-      // mise Node installs: ~/.local/share/mise/installs/node/*/bin
-      let mise_node = home.join(".local/share/mise/installs/node");
-      if let Ok(entries) = fs::read_dir(mise_node) {
-         for entry in entries.flatten() {
-            candidates.push(entry.path().join("bin"));
-         }
-      }
-
-      // asdf Node installs: ~/.asdf/installs/nodejs/*/bin
-      let asdf_node = home.join(".asdf/installs/nodejs");
-      if let Ok(entries) = fs::read_dir(asdf_node) {
-         for entry in entries.flatten() {
-            candidates.push(entry.path().join("bin"));
-         }
-      }
-
-      // nvm Node installs: ~/.nvm/versions/node/*/bin
-      let nvm_node = home.join(".nvm/versions/node");
-      if let Ok(entries) = fs::read_dir(nvm_node) {
-         for entry in entries.flatten() {
-            candidates.push(entry.path().join("bin"));
-         }
-      }
-   }
-
-   // Common system paths on macOS/Linux
-   candidates.push(PathBuf::from("/usr/local/bin"));
-   candidates.push(PathBuf::from("/opt/homebrew/bin"));
-   candidates.push(PathBuf::from("/usr/bin"));
-   candidates.push(PathBuf::from("/bin"));
-   candidates.push(PathBuf::from("/opt/local/bin"));
-
-   if let Ok(cwd) = env::current_dir() {
-      candidates.push(cwd.join("node_modules/.bin"));
-   }
-
-   // Env-specific bin dirs if present
-   if let Some(dir) = env::var_os("PNPM_HOME") {
-      candidates.push(PathBuf::from(dir));
-   }
-   if let Some(dir) = env::var_os("BUN_INSTALL") {
-      candidates.push(PathBuf::from(dir).join("bin"));
-   }
-   if let Some(dir) = env::var_os("VOLTA_HOME") {
-      candidates.push(PathBuf::from(dir).join("bin"));
-   }
-   if let Some(dir) = env::var_os("NVM_BIN") {
-      candidates.push(PathBuf::from(dir));
-   }
-   if let Some(dir) = env::var_os("MISE_DATA_DIR") {
-      let mise_node = PathBuf::from(dir).join("installs/node");
-      if let Ok(entries) = fs::read_dir(mise_node) {
-         for entry in entries.flatten() {
-            candidates.push(entry.path().join("bin"));
-         }
-      }
-   }
-   if let Some(dir) = env::var_os("ASDF_DATA_DIR") {
-      let asdf_node = PathBuf::from(dir).join("installs/nodejs");
-      if let Ok(entries) = fs::read_dir(asdf_node) {
-         for entry in entries.flatten() {
-            candidates.push(entry.path().join("bin"));
-         }
-      }
-   }
-   if let Some(dir) = env::var_os("GOPATH") {
-      candidates.push(PathBuf::from(dir).join("bin"));
-   }
-   if let Some(dir) = env::var_os("GOBIN") {
-      candidates.push(PathBuf::from(dir));
-   }
-   if let Some(dir) = env::var_os("CARGO_HOME") {
-      candidates.push(PathBuf::from(dir).join("bin"));
-   }
-
-   for dir in candidates {
-      if let Some(found) = check_dir_for_binary(&dir, binary_name) {
-         return Some(found);
-      }
-   }
-
-   None
-}
-
-fn check_dir_for_binary(dir: &Path, binary_name: &str) -> Option<PathBuf> {
-   #[cfg(target_os = "windows")]
-   {
-      let lowercase_name = binary_name.to_ascii_lowercase();
-      let mut candidate_names = vec![binary_name.to_string()];
-
-      for ext in [".exe", ".cmd", ".bat", ".ps1"] {
-         if !lowercase_name.ends_with(ext) {
-            candidate_names.push(format!("{binary_name}{ext}"));
-         }
-      }
-
-      for name in candidate_names {
-         let candidate = dir.join(name);
-         if candidate.is_file() {
-            return Some(candidate);
-         }
-      }
-
-      None
-   }
-
-   #[cfg(not(target_os = "windows"))]
-   {
-      let candidate = dir.join(binary_name);
-      if candidate.is_file() {
-         return Some(candidate);
-      }
-      None
-   }
-}
-
 #[cfg(test)]
 mod tests {
-   use super::{
-      check_dir_for_binary, managed_agent_version, managed_wrapper_path, should_update_agent,
-   };
+   use super::{managed_agent_version, managed_wrapper_path, should_update_agent};
    use crate::acp::types::AgentConfig;
-   use std::{fs, path::PathBuf};
+   use std::fs;
 
    #[test]
    fn managed_wrapper_path_prefers_expected_wrapper_name() {
@@ -363,12 +190,6 @@ mod tests {
       let resolved =
          managed_wrapper_path(Some(temp_dir.path()), "test-agent").expect("wrapper should exist");
       assert_eq!(resolved, wrapper);
-   }
-
-   #[test]
-   fn check_dir_for_binary_returns_none_for_missing_binary() {
-      let missing = check_dir_for_binary(PathBuf::from("/tmp/athas-missing").as_path(), "nope");
-      assert!(missing.is_none());
    }
 
    #[test]

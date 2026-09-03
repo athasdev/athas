@@ -16,8 +16,8 @@
       "args": ["--acp"],
       "install": {
         "runtime": "node",
-        "package": "@google/gemini-cli@0.56.0",
-        "version": "0.56.0",
+        "package": "@google/gemini-cli@0.58.0",
+        "version": "0.58.0",
         "command": "gemini"
       }
     }

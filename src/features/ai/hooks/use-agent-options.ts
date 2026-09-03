@@ -1,112 +1,103 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
+import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import {
-  BUILT_IN_AI_INTEGRATIONS,
-  CODEX_INTEGRATION_ID,
-} from "@/features/ai/integrations/integration-registry";
-import { isTerminalAgent, TERMINAL_AGENT_OPTIONS } from "@/features/ai/lib/terminal-agents";
+  buildAgentOptions,
+  getAgentErrorMessage,
+  loadAgentAvailability,
+  type AgentAction,
+  type PendingAgentAction,
+} from "@/features/ai/lib/agent-options";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import { toast } from "sonner";
 
-const ATHAS_AGENT_OPTION = {
-  id: "custom",
-  name: "AI Chat",
-  description: "Chat directly with a configured model provider",
-};
-
-export interface AgentOption {
-  id: AgentType;
-  name: string;
-  description: string;
-  isInstalled: boolean;
-  isCurrent: boolean;
-  canInstall: boolean;
-  isInstalling: boolean;
-  updateAvailable: boolean;
-}
-
 export function useAgentOptions(currentAgentId: AgentType) {
-  const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set(["custom"]));
   const [agentConfigs, setAgentConfigs] = useState<Map<string, AgentConfig>>(new Map());
-  const [installingAgentId, setInstallingAgentId] = useState<string | null>(null);
+  const [codexInstalled, setCodexInstalled] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAgentAction | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const loadRequestIdRef = useRef(0);
+  const pendingActionRef = useRef<PendingAgentAction | null>(null);
 
-  const loadInstalledAgents = useCallback(async () => {
+  const loadAgents = useCallback(async (showLoading = true) => {
+    const requestId = ++loadRequestIdRef.current;
+    if (showLoading) setIsLoading(true);
+    setLoadError(null);
+
     try {
-      const detectedAgents = await invoke<AgentConfig[]>("get_available_agents");
-      const codex = await CodexIntegrationService.status().catch(() => null);
-      setAgentConfigs(new Map(detectedAgents.map((agent) => [agent.id, agent])));
-      const installed = new Set<string>(["custom"]);
-      if (codex?.installed) installed.add(CODEX_INTEGRATION_ID);
-      for (const agent of detectedAgents) {
-        if (agent.installed) installed.add(agent.id);
+      const result = await loadAgentAvailability(
+        () => invoke<AgentConfig[]>("get_available_agents"),
+        () => CodexIntegrationService.status(),
+      );
+      if (requestId !== loadRequestIdRef.current) return;
+
+      if (result.agents) {
+        setAgentConfigs(new Map(result.agents.map((agent) => [agent.id, agent])));
       }
-      setInstalledAgents(installed);
-    } catch {
-      setAgentConfigs(new Map());
+      if (result.codexInstalled !== null) {
+        setCodexInstalled(result.codexInstalled);
+      }
+      setLoadError(result.errors.length > 0 ? result.errors.join("\n") : null);
+    } catch (error) {
+      if (requestId === loadRequestIdRef.current) {
+        setLoadError(getAgentErrorMessage(error));
+      }
+    } finally {
+      if (requestId === loadRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    void loadInstalledAgents();
-  }, [loadInstalledAgents]);
+    void loadAgents();
+    return () => {
+      loadRequestIdRef.current += 1;
+    };
+  }, [loadAgents]);
 
-  const options = useMemo<AgentOption[]>(() => {
-    const registryAgents = Array.from(agentConfigs.values()).sort((left, right) =>
-      left.name.localeCompare(right.name),
-    );
-    const availableAgents = [
-      ATHAS_AGENT_OPTION,
-      ...BUILT_IN_AI_INTEGRATIONS,
-      ...TERMINAL_AGENT_OPTIONS,
-      ...registryAgents,
-    ];
-
-    return availableAgents.map((agent) => {
-      const agentId = agent.id as AgentType;
-      const isInstalled = installedAgents.has(agent.id);
-      const agentConfig = agentConfigs.get(agent.id);
-      const isTerminal = isTerminalAgent(agent.id);
-      const isIntegration = agent.id === CODEX_INTEGRATION_ID;
-
-      return {
-        id: agentId,
-        name: agent.name,
-        description: agentConfig?.description ?? agent.description ?? "ACP-compatible coding agent",
-        isInstalled: isTerminal || isInstalled,
-        isCurrent: agent.id === currentAgentId,
-        canInstall:
-          agent.id === "custom" || isTerminal || isIntegration
-            ? false
-            : (agentConfig?.canInstall ?? true),
-        isInstalling: installingAgentId === agent.id,
-        updateAvailable: agentConfig?.updateAvailable ?? false,
-      };
-    });
-  }, [agentConfigs, currentAgentId, installedAgents, installingAgentId]);
-
-  const installAgent = useCallback(
-    async (agentId: AgentType, agentName: string) => {
-      if (agentId === "custom" || agentId === CODEX_INTEGRATION_ID || installingAgentId) return;
-
-      setInstallingAgentId(agentId);
-      try {
-        const installedAgent = await invoke<AgentConfig>("install_acp_agent", { agentId });
-        setAgentConfigs((current) => new Map(current).set(installedAgent.id, installedAgent));
-        setInstalledAgents((current) => new Set(current).add(installedAgent.id));
-        toast.success(`${agentName} installed`);
-      } catch (error) {
-        toast.error(`Failed to install ${agentName}`, {
-          description: error instanceof Error ? error.message : "Unknown error",
-        });
-      } finally {
-        setInstallingAgentId(null);
-        void loadInstalledAgents();
-      }
-    },
-    [installingAgentId, loadInstalledAgents],
+  const options = useMemo(
+    () => buildAgentOptions({ currentAgentId, agentConfigs, codexInstalled, pendingAction }),
+    [agentConfigs, codexInstalled, currentAgentId, pendingAction],
   );
 
-  return { options, installAgent };
+  const runAgentAction = useCallback(
+    async (agentId: AgentType, agentName: string, action: AgentAction) => {
+      if (agentId === "custom" || agentId === CODEX_INTEGRATION_ID || pendingActionRef.current) {
+        return;
+      }
+
+      const nextAction = { agentId, action };
+      pendingActionRef.current = nextAction;
+      setPendingAction(nextAction);
+      try {
+        const updatedAgent = await invoke<AgentConfig>(
+          action === "update" ? "update_acp_agent" : "install_acp_agent",
+          { agentId },
+        );
+        setAgentConfigs((current) => new Map(current).set(updatedAgent.id, updatedAgent));
+        toast.success(`${agentName} ${action === "update" ? "updated" : "installed"}`);
+      } catch (error) {
+        toast.error(`Failed to ${action} ${agentName}`, {
+          description: getAgentErrorMessage(error),
+        });
+      } finally {
+        pendingActionRef.current = null;
+        setPendingAction(null);
+        void loadAgents(false);
+      }
+    },
+    [loadAgents],
+  );
+
+  return {
+    options,
+    isLoading,
+    loadError,
+    refresh: loadAgents,
+    runAgentAction,
+  };
 }

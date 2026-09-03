@@ -667,7 +667,9 @@ async function validateAgentsAgainstAcpRegistry(extensionFolders: string[]): Pro
           for (const [platform, url] of Object.entries(downloadUrls)) {
             const registryUrl =
               registryAgent.distribution?.binary?.[registryPlatformArch(platform)]?.archive;
-            if (typeof url !== "string" || url !== registryUrl) {
+            if (typeof url !== "string") {
+              error(folder, `Agent '${agentId}' binary URL for ${platform} is invalid`);
+            } else if (registryUrl && url !== registryUrl) {
               error(
                 folder,
                 `Agent '${agentId}' binary URL for ${platform} does not match the ACP Registry`,

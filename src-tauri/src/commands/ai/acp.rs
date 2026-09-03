@@ -18,6 +18,15 @@ use tokio::sync::Mutex;
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
 const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
 const NON_ACP_AGENT_IDS: &[&str] = &["claude-code", "codex-cli", "codex"];
+const BUNDLED_AGENT_MANIFESTS: &[&str] = &[
+   include_str!("../../../../extensions/official/antigravity/extension.json"),
+   include_str!("../../../../extensions/official/claude-code/extension.json"),
+   include_str!("../../../../extensions/official/gemini-cli/extension.json"),
+   include_str!("../../../../extensions/official/github-copilot/extension.json"),
+   include_str!("../../../../extensions/official/kimi-cli/extension.json"),
+   include_str!("../../../../extensions/official/opencode/extension.json"),
+   include_str!("../../../../extensions/official/qwen-code/extension.json"),
+];
 
 fn is_acp_agent_id(agent_id: &str) -> bool {
    !NON_ACP_AGENT_IDS.contains(&agent_id)
@@ -297,6 +306,35 @@ fn merge_agent_catalog(
    agents
 }
 
+fn bundled_agent_catalog() -> Vec<AgentConfig> {
+   BUNDLED_AGENT_MANIFESTS
+      .iter()
+      .filter_map(
+         |manifest| match serde_json::from_str::<MarketplaceExtensionManifest>(manifest) {
+            Ok(manifest) => Some(manifest),
+            Err(error) => {
+               log::error!("Invalid bundled agent manifest: {error}");
+               None
+            }
+         },
+      )
+      .flat_map(|manifest| manifest.agents)
+      .filter(|agent| is_acp_agent_id(&agent.id))
+      .map(to_agent_config)
+      .collect()
+}
+
+fn agent_configs_from_manifests(
+   manifests: HashMap<String, MarketplaceExtensionManifest>,
+) -> Vec<AgentConfig> {
+   manifests
+      .into_values()
+      .flat_map(|manifest| manifest.agents)
+      .filter(|agent| is_acp_agent_id(&agent.id))
+      .map(to_agent_config)
+      .collect()
+}
+
 async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
    let cache = AGENT_CATALOG_CACHE.get_or_init(|| std::sync::Mutex::new(None));
    {
@@ -310,24 +348,25 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
       }
    }
 
+   let bundled_agents = bundled_agent_catalog();
    let marketplace_agents = match reqwest::Client::new()
       .get(extensions_manifest_url())
       .timeout(Duration::from_secs(5))
       .send()
       .await
    {
-      Ok(response) if response.status().is_success() => response
-         .json::<HashMap<String, MarketplaceExtensionManifest>>()
-         .await
-         .map(|manifests| {
-            manifests
-               .into_values()
-               .flat_map(|manifest| manifest.agents)
-               .filter(|agent| is_acp_agent_id(&agent.id))
-               .map(to_agent_config)
-               .collect::<Vec<_>>()
-         })
-         .map_err(|error| format!("Invalid agent catalog: {}", error))?,
+      Ok(response) if response.status().is_success() => {
+         match response
+            .json::<HashMap<String, MarketplaceExtensionManifest>>()
+            .await
+         {
+            Ok(manifests) => agent_configs_from_manifests(manifests),
+            Err(error) => {
+               log::warn!("Invalid remote agent catalog: {error}; using bundled agents");
+               Vec::new()
+            }
+         }
+      }
       Ok(response) => {
          log::warn!(
             "Failed to load agent catalog: HTTP {}; using bundled agents",
@@ -343,7 +382,7 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
          Vec::new()
       }
    };
-   let agents = merge_agent_catalog(marketplace_agents, Vec::new());
+   let agents = merge_agent_catalog(marketplace_agents, bundled_agents);
 
    let mut cached = cache
       .lock()
@@ -692,7 +731,10 @@ fn make_wrapper_executable(path: &PathBuf) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-   use super::{is_acp_agent_id, node_package_identity};
+   use super::{
+      bundled_agent_catalog, is_acp_agent_id, merge_agent_catalog, node_package_identity,
+   };
+   use athas_ai::AgentConfig;
 
    #[test]
    fn keeps_terminal_integrations_out_of_the_acp_catalog() {
@@ -713,5 +755,34 @@ mod tests {
          "@google/gemini-cli"
       );
       assert_eq!(node_package_identity("@scope/package"), "@scope/package");
+   }
+
+   #[test]
+   fn bundles_every_official_acp_agent_for_offline_discovery() {
+      let agents = bundled_agent_catalog();
+      let ids = agents
+         .iter()
+         .map(|agent| agent.id.as_str())
+         .collect::<Vec<_>>();
+
+      assert_eq!(agents.len(), 7);
+      assert!(ids.contains(&"claude-acp"));
+      assert!(ids.contains(&"antigravity-acp"));
+      assert!(agents.iter().all(|agent| agent.can_install));
+   }
+
+   #[test]
+   fn remote_agent_metadata_overrides_the_bundled_fallback() {
+      let mut bundled = AgentConfig::new("test-agent", "Bundled", "test-agent");
+      bundled.available_version = Some("1.0.0".to_string());
+      let mut remote = bundled.clone();
+      remote.name = "Remote".to_string();
+      remote.available_version = Some("2.0.0".to_string());
+
+      let merged = merge_agent_catalog(vec![remote], vec![bundled]);
+
+      assert_eq!(merged.len(), 1);
+      assert_eq!(merged[0].name, "Remote");
+      assert_eq!(merged[0].available_version.as_deref(), Some("2.0.0"));
    }
 }
