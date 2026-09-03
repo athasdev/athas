@@ -23,7 +23,6 @@ import {
   PauseIcon as Pause,
   PlayIcon as Play,
   PlusIcon as Plus,
-  RobotIcon as Agent,
   SparkleIcon as Sparkles,
   SquaresFourIcon as Overview,
   TrashIcon as Trash,
@@ -471,7 +470,6 @@ function CreateContent({ onCreated }: { onCreated: (taskId: string) => void }) {
                 onChange={setAgentId}
                 disabled={isLoading || agentOptions.length === 0}
                 placeholder={isLoading ? "Checking agents…" : "No runnable agents"}
-                leftIcon={Agent}
                 aria-label="Continuous agent provider"
               />
             </Field>
@@ -629,7 +627,6 @@ function TaskContent({
               variant="default"
               onClick={() => openAgentBuffer(task.lastChatId!)}
             >
-              <Agent />
               Open latest session
             </Button>
           ) : (
