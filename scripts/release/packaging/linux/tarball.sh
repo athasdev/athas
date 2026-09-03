@@ -116,6 +116,52 @@ fi
 install -d "${libexec_dir}/locales"
 cp "${cef_dir}/locales/"*.pak "${libexec_dir}/locales/"
 
+if ! command -v ldd >/dev/null 2>&1; then
+  echo "ldd is required to collect Linux tarball runtime libraries." >&2
+  exit 1
+fi
+
+if ! command -v patchelf >/dev/null 2>&1; then
+  echo "patchelf is required to prepare Linux tarball runtime libraries." >&2
+  exit 1
+fi
+
+is_glibc_runtime_library() {
+  case "$1" in
+    ld-linux*.so.* | libc.so.* | libdl.so.* | libm.so.* | libpthread.so.* | libresolv.so.* | librt.so.* | libutil.so.*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+ldd_output="$(ldd "${libexec_dir}/athas")" || {
+  echo "Could not inspect Linux tarball runtime libraries." >&2
+  exit 1
+}
+
+if grep -q 'not found' <<<"$ldd_output"; then
+  echo "Linux tarball runtime libraries could not be resolved:" >&2
+  grep 'not found' <<<"$ldd_output" >&2
+  exit 1
+fi
+
+while IFS=$'\t' read -r library_name library_path; do
+  if is_glibc_runtime_library "$library_name" || [[ -e "${libexec_dir}/${library_name}" ]]; then
+    continue
+  fi
+
+  install -m 755 "$library_path" "${libexec_dir}/${library_name}"
+done < <(
+  awk '$2 == "=>" && $3 ~ /^\// { print $1 "\t" $3 }' <<<"$ldd_output"
+)
+
+while IFS= read -r -d '' library_path; do
+  patchelf --add-rpath '$ORIGIN' "$library_path"
+done < <(find "$libexec_dir" -maxdepth 1 -type f \( -name '*.so' -o -name '*.so.*' \) -print0)
+
 if command -v strip >/dev/null 2>&1; then
   find "$libexec_dir" -maxdepth 1 -type f \( -name '*.so' -o -name '*.so.*' \) -exec strip --strip-unneeded {} +
 fi
@@ -157,6 +203,7 @@ tar -tzf "$archive_path" > "$archive_contents"
 for required in \
   "${app_dir_name}/libexec/athas" \
   "${app_dir_name}/libexec/libcef.so" \
+  "${app_dir_name}/libexec/libgdk_pixbuf-2.0.so.0" \
   "${app_dir_name}/libexec/icudtl.dat" \
   "${app_dir_name}/libexec/locales/en-US.pak" \
   "${app_dir_name}/lib/${product_name}/bundled"

@@ -54,6 +54,15 @@ describe("Linux release packaging", () => {
     expect(cefFiles).not.toContain("chrome-sandbox");
   });
 
+  it("bundles non-glibc runtime libraries in portable tarballs", () => {
+    const script = readRepoFile("scripts/release/packaging/linux/tarball.sh");
+
+    expect(script).toContain('ldd "${libexec_dir}/athas"');
+    expect(script).toContain("is_glibc_runtime_library");
+    expect(script).toContain("patchelf --add-rpath '$ORIGIN'");
+    expect(script).toContain("${app_dir_name}/libexec/libgdk_pixbuf-2.0.so.0");
+  });
+
   it("preserves the root-owned setuid sandbox contract in Debian packages", () => {
     const script = readRepoFile("scripts/release/packaging/linux/native.sh");
 
