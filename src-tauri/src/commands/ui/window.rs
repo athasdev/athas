@@ -641,6 +641,19 @@ pub async fn create_app_window(
    let started_at = Instant::now();
    let request_kind = window_open_request_kind(request.as_ref());
    log::info!("[window-open:command] create_app_window:start kind={request_kind}");
+   #[cfg(target_os = "macos")]
+   let result = {
+      let (sender, receiver) = tokio::sync::oneshot::channel();
+      let app_handle = app.clone();
+      app.run_on_main_thread(move || {
+         let _ = sender.send(create_app_window_internal(&app_handle, request));
+      })
+      .map_err(|error| error.to_string())?;
+      receiver
+         .await
+         .map_err(|_| "App window creation ended without a response".to_string())?
+   };
+   #[cfg(not(target_os = "macos"))]
    let result = create_app_window_internal(&app, request);
    match &result {
       Ok(label) => log::info!(
