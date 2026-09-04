@@ -1,4 +1,4 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { ProjectCustomIcon } from "@/features/window/components/project-custom-icon";
 import { FolderIcon, PlusIcon, RemoteIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
@@ -22,13 +22,7 @@ export function ProjectGlyph({
   className?: string;
 }) {
   if (iconPath) {
-    return (
-      <img
-        src={convertFileSrc(iconPath)}
-        alt=""
-        className={cn("size-[1em] shrink-0 rounded-md object-contain", className)}
-      />
-    );
+    return <ProjectCustomIcon value={iconPath} className={className} />;
   }
 
   const Icon = isRemoteProjectPath(projectPath) ? RemoteIcon : projectPath ? FolderIcon : PlusIcon;

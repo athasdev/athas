@@ -1,4 +1,5 @@
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
+import { ProjectCustomIcon } from "./project-custom-icon";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -489,11 +490,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
                       onClick={() => handleRecentFolderClick(folder)}
                       icon={
                         iconPath ? (
-                          <img
-                            src={convertFileSrc(iconPath)}
-                            alt=""
-                            className="size-(--app-ui-font-size) rounded-sm object-contain"
-                          />
+                          <ProjectCustomIcon value={iconPath} />
                         ) : folder.missing ? (
                           <WarningCircle className="text-warning" />
                         ) : (

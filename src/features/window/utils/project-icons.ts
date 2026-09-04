@@ -1,11 +1,29 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readDir } from "@tauri-apps/plugin-fs";
+import { matchesSearchQuery } from "@/utils/search-match";
 
 export interface ProjectIconFile {
   name: string;
   path: string;
   src: string;
   score: number;
+}
+
+export function getProjectIconOptions(
+  icons: ProjectIconFile[],
+  projectPath: string,
+  query: string,
+) {
+  const prefix = `${projectPath.replace(/[\\/]+$/, "")}/`.replace(/\\/g, "/");
+  return icons
+    .map((icon) => {
+      const normalizedPath = icon.path.replace(/\\/g, "/");
+      const relativePath = normalizedPath.startsWith(prefix)
+        ? normalizedPath.slice(prefix.length)
+        : normalizedPath;
+      return { ...icon, relativePath };
+    })
+    .filter((icon) => matchesSearchQuery(query, [icon.name, icon.relativePath]));
 }
 
 const IGNORED_DIRECTORIES = new Set([

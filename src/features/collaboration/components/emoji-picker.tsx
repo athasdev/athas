@@ -6,79 +6,10 @@ import Input from "@/ui/input";
 import { Toggle } from "@/ui/toggle";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
+import { defaultEmojiPickerOptions, emojiLabels } from "@/utils/emoji-catalog";
 
 const RECENT_EMOJI_STORAGE_KEY = "athas.ui.emoji-picker.recent";
 const MAX_RECENT_EMOJIS = 8;
-
-const defaultEmojiPickerOptions = [
-  "💬",
-  "🛠️",
-  "🚀",
-  "🧪",
-  "📣",
-  "🔒",
-  "📌",
-  "⚡",
-  "✅",
-  "🔥",
-  "🎯",
-  "🧠",
-  "👀",
-  "🙌",
-  "🙏",
-  "❤️",
-  "✨",
-  "⭐",
-  "💡",
-  "📎",
-  "📁",
-  "📝",
-  "🐛",
-  "🚨",
-  "⏳",
-  "🔍",
-  "🎨",
-  "⚙️",
-  "🧩",
-  "🧵",
-  "📦",
-  "🧹",
-];
-
-const emojiLabels: Record<string, { label: string; keywords: string[] }> = {
-  "💬": { label: "Message", keywords: ["chat", "comment", "thread"] },
-  "🛠️": { label: "Tools", keywords: ["fix", "build", "work"] },
-  "🚀": { label: "Launch", keywords: ["ship", "release", "deploy"] },
-  "🧪": { label: "Test", keywords: ["lab", "qa", "experiment"] },
-  "📣": { label: "Announcement", keywords: ["news", "broadcast"] },
-  "🔒": { label: "Private", keywords: ["lock", "secure"] },
-  "📌": { label: "Pinned", keywords: ["pin", "important"] },
-  "⚡": { label: "Fast", keywords: ["bolt", "performance"] },
-  "✅": { label: "Done", keywords: ["check", "complete"] },
-  "🔥": { label: "Hot", keywords: ["fire", "urgent"] },
-  "🎯": { label: "Goal", keywords: ["target", "focus"] },
-  "🧠": { label: "Ideas", keywords: ["brain", "think"] },
-  "👀": { label: "Review", keywords: ["eyes", "look"] },
-  "🙌": { label: "Celebrate", keywords: ["hands", "thanks"] },
-  "🙏": { label: "Request", keywords: ["please", "pray"] },
-  "❤️": { label: "Love", keywords: ["heart", "like"] },
-  "✨": { label: "Polish", keywords: ["sparkles", "clean"] },
-  "⭐": { label: "Star", keywords: ["favorite", "important"] },
-  "💡": { label: "Idea", keywords: ["light", "bulb"] },
-  "📎": { label: "Attachment", keywords: ["clip", "file"] },
-  "📁": { label: "Files", keywords: ["folder", "project"] },
-  "📝": { label: "Notes", keywords: ["memo", "write"] },
-  "🐛": { label: "Bug", keywords: ["issue", "debug"] },
-  "🚨": { label: "Alert", keywords: ["warning", "incident"] },
-  "⏳": { label: "Waiting", keywords: ["hourglass", "pending"] },
-  "🔍": { label: "Search", keywords: ["find", "inspect"] },
-  "🎨": { label: "Design", keywords: ["paint", "style"] },
-  "⚙️": { label: "Settings", keywords: ["gear", "config"] },
-  "🧩": { label: "Integration", keywords: ["plugin", "piece"] },
-  "🧵": { label: "Thread", keywords: ["conversation", "topic"] },
-  "📦": { label: "Package", keywords: ["box", "bundle"] },
-  "🧹": { label: "Cleanup", keywords: ["sweep", "refactor"] },
-};
 
 interface EmojiPickerProps {
   selected?: string;

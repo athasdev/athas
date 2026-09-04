@@ -1,10 +1,5 @@
 import { appDataDir } from "@tauri-apps/api/path";
-import {
-  ArrowDownIcon as ArrowDown,
-  ArrowUpIcon as ArrowUp,
-  MagnifyingGlassIcon as Search,
-  PuzzlePieceIcon as Puzzle,
-} from "@/ui/icons";
+import { MagnifyingGlassIcon as Search, PuzzlePieceIcon as Puzzle } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
@@ -38,7 +33,6 @@ import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import Command, {
   CommandEmpty,
-  CommandFooter,
   CommandHeader,
   CommandInput,
   CommandItemBadge,
@@ -47,7 +41,7 @@ import Command, {
   CommandTabs,
   useCommandListNavigation,
 } from "@/ui/command";
-import { Kbd, KbdGroup } from "@/ui/kbd";
+import { Kbd } from "@/ui/kbd";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import Keybinding from "@/features/keymaps/components/keybinding";
 import { createAdvancedActions } from "../constants/advanced-actions";
@@ -593,26 +587,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
               ))
             )}
           </CommandList>
-
-          <CommandFooter>
-            <KbdGroup>
-              <Kbd>
-                <ArrowUp />
-              </Kbd>
-              <Kbd>
-                <ArrowDown />
-              </Kbd>
-              <span className="text-subtle-foreground ui-text-chrome">Navigate</span>
-            </KbdGroup>
-            <KbdGroup>
-              <Kbd>Return</Kbd>
-              <span className="text-subtle-foreground ui-text-chrome">Run</span>
-            </KbdGroup>
-            <KbdGroup>
-              <Kbd>Esc</Kbd>
-              <span className="text-subtle-foreground ui-text-chrome">Close</span>
-            </KbdGroup>
-          </CommandFooter>
         </>
       )}
     </Command>
