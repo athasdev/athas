@@ -33,6 +33,7 @@ import Input from "@/ui/input";
 import Section, { SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
+import { TextLink } from "@/ui/text-link";
 import { ToggleGroup } from "@/ui/toggle-group";
 import { fetchAutocompleteModels } from "@/features/editor/services/editor-autocomplete-service";
 import {
@@ -747,11 +748,9 @@ export const AISettings = () => {
                 <Button
                   shape="pill"
                   type="button"
-                  variant="default"
+                  variant="danger"
                   onClick={handleRemoveOllamaApiKey}
-                  title="Remove saved API key"
-                  aria-label="Remove Ollama API key"
-                  className="text-destructive hover:bg-destructive/10"
+                  tooltip="Remove saved API key"
                   iconOnly
                 >
                   <Trash2 />
@@ -763,14 +762,14 @@ export const AISettings = () => {
             <SettingRow label="Ollama Cloud Key" description="Ollama Cloud requires an API key.">
               <div className="flex items-center gap-1.5">
                 <AlertCircle className="shrink-0 text-warning" />
-                <a
+                <TextLink
                   href="https://ollama.com/settings/keys"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                  className="inline-flex items-center gap-1"
                 >
                   Get key <ExternalLink className="size-3" />
-                </a>
+                </TextLink>
               </div>
             </SettingRow>
           )}

@@ -1,11 +1,9 @@
 import { Switch as SwitchPrimitive } from "@base-ui/react/switch";
 import { cn } from "@/utils/cn";
 
-interface SwitchProps {
+interface SwitchProps extends Omit<SwitchPrimitive.Root.Props, "onCheckedChange"> {
   checked: boolean;
   onChange: (checked: boolean) => void;
-  disabled?: boolean;
-  className?: string;
 }
 
 const switchClassName =
@@ -14,15 +12,15 @@ const switchClassName =
 const switchThumbClassName =
   "pointer-events-none block size-2.5 rounded-full bg-foreground shadow-(--shadow-card) transition-[transform,background-color,box-shadow] duration-normal ease-smooth group-data-checked/switch:translate-x-3.5 group-data-checked/switch:bg-background";
 
-export default function Switch({ checked, onChange, disabled = false, className }: SwitchProps) {
+export default function Switch({ checked, onChange, className, ...props }: SwitchProps) {
   return (
     <SwitchPrimitive.Root
       data-setting-interactive-root="true"
       data-setting-primary-control="true"
       checked={checked}
       onCheckedChange={onChange}
-      disabled={disabled}
       className={cn(switchClassName, className)}
+      {...props}
     >
       <SwitchPrimitive.Thumb className={switchThumbClassName} />
     </SwitchPrimitive.Root>

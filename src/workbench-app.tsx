@@ -23,6 +23,9 @@ import { TooltipProvider } from "./ui/tooltip";
 import { WindowResizeBorder } from "./features/window/components/window-resize-border";
 import { DialogServiceProvider } from "@/ui/dialog";
 import { ContinuousAgentsRuntime } from "@/features/ai/continuous-agents/continuous-agents-runtime";
+import { ProductFeedbackDialog } from "@/features/feedback/components/product-feedback-dialog";
+import { bucketFrictionDuration } from "@/features/telemetry/lib/friction-signals";
+import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 
 function WorkbenchApp() {
   useAppBootstrap();
@@ -37,10 +40,21 @@ function WorkbenchApp() {
       durationMs: Math.round((performance.now() - mountedAt) * 100) / 100,
     }));
     const cleanupStartupMilestone = recordStartupMilestoneAfterFrame("workbench:first-frame");
+    const frictionFrame = window.requestAnimationFrame(() => {
+      const readyDuration = performance.now();
+      if (readyDuration >= 5_000) {
+        void recordFrictionSignal({
+          area: "startup",
+          signal: "slow_ready",
+          durationBucket: bucketFrictionDuration(readyDuration),
+        });
+      }
+    });
 
     return () => {
       cleanupTrace();
       cleanupStartupMilestone();
+      window.cancelAnimationFrame(frictionFrame);
     };
   }, []);
 
@@ -86,6 +100,7 @@ function WorkbenchApp() {
             <Toaster />
             <NotificationRecorder />
             <ContinuousAgentsRuntime />
+            <ProductFeedbackDialog />
           </div>
         </TooltipProvider>
       </DialogServiceProvider>

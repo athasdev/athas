@@ -23,6 +23,7 @@ interface GitHubReleaseResponse {
 interface WhatsNewStorageState {
   current?: WhatsNewInfo;
   pending?: WhatsNewInfo;
+  lastReadVersion?: string;
 }
 
 const STORAGE_KEY = "athas-whats-new";
@@ -246,13 +247,32 @@ export function storeCurrentWhatsNew(info: WhatsNewInfo) {
   });
 }
 
+export function isWhatsNewUnread(currentVersion: string): boolean {
+  const state = readState();
+  return (
+    state.current?.version === currentVersion &&
+    Boolean(state.current.previousVersion) &&
+    state.lastReadVersion !== currentVersion
+  );
+}
+
+export function markWhatsNewRead(version: string) {
+  const state = readState();
+  writeState({
+    ...state,
+    lastReadVersion: version,
+  });
+}
+
 export function hydrateWhatsNew(currentVersion: string): WhatsNewInfo {
   const state = readState();
 
   if (state.pending?.version === currentVersion) {
     const info = state.pending;
     writeState({
+      ...state,
       current: info,
+      pending: undefined,
     });
 
     return info;

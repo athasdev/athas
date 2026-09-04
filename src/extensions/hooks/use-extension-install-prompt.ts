@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { useExtensionStore } from "../registry/extension-store";
 
 interface ExtensionInstallNeededEvent {
@@ -55,6 +56,7 @@ export const useExtensionInstallPrompt = () => {
 
               // Install the extension
               await installExtension(extensionId);
+              activePrompts.delete(extensionId);
 
               // Show success
               updateToast(toastId, {
@@ -77,7 +79,6 @@ export const useExtensionInstallPrompt = () => {
               // Auto-dismiss success message after 3 seconds
               setTimeout(() => {
                 dismissToast(toastId);
-                activePrompts.delete(extensionId);
               }, 3000);
             } catch (error) {
               // Show error
@@ -90,9 +91,10 @@ export const useExtensionInstallPrompt = () => {
                 action: {
                   label: "Retry",
                   onClick: () => {
+                    void recordFrictionSignal({ area: "extensions", signal: "retry" });
                     // Retry installation
-                    dismissToast(toastId);
                     activePrompts.delete(extensionId);
+                    dismissToast(toastId);
                     window.dispatchEvent(
                       new CustomEvent("extension-install-needed", {
                         detail: customEvent.detail,
@@ -119,6 +121,7 @@ export const useExtensionInstallPrompt = () => {
           activePrompts.delete(extId);
           // Mark as dismissed so we don't show again this session
           dismissedExtensions.current.add(extId);
+          void recordFrictionSignal({ area: "extensions", signal: "prompt_dismissed" });
           break;
         }
       }

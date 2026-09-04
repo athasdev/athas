@@ -5,6 +5,7 @@ import {
   DEFAULT_UI_FONT_FAMILY,
 } from "@/features/settings/config/typography-defaults";
 import {
+  DEFAULT_HIDDEN_SIDEBAR_ACTIVITY_ITEM_IDS,
   GIT_SIDEBAR_TAB_IDS,
   SIDEBAR_ACTIVITY_ITEM_IDS,
 } from "@/features/layout/config/item-order";
@@ -76,7 +77,8 @@ export const defaultSettings: Settings = {
   compactMenuBar: true,
   windowTransparency: false,
   sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],
-  hiddenSidebarActivityItems: [],
+  hiddenSidebarActivityItems: [...DEFAULT_HIDDEN_SIDEBAR_ACTIVITY_ITEM_IDS],
+  pinnedSidebarExtensionItems: [],
   openFoldersInNewWindow: true,
   // AI
   aiProviderId: DEFAULT_AI_PROVIDER_ID,
@@ -98,7 +100,7 @@ export const defaultSettings: Settings = {
   activityRailExpanded: false,
   activityRailWidth: 180,
   showActivityRailAgentHistory: true,
-  showActivityRailTerminals: true,
+  showActivityRailTerminals: false,
   showActivityRailProjectIcons: true,
   collapsedActivityRailSections: [],
   sidebarWidth: 220,
@@ -193,6 +195,7 @@ export function getDefaultSettingsSnapshot(): Settings {
     hiddenDirectoryPatterns: [...defaultSettings.hiddenDirectoryPatterns],
     sidebarActivityItemsOrder: [...defaultSettings.sidebarActivityItemsOrder],
     hiddenSidebarActivityItems: [...defaultSettings.hiddenSidebarActivityItems],
+    pinnedSidebarExtensionItems: [...defaultSettings.pinnedSidebarExtensionItems],
     hiddenGitSidebarItems: [...defaultSettings.hiddenGitSidebarItems],
     collapsedActivityRailSections: [...defaultSettings.collapsedActivityRailSections],
     aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),

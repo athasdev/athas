@@ -10,8 +10,9 @@ import { useActivityBarVisibility } from "@/features/layout/hooks/use-activity-b
 import { useActivityNavigationItems } from "@/features/layout/hooks/use-activity-navigation-items";
 import { useActivityProjectCarousel } from "@/features/layout/hooks/use-activity-project-carousel";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
+import { useToast } from "@/features/layout/contexts/toast-context";
 import { getCollapsedActivityBarWidth } from "@/features/layout/utils/activity-bar-layout";
-import { OnboardingChecklist } from "@/features/onboarding/components/onboarding-checklist";
+import { claimContextualTip } from "@/features/onboarding/lib/contextual-teaching";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
@@ -24,6 +25,7 @@ interface ActivityBarProps {
 
 export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
   const { openSidebarView } = useSidebarPaneController();
+  const { showToast } = useToast();
   const isGitViewActive = useUIState((state) => state.isGitViewActive);
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
@@ -35,8 +37,17 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
+  const handleOpenGlobalSearch = useCallback(() => {
+    openGlobalSearchBuffer();
+    if (claimContextualTip("global-search-shortcut")) {
+      showToast({
+        message: "Search opened",
+        description: "Next time, use Mod+Shift+F to search the workspace from anywhere.",
+        type: "info",
+      });
+    }
+  }, [openGlobalSearchBuffer, showToast]);
   const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
-  const openSettingsBuffer = useBufferStore.use.actions().openSettingsBuffer;
   const isExtensionsBufferActive = useBufferStore((state) => {
     const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
     return activeBuffer?.type === "extensions" || activeBuffer?.type === "extension";
@@ -75,7 +86,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
   const railContentRef = useRef<HTMLDivElement>(null);
   const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
-  const activityBarVisibility = useActivityBarVisibility(coreFeatures);
+  const activityBarVisibility = useActivityBarVisibility();
   const handleSidebarViewChange = (view: typeof activeSidebarView) => {
     openSidebarView(view);
   };
@@ -94,8 +105,8 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
     onToggleDebugger: handleDebuggerToggle,
     onOpenDatabases: handleOpenDatabases,
   });
-  const visibleNavigationItems = activityNavigationItems.filter(
-    (item) => !activityBarVisibility.hiddenNavigationItemIds.includes(item.id),
+  const visibleNavigationItems = activityNavigationItems.filter((item) =>
+    activityBarVisibility.isNavigationItemVisible(item.id),
   );
   const filesNavigationIndex = visibleNavigationItems.findIndex((item) => item.id === "files");
   const searchInsertionIndex = Math.max(filesNavigationIndex + 1, 0);
@@ -107,13 +118,19 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
           label: "Search",
           icon: <MagnifyingGlassIcon />,
           active: isGlobalSearchBufferActive,
-          onClick: openGlobalSearchBuffer,
+          onClick: handleOpenGlobalSearch,
           ariaLabel: "Search",
           shortcut: "Mod+Shift+F",
         },
         ...visibleNavigationItems.slice(searchInsertionIndex),
       ]
     : visibleNavigationItems;
+  const visibleNavigationItemIds = visibleNavigationItems.map((item) => item.id);
+  const hasHiddenItems =
+    visibleNavigationItems.length < activityNavigationItems.length ||
+    !activityBarVisibility.agentHistory ||
+    (coreFeatures.terminal && !activityBarVisibility.terminals) ||
+    !activityBarVisibility.projectDots;
   const alignProjectCarouselToCurrent = useCallback(() => {
     const container = railContentRef.current;
     const currentPanel = container?.querySelector<HTMLElement>(
@@ -196,15 +213,6 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
             data-slot="activity-sidebar-footer"
             className="relative z-20 flex w-full shrink-0 flex-col items-center gap-chrome-tight px-chrome-inline"
           >
-            <OnboardingChecklist
-              expanded={expanded}
-              hasProject={Boolean(carouselProject)}
-              onOpenProject={() => openProjectPicker()}
-              onStartAgent={handleNewAgent}
-              onOpenTerminal={handleNewTerminal}
-              onOpenCommandPalette={() => useUIState.getState().setIsCommandPaletteVisible(true)}
-              onOpenSettings={openSettingsBuffer}
-            />
             {expanded && projectCarouselEnabled && activityBarVisibility.projectDots ? (
               <ActivityProjectDots
                 projects={projectTabs}
@@ -232,17 +240,17 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
       </ContextMenuTrigger>
       <ActivityBarMenu
         navigationItems={activityNavigationItems}
-        hiddenNavigationItemIds={activityBarVisibility.hiddenNavigationItemIds}
+        visibleNavigationItemIds={visibleNavigationItemIds}
         coreFeatures={coreFeatures}
         showAgentHistory={activityBarVisibility.agentHistory}
         showTerminals={activityBarVisibility.terminals}
         showProjectDots={activityBarVisibility.projectDots}
-        hasHiddenItems={activityBarVisibility.hasHiddenItems}
+        hasHiddenItems={hasHiddenItems}
         onNewAgent={handleNewAgent}
         onNewTerminal={handleNewTerminal}
         onNewWorktree={handleNewWorktree}
         onOpenProject={() => openProjectPicker()}
-        onSearch={openGlobalSearchBuffer}
+        onSearch={handleOpenGlobalSearch}
         onOpenExtensions={openExtensionsBuffer}
         onNavigationItemVisibleChange={activityBarVisibility.setNavigationItemVisible}
         onAgentHistoryVisibleChange={(visible) =>
@@ -254,7 +262,9 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
         onProjectDotsVisibleChange={(visible) =>
           activityBarVisibility.setItemVisible("projectDots", visible)
         }
-        onShowAll={activityBarVisibility.showAll}
+        onShowAll={() =>
+          activityBarVisibility.showAll(activityNavigationItems.map((item) => item.id))
+        }
       />
     </ContextMenu>
   );

@@ -9,12 +9,8 @@ describe("resolveOnboardingContextFromState", () => {
     });
   });
 
-  it("opens updated onboarding when the seen version changed", () => {
-    expect(resolveOnboardingContextFromState("1.2.0", { lastSeenVersion: "1.1.0" })).toEqual({
-      mode: "updated",
-      currentVersion: "1.2.0",
-      previousVersion: "1.1.0",
-    });
+  it("does not interrupt returning users after an update", () => {
+    expect(resolveOnboardingContextFromState("1.2.0", { lastSeenVersion: "1.1.0" })).toBeNull();
   });
 
   it("does not reopen onboarding for the same seen version", () => {

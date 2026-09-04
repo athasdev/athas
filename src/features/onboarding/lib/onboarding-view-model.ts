@@ -10,15 +10,10 @@ export interface OnboardingViewModel {
 }
 
 export function buildOnboardingViewModel(context: OnboardingContext): OnboardingViewModel {
-  if (context.mode === "updated" || context.mode === "release-notes") {
-    const versionCopy = context.previousVersion
-      ? `Updated from ${context.previousVersion} to ${context.currentVersion}.`
-      : `Athas ${context.currentVersion} is installed.`;
-
+  if (context.mode === "release-notes") {
     return {
       title: `What's new in Athas ${context.currentVersion}`,
-      description:
-        context.mode === "updated" ? versionCopy : "The latest changes, improvements, and fixes.",
+      description: "The latest changes, improvements, and fixes.",
       showSettings: false,
       primaryAction: "finish",
       primaryLabel: "Done",

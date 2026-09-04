@@ -156,11 +156,13 @@ describe("settings UI contract", () => {
     expect(settingsViewSource).not.toContain("tabIndex: -1");
   });
 
-  it("keeps settings navigation inline in the resource content", () => {
+  it("keeps settings navigation in a persistent grouped sidebar", () => {
     const settingsViewSource = readFileSync(
       `${componentsDirectory}/settings-workbench-view.tsx`,
       "utf8",
     );
+    const navigationSource = readFileSync(`${componentsDirectory}/settings-navigation.tsx`, "utf8");
+    const sectionSource = readFileSync(`${componentsDirectory}/settings-section.tsx`, "utf8");
     const sidebarPaneSource = readFileSync(
       fileURLToPath(new URL("../../layout/components/sidebar/sidebar-pane.tsx", import.meta.url)),
       "utf8",
@@ -170,11 +172,16 @@ describe("settings UI contract", () => {
       "utf8",
     );
 
-    expect(settingsViewSource).toContain("<ResourcePageHeader");
-    expect(settingsViewSource).toContain("<ResourceCategoryNav");
-    expect(settingsViewSource).toContain("<SettingsBreadcrumb");
+    expect(settingsViewSource).toContain("<SettingsNavigation");
     expect(settingsViewSource).toContain("<SearchInput");
-    expect(settingsViewSource).toContain('ariaLabel="Settings sections"');
+    expect(settingsViewSource).not.toContain("<ResourcePageHeader");
+    expect(settingsViewSource).not.toContain("<ResourceCategoryNav");
+    expect(settingsViewSource).not.toContain("<SettingsBreadcrumb");
+    expect(navigationSource).toContain('aria-label="Settings sections"');
+    expect(navigationSource).toContain("<SidebarSectionLabel");
+    expect(navigationSource).toContain("<SidebarListItem");
+    expect(sectionSource).toContain("<Card");
+    expect(sectionSource).not.toContain("<Accordion");
     expect(sidebarPaneSource).not.toContain("SettingsSidebar");
     expect(modalSliceSource).not.toContain('setActiveView("settings")');
     expect(modalSliceSource).not.toContain("setIsSidebarVisible(true)");

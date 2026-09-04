@@ -3,6 +3,10 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { arch, platform } from "@tauri-apps/plugin-os";
 import { load, type Store } from "@tauri-apps/plugin-store";
 import { getSettingsStore } from "@/features/settings/lib/settings-persistence";
+import {
+  createFrictionPayload,
+  type FrictionSignalInput,
+} from "@/features/telemetry/lib/friction-signals";
 import { getApiBase } from "@/utils/api-base";
 
 const API_BASE = getApiBase();
@@ -39,9 +43,10 @@ type TelemetryEventType =
   | "extension_install"
   | "extension_uninstall"
   | "extension_update"
+  | "friction"
   | "crash_report";
 
-type TelemetryLogStatus = "queued" | "sent" | "failed" | "dropped" | "cleared";
+type TelemetryLogStatus = "local" | "queued" | "sent" | "failed" | "dropped" | "cleared";
 
 interface QueuedTelemetryEvent {
   id: string;
@@ -350,7 +355,12 @@ function summarizeExtensions(
 async function enqueueTelemetryEvent(
   type: TelemetryEventType,
   payload: Record<string, unknown>,
-  options?: { flushImmediately?: boolean; mode?: TelemetryMode },
+  options?: {
+    flushImmediately?: boolean;
+    mode?: TelemetryMode;
+    logEventType?: string;
+    logSummary?: string;
+  },
 ): Promise<boolean> {
   const mode = options?.mode ?? "optional";
   if (mode === "optional" && !(await isUsageTelemetryEnabled())) return false;
@@ -398,8 +408,8 @@ async function enqueueTelemetryEvent(
   await appendLogEntry(
     {
       status: "queued",
-      eventType: type,
-      summary: `Queued ${type}`,
+      eventType: options?.logEventType ?? type,
+      summary: options?.logSummary ?? `Queued ${type}`,
     },
     store,
   );
@@ -600,6 +610,26 @@ export async function recordExtensionLifecycleTelemetry(payload: {
     },
     { mode: "optional" },
   );
+}
+
+export async function recordFrictionSignal(input: FrictionSignalInput) {
+  const eventType = `friction:${input.area}:${input.signal}`;
+  const payload = createFrictionPayload(input);
+
+  if (!(await isUsageTelemetryEnabled())) {
+    await appendLogEntry({
+      status: "local",
+      eventType,
+      summary: "Stored locally because anonymous usage telemetry is off",
+    });
+    return false;
+  }
+
+  return enqueueTelemetryEvent("friction", payload, {
+    mode: "optional",
+    logEventType: eventType,
+    logSummary: "Queued anonymous friction signal",
+  });
 }
 
 export async function getTelemetryLogEntries(): Promise<TelemetryLogEntry[]> {

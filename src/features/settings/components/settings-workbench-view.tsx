@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import EditorBreadcrumb from "@/features/editor/components/toolbar/breadcrumb";
 import { SETTINGS_TAB_ITEMS } from "@/features/settings/config/settings-tabs";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
@@ -17,9 +16,9 @@ import { Dropdown } from "@/ui/dropdown";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import { ScrollArea } from "@/ui/scroll-area";
 import { SearchInput } from "@/ui/search";
-import { ResourceCategoryNav, ResourcePageHeader } from "@/ui/resource";
 import type { SearchResult } from "../types/search.types";
 
+import { SettingsNavigation } from "./settings-navigation";
 import { AdvancedSettings } from "./tabs/advanced-settings";
 import { AccountSettings } from "./tabs/account-settings";
 import { AISettings } from "./tabs/ai-settings";
@@ -32,7 +31,6 @@ import { GitSettings } from "./tabs/git-settings";
 import { KeyboardSettings } from "./tabs/keyboard-settings";
 import { FileTreeSettings } from "./tabs/file-tree-settings";
 import { TerminalSettings } from "./tabs/terminal-settings";
-import { SettingsBreadcrumb } from "./settings-breadcrumb";
 
 const SettingsWorkbenchView = () => {
   const {
@@ -132,7 +130,6 @@ const SettingsWorkbenchView = () => {
   useEffect(() => {
     if (!settingsInitialSection) return;
 
-    let revealFrameId: number | undefined;
     const frameId = window.requestAnimationFrame(() => {
       const content = contentRef.current;
       if (!content) return;
@@ -143,28 +140,15 @@ const SettingsWorkbenchView = () => {
       );
       if (!section) return;
 
-      const revealSection = () => {
-        section.scrollIntoView({ block: "start", inline: "nearest" });
-      };
-      const sectionTrigger = section.querySelector<HTMLElement>("[data-settings-section-trigger]");
-
-      if (sectionTrigger?.getAttribute("aria-expanded") === "false") {
-        sectionTrigger.click();
-        revealFrameId = window.requestAnimationFrame(revealSection);
-      } else {
-        revealSection();
-      }
+      section.scrollIntoView({ block: "start", inline: "nearest" });
     });
 
     return () => {
       window.cancelAnimationFrame(frameId);
-      if (revealFrameId !== undefined) window.cancelAnimationFrame(revealFrameId);
     };
   }, [activeTab, settingsInitialSection, settingsNavigationRequestId]);
 
   useEffect(() => {
-    let revealFrameId: number | undefined;
-
     const clearSearchHighlights = () => {
       const content = contentRef.current;
       if (!content) return;
@@ -205,24 +189,12 @@ const SettingsWorkbenchView = () => {
       clearSearchHighlights();
       section?.setAttribute("data-settings-search-section-active", "true");
       target.setAttribute("data-settings-search-active", "true");
-
-      const revealTarget = () => {
-        target.scrollIntoView({ block: "center", inline: "nearest" });
-        target.focus({ preventScroll: true });
-      };
-      const sectionTrigger = section?.querySelector<HTMLElement>("[data-settings-section-trigger]");
-
-      if (sectionTrigger?.getAttribute("aria-expanded") === "false") {
-        sectionTrigger.click();
-        revealFrameId = window.requestAnimationFrame(revealTarget);
-      } else {
-        revealTarget();
-      }
+      target.scrollIntoView({ block: "center", inline: "nearest" });
+      target.focus({ preventScroll: true });
     });
 
     return () => {
       window.cancelAnimationFrame(frameId);
-      if (revealFrameId !== undefined) window.cancelAnimationFrame(revealFrameId);
     };
   }, [activeTab, selectedResultId, visibleSearchResults]);
 
@@ -264,16 +236,7 @@ const SettingsWorkbenchView = () => {
 
   const activePanelId = `settings-panel-${activeTab}`;
   const activeTabId = `settings-tab-${activeTab}`;
-  const settingsCategories = visibleTabs.map((item) => {
-    const Icon = item.icon;
-    return {
-      id: item.id,
-      label: item.label,
-      icon: <Icon weight="duotone" />,
-      tabId: `settings-tab-${item.id}`,
-      panelId: `settings-panel-${item.id}`,
-    };
-  });
+  const activeTabItem = visibleTabs.find((item) => item.id === activeTab) ?? visibleTabs[0];
 
   const searchInput = (
     <div ref={searchInputAnchorRef} className="w-full">
@@ -305,46 +268,35 @@ const SettingsWorkbenchView = () => {
 
   return (
     <>
-      <div className="@container/settings flex size-full min-w-0 flex-col overflow-hidden bg-background">
-        <ResourcePageHeader
-          breadcrumb={
-            <EditorBreadcrumb
-              filePathOverride="Settings"
-              showPath={false}
-              showDefaultActions={false}
-              extraLeftContent={
-                <SettingsBreadcrumb
-                  activeTab={activeTab}
-                  onOpenRoot={() => handleTabChange("general")}
-                />
-              }
-            />
-          }
+      <div className="@container/settings flex size-full min-w-0 overflow-hidden bg-background">
+        <SettingsNavigation
+          activeTab={activeTab}
+          items={visibleTabs}
+          onTabChange={handleTabChange}
           search={searchInput}
-          categories={
-            <ResourceCategoryNav
-              items={settingsCategories}
-              value={activeTab}
-              onValueChange={handleTabChange}
-              ariaLabel="Settings sections"
-            />
-          }
         />
 
-        <ScrollArea
-          orientation="vertical"
-          className="min-h-0 min-w-0 flex-1"
-          contentClassName="mx-auto min-h-full w-full max-w-4xl overflow-x-hidden px-6 py-4 max-[720px]:px-3 max-[720px]:py-2"
-          viewportProps={{
-            ref: contentRef,
-            id: activePanelId,
-            role: "tabpanel",
-            "aria-labelledby": activeTabId,
-            "data-settings-content": "",
-          }}
-        >
-          {renderTabContent()}
-        </ScrollArea>
+        <main className="min-h-0 min-w-0 flex-1">
+          <ScrollArea
+            orientation="vertical"
+            className="size-full min-h-0 min-w-0"
+            contentClassName="mx-auto min-h-full w-full max-w-3xl overflow-x-hidden px-8 py-8 @max-[760px]/settings:px-5 @max-[760px]/settings:py-5"
+            viewportProps={{
+              ref: contentRef,
+              id: activePanelId,
+              role: "tabpanel",
+              "aria-labelledby": activeTabId,
+              "data-settings-content": "",
+            }}
+          >
+            <header className="mb-6 px-1">
+              <h1 className="font-semibold text-foreground ui-text-base">
+                {activeTabItem?.label ?? "Settings"}
+              </h1>
+            </header>
+            {renderTabContent()}
+          </ScrollArea>
+        </main>
       </div>
       <Dropdown
         isOpen={isSearchDropdownOpen && searchQuery.trim().length > 0}

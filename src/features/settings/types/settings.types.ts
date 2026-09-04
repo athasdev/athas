@@ -103,6 +103,7 @@ export interface Settings {
   windowTransparency: boolean;
   sidebarActivityItemsOrder: Array<SidebarActivityItemId | string>;
   hiddenSidebarActivityItems: string[];
+  pinnedSidebarExtensionItems: string[];
   openFoldersInNewWindow: boolean;
   // AI
   aiProviderId: string;

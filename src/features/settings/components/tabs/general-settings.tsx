@@ -16,7 +16,7 @@ import Command, {
 import { Progress } from "@/ui/progress";
 import { writeClipboardText } from "@/utils/clipboard";
 import { matchesSearchQuery } from "@/utils/search-match";
-import { SettingsView, SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 
 const REPORT_BUG_CHANNELS = [
   {
@@ -163,119 +163,130 @@ export const GeneralSettings = () => {
     }
   };
 
+  const updateStatus = downloading
+    ? `Athas ${appVersion || "..."} · Downloading ${downloadProgress?.percentage ?? 0}%`
+    : installing
+      ? `Athas ${appVersion || "..."} · Installing update...`
+      : available
+        ? `Athas ${appVersion || "..."} · Version ${updateInfo?.version} available`
+        : error
+          ? `Athas ${appVersion || "..."} · Failed to check for updates`
+          : `Athas ${appVersion || "..."} · App is up to date`;
+  const cliStatus = cliChecking
+    ? "Checking..."
+    : cliInstalled
+      ? "CLI command is installed at $HOME/.local/bin/athas"
+      : "CLI command is not installed.";
+
   return (
     <SettingsView>
-      <SettingRow
-        label="Version"
-        description="Check for updates and install the latest app version."
-      >
-        <div className="flex flex-wrap justify-end gap-2">
-          {available ? (
-            <Button
-              shape="pill"
-              onClick={downloadAndInstall}
-              disabled={downloading || installing}
-              variant="default"
-            >
-              {downloading
-                ? "Downloading..."
-                : installing
-                  ? "Installing..."
-                  : `Install ${updateInfo?.version ?? "update"}`}
-            </Button>
-          ) : (
-            <Button
-              shape="pill"
-              onClick={handleCheckForUpdates}
-              disabled={checking || downloading || installing}
-              variant="default"
-            >
-              {checking ? "Checking..." : "Check"}
-            </Button>
-          )}
-        </div>
-      </SettingRow>
+      <Section title="Application">
+        <SettingRow
+          label="Version"
+          description={
+            <span className="flex flex-col gap-0.5">
+              <span>Check for updates and install the latest app version.</span>
+              <span className="text-subtle-foreground/75">{updateStatus}</span>
+            </span>
+          }
+        >
+          <div className="flex flex-wrap justify-end gap-2">
+            {available ? (
+              <Button
+                shape="pill"
+                onClick={downloadAndInstall}
+                disabled={downloading || installing}
+                variant="default"
+              >
+                {downloading
+                  ? "Downloading..."
+                  : installing
+                    ? "Installing..."
+                    : `Install ${updateInfo?.version ?? "update"}`}
+              </Button>
+            ) : (
+              <Button
+                shape="pill"
+                onClick={handleCheckForUpdates}
+                disabled={checking || downloading || installing}
+                variant="default"
+              >
+                {checking ? "Checking..." : "Check"}
+              </Button>
+            )}
+          </div>
+        </SettingRow>
 
-      <div className="font-sans ui-text-sm -mt-3 px-1 text-subtle-foreground/75">
-        {downloading
-          ? `Athas ${appVersion || "..."} · Downloading ${downloadProgress?.percentage ?? 0}%`
-          : installing
-            ? `Athas ${appVersion || "..."} · Installing update...`
-            : available
-              ? `Athas ${appVersion || "..."} · Version ${updateInfo?.version} available`
-              : error
-                ? `Athas ${appVersion || "..."} · Failed to check for updates`
-                : `Athas ${appVersion || "..."} · App is up to date`}
-      </div>
-
-      {downloading && downloadProgress ? (
-        <Progress
-          value={downloadProgress.percentage}
-          aria-label="Athas update download progress"
-          className="px-3"
-        />
-      ) : null}
-
-      {error && <div className="font-sans ui-text-sm px-3 text-destructive">{error}</div>}
-
-      <SettingRow
-        label="Terminal Command"
-        description="Install the `athas` command to open folders and files from your terminal."
-      >
-        <div className="flex gap-2">
-          {cliInstalled ? (
-            <TypedConfirmAction
-              actionLabel="Uninstall"
-              busyLabel="Uninstalling..."
-              isBusy={cliInstalling}
-              onConfirm={handleUninstallCli}
+        {downloading && downloadProgress ? (
+          <div className="px-4 py-3">
+            <Progress
+              value={downloadProgress.percentage}
+              aria-label="Athas update download progress"
             />
-          ) : (
-            <>
-              <Button
-                shape="pill"
-                onClick={() => void handleInstallCli()}
-                disabled={cliInstalling || cliChecking}
-                variant="default"
-              >
-                {cliInstalling ? "Installing..." : "Install"}
-              </Button>
-              <Button
-                shape="pill"
-                onClick={handleCopyInstallCommand}
-                disabled={cliChecking}
-                variant="default"
-                tooltip="Copy install command to clipboard"
-              >
-                Copy
-              </Button>
-            </>
-          )}
-        </div>
-      </SettingRow>
+          </div>
+        ) : null}
 
-      <div className="font-sans ui-text-sm -mt-3 px-1 text-subtle-foreground/75">
-        {cliChecking
-          ? "Checking..."
-          : cliInstalled
-            ? "CLI command is installed at $HOME/.local/bin/athas"
-            : "CLI command is not installed."}
-      </div>
+        {error && <div className="font-sans ui-text-sm px-4 py-2 text-destructive">{error}</div>}
 
-      <SettingRow label="Import Settings" description="Import matching setup from another editor.">
-        <Button shape="pill" onClick={() => setIsImportDialogOpen(true)} variant="default">
-          Import
-        </Button>
-      </SettingRow>
+        <SettingRow
+          label="Terminal Command"
+          description={
+            <span className="flex flex-col gap-0.5">
+              <span>Install the `athas` command to open folders and files from your terminal.</span>
+              <span className="text-subtle-foreground/75">{cliStatus}</span>
+            </span>
+          }
+        >
+          <div className="flex gap-2">
+            {cliInstalled ? (
+              <TypedConfirmAction
+                actionLabel="Uninstall"
+                busyLabel="Uninstalling..."
+                isBusy={cliInstalling}
+                onConfirm={handleUninstallCli}
+              />
+            ) : (
+              <>
+                <Button
+                  shape="pill"
+                  onClick={() => void handleInstallCli()}
+                  disabled={cliInstalling || cliChecking}
+                  variant="default"
+                >
+                  {cliInstalling ? "Installing..." : "Install"}
+                </Button>
+                <Button
+                  shape="pill"
+                  onClick={handleCopyInstallCommand}
+                  disabled={cliChecking}
+                  variant="default"
+                  tooltip="Copy install command to clipboard"
+                >
+                  Copy
+                </Button>
+              </>
+            )}
+          </div>
+        </SettingRow>
 
-      <SettingRow
-        label="Report a Bug"
-        description="Choose where to report an issue with environment details."
-      >
-        <Button shape="pill" onClick={() => setIsReportBugDialogOpen(true)} variant="default">
-          Open
-        </Button>
-      </SettingRow>
+        <SettingRow
+          label="Import Settings"
+          description="Import matching setup from another editor."
+        >
+          <Button shape="pill" onClick={() => setIsImportDialogOpen(true)} variant="default">
+            Import
+          </Button>
+        </SettingRow>
+
+        <SettingRow
+          label="Report a Bug"
+          description="Choose where to report an issue with environment details."
+        >
+          <Button shape="pill" onClick={() => setIsReportBugDialogOpen(true)} variant="default">
+            Open
+          </Button>
+        </SettingRow>
+      </Section>
 
       {isImportDialogOpen && (
         <IdeSettingsImportDialog onClose={() => setIsImportDialogOpen(false)} />

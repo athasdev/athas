@@ -876,11 +876,12 @@ function DropdownMenuTrailingAction({
   return (
     <span
       className={cn(
-        "absolute right-1 z-10 flex transition-opacity",
+        "absolute right-0 z-10 flex pr-1 transition-opacity",
         visibility === "always"
           ? "opacity-100"
           : "opacity-0 group-hover/dropdown-menu-row:opacity-100 group-focus-within/dropdown-menu-row:opacity-100 has-data-[popup-open]:opacity-100",
       )}
+      onMouseMove={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}

@@ -25,6 +25,12 @@ export interface SettingsTabItem {
   }>;
 }
 
+export interface SettingsTabGroup {
+  id: string;
+  label: string;
+  tabs: SettingsTab[];
+}
+
 export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
   { id: "general", label: "General", icon: GearSix },
   { id: "account", label: "Account", icon: UserCircle },
@@ -38,4 +44,22 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
   { id: "collaboration", label: "Collaboration", icon: UsersThree },
   { id: "enterprise", label: "Enterprise", icon: ShieldCheck },
   { id: "advanced", label: "Advanced", icon: Gear },
+];
+
+export const SETTINGS_TAB_GROUPS: SettingsTabGroup[] = [
+  {
+    id: "application",
+    label: "Application",
+    tabs: ["general", "account", "appearance"],
+  },
+  {
+    id: "workspace",
+    label: "Workspace",
+    tabs: ["editor", "file-explorer", "git", "terminal", "keyboard"],
+  },
+  {
+    id: "features",
+    label: "Features",
+    tabs: ["ai", "collaboration", "enterprise", "advanced"],
+  },
 ];

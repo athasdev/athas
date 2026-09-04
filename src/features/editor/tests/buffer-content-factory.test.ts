@@ -15,19 +15,17 @@ describe("createPaneContent onboarding surfaces", () => {
     });
   });
 
-  it("names update and manual release surfaces What's New", () => {
-    for (const mode of ["updated", "release-notes"] as const) {
-      const content = createPaneContent(mode, {
-        type: "onboarding",
-        context: { mode, currentVersion: "1.2.0" },
-      });
+  it("names the release notes surface What's New", () => {
+    const content = createPaneContent("release-notes", {
+      type: "onboarding",
+      context: { mode: "release-notes", currentVersion: "1.2.0" },
+    });
 
-      expect(content).toMatchObject({
-        type: "onboarding",
-        name: "What's New",
-        path: `onboarding://${mode}/1.2.0`,
-      });
-    }
+    expect(content).toMatchObject({
+      type: "onboarding",
+      name: "What's New",
+      path: "onboarding://release-notes/1.2.0",
+    });
   });
 });
 

@@ -5,6 +5,8 @@ import { createSelectors } from "@/utils/zustand-selectors";
 import type { UpdateInfo } from "../hooks/use-updater";
 import {
   hydrateWhatsNew,
+  isWhatsNewUnread,
+  markWhatsNewRead,
   queuePendingWhatsNew,
   resolveWhatsNewInfo,
   storeCurrentWhatsNew,
@@ -13,6 +15,7 @@ import {
 
 interface WhatsNewState {
   initialized: boolean;
+  hasUnread: boolean;
   info: WhatsNewInfo | null;
   actions: {
     initialize: () => Promise<void>;
@@ -32,6 +35,7 @@ function openWhatsNewSurface(info: WhatsNewInfo) {
 
 const useWhatsNewStoreBase = create<WhatsNewState>()((set, get) => ({
   initialized: false,
+  hasUnread: false,
   info: null,
 
   actions: {
@@ -47,6 +51,7 @@ const useWhatsNewStoreBase = create<WhatsNewState>()((set, get) => ({
 
       set({
         initialized: true,
+        hasUnread: isWhatsNewUnread(currentVersion),
         info: resolvedInfo,
       });
     },
@@ -63,13 +68,16 @@ const useWhatsNewStoreBase = create<WhatsNewState>()((set, get) => ({
 
       const resolvedInfo = await resolveWhatsNewInfo(info);
       storeCurrentWhatsNew(resolvedInfo);
-      set({ info: resolvedInfo });
+      markWhatsNewRead(resolvedInfo.version);
+      set({ hasUnread: false, info: resolvedInfo });
       openWhatsNewSurface(resolvedInfo);
     },
 
     openInfo: async (info) => {
       const resolvedInfo = await resolveWhatsNewInfo(info);
-      set({ info: resolvedInfo });
+      storeCurrentWhatsNew(resolvedInfo);
+      markWhatsNewRead(resolvedInfo.version);
+      set({ hasUnread: false, info: resolvedInfo });
       openWhatsNewSurface(resolvedInfo);
     },
 

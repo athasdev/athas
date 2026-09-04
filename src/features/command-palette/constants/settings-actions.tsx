@@ -20,9 +20,9 @@ import {
   TextAlignJustifyIcon as WrapText,
 } from "@/ui/icons";
 import { settingsSearchIndex } from "@/features/settings/config/search-index";
+import { openProductFeedback } from "@/features/feedback/services/product-feedback";
 import type { Settings as AppSettings } from "@/features/settings/stores/settings.store";
 import type { SettingsTab } from "@/features/window/stores/ui-state.store";
-import { writeClipboardText } from "@/utils/clipboard";
 import { scoreSearchQuery } from "@/utils/search-match";
 import type { Action } from "../types/action.types";
 import type { CommandPaletteViewId } from "../types/view.types";
@@ -163,35 +163,14 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       },
     },
     {
-      id: "report-bug",
-      label: "Help: Report a Bug",
-      description: "Copy environment details and open the bug report page",
-      icon: <AlertCircle />,
+      id: "send-product-feedback",
+      label: "Help: Send Product Feedback",
+      description: "Describe your intent, what happened, and what you expected",
+      icon: <MessageSquare />,
       category: "Settings",
-      action: async () => {
-        try {
-          onClose();
-          const { getVersion } = await import("@tauri-apps/api/app");
-          const version = await getVersion();
-          let osSummary = "";
-          try {
-            const os = await import("@tauri-apps/plugin-os");
-            const plat = os.platform();
-            const ver = os.version();
-            osSummary = `${plat} ${ver}`;
-          } catch {
-            osSummary = navigator.userAgent;
-          }
-
-          const text = `Environment\n\n- App: Athas ${version}\n- OS: ${osSummary}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
-
-          await writeClipboardText(text);
-
-          const { openUrl } = await import("@tauri-apps/plugin-opener");
-          await openUrl("https://github.com/athasdev/athas/issues/new?template=01-bug.yml");
-        } catch (e) {
-          console.error("Failed to prepare bug report:", e);
-        }
+      action: () => {
+        onClose();
+        openProductFeedback();
       },
     },
     {

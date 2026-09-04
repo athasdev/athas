@@ -12,6 +12,11 @@ const toggleVariants = cva(
         default: "bg-transparent",
         outline: "border-border bg-surface/55",
       },
+      tone: {
+        default: "",
+        accent:
+          "data-pressed:bg-primary/10 data-pressed:text-primary hover:data-pressed:bg-primary/14 hover:data-pressed:text-primary",
+      },
       size: {
         default: "size-7 [&_svg:not([class*='size-'])]:size-3.5",
         chrome: "size-chrome-control [&_svg:not([class*='size-'])]:size-[1em]",
@@ -19,6 +24,7 @@ const toggleVariants = cva(
     },
     defaultVariants: {
       variant: "default",
+      tone: "default",
       size: "default",
     },
   },
@@ -27,6 +33,7 @@ const toggleVariants = cva(
 function Toggle({
   className,
   variant = "default",
+  tone = "default",
   size = "default",
   tooltip,
   shortcut,
@@ -44,7 +51,7 @@ function Toggle({
   const element = (
     <TogglePrimitive
       data-slot="toggle"
-      className={cn(toggleVariants({ variant, size }), className)}
+      className={cn(toggleVariants({ variant, tone, size }), className)}
       aria-label={ariaLabel ?? tooltip}
       {...props}
     />

@@ -8,6 +8,14 @@ export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "docker",
   "extensions",
 ] as const;
+export const DEFAULT_HIDDEN_SIDEBAR_ACTIVITY_ITEM_IDS = [
+  "github-prs",
+  "views",
+  "debugger",
+  "databases",
+  "docker",
+  "extensions",
+] as const;
 export const GIT_SIDEBAR_TAB_IDS = ["changes", "history", "review"] as const;
 export const GIT_SIDEBAR_ITEM_IDS = [...GIT_SIDEBAR_TAB_IDS, "remotes", "tags", "stashes"] as const;
 

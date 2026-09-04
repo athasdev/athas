@@ -21,6 +21,7 @@ import NumberInput from "@/ui/number-input";
 import Section, { SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
+import { TextLink } from "@/ui/text-link";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { FontSelector } from "../font-selector";
 import { toast } from "sonner";
@@ -274,14 +275,9 @@ export const AppearanceSettings = () => {
           description={
             <>
               Import Athas theme JSON or create one from an installed theme.{" "}
-              <a
-                href={themeDocsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
+              <TextLink href={themeDocsUrl} target="_blank" rel="noopener noreferrer">
                 Format guide
-              </a>
+              </TextLink>
             </>
           }
         >

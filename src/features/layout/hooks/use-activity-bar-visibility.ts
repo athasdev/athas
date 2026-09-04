@@ -1,6 +1,9 @@
 import { useCallback, useMemo } from "react";
-import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import {
+  isActivityNavigationItemVisible,
+  isCoreActivityNavigationItem,
+} from "@/features/layout/utils/activity-navigation-visibility";
 
 const VISIBILITY_SETTING_BY_ITEM = {
   agentHistory: "showActivityRailAgentHistory",
@@ -10,13 +13,16 @@ const VISIBILITY_SETTING_BY_ITEM = {
 
 export type ActivityBarVisibilityItem = keyof typeof VISIBILITY_SETTING_BY_ITEM;
 
-export function useActivityBarVisibility(coreFeatures: CoreFeaturesState) {
+export function useActivityBarVisibility() {
   const storedHiddenNavigationItemIds = useSettingsStore(
     (state) => state.settings.hiddenSidebarActivityItems,
   );
   const hiddenNavigationItemIds = useMemo(
     () => storedHiddenNavigationItemIds.filter((itemId) => itemId !== "search"),
     [storedHiddenNavigationItemIds],
+  );
+  const pinnedExtensionItemIds = useSettingsStore(
+    (state) => state.settings.pinnedSidebarExtensionItems,
   );
   const agentHistory = useSettingsStore((state) => state.settings.showActivityRailAgentHistory);
   const terminals = useSettingsStore((state) => state.settings.showActivityRailTerminals);
@@ -25,6 +31,15 @@ export function useActivityBarVisibility(coreFeatures: CoreFeaturesState) {
 
   const setNavigationItemVisible = useCallback(
     (itemId: string, visible: boolean) => {
+      if (!isCoreActivityNavigationItem(itemId)) {
+        const currentPinnedItems = useSettingsStore.getState().settings.pinnedSidebarExtensionItems;
+        const nextPinnedItems = visible
+          ? Array.from(new Set([...currentPinnedItems, itemId]))
+          : currentPinnedItems.filter((pinnedItemId) => pinnedItemId !== itemId);
+        void updateSetting("pinnedSidebarExtensionItems", nextPinnedItems);
+        return;
+      }
+
       const currentHiddenItems = useSettingsStore.getState().settings.hiddenSidebarActivityItems;
       const nextHiddenItems = visible
         ? currentHiddenItems.filter((hiddenItemId) => hiddenItemId !== itemId)
@@ -35,6 +50,12 @@ export function useActivityBarVisibility(coreFeatures: CoreFeaturesState) {
     [updateSetting],
   );
 
+  const isNavigationItemVisible = useCallback(
+    (itemId: string) =>
+      isActivityNavigationItemVisible(itemId, hiddenNavigationItemIds, pinnedExtensionItemIds),
+    [hiddenNavigationItemIds, pinnedExtensionItemIds],
+  );
+
   const setItemVisible = useCallback(
     (item: ActivityBarVisibilityItem, visible: boolean) => {
       void updateSetting(VISIBILITY_SETTING_BY_ITEM[item], visible);
@@ -42,25 +63,25 @@ export function useActivityBarVisibility(coreFeatures: CoreFeaturesState) {
     [updateSetting],
   );
 
-  const showAll = useCallback(() => {
-    void updateSetting("hiddenSidebarActivityItems", []);
-    for (const setting of Object.values(VISIBILITY_SETTING_BY_ITEM)) {
-      void updateSetting(setting, true);
-    }
-  }, [updateSetting]);
-
-  const hasHiddenItems =
-    hiddenNavigationItemIds.length > 0 ||
-    !agentHistory ||
-    (coreFeatures.terminal && !terminals) ||
-    !projectDots;
+  const showAll = useCallback(
+    (navigationItemIds: string[]) => {
+      void updateSetting("hiddenSidebarActivityItems", []);
+      void updateSetting(
+        "pinnedSidebarExtensionItems",
+        navigationItemIds.filter((itemId) => !isCoreActivityNavigationItem(itemId)),
+      );
+      for (const setting of Object.values(VISIBILITY_SETTING_BY_ITEM)) {
+        void updateSetting(setting, true);
+      }
+    },
+    [updateSetting],
+  );
 
   return {
-    hiddenNavigationItemIds,
     agentHistory,
     terminals,
     projectDots,
-    hasHiddenItems,
+    isNavigationItemVisible,
     setNavigationItemVisible,
     setItemVisible,
     showAll,

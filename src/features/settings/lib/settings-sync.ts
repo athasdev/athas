@@ -63,6 +63,7 @@ type SyncableSettingsKey =
   | "windowTransparency"
   | "sidebarActivityItemsOrder"
   | "hiddenSidebarActivityItems"
+  | "pinnedSidebarExtensionItems"
   | "openFoldersInNewWindow"
   | "aiProviderId"
   | "aiModelId"
@@ -184,6 +185,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "windowTransparency",
   "sidebarActivityItemsOrder",
   "hiddenSidebarActivityItems",
+  "pinnedSidebarExtensionItems",
   "openFoldersInNewWindow",
   "aiProviderId",
   "aiModelId",

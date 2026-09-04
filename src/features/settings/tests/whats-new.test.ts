@@ -1,9 +1,17 @@
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import {
   buildReleaseNotesMarkdown,
   buildWhatsNewMarkdown,
+  hydrateWhatsNew,
+  isWhatsNewUnread,
+  markWhatsNewRead,
+  queuePendingWhatsNew,
   resolveWhatsNewInfo,
 } from "../lib/whats-new";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("buildWhatsNewMarkdown", () => {
   it("uses bundled release notes when available", () => {
@@ -57,6 +65,25 @@ describe("buildWhatsNewMarkdown", () => {
     expect(markdown).not.toContain("description: Version 1.2.0");
     expect(markdown).not.toContain("## Changes");
     expect(markdown).not.toContain("---");
+  });
+});
+
+describe("What's New read state", () => {
+  it("marks a pending update unread until its release notes are opened", () => {
+    const values = new Map<string, string>();
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (key: string) => values.get(key) ?? null,
+        setItem: (key: string, value: string) => values.set(key, value),
+      },
+    });
+
+    queuePendingWhatsNew({ version: "1.2.0", previousVersion: "1.1.0" });
+    expect(hydrateWhatsNew("1.2.0")).toMatchObject({ previousVersion: "1.1.0" });
+    expect(isWhatsNewUnread("1.2.0")).toBe(true);
+
+    markWhatsNewRead("1.2.0");
+    expect(isWhatsNewUnread("1.2.0")).toBe(false);
   });
 });
 

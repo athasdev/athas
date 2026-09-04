@@ -358,6 +358,8 @@ interface SidebarTabItem<TValue extends string> {
   id: TValue;
   label: string;
   icon?: ReactNode;
+  badge?: ReactNode;
+  ariaLabel?: string;
   disabled?: boolean;
 }
 
@@ -372,12 +374,14 @@ export function SidebarTabBar<TValue extends string>({
   onChange,
   children,
   className,
+  layout = "inline",
 }: {
   items: SidebarTabItem<TValue>[];
   value: TValue;
   onChange: (value: TValue) => void;
   children?: ReactNode;
   className?: string;
+  layout?: "inline" | "stacked";
 }) {
   return (
     <Tabs
@@ -388,15 +392,40 @@ export function SidebarTabBar<TValue extends string>({
       <div
         className={cn(
           "flex h-pane-header shrink-0 items-center overflow-hidden px-chrome-inline",
+          layout === "stacked" && "h-auto border-border/70 border-b py-1",
           className,
         )}
       >
-        <div className="scrollbar-none min-w-0 overflow-x-auto">
-          <TabsList aria-label="Sidebar sections">
+        <div
+          className={cn("scrollbar-none min-w-0 overflow-x-auto", layout === "stacked" && "w-full")}
+        >
+          <TabsList
+            aria-label="Sidebar sections"
+            className={cn(layout === "stacked" && "h-auto w-full items-stretch")}
+          >
             {items.map((item) => (
-              <TabsTrigger key={item.id} value={item.id} disabled={item.disabled}>
+              <TabsTrigger
+                key={item.id}
+                value={item.id}
+                disabled={item.disabled}
+                aria-label={item.ariaLabel}
+                className={cn(
+                  layout === "stacked" &&
+                    "h-[calc(var(--athas-chrome-control-height)+var(--athas-chrome-line-height)+var(--athas-chrome-gap))] min-w-0 flex-col gap-chrome-tight rounded-md px-1.5 py-1",
+                )}
+              >
                 {item.icon}
-                <span className="truncate whitespace-nowrap">{item.label}</span>
+                <span
+                  className={cn(
+                    "flex max-w-full min-w-0 items-center gap-chrome-tight",
+                    layout === "stacked" && "leading-none",
+                  )}
+                >
+                  <span className="truncate whitespace-nowrap">{item.label}</span>
+                  {item.badge ? (
+                    <span className="shrink-0 text-subtle-foreground/80">{item.badge}</span>
+                  ) : null}
+                </span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -478,7 +507,7 @@ export function SidebarListActionRow({
       {...props}
     >
       {children}
-      <span className="pointer-events-none absolute right-0 z-10 flex items-center gap-chrome-tight bg-[linear-gradient(to_left,transparent_0,var(--color-accent)_var(--athas-chrome-gap),var(--color-accent)_60%,transparent_100%)] pr-1 pl-6 opacity-0 transition-opacity duration-fast ease-smooth group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100 group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100">
+      <span className="pointer-events-none absolute right-0 z-10 flex items-center gap-chrome-tight pr-1 opacity-0 transition-opacity duration-fast ease-smooth group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100 group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100 [&_[data-slot=button]]:bg-background [&_[data-slot=button]:hover]:bg-selected [&_[data-slot=button]:focus-visible]:bg-selected [&_[data-slot=button][data-active=true]]:bg-selected [&_[data-slot=button][data-variant=danger]:hover]:bg-destructive/10 [&_[data-slot=button][data-variant=danger]:focus-visible]:bg-destructive/10">
         {actions}
       </span>
     </div>

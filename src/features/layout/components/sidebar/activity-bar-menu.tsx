@@ -23,7 +23,7 @@ import {
 
 interface ActivityBarMenuProps {
   navigationItems: ActivityNavigationItem[];
-  hiddenNavigationItemIds: string[];
+  visibleNavigationItemIds: string[];
   coreFeatures: CoreFeaturesState;
   showAgentHistory: boolean;
   showTerminals: boolean;
@@ -44,7 +44,7 @@ interface ActivityBarMenuProps {
 
 export function ActivityBarMenu({
   navigationItems,
-  hiddenNavigationItemIds,
+  visibleNavigationItemIds,
   coreFeatures,
   showAgentHistory,
   showTerminals,
@@ -105,7 +105,7 @@ export function ActivityBarMenu({
             {navigationItems.map((item) => (
               <ContextMenuCheckboxItem
                 key={item.id}
-                checked={!hiddenNavigationItemIds.includes(item.id)}
+                checked={visibleNavigationItemIds.includes(item.id)}
                 onCheckedChange={(checked) => onNavigationItemVisibleChange(item.id, checked)}
               >
                 {item.icon}

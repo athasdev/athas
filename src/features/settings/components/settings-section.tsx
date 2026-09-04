@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { Button } from "@/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
+import { Card } from "@/ui/card";
 import { cn } from "@/utils/cn";
 import { getSettingSearchTargetKey } from "../lib/settings-search";
 
@@ -30,7 +30,7 @@ export function SettingsView({ layout = "stack", className, ...props }: Settings
       data-slot="settings-view"
       className={cn(
         "min-w-0",
-        layout === "stack" ? "space-y-4" : "flex h-full min-h-0 flex-col",
+        layout === "stack" ? "space-y-6" : "flex h-full min-h-0 flex-col",
         className,
       )}
       {...props}
@@ -42,28 +42,22 @@ export default function Section({ title, description, children, className }: Sec
   const sectionKey = getSettingSearchTargetKey(title);
 
   return (
-    <Accordion
-      render={<section />}
+    <section
       className={cn(
-        "rounded-lg transition-[background-color,box-shadow] first:[&_.settings-section-header]:hidden data-[settings-search-section-active=true]:bg-primary/5 data-[settings-search-section-active=true]:ring-1 data-[settings-search-section-active=true]:ring-primary/25",
+        "scroll-mt-6 rounded-lg transition-[background-color,box-shadow] data-[settings-search-section-active=true]:bg-primary/5 data-[settings-search-section-active=true]:ring-1 data-[settings-search-section-active=true]:ring-primary/25",
         className,
       )}
-      defaultValue={[sectionKey]}
       data-settings-section={title}
       data-settings-section-key={sectionKey}
     >
-      <AccordionItem value={sectionKey} className="space-y-0">
-        <AccordionTrigger className="settings-section-header mb-2" data-settings-section-trigger="">
-          <span className="flex min-w-0 flex-col">
-            <span>{title}</span>
-            {description ? (
-              <span className="ui-text-sm text-subtle-foreground">{description}</span>
-            ) : null}
-          </span>
-        </AccordionTrigger>
-        <AccordionContent className="gap-2">{children}</AccordionContent>
-      </AccordionItem>
-    </Accordion>
+      <div className="mb-2 px-1">
+        <h2 className="font-medium text-foreground ui-text-base">{title}</h2>
+        {description ? (
+          <p className="mt-0.5 text-subtle-foreground ui-text-sm">{description}</p>
+        ) : null}
+      </div>
+      <Card className="gap-0 divide-y divide-border/60 py-0">{children}</Card>
+    </section>
   );
 }
 
@@ -192,7 +186,7 @@ export function SettingRow({
       data-setting-row-label={label}
       tabIndex={-1}
       className={cn(
-        "flex w-full min-w-0 max-w-full items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-[background-color,box-shadow] hover:bg-accent/40 focus-within:bg-accent/40 focus:outline-none data-[settings-search-active=true]:bg-primary/15 data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-primary/50 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2 @max-[640px]/settings:flex-col @max-[640px]/settings:items-stretch @max-[640px]/settings:gap-2",
+        "flex w-full min-w-0 max-w-full items-center justify-between gap-3 px-4 py-3 select-none transition-[background-color,box-shadow] hover:bg-accent/40 focus-within:bg-accent/40 focus:outline-none data-[settings-search-active=true]:bg-primary/15 data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-primary/50 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2 @max-[640px]/settings:flex-col @max-[640px]/settings:items-stretch @max-[640px]/settings:gap-2",
         className,
       )}
       onClick={activateOnClick ? handleRowClick : undefined}

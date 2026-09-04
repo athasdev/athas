@@ -39,7 +39,7 @@ describe("default settings", () => {
     expect(settings.terminalRightClickSelectsWord).toBe(false);
   });
 
-  it("preserves the established interface while exposing optional UI controls", () => {
+  it("starts with a focused Activity rail while keeping specialist tools available", () => {
     const settings = getDefaultSettingsSnapshot();
 
     expect(settings.reduceMotion).toBe(false);
@@ -48,9 +48,17 @@ describe("default settings", () => {
     expect(settings.activityRailExpanded).toBe(false);
     expect(settings.activityRailWidth).toBe(180);
     expect(settings.showActivityRailAgentHistory).toBe(true);
-    expect(settings.showActivityRailTerminals).toBe(true);
+    expect(settings.showActivityRailTerminals).toBe(false);
     expect(settings.showActivityRailProjectIcons).toBe(true);
-    expect(settings.hiddenSidebarActivityItems).toEqual([]);
+    expect(settings.hiddenSidebarActivityItems).toEqual([
+      "github-prs",
+      "views",
+      "debugger",
+      "databases",
+      "docker",
+      "extensions",
+    ]);
+    expect(settings.pinnedSidebarExtensionItems).toEqual([]);
     expect(settings.hiddenGitSidebarItems).toEqual([]);
     expect(settings.collapsedActivityRailSections).toEqual([]);
     expect(settings.sidebarWidth).toBe(220);

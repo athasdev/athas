@@ -2,10 +2,10 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { memo, useEffect, useRef, useState } from "react";
 import { getServiceUrls } from "@/config/services";
 import { useGitHubStore } from "@/features/github/stores/github.store";
-import { getGitHubAvatarUrl } from "@/features/github/utils/github-avatar-url";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
+import { getAccountIdentity } from "@/features/window/lib/account-identity";
 import { getAccountPlanLabel } from "@/features/window/lib/account-usage";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -107,17 +107,14 @@ export const AccountMenu = memo(function AccountMenu() {
 
   const isTeams = Boolean(subscription?.collaboration?.enabled);
   const planLabel = getAccountPlanLabel(subscription, isAuthenticated);
-  const githubLogin =
+  const connectedGitHubLogin =
     githubAccountStatus === "connected" ? githubCurrentUser || user?.github_username : null;
-  const accountName = user?.name || githubLogin || user?.email || "Account";
-  const accountDetail = githubLogin ? `@${githubLogin}` : user?.email;
-  const accountAvatarUrl = getGitHubAvatarUrl(
-    {
-      login: githubLogin,
-      avatarUrl: user?.avatar_url,
-    },
-    64,
-  );
+  const {
+    name: accountName,
+    detail: accountDetail,
+    githubLogin,
+    avatarUrl: accountAvatarUrl,
+  } = getAccountIdentity(user, connectedGitHubLogin);
 
   const signedOutAccountItems: MenuItem[] = [
     {

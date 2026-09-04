@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentProps } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useToast } from "@/features/layout/contexts/toast-context";
@@ -15,14 +15,26 @@ import {
 } from "@/features/telemetry/services/telemetry";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { Empty, EmptyDescription } from "@/ui/empty";
+import { ButtonGroup } from "@/ui/button-group";
+import { EmptyState } from "@/ui/empty";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/ui/item";
 import Switch from "@/ui/switch";
+import { TextLink } from "@/ui/text-link";
 import Section, { SettingsView, SettingRow } from "../settings-section";
 import { getServiceUrls } from "@/config/services";
 
 const telemetryDescription =
   "Athas sends anonymous operational metadata for updates and, when enabled, heartbeats, extensions, and crashes; it never sends file paths, project names, prompts, or editor content.";
 const telemetryLearnMoreUrl = getServiceUrls().telemetryDocsUrl;
+
+function getTelemetryStatusVariant(
+  status: TelemetryLogEntry["status"],
+): ComponentProps<typeof Badge>["variant"] {
+  if (status === "failed") return "error";
+  if (status === "sent") return "success";
+  if (status === "local") return "accent";
+  return "muted";
+}
 
 export const AdvancedSettings = () => {
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
@@ -180,14 +192,9 @@ export const AdvancedSettings = () => {
           description={
             <>
               {telemetryDescription}{" "}
-              <a
-                href={telemetryLearnMoreUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
+              <TextLink href={telemetryLearnMoreUrl} target="_blank" rel="noopener noreferrer">
                 Learn more
-              </a>
+              </TextLink>
             </>
           }
         >
@@ -195,55 +202,44 @@ export const AdvancedSettings = () => {
         </SettingRow>
         <SettingRow
           label="Telemetry Log"
-          description="Inspect the local queue and recent telemetry delivery results."
+          description="Inspect local friction signals, the upload queue, and recent delivery results."
         >
-          <div className="flex gap-2">
+          <ButtonGroup>
             <Button
               shape="pill"
-              variant="default"
+              variant="ghost"
               onClick={() => setShowTelemetryLog((value) => !value)}
             >
               {showTelemetryLog ? "Hide Log" : "Open Log"}
             </Button>
-            <Button shape="pill" variant="default" onClick={handleClearTelemetryLog}>
+            <Button shape="pill" variant="ghost" onClick={handleClearTelemetryLog}>
               Clear
             </Button>
-          </div>
+          </ButtonGroup>
         </SettingRow>
         {showTelemetryLog && (
-          <div className="rounded-lg border border-border/70 bg-background/50">
+          <div className="max-h-72 overflow-y-auto">
             {telemetryLog.length === 0 ? (
-              <Empty className="min-h-0 flex-none items-start rounded-none px-3 py-2 text-left">
-                <EmptyDescription>No telemetry entries yet.</EmptyDescription>
-              </Empty>
+              <EmptyState message="No telemetry entries yet." />
             ) : (
-              <div className="max-h-72 overflow-y-auto">
+              <ItemGroup>
                 {[...telemetryLog].reverse().map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="font-sans ui-text-base flex items-center gap-2 border-border/70 px-3 py-2 text-foreground not-last:border-b"
-                  >
-                    <span className="min-w-0 flex-1 truncate font-medium">{entry.eventType}</span>
-                    <span
-                      className={
-                        entry.status === "failed"
-                          ? "shrink-0 uppercase text-destructive"
-                          : entry.status === "sent"
-                            ? "shrink-0 uppercase text-success"
-                            : "shrink-0 uppercase text-subtle-foreground"
-                      }
-                    >
-                      {entry.status}
-                    </span>
-                    <span className="min-w-0 flex-[1.4] truncate text-subtle-foreground">
-                      {entry.error || entry.summary}
-                    </span>
-                    <span className="shrink-0 text-subtle-foreground">
-                      {new Date(entry.timestamp).toLocaleString()}
-                    </span>
-                  </div>
+                  <Item key={entry.id} variant="muted">
+                    <ItemContent>
+                      <ItemTitle>{entry.eventType}</ItemTitle>
+                      <ItemDescription>{entry.error || entry.summary}</ItemDescription>
+                    </ItemContent>
+                    <ItemActions>
+                      <Badge variant={getTelemetryStatusVariant(entry.status)}>
+                        {entry.status}
+                      </Badge>
+                      <time className="font-sans ui-text-sm text-subtle-foreground">
+                        {new Date(entry.timestamp).toLocaleString()}
+                      </time>
+                    </ItemActions>
+                  </Item>
                 ))}
-              </div>
+              </ItemGroup>
             )}
           </div>
         )}

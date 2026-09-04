@@ -24,6 +24,7 @@ import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
 import { ensureRemoteConnectionConnected } from "@/features/remote/services/remote-connection-client";
 import { buildRemoteRootPath, parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import type { BufferSession } from "@/features/workspace/types/workspace-session.types";
@@ -834,6 +835,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
                     workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId,
                   restoreBuffer: async (buffer) => restoreBuffers([buffer]),
                   onBufferError: (buffer, error) => {
+                    void recordFrictionSignal({ area: "layout", signal: "restore_failed" });
                     console.warn(
                       `[workspace-open] failed to restore deferred tab ${buffer.path}`,
                       error,
@@ -862,6 +864,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
                 }
               })()
                 .catch((error) => {
+                  void recordFrictionSignal({ area: "layout", signal: "restore_failed" });
                   console.warn("[workspace-open] failed to restore deferred saved tabs", error);
                   frontendTrace("warn", "workspace-open", "restoreSession:deferred:error", {
                     projectPath,

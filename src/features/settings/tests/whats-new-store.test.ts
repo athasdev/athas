@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 const mocks = vi.hoisted(() => ({
+  isWhatsNewUnread: vi.fn(() => true),
+  markWhatsNewRead: vi.fn(),
   openOnboardingBuffer: vi.fn(),
   storeCurrentWhatsNew: vi.fn(),
 }));
@@ -21,6 +23,8 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
 
 vi.mock("../lib/whats-new", () => ({
   hydrateWhatsNew: () => ({ version: "1.2.0", previousVersion: "1.1.0" }),
+  isWhatsNewUnread: mocks.isWhatsNewUnread,
+  markWhatsNewRead: mocks.markWhatsNewRead,
   queuePendingWhatsNew: vi.fn(),
   resolveWhatsNewInfo: vi.fn(async (info) => ({ ...info, body: "Release notes" })),
   storeCurrentWhatsNew: mocks.storeCurrentWhatsNew,
@@ -31,8 +35,9 @@ import { useWhatsNewStore } from "../stores/whats-new.store";
 describe("What's New store", () => {
   beforeEach(() => {
     mocks.openOnboardingBuffer.mockClear();
+    mocks.markWhatsNewRead.mockClear();
     mocks.storeCurrentWhatsNew.mockClear();
-    useWhatsNewStore.setState({ initialized: false, info: null });
+    useWhatsNewStore.setState({ initialized: false, hasUnread: false, info: null });
   });
 
   it("hydrates silently and opens the unified release surface only when requested", async () => {
@@ -43,6 +48,7 @@ describe("What's New store", () => {
       version: "1.2.0",
       body: "Release notes",
     });
+    expect(useWhatsNewStore.getState().hasUnread).toBe(true);
 
     await useWhatsNewStore.getState().actions.open();
 
@@ -52,5 +58,7 @@ describe("What's New store", () => {
       currentVersion: "1.2.0",
       previousVersion: "1.1.0",
     });
+    expect(mocks.markWhatsNewRead).toHaveBeenCalledWith("1.2.0");
+    expect(useWhatsNewStore.getState().hasUnread).toBe(false);
   });
 });

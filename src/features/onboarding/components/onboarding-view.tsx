@@ -1,5 +1,5 @@
 import { FolderOpenIcon as FolderOpen } from "@/ui/icons";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
@@ -15,12 +15,13 @@ import { buildOnboardingViewModel } from "@/features/onboarding/lib/onboarding-v
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { formatReleaseDate } from "@/features/settings/lib/whats-new";
+import { SettingsView, SettingRow } from "@/features/settings/components/settings-section";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { Button } from "@/ui/button";
-import { Card } from "@/ui/card";
 import { ScrollArea } from "@/ui/scroll-area";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
+import { TextLink } from "@/ui/text-link";
 import { getServiceUrls } from "@/config/services";
 import { ReleaseNotesContent } from "./release-notes-content";
 
@@ -31,28 +32,6 @@ const telemetryLearnMoreUrl = getServiceUrls().telemetryDocsUrl;
 interface OnboardingViewProps {
   bufferId: string;
   context: OnboardingContext;
-}
-
-function SettingRow({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-5 border-border/70 border-b px-5 py-4 last:border-b-0">
-      <div className="min-w-0">
-        <div className="font-sans ui-text-sm font-medium text-foreground">{title}</div>
-        {description ? (
-          <p className="font-sans ui-text-sm mt-1 max-w-140 text-muted-foreground">{description}</p>
-        ) : null}
-      </div>
-      <div className="shrink-0">{children}</div>
-    </div>
-  );
 }
 
 export default function OnboardingView({ bufferId, context }: OnboardingViewProps) {
@@ -107,7 +86,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
       await persistSelections();
     }
 
-    if (context.mode === "first-run" || context.mode === "updated") {
+    if (context.mode === "first-run") {
       const trackedContext = useOnboardingStore.getState().context;
       if (trackedContext?.currentVersion === context.currentVersion) {
         await completeOnboarding();
@@ -163,9 +142,9 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
         </div>
 
         {viewModel.showSettings ? (
-          <Card className="gap-0 rounded-lg py-0">
+          <SettingsView>
             <SettingRow
-              title="Keybinding preset"
+              label="Keybinding preset"
               description={keybindingPresetDefinitions[keybindingPreset].description}
             >
               <Select
@@ -178,41 +157,36 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
             </SettingRow>
 
             <SettingRow
-              title="Share anonymous telemetry"
+              label="Share anonymous telemetry"
               description={
                 <>
                   {telemetryDescription}{" "}
-                  <a
-                    href={telemetryLearnMoreUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
+                  <TextLink href={telemetryLearnMoreUrl} target="_blank" rel="noopener noreferrer">
                     Learn more
-                  </a>
+                  </TextLink>
                 </>
               }
             >
               <Switch checked={telemetry} onChange={setTelemetry} />
             </SettingRow>
 
-            <SettingRow title="Enable Vim mode">
+            <SettingRow label="Enable Vim mode">
               <Switch checked={vimMode} onChange={setVimMode} />
             </SettingRow>
 
-            <SettingRow title="Open folders in a new window">
+            <SettingRow label="Open folders in a new window">
               <Switch checked={openFoldersInNewWindow} onChange={setOpenFoldersInNewWindow} />
             </SettingRow>
 
             <SettingRow
-              title="Import settings from another editor"
+              label="Import settings from another editor"
               description="Import matching setup from VS Code, Cursor, Windsurf, Zed, or JetBrains."
             >
               <Button variant="default" onClick={() => setIsImportDialogOpen(true)}>
                 Import
               </Button>
             </SettingRow>
-          </Card>
+          </SettingsView>
         ) : (
           <div className="min-w-0">
             <ReleaseNotesContent

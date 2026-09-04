@@ -90,5 +90,6 @@ describe("title bar controls", () => {
     expect(dropdownSource).toContain('data-slot="dropdown-menu-footer"');
     expect(dropdownSource).toContain("openOnHover");
     expect(dropdownSource).toContain("has-data-[popup-open]:opacity-100");
+    expect(dropdownSource).toContain("onMouseMove={(event) => event.stopPropagation()}");
   });
 });

@@ -561,6 +561,9 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.hiddenSidebarActivityItems = normalizeStringList(
     normalizedSettings.hiddenSidebarActivityItems,
   ).filter((itemId) => itemId !== "search" && itemId !== "review");
+  normalizedSettings.pinnedSidebarExtensionItems = normalizeStringList(
+    normalizedSettings.pinnedSidebarExtensionItems,
+  );
   normalizedSettings.collapsedActivityRailSections = normalizeStringList(
     normalizedSettings.collapsedActivityRailSections,
   );
@@ -639,7 +642,11 @@ export function normalizeSettingValue<K extends keyof Settings>(
     ) as Settings[K];
   }
 
-  if (key === "hiddenSidebarActivityItems" || key === "collapsedActivityRailSections") {
+  if (
+    key === "hiddenSidebarActivityItems" ||
+    key === "pinnedSidebarExtensionItems" ||
+    key === "collapsedActivityRailSections"
+  ) {
     return normalizeStringList(value) as Settings[K];
   }
 
