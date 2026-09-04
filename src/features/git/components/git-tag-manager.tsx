@@ -43,10 +43,9 @@ import {
 } from "../api/git-tags-api";
 import { useGitBlameStore } from "../stores/git-blame.store";
 import type { GitRemote, GitTag } from "../types/git.types";
-import GitCommandSurface from "./git-command-surface";
 
 interface GitTagManagerProps {
-  isOpen: boolean;
+  query: string;
   onClose: () => void;
   repoPath?: string;
   onRefresh?: () => void;
@@ -54,13 +53,12 @@ interface GitTagManagerProps {
 }
 
 const GitTagManager = ({
-  isOpen,
+  query,
   onClose,
   repoPath,
   onRefresh,
   onViewTagComparison,
 }: GitTagManagerProps) => {
-  const [query, setQuery] = useState("");
   const [tags, setTags] = useState<GitTag[]>([]);
   const [remotes, setRemotes] = useState<GitRemote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -76,21 +74,15 @@ const GitTagManager = ({
   const remoteLoadRequestIdRef = useRef(0);
 
   useEffect(() => {
-    if (!isOpen) {
-      tagLoadRequestIdRef.current += 1;
-      remoteLoadRequestIdRef.current += 1;
-      return;
-    }
     void loadTags();
     void loadRemotes();
     return () => {
       tagLoadRequestIdRef.current += 1;
       remoteLoadRequestIdRef.current += 1;
     };
-  }, [isOpen, repoPath]);
+  }, [repoPath]);
 
   const resetTransientState = () => {
-    setQuery("");
     setIsCreateOpen(false);
     setNewTagName("");
     setNewTagMessage("");
@@ -257,14 +249,7 @@ const GitTagManager = ({
   };
 
   return (
-    <GitCommandSurface
-      isOpen={isOpen}
-      onClose={handleClose}
-      query={query}
-      onQueryChange={setQuery}
-      placeholder="Search tags..."
-      meta={`${tags.length} tag${tags.length === 1 ? "" : "s"}`}
-    >
+    <>
       {!isCreateOpen ? (
         <div className="flex shrink-0 items-center justify-end px-2 pt-2">
           <div className="flex items-center justify-end gap-2">
@@ -592,7 +577,7 @@ const GitTagManager = ({
           />
         </div>
       ) : null}
-    </GitCommandSurface>
+    </>
   );
 };
 

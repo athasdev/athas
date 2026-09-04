@@ -83,7 +83,7 @@ export function GitHubSidebarRow({
     <SidebarListItem
       active={active}
       leading={
-        <span className="flex size-5 shrink-0 items-center justify-center overflow-hidden">
+        <span className="flex size-[1em] shrink-0 items-center justify-center overflow-hidden">
           {leading}
         </span>
       }

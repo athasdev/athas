@@ -16,6 +16,7 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Spinner } from "@/ui/spinner";
+import { TextLink } from "@/ui/text-link";
 import { cn } from "@/utils/cn";
 import type { Label, LinkedIssue, StatusCheck } from "../types/github.types";
 
@@ -227,16 +228,16 @@ export const LinkedIssuesList = memo(({ issues }: LinkedIssuesProps) => {
       <span>Linked</span>
       <span className="inline-flex items-center gap-1">
         {issues.map((issue, idx) => (
-          <a
+          <TextLink
             key={idx}
             href={issue.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-sans ui-text-sm text-primary hover:underline"
+            className="font-sans ui-text-sm"
           >
             #{issue.number}
             {idx < issues.length - 1 && ","}
-          </a>
+          </TextLink>
         ))}
       </span>
     </span>

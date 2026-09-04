@@ -20,7 +20,13 @@ import { ReviewSidebarPanel } from "@/features/review/components/review-sidebar"
 import { type GitActivitySection, useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
-import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
+import {
+  CommandEmpty,
+  CommandItemAction,
+  CommandItemBadge,
+  CommandItemRow,
+  CommandList,
+} from "@/ui/command";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
@@ -59,7 +65,11 @@ import GitCommitHistory, {
 } from "./git-commit-history";
 import { GitCommitFilesPanel } from "./git-commit-files-panel";
 import GitCommitPanel from "../commit-composer/components/git-commit-panel";
-import GitCommandSurface from "./git-command-surface";
+import GitCommandSurface, {
+  GitCommandWorkspace,
+  type GitCommandSection,
+} from "./git-command-surface";
+import { GitBrowseCommand } from "./git-browse-command";
 import GitRemoteManager from "./git-remote-manager";
 import GitTagManager from "./git-tag-manager";
 import GitStatusPanel from "./status/git-status-panel";
@@ -113,7 +123,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     isActive,
   });
   const [showGitActionsMenu, setShowGitActionsMenu] = useState(false);
-  const [showStashList, setShowStashList] = useState(false);
+  const [commandSection, setActiveCommandSection] = useState<GitCommandSection | null>(null);
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [isInitializingRepo, setIsInitializingRepo] = useState(false);
   const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
@@ -124,8 +134,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [isSyncMenuOpen, setIsSyncMenuOpen] = useState(false);
   const [remoteAction, setRemoteAction] = useState<GitRemoteAction | null>(null);
 
-  const [showRemoteManager, setShowRemoteManager] = useState(false);
-  const [showTagManager, setShowTagManager] = useState(false);
   const hiddenGitSidebarItems = useSettingsStore((state) => state.settings.hiddenGitSidebarItems);
   const gitSidebarTabOrder = useSettingsStore((state) => state.settings.gitSidebarTabOrder);
   const showUntrackedFiles = useSettingsStore((state) => state.settings.showUntrackedFiles);
@@ -150,7 +158,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [commitDiffSearchQuery, setCommitDiffSearchQuery] = useState("");
   const [showBranchDiffList, setShowBranchDiffList] = useState(false);
   const [branchDiffSearchQuery, setBranchDiffSearchQuery] = useState("");
-  const [stashSearchQuery, setStashSearchQuery] = useState("");
+  const [commandSearchQuery, setCommandSearchQuery] = useState("");
+  const setCommandSection = useCallback((section: GitCommandSection | null) => {
+    setActiveCommandSection(section);
+    setCommandSearchQuery("");
+  }, []);
   const [stashActionLoading, setStashActionLoading] = useState<Set<number>>(new Set());
 
   const {
@@ -244,9 +256,17 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     (section: GitActivitySection) => {
       handleBackFromHistoryCommit();
       setGitSection(section);
+      setCommandSection(section === "review" ? null : section);
     },
-    [handleBackFromHistoryCommit, setGitSection],
+    [handleBackFromHistoryCommit, setGitSection, setCommandSection],
   );
+  useEffect(() => {
+    if (commandSection) handleBackFromHistoryCommit();
+  }, [commandSection, handleBackFromHistoryCommit]);
+
+  useEffect(() => {
+    setCommandSection(null);
+  }, [activeRepoPath, setCommandSection]);
   const handleGitSidebarItemVisibleChange = useCallback(
     (itemId: GitSidebarItemId, visible: boolean) => {
       const nextHiddenItems = visible
@@ -523,8 +543,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       }
 
       if (detail.type === "show-tab") {
-        handleBackFromHistoryCommit();
-        setGitSection(detail.tab);
+        handleSelectGitSection(detail.tab);
         return;
       }
 
@@ -539,18 +558,17 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       }
 
       if (detail.type === "manage-remotes") {
-        setShowRemoteManager(true);
+        setCommandSection("remotes");
         return;
       }
 
       if (detail.type === "manage-tags") {
-        setShowTagManager(true);
+        setCommandSection("tags");
         return;
       }
 
       if (detail.type === "view-stashes") {
-        setShowStashList(true);
-        setStashSearchQuery("");
+        setCommandSection("stashes");
         return;
       }
 
@@ -568,12 +586,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return () => window.removeEventListener("athas:git-palette-action", handlePaletteAction);
   }, [
     handleInitializeRepository,
-    handleBackFromHistoryCommit,
+    handleSelectGitSection,
     handleManualRefresh,
     handleOpenBranchManager,
     handleSelectRepository,
     handleShowBranchDiffList,
-    setGitSection,
+    setCommandSection,
   ]);
 
   useEffect(() => {
@@ -656,7 +674,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           height: rect.height,
         });
         setShowGitActionsMenu(!showGitActionsMenu);
-        setShowStashList(false);
+        setCommandSection(null);
       }}
       tooltip="Git Actions"
     >
@@ -666,26 +684,23 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   const renderSourceControlNavigation = () => (
     <SourceControlNavigation
-      activeSection={gitSection}
+      activeSection={
+        commandSection === "changes" || commandSection === "history" ? commandSection : gitSection
+      }
       sectionOrder={gitSidebarTabOrder}
       hiddenItemIds={hiddenGitSidebarItems}
       changeCount={visibleGitFiles.length}
       commitCount={commits.length}
       activeRepositoryItem={
-        showRemoteManager
-          ? "remotes"
-          : showTagManager
-            ? "tags"
-            : showStashList
-              ? "stashes"
-              : undefined
+        commandSection === "remotes" || commandSection === "tags" || commandSection === "stashes"
+          ? commandSection
+          : undefined
       }
       onSectionChange={handleSelectGitSection}
-      onOpenRemotes={() => setShowRemoteManager(true)}
-      onOpenTags={() => setShowTagManager(true)}
+      onOpenRemotes={() => setCommandSection("remotes")}
+      onOpenTags={() => setCommandSection("tags")}
       onOpenStashes={() => {
-        setShowStashList(true);
-        setStashSearchQuery("");
+        setCommandSection("stashes");
       }}
       onItemVisibleChange={handleGitSidebarItemVisibleChange}
     />
@@ -710,11 +725,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       onRefresh={onRefresh}
       onOpenBranchManager={handleOpenBranchManager}
       onShowBranchDiff={() => void handleShowBranchDiffList()}
-      onOpenRemoteManager={() => setShowRemoteManager(true)}
-      onOpenTagManager={() => setShowTagManager(true)}
+      onOpenRemoteManager={() => setCommandSection("remotes")}
+      onOpenTagManager={() => setCommandSection("tags")}
       onViewStashes={() => {
-        setShowStashList(true);
-        setStashSearchQuery("");
+        setCommandSection("stashes");
       }}
       onSelectRepository={handleSelectRepository}
       isSelectingRepository={isSelectingRepo}
@@ -724,7 +738,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   );
 
   const filteredStashes = useMemo(() => {
-    const query = stashSearchQuery.trim().toLowerCase();
+    const query = commandSearchQuery.trim().toLowerCase();
     if (!query) {
       return stashes;
     }
@@ -737,7 +751,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         `stash@{${stash.index}}`,
       ]),
     );
-  }, [stashSearchQuery, stashes]);
+  }, [commandSearchQuery, stashes]);
   const filteredDiffCommits = useMemo(() => {
     const query = commitDiffSearchQuery.trim().toLowerCase();
     if (!query) {
@@ -939,8 +953,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 onShowCommitDiffPicker={handleShowCommitDiffList}
                 onShowBranchDiffPicker={() => void handleShowBranchDiffList()}
                 onShowStashDiffPicker={() => {
-                  setShowStashList(true);
-                  setStashSearchQuery("");
+                  setCommandSection("stashes");
                 }}
                 onRefresh={refreshAfterAction}
                 repoPath={activeRepoPath}
@@ -1049,126 +1062,129 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           )}
         </CommandList>
       </GitCommandSurface>
-      <GitCommandSurface
-        isOpen={showStashList}
-        onClose={() => {
-          setShowStashList(false);
-          setStashSearchQuery("");
-        }}
-        query={stashSearchQuery}
-        onQueryChange={setStashSearchQuery}
-        placeholder="Search stashes..."
-        meta={`${stashes.length} stash${stashes.length === 1 ? "" : "es"}`}
+      <GitCommandWorkspace
+        section={commandSection}
+        query={commandSearchQuery}
+        onQueryChange={setCommandSearchQuery}
+        onSectionChange={setCommandSection}
+        onClose={() => setCommandSection(null)}
       >
-        <CommandList>
-          {filteredStashes.length === 0 ? (
-            <CommandEmpty>
-              {stashSearchQuery.trim() ? "No matching stashes" : "No stashes"}
-            </CommandEmpty>
-          ) : (
-            filteredStashes.map((stash) => {
-              const displayTitle = getStashDisplayTitle(stash.message);
-              const isActionLoading = stashActionLoading.has(stash.index);
+        {commandSection === "changes" || commandSection === "history" ? (
+          <GitBrowseCommand
+            key={commandSection}
+            section={commandSection}
+            query={commandSearchQuery}
+            files={visibleGitFiles}
+            commits={commits}
+            onClose={() => setCommandSection(null)}
+            onFileSelect={(file) => void handleGitFileClick(file.path, file.staged)}
+            onCommitSelect={handleSelectHistoryCommit}
+          />
+        ) : null}
+        {commandSection === "stashes" ? (
+          <CommandList>
+            {filteredStashes.length === 0 ? (
+              <CommandEmpty>
+                {commandSearchQuery.trim() ? "No matching stashes" : "No stashes"}
+              </CommandEmpty>
+            ) : (
+              filteredStashes.map((stash) => {
+                const displayTitle = getStashDisplayTitle(stash.message);
+                const isActionLoading = stashActionLoading.has(stash.index);
 
-              return (
-                <CommandItemRow
-                  key={stash.index}
-                  as="div"
-                  icon={<Archive size={14} className="text-subtle-foreground" />}
-                  title={displayTitle}
-                  description={
-                    <>
-                      <span className="shrink-0">{formatRelativeDate(stash.date)}</span>
-                      <CommandItemBadge>{getStashPositionLabel(stash.index)}</CommandItemBadge>
-                    </>
-                  }
-                  contentLayout="inline"
-                  disabled={isActionLoading}
-                  className="group/stash text-subtle-foreground hover:text-foreground"
-                  onClick={() => {
-                    void handleViewStashDiff(stash.index);
-                    setShowStashList(false);
-                    setStashSearchQuery("");
-                  }}
-                  action={
-                    <div className="ml-auto flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/stash:opacity-100 sm:group-focus-within/stash:opacity-100">
-                      <Button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleStashListAction(
-                            () => applyStash(activeRepoPath!, stash.index),
-                            stash.index,
-                            "Apply stash",
-                          );
-                        }}
-                        disabled={isActionLoading}
-                        variant="ghost"
-                        iconOnly
-                        className="text-subtle-foreground disabled:opacity-50"
-                        tooltip="Apply stash"
-                      >
-                        <Download weight="fill" />
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleStashListAction(
-                            () => popStash(activeRepoPath!, stash.index),
-                            stash.index,
-                            "Pop stash",
-                          );
-                        }}
-                        disabled={isActionLoading}
-                        variant="ghost"
-                        iconOnly
-                        className="text-subtle-foreground disabled:opacity-50"
-                        tooltip="Pop stash"
-                      >
-                        <Upload />
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleStashListAction(
-                            () => dropStash(activeRepoPath!, stash.index),
-                            stash.index,
-                            "Drop stash",
-                          );
-                        }}
-                        disabled={isActionLoading}
-                        variant="ghost"
-                        iconOnly
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-                        tooltip="Drop stash"
-                      >
-                        <Trash2 />
-                      </Button>
-                    </div>
-                  }
-                />
-              );
-            })
-          )}
-        </CommandList>
-      </GitCommandSurface>
+                return (
+                  <CommandItemRow
+                    key={stash.index}
+                    as="div"
+                    icon={<Archive size={14} className="text-subtle-foreground" />}
+                    title={displayTitle}
+                    description={
+                      <>
+                        <span className="shrink-0">{formatRelativeDate(stash.date)}</span>
+                        <CommandItemBadge>{getStashPositionLabel(stash.index)}</CommandItemBadge>
+                      </>
+                    }
+                    contentLayout="inline"
+                    disabled={isActionLoading}
+                    onClick={() => {
+                      void handleViewStashDiff(stash.index);
+                      setCommandSection(null);
+                    }}
+                    action={
+                      <div className="ml-auto flex shrink-0 items-center gap-0.5">
+                        <CommandItemAction
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleStashListAction(
+                              () => applyStash(activeRepoPath!, stash.index),
+                              stash.index,
+                              "Apply stash",
+                            );
+                          }}
+                          disabled={isActionLoading}
+                          tooltip="Apply stash"
+                        >
+                          <Download weight="fill" />
+                        </CommandItemAction>
+                        <CommandItemAction
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleStashListAction(
+                              () => popStash(activeRepoPath!, stash.index),
+                              stash.index,
+                              "Pop stash",
+                            );
+                          }}
+                          disabled={isActionLoading}
+                          tooltip="Pop stash"
+                        >
+                          <Upload />
+                        </CommandItemAction>
+                        <CommandItemAction
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleStashListAction(
+                              () => dropStash(activeRepoPath!, stash.index),
+                              stash.index,
+                              "Drop stash",
+                            );
+                          }}
+                          disabled={isActionLoading}
+                          tone="danger"
+                          tooltip="Drop stash"
+                        >
+                          <Trash2 />
+                        </CommandItemAction>
+                      </div>
+                    }
+                  />
+                );
+              })
+            )}
+          </CommandList>
+        ) : null}
 
-      <GitRemoteManager
-        isOpen={showRemoteManager}
-        onClose={() => setShowRemoteManager(false)}
-        repoPath={activeRepoPath}
-        onRefresh={refreshAfterAction}
-      />
+        {commandSection === "remotes" ? (
+          <GitRemoteManager
+            query={commandSearchQuery}
+            repoPath={activeRepoPath}
+            onRefresh={refreshAfterAction}
+          />
+        ) : null}
 
-      <GitTagManager
-        isOpen={showTagManager}
-        onClose={() => setShowTagManager(false)}
-        repoPath={activeRepoPath}
-        onRefresh={refreshAfterAction}
-        onViewTagComparison={handleViewTagComparison}
-      />
+        {commandSection === "tags" ? (
+          <GitTagManager
+            query={commandSearchQuery}
+            onClose={() => setCommandSection(null)}
+            repoPath={activeRepoPath}
+            onRefresh={refreshAfterAction}
+            onViewTagComparison={handleViewTagComparison}
+          />
+        ) : null}
+      </GitCommandWorkspace>
     </>
   );
 };

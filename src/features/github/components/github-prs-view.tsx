@@ -48,10 +48,10 @@ import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import {
   SidebarIconButton,
-  SidebarNavigation,
   SidebarSearchPopover,
   SidebarScrollArea,
   SidebarSection,
+  SidebarTabBar,
   SidebarWorkspace,
 } from "@/ui/sidebar";
 import { writeClipboardText } from "@/utils/clipboard";
@@ -761,38 +761,31 @@ const GitHubPRsView = memo(() => {
             message="Enable GitHub sidebar sections in Settings -> Appearance."
           />
         ) : (
-          <>
-            <SidebarNavigation
-              label="GitHub sections"
-              groups={[
-                {
-                  id: "github",
-                  title: "GitHub",
-                  items: availableSections.map((section) => ({
-                    id: section,
-                    label:
-                      section === "pull-requests"
-                        ? "Pull Requests"
-                        : section === "issues"
-                          ? "Issues"
-                          : "Actions",
-                    leading:
-                      section === "pull-requests" ? (
-                        <GitPullRequest />
-                      ) : section === "issues" ? (
-                        <ChatCircleTextIcon />
-                      ) : (
-                        <LightningIcon />
-                      ),
-                    trailing:
-                      section === "pull-requests" && prs.length > 0 ? prs.length : undefined,
-                    active: activeSection === section,
-                    onClick: () => setActiveSection(section),
-                    ariaLabel: `GitHub: ${section}`,
-                  })),
-                },
-              ]}
-            />
+          <SidebarTabBar
+            layout="stacked"
+            items={availableSections.map((section) => ({
+              id: section,
+              label:
+                section === "pull-requests" ? "PRs" : section === "issues" ? "Issues" : "Actions",
+              icon:
+                section === "pull-requests" ? (
+                  <GitPullRequest />
+                ) : section === "issues" ? (
+                  <ChatCircleTextIcon />
+                ) : (
+                  <LightningIcon />
+                ),
+              badge: section === "pull-requests" && prs.length > 0 ? prs.length : undefined,
+              ariaLabel:
+                section === "pull-requests"
+                  ? `GitHub Pull Requests, ${prs.length}`
+                  : section === "issues"
+                    ? "GitHub Issues"
+                    : "GitHub Actions",
+            }))}
+            value={activeSection}
+            onChange={setActiveSection}
+          >
             <div className="min-h-0 flex-1">
               {activeSection === "pull-requests" ? (
                 <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -880,7 +873,7 @@ const GitHubPRsView = memo(() => {
                 />
               )}
             </div>
-          </>
+          </SidebarTabBar>
         )}
         <ContextMenuPopup
           isOpen={prContextMenu.isOpen}

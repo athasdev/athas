@@ -7,6 +7,8 @@ import {
   normalizeItemOrder,
 } from "@/features/layout/config/item-order";
 import type { GitActivitySection } from "@/features/layout/stores/sidebar.store";
+import { Button } from "@/ui/button";
+import Tooltip from "@/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -24,12 +26,7 @@ import {
   NetworkIcon,
   TagIcon,
 } from "@/ui/icons";
-import {
-  SidebarIconButton,
-  SidebarMenuContent,
-  SidebarNavigation,
-  type SidebarNavigationItem,
-} from "@/ui/sidebar";
+import { SidebarIconButton, SidebarMenuContent } from "@/ui/sidebar";
 
 interface SourceControlNavigationProps {
   activeSection: GitActivitySection;
@@ -130,19 +127,19 @@ export function SourceControlNavigation({
   onOpenStashes,
   onItemVisibleChange,
 }: SourceControlNavigationProps) {
-  const viewItems: SidebarNavigationItem[] = normalizeItemOrder(sectionOrder, GIT_SIDEBAR_TAB_IDS)
+  const viewItems = normalizeItemOrder(sectionOrder, GIT_SIDEBAR_TAB_IDS)
     .filter((itemId) => !hiddenItemIds.includes(itemId))
     .map((itemId) => ({
       id: itemId,
       label: labels[itemId],
       leading: icons[itemId],
-      trailing:
+      count:
         itemId === "changes"
           ? changeCount || undefined
           : itemId === "history"
             ? commitCount || undefined
             : undefined,
-      active: activeSection === itemId,
+      active: !activeRepositoryItem && activeSection === itemId,
       onClick: () => onSectionChange(itemId),
       ariaLabel: `Source Control: ${labels[itemId]}`,
     }));
@@ -151,7 +148,7 @@ export function SourceControlNavigation({
     tags: onOpenTags,
     stashes: onOpenStashes,
   };
-  const repositoryItems: SidebarNavigationItem[] = (["remotes", "tags", "stashes"] as const)
+  const repositoryItems = (["remotes", "tags", "stashes"] as const)
     .filter((itemId) => !hiddenItemIds.includes(itemId))
     .map((itemId) => ({
       id: itemId,
@@ -160,27 +157,38 @@ export function SourceControlNavigation({
       active: activeRepositoryItem === itemId,
       onClick: repositoryActions[itemId],
       ariaLabel: `Source Control: ${labels[itemId]}`,
+      count: undefined,
     }));
 
   return (
-    <SidebarNavigation
-      label="Source Control sections"
-      groups={[
-        {
-          id: "views",
-          title: "Views",
-          items: viewItems,
-          action: (
-            <SourceControlNavigationVisibilityMenu
-              hiddenItemIds={hiddenItemIds}
-              onItemVisibleChange={onItemVisibleChange}
-            />
-          ),
-        },
-        ...(repositoryItems.length > 0
-          ? [{ id: "repository", title: "Repository", items: repositoryItems }]
-          : []),
-      ]}
-    />
+    <nav
+      aria-label="Source Control sections"
+      className="flex shrink-0 items-center gap-chrome-tight px-chrome-inline py-1"
+    >
+      {[...viewItems, ...repositoryItems].map((item) => (
+        <Tooltip
+          key={item.id}
+          content={item.count ? `${item.label} (${item.count})` : item.label}
+          triggerClassName="min-w-0 flex-1"
+        >
+          <Button
+            variant="ghost"
+            iconOnly
+            className="w-full min-w-0"
+            active={item.active}
+            aria-current={item.active ? "page" : undefined}
+            aria-label={item.ariaLabel}
+            aria-haspopup={item.id === "review" ? undefined : "dialog"}
+            onClick={item.onClick}
+          >
+            {item.leading}
+          </Button>
+        </Tooltip>
+      ))}
+      <SourceControlNavigationVisibilityMenu
+        hiddenItemIds={hiddenItemIds}
+        onItemVisibleChange={onItemVisibleChange}
+      />
+    </nav>
   );
 }

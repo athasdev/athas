@@ -16,17 +16,14 @@ import Input from "@/ui/input";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { addRemote, getRemotes, removeRemote } from "../api/git-remotes-api";
 import type { GitRemote } from "../types/git.types";
-import GitCommandSurface from "./git-command-surface";
 
 interface GitRemoteManagerProps {
-  isOpen: boolean;
-  onClose: () => void;
+  query: string;
   repoPath?: string;
   onRefresh?: () => void;
 }
 
-const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteManagerProps) => {
-  const [query, setQuery] = useState("");
+const GitRemoteManager = ({ query, repoPath, onRefresh }: GitRemoteManagerProps) => {
   const [remotes, setRemotes] = useState<GitRemote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -36,22 +33,11 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
   const loadRequestIdRef = useRef(0);
 
   useEffect(() => {
-    if (!isOpen) {
-      loadRequestIdRef.current += 1;
-      return;
-    }
     void loadRemotes();
     return () => {
       loadRequestIdRef.current += 1;
     };
-  }, [isOpen, repoPath]);
-
-  const handleClose = () => {
-    setQuery("");
-    setNewRemoteName("");
-    setNewRemoteUrl("");
-    onClose();
-  };
+  }, [repoPath]);
 
   const filteredRemotes = useMemo(() => {
     if (!query.trim()) return remotes;
@@ -110,14 +96,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
   };
 
   return (
-    <GitCommandSurface
-      isOpen={isOpen}
-      onClose={handleClose}
-      query={query}
-      onQueryChange={setQuery}
-      placeholder="Search remotes..."
-      meta={`${remotes.length} remote${remotes.length === 1 ? "" : "s"}`}
-    >
+    <>
       <CommandForm
         title="Add remote"
         icon={<Plus className="size-4" />}
@@ -189,7 +168,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
           })
         )}
       </CommandList>
-    </GitCommandSurface>
+    </>
   );
 };
 

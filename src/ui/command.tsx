@@ -470,9 +470,15 @@ interface CommandTabsProps {
   items: CommandTabsItem[];
   ariaLabel: string;
   className?: string;
+  layout?: "inline" | "fit";
 }
 
-export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) => {
+export const CommandTabs = ({
+  items,
+  ariaLabel,
+  className,
+  layout = "inline",
+}: CommandTabsProps) => {
   const activeItemId = items.find((item) => item.isActive)?.id;
 
   return (
@@ -484,11 +490,19 @@ export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) =
         className,
       )}
     >
-      <TabsList variant="bare" aria-label={ariaLabel}>
+      <TabsList
+        variant="bare"
+        aria-label={ariaLabel}
+        className={layout === "fit" ? "w-full" : undefined}
+      >
         {items.map((item) => (
-          <TabsTrigger key={item.id} value={item.id} className="w-fit flex-none justify-start">
+          <TabsTrigger
+            key={item.id}
+            value={item.id}
+            className={layout === "fit" ? "min-w-0 flex-1" : "w-fit flex-none justify-start"}
+          >
             {item.icon}
-            {item.label}
+            <span className="truncate">{item.label}</span>
           </TabsTrigger>
         ))}
       </TabsList>
