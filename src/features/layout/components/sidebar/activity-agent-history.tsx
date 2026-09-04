@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { AgentSessionSidebarItem } from "@/features/ai/components/agent-session-sidebar-item";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { detachAgentView, focusAgentWindow } from "@/features/ai/detached/agent-window-service";
+import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
@@ -18,7 +20,14 @@ import {
   ContextMenuTrigger,
 } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import { DotsThreeIcon, PencilSimpleLineIcon, PlusIcon, SparkleIcon, TrashIcon } from "@/ui/icons";
+import {
+  DotsThreeIcon,
+  PencilSimpleLineIcon,
+  PlusIcon,
+  SparkleIcon,
+  TrashIcon,
+  WindowExpandIcon,
+} from "@/ui/icons";
 import { InlineRenameInput } from "@/ui/input";
 import { SidebarIconButton, SidebarListEditor, SidebarListItem } from "@/ui/sidebar";
 
@@ -71,8 +80,17 @@ export function ActivityAgentRow({
   onArchive,
   onDelete,
 }: ActivityAgentRowProps) {
+  const windowStatus = useAgentWindowStore.use.status();
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(chat.title);
+
+  if (windowStatus !== "attached") {
+    return (
+      <SidebarListItem leading={<WindowExpandIcon />} onClick={() => focusAgentWindow(chat.id)}>
+        {chat.title}
+      </SidebarListItem>
+    );
+  }
 
   if (isRenaming) {
     return (
@@ -145,6 +163,7 @@ export function ActivityAgentRow({
 }
 
 export function ActivityAgentHistory({ workspacePath }: { workspacePath: string | null }) {
+  const agentWindowStatus = useAgentWindowStore.use.status();
   const chats = useAIChatStore((state) => state.chats);
   const currentChatId = useAIChatStore((state) => state.currentChatId);
   const deleteChat = useAIChatStore((state) => state.actions.deleteChat);
@@ -188,11 +207,32 @@ export function ActivityAgentHistory({ workspacePath }: { workspacePath: string 
     [handleOpenChat, olderChats],
   );
 
+  if (agentWindowStatus !== "attached") {
+    return (
+      <ActivitySidebarSection id="agents" title="Agents">
+        <SidebarListItem leading={<WindowExpandIcon />} onClick={() => focusAgentWindow()}>
+          {agentWindowStatus === "opening" ? "Opening Agents…" : "Show Agents Window"}
+        </SidebarListItem>
+      </ActivitySidebarSection>
+    );
+  }
+
   return (
     <ActivitySidebarSection
       id="agents"
       title="Agents"
-      action={visibleChats.length > 0 ? <NewAgentIconButton /> : undefined}
+      action={
+        <div className="flex items-center">
+          <SidebarIconButton
+            tooltip="Detach Agents View"
+            aria-label="Detach Agents View"
+            onClick={() => void detachAgentView()}
+          >
+            <WindowExpandIcon />
+          </SidebarIconButton>
+          {visibleChats.length > 0 ? <NewAgentIconButton /> : null}
+        </div>
+      }
     >
       {visibleChats.length === 0 ? <NewAgentRow /> : null}
       {visibleChats.map((chat) => (

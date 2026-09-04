@@ -16,6 +16,7 @@ import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
 import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
+import { startAssistantResponseContinuation } from "@/features/ai/lib/assistant-response";
 import {
   createToolCall,
   markToolCallComplete,
@@ -31,6 +32,8 @@ import {
   type AgentNativeNotificationKind,
 } from "@/features/ai/services/agent-native-notifications";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { agentsAreDetached } from "@/features/ai/detached/agent-window.store";
+import { peekAgentDraft } from "@/features/ai/detached/agent-window-drafts";
 import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
@@ -46,9 +49,13 @@ import {
 } from "@/features/ai/utils/chat-session-title";
 import { getMessageSearchMatches } from "@/features/ai/utils/message-search";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useGitHubStore } from "@/features/github/stores/github.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
+import { claimContextualTip } from "@/features/onboarding/lib/contextual-teaching";
 import { useAuthStore } from "@/features/window/stores/auth.store";
+import { getAccountIdentity } from "@/features/window/lib/account-identity";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
@@ -83,6 +90,9 @@ const AIChat = memo(function AIChat({
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const subscription = useAuthStore((state) => state.subscription);
+  const user = useAuthStore((state) => state.user);
+  const githubAccountStatus = useGitHubStore((state) => state.githubAccountStatus);
+  const githubCurrentUser = useGitHubStore((state) => state.currentUser);
   const enterprisePolicy = subscription?.enterprise?.policy;
   const isAiChatBlockedByPolicy = Boolean(
     enterprisePolicy?.managedMode && !enterprisePolicy.aiChatEnabled,
@@ -98,21 +108,31 @@ const AIChat = memo(function AIChat({
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [activeMessageSearchIndex, setActiveMessageSearchIndex] = useState(0);
-  const composerContext = useComposerContextSelection();
+  const composerContext = useComposerContextSelection(peekAgentDraft(surfaceId));
   const { selectedBufferIds, selectedEditorContexts, selectedFilesPaths } =
     composerContext.inputProps;
   const effectiveChatId = chatId ?? chatState.currentChatId;
+  const previousChatId = useRef(effectiveChatId);
   const currentChat = useMemo(
     () => chatState.chats.find((chat) => chat.id === effectiveChatId),
     [chatState.chats, effectiveChatId],
   );
   const currentAgentId = currentChat?.agentId ?? useAIChatStore.getState().selectedAgentId;
+  const assistantIconId =
+    currentAgentId === "custom" ? (currentChat?.providerId ?? aiProviderId) : currentAgentId;
+  const assistantLabel =
+    currentAgentId === "custom"
+      ? (currentChat?.modelId ?? currentChat?.providerId ?? aiProviderId)
+      : currentAgentId;
+  const connectedGitHubLogin =
+    githubAccountStatus === "connected" ? githubCurrentUser || user?.github_username : null;
+  const accountIdentity = getAccountIdentity(user, connectedGitHubLogin);
   const activeRun = effectiveChatId ? chatState.agentRuns[effectiveChatId] : undefined;
   const isSurfaceTyping = Boolean(activeRun);
   const surfaceStreamingMessageId = activeRun?.assistantMessageId ?? null;
-  const queueCount = effectiveChatId
-    ? (chatState.agentMessageQueues[effectiveChatId]?.length ?? 0)
-    : 0;
+  const queuedMessages = effectiveChatId
+    ? (chatState.agentMessageQueues[effectiveChatId] ?? [])
+    : [];
   const chatMessageLoadState = effectiveChatId
     ? chatState.chatMessageLoadStates[effectiveChatId]
     : "loaded";
@@ -150,7 +170,8 @@ const AIChat = memo(function AIChat({
   useEffect(() => {
     setAcpEvents([]);
     closeMessageSearch();
-    composerContext.clear();
+    if (previousChatId.current !== effectiveChatId) composerContext.clear();
+    previousChatId.current = effectiveChatId;
   }, [closeMessageSearch, composerContext.clear, effectiveChatId]);
 
   useEffect(() => {
@@ -363,6 +384,7 @@ const AIChat = memo(function AIChat({
   };
 
   const stopStreaming = async () => {
+    void recordFrictionSignal({ area: "agent", signal: "cancel" });
     const pendingPermissions = permissionQueue;
     setPermissionQueue([]);
 
@@ -426,6 +448,7 @@ const AIChat = memo(function AIChat({
     messageContent: string,
     options: { editedUserMessageId?: string; targetChatId?: string } = {},
   ) {
+    if (agentsAreDetached()) return;
     const store = useAIChatStore.getState();
     const requestedChatId = options.targetChatId ?? effectiveChatId;
     const targetChat = requestedChatId
@@ -440,8 +463,6 @@ const AIChat = memo(function AIChat({
       return;
     }
     const isAcp = isAcpAgent(currentAgentId);
-    if (options.editedUserMessageId && currentAgentId !== "custom") return;
-
     // Agents are started automatically by AcpStreamHandler when needed
 
     let targetChatId = requestedChatId ?? store.currentChatId;
@@ -527,7 +548,7 @@ const AIChat = memo(function AIChat({
     }
 
     abortControllerRef.current = new AbortController();
-    let currentAssistantMessageId = assistantMessageId;
+    const currentAssistantMessageId = assistantMessageId;
     let currentAssistantRawContent = "";
     let acpProducedStateOnlyUpdate = false;
     let acpCommandResultLabel: string | null = null;
@@ -773,26 +794,15 @@ details: ${errorDetails || mainError}
         },
         conversationContext,
         () => {
+          currentAssistantRawContent = startAssistantResponseContinuation(
+            currentAssistantRawContent,
+          );
           chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
-            isStreaming: false,
-            responsePhase: undefined,
-          });
-
-          const newMessageId = createMessageId();
-          currentAssistantRawContent = "";
-          const newAssistantMessage: Message = {
-            id: newMessageId,
-            content: "",
-            role: "assistant",
-            timestamp: new Date(),
             isStreaming: true,
             responsePhase: "waiting",
-          };
-
-          chatActions.addMessage(targetChatId, newAssistantMessage);
-          currentAssistantMessageId = newMessageId;
+          });
           chatActions.updateAgentRun(targetChatId, runId, {
-            assistantMessageId: newMessageId,
+            assistantMessageId: currentAssistantMessageId,
             phase: "waiting",
           });
         },
@@ -1000,6 +1010,8 @@ details: ${errorDetails || mainError}
 
   const sendMessage = useCallback(
     (messageContent: string): AgentMessageSubmitResult => {
+      if (agentsAreDetached())
+        return { accepted: false, error: "Agents are open in another window." };
       if (!messageContent.trim()) return { accepted: false };
       const access = getAgentMessageAccess(currentAgentId, chatState.hasApiKey);
       if (!access.accepted) {
@@ -1015,6 +1027,14 @@ details: ${errorDetails || mainError}
       const targetChatId = effectiveChatId ?? useAIChatStore.getState().currentChatId;
       if (targetChatId && useAIChatStore.getState().agentRuns[targetChatId]) {
         chatActions.enqueueAgentMessage(targetChatId, messageContent);
+        if (claimContextualTip("agent-queue-controls")) {
+          showToast({
+            message: "Message queued",
+            description:
+              "Open the queue to edit, reorder, or remove guidance while the agent runs.",
+            type: "info",
+          });
+        }
         return { accepted: true };
       }
 
@@ -1036,8 +1056,36 @@ details: ${errorDetails || mainError}
     [sendMessage],
   );
 
+  const handleInterruptAndSend = useCallback(
+    (messageContent: string): AgentMessageSubmitResult => {
+      if (!messageContent.trim()) return { accepted: false };
+      const access = getAgentMessageAccess(currentAgentId, chatState.hasApiKey);
+      if (!access.accepted) {
+        showToast({ message: access.error ?? "This agent is not ready.", type: "error" });
+        return access;
+      }
+
+      const targetChatId = effectiveChatId ?? useAIChatStore.getState().currentChatId;
+      if (!targetChatId || !useAIChatStore.getState().agentRuns[targetChatId]) {
+        return sendMessage(messageContent);
+      }
+
+      chatActions.prependAgentMessage(targetChatId, messageContent);
+      void stopStreaming();
+      return { accepted: true };
+    },
+    [
+      chatActions.prependAgentMessage,
+      chatState.hasApiKey,
+      currentAgentId,
+      effectiveChatId,
+      sendMessage,
+      showToast,
+    ],
+  );
+
   const handleEditUserMessage = async (messageId: string, content: string) => {
-    if (isSurfaceTyping || surfaceStreamingMessageId || currentChat?.agentId !== "custom") {
+    if (isSurfaceTyping || surfaceStreamingMessageId) {
       return;
     }
 
@@ -1118,11 +1166,24 @@ details: ${errorDetails || mainError}
       currentAgentId={currentAgentId}
       isTyping={isSurfaceTyping}
       streamingMessageId={surfaceStreamingMessageId}
-      queueCount={queueCount}
+      queuedMessages={queuedMessages}
       {...composerContext.inputProps}
       isActiveSurface={isActiveSurface}
       presentation={useInitialComposer ? "initial" : "default"}
       onSendMessage={handleSendMessage}
+      onInterruptAndSend={handleInterruptAndSend}
+      onMoveQueuedMessage={(fromIndex, toIndex) => {
+        if (effectiveChatId)
+          chatActions.moveQueuedAgentMessage(effectiveChatId, fromIndex, toIndex);
+      }}
+      onRemoveQueuedMessage={(index, reason) => {
+        if (effectiveChatId) {
+          chatActions.removeQueuedAgentMessage(effectiveChatId, index);
+          if (reason === "discard") {
+            void recordFrictionSignal({ area: "agent", signal: "queue_discard" });
+          }
+        }
+      }}
       onStopStreaming={stopStreaming}
     />
   );
@@ -1194,8 +1255,7 @@ details: ${errorDetails || mainError}
                     }}
                     onEditUserMessage={handleEditUserMessage}
                     canEditUserMessages={
-                      currentChat?.agentId === "custom" &&
-                      chatState.hasApiKey &&
+                      getAgentMessageAccess(currentAgentId, chatState.hasApiKey).accepted &&
                       !isSurfaceTyping &&
                       !surfaceStreamingMessageId &&
                       !isAiChatBlockedByPolicy
@@ -1204,6 +1264,10 @@ details: ${errorDetails || mainError}
                     searchQuery={messageSearchQuery}
                     activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
                     activeSearchIndex={activeMessageSearchIndex}
+                    userName={accountIdentity.name}
+                    userAvatarUrl={accountIdentity.avatarUrl}
+                    assistantIconId={assistantIconId}
+                    assistantLabel={assistantLabel}
                   />
                 </MessageScrollerViewport>
                 <MessageScrollerButton />

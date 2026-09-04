@@ -28,6 +28,7 @@ import {
 import { normalizeCodeFenceLanguage } from "@/features/editor/markdown/language-map";
 import { Button } from "@/ui/button";
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
+import { TextLink } from "@/ui/text-link";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
@@ -403,8 +404,6 @@ type MarkdownTable = {
 
 const INLINE_CODE_CLASS_NAME =
   "font-mono inline whitespace-break-spaces rounded bg-surface/80 px-1 py-0 text-[0.95em] leading-[inherit] text-foreground align-baseline";
-const INLINE_LINK_CLASS_NAME =
-  "inline wrap-break-word font-[inherit] leading-[inherit] text-primary hover:underline";
 
 function splitMarkdownTableRow(line: string): string[] {
   let value = line.trim();
@@ -618,17 +617,16 @@ function renderInlineFormatting(text: string): React.ReactNode {
       const url = linkMatch[2];
       const label = linkMatch[1];
       elements.push(
-        <a
+        <TextLink
           key={getInlineKey("link", linkMatch[0])}
           href={url}
           onClick={(e) => {
             e.preventDefault();
             void openMarkdownLink(url, label);
           }}
-          className={INLINE_LINK_CLASS_NAME}
         >
           {label}
-        </a>,
+        </TextLink>,
       );
       remaining = remaining.slice(linkMatch[0].length);
       continue;
@@ -639,17 +637,16 @@ function renderInlineFormatting(text: string): React.ReactNode {
     if (urlMatch) {
       const url = urlMatch[1];
       elements.push(
-        <a
+        <TextLink
           key={getInlineKey("url", urlMatch[0])}
           href={url}
           onClick={(e) => {
             e.preventDefault();
             import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(url));
           }}
-          className={INLINE_LINK_CLASS_NAME}
         >
           {url.length > 60 ? `${url.slice(0, 60)}...` : url}
-        </a>,
+        </TextLink>,
       );
       remaining = remaining.slice(urlMatch[0].length);
       continue;

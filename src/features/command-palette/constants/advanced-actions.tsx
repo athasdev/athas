@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { detachAgentView } from "@/features/ai/detached/agent-window-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   ArrowClockwiseIcon as RefreshCw,
@@ -38,6 +39,17 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
   const { lspStatus, vimMode, vimCommands, setMode, openQuickEdit, showToast, onClose } = params;
 
   const baseActions: Action[] = [
+    {
+      id: "ai-detach-agents",
+      label: "AI: Detach Agents View",
+      description: "Move the Agents view into its own window",
+      icon: <Sparkles />,
+      category: "AI",
+      action: async () => {
+        onClose();
+        await detachAgentView();
+      },
+    },
     {
       id: "ai-new-agent",
       label: "AI: New Agent",

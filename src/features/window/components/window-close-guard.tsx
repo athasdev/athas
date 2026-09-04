@@ -10,6 +10,8 @@ import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-d
 import { consumeCloseRequestSuppression } from "@/features/window/utils/close-request-suppression";
 import { REQUEST_WINDOW_CLOSE_EVENT } from "@/features/window/utils/request-window-close";
 import { IS_LINUX } from "@/utils/platform";
+import { agentsAreDetached } from "@/features/ai/detached/agent-window.store";
+import { toast } from "sonner";
 
 interface PendingWindowClose {
   bufferId: string;
@@ -60,6 +62,10 @@ export function WindowCloseGuard() {
   }, []);
 
   const continueCloseOrPrompt = useCallback(async () => {
+    if (agentsAreDetached()) {
+      toast.info("Return the Agents view to this window before closing it.");
+      return;
+    }
     const dirtyBuffer = getBlockingDirtyBuffer(discardedBufferIdsRef.current);
 
     if (dirtyBuffer) {
@@ -77,6 +83,11 @@ export function WindowCloseGuard() {
 
   const handleCloseRequested = useCallback<CloseRequestedHandler>(
     (event) => {
+      if (agentsAreDetached()) {
+        event.preventDefault();
+        toast.info("Return the Agents view to this window before closing it.");
+        return;
+      }
       if (IS_LINUX && consumeCloseRequestSuppression()) {
         event.preventDefault();
         return;

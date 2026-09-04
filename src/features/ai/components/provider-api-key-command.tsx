@@ -20,7 +20,6 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import Input from "@/ui/input";
-import { cn } from "@/utils/cn";
 
 interface ProviderApiKeyCommandProps {
   isOpen: boolean;
@@ -283,12 +282,7 @@ function ProviderApiKeyCommandContent({
                 )}
                 <div className="flex items-center gap-1.5">
                   {hasExistingKey && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => void handleRemove()}
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    >
+                    <Button type="button" variant="danger" onClick={() => void handleRemove()}>
                       <Trash />
                       <span>Remove</span>
                     </Button>
@@ -298,7 +292,6 @@ function ProviderApiKeyCommandContent({
                     variant="accent"
                     onClick={() => void handleSave()}
                     disabled={!apiKey.trim() || isValidating || apiKey.startsWith("•")}
-                    className={cn(isValidating && "opacity-70")}
                   >
                     <span>{isValidating ? "Validating" : "Save key"}</span>
                   </Button>

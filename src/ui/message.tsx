@@ -1,4 +1,5 @@
 import type * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 import { CopyIcon as Copy, type Icon as AppIcon } from "@/ui/icons";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -31,12 +32,42 @@ function Message({
   );
 }
 
-function MessageAvatar({ className, ...props }: React.ComponentProps<"div">) {
+const messageAvatarVariants = cva(
+  "flex shrink-0 items-center justify-center overflow-hidden [&_svg:not([class*='size-'])]:size-3.5",
+  {
+    variants: {
+      variant: {
+        default: "rounded-full bg-surface",
+        assistant: "rounded-md bg-accent text-subtle-foreground",
+      },
+      size: {
+        default: "",
+        compact: "size-6",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  },
+);
+
+function MessageAvatar({
+  className,
+  placement = "footer",
+  variant = "default",
+  size = "default",
+  ...props
+}: React.ComponentProps<"div"> &
+  VariantProps<typeof messageAvatarVariants> & { placement?: "content" | "footer" }) {
   return (
     <div
       data-slot="message-avatar"
       className={cn(
-        "flex min-w-8 shrink-0 items-center justify-center self-end overflow-hidden rounded-full bg-surface group-has-data-[slot=message-footer]/message:-translate-y-8",
+        messageAvatarVariants({ variant, size }),
+        placement === "footer"
+          ? "min-w-8 self-end group-has-data-[slot=message-footer]/message:-translate-y-8"
+          : "min-w-6 self-start",
         className,
       )}
       {...props}
@@ -70,12 +101,17 @@ function MessageHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function MessageFooter({ className, ...props }: React.ComponentProps<"div">) {
+function MessageFooter({
+  className,
+  reserveSpace = true,
+  ...props
+}: React.ComponentProps<"div"> & { reserveSpace?: boolean }) {
   return (
     <div
       data-slot="message-footer"
       className={cn(
         "flex min-h-6 max-w-full min-w-0 items-center gap-0.5 px-2 text-subtle-foreground/60 transition-opacity duration-fast ui-text-sm group-has-data-[variant=ghost]/message:px-0 group-data-[align=end]/message:justify-end md:pointer-events-none md:opacity-0 md:group-hover/message:pointer-events-auto md:group-hover/message:opacity-100 md:group-focus-within/message:pointer-events-auto md:group-focus-within/message:opacity-100",
+        !reserveSpace && "-mb-6",
         className,
       )}
       {...props}
@@ -146,5 +182,6 @@ export {
   MessageFooter,
   MessageGroup,
   MessageHeader,
+  messageAvatarVariants,
   MessageResponse,
 };

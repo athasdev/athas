@@ -93,4 +93,54 @@ describe("AI chat history service", () => {
 
     expect(chat.messages[0].isStreaming).toBe(false);
   });
+
+  it("restores consecutive assistant segments as one response", async () => {
+    vi.mocked(invoke).mockResolvedValue({
+      chat: {
+        id: "loaded-chat",
+        title: "Session",
+        created_at: 1,
+        last_message_at: 3,
+        agent_id: "codex",
+        acp_session_id: null,
+        workspace_path: null,
+        provider_id: null,
+        model_id: null,
+        branch: null,
+        is_pinned: false,
+        archived_at: null,
+      },
+      messages: [
+        {
+          id: "assistant-1",
+          chat_id: "loaded-chat",
+          role: "assistant",
+          content: "First segment",
+          timestamp: 2,
+          is_streaming: false,
+          is_tool_use: false,
+          tool_name: null,
+        },
+        {
+          id: "assistant-2",
+          chat_id: "loaded-chat",
+          role: "assistant",
+          content: "Second segment",
+          timestamp: 3,
+          is_streaming: false,
+          is_tool_use: false,
+          tool_name: null,
+        },
+      ],
+      tool_calls: [],
+    });
+
+    const chat = await loadChatFromDb("loaded-chat");
+
+    expect(chat.messages).toHaveLength(1);
+    expect(chat.messages[0]).toMatchObject({
+      id: "assistant-1",
+      content: "First segment\n\nSecond segment",
+    });
+  });
 });

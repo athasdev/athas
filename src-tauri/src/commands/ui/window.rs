@@ -64,11 +64,48 @@ struct EmbeddedWebviewLocationChangeEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateAppWindowRequest {
+   pub agent_window: Option<String>,
    pub path: Option<String>,
    pub is_directory: Option<bool>,
    pub line: Option<u32>,
    pub remote_connection_id: Option<String>,
    pub remote_connection_name: Option<String>,
+}
+
+#[cfg(test)]
+mod agent_window_tests {
+   use super::*;
+
+   #[test]
+   fn opens_agents_without_a_workspace_open_request() {
+      let request: CreateAppWindowRequest = serde_json::from_value(serde_json::json!({
+         "agentWindow": "test-channel"
+      }))
+      .unwrap();
+      let url = build_window_open_url(Some(&request), "main-2", 123);
+      assert!(url.starts_with("/?view=agents&agentWindow=test-channel&"));
+      assert!(!url.contains("target=open"));
+      assert_eq!(window_title_for_request(Some(&request)), "Agents - Athas");
+   }
+
+   #[test]
+   fn preserves_directory_window_requests() {
+      let request: CreateAppWindowRequest = serde_json::from_value(serde_json::json!({
+         "path": "/workspace/project", "isDirectory": true
+      }))
+      .unwrap();
+      let url = build_window_open_url(Some(&request), "main-2", 123);
+      assert!(url.contains("target=open&type=directory&path="));
+      assert!(!url.contains("view=agents"));
+      assert_eq!(window_title_for_request(Some(&request)), "project - Athas");
+   }
+
+   #[test]
+   fn preserves_empty_windows() {
+      let url = build_window_open_url(None, "main-2", 123);
+      assert!(url.starts_with("/?athasWindowTraceId=main-2&"));
+      assert_eq!(window_title_for_request(None), "Athas");
+   }
 }
 
 fn append_window_trace_params(url: String, label: &str, created_at_ms: u128) -> String {
@@ -84,6 +121,17 @@ fn build_window_open_url(
    let Some(request) = request else {
       return append_window_trace_params("/".to_string(), label, created_at_ms);
    };
+
+   if let Some(channel) = &request.agent_window {
+      let mut serializer = url::form_urlencoded::Serializer::new(String::new());
+      serializer.append_pair("view", "agents");
+      serializer.append_pair("agentWindow", channel);
+      return append_window_trace_params(
+         format!("/?{}", serializer.finish()),
+         label,
+         created_at_ms,
+      );
+   }
 
    let has_payload = request.path.is_some() || request.remote_connection_id.is_some();
    if !has_payload {
@@ -138,6 +186,9 @@ fn window_open_created_at_ms() -> u128 {
 }
 
 fn window_title_for_request(request: Option<&CreateAppWindowRequest>) -> String {
+   if request.is_some_and(|request| request.agent_window.is_some()) {
+      return "Agents - Athas".to_string();
+   }
    let name = request.and_then(|request| {
       request
          .remote_connection_name

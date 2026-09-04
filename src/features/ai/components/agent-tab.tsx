@@ -3,6 +3,8 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { AgentContent } from "@/features/panes/types/pane-content.types";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import AIChat from "./chat/ai-chat";
+import { AgentWindowPlaceholder } from "@/features/ai/detached/agent-window-placeholder";
+import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
 
 interface AgentTabProps {
   buffer: AgentContent;
@@ -10,6 +12,7 @@ interface AgentTabProps {
 }
 
 export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
+  const windowStatus = useAgentWindowStore.use.status();
   const contextBuffers = useBufferStore((state) => (isActive ? state.buffers : []));
   const activeBuffer = useBufferStore(
     (state) => state.buffers.find((candidate) => candidate.id === buffer.id) ?? buffer,
@@ -25,11 +28,13 @@ export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
     updateBuffer({ ...buffer, name: tabTitle });
   }, [buffer, tabTitle, updateBuffer]);
 
+  if (windowStatus !== "attached") return <AgentWindowPlaceholder />;
+
   return (
     <div className="size-full overflow-hidden">
       <AIChat
         mode="chat"
-        surfaceId={`agent-tab:${buffer.id}`}
+        surfaceId={`agent-session:${buffer.sessionId}`}
         chatId={buffer.sessionId}
         activeBuffer={activeBuffer}
         buffers={contextBuffers}

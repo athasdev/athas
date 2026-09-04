@@ -104,4 +104,26 @@ describe("AI chat surface sessions", () => {
     actions.finishAgentRun(chatId, "run-1");
     expect(useAIChatStore.getState().agentRuns[chatId]).toBeUndefined();
   });
+
+  it("lets users prioritize, reorder, and remove queued guidance", () => {
+    const chatId = useAIChatStore.getState().actions.createNewChat("codex");
+    const actions = useAIChatStore.getState().actions;
+
+    actions.enqueueAgentMessage(chatId, "later");
+    actions.enqueueAgentMessage(chatId, "last");
+    actions.prependAgentMessage(chatId, "interrupt now");
+    actions.moveQueuedAgentMessage(chatId, 2, 1);
+
+    expect(useAIChatStore.getState().agentMessageQueues[chatId]).toEqual([
+      "interrupt now",
+      "last",
+      "later",
+    ]);
+
+    actions.removeQueuedAgentMessage(chatId, 1);
+    expect(useAIChatStore.getState().agentMessageQueues[chatId]).toEqual([
+      "interrupt now",
+      "later",
+    ]);
+  });
 });

@@ -1,4 +1,5 @@
 import { forwardRef, type ComponentProps } from "react";
+import { chatContentWidth } from "@/features/ai/components/chat/chat-content-width";
 import { SidebarComposerBody } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
@@ -33,7 +34,7 @@ export const ChatComposer = forwardRef<
     <div
       ref={ref}
       data-ai-element="prompt-input"
-      className={cn("mx-auto mb-2 w-[calc(100%-1rem)] max-w-4xl shrink-0", rootClassName)}
+      className={cn(chatContentWidth(), "mb-2 shrink-0", rootClassName)}
       {...props}
     />
   );

@@ -1,5 +1,6 @@
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat.types";
 import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
+import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 import {
   deleteChatFromDb,
@@ -155,6 +156,10 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       set((state) => {
         (state.agentMessageQueues[chatId] ??= []).push(message);
       }),
+    prependAgentMessage: (chatId, message) =>
+      set((state) => {
+        (state.agentMessageQueues[chatId] ??= []).unshift(message);
+      }),
     dequeueAgentMessage: (chatId) => {
       let message: string | null = null;
       set((state) => {
@@ -166,6 +171,23 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       });
       return message;
     },
+    moveQueuedAgentMessage: (chatId, fromIndex, toIndex) =>
+      set((state) => {
+        const queue = state.agentMessageQueues[chatId];
+        if (!queue || fromIndex < 0 || fromIndex >= queue.length) return;
+        if (toIndex < 0 || toIndex >= queue.length || fromIndex === toIndex) return;
+
+        const [message] = queue.splice(fromIndex, 1);
+        if (message) queue.splice(toIndex, 0, message);
+      }),
+    removeQueuedAgentMessage: (chatId, index) =>
+      set((state) => {
+        const queue = state.agentMessageQueues[chatId];
+        if (!queue || index < 0 || index >= queue.length) return;
+
+        queue.splice(index, 1);
+        if (queue.length === 0) delete state.agentMessageQueues[chatId];
+      }),
     createNewChat: (agentId, options = {}) => {
       const state = get();
       const activate = options.activate ?? true;
@@ -369,8 +391,8 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         const chat = state.chats.find((candidate) => candidate.id === chatId);
         if (!chat) return;
 
-        chat.messages = messages.map(normalizeMessageFollowUpActions);
-        chat.lastMessageAt = messages[messages.length - 1]?.timestamp ?? chat.createdAt;
+        chat.messages = coalesceAssistantResponses(messages.map(normalizeMessageFollowUpActions));
+        chat.lastMessageAt = chat.messages[chat.messages.length - 1]?.timestamp ?? chat.createdAt;
       });
       void syncChatToDatabase(get, chatId);
     },

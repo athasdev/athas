@@ -56,7 +56,7 @@ function createHandler(
     onChunk: (chunk: string) => void;
     onComplete: (result?: AgentCompletionResult) => void;
     onError: (error: string, canReconnect?: boolean) => void;
-    onNewMessage: () => void;
+    onResponseContinuation: () => void;
     onEvent: (event: AcpEvent) => void;
     onPermissionRequest: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
   }> = {},
@@ -130,10 +130,10 @@ describe("AcpStreamHandler", () => {
     );
   });
 
-  it("starts a new message before reasoning that follows a completed tool", () => {
+  it("starts a response continuation before reasoning that follows a completed tool", () => {
     const calls: string[] = [];
     const { handler } = createHandler({
-      onNewMessage: () => calls.push("new-message"),
+      onResponseContinuation: () => calls.push("response-continuation"),
       onEvent: (event) => calls.push(event.type),
     });
 
@@ -162,7 +162,7 @@ describe("AcpStreamHandler", () => {
       isComplete: false,
     });
 
-    expect(calls).toEqual(["new-message", "thought_chunk"]);
+    expect(calls).toEqual(["response-continuation", "thought_chunk"]);
   });
 
   it("normalizes startup authentication errors for the login action", () => {

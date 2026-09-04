@@ -4,11 +4,13 @@ import {
   CodeBlockIcon as CodeBlock,
   DatabaseIcon as Database,
   FileTextIcon as FileText,
+  LightningIcon as Lightning,
   MicrophoneIcon as Mic,
   StopIcon as Stop,
   XIcon as X,
 } from "@/ui/icons";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { registerAgentDraft, takeAgentDraft } from "@/features/ai/detached/agent-window-drafts";
 import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
 import {
   AI_CHAT_INSERT_SKILL_EVENT,
@@ -46,8 +48,9 @@ import {
   AttachmentMedia,
   AttachmentTitle,
 } from "@/ui/attachment";
-import Badge from "@/ui/badge";
+import { badgeVariants } from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { Toggle } from "@/ui/toggle";
 import { cn } from "@/utils/cn";
 import {
@@ -57,6 +60,7 @@ import {
   ChatComposerToolbar,
 } from "./chat-composer";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
+import { AgentMessageQueue } from "./agent-message-queue";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ContextSelector } from "../selectors/context-selector";
@@ -68,7 +72,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   currentAgentId,
   isTyping,
   streamingMessageId,
-  queueCount,
+  queuedMessages,
   selectedBufferIds,
   selectedFilesPaths,
   selectedEditorContexts,
@@ -82,6 +86,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
   autoFocus = false,
   onAgentChange,
   onSendMessage,
+  onInterruptAndSend,
+  onMoveQueuedMessage,
+  onRemoveQueuedMessage,
   onStopStreaming,
 }: AIChatInputBarProps) {
   const inputRef = useRef<HTMLDivElement>(null);
@@ -97,6 +104,30 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [isComposerFocused, setIsComposerFocused] = useState(false);
   const inputValueRef = useRef("");
   const [pastedImages, setPastedImages] = useState<PastedImage[]>([]);
+  const draftReader = useRef(() => ({
+    text: inputValueRef.current,
+    images: pastedImages,
+    bufferIds: [...selectedBufferIds],
+    filePaths: [...selectedFilesPaths],
+    editorContexts: selectedEditorContexts,
+  }));
+  draftReader.current = () => ({
+    text: inputValueRef.current,
+    images: pastedImages,
+    bufferIds: [...selectedBufferIds],
+    filePaths: [...selectedFilesPaths],
+    editorContexts: selectedEditorContexts,
+  });
+  useLayoutEffect(() => {
+    const draft = takeAgentDraft(surfaceId);
+    if (draft) {
+      inputValueRef.current = draft.text;
+      if (inputRef.current) inputRef.current.textContent = draft.text;
+      setHasInputText(draft.text.trim().length > 0);
+      setPastedImages(draft.images);
+    }
+    return registerAgentDraft(surfaceId, () => draftReader.current());
+  }, [surfaceId]);
   const [isContextDropdownOpen, setIsContextDropdownOpen] = useState(false);
   const [mentionState, setMentionState] = useState({
     active: false,
@@ -336,7 +367,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // Computed state for send button
   const hasImages = pastedImages.length > 0;
-  const isSendDisabled = isStreaming ? false : (!hasInputText && !hasImages) || !isInputEnabled;
+  const isSendDisabled = (!hasInputText && !hasImages) || !isInputEnabled;
   const getPlainTextFromDiv = useCallback(() => getComposerText(inputRef.current), []);
   const getTextBeforeCaret = useCallback(() => getComposerTextBeforeCaret(inputRef.current), []);
   const getCaretDropdownPosition = useCallback(
@@ -868,8 +899,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
       mentionSpan.setAttribute("data-mention-path", file.path);
       mentionSpan.setAttribute("contenteditable", "false");
       mentionSpan.title = file.path;
-      mentionSpan.className =
-        "font-sans ui-text-sm inline-flex min-h-6 max-w-45 items-center gap-1 truncate rounded-full border-0 bg-primary/10 px-1.5 py-0.5 leading-row text-primary align-baseline select-none";
+      mentionSpan.className = cn(
+        badgeVariants({ variant: "accent" }),
+        "max-w-48 truncate align-baseline select-none",
+      );
       mentionSpan.textContent = file.name;
 
       const trailingSpace = document.createTextNode(" ");
@@ -909,8 +942,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
       commandSpan.setAttribute("data-slash-command-name", command.name);
       commandSpan.setAttribute("contenteditable", "false");
       commandSpan.title = command.description || `/${command.name}`;
-      commandSpan.className =
-        "font-sans ui-text-sm inline-flex min-h-6 max-w-45 items-center gap-1 truncate rounded-full border-0 bg-accent/70 px-1.5 py-0.5 leading-row text-foreground align-baseline select-none";
+      commandSpan.className = cn(
+        badgeVariants({ variant: "muted" }),
+        "max-w-48 truncate align-baseline select-none",
+      );
       commandSpan.textContent = `/${command.name}`;
 
       const trailingSpace = document.createTextNode(" ");
@@ -949,6 +984,35 @@ const AIChatInputBar = memo(function AIChatInputBar({
     if (inputRef.current) {
       inputRef.current.innerHTML = "";
     }
+  };
+
+  const replaceInput = useCallback(
+    (value: string) => {
+      if (!inputRef.current) return;
+      inputRef.current.textContent = value;
+      setInput(value);
+      setHasInputText(value.trim().length > 0);
+      inputRef.current.focus();
+
+      const selection = window.getSelection();
+      if (!selection) return;
+      const range = document.createRange();
+      range.selectNodeContents(inputRef.current);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    },
+    [setInput],
+  );
+
+  const handleInterruptAndSend = () => {
+    const currentInput = inputValueRef.current;
+    if (!currentInput.trim() || !isInputEnabled) return;
+    const result = onInterruptAndSend(currentInput);
+    if (!result.accepted) return;
+
+    replaceInput("");
+    clearPastedImages();
   };
 
   const focusInput = useCallback(() => inputRef.current?.focus(), []);
@@ -1055,12 +1119,17 @@ const AIChatInputBar = memo(function AIChatInputBar({
             />
           </div>
 
-          {queueCount > 0 && (
-            <Badge className="shrink-0 gap-1 bg-primary/10 px-2.5 text-primary">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-              <span>{queueCount}</span>
-            </Badge>
-          )}
+          <AgentMessageQueue
+            messages={queuedMessages}
+            onEdit={(index) => {
+              const message = queuedMessages[index];
+              if (!message) return;
+              onRemoveQueuedMessage(index, "edit");
+              replaceInput(message);
+            }}
+            onMove={onMoveQueuedMessage}
+            onRemove={(index) => onRemoveQueuedMessage(index, "discard")}
+          />
 
           <div className="flex shrink-0 items-center gap-1">
             {hasSlashCommands && (
@@ -1119,9 +1188,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               disabled={!isInputEnabled || !isSpeechRecognitionSupported}
               pressed={isListening}
               onPressedChange={toggleVoiceInput}
-              className={cn(
-                isListening && "bg-primary/10 text-primary hover:bg-primary/14 hover:text-primary",
-              )}
+              tone="accent"
               tooltip={
                 isMacDevSpeechRecognitionBlocked
                   ? "Voice input is disabled in macOS dev mode"
@@ -1136,29 +1203,55 @@ const AIChatInputBar = memo(function AIChatInputBar({
               <Mic size={12} className={cn(isListening && "animate-pulse")} />
             </Toggle>
 
-            <Button
-              type="button"
-              disabled={isSendDisabled}
-              onClick={isStreaming ? onStopStreaming : handleSendMessage}
-              variant="ghost"
-              className={cn(
-                isSendDisabled
-                  ? "cursor-not-allowed bg-accent/40 text-subtle-foreground opacity-50"
-                  : isStreaming
-                    ? "bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive"
-                    : (hasInputText || hasImages) && isInputEnabled
-                      ? "bg-primary text-white hover:bg-primary/85 hover:text-white"
-                      : "bg-accent/70 text-subtle-foreground hover:bg-accent hover:text-foreground",
-              )}
-              tooltip={
-                isStreaming ? "Stop generation" : queueCount > 0 ? "Add to queue" : "Send message"
-              }
-              shortcut={isStreaming ? "escape" : "enter"}
-              aria-label={isStreaming ? "Stop generation" : "Send message"}
-              iconOnly
-            >
-              {isStreaming ? <Stop /> : <ArrowUp />}
-            </Button>
+            {isStreaming ? (
+              <ButtonGroup variant="ghost">
+                <Button
+                  type="button"
+                  disabled={isSendDisabled}
+                  onClick={handleSendMessage}
+                  variant="accent"
+                  tooltip="Send after current response"
+                  shortcut="enter"
+                  iconOnly
+                >
+                  <ArrowUp />
+                </Button>
+                <ButtonGroupSeparator />
+                <Button
+                  type="button"
+                  disabled={isSendDisabled || hasImages}
+                  onClick={handleInterruptAndSend}
+                  variant="accent-ghost"
+                  tooltip="Interrupt and send now"
+                  iconOnly
+                >
+                  <Lightning />
+                </Button>
+                <ButtonGroupSeparator />
+                <Button
+                  type="button"
+                  onClick={onStopStreaming}
+                  variant="danger"
+                  tooltip="Stop generation"
+                  shortcut="escape"
+                  iconOnly
+                >
+                  <Stop />
+                </Button>
+              </ButtonGroup>
+            ) : (
+              <Button
+                type="button"
+                disabled={isSendDisabled}
+                onClick={handleSendMessage}
+                variant="accent"
+                tooltip="Send message"
+                shortcut="enter"
+                iconOnly
+              >
+                <ArrowUp />
+              </Button>
+            )}
           </div>
         </ChatComposerToolbar>
 

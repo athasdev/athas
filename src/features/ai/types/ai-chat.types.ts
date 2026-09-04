@@ -104,7 +104,7 @@ export interface AIChatInputBarProps {
   currentAgentId: AgentType;
   isTyping: boolean;
   streamingMessageId: string | null;
-  queueCount: number;
+  queuedMessages: string[];
   selectedBufferIds: Set<string>;
   selectedFilesPaths: Set<string>;
   selectedEditorContexts: EditorSelectionContext[];
@@ -118,5 +118,8 @@ export interface AIChatInputBarProps {
   autoFocus?: boolean;
   onAgentChange?: (agentId: AgentType) => void;
   onSendMessage: (message: string) => AgentMessageSubmitResult;
+  onInterruptAndSend: (message: string) => AgentMessageSubmitResult;
+  onMoveQueuedMessage: (fromIndex: number, toIndex: number) => void;
+  onRemoveQueuedMessage: (index: number, reason: "edit" | "discard") => void;
   onStopStreaming: () => void;
 }

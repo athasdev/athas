@@ -9,6 +9,7 @@ import {
   useMessageScroller,
 } from "@/ui/message-scroller";
 import { cn } from "@/utils/cn";
+import { chatContentWidth } from "./chat-content-width";
 import { useAIChatStore } from "../../stores/ai-chat.store";
 import { AcpInlineEvent } from "./acp-inline-event";
 import { AgentShortcuts } from "./agent-shortcuts";
@@ -26,6 +27,10 @@ interface ChatMessagesProps {
   activeSearchMessageId?: string | null;
   activeSearchIndex?: number;
   surfaceId: string;
+  userName: string;
+  userAvatarUrl?: string | null;
+  assistantIconId: string;
+  assistantLabel: string;
 }
 
 const getTimestampMs = (value: Date | string): number => {
@@ -45,6 +50,10 @@ export const ChatMessages = memo(function ChatMessages({
   activeSearchMessageId,
   activeSearchIndex,
   surfaceId,
+  userName,
+  userAvatarUrl,
+  assistantIconId,
+  assistantLabel,
 }: ChatMessagesProps) {
   const { scrollToMessage } = useMessageScroller();
   const { currentChatId, chats } = useAIChatStore(
@@ -97,7 +106,7 @@ export const ChatMessages = memo(function ChatMessages({
 
   if (messages.length === 0) {
     return (
-      <MessageScrollerContent className="mx-auto w-full max-w-4xl justify-end px-4 pt-4 pb-2">
+      <MessageScrollerContent className={cn(chatContentWidth(), "justify-end pt-4 pb-2")}>
         <AgentShortcuts className="mx-auto max-w-sm" surfaceId={surfaceId} />
       </MessageScrollerContent>
     );
@@ -105,7 +114,7 @@ export const ChatMessages = memo(function ChatMessages({
 
   return (
     <MessageScrollerContent
-      className="mx-auto w-full max-w-3xl"
+      className={chatContentWidth()}
       aria-busy={messages.some((message) => message.isStreaming)}
     >
       {timelineItems.map((item) => {
@@ -134,12 +143,17 @@ export const ChatMessages = memo(function ChatMessages({
           (!prevMessage.content || prevMessage.content.trim().length === 0);
 
         const isPlanMessage = message.role === "assistant" && hasPlanBlock(message.content);
+        const hasMessageFooter =
+          message.role === "user" ||
+          (message.role === "assistant" && message.content.trim().length > 0);
         const messageClassName = [
           isToolOnlyMessage
             ? previousMessageIsToolOnly
-              ? "px-4 py-1"
-              : "px-4 pt-2 pb-1"
-            : "px-4 py-3",
+              ? "py-1"
+              : "pt-2 pb-1"
+            : hasMessageFooter
+              ? "pt-2 pb-6"
+              : "py-2",
           isPlanMessage ? "pt-2" : "",
         ]
           .filter(Boolean)
@@ -174,6 +188,10 @@ export const ChatMessages = memo(function ChatMessages({
               searchQuery={searchQuery}
               chatId={currentChat?.id}
               onExecutePlanStep={onSendFollowUp}
+              userName={userName}
+              userAvatarUrl={userAvatarUrl}
+              assistantIconId={assistantIconId}
+              assistantLabel={assistantLabel}
             />
             {isLastMessage && message.role === "assistant" && onSendFollowUp ? (
               <ChatFollowUpActions

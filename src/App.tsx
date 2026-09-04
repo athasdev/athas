@@ -1,5 +1,6 @@
 import { lazy, Suspense, use, useEffect, useMemo } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { parseAgentWindowChannel } from "@/features/ai/detached/agent-window-state";
 import { recordStartupMilestoneAfterFrame } from "@/features/bootstrap/startup-performance";
 import {
   getWindowOpenDiagnostics,
@@ -8,6 +9,7 @@ import {
 } from "@/features/window/utils/window-open-diagnostics";
 
 const WorkbenchApp = lazy(() => import("./workbench-app"));
+const DetachedAgentsApp = lazy(() => import("./features/ai/detached/detached-agents-app"));
 
 function isBlankWindowOpen() {
   const diagnostics = getWindowOpenDiagnostics();
@@ -60,6 +62,7 @@ interface AppProps {
 }
 
 function App({ terminalSessionReady }: AppProps) {
+  const agentWindow = useMemo(() => parseAgentWindowChannel(new URL(window.location.href)), []);
   const blankWindowOpen = useMemo(() => isBlankWindowOpen(), []);
 
   useEffect(() => {
@@ -80,10 +83,14 @@ function App({ terminalSessionReady }: AppProps) {
 
   return (
     <Suspense fallback={<InitialWindowShell />}>
-      <WorkbenchBoundary
-        blankWindowOpen={blankWindowOpen}
-        terminalSessionReady={terminalSessionReady}
-      />
+      {agentWindow ? (
+        <DetachedAgentsApp />
+      ) : (
+        <WorkbenchBoundary
+          blankWindowOpen={blankWindowOpen}
+          terminalSessionReady={terminalSessionReady}
+        />
+      )}
     </Suspense>
   );
 }

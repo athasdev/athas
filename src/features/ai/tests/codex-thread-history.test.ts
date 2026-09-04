@@ -20,7 +20,8 @@ describe("Codex thread history", () => {
                 ],
               },
               { type: "reasoning", id: "reasoning-1", summary: ["Checking"] },
-              { type: "agentMessage", id: "assistant-1", text: "Looks good" },
+              { type: "agentMessage", id: "assistant-1", text: "I checked it." },
+              { type: "agentMessage", id: "assistant-2", text: "Looks good" },
             ],
           },
         ],
@@ -36,7 +37,7 @@ describe("Codex thread history", () => {
       },
       {
         id: "assistant-1",
-        content: "Looks good",
+        content: "I checked it.\n\nLooks good",
         role: "assistant",
         timestamp: new Date(1_700_000_002_000),
       },

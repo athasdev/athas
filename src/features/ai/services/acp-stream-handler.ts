@@ -26,7 +26,7 @@ interface AcpHandlers {
   onChunk: (chunk: string) => void;
   onComplete: (result?: AgentCompletionResult) => void;
   onError: (error: string, canReconnect?: boolean) => void;
-  onNewMessage?: () => void;
+  onResponseContinuation?: () => void;
   onToolUse?: (event: Extract<AcpEvent, { type: "tool_start" }>) => void;
   onToolUpdate?: (event: Extract<AcpEvent, { type: "tool_update" }>) => void;
   onToolComplete?: (toolName: string, toolId?: string, output?: unknown, error?: string) => void;
@@ -525,7 +525,7 @@ export class AcpStreamHandler {
   private startPendingMessage(): void {
     if (!this.pendingNewMessage) return;
     this.pendingNewMessage = false;
-    this.handlers.onNewMessage?.();
+    this.handlers.onResponseContinuation?.();
   }
 
   private handleToolStart(event: Extract<AcpEvent, { type: "tool_start" }>): void {

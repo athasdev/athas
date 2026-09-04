@@ -16,7 +16,7 @@ interface CodexHandlers {
   onChunk: (chunk: string) => void;
   onComplete: (result?: AgentCompletionResult) => void;
   onError: (error: string, canReconnect?: boolean) => void;
-  onNewMessage?: () => void;
+  onResponseContinuation?: () => void;
   onToolUse?: (event: Extract<AcpEvent, { type: "tool_start" }>) => void;
   onToolComplete?: (toolName: string, toolId?: string, output?: unknown, error?: string) => void;
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
@@ -245,7 +245,7 @@ export class CodexIntegrationService {
   private startPendingMessage() {
     if (!this.pendingNewMessage) return;
     this.pendingNewMessage = false;
-    this.handlers.onNewMessage?.();
+    this.handlers.onResponseContinuation?.();
   }
 
   private dispose() {

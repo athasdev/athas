@@ -1,7 +1,7 @@
 import {
   CopySimpleIcon as CopySimple,
   FileTextIcon as FileText,
-  PencilSimpleIcon as PencilSimple,
+  UploadSimpleIcon as Share,
 } from "@/ui/icons";
 import type { FormEvent, ReactNode } from "react";
 import { memo, useCallback, useState } from "react";
@@ -12,6 +12,7 @@ import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message as AIMessage } from "@/features/ai/types/ai-chat.types";
 import { formatTime } from "@/features/ai/lib/formatting";
+import { buildShareableOutcomeMarkdown } from "@/features/ai/lib/shareable-outcome";
 import { writeClipboardText } from "@/utils/clipboard";
 import { Button } from "@/ui/button";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
@@ -25,8 +26,10 @@ import {
   AttachmentTrigger,
 } from "@/ui/attachment";
 import { Bubble, BubbleContent } from "@/ui/bubble";
-import { Message, MessageContent, MessageFooter } from "@/ui/message";
+import { Avatar } from "@/ui/avatar";
+import { Message, MessageAvatar, MessageContent, MessageFooter } from "@/ui/message";
 import Textarea from "@/ui/textarea";
+import { ProviderIcon } from "../icons/provider-icons";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
 import { ToolCallGroupDisplay } from "../messages/tool-call-display";
@@ -40,6 +43,10 @@ interface ChatMessageProps {
   searchQuery?: string;
   chatId?: string | null;
   onExecutePlanStep?: (message: string) => void | Promise<void>;
+  userName: string;
+  userAvatarUrl?: string | null;
+  assistantIconId: string;
+  assistantLabel: string;
 }
 
 async function copyText(text: string) {
@@ -89,14 +96,34 @@ function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
   );
 }
 
+function AssistantMessageAvatar({ iconId, label }: { iconId: string; label: string }) {
+  return (
+    <MessageAvatar
+      placement="content"
+      variant="assistant"
+      size="compact"
+      className="mt-1.5"
+      title={label}
+      aria-label={label}
+    >
+      <ProviderIcon providerId={iconId} />
+    </MessageAvatar>
+  );
+}
+
 export const ChatMessage = memo(function ChatMessage({
   message,
+  isLastMessage,
   onApplyCode,
   onEditUserMessage,
   canEditUserMessage = false,
   searchQuery = "",
   chatId,
   onExecutePlanStep,
+  userName,
+  userAvatarUrl,
+  assistantIconId,
+  assistantLabel,
 }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftContent, setDraftContent] = useState(message.content);
@@ -138,14 +165,13 @@ export const ChatMessage = memo(function ChatMessage({
     };
 
     return (
-      <Message align="end">
+      <Message>
+        <MessageAvatar placement="content" size="compact" className="mt-0.5">
+          <Avatar name={userName} src={userAvatarUrl} className="size-full" />
+        </MessageAvatar>
         <MessageContent>
-          <Bubble
-            variant="secondary"
-            align="end"
-            className={isEditing ? "w-full max-w-[80%]" : undefined}
-          >
-            <BubbleContent title={messageTime} className={isEditing ? "w-full" : undefined}>
+          <Bubble variant="ghost">
+            <BubbleContent title={messageTime} className="w-full">
               {isEditing ? (
                 <form onSubmit={submitEdit} className="flex min-w-0 flex-col gap-2">
                   <Textarea
@@ -159,7 +185,8 @@ export const ChatMessage = memo(function ChatMessage({
                       }
                     }}
                     variant="ghost"
-                    className="min-h-16 resize-y p-0"
+                    inset="flush"
+                    className="min-h-16 resize-y"
                     aria-label="Edit prompt"
                   />
                   <div className="flex justify-end gap-1">
@@ -171,6 +198,15 @@ export const ChatMessage = memo(function ChatMessage({
                     </Button>
                   </div>
                 </form>
+              ) : canEditUserMessage && onEditUserMessage ? (
+                <button
+                  type="button"
+                  onClick={startEditing}
+                  className="block w-full cursor-text text-left whitespace-pre-wrap wrap-break-word select-text"
+                  aria-label="Edit prompt"
+                >
+                  <HighlightedPlainText text={message.content} query={searchQuery} />
+                </button>
               ) : (
                 <div className="select-text whitespace-pre-wrap wrap-break-word">
                   <HighlightedPlainText text={message.content} query={searchQuery} />
@@ -179,16 +215,11 @@ export const ChatMessage = memo(function ChatMessage({
             </BubbleContent>
           </Bubble>
           {isEditing ? null : (
-            <MessageFooter>
+            <MessageFooter reserveSpace={false}>
               <span>{messageTime}</span>
               <MessageAction onClick={() => void copyText(message.content)} label="Copy prompt">
                 <CopySimple className="size-3.5" />
               </MessageAction>
-              {canEditUserMessage && onEditUserMessage ? (
-                <MessageAction onClick={startEditing} label="Edit prompt">
-                  <PencilSimple className="size-3.5" />
-                </MessageAction>
-              ) : null}
             </MessageFooter>
           )}
         </MessageContent>
@@ -198,9 +229,12 @@ export const ChatMessage = memo(function ChatMessage({
 
   if (isToolOnlyMessage) {
     return (
-      <div>
-        <ToolCallGroupDisplay toolCalls={message.toolCalls!} isStreaming={message.isStreaming} />
-      </div>
+      <Message>
+        <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
+        <MessageContent>
+          <ToolCallGroupDisplay toolCalls={message.toolCalls!} isStreaming={message.isStreaming} />
+        </MessageContent>
+      </Message>
     );
   }
 
@@ -210,11 +244,19 @@ export const ChatMessage = memo(function ChatMessage({
     (!message.content || message.content.trim().length === 0) &&
     (!message.toolCalls || message.toolCalls.length === 0)
   ) {
-    return <ChatResponseStatus phase={message.responsePhase} />;
+    return (
+      <Message>
+        <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
+        <MessageContent>
+          <ChatResponseStatus phase={message.responsePhase} />
+        </MessageContent>
+      </Message>
+    );
   }
 
   return (
     <Message>
+      <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
       <MessageContent>
         <Bubble variant="ghost">
           <BubbleContent>
@@ -299,10 +341,17 @@ export const ChatMessage = memo(function ChatMessage({
           </BubbleContent>
         </Bubble>
         {message.content.trim() ? (
-          <MessageFooter>
+          <MessageFooter reserveSpace={false}>
             <MessageAction onClick={() => void copyText(message.content)} label="Copy response">
               <CopySimple className="size-3.5" />
             </MessageAction>
+            {isLastMessage && !message.isStreaming ? (
+              <MessageAction
+                onClick={() => void copyText(buildShareableOutcomeMarkdown(message.content))}
+                label="Copy outcome as Markdown"
+                icon={Share}
+              />
+            ) : null}
           </MessageFooter>
         ) : null}
       </MessageContent>

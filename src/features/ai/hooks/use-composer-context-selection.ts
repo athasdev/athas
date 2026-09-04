@@ -24,11 +24,19 @@ export function toggleComposerContextSelection(
   return next;
 }
 
-export function useComposerContextSelection() {
-  const [selectedBufferIds, setSelectedBufferIds] = useState<Set<string>>(new Set());
-  const [selectedFilesPaths, setSelectedFilesPaths] = useState<Set<string>>(new Set());
+export function useComposerContextSelection(initial?: {
+  bufferIds: string[];
+  filePaths: string[];
+  editorContexts: EditorSelectionContext[];
+}) {
+  const [selectedBufferIds, setSelectedBufferIds] = useState<Set<string>>(
+    () => new Set(initial?.bufferIds),
+  );
+  const [selectedFilesPaths, setSelectedFilesPaths] = useState<Set<string>>(
+    () => new Set(initial?.filePaths),
+  );
   const [selectedEditorContexts, setSelectedEditorContexts] = useState<EditorSelectionContext[]>(
-    [],
+    initial?.editorContexts ?? [],
   );
 
   const onToggleBufferSelection = useCallback((bufferId: string) => {

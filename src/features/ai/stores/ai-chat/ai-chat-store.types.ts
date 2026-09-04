@@ -72,7 +72,10 @@ export interface AIChatActions {
   updateAgentRun: (chatId: string, runId: string, updates: Partial<AgentRunState>) => void;
   finishAgentRun: (chatId: string, runId: string) => void;
   enqueueAgentMessage: (chatId: string, message: string) => void;
+  prependAgentMessage: (chatId: string, message: string) => void;
   dequeueAgentMessage: (chatId: string) => string | null;
+  moveQueuedAgentMessage: (chatId: string, fromIndex: number, toIndex: number) => void;
+  removeQueuedAgentMessage: (chatId: string, index: number) => void;
   createNewChat: (agentId?: AgentType, options?: { activate?: boolean }) => string;
   ensureChatSession: (
     chatId: string,

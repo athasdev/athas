@@ -2,6 +2,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 
 export interface WindowOpenRequest {
+  agentWindow?: string;
   type?: "path" | "remote" | "web" | "terminal" | "settings";
   source?: "app" | "cli" | "deepLink";
   path?: string;

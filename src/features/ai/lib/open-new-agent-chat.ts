@@ -4,6 +4,11 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { isTerminalAgent } from "./terminal-agents";
 import { openTerminalAgent } from "./terminal-agent-terminal";
+import { agentsAreDetached } from "@/features/ai/detached/agent-window.store";
+import {
+  newAgentInDetachedWindow,
+  openAgentWindowSession,
+} from "@/features/ai/detached/agent-window-service";
 
 interface OpenNewAgentChatOptions {
   editorSelections?: EditorSelectionContext[];
@@ -13,6 +18,10 @@ export function openNewAgentChat(
   agentId?: AgentType,
   options: OpenNewAgentChatOptions = {},
 ): string | null {
+  if (agentsAreDetached()) {
+    newAgentInDetachedWindow();
+    return null;
+  }
   const chatStore = useAIChatStore.getState();
   const requestedAgentId = agentId ?? chatStore.actions.getCurrentAgentId();
   const nextAgentId =
@@ -35,5 +44,7 @@ export function openNewAgentChat(
       editorSelections: options.editorSelections,
     });
   }
-  return useBufferStore.getState().actions.openAgentBuffer(chatId);
+  return (
+    openAgentWindowSession(chatId) ?? useBufferStore.getState().actions.openAgentBuffer(chatId)
+  );
 }

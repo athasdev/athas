@@ -207,17 +207,17 @@ describe("Codex integration service", () => {
     expect(mocks.updateChatTitle).not.toHaveBeenCalled();
   });
 
-  it("ignores transcript items and starts a new message after tool activity", () => {
+  it("ignores transcript items and continues the response after tool activity", () => {
     const calls: string[] = [];
     const onToolUse = vi.fn(() => calls.push("tool-start"));
     const onToolComplete = vi.fn(() => calls.push("tool-complete"));
-    const onNewMessage = vi.fn(() => calls.push("new-message"));
+    const onResponseContinuation = vi.fn(() => calls.push("response-continuation"));
     const onChunk = vi.fn(() => calls.push("chunk"));
     const service = new CodexIntegrationService({
       onChunk,
       onComplete: vi.fn(),
       onError: vi.fn(),
-      onNewMessage,
+      onResponseContinuation,
       onToolUse,
       onToolComplete,
     }) as unknown as {
@@ -268,7 +268,7 @@ describe("Codex integration service", () => {
     expect(onToolUse).toHaveBeenCalledWith(
       expect.objectContaining({ toolId: "tool-1", toolName: "athas_set_chat_title" }),
     );
-    expect(calls).toEqual(["tool-start", "tool-complete", "new-message", "chunk"]);
+    expect(calls).toEqual(["tool-start", "tool-complete", "response-continuation", "chunk"]);
   });
 
   it("surfaces Codex reasoning only after a real reasoning item starts", () => {

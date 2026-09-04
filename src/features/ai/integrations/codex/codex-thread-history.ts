@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import type { Message } from "@/features/ai/types/ai-chat.types";
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -70,7 +71,7 @@ export function normalizeCodexThreadMessages(value: unknown): Message[] {
     }
   }
 
-  return messages;
+  return coalesceAssistantResponses(messages);
 }
 
 export async function readCodexThreadMessages(threadId: string): Promise<Message[]> {

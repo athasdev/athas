@@ -1,4 +1,6 @@
 import { useCallback } from "react";
+import { agentsAreDetached, useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
+import { AgentWindowPlaceholder } from "@/features/ai/detached/agent-window-placeholder";
 import AIChatInputBar from "@/features/ai/components/input/chat-input-bar";
 import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
 import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
@@ -19,6 +21,7 @@ export function AgentLaunchInput({
   autoFocus = false,
   surfaceId = "agent-launch-input",
 }: AgentLaunchInputProps) {
+  const agentWindowStatus = useAgentWindowStore.use.status();
   const buffers = useBufferStore((state) => state.buffers);
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
   const allProjectFiles = useFileSystemStore(
@@ -35,6 +38,7 @@ export function AgentLaunchInput({
 
   const submit = useCallback(
     (prompt: string) => {
+      if (agentsAreDetached()) return { accepted: false };
       if (isTerminalAgent(selectedAgentId)) {
         openTerminalAgent(selectedAgentId);
         return { accepted: true };
@@ -66,6 +70,8 @@ export function AgentLaunchInput({
     ],
   );
 
+  if (agentWindowStatus !== "attached") return <AgentWindowPlaceholder />;
+
   return (
     <AIChatInputBar
       surfaceId={surfaceId}
@@ -74,13 +80,16 @@ export function AgentLaunchInput({
       currentAgentId={selectedAgentId}
       isTyping={false}
       streamingMessageId={null}
-      queueCount={0}
+      queuedMessages={[]}
       {...composerContext.inputProps}
       isActiveSurface
       presentation="initial"
       autoFocus={autoFocus}
       onAgentChange={setSelectedAgentId}
       onSendMessage={submit}
+      onInterruptAndSend={submit}
+      onMoveQueuedMessage={() => {}}
+      onRemoveQueuedMessage={() => {}}
       onStopStreaming={() => {}}
     />
   );
