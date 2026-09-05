@@ -1,3 +1,4 @@
+import { toOpenAIMessage } from "@/features/ai/lib/image-attachments";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import {
   DEFAULT_OLLAMA_BASE_URL,
@@ -125,7 +126,7 @@ export class OllamaProvider extends AIProvider {
   buildPayload(request: StreamRequest) {
     return {
       model: request.modelId,
-      messages: request.messages,
+      messages: request.messages.map(toOpenAIMessage),
       stream: true,
       temperature: request.temperature,
       max_tokens: request.maxTokens,

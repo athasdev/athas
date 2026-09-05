@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 
@@ -77,6 +78,60 @@ function createHandler(
 }
 
 describe("AcpStreamHandler", () => {
+  it.each([true, false])("honors the agent image prompt capability (%s)", async (image) => {
+    const status = {
+      running: true,
+      initialized: true,
+      sessionActive: true,
+      agentId: "codex",
+      sessionId: "session-a",
+      workspacePath: "/workspace",
+      agentCapabilities: {
+        loadSession: false,
+        promptCapabilities: { image, audio: false, embeddedContext: false },
+        mcpCapabilities: { http: false, sse: false },
+        sessionCapabilities: null,
+        authCapabilities: null,
+      },
+    };
+    const original = useAIChatStore.getState();
+    vi.mocked(useAIChatStore.getState).mockReturnValue({ ...original, acpStatus: status });
+    vi.mocked(invoke).mockImplementation(async (command) => {
+      if (command === "get_acp_status" || command === "start_acp_agent") return status;
+      return undefined;
+    });
+    const handlers = { onChunk: vi.fn(), onComplete: vi.fn(), onError: vi.fn() };
+    const handler = new AcpStreamHandler("codex", handlers, "chat-1");
+    try {
+      const start = handler.start("/review", {
+        projectRoot: "/workspace",
+        images: [{ mediaType: "image/png", data: "YWJj" }],
+      });
+      await vi.advanceTimersByTimeAsync(1000);
+      await start;
+      if (image) {
+        expect(invoke).toHaveBeenCalledWith("send_acp_prompt", {
+          prompt: [
+            { type: "text", text: "/review" },
+            { type: "image", mimeType: "image/png", data: "YWJj" },
+          ],
+        });
+        expect(handlers.onError).not.toHaveBeenCalled();
+      } else {
+        expect(
+          vi.mocked(invoke).mock.calls.some(([command]) => command === "send_acp_prompt"),
+        ).toBe(false);
+        expect(handlers.onError).toHaveBeenCalledWith(
+          expect.stringContaining("does not support image attachments"),
+          undefined,
+        );
+      }
+    } finally {
+      await AcpStreamHandler.cancelPrompt();
+      vi.mocked(useAIChatStore.getState).mockReturnValue(original);
+    }
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.mocked(listen).mockResolvedValue(vi.fn());

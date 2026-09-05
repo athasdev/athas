@@ -272,6 +272,7 @@ export const getChatCompletionStream = async (
     messages.push({
       role: "user" as const,
       content: userMessage,
+      ...(context.images?.length ? { images: context.images } : {}),
     });
 
     // Use provider abstraction

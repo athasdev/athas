@@ -18,6 +18,18 @@ vi.mock("@/features/window/stores/project.store", () => ({
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 
 describe("AI chat surface sessions", () => {
+  it("preserves image-only queued prompts through reordering and dequeue", () => {
+    const actions = useAIChatStore.getState().actions;
+    const chatId = actions.createNewChat("codex");
+    const images = [{ mediaType: "image/png", data: "YWJj" }];
+    actions.enqueueAgentMessage(chatId, "", images);
+    actions.prependAgentMessage(chatId, "next");
+    actions.moveQueuedAgentMessage(chatId, 1, 0);
+    expect(actions.dequeueAgentMessage(chatId)).toEqual({ content: "", images });
+    expect(actions.dequeueAgentMessage(chatId)).toEqual({ content: "next" });
+    expect(actions.dequeueAgentMessage(chatId)).toBeNull();
+  });
+
   beforeEach(() => {
     useAIChatStore.setState({
       chats: [],
@@ -99,7 +111,7 @@ describe("AI chat surface sessions", () => {
       runId: "run-1",
       phase: "starting",
     });
-    expect(actions.dequeueAgentMessage(chatId)).toBe("second message");
+    expect(actions.dequeueAgentMessage(chatId)).toEqual({ content: "second message" });
 
     actions.finishAgentRun(chatId, "run-1");
     expect(useAIChatStore.getState().agentRuns[chatId]).toBeUndefined();
@@ -115,15 +127,15 @@ describe("AI chat surface sessions", () => {
     actions.moveQueuedAgentMessage(chatId, 2, 1);
 
     expect(useAIChatStore.getState().agentMessageQueues[chatId]).toEqual([
-      "interrupt now",
-      "last",
-      "later",
+      { content: "interrupt now" },
+      { content: "last" },
+      { content: "later" },
     ]);
 
     actions.removeQueuedAgentMessage(chatId, 1);
     expect(useAIChatStore.getState().agentMessageQueues[chatId]).toEqual([
-      "interrupt now",
-      "later",
+      { content: "interrupt now" },
+      { content: "later" },
     ]);
   });
 });

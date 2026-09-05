@@ -1,3 +1,4 @@
+import { toOpenAIMessage } from "@/features/ai/lib/image-attachments";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import {
   AIProvider,
@@ -110,7 +111,7 @@ export class OpenAIProvider extends AIProvider {
 
     const payload: Record<string, unknown> = {
       model: request.modelId,
-      messages: request.messages,
+      messages: request.messages.map(toOpenAIMessage),
       stream: true,
     };
 

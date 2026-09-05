@@ -75,6 +75,7 @@ type AcpContentBlock =
 
 export type AcpPromptContentBlock =
   | { type: "text"; text: string }
+  | { type: "image"; data: string; mimeType: string }
   | { type: "resource_link"; uri: string; name: string; mimeType?: string | null }
   | {
       type: "resource";

@@ -47,7 +47,10 @@ describe("Agents window transfer", () => {
 
   it("blocks queued messages and launches before a run starts", () => {
     expect(
-      getAgentWindowTransferBlocker({ ...idle, agentMessageQueues: { chat: ["next"] } }),
+      getAgentWindowTransferBlocker({
+        ...idle,
+        agentMessageQueues: { chat: [{ content: "next" }] },
+      }),
     ).not.toBeNull();
     expect(
       getAgentWindowTransferBlocker({

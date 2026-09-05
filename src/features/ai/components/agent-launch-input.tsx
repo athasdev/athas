@@ -7,6 +7,9 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
+import type { ImageContent } from "@/features/ai/types/ai-chat.types";
+import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
+import { useToast } from "@/features/layout/contexts/toast-context";
 
 const EMPTY_PROJECT_FILES: FileEntry[] = [];
 
@@ -31,23 +34,37 @@ export function AgentLaunchInput({
     (state) => state.actions.setPendingAgentLaunchRequest,
   );
   const composerContext = useComposerContextSelection();
+  const { showToast } = useToast();
   const { selectedBufferIds, selectedFilesPaths } = composerContext.inputProps;
 
   const submit = useCallback(
-    (prompt: string) => {
+    (prompt: string, images?: ImageContent[]) => {
       if (isTerminalAgent(selectedAgentId)) {
+        if (images?.length) {
+          showToast({
+            message: "Terminal agents do not accept pasted images here. Choose a chat agent.",
+            type: "error",
+          });
+          return { accepted: false };
+        }
         openTerminalAgent(selectedAgentId);
         return { accepted: true };
       }
 
       const nextPrompt = prompt.trim();
-      if (!nextPrompt) return { accepted: false };
+      if (!nextPrompt && !images?.length) return { accepted: false };
+      const access = getAgentMessageAccess(selectedAgentId, useAIChatStore.getState().hasApiKey);
+      if (!access.accepted) {
+        showToast({ message: access.error ?? "This agent is not ready.", type: "error" });
+        return access;
+      }
 
       const chatId = createNewChat(selectedAgentId, { activate: false });
       setPendingAgentLaunchRequest({
         chatId,
         agentId: selectedAgentId,
         prompt: nextPrompt,
+        images,
         selectedBufferIds: Array.from(selectedBufferIds),
         selectedFilesPaths: Array.from(selectedFilesPaths),
         editorSelections: composerContext.inputProps.selectedEditorContexts,
@@ -63,6 +80,7 @@ export function AgentLaunchInput({
       selectedFilesPaths,
       composerContext.inputProps.selectedEditorContexts,
       setPendingAgentLaunchRequest,
+      showToast,
     ],
   );
 

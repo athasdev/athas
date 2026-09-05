@@ -6,6 +6,7 @@ import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { runCodexDynamicTool } from "./codex-dynamic-tools";
+import { imageDataUrl } from "@/features/ai/lib/image-attachments";
 import type {
   CodexIntegrationStatus,
   CodexProtocolEvent,
@@ -112,7 +113,10 @@ export class CodexIntegrationService {
       const turn = await invoke<any>("start_codex_turn", {
         args: {
           threadId: this.threadId,
-          input: [{ type: "text", text: message, text_elements: [] }],
+          input: [
+            ...(message ? [{ type: "text", text: message, text_elements: [] }] : []),
+            ...(context.images ?? []).map((image) => ({ type: "image", url: imageDataUrl(image) })),
+          ],
           settings: getCodexSettings(),
         },
       });

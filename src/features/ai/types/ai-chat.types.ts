@@ -31,9 +31,14 @@ export interface ToolCall {
   isComplete?: boolean;
 }
 
-interface ImageContent {
+export interface ImageContent {
   data: string;
   mediaType: string;
+}
+
+export interface QueuedAgentMessage {
+  content: string;
+  images?: ImageContent[];
 }
 
 interface ResourceContent {
@@ -104,7 +109,7 @@ export interface AIChatInputBarProps {
   currentAgentId: AgentType;
   isTyping: boolean;
   streamingMessageId: string | null;
-  queuedMessages: string[];
+  queuedMessages: QueuedAgentMessage[];
   selectedBufferIds: Set<string>;
   selectedFilesPaths: Set<string>;
   selectedEditorContexts: EditorSelectionContext[];
@@ -117,8 +122,8 @@ export interface AIChatInputBarProps {
   presentation?: "default" | "initial";
   autoFocus?: boolean;
   onAgentChange?: (agentId: AgentType) => void;
-  onSendMessage: (message: string) => AgentMessageSubmitResult;
-  onInterruptAndSend: (message: string) => AgentMessageSubmitResult;
+  onSendMessage: (message: string, images?: ImageContent[]) => AgentMessageSubmitResult;
+  onInterruptAndSend: (message: string, images?: ImageContent[]) => AgentMessageSubmitResult;
   onMoveQueuedMessage: (fromIndex: number, toIndex: number) => void;
   onRemoveQueuedMessage: (index: number, reason: "edit" | "discard") => void;
   onStopStreaming: () => void;

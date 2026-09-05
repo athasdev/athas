@@ -27,6 +27,7 @@ import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
+import type { ImageContent } from "@/features/ai/types/ai-chat.types";
 import {
   sendAgentNativeNotification,
   type AgentNativeNotificationKind,
@@ -438,17 +439,21 @@ const AIChat = memo(function AIChat({
   );
 
   function finishRunAndProcessQueue(targetChatId: string, runId: string) {
+    if (useAIChatStore.getState().agentRuns[targetChatId]?.runId !== runId) return;
     const actions = useAIChatStore.getState().actions;
     actions.finishAgentRun(targetChatId, runId);
     const nextMessage = actions.dequeueAgentMessage(targetChatId);
     if (nextMessage) {
-      queueMicrotask(() => void processMessage(nextMessage, { targetChatId }));
+      queueMicrotask(
+        () =>
+          void processMessage(nextMessage.content, { targetChatId, images: nextMessage.images }),
+      );
     }
   }
 
   async function processMessage(
     messageContent: string,
-    options: { editedUserMessageId?: string; targetChatId?: string } = {},
+    options: { editedUserMessageId?: string; targetChatId?: string; images?: ImageContent[] } = {},
   ) {
     const store = useAIChatStore.getState();
     const requestedChatId = options.targetChatId ?? effectiveChatId;
@@ -459,7 +464,7 @@ const AIChat = memo(function AIChat({
     const currentAgentId = targetChat?.agentId ?? store.actions.getCurrentAgentId();
     const trimmedMessageContent = messageContent.trim();
     const access = getAgentMessageAccess(currentAgentId, store.hasApiKey);
-    if (!trimmedMessageContent) return;
+    if (!trimmedMessageContent && !options.images?.length && !options.editedUserMessageId) return;
     if (!access.accepted) {
       showToast({ message: access.error ?? "This agent is not ready.", type: "error" });
       return;
@@ -501,6 +506,7 @@ const AIChat = memo(function AIChat({
             content: trimmedMessageContent,
             role: "user",
             timestamp: new Date(),
+            images: options.images,
           };
 
     const assistantMessageId = createMessageId();
@@ -568,10 +574,11 @@ const AIChat = memo(function AIChat({
           );
       const latestSettings = useSettingsStore.getState().settings;
       const context = await buildContext(currentAgentId, latestSettings.aiProviderId);
+      context.images = userMessage.images;
       context.mentionedFiles = [...mentionedFiles, ...attachedFiles];
 
       // Handle direct ACP UI intents locally so they are always reliable.
-      if (isAcp) {
+      if (isAcp && !userMessage.images?.length) {
         const directAction = parseDirectAcpUiAction(trimmedMessageContent);
         if (directAction) {
           const bufferActions = useBufferStore.getState().actions;
@@ -1011,10 +1018,10 @@ details: ${errorDetails || mainError}
   }
 
   const sendMessage = useCallback(
-    (messageContent: string): AgentMessageSubmitResult => {
+    (messageContent: string, images?: ImageContent[]): AgentMessageSubmitResult => {
       if (agentIsDetached(effectiveChatId))
         return { accepted: false, error: "This agent is open in another window." };
-      if (!messageContent.trim()) return { accepted: false };
+      if (!messageContent.trim() && !images?.length) return { accepted: false };
       const access = getAgentMessageAccess(currentAgentId, chatState.hasApiKey);
       if (!access.accepted) {
         showToast({ message: access.error ?? "This agent is not ready.", type: "error" });
@@ -1028,7 +1035,7 @@ details: ${errorDetails || mainError}
 
       const targetChatId = effectiveChatId ?? useAIChatStore.getState().currentChatId;
       if (targetChatId && useAIChatStore.getState().agentRuns[targetChatId]) {
-        chatActions.enqueueAgentMessage(targetChatId, messageContent);
+        chatActions.enqueueAgentMessage(targetChatId, messageContent, images);
         if (claimContextualTip("agent-queue-controls")) {
           showToast({
             message: "Message queued",
@@ -1040,7 +1047,7 @@ details: ${errorDetails || mainError}
         return { accepted: true };
       }
 
-      void processMessage(messageContent);
+      void processMessage(messageContent, { images });
       return { accepted: true };
     },
     [
@@ -1054,7 +1061,7 @@ details: ${errorDetails || mainError}
   );
 
   const handleSendMessage = useCallback(
-    (messageContent: string) => sendMessage(messageContent),
+    (messageContent: string, images?: ImageContent[]) => sendMessage(messageContent, images),
     [sendMessage],
   );
 
@@ -1066,8 +1073,9 @@ details: ${errorDetails || mainError}
   );
 
   const handleInterruptAndSend = useCallback(
-    (messageContent: string): AgentMessageSubmitResult => {
-      if (!messageContent.trim()) return { accepted: false };
+    (messageContent: string, images?: ImageContent[]): AgentMessageSubmitResult => {
+      if (agentIsDetached(effectiveChatId)) return { accepted: false };
+      if (!messageContent.trim() && !images?.length) return { accepted: false };
       const access = getAgentMessageAccess(currentAgentId, chatState.hasApiKey);
       if (!access.accepted) {
         showToast({ message: access.error ?? "This agent is not ready.", type: "error" });
@@ -1076,10 +1084,10 @@ details: ${errorDetails || mainError}
 
       const targetChatId = effectiveChatId ?? useAIChatStore.getState().currentChatId;
       if (!targetChatId || !useAIChatStore.getState().agentRuns[targetChatId]) {
-        return sendMessage(messageContent);
+        return sendMessage(messageContent, images);
       }
 
-      chatActions.prependAgentMessage(targetChatId, messageContent);
+      chatActions.prependAgentMessage(targetChatId, messageContent, images);
       void stopStreaming();
       return { accepted: true };
     },
@@ -1119,7 +1127,7 @@ details: ${errorDetails || mainError}
       pendingLaunch.editorSelections,
     );
     chatActions.setPendingAgentLaunchRequest(null);
-    if (!pendingLaunch.prompt) return;
+    if (!pendingLaunch.prompt && !pendingLaunch.images?.length) return;
 
     const access = getAgentMessageAccess(pendingLaunch.agentId, chatState.hasApiKey);
     if (!access.accepted) {
@@ -1127,7 +1135,7 @@ details: ${errorDetails || mainError}
       return;
     }
 
-    void sendMessage(pendingLaunch.prompt);
+    void sendMessage(pendingLaunch.prompt ?? "", pendingLaunch.images);
   }, [
     chatActions,
     effectiveChatId,

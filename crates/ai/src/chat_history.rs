@@ -28,6 +28,8 @@ pub struct MessageData {
    pub is_streaming: bool,
    pub is_tool_use: bool,
    pub tool_name: Option<String>,
+   #[serde(default)]
+   pub images: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -136,6 +138,19 @@ impl ChatHistoryRepository {
          )
          .map_err(|e| format!("Failed to create tool_calls table: {}", e))?;
 
+      let has_images: bool = conn
+         .query_row(
+            "SELECT EXISTS(SELECT 1 FROM pragma_table_info('messages') WHERE name = 'images')",
+            [],
+            |row| row.get(0),
+         )
+         .map_err(|e| format!("Failed to inspect message columns: {e}"))?;
+      if !has_images {
+         conn
+            .execute("ALTER TABLE messages ADD COLUMN images TEXT", [])
+            .map_err(|e| format!("Failed to add message images: {e}"))?;
+      }
+
       conn
          .execute(
             "CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id)",
@@ -209,7 +224,7 @@ impl ChatHistoryRepository {
       for message in messages {
          match conn.execute(
             "INSERT INTO messages (id, chat_id, role, content, timestamp, is_streaming, \
-             is_tool_use, tool_name) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+             is_tool_use, tool_name, images) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                message.id,
                message.chat_id,
@@ -218,7 +233,8 @@ impl ChatHistoryRepository {
                message.timestamp,
                message.is_streaming,
                message.is_tool_use,
-               message.tool_name
+               message.tool_name,
+               message.images
             ],
          ) {
             Ok(_) => {}
@@ -317,8 +333,8 @@ impl ChatHistoryRepository {
 
       let mut stmt = conn
          .prepare(
-            "SELECT id, chat_id, role, content, timestamp, is_streaming, is_tool_use, tool_name \
-             FROM messages WHERE chat_id = ?1 ORDER BY timestamp ASC",
+            "SELECT id, chat_id, role, content, timestamp, is_streaming, is_tool_use, tool_name, \
+             images FROM messages WHERE chat_id = ?1 ORDER BY timestamp ASC",
          )
          .map_err(|e| format!("Failed to prepare messages query: {}", e))?;
 
@@ -333,6 +349,7 @@ impl ChatHistoryRepository {
                is_streaming: row.get(5)?,
                is_tool_use: row.get(6)?,
                tool_name: row.get(7)?,
+               images: row.get(8)?,
             })
          })
          .map_err(|e| format!("Failed to query messages: {}", e))?
@@ -471,4 +488,47 @@ fn map_chat_row(row: &rusqlite::Row<'_>) -> SqliteResult<ChatData> {
       is_pinned: row.get(10)?,
       archived_at: row.get(11)?,
    })
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn migrates_legacy_messages_and_round_trips_images() {
+      let directory = tempfile::tempdir().unwrap();
+      let path = directory.path().join("history.db");
+      let conn = Connection::open(&path).unwrap();
+      conn
+         .execute_batch(
+            "CREATE TABLE messages (
+         id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, role TEXT NOT NULL,
+         content TEXT NOT NULL, timestamp INTEGER NOT NULL, is_streaming BOOLEAN,
+         is_tool_use BOOLEAN, tool_name TEXT
+      );",
+         )
+         .unwrap();
+      drop(conn);
+      let repository = ChatHistoryRepository::new(path.clone());
+      repository.initialize().unwrap();
+      repository.initialize().unwrap();
+      let chat: ChatData = serde_json::from_value(serde_json::json!({
+         "id": "images", "title": "Images", "created_at": 1, "last_message_at": 2,
+         "is_pinned": false
+      }))
+      .unwrap();
+      let mut message: MessageData = serde_json::from_value(serde_json::json!({
+         "id": "user", "chat_id": "images", "role": "user", "content": "",
+         "timestamp": 2, "is_streaming": false, "is_tool_use": false
+      }))
+      .unwrap();
+      assert!(message.images.is_none());
+      let images = r#"[{"mediaType":"image/png","data":"YWJj"}]"#.to_string();
+      message.images = Some(images.clone());
+      repository.save_chat(chat, vec![message], vec![]).unwrap();
+      let reopened = ChatHistoryRepository::new(path);
+      let loaded = reopened.load_chat("images").unwrap();
+      assert_eq!(loaded.messages[0].images.as_deref(), Some(images.as_str()));
+      assert_eq!(loaded.messages[0].content, "");
+   }
 }

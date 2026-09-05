@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
 
@@ -43,6 +44,31 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
 }));
 
 describe("Codex integration service", () => {
+  it("sends pasted image data URLs as Codex turn input items", async () => {
+    vi.mocked(invoke).mockImplementation(async (command) => {
+      if (command === "start_codex_thread") return { thread: { id: "thread-1" } };
+      if (command === "start_codex_turn") return { turn: { id: "turn-1" } };
+      return undefined;
+    });
+    vi.mocked(listen).mockResolvedValue(vi.fn());
+    const onError = vi.fn();
+    const service = new CodexIntegrationService(
+      { onChunk: vi.fn(), onComplete: vi.fn(), onError },
+      "chat-1",
+    );
+    try {
+      await service.start("", { images: [{ mediaType: "image/png", data: "YWJj" }] });
+      expect(onError).not.toHaveBeenCalled();
+      expect(invoke).toHaveBeenCalledWith("start_codex_turn", {
+        args: expect.objectContaining({
+          input: [{ type: "image", url: "data:image/png;base64,YWJj" }],
+        }),
+      });
+    } finally {
+      await CodexIntegrationService.cancel();
+    }
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });

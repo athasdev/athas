@@ -27,6 +27,22 @@ function createChat(id: string, content: string): Chat {
 }
 
 describe("AI chat history service", () => {
+  it("round-trips image attachments through the persisted history payload", async () => {
+    const chat = createChat("image-chat", "");
+    chat.messages[0].role = "user";
+    chat.messages[0].isStreaming = false;
+    chat.messages[0].images = [{ mediaType: "image/png", data: "YWJj" }];
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await saveChatToDb(chat);
+    const saved = vi.mocked(invoke).mock.calls[0][1];
+    expect(saved).toMatchObject({
+      messages: [expect.objectContaining({ images: JSON.stringify(chat.messages[0].images) })],
+    });
+    vi.mocked(invoke).mockResolvedValue({ ...saved, tool_calls: [] });
+    const restored = await loadChatFromDb(chat.id);
+    expect(restored.messages[0].images).toEqual(chat.messages[0].images);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });

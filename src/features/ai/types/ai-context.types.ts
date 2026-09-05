@@ -2,6 +2,7 @@
 
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { MentionedFile } from "@/features/ai/lib/file-mentions";
+import type { ImageContent } from "./ai-chat.types";
 
 export interface EditorSelectionContext {
   id: string;
@@ -17,6 +18,7 @@ export interface EditorSelectionContext {
 }
 
 export interface ContextInfo {
+  images?: ImageContent[];
   activeBuffer?: PaneContent & { webViewerContent?: string };
   openBuffers?: PaneContent[];
   selectedFiles?: string[];

@@ -13,6 +13,13 @@ function message(overrides: Partial<Message>): Message {
 }
 
 describe("buildConversationHistory", () => {
+  it("retains images and image-only user messages in subsequent requests", () => {
+    const images = [{ mediaType: "image/png", data: "YWJj" }];
+    expect(buildConversationHistory([message({ content: "", images })])).toEqual([
+      { role: "user", content: "", images },
+    ]);
+  });
+
   it("keeps only completed visible user and assistant turns", () => {
     expect(
       buildConversationHistory([

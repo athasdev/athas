@@ -103,6 +103,15 @@ export class AcpStreamHandler {
       if (!this.activeSessionId) {
         throw new Error(`${this.agentId} did not create an active session`);
       }
+      if (
+        context.images?.length &&
+        !useAIChatStore.getState().acpStatus?.agentCapabilities?.promptCapabilities.image
+      ) {
+        this.fail(
+          "This agent does not support image attachments. Choose an image-capable agent or remove the images.",
+        );
+        return;
+      }
       await this.setupListeners();
       this.awaitingFirstResponse = true;
       await withTimeout(
@@ -255,10 +264,15 @@ export class AcpStreamHandler {
   }
 
   private buildPrompt(userMessage: string, context: ContextInfo): AcpPromptContentBlock[] {
+    const images: AcpPromptContentBlock[] = (context.images ?? []).map((image) => ({
+      type: "image",
+      data: image.data,
+      mimeType: image.mediaType,
+    }));
     // ACP slash commands must remain the first token in the prompt.
     // If we prepend context, agents interpret them as plain text.
     if (userMessage.trimStart().startsWith("/")) {
-      return [{ type: "text", text: userMessage }];
+      return [{ type: "text", text: userMessage }, ...images];
     }
 
     const contextPrompt = [buildContextPrompt(context), getFollowUpActionsInstruction()]
@@ -309,7 +323,7 @@ export class AcpStreamHandler {
       });
     }
 
-    return blocks;
+    return [...blocks, ...images];
   }
 
   private async setupListeners(): Promise<void> {

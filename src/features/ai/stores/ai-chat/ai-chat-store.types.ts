@@ -11,6 +11,8 @@ import type {
   ChatMode,
   Message,
   OutputStyle,
+  ImageContent,
+  QueuedAgentMessage,
 } from "@/features/ai/types/ai-chat.types";
 import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";
 import type { EditorSelectionContext } from "@/features/ai/types/ai-context.types";
@@ -24,6 +26,7 @@ interface PendingAgentLaunchRequest {
   chatId: string;
   agentId: AgentType;
   prompt: string | null;
+  images?: ImageContent[];
   selectedBufferIds: string[];
   selectedFilesPaths: string[];
   editorSelections: EditorSelectionContext[];
@@ -46,7 +49,7 @@ export interface AIChatState {
   selectedAgentId: AgentType;
   pendingAgentLaunchRequest: PendingAgentLaunchRequest | null;
   agentRuns: Record<string, AgentRunState>;
-  agentMessageQueues: Record<string, string[]>;
+  agentMessageQueues: Record<string, QueuedAgentMessage[]>;
   chatMessageLoadStates: Record<string, ChatMessageLoadState>;
   mode: ChatMode;
   outputStyle: OutputStyle;
@@ -71,9 +74,9 @@ export interface AIChatActions {
   startAgentRun: (chatId: string, run: AgentRunState) => void;
   updateAgentRun: (chatId: string, runId: string, updates: Partial<AgentRunState>) => void;
   finishAgentRun: (chatId: string, runId: string) => void;
-  enqueueAgentMessage: (chatId: string, message: string) => void;
-  prependAgentMessage: (chatId: string, message: string) => void;
-  dequeueAgentMessage: (chatId: string) => string | null;
+  enqueueAgentMessage: (chatId: string, message: string, images?: ImageContent[]) => void;
+  prependAgentMessage: (chatId: string, message: string, images?: ImageContent[]) => void;
+  dequeueAgentMessage: (chatId: string) => QueuedAgentMessage | null;
   moveQueuedAgentMessage: (chatId: string, fromIndex: number, toIndex: number) => void;
   removeQueuedAgentMessage: (chatId: string, index: number) => void;
   createNewChat: (agentId?: AgentType, options?: { activate?: boolean }) => string;

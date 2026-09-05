@@ -3,9 +3,10 @@ import { Button } from "@/ui/button";
 import { ButtonGroup } from "@/ui/button-group";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/ui/item";
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/ui/popover";
+import type { QueuedAgentMessage } from "@/features/ai/types/ai-chat.types";
 
 interface AgentMessageQueueProps {
-  messages: string[];
+  messages: QueuedAgentMessage[];
   onEdit: (index: number) => void;
   onMove: (fromIndex: number, toIndex: number) => void;
   onRemove: (index: number) => void;
@@ -36,10 +37,15 @@ export function AgentMessageQueue({ messages, onEdit, onMove, onRemove }: AgentM
         </PopoverHeader>
         <ItemGroup>
           {messages.map((message, index) => (
-            <Item key={`${index}-${message}`} variant="muted">
+            <Item key={`${index}-${message.content}`} variant="muted">
               <ItemContent>
                 <ItemTitle>Runs {index === 0 ? "next" : `#${index + 1}`}</ItemTitle>
-                <ItemDescription>{message}</ItemDescription>
+                <ItemDescription>
+                  {message.content}
+                  {message.images?.length
+                    ? ` (${message.images.length} image${message.images.length === 1 ? "" : "s"} attached)`
+                    : ""}
+                </ItemDescription>
               </ItemContent>
               <ItemActions>
                 <ButtonGroup variant="ghost">

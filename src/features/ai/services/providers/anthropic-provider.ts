@@ -64,7 +64,16 @@ export class AnthropicProvider extends AIProvider {
       ...(systemMessage ? { system: systemMessage.content } : {}),
       messages: nonSystemMessages.map((m) => ({
         role: m.role,
-        content: m.content,
+        content:
+          m.role === "user" && m.images?.length
+            ? [
+                ...m.images.map((image) => ({
+                  type: "image",
+                  source: { type: "base64", media_type: image.mediaType, data: image.data },
+                })),
+                ...(m.content ? [{ type: "text", text: m.content }] : []),
+              ]
+            : m.content,
       })),
     };
   }

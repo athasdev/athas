@@ -1,3 +1,4 @@
+import { toOpenAIMessage } from "@/features/ai/lib/image-attachments";
 import {
   AIProvider,
   type ProviderHeaders,
@@ -53,7 +54,7 @@ export class GrokProvider extends AIProvider {
   buildPayload(request: StreamRequest): any {
     return {
       model: request.modelId,
-      messages: request.messages,
+      messages: request.messages.map(toOpenAIMessage),
       max_tokens: request.maxTokens,
       temperature: request.temperature,
       stream: true,

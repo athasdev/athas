@@ -1,3 +1,4 @@
+import { toOpenAIMessage } from "@/features/ai/lib/image-attachments";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import {
   AIProvider,
@@ -49,7 +50,7 @@ export class OpenAICompatibleProvider extends AIProvider {
   buildPayload(request: StreamRequest): any {
     return {
       model: request.modelId,
-      messages: request.messages,
+      messages: request.messages.map(toOpenAIMessage),
       max_tokens: request.maxTokens,
       temperature: request.temperature,
       stream: true,

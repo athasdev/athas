@@ -18,6 +18,8 @@ import {
 } from "@/features/ai/lib/skill-events";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useVoiceInput } from "@/features/ai/hooks/use-voice-input";
+import { parsePastedImages, restorePastedImages } from "@/features/ai/lib/image-attachments";
+import { useToast } from "@/features/layout/contexts/toast-context";
 import {
   getComposerDropdownPosition,
   getComposerText,
@@ -99,6 +101,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [isComposerFocused, setIsComposerFocused] = useState(false);
   const inputValueRef = useRef("");
   const [pastedImages, setPastedImages] = useState<PastedImage[]>([]);
+  const { showToast } = useToast();
   const draftReader = useRef(() => ({
     text: inputValueRef.current,
     images: pastedImages,
@@ -970,7 +973,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
     const hasContent = currentInput.trim() || currentImages.length > 0;
     if (!hasContent || !isInputEnabled) return;
 
-    const result = onSendMessage(currentInput);
+    let images;
+    try {
+      images = parsePastedImages(currentImages);
+    } catch (error) {
+      showToast({ message: String(error), type: "error" });
+      return;
+    }
+    const result = onSendMessage(currentInput, images);
     if (!result.accepted) return;
 
     setInput("");
@@ -1002,8 +1012,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const handleInterruptAndSend = () => {
     const currentInput = inputValueRef.current;
-    if (!currentInput.trim() || !isInputEnabled) return;
-    const result = onInterruptAndSend(currentInput);
+    if ((!currentInput.trim() && !pastedImages.length) || !isInputEnabled) return;
+    let images;
+    try {
+      images = parsePastedImages(pastedImages);
+    } catch (error) {
+      showToast({ message: String(error), type: "error" });
+      return;
+    }
+    const result = onInterruptAndSend(currentInput, images);
     if (!result.accepted) return;
 
     replaceInput("");
@@ -1234,7 +1251,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
             const message = queuedMessages[index];
             if (!message) return;
             onRemoveQueuedMessage(index, "edit");
-            replaceInput(message);
+            replaceInput(message.content);
+            setPastedImages(restorePastedImages(message.images));
           }}
           onMove={onMoveQueuedMessage}
           onRemove={(index) => onRemoveQueuedMessage(index, "discard")}
@@ -1315,7 +1333,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               <ButtonGroupSeparator />
               <Button
                 type="button"
-                disabled={isSendDisabled || hasImages}
+                disabled={isSendDisabled}
                 onClick={handleInterruptAndSend}
                 variant="accent-ghost"
                 tooltip="Interrupt and send now"

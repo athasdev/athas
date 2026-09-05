@@ -152,19 +152,19 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
           delete state.agentRuns[chatId];
         }
       }),
-    enqueueAgentMessage: (chatId, message) =>
+    enqueueAgentMessage: (chatId, message, images) =>
       set((state) => {
-        (state.agentMessageQueues[chatId] ??= []).push(message);
+        (state.agentMessageQueues[chatId] ??= []).push({ content: message, images });
       }),
-    prependAgentMessage: (chatId, message) =>
+    prependAgentMessage: (chatId, message, images) =>
       set((state) => {
-        (state.agentMessageQueues[chatId] ??= []).unshift(message);
+        (state.agentMessageQueues[chatId] ??= []).unshift({ content: message, images });
       }),
     dequeueAgentMessage: (chatId) => {
-      let message: string | null = null;
+      const message = get().agentMessageQueues[chatId]?.[0] ?? null;
       set((state) => {
         const queue = state.agentMessageQueues[chatId];
-        message = queue?.shift() ?? null;
+        queue?.shift();
         if (queue?.length === 0) {
           delete state.agentMessageQueues[chatId];
         }

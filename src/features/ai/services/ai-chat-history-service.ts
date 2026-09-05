@@ -33,6 +33,7 @@ interface MessageData {
   is_streaming: boolean;
   is_tool_use: boolean;
   tool_name: string | null;
+  images?: string | null;
 }
 
 interface ToolCallData {
@@ -101,6 +102,7 @@ function chatToData(chat: Chat): {
     is_streaming: msg.isStreaming || false,
     is_tool_use: msg.isToolUse || false,
     tool_name: msg.toolName || null,
+    images: msg.images?.length ? JSON.stringify(msg.images) : null,
   }));
 
   const tool_calls: ToolCallData[] = [];
@@ -150,6 +152,7 @@ function dataToChat(data: ChatWithMessages): Chat {
         id: msg.id,
         role: msg.role as "user" | "assistant" | "system",
         content: msg.content,
+        images: deserializeMessageImages(msg.images),
         timestamp: new Date(msg.timestamp),
         isStreaming: false,
         isToolUse: msg.is_tool_use,
@@ -272,3 +275,4 @@ export const deleteChatFromDb = async (chatId: string): Promise<void> => {
     throw error;
   }
 };
+import { deserializeMessageImages } from "@/features/ai/lib/image-attachments";
