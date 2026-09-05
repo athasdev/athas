@@ -12,7 +12,7 @@ interface AgentTabProps {
 }
 
 export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
-  const windowStatus = useAgentWindowStore.use.status();
+  const windowStatus = useAgentWindowStore((state) => state.sessions[buffer.sessionId]);
   const contextBuffers = useBufferStore((state) => (isActive ? state.buffers : []));
   const activeBuffer = useBufferStore(
     (state) => state.buffers.find((candidate) => candidate.id === buffer.id) ?? buffer,
@@ -28,7 +28,7 @@ export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
     updateBuffer({ ...buffer, name: tabTitle });
   }, [buffer, tabTitle, updateBuffer]);
 
-  if (windowStatus !== "attached") return <AgentWindowPlaceholder />;
+  if (windowStatus) return <AgentWindowPlaceholder chatId={buffer.sessionId} />;
 
   return (
     <div className="size-full overflow-hidden">

@@ -51,14 +51,9 @@ import {
 import { badgeVariants } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
-import { Toggle } from "@/ui/toggle";
 import { cn } from "@/utils/cn";
-import {
-  ChatComposer,
-  ChatComposerBody,
-  ChatComposerEditable,
-  ChatComposerToolbar,
-} from "./chat-composer";
+import { Composer, ComposerEditable, ComposerToolbar } from "@/ui/composer";
+import { chatContentWidth } from "../chat/chat-content-width";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
 import { AgentMessageQueue } from "./agent-message-queue";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
@@ -1046,254 +1041,122 @@ const AIChatInputBar = memo(function AIChatInputBar({
   }, [autoFocus, isActiveSurface]);
 
   return (
-    <ChatComposer
+    <Composer
       ref={aiChatContainerRef}
-      standalone={isInitialPresentation}
+      data-ai-element="prompt-input"
       data-ai-context-drop-target
       onDragOver={handleContextDragOver}
       onDragLeave={handleContextDragLeave}
       onDrop={handleContextDrop}
       dragActive={isContextDragOver}
-      className={cn(isInitialPresentation && "w-full")}
+      className={cn(
+        "ai-chat-container z-20",
+        isInitialPresentation ? "w-full" : [chatContentWidth(), "mb-3"],
+      )}
     >
-      <ChatComposerBody variant={isInitialPresentation ? "plain" : "surface"}>
-        {pastedImages.length > 0 && (
-          <AttachmentGroup className={cn("px-3 pt-3", isInitialPresentation && "px-4 pt-4")}>
-            {pastedImages.map((image) => (
-              <Attachment key={image.id} orientation="vertical">
-                <AttachmentMedia variant="image">
-                  <img src={image.dataUrl} alt={image.name} />
-                </AttachmentMedia>
-                <AttachmentContent>
-                  <AttachmentTitle>{image.name}</AttachmentTitle>
-                </AttachmentContent>
-                <AttachmentActions>
-                  <AttachmentAction
-                    onClick={() => removePastedImage(image.id)}
-                    aria-label={`Remove ${image.name}`}
-                  >
-                    <X />
-                  </AttachmentAction>
-                </AttachmentActions>
-              </Attachment>
-            ))}
-          </AttachmentGroup>
-        )}
+      {pastedImages.length > 0 && (
+        <AttachmentGroup className="px-3 pt-3">
+          {pastedImages.map((image) => (
+            <Attachment key={image.id} orientation="vertical">
+              <AttachmentMedia variant="image">
+                <img src={image.dataUrl} alt={image.name} />
+              </AttachmentMedia>
+              <AttachmentContent>
+                <AttachmentTitle>{image.name}</AttachmentTitle>
+              </AttachmentContent>
+              <AttachmentActions>
+                <AttachmentAction
+                  onClick={() => removePastedImage(image.id)}
+                  aria-label={`Remove ${image.name}`}
+                >
+                  <X />
+                </AttachmentAction>
+              </AttachmentActions>
+            </Attachment>
+          ))}
+        </AttachmentGroup>
+      )}
 
-        <ChatComposerEditable
-          ref={inputRef}
-          enabled={isInputEnabled}
-          contentEditable={isInputEnabled}
-          onInput={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onMouseDown={handleEditableMouseDown}
-          onFocus={() => setIsComposerFocused(true)}
-          onBlur={() => setIsComposerFocused(false)}
-          onPaste={handlePaste}
-          data-placeholder={inputPlaceholder}
-          className={cn(
-            isInitialPresentation && "max-h-48 min-h-28 overflow-y-auto px-4 py-4 ui-text-base",
-          )}
-          role="textbox"
-          aria-multiline={!isInitialPresentation}
-          aria-label="Message input"
-          tabIndex={isInputEnabled ? 0 : -1}
-        />
-
-        <ChatComposerToolbar className={cn(isInitialPresentation && "items-center px-3 pb-3 pt-0")}>
-          <div className="flex min-w-0 flex-1 items-center">
-            <ContextSelector
-              buffers={buffers}
-              selectedBufferIds={selectedBufferIds}
-              selectedFilesPaths={selectedFilesPaths}
-              onToggleBuffer={toggleBufferSelection}
-              onToggleFile={toggleFileSelection}
-              isOpen={isContextDropdownOpen}
-              triggerRef={contextTriggerRef}
-              onOpenChange={(open) => {
-                if (open) {
-                  closeInlineMenus();
+      {selectedContextItems.length > 0 ? (
+        <AttachmentGroup className="px-3 pt-3" role="list" aria-label="Selected context">
+          {selectedContextItems.map((item) => (
+            <Attachment
+              key={`selected-${item.type}-${item.id}`}
+              data-context-chip
+              role="listitem"
+              tabIndex={0}
+              aria-label={`${item.name}. Press Delete to remove from context.`}
+              title={item.type === "buffer" ? item.name : item.path}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                  event.preventDefault();
+                  const chips = Array.from(
+                    event.currentTarget.parentElement?.querySelectorAll<HTMLElement>(
+                      "[data-context-chip]",
+                    ) || [],
+                  );
+                  const currentIndex = chips.indexOf(event.currentTarget);
+                  const nextIndex =
+                    event.key === "ArrowLeft"
+                      ? Math.max(currentIndex - 1, 0)
+                      : Math.min(currentIndex + 1, chips.length - 1);
+                  chips[nextIndex]?.focus();
+                  return;
                 }
-                setIsContextDropdownOpen(open);
-              }}
-            />
-          </div>
 
-          <AgentMessageQueue
-            messages={queuedMessages}
-            onEdit={(index) => {
-              const message = queuedMessages[index];
-              if (!message) return;
-              onRemoveQueuedMessage(index, "edit");
-              replaceInput(message);
-            }}
-            onMove={onMoveQueuedMessage}
-            onRemove={(index) => onRemoveQueuedMessage(index, "discard")}
-          />
-
-          <div className="flex shrink-0 items-center gap-1">
-            {hasSlashCommands && (
-              <Button
-                type="button"
-                onClick={() => {
-                  if (!inputRef.current || !isInputEnabled) return;
-                  if (slashCommandState.active) {
-                    hideSlashCommands();
-                    return;
+                if (event.key === "Backspace" || event.key === "Delete") {
+                  event.preventDefault();
+                  const chipContainer = event.currentTarget.parentElement;
+                  const chips = Array.from(
+                    chipContainer?.querySelectorAll<HTMLElement>("[data-context-chip]") || [],
+                  );
+                  const currentIndex = chips.indexOf(event.currentTarget);
+                  const nextFocusIndex = Math.max(0, Math.min(currentIndex, chips.length - 2));
+                  if (item.type === "buffer") {
+                    toggleBufferSelection(item.id);
+                  } else if (item.type === "file") {
+                    toggleFileSelection(item.id);
+                  } else {
+                    onRemoveEditorContext(item.id);
                   }
-                  closeInlineMenus();
-                  inputRef.current.textContent = "/";
-                  setInput("/");
-                  setHasInputText(true);
-                  inputRef.current.focus();
-                  const selection = window.getSelection();
-                  if (selection) {
-                    const range = document.createRange();
-                    range.selectNodeContents(inputRef.current);
-                    range.collapse(false);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                  }
-                  slashCommandRangeRef.current = { startIndex: 0, endIndex: 1 };
-                  showSlashCommands(getSlashDropdownPosition(), "");
-                }}
-                variant="ghost"
-                iconOnly
-                active={slashCommandState.active}
-                tooltip="Show slash commands"
-                aria-label="Show slash commands"
-              >
-                <CommandIcon size={12} />
-              </Button>
-            )}
-
-            <ChatPreferencesMenu
-              currentAgentId={currentAgentId}
-              providerId={aiProviderId}
-              modelId={aiModelId}
-              sessionConfigOptions={sessionConfigOptions}
-              onAgentChange={onAgentChange}
-              onProviderChange={handleAthasProviderChange}
-              onModelChange={handleAthasModelChange}
-              onSessionConfigChange={(optionId, value) =>
-                void changeSessionConfigOption(optionId, value)
-              }
-              onSelectSkill={insertSkillAtCursor}
-              onSelectCodexSkill={insertCodexSkillAtCursor}
-              onBeforeOpen={closeInlineMenus}
-            />
-
-            <Toggle
-              type="button"
-              disabled={!isInputEnabled || !isSpeechRecognitionSupported}
-              pressed={isListening}
-              onPressedChange={toggleVoiceInput}
-              tone="accent"
-              tooltip={
-                isMacDevSpeechRecognitionBlocked
-                  ? "Voice input is disabled in macOS dev mode"
-                  : !isSpeechRecognitionSupported
-                    ? "Voice input is not supported"
-                    : isListening
-                      ? interimTranscript || "Stop voice input"
-                      : "Start voice input"
-              }
-              aria-label={isListening ? "Stop voice input" : "Start voice input"}
-            >
-              <Mic size={12} className={cn(isListening && "animate-pulse")} />
-            </Toggle>
-
-            {isStreaming ? (
-              <ButtonGroup variant="ghost">
-                <Button
-                  type="button"
-                  disabled={isSendDisabled}
-                  onClick={handleSendMessage}
-                  variant="accent"
-                  tooltip="Send after current response"
-                  shortcut="enter"
-                  iconOnly
-                >
-                  <ArrowUp />
-                </Button>
-                <ButtonGroupSeparator />
-                <Button
-                  type="button"
-                  disabled={isSendDisabled || hasImages}
-                  onClick={handleInterruptAndSend}
-                  variant="accent-ghost"
-                  tooltip="Interrupt and send now"
-                  iconOnly
-                >
-                  <Lightning />
-                </Button>
-                <ButtonGroupSeparator />
-                <Button
-                  type="button"
-                  onClick={onStopStreaming}
-                  variant="danger"
-                  tooltip="Stop generation"
-                  shortcut="escape"
-                  iconOnly
-                >
-                  <Stop />
-                </Button>
-              </ButtonGroup>
-            ) : (
-              <Button
-                type="button"
-                disabled={isSendDisabled}
-                onClick={handleSendMessage}
-                variant="accent"
-                tooltip="Send message"
-                shortcut="enter"
-                iconOnly
-              >
-                <ArrowUp />
-              </Button>
-            )}
-          </div>
-        </ChatComposerToolbar>
-
-        {selectedContextItems.length > 0 ? (
-          <AttachmentGroup
-            className={cn("px-2 pb-2", isInitialPresentation && "px-3 pb-3")}
-            role="list"
-            aria-label="Selected context"
-          >
-            {selectedContextItems.map((item) => (
-              <Attachment
-                key={`selected-${item.type}-${item.id}`}
-                data-context-chip
-                role="listitem"
-                tabIndex={0}
-                aria-label={`${item.name}. Press Delete to remove from context.`}
-                title={item.type === "buffer" ? item.name : item.path}
-                onKeyDown={(event) => {
-                  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-                    event.preventDefault();
-                    const chips = Array.from(
-                      event.currentTarget.parentElement?.querySelectorAll<HTMLElement>(
-                        "[data-context-chip]",
-                      ) || [],
-                    );
-                    const currentIndex = chips.indexOf(event.currentTarget);
-                    const nextIndex =
-                      event.key === "ArrowLeft"
-                        ? Math.max(currentIndex - 1, 0)
-                        : Math.min(currentIndex + 1, chips.length - 1);
-                    chips[nextIndex]?.focus();
-                    return;
-                  }
-
-                  if (event.key === "Backspace" || event.key === "Delete") {
-                    event.preventDefault();
-                    const chipContainer = event.currentTarget.parentElement;
-                    const chips = Array.from(
+                  requestAnimationFrame(() => {
+                    const nextChips = Array.from(
                       chipContainer?.querySelectorAll<HTMLElement>("[data-context-chip]") || [],
                     );
-                    const currentIndex = chips.indexOf(event.currentTarget);
-                    const nextFocusIndex = Math.max(0, Math.min(currentIndex, chips.length - 2));
+                    const nextChip = nextChips[nextFocusIndex];
+                    if (nextChip) {
+                      nextChip.focus();
+                      return;
+                    }
+                    contextTriggerRef.current?.focus();
+                  });
+                }
+              }}
+            >
+              <AttachmentMedia>
+                {item.type === "selection" ? (
+                  <CodeBlock />
+                ) : item.type === "buffer" ? (
+                  item.databaseType ? (
+                    <Database />
+                  ) : (
+                    <FileText />
+                  )
+                ) : (
+                  <FileText />
+                )}
+              </AttachmentMedia>
+              <AttachmentContent>
+                <AttachmentTitle>
+                  {item.name}
+                  {item.type === "buffer" && item.isDirty ? (
+                    <span className="ml-1 inline-block size-1.5 rounded-full bg-warning" />
+                  ) : null}
+                </AttachmentTitle>
+              </AttachmentContent>
+              <AttachmentActions>
+                <AttachmentAction
+                  onClick={() => {
                     if (item.type === "buffer") {
                       toggleBufferSelection(item.id);
                     } else if (item.type === "file") {
@@ -1301,63 +1164,192 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     } else {
                       onRemoveEditorContext(item.id);
                     }
-                    requestAnimationFrame(() => {
-                      const nextChips = Array.from(
-                        chipContainer?.querySelectorAll<HTMLElement>("[data-context-chip]") || [],
-                      );
-                      const nextChip = nextChips[nextFocusIndex];
-                      if (nextChip) {
-                        nextChip.focus();
-                        return;
-                      }
-                      contextTriggerRef.current?.focus();
-                    });
-                  }
-                }}
+                  }}
+                  aria-label={`Remove ${item.name} from context`}
+                  tabIndex={0}
+                >
+                  <X weight="bold" />
+                </AttachmentAction>
+              </AttachmentActions>
+            </Attachment>
+          ))}
+        </AttachmentGroup>
+      ) : null}
+
+      <ComposerEditable
+        ref={inputRef}
+        data-ai-element="prompt-input-editable"
+        enabled={isInputEnabled}
+        contentEditable={isInputEnabled}
+        onInput={handleInputChange}
+        onKeyDown={handleKeyDown}
+        onMouseDown={handleEditableMouseDown}
+        onFocus={() => setIsComposerFocused(true)}
+        onBlur={() => setIsComposerFocused(false)}
+        onPaste={handlePaste}
+        data-placeholder={inputPlaceholder}
+        role="textbox"
+        aria-multiline
+        aria-label="Message input"
+        tabIndex={isInputEnabled ? 0 : -1}
+      />
+
+      <ComposerToolbar>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+          <ContextSelector
+            buffers={buffers}
+            selectedBufferIds={selectedBufferIds}
+            selectedFilesPaths={selectedFilesPaths}
+            onToggleBuffer={toggleBufferSelection}
+            onToggleFile={toggleFileSelection}
+            isOpen={isContextDropdownOpen}
+            triggerRef={contextTriggerRef}
+            onOpenChange={(open) => {
+              if (open) {
+                closeInlineMenus();
+              }
+              setIsContextDropdownOpen(open);
+            }}
+          />
+          <ChatPreferencesMenu
+            currentAgentId={currentAgentId}
+            providerId={aiProviderId}
+            modelId={aiModelId}
+            sessionConfigOptions={sessionConfigOptions}
+            onAgentChange={onAgentChange}
+            onProviderChange={handleAthasProviderChange}
+            onModelChange={handleAthasModelChange}
+            onSessionConfigChange={(optionId, value) =>
+              void changeSessionConfigOption(optionId, value)
+            }
+            onSelectSkill={insertSkillAtCursor}
+            onSelectCodexSkill={insertCodexSkillAtCursor}
+            onBeforeOpen={closeInlineMenus}
+          />
+        </div>
+
+        <AgentMessageQueue
+          messages={queuedMessages}
+          onEdit={(index) => {
+            const message = queuedMessages[index];
+            if (!message) return;
+            onRemoveQueuedMessage(index, "edit");
+            replaceInput(message);
+          }}
+          onMove={onMoveQueuedMessage}
+          onRemove={(index) => onRemoveQueuedMessage(index, "discard")}
+        />
+
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {hasSlashCommands && (
+            <Button
+              type="button"
+              onClick={() => {
+                if (!inputRef.current || !isInputEnabled) return;
+                if (slashCommandState.active) {
+                  hideSlashCommands();
+                  return;
+                }
+                closeInlineMenus();
+                inputRef.current.textContent = "/";
+                setInput("/");
+                setHasInputText(true);
+                inputRef.current.focus();
+                const selection = window.getSelection();
+                if (selection) {
+                  const range = document.createRange();
+                  range.selectNodeContents(inputRef.current);
+                  range.collapse(false);
+                  selection.removeAllRanges();
+                  selection.addRange(range);
+                }
+                slashCommandRangeRef.current = { startIndex: 0, endIndex: 1 };
+                showSlashCommands(getSlashDropdownPosition(), "");
+              }}
+              variant="ghost"
+              disabled={!isInputEnabled}
+              iconOnly
+              active={slashCommandState.active}
+              tooltip="Show slash commands"
+              aria-label="Show slash commands"
+            >
+              <CommandIcon />
+            </Button>
+          )}
+
+          <Button
+            type="button"
+            disabled={!isInputEnabled || !isSpeechRecognitionSupported}
+            active={isListening}
+            aria-pressed={isListening}
+            onClick={toggleVoiceInput}
+            variant={isListening ? "accent-ghost" : "ghost"}
+            iconOnly
+            tooltip={
+              isMacDevSpeechRecognitionBlocked
+                ? "Voice input is unavailable in macOS development builds. Use a packaged build."
+                : !isSpeechRecognitionSupported
+                  ? "Voice input is not supported by this webview"
+                  : isListening
+                    ? interimTranscript || "Stop voice input"
+                    : "Start voice input"
+            }
+            aria-label={isListening ? "Stop voice input" : "Start voice input"}
+          >
+            <Mic className={cn(isListening && "animate-pulse")} />
+          </Button>
+
+          {isStreaming ? (
+            <ButtonGroup variant="ghost">
+              <Button
+                type="button"
+                disabled={isSendDisabled}
+                onClick={handleSendMessage}
+                variant="accent"
+                tooltip="Send after current response"
+                shortcut="enter"
+                iconOnly
               >
-                <AttachmentMedia>
-                  {item.type === "selection" ? (
-                    <CodeBlock />
-                  ) : item.type === "buffer" ? (
-                    item.databaseType ? (
-                      <Database />
-                    ) : (
-                      <FileText />
-                    )
-                  ) : (
-                    <FileText />
-                  )}
-                </AttachmentMedia>
-                <AttachmentContent>
-                  <AttachmentTitle>
-                    {item.name}
-                    {item.type === "buffer" && item.isDirty ? (
-                      <span className="ml-1 inline-block size-1.5 rounded-full bg-warning" />
-                    ) : null}
-                  </AttachmentTitle>
-                </AttachmentContent>
-                <AttachmentActions>
-                  <AttachmentAction
-                    onClick={() => {
-                      if (item.type === "buffer") {
-                        toggleBufferSelection(item.id);
-                      } else if (item.type === "file") {
-                        toggleFileSelection(item.id);
-                      } else {
-                        onRemoveEditorContext(item.id);
-                      }
-                    }}
-                    aria-label={`Remove ${item.name} from context`}
-                    tabIndex={0}
-                  >
-                    <X weight="bold" />
-                  </AttachmentAction>
-                </AttachmentActions>
-              </Attachment>
-            ))}
-          </AttachmentGroup>
-        ) : null}
-      </ChatComposerBody>
+                <ArrowUp />
+              </Button>
+              <ButtonGroupSeparator />
+              <Button
+                type="button"
+                disabled={isSendDisabled || hasImages}
+                onClick={handleInterruptAndSend}
+                variant="accent-ghost"
+                tooltip="Interrupt and send now"
+                iconOnly
+              >
+                <Lightning />
+              </Button>
+              <ButtonGroupSeparator />
+              <Button
+                type="button"
+                onClick={onStopStreaming}
+                variant="danger"
+                tooltip="Stop generation"
+                shortcut="escape"
+                iconOnly
+              >
+                <Stop />
+              </Button>
+            </ButtonGroup>
+          ) : (
+            <Button
+              type="button"
+              disabled={isSendDisabled}
+              onClick={handleSendMessage}
+              variant="accent"
+              tooltip="Send message"
+              shortcut="enter"
+              iconOnly
+            >
+              <ArrowUp />
+            </Button>
+          )}
+        </div>
+      </ComposerToolbar>
 
       {(isActiveSurface || isComposerFocused) && mentionState.active && (
         <FileMentionDropdown
@@ -1384,7 +1376,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           onClose={hideSlashCommands}
         />
       )}
-    </ChatComposer>
+    </Composer>
   );
 });
 

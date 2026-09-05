@@ -23,6 +23,8 @@ export interface AgentSessionSidebarItemProps {
   active?: boolean;
   pinned?: boolean;
   onOpen: () => void;
+  onOpenInNewWindow?: () => void;
+  actionsDisabled?: boolean;
   onPinChange: (pinned: boolean) => void;
   onArchive: () => void;
 }
@@ -50,6 +52,8 @@ export function AgentSessionSidebarItem({
   modelLabel,
   onArchive,
   onOpen,
+  onOpenInNewWindow,
+  actionsDisabled = false,
   onPinChange,
   pinned = false,
   projectName,
@@ -65,6 +69,7 @@ export function AgentSessionSidebarItem({
         actions={[
           <SidebarIconButton
             key="pin"
+            disabled={actionsDisabled}
             active={pinned}
             aria-pressed={pinned}
             tooltip={pinned ? "Unpin session" : "Pin session"}
@@ -77,6 +82,7 @@ export function AgentSessionSidebarItem({
           </SidebarIconButton>,
           <SidebarIconButton
             key="archive"
+            disabled={actionsDisabled}
             tone="danger"
             tooltip="Archive session"
             onClick={(event) => {
@@ -92,6 +98,7 @@ export function AgentSessionSidebarItem({
           delay={320}
           closeDelay={140}
           onClick={onOpen}
+          onDoubleClick={onOpenInNewWindow}
           render={
             <SidebarListItem
               active={active}

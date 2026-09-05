@@ -4,16 +4,10 @@ import { enableMapSet } from "immer";
 import { toast } from "sonner";
 import { AgentTab } from "@/features/ai/components/agent-tab";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
-import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
-import { ActivityAgentRow } from "@/features/layout/components/sidebar/activity-agent-history";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
-import {
-  initializeSettingsStore,
-  useSettingsStore,
-} from "@/features/settings/stores/settings.store";
+import { initializeSettingsStore } from "@/features/settings/stores/settings.store";
 import { initializeThemeSystem } from "@/extensions/themes/theme-initializer";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
@@ -23,11 +17,8 @@ import { useFontLoading } from "@/features/window/hooks/use-font-loading";
 import { useSystemAccessibility } from "@/features/settings/hooks/use-system-accessibility";
 import { REQUEST_WINDOW_CLOSE_EVENT } from "@/features/window/utils/request-window-close";
 import { applyPlatformClass } from "@/utils/platform";
-import { Button } from "@/ui/button";
-import { ChromeBar, ChromeGroup, ChromeLabel } from "@/ui/chrome";
 import { DialogServiceProvider } from "@/ui/dialog";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/ui/empty";
-import { PlusIcon, ArrowLeftIcon } from "@/ui/icons";
 import { Toaster } from "@/ui/sonner";
 import { TooltipProvider } from "@/ui/tooltip";
 import {
@@ -38,42 +29,10 @@ import {
 } from "./agent-window-service";
 import { getAgentWindowTransferBlocker, parseAgentWindowChannel } from "./agent-window-state";
 import { useAgentWindowStore } from "./agent-window.store";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 
 enableMapSet();
-
-function selectSession(chatId: string) {
-  const store = useBufferStore.getState();
-  const existing = store.buffers.find(
-    (buffer) => buffer.type === "agent" && buffer.sessionId === chatId,
-  );
-  const id = existing?.id ?? `detached-agent-${chatId}`;
-  useBufferStore.setState({
-    activeBufferId: id,
-    buffers: existing
-      ? store.buffers
-      : [
-          ...store.buffers,
-          {
-            id,
-            type: "agent",
-            sessionId: chatId,
-            path: `agent://${chatId}`,
-            name: "New Session",
-            isActive: true,
-            isPinned: false,
-            isPreview: false,
-          },
-        ],
-  });
-  useAIChatStore.getState().actions.switchToChat(chatId);
-  return id;
-}
-
-function newSession() {
-  const store = useAIChatStore.getState();
-  const agentId = isTerminalAgent(store.selectedAgentId) ? "custom" : store.selectedAgentId;
-  selectSession(store.actions.createNewChat(agentId));
-}
 
 export default function DetachedAgentsApp() {
   const [ready, setReady] = useState(false);
@@ -81,38 +40,37 @@ export default function DetachedAgentsApp() {
   const [returning, setReturning] = useState(false);
   const connection = useRef<BroadcastChannel | null>(null);
   const returnTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const initialized = useRef(false);
+  const sessionId = useRef<string | null>(null);
   const returningRef = useRef(false);
-  const chats = useAIChatStore((state) => state.chats);
-  const actions = useAIChatStore.use.actions();
-  const buffers = useBufferStore((state) => state.buffers);
-  const activeId = useBufferStore((state) => state.activeBufferId);
-  const workspacePath = useProjectStore((state) => state.rootFolderPath);
-  const settings = useSettingsStore.use.settings();
+  const buffer = useBufferStore((state) => state.buffers.find((item) => item.type === "agent"));
+  const chat = useAIChatStore((state) =>
+    state.chats.find((item) => item.id === (buffer?.type === "agent" ? buffer.sessionId : null)),
+  );
+  useEffect(() => {
+    if (chat?.title) void getCurrentWindow().setTitle(`${chat.title} — Athas`).catch(console.error);
+  }, [chat?.title]);
   useFontLoading();
   useSystemAccessibility();
 
   const returnToOwner = useCallback(() => {
     if (returningRef.current) return;
-    if (!initialized.current) {
+    if (!sessionId.current) {
       void getCurrentWindow().destroy();
       return;
     }
-    const blocker = getAgentWindowTransferBlocker(useAIChatStore.getState());
+    const blocker = getAgentWindowTransferBlocker(useAIChatStore.getState(), sessionId.current);
     if (blocker) {
       toast.info(blocker);
       return;
     }
-    const snapshot = captureAgentWindowSnapshot();
+    const snapshot = captureAgentWindowSnapshot(sessionId.current);
     returningRef.current = true;
     setReturning(true);
-    useAgentWindowStore.getState().actions.setStatus("opening");
     connection.current?.postMessage({ type: "return", snapshot });
     returnTimer.current = setTimeout(() => {
       returningRef.current = false;
       setReturning(false);
-      useAgentWindowStore.getState().actions.setStatus("attached");
-      toast.error("The original window did not respond. Your sessions remain here.");
+      toast.error("The original window did not respond. Your session remains here.");
     }, 10_000);
   }, []);
 
@@ -122,36 +80,55 @@ export default function DetachedAgentsApp() {
     let publishTimer: ReturnType<typeof setTimeout> | undefined;
     const id = parseAgentWindowChannel(new URL(window.location.href));
     if (!id) {
-      setError("This Agents window has no source window.");
+      setError("This agent window has no source window.");
       return;
     }
     const channel = new BroadcastChannel(`athas-agents-${id}`);
     connection.current = channel;
     const publish = () => {
-      if (!initialized.current || returningRef.current) return;
+      if (!sessionId.current || returningRef.current) return;
       clearTimeout(publishTimer);
       publishTimer = setTimeout(() => {
-        channel.postMessage({ type: "snapshot", snapshot: captureAgentWindowSnapshot() });
+        if (!sessionId.current) return;
+        channel.postMessage({
+          type: "snapshot",
+          snapshot: captureAgentWindowSnapshot(sessionId.current),
+        });
       }, 150);
     };
     channel.onmessage = ({ data }: MessageEvent<AgentWindowMessage>) => {
-      if (data.type === "initialize" && !initialized.current) {
+      if (data.type === "initialize" && !sessionId.current) {
+        const chatId = data.snapshot.chat.currentChatId;
+        if (!chatId) {
+          setError("No agent session was provided.");
+          return;
+        }
         restoreAgentWindowSnapshot(data.snapshot);
         useProjectStore.getState().actions.setRootFolderPath(data.snapshot.workspacePath);
         useFileSystemStore.setState({ rootFolderPath: data.snapshot.workspacePath });
-        useBufferStore.setState({
-          buffers: data.snapshot.buffers,
-          activeBufferId: data.snapshot.activeBufferId,
-        });
-        initialized.current = true;
-        setReady(true);
-        const active = data.snapshot.buffers.find(
-          (buffer) => buffer.id === data.snapshot.activeBufferId && buffer.type === "agent",
+        const existing = data.snapshot.buffers.find(
+          (item) => item.type === "agent" && item.sessionId === chatId,
         );
-        const fallback = data.snapshot.buffers.find((buffer) => buffer.type === "agent");
-        const selected = active ?? fallback;
-        if (selected?.type === "agent") selectSession(selected.sessionId);
+        const agentBuffer = existing ?? {
+          id: `detached-agent-${chatId}`,
+          type: "agent" as const,
+          sessionId: chatId,
+          path: `agent://${chatId}`,
+          name: data.snapshot.chat.chats[0]?.title ?? "Agent",
+          isActive: true,
+          isPinned: false,
+          isPreview: false,
+        };
+        useBufferStore.setState({
+          buffers: [...data.snapshot.buffers.filter((item) => item.type === "editor"), agentBuffer],
+          activeBufferId: agentBuffer.id,
+        });
+        sessionId.current = chatId;
+        useAIChatStore.getState().actions.switchToChat(chatId);
+        setReady(true);
         publish();
+      } else if (data.type === "identity") {
+        useAgentWindowStore.getState().actions.setAccountIdentity(data.identity);
       } else if (data.type === "returned" && returningRef.current) {
         clearTimeout(returnTimer.current);
         void getCurrentWindow()
@@ -159,41 +136,42 @@ export default function DetachedAgentsApp() {
           .catch((cause) => {
             returningRef.current = false;
             setReturning(false);
-            useAgentWindowStore.getState().actions.setStatus("attached");
-            toast.error(`Could not close the Agents window. Try returning again: ${String(cause)}`);
+            toast.error(`Could not close the agent window: ${String(cause)}`);
           });
-      } else if ((data.type === "focus" || data.type === "open") && initialized.current) {
-        if (data.type === "open" && !returningRef.current) {
-          if (data.chatId) selectSession(data.chatId);
-          else newSession();
-        }
+      } else if (data.type === "focus" && sessionId.current) {
         void getCurrentWindow().setFocus().catch(console.error);
       }
     };
-    setAgentWindowSessionOpener(selectSession);
     const bufferActions = useBufferStore.getState().actions;
     const openInWorkbench: typeof bufferActions.openContent = (content) => {
-      if (content.type === "agent") {
-        if (content.sessionId) return selectSession(content.sessionId);
-        newSession();
-        return useBufferStore.getState().activeBufferId ?? "";
-      }
       channel.postMessage({ type: "workbench", content });
-      return "detached-workbench-request";
+      return "agent-workbench-request";
     };
+    setAgentWindowSessionOpener((chatId) => {
+      if (chatId === sessionId.current) return useBufferStore.getState().activeBufferId ?? "";
+      return openInWorkbench({ type: "agent", sessionId: chatId });
+    });
     useBufferStore.setState({
       actions: {
         ...bufferActions,
         openContent: openInWorkbench,
+        openSettingsBuffer: () => {
+          const state = useUIState.getState();
+          channel.postMessage({
+            type: "settings",
+            tab: state.settingsInitialTab ?? undefined,
+            section: state.settingsInitialSection ?? undefined,
+          });
+          return "agent-settings-request";
+        },
         setActiveBuffer: (id) => {
-          const buffer = useBufferStore.getState().buffers.find((item) => item.id === id);
-          if (buffer?.type === "agent") selectSession(buffer.sessionId);
-          else if (buffer?.type === "editor")
+          const item = useBufferStore.getState().buffers.find((candidate) => candidate.id === id);
+          if (item?.type === "editor")
             openInWorkbench({
               type: "editor",
-              path: buffer.path,
-              name: buffer.name,
-              content: buffer.content,
+              path: item.path,
+              name: item.name,
+              content: item.content,
             });
         },
       },
@@ -216,12 +194,8 @@ export default function DetachedAgentsApp() {
       }
     };
     window.addEventListener("keydown", onKeyDown);
-    void Promise.all([
-      initializeSettingsStore(),
-      initializeThemeSystem(),
-      useAuthStore.getState().actions.initialize(),
-      listeners,
-    ])
+    void useAuthStore.getState().actions.initialize().catch(console.error);
+    void Promise.all([initializeSettingsStore(), initializeThemeSystem(), listeners])
       .then(() => {
         if (!disposed) channel.postMessage({ type: "ready" });
       })
@@ -235,6 +209,7 @@ export default function DetachedAgentsApp() {
       unsubscribeChat();
       unsubscribeBuffers();
       setAgentWindowSessionOpener(null);
+      useAgentWindowStore.getState().actions.setAccountIdentity(null);
       useBufferStore.setState({ actions: bufferActions });
       void listeners.then((unlisteners) => unlisteners.forEach((unlisten) => unlisten()));
       channel.close();
@@ -243,94 +218,41 @@ export default function DetachedAgentsApp() {
     };
   }, [returnToOwner]);
 
-  const visibleChats = filterChatsByWorkspace(chats, workspacePath)
-    .filter((chat) => !chat.archivedAt)
-    .sort(
-      (a, b) =>
-        Number(b.isPinned) - Number(a.isPinned) ||
-        b.lastMessageAt.getTime() - a.lastMessageAt.getTime(),
-    );
-  const agentBuffers = buffers
-    .filter((buffer) => buffer.type === "agent")
-    .filter((buffer) => chats.some((chat) => chat.id === buffer.sessionId));
-  const active = agentBuffers.find((buffer) => buffer.id === activeId);
-
   return (
     <DialogServiceProvider>
       <TooltipProvider>
         <FontStyleInjector />
         <WindowResizeBorder />
         <div className="athas-layout-shell flex h-dvh flex-col overflow-hidden bg-background">
-          <TitleBar showMinimal />
-          <ChromeBar region="sidebar">
-            <ChromeGroup grow>
-              <ChromeLabel tone="strong">Agents</ChromeLabel>
-            </ChromeGroup>
-            <Button variant="ghost" onClick={returnToOwner} disabled={returning}>
-              <ArrowLeftIcon /> Return to Main Window
-            </Button>
-          </ChromeBar>
+          <TitleBar
+            showMinimal
+            title={chat?.title ?? "Agent"}
+            titleIcon={
+              <ProviderIcon
+                providerId={
+                  chat?.agentId === "custom"
+                    ? (chat.providerId ?? "custom")
+                    : (chat?.agentId ?? "custom")
+                }
+              />
+            }
+          />
           {error ? (
             <Empty tone="error">
               <EmptyHeader>
-                <EmptyTitle>Agents window error</EmptyTitle>
+                <EmptyTitle>Agent window error</EmptyTitle>
                 <EmptyDescription>{error}</EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : !ready || returning ? (
             <Empty>
-              <EmptyTitle>{returning ? "Returning Agents…" : "Loading Agents…"}</EmptyTitle>
+              <EmptyTitle>{returning ? "Returning agent…" : "Loading agent…"}</EmptyTitle>
             </Empty>
-          ) : (
-            <div className="flex min-h-0 flex-1">
-              <aside
-                aria-label="Agent sessions"
-                className="flex w-56 shrink-0 flex-col overflow-y-auto p-2 max-[600px]:w-40"
-              >
-                <Button variant="ghost" onClick={newSession}>
-                  <PlusIcon /> New Agent
-                </Button>
-                {visibleChats.map((chat) => (
-                  <ActivityAgentRow
-                    key={chat.id}
-                    chat={chat}
-                    active={active?.sessionId === chat.id}
-                    aiProviderId={settings.aiProviderId}
-                    aiModelId={settings.aiModelId}
-                    currentBranch={null}
-                    workspacePath={workspacePath ?? null}
-                    onOpen={selectSession}
-                    onUpdateTitle={actions.updateChatTitle}
-                    onPinChange={actions.setChatPinned}
-                    onArchive={(id) => actions.setChatArchived(id, true)}
-                    onDelete={(chatId) => {
-                      if (useAIChatStore.getState().agentRuns[chatId]) {
-                        toast.info("Stop this agent before deleting its session.");
-                        return;
-                      }
-                      actions.deleteChat(chatId);
-                    }}
-                  />
-                ))}
-              </aside>
-              <main className="min-h-0 min-w-0 flex-1">
-                {agentBuffers.map((buffer) => (
-                  <div key={buffer.id} className={buffer.id === activeId ? "h-full" : "hidden"}>
-                    <AgentTab buffer={buffer} isActive={buffer.id === activeId} />
-                  </div>
-                ))}
-                {!active && (
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyTitle>Your agents, in their own window</EmptyTitle>
-                      <EmptyDescription>Select a session or start a new agent.</EmptyDescription>
-                    </EmptyHeader>
-                    <Button onClick={newSession}>New Agent</Button>
-                  </Empty>
-                )}
-              </main>
-            </div>
-          )}
+          ) : buffer?.type === "agent" ? (
+            <main className="min-h-0 min-w-0 flex-1">
+              <AgentTab buffer={buffer} />
+            </main>
+          ) : null}
         </div>
         <Toaster />
       </TooltipProvider>

@@ -1,5 +1,4 @@
 import { memo, useEffect, useMemo } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { getFollowUpActionsForMessage } from "@/features/ai/lib/follow-up-actions";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
@@ -56,15 +55,8 @@ export const ChatMessages = memo(function ChatMessages({
   assistantLabel,
 }: ChatMessagesProps) {
   const { scrollToMessage } = useMessageScroller();
-  const { currentChatId, chats } = useAIChatStore(
-    useShallow((state) => ({
-      currentChatId: state.currentChatId,
-      chats: state.chats,
-    })),
-  );
-  const currentChat = useMemo(
-    () => chats.find((chat) => chat.id === (chatId ?? currentChatId)),
-    [chatId, chats, currentChatId],
+  const currentChat = useAIChatStore((state) =>
+    state.chats.find((chat) => chat.id === (chatId ?? state.currentChatId)),
   );
   const messages = currentChat?.messages || [];
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
@@ -106,7 +98,7 @@ export const ChatMessages = memo(function ChatMessages({
 
   if (messages.length === 0) {
     return (
-      <MessageScrollerContent className={cn(chatContentWidth(), "justify-end pt-4 pb-2")}>
+      <MessageScrollerContent className={cn(chatContentWidth(), "justify-end py-4")}>
         <AgentShortcuts className="mx-auto max-w-sm" surfaceId={surfaceId} />
       </MessageScrollerContent>
     );
@@ -114,7 +106,7 @@ export const ChatMessages = memo(function ChatMessages({
 
   return (
     <MessageScrollerContent
-      className={chatContentWidth()}
+      className={cn(chatContentWidth(), "py-4")}
       aria-busy={messages.some((message) => message.isStreaming)}
     >
       {timelineItems.map((item) => {

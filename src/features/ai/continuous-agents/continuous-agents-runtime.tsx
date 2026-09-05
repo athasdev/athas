@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { agentsAreDetached } from "@/features/ai/detached/agent-window.store";
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
@@ -31,7 +30,6 @@ export function ContinuousAgentsRuntime() {
         return runNextDueContinuousAgent({
           getWorkspacePath: () => useProjectStore.getState().rootFolderPath ?? null,
           isAgentBusy: () => {
-            if (agentsAreDetached()) return true;
             const chatState = useAIChatStore.getState();
             return Boolean(
               chatState.pendingAgentLaunchRequest || Object.keys(chatState.agentRuns).length > 0,

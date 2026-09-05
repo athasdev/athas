@@ -37,6 +37,6 @@ export function captureAgentDrafts() {
   return structuredClone(drafts);
 }
 
-export function restoreAgentDrafts(next: Record<string, AgentWindowDraft>) {
-  drafts = structuredClone(next);
+export function restoreAgentDrafts(next: Record<string, AgentWindowDraft>, merge = false) {
+  drafts = merge ? { ...drafts, ...structuredClone(next) } : structuredClone(next);
 }

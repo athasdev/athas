@@ -8,15 +8,11 @@ export function resolveModelOptions({
   staticModels,
   fetchedModels,
   customModels,
-  isLoading,
 }: {
   staticModels: AIModelOption[];
   fetchedModels: ProviderModel[];
   customModels: ProviderModel[];
-  isLoading: boolean;
 }): AIModelOption[] {
-  if (isLoading) return [];
-
   const mergedModels = new Map<string, AIModelOption>(
     staticModels.map((model) => [model.id, model]),
   );

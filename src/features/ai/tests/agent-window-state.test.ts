@@ -116,4 +116,15 @@ describe("Agents window drafts", () => {
     restoreAgentDrafts({ session: { ...draft, text: "", images: [] } });
     expect(takeAgentDraft("session")).toEqual({ ...draft, text: "", images: [] });
   });
+
+  it("merges a returned agent draft without losing drafts for other sessions", () => {
+    restoreAgentDrafts({
+      "agent-session:first": draft,
+      "agent-session:second": { ...draft, text: "Still editing here" },
+    });
+    restoreAgentDrafts({ "agent-session:first": { ...draft, text: "", images: [] } }, true);
+
+    expect(takeAgentDraft("agent-session:first")).toEqual({ ...draft, text: "", images: [] });
+    expect(takeAgentDraft("agent-session:second")?.text).toBe("Still editing here");
+  });
 });

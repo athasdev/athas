@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
-import { detachAgentView } from "@/features/ai/detached/agent-window-service";
+import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   ArrowClockwiseIcon as RefreshCw,
@@ -40,14 +40,17 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
 
   const baseActions: Action[] = [
     {
-      id: "ai-detach-agents",
-      label: "AI: Detach Agents View",
-      description: "Move the Agents view into its own window",
+      id: "ai-open-agent-window",
+      label: "AI: Open Agent in New Window",
+      description: "Open the active agent session in its own window",
       icon: <Sparkles />,
       category: "AI",
       action: async () => {
         onClose();
-        await detachAgentView();
+        const state = useBufferStore.getState();
+        const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+        if (buffer?.type === "agent") await openAgentInNewWindow(buffer.sessionId);
+        else showToast({ message: "Open an agent tab first.", type: "info" });
       },
     },
     {

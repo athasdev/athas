@@ -1,5 +1,74 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CodexSkillSummary, CodexThreadPage, CodexThreadSummary } from "./codex-types";
+import type {
+  CodexSkillSummary,
+  CodexThreadPage,
+  CodexThreadSummary,
+  CodexModelOption,
+} from "./codex-types";
+import { createTimedResourceCache } from "@/utils/timed-resource-cache";
+
+const startupCache = createTimedResourceCache<void>();
+const modelsCache = createTimedResourceCache<CodexModelOption[]>();
+const threadsCache = createTimedResourceCache<CodexThreadPage>();
+const skillsCache = createTimedResourceCache<ReturnType<typeof normalizeCodexSkills>>();
+const ttlMs = 30_000;
+
+async function withCatalogTimeout<T>(request: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await new Promise<T>((resolve, reject) => {
+      timer = setTimeout(
+        () => reject(new Error("Codex took too long to respond. Try again.")),
+        15_000,
+      );
+      request.then(resolve, reject);
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export function normalizeCodexModels(value: unknown): CodexModelOption[] {
+  const result = asRecord(value);
+  const data = Array.isArray(result.data)
+    ? result.data
+    : Array.isArray(result.models)
+      ? result.models
+      : [];
+  return data.flatMap((entry) => {
+    const model = asRecord(entry);
+    const id = asString(model.model) || asString(model.id);
+    if (!id || model.hidden === true) return [];
+    const efforts = Array.isArray(model.supportedReasoningEfforts)
+      ? model.supportedReasoningEfforts
+      : [];
+    return [
+      {
+        id,
+        name: asString(model.displayName) || asString(model.name) || id,
+        description: asString(model.description),
+        isDefault: model.isDefault === true,
+        defaultReasoningEffort: asString(model.defaultReasoningEffort),
+        reasoningEfforts: efforts.flatMap((entry) => {
+          const effort = asRecord(entry);
+          const value = asString(effort.reasoningEffort);
+          return value ? [{ value, label: asString(effort.description) || value }] : [];
+        }),
+      },
+    ];
+  });
+}
+
+export function listCodexComposerModels(cwd: string, force = false) {
+  return modelsCache.load(
+    cwd,
+    async () => {
+      await startCodexComposer(cwd);
+      return normalizeCodexModels(await withCatalogTimeout(invoke("list_codex_models")));
+    },
+    { ttlMs, force },
+  );
+}
 
 export const CODEX_COMPOSER_THREAD_PAGE_SIZE = 20;
 
@@ -85,22 +154,45 @@ export function normalizeCodexSkills(value: unknown) {
 }
 
 export async function startCodexComposer(cwd: string): Promise<void> {
-  await invoke("start_codex_integration", { args: { cwd } });
+  return startupCache.load(
+    cwd,
+    async () => {
+      await withCatalogTimeout(invoke("start_codex_integration", { args: { cwd } }));
+    },
+    { ttlMs: 5_000 },
+  );
 }
 
 export async function listCodexComposerThreads(
   cwd: string,
   cursor: string | null = null,
+  force = false,
 ): Promise<CodexThreadPage> {
-  const result = await invoke("list_codex_threads", {
-    cwd,
-    cursor,
-    limit: CODEX_COMPOSER_THREAD_PAGE_SIZE,
-  });
+  return threadsCache.load(
+    JSON.stringify([cwd, cursor]),
+    async () => {
+      await startCodexComposer(cwd);
+      const result = await withCatalogTimeout(
+        invoke("list_codex_threads", {
+          cwd,
+          cursor,
+          limit: CODEX_COMPOSER_THREAD_PAGE_SIZE,
+        }),
+      );
 
-  return normalizeCodexThreadPage(result);
+      return normalizeCodexThreadPage(result);
+    },
+    { ttlMs, force },
+  );
 }
 
-export async function listCodexComposerSkills(cwd: string) {
-  return normalizeCodexSkills(await invoke("list_codex_skills", { cwd }));
+export async function listCodexComposerSkills(cwd: string, force = false) {
+  return skillsCache.load(
+    cwd,
+    async () => {
+      await startCodexComposer(cwd);
+      return normalizeCodexSkills(await withCatalogTimeout(invoke("list_codex_skills", { cwd })));
+    },
+    { ttlMs, force },
+  );
 }

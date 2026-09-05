@@ -1,5 +1,5 @@
 import { getCurrentWindow, type Window as TauriWindow } from "@tauri-apps/api/window";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -16,7 +16,7 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
-import { ChromeBar, ChromeGroup } from "@/ui/chrome";
+import { ChromeBar, ChromeGroup, ChromeLabel } from "@/ui/chrome";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -42,12 +42,16 @@ import { WindowControls } from "./window-controls";
 
 interface TitleBarProps {
   showMinimal?: boolean;
+  title?: string;
+  titleIcon?: ReactNode;
   activityBarExpanded?: boolean;
   onActivityBarExpandedChange?: (expanded: boolean) => void;
 }
 
 const TitleBar = ({
   showMinimal = false,
+  title,
+  titleIcon,
   activityBarExpanded: controlledActivityBarExpanded,
   onActivityBarExpandedChange,
 }: TitleBarProps) => {
@@ -312,9 +316,12 @@ const TitleBar = ({
         aria-label="Window toolbar"
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
-        className="athas-title-bar relative z-50 justify-between select-none"
+        className="athas-title-bar relative z-50 justify-between select-none ps-title-bar-leading"
       >
-        <ChromeGroup grow />
+        <ChromeGroup grow align="center" className="pointer-events-none overflow-hidden">
+          {titleIcon}
+          {title ? <ChromeLabel tone="strong">{title}</ChromeLabel> : null}
+        </ChromeGroup>
 
         {showAppWindowControls && (
           <WindowControls

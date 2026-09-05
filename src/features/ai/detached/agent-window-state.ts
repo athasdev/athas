@@ -1,8 +1,12 @@
 import type { AIChatState } from "@/features/ai/stores/ai-chat/ai-chat-store.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { AgentWindowDraft } from "./agent-window-drafts";
+import type { getAccountIdentity } from "@/features/window/lib/account-identity";
+
+export type AgentAccountIdentity = ReturnType<typeof getAccountIdentity>;
 
 export interface AgentWindowSnapshot {
+  accountIdentity?: AgentAccountIdentity;
   chat: Pick<AIChatState, "chats" | "currentChatId" | "selectedAgentId" | "chatMessageLoadStates">;
   workspacePath: string | undefined;
   buffers: PaneContent[];
@@ -15,13 +19,17 @@ export function getAgentWindowTransferBlocker(
     AIChatState,
     "agentRuns" | "pendingAgentLaunchRequest" | "agentMessageQueues" | "chatMessageLoadStates"
   >,
+  chatId?: string,
 ) {
   if (
-    state.pendingAgentLaunchRequest ||
-    Object.keys(state.agentRuns).length > 0 ||
-    Object.values(state.agentMessageQueues).some((queue) => queue.length > 0)
+    (state.pendingAgentLaunchRequest &&
+      (!chatId || state.pendingAgentLaunchRequest.chatId === chatId)) ||
+    (chatId ? state.agentRuns[chatId] : Object.keys(state.agentRuns).length > 0) ||
+    (chatId
+      ? state.agentMessageQueues[chatId]?.length
+      : Object.values(state.agentMessageQueues).some((queue) => queue.length > 0))
   ) {
-    return "Wait for agents to finish, or stop them, before moving the Agents view.";
+    return "Wait for this agent to finish, or stop it, before opening it in another window.";
   }
   return null;
 }

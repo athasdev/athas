@@ -23,7 +23,8 @@ interface CodexHandlers {
   onEvent?: (event: AcpEvent) => void;
 }
 
-const settingsKey = "athas-codex-integration-settings";
+export const codexSettingsKey = "athas-codex-integration-settings";
+export const codexSettingsChanged = "athas-codex-settings-changed";
 export const defaultCodexSettings: CodexThreadSettings = {
   effort: "medium",
   approvalPolicy: "on-request",
@@ -33,14 +34,18 @@ export const defaultCodexSettings: CodexThreadSettings = {
 
 export function getCodexSettings(): CodexThreadSettings {
   try {
-    return { ...defaultCodexSettings, ...JSON.parse(localStorage.getItem(settingsKey) ?? "{}") };
+    return {
+      ...defaultCodexSettings,
+      ...JSON.parse(localStorage.getItem(codexSettingsKey) ?? "{}"),
+    };
   } catch {
     return defaultCodexSettings;
   }
 }
 
 export function saveCodexSettings(settings: CodexThreadSettings) {
-  localStorage.setItem(settingsKey, JSON.stringify(settings));
+  localStorage.setItem(codexSettingsKey, JSON.stringify(settings));
+  window.dispatchEvent(new Event(codexSettingsChanged));
 }
 
 function itemId(params: Record<string, any>) {

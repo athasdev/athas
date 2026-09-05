@@ -8,10 +8,14 @@ import {
   loadAgentAvailability,
   type AgentAction,
   type PendingAgentAction,
+  type AgentAvailabilityResult,
 } from "@/features/ai/lib/agent-options";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import { toast } from "sonner";
+import { createTimedResourceCache } from "@/utils/timed-resource-cache";
+
+const availabilityCache = createTimedResourceCache<AgentAvailabilityResult>();
 
 export function useAgentOptions(currentAgentId: AgentType) {
   const [agentConfigs, setAgentConfigs] = useState<Map<string, AgentConfig>>(new Map());
@@ -22,15 +26,20 @@ export function useAgentOptions(currentAgentId: AgentType) {
   const loadRequestIdRef = useRef(0);
   const pendingActionRef = useRef<PendingAgentAction | null>(null);
 
-  const loadAgents = useCallback(async (showLoading = true) => {
+  const loadAgents = useCallback(async (showLoading = true, force = false) => {
     const requestId = ++loadRequestIdRef.current;
     if (showLoading) setIsLoading(true);
     setLoadError(null);
 
     try {
-      const result = await loadAgentAvailability(
-        () => invoke<AgentConfig[]>("get_available_agents"),
-        () => CodexIntegrationService.status(),
+      const result = await availabilityCache.load(
+        "agents",
+        () =>
+          loadAgentAvailability(
+            () => invoke<AgentConfig[]>("get_available_agents"),
+            () => CodexIntegrationService.status(),
+          ),
+        { ttlMs: 30_000, force },
       );
       if (requestId !== loadRequestIdRef.current) return;
 
@@ -87,7 +96,7 @@ export function useAgentOptions(currentAgentId: AgentType) {
       } finally {
         pendingActionRef.current = null;
         setPendingAction(null);
-        void loadAgents(false);
+        void loadAgents(false, true);
       }
     },
     [loadAgents],
@@ -97,7 +106,7 @@ export function useAgentOptions(currentAgentId: AgentType) {
     options,
     isLoading,
     loadError,
-    refresh: loadAgents,
+    refresh: () => loadAgents(true, true),
     runAgentAction,
   };
 }

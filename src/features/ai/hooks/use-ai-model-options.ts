@@ -68,8 +68,8 @@ export function useAIModelOptions(
         if (config?.requiresApiKey && !canUseWithoutApiKey && !canFetchWithoutApiKey) return;
 
         const models = await getModels.call(providerInstance, apiKey || undefined);
-        if (!isCurrent) return;
         setDynamicModels(providerId, models);
+        if (!isCurrent) return;
         if (models.length === 0) {
           setModelFetchError({
             providerId,
@@ -115,32 +115,35 @@ export function useAIModelOptions(
       staticModels,
       fetchedModels: resolvedFetchedModels,
       customModels,
-      isLoading: isLoadingModels,
     });
   }, [
     autocompleteCustomModelId,
     customModelId,
     fetchedModels,
-    isLoadingModels,
     modelId,
     provider?.models,
     providerId,
   ]);
 
   useEffect(() => {
-    if (!onChange || availableModels.length === 0) return;
-    if (!availableModels.some((model) => model.id === modelId)) {
-      onChange(availableModels[0].id);
-    }
-  }, [availableModels, modelId, onChange]);
+    if (
+      !onChange ||
+      modelId ||
+      isLoadingModels ||
+      visibleModelFetchError ||
+      availableModels.length === 0
+    )
+      return;
+    onChange(availableModels[0].id);
+  }, [availableModels, modelId, onChange, isLoadingModels, visibleModelFetchError]);
 
   const currentModelName = useMemo(() => {
     const selectedModel = availableModels.find((model) => model.id === modelId);
     if (selectedModel) return selectedModel.name;
+    if (modelId.trim()) return modelId;
     if (isLoadingModels) return "Loading models…";
-    if ((providerId === "openrouter" || isCustomProvider) && modelId.trim()) return modelId;
     return "Select model";
-  }, [availableModels, isCustomProvider, isLoadingModels, modelId, providerId]);
+  }, [availableModels, isLoadingModels, modelId]);
 
   return {
     availableModels,

@@ -63,7 +63,7 @@ export function WindowCloseGuard() {
 
   const continueCloseOrPrompt = useCallback(async () => {
     if (agentsAreDetached()) {
-      toast.info("Return the Agents view to this window before closing it.");
+      toast.info("Close the agent windows before closing this window.");
       return;
     }
     const dirtyBuffer = getBlockingDirtyBuffer(discardedBufferIdsRef.current);
@@ -85,7 +85,7 @@ export function WindowCloseGuard() {
     (event) => {
       if (agentsAreDetached()) {
         event.preventDefault();
-        toast.info("Return the Agents view to this window before closing it.");
+        toast.info("Close the agent windows before closing this window.");
         return;
       }
       if (IS_LINUX && consumeCloseRequestSuppression()) {

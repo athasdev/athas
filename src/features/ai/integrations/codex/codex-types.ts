@@ -38,6 +38,15 @@ export interface CodexCatalog {
   rateLimits: Record<string, any> | null;
 }
 
+export interface CodexModelOption {
+  id: string;
+  name: string;
+  description: string;
+  isDefault: boolean;
+  defaultReasoningEffort: string;
+  reasoningEfforts: { value: string; label: string }[];
+}
+
 export interface CodexThreadSummary {
   id: string;
   name: string | null;

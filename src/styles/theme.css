@@ -148,6 +148,11 @@
     --app-primary: var(--primary);
     --athas-navigation-material: var(--surface);
     --border-strong: color-mix(in srgb, var(--border) 72%, var(--foreground) 28%);
+    --composer-background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--background) 88%, var(--surface)),
+      color-mix(in srgb, var(--background) 64%, var(--surface))
+    );
     --success: var(--primary);
     --warning: var(--muted-foreground);
     --tab-hover-bg: color-mix(in srgb, var(--accent) 72%, transparent);

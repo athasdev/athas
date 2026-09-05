@@ -18,6 +18,10 @@ export const chromeBarVariants = cva(
         neutral: "text-muted-foreground",
         primary: "text-foreground",
       },
+      surface: {
+        default: "",
+        transparent: "bg-transparent",
+      },
       separated: {
         true: "border-border/55 border-b",
         false: "border-transparent border-b",
@@ -74,6 +78,7 @@ export function ChromeBar({
   className,
   region,
   emphasis,
+  surface,
   separated,
   ...props
 }: ComponentProps<"div"> & VariantProps<typeof chromeBarVariants>) {
@@ -81,7 +86,7 @@ export function ChromeBar({
     <div
       data-slot="chrome-bar"
       data-region={region}
-      className={cn(chromeBarVariants({ region, emphasis, separated }), className)}
+      className={cn(chromeBarVariants({ region, emphasis, surface, separated }), className)}
       {...props}
     />
   );

@@ -3,6 +3,7 @@ import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
 import { Alert, AlertDescription } from "@/ui/alert";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
+import { ProviderIcon } from "../icons/provider-icons";
 
 interface ModelSelectorProps {
   providerId: string;
@@ -43,11 +44,11 @@ export function ModelSelector({
         };
       })}
       placeholder={currentModelName}
-      aria-label="Select AI model"
+      aria-label="Change model"
       searchable
-      searchableTrigger={isComposer ? "input" : "menu"}
+      searchableTrigger="menu"
       openDirection={isComposer ? "up" : "down"}
-      allowCustomValue={isCustomProvider}
+      allowCustomValue={isCustomProvider || providerId === "openrouter"}
       customValueLabel={(customValue) => `Use ${customValue}`}
       emptyLabel={
         isLoadingModels
@@ -56,7 +57,7 @@ export function ModelSelector({
             ? "Type a model name and press Enter"
             : "No models found"
       }
-      hideChevron={isComposer}
+      leftIcon={isComposer ? <ProviderIcon providerId={providerId} /> : undefined}
       variant={isComposer ? "ghost" : "default"}
       disabled={disabled}
       open={open}

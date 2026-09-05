@@ -5,19 +5,14 @@ import { Button } from "@/ui/button";
 import Select from "@/ui/select";
 import { Spinner } from "@/ui/spinner";
 import Section, { SettingRow } from "@/features/settings/components/settings-section";
-import {
-  CodexIntegrationService,
-  getCodexSettings,
-  saveCodexSettings,
-} from "./codex-integration-service";
-import type { CodexIntegrationStatus, CodexThreadSettings } from "./codex-types";
+import { CodexIntegrationService } from "./codex-integration-service";
+import type { CodexIntegrationStatus } from "./codex-types";
+import { useCodexSettings } from "./use-codex-settings";
+import { useCodexModels } from "./use-codex-models";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { normalizeCodexSkills, normalizeCodexThreads } from "./codex-composer-catalog";
+import { getCodexModelPatch } from "./codex-model-settings";
 
-const effortOptions = ["low", "medium", "high", "xhigh"].map((value) => ({
-  value,
-  label: value === "xhigh" ? "Extra high" : `${value[0].toUpperCase()}${value.slice(1)}`,
-}));
 const sandboxOptions = [
   { value: "read-only", label: "Read only" },
   { value: "workspace-write", label: "Workspace write" },
@@ -32,8 +27,17 @@ const approvalOptions = [
 export function CodexSettings() {
   const cwd = useProjectStore((state) => state.rootFolderPath || ".");
   const [status, setStatus] = useState<CodexIntegrationStatus | null>(null);
-  const [settings, setSettings] = useState<CodexThreadSettings>(getCodexSettings);
-  const [models, setModels] = useState<any[]>([]);
+  const { settings, update } = useCodexSettings();
+  const { models, retry: refreshModels } = useCodexModels(cwd);
+  const model = models.find((item) =>
+    settings.model ? item.id === settings.model : item.isDefault,
+  );
+  const effortOptions =
+    model?.reasoningEfforts.map(({ value, label }) => ({
+      value,
+      label: value,
+      keywords: [label],
+    })) ?? [];
   const [details, setDetails] = useState({ skills: 0, mcp: 0, threads: 0 });
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -43,13 +47,12 @@ export function CodexSettings() {
     setCatalogError(null);
     try {
       setStatus(await invoke<CodexIntegrationStatus>("start_codex_integration", { args: { cwd } }));
-      const [modelResult, skillsResult, mcpResult, threadResult] = await Promise.all([
-        invoke<any>("list_codex_models"),
+      refreshModels();
+      const [skillsResult, mcpResult, threadResult] = await Promise.all([
         invoke<any>("list_codex_skills", { cwd }),
         invoke<any>("list_codex_mcp_servers"),
         invoke<any>("list_codex_threads", { cwd, cursor: null }),
       ]);
-      setModels(modelResult.data ?? modelResult.models ?? []);
       setDetails({
         skills: normalizeCodexSkills(skillsResult).skills.length,
         mcp: (mcpResult.data ?? mcpResult.servers ?? []).length,
@@ -61,19 +64,13 @@ export function CodexSettings() {
       setBusy(false);
       setStatus(await CodexIntegrationService.status().catch(() => null));
     }
-  }, [cwd]);
+  }, [cwd, refreshModels]);
 
   useEffect(() => {
     void CodexIntegrationService.status()
       .then(setStatus)
       .catch(() => {});
   }, []);
-
-  const update = (patch: Partial<CodexThreadSettings>) => {
-    const next = { ...settings, ...patch };
-    setSettings(next);
-    saveCodexSettings(next);
-  };
 
   return (
     <Section
@@ -108,12 +105,15 @@ export function CodexSettings() {
       <SettingRow label="Model" description="Models are read from your installed Codex version">
         <Select
           value={settings.model ?? ""}
-          options={models.map((model) => ({
-            value: model.id ?? model.model,
-            label: model.displayName ?? model.name ?? model.id,
-          }))}
+          options={[
+            { value: "", label: "Codex default" },
+            ...models.map((model) => ({
+              value: model.id,
+              label: model.name,
+            })),
+          ]}
           placeholder="Codex default"
-          onChange={(model) => update({ model })}
+          onChange={(model) => update(getCodexModelPatch(model || undefined, models, settings))}
           searchable
         />
       </SettingRow>
@@ -121,6 +121,7 @@ export function CodexSettings() {
         <Select
           value={settings.effort ?? "medium"}
           options={effortOptions}
+          disabled={effortOptions.length === 0}
           onChange={(effort) => update({ effort })}
         />
       </SettingRow>

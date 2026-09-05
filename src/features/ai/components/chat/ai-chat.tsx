@@ -1,5 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import {
   isAcpAuthenticationError,
@@ -32,7 +32,7 @@ import {
   type AgentNativeNotificationKind,
 } from "@/features/ai/services/agent-native-notifications";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { agentsAreDetached } from "@/features/ai/detached/agent-window.store";
+import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
 import { peekAgentDraft } from "@/features/ai/detached/agent-window-drafts";
 import { useComposerContextSelection } from "@/features/ai/hooks/use-composer-context-selection";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
@@ -56,6 +56,7 @@ import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { claimContextualTip } from "@/features/onboarding/lib/contextual-teaching";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { getAccountIdentity } from "@/features/window/lib/account-identity";
+import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
@@ -126,7 +127,8 @@ const AIChat = memo(function AIChat({
       : currentAgentId;
   const connectedGitHubLogin =
     githubAccountStatus === "connected" ? githubCurrentUser || user?.github_username : null;
-  const accountIdentity = getAccountIdentity(user, connectedGitHubLogin);
+  const detachedIdentity = useAgentWindowStore((state) => state.accountIdentity);
+  const accountIdentity = detachedIdentity ?? getAccountIdentity(user, connectedGitHubLogin);
   const activeRun = effectiveChatId ? chatState.agentRuns[effectiveChatId] : undefined;
   const isSurfaceTyping = Boolean(activeRun);
   const surfaceStreamingMessageId = activeRun?.assistantMessageId ?? null;
@@ -448,9 +450,9 @@ const AIChat = memo(function AIChat({
     messageContent: string,
     options: { editedUserMessageId?: string; targetChatId?: string } = {},
   ) {
-    if (agentsAreDetached()) return;
     const store = useAIChatStore.getState();
     const requestedChatId = options.targetChatId ?? effectiveChatId;
+    if (agentIsDetached(requestedChatId)) return;
     const targetChat = requestedChatId
       ? store.chats.find((chat) => chat.id === requestedChatId)
       : null;
@@ -1010,8 +1012,8 @@ details: ${errorDetails || mainError}
 
   const sendMessage = useCallback(
     (messageContent: string): AgentMessageSubmitResult => {
-      if (agentsAreDetached())
-        return { accepted: false, error: "Agents are open in another window." };
+      if (agentIsDetached(effectiveChatId))
+        return { accepted: false, error: "This agent is open in another window." };
       if (!messageContent.trim()) return { accepted: false };
       const access = getAgentMessageAccess(currentAgentId, chatState.hasApiKey);
       if (!access.accepted) {
@@ -1056,6 +1058,13 @@ details: ${errorDetails || mainError}
     [sendMessage],
   );
 
+  const handleSendFollowUp = useCallback(
+    (messageContent: string) => {
+      sendMessage(messageContent);
+    },
+    [sendMessage],
+  );
+
   const handleInterruptAndSend = useCallback(
     (messageContent: string): AgentMessageSubmitResult => {
       if (!messageContent.trim()) return { accepted: false };
@@ -1084,13 +1093,18 @@ details: ${errorDetails || mainError}
     ],
   );
 
-  const handleEditUserMessage = async (messageId: string, content: string) => {
-    if (isSurfaceTyping || surfaceStreamingMessageId) {
-      return;
-    }
+  const processMessageRef = useRef(processMessage);
+  useLayoutEffect(() => {
+    processMessageRef.current = processMessage;
+  });
 
-    void processMessage(content, { editedUserMessageId: messageId });
-  };
+  const handleEditUserMessage = useCallback(
+    (messageId: string, content: string) => {
+      if (isSurfaceTyping || surfaceStreamingMessageId) return;
+      void processMessageRef.current(content, { editedUserMessageId: messageId });
+    },
+    [isSurfaceTyping, surfaceStreamingMessageId],
+  );
 
   useEffect(() => {
     const pendingLaunch = chatState.pendingAgentLaunchRequest;
@@ -1245,14 +1259,12 @@ details: ${errorDetails || mainError}
           ) : (
             <MessageScrollerProvider autoScroll defaultScrollPosition="last-anchor">
               <MessageScroller>
-                <MessageScrollerViewport>
+                <MessageScrollerViewport fadeEdges>
                   <ChatMessages
                     surfaceId={surfaceId}
                     chatId={effectiveChatId}
                     onApplyCode={onApplyCode}
-                    onSendFollowUp={(message) => {
-                      handleSendMessage(message);
-                    }}
+                    onSendFollowUp={handleSendFollowUp}
                     onEditUserMessage={handleEditUserMessage}
                     canEditUserMessages={
                       getAgentMessageAccess(currentAgentId, chatState.hasApiKey).accepted &&

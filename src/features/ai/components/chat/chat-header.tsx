@@ -4,6 +4,8 @@ import {
   MagnifyingGlassIcon as Search,
   PlusIcon as Plus,
   XIcon as X,
+  WindowExpandIcon,
+  ArrowLeftIcon,
 } from "@/ui/icons";
 import { useEffect, useMemo, useRef } from "react";
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
@@ -14,6 +16,8 @@ import Input from "@/ui/input";
 import { useAIChatStore } from "../../stores/ai-chat.store";
 import ChatHistoryDropdown from "../history/chat-history-dropdown";
 import { useNewAgentAction } from "../../hooks/use-new-agent-action";
+import { isAgentWindow, openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
+import { requestWindowClose } from "@/features/window/utils/request-window-close";
 
 interface ChatHeaderProps {
   chatId?: string | null;
@@ -51,6 +55,7 @@ export function ChatHeader({
   const setChatArchived = useAIChatStore((state) => state.actions.setChatArchived);
 
   const effectiveChatId = chatId ?? currentChatId;
+  const standalone = isAgentWindow();
   const currentChat = chats.find((chat) => chat.id === effectiveChatId);
   const currentAgentId = currentChat?.agentId ?? selectedAgentId;
   const handleNewAgent = useNewAgentAction({ agentId: currentAgentId });
@@ -74,9 +79,11 @@ export function ChatHeader({
   }, [isMessageSearchOpen]);
 
   return (
-    <div className="relative z-10020 bg-background">
+    <div className="relative z-10020 shrink-0">
       {isMessageSearchOpen ? (
         <PaneContentHeader
+          surface="transparent"
+          separated={false}
           context={
             <Input
               ref={messageSearchInputRef}
@@ -101,7 +108,6 @@ export function ChatHeader({
               placeholder="Search messages"
               variant="ghost"
               leftIcon={Search}
-              className="h-7 bg-surface/45"
             />
           }
           detail={messageSearchPosition}
@@ -144,6 +150,7 @@ export function ChatHeader({
         />
       ) : (
         <PaneContentHeader
+          surface="transparent"
           separated={false}
           actions={
             <>
@@ -158,25 +165,45 @@ export function ChatHeader({
                 <Search />
               </Button>
 
-              <ChatHistoryDropdown
-                chats={workspaceChats}
-                currentChatId={effectiveChatId}
-                onSwitchToChat={onSwitchChat}
-                onSetChatArchived={setChatArchived}
-                onDeleteChat={onDeleteChat ?? (() => {})}
-              />
+              {!standalone && (
+                <ChatHistoryDropdown
+                  chats={workspaceChats}
+                  currentChatId={effectiveChatId}
+                  onSwitchToChat={onSwitchChat}
+                  onSetChatArchived={setChatArchived}
+                  onDeleteChat={onDeleteChat ?? (() => {})}
+                />
+              )}
 
-              <Button
-                type="button"
-                variant="ghost"
-                iconOnly
-                onClick={handleNewAgent}
-                tooltip="New Agent"
-                commandId="workbench.agentLauncher"
-                aria-label="New Agent"
-              >
-                <Plus />
-              </Button>
+              {!standalone && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  iconOnly
+                  onClick={handleNewAgent}
+                  tooltip="New Agent"
+                  commandId="workbench.agentLauncher"
+                  aria-label="New Agent"
+                >
+                  <Plus />
+                </Button>
+              )}
+              {effectiveChatId && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  iconOnly
+                  onClick={() =>
+                    standalone ? requestWindowClose() : void openAgentInNewWindow(effectiveChatId)
+                  }
+                  tooltip={standalone ? "Return agent to main window" : "Open agent in new window"}
+                  aria-label={
+                    standalone ? "Return agent to main window" : "Open agent in new window"
+                  }
+                >
+                  {standalone ? <ArrowLeftIcon /> : <WindowExpandIcon />}
+                </Button>
+              )}
             </>
           }
         />
