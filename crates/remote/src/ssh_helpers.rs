@@ -1,7 +1,12 @@
 use ssh2::Session;
-use std::{env, fs, io::Read, net::TcpStream, path::Path};
+use std::{
+   env, fs,
+   io::Read,
+   net::TcpStream,
+   path::{Path, PathBuf},
+};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct SshConfig {
    hostname: Option<String>,
    user: Option<String>,
@@ -51,6 +56,16 @@ pub(super) fn exec_remote_command(session: &Session, command: &str) -> Result<St
    }
 
    Ok(stdout)
+}
+
+fn expand_identity_path(key_path: &str, home_dir: &Path) -> PathBuf {
+   if key_path == "~" {
+      home_dir.to_path_buf()
+   } else if let Some(relative_path) = key_path.strip_prefix("~/") {
+      home_dir.join(relative_path)
+   } else {
+      PathBuf::from(key_path)
+   }
 }
 
 fn get_ssh_config(host: &str) -> SshConfig {
@@ -119,6 +134,27 @@ pub(super) fn create_ssh_session(
    key_path: Option<&str>,
 ) -> Result<Session, String> {
    let ssh_config = get_ssh_config(host);
+   let home_dir = env::var("HOME").unwrap_or_default();
+   create_ssh_session_with_config(
+      host,
+      port,
+      username,
+      password,
+      key_path,
+      &ssh_config,
+      Path::new(&home_dir),
+   )
+}
+
+fn create_ssh_session_with_config(
+   host: &str,
+   port: u16,
+   username: &str,
+   password: Option<&str>,
+   key_path: Option<&str>,
+   ssh_config: &SshConfig,
+   home_dir: &Path,
+) -> Result<Session, String> {
    log::info!(
       "SSH config lookup for '{}': hostname={:?}, user={:?}, identity={:?}",
       host,
@@ -131,7 +167,7 @@ pub(super) fn create_ssh_session(
    let actual_port = ssh_config.port.unwrap_or(port);
    let actual_username = ssh_config.user.as_deref().unwrap_or(username);
 
-   let tcp = TcpStream::connect(format!("{}:{}", actual_host, actual_port)).map_err(|e| {
+   let tcp = TcpStream::connect((actual_host, actual_port)).map_err(|e| {
       format!(
          "Failed to connect to {}:{}: {}",
          actual_host, actual_port, e
@@ -140,50 +176,53 @@ pub(super) fn create_ssh_session(
 
    let mut sess = Session::new().map_err(|e| format!("Failed to create session: {}", e))?;
    sess.set_tcp_stream(tcp);
-   sess
-      .handshake()
-      .map_err(|e| format!("Failed to handshake: {}", e))?;
+   sess.handshake().map_err(|e| {
+      format!(
+         "SSH handshake with {}:{} failed before authentication: {}. No private key has been read \
+          yet; check the server SSH logs and network connection.",
+         actual_host, actual_port, e
+      )
+   })?;
 
-   let home_dir = env::var("HOME").unwrap_or_default();
    let default_key_paths = [
-      format!("{}/.ssh/id_ed25519", home_dir),
-      format!("{}/.ssh/id_rsa", home_dir),
-      format!("{}/.ssh/id_ecdsa", home_dir),
+      home_dir.join(".ssh/id_ed25519"),
+      home_dir.join(".ssh/id_rsa"),
+      home_dir.join(".ssh/id_ecdsa"),
    ];
 
-   let key_file = key_path
+   let configured_key_path = key_path
+      .filter(|path| !path.is_empty())
       .or(ssh_config.identity_file.as_deref())
-      .filter(|path| !path.is_empty() && Path::new(path).exists())
-      .or_else(|| {
-         default_key_paths
-            .iter()
-            .find(|path| Path::new(path).exists())
-            .map(|s| s.as_str())
-      })
-      .unwrap_or("");
+      .map(|path| expand_identity_path(path, home_dir));
 
-   let mut keys_to_try: Vec<String> = Vec::new();
-   if !key_file.is_empty() && Path::new(key_file).exists() {
-      keys_to_try.push(key_file.to_string());
+   let mut keys_to_try = Vec::new();
+   if let Some(key_path) = configured_key_path {
+      keys_to_try.push(key_path);
    }
 
    for default_key in &default_key_paths {
-      if Path::new(default_key).exists() && !keys_to_try.contains(default_key) {
+      if !home_dir.as_os_str().is_empty()
+         && default_key.is_file()
+         && !keys_to_try.contains(default_key)
+      {
          keys_to_try.push(default_key.clone());
       }
    }
 
+   let mut authentication_errors = Vec::new();
    for key in &keys_to_try {
-      log::info!("Attempting key authentication with: {}", key);
-      match sess.userauth_pubkey_file(actual_username, None, Path::new(key), None) {
+      log::info!("Attempting key authentication with: {}", key.display());
+      match sess.userauth_pubkey_file(actual_username, None, key, None) {
          Ok(()) => {
             if sess.authenticated() {
-               log::info!("Key authentication successful with: {}", key);
+               log::info!("Key authentication successful with: {}", key.display());
                return Ok(sess);
             }
          }
          Err(e) => {
-            log::debug!("Key {} failed: {}", key, e);
+            let key_error = format!("Key {} failed: {}", key.display(), e);
+            log::debug!("{}", key_error);
+            authentication_errors.push(key_error);
          }
       }
    }
@@ -205,6 +244,7 @@ pub(super) fn create_ssh_session(
          log::warn!("SSH agent auth returned Ok but not authenticated");
       }
       Err(e) => {
+         authentication_errors.push(format!("SSH agent authentication failed: {}", e));
          log::warn!(
             "SSH agent authentication failed: {} (try running: ssh-add ~/.ssh/id_rsa)",
             e
@@ -218,11 +258,11 @@ pub(super) fn create_ssh_session(
          .userauth_password(actual_username, pass)
          .map_err(|e| format!("Password authentication failed: {}", e))?;
    } else {
-      return Err(
-         "No valid authentication method available. Please provide a password or ensure your SSH \
-          key is properly configured."
-            .to_string(),
-      );
+      return Err(format!(
+         "No valid authentication method available. {}. For an encrypted private key, unlock it \
+          with ssh-add and retry using the SSH agent.",
+         authentication_errors.join("; ")
+      ));
    }
 
    if !sess.authenticated() {
@@ -232,6 +272,10 @@ pub(super) fn create_ssh_session(
    log::info!("Authentication successful!");
    Ok(sess)
 }
+
+#[cfg(test)]
+#[path = "../tests/ssh/session.rs"]
+mod session_tests;
 
 #[cfg(test)]
 mod tests {
