@@ -305,8 +305,8 @@ const TabBar = ({
   }, [sortedBuffers]);
   // Calculate display names for tabs with minimal distinguishing paths
   const displayNames = useMemo(() => {
-    return calculateDisplayNames(buffers, rootFolderPath);
-  }, [buffers, rootFolderPath]);
+    return calculateDisplayNames(buffers);
+  }, [buffers]);
 
   const getBufferDisplayName = useCallback(
     (buffer: PaneContent) => {

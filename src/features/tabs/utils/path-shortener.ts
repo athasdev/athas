@@ -7,7 +7,7 @@ import { isVirtualContent } from "@/features/panes/types/pane-content.types";
 function getPathSegments(filePath: string): string[] {
   // Normalize path separators to forward slash
   const normalized = filePath.replace(/\\/g, "/");
-  const parts = normalized.split("/");
+  const parts = normalized.split("/").filter(Boolean);
   // Return all parts except the last one (filename)
   return parts.slice(0, -1);
 }
@@ -22,16 +22,10 @@ function getFileName(filePath: string): string {
 }
 
 /**
- * Check if a path is within the root directory
- */
-/**
  * Calculate minimal distinguishing display names for buffers
  * Returns a map of buffer ID to display name
  */
-export function calculateDisplayNames(
-  buffers: PaneContent[],
-  _rootPath: string | undefined,
-): Map<string, string> {
+export function calculateDisplayNames(buffers: PaneContent[]): Map<string, string> {
   const displayNames = new Map<string, string>();
 
   // Group buffers by filename
