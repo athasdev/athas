@@ -300,7 +300,6 @@ async fn initialize_connection(
       "athas.dev".to_string(),
       json!({
          "extensionMethods": [
-            { "name": "_athas/open_web_viewer", "description": "Open a URL in Athas web viewer", "params": { "url": "string" } },
             { "name": "_athas/open_terminal", "description": "Open a terminal tab in Athas", "params": { "command": "string|null" } },
             { "name": "_athas/set_chat_title", "description": "Rename the active Athas chat title", "params": { "title": "string" } }
          ]

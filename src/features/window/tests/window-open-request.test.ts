@@ -88,7 +88,7 @@ describe("parseWindowOpenUrl", () => {
     });
   });
 
-  it("parses web viewer requests", () => {
+  it("parses external URL requests", () => {
     const url = new URL("athas://open?type=web&url=https%3A%2F%2Fathas.dev%2Fdocs");
     const result = parseWindowOpenUrl(url);
     expect(result).toEqual({

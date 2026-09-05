@@ -50,20 +50,6 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         isPreview: false,
         sessionId: spec.sessionId ?? id.replace("buffer_", ""),
       };
-    case "webViewer":
-      return {
-        ...base,
-        type: "webViewer",
-        path: `web-viewer://${spec.url}`,
-        name: "Web Viewer",
-        isPreview: false,
-        url: spec.url,
-        allowWhenDisabled: spec.allowWhenDisabled,
-        zoomLevel: spec.zoomLevel,
-        profileKey: spec.profileKey,
-        history: spec.history,
-        historyIndex: spec.historyIndex,
-      };
     case "newTab":
       return {
         ...base,

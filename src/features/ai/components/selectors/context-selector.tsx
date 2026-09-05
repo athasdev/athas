@@ -23,7 +23,6 @@ import {
   GitBranchIcon as GitBranch,
   GithubLogoIcon as GithubLogo,
   GitPullRequestIcon as GitPullRequest,
-  GlobeIcon as Globe,
   PlayCircleIcon as PlayCircle,
   PlusIcon as Plus,
   TerminalWindowIcon as TerminalWindow,
@@ -37,7 +36,6 @@ import {
 } from "@/features/ai/utils/context-selector-model";
 
 function getBufferContextDescription(buffer: PaneContent) {
-  if (buffer.type === "webViewer") return buffer.url;
   if (buffer.type === "terminal") return buffer.workingDirectory || "Terminal";
   if (buffer.type === "database") return `${buffer.databaseType} database`;
   if (buffer.type === "pullRequest") return `Pull request #${buffer.prNumber}`;
@@ -47,7 +45,6 @@ function getBufferContextDescription(buffer: PaneContent) {
 }
 
 function getBufferContextIcon(buffer: PaneContent) {
-  if (buffer.type === "webViewer") return <Globe />;
   if (buffer.type === "terminal") return <TerminalWindow />;
   if (buffer.type === "database") return <Database />;
   if (buffer.type === "pullRequest") return <GitPullRequest />;

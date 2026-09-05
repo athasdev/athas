@@ -67,13 +67,12 @@ describe("getExplorerTargetPath", () => {
   it("ignores non-file buffers", () => {
     const buffer = {
       id: "web",
-      type: "webViewer",
+      type: "newTab",
       path: "https://example.com",
       name: "Example",
       isPinned: false,
       isPreview: false,
       isActive: true,
-      url: "https://example.com",
     } satisfies PaneContent;
 
     expect(getExplorerTargetPath(buffer)).toBeUndefined();

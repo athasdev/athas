@@ -3,7 +3,6 @@ import type {
   EditorContent,
   PaneContent,
   TerminalContent,
-  WebViewerContent,
 } from "@/features/panes/types/pane-content.types";
 import {
   buildWorkspaceBufferSnapshot,
@@ -49,21 +48,6 @@ const createTerminalBuffer = (): TerminalContent => ({
   remoteConnectionId: "remote-1",
 });
 
-const createWebViewerBuffer = (): WebViewerContent => ({
-  id: "web-1",
-  type: "webViewer",
-  path: "webview://web-1",
-  name: "Athas",
-  isPinned: true,
-  isPreview: false,
-  isActive: false,
-  url: "https://athas.dev",
-  zoomLevel: 1.25,
-  profileKey: "default",
-  history: ["https://athas.dev", "https://athas.dev/docs"],
-  historyIndex: 1,
-});
-
 describe("workspace session codec", () => {
   beforeEach(() => {
     buildPersistedEditorViewState.mockReset();
@@ -104,7 +88,7 @@ describe("workspace session codec", () => {
     });
   });
 
-  it("encodes terminal and web viewer restoration metadata", () => {
+  it("encodes terminal restoration metadata", () => {
     expect(
       encodeWorkspaceBuffer(createTerminalBuffer(), { workspaceRootPath: "/workspace" }),
     ).toEqual({
@@ -117,19 +101,6 @@ describe("workspace session codec", () => {
       initialCommand: "bun dev",
       workingDirectory: "/workspace",
       remoteConnectionId: "remote-1",
-    });
-    expect(
-      encodeWorkspaceBuffer(createWebViewerBuffer(), { workspaceRootPath: "/workspace" }),
-    ).toEqual({
-      type: "webViewer",
-      path: "webview://web-1",
-      name: "Athas",
-      isPinned: true,
-      url: "https://athas.dev",
-      zoomLevel: 1.25,
-      profileKey: "default",
-      history: ["https://athas.dev", "https://athas.dev/docs"],
-      historyIndex: 1,
     });
   });
 
@@ -157,7 +128,7 @@ describe("workspace session codec", () => {
   it("builds one snapshot for open and deferred buffers without duplicate paths", () => {
     const activeBuffer = createEditorBuffer();
     const snapshot = buildWorkspaceBufferSnapshot({
-      buffers: [activeBuffer, createWebViewerBuffer()],
+      buffers: [activeBuffer, createTerminalBuffer()],
       activeBufferId: activeBuffer.id,
       pendingBuffers: [
         {
@@ -180,7 +151,7 @@ describe("workspace session codec", () => {
     expect(snapshot.activeBufferPath).toBe(activeBuffer.path);
     expect(snapshot.buffers.map((buffer) => buffer.path)).toEqual([
       activeBuffer.path,
-      "webview://web-1",
+      "terminal://terminal-1",
       "/workspace/deferred.ts",
     ]);
     expect(snapshot.buffers[0]).toMatchObject({ id: activeBuffer.id, name: "app.ts" });

@@ -178,7 +178,6 @@ type StopReason = "end_turn" | "max_tokens" | "max_turn_requests" | "refusal" | 
 
 // UI action types that agents can request
 type UiAction =
-  | { action: "open_web_viewer"; url: string }
   | { action: "open_terminal"; command: string | null }
   | { action: "set_chat_title"; title: string };
 

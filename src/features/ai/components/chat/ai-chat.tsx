@@ -335,19 +335,8 @@ const AIChat = memo(function AIChat({
         ? activeBuffer
         : undefined;
 
-    let activeBufferContext: (typeof activeBuffer & { webViewerContent?: string }) | undefined =
-      selectedActiveBuffer;
-    if (selectedActiveBuffer?.type === "webViewer" && selectedActiveBuffer.url) {
-      const { fetchWebPageContent } = await import("@/features/ai/services/web-content-service");
-      const webContent = await fetchWebPageContent(selectedActiveBuffer.url);
-      activeBufferContext = {
-        ...selectedActiveBuffer,
-        webViewerContent: webContent,
-      };
-    }
-
     const context: ContextInfo = {
-      activeBuffer: activeBufferContext,
+      activeBuffer: selectedActiveBuffer,
       openBuffers: selectedBuffers,
       selectedFiles,
       selectedProjectFiles: Array.from(selectedFilesPaths),
@@ -357,7 +346,7 @@ const AIChat = memo(function AIChat({
       agentId,
     };
 
-    if (selectedActiveBuffer && selectedActiveBuffer.type !== "webViewer") {
+    if (selectedActiveBuffer) {
       const extension = selectedActiveBuffer.path.split(".").pop()?.toLowerCase() || "";
       const languageMap: Record<string, string> = {
         js: "JavaScript",
@@ -582,22 +571,7 @@ const AIChat = memo(function AIChat({
         const directAction = parseDirectAcpUiAction(trimmedMessageContent);
         if (directAction) {
           const bufferActions = useBufferStore.getState().actions;
-          if (directAction.kind === "open_web_viewer" && directAction.url) {
-            if (!useSettingsStore.getState().settings.coreFeatures.webViewer) {
-              chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
-                content: "Web Viewer is disabled. Enable it in Settings > Features to open URLs.",
-                isStreaming: false,
-              });
-              finishRunAndProcessQueue(targetChatId, runId);
-              return;
-            }
-
-            bufferActions.openWebViewerBuffer(directAction.url);
-            chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
-              content: `Opened ${directAction.url} in Athas web viewer.`,
-              isStreaming: false,
-            });
-          } else if (directAction.kind === "open_terminal" && directAction.command) {
+          if (directAction.kind === "open_terminal" && directAction.command) {
             bufferActions.openTerminalBuffer({
               command: directAction.command,
               name: directAction.command,

@@ -489,11 +489,6 @@ export class AcpStreamHandler {
     const bufferActions = useBufferStore.getState().actions;
 
     switch (action.action) {
-      case "open_web_viewer":
-        console.log("Opening web viewer:", action.url);
-        bufferActions.openWebViewerBuffer(action.url);
-        break;
-
       case "open_terminal":
         console.log("Opening terminal:", action.command);
         bufferActions.openTerminalBuffer({

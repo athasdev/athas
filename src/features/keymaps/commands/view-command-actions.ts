@@ -8,12 +8,9 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useKeymapStore } from "../stores/keymaps.store";
 
-function getZoomTarget(): "editor" | "terminal" | "webviewer" {
+function getZoomTarget(): "editor" | "terminal" {
   const terminalContainer = document.querySelector('[data-terminal-container="active"]');
   if (terminalContainer?.contains(document.activeElement)) return "terminal";
-
-  const activeBuffer = useBufferStore.getState().buffers.find((b) => b.isActive);
-  if (activeBuffer?.type === "webViewer") return "webviewer";
 
   return "editor";
 }
@@ -174,30 +171,15 @@ export function toggleRenderWhitespace(): void {
 }
 
 export function zoomIn(): void {
-  const target = getZoomTarget();
-  if (target === "webviewer") {
-    window.dispatchEvent(new CustomEvent("webviewer-zoom", { detail: "in" }));
-  } else {
-    useZoomStore.getState().actions.zoomIn(target);
-  }
+  useZoomStore.getState().actions.zoomIn(getZoomTarget());
 }
 
 export function zoomOut(): void {
-  const target = getZoomTarget();
-  if (target === "webviewer") {
-    window.dispatchEvent(new CustomEvent("webviewer-zoom", { detail: "out" }));
-  } else {
-    useZoomStore.getState().actions.zoomOut(target);
-  }
+  useZoomStore.getState().actions.zoomOut(getZoomTarget());
 }
 
 export function resetZoom(): void {
-  const target = getZoomTarget();
-  if (target === "webviewer") {
-    window.dispatchEvent(new CustomEvent("webviewer-zoom", { detail: "reset" }));
-  } else {
-    useZoomStore.getState().actions.resetZoom(target);
-  }
+  useZoomStore.getState().actions.resetZoom(getZoomTarget());
 }
 
 export function openKeyboardShortcuts(): void {

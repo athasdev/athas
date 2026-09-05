@@ -16,9 +16,7 @@ const createEmptyPaneNode = (id: string): PaneGroup => ({
 });
 
 const isPersistablePaneBuffer = (buffer: PaneContent) =>
-  (buffer.type === "editor" && !buffer.isVirtual) ||
-  buffer.type === "terminal" ||
-  buffer.type === "webViewer";
+  (buffer.type === "editor" && !buffer.isVirtual) || buffer.type === "terminal";
 
 const unique = <T>(items: T[]) => Array.from(new Set(items));
 

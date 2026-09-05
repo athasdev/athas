@@ -43,7 +43,6 @@ import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-
 import { ensureBufferInPane as ensureBufferInWorkspacePane } from "@/features/panes/utils/pane-buffer-actions";
 import { defaultSettings } from "@/features/settings/config/default-settings";
 import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { cleanupBufferHistoryTracking } from "@/features/editor/stores/buffer-history-tracking";
 import type {
   EditorContent,
@@ -109,7 +108,6 @@ interface BufferActions {
   ) => string;
   convertPreviewToDefinite: (bufferId: string) => void;
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
-  openWebViewerBuffer: (url: string) => string;
   openPRBuffer: (
     prNumber: number,
     metadata?: {
@@ -598,42 +596,6 @@ const createBufferStore = (workspaceId: string) => {
               return newBuffer.id;
             }
 
-            case "webViewer": {
-              let displayName = "Web Viewer";
-              if (spec.url && spec.url !== "about:blank") {
-                try {
-                  const urlObj = new URL(spec.url);
-                  if (urlObj.hostname) {
-                    displayName = `Web: ${urlObj.hostname}`;
-                  }
-                } catch {
-                  // Invalid URL, use default
-                }
-              }
-              const path = `web-viewer://${spec.url}`;
-
-              const existing = buffers.find((b) => b.type === "webViewer" && b.url === spec.url);
-              if (existing) {
-                return activateExistingBuffer(existing.id);
-              }
-
-              let newBuffers = closeNewTabInActivePane([...buffers]);
-              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
-
-              const id = generateBufferId(path);
-              const newBuffer = createPaneContent(id, spec);
-              newBuffer.path = path;
-              newBuffer.name = displayName;
-
-              set((state) => {
-                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
-                state.activeBufferId = newBuffer.id;
-              });
-
-              syncBufferToPane(newBuffer.id);
-              return newBuffer.id;
-            }
-
             case "newTab": {
               const nextBuffers = applyAutoEviction([...buffers], maxOpenTabs);
               const id = generateBufferId(`newtab://${newTabSequence++}`);
@@ -963,14 +925,6 @@ const createBufferStore = (workspaceId: string) => {
             name,
             terminalConnectionId,
           });
-        },
-
-        openWebViewerBuffer: (url: string): string => {
-          if (!useSettingsStore.getState().settings.coreFeatures.webViewer) {
-            return get().activeBufferId ?? "";
-          }
-
-          return get().actions.openContent({ type: "webViewer", url });
         },
 
         openPRBuffer: (

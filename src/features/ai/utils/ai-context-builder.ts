@@ -10,8 +10,6 @@ function formatContextPath(path: string, projectRoot?: string) {
 }
 
 function formatOpenContextSummary(buffer: PaneContent, projectRoot?: string) {
-  if (buffer.type === "webViewer")
-    return `Web page: ${buffer.title || buffer.name} (${buffer.url})`;
   if (buffer.type === "terminal") {
     return `Terminal: ${buffer.name}${buffer.workingDirectory ? ` (${buffer.workingDirectory})` : ""}`;
   }
@@ -68,7 +66,7 @@ export const buildContextPrompt = (context: ContextInfo): string => {
 
   if (isAcpAgent) {
     contextPrompt += `Athas ACP client extensions:
-- If your adapter exposes client extension requests, use \`_athas/open_web_viewer\`, \`_athas/open_terminal\`, and \`_athas/set_chat_title\`.
+- If your adapter exposes client extension requests, use \`_athas/open_terminal\` and \`_athas/set_chat_title\`.
 - Invoke them only as ACP extension requests. Never imitate them with a shell command.
 
 `;
@@ -85,16 +83,10 @@ export const buildContextPrompt = (context: ContextInfo): string => {
     }
   }
 
-  // Currently active file or web viewer
+  // Currently active file
   if (context.activeBuffer) {
     const ab = context.activeBuffer;
-    // Handle web viewer buffers
-    if (ab.type === "webViewer") {
-      contextPrompt += `\nCurrently viewing web page: ${ab.url}`;
-      if (ab.webViewerContent) {
-        contextPrompt += `\n\nWeb page content:\n${ab.webViewerContent}`;
-      }
-    } else if (isAcpAgent) {
+    if (isAcpAgent) {
       // ACP agents can read files themselves, so provide paths instead of full content.
       contextPrompt += `\nCurrently editing: ${ab.path}`;
       if (context.language && context.language !== "Text") {

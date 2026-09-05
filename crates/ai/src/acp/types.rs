@@ -331,9 +331,6 @@ pub enum AcpContentBlock {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case")]
 pub enum UiAction {
-   /// Open a URL in the web viewer
-   #[serde(rename_all = "camelCase")]
-   OpenWebViewer { url: String },
    /// Open a terminal with an optional command
    #[serde(rename_all = "camelCase")]
    OpenTerminal { command: Option<String> },

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useLayoutEffect } from "react";
+import { useEffect } from "react";
 import { useExtensionInstallPrompt } from "@/extensions/hooks/use-extension-install-prompt";
 import {
   cleanupFileClipboardListener,
@@ -61,12 +61,6 @@ export function useAppBootstrap() {
       window.cancelAnimationFrame(frame);
       if (timer !== null) window.clearTimeout(timer);
     };
-  }, []);
-
-  useLayoutEffect(() => {
-    void invoke("close_all_embedded_webviews").catch((error) => {
-      console.warn("Failed to clean up stale embedded webviews:", error);
-    });
   }, []);
 
   useEffect(() => {

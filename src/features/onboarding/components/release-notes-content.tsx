@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import "@/features/editor/markdown/styles.css";
 import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { buildReleaseNotesMarkdown, type WhatsNewInfo } from "@/features/settings/lib/whats-new";
 import { Spinner } from "@/ui/spinner";
 
@@ -12,21 +12,17 @@ interface ReleaseNotesContentProps {
 
 export function ReleaseNotesContent({ info, loading = false }: ReleaseNotesContentProps) {
   const html = useHighlightedMarkdown(buildReleaseNotesMarkdown(info));
-  const openWebViewerBuffer = useBufferStore.use.actions().openWebViewerBuffer;
-  const handleLinkClick = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
-      const link = (event.target as HTMLElement).closest("a");
-      const href = link?.getAttribute("href");
-      if (!href) return;
+  const handleLinkClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    const link = (event.target as HTMLElement).closest("a");
+    const href = link?.getAttribute("href");
+    if (!href) return;
 
-      if (href.startsWith("https://") || href.startsWith("http://")) {
-        event.preventDefault();
-        event.stopPropagation();
-        openWebViewerBuffer(href);
-      }
-    },
-    [openWebViewerBuffer],
-  );
+    if (href.startsWith("https://") || href.startsWith("http://")) {
+      event.preventDefault();
+      event.stopPropagation();
+      void openUrl(href).catch(console.error);
+    }
+  }, []);
 
   if (loading && !info.body?.trim()) {
     return (

@@ -30,7 +30,7 @@ import {
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import Badge from "@/ui/badge";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
@@ -134,12 +134,6 @@ const TerminalTab = lazy(() =>
     default: m.TerminalTab,
   })),
 );
-const WebViewer = lazy(() =>
-  import("@/features/viewer/web/components/web-viewer").then((m) => ({
-    default: m.WebViewer,
-  })),
-);
-
 interface PaneContainerProps {
   pane: PaneGroup;
 }
@@ -198,33 +192,31 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   const summary =
     buffer.type === "terminal"
       ? "Terminal session"
-      : buffer.type === "webViewer"
-        ? buffer.url || "Web view"
-        : buffer.type === "pullRequest"
-          ? `Pull request #${buffer.prNumber}`
-          : buffer.type === "githubIssue"
-            ? `Issue #${buffer.issueNumber}`
-            : buffer.type === "githubAction"
-              ? `Workflow run #${buffer.runId}`
-              : buffer.type === "diff"
-                ? "Diff preview"
-                : buffer.type === "image"
-                  ? "Image preview"
-                  : buffer.type === "pdf"
-                    ? "PDF preview"
-                    : buffer.type === "binary"
-                      ? "Binary file preview"
-                      : buffer.type === "database"
-                        ? `${buffer.databaseType} viewer`
-                        : buffer.type === "externalEditor"
-                          ? "External editor session"
-                          : buffer.type === "globalSearch"
-                            ? "Search results"
-                            : buffer.type === "diagnostics"
-                              ? "Diagnostics"
-                              : buffer.type === "references"
-                                ? "References"
-                                : previewText || "No preview available";
+      : buffer.type === "pullRequest"
+        ? `Pull request #${buffer.prNumber}`
+        : buffer.type === "githubIssue"
+          ? `Issue #${buffer.issueNumber}`
+          : buffer.type === "githubAction"
+            ? `Workflow run #${buffer.runId}`
+            : buffer.type === "diff"
+              ? "Diff preview"
+              : buffer.type === "image"
+                ? "Image preview"
+                : buffer.type === "pdf"
+                  ? "PDF preview"
+                  : buffer.type === "binary"
+                    ? "Binary file preview"
+                    : buffer.type === "database"
+                      ? `${buffer.databaseType} viewer`
+                      : buffer.type === "externalEditor"
+                        ? "External editor session"
+                        : buffer.type === "globalSearch"
+                          ? "Search results"
+                          : buffer.type === "diagnostics"
+                            ? "Diagnostics"
+                            : buffer.type === "references"
+                              ? "References"
+                              : previewText || "No preview available";
 
   const previewLines = summary.split("\n").slice(0, 12);
 
@@ -306,19 +298,6 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
   );
 }
 
-function WebViewerDisabledState() {
-  return (
-    <Empty className="size-full rounded-none bg-background px-6">
-      <EmptyHeader>
-        <EmptyTitle>Web Viewer is disabled</EmptyTitle>
-        <EmptyDescription>
-          Enable it in Settings &gt; Features to open URLs in embedded editor tabs.
-        </EmptyDescription>
-      </EmptyHeader>
-    </Empty>
-  );
-}
-
 function isStandardEditorBuffer(buffer: PaneRenderBuffer): buffer is EditorBufferShell {
   return buffer.type === "editor";
 }
@@ -330,7 +309,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
-  const webViewerEnabled = useSettingsStore((state) => state.settings.coreFeatures.webViewer);
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [isTabDragOver, setIsTabDragOver] = useState(false);
@@ -922,13 +900,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
             />
           );
 
-        case "webViewer":
-          if (!webViewerEnabled && !buffer.allowWhenDisabled) {
-            return <WebViewerDisabledState />;
-          }
-
-          return <WebViewer url={buffer.url} bufferId={buffer.id} isActive={isActivePane} />;
-
         case "agent":
           return <AgentTab buffer={buffer} isActive={isActivePane} />;
 
@@ -1182,22 +1153,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                             isVisible={true}
                           />
                         </div>
-                      ) : buffer.type === "webViewer" && isActiveBuffer ? (
-                        <div className="size-full">
-                          {webViewerEnabled ? (
-                            <WebViewer
-                              url={buffer.url}
-                              bufferId={buffer.id}
-                              profileKey={buffer.profileKey}
-                              history={buffer.history}
-                              historyIndex={buffer.historyIndex}
-                              isActive={isActivePane && isActiveBuffer}
-                              isVisible={true}
-                            />
-                          ) : (
-                            <WebViewerDisabledState />
-                          )}
-                        </div>
                       ) : buffer.type === "pullRequest" ? (
                         <PullRequestPreviewCard buffer={buffer} />
                       ) : isActiveBuffer ? (
@@ -1222,41 +1177,23 @@ export function PaneContainer({ pane }: PaneContainerProps) {
             <>
               {paneBuffers
                 .filter(
-                  (
-                    b,
-                  ): b is
-                    | import("../types/pane-content.types").TerminalContent
-                    | import("../types/pane-content.types").WebViewerContent =>
-                    isWorkspaceSurfaceActive &&
-                    b.id === activeBuffer?.id &&
-                    (b.type === "terminal" || (webViewerEnabled && b.type === "webViewer")),
+                  (b): b is import("../types/pane-content.types").TerminalContent =>
+                    isWorkspaceSurfaceActive && b.id === activeBuffer?.id && b.type === "terminal",
                 )
                 .map((b) => {
                   return (
                     <div key={b.id} className="absolute inset-0">
-                      {b.type === "terminal" ? (
-                        <TerminalTab
-                          sessionId={b.sessionId}
-                          bufferId={b.id}
-                          paneId={pane.id}
-                          shell={b.shell}
-                          initialCommand={b.initialCommand}
-                          workingDirectory={b.workingDirectory}
-                          remoteConnectionId={b.remoteConnectionId}
-                          isActive={isActivePane}
-                          isVisible={isWorkspaceSurfaceActive}
-                        />
-                      ) : (
-                        <WebViewer
-                          url={b.url}
-                          bufferId={b.id}
-                          profileKey={b.profileKey}
-                          history={b.history}
-                          historyIndex={b.historyIndex}
-                          isActive={isActivePane}
-                          isVisible={isWorkspaceSurfaceActive}
-                        />
-                      )}
+                      <TerminalTab
+                        sessionId={b.sessionId}
+                        bufferId={b.id}
+                        paneId={pane.id}
+                        shell={b.shell}
+                        initialCommand={b.initialCommand}
+                        workingDirectory={b.workingDirectory}
+                        remoteConnectionId={b.remoteConnectionId}
+                        isActive={isActivePane}
+                        isVisible={isWorkspaceSurfaceActive}
+                      />
                     </div>
                   );
                 })}
@@ -1280,7 +1217,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
               {isWorkspaceSurfaceActive &&
                 activeBuffer &&
                 activeBuffer.type !== "terminal" &&
-                (activeBuffer.type !== "webViewer" || !webViewerEnabled) &&
                 !isStandardEditorBuffer(activeBuffer) &&
                 renderActiveBuffer(activeBuffer)}
             </>

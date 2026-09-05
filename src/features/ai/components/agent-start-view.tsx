@@ -5,7 +5,6 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import {
   ContextMenu,
@@ -18,7 +17,6 @@ import { Empty, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   FileTextIcon as FileText,
   FolderOpenIcon as FolderOpen,
-  GlobeHemisphereWestIcon as Globe,
   PlusIcon as Plus,
   SparkleIcon as Sparkles,
   TerminalWindowIcon as Terminal,
@@ -37,18 +35,13 @@ interface ActionItem {
 }
 
 export function AgentStartView({ children, showQuickActions = false }: AgentStartViewProps) {
-  const { openTerminalBuffer, openWebViewerBuffer, openBuffer } = useBufferStore.use.actions();
+  const { openTerminalBuffer, openBuffer } = useBufferStore.use.actions();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
-  const webViewerEnabled = useSettingsStore((state) => state.settings.coreFeatures.webViewer);
   const handleOpenAgent = useNewAgentAction();
 
   const handleOpenTerminal = useCallback(() => {
     openTerminalBuffer();
   }, [openTerminalBuffer]);
-
-  const handleOpenWebViewer = useCallback(() => {
-    openWebViewerBuffer("https://");
-  }, [openWebViewerBuffer]);
 
   const handleNewFile = useCallback(() => {
     const id = `untitled-${Date.now()}`;
@@ -89,9 +82,9 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
     },
     {
       id: "research",
-      label: webViewerEnabled ? "Open URL" : "Open folder",
-      icon: webViewerEnabled ? <Globe /> : <FolderOpen />,
-      action: webViewerEnabled ? handleOpenWebViewer : handleOpenFolder,
+      label: "Open folder",
+      icon: <FolderOpen />,
+      action: handleOpenFolder,
     },
   ];
 
@@ -155,12 +148,6 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
           <Sparkles />
           New Agent
         </ContextMenuItem>
-        {webViewerEnabled ? (
-          <ContextMenuItem onClick={handleOpenWebViewer}>
-            <Globe />
-            Open URL
-          </ContextMenuItem>
-        ) : null}
       </ContextMenuContent>
     </ContextMenu>
   );

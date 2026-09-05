@@ -949,23 +949,6 @@ impl AthasAcpClient {
          serde_json::from_str(args.params.get()).unwrap_or(serde_json::Value::Null);
 
       match &*args.method {
-         "_athas/open_web_viewer" => {
-            let url = params
-               .get("url")
-               .and_then(|v| v.as_str())
-               .unwrap_or("about:blank")
-               .to_string();
-
-            self.emit_event(AcpEvent::UiAction {
-               session_id,
-               action: UiAction::OpenWebViewer { url },
-            });
-
-            let response = serde_json::json!({ "success": true });
-            Ok(acp::ExtResponse::new(
-               serde_json::value::to_raw_value(&response).unwrap().into(),
-            ))
-         }
          "_athas/open_terminal" => {
             let command = params
                .get("command")

@@ -1,7 +1,6 @@
 import {
   WarningCircleIcon as AlertCircle,
   ColumnsIcon as Columns,
-  GlobeHemisphereWestIcon as Globe,
   ListIcon as Menu,
   RowsIcon as Rows,
   SidebarSimpleIcon as PanelBottom,
@@ -14,7 +13,6 @@ import {
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
-import { showPromptDialog } from "@/ui/dialog";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import type { Action } from "../types/action.types";
@@ -30,13 +28,11 @@ interface ViewActionsParams {
     activityRailExpanded: boolean;
     nativeMenuBar: boolean;
     compactMenuBar: boolean;
-    webViewerEnabled: boolean;
   };
   updateSetting: (key: string, value: any) => void | Promise<void>;
   zoomIn: (target: "editor" | "terminal") => void;
   zoomOut: (target: "editor" | "terminal") => void;
   resetZoom: (target: "editor" | "terminal") => void;
-  openWebViewerBuffer: (url: string) => void;
   onClose: () => void;
 }
 
@@ -53,7 +49,6 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
     zoomIn,
     zoomOut,
     resetZoom,
-    openWebViewerBuffer,
     onClose,
   } = params;
 
@@ -302,38 +297,5 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         onClose();
       },
     },
-    ...(settings.webViewerEnabled
-      ? [
-          {
-            id: "open-web-viewer",
-            label: "View: Open Web Viewer",
-            description: "Open a new web viewer tab",
-            icon: <Globe />,
-            category: "View",
-            action: () => {
-              openWebViewerBuffer("about:blank");
-              onClose();
-            },
-          },
-          {
-            id: "open-url",
-            label: "View: Open URL...",
-            description: "Open a URL in web viewer",
-            icon: <Globe />,
-            category: "View",
-            action: async () => {
-              const url = await showPromptDialog("Enter URL:", {
-                title: "Open URL",
-                defaultValue: "https://",
-                placeholder: "https://",
-              });
-              if (url?.trim()) {
-                openWebViewerBuffer(url.trim());
-              }
-              onClose();
-            },
-          },
-        ]
-      : []),
   ];
 };

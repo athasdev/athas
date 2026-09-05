@@ -38,7 +38,6 @@ vi.mock("@/features/editor/stores/buffer.store", () => ({
     getState: vi.fn(() => ({
       actions: {
         openTerminalBuffer: vi.fn(),
-        openWebViewerBuffer: vi.fn(),
       },
     })),
   },

@@ -23,5 +23,4 @@ export interface CoreFeaturesState {
   teamCollaboration: boolean;
   breadcrumbs: boolean;
   persistentCommands: boolean;
-  webViewer: boolean;
 }

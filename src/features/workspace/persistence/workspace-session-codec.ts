@@ -101,20 +101,6 @@ export function encodeWorkspaceBuffer(
     };
   }
 
-  if (buffer.type === "webViewer") {
-    return {
-      type: "webViewer",
-      path: buffer.path,
-      name: buffer.name,
-      isPinned: buffer.isPinned,
-      url: buffer.url,
-      zoomLevel: buffer.zoomLevel,
-      profileKey: buffer.profileKey,
-      history: buffer.history,
-      historyIndex: buffer.historyIndex,
-    };
-  }
-
   return null;
 }
 
@@ -130,7 +116,11 @@ export function buildWorkspaceBufferSnapshot({
   const openBufferPaths = new Set(openBuffers.map((buffer) => buffer.path));
   const persistedBuffers = [
     ...openBuffers,
-    ...pendingBuffers.filter((buffer) => !openBufferPaths.has(buffer.path)),
+    ...pendingBuffers.filter(
+      (buffer) =>
+        (buffer.type === "editor" || buffer.type === "terminal") &&
+        !openBufferPaths.has(buffer.path),
+    ),
   ];
   const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
   const activeBufferPath =

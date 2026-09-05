@@ -180,7 +180,19 @@ const useSessionStoreBase = create<SessionState>()(
         },
 
         getSession: (projectPath) => {
-          return get().sessions[projectPath] || null;
+          const session = get().sessions[projectPath];
+          if (!session) return null;
+          const buffers = session.buffers.filter(
+            (buffer) => buffer.type === "editor" || buffer.type === "terminal",
+          );
+          if (buffers.length === session.buffers.length) return session;
+          return {
+            ...session,
+            buffers,
+            activeBufferPath: buffers.some((buffer) => buffer.path === session.activeBufferPath)
+              ? session.activeBufferPath
+              : (buffers[0]?.path ?? null),
+          };
         },
 
         saveUiState: (projectPath, uiState) => {

@@ -27,7 +27,7 @@ describe("Linux release packaging", () => {
     const alloyRuntime = "browser_runtime_style(tauri_runtime_cef::RuntimeStyle::Alloy)";
 
     expect(appSetup).toContain(alloyRuntime);
-    expect(windowCommands.split(alloyRuntime)).toHaveLength(3);
+    expect(windowCommands).toContain(alloyRuntime);
   });
 
   it("uses the XDG portal dialog backend without changing the CEF runtime", () => {

@@ -210,6 +210,7 @@ describe("settings normalization", () => {
         diagnostics: true,
         debugger: false,
         outline: true,
+        webViewer: true,
         aiChat: true,
         teamCollaboration: true,
         breadcrumbs: true,
@@ -217,7 +218,7 @@ describe("settings normalization", () => {
       } as never,
     });
 
-    expect(normalized.coreFeatures.webViewer).toBe(false);
+    expect(normalized.coreFeatures).not.toHaveProperty("webViewer");
     expect(normalized.coreFeatures.ghosttyTerminal).toBe(false);
     expect(normalized.coreFeatures).not.toHaveProperty("outline");
   });

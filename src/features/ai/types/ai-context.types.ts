@@ -19,7 +19,7 @@ export interface EditorSelectionContext {
 
 export interface ContextInfo {
   images?: ImageContent[];
-  activeBuffer?: PaneContent & { webViewerContent?: string };
+  activeBuffer?: PaneContent;
   openBuffers?: PaneContent[];
   selectedFiles?: string[];
   selectedProjectFiles?: string[];

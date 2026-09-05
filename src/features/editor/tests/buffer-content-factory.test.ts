@@ -107,22 +107,6 @@ describe("createPaneContent custom view surfaces", () => {
   });
 });
 
-describe("createPaneContent web viewer surfaces", () => {
-  it("preserves explicit access when the general web viewer feature is disabled", () => {
-    const content = createPaneContent("github-notification", {
-      type: "webViewer",
-      url: "https://github.com/athasdev/athas/actions",
-      allowWhenDisabled: true,
-    });
-
-    expect(content).toMatchObject({
-      type: "webViewer",
-      url: "https://github.com/athasdev/athas/actions",
-      allowWhenDisabled: true,
-    });
-  });
-});
-
 describe("createPaneContent SVG preview surfaces", () => {
   it("keeps the preview linked to its editable source file", () => {
     const content = createPaneContent("svg-preview", {

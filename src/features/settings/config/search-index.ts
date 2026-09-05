@@ -939,14 +939,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "The last used commands appear at the top of the command palette",
     keywords: ["persistent", "commands", "recent", "command", "palette"],
   },
-  {
-    id: "features-web-viewer",
-    tab: "advanced",
-    section: "Features",
-    label: "Web Viewer",
-    description: "Open URLs in embedded editor tabs",
-    keywords: ["web", "viewer", "browser", "url", "embedded", "experimental"],
-  },
   // Terminal Settings
   {
     id: "terminal-default-shell",

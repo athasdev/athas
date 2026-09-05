@@ -127,7 +127,10 @@ async function handleWindowOpenRequest(request: WindowOpenRequest) {
     useFileSystemStore.getState();
 
   if (request.type === "web" && request.url) {
-    useBufferStore.getState().actions.openWebViewerBuffer(request.url);
+    const url = request.url;
+    void import("@tauri-apps/plugin-opener")
+      .then(({ openUrl }) => openUrl(url))
+      .catch(console.error);
     return;
   }
 

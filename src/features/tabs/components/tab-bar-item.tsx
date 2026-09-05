@@ -4,7 +4,6 @@ import {
   DatabaseIcon as Database,
   GitBranchIcon as GitBranch,
   GitPullRequestIcon as GitPullRequest,
-  GlobeHemisphereWestIcon as Globe,
   GearSixIcon as Settings,
   MagnifyingGlassIcon as Search,
   ChatCircleTextIcon as MessageSquare,
@@ -72,7 +71,6 @@ const TabBarItem = memo(function TabBarItem({
   onRenameSubmit,
   onRenameCancel,
 }: TabBarItemProps) {
-  const [faviconError, setFaviconError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const showTabIcons = useSettingsStore((state) => state.settings.showTabIcons);
   const tabCloseButtonVisibility = useSettingsStore(
@@ -103,11 +101,6 @@ const TabBarItem = memo(function TabBarItem({
 
     return displayName;
   };
-
-  // Reset favicon error when favicon URL changes
-  useEffect(() => {
-    setFaviconError(false);
-  }, [buffer.type === "webViewer" ? buffer.favicon : undefined]);
 
   const handleAuxClick = useCallback(
     (e: React.MouseEvent) => {
@@ -179,17 +172,6 @@ const TabBarItem = memo(function TabBarItem({
               <Terminal className="text-subtle-foreground" />
             ) : buffer.type === "agent" ? (
               <Sparkles className="text-subtle-foreground" />
-            ) : buffer.type === "webViewer" ? (
-              buffer.favicon && !faviconError ? (
-                <img
-                  src={buffer.favicon}
-                  alt=""
-                  className="size-3 object-contain"
-                  onError={() => setFaviconError(true)}
-                />
-              ) : (
-                <Globe className="text-subtle-foreground" />
-              )
             ) : buffer.type === "database" ? (
               <Database className="text-subtle-foreground" />
             ) : buffer.type === "pullRequest" ? (

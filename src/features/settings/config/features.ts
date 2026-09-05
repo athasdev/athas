@@ -4,7 +4,6 @@ import {
   BugBeetleIcon as BugBeetle,
   GitBranchIcon as GitBranch,
   GitPullRequestIcon as GitPullRequest,
-  GlobeHemisphereWestIcon as Globe,
   ChatCircleTextIcon as MessageSquare,
   NavigationArrowIcon as Navigation,
   MagnifyingGlassIcon as Search,
@@ -100,13 +99,5 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     description: "The last used commands appear at the top of the command palette",
     icon: Brain,
     enabled: coreFeatures.persistentCommands,
-  },
-  {
-    id: "webViewer",
-    name: "Web Viewer",
-    description: "Open URLs in embedded editor tabs",
-    icon: Globe,
-    enabled: coreFeatures.webViewer,
-    status: "experimental",
   },
 ];

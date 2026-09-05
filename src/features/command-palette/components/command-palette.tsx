@@ -178,7 +178,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     switchToNextBuffer,
     switchToPreviousBuffer,
     reopenClosedTab,
-    openWebViewerBuffer,
     openGitHubFormBuffer,
     openContent,
   } = useBufferStore.use.actions();
@@ -263,7 +262,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
         activityRailExpanded: commandSettings.activityRailExpanded,
         nativeMenuBar: commandSettings.nativeMenuBar,
         compactMenuBar: commandSettings.compactMenuBar,
-        webViewerEnabled: commandSettings.coreFeatures.webViewer,
       },
       updateSetting: useSettingsStore.getState().actions.updateSetting as (
         key: string,
@@ -272,7 +270,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       zoomIn,
       zoomOut,
       resetZoom,
-      openWebViewerBuffer,
       onClose,
     }),
     ...createSettingsActions({

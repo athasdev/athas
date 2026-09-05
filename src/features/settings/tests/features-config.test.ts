@@ -37,19 +37,6 @@ describe("features config", () => {
     expect(feature).not.toHaveProperty("status");
   });
 
-  it("keeps Web Viewer experimental and off by default", () => {
-    const feature = createCoreFeaturesList(defaultSettings.coreFeatures).find(
-      (item) => item.id === "webViewer",
-    );
-
-    expect(feature).toMatchObject({
-      name: "Web Viewer",
-      description: "Open URLs in embedded editor tabs",
-      enabled: false,
-      status: "experimental",
-    });
-  });
-
   it("keeps the Ghostty terminal engine experimental and off by default", () => {
     const feature = createCoreFeaturesList(defaultSettings.coreFeatures).find(
       (item) => item.id === "ghosttyTerminal",

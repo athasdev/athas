@@ -5,7 +5,6 @@ const AUTO_EVICTION_PROTECTED_TYPES = new Set<PaneContent["type"]>([
   "agent",
   "externalEditor",
   "terminal",
-  "webViewer",
 ]);
 
 export interface AutoEvictionOptions {

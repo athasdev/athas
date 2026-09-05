@@ -1,3 +1,4 @@
+import type { BufferSession } from "@/features/workspace/types/workspace-session.types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { saveWorkspaceTerminalsToStorage } from "@/features/terminal/lib/terminal-session-storage";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
@@ -35,6 +36,24 @@ describe("workspace session repository", () => {
   beforeEach(() => {
     storage.clear();
     useSessionStore.setState({ sessions: {} });
+  });
+
+  it("drops saved browser tabs and selects a remaining file on load", () => {
+    workspaceSessionRepository.save({
+      projectPath: "/workspace",
+      buffers: [
+        {
+          type: "webViewer",
+          path: "web-viewer://https://athas.dev",
+          url: "https://athas.dev",
+        } as unknown as BufferSession,
+        { type: "editor", path: "/workspace/main.ts", name: "main.ts", isPinned: true },
+      ],
+      activeBufferPath: "web-viewer://https://athas.dev",
+    });
+    const saved = workspaceSessionRepository.load("/workspace").session;
+    expect(saved?.buffers).toHaveLength(1);
+    expect(saved?.activeBufferPath).toBe("/workspace/main.ts");
   });
 
   it("updates terminals without replacing the saved editor session", () => {

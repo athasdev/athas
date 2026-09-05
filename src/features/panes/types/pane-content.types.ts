@@ -19,7 +19,6 @@ export type PaneContentType =
   | "editor"
   | "terminal"
   | "agent"
-  | "webViewer"
   | "newTab"
   | "diff"
   | "image"
@@ -84,18 +83,6 @@ export interface TerminalContent extends PaneContentBase {
 export interface AgentContent extends PaneContentBase {
   type: "agent";
   sessionId: string;
-}
-
-export interface WebViewerContent extends PaneContentBase {
-  type: "webViewer";
-  url: string;
-  allowWhenDisabled?: boolean;
-  title?: string;
-  favicon?: string;
-  zoomLevel?: number;
-  profileKey?: string;
-  history?: string[];
-  historyIndex?: number;
 }
 
 export interface NewTabContent extends PaneContentBase {
@@ -244,7 +231,6 @@ export type PaneContent =
   | EditorContent
   | TerminalContent
   | AgentContent
-  | WebViewerContent
   | NewTabContent
   | DiffContent
   | ImageContent
@@ -277,17 +263,12 @@ export function isEditorContent(c: PaneContent): c is EditorContent {
   return c.type === "editor";
 }
 
-export function isWebViewerContent(c: PaneContent): c is WebViewerContent {
-  return c.type === "webViewer";
-}
-
 // ── Helpers ─────────────────────────────────────────────────────────
 
 /** Content types that are virtual (not backed by a real file on disk). */
 const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "terminal",
   "agent",
-  "webViewer",
   "newTab",
   "pullRequest",
   "githubIssue",
@@ -367,15 +348,6 @@ export type OpenContentSpec =
       path?: string;
     }
   | { type: "agent"; sessionId?: string }
-  | {
-      type: "webViewer";
-      url: string;
-      allowWhenDisabled?: boolean;
-      zoomLevel?: number;
-      profileKey?: string;
-      history?: string[];
-      historyIndex?: number;
-    }
   | { type: "newTab" }
   | {
       type: "diff";

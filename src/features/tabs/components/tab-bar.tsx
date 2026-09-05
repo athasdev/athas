@@ -31,7 +31,6 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
-import { useWebViewerNavigationStore } from "@/features/viewer/web/stores/web-viewer-navigation.store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
@@ -117,17 +116,8 @@ const TabBar = ({
   }, [buffers]);
   const activeBufferId =
     activeBufferCandidate && bufferById.has(activeBufferCandidate) ? activeBufferCandidate : null;
-  const activeBuffer = activeBufferId ? (bufferById.get(activeBufferId) ?? null) : null;
-  const activeWebViewerNavigation = useWebViewerNavigationStore((state) =>
-    activeBuffer?.type === "webViewer" ? state.navigationByBufferId[activeBuffer.id] : undefined,
-  );
-  const usesWebViewerNavigation = activeBuffer?.type === "webViewer";
-  const canGoBack = usesWebViewerNavigation
-    ? Boolean(activeWebViewerNavigation?.canGoBack)
-    : jumpListActions.canGoBack();
-  const canGoForward = usesWebViewerNavigation
-    ? Boolean(activeWebViewerNavigation?.canGoForward)
-    : jumpListActions.canGoForward();
+  const canGoBack = jumpListActions.canGoBack();
+  const canGoForward = jumpListActions.canGoForward();
   const isPaneFullscreen = paneId ? fullscreenPaneId === paneId : false;
   const isPaneLocked = Boolean(pane?.locked);
   const isInSplit = paneRoot.type === "split";
@@ -178,11 +168,6 @@ const TabBar = ({
   }, []);
 
   const handleJumpBack = useCallback(async () => {
-    if (usesWebViewerNavigation) {
-      activeWebViewerNavigation?.goBack?.();
-      return;
-    }
-
     const bufferStore = useBufferStore.getState();
     const editorState = useEditorStateStore.getState();
     const currentActiveBufferId = bufferStore.activeBufferId;
@@ -205,19 +190,14 @@ const TabBar = ({
     if (entry) {
       await navigateToJumpEntry(entry);
     }
-  }, [activeWebViewerNavigation, jumpListActions, usesWebViewerNavigation]);
+  }, [jumpListActions]);
 
   const handleJumpForward = useCallback(async () => {
-    if (usesWebViewerNavigation) {
-      activeWebViewerNavigation?.goForward?.();
-      return;
-    }
-
     const entry = jumpListActions.goForward();
     if (entry) {
       await navigateToJumpEntry(entry);
     }
-  }, [activeWebViewerNavigation, jumpListActions, usesWebViewerNavigation]);
+  }, [jumpListActions]);
 
   const handleShowNewTab = useCallback(() => {
     if (!paneId) return;

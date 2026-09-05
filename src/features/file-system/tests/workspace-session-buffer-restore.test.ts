@@ -11,6 +11,20 @@ const createContext = () => ({
 });
 
 describe("workspace session buffer restore", () => {
+  it("ignores browser tabs saved by older versions without opening their URL as a file", async () => {
+    const context = createContext();
+    const legacyBuffer = {
+      type: "webViewer",
+      path: "web-viewer://https://athas.dev",
+      url: "https://athas.dev",
+      isPinned: true,
+    } as unknown as BufferSession;
+    await expect(restoreWorkspaceSessionBuffer(legacyBuffer, context)).resolves.toBeNull();
+    expect(context.openContent).not.toHaveBeenCalled();
+    expect(context.openFile).not.toHaveBeenCalled();
+    expect(context.pinBuffer).not.toHaveBeenCalled();
+  });
+
   it("restores and pins a terminal with its persisted launch options", async () => {
     const context = createContext();
     const buffer: BufferSession = {
@@ -38,32 +52,6 @@ describe("workspace session buffer restore", () => {
     });
     expect(context.pinBuffer).toHaveBeenCalledWith("virtual-buffer");
     expect(context.openFile).not.toHaveBeenCalled();
-  });
-
-  it("restores web viewer navigation state", async () => {
-    const context = createContext();
-    const buffer: BufferSession = {
-      type: "webViewer",
-      path: "web://saved",
-      name: "Docs",
-      isPinned: false,
-      url: "https://example.com/docs",
-      zoomLevel: 1.25,
-      profileKey: "docs",
-      history: ["https://example.com", "https://example.com/docs"],
-      historyIndex: 1,
-    };
-
-    await expect(restoreWorkspaceSessionBuffer(buffer, context)).resolves.toBe("virtual-buffer");
-    expect(context.openContent).toHaveBeenCalledWith({
-      type: "webViewer",
-      url: "https://example.com/docs",
-      zoomLevel: 1.25,
-      profileKey: "docs",
-      history: ["https://example.com", "https://example.com/docs"],
-      historyIndex: 1,
-    });
-    expect(context.pinBuffer).not.toHaveBeenCalled();
   });
 
   it("opens editor files through the main route before restoring editor state", async () => {
