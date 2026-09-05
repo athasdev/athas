@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   CaretLeftIcon as CaretLeft,
@@ -105,18 +106,22 @@ type SidebarNoteItem = NonNullable<
 const COLLABORATION_TABS: Array<{
   id: CollaborationSidebarTab;
   label: string;
+  icon: ReactNode;
 }> = [
   {
     id: "channels",
     label: "Channels",
+    icon: <ChatCircleText />,
   },
   {
     id: "people",
     label: "People",
+    icon: <UsersThree />,
   },
   {
     id: "notes",
     label: "Notes",
+    icon: <FileText />,
   },
 ];
 
@@ -1454,6 +1459,7 @@ export function CollaborationSidebarView() {
   return (
     <SidebarWorkspace title="Collaboration">
       <SidebarTabBar
+        label="Collaboration sections"
         className="relative z-10020"
         items={COLLABORATION_TABS}
         value={activeTab}

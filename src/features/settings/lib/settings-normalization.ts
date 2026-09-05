@@ -20,7 +20,7 @@ import {
   normalizeItemOrder,
 } from "@/features/layout/config/item-order";
 import { normalizeUiFontSize } from "@/features/settings/lib/ui-font-size";
-import type { GitSidebarItemId, GitSidebarTabId } from "@/features/layout/config/item-order";
+import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import type { Settings, SettingsSection } from "@/features/settings/types/settings.types";
 
 const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
@@ -464,7 +464,7 @@ export function normalizeSettings(settings: Settings): Settings {
   if (
     persistedGitPanelMode === "none" ||
     (persistedGitPanelMode &&
-      !GIT_SIDEBAR_TAB_IDS.includes(persistedGitPanelMode as GitSidebarTabId))
+      !GIT_SIDEBAR_ITEM_IDS.includes(persistedGitPanelMode as GitSidebarItemId))
   ) {
     normalizedSettings.gitLastPanelMode = "changes";
   }

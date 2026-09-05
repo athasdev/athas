@@ -88,14 +88,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
   return (
     <Popover open={isExpanded} onOpenChange={setIsExpanded}>
       <PopoverTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            shape="pill"
-            className="-ml-1.5 min-w-0 text-left"
-          />
-        }
+        render={<Button type="button" variant="ghost" className="-ml-1.5 min-w-0 text-left" />}
       >
         {summary.icon}
         <span className={cn("font-sans", summary.tone)}>{summary.label}</span>

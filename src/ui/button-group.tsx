@@ -15,10 +15,10 @@ const buttonGroupVariants = cva(
       },
       variant: {
         default:
-          "rounded-full bg-accent *:data-[slot=button]:bg-transparent *:data-[slot=button]:hover:bg-selected",
+          "rounded-chrome bg-accent *:data-[slot=button]:bg-transparent *:data-[slot=button]:hover:bg-selected",
         accent:
-          "overflow-hidden rounded-full bg-primary/10 *:data-[slot=button]:text-primary *:data-[slot=button]:hover:bg-primary/10 *:data-[slot=button-group-separator]:bg-primary/25",
-        ghost: "rounded-full bg-transparent",
+          "overflow-hidden rounded-chrome bg-primary/10 *:data-[slot=button]:text-primary *:data-[slot=button]:hover:bg-primary/10 *:data-[slot=button-group-separator]:bg-primary/25",
+        ghost: "rounded-chrome bg-transparent",
       },
     },
     defaultVariants: {
@@ -46,19 +46,6 @@ function ButtonGroup({
   );
 }
 
-function ButtonGroupText({ className, ...props }: ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="button-group-text"
-      className={cn(
-        "flex items-center gap-2 rounded-full bg-accent px-3 font-medium text-foreground [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-3.5",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
 function ButtonGroupSeparator({
   className,
   orientation = "vertical",
@@ -77,4 +64,4 @@ function ButtonGroupSeparator({
   );
 }
 
-export { ButtonGroup, ButtonGroupSeparator, ButtonGroupText, buttonGroupVariants };
+export { ButtonGroup, ButtonGroupSeparator };

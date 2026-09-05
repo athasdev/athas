@@ -547,7 +547,6 @@ export const AISettings = () => {
 
         <SettingRow label="API Keys" description="Manage provider API keys separately">
           <Button
-            shape="pill"
             type="button"
             variant="default"
             onClick={() => setIsApiKeyManagerOpen(true)}
@@ -570,7 +569,6 @@ export const AISettings = () => {
               }
             >
               <Button
-                shape="pill"
                 type="button"
                 variant="default"
                 onClick={() => void action.execute()}
@@ -628,7 +626,6 @@ export const AISettings = () => {
                 disabled={isSavingCustomChatApiKey}
               />
               <Button
-                shape="pill"
                 type="button"
                 variant="default"
                 onClick={handleSaveCustomChatApiKey}
@@ -638,7 +635,6 @@ export const AISettings = () => {
               </Button>
               {hasCustomChatApiKey && (
                 <Button
-                  shape="pill"
                   type="button"
                   variant="default"
                   onClick={handleRemoveCustomChatApiKey}
@@ -703,7 +699,6 @@ export const AISettings = () => {
               {ollamaStatus === "error" && <AlertCircle className="text-destructive" />}
               {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
                 <Button
-                  shape="pill"
                   type="button"
                   variant="default"
                   onClick={handleResetOllamaUrl}
@@ -736,7 +731,6 @@ export const AISettings = () => {
                 disabled={isSavingOllamaKey}
               />
               <Button
-                shape="pill"
                 type="button"
                 variant="default"
                 onClick={handleSaveOllamaApiKey}
@@ -746,7 +740,6 @@ export const AISettings = () => {
               </Button>
               {hasStoredOllamaKey && (
                 <Button
-                  shape="pill"
                   type="button"
                   variant="danger"
                   onClick={handleRemoveOllamaApiKey}
@@ -822,7 +815,6 @@ export const AISettings = () => {
                 description={option.description || "Session option exposed by the active ACP agent"}
               >
                 <Select
-                  shape="pill"
                   value={option.kind.currentValue}
                   options={option.kind.options.map((value) => ({
                     value: value.id,
@@ -925,7 +917,6 @@ export const AISettings = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   <Button
-                    shape="pill"
                     variant="default"
                     onClick={loadAutocompleteModels}
                     disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
@@ -939,7 +930,6 @@ export const AISettings = () => {
                     )}
                   </Button>
                   <Select
-                    shape="pill"
                     value={hasAutocompleteModels ? settings.aiAutocompleteModelId : ""}
                     options={autocompleteModels.map((model) => ({
                       value: model.id,
@@ -1011,7 +1001,6 @@ export const AISettings = () => {
                       disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
                     />
                     <Button
-                      shape="pill"
                       variant="default"
                       onClick={handleSaveCustomAutocompleteApiKey}
                       disabled={
@@ -1024,7 +1013,6 @@ export const AISettings = () => {
                     </Button>
                     {hasCustomAutocompleteApiKey && (
                       <Button
-                        shape="pill"
                         variant="default"
                         onClick={handleRemoveCustomAutocompleteApiKey}
                         disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}

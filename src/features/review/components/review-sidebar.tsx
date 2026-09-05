@@ -19,10 +19,9 @@ import {
   SidebarIconButton,
   SidebarScrollArea,
   SidebarSection,
+  SidebarTabBar,
 } from "@/ui/sidebar";
-import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { Spinner } from "@/ui/spinner";
-import Tooltip from "@/ui/tooltip";
 import { useReviewChangeSets } from "../hooks/use-review-change-sets";
 import { useReviewStore } from "../stores/review.store";
 import type { ReviewChangeSet, ReviewRiskLevel, ReviewViewMode } from "../types/review.types";
@@ -186,25 +185,15 @@ function ReviewSidebarContent() {
         />
       </SidebarComposerBody>
 
-      <Tabs
+      <SidebarTabBar
+        label="Review view"
+        items={MODE_ITEMS.map(({ id, label, icon: Icon }) => ({ id, label, icon: <Icon /> }))}
         value={projectState.viewMode}
-        onValueChange={(value) => {
+        onChange={(value) => {
           if (activeRepoPath) reviewActions.setViewMode(activeRepoPath, value as ReviewViewMode);
         }}
-        className="min-h-0 flex-1"
       >
-        <TabsList variant="bare" className="grid w-full grid-cols-3" aria-label="Review view">
-          {MODE_ITEMS.map(({ id, label, icon: Icon }) => (
-            <Tooltip key={id} content={label} triggerClassName="w-full">
-              <TabsTrigger value={id} aria-label={`${label} review view`} className="w-full">
-                <Icon />
-                <span className="sr-only">{label}</span>
-              </TabsTrigger>
-            </Tooltip>
-          ))}
-        </TabsList>
-
-        <SidebarScrollArea className="mt-2 min-h-0 flex-1">
+        <SidebarScrollArea className="min-h-0 flex-1">
           {isLoading && timelineChangeSets.length === 0 ? (
             <EmptyState
               layout="sidebar"
@@ -253,7 +242,7 @@ function ReviewSidebarContent() {
             />
           )}
         </SidebarScrollArea>
-      </Tabs>
+      </SidebarTabBar>
     </div>
   );
 }

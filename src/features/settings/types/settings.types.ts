@@ -203,7 +203,7 @@ export interface Settings {
   compactGitStatusBadges: boolean;
   collapseEmptyGitSections: boolean;
   rememberLastGitPanelMode: boolean;
-  gitLastPanelMode: GitSidebarTabId;
+  gitLastPanelMode: GitSidebarItemId;
   gitSidebarTabOrder: GitSidebarTabId[];
   hiddenGitSidebarItems: GitSidebarItemId[];
   githubSidebarSectionOrder: Array<"pull-requests" | "issues" | "actions">;

@@ -193,7 +193,6 @@ export const GeneralSettings = () => {
           <div className="flex flex-wrap justify-end gap-2">
             {available ? (
               <Button
-                shape="pill"
                 onClick={downloadAndInstall}
                 disabled={downloading || installing}
                 variant="default"
@@ -206,7 +205,6 @@ export const GeneralSettings = () => {
               </Button>
             ) : (
               <Button
-                shape="pill"
                 onClick={handleCheckForUpdates}
                 disabled={checking || downloading || installing}
                 variant="default"
@@ -248,7 +246,6 @@ export const GeneralSettings = () => {
             ) : (
               <>
                 <Button
-                  shape="pill"
                   onClick={() => void handleInstallCli()}
                   disabled={cliInstalling || cliChecking}
                   variant="default"
@@ -256,7 +253,6 @@ export const GeneralSettings = () => {
                   {cliInstalling ? "Installing..." : "Install"}
                 </Button>
                 <Button
-                  shape="pill"
                   onClick={handleCopyInstallCommand}
                   disabled={cliChecking}
                   variant="default"
@@ -273,7 +269,7 @@ export const GeneralSettings = () => {
           label="Import Settings"
           description="Import matching setup from another editor."
         >
-          <Button shape="pill" onClick={() => setIsImportDialogOpen(true)} variant="default">
+          <Button onClick={() => setIsImportDialogOpen(true)} variant="default">
             Import
           </Button>
         </SettingRow>
@@ -282,7 +278,7 @@ export const GeneralSettings = () => {
           label="Report a Bug"
           description="Choose where to report an issue with environment details."
         >
-          <Button shape="pill" onClick={() => setIsReportBugDialogOpen(true)} variant="default">
+          <Button onClick={() => setIsReportBugDialogOpen(true)} variant="default">
             Open
           </Button>
         </SettingRow>

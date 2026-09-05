@@ -21,7 +21,7 @@ export const buttonVariants = cva(
           "border-0 bg-transparent text-foreground hover:bg-destructive/10 hover:text-destructive data-[active=true]:bg-destructive/12 data-[active=true]:text-destructive",
       },
       iconOnly: {
-        true: "rounded-full p-0",
+        true: "p-0",
         false: "px-2.5",
       },
       size: {
@@ -29,16 +29,11 @@ export const buttonVariants = cva(
         chrome:
           "h-chrome-control gap-chrome px-1.5 ui-text-chrome [&_svg:not([class*='size-'])]:size-[1em]",
       },
-      shape: {
-        default: "",
-        pill: "rounded-full",
-      },
     },
     defaultVariants: {
       variant: "default",
       iconOnly: false,
       size: "default",
-      shape: "default",
     },
     compoundVariants: [
       { iconOnly: true, size: "default", className: "w-7" },
@@ -63,7 +58,6 @@ export function Button({
   variant = "default",
   iconOnly = false,
   size = "default",
-  shape = "default",
   active,
   render,
   ref,
@@ -85,7 +79,7 @@ export function Button({
       "data-variant": variant,
       "data-icon-only": iconOnly || undefined,
       "data-active": active,
-      className: cn(buttonVariants({ variant, iconOnly, size, shape }), className),
+      className: cn(buttonVariants({ variant, iconOnly, size }), className),
       "aria-label": ariaLabel ?? (tooltip ? tooltip : undefined),
       ...props,
     },

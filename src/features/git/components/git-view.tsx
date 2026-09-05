@@ -1,14 +1,11 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  ArchiveIcon as Archive,
   CaretDownIcon as CaretDown,
   ClockCounterClockwiseIcon as ClockCounterClockwise,
   DownloadIcon as Download,
-  DotsThreeIcon as MoreHorizontal,
   FolderSimpleStarIcon as FolderSimpleStar,
   GitBranchIcon as GitBranch,
   ArrowClockwiseIcon as RefreshCw,
-  TrashIcon as Trash2,
   UploadIcon as Upload,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -20,20 +17,13 @@ import { ReviewSidebarPanel } from "@/features/review/components/review-sidebar"
 import { type GitActivitySection, useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
-import {
-  CommandEmpty,
-  CommandItemAction,
-  CommandItemBadge,
-  CommandItemRow,
-  CommandList,
-} from "@/ui/command";
+import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { showAlertDialog } from "@/ui/dialog";
-import { SidebarFooter, SidebarIconButton, SidebarWorkspace } from "@/ui/sidebar";
+import { SidebarFooter, SidebarSearchPopover, SidebarWorkspace } from "@/ui/sidebar";
 import { toast } from "sonner";
-import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { getBranches } from "../api/git-branches-api";
 import { getStatusDiffStats } from "../api/git-diff-api";
@@ -50,7 +40,6 @@ import {
   type WorkingTreeDiffEntry,
   type WorkingTreeDiffScope,
 } from "../services/working-tree-diff-loader";
-import type { GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";
 import { openGitWorktreeWorkspace } from "../utils/git-worktree-open";
 import {
@@ -65,12 +54,9 @@ import GitCommitHistory, {
 } from "./git-commit-history";
 import { GitCommitFilesPanel } from "./git-commit-files-panel";
 import GitCommitPanel from "../commit-composer/components/git-commit-panel";
-import GitCommandSurface, {
-  GitCommandWorkspace,
-  type GitCommandSection,
-} from "./git-command-surface";
-import { GitBrowseCommand } from "./git-browse-command";
+import GitCommandSurface from "./git-command-surface";
 import GitRemoteManager from "./git-remote-manager";
+import { GitStashManager } from "./git-stash-manager";
 import GitTagManager from "./git-tag-manager";
 import GitStatusPanel from "./status/git-status-panel";
 import { SourceControlNavigation } from "./source-control-navigation";
@@ -122,14 +108,9 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     workspacePath: repoPath,
     isActive,
   });
-  const [showGitActionsMenu, setShowGitActionsMenu] = useState(false);
-  const [commandSection, setActiveCommandSection] = useState<GitCommandSection | null>(null);
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [isInitializingRepo, setIsInitializingRepo] = useState(false);
   const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
-  const [gitActionsMenuAnchor, setGitActionsMenuAnchor] = useState<GitActionsMenuAnchorRect | null>(
-    null,
-  );
   const syncMenuAnchorRef = useRef<HTMLDivElement>(null);
   const [isSyncMenuOpen, setIsSyncMenuOpen] = useState(false);
   const [remoteAction, setRemoteAction] = useState<GitRemoteAction | null>(null);
@@ -158,11 +139,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [commitDiffSearchQuery, setCommitDiffSearchQuery] = useState("");
   const [showBranchDiffList, setShowBranchDiffList] = useState(false);
   const [branchDiffSearchQuery, setBranchDiffSearchQuery] = useState("");
-  const [commandSearchQuery, setCommandSearchQuery] = useState("");
-  const setCommandSection = useCallback((section: GitCommandSection | null) => {
-    setActiveCommandSection(section);
-    setCommandSearchQuery("");
-  }, []);
+  const [sidebarSearchQuery, setSidebarSearchQuery] = useState("");
   const [stashActionLoading, setStashActionLoading] = useState<Set<number>>(new Set());
 
   const {
@@ -256,17 +233,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     (section: GitActivitySection) => {
       handleBackFromHistoryCommit();
       setGitSection(section);
-      setCommandSection(section === "review" ? null : section);
+      setSidebarSearchQuery("");
     },
-    [handleBackFromHistoryCommit, setGitSection, setCommandSection],
+    [handleBackFromHistoryCommit, setGitSection],
   );
-  useEffect(() => {
-    if (commandSection) handleBackFromHistoryCommit();
-  }, [commandSection, handleBackFromHistoryCommit]);
-
-  useEffect(() => {
-    setCommandSection(null);
-  }, [activeRepoPath, setCommandSection]);
   const handleGitSidebarItemVisibleChange = useCallback(
     (itemId: GitSidebarItemId, visible: boolean) => {
       const nextHiddenItems = visible
@@ -558,17 +528,17 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       }
 
       if (detail.type === "manage-remotes") {
-        setCommandSection("remotes");
+        handleSelectGitSection("remotes");
         return;
       }
 
       if (detail.type === "manage-tags") {
-        setCommandSection("tags");
+        handleSelectGitSection("tags");
         return;
       }
 
       if (detail.type === "view-stashes") {
-        setCommandSection("stashes");
+        handleSelectGitSection("stashes");
         return;
       }
 
@@ -591,7 +561,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     handleOpenBranchManager,
     handleSelectRepository,
     handleShowBranchDiffList,
-    setCommandSection,
   ]);
 
   useEffect(() => {
@@ -661,52 +630,18 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     }
   };
 
-  const renderActionsButton = () => (
-    <SidebarIconButton
-      onClick={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        setGitActionsMenuAnchor({
-          left: rect.left,
-          right: rect.right,
-          top: rect.top,
-          bottom: rect.bottom,
-          width: rect.width,
-          height: rect.height,
-        });
-        setShowGitActionsMenu(!showGitActionsMenu);
-        setCommandSection(null);
-      }}
-      tooltip="Git Actions"
-    >
-      <MoreHorizontal />
-    </SidebarIconButton>
-  );
-
   const renderSourceControlNavigation = () => (
     <SourceControlNavigation
-      activeSection={
-        commandSection === "changes" || commandSection === "history" ? commandSection : gitSection
-      }
+      activeSection={gitSection}
       sectionOrder={gitSidebarTabOrder}
       hiddenItemIds={hiddenGitSidebarItems}
       changeCount={visibleGitFiles.length}
       commitCount={commits.length}
-      activeRepositoryItem={
-        commandSection === "remotes" || commandSection === "tags" || commandSection === "stashes"
-          ? commandSection
-          : undefined
-      }
       onSectionChange={handleSelectGitSection}
-      onOpenRemotes={() => setCommandSection("remotes")}
-      onOpenTags={() => setCommandSection("tags")}
-      onOpenStashes={() => {
-        setCommandSection("stashes");
-      }}
-      onItemVisibleChange={handleGitSidebarItemVisibleChange}
     />
   );
 
-  const renderGitActionsMenu = ({
+  const renderActionsMenu = ({
     hasGitRepo,
     onRefresh,
   }: {
@@ -714,22 +649,16 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     onRefresh?: () => void;
   }) => (
     <GitActionsMenu
-      isOpen={showGitActionsMenu}
-      anchorRect={gitActionsMenuAnchor}
-      onClose={() => {
-        setShowGitActionsMenu(false);
-        setGitActionsMenuAnchor(null);
-      }}
       hasGitRepo={hasGitRepo}
+      hiddenItemIds={hiddenGitSidebarItems}
+      onItemVisibleChange={handleGitSidebarItemVisibleChange}
       repoPath={activeRepoPath ?? repoPath}
       onRefresh={onRefresh}
       onOpenBranchManager={handleOpenBranchManager}
       onShowBranchDiff={() => void handleShowBranchDiffList()}
-      onOpenRemoteManager={() => setCommandSection("remotes")}
-      onOpenTagManager={() => setCommandSection("tags")}
-      onViewStashes={() => {
-        setCommandSection("stashes");
-      }}
+      onOpenRemoteManager={() => handleSelectGitSection("remotes")}
+      onOpenTagManager={() => handleSelectGitSection("tags")}
+      onViewStashes={() => handleSelectGitSection("stashes")}
       onSelectRepository={handleSelectRepository}
       isSelectingRepository={isSelectingRepo}
       onInitializeRepository={handleInitializeRepository}
@@ -738,7 +667,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   );
 
   const filteredStashes = useMemo(() => {
-    const query = commandSearchQuery.trim().toLowerCase();
+    const query = sidebarSearchQuery.trim().toLowerCase();
     if (!query) {
       return stashes;
     }
@@ -751,7 +680,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         `stash@{${stash.index}}`,
       ]),
     );
-  }, [commandSearchQuery, stashes]);
+  }, [sidebarSearchQuery, stashes]);
   const filteredDiffCommits = useMemo(() => {
     const query = commitDiffSearchQuery.trim().toLowerCase();
     if (!query) {
@@ -785,7 +714,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   if (!activeRepoPath) {
     return (
       <>
-        <SidebarWorkspace title="Source Control" actions={renderActionsButton()}>
+        <SidebarWorkspace
+          title="Source Control"
+          actions={renderActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
+        >
           {renderSourceControlNavigation()}
           <EmptyState
             layout="sidebar"
@@ -809,7 +741,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             }}
           />
         </SidebarWorkspace>
-        {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
       </>
     );
   }
@@ -817,14 +748,16 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   if (isLoadingGitData && !gitStatus) {
     return (
       <>
-        <SidebarWorkspace title="Source Control" actions={renderActionsButton()}>
+        <SidebarWorkspace
+          title="Source Control"
+          actions={renderActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
+        >
           {renderSourceControlNavigation()}
           <EmptyState
             layout="sidebar"
             message={<Spinner label="Loading Git status" showLabel compact />}
           />
         </SidebarWorkspace>
-        {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
       </>
     );
   }
@@ -832,7 +765,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   if (!gitStatus) {
     return (
       <>
-        <SidebarWorkspace title="Source Control" actions={renderActionsButton()}>
+        <SidebarWorkspace
+          title="Source Control"
+          actions={renderActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
+        >
           {renderSourceControlNavigation()}
           <EmptyState
             layout="sidebar"
@@ -856,7 +792,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             }}
           />
         </SidebarWorkspace>
-        {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
       </>
     );
   }
@@ -928,7 +863,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               items={syncMenuItems}
               className="min-w-33"
             />
-            {renderActionsButton()}
+            {renderActionsMenu({ hasGitRepo: true, onRefresh: refreshAfterAction })}
+            {gitSection === "remotes" || gitSection === "tags" || gitSection === "stashes" ? (
+              <SidebarSearchPopover
+                value={sidebarSearchQuery}
+                onChange={setSidebarSearchQuery}
+                placeholder={`Search ${gitSection}`}
+              />
+            ) : null}
             {gitSection === "history" ? (
               <GitCommitHistoryControls
                 searchQuery={historySearchQuery}
@@ -942,7 +884,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       >
         {renderSourceControlNavigation()}
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1">
+          <div className="flex min-h-0 flex-1 flex-col">
             {gitSection === "changes" ? (
               <GitStatusPanel
                 files={visibleGitFiles}
@@ -953,7 +895,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 onShowCommitDiffPicker={handleShowCommitDiffList}
                 onShowBranchDiffPicker={() => void handleShowBranchDiffList()}
                 onShowStashDiffPicker={() => {
-                  setCommandSection("stashes");
+                  handleSelectGitSection("stashes");
                 }}
                 onRefresh={refreshAfterAction}
                 repoPath={activeRepoPath}
@@ -967,11 +909,52 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 searchQuery={historySearchQuery}
                 searchScope={historySearchScope}
               />
-            ) : (
+            ) : gitSection === "review" ? (
               <ReviewSidebarPanel />
+            ) : gitSection === "remotes" ? (
+              <GitRemoteManager
+                query={sidebarSearchQuery}
+                repoPath={activeRepoPath}
+                onRefresh={refreshAfterAction}
+              />
+            ) : gitSection === "tags" ? (
+              <GitTagManager
+                query={sidebarSearchQuery}
+                repoPath={activeRepoPath}
+                onRefresh={refreshAfterAction}
+                onViewTagComparison={handleViewTagComparison}
+              />
+            ) : (
+              <GitStashManager
+                stashes={filteredStashes}
+                query={sidebarSearchQuery}
+                isActionLoading={(stashIndex) => stashActionLoading.has(stashIndex)}
+                onView={(stashIndex) => void handleViewStashDiff(stashIndex)}
+                onApply={(stashIndex) =>
+                  void handleStashListAction(
+                    () => applyStash(activeRepoPath, stashIndex),
+                    stashIndex,
+                    "Apply stash",
+                  )
+                }
+                onPop={(stashIndex) =>
+                  void handleStashListAction(
+                    () => popStash(activeRepoPath, stashIndex),
+                    stashIndex,
+                    "Pop stash",
+                  )
+                }
+                onDrop={(stashIndex) =>
+                  void handleStashListAction(
+                    () => dropStash(activeRepoPath, stashIndex),
+                    stashIndex,
+                    "Drop stash",
+                  )
+                }
+              />
             )}
           </div>
-          {gitSection !== "review" ? (
+          {gitSection === "changes" || gitSection === "history" ? (
             <SidebarFooter>
               <GitCommitPanel
                 stagedFilesCount={stagedFiles.length}
@@ -987,7 +970,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         </div>
       </SidebarWorkspace>
 
-      {renderGitActionsMenu({ hasGitRepo: !!gitStatus, onRefresh: refreshAfterAction })}
       <GitCommandSurface
         isOpen={showCommitDiffList}
         onClose={() => {
@@ -1005,7 +987,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               {commitDiffSearchQuery.trim() ? "No matching commits" : "No commits"}
             </CommandEmpty>
           ) : (
-            <div className="space-y-1">
+            <div>
               {filteredDiffCommits.map((commit) => {
                 const shortHash = commit.hash.substring(0, 7);
 
@@ -1013,7 +995,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                   <CommandItemRow
                     key={commit.hash}
                     type="button"
-                    icon={<ClockCounterClockwise size={14} className="text-subtle-foreground" />}
+                    icon={<ClockCounterClockwise />}
                     title={commit.message}
                     accessory={<CommandItemBadge>{shortHash}</CommandItemBadge>}
                     onClick={() => {
@@ -1046,12 +1028,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               {branchDiffSearchQuery.trim() ? "No matching branches" : "No other branches"}
             </CommandEmpty>
           ) : (
-            <div className="space-y-1">
+            <div>
               {filteredBranchDiffBranches.map((branch) => (
                 <CommandItemRow
                   key={branch}
                   type="button"
-                  icon={<GitBranch size={14} className="text-subtle-foreground" />}
+                  icon={<GitBranch />}
                   title={branch}
                   description={`compare with ${gitStatus.branch}`}
                   onClick={() => void handleViewBranchDiff(branch)}
@@ -1062,129 +1044,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           )}
         </CommandList>
       </GitCommandSurface>
-      <GitCommandWorkspace
-        section={commandSection}
-        query={commandSearchQuery}
-        onQueryChange={setCommandSearchQuery}
-        onSectionChange={setCommandSection}
-        onClose={() => setCommandSection(null)}
-      >
-        {commandSection === "changes" || commandSection === "history" ? (
-          <GitBrowseCommand
-            key={commandSection}
-            section={commandSection}
-            query={commandSearchQuery}
-            files={visibleGitFiles}
-            commits={commits}
-            onClose={() => setCommandSection(null)}
-            onFileSelect={(file) => void handleGitFileClick(file.path, file.staged)}
-            onCommitSelect={handleSelectHistoryCommit}
-          />
-        ) : null}
-        {commandSection === "stashes" ? (
-          <CommandList>
-            {filteredStashes.length === 0 ? (
-              <CommandEmpty>
-                {commandSearchQuery.trim() ? "No matching stashes" : "No stashes"}
-              </CommandEmpty>
-            ) : (
-              filteredStashes.map((stash) => {
-                const displayTitle = getStashDisplayTitle(stash.message);
-                const isActionLoading = stashActionLoading.has(stash.index);
-
-                return (
-                  <CommandItemRow
-                    key={stash.index}
-                    as="div"
-                    icon={<Archive size={14} className="text-subtle-foreground" />}
-                    title={displayTitle}
-                    description={
-                      <>
-                        <span className="shrink-0">{formatRelativeDate(stash.date)}</span>
-                        <CommandItemBadge>{getStashPositionLabel(stash.index)}</CommandItemBadge>
-                      </>
-                    }
-                    contentLayout="inline"
-                    disabled={isActionLoading}
-                    onClick={() => {
-                      void handleViewStashDiff(stash.index);
-                      setCommandSection(null);
-                    }}
-                    action={
-                      <div className="ml-auto flex shrink-0 items-center gap-0.5">
-                        <CommandItemAction
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void handleStashListAction(
-                              () => applyStash(activeRepoPath!, stash.index),
-                              stash.index,
-                              "Apply stash",
-                            );
-                          }}
-                          disabled={isActionLoading}
-                          tooltip="Apply stash"
-                        >
-                          <Download weight="fill" />
-                        </CommandItemAction>
-                        <CommandItemAction
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void handleStashListAction(
-                              () => popStash(activeRepoPath!, stash.index),
-                              stash.index,
-                              "Pop stash",
-                            );
-                          }}
-                          disabled={isActionLoading}
-                          tooltip="Pop stash"
-                        >
-                          <Upload />
-                        </CommandItemAction>
-                        <CommandItemAction
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void handleStashListAction(
-                              () => dropStash(activeRepoPath!, stash.index),
-                              stash.index,
-                              "Drop stash",
-                            );
-                          }}
-                          disabled={isActionLoading}
-                          tone="danger"
-                          tooltip="Drop stash"
-                        >
-                          <Trash2 />
-                        </CommandItemAction>
-                      </div>
-                    }
-                  />
-                );
-              })
-            )}
-          </CommandList>
-        ) : null}
-
-        {commandSection === "remotes" ? (
-          <GitRemoteManager
-            query={commandSearchQuery}
-            repoPath={activeRepoPath}
-            onRefresh={refreshAfterAction}
-          />
-        ) : null}
-
-        {commandSection === "tags" ? (
-          <GitTagManager
-            query={commandSearchQuery}
-            onClose={() => setCommandSection(null)}
-            repoPath={activeRepoPath}
-            onRefresh={refreshAfterAction}
-            onViewTagComparison={handleViewTagComparison}
-          />
-        ) : null}
-      </GitCommandWorkspace>
     </>
   );
 };

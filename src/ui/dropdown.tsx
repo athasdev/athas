@@ -745,8 +745,27 @@ function DropdownMenuSearch({
         className={cn("ui-text-chrome", className)}
         aria-label={props["aria-label"] ?? props.placeholder ?? "Search menu"}
         onKeyDown={(event) => {
-          event.stopPropagation();
           onKeyDown?.(event);
+          if (event.defaultPrevented || event.key === "Escape" || event.key === "Tab") return;
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            const items = Array.from(
+              event.currentTarget
+                .closest('[role="menu"]')
+                ?.querySelectorAll<HTMLElement>(
+                  '[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]',
+                ) ?? [],
+            ).filter(
+              (item) =>
+                item.getAttribute("aria-disabled") !== "true" &&
+                !item.hasAttribute("data-disabled"),
+            );
+            const item = event.key === "ArrowDown" ? items[0] : items[items.length - 1];
+            if (item) {
+              event.preventDefault();
+              item.focus();
+            }
+          }
+          event.stopPropagation();
         }}
         {...props}
       />

@@ -264,6 +264,15 @@ describe("settings normalization", () => {
     expect(normalized.gitSidebarTabOrder).toEqual(["changes", "history", "review"]);
   });
 
+  it("preserves repository sections as the last Git sidebar mode", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      gitLastPanelMode: "stashes",
+    });
+
+    expect(normalized.gitLastPanelMode).toBe("stashes");
+  });
+
   it("preserves custom AI provider settings and mirrors the custom model into chat model", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),

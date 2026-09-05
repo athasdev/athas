@@ -18,7 +18,7 @@ function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn("min-w-0 space-y-1", className)}
+      className={cn("min-w-0", className)}
       {...props}
     />
   );
@@ -33,7 +33,7 @@ function AccordionTrigger({
   action?: ReactNode;
 }) {
   return (
-    <AccordionPrimitive.Header className="sticky top-2 z-10 flex w-full min-w-0 items-center justify-between gap-chrome-tight bg-background">
+    <AccordionPrimitive.Header className="sticky top-0 z-10 flex w-full min-w-0 items-center justify-between gap-chrome-tight bg-background">
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
@@ -57,17 +57,10 @@ function AccordionContent({ className, children, ...props }: AccordionPrimitive.
   return (
     <AccordionPrimitive.Panel
       data-slot="accordion-content"
-      className="overflow-hidden ui-text-sm data-open:animate-accordion-down data-closed:animate-accordion-up"
+      className="overflow-hidden ui-text-sm"
       {...props}
     >
-      <div
-        className={cn(
-          "flex h-(--accordion-panel-height) flex-col gap-1 pt-0 data-ending-style:h-0 data-starting-style:h-0",
-          className,
-        )}
-      >
-        {children}
-      </div>
+      <div className={cn("flex flex-col gap-1", className)}>{children}</div>
     </AccordionPrimitive.Panel>
   );
 }

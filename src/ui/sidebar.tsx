@@ -1,17 +1,11 @@
-import {
-  Children,
-  forwardRef,
-  type ComponentProps,
-  type CSSProperties,
-  type ReactNode,
-  useEffect,
-  useState,
-} from "react";
+import { useRender } from "@base-ui/react/use-render";
+import { forwardRef, type ComponentProps, type ReactNode, useEffect, useState } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button, type ButtonProps } from "@/ui/button";
 import { ChromeBar } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
-import { CaretDownIcon as CaretDown, CaretRightIcon, MagnifyingGlassIcon } from "@/ui/icons";
+import { FieldTitle } from "@/ui/field";
+import { CaretDownIcon as CaretDown, DotsThreeIcon, MagnifyingGlassIcon } from "@/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { ScrollArea } from "@/ui/scroll-area";
 import { SearchField } from "@/ui/search";
@@ -128,7 +122,7 @@ export const SidebarFooter = forwardRef<
     <div
       ref={ref}
       className={cn(
-        "ui-text-chrome mx-2 mb-2 shrink-0 rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--surface)_82%,var(--border)_18%)] p-0 pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
+        "ui-text-chrome mx-2 mb-2 shrink-0 rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--surface)_82%,var(--border)_18%)] p-0 pb-1",
         className,
       )}
       {...props}
@@ -178,6 +172,26 @@ export function SidebarComposerBody({
     >
       {children}
     </div>
+  );
+}
+
+export function SidebarForm({
+  title,
+  actions,
+  children,
+  ...props
+}: Omit<ComponentProps<"form">, "title" | "className" | "style"> & {
+  title: ReactNode;
+  actions: ReactNode;
+}) {
+  return (
+    <SidebarComposerBody className="mb-2 p-3">
+      <form {...props} className="flex min-w-0 flex-col gap-3">
+        <FieldTitle>{title}</FieldTitle>
+        {children}
+        <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>
+      </form>
+    </SidebarComposerBody>
   );
 }
 
@@ -264,68 +278,6 @@ export function SidebarSection({
   );
 }
 
-export interface SidebarNavigationItem {
-  id: string;
-  label: ReactNode;
-  leading?: ReactNode;
-  trailing?: ReactNode;
-  active?: boolean;
-  disabled?: boolean;
-  ariaLabel?: string;
-  onClick: () => void;
-}
-
-export interface SidebarNavigationGroup {
-  id: string;
-  title: ReactNode;
-  items: SidebarNavigationItem[];
-  action?: ReactNode;
-  defaultExpanded?: boolean;
-}
-
-export function SidebarNavigation({
-  label,
-  groups,
-  className,
-}: {
-  label: string;
-  groups: SidebarNavigationGroup[];
-  className?: string;
-}) {
-  return (
-    <ScrollArea
-      className={cn("max-h-[45%] shrink-0 border-border/70 border-b", className)}
-      contentClassName="px-chrome-inline py-2"
-    >
-      <nav aria-label={label} data-slot="secondary-sidebar-navigation">
-        {groups.map((group) => (
-          <SidebarSection
-            key={group.id}
-            title={group.title}
-            action={group.action}
-            defaultExpanded={group.defaultExpanded}
-          >
-            {group.items.map((item) => (
-              <SidebarListItem
-                key={item.id}
-                active={item.active}
-                disabled={item.disabled}
-                leading={item.leading}
-                trailing={item.trailing}
-                onClick={item.onClick}
-                aria-label={item.ariaLabel}
-                aria-current={item.active ? "page" : undefined}
-              >
-                {item.label}
-              </SidebarListItem>
-            ))}
-          </SidebarSection>
-        ))}
-      </nav>
-    </ScrollArea>
-  );
-}
-
 export function SidebarSectionLabel({
   children,
   leading,
@@ -374,14 +326,14 @@ export function SidebarTabBar<TValue extends string>({
   onChange,
   children,
   className,
-  layout = "inline",
+  label = "Sidebar sections",
 }: {
   items: SidebarTabItem<TValue>[];
   value: TValue;
   onChange: (value: TValue) => void;
   children?: ReactNode;
   className?: string;
-  layout?: "inline" | "stacked";
+  label?: string;
 }) {
   return (
     <Tabs
@@ -391,41 +343,29 @@ export function SidebarTabBar<TValue extends string>({
     >
       <div
         className={cn(
-          "flex h-pane-header shrink-0 items-center overflow-hidden px-chrome-inline",
-          layout === "stacked" && "h-auto border-border/70 border-b py-1",
+          "flex h-pane-header min-w-0 shrink-0 items-center justify-center px-chrome-inline",
           className,
         )}
       >
-        <div
-          className={cn("scrollbar-none min-w-0 overflow-x-auto", layout === "stacked" && "w-full")}
-        >
-          <TabsList
-            aria-label="Sidebar sections"
-            className={cn(layout === "stacked" && "h-auto w-full items-stretch")}
-          >
+        <div className="scrollbar-none min-w-0 overflow-x-auto overscroll-x-contain">
+          <TabsList variant="sidebar" aria-label={label}>
             {items.map((item) => (
               <TabsTrigger
                 key={item.id}
                 value={item.id}
                 disabled={item.disabled}
-                aria-label={item.ariaLabel}
-                className={cn(
-                  layout === "stacked" &&
-                    "h-[calc(var(--athas-chrome-control-height)+var(--athas-chrome-line-height)+var(--athas-chrome-gap))] min-w-0 flex-col gap-chrome-tight rounded-md px-1.5 py-1",
-                )}
+                aria-label={item.ariaLabel ?? item.label}
+                title={item.ariaLabel ?? item.label}
               >
                 {item.icon}
                 <span
-                  className={cn(
-                    "flex max-w-full min-w-0 items-center gap-chrome-tight",
-                    layout === "stacked" && "leading-none",
-                  )}
+                  className={cn("min-w-0 truncate", item.icon && item.id !== value && "sr-only")}
                 >
-                  <span className="truncate whitespace-nowrap">{item.label}</span>
-                  {item.badge ? (
-                    <span className="shrink-0 text-subtle-foreground/80">{item.badge}</span>
-                  ) : null}
+                  {item.label}
                 </span>
+                {item.badge && item.id === value ? (
+                  <span className="shrink-0 tabular-nums text-subtle-foreground">{item.badge}</span>
+                ) : null}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -486,28 +426,20 @@ export function SidebarListActionRow({
   actions,
   children,
   className,
-  style,
   ...props
 }: ComponentProps<"div"> & {
   actions: ReactNode;
 }) {
-  const actionCount = Children.toArray(actions).length;
-  const rowStyle = {
-    ...style,
-    "--sidebar-list-actions-width": `calc(${actionCount} * var(--athas-chrome-control-height) + ${Math.max(actionCount - 1, 0)} * var(--athas-chrome-gap-tight) + var(--athas-chrome-gap))`,
-  } as CSSProperties;
-
   return (
     <div
       className={cn(
-        "group/sidebar-list-action-row relative flex w-full min-w-0 items-center [&:focus-within_[data-slot=sidebar-list-item]]:pr-(--sidebar-list-actions-width) [&:hover_[data-slot=sidebar-list-item]]:pr-(--sidebar-list-actions-width)",
+        "group/sidebar-list-action-row grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center",
         className,
       )}
-      style={rowStyle}
       {...props}
     >
       {children}
-      <span className="pointer-events-none absolute right-0 z-10 flex items-center gap-chrome-tight pr-1 opacity-0 transition-opacity duration-fast ease-smooth group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100 group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100 [&_[data-slot=button]]:bg-background [&_[data-slot=button]:hover]:bg-selected [&_[data-slot=button]:focus-visible]:bg-selected [&_[data-slot=button][data-active=true]]:bg-selected [&_[data-slot=button][data-variant=danger]:hover]:bg-destructive/10 [&_[data-slot=button][data-variant=danger]:focus-visible]:bg-destructive/10">
+      <span className="pointer-events-none flex items-center gap-chrome-tight pr-1 opacity-0 transition-opacity duration-fast ease-smooth motion-reduce:transition-none group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100 group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100 group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:pointer-events-auto group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:opacity-100">
         {actions}
       </span>
     </div>
@@ -583,8 +515,10 @@ export function SidebarListItem({
   trailing,
   tone = "default",
   width = "fill",
+  render,
+  ref,
   ...props
-}: Omit<ComponentProps<"button">, "className" | "style"> & {
+}: Omit<useRender.ComponentProps<"button">, "className" | "style"> & {
   children: ReactNode;
   active?: boolean;
   description?: ReactNode;
@@ -593,12 +527,15 @@ export function SidebarListItem({
   tone?: "default" | "warning" | "error";
   width?: "fill" | "content";
 }) {
-  return (
-    <button
-      type="button"
-      className={cn(
+  return useRender({
+    defaultTagName: "button",
+    render,
+    ref,
+    props: {
+      type: "button",
+      className: cn(
         sidebarListRowClassName,
-        "text-left transition-[background-color,color,padding-right] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+        "text-left transition-colors duration-fast motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50",
         tone === "default" &&
           "text-subtle-foreground hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground",
         tone === "warning" &&
@@ -608,52 +545,46 @@ export function SidebarListItem({
         active && tone === "default" && "bg-selected text-foreground",
         active && tone === "warning" && "bg-warning/15 text-warning",
         active && tone === "error" && "bg-destructive/12 text-destructive",
-        description && "h-auto min-h-10 items-start py-1",
+        description && "h-auto min-h-10 py-1.5",
         width === "content" && "w-fit max-w-full",
-      )}
-      data-slot="sidebar-list-item"
-      data-active={active}
-      {...props}
-    >
-      {leading ? (
-        <span
-          className={cn(
-            "flex size-[1em] shrink-0 items-center justify-center",
-            description && "mt-0.5",
-          )}
-        >
-          {leading}
-        </span>
-      ) : null}
-      <span className={cn("min-w-0 flex-1 overflow-hidden", description && "flex flex-col")}>
-        <span
-          className={cn("block max-w-full truncate", description && "font-medium text-foreground")}
-        >
-          {children}
-        </span>
-        {description ? (
-          <span className="mt-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden font-normal leading-row text-subtle-foreground/80">
-            <span className="min-w-0 flex-1 truncate">{description}</span>
-            {trailing ? (
-              <span className="ml-auto max-w-[45%] shrink-0 truncate whitespace-nowrap text-right">
-                {trailing}
+      ),
+      "data-slot": "sidebar-list-item",
+      "data-active": active,
+      ...props,
+      children: (
+        <>
+          {leading ? (
+            <span className="flex size-[1em] shrink-0 items-center justify-center">{leading}</span>
+          ) : null}
+          <span className={cn("min-w-0 flex-1 overflow-hidden", description && "flex flex-col")}>
+            <span
+              className={cn(
+                "block max-w-full truncate",
+                description && "font-medium text-foreground",
+              )}
+            >
+              {children}
+            </span>
+            {description ? (
+              <span className="mt-0.5 block min-w-0 truncate font-normal leading-row text-subtle-foreground/80">
+                {description}
               </span>
             ) : null}
           </span>
-        ) : null}
-      </span>
-      {trailing && !description ? (
-        <span
-          className={cn(
-            "ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right",
-            tone === "default" ? "text-subtle-foreground/80" : "text-current",
-          )}
-        >
-          {trailing}
-        </span>
-      ) : null}
-    </button>
-  );
+          {trailing ? (
+            <span
+              className={cn(
+                "ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right",
+                tone === "default" ? "text-subtle-foreground/80" : "text-current",
+              )}
+            >
+              {trailing}
+            </span>
+          ) : null}
+        </>
+      ),
+    },
+  });
 }
 
 export function SidebarMenuContent({
@@ -669,6 +600,7 @@ export function SidebarListMenuItem({
   menu,
   menuLabel,
   active = false,
+  disabled,
   onClick,
   ...props
 }: ComponentProps<typeof SidebarListItem> & {
@@ -676,21 +608,30 @@ export function SidebarListMenuItem({
   menuLabel: string;
 }) {
   return (
-    <div
+    <SidebarListActionRow
       role="group"
       data-active={active}
-      className={cn("flex w-full min-w-0 rounded-chrome", active && "bg-selected text-foreground")}
+      actions={
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<SidebarIconButton aria-label={menuLabel} disabled={disabled} />}
+          >
+            <DotsThreeIcon />
+          </DropdownMenuTrigger>
+          <SidebarMenuContent>{menu}</SidebarMenuContent>
+        </DropdownMenu>
+      }
     >
-      <SidebarListItem active={false} leading={leading} onClick={onClick} {...props}>
+      <SidebarListItem
+        active={active}
+        disabled={disabled}
+        leading={leading}
+        onClick={onClick}
+        {...props}
+      >
         {children}
       </SidebarListItem>
-      <DropdownMenu>
-        <DropdownMenuTrigger render={<SidebarIconButton aria-label={menuLabel} />}>
-          <CaretRightIcon />
-        </DropdownMenuTrigger>
-        <SidebarMenuContent>{menu}</SidebarMenuContent>
-      </DropdownMenu>
-    </div>
+    </SidebarListActionRow>
   );
 }
 

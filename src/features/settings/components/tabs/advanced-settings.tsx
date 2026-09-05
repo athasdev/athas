@@ -170,7 +170,7 @@ export const AdvancedSettings = () => {
       </Section>
       <Section title="Data">
         <SettingRow label="Export Settings" description="Save all app settings to a JSON file.">
-          <Button shape="pill" variant="default" onClick={() => void handleExportSettings()}>
+          <Button variant="default" onClick={() => void handleExportSettings()}>
             Export
           </Button>
         </SettingRow>
@@ -178,7 +178,7 @@ export const AdvancedSettings = () => {
           label="Import Settings"
           description="Restore app settings from an Athas settings JSON file."
         >
-          <Button shape="pill" variant="default" onClick={handleImportSettings}>
+          <Button variant="default" onClick={handleImportSettings}>
             Import
           </Button>
         </SettingRow>
@@ -205,14 +205,10 @@ export const AdvancedSettings = () => {
           description="Inspect local friction signals, the upload queue, and recent delivery results."
         >
           <ButtonGroup>
-            <Button
-              shape="pill"
-              variant="ghost"
-              onClick={() => setShowTelemetryLog((value) => !value)}
-            >
+            <Button variant="ghost" onClick={() => setShowTelemetryLog((value) => !value)}>
               {showTelemetryLog ? "Hide Log" : "Open Log"}
             </Button>
-            <Button shape="pill" variant="ghost" onClick={handleClearTelemetryLog}>
+            <Button variant="ghost" onClick={handleClearTelemetryLog}>
               Clear
             </Button>
           </ButtonGroup>

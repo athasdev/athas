@@ -29,6 +29,7 @@ import {
   CommandEmpty,
   CommandFooter,
   CommandFooterAction,
+  CommandItemAction,
   CommandItemBadge,
   CommandItemRow,
   CommandList,
@@ -63,8 +64,6 @@ interface GitBranchManagerProps {
 }
 
 type GitBranchManagerTab = "branches" | "worktrees" | "repositories";
-
-const gitCommandIconClassName = "size-3.5 shrink-0";
 
 function getFilteredBranches(branches: string[], currentBranch: string, query: string) {
   const sorted = [...branches].sort((a, b) => {
@@ -645,21 +644,21 @@ const GitBranchManager = ({
     {
       id: "repositories",
       label: "Repositories",
-      icon: <FolderOpenIcon className={gitCommandIconClassName} />,
+      icon: <FolderOpenIcon />,
       isActive: activeTab === "repositories",
       onSelect: () => handleTabChange("repositories"),
     },
     {
       id: "branches",
       label: "Branches",
-      icon: <GitBranchIcon className={gitCommandIconClassName} />,
+      icon: <GitBranchIcon />,
       isActive: activeTab === "branches",
       onSelect: () => handleTabChange("branches"),
     },
     {
       id: "worktrees",
       label: "Worktrees",
-      icon: <NodesIcon className={gitCommandIconClassName} />,
+      icon: <NodesIcon />,
       isActive: activeTab === "worktrees",
       onSelect: () => handleTabChange("worktrees"),
     },
@@ -723,17 +722,16 @@ const GitBranchManager = ({
             </CommandEmpty>
           ) : null}
           {activeTab === "branches" && (createBranchName || filteredBranches.length > 0) ? (
-            <div className="space-y-1">
+            <div>
               {createBranchName ? (
                 <CommandItemRow
                   as="div"
-                  icon={<Plus className={cn(gitCommandIconClassName, "text-subtle-foreground")} />}
+                  icon={<Plus />}
                   title={`Create new branch "${createBranchName}"`}
                   onClick={() => void handleCreateBranch(createBranchName)}
                   disabled={isLoading}
                   isSelected={selectedIndex === 0}
                   onMouseEnter={() => setSelectedIndex(0)}
-                  className="min-h-9"
                 />
               ) : null}
               {filteredBranches.map((branch, index) => (
@@ -760,17 +758,16 @@ const GitBranchManager = ({
             </CommandEmpty>
           ) : null}
           {activeTab === "worktrees" && (createWorktreePath || filteredWorktrees.length > 0) ? (
-            <div className="space-y-1">
+            <div>
               {createWorktreePath ? (
                 <CommandItemRow
                   as="div"
-                  icon={<Plus className={cn(gitCommandIconClassName, "text-subtle-foreground")} />}
+                  icon={<Plus />}
                   title={`Create worktree "${createWorktreePath}"`}
                   onClick={() => void handleCreateWorktree(createWorktreePath)}
                   disabled={isLoadingWorktrees}
                   isSelected={selectedIndex === 0}
                   onMouseEnter={() => setSelectedIndex(0)}
-                  className="min-h-9"
                 />
               ) : null}
               {filteredWorktrees.map((worktree, index) => (
@@ -794,7 +791,7 @@ const GitBranchManager = ({
             </CommandEmpty>
           ) : null}
           {activeTab === "repositories" && filteredRepoPaths.length > 0 ? (
-            <div className="space-y-1">
+            <div>
               {filteredRepoPaths.map((repository, index) => (
                 <RepositoryRow
                   key={repository}
@@ -907,23 +904,16 @@ function BranchRow({
   return (
     <CommandItemRow
       as="div"
-      icon={
-        isCurrent ? (
-          <Check className={cn(gitCommandIconClassName, "text-success")} />
-        ) : (
-          <GitBranchIcon className={cn(gitCommandIconClassName, "text-subtle-foreground")} />
-        )
-      }
+      icon={isCurrent ? <Check className="text-success" /> : <GitBranchIcon />}
       title={branch}
       isSelected={isSelected}
       disabled={isLoading}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground"}
       accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
       action={
         !isCurrent ? (
-          <Button
+          <CommandItemAction
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -934,19 +924,13 @@ function BranchRow({
               event.stopPropagation();
             }}
             disabled={isLoading}
-            variant="ghost"
-            iconOnly
-            className={cn(
-              "text-git-deleted opacity-100 transition-opacity sm:opacity-0",
-              "hover:bg-git-deleted/10 hover:opacity-80 hover:text-git-deleted",
-              "disabled:opacity-50 sm:group-hover:opacity-100",
-            )}
+            tone="danger"
             tooltip={`Delete ${branch}`}
             aria-label={`Delete branch ${branch}`}
             type="button"
           >
             <Trash2 />
-          </Button>
+          </CommandItemAction>
         ) : null
       }
     />
@@ -1025,19 +1009,12 @@ function RepositoryRow({
   return (
     <CommandItemRow
       as="div"
-      icon={
-        isCurrent ? (
-          <Check className={cn(gitCommandIconClassName, "text-success")} />
-        ) : (
-          <FolderOpenIcon className={cn(gitCommandIconClassName, "text-subtle-foreground")} />
-        )
-      }
+      icon={isCurrent ? <Check className="text-success" /> : <FolderOpenIcon />}
       title={getFolderName(repoPath)}
       description={relativePath === "." ? repoPath : relativePath}
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground"}
       accessory={
         <>
           {isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
@@ -1064,24 +1041,17 @@ function WorktreeRow({
   return (
     <CommandItemRow
       as="div"
-      icon={
-        isCurrent ? (
-          <Check className={cn(gitCommandIconClassName, "text-success")} />
-        ) : (
-          <NodesIcon className={cn(gitCommandIconClassName, "text-subtle-foreground")} />
-        )
-      }
+      icon={isCurrent ? <Check className="text-success" /> : <NodesIcon />}
       title={getFolderName(worktree.path)}
       description={
         <>
-          <GitBranchIcon className={gitCommandIconClassName} />
+          <GitBranchIcon />
           <span className="truncate">{getBranchLabel(worktree)}</span>
         </>
       }
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground"}
       accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
     />
   );

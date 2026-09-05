@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import { cn } from "@/utils/cn";
+import { SidebarListActionRow, SidebarListItem } from "@/ui/sidebar";
 import type {
   DockerComposeAction,
   DockerComposeService,
@@ -102,47 +102,20 @@ export function DockerResourceRow({
   onClick?: () => void;
   actions?: ReactNode;
 }) {
-  const content = (
-    <>
-      <span className="flex min-w-0 items-center gap-1.5">
-        <span className="min-w-0 flex-1 truncate font-medium text-foreground ui-text-sm">
-          {title}
-        </span>
-        {status}
-      </span>
-      {description ? (
-        <span className="mt-0.5 block truncate text-subtle-foreground ui-text-sm">
-          {description}
-        </span>
-      ) : null}
-    </>
+  const row = (
+    <SidebarListItem
+      render={onClick ? undefined : <div />}
+      type={onClick ? "button" : undefined}
+      active={active}
+      onClick={onClick}
+      description={description}
+      trailing={status}
+    >
+      {title}
+    </SidebarListItem>
   );
 
-  return (
-    <div
-      className={cn(
-        "group/docker-row flex min-h-12 w-full min-w-0 items-center rounded-lg transition-colors hover:bg-accent/70",
-        active && "bg-accent/80",
-      )}
-    >
-      {onClick ? (
-        <button
-          type="button"
-          className="min-w-0 flex-1 px-2.5 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
-          onClick={onClick}
-        >
-          {content}
-        </button>
-      ) : (
-        <div className="min-w-0 flex-1 px-2.5 py-2">{content}</div>
-      )}
-      {actions ? (
-        <div className="mr-1 shrink-0 opacity-0 transition-opacity group-hover/docker-row:opacity-100 group-focus-within/docker-row:opacity-100">
-          {actions}
-        </div>
-      ) : null}
-    </div>
-  );
+  return actions ? <SidebarListActionRow actions={actions}>{row}</SidebarListActionRow> : row;
 }
 
 function ContainerActions({

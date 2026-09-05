@@ -45,7 +45,6 @@ export interface SelectProps {
   menuAnimated?: boolean;
   disabled?: boolean;
   variant?: "default" | "ghost" | "surface";
-  shape?: "default" | "pill";
   align?: "default" | "start";
   searchable?: boolean;
   searchableTrigger?: "menu" | "input";
@@ -159,7 +158,6 @@ function PlainSelect({
   menuAnimated,
   disabled,
   variant,
-  shape,
   align,
   openDirection,
   leftIcon,
@@ -174,7 +172,6 @@ function PlainSelect({
 }: SelectProps & {
   placeholder: string;
   variant: "default" | "ghost" | "surface";
-  shape: "default" | "pill";
   menuAnimated: boolean;
   hideChevron: boolean;
   iconOnly: boolean;
@@ -207,11 +204,7 @@ function PlainSelect({
           data-prevent-dialog-escape={open ? "true" : undefined}
           aria-label={ariaLabel}
           render={
-            <Button
-              variant={variant === "surface" ? "ghost" : variant}
-              iconOnly={iconOnly}
-              shape={shape}
-            />
+            <Button variant={variant === "surface" ? "ghost" : variant} iconOnly={iconOnly} />
           }
           className={cn(
             !iconOnly &&
@@ -295,7 +288,6 @@ function SearchableSelect({
   menuAnimated,
   disabled,
   variant,
-  shape,
   align,
   searchableTrigger,
   openDirection,
@@ -314,7 +306,6 @@ function SearchableSelect({
 }: SelectProps & {
   placeholder: string;
   variant: "default" | "ghost" | "surface";
-  shape: "default" | "pill";
   searchableTrigger: "menu" | "input";
   menuAnimated: boolean;
   hideChevron: boolean;
@@ -405,7 +396,6 @@ function SearchableSelect({
             placeholder={selectedOption?.label || placeholder}
             leftIcon={componentIcon}
             variant={variant === "default" ? "button" : variant === "surface" ? "surface" : "ghost"}
-            shape={shape}
             className="w-full"
             inputClassName={cn(
               "field-sizing-content min-w-0 max-w-full font-normal",
@@ -428,11 +418,7 @@ function SearchableSelect({
             data-prevent-dialog-escape={open ? "true" : undefined}
             aria-label={ariaLabel}
             render={
-              <Button
-                variant={variant === "surface" ? "ghost" : variant}
-                iconOnly={iconOnly}
-                shape={shape}
-              />
+              <Button variant={variant === "surface" ? "ghost" : variant} iconOnly={iconOnly} />
             }
             className={cn(
               !iconOnly &&
@@ -498,7 +484,6 @@ export default function Select({
   menuAnimated = true,
   disabled = false,
   variant = "ghost",
-  shape = "default",
   align = "default",
   searchable = false,
   searchableTrigger = "menu",
@@ -534,7 +519,6 @@ export default function Select({
     menuAnimated,
     disabled,
     variant,
-    shape,
     align,
     searchableTrigger,
     allowCustomValue,

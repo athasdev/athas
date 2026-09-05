@@ -3,11 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { SourceControlNavigation } from "../components/source-control-navigation";
 
 describe("SourceControlNavigation", () => {
-  it("routes all six entries and reserves Review for the sidebar", () => {
+  it("routes all six entries to sidebar sections", () => {
     const onSectionChange = vi.fn();
-    const onOpenRemotes = vi.fn();
-    const onOpenTags = vi.fn();
-    const onOpenStashes = vi.fn();
     const navigation = SourceControlNavigation({
       activeSection: "changes",
       sectionOrder: ["changes", "history", "review"],
@@ -15,28 +12,43 @@ describe("SourceControlNavigation", () => {
       changeCount: 4,
       commitCount: 12,
       onSectionChange,
-      onOpenRemotes,
-      onOpenTags,
-      onOpenStashes,
-      onItemVisibleChange: vi.fn(),
     });
-    const buttons = navigation.props.children[0].map(
-      (item: {
-        props: { children: { props: { onClick: () => void; "aria-haspopup"?: string } } };
-      }) => item.props.children.props,
-    );
-    expect(buttons).toHaveLength(6);
-    buttons.forEach((button: { onClick: () => void }) => button.onClick());
-    expect(onSectionChange.mock.calls).toEqual([["changes"], ["history"], ["review"]]);
-    expect(onOpenRemotes).toHaveBeenCalledOnce();
-    expect(onOpenTags).toHaveBeenCalledOnce();
-    expect(onOpenStashes).toHaveBeenCalledOnce();
-    expect(buttons[2]["aria-haspopup"]).toBeUndefined();
-    expect(
-      buttons.filter(
-        (button: { "aria-haspopup"?: string }) => button["aria-haspopup"] === "dialog",
-      ),
-    ).toHaveLength(5);
+    const { items, onChange } = navigation.props;
+    expect(items.map((item: { id: string }) => item.id)).toEqual([
+      "changes",
+      "history",
+      "review",
+      "remotes",
+      "tags",
+      "stashes",
+    ]);
+    items.forEach((item: { id: string }) => onChange(item.id));
+    expect(onSectionChange.mock.calls).toEqual([
+      ["changes"],
+      ["history"],
+      ["review"],
+      ["remotes"],
+      ["tags"],
+      ["stashes"],
+    ]);
+  });
+
+  it("preserves the configured order and hidden sections", () => {
+    const navigation = SourceControlNavigation({
+      activeSection: "review",
+      sectionOrder: ["review", "changes", "history"],
+      hiddenItemIds: ["history", "tags"],
+      changeCount: 4,
+      commitCount: 12,
+      onSectionChange: vi.fn(),
+    });
+    expect(navigation.props.items.map((item: { id: string }) => item.id)).toEqual([
+      "review",
+      "changes",
+      "remotes",
+      "stashes",
+    ]);
+    expect(navigation.props.value).toBe("review");
   });
 
   it("owns Source Control sections inside the secondary sidebar", () => {
@@ -48,18 +60,16 @@ describe("SourceControlNavigation", () => {
         changeCount={4}
         commitCount={12}
         onSectionChange={() => {}}
-        onOpenRemotes={() => {}}
-        onOpenTags={() => {}}
-        onOpenStashes={() => {}}
-        onItemVisibleChange={() => {}}
       />,
     );
 
     expect(markup).toContain('aria-label="Source Control sections"');
     expect(markup).toContain('aria-label="Source Control: Changes"');
-    expect(markup).toContain('aria-current="page"');
+    expect(markup).toContain('role="tab"');
+    expect(markup).toContain('aria-selected="true"');
     expect(markup).toContain('aria-label="Source Control: Remotes"');
     expect(markup).toContain('aria-label="Source Control: Stashes"');
     expect(markup).not.toContain('aria-label="Source Control: Tags"');
+    expect(markup).not.toContain("Choose visible Source Control items");
   });
 });

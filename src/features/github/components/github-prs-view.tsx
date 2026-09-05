@@ -762,7 +762,7 @@ const GitHubPRsView = memo(() => {
           />
         ) : (
           <SidebarTabBar
-            layout="stacked"
+            label="GitHub sections"
             items={availableSections.map((section) => ({
               id: section,
               label:

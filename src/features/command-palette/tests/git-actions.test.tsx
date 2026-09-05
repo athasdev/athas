@@ -148,7 +148,7 @@ describe("createGitActions", () => {
     vi.unstubAllGlobals();
   });
 
-  it("opens the stash surface without switching the sidebar to git", () => {
+  it("opens stashes in the git sidebar", () => {
     const params = createActions();
     const dispatchEvent = vi.fn();
     vi.stubGlobal("window", {
@@ -169,8 +169,8 @@ describe("createGitActions", () => {
     actions.find((action) => action.id === "git-view-stashes")?.action();
 
     expect(params.onClose).toHaveBeenCalledOnce();
-    expect(params.setIsSidebarVisible).not.toHaveBeenCalled();
-    expect(params.setActiveView).not.toHaveBeenCalled();
+    expect(params.setIsSidebarVisible).toHaveBeenCalledWith(true);
+    expect(params.setActiveView).toHaveBeenCalledWith("git");
     expect(dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         detail: { type: "view-stashes" },

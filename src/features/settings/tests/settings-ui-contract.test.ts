@@ -93,7 +93,7 @@ describe("settings UI contract", () => {
     expect(selects.filter(({ size }) => size !== null)).toEqual([]);
   });
 
-  it("uses pill-shaped Button surfaces for settings actions and selectors", () => {
+  it("inherits the shared control shape instead of selecting pill surfaces", () => {
     const buttons = settingsComponentFiles.flatMap((filePath) =>
       collectControlProps(filePath, "Button"),
     );
@@ -101,10 +101,8 @@ describe("settings UI contract", () => {
       collectControlProps(filePath, "Select"),
     );
 
-    expect(buttons.filter(({ shape }) => shape !== "pill")).toEqual([]);
-    expect(
-      selects.filter(({ shape, variant }) => shape !== "pill" || variant !== "default"),
-    ).toEqual([]);
+    expect(buttons.filter(({ shape }) => shape !== null)).toEqual([]);
+    expect(selects.filter(({ shape }) => shape !== null)).toEqual([]);
   });
 
   it("inherits shared control typography without tab-specific overrides", () => {

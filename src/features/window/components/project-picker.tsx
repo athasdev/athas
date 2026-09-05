@@ -663,7 +663,6 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
               <Button
                 type="button"
                 variant="ghost"
-                shape="pill"
                 onClick={() => void handleTestRemoteConnection()}
                 disabled={!canTestRemoteConnection || isRemoteTesting || isRemoteSaving}
               >
@@ -676,7 +675,6 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
               <Button
                 type="submit"
                 form="project-picker-add-remote-form"
-                shape="pill"
                 disabled={!isRemoteFormValid || isRemoteSaving || isRemoteTesting}
               >
                 {isRemoteSaving ? (

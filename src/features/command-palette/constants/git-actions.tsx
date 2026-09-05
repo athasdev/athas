@@ -66,13 +66,6 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
     }, 0);
   };
 
-  const openGitCommandSurface = (detail: unknown) => {
-    onClose();
-    window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent("athas:git-palette-action", { detail }));
-    }, 0);
-  };
-
   return [
     {
       id: "git-branch-manager",
@@ -217,7 +210,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       description: "Open stash list",
       icon: <Archive />,
       category: "Git",
-      action: () => openGitCommandSurface({ type: "view-stashes" }),
+      action: () => openGitAction({ type: "view-stashes" }),
     },
     {
       id: "git-apply-stash",
@@ -225,7 +218,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       description: "Open stash list to apply a stash",
       icon: <Archive />,
       category: "Git",
-      action: () => openGitCommandSurface({ type: "view-stashes" }),
+      action: () => openGitAction({ type: "view-stashes" }),
     },
     {
       id: "git-pop-stash",
@@ -233,7 +226,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       description: "Open stash list to pop a stash",
       icon: <Archive />,
       category: "Git",
-      action: () => openGitCommandSurface({ type: "view-stashes" }),
+      action: () => openGitAction({ type: "view-stashes" }),
     },
     {
       id: "git-drop-stash",
@@ -241,7 +234,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       description: "Open stash list to drop a stash",
       icon: <Archive />,
       category: "Git",
-      action: () => openGitCommandSurface({ type: "view-stashes" }),
+      action: () => openGitAction({ type: "view-stashes" }),
     },
     {
       id: "git-stage-all",

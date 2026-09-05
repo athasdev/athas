@@ -1,8 +1,8 @@
 import { createStore } from "zustand/vanilla";
-import type { GitSidebarTabId } from "@/features/layout/config/item-order";
+import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 
-export type GitActivitySection = GitSidebarTabId;
+export type GitActivitySection = GitSidebarItemId;
 export type GitHubActivitySection = "pull-requests" | "issues" | "actions";
 export type DockerActivitySection = "resources" | "compose" | "project" | "registry";
 

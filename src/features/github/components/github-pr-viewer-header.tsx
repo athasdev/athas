@@ -110,7 +110,6 @@ export function GitHubPRViewerHeader({
           <Button
             type="button"
             variant="ghost"
-            shape="pill"
             active={activeView === "activity"}
             aria-pressed={activeView === "activity"}
             onClick={onShowOverview}
@@ -122,7 +121,6 @@ export function GitHubPRViewerHeader({
           <Button
             type="button"
             variant="ghost"
-            shape="pill"
             active={activeView === "files"}
             aria-pressed={activeView === "files"}
             onClick={onShowFiles}
@@ -132,10 +130,10 @@ export function GitHubPRViewerHeader({
           </Button>
         </div>
         <div className="flex items-center gap-1">
-          <Button onClick={onComment} disabled={isClosed} variant="ghost" shape="pill">
+          <Button onClick={onComment} disabled={isClosed} variant="ghost">
             Comment
           </Button>
-          <Button onClick={onMerge} disabled={!canMerge} variant="accent" shape="pill">
+          <Button onClick={onMerge} disabled={!canMerge} variant="accent">
             Merge
           </Button>
         </div>

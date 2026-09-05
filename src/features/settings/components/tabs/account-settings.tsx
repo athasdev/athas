@@ -102,7 +102,7 @@ export const AccountSettings = () => {
           {isAuthenticated ? (
             <span className="font-sans ui-text-base text-subtle-foreground">{user?.email}</span>
           ) : (
-            <Button shape="pill" variant="default" onClick={signIn} disabled={isSigningIn}>
+            <Button variant="default" onClick={signIn} disabled={isSigningIn}>
               {isSigningIn ? "Signing In..." : "Sign In"}
             </Button>
           )}
@@ -146,7 +146,7 @@ export const AccountSettings = () => {
                   {planLabel}
                 </Badge>
               ) : null}
-              <Button shape="pill" variant="default" onClick={handleManagePlan}>
+              <Button variant="default" onClick={handleManagePlan}>
                 {isPaidPlan ? "Manage plan" : "Upgrade plan"}
               </Button>
             </div>
@@ -181,7 +181,6 @@ export const AccountSettings = () => {
               description="Upload this device's current settings snapshot to the cloud."
             >
               <Button
-                shape="pill"
                 variant="default"
                 onClick={() => void handleSyncNow()}
                 disabled={settingsSyncIsSyncing}
@@ -195,7 +194,6 @@ export const AccountSettings = () => {
               description="Replace this device's non-sensitive settings with the cloud snapshot."
             >
               <Button
-                shape="pill"
                 variant="default"
                 onClick={() => void handleRestoreFromCloud()}
                 disabled={settingsSyncIsSyncing}
@@ -211,7 +209,7 @@ export const AccountSettings = () => {
             label="Manage Account"
             description="Open your Athas dashboard to manage billing and subscription details."
           >
-            <Button shape="pill" variant="default" onClick={handleManageAccount}>
+            <Button variant="default" onClick={handleManageAccount}>
               Open Dashboard
             </Button>
           </SettingRow>
@@ -222,7 +220,7 @@ export const AccountSettings = () => {
             label="Sign Out"
             description="End your current Athas account session on this device."
           >
-            <Button shape="pill" variant="default" onClick={() => void logout()}>
+            <Button variant="default" onClick={() => void logout()}>
               Sign Out
             </Button>
           </SettingRow>

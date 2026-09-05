@@ -40,7 +40,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { showPromptDialog } from "@/ui/dialog";
 import {
-  SidebarNavigation,
+  SidebarTabBar,
   SidebarSearchPopover,
   SidebarSectionLabel,
   SidebarWorkspace,
@@ -1045,49 +1045,30 @@ export function DockerSidebar() {
         }
         className="font-sans select-none"
       >
-        <SidebarNavigation
+        <SidebarTabBar
           label="Docker sections"
-          groups={[
+          value={activeSection}
+          onChange={setActiveSection}
+          items={[
             {
-              id: "docker",
-              title: "Docker",
-              items: [
-                {
-                  id: "resources",
-                  label: "Resources",
-                  leading: <CubeIcon />,
-                  trailing:
-                    inventory.containers.length + inventory.images.length > 0
-                      ? inventory.containers.length + inventory.images.length
-                      : undefined,
-                  active: activeSection === "resources",
-                  onClick: () => setActiveSection("resources"),
-                },
-                {
-                  id: "compose",
-                  label: "Compose",
-                  leading: <NodesIcon />,
-                  trailing: composeProject.services.length || undefined,
-                  active: activeSection === "compose",
-                  onClick: () => setActiveSection("compose"),
-                },
-                {
-                  id: "project",
-                  label: "Project",
-                  leading: <FolderOpenIcon />,
-                  trailing: projectConfigItemCount || undefined,
-                  active: activeSection === "project",
-                  onClick: () => setActiveSection("project"),
-                },
-                {
-                  id: "registry",
-                  label: "Registry",
-                  leading: <CloudArrowDownIcon />,
-                  active: activeSection === "registry",
-                  onClick: () => setActiveSection("registry"),
-                },
-              ],
+              id: "resources",
+              label: "Resources",
+              icon: <CubeIcon />,
+              badge: inventory.containers.length + inventory.images.length || undefined,
             },
+            {
+              id: "compose",
+              label: "Compose",
+              icon: <NodesIcon />,
+              badge: composeProject.services.length || undefined,
+            },
+            {
+              id: "project",
+              label: "Project",
+              icon: <FolderOpenIcon />,
+              badge: projectConfigItemCount || undefined,
+            },
+            { id: "registry", label: "Registry", icon: <CloudArrowDownIcon /> },
           ]}
         />
         {activeSection === "resources" && error && !connectionError ? (

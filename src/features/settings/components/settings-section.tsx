@@ -203,7 +203,6 @@ export function SettingRow({
           {onReset ? (
             <span className="flex size-5 items-center justify-center">
               <Button
-                shape="pill"
                 type="button"
                 variant="ghost"
                 onClick={onReset}

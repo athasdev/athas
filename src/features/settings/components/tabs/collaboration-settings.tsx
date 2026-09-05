@@ -43,7 +43,7 @@ export const CollaborationSettings = () => {
         description="Teams workspace status. Manage members, channels, invites, and policies in the web dashboard."
       >
         <SettingRow label="Dashboard" description="Open the full collaboration workspace.">
-          <Button shape="pill" type="button" variant="default" onClick={openDashboardCollaboration}>
+          <Button type="button" variant="default" onClick={openDashboardCollaboration}>
             <UsersThree />
             Open
           </Button>
@@ -69,7 +69,6 @@ export const CollaborationSettings = () => {
           <div className="flex items-center gap-2">
             <Badge variant="default">{collaboration?.presence.length ?? 0} sessions</Badge>
             <Button
-              shape="pill"
               type="button"
               variant="default"
               disabled={!presenceTarget.channelId && !presenceTarget.followingUserId}
@@ -112,7 +111,6 @@ export const CollaborationSettings = () => {
               description={`${channel.memberCount} members · ${channel.guestCount} guests`}
             >
               <Button
-                shape="pill"
                 type="button"
                 variant={presenceTarget.channelId === channel.id ? "accent" : "default"}
                 disabled={!collaboration?.capabilities.presence}
@@ -126,7 +124,6 @@ export const CollaborationSettings = () => {
           {followableMembers.slice(0, 4).map((member) => (
             <SettingRow key={`follow-${member.id}`} label={member.name} description={member.email}>
               <Button
-                shape="pill"
                 type="button"
                 variant={presenceTarget.followingUserId === member.userId ? "accent" : "default"}
                 disabled={!collaboration?.capabilities.presence}

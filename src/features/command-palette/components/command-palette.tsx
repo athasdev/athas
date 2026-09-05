@@ -560,7 +560,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
                         onMouseEnter={() => setSelectedIndex(index)}
                         isSelected={isSelected}
                         icon={action.icon}
-                        iconVariant="framed"
                         contentLayout="stacked"
                         title={<SearchMatchHighlight text={action.label} query={query} />}
                         description={
