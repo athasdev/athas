@@ -45,14 +45,14 @@
 
 let
   pname = "athas";
-  version = "0.12.0";
+  version = "0.14.0";
 
   # Keep the formatting of these lines stable
   # (one `"<system>" = "sha256-...";` per line) so the workflow's sed can find
   # them.
   hashes = {
-    "x86_64-linux" = "sha256-cKekY5XDwxxSaJ78nwonmZBxsN6UfrR7/CEhYqBbUsQ=";
-    "aarch64-linux" = "sha256-n1lptpWGdeUnmsN6TjlR2y7Po+QbhzW8frrg+4/B0LI=";
+    "x86_64-linux" = "sha256-ZY9AUIpLNghP4l7tYSsLm1JSrkCrg/MCG0s9JmI/hyA=";
+    "aarch64-linux" = "sha256-3fOA/LZTiRlG575pgMx0mo6U74q3KwqfCn1QBhT/Yjg=";
   };
 
   arches = {
