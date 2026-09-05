@@ -1,7 +1,7 @@
 import { getFileDiff } from "../api/git-diff-api";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff, GitFile, GitStatus } from "../types/git.types";
-import { countDiffStats } from "./git-diff-helpers";
+import { countDiffStats, hasGitDiffChanges } from "./git-diff-helpers";
 
 const WORKING_TREE_TITLE = "Uncommitted Changes";
 const WORKING_TREE_MULTI_DIFF_BATCH_SIZE = 8;
@@ -157,11 +157,7 @@ export const buildWorkingTreeMultiDiff = async ({
     ): entry is {
       fileKey: string;
       diff: GitDiff;
-    } =>
-      !!entry.diff &&
-      (entry.diff.lines.length > 0 ||
-        entry.diff.is_image === true ||
-        entry.diff.is_binary === true),
+    } => hasGitDiffChanges(entry.diff),
   );
 
   const stats = countDiffStats(resolvedDiffs.map((entry) => entry.diff));

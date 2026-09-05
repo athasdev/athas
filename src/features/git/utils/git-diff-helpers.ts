@@ -2,6 +2,18 @@ import type { DiffLineWithIndex, ParsedHunk } from "../types/git-diff.types";
 import type { GitDiff, GitDiffLine, GitHunk } from "../types/git.types";
 export { getDiffLineVisualState, getDiffLineVisualType } from "./diff-viewer-visuals";
 
+export function hasGitDiffChanges(diff: GitDiff | null): diff is GitDiff {
+  return (
+    !!diff &&
+    (diff.lines.length > 0 ||
+      diff.is_image === true ||
+      diff.is_binary === true ||
+      diff.is_new ||
+      diff.is_deleted ||
+      diff.is_renamed)
+  );
+}
+
 export interface DiffHunkRange {
   oldStart: number;
   oldCount: number;

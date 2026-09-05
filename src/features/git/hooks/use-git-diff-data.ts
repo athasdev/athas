@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -7,6 +7,7 @@ import { isGitChangeRelevant, subscribeToGitChanges } from "../events/git-events
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff } from "../types/git.types";
 import { getDiffBufferFilePath } from "../utils/diff-buffer-path";
+import { hasGitDiffChanges } from "../utils/git-diff-helpers";
 
 interface UseDiffDataReturn {
   diff: GitDiff | null;
@@ -32,17 +33,20 @@ export const useDiffData = (): UseDiffDataReturn => {
 
   const isRefreshing = useRef(false);
 
-  const rawDiffData: GitDiff | MultiFileDiff | null =
-    (activeBuffer?.type === "diff" && activeBuffer.diffData) ||
-    (activeBuffer?.type === "diff" && activeBuffer.content
-      ? (() => {
-          try {
-            return JSON.parse(activeBuffer.content) as GitDiff | MultiFileDiff;
-          } catch {
-            return null;
-          }
-        })()
-      : null);
+  const rawDiffData = useMemo<GitDiff | MultiFileDiff | null>(
+    () =>
+      (activeBuffer?.type === "diff" && activeBuffer.diffData) ||
+      (activeBuffer?.type === "diff" && activeBuffer.content
+        ? (() => {
+            try {
+              return JSON.parse(activeBuffer.content) as GitDiff | MultiFileDiff;
+            } catch {
+              return null;
+            }
+          })()
+        : null),
+    [activeBuffer],
+  );
 
   const diff = rawDiffData && "file_path" in rawDiffData ? rawDiffData : null;
 
@@ -53,14 +57,14 @@ export const useDiffData = (): UseDiffDataReturn => {
 
   const switchToView = useCallback(
     (viewType: "staged" | "unstaged") => {
-      if (!filePath) return;
+      if (!filePath || !rootFolderPath) return;
 
       const encodedPath = encodeURIComponent(filePath);
       const newVirtualPath = `diff://${viewType}/${encodedPath}`;
       const displayName = `${filePath.split("/").pop()} (${viewType})`;
 
-      getFileDiff(rootFolderPath!, filePath, viewType === "staged").then((newDiff) => {
-        if (newDiff && newDiff.lines.length > 0) {
+      getFileDiff(rootFolderPath, filePath, viewType === "staged").then((newDiff) => {
+        if (hasGitDiffChanges(newDiff)) {
           useBufferStore
             .getState()
             .actions.openBuffer(
@@ -97,12 +101,12 @@ export const useDiffData = (): UseDiffDataReturn => {
     try {
       const currentViewDiff = await getFileDiff(rootFolderPath, filePath, isStaged);
 
-      if (currentViewDiff && currentViewDiff.lines.length > 0) {
+      if (hasGitDiffChanges(currentViewDiff)) {
         updateBufferContent(activeBuffer.id, "", false, currentViewDiff);
       } else {
         const otherViewDiff = await getFileDiff(rootFolderPath, filePath, !isStaged);
 
-        if (otherViewDiff && otherViewDiff.lines.length > 0) {
+        if (hasGitDiffChanges(otherViewDiff)) {
           switchToView(isStaged ? "unstaged" : "staged");
           setTimeout(() => closeBuffer(activeBuffer.id), 100);
         } else {
@@ -128,20 +132,25 @@ export const useDiffData = (): UseDiffDataReturn => {
   ]);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = subscribeToGitChanges((change) => {
       if (!isWorkingTreeFileDiff || !rootFolderPath || !filePath || !activeBuffer) return;
       if (!isGitChangeRelevant(change, rootFolderPath, filePath)) return;
 
       if (isRefreshing.current) return;
 
-      setTimeout(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
         if (!isRefreshing.current) {
           void refresh();
         }
       }, 50);
     });
 
-    return unsubscribe;
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, [refresh, rootFolderPath, filePath, activeBuffer, isWorkingTreeFileDiff]);
 
   return {

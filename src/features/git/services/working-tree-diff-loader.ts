@@ -3,7 +3,7 @@ import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { getFileDiff } from "../api/git-diff-api";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff, GitFile } from "../types/git.types";
-import { countDiffStats } from "../utils/git-diff-helpers";
+import { countDiffStats, hasGitDiffChanges } from "../utils/git-diff-helpers";
 
 export type WorkingTreeDiffScope = "all" | "unstaged" | "staged";
 export type WorkingTreeDiffEntry = readonly [fileKey: string, file: GitFile];
@@ -68,6 +68,7 @@ export async function loadWorkingTreeDiffsProgressively({
     Math.max(0, WORKING_TREE_DIFF_FILE_LIMIT - initialDiffs.length),
   );
   const loadedDiffs: LoadedWorkingTreeDiff[] = [...initialDiffs];
+  const stats = countDiffStats(initialDiffs.map((item) => item.diff));
 
   const publish = (processed: number, isLoading: boolean) => {
     if (!isBufferLoadCurrent(bufferId, repoPath, controller)) {
@@ -80,7 +81,6 @@ export async function loadWorkingTreeDiffsProgressively({
       currentBuffer?.type === "diff" && currentBuffer.diffData && "files" in currentBuffer.diffData
         ? currentBuffer.diffData
         : null;
-    const stats = countDiffStats(loadedDiffs.map((item) => item.diff));
     bufferState.actions.updateBufferContent(bufferId, "", false, {
       title,
       repoPath,
@@ -119,10 +119,7 @@ export async function loadWorkingTreeDiffsProgressively({
       const batchResults = await Promise.all(
         batch.map(async ([fileKey, entry]) => {
           const diff = await getFileDiff(repoPath, entry.path, entry.staged);
-          if (
-            !diff ||
-            (diff.lines.length === 0 && diff.is_image !== true && diff.is_binary !== true)
-          ) {
+          if (!hasGitDiffChanges(diff)) {
             return null;
           }
           return { fileKey, diff };
@@ -132,9 +129,13 @@ export async function loadWorkingTreeDiffsProgressively({
       if (!isBufferLoadCurrent(bufferId, repoPath, controller)) break;
 
       processed += batch.length;
-      loadedDiffs.push(
-        ...batchResults.filter((entry): entry is LoadedWorkingTreeDiff => entry !== null),
+      const nextDiffs = batchResults.filter(
+        (entry): entry is LoadedWorkingTreeDiff => entry !== null,
       );
+      const batchStats = countDiffStats(nextDiffs.map((item) => item.diff));
+      stats.additions += batchStats.additions;
+      stats.deletions += batchStats.deletions;
+      loadedDiffs.push(...nextDiffs);
       if (!publish(processed, index + batch.length < diffEntriesToLoad.length)) break;
       await yieldToRenderer();
     }
