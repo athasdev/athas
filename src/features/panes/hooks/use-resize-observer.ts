@@ -19,7 +19,9 @@ export function useResizeObserver(ref: React.RefObject<HTMLElement | null>): Dim
       const entry = entries[0];
       const { width, height } = entry.contentRect;
 
-      setDimensions({ width, height });
+      setDimensions((current) =>
+        current.width === width && current.height === height ? current : { width, height },
+      );
     });
 
     observer.observe(element);

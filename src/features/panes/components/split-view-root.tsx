@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { WorkbenchFullscreenSurface } from "@/features/window/components/workbench-fullscreen-surface";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { WorkspaceStoreScopeContext } from "@/features/workspace/stores/create-workspace-scoped-store";
@@ -9,7 +9,11 @@ import { findPaneGroup } from "../utils/pane-tree";
 import { PaneContainer } from "./pane-container";
 import { PaneNodeRenderer } from "./pane-node-renderer";
 
-function SplitViewRoot({ activeSurface = true }: { activeSurface?: boolean }) {
+const SplitViewRoot = memo(function SplitViewRoot({
+  activeSurface = true,
+}: {
+  activeSurface?: boolean;
+}) {
   const root = usePaneStore.use.root();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
   const exitPaneFullscreen = usePaneStore((state) => state.actions.exitPaneFullscreen);
@@ -39,7 +43,7 @@ function SplitViewRoot({ activeSurface = true }: { activeSurface?: boolean }) {
       )}
     </>
   );
-}
+});
 
 const MAX_CACHED_WORKSPACES = 3;
 
@@ -104,6 +108,7 @@ export function CachedWorkspaceSplitViews() {
           <WorkspaceStoreScopeContext.Provider key={workspaceId} value={workspaceId}>
             <div
               aria-hidden={!isActive}
+              inert={!isActive}
               className={cn(
                 "absolute inset-0 overflow-hidden",
                 isActive ? "visible z-10" : "invisible pointer-events-none",

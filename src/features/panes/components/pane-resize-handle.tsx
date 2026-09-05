@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MIN_PANE_SIZE } from "../constants/pane";
+import { getPaneResizeLimits, resizePanePair, resizePanePairByPixels } from "../utils/pane-resize";
 
 interface PaneResizeHandleProps {
   direction: "horizontal" | "vertical";
@@ -27,10 +27,12 @@ export function PaneResizeHandle({
   const nextPaneRef = useRef<HTMLElement | null>(null);
 
   const isHorizontal = direction === "horizontal";
+  const limits = getPaneResizeLimits(initialSizes);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      if (e.button !== 0) return;
       setIsDragging(true);
       startPositionRef.current = isHorizontal ? e.clientX : e.clientY;
       startSizesRef.current = initialSizes;
@@ -79,22 +81,7 @@ export function PaneResizeHandle({
       const availableSize = availableSizeRef.current;
       if (availableSize <= 0) return;
 
-      const pairTotal = startSizesRef.current[0] + startSizesRef.current[1];
-      const scaledDelta = (delta / availableSize) * pairTotal;
-
-      let newFirstSize = startSizesRef.current[0] + scaledDelta;
-      let newSecondSize = startSizesRef.current[1] - scaledDelta;
-
-      const minSize = Math.min(MIN_PANE_SIZE, pairTotal * 0.1);
-      if (newFirstSize < minSize) {
-        newFirstSize = minSize;
-        newSecondSize = pairTotal - minSize;
-      } else if (newSecondSize < minSize) {
-        newSecondSize = minSize;
-        newFirstSize = pairTotal - minSize;
-      }
-
-      pendingSizesRef.current = [newFirstSize, newSecondSize];
+      pendingSizesRef.current = resizePanePairByPixels(startSizesRef.current, delta, availableSize);
       if (resizeFrameRef.current === null) {
         resizeFrameRef.current = requestAnimationFrame(flushPreview);
       }
@@ -121,10 +108,12 @@ export function PaneResizeHandle({
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("blur", handleMouseUp);
 
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("blur", handleMouseUp);
       if (resizeFrameRef.current !== null) {
         cancelAnimationFrame(resizeFrameRef.current);
         resizeFrameRef.current = null;
@@ -140,19 +129,40 @@ export function PaneResizeHandle({
   return (
     <div
       ref={containerRef}
-      className={`group relative flex shrink-0 items-center justify-center ${
+      className={`group relative flex shrink-0 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${
         isHorizontal
           ? "h-full w-workbench cursor-col-resize"
           : "h-workbench w-full cursor-row-resize"
       }`}
       onDoubleClick={onReset}
       onMouseDown={handleMouseDown}
+      onKeyDown={(event) => {
+        if (isDragging) return;
+        const backward = isHorizontal ? "ArrowLeft" : "ArrowUp";
+        const forward = isHorizontal ? "ArrowRight" : "ArrowDown";
+        if (event.key === "Enter" && onReset) {
+          event.preventDefault();
+          onReset();
+        } else if ([backward, forward, "Home", "End"].includes(event.key)) {
+          event.preventDefault();
+          const step = event.shiftKey ? 10 : 2;
+          const delta =
+            event.key === "Home"
+              ? -limits.total
+              : event.key === "End"
+                ? limits.total
+                : event.key === backward
+                  ? -step
+                  : step;
+          onResize(resizePanePair(initialSizes, delta));
+        }
+      }}
       role="separator"
       aria-orientation={isHorizontal ? "vertical" : "horizontal"}
       aria-label="Resize panes"
       aria-valuenow={Math.round(initialSizes[0])}
-      aria-valuemin={MIN_PANE_SIZE}
-      aria-valuemax={100 - MIN_PANE_SIZE}
+      aria-valuemin={limits.min}
+      aria-valuemax={limits.max}
       tabIndex={0}
     >
       <div

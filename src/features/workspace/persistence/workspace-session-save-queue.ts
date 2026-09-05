@@ -9,26 +9,34 @@ export function createWorkspaceSessionSaveQueue<T>(
 ): WorkspaceSessionSaveQueue<T> {
   const timers = new Map<string, ReturnType<typeof setTimeout>>();
   const pending = new Map<string, T>();
+  const deadlines = new Map<string, number>();
+  const maxWaitMs = Math.max(delayMs * 10, 1000);
 
   return {
     schedule(projectPath, payload) {
       pending.set(projectPath, payload);
+      const deadline = deadlines.get(projectPath) ?? Date.now() + maxWaitMs;
+      deadlines.set(projectPath, deadline);
 
       const existingTimer = timers.get(projectPath);
       if (existingTimer) {
         clearTimeout(existingTimer);
       }
 
-      const timer = setTimeout(() => {
-        timers.delete(projectPath);
-        if (!pending.has(projectPath)) {
-          return;
-        }
+      const timer = setTimeout(
+        () => {
+          timers.delete(projectPath);
+          deadlines.delete(projectPath);
+          if (!pending.has(projectPath)) {
+            return;
+          }
 
-        const latestPayload = pending.get(projectPath) as T;
-        pending.delete(projectPath);
-        save(projectPath, latestPayload);
-      }, delayMs);
+          const latestPayload = pending.get(projectPath) as T;
+          pending.delete(projectPath);
+          save(projectPath, latestPayload);
+        },
+        Math.max(0, Math.min(delayMs, deadline - Date.now())),
+      );
 
       timers.set(projectPath, timer);
     },
@@ -41,6 +49,7 @@ export function createWorkspaceSessionSaveQueue<T>(
       }
 
       pending.delete(projectPath);
+      deadlines.delete(projectPath);
     },
   };
 }

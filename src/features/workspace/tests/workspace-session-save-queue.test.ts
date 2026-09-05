@@ -2,6 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { createWorkspaceSessionSaveQueue } from "../persistence/workspace-session-save-queue";
 
 describe("createWorkspaceSessionSaveQueue", () => {
+  it("periodically persists the latest session during continuous activity", () => {
+    const save = vi.fn();
+    const queue = createWorkspaceSessionSaveQueue(save, 50);
+    for (let index = 0; index < 25; index++) {
+      queue.schedule("/workspace-a", index);
+      vi.advanceTimersByTime(40);
+    }
+    expect(save).toHaveBeenCalledExactlyOnceWith("/workspace-a", 24);
+    queue.schedule("/workspace-a", 25);
+    vi.advanceTimersByTime(50);
+    expect(save).toHaveBeenLastCalledWith("/workspace-a", 25);
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
   });
