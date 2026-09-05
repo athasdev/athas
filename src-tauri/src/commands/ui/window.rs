@@ -340,14 +340,21 @@ fn set_windows_window_transparency(
 }
 
 #[cfg(all(target_os = "macos", not(feature = "linux")))]
-fn set_ns_appearance(target: *mut std::ffi::c_void, appearance_name: &str) -> Result<(), String> {
+fn set_ns_appearance(
+   target: *mut std::ffi::c_void,
+   appearance_name: Option<&str>,
+) -> Result<(), String> {
    use objc::{class, msg_send, runtime::Object, sel, sel_impl};
    use std::ffi::CString;
 
-   let appearance_name =
-      CString::new(appearance_name).map_err(|e| format!("Invalid macOS appearance name: {e}"))?;
-
    unsafe {
+      let target = target.cast::<Object>();
+      let Some(appearance_name) = appearance_name else {
+         let _: () = msg_send![target, setAppearance: std::ptr::null_mut::<Object>()];
+         return Ok(());
+      };
+      let appearance_name = CString::new(appearance_name)
+         .map_err(|e| format!("Invalid macOS appearance name: {e}"))?;
       let name: *mut Object =
          msg_send![class!(NSString), stringWithUTF8String: appearance_name.as_ptr()];
       if name.is_null() {
@@ -359,7 +366,6 @@ fn set_ns_appearance(target: *mut std::ffi::c_void, appearance_name: &str) -> Re
          return Err("Failed to resolve macOS appearance".to_string());
       }
 
-      let target = target.cast::<Object>();
       let _: () = msg_send![target, setAppearance: appearance];
    }
 
@@ -402,11 +408,17 @@ fn sync_macos_window_appearance(
    window: &tauri::WebviewWindow<AthasRuntime>,
    theme_type: &str,
    transparency_enabled: bool,
+   follow_system: bool,
 ) -> Result<(), String> {
    let appearance_name = match theme_type {
       "light" => "NSAppearanceNameAqua",
       "dark" => "NSAppearanceNameDarkAqua",
       _ => return Err(format!("Unsupported macOS theme appearance: {theme_type}")),
+   };
+   let appearance_name = if follow_system {
+      None
+   } else {
+      Some(appearance_name)
    };
 
    let ns_window = window
@@ -447,11 +459,20 @@ pub fn set_native_window_appearance(
    window: tauri::WebviewWindow<AthasRuntime>,
    theme_type: String,
    transparency_enabled: Option<bool>,
+   follow_system: Option<bool>,
 ) -> Result<(), String> {
    #[cfg(all(target_os = "macos", not(feature = "linux")))]
    {
-      sync_macos_window_appearance(&window, &theme_type, transparency_enabled.unwrap_or(false))?;
+      sync_macos_window_appearance(
+         &window,
+         &theme_type,
+         transparency_enabled.unwrap_or(false),
+         follow_system.unwrap_or(false),
+      )?;
    }
+
+   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
+   let _ = follow_system;
 
    #[cfg(target_os = "windows")]
    {

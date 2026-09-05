@@ -27,6 +27,7 @@ function applyFallbackTheme(theme: Theme) {
 let removeThemeSyncListener: (() => void) | null = null;
 let latestThemeSyncSettings: Settings | null = null;
 let cancelPendingThemeApplication: (() => void) | null = null;
+let themeApplicationVersion = 0;
 
 function getCurrentThemeType(): "light" | "dark" {
   return document.documentElement.getAttribute("data-theme-type") === "light" ? "light" : "dark";
@@ -96,11 +97,16 @@ function syncThemeWithSystem(settings: Settings) {
 
 async function applyTheme(theme: Theme) {
   if (typeof window === "undefined") return;
+  const version = ++themeApplicationVersion;
+  cancelPendingThemeApplication?.();
+  cancelPendingThemeApplication = null;
 
   try {
     const { themeRegistry } = await import("@/extensions/themes/theme-registry");
+    if (version !== themeApplicationVersion) return;
 
     const applyRegisteredTheme = () => {
+      if (version !== themeApplicationVersion) return;
       themeRegistry.applyTheme(theme);
       const appliedTheme = themeRegistry.getTheme(theme);
       if (appliedTheme) {
@@ -112,6 +118,7 @@ async function applyTheme(theme: Theme) {
     const waitForThemeRegistration = () => {
       cancelPendingThemeApplication?.();
       cancelPendingThemeApplication = themeRegistry.onRegistryChange(() => {
+        if (version !== themeApplicationVersion) return;
         if (!themeRegistry.getTheme(theme)) return;
         cancelPendingThemeApplication?.();
         cancelPendingThemeApplication = null;
@@ -120,7 +127,9 @@ async function applyTheme(theme: Theme) {
     };
 
     if (!themeRegistry.isRegistryReady()) {
-      themeRegistry.onReady(() => {
+      cancelPendingThemeApplication = themeRegistry.onReady(() => {
+        if (version !== themeApplicationVersion) return;
+        cancelPendingThemeApplication = null;
         if (themeRegistry.getTheme(theme)) {
           applyRegisteredTheme();
         } else {
@@ -135,10 +144,9 @@ async function applyTheme(theme: Theme) {
       return;
     }
 
-    cancelPendingThemeApplication?.();
-    cancelPendingThemeApplication = null;
     applyRegisteredTheme();
   } catch (error) {
+    if (version !== themeApplicationVersion) return;
     console.error("Failed to apply theme via registry:", error);
     applyFallbackTheme(theme);
   }
@@ -148,7 +156,11 @@ function syncNativeWindowAppearance(themeType: "light" | "dark") {
   const transparencyEnabled =
     typeof document === "undefined" ? true : isEffectiveWindowTransparencyEnabled();
 
-  void invoke("set_native_window_appearance", { themeType, transparencyEnabled }).catch((error) => {
+  void invoke("set_native_window_appearance", {
+    themeType,
+    transparencyEnabled,
+    followSystem: latestThemeSyncSettings !== null,
+  }).catch((error) => {
     console.warn("Failed to sync native window appearance", error);
   });
 }
@@ -195,15 +207,19 @@ export function applySettingsSideEffects(settings: Settings) {
   cacheFontSettings(settings);
   applyWindowTransparency(settings.windowTransparency);
   applyUiPreferences(settings);
-  void applyTheme(resolveEffectiveTheme(settings));
+  applyThemeSettings(settings);
+  syncOllamaBaseUrl(settings.ollamaBaseUrl);
+  syncCustomProviderBaseUrl(settings.aiCustomBaseUrl);
+  void syncOllamaApiKey();
+}
+
+function applyThemeSettings(settings: Settings) {
   if (settings.syncSystemTheme) {
     syncThemeWithSystem(settings);
   } else {
     stopSystemThemeSync();
   }
-  syncOllamaBaseUrl(settings.ollamaBaseUrl);
-  syncCustomProviderBaseUrl(settings.aiCustomBaseUrl);
-  void syncOllamaApiKey();
+  void applyTheme(resolveEffectiveTheme(settings));
 }
 
 export function applySettingSideEffect<K extends keyof Settings>(
@@ -216,14 +232,7 @@ export function applySettingSideEffect<K extends keyof Settings>(
   }
 
   if (key === "syncSystemTheme" || key === "autoThemeLight" || key === "autoThemeDark") {
-    const settings = getSettings();
-    void applyTheme(resolveEffectiveTheme(settings));
-
-    if (settings.syncSystemTheme) {
-      syncThemeWithSystem(settings);
-    } else {
-      stopSystemThemeSync();
-    }
+    applyThemeSettings(getSettings());
   }
 
   if (key === "ollamaBaseUrl") {
