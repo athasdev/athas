@@ -6,9 +6,15 @@
 import { Language, Parser, Query } from "web-tree-sitter";
 import treeSitterRuntimeWasmUrl from "web-tree-sitter/web-tree-sitter.wasm?url";
 import { logger } from "../../utils/logger";
-import { indexedDBParserCache } from "./cache-indexeddb";
+import { indexedDBParserCache, type ParserCacheEntry } from "./cache-indexeddb";
+import { computeWasmChecksum, isWasmChecksumValid } from "./checksum";
 import { fetchHighlightQuery } from "./extension-assets";
 import type { LoadedParser, ParserConfig } from "../../types/wasm-parser/wasm-parser.types";
+
+async function resolveParserVersion(languageId: string): Promise<string> {
+  const { getLanguageExtensionById } = await import("@/extensions/languages/language-packager");
+  return getLanguageExtensionById(languageId)?.version ?? "unknown";
+}
 
 export function getTreeSitterRuntimeAssetPath(scriptName: string): string {
   if (scriptName === "web-tree-sitter.wasm") {
@@ -547,9 +553,44 @@ class WasmParserLoader {
       throw new Error(`Cache entry for ${languageId} has no WASM data`);
     }
 
+    if (!(await isWasmChecksumValid(wasmBytes, cached.checksum))) {
+      logger.warn(
+        "WasmParser",
+        `Checksum mismatch for cached parser ${languageId}, re-downloading`,
+      );
+      await indexedDBParserCache.delete(languageId);
+      return null;
+    }
+
     return {
       wasmBytes,
       queryText: cached.highlightQuery?.trim() ? cached.highlightQuery : undefined,
+    };
+  }
+
+  private async createCacheEntry(
+    languageId: string,
+    wasmBytes: Uint8Array,
+    queryText: string | undefined,
+    sourceUrl: string,
+  ): Promise<ParserCacheEntry> {
+    const wasmData = new Uint8Array(wasmBytes).buffer;
+    const [checksum, version] = await Promise.all([
+      computeWasmChecksum(new Uint8Array(wasmData)),
+      resolveParserVersion(languageId),
+    ]);
+    const now = Date.now();
+    return {
+      languageId,
+      wasmBlob: new Blob([wasmData]),
+      wasmData,
+      highlightQuery: queryText || "",
+      version,
+      checksum,
+      downloadedAt: now,
+      lastUsedAt: now,
+      size: wasmData.byteLength,
+      sourceUrl,
     };
   }
 
@@ -608,18 +649,9 @@ class WasmParserLoader {
 
           // Cache for future use
           try {
-            await indexedDBParserCache.set({
-              languageId,
-              wasmBlob: new Blob([wasmBytes as BlobPart]), // Legacy compatibility
-              wasmData: wasmBytes.buffer as ArrayBuffer, // Preferred: ArrayBuffer
-              highlightQuery: queryText || "",
-              version: "1.0.0", // TODO: Get version from manifest
-              checksum: "", // TODO: Calculate checksum
-              downloadedAt: Date.now(),
-              lastUsedAt: Date.now(),
-              size: wasmBytes.byteLength,
-              sourceUrl: wasmPath,
-            });
+            await indexedDBParserCache.set(
+              await this.createCacheEntry(languageId, wasmBytes, queryText, wasmPath),
+            );
             logger.debug("WasmParser", `Cached ${languageId} to IndexedDB`);
           } catch (cacheError) {
             logger.warn("WasmParser", `Failed to cache ${languageId}:`, cacheError);
@@ -664,18 +696,9 @@ class WasmParserLoader {
 
           // Cache local parsers to IndexedDB for future use
           try {
-            await indexedDBParserCache.set({
-              languageId,
-              wasmBlob: new Blob([wasmBytes as BlobPart]),
-              wasmData: wasmBytes.buffer as ArrayBuffer,
-              highlightQuery: queryText || "",
-              version: "1.0.0",
-              checksum: "",
-              downloadedAt: Date.now(),
-              lastUsedAt: Date.now(),
-              size: wasmBytes.byteLength,
-              sourceUrl: wasmPath,
-            });
+            await indexedDBParserCache.set(
+              await this.createCacheEntry(languageId, wasmBytes, queryText, wasmPath),
+            );
             logger.debug("WasmParser", `Cached ${languageId} to IndexedDB (from local path)`);
           } catch (cacheError) {
             logger.warn("WasmParser", `Failed to cache ${languageId}:`, cacheError);
