@@ -29,6 +29,7 @@ export function createTimedResourceCache<T>(): TimedResourceCache<T> {
     },
 
     set: (key, value) => {
+      inFlight.delete(key);
       entries.set(key, { fetchedAt: Date.now(), value });
       return value;
     },
@@ -51,11 +52,15 @@ export function createTimedResourceCache<T>(): TimedResourceCache<T> {
 
       const request = loader()
         .then((value) => {
-          entries.set(key, { fetchedAt: Date.now(), value });
+          if (inFlight.get(key) === request) {
+            entries.set(key, { fetchedAt: Date.now(), value });
+          }
           return value;
         })
         .finally(() => {
-          inFlight.delete(key);
+          if (inFlight.get(key) === request) {
+            inFlight.delete(key);
+          }
         });
 
       inFlight.set(key, request);
@@ -63,7 +68,7 @@ export function createTimedResourceCache<T>(): TimedResourceCache<T> {
     },
 
     clear: (key) => {
-      if (key) {
+      if (key !== undefined) {
         entries.delete(key);
         inFlight.delete(key);
         return;

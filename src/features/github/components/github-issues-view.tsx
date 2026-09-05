@@ -1,14 +1,7 @@
+import { useGitHubList } from "../hooks/use-github-list";
 import { invoke } from "@tauri-apps/api/core";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
-import {
-  memo,
-  startTransition,
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { memo, startTransition, useCallback, useDeferredValue, useEffect, useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
@@ -131,53 +124,24 @@ const GitHubIssuesView = memo(
         : null;
       return activeBuffer?.type === "githubIssue" ? activeBuffer.issueNumber : null;
     });
-    const [issues, setIssues] = useState<IssueListItem[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const deferredIssues = useDeferredValue(issues);
-    const deferredSearchQuery = useDeferredValue(searchQuery);
-
-    const fetchIssues = useCallback(
-      async (force = false) => {
-        if (!repoPath) {
-          setIssues([]);
-          setError("No repository selected.");
-          setIsLoading(false);
-          return;
-        }
-
-        const cacheKey = `${repoPath}::${filter}`;
-        const cached = githubIssueListCache.getFreshValue(cacheKey, GITHUB_ISSUE_LIST_TTL_MS);
-        if (cached && !force) {
-          startTransition(() => setIssues(cached));
-          setError(null);
-          setIsLoading(false);
-          return;
-        }
-
-        const stale = githubIssueListCache.getSnapshot(cacheKey)?.value;
-        if (stale && !force) {
-          startTransition(() => setIssues(stale));
-        }
-
-        setIsLoading(true);
-        setError(null);
-
-        try {
-          const nextIssues = await githubIssueListCache.load(
-            cacheKey,
-            () => invoke<IssueListItem[]>("github_list_issues", { repoPath, state: filter }),
-            { force, ttlMs: GITHUB_ISSUE_LIST_TTL_MS },
-          );
-          startTransition(() => setIssues(nextIssues));
-        } catch (nextError) {
-          setError(nextError instanceof Error ? nextError.message : String(nextError));
-        } finally {
-          setIsLoading(false);
-        }
-      },
+    const load = useCallback(
+      () => invoke<IssueListItem[]>("github_list_issues", { repoPath, state: filter }),
       [filter, repoPath],
     );
+    const {
+      data: deferredIssues,
+      isLoading,
+      error,
+      refresh,
+    } = useGitHubList({
+      cache: githubIssueListCache,
+      cacheKey: repoPath ? `${repoPath}::${filter}` : null,
+      enabled: isAuthenticated,
+      load,
+      refreshNonce,
+      ttlMs: GITHUB_ISSUE_LIST_TTL_MS,
+    });
+    const deferredSearchQuery = useDeferredValue(searchQuery);
 
     const prefetchIssue = useCallback(
       (issue: IssueListItem) => {
@@ -206,30 +170,6 @@ const GitHubIssuesView = memo(
 
       return () => window.clearTimeout(timeoutId);
     }, [checkAuth]);
-
-    useEffect(() => {
-      if (!isAuthenticated) return;
-
-      let timeoutId: number | null = null;
-      const frameId = window.requestAnimationFrame(() => {
-        timeoutId = window.setTimeout(() => {
-          void fetchIssues();
-        }, 0);
-      });
-
-      return () => {
-        window.cancelAnimationFrame(frameId);
-        if (timeoutId !== null) {
-          window.clearTimeout(timeoutId);
-        }
-      };
-    }, [fetchIssues, isAuthenticated]);
-
-    useEffect(() => {
-      if (isAuthenticated && refreshNonce > 0) {
-        void fetchIssues(true);
-      }
-    }, [fetchIssues, isAuthenticated, refreshNonce]);
 
     const filteredIssues = useMemo(() => {
       const query = deferredSearchQuery.trim().toLowerCase();
@@ -283,16 +223,23 @@ const GitHubIssuesView = memo(
     }
 
     return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-busy={isLoading}>
         <SidebarScrollArea className="min-h-0 flex-1">
-          {error ? (
-            <EmptyState layout="sidebar" message={error} tone="error" role="alert" />
-          ) : isLoading && deferredIssues.length === 0 ? (
+          {error && (
+            <EmptyState
+              layout="sidebar"
+              message={error}
+              tone="error"
+              role="alert"
+              action={{ label: "Retry", onClick: refresh, disabled: isLoading }}
+            />
+          )}
+          {isLoading && deferredIssues.length === 0 ? (
             <EmptyState
               layout="sidebar"
               message={<Spinner label="Loading issues" showLabel compact />}
             />
-          ) : deferredIssues.length === 0 ? (
+          ) : error && deferredIssues.length === 0 ? null : deferredIssues.length === 0 ? (
             <EmptyState layout="sidebar" message="No issues" />
           ) : filteredIssues.length === 0 ? (
             <EmptyState layout="sidebar" message="No matching issues" />

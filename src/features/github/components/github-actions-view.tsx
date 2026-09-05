@@ -1,3 +1,4 @@
+import { useGitHubList } from "../hooks/use-github-list";
 import { invoke } from "@tauri-apps/api/core";
 import {
   CheckCircleIcon as CheckCircle2,
@@ -6,15 +7,7 @@ import {
   XCircleIcon as XCircle,
 } from "@/ui/icons";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
-import {
-  memo,
-  startTransition,
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { memo, startTransition, useCallback, useDeferredValue, useEffect, useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
@@ -259,52 +252,24 @@ const GitHubActionsView = memo(
         : null;
       return activeBuffer?.type === "githubAction" ? activeBuffer.runId : null;
     });
-    const [runs, setRuns] = useState<WorkflowRunListItem[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const deferredRuns = useDeferredValue(runs);
-    const deferredSearchQuery = useDeferredValue(searchQuery);
-
-    const fetchRuns = useCallback(
-      async (force = false) => {
-        if (!repoPath) {
-          setRuns([]);
-          setError("No repository selected.");
-          setIsLoading(false);
-          return;
-        }
-
-        const cached = githubActionListCache.getFreshValue(repoPath, GITHUB_ACTION_LIST_TTL_MS);
-        if (cached && !force) {
-          startTransition(() => setRuns(cached));
-          setError(null);
-          setIsLoading(false);
-          return;
-        }
-
-        const stale = githubActionListCache.getSnapshot(repoPath)?.value;
-        if (stale && !force) {
-          startTransition(() => setRuns(stale));
-        }
-
-        setIsLoading(true);
-        setError(null);
-
-        try {
-          const nextRuns = await githubActionListCache.load(
-            repoPath,
-            () => invoke<WorkflowRunListItem[]>("github_list_workflow_runs", { repoPath }),
-            { force, ttlMs: GITHUB_ACTION_LIST_TTL_MS },
-          );
-          startTransition(() => setRuns(nextRuns));
-        } catch (nextError) {
-          setError(nextError instanceof Error ? nextError.message : String(nextError));
-        } finally {
-          setIsLoading(false);
-        }
-      },
+    const load = useCallback(
+      () => invoke<WorkflowRunListItem[]>("github_list_workflow_runs", { repoPath }),
       [repoPath],
     );
+    const {
+      data: deferredRuns,
+      isLoading,
+      error,
+      refresh,
+    } = useGitHubList({
+      cache: githubActionListCache,
+      cacheKey: repoPath,
+      enabled: isAuthenticated,
+      load,
+      refreshNonce,
+      ttlMs: GITHUB_ACTION_LIST_TTL_MS,
+    });
+    const deferredSearchQuery = useDeferredValue(searchQuery);
 
     const prefetchWorkflowRun = useCallback(
       (run: WorkflowRunListItem) => {
@@ -333,30 +298,6 @@ const GitHubActionsView = memo(
 
       return () => window.clearTimeout(timeoutId);
     }, [checkAuth]);
-
-    useEffect(() => {
-      if (!isAuthenticated) return;
-
-      let timeoutId: number | null = null;
-      const frameId = window.requestAnimationFrame(() => {
-        timeoutId = window.setTimeout(() => {
-          void fetchRuns();
-        }, 0);
-      });
-
-      return () => {
-        window.cancelAnimationFrame(frameId);
-        if (timeoutId !== null) {
-          window.clearTimeout(timeoutId);
-        }
-      };
-    }, [fetchRuns, isAuthenticated]);
-
-    useEffect(() => {
-      if (isAuthenticated && refreshNonce > 0) {
-        void fetchRuns(true);
-      }
-    }, [fetchRuns, isAuthenticated, refreshNonce]);
 
     const filteredRuns = useMemo(() => {
       const query = deferredSearchQuery.trim().toLowerCase();
@@ -429,16 +370,23 @@ const GitHubActionsView = memo(
     }
 
     return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-busy={isLoading}>
         <SidebarScrollArea className="min-h-0 flex-1">
-          {error ? (
-            <EmptyState layout="sidebar" message={error} tone="error" role="alert" />
-          ) : isLoading && deferredRuns.length === 0 ? (
+          {error && (
+            <EmptyState
+              layout="sidebar"
+              message={error}
+              tone="error"
+              role="alert"
+              action={{ label: "Retry", onClick: refresh, disabled: isLoading }}
+            />
+          )}
+          {isLoading && deferredRuns.length === 0 ? (
             <EmptyState
               layout="sidebar"
               message={<Spinner label="Loading workflow runs" showLabel compact />}
             />
-          ) : deferredRuns.length === 0 ? (
+          ) : error && deferredRuns.length === 0 ? null : deferredRuns.length === 0 ? (
             <EmptyState layout="sidebar" message="No workflow runs" />
           ) : filteredRuns.length === 0 ? (
             <EmptyState layout="sidebar" message="No matching workflow runs" />

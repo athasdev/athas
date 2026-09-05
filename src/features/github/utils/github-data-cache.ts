@@ -5,7 +5,7 @@ import type {
   WorkflowRunDetails,
   WorkflowRunListItem,
 } from "../types/github.types";
-import { createTimedResourceCache } from "./github-resource-cache";
+import { createTimedResourceCache } from "@/utils/timed-resource-cache";
 
 export const GITHUB_ISSUE_LIST_TTL_MS = 60_000;
 export const GITHUB_NOTIFICATION_LIST_TTL_MS = 60_000;
