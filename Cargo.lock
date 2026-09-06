@@ -623,7 +623,6 @@ dependencies = [
 name = "athas"
 version = "0.14.0"
 dependencies = [
- "agent-client-protocol",
  "anyhow",
  "async-trait",
  "athas-ai",
