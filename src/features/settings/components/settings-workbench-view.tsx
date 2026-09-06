@@ -14,7 +14,7 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
 import { Dropdown } from "@/ui/dropdown";
 import { Empty, EmptyDescription } from "@/ui/empty";
-import { ScrollArea } from "@/ui/scroll-area";
+import { Workbench, WorkbenchContent } from "@/ui/workbench";
 import { SearchInput } from "@/ui/search";
 import type { SearchResult } from "../types/search.types";
 
@@ -235,7 +235,6 @@ const SettingsWorkbenchView = () => {
   };
 
   const activePanelId = `settings-panel-${activeTab}`;
-  const activeTabId = `settings-tab-${activeTab}`;
   const activeTabItem = visibleTabs.find((item) => item.id === activeTab) ?? visibleTabs[0];
 
   const searchInput = (
@@ -268,36 +267,28 @@ const SettingsWorkbenchView = () => {
 
   return (
     <>
-      <div className="@container/settings flex size-full min-w-0 overflow-hidden bg-background">
+      <Workbench>
         <SettingsNavigation
           activeTab={activeTab}
           items={visibleTabs}
           onTabChange={handleTabChange}
           search={searchInput}
-        />
-
-        <main className="min-h-0 min-w-0 flex-1">
-          <ScrollArea
-            orientation="vertical"
-            className="size-full min-h-0 min-w-0"
-            contentClassName="mx-auto min-h-full w-full max-w-3xl overflow-x-hidden px-8 py-8 @max-[760px]/settings:px-5 @max-[760px]/settings:py-5"
+        >
+          <WorkbenchContent
+            title={activeTabItem?.label ?? "Settings"}
+            description={activeTabItem?.description}
             viewportProps={{
               ref: contentRef,
               id: activePanelId,
-              role: "tabpanel",
-              "aria-labelledby": activeTabId,
+              role: "region",
+              "aria-label": `${activeTabItem?.label ?? "Settings"} settings`,
               "data-settings-content": "",
             }}
           >
-            <header className="mb-6 px-1">
-              <h1 className="font-semibold text-foreground ui-text-base">
-                {activeTabItem?.label ?? "Settings"}
-              </h1>
-            </header>
-            {renderTabContent()}
-          </ScrollArea>
-        </main>
-      </div>
+            <div className="@container/settings">{renderTabContent()}</div>
+          </WorkbenchContent>
+        </SettingsNavigation>
+      </Workbench>
       <Dropdown
         isOpen={isSearchDropdownOpen && searchQuery.trim().length > 0}
         anchorRef={searchInputAnchorRef}

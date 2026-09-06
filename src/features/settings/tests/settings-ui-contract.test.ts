@@ -134,9 +134,8 @@ describe("settings UI contract", () => {
     const sectionSource = readFileSync(`${componentsDirectory}/settings-section.tsx`, "utf8");
 
     expect(settingsViewSource).toContain("@container/settings");
-    expect(settingsViewSource).toContain('orientation="vertical"');
+    expect(settingsViewSource).toContain("<WorkbenchContent");
     expect(settingsViewSource).not.toContain('orientation="both"');
-    expect(settingsViewSource).toContain("overflow-x-hidden");
     expect(sectionSource).toContain("@max-[640px]/settings:flex-col");
     expect(sectionSource).toContain("@max-[640px]/settings:w-full");
     expect(sectionSource).toContain("@max-[640px]/settings:[&>div]:flex-wrap");
@@ -148,7 +147,7 @@ describe("settings UI contract", () => {
       "utf8",
     );
 
-    expect(settingsViewSource).toContain("bg-background");
+    expect(settingsViewSource).toContain("<Workbench>");
     expect(settingsViewSource).not.toContain("<Dialog");
     expect(settingsViewSource).not.toContain("<Card");
     expect(settingsViewSource).not.toContain("tabIndex: -1");
@@ -175,9 +174,9 @@ describe("settings UI contract", () => {
     expect(settingsViewSource).not.toContain("<ResourcePageHeader");
     expect(settingsViewSource).not.toContain("<ResourceCategoryNav");
     expect(settingsViewSource).not.toContain("<SettingsBreadcrumb");
-    expect(navigationSource).toContain('aria-label="Settings sections"');
-    expect(navigationSource).toContain("<SidebarSectionLabel");
-    expect(navigationSource).toContain("<SidebarListItem");
+    expect(navigationSource).toContain('ariaLabel="Settings sections"');
+    expect(navigationSource).toContain("<WorkbenchNavigation");
+    expect(navigationSource).toContain("SETTINGS_TAB_GROUPS.map");
     expect(sectionSource).toContain("<Card");
     expect(sectionSource).not.toContain("<Accordion");
     expect(sidebarPaneSource).not.toContain("SettingsSidebar");

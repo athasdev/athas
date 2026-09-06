@@ -18,6 +18,7 @@ import type { SettingsTab } from "@/features/window/stores/ui-state.store";
 export interface SettingsTabItem {
   id: SettingsTab;
   label: string;
+  description: string;
   icon: ComponentType<{
     size?: string | number;
     className?: string;
@@ -32,18 +33,68 @@ export interface SettingsTabGroup {
 }
 
 export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
-  { id: "general", label: "General", icon: GearSix },
-  { id: "account", label: "Account", icon: UserCircle },
-  { id: "appearance", label: "Appearance", icon: PaintBrush },
-  { id: "editor", label: "Editor", icon: CodeBlock },
-  { id: "file-explorer", label: "Files", icon: TreeStructure },
-  { id: "git", label: "Git", icon: GitBranch },
-  { id: "terminal", label: "Terminal", icon: TerminalWindow },
-  { id: "keyboard", label: "Keybindings", icon: Keyboard },
-  { id: "ai", label: "Agent", icon: Sparkle },
-  { id: "collaboration", label: "Collaboration", icon: UsersThree },
-  { id: "enterprise", label: "Enterprise", icon: ShieldCheck },
-  { id: "advanced", label: "Advanced", icon: Gear },
+  {
+    id: "general",
+    description: "Updates, setup, and application preferences.",
+    label: "General",
+    icon: GearSix,
+  },
+  {
+    id: "account",
+    description: "Your profile, subscription, and connected account.",
+    label: "Account",
+    icon: UserCircle,
+  },
+  {
+    id: "appearance",
+    description: "Themes, typography, and workspace appearance.",
+    label: "Appearance",
+    icon: PaintBrush,
+  },
+  {
+    id: "editor",
+    description: "Editing behavior, formatting, and code display.",
+    label: "Editor",
+    icon: CodeBlock,
+  },
+  {
+    id: "file-explorer",
+    description: "File visibility and explorer behavior.",
+    label: "Files",
+    icon: TreeStructure,
+  },
+  { id: "git", description: "Version control and change tracking.", label: "Git", icon: GitBranch },
+  {
+    id: "terminal",
+    description: "Shell, terminal appearance, and behavior.",
+    label: "Terminal",
+    icon: TerminalWindow,
+  },
+  {
+    id: "keyboard",
+    description: "Shortcuts for the way you work.",
+    label: "Keybindings",
+    icon: Keyboard,
+  },
+  { id: "ai", description: "Agent models, tools, and preferences.", label: "Agent", icon: Sparkle },
+  {
+    id: "collaboration",
+    description: "Shared workspaces and collaboration preferences.",
+    label: "Collaboration",
+    icon: UsersThree,
+  },
+  {
+    id: "enterprise",
+    description: "Organization policies and access.",
+    label: "Enterprise",
+    icon: ShieldCheck,
+  },
+  {
+    id: "advanced",
+    description: "Diagnostics and advanced application options.",
+    label: "Advanced",
+    icon: Gear,
+  },
 ];
 
 export const SETTINGS_TAB_GROUPS: SettingsTabGroup[] = [
