@@ -1,15 +1,23 @@
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotionConfig,
+  useIsPresent,
+  type HTMLMotionProps,
+} from "motion/react";
+import { forwardRef } from "react";
 import type * as React from "react";
-import { Button } from "@/ui/button";
+import { instantTransition, quickTransition } from "@/utils/motion";
 import { cn } from "@/utils/cn";
 
 const attachmentVariants = cva(
-  "group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap gap-2.5 rounded-lg border border-border bg-surface ui-text-sm text-foreground outline-none transition-colors duration-fast focus-within:ring-1 focus-within:ring-primary/35 focus-visible:ring-1 focus-visible:ring-primary/35 has-data-[slot=attachment-content]:px-2 has-data-[slot=attachment-content]:py-1.5 has-data-[slot=attachment-media]:p-1.5 has-[>a,>button]:hover:bg-accent/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
+  "group/attachment relative flex w-fit max-w-[min(16rem,100%)] min-w-0 shrink-0 ui-text-sm gap-2 rounded-lg bg-attachment text-foreground outline-none shadow-(--attachment-shadow) transition-[background-color,box-shadow] duration-fast ease-smooth motion-reduce:transition-none hover:bg-attachment-hover hover:shadow-(--attachment-hover-shadow) focus-within:ring-1 focus-within:ring-primary/35 focus-visible:ring-1 focus-visible:ring-primary/35 has-data-[slot=attachment-content]:px-2 has-data-[slot=attachment-content]:py-1.5 has-data-[slot=attachment-media]:p-1.5 data-[state=error]:ring-1 data-[state=error]:ring-destructive/30 data-[state=idle]:border data-[state=idle]:border-dashed data-[state=idle]:border-border",
   {
     variants: {
       orientation: {
-        horizontal: "min-w-40 items-center",
+        horizontal: "items-center",
         vertical: "w-24 flex-col has-data-[slot=attachment-content]:w-30",
       },
     },
@@ -21,19 +29,33 @@ const attachmentVariants = cva(
 
 type AttachmentState = "idle" | "uploading" | "processing" | "error" | "done";
 
-type AttachmentProps = React.ComponentProps<"div"> &
+type AttachmentProps = HTMLMotionProps<"div"> &
   VariantProps<typeof attachmentVariants> & {
     state?: AttachmentState;
   };
 
-function Attachment({
-  className,
-  state = "done",
-  orientation = "horizontal",
-  ...props
-}: AttachmentProps) {
+const Attachment = forwardRef<HTMLDivElement, AttachmentProps>(function Attachment(
+  { className, state = "done", orientation = "horizontal", ...props },
+  ref,
+) {
+  const reduceMotion = useReducedMotionConfig();
+  const isPresent = useIsPresent();
   return (
-    <div
+    <motion.div
+      ref={ref}
+      layout={reduceMotion ? false : "position"}
+      initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.96, y: reduceMotion ? 0 : 4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.9, y: reduceMotion ? 0 : -2 }}
+      transition={
+        reduceMotion
+          ? instantTransition
+          : {
+              ...quickTransition,
+              layout: { type: "spring", stiffness: 500, damping: 36 },
+            }
+      }
+      inert={!isPresent || undefined}
       data-slot="attachment"
       data-state={state}
       data-orientation={orientation}
@@ -41,10 +63,10 @@ function Attachment({
       {...props}
     />
   );
-}
+});
 
 const attachmentMediaVariants = cva(
-  "relative flex aspect-square w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-accent text-foreground group-data-[orientation=vertical]/attachment:w-full group-data-[state=error]/attachment:bg-destructive/10 group-data-[state=error]/attachment:text-destructive [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 group-data-[orientation=vertical]/attachment:[&_svg:not([class*='size-'])]:size-6",
+  "relative flex aspect-square w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-attachment-media text-muted-foreground group-data-[orientation=vertical]/attachment:w-full group-data-[state=error]/attachment:bg-destructive/10 group-data-[state=error]/attachment:text-destructive [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 group-data-[orientation=vertical]/attachment:[&_svg:not([class*='size-'])]:size-6",
   {
     variants: {
       variant: {
@@ -113,34 +135,6 @@ function AttachmentDescription({ className, ...props }: React.ComponentProps<"sp
   );
 }
 
-function AttachmentActions({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="attachment-actions"
-      className={cn(
-        "relative z-20 flex shrink-0 items-center group-data-[orientation=vertical]/attachment:absolute group-data-[orientation=vertical]/attachment:top-3 group-data-[orientation=vertical]/attachment:right-3 group-data-[orientation=vertical]/attachment:gap-1",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function AttachmentAction({
-  variant,
-  iconOnly = true,
-  ...props
-}: React.ComponentProps<typeof Button>) {
-  return (
-    <Button
-      data-slot="attachment-action"
-      variant={variant ?? "ghost"}
-      iconOnly={iconOnly}
-      {...props}
-    />
-  );
-}
-
 type AttachmentTriggerProps = useRender.ComponentProps<"button">;
 
 function AttachmentTrigger({ className, render, ref, type, ...props }: AttachmentTriggerProps) {
@@ -157,23 +151,25 @@ function AttachmentTrigger({ className, render, ref, type, ...props }: Attachmen
   });
 }
 
-function AttachmentGroup({ className, ...props }: React.ComponentProps<"div">) {
+function AttachmentGroup({ className, children, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="attachment-group"
       className={cn(
-        "scrollbar-none flex min-w-0 snap-x snap-mandatory scroll-px-1 gap-3 overflow-x-auto overscroll-x-contain py-1 *:data-[slot=attachment]:flex-none *:data-[slot=attachment]:snap-start",
+        "relative flex min-w-0 flex-wrap items-start gap-1.5 py-1 empty:hidden",
         className,
       )}
       {...props}
-    />
+    >
+      <AnimatePresence initial={false} mode="popLayout">
+        {children}
+      </AnimatePresence>
+    </div>
   );
 }
 
 export {
   Attachment,
-  AttachmentAction,
-  AttachmentActions,
   AttachmentContent,
   AttachmentDescription,
   AttachmentGroup,

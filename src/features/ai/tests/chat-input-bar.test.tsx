@@ -54,11 +54,13 @@ describe("Agent composer", () => {
     },
   );
 
-  it("keeps context attachments separate from the single prompt and toolbar", () => {
+  it("summarizes attached files without exposing a chip for every filename", () => {
     const markup = renderComposer({ selectedFilesPaths: new Set(["/src/one.ts", "/src/two.ts"]) });
     expect(markup.match(/role="textbox"/g)).toHaveLength(1);
     expect(markup.match(/aria-label="Send message"/g)).toHaveLength(1);
-    expect(markup.indexOf('aria-label="Remove two.ts from context"')).toBeLessThan(
+    expect(markup).toContain('aria-label="Review 2 files"');
+    expect(markup).not.toContain('aria-label="Remove two.ts from context"');
+    expect(markup.indexOf('aria-label="Review 2 files"')).toBeLessThan(
       markup.indexOf('role="textbox"'),
     );
   });

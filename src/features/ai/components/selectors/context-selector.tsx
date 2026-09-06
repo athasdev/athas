@@ -194,7 +194,6 @@ export function ContextSelector({
             onKeyDown={(event) => event.stopPropagation()}
           >
             <AIFileSelector
-              files={[]}
               query={fileQuery}
               onQueryChange={setFileQuery}
               onSelect={(file) => {

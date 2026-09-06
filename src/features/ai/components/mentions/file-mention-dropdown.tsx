@@ -1,9 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import type { MentionState } from "@/features/ai/types/chat-composer.types";
-import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { FileItem } from "@/features/file-search/types/file-search.types";
-import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { ComposerAttachedPanel } from "../input/composer-attached-panel";
 import { AIFileSelector } from "./ai-file-selector";
@@ -26,34 +24,9 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   onSelectedIndexChange,
 }: FileMentionDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [fallbackFiles, setFallbackFiles] = useState<FileEntry[]>([]);
 
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
   const { selectedIndex } = mentionState;
-  const effectiveFiles = files.length > 0 ? files : fallbackFiles;
-
-  useEffect(() => {
-    if (files.length > 0) {
-      setFallbackFiles([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    getAllProjectFiles().then((allFiles) => {
-      if (cancelled) return;
-
-      setFallbackFiles(
-        allFiles.filter((file) => !file.isDir && !shouldIgnoreSearchFile(file.path)),
-      );
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [files, getAllProjectFiles]);
-
   const handleFileClick = (file: { name: string; path: string }) => {
     const fileEntry: FileEntry = {
       name: file.name,
@@ -98,7 +71,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
     >
       <div ref={dropdownRef} className="flex min-h-0 flex-col">
         <AIFileSelector
-          files={effectiveFiles}
+          files={files}
           query={mentionState.search}
           onSelect={handleFileClick}
           rootFolderPath={rootFolderPath}

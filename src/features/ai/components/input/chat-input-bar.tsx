@@ -1,13 +1,9 @@
 import {
   CommandIcon,
   ArrowUpIcon as ArrowUp,
-  CodeBlockIcon as CodeBlock,
-  DatabaseIcon as Database,
-  FileTextIcon as FileText,
   LightningIcon as Lightning,
   MicrophoneIcon as Mic,
   StopIcon as Stop,
-  XIcon as X,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { registerAgentDraft, takeAgentDraft } from "@/features/ai/detached/agent-window-drafts";
@@ -41,15 +37,7 @@ import {
   type SidebarDragResource,
 } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import {
-  Attachment,
-  AttachmentAction,
-  AttachmentActions,
-  AttachmentContent,
-  AttachmentGroup,
-  AttachmentMedia,
-  AttachmentTitle,
-} from "@/ui/attachment";
+import { ComposerAttachments } from "./composer-attachments";
 import { badgeVariants } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
@@ -444,38 +432,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
     () => allProjectFiles.filter((file) => !file.isDir && !shouldIgnoreSearchFile(file.path)),
     [allProjectFiles],
   );
-
-  const selectedContextItems = useMemo(() => {
-    const bufferSelections = buffers
-      .filter((buffer) => buffer.type !== "agent" && selectedBufferIds.has(buffer.id))
-      .map((buffer) => ({
-        type: "buffer" as const,
-        id: buffer.id,
-        name: buffer.name,
-        databaseType: buffer.type === "database" ? buffer.databaseType : undefined,
-        isDirty: buffer.type === "editor" && buffer.isDirty,
-      }));
-
-    const fileSelections = Array.from(selectedFilesPaths).map((filePath) => ({
-      type: "file" as const,
-      id: filePath,
-      name: filePath.split("/").pop() || "Unknown",
-      path: filePath,
-    }));
-
-    const editorSelections = selectedEditorContexts.map((context) => ({
-      type: "selection" as const,
-      id: context.id,
-      name: `${context.fileName}:${
-        context.startLine === context.endLine
-          ? context.startLine
-          : `${context.startLine}-${context.endLine}`
-      }`,
-      path: context.filePath,
-    }));
-
-    return [...editorSelections, ...bufferSelections, ...fileSelections];
-  }, [buffers, selectedBufferIds, selectedEditorContexts, selectedFilesPaths]);
 
   // ResizeObserver to track container size changes
   useEffect(() => {
@@ -1071,127 +1027,20 @@ const AIChatInputBar = memo(function AIChatInputBar({
         isInitialPresentation ? "w-full" : [chatContentWidth(), "mb-3"],
       )}
     >
-      {pastedImages.length > 0 && (
-        <AttachmentGroup className="px-3 pt-3">
-          {pastedImages.map((image) => (
-            <Attachment key={image.id} orientation="vertical">
-              <AttachmentMedia variant="image">
-                <img src={image.dataUrl} alt={image.name} />
-              </AttachmentMedia>
-              <AttachmentContent>
-                <AttachmentTitle>{image.name}</AttachmentTitle>
-              </AttachmentContent>
-              <AttachmentActions>
-                <AttachmentAction
-                  onClick={() => removePastedImage(image.id)}
-                  aria-label={`Remove ${image.name}`}
-                >
-                  <X />
-                </AttachmentAction>
-              </AttachmentActions>
-            </Attachment>
-          ))}
-        </AttachmentGroup>
-      )}
-
-      {selectedContextItems.length > 0 ? (
-        <AttachmentGroup className="px-3 pt-3" role="list" aria-label="Selected context">
-          {selectedContextItems.map((item) => (
-            <Attachment
-              key={`selected-${item.type}-${item.id}`}
-              data-context-chip
-              role="listitem"
-              tabIndex={0}
-              aria-label={`${item.name}. Press Delete to remove from context.`}
-              title={item.type === "buffer" ? item.name : item.path}
-              onKeyDown={(event) => {
-                if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-                  event.preventDefault();
-                  const chips = Array.from(
-                    event.currentTarget.parentElement?.querySelectorAll<HTMLElement>(
-                      "[data-context-chip]",
-                    ) || [],
-                  );
-                  const currentIndex = chips.indexOf(event.currentTarget);
-                  const nextIndex =
-                    event.key === "ArrowLeft"
-                      ? Math.max(currentIndex - 1, 0)
-                      : Math.min(currentIndex + 1, chips.length - 1);
-                  chips[nextIndex]?.focus();
-                  return;
-                }
-
-                if (event.key === "Backspace" || event.key === "Delete") {
-                  event.preventDefault();
-                  const chipContainer = event.currentTarget.parentElement;
-                  const chips = Array.from(
-                    chipContainer?.querySelectorAll<HTMLElement>("[data-context-chip]") || [],
-                  );
-                  const currentIndex = chips.indexOf(event.currentTarget);
-                  const nextFocusIndex = Math.max(0, Math.min(currentIndex, chips.length - 2));
-                  if (item.type === "buffer") {
-                    toggleBufferSelection(item.id);
-                  } else if (item.type === "file") {
-                    toggleFileSelection(item.id);
-                  } else {
-                    onRemoveEditorContext(item.id);
-                  }
-                  requestAnimationFrame(() => {
-                    const nextChips = Array.from(
-                      chipContainer?.querySelectorAll<HTMLElement>("[data-context-chip]") || [],
-                    );
-                    const nextChip = nextChips[nextFocusIndex];
-                    if (nextChip) {
-                      nextChip.focus();
-                      return;
-                    }
-                    contextTriggerRef.current?.focus();
-                  });
-                }
-              }}
-            >
-              <AttachmentMedia>
-                {item.type === "selection" ? (
-                  <CodeBlock />
-                ) : item.type === "buffer" ? (
-                  item.databaseType ? (
-                    <Database />
-                  ) : (
-                    <FileText />
-                  )
-                ) : (
-                  <FileText />
-                )}
-              </AttachmentMedia>
-              <AttachmentContent>
-                <AttachmentTitle>
-                  {item.name}
-                  {item.type === "buffer" && item.isDirty ? (
-                    <span className="ml-1 inline-block size-1.5 rounded-full bg-warning" />
-                  ) : null}
-                </AttachmentTitle>
-              </AttachmentContent>
-              <AttachmentActions>
-                <AttachmentAction
-                  onClick={() => {
-                    if (item.type === "buffer") {
-                      toggleBufferSelection(item.id);
-                    } else if (item.type === "file") {
-                      toggleFileSelection(item.id);
-                    } else {
-                      onRemoveEditorContext(item.id);
-                    }
-                  }}
-                  aria-label={`Remove ${item.name} from context`}
-                  tabIndex={0}
-                >
-                  <X weight="bold" />
-                </AttachmentAction>
-              </AttachmentActions>
-            </Attachment>
-          ))}
-        </AttachmentGroup>
-      ) : null}
+      <ComposerAttachments
+        buffers={buffers}
+        selectedBufferIds={selectedBufferIds}
+        selectedFilesPaths={selectedFilesPaths}
+        selectedEditorContexts={selectedEditorContexts}
+        pastedImages={pastedImages}
+        contextTriggerRef={contextTriggerRef}
+        onRemove={(source) => {
+          if (source.type === "buffer") toggleBufferSelection(source.id);
+          else if (source.type === "file") toggleFileSelection(source.id);
+          else if (source.type === "selection") onRemoveEditorContext(source.id);
+          else removePastedImage(source.id);
+        }}
+      />
 
       <ComposerEditable
         ref={inputRef}
