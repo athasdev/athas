@@ -1,3 +1,4 @@
+import { BUNDLED_FONTS } from "@/features/settings/config/bundled-fonts";
 import { useEffect } from "react";
 import {
   DEFAULT_MONO_FONT_FAMILY,
@@ -26,7 +27,7 @@ export function useFontLoading() {
         settings.fontFamily,
         DEFAULT_MONO_FONT_FAMILY,
         availableFonts,
-        [DEFAULT_MONO_FONT_FAMILY],
+        BUNDLED_FONTS.map((font) => font.family),
       );
       if (nextEditorFontFamily !== settings.fontFamily) {
         updates.push(settingsStore.actions.updateSetting("fontFamily", nextEditorFontFamily));
@@ -36,7 +37,7 @@ export function useFontLoading() {
         settings.terminalFontFamily,
         DEFAULT_MONO_FONT_FAMILY,
         availableFonts,
-        [DEFAULT_MONO_FONT_FAMILY],
+        BUNDLED_FONTS.map((font) => font.family),
       );
       if (nextTerminalFontFamily !== settings.terminalFontFamily) {
         updates.push(
@@ -48,7 +49,7 @@ export function useFontLoading() {
         settings.uiFontFamily,
         DEFAULT_UI_FONT_FAMILY,
         availableFonts,
-        [DEFAULT_UI_FONT_FAMILY],
+        BUNDLED_FONTS.map((font) => font.family),
       );
       if (nextUiFontFamily !== settings.uiFontFamily) {
         updates.push(settingsStore.actions.updateSetting("uiFontFamily", nextUiFontFamily));

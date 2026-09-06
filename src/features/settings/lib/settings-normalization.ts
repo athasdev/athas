@@ -481,15 +481,21 @@ export function normalizeSettings(settings: Settings): Settings {
 
   normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
   normalizedSettings.fontFamily = normalizeConfiguredFontFamily(
-    normalizedSettings.fontFamily,
+    normalizedSettings.fontFamily === "Geist Mono"
+      ? DEFAULT_MONO_FONT_FAMILY
+      : normalizedSettings.fontFamily,
     DEFAULT_MONO_FONT_FAMILY,
   );
   normalizedSettings.terminalFontFamily = normalizeConfiguredFontFamily(
-    normalizedSettings.terminalFontFamily,
+    normalizedSettings.terminalFontFamily === "Geist Mono"
+      ? DEFAULT_MONO_FONT_FAMILY
+      : normalizedSettings.terminalFontFamily,
     DEFAULT_MONO_FONT_FAMILY,
   );
   normalizedSettings.uiFontFamily = normalizeConfiguredFontFamily(
-    normalizedSettings.uiFontFamily,
+    ["system-ui", "Geist Sans"].includes(normalizedSettings.uiFontFamily)
+      ? DEFAULT_UI_FONT_FAMILY
+      : normalizedSettings.uiFontFamily,
     DEFAULT_UI_FONT_FAMILY,
   );
   if (normalizedSettings.terminalLineHeight === LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT) {

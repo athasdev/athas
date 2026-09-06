@@ -1,3 +1,4 @@
+import { DEFAULT_MONO_FONT_FAMILY } from "@/features/settings/config/typography-defaults";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import type { Position } from "../types/editor.types";
 
@@ -310,7 +311,7 @@ const prewarmCharCache = (fontSize: number, fontFamily: string) => {
 const getCharWidthCached = (
   char: string,
   fontSize: number,
-  fontFamily: string = 'Geist Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  fontFamily: string = DEFAULT_MONO_FONT_FAMILY,
 ): number => {
   const font = buildCanvasFont(fontSize, fontFamily);
   const fontReady = isCanvasFontReady(font);
@@ -364,7 +365,7 @@ export const getAccurateCursorX = (
   line: string,
   column: number,
   fontSize: number,
-  fontFamily: string = 'Geist Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  fontFamily: string = DEFAULT_MONO_FONT_FAMILY,
   tabSize: number = 2,
 ): number => {
   let x = 0;
@@ -391,7 +392,7 @@ export const getAccurateCursorX = (
 export const measureTextWidth = (
   text: string,
   fontSize: number,
-  fontFamily: string = 'Geist Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  fontFamily: string = DEFAULT_MONO_FONT_FAMILY,
   tabSize: number = 2,
 ): number => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize);
 

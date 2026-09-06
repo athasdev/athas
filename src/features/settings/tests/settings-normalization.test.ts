@@ -7,6 +7,18 @@ import {
 import { normalizeSettings, normalizeSettingValue } from "../lib/settings-normalization";
 
 describe("settings normalization", () => {
+  it("migrates previous bundled defaults to the shared typefaces", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      fontFamily: "Geist Mono",
+      terminalFontFamily: "Geist Mono",
+      uiFontFamily: "system-ui",
+    });
+    expect(normalized.fontFamily).toBe("JetBrains Mono");
+    expect(normalized.terminalFontFamily).toBe("JetBrains Mono");
+    expect(normalized.uiFontFamily).toBe("Inter");
+  });
+
   it("preserves configured font settings that may exist on the system", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),

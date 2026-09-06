@@ -66,8 +66,6 @@
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@fontsource/geist-mono": "^5.2.8",
-    "@fontsource/geist-sans": "^5.2.5",
     "@lexical/react": "^0.48.0",
     "@lexical/rich-text": "^0.48.0",
     "@mdxeditor/editor": "^4.1.1",

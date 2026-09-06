@@ -1,3 +1,4 @@
+import { BUNDLED_FONTS } from "@/features/settings/config/bundled-fonts";
 import { useEffect, useState } from "react";
 import {
   DEFAULT_MONO_FONT_FAMILY,
@@ -12,28 +13,6 @@ import type { FontInfo } from "@/features/settings/types/font.types";
 import { Spinner } from "@/ui/spinner";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
-
-// Bundled fonts that are always available
-const BUNDLED_FONTS: FontInfo[] = [
-  {
-    name: "System UI",
-    family: "system-ui",
-    style: "Regular",
-    is_monospace: false,
-  },
-  {
-    name: "Geist Sans",
-    family: "Geist Sans",
-    style: "Regular",
-    is_monospace: false,
-  },
-  {
-    name: "Geist Mono",
-    family: "Geist Mono",
-    style: "Regular",
-    is_monospace: true,
-  },
-];
 
 interface FontSelectorProps {
   value: string;

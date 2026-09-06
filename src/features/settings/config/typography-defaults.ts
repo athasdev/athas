@@ -1,5 +1,6 @@
-export const DEFAULT_UI_FONT_FAMILY = "system-ui";
-export const DEFAULT_MONO_FONT_FAMILY = "Geist Mono";
+export const DEFAULT_UI_FONT_FAMILY = "Inter";
+export const DEFAULT_MONO_FONT_FAMILY = "JetBrains Mono";
+export const DEFAULT_HEADING_FONT_FAMILY = "Inter Display";
 
 const DEFAULT_MONO_FONT_FALLBACK =
   'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';

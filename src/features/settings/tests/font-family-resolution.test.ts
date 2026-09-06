@@ -19,8 +19,8 @@ describe("font family resolution", () => {
   it("builds one normalized stack for UI and editor fonts", () => {
     const { mono, sans } = getTypographyFontFallbacks(false);
 
-    expect(buildFontFamilyStack(DEFAULT_MONO_FONT_FAMILY, mono)).toBe(`"Geist Mono", ${mono}`);
-    expect(buildFontFamilyStack(`"${DEFAULT_UI_FONT_FAMILY}"`, sans)).toBe(`system-ui, ${sans}`);
+    expect(buildFontFamilyStack(DEFAULT_MONO_FONT_FAMILY, mono)).toBe(`"JetBrains Mono", ${mono}`);
+    expect(buildFontFamilyStack(`"${DEFAULT_UI_FONT_FAMILY}"`, sans)).toBe(`"Inter", ${sans}`);
   });
 
   it("preserves configured full font stacks", () => {
