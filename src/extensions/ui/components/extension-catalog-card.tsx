@@ -9,7 +9,7 @@ import {
   WarningCircleIcon as Warning,
   XCircleIcon as Unavailable,
 } from "@/ui/icons";
-import { Card, CardContent, CardTitle } from "@/ui/card";
+import { Card, CardContent, CardDescription, CardTitle } from "@/ui/card";
 import { Spinner } from "@/ui/spinner";
 import { ExtensionIcon } from "./extension-catalog-icon";
 import type { UnifiedExtension } from "./extension-catalog-types";
@@ -54,8 +54,8 @@ export function ExtensionCatalogCard({
 
   return (
     <Card
-      variant="ghost"
-      className="min-w-0 cursor-default transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+      variant="interactive"
+      className="min-w-0"
       onClick={onSelect}
       onContextMenu={(event) => onContextMenu(event, extension)}
       onKeyDown={handleKeyDown}
@@ -66,7 +66,7 @@ export function ExtensionCatalogCard({
         <ExtensionIcon extension={extension} />
         <div className="min-w-0">
           <CardTitle className="truncate">{extension.name}</CardTitle>
-          <div className="mt-1 flex min-w-0 items-center gap-3 text-subtle-foreground ui-text-sm">
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-subtle-foreground ui-text-sm">
             <span className="flex shrink-0 items-center gap-1">
               <Tag className="size-3.5" />
               {getCategoryLabel(extension.category)}
@@ -85,7 +85,29 @@ export function ExtensionCatalogCard({
             ) : null}
           </div>
         </div>
-        <span className="flex size-5 items-center justify-center justify-self-end">{status}</span>
+        <span
+          className="flex size-5 items-center justify-center justify-self-end"
+          aria-label={
+            isInstalling
+              ? "Installing"
+              : hasRuntimeIssue
+                ? "Runtime issue"
+                : hasUpdate
+                  ? "Update available"
+                  : isUnavailableAgent
+                    ? "Unavailable"
+                    : extension.isInstalled
+                      ? "Installed"
+                      : "Available to install"
+          }
+        >
+          {status}
+        </span>
+        {extension.description ? (
+          <CardDescription className="col-span-3 mt-3 line-clamp-2">
+            {extension.description}
+          </CardDescription>
+        ) : null}
       </CardContent>
     </Card>
   );

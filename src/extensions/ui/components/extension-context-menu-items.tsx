@@ -8,45 +8,31 @@ import {
 } from "@/ui/icons";
 import type { MenuItem } from "@/ui/dropdown";
 import { hasSkillLocalOverride } from "@/features/ai/lib/skill-library";
-import type { UnifiedExtension } from "./extension-catalog-types";
+import type {
+  AppearanceSelection,
+  ExtensionCatalogActions,
+  UnifiedExtension,
+} from "./extension-catalog-types";
 import {
   getAppearanceSettingKey,
   getPrimaryActionLabel,
   isAppearanceExtension,
 } from "./extension-catalog-utils";
 
-type ExtensionAction = (extension: UnifiedExtension) => void | Promise<void>;
-
 export function buildExtensionContextMenuItems({
   extension,
-  settings,
-  isExtensionInstalling,
-  hasExtensionUpdate,
-  handleActivateExtension,
-  handleDeactivateExtension,
-  handleUseAppearance,
-  handleToggle,
-  handleUpdate,
-  handleResetSkillOverride,
-  handleUninstall,
+  appearanceSelection,
+  actions,
 }: {
   extension: UnifiedExtension | null;
-  settings: { theme: string; iconTheme: string };
-  isExtensionInstalling: (extension: UnifiedExtension) => boolean;
-  hasExtensionUpdate: (extension: UnifiedExtension) => boolean;
-  handleActivateExtension: ExtensionAction;
-  handleDeactivateExtension: ExtensionAction;
-  handleUseAppearance: (extension: UnifiedExtension, selectionId?: string) => void | Promise<void>;
-  handleToggle: ExtensionAction;
-  handleUpdate: ExtensionAction;
-  handleResetSkillOverride: ExtensionAction;
-  handleUninstall: ExtensionAction;
+  appearanceSelection: AppearanceSelection;
+  actions: ExtensionCatalogActions;
 }): MenuItem[] {
   if (!extension) return [];
 
   const items: MenuItem[] = [];
-  const isInstalling = isExtensionInstalling(extension);
-  const hasUpdate = hasExtensionUpdate(extension);
+  const isInstalling = actions.isInstalling(extension);
+  const hasUpdate = actions.hasUpdate(extension);
   const hasLocalOverride = extension.skill ? hasSkillLocalOverride(extension.skill) : false;
   const hasRuntimeIssue = Boolean(extension.runtimeIssues?.length);
   const isUnavailableAgent =
@@ -74,7 +60,7 @@ export function buildExtensionContextMenuItems({
           icon: <Check className="size-3.5 text-primary" weight="bold" />,
           disabled: isInstalling,
           onClick: () => {
-            void handleActivateExtension(extension);
+            void actions.activate(extension);
           },
         });
       } else {
@@ -84,13 +70,13 @@ export function buildExtensionContextMenuItems({
           icon: <XCircle className="size-3.5" weight="duotone" />,
           disabled: isInstalling,
           onClick: () => {
-            void handleDeactivateExtension(extension);
+            void actions.deactivate(extension);
           },
         });
       }
 
       const settingKey = getAppearanceSettingKey(extension);
-      const currentSelection = settingKey ? settings[settingKey] : undefined;
+      const currentSelection = settingKey ? appearanceSelection[settingKey] : undefined;
       const appearanceOptions = extension.appearanceOptions?.length
         ? extension.appearanceOptions
         : extension.selectionId
@@ -112,7 +98,7 @@ export function buildExtensionContextMenuItems({
             ),
             disabled: isCurrent || isInstalling,
             onClick: () => {
-              void handleUseAppearance(extension, option.id);
+              void actions.applyAppearance(extension, option.id);
             },
           });
         }
@@ -123,7 +109,7 @@ export function buildExtensionContextMenuItems({
           icon: <Check className="size-3.5 text-primary" weight="bold" />,
           disabled: extension.isActive || isInstalling,
           onClick: () => {
-            void handleUseAppearance(extension);
+            void actions.applyAppearance(extension);
           },
         });
       }
@@ -138,7 +124,7 @@ export function buildExtensionContextMenuItems({
         ),
         disabled: isInstalling,
         onClick: () => {
-          void handleToggle(extension);
+          void actions.toggle(extension);
         },
       });
     }
@@ -151,7 +137,7 @@ export function buildExtensionContextMenuItems({
       icon: <RefreshCw className="size-3.5" weight="duotone" />,
       disabled: isInstalling,
       onClick: () => {
-        void handleUpdate(extension);
+        void actions.update(extension);
       },
     });
   }
@@ -163,7 +149,7 @@ export function buildExtensionContextMenuItems({
       icon: <Reset className="size-3.5" weight="duotone" />,
       disabled: isInstalling,
       onClick: () => {
-        void handleResetSkillOverride(extension);
+        void actions.resetSkillOverride(extension);
       },
     });
   }
@@ -179,7 +165,7 @@ export function buildExtensionContextMenuItems({
       icon: <Download className="size-3.5" weight="fill" />,
       disabled: isInstalling || isUnavailableAgent,
       onClick: () => {
-        void handleToggle(extension);
+        void actions.toggle(extension);
       },
     });
   } else if (extension.category === "agent" || extension.category === "skill") {
@@ -190,7 +176,7 @@ export function buildExtensionContextMenuItems({
       disabled: isInstalling,
       tone: "destructive",
       onClick: () => {
-        void handleToggle(extension);
+        void actions.toggle(extension);
       },
     });
   } else if (extension.isMarketplace) {
@@ -201,7 +187,7 @@ export function buildExtensionContextMenuItems({
       disabled: isInstalling,
       tone: "destructive",
       onClick: () => {
-        void handleUninstall(extension);
+        void actions.uninstall(extension);
       },
     });
   }

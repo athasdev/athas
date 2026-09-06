@@ -60,3 +60,28 @@ export const EXTENSION_CATEGORIES = [
   { id: "skill", label: "Skills" },
   { id: "agent", label: "Agents" },
 ] as const;
+
+type ExtensionAction = (extension: UnifiedExtension) => void | Promise<void>;
+
+/**
+ * The single vocabulary every extension surface speaks: the catalog grid, the
+ * context menu and the detail view all take this object rather than
+ * re-listing the same handlers under their own prop names.
+ */
+export interface ExtensionCatalogActions {
+  isInstalling: (extension: UnifiedExtension) => boolean;
+  hasUpdate: (extension: UnifiedExtension) => boolean;
+  activate: ExtensionAction;
+  deactivate: ExtensionAction;
+  applyAppearance: (extension: UnifiedExtension, selectionId?: string) => void | Promise<void>;
+  toggle: ExtensionAction;
+  update: ExtensionAction;
+  uninstall: ExtensionAction;
+  resetSkillOverride: ExtensionAction;
+}
+
+/** The appearance settings a surface needs to mark the current theme selection. */
+export interface AppearanceSelection {
+  theme: string;
+  iconTheme: string;
+}

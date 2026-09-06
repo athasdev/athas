@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import {
   createSkillFromMarketplace,
+  hasMarketplaceSkillUpdate,
   resetSkillLocalOverride,
   resolveMarketplaceSkill,
   updateSkillFromMarketplace,
@@ -11,7 +12,10 @@ import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import type { UnifiedExtension } from "../components/extension-catalog-types";
+import type {
+  ExtensionCatalogActions,
+  UnifiedExtension,
+} from "../components/extension-catalog-types";
 import {
   getAppearanceOptionLabel,
   getAppearanceSettingKey,
@@ -29,6 +33,8 @@ export function useExtensionCatalogActions(settings: ExtensionCatalogActionSetti
   const [installingAgentIds, setInstallingAgentIds] = useState<Set<string>>(new Set());
   const { showToast } = useToast();
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
+  const availableExtensions = useExtensionStore.use.availableExtensions();
+  const extensionsWithUpdates = useExtensionStore.use.extensionsWithUpdates();
   const {
     installExtension,
     uninstallExtension,
@@ -409,20 +415,31 @@ export function useExtensionCatalogActions(settings: ExtensionCatalogActionSetti
     }
   };
 
-  const isExtensionInstalling = (extension: UnifiedExtension) =>
-    extension.category === "agent" &&
-    installingAgentIds.has(extension.agentId ?? extension.id.replace(/^agent:/, ""));
+  const isInstalling = (extension: UnifiedExtension) =>
+    Boolean(availableExtensions.get(extension.id)?.isInstalling) ||
+    (extension.category === "agent" &&
+      installingAgentIds.has(extension.agentId ?? extension.id.replace(/^agent:/, "")));
 
-  return {
-    agents,
-    isLoadingAgents,
-    isExtensionInstalling,
-    handleActivateExtension,
-    handleDeactivateExtension,
-    handleUseAppearance,
-    handleToggle,
-    handleUninstall,
-    handleUpdate,
-    handleResetSkillOverride,
+  const hasUpdate = (extension: UnifiedExtension) =>
+    Boolean(extension.hasUpdate) ||
+    extensionsWithUpdates.has(extension.id) ||
+    Boolean(
+      extension.skill &&
+      extension.marketplaceSkill &&
+      hasMarketplaceSkillUpdate(extension.skill, extension.marketplaceSkill),
+    );
+
+  const actions: ExtensionCatalogActions = {
+    isInstalling,
+    hasUpdate,
+    activate: handleActivateExtension,
+    deactivate: handleDeactivateExtension,
+    applyAppearance: handleUseAppearance,
+    toggle: handleToggle,
+    update: handleUpdate,
+    uninstall: handleUninstall,
+    resetSkillOverride: handleResetSkillOverride,
   };
+
+  return { agents, isLoadingAgents, actions };
 }

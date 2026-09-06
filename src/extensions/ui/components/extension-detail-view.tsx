@@ -1,4 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
+import type { ReactNode } from "react";
 import {
   ArrowSquareOutIcon as OpenExternal,
   ArrowClockwiseIcon as RefreshCw,
@@ -16,11 +17,27 @@ import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import { Card, CardContent } from "@/ui/card";
 import { Spinner } from "@/ui/spinner";
+import { WorkbenchContent } from "@/ui/workbench";
+import { ResourceContentSection } from "@/ui/resource";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/ui/item";
+import { Table, TableBody, TableCell, TableHead, TableRow } from "@/ui/table";
 import MarkdownRenderer from "@/features/ai/components/messages/markdown-renderer";
 import { hasSkillLocalOverride } from "@/features/ai/lib/skill-library";
 import { AppearancePreviewGraphic } from "@/extensions/appearance/components/appearance-preview";
 import { ExtensionIcon } from "./extension-catalog-icon";
-import type { UnifiedExtension } from "./extension-catalog-types";
+import type {
+  AppearanceSelection,
+  ExtensionCatalogActions,
+  UnifiedExtension,
+} from "./extension-catalog-types";
 import {
   canDeactivateAppearanceExtension,
   getCategoryLabel,
@@ -28,287 +45,314 @@ import {
   isAppearanceExtension,
 } from "./extension-catalog-utils";
 
+/** Skill instructions are lazy-loaded by the surface, so their state arrives as one slot. */
+interface SkillPreviewState {
+  isLoading: boolean;
+  error?: string;
+  onOpen: () => void;
+}
+
 interface ExtensionDetailViewProps {
+  breadcrumb?: ReactNode;
   extension: UnifiedExtension | null;
-  settings: { theme: string; iconTheme: string };
-  isInstalling: (extension: UnifiedExtension) => boolean;
-  hasUpdate: (extension: UnifiedExtension) => boolean;
-  onUseAppearance: (extension: UnifiedExtension, selectionId?: string) => void | Promise<void>;
-  onToggle: (extension: UnifiedExtension) => void | Promise<void>;
-  onUninstall: (extension: UnifiedExtension) => void | Promise<void>;
-  onUpdate: (extension: UnifiedExtension) => void | Promise<void>;
-  onDeactivate: (extension: UnifiedExtension) => void | Promise<void>;
-  onResetSkillOverride: (extension: UnifiedExtension) => void | Promise<void>;
+  appearanceSelection: AppearanceSelection;
+  actions: ExtensionCatalogActions;
   onEditSkill: (skillId: string) => void;
-  onOpenSkillPreview: () => void;
-  isSkillPreviewLoading: boolean;
-  skillPreviewError?: string;
+  skillPreview: SkillPreviewState;
 }
 
 export function ExtensionDetailView({
+  breadcrumb,
   extension,
-  settings,
-  isInstalling,
-  hasUpdate,
-  onUseAppearance,
-  onToggle,
-  onUninstall,
-  onUpdate,
-  onDeactivate,
-  onResetSkillOverride,
+  appearanceSelection,
+  actions,
   onEditSkill,
-  onOpenSkillPreview,
-  isSkillPreviewLoading,
-  skillPreviewError,
+  skillPreview,
 }: ExtensionDetailViewProps) {
   if (!extension) {
     return <EmptyState layout="sidebar" message="Extension not found." />;
   }
 
   const skillContent = extension.skill?.content ?? extension.marketplaceSkill?.content;
+  const isInstalling = actions.isInstalling(extension);
+  const hasUpdate = actions.hasUpdate(extension);
+
+  const headerActions = (
+    <>
+      {extension.skill ? (
+        <Button variant="accent" onClick={() => extension.skill && onEditSkill(extension.skill.id)}>
+          <Pencil />
+          Edit
+        </Button>
+      ) : null}
+      {extension.sourceUrl ? (
+        <Button
+          variant="ghost"
+          onClick={() => extension.sourceUrl && void openUrl(extension.sourceUrl)}
+        >
+          <OpenExternal />
+          Source
+        </Button>
+      ) : null}
+      {!extension.isBundled ? (
+        <Button
+          variant={
+            isAppearanceExtension(extension) && extension.isActive
+              ? "default"
+              : isAppearanceExtension(extension) && extension.isInstalled
+                ? "accent"
+                : extension.isInstalled &&
+                    (extension.category === "agent" || extension.category === "skill")
+                  ? "danger"
+                  : extension.isInstalled && extension.isEnabled
+                    ? "default"
+                    : "accent"
+          }
+          onClick={() => void actions.toggle(extension)}
+          disabled={
+            (isAppearanceExtension(extension) && extension.isActive) ||
+            isInstalling ||
+            (extension.category === "agent" &&
+              !extension.isInstalled &&
+              extension.canInstall === false)
+          }
+        >
+          {isAppearanceExtension(extension) && extension.isInstalled ? (
+            <Check />
+          ) : extension.isInstalled &&
+            (extension.category === "agent" || extension.category === "skill") ? (
+            <Trash />
+          ) : extension.isInstalled && extension.isEnabled ? (
+            <XCircle />
+          ) : extension.isInstalled ? (
+            <Check />
+          ) : (
+            <Download weight="fill" />
+          )}
+          {getPrimaryActionLabel(extension)}
+        </Button>
+      ) : null}
+      {extension.isMarketplace &&
+      extension.isInstalled &&
+      extension.category !== "agent" &&
+      extension.category !== "skill" ? (
+        <Button
+          variant="danger"
+          onClick={() => void actions.uninstall(extension)}
+          disabled={isInstalling}
+        >
+          <Trash />
+          Uninstall
+        </Button>
+      ) : null}
+      {hasUpdate && extension.isInstalled ? (
+        <Button
+          variant="default"
+          onClick={() => void actions.update(extension)}
+          disabled={isInstalling}
+        >
+          <RefreshCw />
+          Update
+        </Button>
+      ) : null}
+      {canDeactivateAppearanceExtension(extension) ? (
+        <Button
+          variant="ghost"
+          disabled={isInstalling}
+          onClick={() => void actions.deactivate(extension)}
+        >
+          <XCircle />
+          Deactivate
+        </Button>
+      ) : null}
+      {extension.skill && hasSkillLocalOverride(extension.skill) ? (
+        <Button variant="default" onClick={() => void actions.resetSkillOverride(extension)}>
+          <Reset />
+          Reset
+        </Button>
+      ) : null}
+    </>
+  );
+
+  const metadata = [
+    ["Category", getCategoryLabel(extension.category)],
+    ["Publisher", extension.publisher],
+    ["Version", extension.installedVersion ?? extension.version],
+    ["License", extension.license],
+    [
+      "Distribution",
+      extension.isBundled ? "Built-in" : extension.isMarketplace ? "Marketplace" : "Local",
+    ],
+  ].filter((entry) => entry[1]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-6 py-8">
-      <div className="flex items-start gap-4">
-        <ExtensionIcon extension={extension} />
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate font-semibold text-foreground ui-text-base">{extension.name}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-subtle-foreground ui-text-sm">
-            {extension.publisher ? <span>By {extension.publisher}</span> : null}
-            {extension.version ? <span>v{extension.version}</span> : null}
-            {extension.license ? <span>{extension.license}</span> : null}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5">
-        <Badge variant="default">{getCategoryLabel(extension.category)}</Badge>
-        {extension.isInstalled ? <Badge variant="accent">Installed</Badge> : null}
-        {extension.isInstalled && !extension.isEnabled ? (
-          <Badge variant="default">Disabled</Badge>
-        ) : null}
-        {hasUpdate(extension) ? <Badge variant="accent">Update</Badge> : null}
-        {extension.isActive ? <Badge variant="accent">Active</Badge> : null}
-        {extension.isBundled ? <Badge variant="accent">Built-in</Badge> : null}
-      </div>
-
-      {extension.description ? (
-        <p className="leading-6 text-subtle-foreground ui-text-base">{extension.description}</p>
-      ) : null}
-
-      {extension.runtimeIssues?.length ? (
-        <Alert tone="error">
-          <AlertDescription>{extension.runtimeIssues[0]?.message}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      {isAppearanceExtension(extension) && extension.appearanceOptions?.length ? (
-        <div className="border-border/70 border-t pt-5">
-          <div className="mb-2 font-medium text-foreground ui-text-sm">
-            {extension.category === "theme" ? "Themes" : "Icon themes"}
-          </div>
-          <div className="space-y-2">
-            {extension.appearanceOptions.map((option) => {
-              const currentSelection =
-                extension.category === "theme" ? settings.theme : settings.iconTheme;
-              const isCurrent = currentSelection === option.id;
-
-              return (
-                <div
-                  key={option.id}
-                  className="flex min-w-0 items-center gap-3 rounded-lg border border-border/65 bg-background px-3 py-2"
-                >
-                  {option.preview ? <AppearancePreviewGraphic preview={option.preview} /> : null}
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-foreground ui-text-sm">
-                      {option.name}
-                    </div>
-                    {option.description ? (
-                      <div className="mt-0.5 line-clamp-1 text-subtle-foreground ui-text-sm">
-                        {option.description}
-                      </div>
-                    ) : null}
-                  </div>
-                  <Button
-                    variant={isCurrent ? "default" : "accent"}
-                    active={isCurrent}
-                    disabled={!extension.isInstalled || isCurrent}
-                    onClick={() => void onUseAppearance(extension, option.id)}
-                  >
-                    <Check />
-                    {isCurrent ? "Current" : extension.isEnabled ? "Use" : "Activate and use"}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap gap-2">
-        {extension.skill ? (
-          <Button
-            variant="accent"
-            onClick={() => extension.skill && onEditSkill(extension.skill.id)}
-          >
-            <Pencil />
-            Edit
-          </Button>
-        ) : null}
-        {extension.sourceUrl ? (
-          <Button
-            variant="ghost"
-            onClick={() => extension.sourceUrl && void openUrl(extension.sourceUrl)}
-          >
-            <OpenExternal />
-            Source
-          </Button>
-        ) : null}
-        {!extension.isBundled ? (
-          <Button
-            variant={
-              isAppearanceExtension(extension) && extension.isActive
-                ? "default"
-                : isAppearanceExtension(extension) && extension.isInstalled
-                  ? "accent"
-                  : extension.isInstalled &&
-                      (extension.category === "agent" || extension.category === "skill")
-                    ? "ghost"
-                    : extension.isInstalled && extension.isEnabled
-                      ? "default"
-                      : "accent"
-            }
-            className={
-              extension.isInstalled &&
-              (extension.category === "agent" || extension.category === "skill")
-                ? "text-subtle-foreground hover:text-destructive"
-                : undefined
-            }
-            onClick={() => void onToggle(extension)}
-            disabled={
-              (isAppearanceExtension(extension) && extension.isActive) ||
-              isInstalling(extension) ||
-              (extension.category === "agent" &&
-                !extension.isInstalled &&
-                extension.canInstall === false)
-            }
-          >
-            {isAppearanceExtension(extension) && extension.isInstalled ? (
-              <Check />
-            ) : extension.isInstalled &&
-              (extension.category === "agent" || extension.category === "skill") ? (
-              <Trash />
-            ) : extension.isInstalled && extension.isEnabled ? (
-              <XCircle />
-            ) : extension.isInstalled ? (
-              <Check />
-            ) : (
-              <Download weight="fill" />
-            )}
-            {getPrimaryActionLabel(extension)}
-          </Button>
-        ) : null}
-        {extension.isMarketplace &&
-        extension.isInstalled &&
-        extension.category !== "agent" &&
-        extension.category !== "skill" ? (
-          <Button
-            variant="ghost"
-            className="text-subtle-foreground hover:text-destructive"
-            onClick={() => void onUninstall(extension)}
-            disabled={isInstalling(extension)}
-          >
-            <Trash />
-            Uninstall
-          </Button>
-        ) : null}
-        {hasUpdate(extension) && extension.isInstalled ? (
-          <Button
-            variant="default"
-            onClick={() => void onUpdate(extension)}
-            disabled={isInstalling(extension)}
-          >
-            <RefreshCw />
-            Update
-          </Button>
-        ) : null}
-        {canDeactivateAppearanceExtension(extension) ? (
-          <Button
-            variant="ghost"
-            className="text-subtle-foreground"
-            onClick={() => void onDeactivate(extension)}
-          >
-            <XCircle />
-            Deactivate
-          </Button>
-        ) : null}
-        {extension.skill && hasSkillLocalOverride(extension.skill) ? (
-          <Button variant="default" onClick={() => void onResetSkillOverride(extension)}>
-            <Reset />
-            Reset
-          </Button>
-        ) : null}
-      </div>
-
-      {extension.category === "skill" ? (
-        <div className="border-border/70 border-t pt-5">
-          <Accordion
-            key={extension.id}
-            defaultValue={[]}
-            onValueChange={(value) => {
-              if (value.includes("instructions")) onOpenSkillPreview();
-            }}
-          >
-            <AccordionItem value="instructions">
-              <AccordionTrigger>Skill instructions</AccordionTrigger>
-              <AccordionContent className="gap-3 pt-2">
-                <p className="text-subtle-foreground ui-text-sm">
-                  Review what this skill asks the agent to do before adding it.
-                </p>
-                {isSkillPreviewLoading ? (
-                  <Card variant="muted">
-                    <CardContent>
-                      <Spinner label="Loading skill instructions" showLabel />
-                    </CardContent>
-                  </Card>
-                ) : skillPreviewError ? (
-                  <Alert tone="error">
-                    <AlertDescription>{skillPreviewError}</AlertDescription>
-                  </Alert>
-                ) : skillContent ? (
-                  <Card variant="muted">
-                    <CardContent className="min-w-0 overflow-hidden">
-                      <MarkdownRenderer content={skillContent} />
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Alert>
-                    <AlertDescription>
-                      This skill does not provide previewable instructions.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-      ) : null}
-
-      <div className="border-border/70 border-t pt-5">
-        <div className="mb-2 font-medium text-foreground ui-text-sm">Contributions</div>
-        <div className="flex flex-wrap gap-1.5">
-          {(extension.contributionSummary?.length
-            ? extension.contributionSummary
-            : extension.extensions
-              ? extension.extensions
-              : [getCategoryLabel(extension.category)]
-          ).map((item) => (
-            <Badge key={item} variant="default">
-              {item}
+    <WorkbenchContent
+      key={extension.id}
+      title={extension.name}
+      description={extension.description}
+      breadcrumb={breadcrumb}
+      leading={<ExtensionIcon extension={extension} />}
+      actions={headerActions}
+      status={
+        <>
+          {isInstalling ? (
+            <Spinner label="Installing" showLabel compact />
+          ) : (
+            <Badge variant={extension.isInstalled && extension.isEnabled ? "success" : "muted"}>
+              {extension.isActive
+                ? "Active"
+                : extension.isInstalled
+                  ? extension.isEnabled
+                    ? "Installed"
+                    : "Disabled"
+                  : "Not installed"}
             </Badge>
-          ))}
-        </div>
+          )}
+          {hasUpdate ? <Badge variant="accent">Update available</Badge> : null}
+        </>
+      }
+    >
+      <div className="space-y-8">
+        {extension.runtimeIssues?.length ? (
+          <Alert tone="error">
+            <AlertDescription>{extension.runtimeIssues[0]?.message}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <ResourceContentSection title="Extension details">
+          <Card variant="outline">
+            <CardContent>
+              <Table>
+                <TableBody>
+                  {metadata.map(([label, value]) => (
+                    <TableRow key={label}>
+                      <TableHead scope="row" className="w-1/3">
+                        {label}
+                      </TableHead>
+                      <TableCell className="break-all">{value}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </ResourceContentSection>
+
+        {isAppearanceExtension(extension) && extension.appearanceOptions?.length ? (
+          <ResourceContentSection title={extension.category === "theme" ? "Themes" : "Icon themes"}>
+            <Card variant="outline">
+              <CardContent>
+                <ItemGroup>
+                  {extension.appearanceOptions.map((option) => {
+                    const isCurrent =
+                      (extension.category === "theme"
+                        ? appearanceSelection.theme
+                        : appearanceSelection.iconTheme) === option.id;
+                    return (
+                      <Item key={option.id} role="listitem">
+                        {option.preview ? (
+                          <ItemMedia>
+                            <AppearancePreviewGraphic preview={option.preview} size="detail" />
+                          </ItemMedia>
+                        ) : null}
+                        <ItemContent>
+                          <ItemTitle>{option.name}</ItemTitle>
+                          {option.description ? (
+                            <ItemDescription>{option.description}</ItemDescription>
+                          ) : null}
+                        </ItemContent>
+                        <ItemActions>
+                          <Button
+                            variant={isCurrent ? "default" : "accent"}
+                            active={isCurrent}
+                            disabled={!extension.isInstalled || isCurrent || isInstalling}
+                            onClick={() => void actions.applyAppearance(extension, option.id)}
+                          >
+                            <Check />
+                            {isCurrent
+                              ? "Current"
+                              : extension.isEnabled
+                                ? "Use"
+                                : "Activate and use"}
+                          </Button>
+                        </ItemActions>
+                      </Item>
+                    );
+                  })}
+                </ItemGroup>
+              </CardContent>
+            </Card>
+          </ResourceContentSection>
+        ) : null}
+
+        {extension.category === "skill" ? (
+          <ResourceContentSection title="Instructions">
+            <Accordion
+              key={extension.id}
+              defaultValue={[]}
+              onValueChange={(value) => {
+                if (value.includes("instructions")) skillPreview.onOpen();
+              }}
+            >
+              <AccordionItem value="instructions">
+                <AccordionTrigger>Skill instructions</AccordionTrigger>
+                <AccordionContent className="gap-3 pt-2">
+                  <p className="text-subtle-foreground ui-text-sm">
+                    Review what this skill asks the agent to do before adding it.
+                  </p>
+                  {skillPreview.isLoading ? (
+                    <Card variant="muted">
+                      <CardContent>
+                        <Spinner label="Loading skill instructions" showLabel />
+                      </CardContent>
+                    </Card>
+                  ) : skillPreview.error ? (
+                    <Alert tone="error">
+                      <AlertDescription>{skillPreview.error}</AlertDescription>
+                    </Alert>
+                  ) : skillContent ? (
+                    <Card variant="muted">
+                      <CardContent className="min-w-0 overflow-hidden">
+                        <MarkdownRenderer content={skillContent} />
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Alert>
+                      <AlertDescription>
+                        This skill does not provide previewable instructions.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </ResourceContentSection>
+        ) : null}
+
+        <ResourceContentSection title="Contributions">
+          <Card variant="outline">
+            <CardContent>
+              <ItemGroup>
+                {(extension.contributionSummary?.length
+                  ? extension.contributionSummary
+                  : extension.extensions
+                    ? extension.extensions
+                    : [getCategoryLabel(extension.category)]
+                ).map((item) => (
+                  <Item key={item} role="listitem">
+                    <ItemMedia variant="icon">
+                      <Check />
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemTitle>{item}</ItemTitle>
+                    </ItemContent>
+                  </Item>
+                ))}
+              </ItemGroup>
+            </CardContent>
+          </Card>
+        </ResourceContentSection>
       </div>
-    </div>
+    </WorkbenchContent>
   );
 }
