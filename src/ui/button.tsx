@@ -25,6 +25,7 @@ export const buttonVariants = cva(
         false: "px-2.5",
       },
       size: {
+        compact: "h-5 gap-1 ui-text-caption [&_svg:not([class*='size-'])]:size-3",
         default: "h-7 gap-1.5 ui-text-sm [&_svg:not([class*='size-'])]:size-3.5",
         chrome:
           "h-chrome-control gap-chrome px-1.5 ui-text-chrome [&_svg:not([class*='size-'])]:size-[1em]",
@@ -36,6 +37,7 @@ export const buttonVariants = cva(
       size: "default",
     },
     compoundVariants: [
+      { iconOnly: true, size: "compact", className: "w-5" },
       { iconOnly: true, size: "default", className: "w-7" },
       { iconOnly: true, size: "chrome", className: "w-chrome-control" },
     ],

@@ -12,6 +12,8 @@ const cardVariants = cva(
         muted: "bg-surface/55",
         outline: "border border-border/70 bg-transparent",
         elevated: "bg-surface/65 shadow-(--shadow-card)",
+        interactive:
+          "border border-border/70 bg-surface/45 cursor-default transition-colors hover:bg-accent/60 active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
       },
     },
     defaultVariants: {
