@@ -4,12 +4,14 @@ import { useGitDataController } from "@/features/git/hooks/use-git-data-controll
 import { useGitStore } from "@/features/git/stores/git.store";
 import type { GitDiff, GitDiffStat } from "@/features/git/types/git.types";
 import {
+  createAgentSessionChangeSet,
   createCommitChangeSet,
   createWorkingTreeChangeSet,
   createWorkingTreeFingerprint,
   EMPTY_PROJECT_REVIEW_STATE,
   getPendingCommits,
 } from "../lib/review-model";
+import { useAgentChangesStore } from "../stores/agent-changes.store";
 import { useReviewStore } from "../stores/review.store";
 import type { ReviewChangeSet } from "../types/review.types";
 
@@ -21,6 +23,7 @@ export function useReviewChangeSets(workspacePath?: string | null) {
     isActive: true,
   });
   const gitStatus = useGitStore((state) => state.gitStatus);
+  const agentSessions = useAgentChangesStore((state) => state.sessions);
   const commits = useGitStore((state) => state.commits);
   const isLoadingGitData = useGitStore((state) => state.isLoadingGitData);
   const projectState = useReviewStore((state) =>
@@ -109,6 +112,20 @@ export function useReviewChangeSets(workspacePath?: string | null) {
     });
   }, [fingerprint, gitStatus, projectState?.reviewedWorkingTreeFingerprint, workingTreeStats]);
 
+  const agentSessionChangeSets = useMemo<ReviewChangeSet[]>(
+    () =>
+      Object.values(agentSessions)
+        .filter(
+          (session) =>
+            Object.keys(session.files).length > 0 &&
+            (!workspacePath || !session.workspacePath || session.workspacePath === workspacePath),
+        )
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+        .map(createAgentSessionChangeSet)
+        .filter((changeSet) => changeSet.files.length > 0),
+    [agentSessions, workspacePath],
+  );
+
   const pendingHashes = useMemo(
     () => new Set(pendingCommits.map((commit) => commit.hash)),
     [pendingCommits],
@@ -123,19 +140,25 @@ export function useReviewChangeSets(workspacePath?: string | null) {
           !pendingHashes.has(commit.hash),
         ),
       );
-    return workingTreeChangeSet ? [workingTreeChangeSet, ...commitSets] : commitSets;
-  }, [commitDiffs, commits, pendingHashes, workingTreeChangeSet]);
+    const leading = workingTreeChangeSet ? [workingTreeChangeSet] : [];
+    return [...agentSessionChangeSets, ...leading, ...commitSets];
+  }, [agentSessionChangeSets, commitDiffs, commits, pendingHashes, workingTreeChangeSet]);
   const queueChangeSets = useMemo<ReviewChangeSet[]>(() => {
     const pending = pendingCommits.map((commit) =>
       createCommitChangeSet(commit, commitDiffs[commit.hash] ?? [], false),
     );
-    return workingTreeChangeSet && !workingTreeChangeSet.reviewed
-      ? [workingTreeChangeSet, ...pending]
-      : pending;
-  }, [commitDiffs, pendingCommits, workingTreeChangeSet]);
+    const leading =
+      workingTreeChangeSet && !workingTreeChangeSet.reviewed ? [workingTreeChangeSet] : [];
+    return [
+      ...agentSessionChangeSets.filter((changeSet) => !changeSet.reviewed),
+      ...leading,
+      ...pending,
+    ];
+  }, [agentSessionChangeSets, commitDiffs, pendingCommits, workingTreeChangeSet]);
 
   return {
     activeRepoPath,
+    agentSessions,
     gitStatus,
     commits,
     projectState: projectState ?? EMPTY_PROJECT_REVIEW_STATE,

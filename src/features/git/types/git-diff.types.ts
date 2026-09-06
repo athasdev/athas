@@ -120,7 +120,7 @@ export interface MultiFileDiff {
   };
   reviewSession?: {
     id: string;
-    sourceKind: "working-tree" | "commit";
+    sourceKind: "working-tree" | "commit" | "agent-session";
     sourceFingerprint?: string;
   };
 }

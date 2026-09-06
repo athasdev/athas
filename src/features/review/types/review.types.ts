@@ -9,9 +9,30 @@ export interface ReviewFileSummary {
   deletions: number;
 }
 
+export type ReviewChangeSetKind = "working-tree" | "commit" | "agent-session";
+
+/** One file an agent session rewrote, from its state before the session to now. */
+export interface AgentChangeFile {
+  path: string;
+  oldText: string;
+  newText: string;
+}
+
+export interface AgentChangeSession {
+  sessionId: string;
+  title: string;
+  workspacePath: string | null;
+  startedAt: string;
+  updatedAt: string;
+  reviewedAt: string | null;
+  files: Record<string, AgentChangeFile>;
+}
+
 export interface ReviewChangeSet {
   id: string;
-  kind: "working-tree" | "commit";
+  kind: ReviewChangeSetKind;
+  /** Set on agent-session change sets; identifies the chat that produced them. */
+  sessionId?: string;
   title: string;
   description?: string;
   author?: string;

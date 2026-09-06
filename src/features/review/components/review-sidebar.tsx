@@ -23,7 +23,9 @@ import {
 } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { useReviewChangeSets } from "../hooks/use-review-change-sets";
+import { useAgentChangesStore } from "../stores/agent-changes.store";
 import { useReviewStore } from "../stores/review.store";
+import { openAgentSessionDiffBuffer } from "../utils/open-agent-session-diff-buffer";
 import type { ReviewChangeSet, ReviewRiskLevel, ReviewViewMode } from "../types/review.types";
 import { ReviewAccessGate } from "./review-access-gate";
 import { ReviewChangeCard } from "./review-change-card";
@@ -48,6 +50,7 @@ function ReviewSidebarContent() {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const {
     activeRepoPath,
+    agentSessions,
     gitStatus,
     commits,
     projectState,
@@ -58,6 +61,7 @@ function ReviewSidebarContent() {
     refresh,
   } = useReviewChangeSets(rootFolderPath);
   const reviewActions = useReviewStore.use.actions();
+  const agentChangeActions = useAgentChangesStore.use.actions();
   const reviewedInSession =
     projectState.reviewedCommitHashes.length +
     (fingerprint && projectState.reviewedWorkingTreeFingerprint === fingerprint ? 1 : 0);
@@ -76,6 +80,14 @@ function ReviewSidebarContent() {
   );
 
   const openChangeSet = async (changeSet: ReviewChangeSet) => {
+    if (changeSet.kind === "agent-session") {
+      const session = changeSet.sessionId ? agentSessions[changeSet.sessionId] : undefined;
+      if (!session) return;
+      const bufferId = openAgentSessionDiffBuffer({ session, repoPath: activeRepoPath });
+      if (!bufferId) toast.info("This agent session left no reviewable changes.");
+      return;
+    }
+
     if (!activeRepoPath) return;
     if (changeSet.kind === "working-tree") {
       const bufferId = openWorkingTreeDiffBuffer({
@@ -111,6 +123,10 @@ function ReviewSidebarContent() {
   };
 
   const markReviewed = (changeSet: ReviewChangeSet) => {
+    if (changeSet.kind === "agent-session") {
+      if (changeSet.sessionId) agentChangeActions.markReviewed(changeSet.sessionId);
+      return;
+    }
     if (!activeRepoPath) return;
     if (changeSet.kind === "working-tree") {
       if (fingerprint) reviewActions.markWorkingTreeReviewed(activeRepoPath, fingerprint);

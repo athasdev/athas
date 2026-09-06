@@ -5,6 +5,7 @@ import {
   GitDiffIcon,
   ShieldCheckIcon,
   ShieldWarningIcon,
+  SparkleIcon,
   WarningIcon,
 } from "@/ui/icons";
 import { SidebarIconButton, SidebarListActionRow, SidebarListItem } from "@/ui/sidebar";
@@ -53,7 +54,12 @@ export function ReviewChangeCard({
     .filter(Boolean)
     .join(" · ");
   const riskTooltip = [RISK_LABELS[changeSet.risk], ...changeSet.riskReasons].join(" · ");
-  const KindIcon = changeSet.kind === "working-tree" ? GitDiffIcon : GitCommitIcon;
+  const KindIcon =
+    changeSet.kind === "agent-session"
+      ? SparkleIcon
+      : changeSet.kind === "working-tree"
+        ? GitDiffIcon
+        : GitCommitIcon;
   const row = (
     <SidebarListItem
       leading={

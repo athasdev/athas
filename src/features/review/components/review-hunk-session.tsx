@@ -15,6 +15,7 @@ import {
   requestReviewHunkInsight,
   requestReviewHunkSummaries,
 } from "../services/review-intelligence";
+import { useAgentChangesStore } from "../stores/agent-changes.store";
 import { useReviewStore } from "../stores/review.store";
 import type {
   ReviewHunkInsight,
@@ -160,6 +161,10 @@ export function ReviewHunkSession({ multiDiff }: { multiDiff: MultiFileDiff }) {
       if (reviewSession.sourceFingerprint) {
         reviewActions.markWorkingTreeReviewed(repoPath, reviewSession.sourceFingerprint);
       }
+    } else if (reviewSession.sourceKind === "agent-session") {
+      useAgentChangesStore
+        .getState()
+        .actions.markReviewed(reviewSession.id.replace(/^agent-session:/, ""));
     } else {
       reviewActions.markCommitReviewed(repoPath, multiDiff.commitHash);
     }

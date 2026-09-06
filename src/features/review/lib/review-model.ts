@@ -1,5 +1,7 @@
 import type { GitCommit, GitDiff, GitDiffStat, GitStatus } from "@/features/git/types/git.types";
+import { diffTextLines } from "@/features/git/utils/line-diff";
 import type {
+  AgentChangeSession,
   ProjectReviewState,
   ReviewChangeSet,
   ReviewFileSummary,
@@ -194,5 +196,49 @@ export function createWorkingTreeChangeSet({
     riskReasons: risk.reasons,
     categories: getCategories(files.map((file) => file.path)),
     reviewed,
+  };
+}
+
+function toWorkspaceRelativePath(path: string, workspacePath: string | null): string {
+  if (!workspacePath) return path;
+  const prefix = workspacePath.endsWith("/") ? workspacePath : `${workspacePath}/`;
+  return path.startsWith(prefix) ? path.slice(prefix.length) : path;
+}
+
+export function summarizeAgentSessionFiles(session: AgentChangeSession): ReviewFileSummary[] {
+  return (
+    Object.values(session.files)
+      .map((file) => {
+        const ops = diffTextLines(file.oldText, file.newText);
+        return {
+          path: toWorkspaceRelativePath(file.path, session.workspacePath),
+          additions: ops.filter((op) => op.type === "added").length,
+          deletions: ops.filter((op) => op.type === "removed").length,
+        };
+      })
+      // A file the agent edited and then put back is nothing to review.
+      .filter((file) => file.additions > 0 || file.deletions > 0)
+      .sort((left, right) => left.path.localeCompare(right.path))
+  );
+}
+
+export function createAgentSessionChangeSet(session: AgentChangeSession): ReviewChangeSet {
+  const files = summarizeAgentSessionFiles(session);
+  const risk = classifyReviewRisk(files);
+
+  return {
+    id: `agent-session:${session.sessionId}`,
+    kind: "agent-session",
+    sessionId: session.sessionId,
+    title: session.title,
+    description: "Files this agent session changed",
+    date: session.updatedAt,
+    files,
+    additions: files.reduce((total, file) => total + file.additions, 0),
+    deletions: files.reduce((total, file) => total + file.deletions, 0),
+    risk: risk.level,
+    riskReasons: risk.reasons,
+    categories: getCategories(files.map((file) => file.path)),
+    reviewed: session.reviewedAt !== null,
   };
 }
