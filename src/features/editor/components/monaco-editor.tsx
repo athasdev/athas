@@ -742,6 +742,13 @@ export function MonacoEditor({
       cursorBlinking:
         vimModeEnabled && vimCurrentMode === "normal" ? "solid" : editorCursorBlinking,
       contextmenu: false,
+      definitionLinkOpensInPeek: false,
+      gotoLocation: {
+        multipleDefinitions: "goto",
+        multipleDeclarations: "goto",
+        multipleTypeDefinitions: "goto",
+        multipleImplementations: "goto",
+      },
       overviewRulerLanes: 0,
       fixedOverflowWidgets: true,
       "semanticHighlighting.enabled": false,
@@ -1749,6 +1756,24 @@ export function MonacoEditor({
       if (cached.selection) editor.setSelection(toMonacoRange(model, cached.selection));
     }
   }, [activeBufferId, isActiveSurface, viewStateKey]);
+
+  const pendingNavigation = useEditorStateStore((state) =>
+    state.pendingNavigation?.bufferId === activeBufferId ? state.pendingNavigation : null,
+  );
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    const model = modelRef.current;
+    if (!editor || !model || !isActiveSurface || !pendingNavigation) return;
+
+    const range = toMonacoRange(model, pendingNavigation.range);
+    editor.setSelection(range);
+    editor.revealRangeInCenter(range);
+    editor.focus();
+    if (useEditorStateStore.getState().pendingNavigation === pendingNavigation) {
+      useEditorStateStore.getState().actions.requestNavigation(null);
+    }
+  }, [isActiveSurface, pendingNavigation]);
 
   if (!buffer) return null;
 

@@ -1,25 +1,19 @@
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { getJavaClassFileName, isJavaClassFileUri } from "@/features/editor/lsp/java-class-file";
+import {
+  navigateToLspLocation,
+  type LspNavigationLocation,
+} from "@/features/editor/lsp/location-navigation";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
-import {
-  calculateOffsetFromContentPosition,
-  getLineTextFromContent,
-  getLineTextsFromContent,
-} from "@/features/editor/utils/position";
+import { getLineTextFromContent, getLineTextsFromContent } from "@/features/editor/utils/position";
 import { useReferencesStore } from "@/features/references/stores/references.store";
 import { showChoiceDialog } from "@/ui/dialog";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { toast } from "sonner";
-import type { CallHierarchyItem, Range, TypeHierarchyItem } from "vscode-languageserver-protocol";
-
-type LspNavigationLocation = {
-  uri: string;
-  range: Range;
-};
+import type { CallHierarchyItem, TypeHierarchyItem } from "vscode-languageserver-protocol";
 
 type LspNavigationClient = {
   getDefinition: (
@@ -50,71 +44,6 @@ function getActiveEditorContext() {
     bufferStore,
     editorState: useEditorStateStore.getState(),
   };
-}
-
-async function navigateToLspLocation(target: LspNavigationLocation): Promise<void> {
-  const context = getActiveEditorContext();
-  if (!context) return;
-
-  const { activeBuffer, bufferStore, editorState } = context;
-  const [{ LspClient }, { readFileContent }, { filePathFromUri }] = await Promise.all([
-    import("@/features/editor/lsp/lsp-client"),
-    import("@/features/file-system/controllers/file-operations"),
-    import("@/features/editor/lsp/workspace-edit"),
-  ]);
-
-  useJumpListStore.getState().actions.pushEntry({
-    bufferId: activeBuffer.id,
-    filePath: activeBuffer.path,
-    line: editorState.cursorPosition.line,
-    column: editorState.cursorPosition.column,
-    offset: editorState.cursorPosition.offset,
-    scrollTop: editorState.scrollTop,
-    scrollLeft: editorState.scrollLeft,
-  });
-
-  const isJavaClassFile = isJavaClassFileUri(target.uri);
-  const filePath = isJavaClassFile ? target.uri : filePathFromUri(target.uri);
-  const existingBuffer = bufferStore.buffers.find((b) => b.path === filePath);
-
-  if (existingBuffer) {
-    bufferStore.actions.setActiveBuffer(existingBuffer.id);
-  } else if (isJavaClassFile) {
-    const content = await LspClient.getInstance().getJavaClassFileContents(
-      activeBuffer.path,
-      target.uri,
-    );
-    const bufferId = bufferStore.actions.openContent({
-      type: "editor",
-      path: target.uri,
-      name: getJavaClassFileName(target.uri),
-      content,
-      isVirtual: true,
-      readOnly: true,
-      language: "java",
-    });
-    bufferStore.actions.setActiveBuffer(bufferId);
-  } else {
-    const content = await readFileContent(filePath);
-    const fileName = filePath.split("/").pop() || "untitled";
-    const bufferId = bufferStore.actions.openBuffer(filePath, fileName, content);
-    bufferStore.actions.setActiveBuffer(bufferId);
-  }
-
-  setTimeout(() => {
-    const content = editorAPI.getContent();
-    const offset = calculateOffsetFromContentPosition(
-      content,
-      target.range.start.line,
-      target.range.start.character,
-    );
-
-    editorAPI.setCursorPosition({
-      line: target.range.start.line,
-      column: target.range.start.character,
-      offset,
-    });
-  }, 100);
 }
 
 async function goToActiveLspLocation(

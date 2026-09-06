@@ -74,7 +74,9 @@ export function filePathFromUri(uri: string): string {
 
   try {
     const url = new URL(uri);
-    return decodeURIComponent(url.pathname);
+    const path = decodeURIComponent(url.pathname);
+    if (url.hostname) return `//${url.hostname}${path}`;
+    return /^\/[A-Za-z]:\//.test(path) ? path.slice(1) : path;
   } catch {
     return decodeURIComponent(uri.replace(/^file:\/\//, ""));
   }

@@ -16,10 +16,20 @@ declare global {
     };
     __athasMonacoContextMenuInitialized?: boolean;
     __athasMonacoExternalLinkOpenerInitialized?: boolean;
+    __athasMonacoEditorOpenerInitialized?: boolean;
   }
 }
 
 if (typeof window !== "undefined") {
+  if (!window.__athasMonacoEditorOpenerInitialized) {
+    window.__athasMonacoEditorOpenerInitialized = true;
+    monacoEditor.registerEditorOpener({
+      openCodeEditor: async (...args) => {
+        const { athasEditorOpener } = await import("./editor-opener");
+        return athasEditorOpener.openCodeEditor(...args);
+      },
+    });
+  }
   if (!window.__athasMonacoExternalLinkOpenerInitialized) {
     window.__athasMonacoExternalLinkOpenerInitialized = true;
     monacoEditor.registerLinkOpener({

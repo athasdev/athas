@@ -11,6 +11,10 @@ import {
 describe("workspace edit utilities", () => {
   it("decodes file URIs into filesystem paths", () => {
     expect(filePathFromUri("file:///tmp/hello%20world.ts")).toBe("/tmp/hello world.ts");
+    expect(filePathFromUri("file:///C:/work/hello%20world.ts")).toBe("C:/work/hello world.ts");
+    expect(filePathFromUri("file://server/share/hello%20world.ts")).toBe(
+      "//server/share/hello world.ts",
+    );
   });
 
   it("encodes filesystem paths as file URIs", () => {

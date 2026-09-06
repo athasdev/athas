@@ -20,6 +20,11 @@ export interface EditorViewState {
   scrollLeft: number;
 }
 
+export interface EditorNavigationTarget {
+  bufferId: string;
+  range: Range;
+}
+
 // Editor View State Cache Manager - caches cursor position and scroll offset per buffer
 class EditorViewStateCacheManager {
   private cache = new Map<string, EditorViewState>();
@@ -218,12 +223,14 @@ interface EditorState {
   placeholder?: string;
   disabled: boolean;
   activeEditorViewKey: string | null;
+  pendingNavigation: EditorNavigationTarget | null;
 
   // Actions
   actions: EditorStateActions;
 }
 
 interface EditorStateActions {
+  requestNavigation: (target: EditorNavigationTarget | null) => void;
   // Cursor actions
   setCursorPosition: (position: Position, options?: { ensureVisible?: boolean }) => void;
   setSelection: (selection?: Range) => void;
@@ -293,9 +300,11 @@ export const useEditorStateStore = createSelectors(
       placeholder: undefined,
       disabled: false,
       activeEditorViewKey: null,
+      pendingNavigation: null,
 
       // Actions
       actions: {
+        requestNavigation: (pendingNavigation) => set({ pendingNavigation }),
         // Cursor actions
         setCursorPosition: (position, options) => {
           const currentState = useEditorStateStore.getState();

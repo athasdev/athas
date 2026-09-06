@@ -432,7 +432,7 @@ export function registerMonacoLspProviders() {
         position.column - 1,
       );
       return (locations ?? []).map((location) => ({
-        uri: Uri.file(filePathFromUri(location.uri)),
+        uri: Uri.parse(location.uri),
         range: toMonacoRange(location.range),
       }));
     },
@@ -448,7 +448,7 @@ export function registerMonacoLspProviders() {
         position.column - 1,
       );
       return (locations ?? []).map((location) => ({
-        uri: Uri.file(filePathFromUri(location.uri)),
+        uri: Uri.parse(location.uri),
         range: toMonacoRange(location.range),
       }));
     },
@@ -464,7 +464,7 @@ export function registerMonacoLspProviders() {
         position.column - 1,
       );
       return (locations ?? []).map((location) => ({
-        uri: Uri.file(filePathFromUri(location.uri)),
+        uri: Uri.parse(location.uri),
         range: toMonacoRange(location.range),
       }));
     },
@@ -480,7 +480,7 @@ export function registerMonacoLspProviders() {
         position.column - 1,
       );
       return (locations ?? []).map((location) => ({
-        uri: Uri.file(filePathFromUri(location.uri)),
+        uri: Uri.parse(location.uri),
         range: toMonacoRange(location.range),
       }));
     },
