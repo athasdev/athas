@@ -1,7 +1,17 @@
 import { useRender } from "@base-ui/react/use-render";
-import { forwardRef, type ComponentProps, type ReactNode, useEffect, useState } from "react";
+import {
+  Children,
+  forwardRef,
+  Fragment,
+  isValidElement,
+  type ComponentProps,
+  type ReactNode,
+  useEffect,
+  useState,
+} from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { Button, type ButtonProps } from "@/ui/button";
+import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { ChromeBar } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { FieldTitle } from "@/ui/field";
@@ -430,17 +440,42 @@ export function SidebarListActionRow({
 }: ComponentProps<"div"> & {
   actions: ReactNode;
 }) {
+  const actionItems = Children.toArray(actions).filter(Boolean);
+
   return (
     <div
+      data-slot="sidebar-list-action-row"
       className={cn(
-        "group/sidebar-list-action-row grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center",
+        "group/sidebar-list-action-row relative flex w-full min-w-0 items-center rounded-chrome",
+        "has-[[data-slot=button]:focus-visible]:bg-accent",
+        "has-[[data-slot=button][aria-expanded=true]]:bg-accent",
         className,
       )}
       {...props}
     >
       {children}
-      <span className="pointer-events-none flex items-center gap-chrome-tight pr-1 opacity-0 transition-opacity duration-fast ease-smooth motion-reduce:transition-none group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100 group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100 group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:pointer-events-auto group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:opacity-100">
-        {actions}
+      <span
+        data-slot="sidebar-list-actions"
+        className={cn(
+          "pointer-events-none absolute inset-y-0 right-0 flex items-center rounded-r-chrome pr-1 pl-6",
+          "bg-[linear-gradient(to_right,transparent,var(--accent)_1.25rem)]",
+          "opacity-0 transition-opacity duration-fast ease-smooth motion-reduce:transition-none",
+          "group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100",
+          "group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100",
+          "group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:pointer-events-auto group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:opacity-100",
+        )}
+      >
+        <ButtonGroup
+          variant="ghost"
+          className="rounded-chrome bg-surface shadow-xs ring-1 ring-border/60 [&>[data-slot=button]]:size-5"
+        >
+          {actionItems.map((action, index) => (
+            <Fragment key={(isValidElement(action) && action.key) || index}>
+              {index > 0 ? <ButtonGroupSeparator /> : null}
+              {action}
+            </Fragment>
+          ))}
+        </ButtonGroup>
       </span>
     </div>
   );

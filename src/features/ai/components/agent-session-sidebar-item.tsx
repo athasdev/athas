@@ -10,6 +10,7 @@ import {
   SparkleIcon,
 } from "@/ui/icons";
 import { SidebarIconButton, SidebarListActionRow, SidebarListItem } from "@/ui/sidebar";
+import { cn } from "@/utils/cn";
 
 export interface AgentSessionSidebarItemProps {
   title: string;
@@ -34,12 +35,29 @@ const agentSessionDateFormatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 });
 
-function MetadataRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+function MetadataRow({
+  icon,
+  label,
+  value,
+  mono = false,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   return (
-    <div className="grid grid-cols-[1rem_4.25rem_minmax(0,1fr)] items-center gap-2">
-      <span className="flex size-4 items-center justify-center text-subtle-foreground">{icon}</span>
-      <dt className="text-subtle-foreground">{label}</dt>
-      <dd className="min-w-0 truncate text-foreground">{value}</dd>
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="flex size-4 shrink-0 items-center justify-center text-subtle-foreground/70">
+        {icon}
+      </span>
+      <dt className="w-14 shrink-0 text-subtle-foreground/80">{label}</dt>
+      <dd
+        className={cn("min-w-0 flex-1 truncate text-right text-foreground", mono && "font-mono")}
+        title={value}
+      >
+        {value}
+      </dd>
     </div>
   );
 }
@@ -115,21 +133,27 @@ export function AgentSessionSidebarItem({
         align="start"
         sideOffset={10}
         collisionPadding={10}
-        className="z-10080 w-72 overflow-hidden p-0"
+        className="z-10080 w-[19rem] overflow-hidden p-0"
       >
-        <div className="border-border/70 border-b p-3">
-          <div className="flex min-w-0 items-start gap-2.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-background">
-              <ProviderIcon providerId={providerIconId} size={16} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="line-clamp-2 font-medium text-foreground ui-text-base">{title}</div>
-              <div className="mt-1 text-subtle-foreground ui-text-sm">{formattedDate}</div>
+        <div className="flex min-w-0 items-start gap-3 bg-[color-mix(in_srgb,var(--accent)_45%,transparent)] p-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background ring-1 ring-border/60">
+            <ProviderIcon providerId={providerIconId} size={16} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="line-clamp-2 font-medium text-foreground ui-text-base">{title}</div>
+            <div className="mt-1 flex min-w-0 items-center gap-1.5 text-subtle-foreground ui-text-sm">
+              <span className="min-w-0 truncate">{formattedDate}</span>
+              {pinned ? (
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-background px-1.5 py-0.5 text-subtle-foreground ring-1 ring-border/60">
+                  <PushPinIcon className="size-3" />
+                  Pinned
+                </span>
+              ) : null}
             </div>
           </div>
         </div>
 
-        <dl className="space-y-2 p-3 ui-text-sm">
+        <dl className="flex flex-col gap-1.5 border-border/60 border-t p-3 ui-text-sm">
           <MetadataRow
             icon={<SparkleIcon className="size-3.5" />}
             label="Agent"
@@ -146,18 +170,25 @@ export function AgentSessionSidebarItem({
               icon={<GitBranchIcon className="size-3.5" />}
               label="Branch"
               value={branch}
+              mono
             />
           ) : null}
         </dl>
 
         {workspacePath ? (
           <div
-            className="truncate border-border/70 border-t px-3 py-2 font-mono text-subtle-foreground ui-text-sm"
+            className="min-w-0 truncate border-border/60 border-t px-3 py-2 font-mono text-subtle-foreground/80 ui-text-sm"
             title={workspacePath}
+            dir="rtl"
           >
-            {workspacePath}
+            <bdi>{workspacePath}</bdi>
           </div>
         ) : null}
+
+        <div className="flex items-center justify-between gap-2 border-border/60 border-t bg-[color-mix(in_srgb,var(--accent)_30%,transparent)] px-3 py-2 text-subtle-foreground/80 ui-text-sm">
+          <span>Click to open</span>
+          <span>Double-click for new window</span>
+        </div>
       </HoverCardContent>
     </HoverCard>
   );
