@@ -1,6 +1,5 @@
 import type { StateCreator } from "zustand";
 import type { CommandPaletteViewId } from "@/features/command-palette/types/view.types";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SettingsTab } from "./types/ui-state.types";
 
 export type ProjectPickerInitialStep = "picker" | "addRemote";
@@ -239,7 +238,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
 
   openSettingsDialog: (tab?: SettingsTab, section?: string) => {
     set({
-      isSettingsDialogVisible: false,
+      isSettingsDialogVisible: true,
       isQuickOpenVisible: false,
       isCommandPaletteVisible: false,
       isGlobalSearchVisible: false,
@@ -250,6 +249,5 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       settingsInitialSection: section ?? null,
       settingsNavigationRequestId: get().settingsNavigationRequestId + 1,
     });
-    useBufferStore.getState().actions.openSettingsBuffer();
   },
 });

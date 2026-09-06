@@ -6,12 +6,12 @@ describe("snapshot content", () => {
     expect(selectionContent("before SELECT after", 7, 13)).toBe("SELECT");
     expect(selectionContent("before SELECT after", 13, 7)).toBe("SELECT");
   });
-  it("excludes hidden system and tool messages and redacts local paths", () => {
+  it("preserves assistant text after tool use, excludes system messages and redacts paths", () => {
     const message = { id: "1", timestamp: new Date() };
     expect(
       conversationContent([
         { ...message, role: "system", content: "system secret" },
-        { ...message, role: "assistant", isToolUse: true, content: "tool secret" },
+        { ...message, role: "assistant", isToolUse: true, content: "I checked the file." },
         { ...message, role: "user", content: "Read /Users/alex/private.txt" },
         {
           ...message,
@@ -20,6 +20,6 @@ describe("snapshot content", () => {
           toolCalls: [{ name: "read", input: "secret", timestamp: new Date() }],
         },
       ]),
-    ).toBe("## You\n\nRead [local path]\n\n## Agent\n\nDone");
+    ).toBe("## Agent\n\nI checked the file.\n\n## You\n\nRead [local path]\n\n## Agent\n\nDone");
   });
 });

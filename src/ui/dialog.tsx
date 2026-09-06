@@ -37,7 +37,7 @@ interface DialogProps {
   >;
   headerActions?: ReactNode;
   footer?: ReactNode;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "settings";
   classNames?: Partial<{
     header: string;
     title: string;
@@ -54,6 +54,7 @@ const dialogContentVariants = cva(
         sm: "max-w-sm",
         md: "max-w-md",
         lg: "max-w-lg",
+        settings: "h-[min(34rem,calc(100dvh-4rem))] max-w-3xl",
       },
     },
     defaultVariants: {
@@ -98,7 +99,7 @@ function DialogContent({
   showCloseButton = true,
   ...props
 }: DialogPrimitive.Popup.Props & {
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "settings";
   showCloseButton?: boolean;
 }) {
   return (
@@ -274,7 +275,11 @@ const AppDialog = ({
               {children}
             </ScrollArea>
           ) : (
-            <div className={cn("min-h-0 flex-1 p-4", classNames?.content)}>{children}</div>
+            <div
+              className={cn("min-h-0 flex-1", size !== "settings" && "p-4", classNames?.content)}
+            >
+              {children}
+            </div>
           )}
 
           {footer && (

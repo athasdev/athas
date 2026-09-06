@@ -1,3 +1,4 @@
+import { getShareDeviceId } from "./share-device";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
@@ -23,6 +24,8 @@ export function shareEditor(selectionOnly = false) {
   const content = buffer.content;
   if (selectionOnly && (!selection || selection.start.offset === selection.end.offset)) return;
   openShare({
+    sourceId: buffer.id,
+    deviceId: getShareDeviceId(),
     kind: selectionOnly ? "snippet" : "buffer",
     title: buffer.name,
     language: buffer.languageOverride || buffer.language || "text",
@@ -35,11 +38,19 @@ export function shareEditor(selectionOnly = false) {
   });
 }
 
-export function shareAgent(chatId?: string) {
+export async function shareAgent(chatId?: string) {
   const state = useAIChatStore.getState();
-  const chat = state.chats.find((entry) => entry.id === (chatId ?? state.currentChatId));
+  let chat = state.chats.find((entry) => entry.id === (chatId ?? state.currentChatId));
   if (!chat) return;
+  if (!chat.messages.length) {
+    await state.actions.loadChatMessages(chat.id);
+    chat = useAIChatStore.getState().chats.find((entry) => entry.id === chat?.id);
+    if (!chat) return;
+  }
   openShare({
+    sourceUpdatedAt: chat.lastMessageAt.getTime(),
+    sourceId: chat.id,
+    deviceId: getShareDeviceId(),
     kind: "agent",
     title: chat.title,
     content: conversationContent(chat.messages),

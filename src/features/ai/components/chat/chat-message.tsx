@@ -37,6 +37,7 @@ import { ToolCallGroupDisplay } from "../messages/tool-call-display";
 interface ChatMessageProps {
   message: AIMessage;
   isLastMessage: boolean;
+  showActions?: boolean;
   onApplyCode?: (code: string, language?: string) => void;
   onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
   canEditUserMessage?: boolean;
@@ -114,6 +115,7 @@ function AssistantMessageAvatar({ iconId, label }: { iconId: string; label: stri
 export const ChatMessage = memo(function ChatMessage({
   message,
   isLastMessage,
+  showActions = true,
   onApplyCode,
   onEditUserMessage,
   canEditUserMessage = false,
@@ -214,7 +216,7 @@ export const ChatMessage = memo(function ChatMessage({
               )}
             </BubbleContent>
           </Bubble>
-          {isEditing ? null : (
+          {isEditing || !showActions ? null : (
             <MessageFooter reserveSpace={false}>
               <span>{messageTime}</span>
               <MessageAction onClick={() => void copyText(message.content)} label="Copy prompt">
@@ -340,7 +342,7 @@ export const ChatMessage = memo(function ChatMessage({
             )}
           </BubbleContent>
         </Bubble>
-        {message.content.trim() ? (
+        {showActions && message.content.trim() ? (
           <MessageFooter reserveSpace={false}>
             <MessageAction onClick={() => void copyText(message.content)} label="Copy response">
               <CopySimple className="size-3.5" />

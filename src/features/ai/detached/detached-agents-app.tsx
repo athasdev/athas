@@ -1,3 +1,4 @@
+import { SharingRuntime } from "@/features/sharing/components/sharing-runtime";
 import { ShareDialog } from "@/features/sharing/components/share-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -257,6 +258,7 @@ export default function DetachedAgentsApp() {
         </div>
         <Toaster />
         <ShareDialog />
+        <SharingRuntime />
       </TooltipProvider>
     </DialogServiceProvider>
   );

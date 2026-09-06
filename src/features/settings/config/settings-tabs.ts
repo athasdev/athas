@@ -1,4 +1,5 @@
 import {
+  UploadIcon,
   CodeBlockIcon as CodeBlock,
   GearIcon as Gear,
   GearSixIcon as GearSix,
@@ -33,6 +34,12 @@ export interface SettingsTabGroup {
 }
 
 export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
+  {
+    id: "sharing",
+    label: "Sharing & cloud",
+    description: "Shared links, live updates, and private cloud sessions.",
+    icon: UploadIcon,
+  },
   {
     id: "general",
     description: "Updates, setup, and application preferences.",
@@ -101,7 +108,7 @@ export const SETTINGS_TAB_GROUPS: SettingsTabGroup[] = [
   {
     id: "application",
     label: "Application",
-    tabs: ["general", "account", "appearance"],
+    tabs: ["general", "account", "sharing", "appearance"],
   },
   {
     id: "workspace",

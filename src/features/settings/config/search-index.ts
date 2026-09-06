@@ -2,6 +2,22 @@ import type { SettingSearchRecord } from "../types/search.types";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 
 export const settingsSearchIndex: SettingSearchRecord[] = [
+  {
+    id: "cloud-agent-sessions",
+    tab: "sharing",
+    section: "Cloud sessions",
+    label: "Sync agent sessions",
+    description: "Read private agent conversations on the web",
+    keywords: ["cloud", "sync", "private", "sessions", "web"],
+  },
+  {
+    id: "shared-links",
+    tab: "sharing",
+    section: "My shared items",
+    label: "My shared items",
+    description: "Manage shared links, visibility, and live updates",
+    keywords: ["share", "public", "live", "visibility", "revoke"],
+  },
   // Enterprise Settings
   {
     id: "enterprise-managed-mode",

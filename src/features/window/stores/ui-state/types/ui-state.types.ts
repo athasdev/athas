@@ -1,4 +1,5 @@
 export type SettingsTab =
+  | "sharing"
   | "account"
   | "general"
   | "editor"

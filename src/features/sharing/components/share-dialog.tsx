@@ -1,10 +1,11 @@
+import Switch from "@/ui/switch";
 import { useEffect, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
-import Textarea from "@/ui/textarea";
+import { SharePreview } from "./share-preview";
 import { Field, FieldDescription, FieldLabel } from "@/ui/field";
 import { writeClipboardText } from "@/utils/clipboard";
 import { OPEN_SHARE_EVENT } from "../services/open-share";
@@ -12,6 +13,7 @@ import { createShare, fetchShareOptions, revokeShare } from "../services/share-a
 import type { ShareDraft, ShareInput, ShareOptions } from "../types/share.types";
 
 function ShareSnapshotDialog({ draft, onClose }: { draft: ShareDraft; onClose: () => void }) {
+  const [live, setLive] = useState(false);
   const [visibility, setVisibility] = useState<ShareInput["visibility"]>("public");
   const [emails, setEmails] = useState("");
   const [workspaceId, setWorkspaceId] = useState("");
@@ -60,6 +62,7 @@ function ShareSnapshotDialog({ draft, onClose }: { draft: ShareDraft; onClose: (
     try {
       const share = await createShare({
         ...draft,
+        live,
         requestId: requestId.current,
         visibility,
         emails: visibility === "email" ? emails.split(/[,;\s]+/).filter(Boolean) : [],
@@ -113,13 +116,11 @@ function ShareSnapshotDialog({ draft, onClose }: { draft: ShareDraft; onClose: (
       }
     >
       <div className="flex flex-col gap-4">
-        <FieldDescription>
-          A read-only snapshot hosted on athas.dev. Future edits stay local.
-        </FieldDescription>
+        <FieldDescription>Share a read-only view on athas.dev.</FieldDescription>
         <Field>
           <FieldLabel>Content</FieldLabel>
-          <Input value={draft.title} readOnly />
-          <Textarea value={draft.content} readOnly rows={8} aria-label="Snapshot preview" />
+          <p className="font-medium ui-text-sm">{draft.title}</p>
+          <SharePreview draft={draft} />
         </Field>
         {!draft.content && <FieldDescription>There is no text to share.</FieldDescription>}
         {draft.content.length > 500_000 && (
@@ -129,6 +130,26 @@ function ShareSnapshotDialog({ draft, onClose }: { draft: ShareDraft; onClose: (
         )}
         {!result ? (
           <>
+            {draft.kind !== "snippet" && draft.sourceId && (
+              <Field>
+                <div className="flex items-center justify-between gap-4">
+                  <FieldLabel htmlFor="share-live">Keep this link up to date</FieldLabel>
+                  <Switch
+                    id="share-live"
+                    checked={live}
+                    disabled={busy}
+                    onChange={(value) => {
+                      setLive(value);
+                      requestId.current = crypto.randomUUID();
+                    }}
+                  />
+                </div>
+                <FieldDescription>
+                  New responses and edits appear here while Athas is running. You can pause this in
+                  Settings.
+                </FieldDescription>
+              </Field>
+            )}
             <Field>
               <FieldLabel>Visibility</FieldLabel>
               <Select

@@ -167,6 +167,7 @@ const SETTINGS_SECTIONS = new Set<SettingsSection>([
   "advanced",
   "terminal",
   "file-explorer",
+  "sharing",
 ]);
 
 function normalizeEditorLineHeight(value: number): number {

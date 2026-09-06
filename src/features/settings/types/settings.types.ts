@@ -30,6 +30,7 @@ export interface LegacyV0DesignSystemProfile {
   readonly componentsJsonPath?: string;
 }
 export type SettingsSection =
+  | "sharing"
   | "account"
   | "general"
   | "editor"

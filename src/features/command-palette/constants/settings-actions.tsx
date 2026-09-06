@@ -64,6 +64,7 @@ interface SettingsActionsParams {
 
 const settingsTabLabels: Record<SettingsTab, string> = {
   account: "Account",
+  sharing: "Sharing & cloud",
   general: "General",
   editor: "Editor",
   git: "Git",

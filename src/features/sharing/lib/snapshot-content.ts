@@ -7,7 +7,7 @@ export function selectionContent(content: string, start: number, end: number) {
 
 export function conversationMessages(messages: Message[]) {
   return messages
-    .filter((message) => message.role !== "system" && !message.isToolUse && message.content.trim())
+    .filter((message) => message.role !== "system" && message.content.trim())
     .map((message) => ({
       role: message.role as "user" | "assistant",
       content: redactLocalPaths(message.content),

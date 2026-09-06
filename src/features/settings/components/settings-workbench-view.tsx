@@ -1,3 +1,4 @@
+import { SharingSettings } from "@/features/sharing/components/sharing-settings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SETTINGS_TAB_ITEMS } from "@/features/settings/config/settings-tabs";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -207,6 +208,8 @@ const SettingsWorkbenchView = () => {
     switch (activeTab) {
       case "account":
         return <AccountSettings />;
+      case "sharing":
+        return <SharingSettings />;
       case "general":
         return <GeneralSettings />;
       case "editor":

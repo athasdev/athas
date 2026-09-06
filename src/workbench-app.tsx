@@ -1,3 +1,5 @@
+import { SharingRuntime } from "@/features/sharing/components/sharing-runtime";
+import { SettingsDialog } from "@/features/settings/components/settings-dialog";
 import { ShareDialog } from "@/features/sharing/components/share-dialog";
 import { useEffect } from "react";
 import { MotionConfig } from "motion/react";
@@ -103,6 +105,8 @@ function WorkbenchApp() {
             <ContinuousAgentsRuntime />
             <ProductFeedbackDialog />
             <ShareDialog />
+            <SharingRuntime />
+            <SettingsDialog />
           </div>
         </TooltipProvider>
       </DialogServiceProvider>
