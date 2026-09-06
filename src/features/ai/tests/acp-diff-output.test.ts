@@ -28,7 +28,21 @@ describe("ACP diff output", () => {
     });
   });
 
-  it("preserves non-diff output and balances bounded previews", () => {
+  it("shows only the touched region of a large file", () => {
+    const oldText = Array.from({ length: 600 }, (_, index) => `line ${index}`).join("\n");
+    const newText = oldText.replace("line 300", "line 300 changed");
+    const [diff] = getAcpDiffOutputs({ type: "diff", path: "large.ts", oldText, newText });
+
+    const view = createAcpDiffViewNode(diff);
+
+    expect(view.truncated).toBe(false);
+    expect(view.lines.filter((line) => line.type === "removed")).toHaveLength(1);
+    expect(view.lines.filter((line) => line.type === "added")).toHaveLength(1);
+    // one hunk header, three lines of context either side, one -/+ pair
+    expect(view.lines).toHaveLength(9);
+  });
+
+  it("preserves non-diff output and bounds a whole-file rewrite", () => {
     const oldText = Array.from({ length: 600 }, (_, index) => `old ${index}`).join("\n");
     const newText = Array.from({ length: 600 }, (_, index) => `new ${index}`).join("\n");
     const diff = { type: "diff", path: "large.ts", oldText, newText };
@@ -36,10 +50,19 @@ describe("ACP diff output", () => {
     const view = createAcpDiffViewNode(getAcpDiffOutputs([content, diff])[0]);
 
     expect(view.lines).toHaveLength(EXTENSION_VIEW_LIMITS.maxDiffLines);
-    expect(view.lines.some((line) => line.type === "removed")).toBe(true);
-    expect(view.lines.some((line) => line.type === "added")).toBe(true);
     expect(view.truncated).toBe(true);
     expect(stripAcpDiffOutputs([content, diff])).toEqual([content]);
     expect(stripAcpDiffOutputs(diff)).toBeUndefined();
+  });
+
+  it("reports a no-op edit as no changes rather than a full rewrite", () => {
+    const [diff] = getAcpDiffOutputs({
+      type: "diff",
+      path: "same.ts",
+      oldText: "const ready = true;",
+      newText: "const ready = true;",
+    });
+
+    expect(createAcpDiffViewNode(diff).lines).toEqual([{ type: "header", content: "No changes" }]);
   });
 });
