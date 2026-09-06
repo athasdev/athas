@@ -1,3 +1,4 @@
+import { ShareDialog } from "@/features/sharing/components/share-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { enableMapSet } from "immer";
@@ -255,6 +256,7 @@ export default function DetachedAgentsApp() {
           ) : null}
         </div>
         <Toaster />
+        <ShareDialog />
       </TooltipProvider>
     </DialogServiceProvider>
   );

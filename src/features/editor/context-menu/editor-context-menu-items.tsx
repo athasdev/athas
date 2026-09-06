@@ -13,6 +13,8 @@ import {
 import type { ContextMenuGroupData } from "@/ui/context-menu";
 
 export interface EditorContextMenuHandlers {
+  onShareSelection?: () => void;
+  onShareBuffer?: () => void;
   onCopy?: () => void;
   onCut?: () => void;
   onPaste?: () => void;
@@ -39,6 +41,8 @@ function isDisabled(handler: (() => void) | undefined, disabled = false): boolea
 
 export function buildEditorContextMenuGroups({
   hasSelection,
+  onShareSelection,
+  onShareBuffer,
   onCopy,
   onCut,
   onPaste,
@@ -55,6 +59,23 @@ export function buildEditorContextMenuGroups({
   onToggleCase,
 }: EditorContextMenuItemOptions): ContextMenuGroupData[] {
   return [
+    {
+      id: "sharing",
+      items: [
+        {
+          id: "share-selection",
+          label: "Share Selection to Web…",
+          disabled: !hasSelection || !onShareSelection,
+          onClick: onShareSelection,
+        },
+        {
+          id: "share-buffer",
+          label: "Share Buffer to Web…",
+          disabled: !onShareBuffer,
+          onClick: onShareBuffer,
+        },
+      ],
+    },
     {
       id: "editing",
       items: [

@@ -546,7 +546,7 @@ export const removeAuthToken = async (): Promise<void> => {
 };
 
 // Authenticated API fetch helper
-async function authenticatedFetch(
+export async function authenticatedFetch(
   path: string,
   options: RequestInit = {},
   tokenOverride?: string,

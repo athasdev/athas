@@ -18,11 +18,11 @@ function getItem(id: string, handlers = {}) {
 }
 
 describe("buildEditorContextMenuGroups", () => {
-  it("keeps the context menu to three focused groups", () => {
+  it("groups sharing, editing, code, and navigation actions", () => {
     const groups = buildEditorContextMenuGroups(baseOptions);
 
-    expect(groups.map((group) => group.id)).toEqual(["editing", "code", "navigation"]);
-    expect(groups.flatMap((group) => group.items)).toHaveLength(13);
+    expect(groups.map((group) => group.id)).toEqual(["sharing", "editing", "code", "navigation"]);
+    expect(groups.flatMap((group) => group.items)).toHaveLength(15);
   });
 
   it("disables commands that do not have a handler", () => {

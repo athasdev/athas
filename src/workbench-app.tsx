@@ -1,3 +1,4 @@
+import { ShareDialog } from "@/features/sharing/components/share-dialog";
 import { useEffect } from "react";
 import { MotionConfig } from "motion/react";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
@@ -101,6 +102,7 @@ function WorkbenchApp() {
             <NotificationRecorder />
             <ContinuousAgentsRuntime />
             <ProductFeedbackDialog />
+            <ShareDialog />
           </div>
         </TooltipProvider>
       </DialogServiceProvider>

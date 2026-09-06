@@ -1,3 +1,4 @@
+import { shareEditor, shareAgent } from "@/features/sharing/services/open-share";
 import {
   ClockCounterClockwiseIcon as ClockCounterClockwise,
   FilePlusIcon as FilePlus,
@@ -23,6 +24,39 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
   const { onClose } = params;
 
   const baseActions: Action[] = [
+    {
+      id: "share-buffer",
+      label: "File: Share Buffer to Web",
+      description: "Create a read-only snapshot link",
+      category: "File",
+      icon: <FilePlus />,
+      action: () => {
+        onClose();
+        shareEditor();
+      },
+    },
+    {
+      id: "share-selection",
+      label: "File: Share Selection to Web",
+      description: "Share the selected code",
+      category: "File",
+      icon: <FilePlus />,
+      action: () => {
+        onClose();
+        shareEditor(true);
+      },
+    },
+    {
+      id: "share-agent",
+      label: "AI: Share Agent to Web",
+      description: "Share the current conversation",
+      category: "AI",
+      icon: <FilePlus />,
+      action: () => {
+        onClose();
+        shareAgent();
+      },
+    },
     {
       id: "file-new",
       label: "File: New File",

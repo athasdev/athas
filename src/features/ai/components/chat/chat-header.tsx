@@ -1,3 +1,5 @@
+import { shareAgent } from "@/features/sharing/services/open-share";
+import { UploadSimpleIcon } from "@/ui/icons";
 import {
   ArrowDownIcon as ArrowDown,
   ArrowUpIcon as ArrowUp,
@@ -163,6 +165,17 @@ export function ChatHeader({
                 aria-label="Search messages"
               >
                 <Search />
+              </Button>
+
+              <Button
+                variant="ghost"
+                iconOnly
+                tooltip="Share agent to web"
+                aria-label="Share agent to web"
+                disabled={!currentChat?.messages.length}
+                onClick={() => shareAgent(effectiveChatId ?? undefined)}
+              >
+                <UploadSimpleIcon />
               </Button>
 
               {!standalone && (

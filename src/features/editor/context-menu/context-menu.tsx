@@ -1,3 +1,4 @@
+import { shareEditor } from "@/features/sharing/services/open-share";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { ContextMenuPopup } from "@/ui/context-menu";
 import {
@@ -21,6 +22,8 @@ const EditorContextMenu = ({ isOpen, position, onClose, ...handlers }: EditorCon
 
   const groups = buildEditorContextMenuGroups({
     hasSelection,
+    onShareSelection: () => shareEditor(true),
+    onShareBuffer: () => shareEditor(),
     ...handlers,
   });
 
