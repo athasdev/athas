@@ -1,5 +1,6 @@
 @theme inline {
   --font-sans: var(--app-font-family);
+  --font-heading: "Inter Display", var(--app-font-family);
   --font-mono: var(--editor-font-family);
   --leading-row: 1.35;
   --leading-chrome: var(--athas-chrome-line-height);
@@ -38,6 +39,9 @@
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
+  --color-attachment: var(--attachment-background);
+  --color-attachment-hover: var(--attachment-hover);
+  --color-attachment-media: var(--attachment-media);
   --color-selected: var(--selected);
   --color-selection: var(--selection);
   --color-scrollbar-thumb: var(--app-scrollbar-thumb);
@@ -111,10 +115,10 @@
 @layer base {
   :root {
     --app-font-family:
-      system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-      sans-serif;
+      "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+      Arial, sans-serif;
     --editor-font-family:
-      "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+      "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
       monospace;
     --app-ui-font-size: 13px;
     --app-ui-scale: 1;
@@ -153,6 +157,12 @@
       color-mix(in srgb, var(--background) 88%, var(--surface)),
       color-mix(in srgb, var(--background) 64%, var(--surface))
     );
+    --attachment-background: color-mix(in srgb, var(--foreground) 3%, var(--surface));
+    --attachment-hover: color-mix(in srgb, var(--foreground) 7%, var(--surface));
+    --attachment-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 50%, transparent);
+    --attachment-hover-shadow: inset 0 0 0 1px
+      color-mix(in srgb, var(--border-strong) 65%, transparent);
+    --attachment-media: color-mix(in srgb, var(--foreground) 6%, var(--surface));
     --success: var(--primary);
     --warning: var(--muted-foreground);
     --tab-hover-bg: color-mix(in srgb, var(--accent) 72%, transparent);

@@ -2,6 +2,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import { iconThemeRegistry } from "../icon-theme-registry";
+import { FileIcon, FolderIcon } from "@/ui/icons";
 import { IconThemeGraphic } from "./icon-theme-graphic";
 
 interface ThemedFileIconProps {
@@ -38,7 +39,13 @@ export function ThemedFileIcon({
     () => iconTheme?.getFileIcon(fileName, isDir, isExpanded, isSymlink) ?? null,
     [fileName, iconTheme, isDir, isExpanded, isSymlink, colorThemeId],
   );
-  const icon = <IconThemeGraphic result={iconResult} className={className} />;
+  const icon = iconResult ? (
+    <IconThemeGraphic result={iconResult} className={className} />
+  ) : isDir ? (
+    <FolderIcon className={className} />
+  ) : (
+    <FileIcon className={className} />
+  );
 
   if (isSymlink) {
     return (
