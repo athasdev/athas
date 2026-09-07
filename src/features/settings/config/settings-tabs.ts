@@ -32,7 +32,7 @@ export interface SettingsTabGroup {
 export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
   {
     id: "sharing",
-    label: "Sharing & cloud",
+    label: "Sharing & Cloud",
     description: "Shared links, live updates, and private cloud sessions.",
     icon: UploadIcon,
   },

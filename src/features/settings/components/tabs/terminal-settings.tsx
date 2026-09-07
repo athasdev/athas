@@ -11,15 +11,14 @@ import {
   getAllTerminalProfiles,
 } from "@/features/terminal/utils/terminal-profiles";
 import { Button } from "@/ui/button";
-import { Empty, EmptyDescription } from "@/ui/empty";
+import { EmptyState } from "@/ui/empty";
 import { Field, FieldDescription, FieldLabel } from "@/ui/field";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
-import Section, { SettingsView, SettingRow } from "../settings-section";
+import Section, { SettingBlock, SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
-import Tooltip from "@/ui/tooltip";
 
 const FONT_HELP_TEXT =
   "Note: Selected font must be installed on your system to work correctly. If icons are missing, try installing a Nerd Font.";
@@ -111,11 +110,11 @@ export const TerminalSettings = () => {
     <SettingsView>
       <Section
         title="Launch"
-        description="Choose which shell and profile new terminal tabs should use by default."
+        description="Choose which shell and profile new terminal tabs should use by default"
       >
         <SettingRow
           label="Default Shell"
-          description="Fallback shell when a terminal profile does not override it."
+          description="Fallback shell when a terminal profile does not override it"
           onReset={() =>
             updateSetting("terminalDefaultShellId", getDefaultSetting("terminalDefaultShellId"))
           }
@@ -138,7 +137,7 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Default Profile"
-          description="Used by the terminal toolbar button and Cmd+T when the terminal is focused."
+          description="Used by the terminal toolbar button and Cmd+T when the terminal is focused"
           onReset={() =>
             updateSetting("terminalDefaultProfileId", getDefaultSetting("terminalDefaultProfileId"))
           }
@@ -164,136 +163,125 @@ export const TerminalSettings = () => {
 
       <Section
         title="Profiles"
-        description="Create reusable launch presets with a shell override, startup directory, and optional startup commands."
+        description="Create reusable launch presets with a shell override, startup directory, and optional startup commands"
       >
-        <div className="space-y-3 px-1">
-          <div className="flex items-center justify-between">
-            <div className="font-sans ui-text-base text-subtle-foreground">
-              Built-in profiles are generated from detected shells. Custom profiles appear in the
-              terminal toolbar profile picker.
-            </div>
-            <Button
-              variant="default"
-              onClick={() =>
-                profileActions.addProfile({
-                  name: `Custom Profile ${profiles.length + 1}`,
-                  shell: settings.terminalDefaultShellId || undefined,
-                  startupCommands: [],
-                })
-              }
-            >
-              <PlusIcon className="mr-1" />
-              Add Profile
-            </Button>
-          </div>
+        <SettingRow
+          label="Custom Profiles"
+          description="Built-in profiles come from detected shells. Custom profiles appear in the terminal toolbar profile picker."
+        >
+          <Button
+            variant="default"
+            onClick={() =>
+              profileActions.addProfile({
+                name: `Custom Profile ${profiles.length + 1}`,
+                shell: settings.terminalDefaultShellId || undefined,
+                startupCommands: [],
+              })
+            }
+          >
+            <PlusIcon />
+            Add Profile
+          </Button>
+        </SettingRow>
 
-          {profiles.length === 0 ? (
-            <Empty className="min-h-24 border border-border/70 bg-surface/50 px-3 py-3">
-              <EmptyDescription className="ui-text-base">
-                No custom terminal profiles yet.
-              </EmptyDescription>
-            </Empty>
-          ) : (
-            profiles.map((profile) => (
-              <div
-                key={profile.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-surface/60 p-3"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-sans ui-text-base mb-1 text-foreground">
-                      {profile.name}
-                    </div>
-                    <div className="font-sans ui-text-base text-subtle-foreground">
-                      Visible in the terminal profile picker.
-                    </div>
+        {profiles.length === 0 ? (
+          <EmptyState className="py-6" message="No custom terminal profiles yet" />
+        ) : (
+          profiles.map((profile) => (
+            <SettingBlock key={profile.id} className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="font-sans ui-text-base text-foreground">{profile.name}</div>
+                  <div className="font-sans ui-text-sm text-subtle-foreground">
+                    Visible in the terminal profile picker
                   </div>
-                  <Button
-                    variant="danger"
-                    onClick={() => profileActions.deleteProfile(profile.id)}
-                    aria-label={`Delete ${profile.name}`}
-                    iconOnly
-                  >
-                    <TrashIcon />
-                  </Button>
                 </div>
+                <Button
+                  variant="danger"
+                  onClick={() => profileActions.deleteProfile(profile.id)}
+                  aria-label={`Delete ${profile.name}`}
+                  tooltip={`Delete ${profile.name}`}
+                  iconOnly
+                >
+                  <TrashIcon />
+                </Button>
+              </div>
 
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor={`terminal-profile-name-${profile.id}`}>Name</FieldLabel>
-                    <Input
-                      id={`terminal-profile-name-${profile.id}`}
-                      value={profile.name}
-                      onChange={(event) =>
-                        profileActions.updateProfile(profile.id, {
-                          name: event.target.value,
-                        })
-                      }
-                      placeholder="My Profile"
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor={`terminal-profile-shell-${profile.id}`}>Shell</FieldLabel>
-                    <Select
-                      id={`terminal-profile-shell-${profile.id}`}
-                      value={profile.shell || DEFAULT_SHELL_OPTION_VALUE}
-                      options={shellOptions}
-                      onChange={(value) =>
-                        profileActions.updateProfile(profile.id, {
-                          shell: value === DEFAULT_SHELL_OPTION_VALUE ? undefined : value,
-                        })
-                      }
-                      width="full"
-                      variant="default"
-                      searchable
-                      searchableTrigger="input"
-                    />
-                  </Field>
-                </div>
-
+              <div className="grid gap-3 @md/settings:grid-cols-2">
                 <Field>
-                  <FieldLabel htmlFor={`terminal-profile-directory-${profile.id}`}>
-                    Startup Directory
-                  </FieldLabel>
+                  <FieldLabel htmlFor={`terminal-profile-name-${profile.id}`}>Name</FieldLabel>
                   <Input
-                    id={`terminal-profile-directory-${profile.id}`}
-                    value={profile.startupDirectory || ""}
+                    id={`terminal-profile-name-${profile.id}`}
+                    value={profile.name}
                     onChange={(event) =>
                       profileActions.updateProfile(profile.id, {
-                        startupDirectory: event.target.value || undefined,
+                        name: event.target.value,
                       })
                     }
-                    placeholder="Leave empty to use the current workspace directory"
+                    placeholder="My Profile"
                   />
-                  <FieldDescription>
-                    Leave empty to use the current workspace directory.
-                  </FieldDescription>
                 </Field>
-
                 <Field>
-                  <FieldLabel htmlFor={`terminal-profile-commands-${profile.id}`}>
-                    Startup Commands
-                  </FieldLabel>
-                  <Textarea
-                    id={`terminal-profile-commands-${profile.id}`}
-                    value={(profile.startupCommands || []).join("\n")}
-                    onChange={(event) =>
+                  <FieldLabel htmlFor={`terminal-profile-shell-${profile.id}`}>Shell</FieldLabel>
+                  <Select
+                    id={`terminal-profile-shell-${profile.id}`}
+                    value={profile.shell || DEFAULT_SHELL_OPTION_VALUE}
+                    options={shellOptions}
+                    onChange={(value) =>
                       profileActions.updateProfile(profile.id, {
-                        startupCommands: event.target.value
-                          .split("\n")
-                          .map((line) => line.trim())
-                          .filter(Boolean),
+                        shell: value === DEFAULT_SHELL_OPTION_VALUE ? undefined : value,
                       })
                     }
-                    placeholder="One command per line"
-                    rows={3}
+                    width="full"
+                    variant="default"
+                    searchable
+                    searchableTrigger="input"
                   />
-                  <FieldDescription>Enter one command per line.</FieldDescription>
                 </Field>
               </div>
-            ))
-          )}
-        </div>
+
+              <Field>
+                <FieldLabel htmlFor={`terminal-profile-directory-${profile.id}`}>
+                  Startup Directory
+                </FieldLabel>
+                <Input
+                  id={`terminal-profile-directory-${profile.id}`}
+                  value={profile.startupDirectory || ""}
+                  onChange={(event) =>
+                    profileActions.updateProfile(profile.id, {
+                      startupDirectory: event.target.value || undefined,
+                    })
+                  }
+                  placeholder="Leave empty to use the current workspace directory"
+                />
+                <FieldDescription>
+                  Leave empty to use the current workspace directory.
+                </FieldDescription>
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor={`terminal-profile-commands-${profile.id}`}>
+                  Startup Commands
+                </FieldLabel>
+                <Textarea
+                  id={`terminal-profile-commands-${profile.id}`}
+                  value={(profile.startupCommands || []).join("\n")}
+                  onChange={(event) =>
+                    profileActions.updateProfile(profile.id, {
+                      startupCommands: event.target.value
+                        .split("\n")
+                        .map((line) => line.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                  placeholder="One command per line"
+                  rows={3}
+                />
+                <FieldDescription>Enter one command per line.</FieldDescription>
+              </Field>
+            </SettingBlock>
+          ))
+        )}
       </Section>
 
       <Section title="Typography">
@@ -315,9 +303,9 @@ export const TerminalSettings = () => {
               searchableTrigger="input"
               placeholder="Select font..."
             />
-            <Tooltip content={FONT_HELP_TEXT}>
-              <InfoIcon className="size-4 cursor-help text-subtle-foreground transition-colors hover:text-foreground" />
-            </Tooltip>
+            <Button variant="ghost" iconOnly tooltip={FONT_HELP_TEXT} aria-label="Font help">
+              <InfoIcon />
+            </Button>
           </div>
         </SettingRow>
 
@@ -465,8 +453,6 @@ export const TerminalSettings = () => {
               updateSetting("terminalCursorStyle", val as "block" | "underline" | "bar")
             }
             variant="default"
-            searchable
-            searchableTrigger="input"
           />
         </SettingRow>
 

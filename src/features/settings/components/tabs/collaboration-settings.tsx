@@ -42,7 +42,7 @@ export const CollaborationSettings = () => {
         title={workspace?.name ?? "Collaboration"}
         description="Teams workspace status. Manage members, channels, invites, and policies in the web dashboard."
       >
-        <SettingRow label="Dashboard" description="Open the full collaboration workspace.">
+        <SettingRow label="Dashboard" description="Open the full collaboration workspace">
           <Button type="button" variant="default" onClick={openDashboardCollaboration}>
             <UsersIcon />
             Open

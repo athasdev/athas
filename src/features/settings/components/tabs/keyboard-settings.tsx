@@ -45,7 +45,7 @@ import { ToggleGroup } from "@/ui/toggle-group";
 import { quickTransition } from "@/utils/motion";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { TypedConfirmAction } from "../typed-confirm-action";
-import { SettingsView, SettingRow } from "../settings-section";
+import Section, { SettingBlock, SettingsView, SettingRow } from "../settings-section";
 
 type FilterType = "all" | "user" | "default" | "preset" | "preset-changes" | "extension";
 
@@ -267,12 +267,8 @@ export const KeyboardSettings = () => {
             {...editorStepTransition}
           >
             <div className="mb-3 flex items-center justify-between gap-3">
-              <Button
-                variant="default"
-                onClick={() => setIsEditingKeybindings(false)}
-                className="gap-1.5"
-              >
-                <ArrowLeftIcon size={14} />
+              <Button variant="default" onClick={() => setIsEditingKeybindings(false)}>
+                <ArrowLeftIcon />
                 Back
               </Button>
               <div className="flex items-center gap-2">
@@ -302,36 +298,16 @@ export const KeyboardSettings = () => {
                 onValueChange={setFilterType}
                 ariaLabel="Keybinding filter"
                 options={[
-                  {
-                    value: "all",
-                    label: "All",
-                    icon: <CirclesIcon size={14} />,
-                  },
-                  {
-                    value: "user",
-                    label: "User",
-                    icon: <UserIcon size={14} />,
-                  },
-                  {
-                    value: "default",
-                    label: "Default",
-                    icon: <SlidersIcon size={14} />,
-                  },
-                  {
-                    value: "preset",
-                    label: "Preset",
-                    icon: <DownloadIcon size={14} optical="md" />,
-                  },
+                  { value: "all", label: "All", icon: <CirclesIcon /> },
+                  { value: "user", label: "User", icon: <UserIcon /> },
+                  { value: "default", label: "Default", icon: <SlidersIcon /> },
+                  { value: "preset", label: "Preset", icon: <DownloadIcon optical="md" /> },
                   {
                     value: "preset-changes",
                     label: "Preset Changes",
-                    icon: <DownloadIcon size={14} optical="md" />,
+                    icon: <DownloadIcon optical="md" />,
                   },
-                  {
-                    value: "extension",
-                    label: "Extension",
-                    icon: <CubeIcon size={14} />,
-                  },
+                  { value: "extension", label: "Extension", icon: <CubeIcon /> },
                 ]}
               />
             </div>
@@ -378,58 +354,66 @@ export const KeyboardSettings = () => {
             </div>
           </motion.div>
         ) : (
-          <motion.div key="keyboard-summary" className="space-y-4" {...summaryStepTransition}>
-            <SettingRow
-              label="Vim Mode"
-              description="Enable vim keybindings and commands"
-              onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
-              canReset={vimMode !== getDefaultSetting("vimMode")}
-            >
-              <Switch checked={vimMode} onChange={(checked) => updateSetting("vimMode", checked)} />
-            </SettingRow>
+          <motion.div key="keyboard-summary" className="space-y-6" {...summaryStepTransition}>
+            <Section title="Keyboard">
+              <SettingRow
+                label="Vim Mode"
+                description="Enable vim keybindings and commands"
+                onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
+                canReset={vimMode !== getDefaultSetting("vimMode")}
+              >
+                <Switch
+                  checked={vimMode}
+                  onChange={(checked) => updateSetting("vimMode", checked)}
+                />
+              </SettingRow>
 
-            <SettingRow
-              label="Keybinding Preset"
-              description="Apply a base shortcut style before your custom overrides."
-              onReset={() =>
-                updateSetting("keybindingPreset", getDefaultSetting("keybindingPreset"))
-              }
-              canReset={keybindingPreset !== getDefaultSetting("keybindingPreset")}
-            >
-              <Select
-                value={keybindingPreset}
-                onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
-                options={keybindingPresetOptions}
-                variant="default"
-                searchable
-                searchableTrigger="input"
-                aria-label="Keybinding preset"
-              />
-            </SettingRow>
+              <SettingRow
+                label="Keybinding Preset"
+                description="Apply a base shortcut style before your custom overrides"
+                onReset={() =>
+                  updateSetting("keybindingPreset", getDefaultSetting("keybindingPreset"))
+                }
+                canReset={keybindingPreset !== getDefaultSetting("keybindingPreset")}
+              >
+                <Select
+                  value={keybindingPreset}
+                  onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
+                  options={keybindingPresetOptions}
+                  variant="default"
+                  aria-label="Keybinding preset"
+                />
+              </SettingRow>
 
-            {keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
-              <Alert tone="warning">
-                <WarningCircleIcon />
-                <AlertDescription>
-                  This preset is incomplete. {selectedPresetCoverage.missingCommandIds.length}{" "}
-                  built-in command
-                  {selectedPresetCoverage.missingCommandIds.length === 1 ? " is" : "s are"} still
-                  missing preset coverage.
-                </AlertDescription>
-              </Alert>
-            ) : null}
+              {keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
+                <SettingBlock>
+                  <Alert tone="warning">
+                    <WarningCircleIcon />
+                    <AlertDescription>
+                      This preset is incomplete. {selectedPresetCoverage.missingCommandIds.length}{" "}
+                      built-in command
+                      {selectedPresetCoverage.missingCommandIds.length === 1 ? " is" : "s are"}{" "}
+                      still missing preset coverage.
+                    </AlertDescription>
+                  </Alert>
+                </SettingBlock>
+              ) : null}
+            </Section>
 
-            <SettingRow label="Edit Keybindings" description="Customize shortcuts individually.">
-              <Button variant="default" onClick={() => setIsEditingKeybindings(true)}>
-                Open Editor
-              </Button>
-            </SettingRow>
-            {userOverrideCount > 0 ? (
-              <div className="font-sans ui-text-base px-1 text-subtle-foreground">
-                {userOverrideCount} user override{userOverrideCount === 1 ? "" : "s"} currently
-                saved.
-              </div>
-            ) : null}
+            <Section title="Shortcuts">
+              <SettingRow
+                label="Edit Keybindings"
+                description={
+                  userOverrideCount > 0
+                    ? `Customize shortcuts individually. ${userOverrideCount} user override${userOverrideCount === 1 ? "" : "s"} saved.`
+                    : "Customize shortcuts individually"
+                }
+              >
+                <Button variant="default" onClick={() => setIsEditingKeybindings(true)}>
+                  Open Editor
+                </Button>
+              </SettingRow>
+            </Section>
           </motion.div>
         )}
       </AnimatePresence>

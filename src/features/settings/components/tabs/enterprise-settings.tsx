@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { toast } from "sonner";
 import { Button } from "@/ui/button";
-import Section, { SettingsView, SettingRow } from "../settings-section";
+import { EmptyState } from "@/ui/empty";
+import { Field, FieldDescription, FieldLabel } from "@/ui/field";
+import Section, { SettingBlock, SettingsView, SettingRow } from "../settings-section";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
 import { updateEnterprisePolicy } from "@/features/window/services/auth-api";
@@ -67,9 +69,10 @@ export const EnterpriseSettings = () => {
     return (
       <SettingsView>
         <Section title="Enterprise Controls" description="Access restricted">
-          <div className="font-sans ui-text-base px-1 py-2 text-subtle-foreground">
-            Enterprise policy controls are available only for enterprise workspaces.
-          </div>
+          <EmptyState
+            className="py-6"
+            message="Enterprise policy controls are available only for enterprise workspaces"
+          />
         </Section>
       </SettingsView>
     );
@@ -79,9 +82,10 @@ export const EnterpriseSettings = () => {
     return (
       <SettingsView>
         <Section title="Enterprise Controls" description="Policy unavailable">
-          <div className="font-sans ui-text-base px-1 py-2 text-subtle-foreground">
-            Enterprise policy could not be loaded. Try re-authenticating.
-          </div>
+          <EmptyState
+            className="py-6"
+            message="Enterprise policy could not be loaded. Try re-authenticating."
+          />
         </Section>
       </SettingsView>
     );
@@ -95,7 +99,7 @@ export const EnterpriseSettings = () => {
       >
         <SettingRow
           label="Managed Mode"
-          description="Enforce enterprise policy controls in the desktop app."
+          description="Enforce enterprise policy controls in the desktop app"
         >
           <Switch
             checked={policy.managedMode}
@@ -108,7 +112,7 @@ export const EnterpriseSettings = () => {
 
         <SettingRow
           label="Require Extension Allowlist"
-          description="Only approved extension IDs can be installed or updated."
+          description="Only approved extension IDs can be installed or updated"
         >
           <Switch
             checked={policy.requireExtensionAllowlist}
@@ -124,7 +128,7 @@ export const EnterpriseSettings = () => {
 
         <SettingRow
           label="Allow BYOK Autocomplete"
-          description="Allow user-provided OpenRouter keys for autocomplete."
+          description="Allow user-provided OpenRouter keys for autocomplete"
         >
           <Switch
             checked={policy.allowByok}
@@ -135,7 +139,7 @@ export const EnterpriseSettings = () => {
 
         <SettingRow
           label="Enable AI Autocomplete"
-          description="Enable inline AI completion for enterprise users."
+          description="Enable inline AI completion for enterprise users"
         >
           <Switch
             checked={policy.aiCompletionEnabled}
@@ -146,7 +150,7 @@ export const EnterpriseSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow label="Enable Agent" description="Enable Agent panel for enterprise users.">
+        <SettingRow label="Enable Agent" description="Enable Agent panel for enterprise users">
           <Switch
             checked={policy.aiChatEnabled}
             onChange={(checked) =>
@@ -159,19 +163,24 @@ export const EnterpriseSettings = () => {
 
       <Section
         title="Extension Allowlist"
-        description="Approved extension IDs, one per line (or comma-separated)."
+        description="Only approved extension IDs can be installed while the allowlist is enforced"
       >
-        <div className="space-y-3 px-1 py-1">
-          <Textarea
-            value={allowlistInput}
-            onChange={(event) => setAllowlistInput(event.target.value)}
-            rows={8}
-            className="font-mono ui-text-base"
-            placeholder="athas.typescript&#10;athas.python&#10;athas.go"
-            disabled={!isAdmin || isSaving || !policy.managedMode}
-          />
+        <SettingBlock className="space-y-3">
+          <Field>
+            <FieldLabel htmlFor="enterprise-extension-allowlist">Approved extension IDs</FieldLabel>
+            <Textarea
+              id="enterprise-extension-allowlist"
+              value={allowlistInput}
+              onChange={(event) => setAllowlistInput(event.target.value)}
+              rows={8}
+              className="font-mono"
+              placeholder="athas.typescript&#10;athas.python&#10;athas.go"
+              disabled={!isAdmin || isSaving || !policy.managedMode}
+            />
+            <FieldDescription>One per line, or comma-separated.</FieldDescription>
+          </Field>
           <div className="flex items-center justify-between gap-2">
-            <p className="font-sans ui-text-base text-subtle-foreground">
+            <p className="font-sans ui-text-sm text-subtle-foreground">
               Parsed entries: <span className="text-foreground">{parsedAllowlist.length}</span>
             </p>
             <div className="flex gap-2">
@@ -195,7 +204,7 @@ export const EnterpriseSettings = () => {
               </Button>
             </div>
           </div>
-        </div>
+        </SettingBlock>
       </Section>
     </SettingsView>
   );

@@ -15,12 +15,11 @@ import {
 } from "@/features/telemetry/services/telemetry";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { ButtonGroup } from "@/ui/button-group";
 import { EmptyState } from "@/ui/empty";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/ui/item";
 import Switch from "@/ui/switch";
 import { TextLink } from "@/ui/text-link";
-import Section, { SettingsView, SettingRow } from "../settings-section";
+import Section, { SettingBlock, SettingsView, SettingRow } from "../settings-section";
 import { getServiceUrls } from "@/config/services";
 
 const telemetryDescription =
@@ -169,14 +168,14 @@ export const AdvancedSettings = () => {
         ))}
       </Section>
       <Section title="Data">
-        <SettingRow label="Export Settings" description="Save all app settings to a JSON file.">
+        <SettingRow label="Export Settings" description="Save all app settings to a JSON file">
           <Button variant="default" onClick={() => void handleExportSettings()}>
             Export
           </Button>
         </SettingRow>
         <SettingRow
           label="Import Settings"
-          description="Restore app settings from an Athas settings JSON file."
+          description="Restore app settings from an Athas settings JSON file"
         >
           <Button variant="default" onClick={handleImportSettings}>
             Import
@@ -202,21 +201,21 @@ export const AdvancedSettings = () => {
         </SettingRow>
         <SettingRow
           label="Telemetry Log"
-          description="Inspect local friction signals, the upload queue, and recent delivery results."
+          description="Inspect local friction signals, the upload queue, and recent delivery results"
         >
-          <ButtonGroup>
-            <Button variant="ghost" onClick={() => setShowTelemetryLog((value) => !value)}>
+          <div className="flex items-center gap-2">
+            <Button variant="default" onClick={() => setShowTelemetryLog((value) => !value)}>
               {showTelemetryLog ? "Hide Log" : "Open Log"}
             </Button>
-            <Button variant="ghost" onClick={handleClearTelemetryLog}>
+            <Button variant="default" onClick={handleClearTelemetryLog}>
               Clear
             </Button>
-          </ButtonGroup>
+          </div>
         </SettingRow>
         {showTelemetryLog && (
-          <div className="max-h-72 overflow-y-auto">
+          <SettingBlock className="max-h-72 overflow-y-auto">
             {telemetryLog.length === 0 ? (
-              <EmptyState message="No telemetry entries yet." />
+              <EmptyState className="py-3" message="No telemetry entries yet" />
             ) : (
               <ItemGroup>
                 {[...telemetryLog].reverse().map((entry) => (
@@ -237,7 +236,7 @@ export const AdvancedSettings = () => {
                 ))}
               </ItemGroup>
             )}
-          </div>
+          </SettingBlock>
         )}
       </Section>
     </SettingsView>

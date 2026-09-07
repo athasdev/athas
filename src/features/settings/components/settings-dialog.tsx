@@ -8,7 +8,13 @@ export function SettingsDialog() {
   const close = useUIState((state) => state.setIsSettingsDialogVisible);
   if (!visible) return null;
   return (
-    <Dialog title="Settings" size="settings" scrollable={false} onClose={() => close(false)}>
+    <Dialog
+      title="Settings"
+      size="settings"
+      scrollable={false}
+      hideHeader
+      onClose={() => close(false)}
+    >
       <Suspense
         fallback={
           <div className="flex h-full items-center justify-center text-subtle-foreground ui-text-sm">

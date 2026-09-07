@@ -4,7 +4,7 @@ import type { SettingSearchRecord } from "../types/search.types";
 
 export const SETTINGS_SEARCH_TAB_LABELS: Record<SettingsTab, string> = {
   general: "General",
-  sharing: "Sharing & cloud",
+  sharing: "Sharing & Cloud",
   account: "Account",
   appearance: "Appearance",
   editor: "Editor",

@@ -40,7 +40,6 @@ import {
   CUSTOM_AUTOCOMPLETE_PROVIDER_ID,
   CUSTOM_CHAT_PROVIDER_ID,
 } from "@/features/ai/lib/custom-provider-config";
-import { cn } from "@/utils/cn";
 import {
   setCustomProviderBaseUrl,
   setOllamaApiKey,
@@ -546,12 +545,7 @@ export const AISettings = () => {
         </SettingRow>
 
         <SettingRow label="API Keys" description="Manage provider API keys separately">
-          <Button
-            type="button"
-            variant="default"
-            onClick={() => setIsApiKeyManagerOpen(true)}
-            className="w-fit"
-          >
+          <Button type="button" variant="default" onClick={() => setIsApiKeyManagerOpen(true)}>
             <KeyIcon />
             <span>Manage keys</span>
           </Button>
@@ -568,12 +562,7 @@ export const AISettings = () => {
                 action.getDescription?.() || action.description || "Configure provider extension"
               }
             >
-              <Button
-                type="button"
-                variant="default"
-                onClick={() => void action.execute()}
-                className="w-fit"
-              >
+              <Button type="button" variant="default" onClick={() => void action.execute()}>
                 <Icon />
                 <span>{action.buttonLabel}</span>
               </Button>
@@ -605,6 +594,7 @@ export const AISettings = () => {
               placeholder="http://localhost:11434/v1"
               spellCheck={false}
               leftIcon={GlobeIcon}
+              className="w-56 max-w-full"
             />
           </SettingRow>
           <SettingRow
@@ -624,6 +614,8 @@ export const AISettings = () => {
                 spellCheck={false}
                 autoComplete="off"
                 disabled={isSavingCustomChatApiKey}
+                leftIcon={KeyIcon}
+                className="w-56 max-w-full"
               />
               <Button
                 type="button"
@@ -689,10 +681,8 @@ export const AISettings = () => {
                 placeholder={DEFAULT_OLLAMA_BASE_URL}
                 spellCheck={false}
                 leftIcon={GlobeIcon}
-                className={cn(
-                  "w-56 max-w-full",
-                  ollamaStatus === "error" && "border-destructive/60",
-                )}
+                className="w-56 max-w-full"
+                aria-invalid={ollamaStatus === "error" || undefined}
               />
               {ollamaStatus === "checking" && <Spinner label="Checking" compact />}
               {ollamaStatus === "ok" && <CheckCircleIcon className="text-success" />}
@@ -713,7 +703,7 @@ export const AISettings = () => {
           </SettingRow>
           <SettingRow
             label="API Key"
-            description="Used for authenticated Ollama endpoints and Ollama Cloud."
+            description="Used for authenticated Ollama endpoints and Ollama Cloud"
           >
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <Input
@@ -723,10 +713,8 @@ export const AISettings = () => {
                 placeholder={hasStoredOllamaKey ? "••••••••  (saved)" : "ollama-…"}
                 spellCheck={false}
                 leftIcon={KeyIcon}
-                className={cn(
-                  "w-56 max-w-full",
-                  needsApiKey && !hasStoredOllamaKey && "border-warning/60",
-                )}
+                className="w-56 max-w-full"
+                aria-invalid={(needsApiKey && !hasStoredOllamaKey) || undefined}
                 autoComplete="off"
                 disabled={isSavingOllamaKey}
               />
@@ -752,7 +740,7 @@ export const AISettings = () => {
             </div>
           </SettingRow>
           {needsApiKey && !hasStoredOllamaKey && (
-            <SettingRow label="Ollama Cloud Key" description="Ollama Cloud requires an API key.">
+            <SettingRow label="Ollama Cloud Key" description="Ollama Cloud requires an API key">
               <div className="flex items-center gap-1.5">
                 <WarningCircleIcon className="shrink-0 text-warning" />
                 <TextLink
@@ -775,7 +763,7 @@ export const AISettings = () => {
                   : "Could not connect. Check that Ollama is running at this address."
               }
             >
-              <Badge variant="default">Error</Badge>
+              <Badge variant="error">Error</Badge>
             </SettingRow>
           )}
         </Section>
@@ -795,7 +783,7 @@ export const AISettings = () => {
               label={provider.name}
               description="Requires OAuth authentication"
             >
-              <Badge variant="default">Coming Soon</Badge>
+              <Badge variant="muted">Coming Soon</Badge>
             </SettingRow>
           ))}
         </Section>
@@ -871,7 +859,6 @@ export const AISettings = () => {
                   )
                 }
                 ariaLabel="Autocomplete provider"
-                wrap={false}
               />
             </SettingRow>
             <SettingRow
@@ -913,6 +900,7 @@ export const AISettings = () => {
                   }}
                   placeholder="qwen2.5-coder:7b"
                   disabled={!aiCompletionAllowedByPolicy}
+                  className="w-56 max-w-full"
                 />
               ) : (
                 <div className="flex items-center gap-2">
@@ -980,6 +968,8 @@ export const AISettings = () => {
                     }}
                     placeholder="http://localhost:11434/v1"
                     disabled={!aiCompletionAllowedByPolicy}
+                    leftIcon={GlobeIcon}
+                    className="w-56 max-w-full"
                   />
                 </SettingRow>
                 <SettingRow
@@ -999,6 +989,8 @@ export const AISettings = () => {
                       }
                       placeholder={hasCustomAutocompleteApiKey ? "Saved" : "API key"}
                       disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
+                      leftIcon={KeyIcon}
+                      className="w-56 max-w-full"
                     />
                     <Button
                       variant="default"
@@ -1026,7 +1018,7 @@ export const AISettings = () => {
             )}
             {autocompleteModelError && (
               <SettingRow label="Model List" description={autocompleteModelError}>
-                <Badge variant="default">Error</Badge>
+                <Badge variant="error">Error</Badge>
               </SettingRow>
             )}
           </>
@@ -1036,7 +1028,7 @@ export const AISettings = () => {
             label="Enterprise Policy"
             description={`${aiCompletionAllowedByPolicy ? "AI completion enabled." : "AI completion disabled."} ${byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}`}
           >
-            <Badge variant="default">Managed</Badge>
+            <Badge variant="accent">Managed</Badge>
           </SettingRow>
         ) : null}
       </Section>

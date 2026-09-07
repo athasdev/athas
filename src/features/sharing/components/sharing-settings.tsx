@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { getServiceUrls } from "@/config/services";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
+import { EmptyState } from "@/ui/empty";
 import Switch from "@/ui/switch";
 import Section, { SettingsView, SettingRow } from "@/features/settings/components/settings-section";
 import { writeClipboardText } from "@/utils/clipboard";
@@ -47,11 +49,11 @@ export function SharingSettings() {
         />
       )}
       <Section
-        title="Cloud sessions"
+        title="Cloud Sessions"
         description="Keep your agent conversations available on the web. Synced sessions are private to your account."
       >
         <SettingRow
-          label="Sync agent sessions"
+          label="Sync Agent Sessions"
           description="Upload existing conversations and keep new responses in sync while Athas runs. Turning this off keeps existing cloud copies."
         >
           <Switch
@@ -62,8 +64,8 @@ export function SharingSettings() {
           />
         </SettingRow>
         <SettingRow
-          label="Your web library"
-          description="Read your private sessions and manage links on athas.dev."
+          label="Web Library"
+          description="Read your private sessions and manage links on athas.dev"
         >
           <Button onClick={() => void openUrl(`${base}/dashboard/settings/sharing`)}>
             Open on web
@@ -71,16 +73,21 @@ export function SharingSettings() {
         </SettingRow>
       </Section>
       <Section
-        title="My shared items"
-        description="Manage access and pause live updates without changing the link."
+        title="Shared Items"
+        description="Manage access and pause live updates without changing the link"
       >
-        {!options && !error && (
-          <p className="ui-text-sm text-subtle-foreground">Loading sharing…</p>
+        {!options && (
+          <EmptyState
+            className="py-6"
+            tone={error ? "error" : "neutral"}
+            message={error || "Loading shared items…"}
+          />
         )}
         {options?.items.filter((item) => item.visibility !== "private").length === 0 && (
-          <p className="ui-text-sm text-subtle-foreground">
-            No shared links yet. Share a conversation, selection, or editor buffer to get started.
-          </p>
+          <EmptyState
+            className="py-6"
+            message="No shared links yet. Share a conversation, selection, or editor buffer to get started."
+          />
         )}
         {options?.items
           .filter((item) => item.visibility !== "private")
@@ -118,10 +125,10 @@ export function SharingSettings() {
             </SettingRow>
           ))}
       </Section>
-      {(error || syncError) && (
-        <p role="alert" className="ui-text-sm text-destructive">
-          {error || syncError}
-        </p>
+      {((error && options) || syncError) && (
+        <Alert tone="error">
+          <AlertDescription>{syncError || error}</AlertDescription>
+        </Alert>
       )}
     </SettingsView>
   );

@@ -97,10 +97,10 @@ export const AccountSettings = () => {
       <Section title="Account">
         <SettingRow
           label="Account"
-          description="Sign in to access account and subscription features."
+          description="Sign in to access account and subscription features"
         >
           {isAuthenticated ? (
-            <span className="font-sans ui-text-base text-subtle-foreground">{user?.email}</span>
+            <span className="text-subtle-foreground">{user?.email}</span>
           ) : (
             <Button variant="default" onClick={signIn} disabled={isSigningIn}>
               {isSigningIn ? "Signing In..." : "Sign In"}
@@ -109,43 +109,21 @@ export const AccountSettings = () => {
         </SettingRow>
 
         {isAuthenticated && (
-          <div
-            role="group"
-            aria-labelledby="account-intelligence-label"
-            aria-describedby="account-intelligence-description"
-            className="rounded-lg px-1 py-2"
+          <SettingRow
+            label="Athas Intelligence"
+            description="Commit messages, inline edits, autocomplete, drafts, and extension generation. Athas Agent uses your configured provider."
+            activateOnClick={false}
           >
-            <div className="mb-3">
-              <div className="min-w-0">
-                <div
-                  id="account-intelligence-label"
-                  className="font-sans ui-text-base text-foreground"
-                >
-                  Athas Intelligence
-                </div>
-                <div
-                  id="account-intelligence-description"
-                  className="font-sans ui-text-base text-subtle-foreground"
-                >
-                  Focused editor features including commit messages, inline edits, autocomplete,
-                  drafts, and extension generation. Athas Agent uses your configured provider.
-                </div>
-              </div>
-            </div>
-            <Badge variant={hasIntelligence ? "default" : "muted"}>
+            <Badge variant={hasIntelligence ? "success" : "muted"}>
               {hasIntelligence ? "Included in Pro" : "Pro required"}
             </Badge>
-          </div>
+          </SettingRow>
         )}
 
         {isAuthenticated && (
-          <SettingRow label="Plan" description="Manage your Athas subscription and billing.">
+          <SettingRow label="Plan" description="Manage your Athas subscription and billing">
             <div className="flex items-center gap-2">
-              {isPaidPlan ? (
-                <Badge variant="default" className="bg-primary/10 font-normal text-primary">
-                  {planLabel}
-                </Badge>
-              ) : null}
+              {isPaidPlan ? <Badge variant="accent">{planLabel}</Badge> : null}
               <Button variant="default" onClick={handleManagePlan}>
                 {isPaidPlan ? "Manage plan" : "Upgrade plan"}
               </Button>
@@ -178,7 +156,7 @@ export const AccountSettings = () => {
           <>
             <SettingRow
               label="Sync Now"
-              description="Upload this device's current settings snapshot to the cloud."
+              description="Upload this device's current settings snapshot to the cloud"
             >
               <Button
                 variant="default"
@@ -191,7 +169,7 @@ export const AccountSettings = () => {
 
             <SettingRow
               label="Restore From Cloud"
-              description="Replace this device's non-sensitive settings with the cloud snapshot."
+              description="Replace this device's non-sensitive settings with the cloud snapshot"
             >
               <Button
                 variant="default"
@@ -207,7 +185,7 @@ export const AccountSettings = () => {
         {isAuthenticated && (
           <SettingRow
             label="Manage Account"
-            description="Open your Athas dashboard to manage billing and subscription details."
+            description="Open your Athas dashboard to manage billing and subscription details"
           >
             <Button variant="default" onClick={handleManageAccount}>
               Open Dashboard
@@ -218,7 +196,7 @@ export const AccountSettings = () => {
         {isAuthenticated && (
           <SettingRow
             label="Sign Out"
-            description="End your current Athas account session on this device."
+            description="End your current Athas account session on this device"
           >
             <Button variant="default" onClick={() => void logout()}>
               Sign Out

@@ -61,6 +61,10 @@ export default function Section({ title, description, children, className }: Sec
   );
 }
 
+export function SettingBlock({ className, ...props }: ComponentProps<"div">) {
+  return <div data-slot="setting-block" className={cn("px-4 py-3", className)} {...props} />;
+}
+
 interface SettingRowProps {
   label: string;
   labelAccessory?: ReactNode;

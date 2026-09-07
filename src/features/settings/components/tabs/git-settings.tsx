@@ -186,8 +186,6 @@ export const GitSettings = () => {
             ]}
             onChange={(value) => updateSetting("gitDefaultDiffView", value as "unified" | "split")}
             variant="default"
-            searchable
-            searchableTrigger="input"
           />
         </SettingRow>
       </Section>

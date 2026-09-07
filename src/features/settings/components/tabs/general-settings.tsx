@@ -5,6 +5,7 @@ import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-s
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
@@ -16,7 +17,7 @@ import Command, {
 import { Progress } from "@/ui/progress";
 import { writeClipboardText } from "@/utils/clipboard";
 import { matchesSearchQuery } from "@/utils/search-match";
-import Section, { SettingsView, SettingRow } from "../settings-section";
+import Section, { SettingBlock, SettingsView, SettingRow } from "../settings-section";
 
 const REPORT_BUG_CHANNELS = [
   {
@@ -216,21 +217,27 @@ export const GeneralSettings = () => {
         </SettingRow>
 
         {downloading && downloadProgress ? (
-          <div className="px-4 py-3">
+          <SettingBlock>
             <Progress
               value={downloadProgress.percentage}
               aria-label="Athas update download progress"
             />
-          </div>
+          </SettingBlock>
         ) : null}
 
-        {error && <div className="font-sans ui-text-sm px-4 py-2 text-destructive">{error}</div>}
+        {error ? (
+          <SettingBlock>
+            <Alert tone="error">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </SettingBlock>
+        ) : null}
 
         <SettingRow
           label="Terminal Command"
           description={
             <span className="flex flex-col gap-0.5">
-              <span>Install the `athas` command to open folders and files from your terminal.</span>
+              <span>Install the athas command to open folders and files from your terminal.</span>
               <span className="text-subtle-foreground/75">{cliStatus}</span>
             </span>
           }
@@ -265,10 +272,7 @@ export const GeneralSettings = () => {
           </div>
         </SettingRow>
 
-        <SettingRow
-          label="Import Settings"
-          description="Import matching setup from another editor."
-        >
+        <SettingRow label="Import Settings" description="Import matching setup from another editor">
           <Button onClick={() => setIsImportDialogOpen(true)} variant="default">
             Import
           </Button>
@@ -276,7 +280,7 @@ export const GeneralSettings = () => {
 
         <SettingRow
           label="Report a Bug"
-          description="Choose where to report an issue with environment details."
+          description="Choose where to report an issue with environment details"
         >
           <Button onClick={() => setIsReportBugDialogOpen(true)} variant="default">
             Open

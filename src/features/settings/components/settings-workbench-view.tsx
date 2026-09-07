@@ -13,10 +13,13 @@ import {
 } from "@/features/settings/lib/settings-search";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
+import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import { Empty, EmptyDescription } from "@/ui/empty";
+import { XIcon } from "@/ui/icons";
 import { Workbench, WorkbenchContent } from "@/ui/workbench";
 import { SearchInput } from "@/ui/search";
+import { cn } from "@/utils/cn";
 import type { SearchResult } from "../types/search.types";
 
 import { SettingsNavigation } from "./settings-navigation";
@@ -40,6 +43,7 @@ const SettingsWorkbenchView = () => {
     settingsNavigationRequestId,
     setSettingsInitialTab,
     setSettingsInitialSection,
+    setIsSettingsDialogVisible,
     activeSidebarView,
     setActiveView,
   } = useUIState();
@@ -280,6 +284,18 @@ const SettingsWorkbenchView = () => {
           <WorkbenchContent
             title={activeTabItem?.label ?? "Settings"}
             description={activeTabItem?.description}
+            pinnedHeader
+            actions={
+              <Button
+                variant="ghost"
+                iconOnly
+                aria-label="Close settings"
+                tooltip="Close"
+                onClick={() => setIsSettingsDialogVisible(false)}
+              >
+                <XIcon />
+              </Button>
+            }
             viewportProps={{
               ref: contentRef,
               id: activePanelId,
@@ -311,20 +327,20 @@ const SettingsWorkbenchView = () => {
                   key={result.id}
                   type="button"
                   onClick={() => navigateToSearchResult(result)}
-                  className={[
-                    "font-sans flex w-full flex-col items-start rounded-lg px-2.5 py-2 text-left transition-colors",
+                  className={cn(
+                    "flex w-full flex-col items-start rounded-chrome px-2 py-1.5 text-left font-sans transition-colors duration-fast",
                     isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-accent",
-                  ].join(" ")}
+                  )}
                 >
-                  <span className="ui-text-base w-full truncate font-medium">{result.label}</span>
-                  <span className="ui-text-sm w-full truncate text-subtle-foreground">
+                  <span className="w-full truncate ui-text-sm font-medium">{result.label}</span>
+                  <span className="w-full truncate text-subtle-foreground ui-text-sm">
                     {SETTINGS_SEARCH_TAB_LABELS[result.tab]} / {result.section}
                   </span>
                 </button>
               );
             })
           ) : (
-            <Empty className="min-h-0 flex-none items-start rounded-none px-3 py-2 text-left">
+            <Empty className="min-h-0 flex-none items-start px-2 py-1.5 text-left">
               <EmptyDescription>No matching settings</EmptyDescription>
             </Empty>
           )}

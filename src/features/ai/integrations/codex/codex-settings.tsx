@@ -84,7 +84,7 @@ export function CodexSettings() {
         }
       >
         <div className="flex items-center gap-2">
-          <Badge variant="default">
+          <Badge variant={status?.initialized ? "success" : "muted"}>
             {status?.initialized ? "Connected" : status?.installed ? "Installed" : "Unavailable"}
           </Badge>
           <Button
@@ -125,7 +125,7 @@ export function CodexSettings() {
           onChange={(effort) => update({ effort })}
         />
       </SettingRow>
-      <SettingRow label="Workspace access" description="Filesystem sandbox used by Codex">
+      <SettingRow label="Workspace Access" description="Filesystem sandbox used by Codex">
         <Select
           value={settings.sandbox ?? "workspace-write"}
           options={sandboxOptions}
@@ -140,7 +140,7 @@ export function CodexSettings() {
         />
       </SettingRow>
       <SettingRow
-        label="Codex capabilities"
+        label="Codex Capabilities"
         description={catalogError ?? "Loaded from app-server for the current workspace"}
       >
         <div className="flex items-center gap-1.5">
@@ -157,7 +157,7 @@ export function CodexSettings() {
           >
             Sign in
           </Button>
-          <Button variant="ghost" onClick={() => void invoke("logout_codex_account")}>
+          <Button variant="default" onClick={() => void invoke("logout_codex_account")}>
             Sign out
           </Button>
         </div>
