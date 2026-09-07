@@ -117,3 +117,33 @@
     opacity: 0.35;
   }
 }
+
+/* Hint shown while hovering a link; xterm-hover keeps it above link hit-testing */
+.xterm-container .terminal-link-tooltip {
+  position: absolute;
+  z-index: 30;
+  display: flex;
+  max-width: min(32rem, calc(100% - 1rem));
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-popover);
+  font-family: var(--ui-font-family);
+  font-size: var(--ui-text-sm);
+  line-height: 1.4;
+  color: var(--foreground);
+  pointer-events: none;
+}
+
+.xterm-container .terminal-link-tooltip-target {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--editor-font-family);
+}
+
+.xterm-container .terminal-link-tooltip-hint {
+  color: var(--subtle-foreground);
+}

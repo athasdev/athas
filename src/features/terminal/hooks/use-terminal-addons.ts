@@ -1,4 +1,3 @@
-import { ask } from "@tauri-apps/plugin-dialog";
 import { open } from "@tauri-apps/plugin-shell";
 import { ClipboardAddon, type ClipboardSelectionType } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
@@ -9,11 +8,17 @@ import { SerializeAddon } from "@xterm/addon-serialize";
 import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
-import type { ILink, ILinkProvider, Terminal } from "@xterm/xterm";
+import type { ILink, ILinkHandler, ILinkProvider, Terminal } from "@xterm/xterm";
+import type { TerminalLinkTooltip } from "@/features/terminal/lib/terminal-link-tooltip";
 import {
   parseTerminalFileLinks,
   type TerminalFileLink,
 } from "@/features/terminal/utils/terminal-file-links";
+import {
+  describeTerminalLinkHint,
+  isTerminalLinkModifierPressed,
+  resolveExternalLinkTarget,
+} from "@/features/terminal/utils/terminal-link-activation";
 import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { writeClipboardText } from "@/utils/clipboard";
 import { frontendTrace } from "@/utils/frontend-trace";
@@ -107,27 +112,31 @@ function reportRendererFallback(reason: "unavailable" | "context-loss", error?: 
   void recordFrictionSignal({ area: "terminal", signal: "renderer_fallback" });
 }
 
-export function loadWebLinksAddon(terminal: Terminal): void {
-  const webLinksAddon = new WebLinksAddon(async (_event: MouseEvent, uri: string) => {
-    try {
-      const confirmed = await ask(`Do you want to open this link in your browser?\n\n${uri}`, {
-        title: "Open External Link",
-        kind: "warning",
-        okLabel: "Open",
-        cancelLabel: "Cancel",
-      });
+export function openExternalTerminalLink(uri: string): void {
+  const target = resolveExternalLinkTarget(uri);
+  if (!target) return;
+  open(target).catch((error) => console.error("Failed to open link:", error));
+}
 
-      if (confirmed) {
-        await open(uri);
-      }
-    } catch (error) {
-      console.error("Failed to open link:", error);
-    }
-  });
+interface TerminalLinkOptions {
+  tooltip: TerminalLinkTooltip;
+}
+
+export function loadWebLinksAddon(terminal: Terminal, { tooltip }: TerminalLinkOptions): void {
+  const webLinksAddon = new WebLinksAddon(
+    (event: MouseEvent, uri: string) => {
+      if (!isTerminalLinkModifierPressed(event)) return;
+      openExternalTerminalLink(uri);
+    },
+    {
+      hover: (event, text) => tooltip.show(event, text, describeTerminalLinkHint("url")),
+      leave: () => tooltip.hide(),
+    },
+  );
   terminal.loadAddon(webLinksAddon);
 }
 
-interface FileLinksProviderOptions {
+interface FileLinksProviderOptions extends TerminalLinkOptions {
   getWorkspaceRoot: () => string | undefined;
   openFile: (link: TerminalFileLink) => void | Promise<void>;
 }
@@ -160,15 +169,50 @@ export function registerFileLinksProvider(
             end: { x: link.endIndex, y: bufferLineNumber },
           },
           text: link.text,
-          activate: () => {
+          activate: (event) => {
+            if (!isTerminalLinkModifierPressed(event)) return;
             void options.openFile(link);
           },
+          hover: (event, text) =>
+            options.tooltip.show(event, text, describeTerminalLinkHint("file")),
+          leave: () => options.tooltip.hide(),
         })),
       );
     },
   };
 
   terminal.registerLinkProvider(provider);
+}
+
+export function createTerminalLinkHandler(options: FileLinksProviderOptions): ILinkHandler {
+  const resolveFileLink = (uri: string) =>
+    uri.toLowerCase().startsWith("file://")
+      ? (parseTerminalFileLinks(uri, options.getWorkspaceRoot())[0] ?? null)
+      : null;
+
+  return {
+    allowNonHttpProtocols: true,
+    activate: (event, uri) => {
+      if (!isTerminalLinkModifierPressed(event)) return;
+      const fileLink = resolveFileLink(uri);
+      if (fileLink) {
+        void options.openFile(fileLink);
+        return;
+      }
+      openExternalTerminalLink(uri);
+    },
+    hover: (event, uri) => {
+      const fileLink = resolveFileLink(uri);
+      const isExternal = !fileLink && resolveExternalLinkTarget(uri) !== null;
+      if (!fileLink && !isExternal) return;
+      options.tooltip.show(
+        event,
+        fileLink ? fileLink.path : uri,
+        describeTerminalLinkHint(fileLink ? "file" : "url"),
+      );
+    },
+    leave: () => options.tooltip.hide(),
+  };
 }
 
 export function injectLinkStyles(sessionId: string, containerId: string): void {

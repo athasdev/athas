@@ -27,6 +27,7 @@ import { frontendTrace } from "@/utils/frontend-trace";
 import { currentPlatform } from "@/utils/platform";
 import {
   createTerminalAddons,
+  createTerminalLinkHandler,
   injectLinkStyles,
   loadWebLinksAddon,
   registerFileLinksProvider,
@@ -34,6 +35,7 @@ import {
   type TerminalAddons,
 } from "../hooks/use-terminal-addons";
 import { useTerminalConnection } from "../hooks/use-terminal-connection";
+import { TerminalLinkTooltip } from "../lib/terminal-link-tooltip";
 import { TerminalShellIntegration } from "../lib/terminal-shell-integration";
 import { useTerminalTheme, type TerminalTheme } from "../hooks/use-terminal-theme";
 import { useTerminalStore } from "../stores/terminal.store";
@@ -85,6 +87,7 @@ export const TerminalEmulator = ({
   const terminalRef = useRef<Terminal | null>(null);
   const addonsRef = useRef<TerminalAddons | null>(null);
   const shellIntegrationRef = useRef<TerminalShellIntegration | null>(null);
+  const linkTooltipRef = useRef<TerminalLinkTooltip | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchResults, setSearchResults] = useState({ current: 0, total: 0 });
@@ -267,7 +270,21 @@ export const TerminalEmulator = ({
     }
 
     try {
+      let linkTooltip: TerminalLinkTooltip | null = null;
+      const linkOptions = {
+        get tooltip() {
+          if (!linkTooltip) throw new Error("Terminal link tooltip is not ready.");
+          return linkTooltip;
+        },
+        getWorkspaceRoot: () => workspaceRootRef.current,
+        openFile: async (link: { path: string; line?: number; column?: number }) => {
+          await useFileSystemStore
+            .getState()
+            .handleFileSelect(link.path, false, link.line, link.column);
+        },
+      };
       const terminal = new Terminal({
+        linkHandler: createTerminalLinkHandler(linkOptions),
         fontFamily: resolved.fontFamily,
         fontSize: effectiveTerminalFontSize,
         lineHeight: terminalLineHeight,
@@ -287,6 +304,9 @@ export const TerminalEmulator = ({
       });
 
       terminal.open(terminalContainerRef.current);
+      linkTooltip = new TerminalLinkTooltip(terminal);
+      linkTooltipRef.current?.dispose();
+      linkTooltipRef.current = linkTooltip;
       const addons = createTerminalAddons(terminal, {
         onRendererFallback: fitTerminal,
       });
@@ -362,15 +382,8 @@ export const TerminalEmulator = ({
         };
       }
 
-      loadWebLinksAddon(terminal);
-      registerFileLinksProvider(terminal, {
-        getWorkspaceRoot: () => workspaceRootRef.current,
-        openFile: async (link) => {
-          await useFileSystemStore
-            .getState()
-            .handleFileSelect(link.path, false, link.line, link.column);
-        },
-      });
+      loadWebLinksAddon(terminal, linkOptions);
+      registerFileLinksProvider(terminal, linkOptions);
       injectLinkStyles(sessionId, terminalContainerRef.current.id || `terminal-${sessionId}`);
       shellIntegrationRef.current?.dispose();
       shellIntegrationRef.current = terminalShellIntegration
@@ -616,6 +629,8 @@ export const TerminalEmulator = ({
       }
       shellIntegrationRef.current?.dispose();
       shellIntegrationRef.current = null;
+      linkTooltipRef.current?.dispose();
+      linkTooltipRef.current = null;
       if (terminalRef.current) {
         terminalRef.current.dispose();
         terminalRef.current = null;
