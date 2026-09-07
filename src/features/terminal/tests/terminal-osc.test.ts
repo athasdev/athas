@@ -9,6 +9,12 @@ describe("OSC 7 directory reports", () => {
     expect(parseOsc7Directory("file:///tmp/project")).toBe("/tmp/project");
   });
 
+  it("normalises Windows drive paths reported by PowerShell", () => {
+    expect(parseOsc7Directory("file://DESKTOP/C:/Users/mehmet/project")).toBe(
+      "C:/Users/mehmet/project",
+    );
+  });
+
   it("keeps undecodable paths and rejects non-file payloads", () => {
     expect(parseOsc7Directory("file:///bad%zz")).toBe("/bad%zz");
     expect(parseOsc7Directory("https://example.com/path")).toBeNull();

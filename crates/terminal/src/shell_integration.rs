@@ -34,6 +34,10 @@ const SCRIPTS: &[(&str, &str)] = &[
       "fish/fish/vendor_conf.d/athas-shell-integration.fish",
       include_str!("../shell-integration/fish/fish/vendor_conf.d/athas-shell-integration.fish"),
    ),
+   (
+      "powershell/athas-shell-integration.ps1",
+      include_str!("../shell-integration/powershell/athas-shell-integration.ps1"),
+   ),
 ];
 
 /// Writes the embedded shell integration scripts under `base_dir` and returns
@@ -61,13 +65,15 @@ pub(crate) fn apply_shell_integration(
    shell_path: Option<&str>,
    environment: &HashMap<String, String>,
 ) -> bool {
-   if cfg!(target_os = "windows") {
-      return false;
-   }
-
    let Some(shell_name) = shell_path.and_then(executable_name) else {
       return false;
    };
+   let shell_name = shell_name
+      .strip_suffix(".exe")
+      .or_else(|| shell_name.strip_suffix(".EXE"))
+      .unwrap_or(shell_name)
+      .to_ascii_lowercase();
+   let posix_shell_supported = !cfg!(target_os = "windows");
    let lookup = |key: &str| {
       environment
          .get(key)
@@ -76,8 +82,23 @@ pub(crate) fn apply_shell_integration(
          .filter(|value| !value.is_empty())
    };
 
-   let applied = match shell_name {
-      "zsh" => {
+   let applied = match shell_name.as_str() {
+      "pwsh" | "powershell" => {
+         let script = integration_dir
+            .join("powershell")
+            .join("athas-shell-integration.ps1");
+         if !script.is_file() {
+            return false;
+         }
+         cmd.arg("-NoExit");
+         cmd.arg("-Command");
+         cmd.arg(format!(
+            ". '{}'",
+            script.to_string_lossy().replace('\'', "''")
+         ));
+         true
+      }
+      "zsh" if posix_shell_supported => {
          let zsh_dir = integration_dir.join("zsh");
          if !zsh_dir.join(".zshrc").is_file() {
             return false;
@@ -88,7 +109,7 @@ pub(crate) fn apply_shell_integration(
          cmd.env("ZDOTDIR", &zsh_dir);
          true
       }
-      "bash" => {
+      "bash" if posix_shell_supported => {
          let script = integration_dir
             .join("bash")
             .join("athas-shell-integration.bash");
@@ -99,7 +120,7 @@ pub(crate) fn apply_shell_integration(
          cmd.arg(&script);
          true
       }
-      "fish" => {
+      "fish" if posix_shell_supported => {
          let data_dir = integration_dir.join("fish");
          if !data_dir.join("fish").join("vendor_conf.d").is_dir() {
             return false;
@@ -129,7 +150,7 @@ fn executable_name(path: &str) -> Option<&str> {
       .filter(|name| !name.is_empty())
 }
 
-#[cfg(all(test, not(target_os = "windows")))]
+#[cfg(test)]
 mod tests {
    use super::*;
    use std::ffi::OsStr;
@@ -177,6 +198,7 @@ mod tests {
       );
    }
 
+   #[cfg(not(target_os = "windows"))]
    #[test]
    fn zsh_redirects_zdotdir_and_remembers_the_user_directory() {
       let dir = install_dir();
@@ -201,6 +223,7 @@ mod tests {
       );
    }
 
+   #[cfg(not(target_os = "windows"))]
    #[test]
    fn bash_loads_the_integration_through_an_init_file() {
       let dir = install_dir();
@@ -225,6 +248,7 @@ mod tests {
       );
    }
 
+   #[cfg(not(target_os = "windows"))]
    #[test]
    fn fish_prepends_the_vendor_data_directory() {
       let dir = install_dir();
@@ -246,6 +270,38 @@ mod tests {
       );
    }
 
+   #[test]
+   fn powershell_dot_sources_the_integration_after_the_profile() {
+      let dir = install_dir();
+      let mut cmd = CommandBuilder::new("pwsh");
+
+      assert!(apply_shell_integration(
+         &mut cmd,
+         &dir,
+         Some("/usr/local/bin/pwsh"),
+         &HashMap::new()
+      ));
+      assert_eq!(
+         argv(&cmd),
+         vec![
+            "pwsh".to_string(),
+            "-NoExit".to_string(),
+            "-Command".to_string(),
+            format!(
+               ". '{}'",
+               dir.join("powershell")
+                  .join("athas-shell-integration.ps1")
+                  .display()
+            ),
+         ]
+      );
+      assert_eq!(
+         cmd.get_env("ATHAS_SHELL_INTEGRATION"),
+         Some(OsStr::new("1"))
+      );
+   }
+
+   #[cfg(not(target_os = "windows"))]
    #[test]
    fn unknown_shells_and_missing_scripts_leave_the_command_alone() {
       let dir = install_dir();

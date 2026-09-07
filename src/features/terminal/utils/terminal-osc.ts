@@ -5,9 +5,12 @@ export function parseOsc7Directory(payload: string): string | null {
   if (pathStart === -1) return null;
 
   const path = payload.slice(pathStart);
+  let decoded = path;
   try {
-    return decodeURIComponent(path);
+    decoded = decodeURIComponent(path);
   } catch {
-    return path;
+    decoded = path;
   }
+
+  return /^\/[A-Za-z]:\//.test(decoded) ? decoded.slice(1) : decoded;
 }
