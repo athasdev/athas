@@ -1,44 +1,73 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  ActivityIcon,
   ArrowClockwiseIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  CopyIcon,
-  SearchIcon,
-  XCircleIcon,
+  ArrowCounterClockwiseIcon,
+  BoltIcon,
+  ChevronDownIcon,
+  GitBranchIcon,
+  GitCommitIcon,
+  OpenExternalIcon,
+  StopIcon,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { Empty, EmptyDescription } from "@/ui/empty";
-import { DropdownMenuItem } from "@/ui/dropdown";
-import Input from "@/ui/input";
-import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";
 import {
-  ResourceMetadataItem,
-  ResourceMetadataList,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
+import { Progress } from "@/ui/progress";
+import {
   ResourceViewer,
   ResourceViewerActionsMenu,
-  ResourceViewerBody,
   ResourceViewerHeader,
   ResourceViewerTitle,
 } from "@/ui/resource";
 import { Spinner } from "@/ui/spinner";
-import { ScrollArea } from "@/ui/scroll-area";
-import { toast } from "sonner";
 import { cn } from "@/utils/cn";
+import { useNow } from "../hooks/use-now";
+import { getWorkflowRunsEntry, useGitHubActionsStore } from "../stores/github-actions.store";
 import type {
   GitHubActionNotificationTarget,
   WorkflowRunDetails,
   WorkflowRunJob,
   WorkflowRunListItem,
-  WorkflowRunStep,
 } from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
-import { copyToClipboard } from "../utils/github-viewer-utils";
+import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
+import {
+  filterWorkflowLog,
+  findFirstProblemLine,
+  formatWorkflowLogText,
+  mapWorkflowLogToSteps,
+  parseWorkflowLog,
+  sliceWorkflowLog,
+  type WorkflowLogLine,
+} from "../utils/github-workflow-logs";
+import {
+  formatWorkflowDuration,
+  getWorkflowRunLabel,
+  getWorkflowRunState,
+  getWorkflowRunTiming,
+  getWorkflowRunTitle,
+  pickInitialWorkflowJob,
+  pickInitialWorkflowStepIndex,
+  summarizeWorkflowJobs,
+} from "../utils/github-workflow-status";
+import { GitHubActionJobsPanel } from "./github-action-jobs-panel";
+import { GitHubActionLogPanel } from "./github-action-log-panel";
+import { GitHubAvatar } from "./github-avatar";
+import {
+  WORKFLOW_TONE_BADGE_VARIANT,
+  WORKFLOW_TONE_TEXT_CLASS,
+  WorkflowStatusIcon,
+} from "./github-workflow-status-icon";
 
 interface GitHubActionViewerProps {
   runId?: number;
@@ -47,265 +76,94 @@ interface GitHubActionViewerProps {
   bufferId: string;
 }
 
-const areJobLogsDownloadable = (job: WorkflowRunJob | null) =>
-  Boolean(job?.completedAt || job?.conclusion || job?.status?.toLowerCase() === "completed");
+interface JobLogState {
+  lines: WorkflowLogLine[];
+  fetchedAt: number;
+}
 
-const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null) => {
-  const normalizedStatus = status?.toLowerCase() ?? "";
-  const normalizedConclusion = conclusion?.toLowerCase() ?? "";
+const ACTIVE_RUN_POLL_INTERVAL_MS = 15_000;
+const ACTIVE_LOG_POLL_INTERVAL_MS = 15_000;
 
-  if (normalizedConclusion === "success") {
-    return { label: "Success", icon: CheckCircleIcon, className: "text-success", animate: false };
-  }
+const describeError = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-  if (
-    normalizedConclusion === "failure" ||
-    normalizedConclusion === "timed_out" ||
-    normalizedConclusion === "startup_failure"
-  ) {
-    return { label: "Failed", icon: XCircleIcon, className: "text-destructive", animate: false };
-  }
-
-  if (normalizedConclusion === "cancelled" || normalizedConclusion === "skipped") {
-    return {
-      label: normalizedConclusion === "skipped" ? "Skipped" : "Cancelled",
-      icon: XCircleIcon,
-      className: "text-subtle-foreground",
-      animate: false,
-    };
-  }
-
-  if (
-    normalizedStatus === "in_progress" ||
-    normalizedStatus === "waiting" ||
-    normalizedStatus === "requested"
-  ) {
-    return { label: "Running", icon: null, className: "text-primary", animate: true };
-  }
-
-  if (normalizedStatus === "queued" || normalizedStatus === "pending") {
-    return { label: "Queued", icon: ClockIcon, className: "text-warning", animate: false };
-  }
-
-  return {
-    label: normalizedConclusion || normalizedStatus || "Unknown",
-    icon: ActivityIcon,
-    className: "text-subtle-foreground",
-    animate: false,
-  };
+const areJobLogsAvailable = (job: WorkflowRunJob | null) => {
+  if (!job) return false;
+  const state = getWorkflowRunState(job.status, job.conclusion);
+  return state.phase !== "queued" && state.phase !== "waiting" && state.phase !== "skipped";
 };
 
-function WorkflowStatusIcon({
-  status,
-  conclusion,
-  className,
+function MetaChip({
+  icon,
+  children,
+  mono,
+  title,
 }: {
-  status?: string | null;
-  conclusion?: string | null;
-  className?: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+  mono?: boolean;
+  title?: string;
 }) {
-  const state = getWorkflowRunStatus(status, conclusion);
-  const Icon = state.icon;
-
   return (
-    <span title={state.label} aria-label={state.label} className={cn(state.className, className)}>
-      {state.animate || !Icon ? (
-        <Spinner label={state.label} compact />
-      ) : (
-        <Icon className="size-4" optical="md" />
+    <span
+      title={title}
+      className={cn(
+        "inline-flex min-w-0 items-center gap-1 text-subtle-foreground ui-text-sm",
+        mono && "font-mono",
       )}
+    >
+      {icon}
+      <span className="truncate">{children}</span>
     </span>
   );
 }
-
-const formatRunTime = (value?: string | null) => {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-const formatDuration = (startedAt?: string | null, completedAt?: string | null) => {
-  if (!startedAt || !completedAt) return null;
-  const started = new Date(startedAt).getTime();
-  const completed = new Date(completedAt).getTime();
-  if (Number.isNaN(started) || Number.isNaN(completed) || completed < started) return null;
-
-  const totalSeconds = Math.round((completed - started) / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-
-  if (minutes <= 0) return `${seconds}s`;
-  if (minutes < 60) return `${minutes}m ${seconds}s`;
-
-  const hours = Math.floor(minutes / 60);
-  return `${hours}h ${minutes % 60}m`;
-};
-
-const stripLogTimestamp = (line: string) => {
-  return line.replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\s+/, "");
-};
-
-const normalizeLogTitle = (value: string) => {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/^run\s+/, "")
-    .replace(/\s+/g, " ");
-};
-
-const getLogGroupTitle = (line: string) => {
-  const cleanLine = stripLogTimestamp(line).trim();
-  if (!cleanLine.startsWith("##[group]")) return null;
-  return cleanLine.replace(/^##\[group\]/, "").trim();
-};
-
-const parseWorkflowLogChunks = (logs: string) => {
-  const lines = logs.split(/\r?\n/);
-  const chunks: Array<{ title: string; text: string }> = [];
-  let currentTitle: string | null = null;
-  let currentStart = 0;
-
-  lines.forEach((line, index) => {
-    const nextTitle = getLogGroupTitle(line);
-    if (nextTitle) {
-      if (currentTitle && currentStart < index) {
-        chunks.push({
-          title: currentTitle,
-          text: lines.slice(currentStart, index).join("\n").trim(),
-        });
-      }
-
-      currentTitle = nextTitle;
-      currentStart = index;
-      return;
-    }
-
-    if (currentTitle && stripLogTimestamp(line).trim() === "##[endgroup]") {
-      chunks.push({
-        title: currentTitle,
-        text: lines
-          .slice(currentStart, index + 1)
-          .join("\n")
-          .trim(),
-      });
-      currentTitle = null;
-      currentStart = index + 1;
-    }
-  });
-
-  if (currentTitle && currentStart < lines.length) {
-    chunks.push({
-      title: currentTitle,
-      text: lines.slice(currentStart).join("\n").trim(),
-    });
-  }
-
-  return chunks.filter((chunk) => chunk.text.length > 0);
-};
-
-const getStepLogChunk = (
-  chunks: Array<{ title: string; text: string }>,
-  step: WorkflowRunStep,
-  stepIndex: number,
-) => {
-  const normalizedStepName = normalizeLogTitle(step.name);
-  const matchingChunk = chunks.find((chunk) => {
-    const normalizedChunkTitle = normalizeLogTitle(chunk.title);
-    return (
-      normalizedChunkTitle === normalizedStepName ||
-      normalizedChunkTitle.includes(normalizedStepName) ||
-      normalizedStepName.includes(normalizedChunkTitle)
-    );
-  });
-
-  return matchingChunk ?? chunks[stepIndex] ?? null;
-};
-
-const getSelectedStepLogs = (
-  logs: string | undefined,
-  steps: WorkflowRunStep[],
-  selectedStepIndex: number | null,
-) => {
-  if (!logs || selectedStepIndex === null || !steps[selectedStepIndex]) return logs;
-
-  const chunks = parseWorkflowLogChunks(logs);
-  if (chunks.length === 0) return logs;
-
-  return getStepLogChunk(chunks, steps[selectedStepIndex], selectedStepIndex)?.text ?? logs;
-};
-
-const filterLogLines = (logs: string | undefined, query: string) => {
-  const normalizedQuery = query.trim().toLowerCase();
-  if (!logs || !normalizedQuery) return logs;
-
-  return logs
-    .split(/\r?\n/)
-    .filter((line) => line.toLowerCase().includes(normalizedQuery))
-    .join("\n");
-};
-
-const getLogLineSegments = (line: string, query: string) => {
-  const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) return [{ text: line, isMatch: false }];
-
-  const lowerLine = line.toLowerCase();
-  const segments: Array<{ text: string; isMatch: boolean }> = [];
-  let currentIndex = 0;
-
-  while (currentIndex < line.length) {
-    const matchIndex = lowerLine.indexOf(normalizedQuery, currentIndex);
-    if (matchIndex < 0) break;
-
-    if (matchIndex > currentIndex) {
-      segments.push({ text: line.slice(currentIndex, matchIndex), isMatch: false });
-    }
-
-    const matchEnd = matchIndex + normalizedQuery.length;
-    segments.push({ text: line.slice(matchIndex, matchEnd), isMatch: true });
-    currentIndex = matchEnd;
-  }
-
-  if (currentIndex < line.length) {
-    segments.push({ text: line.slice(currentIndex), isMatch: false });
-  }
-
-  return segments.length > 0 ? segments : [{ text: line, isMatch: false }];
-};
 
 const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
   const { runId, notification, repoPath, bufferId } = props;
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
   const buffer = useBufferStore((state) => state.buffers.find((item) => item.id === bufferId));
+  const { rerunRun, cancelRun } = useGitHubActionsStore.use.actions();
+  const pendingActions = useGitHubActionsStore.use.pendingActions();
   const [resolvedRunId, setResolvedRunId] = useState<number | null>(runId ?? null);
+  const listedRun = useGitHubActionsStore((state) =>
+    resolvedRunId === null
+      ? null
+      : (getWorkflowRunsEntry(state.entries, repoPath ?? null).runs.find(
+          (run) => run.databaseId === resolvedRunId,
+        ) ?? null),
+  );
   const [details, setDetails] = useState<WorkflowRunDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [visibleJobCount, setVisibleJobCount] = useState(10);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(null);
-  const [jobLogs, setJobLogs] = useState<Record<number, string>>({});
+  const [jobLogs, setJobLogs] = useState<Record<number, JobLogState>>({});
   const [jobLogErrors, setJobLogErrors] = useState<Record<number, string>>({});
   const [loadingJobLogId, setLoadingJobLogId] = useState<number | null>(null);
-  const [isLogSearchVisible, setIsLogSearchVisible] = useState(false);
-  const [logSearchQuery, setLogSearchQuery] = useState("");
-  const visibleJobs = useMemo(
-    () => details?.jobs.slice(0, visibleJobCount) ?? [],
-    [details?.jobs, visibleJobCount],
+  const [logQuery, setLogQuery] = useState("");
+  const [showTimestamps, setShowTimestamps] = useState(false);
+  const [wrapLines, setWrapLines] = useState(true);
+  const [highlightLineIndex, setHighlightLineIndex] = useState<number | null>(null);
+
+  const runState = useMemo(
+    () => getWorkflowRunState(details?.status, details?.conclusion),
+    [details?.conclusion, details?.status],
   );
+  const now = useNow(1_000, runState.isActive);
+  const jobs = details?.jobs ?? [];
   const selectedJob = useMemo(
-    () => details?.jobs.find((job) => job.id === selectedJobId) ?? null,
-    [details?.jobs, selectedJobId],
+    () => jobs.find((job) => job.id === selectedJobId) ?? null,
+    [jobs, selectedJobId],
   );
-  const selectedJobLogsDownloadable = useMemo(
-    () => areJobLogsDownloadable(selectedJob),
-    [selectedJob],
-  );
+  const selectedJobState = selectedJob
+    ? getWorkflowRunState(selectedJob.status, selectedJob.conclusion)
+    : null;
+  const selectedStep =
+    selectedJob && selectedStepIndex !== null
+      ? (selectedJob.steps[selectedStepIndex] ?? null)
+      : null;
+  const jobSummary = useMemo(() => summarizeWorkflowJobs(jobs), [jobs]);
+  const pendingAction = resolvedRunId === null ? undefined : pendingActions[resolvedRunId];
 
   useEffect(() => {
     if (runId !== undefined) setResolvedRunId(runId);
@@ -336,12 +194,12 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
         updateBuffer({
           ...buffer,
           runId: run.databaseId,
-          name: run.displayTitle || run.name || run.workflowName || notification.title,
+          name: getWorkflowRunTitle(run),
           url: run.url,
         });
       }
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      setError(describeError(nextError));
     } finally {
       setIsLoading(false);
     }
@@ -353,7 +211,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
   }, [notification, resolveNotification, resolvedRunId]);
 
   const fetchWorkflowRun = useCallback(
-    async (force = false) => {
+    async (options: { force?: boolean; quiet?: boolean } = {}) => {
       if (resolvedRunId === null) return;
       if (!repoPath) {
         setError("No repository selected.");
@@ -363,19 +221,18 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
 
       const cacheKey = `${repoPath}::${resolvedRunId}`;
       const cached = githubActionDetailsCache.getFreshValue(cacheKey, GITHUB_ACTION_DETAILS_TTL_MS);
-      if (cached && !force) {
+      if (cached && !options.force) {
         setDetails(cached);
         setError(null);
         setIsLoading(false);
-        return;
+        if (!getWorkflowRunState(cached.status, cached.conclusion).isActive) return;
       }
 
       const stale = githubActionDetailsCache.getSnapshot(cacheKey)?.value;
-      if (stale && !force) {
-        setDetails(stale);
-      }
+      if (stale && !options.force) setDetails(stale);
 
-      setIsLoading(true);
+      if (options.quiet) setIsRefreshing(true);
+      else setIsLoading(true);
       setError(null);
 
       try {
@@ -386,14 +243,15 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
               repoPath,
               runId: resolvedRunId,
             }),
-          { force, ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
+          { force: true, ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
         );
         setDetails(nextDetails);
         setError(null);
       } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : String(nextError));
+        if (!options.quiet) setError(describeError(nextError));
       } finally {
         setIsLoading(false);
+        setIsRefreshing(false);
       }
     },
     [repoPath, resolvedRunId],
@@ -404,60 +262,149 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
   }, [fetchWorkflowRun]);
 
   useEffect(() => {
-    if (!details || !buffer || buffer.type !== "githubAction") return;
-
-    const nextName =
-      details.displayTitle || details.name || details.workflowName || `Run #${resolvedRunId}`;
-    if (buffer.name === nextName && buffer.url === details.url) return;
-
-    updateBuffer({
-      ...buffer,
-      name: nextName,
-      url: details.url,
-    });
-  }, [buffer, details, resolvedRunId, updateBuffer]);
+    if (!runState.isActive || !details) return;
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void fetchWorkflowRun({ force: true, quiet: true });
+      }
+    }, ACTIVE_RUN_POLL_INTERVAL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [details, fetchWorkflowRun, runState.isActive]);
 
   useEffect(() => {
-    setVisibleJobCount(10);
+    if (!details || !listedRun) return;
+    const listedState = getWorkflowRunState(listedRun.status, listedRun.conclusion);
+    const detailState = getWorkflowRunState(details.status, details.conclusion);
+    if (listedState.phase !== detailState.phase || listedRun.runAttempt !== details.runAttempt) {
+      void fetchWorkflowRun({ force: true, quiet: true });
+    }
+  }, [details, fetchWorkflowRun, listedRun]);
+
+  useEffect(() => {
+    if (!details || !buffer || buffer.type !== "githubAction") return;
+
+    const nextName = getWorkflowRunTitle(details);
+    if (buffer.name === nextName && buffer.url === details.url) return;
+
+    updateBuffer({ ...buffer, name: nextName, url: details.url });
+  }, [buffer, details, updateBuffer]);
+
+  useEffect(() => {
     setSelectedJobId(null);
     setSelectedStepIndex(null);
     setJobLogs({});
     setJobLogErrors({});
     setLoadingJobLogId(null);
-    setIsLogSearchVisible(false);
-    setLogSearchQuery("");
+    setLogQuery("");
+    setHighlightLineIndex(null);
   }, [details?.databaseId]);
 
   useEffect(() => {
-    const totalJobs = details?.jobs.length ?? 0;
-    if (totalJobs <= visibleJobCount) return;
+    if (!details || selectedJobId !== null) return;
+    const initialJob = pickInitialWorkflowJob(details.jobs);
+    if (!initialJob || initialJob.id == null) return;
+    setSelectedJobId(initialJob.id);
+    setSelectedStepIndex(pickInitialWorkflowStepIndex(initialJob.steps));
+  }, [details, selectedJobId]);
 
-    let cancelled = false;
-    const idleApi = window as Window & {
-      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-      cancelIdleCallback?: (id: number) => void;
-    };
-    const schedule = idleApi.requestIdleCallback;
+  const loadJobLogs = useCallback(
+    async (jobId: number, force = false) => {
+      if (!repoPath) return;
+      const job = details?.jobs.find((item) => item.id === jobId) ?? null;
+      if (!areJobLogsAvailable(job)) return;
+      if (jobLogs[jobId] && !force) return;
 
-    const revealMore = () => {
-      if (cancelled) return;
-      setVisibleJobCount((current) => Math.min(current + 10, totalJobs));
-    };
+      setLoadingJobLogId(jobId);
+      setJobLogErrors((current) => {
+        const next = { ...current };
+        delete next[jobId];
+        return next;
+      });
 
-    if (typeof schedule === "function") {
-      const idleId = schedule(revealMore, { timeout: 200 });
-      return () => {
-        cancelled = true;
-        idleApi.cancelIdleCallback?.(idleId);
-      };
+      try {
+        const raw = await invoke<string>("github_get_workflow_job_logs", { repoPath, jobId });
+        setJobLogs((current) => ({
+          ...current,
+          [jobId]: { lines: parseWorkflowLog(raw), fetchedAt: Date.now() },
+        }));
+      } catch (nextError) {
+        setJobLogErrors((current) => ({ ...current, [jobId]: describeError(nextError) }));
+      } finally {
+        setLoadingJobLogId((current) => (current === jobId ? null : current));
+      }
+    },
+    [details?.jobs, jobLogs, repoPath],
+  );
+
+  useEffect(() => {
+    if (selectedJobId === null) return;
+    void loadJobLogs(selectedJobId);
+  }, [loadJobLogs, selectedJobId]);
+
+  useEffect(() => {
+    if (selectedJobId === null || !selectedJobState?.isActive) return;
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadJobLogs(selectedJobId, true);
+    }, ACTIVE_LOG_POLL_INTERVAL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [loadJobLogs, selectedJobId, selectedJobState?.isActive]);
+
+  useEffect(() => {
+    if (selectedJobId === null || !selectedJobState || selectedJobState.isActive) return;
+    const logState = jobLogs[selectedJobId];
+    if (!logState) return;
+    if (logState.fetchedAt < Date.now() - 1_000) return;
+    void loadJobLogs(selectedJobId, true);
+  }, [jobLogs, loadJobLogs, selectedJobId, selectedJobState]);
+
+  const jobLogLines = selectedJobId !== null ? (jobLogs[selectedJobId]?.lines ?? []) : [];
+  const stepRanges = useMemo(
+    () => (selectedJob ? mapWorkflowLogToSteps(jobLogLines, selectedJob.steps) : []),
+    [jobLogLines, selectedJob],
+  );
+  const stepLines = useMemo(
+    () =>
+      sliceWorkflowLog(
+        jobLogLines,
+        selectedStepIndex !== null ? (stepRanges[selectedStepIndex] ?? null) : null,
+      ),
+    [jobLogLines, selectedStepIndex, stepRanges],
+  );
+  const visibleLines = useMemo(() => filterWorkflowLog(stepLines, logQuery), [logQuery, stepLines]);
+
+  useEffect(() => {
+    if (logQuery.trim()) {
+      setHighlightLineIndex(null);
+      return;
     }
+    const subject = selectedStep ?? selectedJob;
+    const shouldHighlight = subject
+      ? getWorkflowRunState(subject.status, subject.conclusion).isFailed
+      : false;
+    setHighlightLineIndex(shouldHighlight ? findFirstProblemLine(stepLines) : null);
+  }, [logQuery, selectedJob, selectedStep, stepLines]);
 
-    const timeoutId = window.setTimeout(revealMore, 16);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [details?.jobs.length, visibleJobCount]);
+  const handleSelectJob = useCallback((job: WorkflowRunJob) => {
+    if (job.id == null) return;
+    setSelectedJobId(job.id);
+    setSelectedStepIndex(pickInitialWorkflowStepIndex(job.steps));
+    setLogQuery("");
+  }, []);
+
+  const handleSelectStep = useCallback((job: WorkflowRunJob, stepIndex: number) => {
+    if (job.id == null) return;
+    setSelectedJobId(job.id);
+    setSelectedStepIndex(stepIndex);
+  }, []);
+
+  const runAction = useCallback(async (task: () => Promise<boolean>, successMessage: string) => {
+    try {
+      await task();
+      toast.success(successMessage);
+    } catch (actionError) {
+      toast.error(describeError(actionError));
+    }
+  }, []);
 
   const handleOpenInBrowser = useCallback(() => {
     if (!details?.url) {
@@ -475,140 +422,119 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
     void copyToClipboard(details.url, "Run link copied");
   }, [details?.url]);
 
-  const loadJobLogs = useCallback(
-    async (jobId: number, force = false) => {
-      if (!repoPath) {
-        toast.error("No repository selected.");
-        return;
-      }
-
-      const job = details?.jobs.find((item) => item.id === jobId) ?? null;
-      if (!areJobLogsDownloadable(job)) {
-        return;
-      }
-
-      if (jobLogs[jobId] && !force) {
-        return;
-      }
-
-      setLoadingJobLogId(jobId);
-      setJobLogErrors((current) => {
-        const next = { ...current };
-        delete next[jobId];
-        return next;
-      });
-
-      try {
-        const logs = await invoke<string>("github_get_workflow_job_logs", {
-          repoPath,
-          jobId,
-        });
-        setJobLogs((current) => ({ ...current, [jobId]: logs }));
-      } catch (nextError) {
-        setJobLogErrors((current) => ({
-          ...current,
-          [jobId]: nextError instanceof Error ? nextError.message : String(nextError),
-        }));
-      } finally {
-        setLoadingJobLogId((current) => (current === jobId ? null : current));
-      }
-    },
-    [details?.jobs, jobLogs, repoPath],
-  );
-
-  useEffect(() => {
-    if (selectedJobId === null || !selectedJobLogsDownloadable) return;
-    void loadJobLogs(selectedJobId);
-  }, [loadJobLogs, selectedJobId, selectedJobLogsDownloadable]);
-
-  const handleSelectJob = useCallback((job: WorkflowRunJob) => {
-    if (job.id == null) {
-      setSelectedJobId(null);
-      setSelectedStepIndex(null);
+  const handleCopyLogs = useCallback(() => {
+    if (visibleLines.length === 0) {
+      toast.error("No log lines to copy.");
       return;
     }
+    void copyToClipboard(formatWorkflowLogText(visibleLines, showTimestamps), "Logs copied");
+  }, [showTimestamps, visibleLines]);
 
-    setSelectedJobId(job.id);
-    setSelectedStepIndex(job.steps.length > 0 ? 0 : null);
-  }, []);
-
-  const runTitle = useMemo(
-    () =>
-      details?.displayTitle ||
-      details?.name ||
-      details?.workflowName ||
-      buffer?.name ||
-      (resolvedRunId === null ? "Resolving action run" : `Run #${resolvedRunId}`),
-    [buffer?.name, details?.displayTitle, details?.name, details?.workflowName, resolvedRunId],
-  );
-  const runStatus = useMemo(
-    () => getWorkflowRunStatus(details?.status, details?.conclusion),
-    [details?.conclusion, details?.status],
-  );
-  const runSummaryItems = useMemo(() => {
-    if (!details) return [];
-
-    return [
-      details.workflowName ? { label: "Workflow", value: details.workflowName, mono: true } : null,
-      details.headBranch ? { label: "Branch", value: details.headBranch, mono: true } : null,
-      details.event ? { label: "Event", value: details.event } : null,
-      details.updatedAt ? { label: "Updated", value: formatRunTime(details.updatedAt) } : null,
-      details.headSha ? { label: "Commit", value: details.headSha.slice(0, 7), mono: true } : null,
-      { label: "Run", value: `#${details.databaseId}`, mono: true },
-    ].filter((item): item is { label: string; value: string; mono?: boolean } =>
-      Boolean(item?.value),
-    );
-  }, [details]);
-  const jobSummary = useMemo(() => {
-    const jobs = details?.jobs ?? [];
-    return {
-      total: jobs.length,
-      failed: jobs.filter((job) => job.conclusion === "failure" || job.conclusion === "cancelled")
-        .length,
-      running: jobs.filter(
-        (job) =>
-          job.status === "in_progress" || job.status === "queued" || job.status === "waiting",
-      ).length,
-    };
-  }, [details?.jobs]);
-  const selectedStep = useMemo(
-    () => (selectedJob && selectedStepIndex !== null ? selectedJob.steps[selectedStepIndex] : null),
-    [selectedJob, selectedStepIndex],
-  );
-  const selectedStepLogs = useMemo(
-    () =>
-      selectedJob?.id
-        ? getSelectedStepLogs(jobLogs[selectedJob.id], selectedJob.steps, selectedStepIndex)
-        : undefined,
-    [jobLogs, selectedJob, selectedStepIndex],
-  );
-  const filteredStepLogs = useMemo(
-    () => filterLogLines(selectedStepLogs, logSearchQuery),
-    [logSearchQuery, selectedStepLogs],
-  );
-  const hasLogSearchQuery = Boolean(logSearchQuery.trim());
-  const handleCopySelectedLogs = useCallback(() => {
-    if (!selectedStepLogs) {
-      toast.error("Step logs are not loaded.");
+  const handleRefresh = useCallback(() => {
+    if (resolvedRunId === null) {
+      void resolveNotification();
       return;
     }
+    void fetchWorkflowRun({ force: true, quiet: Boolean(details) });
+    if (selectedJobId !== null) void loadJobLogs(selectedJobId, true);
+  }, [details, fetchWorkflowRun, loadJobLogs, resolveNotification, resolvedRunId, selectedJobId]);
 
-    void copyToClipboard(selectedStepLogs, "Step logs copied");
-  }, [selectedStepLogs]);
-  const handleToggleLogSearch = useCallback(() => {
-    if (isLogSearchVisible) setLogSearchQuery("");
-    setIsLogSearchVisible(!isLogSearchVisible);
-  }, [isLogSearchVisible]);
+  const runTitle = details
+    ? getWorkflowRunTitle(details)
+    : (buffer?.name ?? (resolvedRunId === null ? "Resolving action run" : `Run #${resolvedRunId}`));
+  const timing = details ? getWorkflowRunTiming(details, now) : null;
+  const duration = timing ? formatWorkflowDuration(timing.durationMs) : null;
+  const startedLabel = details?.runStartedAt ?? details?.createdAt;
+  const progressValue =
+    jobSummary.total > 0 ? Math.round((jobSummary.completed / jobSummary.total) * 100) : 0;
+  const progressTone =
+    jobSummary.failed > 0
+      ? "error"
+      : runState.phase === "success"
+        ? "success"
+        : runState.isActive
+          ? "accent"
+          : "muted";
+  const jobsLabel =
+    jobSummary.failed > 0
+      ? `${jobSummary.failed} of ${jobSummary.total} jobs failed`
+      : runState.isActive
+        ? `${jobSummary.completed} of ${jobSummary.total} jobs finished`
+        : `${jobSummary.succeeded} of ${jobSummary.total} jobs passed`;
+
+  const rerunButton =
+    details && repoPath && !runState.isActive ? (
+      runState.isFailed ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button type="button" variant="default" disabled={Boolean(pendingAction)} />}
+          >
+            {pendingAction ? <Spinner label="Working" compact /> : <ArrowClockwiseIcon />}
+            Re-run
+            <ChevronDownIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() =>
+                void runAction(
+                  () => rerunRun(repoPath, details.databaseId, true),
+                  "Re-run of failed jobs queued",
+                )
+              }
+            >
+              <ArrowCounterClockwiseIcon />
+              Re-run failed jobs
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() =>
+                void runAction(() => rerunRun(repoPath, details.databaseId, false), "Re-run queued")
+              }
+            >
+              <ArrowClockwiseIcon />
+              Re-run all jobs
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <Button
+          type="button"
+          variant="default"
+          disabled={Boolean(pendingAction)}
+          onClick={() =>
+            void runAction(() => rerunRun(repoPath, details.databaseId, false), "Re-run queued")
+          }
+        >
+          {pendingAction ? <Spinner label="Working" compact /> : <ArrowClockwiseIcon />}
+          Re-run
+        </Button>
+      )
+    ) : null;
+
+  const cancelButton =
+    details && repoPath && runState.isActive ? (
+      <Button
+        type="button"
+        variant="danger"
+        disabled={Boolean(pendingAction)}
+        onClick={() =>
+          void runAction(() => cancelRun(repoPath, details.databaseId), "Cancellation requested")
+        }
+      >
+        {pendingAction ? <Spinner label="Working" compact /> : <StopIcon />}
+        Cancel
+      </Button>
+    ) : null;
 
   return (
     <ResourceViewer
+      scrollMode="workspace"
       header={
         <ResourceViewerHeader
           title={
             <ResourceViewerTitle
               ariaLabel="GitHub action run"
               kind="Workflow run"
-              number={resolvedRunId ?? undefined}
+              number={details?.runNumber ?? resolvedRunId ?? undefined}
               title={runTitle}
               stats={
                 details ? (
@@ -622,35 +548,47 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
             />
           }
           meta={
-            <>
-              {details ? <span className={runStatus.className}>{runStatus.label}</span> : null}
-              {jobSummary.total > 0 ? (
-                <>
-                  <span>&middot;</span>
-                  <span>
-                    {jobSummary.failed > 0
-                      ? `${jobSummary.failed} failed`
-                      : jobSummary.running > 0
-                        ? `${jobSummary.running} running`
-                        : `${jobSummary.total} jobs`}
-                  </span>
-                </>
-              ) : null}
-            </>
+            details ? (
+              <>
+                <span className={WORKFLOW_TONE_TEXT_CLASS[runState.tone]}>{runState.label}</span>
+                {jobSummary.total > 0 ? (
+                  <>
+                    <span>&middot;</span>
+                    <span>{jobsLabel}</span>
+                  </>
+                ) : null}
+                {isRefreshing ? <Spinner label="Refreshing" compact /> : null}
+              </>
+            ) : null
           }
           actions={
-            <ResourceViewerActionsMenu label="Action run actions">
-              <DropdownMenuItem
-                disabled={isLoading && Boolean(details)}
-                onClick={() =>
-                  void (resolvedRunId === null ? resolveNotification() : fetchWorkflowRun(true))
-                }
+            <>
+              {cancelButton}
+              {rerunButton}
+              <Button
+                type="button"
+                variant="ghost"
+                iconOnly
+                tooltip="Open on GitHub"
+                onClick={handleOpenInBrowser}
+                disabled={!details?.url}
               >
-                {isLoading && details ? "Refreshing..." : "Refresh"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCopyRunLink}>Copy link</DropdownMenuItem>
-            </ResourceViewerActionsMenu>
+                <OpenExternalIcon />
+              </Button>
+              <ResourceViewerActionsMenu label="Action run actions">
+                <DropdownMenuItem disabled={isLoading} onClick={handleRefresh}>
+                  {isRefreshing ? "Refreshing..." : "Refresh"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyRunLink}>Copy link</DropdownMenuItem>
+                {details?.headSha ? (
+                  <DropdownMenuItem
+                    onClick={() => void copyToClipboard(details.headSha ?? "", "Commit SHA copied")}
+                  >
+                    Copy commit SHA
+                  </DropdownMenuItem>
+                ) : null}
+              </ResourceViewerActionsMenu>
+            </>
           }
         />
       }
@@ -659,223 +597,159 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
         <ViewerErrorState
           message={error}
           actionLabel="Retry"
-          onAction={() =>
-            void (resolvedRunId === null ? resolveNotification() : fetchWorkflowRun(true))
-          }
-          layout="section"
+          onAction={handleRefresh}
+          layout="fill"
         />
       ) : details ? (
-        <ResourceViewerBody className="space-y-4">
-          <ResourceMetadataList>
-            {runSummaryItems.map((item) => (
-              <ResourceMetadataItem key={item.label} label={item.label} mono={item.mono}>
-                {item.value}
-              </ResourceMetadataItem>
-            ))}
-          </ResourceMetadataList>
-
-          <div className="space-y-2">
-            {visibleJobs.map((job) => {
-              const isSelectedJob = job.id != null && selectedJobId === job.id;
-              const jobMeta = [
-                formatDuration(job.startedAt, job.completedAt),
-                job.startedAt ? formatRunTime(job.startedAt) : null,
-                job.runnerName,
-                job.labels.length > 0 ? job.labels.join(", ") : null,
-              ]
-                .filter(Boolean)
-                .join(" · ");
-
-              return (
-                <section key={`${job.id ?? job.name}-${job.startedAt ?? ""}`}>
-                  <Item
-                    render={<button type="button" />}
-                    variant={isSelectedJob ? "muted" : "default"}
-                    onClick={() => handleSelectJob(job)}
-                    className="min-w-0 flex-nowrap text-left"
-                  >
-                    <ItemMedia variant="icon">
-                      <WorkflowStatusIcon status={job.status} conclusion={job.conclusion} />
-                    </ItemMedia>
-                    <ItemContent>
-                      <ItemTitle className="w-full">
-                        <span className="min-w-0 flex-1 truncate">{job.name}</span>
-                        <span className="shrink-0 font-normal text-subtle-foreground">
-                          {getWorkflowRunStatus(job.status, job.conclusion).label}
-                        </span>
-                      </ItemTitle>
-                      {jobMeta ? (
-                        <ItemDescription className="line-clamp-1">{jobMeta}</ItemDescription>
-                      ) : null}
-                    </ItemContent>
-                  </Item>
-
-                  {isSelectedJob ? (
-                    <div className="mx-2 mb-2 flex min-h-64 overflow-hidden rounded-xl border border-border/70 bg-background">
-                      <ScrollArea
-                        className="min-h-0 w-64 shrink-0 border-border/70 border-r bg-surface/20"
-                        contentClassName="p-1.5"
-                        orientation="both"
-                      >
-                        {job.steps.length > 0 ? (
-                          job.steps.map((step, index) => (
-                            <Item
-                              render={<button type="button" />}
-                              key={`${job.name}-${step.name}-${index}`}
-                              variant={selectedStepIndex === index ? "muted" : "default"}
-                              onClick={() => setSelectedStepIndex(index)}
-                              className="min-w-0 flex-nowrap text-left"
-                            >
-                              <ItemMedia variant="icon">
-                                <WorkflowStatusIcon
-                                  status={step.status}
-                                  conclusion={step.conclusion}
-                                />
-                              </ItemMedia>
-                              <ItemContent>
-                                <ItemTitle className="w-full font-normal">{step.name}</ItemTitle>
-                              </ItemContent>
-                            </Item>
-                          ))
-                        ) : (
-                          <Empty className="min-h-0 flex-none items-start rounded-none px-2 py-2 text-left">
-                            <EmptyDescription>No steps reported.</EmptyDescription>
-                          </Empty>
-                        )}
-                      </ScrollArea>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2 border-border/70 border-b px-3 py-2">
-                          <div className="min-w-0">
-                            <div className="ui-text-sm truncate text-foreground">
-                              {selectedStep?.name ?? job.name}
-                            </div>
-                            <div className="ui-text-sm text-subtle-foreground">
-                              {selectedStep
-                                ? getWorkflowRunStatus(selectedStep.status, selectedStep.conclusion)
-                                    .label
-                                : getWorkflowRunStatus(job.status, job.conclusion).label}
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-1">
-                            {isLogSearchVisible ? (
-                              <Input
-                                value={logSearchQuery}
-                                onChange={(event) => setLogSearchQuery(event.target.value)}
-                                className="w-40 bg-surface/40"
-                                placeholder="Search logs"
-                                aria-label="Search logs"
-                              />
-                            ) : null}
-                            <Button
-                              type="button"
-                              onClick={handleToggleLogSearch}
-                              variant="ghost"
-                              iconOnly
-                              tooltip={isLogSearchVisible ? "Hide log search" : "Search logs"}
-                            >
-                              <SearchIcon />
-                            </Button>
-                            {job.id ? (
-                              <Button
-                                type="button"
-                                onClick={() => void loadJobLogs(job.id!, true)}
-                                variant="ghost"
-                                iconOnly
-                                tooltip="Refresh job logs"
-                                disabled={!areJobLogsDownloadable(job)}
-                              >
-                                {loadingJobLogId === job.id ? (
-                                  <Spinner label="Loading job logs" compact />
-                                ) : (
-                                  <ArrowClockwiseIcon />
-                                )}
-                              </Button>
-                            ) : null}
-                            <Button
-                              type="button"
-                              onClick={handleCopySelectedLogs}
-                              variant="ghost"
-                              tooltip="Copy job logs"
-                              disabled={!job.id || !selectedStepLogs}
-                              iconOnly
-                            >
-                              <CopyIcon />
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="max-h-[52vh] overflow-auto p-3">
-                          {!areJobLogsDownloadable(job) ? (
-                            <p className="ui-text-sm text-subtle-foreground">
-                              Logs are available after this job finishes.
-                            </p>
-                          ) : job.id && loadingJobLogId === job.id && !jobLogs[job.id] ? (
-                            <div className="ui-text-sm flex items-center gap-2 text-subtle-foreground">
-                              <Spinner label="Loading logs" showLabel compact />
-                            </div>
-                          ) : job.id && jobLogErrors[job.id] ? (
-                            <div className="space-y-2">
-                              <p className="ui-text-sm text-destructive">{jobLogErrors[job.id]}</p>
-                              <Button
-                                type="button"
-                                onClick={() => void loadJobLogs(job.id!, true)}
-                                variant="default"
-                                className="border border-destructive/40 text-destructive/90 hover:bg-destructive/10"
-                              >
-                                Retry
-                              </Button>
-                            </div>
-                          ) : filteredStepLogs ? (
-                            <pre className="ui-text-sm whitespace-pre-wrap wrap-break-word font-mono leading-5 text-muted-foreground">
-                              {filteredStepLogs.split(/\r?\n/).map((line, lineIndex, lines) => (
-                                <span key={`${lineIndex}-${line}`}>
-                                  {getLogLineSegments(line, logSearchQuery).map(
-                                    (segment, segmentIndex) =>
-                                      segment.isMatch ? (
-                                        <mark
-                                          key={segmentIndex}
-                                          className="rounded bg-warning/20 px-0.5 text-foreground"
-                                        >
-                                          {segment.text}
-                                        </mark>
-                                      ) : (
-                                        <span key={segmentIndex}>{segment.text}</span>
-                                      ),
-                                  )}
-                                  {lineIndex < lines.length - 1 ? "\n" : null}
-                                </span>
-                              ))}
-                            </pre>
-                          ) : hasLogSearchQuery && selectedStepLogs ? (
-                            <Empty className="min-h-0 items-start rounded-none p-0 text-left">
-                              <EmptyDescription>No log lines match this search.</EmptyDescription>
-                            </Empty>
-                          ) : (
-                            <Empty className="min-h-0 items-start rounded-none p-0 text-left">
-                              <EmptyDescription>No logs available for this step.</EmptyDescription>
-                            </Empty>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                </section>
-              );
-            })}
-            {details.jobs.length > visibleJobs.length ? (
-              <div className="px-1 py-2">
-                <Spinner
-                  label={`Loading ${details.jobs.length - visibleJobs.length} more jobs`}
-                  showLabel
-                  compact
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="flex shrink-0 flex-wrap items-start justify-between gap-x-6 gap-y-3 border-border/60 border-b px-4 py-3 sm:px-6">
+            <div className="min-w-0 flex-1 basis-80">
+              <div className="flex min-w-0 items-center gap-2">
+                <WorkflowStatusIcon
+                  status={details.status}
+                  conclusion={details.conclusion}
+                  className="shrink-0 [&_svg]:size-5"
                 />
+                <h1 className="min-w-0 truncate font-semibold text-foreground ui-text-lg">
+                  {runTitle}
+                </h1>
+                <Badge variant={WORKFLOW_TONE_BADGE_VARIANT[runState.tone]}>{runState.label}</Badge>
+                {details.runAttempt && details.runAttempt > 1 ? (
+                  <Badge variant="warning">Attempt {details.runAttempt}</Badge>
+                ) : null}
+              </div>
+              {details.headCommitMessage && details.headCommitMessage !== runTitle ? (
+                <p className="mt-1 truncate text-subtle-foreground ui-text-sm">
+                  {details.headCommitMessage}
+                </p>
+              ) : null}
+              <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+                {details.workflowName ? (
+                  <MetaChip icon={<BoltIcon />} title="Workflow">
+                    {details.workflowName}
+                  </MetaChip>
+                ) : null}
+                <MetaChip title="Run number" mono>
+                  {getWorkflowRunLabel(details)}
+                </MetaChip>
+                {details.headBranch ? (
+                  <MetaChip icon={<GitBranchIcon />} title="Branch" mono>
+                    {details.headBranch}
+                  </MetaChip>
+                ) : null}
+                {details.headSha ? (
+                  <MetaChip icon={<GitCommitIcon />} title="Commit" mono>
+                    {details.headSha.slice(0, 7)}
+                  </MetaChip>
+                ) : null}
+                {details.event ? <MetaChip title="Event">{details.event}</MetaChip> : null}
+                {details.actor ? (
+                  <MetaChip
+                    title="Triggered by"
+                    icon={
+                      <GitHubAvatar
+                        login={details.actor.login}
+                        avatarUrl={details.actor.avatarUrl}
+                        size={32}
+                        className="size-4"
+                      />
+                    }
+                  >
+                    {details.actor.login}
+                  </MetaChip>
+                ) : null}
+                {startedLabel ? (
+                  <MetaChip title={new Date(startedLabel).toLocaleString()}>
+                    {runState.isActive ? "Started" : "Ran"} {getTimeAgo(startedLabel)}
+                  </MetaChip>
+                ) : null}
+                {duration ? (
+                  <MetaChip title={runState.isActive ? "Elapsed" : "Duration"}>
+                    <span
+                      className={cn(
+                        "tabular-nums",
+                        runState.isActive && WORKFLOW_TONE_TEXT_CLASS.accent,
+                      )}
+                    >
+                      {duration}
+                    </span>
+                  </MetaChip>
+                ) : null}
+              </div>
+            </div>
+            {jobSummary.total > 0 ? (
+              <div className="w-full max-w-80 shrink-0 basis-72">
+                <Progress
+                  value={progressValue}
+                  tone={progressTone}
+                  aria-label="Job progress"
+                  className="gap-1.5"
+                >
+                  <div className="flex w-full items-center justify-between gap-2 text-subtle-foreground ui-text-sm">
+                    <span className="truncate">{jobsLabel}</span>
+                    <span className="flex shrink-0 items-center gap-2 tabular-nums">
+                      {jobSummary.failed > 0 ? (
+                        <span className={WORKFLOW_TONE_TEXT_CLASS.error}>
+                          {jobSummary.failed} failed
+                        </span>
+                      ) : null}
+                      {jobSummary.running > 0 ? (
+                        <span className={WORKFLOW_TONE_TEXT_CLASS.accent}>
+                          {jobSummary.running} running
+                        </span>
+                      ) : null}
+                      {jobSummary.queued > 0 ? (
+                        <span className={WORKFLOW_TONE_TEXT_CLASS.warning}>
+                          {jobSummary.queued} queued
+                        </span>
+                      ) : null}
+                      {jobSummary.succeeded > 0 ? (
+                        <span className={WORKFLOW_TONE_TEXT_CLASS.success}>
+                          {jobSummary.succeeded} passed
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+                </Progress>
               </div>
             ) : null}
           </div>
-        </ResourceViewerBody>
+
+          <div className="flex min-h-0 flex-1 @max-[48rem]/resource-viewer:flex-col">
+            <div className="flex w-72 shrink-0 flex-col border-border/60 border-r bg-surface/35 @max-[48rem]/resource-viewer:max-h-64 @max-[48rem]/resource-viewer:w-full @max-[48rem]/resource-viewer:border-r-0 @max-[48rem]/resource-viewer:border-b">
+              <GitHubActionJobsPanel
+                jobs={jobs}
+                selectedJobId={selectedJobId}
+                selectedStepIndex={selectedStepIndex}
+                now={now}
+                onSelectJob={handleSelectJob}
+                onSelectStep={handleSelectStep}
+              />
+            </div>
+            <GitHubActionLogPanel
+              job={selectedJob}
+              step={selectedStep}
+              lines={visibleLines}
+              now={now}
+              isLoading={selectedJobId !== null && loadingJobLogId === selectedJobId}
+              isLogsAvailable={areJobLogsAvailable(selectedJob)}
+              error={selectedJobId !== null ? (jobLogErrors[selectedJobId] ?? null) : null}
+              query={logQuery}
+              onQueryChange={setLogQuery}
+              showTimestamps={showTimestamps}
+              onToggleTimestamps={() => setShowTimestamps((value) => !value)}
+              wrap={wrapLines}
+              onToggleWrap={() => setWrapLines((value) => !value)}
+              highlightLineIndex={highlightLineIndex}
+              isLive={Boolean(selectedJobState?.isActive)}
+              onRefresh={() => selectedJobId !== null && void loadJobLogs(selectedJobId, true)}
+              onCopy={handleCopyLogs}
+              onOpenOnGitHub={selectedJob?.url ? () => void openUrl(selectedJob.url ?? "") : null}
+            />
+          </div>
+        </div>
       ) : (
-        <ViewerLoadingState label="Loading action run" layout="section" />
+        <ViewerLoadingState label="Loading action run" layout="fill" />
       )}
     </ResourceViewer>
   );
