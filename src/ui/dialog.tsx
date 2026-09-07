@@ -32,6 +32,7 @@ interface DialogProps {
   headerActions?: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md" | "lg" | "settings";
+  hideHeader?: boolean;
   classNames?: Partial<{
     header: string;
     title: string;
@@ -48,7 +49,7 @@ const dialogContentVariants = cva(
         sm: "max-w-sm",
         md: "max-w-md",
         lg: "max-w-lg",
-        settings: "h-[min(34rem,calc(100dvh-4rem))] max-w-3xl",
+        settings: "h-[min(40rem,calc(100dvh-4rem))] max-w-[min(64rem,calc(100vw-2rem))]",
       },
     },
     defaultVariants: {
@@ -175,6 +176,7 @@ const AppDialog = ({
   footer,
   size = "md",
   scrollable = true,
+  hideHeader = false,
   classNames,
 }: DialogProps) => {
   const prefersReducedMotion = useReducedMotionConfig();
@@ -240,29 +242,33 @@ const AppDialog = ({
           data-dialog-content=""
           className={dialogContentVariants({ size })}
         >
-          <div
-            className={cn(
-              "flex shrink-0 items-center justify-between bg-background px-4 py-3",
-              classNames?.header,
-            )}
-          >
-            <div className={cn("flex min-w-0 items-center gap-2", classNames?.title)}>
-              {Icon && <Icon className="text-subtle-foreground" />}
-              <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium text-foreground">
-                {title}
-              </DialogPrimitive.Title>
-            </div>
+          {hideHeader ? (
+            <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+          ) : (
+            <div
+              className={cn(
+                "flex shrink-0 items-center justify-between bg-background px-4 py-3",
+                classNames?.header,
+              )}
+            >
+              <div className={cn("flex min-w-0 items-center gap-2", classNames?.title)}>
+                {Icon && <Icon className="text-subtle-foreground" />}
+                <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium text-foreground">
+                  {title}
+                </DialogPrimitive.Title>
+              </div>
 
-            <div className={cn("flex items-center gap-1", classNames?.headerActions)}>
-              {headerActions}
-              <DialogPrimitive.Close
-                render={<Button variant="ghost" iconOnly />}
-                aria-label="Close dialog"
-              >
-                <XIcon />
-              </DialogPrimitive.Close>
+              <div className={cn("flex items-center gap-1", classNames?.headerActions)}>
+                {headerActions}
+                <DialogPrimitive.Close
+                  render={<Button variant="ghost" iconOnly />}
+                  aria-label="Close dialog"
+                >
+                  <XIcon />
+                </DialogPrimitive.Close>
+              </div>
             </div>
-          </div>
+          )}
 
           {scrollable ? (
             <ScrollArea className="flex-1" contentClassName={cn("p-4", classNames?.content)}>

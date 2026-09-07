@@ -17,6 +17,7 @@ const inputVariants = cva(
     "h-7 w-full min-w-0 font-sans ui-text-sm text-foreground outline-none transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth disabled:cursor-not-allowed disabled:opacity-50",
     "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
     "placeholder:text-subtle-foreground",
+    "aria-invalid:ring-1 aria-invalid:ring-destructive/45 aria-invalid:focus:ring-destructive/45",
   ],
   {
     variants: {

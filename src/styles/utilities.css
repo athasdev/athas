@@ -14,6 +14,10 @@
   font-size: var(--ui-text-base);
 }
 
+@utility ui-text-lg {
+  font-size: var(--ui-text-lg);
+}
+
 @utility duration-fast {
   transition-duration: var(--app-duration-fast);
 }
