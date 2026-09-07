@@ -410,6 +410,29 @@ export const TerminalSettings = () => {
             onChange={(val) => updateSetting("terminalScrollback", val)}
           />
         </SettingRow>
+
+        <SettingRow
+          label="Minimum Contrast"
+          description="Adjust ANSI colors that would be hard to read against the background. 1 keeps theme colors as they are, 4.5 meets WCAG AA, 21 forces black or white."
+          onReset={() =>
+            updateSetting(
+              "terminalMinimumContrastRatio",
+              getDefaultSetting("terminalMinimumContrastRatio"),
+            )
+          }
+          canReset={
+            settings.terminalMinimumContrastRatio !==
+            getDefaultSetting("terminalMinimumContrastRatio")
+          }
+        >
+          <NumberInput
+            min="1"
+            max="21"
+            step={0.5}
+            value={settings.terminalMinimumContrastRatio}
+            onChange={(val) => updateSetting("terminalMinimumContrastRatio", val)}
+          />
+        </SettingRow>
       </Section>
 
       <Section title="Interaction">

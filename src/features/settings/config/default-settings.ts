@@ -52,6 +52,7 @@ export const defaultSettings: Settings = {
   terminalLineHeight: 1,
   terminalLetterSpacing: 0,
   terminalScrollback: 10000,
+  terminalMinimumContrastRatio: 4.5,
   terminalShellIntegration: true,
   terminalCommandNotifications: true,
   terminalCursorStyle: "bar",

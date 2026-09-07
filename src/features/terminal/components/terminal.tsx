@@ -109,6 +109,9 @@ export const TerminalEmulator = ({
   const terminalLineHeight = useSettingsStore((state) => state.settings.terminalLineHeight);
   const terminalLetterSpacing = useSettingsStore((state) => state.settings.terminalLetterSpacing);
   const terminalScrollback = useSettingsStore((state) => state.settings.terminalScrollback);
+  const terminalMinimumContrastRatio = useSettingsStore(
+    (state) => state.settings.terminalMinimumContrastRatio,
+  );
   const terminalCursorStyle = useSettingsStore((state) => state.settings.terminalCursorStyle);
   const terminalCursorBlink = useSettingsStore((state) => state.settings.terminalCursorBlink);
   const terminalCursorWidth = useSettingsStore((state) => state.settings.terminalCursorWidth);
@@ -342,6 +345,7 @@ export const TerminalEmulator = ({
         allowProposedApi: true,
         theme: getTerminalTheme(),
         scrollback: terminalScrollback,
+        minimumContrastRatio: terminalMinimumContrastRatio,
         convertEol: false,
         macOptionIsMeta: terminalMacOptionIsMeta,
         rightClickSelectsWord: terminalRightClickSelectsWord,
@@ -581,6 +585,7 @@ export const TerminalEmulator = ({
     terminalMacOptionIsMeta,
     terminalRightClickSelectsWord,
     terminalScrollback,
+    terminalMinimumContrastRatio,
     terminalShellIntegration,
     terminalIsRemote,
     updateSession,
@@ -611,6 +616,7 @@ export const TerminalEmulator = ({
       options.lineHeight = terminalLineHeight;
       options.letterSpacing = effectiveTerminalLetterSpacing;
       options.scrollback = terminalScrollback;
+      options.minimumContrastRatio = terminalMinimumContrastRatio;
       options.cursorBlink = terminalCursorBlink;
       options.cursorStyle = terminalCursorStyle;
       options.cursorWidth = effectiveTerminalCursorWidth;
@@ -634,6 +640,7 @@ export const TerminalEmulator = ({
     effectiveTerminalLetterSpacing,
     terminalLineHeight,
     terminalScrollback,
+    terminalMinimumContrastRatio,
     terminalCursorBlink,
     terminalCursorInactiveStyle,
     terminalCursorStyle,

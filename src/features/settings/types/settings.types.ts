@@ -78,6 +78,7 @@ export interface Settings {
   terminalLineHeight: number;
   terminalLetterSpacing: number;
   terminalScrollback: number;
+  terminalMinimumContrastRatio: number;
   terminalShellIntegration: boolean;
   terminalCommandNotifications: boolean;
   terminalCursorStyle: "block" | "underline" | "bar";

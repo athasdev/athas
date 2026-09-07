@@ -981,6 +981,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["terminal", "shell", "integration", "prompt", "command", "marks", "osc 133"],
   },
   {
+    id: "terminal-minimum-contrast",
+    tab: "terminal",
+    section: "Typography",
+    label: "Minimum Contrast",
+    description: "Adjust ANSI colors that would be hard to read against the terminal background",
+    keywords: ["terminal", "contrast", "ansi", "colors", "legibility", "accessibility"],
+  },
+  {
     id: "terminal-command-notifications",
     tab: "terminal",
     section: "Launch",
