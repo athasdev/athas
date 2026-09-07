@@ -12,7 +12,9 @@ import {
   parseTerminalFileLinks,
   type TerminalFileLink,
 } from "@/features/terminal/utils/terminal-file-links";
+import { recordFrictionSignal } from "@/features/telemetry/services/telemetry";
 import { writeClipboardText } from "@/utils/clipboard";
+import { frontendTrace } from "@/utils/frontend-trace";
 
 export interface TerminalAddons {
   fitAddon: FitAddon;
@@ -59,15 +61,24 @@ export function loadWebglRenderer(
     const webglAddon = new WebglAddon();
     webglAddon.onContextLoss(() => {
       webglAddon.dispose();
+      reportRendererFallback("context-loss");
       onRendererFallback?.();
     });
     terminal.loadAddon(webglAddon);
     return webglAddon;
   } catch (error) {
     console.warn("WebGL terminal renderer unavailable; using the DOM renderer.", error);
+    reportRendererFallback("unavailable", error);
     onRendererFallback?.();
     return null;
   }
+}
+
+function reportRendererFallback(reason: "unavailable" | "context-loss", error?: unknown) {
+  frontendTrace("warn", "terminal:renderer", `webgl-${reason}`, {
+    error: error instanceof Error ? error.message : error ? String(error) : null,
+  });
+  void recordFrictionSignal({ area: "terminal", signal: "renderer_fallback" });
 }
 
 export function loadWebLinksAddon(terminal: Terminal): void {

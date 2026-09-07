@@ -546,22 +546,7 @@ export const TerminalEmulator = ({
     fitTerminal,
   ]);
 
-  useEffect(() => {
-    if (!isVisible) return;
-
-    let mounted = true;
-    const initTimer = setTimeout(() => {
-      if (mounted && !isInitialized && !isInitializingRef.current) {
-        void initializeTerminal();
-      }
-    }, 200);
-
-    return () => {
-      mounted = false;
-      clearTimeout(initTimer);
-      removeLinkStyles(sessionId);
-    };
-  }, [initializeTerminal, isInitialized, isVisible, sessionId]);
+  useEffect(() => () => removeLinkStyles(sessionId), [sessionId]);
 
   useEffect(() => {
     if (isInitialized || !isVisible || !terminalContainerRef.current) return;

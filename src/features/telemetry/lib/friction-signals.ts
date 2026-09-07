@@ -5,6 +5,7 @@ export const frictionAreas = [
   "layout",
   "extensions",
   "feedback",
+  "terminal",
 ] as const;
 
 export const frictionSignals = [
@@ -16,6 +17,7 @@ export const frictionSignals = [
   "prompt_dismissed",
   "opened",
   "submitted",
+  "renderer_fallback",
 ] as const;
 
 export const frictionDurationBuckets = [
