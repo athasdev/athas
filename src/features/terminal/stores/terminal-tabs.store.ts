@@ -11,6 +11,7 @@ import {
   getLayoutTerminalIds,
   removeTerminalFromLayouts,
   resizeTerminalLayout,
+  sanitizeTerminalLayouts,
   splitTerminalLayout,
 } from "@/features/terminal/utils/terminal-layout";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
@@ -251,7 +252,10 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
       return {
         terminals: newTerminals,
         activeTerminalId: newTerminals.length > 0 ? newTerminals[0].id : null,
-        layouts: [],
+        layouts: sanitizeTerminalLayouts(
+          action.payload.layouts,
+          newTerminals.map((terminal) => terminal.id),
+        ),
       };
     }
 

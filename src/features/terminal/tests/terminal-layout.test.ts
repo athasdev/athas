@@ -9,6 +9,7 @@ import {
   isTerminalLayoutSplit,
   removeTerminalFromLayouts,
   resizeTerminalLayout,
+  sanitizeTerminalLayouts,
   splitTerminalLayout,
 } from "../utils/terminal-layout";
 
@@ -96,6 +97,32 @@ describe("terminal layouts", () => {
       expect(Math.round(entry.size * 10) / 10).toBeCloseTo(33.3, 0);
     }
     expect(resizeTerminalLayout(layouts, "missing", 0, [50, 50])).toBe(layouts);
+  });
+
+  it("restores persisted layouts only for terminals that still exist", () => {
+    const layouts = splitTerminalLayout(
+      splitTerminalLayout([], "a", "b", "right"),
+      "b",
+      "c",
+      "down",
+    );
+    const restored = JSON.parse(JSON.stringify(layouts));
+
+    expect(getLayoutTerminalIds(sanitizeTerminalLayouts(restored, ["a", "b", "c"])[0])).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
+    expect(getLayoutTerminalIds(sanitizeTerminalLayouts(restored, ["a", "c"])[0])).toEqual([
+      "a",
+      "c",
+    ]);
+    expect(sanitizeTerminalLayouts(restored, ["a"])).toEqual([]);
+    expect(sanitizeTerminalLayouts([{ id: "x", type: "split" }], ["a", "b"])).toEqual([]);
+    expect(sanitizeTerminalLayouts("nope", ["a"])).toEqual([]);
+
+    const duplicated = sanitizeTerminalLayouts([...restored, ...restored], ["a", "b", "c"]);
+    expect(duplicated).toHaveLength(1);
   });
 
   it("cycles focus between the terminals of a layout", () => {

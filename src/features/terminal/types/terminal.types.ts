@@ -149,4 +149,7 @@ export type TerminalAction =
     }
   | { type: "DISTRIBUTE_TERMINAL_SPLIT"; payload: { splitId: string } }
   | { type: "RESET_TERMINALS"; payload: Record<string, never> }
-  | { type: "RESTORE_TERMINALS"; payload: { terminals: PersistedTerminal[] } };
+  | {
+      type: "RESTORE_TERMINALS";
+      payload: { terminals: PersistedTerminal[]; layouts?: PaneNode[] };
+    };

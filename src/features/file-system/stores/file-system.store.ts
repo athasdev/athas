@@ -704,7 +704,8 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       },
 
       restoreSession: async (projectPath: string, skipBufferPath?: string) => {
-        const { session, terminals } = workspaceSessionRepository.load(projectPath);
+        const { session, terminals, terminalLayouts } =
+          workspaceSessionRepository.load(projectPath);
         if (session?.workspaceFolders && session.workspaceFolders.length > 1) {
           const currentRootPaths = new Set(
             get()
@@ -733,10 +734,13 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           void syncFffWorkspace(get);
         }
 
-        useTerminalTabsStore.getStore(workspaceId).getState().actions.dispatch({
-          type: "RESTORE_TERMINALS",
-          payload: { terminals },
-        });
+        useTerminalTabsStore
+          .getStore(workspaceId)
+          .getState()
+          .actions.dispatch({
+            type: "RESTORE_TERMINALS",
+            payload: { terminals, layouts: terminalLayouts },
+          });
 
         if (session) {
           const bufferStore = useBufferStore.getStore(workspaceId);

@@ -111,6 +111,61 @@ export function isTerminalLayoutSplit(layout: TerminalLayout): layout is PaneSpl
   return layout.type === "split";
 }
 
+function isLayoutNode(value: unknown): value is PaneNode {
+  if (!value || typeof value !== "object") return false;
+  const node = value as Partial<PaneNode>;
+  if (typeof node.id !== "string" || !node.id) return false;
+  if (node.type === "group") {
+    return (
+      Array.isArray(node.bufferIds) &&
+      node.bufferIds.length === 1 &&
+      typeof node.bufferIds[0] === "string"
+    );
+  }
+  if (node.type === "split") {
+    return (
+      (node.direction === "horizontal" || node.direction === "vertical") &&
+      Array.isArray(node.children) &&
+      node.children.length === 2 &&
+      Array.isArray(node.sizes) &&
+      node.sizes.length === 2 &&
+      node.sizes.every((size) => typeof size === "number" && Number.isFinite(size)) &&
+      node.children.every(isLayoutNode)
+    );
+  }
+  return false;
+}
+
+/**
+ * Rebuilds persisted layouts against the terminals that actually came back:
+ * malformed trees are dropped, terminals that no longer exist or already
+ * appear in an earlier layout are removed, and trees left with a single pane
+ * become standalone tabs again.
+ */
+export function sanitizeTerminalLayouts(
+  layouts: unknown,
+  terminalIds: readonly string[],
+): TerminalLayout[] {
+  if (!Array.isArray(layouts)) return [];
+  const available = new Set(terminalIds);
+  const result: TerminalLayout[] = [];
+
+  for (const candidate of layouts) {
+    if (!isLayoutNode(candidate)) continue;
+    let layout: TerminalLayout | null = candidate;
+    for (const id of getLayoutTerminalIds(candidate)) {
+      if (available.has(id)) {
+        available.delete(id);
+        continue;
+      }
+      layout = layout ? (removeTerminalFromLayouts([layout], id)[0] ?? null) : null;
+    }
+    if (layout && isTerminalLayoutSplit(layout)) result.push(layout);
+  }
+
+  return result;
+}
+
 function updateLayoutContaining(
   layouts: TerminalLayout[],
   nodeId: string,

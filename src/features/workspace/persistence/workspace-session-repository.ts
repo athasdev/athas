@@ -5,6 +5,7 @@ import {
   loadWorkspaceTerminalsFromStorage,
   serializeTerminals,
 } from "@/features/terminal/lib/terminal-session-storage";
+import type { PaneNode } from "@/features/panes/types/pane.types";
 import type { PersistedTerminal, Terminal } from "@/features/terminal/types/terminal.types";
 import { type ProjectUiSession, useSessionStore } from "@/features/window/stores/session.store";
 import type {
@@ -17,6 +18,7 @@ interface SaveWorkspaceSessionInput {
   buffers: BufferSession[];
   activeBufferPath: string | null;
   terminals?: PersistedTerminal[];
+  terminalLayouts?: PaneNode[];
   aiSession?: AIWorkspaceSessionSnapshot | null;
   workspaceFolders?: WorkspaceFolderSession[];
   uiState?: ProjectUiSession;
@@ -27,6 +29,8 @@ export const workspaceSessionRepository = {
     const session = useSessionStore.getState().actions.getSession(projectPath);
     return {
       session,
+      terminalLayouts:
+        isTerminalPersistenceEnabled() && session ? (session.terminalLayouts ?? []) : [],
       terminals: isTerminalPersistenceEnabled()
         ? buildTerminalRestorePayload({
             projectSessionTerminals: session?.terminals,
@@ -42,6 +46,7 @@ export const workspaceSessionRepository = {
     buffers,
     activeBufferPath,
     terminals,
+    terminalLayouts,
     aiSession,
     workspaceFolders,
     uiState,
@@ -56,6 +61,7 @@ export const workspaceSessionRepository = {
         aiSession,
         workspaceFolders,
         uiState,
+        terminalLayouts,
       );
   },
 
@@ -67,7 +73,7 @@ export const workspaceSessionRepository = {
     useSessionStore.getState().actions.saveUiState(projectPath, uiState);
   },
 
-  saveTerminals(projectPath: string, terminals: Terminal[]) {
+  saveTerminals(projectPath: string, terminals: Terminal[], terminalLayouts: PaneNode[] = []) {
     if (!isTerminalPersistenceEnabled()) {
       return;
     }
@@ -82,6 +88,8 @@ export const workspaceSessionRepository = {
         serializeTerminals(terminals),
         previous?.aiSession,
         previous?.workspaceFolders,
+        undefined,
+        terminalLayouts,
       );
   },
 };

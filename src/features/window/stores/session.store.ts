@@ -18,6 +18,7 @@ export interface ProjectSession {
   activeBufferPath: string | null;
   buffers: BufferSession[];
   terminals: PersistedTerminal[];
+  terminalLayouts?: PaneNode[];
   aiSession: AIWorkspaceSessionSnapshot | null;
   uiState: ProjectUiSession | null;
   lastSaved: number;
@@ -71,6 +72,7 @@ interface SessionState {
       aiSession?: AIWorkspaceSessionSnapshot | null,
       workspaceFolders?: WorkspaceFolderSession[],
       uiState?: ProjectUiSession,
+      terminalLayouts?: PaneNode[],
     ) => void;
     getSession: (projectPath: string) => ProjectSession | null;
     saveUiState: (projectPath: string, uiState: ProjectUiSession) => void;
@@ -89,6 +91,7 @@ export function buildSavedProjectSession({
   aiSession,
   workspaceFolders,
   uiState,
+  terminalLayouts,
   now,
 }: {
   previousSession?: ProjectSession;
@@ -99,6 +102,7 @@ export function buildSavedProjectSession({
   aiSession?: AIWorkspaceSessionSnapshot | null;
   workspaceFolders?: WorkspaceFolderSession[];
   uiState?: ProjectUiSession;
+  terminalLayouts?: PaneNode[];
   now: number;
 }): ProjectSession {
   return {
@@ -109,6 +113,8 @@ export function buildSavedProjectSession({
     activeBufferPath,
     buffers,
     terminals: terminals === undefined ? (previousSession?.terminals ?? []) : terminals,
+    terminalLayouts:
+      terminalLayouts === undefined ? previousSession?.terminalLayouts : terminalLayouts,
     aiSession: aiSession === undefined ? (previousSession?.aiSession ?? null) : aiSession,
     uiState: uiState === undefined ? (previousSession?.uiState ?? null) : uiState,
     lastSaved: now,
@@ -160,6 +166,7 @@ const useSessionStoreBase = create<SessionState>()(
           aiSession,
           workspaceFolders,
           uiState,
+          terminalLayouts,
         ) => {
           set((state) => ({
             sessions: {
@@ -173,6 +180,7 @@ const useSessionStoreBase = create<SessionState>()(
                 aiSession,
                 workspaceFolders,
                 uiState,
+                terminalLayouts,
                 now: Date.now(),
               }),
             },

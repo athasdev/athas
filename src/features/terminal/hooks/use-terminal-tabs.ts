@@ -20,9 +20,9 @@ export const useTerminalTabs = () => {
   // Save terminals to storage whenever state changes
   useEffect(() => {
     if (rootFolderPath && hasHydrated) {
-      workspaceSessionRepository.saveTerminals(rootFolderPath, terminals);
+      workspaceSessionRepository.saveTerminals(rootFolderPath, terminals, layouts);
     }
-  }, [rootFolderPath, hasHydrated, terminals]);
+  }, [rootFolderPath, hasHydrated, terminals, layouts]);
 
   // Listen for global workspace reset event
   useEffect(() => {

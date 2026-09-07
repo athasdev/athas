@@ -70,7 +70,7 @@ describe("terminal splits", () => {
     expect(state.terminals).toHaveLength(2);
   });
 
-  it("drops layouts when terminals are reset or restored", () => {
+  it("drops layouts when terminals are reset", () => {
     const { dispatch } = useTerminalTabsStore.getState().actions;
     createTerminal("primary");
     createTerminal("companion");
@@ -80,6 +80,43 @@ describe("terminal splits", () => {
     });
 
     dispatch({ type: "RESET_TERMINALS", payload: {} });
+    expect(useTerminalTabsStore.getState().layouts).toEqual([]);
+  });
+
+  it("restores persisted layouts for the terminals that came back", () => {
+    const { dispatch } = useTerminalTabsStore.getState().actions;
+    createTerminal("primary");
+    createTerminal("companion");
+    dispatch({
+      type: "SPLIT_TERMINAL",
+      payload: { terminalId: "primary", newTerminalId: "companion", direction: "right" },
+    });
+    const persisted = JSON.parse(JSON.stringify(useTerminalTabsStore.getState().layouts));
+
+    dispatch({
+      type: "RESTORE_TERMINALS",
+      payload: {
+        terminals: [
+          { id: "primary", name: "primary", currentDirectory: "/workspace", isPinned: false },
+          { id: "companion", name: "companion", currentDirectory: "/workspace", isPinned: false },
+        ],
+        layouts: persisted,
+      },
+    });
+    expect(getLayoutTerminalIds(useTerminalTabsStore.getState().layouts[0])).toEqual([
+      "primary",
+      "companion",
+    ]);
+
+    dispatch({
+      type: "RESTORE_TERMINALS",
+      payload: {
+        terminals: [
+          { id: "primary", name: "primary", currentDirectory: "/workspace", isPinned: false },
+        ],
+        layouts: persisted,
+      },
+    });
     expect(useTerminalTabsStore.getState().layouts).toEqual([]);
   });
 });
