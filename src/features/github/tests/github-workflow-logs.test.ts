@@ -68,6 +68,7 @@ describe("workflow log parsing", () => {
     const lines = parseWorkflowLog(rawLog);
 
     expect(filterWorkflowLog(lines, "clippy").map((line) => line.index)).toEqual([4]);
+    expect(filterWorkflowLog(lines, "error").map((line) => line.index)).toEqual([5, 6]);
     expect(formatWorkflowLogText(lines.slice(4, 7), false)).toBe(
       [
         "Run Run cargo clippy",

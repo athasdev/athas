@@ -1,24 +1,44 @@
+import "../styles/github-workflow-log.css";
 import {
   ArrowClockwiseIcon,
+  ArrowDownIcon,
   ArrowDownToLineIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
+  ArrowUpIcon,
   ClockIcon,
   CopyIcon,
+  DotsIcon,
+  DownloadIcon,
   OpenExternalIcon,
   SearchIcon,
   TextAlignJustifyIcon,
 } from "@/ui/icons";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  MonacoReadonlyView,
+  type MonacoReadonlyEditor,
+} from "@/features/editor/components/monaco-readonly-view";
 import { Button } from "@/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
-import { ScrollArea } from "@/ui/scroll-area";
 import { Spinner } from "@/ui/spinner";
 import { Toggle } from "@/ui/toggle";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
+import {
+  createViewportDecorator,
+  ensureWorkflowLogLanguage,
+  registerWorkflowLogModel,
+  WORKFLOW_LOG_LANGUAGE_ID,
+} from "../lib/github-workflow-log-monaco";
 import type { WorkflowRunJob, WorkflowRunStep } from "../types/github.types";
-import type { WorkflowLogColor, WorkflowLogLine } from "../utils/github-workflow-logs";
+import { buildWorkflowLogModel, findAdjacentProblemLine } from "../utils/github-workflow-log-model";
+import type { WorkflowLogLine } from "../utils/github-workflow-logs";
 import {
   formatWorkflowDuration,
   getWorkflowJobTiming,
@@ -27,169 +47,43 @@ import {
 } from "../utils/github-workflow-status";
 import { WORKFLOW_TONE_TEXT_CLASS, WorkflowStatusIcon } from "./github-workflow-status-icon";
 
-const COLOR_CLASS: Record<Exclude<WorkflowLogColor, null>, string> = {
-  red: "text-destructive",
-  green: "text-success",
-  yellow: "text-warning",
-  blue: "text-primary",
-  magenta: "text-primary",
-  cyan: "text-primary",
-  gray: "text-subtle-foreground",
-};
+const TAIL_THRESHOLD_PX = 48;
+const REVEAL_SETTLE_MS = 600;
 
-function formatTimestamp(value: string | null) {
-  if (!value) return "";
-  const match = value.match(/T(\d{2}:\d{2}:\d{2})/);
-  return match ? match[1] : value;
+/**
+ * Reveals a line now and again after the next layout passes. Monaco may not
+ * know its final height when the viewer first mounts, so a single reveal can
+ * land in the wrong place once automatic layout resizes the editor.
+ */
+function revealLineWhenSettled(
+  editor: MonacoReadonlyEditor,
+  line: number,
+  mode: "center" | "bottom",
+): () => void {
+  const reveal = () => {
+    if (editor.getModel()?.isDisposed()) return;
+    if (mode === "center") editor.revealLineInCenter(line);
+    else editor.revealLine(line);
+  };
+  reveal();
+  const layoutDisposable = editor.onDidLayoutChange(reveal);
+  const timer = window.setTimeout(() => layoutDisposable.dispose(), REVEAL_SETTLE_MS);
+  return () => {
+    layoutDisposable.dispose();
+    window.clearTimeout(timer);
+  };
 }
 
-function highlightSegments(text: string, query: string) {
-  const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) return [{ text, isMatch: false }];
-
-  const lowerText = text.toLowerCase();
-  const parts: Array<{ text: string; isMatch: boolean }> = [];
-  let cursor = 0;
-
-  while (cursor < text.length) {
-    const matchIndex = lowerText.indexOf(normalizedQuery, cursor);
-    if (matchIndex < 0) break;
-    if (matchIndex > cursor) parts.push({ text: text.slice(cursor, matchIndex), isMatch: false });
-    const matchEnd = matchIndex + normalizedQuery.length;
-    parts.push({ text: text.slice(matchIndex, matchEnd), isMatch: true });
-    cursor = matchEnd;
-  }
-
-  if (cursor < text.length) parts.push({ text: text.slice(cursor), isMatch: false });
-  return parts.length > 0 ? parts : [{ text, isMatch: false }];
-}
-
-interface LogLineRowProps {
-  line: WorkflowLogLine;
-  query: string;
-  showTimestamps: boolean;
-  wrap: boolean;
-  isHighlighted: boolean;
-  isCollapsed: boolean;
-  onToggleGroup?: () => void;
-}
-
-const LogLineRow = memo(
-  ({
-    line,
-    query,
-    showTimestamps,
-    wrap,
-    isHighlighted,
-    isCollapsed,
-    onToggleGroup,
-  }: LogLineRowProps) => {
-    const isGroup = line.level === "group";
-    const Chevron = isCollapsed ? ChevronRightIcon : ChevronDownIcon;
-
-    const content =
-      line.level === null ? (
-        line.segments.map((segment, index) => (
-          <span
-            key={index}
-            className={cn(
-              segment.color && COLOR_CLASS[segment.color],
-              segment.bold && "font-semibold",
-            )}
-          >
-            {highlightSegments(segment.text, query).map((part, partIndex) =>
-              part.isMatch ? (
-                <mark key={partIndex} className="rounded-xs bg-warning/25 text-foreground">
-                  {part.text}
-                </mark>
-              ) : (
-                <span key={partIndex}>{part.text}</span>
-              ),
-            )}
-          </span>
-        ))
-      ) : (
-        <>
-          {line.level !== "group" ? (
-            <span className="mr-2 select-none font-medium uppercase ui-text-caption opacity-80">
-              {line.level}
-            </span>
-          ) : null}
-          {highlightSegments(line.text, query).map((part, partIndex) =>
-            part.isMatch ? (
-              <mark key={partIndex} className="rounded-xs bg-warning/25 text-foreground">
-                {part.text}
-              </mark>
-            ) : (
-              <span key={partIndex}>{part.text}</span>
-            ),
-          )}
-        </>
-      );
-
-    const row = (
-      <>
-        <span className="sticky left-0 w-12 shrink-0 select-none pr-3 text-right tabular-nums text-subtle-foreground/70">
-          {line.index + 1}
-        </span>
-        {showTimestamps ? (
-          <span className="mr-3 shrink-0 select-none tabular-nums text-subtle-foreground/70">
-            {formatTimestamp(line.timestamp)}
-          </span>
-        ) : null}
-        {isGroup ? <Chevron className="mr-1 shrink-0 self-center text-subtle-foreground" /> : null}
-        <span
-          className={cn(
-            "min-w-0 flex-1",
-            wrap ? "whitespace-pre-wrap wrap-break-word" : "whitespace-pre",
-          )}
-        >
-          {content}
-        </span>
-      </>
-    );
-
-    const className = cn(
-      "flex min-h-5 items-start px-3 font-mono leading-5 ui-text-sm [content-visibility:auto] [contain-intrinsic-size:auto_1.25rem]",
-      line.level === "error" && "bg-destructive/10 text-destructive",
-      line.level === "warning" && "bg-warning/10 text-warning",
-      line.level === "notice" && "bg-primary/8 text-foreground",
-      line.level === "debug" && "text-subtle-foreground/70",
-      line.level === "command" && "text-primary",
-      isGroup && "cursor-default font-medium text-foreground hover:bg-accent/40",
-      line.level === null && "text-muted-foreground",
-      isHighlighted && "bg-warning/15 ring-1 ring-warning/40 ring-inset",
-    );
-
-    if (isGroup) {
-      return (
-        <button
-          type="button"
-          data-log-line={line.index}
-          aria-expanded={!isCollapsed}
-          onClick={onToggleGroup}
-          className={cn(className, "w-full text-left")}
-        >
-          {row}
-        </button>
-      );
-    }
-
-    return (
-      <div data-log-line={line.index} className={className}>
-        {row}
-      </div>
-    );
-  },
-);
-
-LogLineRow.displayName = "LogLineRow";
+// The language must exist before the first model is created with it, so this
+// runs at module load rather than in an effect that fires after the editor.
+ensureWorkflowLogLanguage();
 
 interface GitHubActionLogPanelProps {
   job: WorkflowRunJob | null;
   step: WorkflowRunStep | null;
   lines: WorkflowLogLine[];
   now: number;
+  repoPath: string | null;
   isLoading: boolean;
   isLogsAvailable: boolean;
   error: string | null;
@@ -203,6 +97,7 @@ interface GitHubActionLogPanelProps {
   isLive: boolean;
   onRefresh: () => void;
   onCopy: () => void;
+  onExport: () => void;
   onOpenOnGitHub: (() => void) | null;
 }
 
@@ -211,6 +106,7 @@ export function GitHubActionLogPanel({
   step,
   lines,
   now,
+  repoPath,
   isLoading,
   isLogsAvailable,
   error,
@@ -224,11 +120,16 @@ export function GitHubActionLogPanel({
   isLive,
   onRefresh,
   onCopy,
+  onExport,
   onOpenOnGitHub,
 }: GitHubActionLogPanelProps) {
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(() => new Set());
+  const editorRef = useRef<MonacoReadonlyEditor | null>(null);
+  const decoratorRef = useRef<ReturnType<typeof createViewportDecorator> | null>(null);
+  const unregisterModelRef = useRef<(() => void) | null>(null);
+  const followTailRef = useRef(true);
   const [followTail, setFollowTail] = useState(true);
+  const [activeProblemLine, setActiveProblemLine] = useState<number | null>(null);
+
   const subject = step ?? job;
   const subjectState = subject ? getWorkflowRunState(subject.status, subject.conclusion) : null;
   const subjectDuration = step
@@ -237,60 +138,145 @@ export function GitHubActionLogPanel({
       ? formatWorkflowDuration(getWorkflowJobTiming(job, now).durationMs)
       : null;
 
-  const visibleLines = useMemo(() => {
-    const result: WorkflowLogLine[] = [];
-    let hiddenDepth = 0;
-    for (const line of lines) {
-      if (hiddenDepth > 0) {
-        if (line.level === "group") hiddenDepth += 1;
-        if (line.level === "endgroup") hiddenDepth -= 1;
-        continue;
-      }
-      if (line.level === "endgroup") continue;
-      result.push(line);
-      if (line.level === "group" && collapsedGroups.has(line.index)) hiddenDepth = 1;
-    }
-    return result;
-  }, [collapsedGroups, lines]);
+  const model = useMemo(
+    () => buildWorkflowLogModel(lines, { showTimestamps }),
+    [lines, showTimestamps],
+  );
+  const modelRef = useRef(model);
+  modelRef.current = model;
+
+  const highlightLine = useMemo(() => {
+    if (highlightLineIndex === null) return null;
+    const rowIndex = model.rows.findIndex((row) => row.index === highlightLineIndex);
+    return rowIndex === -1 ? null : rowIndex + 1;
+  }, [highlightLineIndex, model.rows]);
+
+  const currentProblemLine = activeProblemLine ?? highlightLine;
 
   useEffect(() => {
-    setCollapsedGroups(new Set());
+    setActiveProblemLine(null);
+    followTailRef.current = true;
     setFollowTail(true);
   }, [job?.id, step?.name]);
 
   useEffect(() => {
-    if (highlightLineIndex === null) return;
-    const frameId = window.requestAnimationFrame(() => {
-      const target = viewportRef.current?.querySelector<HTMLElement>(
-        `[data-log-line="${highlightLineIndex}"]`,
-      );
-      target?.scrollIntoView({ block: "center" });
+    const editor = editorRef.current;
+    if (!editor) return;
+    unregisterModelRef.current?.();
+    unregisterModelRef.current = registerWorkflowLogModel(editor, {
+      model,
+      showTimestamps,
+      repoPath,
     });
-    return () => window.cancelAnimationFrame(frameId);
-  }, [highlightLineIndex, lines]);
+    decoratorRef.current?.update({
+      model,
+      showTimestamps,
+      highlightLine: currentProblemLine,
+    });
+  }, [currentProblemLine, model, repoPath, showTimestamps]);
 
   useEffect(() => {
-    if (!isLive || !followTail || highlightLineIndex !== null) return;
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    viewport.scrollTop = viewport.scrollHeight;
-  }, [followTail, highlightLineIndex, isLive, visibleLines.length]);
+    const editor = editorRef.current;
+    if (!editor || currentProblemLine === null) return;
+    return revealLineWhenSettled(editor, currentProblemLine, "center");
+  }, [currentProblemLine]);
 
-  const handleScroll = () => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    const distance = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-    setFollowTail(distance < 48);
-  };
+  const updateFollowTail = useCallback((editor: MonacoReadonlyEditor) => {
+    const distance =
+      editor.getScrollHeight() - editor.getScrollTop() - editor.getLayoutInfo().height;
+    const next = distance < TAIL_THRESHOLD_PX;
+    if (followTailRef.current === next) return;
+    followTailRef.current = next;
+    setFollowTail(next);
+  }, []);
+
+  const handleReady = useCallback(
+    (editor: MonacoReadonlyEditor) => {
+      editorRef.current = editor;
+      const decorator = createViewportDecorator(editor);
+      decoratorRef.current = decorator;
+      unregisterModelRef.current = registerWorkflowLogModel(editor, {
+        model: modelRef.current,
+        showTimestamps,
+        repoPath,
+      });
+      decorator.update({
+        model: modelRef.current,
+        showTimestamps,
+        highlightLine: currentProblemLine,
+      });
+      const scrollDisposable = editor.onDidScrollChange((event) => {
+        if (event.scrollTopChanged || event.scrollHeightChanged) updateFollowTail(editor);
+      });
+      const cancelReveal =
+        currentProblemLine !== null
+          ? revealLineWhenSettled(editor, currentProblemLine, "center")
+          : isLive && followTailRef.current
+            ? revealLineWhenSettled(editor, editor.getModel()?.getLineCount() ?? 1, "bottom")
+            : null;
+
+      return () => {
+        cancelReveal?.();
+        scrollDisposable.dispose();
+        decorator.dispose();
+        unregisterModelRef.current?.();
+        unregisterModelRef.current = null;
+        decoratorRef.current = null;
+        editorRef.current = null;
+      };
+    },
+    // Only the initial values matter here; later changes are synced by effects.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const handleContentApplied = useCallback(
+    (editor: MonacoReadonlyEditor, appended: boolean) => {
+      if (isLive && followTailRef.current && currentProblemLine === null) {
+        const lastLine = editor.getModel()?.getLineCount() ?? 1;
+        editor.revealLine(lastLine);
+      } else if (!appended && currentProblemLine === null) {
+        editor.setScrollTop(0);
+      }
+    },
+    [currentProblemLine, isLive],
+  );
 
   const scrollToBottom = () => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    viewport.scrollTop = viewport.scrollHeight;
+    const editor = editorRef.current;
+    if (!editor) return;
+    followTailRef.current = true;
     setFollowTail(true);
+    editor.revealLine(editor.getModel()?.getLineCount() ?? 1);
   };
 
+  const jumpToProblem = (direction: 1 | -1) => {
+    const next = findAdjacentProblemLine(model.problemLines, currentProblemLine, direction);
+    if (next === null) return;
+    followTailRef.current = false;
+    setFollowTail(false);
+    setActiveProblemLine(next);
+  };
+
+  const triggerEditorAction = (action: string) => {
+    editorRef.current?.trigger("github-actions-log", action, null);
+  };
+
+  const lineNumberFormatter = useCallback((lineNumber: number) => {
+    const row = modelRef.current.rows[lineNumber - 1];
+    return String(row ? row.index + 1 : lineNumber);
+  }, []);
+
   const hasQuery = query.trim().length > 0;
+  const problemCount = model.errorCount + model.warningCount;
+  const problemLabel = [
+    model.errorCount > 0 ? `${model.errorCount} error${model.errorCount === 1 ? "" : "s"}` : null,
+    model.warningCount > 0
+      ? `${model.warningCount} warning${model.warningCount === 1 ? "" : "s"}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label="Job logs">
@@ -324,11 +310,56 @@ export function GitHubActionLogPanel({
                     <span className="truncate">{job.runnerName}</span>
                   </>
                 ) : null}
+                {model.rows.length > 0 ? (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span className="tabular-nums">{`${model.rows.length} lines`}</span>
+                  </>
+                ) : null}
               </div>
             ) : null}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {problemCount > 0 ? (
+            <div className="mr-1 flex items-center gap-0.5">
+              <Tooltip content="Previous problem">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  iconOnly
+                  aria-label="Previous problem"
+                  onClick={() => jumpToProblem(-1)}
+                >
+                  <ArrowUpIcon />
+                </Button>
+              </Tooltip>
+              <button
+                type="button"
+                onClick={() => jumpToProblem(1)}
+                className={cn(
+                  "rounded-chrome px-1.5 py-0.5 ui-text-caption tabular-nums transition-colors hover:bg-accent/60",
+                  model.errorCount > 0
+                    ? WORKFLOW_TONE_TEXT_CLASS.error
+                    : WORKFLOW_TONE_TEXT_CLASS.warning,
+                )}
+                aria-label={`${problemLabel}. Jump to next problem`}
+              >
+                {problemLabel}
+              </button>
+              <Tooltip content="Next problem">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  iconOnly
+                  aria-label="Next problem"
+                  onClick={() => jumpToProblem(1)}
+                >
+                  <ArrowDownIcon />
+                </Button>
+              </Tooltip>
+            </div>
+          ) : null}
           <Input
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
@@ -384,6 +415,41 @@ export function GitHubActionLogPanel({
               <OpenExternalIcon />
             </Button>
           ) : null}
+          <DropdownMenu>
+            <Tooltip content="More log actions">
+              <DropdownMenuTrigger
+                render={
+                  <Button type="button" variant="ghost" iconOnly aria-label="More log actions" />
+                }
+              >
+                <DotsIcon />
+              </DropdownMenuTrigger>
+            </Tooltip>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                disabled={model.foldRanges.length === 0}
+                onClick={() => triggerEditorAction("editor.foldAll")}
+              >
+                Collapse all groups
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={model.foldRanges.length === 0}
+                onClick={() => triggerEditorAction("editor.unfoldAll")}
+              >
+                Expand all groups
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={model.rows.length === 0}
+                onClick={() => triggerEditorAction("actions.find")}
+              >
+                Find in logs
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={lines.length === 0} onClick={onExport}>
+                <DownloadIcon />
+                Export log
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -413,35 +479,16 @@ export function GitHubActionLogPanel({
             message={hasQuery ? "No log lines match this filter" : "No log output for this step"}
           />
         ) : (
-          <ScrollArea
-            orientation={wrap ? "vertical" : "both"}
-            className="size-full"
-            contentClassName="py-2"
-            viewportProps={{ ref: viewportRef, onScroll: handleScroll }}
-          >
-            {visibleLines.map((line) => (
-              <LogLineRow
-                key={line.index}
-                line={line}
-                query={query}
-                showTimestamps={showTimestamps}
-                wrap={wrap}
-                isHighlighted={highlightLineIndex === line.index}
-                isCollapsed={collapsedGroups.has(line.index)}
-                onToggleGroup={
-                  line.level === "group"
-                    ? () =>
-                        setCollapsedGroups((current) => {
-                          const next = new Set(current);
-                          if (next.has(line.index)) next.delete(line.index);
-                          else next.add(line.index);
-                          return next;
-                        })
-                    : undefined
-                }
-              />
-            ))}
-          </ScrollArea>
+          <MonacoReadonlyView
+            content={model.text}
+            languageId={WORKFLOW_LOG_LANGUAGE_ID}
+            wordWrap={wrap}
+            folding
+            lineNumberFormatter={lineNumberFormatter}
+            ariaLabel="Job log output"
+            onReady={handleReady}
+            onContentApplied={handleContentApplied}
+          />
         )}
         {isLive && !followTail && lines.length > 0 ? (
           <Button

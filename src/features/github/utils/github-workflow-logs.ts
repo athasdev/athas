@@ -66,10 +66,12 @@ const ANSI_COLORS: Record<number, WorkflowLogColor> = {
 };
 
 export function stripAnsi(value: string) {
+  if (!value.includes(ESCAPE)) return value;
   return value.replace(ANSI_SGR_PATTERN, "").replace(ANSI_OTHER_PATTERN, "");
 }
 
 function parseAnsiSegments(value: string): WorkflowLogSegment[] {
+  if (!value.includes(ESCAPE)) return [{ text: value, color: null, bold: false }];
   const input = value.replace(ANSI_OTHER_PATTERN, "");
   const segments: WorkflowLogSegment[] = [];
   let color: WorkflowLogColor = null;
@@ -112,6 +114,10 @@ function parseAnsiSegments(value: string): WorkflowLogSegment[] {
 }
 
 function detectLevel(text: string): { level: WorkflowLogLevel; text: string } {
+  const first = text.charCodeAt(0);
+  // Only "#", ":" and "[" can start a marker; skip the regexes for everything else.
+  if (first !== 35 && first !== 58 && first !== 91) return { level: null, text };
+
   const levelMatch = text.match(LEVEL_PATTERN);
   if (levelMatch) {
     return { level: levelMatch[1] as WorkflowLogLevel, text: levelMatch[2].trim() };
@@ -136,7 +142,12 @@ export function parseWorkflowLog(raw: string): WorkflowLogLine[] {
   if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
 
   return lines.map((rawLine, index) => {
-    const timestampMatch = rawLine.match(TIMESTAMP_PATTERN);
+    // GitHub prefixes every line with an ISO timestamp; the digit check avoids
+    // running the regex on lines that cannot carry one.
+    const timestampMatch =
+      rawLine.charCodeAt(0) >= 48 && rawLine.charCodeAt(0) <= 57
+        ? rawLine.match(TIMESTAMP_PATTERN)
+        : null;
     const timestamp = timestampMatch?.[1] ?? null;
     const body = timestampMatch ? rawLine.slice(timestampMatch[0].length) : rawLine;
     const plain = stripAnsi(body);
@@ -214,7 +225,14 @@ export function findFirstProblemLine(lines: WorkflowLogLine[]): number | null {
 export function filterWorkflowLog(lines: WorkflowLogLine[], query: string): WorkflowLogLine[] {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return lines;
-  return lines.filter((line) => line.text.toLowerCase().includes(normalizedQuery));
+  return lines.filter((line) => {
+    if (line.text.toLowerCase().includes(normalizedQuery)) return true;
+    // Let "error" or "warning" find annotated lines even when the message
+    // itself does not repeat the level.
+    return line.level !== null && line.level !== "group" && line.level !== "endgroup"
+      ? line.level.includes(normalizedQuery)
+      : false;
+  });
 }
 
 export function formatWorkflowLogText(lines: WorkflowLogLine[], includeTimestamps: boolean) {

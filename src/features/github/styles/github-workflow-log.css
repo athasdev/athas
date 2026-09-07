@@ -1,0 +1,70 @@
+/* Decorations applied by the GitHub Actions log viewer on top of Monaco. */
+.gha-log-timestamp {
+  color: var(--subtle-foreground);
+  opacity: 0.8;
+}
+
+.gha-log-line-error {
+  background-color: color-mix(in srgb, var(--destructive) 12%, transparent);
+  color: var(--destructive) !important;
+}
+
+.gha-log-line-warning {
+  background-color: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--warning) !important;
+}
+
+.gha-log-line-notice {
+  background-color: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.gha-log-line-debug {
+  color: var(--subtle-foreground) !important;
+  opacity: 0.8;
+}
+
+.gha-log-line-command {
+  color: var(--primary) !important;
+}
+
+.gha-log-line-group {
+  color: var(--foreground) !important;
+  font-weight: 600;
+}
+
+.gha-log-line-highlight {
+  background-color: color-mix(in srgb, var(--warning) 18%, transparent);
+  box-shadow: inset 2px 0 0 var(--warning);
+}
+
+.gha-log-ansi-bold {
+  font-weight: 600;
+}
+
+.gha-log-ansi-red {
+  color: var(--terminal-red, var(--destructive));
+}
+
+.gha-log-ansi-green {
+  color: var(--terminal-green, var(--success));
+}
+
+.gha-log-ansi-yellow {
+  color: var(--terminal-yellow, var(--warning));
+}
+
+.gha-log-ansi-blue {
+  color: var(--terminal-blue, var(--primary));
+}
+
+.gha-log-ansi-magenta {
+  color: var(--terminal-magenta, var(--primary));
+}
+
+.gha-log-ansi-cyan {
+  color: var(--terminal-cyan, var(--primary));
+}
+
+.gha-log-ansi-gray {
+  color: var(--terminal-bright-black, var(--subtle-foreground));
+}

@@ -1,4 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   ArrowClockwiseIcon,
@@ -10,7 +12,7 @@ import {
   OpenExternalIcon,
   StopIcon,
 } from "@/ui/icons";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
@@ -349,13 +351,20 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
     return () => window.clearInterval(intervalId);
   }, [loadJobLogs, selectedJobId, selectedJobState?.isActive]);
 
+  // Fetch the final log exactly once when the selected job goes from running
+  // to finished. Keyed on the transition rather than on fetch timestamps so a
+  // fast response can never schedule another fetch.
+  const selectedJobIsActive = selectedJobState?.isActive ?? false;
+  const previousJobActivityRef = useRef<{ jobId: number | null; isActive: boolean }>({
+    jobId: null,
+    isActive: false,
+  });
   useEffect(() => {
-    if (selectedJobId === null || !selectedJobState || selectedJobState.isActive) return;
-    const logState = jobLogs[selectedJobId];
-    if (!logState) return;
-    if (logState.fetchedAt < Date.now() - 1_000) return;
-    void loadJobLogs(selectedJobId, true);
-  }, [jobLogs, loadJobLogs, selectedJobId, selectedJobState]);
+    const previous = previousJobActivityRef.current;
+    previousJobActivityRef.current = { jobId: selectedJobId, isActive: selectedJobIsActive };
+    if (selectedJobId === null || previous.jobId !== selectedJobId) return;
+    if (previous.isActive && !selectedJobIsActive) void loadJobLogs(selectedJobId, true);
+  }, [loadJobLogs, selectedJobId, selectedJobIsActive]);
 
   const jobLogLines = selectedJobId !== null ? (jobLogs[selectedJobId]?.lines ?? []) : [];
   const stepRanges = useMemo(
@@ -429,6 +438,35 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
     }
     void copyToClipboard(formatWorkflowLogText(visibleLines, showTimestamps), "Logs copied");
   }, [showTimestamps, visibleLines]);
+
+  const handleExportLogs = useCallback(async () => {
+    if (visibleLines.length === 0) {
+      toast.error("No log lines to export.");
+      return;
+    }
+    const subjectName = (selectedStep?.name ?? selectedJob?.name ?? "job").replace(
+      /[^a-zA-Z0-9_-]+/g,
+      "_",
+    );
+    try {
+      const filePath = await save({
+        defaultPath: `run-${details?.runNumber ?? resolvedRunId ?? "log"}-${subjectName}.log`,
+        filters: [{ name: "Log", extensions: ["log", "txt"] }],
+      });
+      if (!filePath) return;
+      await writeTextFile(filePath, formatWorkflowLogText(visibleLines, showTimestamps));
+      toast.success("Log exported");
+    } catch (exportError) {
+      toast.error(describeError(exportError));
+    }
+  }, [
+    details?.runNumber,
+    resolvedRunId,
+    selectedJob?.name,
+    selectedStep?.name,
+    showTimestamps,
+    visibleLines,
+  ]);
 
   const handleRefresh = useCallback(() => {
     if (resolvedRunId === null) {
@@ -731,6 +769,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
               step={selectedStep}
               lines={visibleLines}
               now={now}
+              repoPath={repoPath ?? null}
               isLoading={selectedJobId !== null && loadingJobLogId === selectedJobId}
               isLogsAvailable={areJobLogsAvailable(selectedJob)}
               error={selectedJobId !== null ? (jobLogErrors[selectedJobId] ?? null) : null}
@@ -744,6 +783,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
               isLive={Boolean(selectedJobState?.isActive)}
               onRefresh={() => selectedJobId !== null && void loadJobLogs(selectedJobId, true)}
               onCopy={handleCopyLogs}
+              onExport={() => void handleExportLogs()}
               onOpenOnGitHub={selectedJob?.url ? () => void openUrl(selectedJob.url ?? "") : null}
             />
           </div>
