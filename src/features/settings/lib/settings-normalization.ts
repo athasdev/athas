@@ -453,6 +453,7 @@ export function normalizeSettings(settings: Settings): Settings {
   delete (normalizedSettings.coreFeatures as { athasEditorEngine?: unknown }).athasEditorEngine;
   delete (normalizedSettings.coreFeatures as { energyEdge?: unknown }).energyEdge;
   delete (normalizedSettings.coreFeatures as { webViewer?: unknown }).webViewer;
+  delete (normalizedSettings.coreFeatures as { ghosttyTerminal?: unknown }).ghosttyTerminal;
   delete (normalizedSettings as Settings & { windowChromeDensity?: unknown }).windowChromeDensity;
   const legacyFooterSettings = normalizedSettings as Settings & {
     footerLeadingItemsOrder?: unknown;

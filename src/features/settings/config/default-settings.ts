@@ -130,7 +130,6 @@ export const defaultSettings: Settings = {
     github: true,
     remote: true,
     terminal: true,
-    ghosttyTerminal: false,
     search: true,
     diagnostics: true,
     debugger: true,

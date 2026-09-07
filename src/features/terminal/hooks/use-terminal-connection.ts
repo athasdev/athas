@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { closeTerminalConnection } from "../services/terminal-connection-lifecycle";
-import type { TerminalDisposable, TerminalFrontend } from "../types/terminal-frontend.types";
+import type { IDisposable, Terminal } from "@xterm/xterm";
 import type { TerminalInput, TerminalSize } from "../types/terminal.types";
 import type { TerminalTheme } from "./use-terminal-theme";
 import { TerminalOscStream } from "../utils/terminal-osc-stream";
@@ -25,7 +25,7 @@ interface UseTerminalConnectionOptions {
   remoteConnectionId?: string;
   reuseExistingConnection?: boolean;
   sessionId: string;
-  terminal: TerminalFrontend | null;
+  terminal: Terminal | null;
   updateSession: (
     sessionId: string,
     updates: {
@@ -108,7 +108,7 @@ export function useTerminalConnection({
   );
 
   const sendTerminalSize = useCallback(
-    (activeTerminal: TerminalFrontend) => {
+    (activeTerminal: Terminal) => {
       const activeConnectionId = currentConnectionIdRef.current;
       if (!activeConnectionId) return;
 
@@ -146,7 +146,7 @@ export function useTerminalConnection({
   useEffect(() => {
     if (!terminal || !isInitialized || !connectionId) return;
 
-    const disposables: TerminalDisposable[] = [];
+    const disposables: IDisposable[] = [];
 
     disposables.push(terminal.onData(write));
     if (terminal.onBinary) disposables.push(terminal.onBinary(writeBinary));

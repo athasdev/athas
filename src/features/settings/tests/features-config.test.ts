@@ -36,17 +36,4 @@ describe("features config", () => {
     });
     expect(feature).not.toHaveProperty("status");
   });
-
-  it("keeps the Ghostty terminal engine experimental and off by default", () => {
-    const feature = createCoreFeaturesList(defaultSettings.coreFeatures).find(
-      (item) => item.id === "ghosttyTerminal",
-    );
-
-    expect(feature).toMatchObject({
-      name: "Ghostty Terminal Engine",
-      description: "Use Ghostty's WebAssembly terminal engine for new terminal sessions",
-      enabled: false,
-      status: "experimental",
-    });
-  });
 });

@@ -1,5 +1,5 @@
 import { Channel } from "@tauri-apps/api/core";
-import type { TerminalFrontend } from "../types/terminal-frontend.types";
+import type { Terminal } from "@xterm/xterm";
 import type { TerminalEvent, TerminalSize } from "../types/terminal.types";
 
 type TerminalEventListener = (event: TerminalEvent) => void;
@@ -83,7 +83,7 @@ function dispatchTerminalEvent(stream: TerminalEventStream, event: TerminalEvent
   }
 }
 
-export function getTerminalSize(terminal: TerminalFrontend): TerminalSize {
+export function getTerminalSize(terminal: Terminal): TerminalSize {
   const screen = terminal.element?.querySelector<HTMLElement>(".xterm-screen");
   const rect = (screen ?? terminal.element)?.getBoundingClientRect();
 

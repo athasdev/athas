@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ISearchOptions } from "@xterm/addon-search";
-import { Terminal as XtermInstance } from "@xterm/xterm";
+import { Terminal } from "@xterm/xterm";
 import {
   useCallback,
   useEffect,
@@ -22,7 +22,6 @@ import {
   type TerminalFileDropDetail,
 } from "@/features/file-system/utils/file-system-drop-controller";
 import { showConfirmDialog } from "@/ui/dialog";
-import { useToast } from "@/features/layout/contexts/toast-context";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { currentPlatform } from "@/utils/platform";
@@ -32,16 +31,11 @@ import {
   loadWebLinksAddon,
   registerFileLinksProvider,
   removeLinkStyles,
+  type TerminalAddons,
 } from "../hooks/use-terminal-addons";
 import { useTerminalConnection } from "../hooks/use-terminal-connection";
 import { useTerminalTheme, type TerminalTheme } from "../hooks/use-terminal-theme";
-import { createGhosttyTerminalRuntime } from "../lib/ghostty-terminal-runtime";
 import { useTerminalStore } from "../stores/terminal.store";
-import type {
-  TerminalEngine,
-  TerminalFrontend,
-  TerminalRuntimeAddons,
-} from "../types/terminal-frontend.types";
 import { formatDroppedPathsForTerminal } from "../utils/terminal-file-drop";
 import { resolveTerminalFont } from "../utils/resolve-font";
 import { getTerminalKeyAction } from "../utils/terminal-keyboard";
@@ -56,16 +50,11 @@ const MULTILINE_PASTE_LINE_THRESHOLD = 5;
 const LARGE_PASTE_CHAR_THRESHOLD = 1000;
 
 interface TerminalEmulatorProps {
-  engine: TerminalEngine;
   sessionId: string;
   isActive: boolean;
   isVisible?: boolean;
   onReady?: () => void;
-  onTerminalRef?: (ref: {
-    focus: () => void;
-    showSearch: () => void;
-    terminal: TerminalFrontend;
-  }) => void;
+  onTerminalRef?: (ref: { focus: () => void; showSearch: () => void; terminal: Terminal }) => void;
   onTerminalExit?: (sessionId: string) => void;
   shell?: string;
   initialCommand?: string;
@@ -75,7 +64,6 @@ interface TerminalEmulatorProps {
 }
 
 export const TerminalEmulator = ({
-  engine,
   sessionId,
   isActive,
   isVisible = true,
@@ -89,15 +77,13 @@ export const TerminalEmulator = ({
   remoteConnectionId,
 }: TerminalEmulatorProps) => {
   const terminalContainerRef = useRef<HTMLDivElement>(null);
-  const terminalRef = useRef<TerminalFrontend | null>(null);
-  const addonsRef = useRef<TerminalRuntimeAddons | null>(null);
-  const activeEngineRef = useRef<TerminalEngine>(engine);
+  const terminalRef = useRef<Terminal | null>(null);
+  const addonsRef = useRef<TerminalAddons | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchResults, setSearchResults] = useState({ current: 0, total: 0 });
   const isInitializingRef = useRef(false);
   const fitFrameRef = useRef<number | null>(null);
-  const { showToast } = useToast();
 
   const updateSession = useTerminalStore((state) => state.actions.updateSession);
   const getSession = useTerminalStore((state) => state.actions.getSession);
@@ -147,18 +133,7 @@ export const TerminalEmulator = ({
   const applyTerminalTheme = useCallback((theme: TerminalTheme) => {
     const terminal = terminalRef.current;
     if (!terminal) return;
-
-    if (activeEngineRef.current === "ghostty") {
-      const ghosttyRenderer = (
-        terminal as TerminalFrontend & {
-          renderer?: { setTheme: (nextTheme: TerminalTheme) => void };
-        }
-      ).renderer;
-      ghosttyRenderer?.setTheme(theme);
-      return;
-    }
-
-    (terminal as XtermInstance).options.theme = theme;
+    terminal.options.theme = theme;
   }, []);
 
   const { currentConnectionIdRef, sendTerminalSize, writeBuffered } = useTerminalConnection({
@@ -192,7 +167,7 @@ export const TerminalEmulator = ({
 
       addons.fitAddon.fit();
       sendTerminalSize(terminal);
-      terminal.refresh?.(0, terminal.rows - 1);
+      terminal.refresh(0, terminal.rows - 1);
     });
   }, [sendTerminalSize]);
 
@@ -238,7 +213,7 @@ export const TerminalEmulator = ({
     event.dataTransfer.dropEffect = "copy";
   }, []);
 
-  const pasteIntoTerminal = useCallback(async (terminal: TerminalFrontend, text: string) => {
+  const pasteIntoTerminal = useCallback(async (terminal: Terminal, text: string) => {
     if (!text) return;
 
     const lineCount = text.replace(/\r\n/g, "\n").split("\n").length;
@@ -276,67 +251,30 @@ export const TerminalEmulator = ({
     }
 
     try {
-      let activeEngine = engine;
-      let terminal: TerminalFrontend | null = null;
-      let addons: TerminalRuntimeAddons | null = null;
+      const terminal = new Terminal({
+        fontFamily: resolved.fontFamily,
+        fontSize: effectiveTerminalFontSize,
+        lineHeight: terminalLineHeight,
+        letterSpacing: effectiveTerminalLetterSpacing,
+        cursorBlink: terminalCursorBlink,
+        cursorStyle: terminalCursorStyle,
+        cursorWidth: effectiveTerminalCursorWidth,
+        cursorInactiveStyle: terminalCursorInactiveStyle,
+        altClickMovesCursor: terminalAltClickMovesCursor,
+        allowProposedApi: true,
+        theme: getTerminalTheme(),
+        scrollback: terminalScrollback,
+        convertEol: false,
+        macOptionIsMeta: terminalMacOptionIsMeta,
+        rightClickSelectsWord: terminalRightClickSelectsWord,
+        ...getTerminalCompatibilityOptions({ isRemote: terminalIsRemote }),
+      });
 
-      if (activeEngine === "ghostty") {
-        try {
-          const runtime = await createGhosttyTerminalRuntime({
-            fontFamily: resolved.fontFamily,
-            fontSize: effectiveTerminalFontSize,
-            cursorBlink: terminalCursorBlink,
-            cursorStyle: terminalCursorStyle,
-            theme: getTerminalTheme(),
-            scrollback: terminalScrollback,
-            convertEol: false,
-            smoothScrollDuration: 0,
-          });
-          terminal = runtime.terminal;
-          addons = runtime.addons;
-          terminal.open(terminalContainerRef.current);
-        } catch (error) {
-          console.error("Failed to initialize the experimental Ghostty terminal:", error);
-          showToast({
-            message: "Ghostty could not start. This terminal is using xterm instead.",
-            type: "error",
-          });
-          activeEngine = "xterm";
-        }
-      }
+      terminal.open(terminalContainerRef.current);
+      const addons = createTerminalAddons(terminal, {
+        onRendererFallback: fitTerminal,
+      });
 
-      if (activeEngine === "xterm") {
-        const xterm = new XtermInstance({
-          fontFamily: resolved.fontFamily,
-          fontSize: effectiveTerminalFontSize,
-          lineHeight: terminalLineHeight,
-          letterSpacing: effectiveTerminalLetterSpacing,
-          cursorBlink: terminalCursorBlink,
-          cursorStyle: terminalCursorStyle,
-          cursorWidth: effectiveTerminalCursorWidth,
-          cursorInactiveStyle: terminalCursorInactiveStyle,
-          altClickMovesCursor: terminalAltClickMovesCursor,
-          allowProposedApi: true,
-          theme: getTerminalTheme(),
-          scrollback: terminalScrollback,
-          convertEol: false,
-          macOptionIsMeta: terminalMacOptionIsMeta,
-          rightClickSelectsWord: terminalRightClickSelectsWord,
-          ...getTerminalCompatibilityOptions({ isRemote: terminalIsRemote }),
-        });
-
-        xterm.open(terminalContainerRef.current);
-        terminal = xterm;
-        addons = createTerminalAddons(xterm, {
-          onRendererFallback: fitTerminal,
-        });
-      }
-
-      if (!terminal || !addons) {
-        throw new Error("No terminal frontend was created.");
-      }
-
-      activeEngineRef.current = activeEngine;
       const handleCustomKeyEvent = (event: KeyboardEvent) => {
         const action = getTerminalKeyAction(event, currentPlatform);
         if (action.type === "switchTab") {
@@ -376,10 +314,7 @@ export const TerminalEmulator = ({
 
         return action.type === "passthrough";
       };
-      terminal.attachCustomKeyEventHandler((event) => {
-        const shouldProcess = handleCustomKeyEvent(event);
-        return activeEngine === "ghostty" ? !shouldProcess : shouldProcess;
-      });
+      terminal.attachCustomKeyEventHandler(handleCustomKeyEvent);
 
       const textarea = terminal.textarea;
       if (textarea) {
@@ -411,31 +346,22 @@ export const TerminalEmulator = ({
         };
       }
 
-      if (activeEngine === "xterm") {
-        const xterm = terminal as XtermInstance;
-        loadWebLinksAddon(xterm);
-        registerFileLinksProvider(xterm, {
-          getWorkspaceRoot: () => workspaceRootRef.current,
-          openFile: async (link) => {
-            await useFileSystemStore
-              .getState()
-              .handleFileSelect(link.path, false, link.line, link.column);
-          },
-        });
-        xterm.unicode.activeVersion = "11";
-        injectLinkStyles(sessionId, terminalContainerRef.current.id || `terminal-${sessionId}`);
-      }
+      loadWebLinksAddon(terminal);
+      registerFileLinksProvider(terminal, {
+        getWorkspaceRoot: () => workspaceRootRef.current,
+        openFile: async (link) => {
+          await useFileSystemStore
+            .getState()
+            .handleFileSelect(link.path, false, link.line, link.column);
+        },
+      });
+      terminal.unicode.activeVersion = "11";
+      injectLinkStyles(sessionId, terminalContainerRef.current.id || `terminal-${sessionId}`);
 
       terminalRef.current = terminal;
       addonsRef.current = addons;
-      const engineTraceMessage =
-        activeEngine === engine
-          ? `${activeEngine}:ready`
-          : `${activeEngine}:fallback-from-${engine}`;
-      frontendTrace("info", "bench:terminal-engine", engineTraceMessage, {
+      frontendTrace("info", "bench:terminal-engine", "xterm:ready", {
         durationMs: Math.round(performance.now() - initializationStartedAt),
-        engine: activeEngine,
-        requestedEngine: engine,
       });
 
       // Fit synchronously after open so terminal.rows/cols reflect the actual container size
@@ -535,7 +461,6 @@ export const TerminalEmulator = ({
     }
   }, [
     currentConnectionIdRef,
-    engine,
     environment,
     fitTerminal,
     getSession,
@@ -548,7 +473,6 @@ export const TerminalEmulator = ({
     remoteConnectionId,
     shell,
     sessionId,
-    showToast,
     terminalCursorBlink,
     terminalCursorInactiveStyle,
     terminalCursorStyle,
@@ -584,38 +508,19 @@ export const TerminalEmulator = ({
       const terminal = terminalRef.current;
       if (cancelled || !terminal || !addonsRef.current) return;
 
-      if (activeEngineRef.current === "ghostty") {
-        const options = (
-          terminal as TerminalFrontend & {
-            options: {
-              cursorBlink: boolean;
-              cursorStyle: "block" | "underline" | "bar";
-              fontFamily: string;
-              fontSize: number;
-              scrollback: number;
-            };
-          }
-        ).options;
-        options.fontFamily = resolved.fontFamily;
-        options.fontSize = effectiveTerminalFontSize;
-        options.scrollback = terminalScrollback;
-        options.cursorBlink = terminalCursorBlink;
-        options.cursorStyle = terminalCursorStyle;
-      } else {
-        const options = (terminal as XtermInstance).options;
-        options.fontFamily = resolved.fontFamily;
-        options.fontSize = effectiveTerminalFontSize;
-        options.lineHeight = terminalLineHeight;
-        options.letterSpacing = effectiveTerminalLetterSpacing;
-        options.scrollback = terminalScrollback;
-        options.cursorBlink = terminalCursorBlink;
-        options.cursorStyle = terminalCursorStyle;
-        options.cursorWidth = effectiveTerminalCursorWidth;
-        options.cursorInactiveStyle = terminalCursorInactiveStyle;
-        options.altClickMovesCursor = terminalAltClickMovesCursor;
-        options.macOptionIsMeta = terminalMacOptionIsMeta;
-        options.rightClickSelectsWord = terminalRightClickSelectsWord;
-      }
+      const options = terminal.options;
+      options.fontFamily = resolved.fontFamily;
+      options.fontSize = effectiveTerminalFontSize;
+      options.lineHeight = terminalLineHeight;
+      options.letterSpacing = effectiveTerminalLetterSpacing;
+      options.scrollback = terminalScrollback;
+      options.cursorBlink = terminalCursorBlink;
+      options.cursorStyle = terminalCursorStyle;
+      options.cursorWidth = effectiveTerminalCursorWidth;
+      options.cursorInactiveStyle = terminalCursorInactiveStyle;
+      options.altClickMovesCursor = terminalAltClickMovesCursor;
+      options.macOptionIsMeta = terminalMacOptionIsMeta;
+      options.rightClickSelectsWord = terminalRightClickSelectsWord;
 
       fitTerminal();
     };
@@ -814,13 +719,7 @@ export const TerminalEmulator = ({
       const newSize = Math.min(Math.max(terminalFontSize + delta, 8), 32);
       useSettingsStore.getState().actions.updateSetting("terminalFontSize", newSize);
       if (terminalRef.current) {
-        if (activeEngineRef.current === "ghostty") {
-          (
-            terminalRef.current as TerminalFrontend & { options: { fontSize: number } }
-          ).options.fontSize = newSize;
-        } else {
-          (terminalRef.current as XtermInstance).options.fontSize = newSize;
-        }
+        terminalRef.current.options.fontSize = newSize;
         fitTerminal();
       }
     },
@@ -830,13 +729,7 @@ export const TerminalEmulator = ({
   const handleZoomReset = useCallback(() => {
     useSettingsStore.getState().actions.updateSetting("terminalFontSize", 14);
     if (terminalRef.current) {
-      if (activeEngineRef.current === "ghostty") {
-        (
-          terminalRef.current as TerminalFrontend & { options: { fontSize: number } }
-        ).options.fontSize = 14;
-      } else {
-        (terminalRef.current as XtermInstance).options.fontSize = 14;
-      }
+      terminalRef.current.options.fontSize = 14;
       fitTerminal();
     }
   }, [fitTerminal]);
@@ -993,7 +886,6 @@ export const TerminalEmulator = ({
           id={`terminal-${sessionId}`}
           data-terminal-drop-target
           data-terminal-session-id={sessionId}
-          data-terminal-engine={activeEngineRef.current}
           className={`xterm-container flex h-full min-h-0 min-w-0 flex-1 text-foreground ${!isActive ? "opacity-60" : ""}`}
           onDragOver={handleTerminalDragOver}
           onDrop={handleTerminalFileDrop}

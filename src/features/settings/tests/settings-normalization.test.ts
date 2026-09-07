@@ -218,6 +218,7 @@ describe("settings normalization", () => {
         github: true,
         remote: true,
         terminal: true,
+        ghosttyTerminal: true,
         search: true,
         diagnostics: true,
         debugger: false,
@@ -231,7 +232,7 @@ describe("settings normalization", () => {
     });
 
     expect(normalized.coreFeatures).not.toHaveProperty("webViewer");
-    expect(normalized.coreFeatures.ghosttyTerminal).toBe(false);
+    expect(normalized.coreFeatures).not.toHaveProperty("ghosttyTerminal");
     expect(normalized.coreFeatures).not.toHaveProperty("outline");
   });
 

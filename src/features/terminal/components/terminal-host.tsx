@@ -4,8 +4,6 @@ import { useShallow } from "zustand/react/shallow";
 import { useTerminalSlotsStore } from "../stores/terminal-slots.store";
 import { type TerminalStore, useTerminalStore } from "../stores/terminal.store";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import type { TerminalEngine } from "../types/terminal-frontend.types";
 import { TerminalEmulator } from "./terminal";
 
 // Renders all live terminal frontends at app root. Each session owns a stable
@@ -64,9 +62,6 @@ export function TerminalHost() {
 }
 
 function TerminalPortal({ sessionId }: { sessionId: string }) {
-  const engineRef = useRef<TerminalEngine>(
-    useSettingsStore.getState().settings.coreFeatures.ghosttyTerminal ? "ghostty" : "xterm",
-  );
   const slotEl = useTerminalSlotsStore((state) => state.slots.get(sessionId)?.el);
   const slot = useTerminalSlotsStore((state) => state.slots.get(sessionId));
 
@@ -126,7 +121,6 @@ function TerminalPortal({ sessionId }: { sessionId: string }) {
 
   return createPortal(
     <TerminalEmulator
-      engine={engineRef.current}
       sessionId={sessionId}
       isActive={slot?.isActive ?? false}
       isVisible={slot?.isVisible ?? true}
