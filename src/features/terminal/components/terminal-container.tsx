@@ -15,6 +15,7 @@ import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
 import { notifyTerminalCommandFinished } from "@/features/terminal/services/terminal-command-notifications";
 import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";
+import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
 import type { PaneNode, SplitPlacement } from "@/features/panes/types/pane.types";
@@ -245,6 +246,11 @@ const TerminalContainer = ({
     }
   }, [isTerminalPaneVisible, terminals.length, setIsBottomPaneVisible]);
 
+  const focusStoreActiveTerminal = useCallback(() => {
+    const nextActiveId = useTerminalTabsStore.getState().activeTerminalId;
+    if (nextActiveId) focusNewTerminal(nextActiveId);
+  }, [focusNewTerminal]);
+
   const handleTabClick = useCallback(
     (terminalId: string) => {
       setActiveTerminal(terminalId);
@@ -258,22 +264,14 @@ const TerminalContainer = ({
     (terminalId: string, event?: React.MouseEvent) => {
       event?.stopPropagation();
 
-      // Find which terminal will become active after closing
-      const currentIndex = terminals.findIndex((t) => t.id === terminalId);
-      const remaining = terminals.filter((t) => t.id !== terminalId);
-
+      const wasActive = terminalId === activeTerminalId;
       closeTerminal(terminalId);
 
-      // Focus next terminal if we closed the active one
-      if (terminalId === activeTerminalId && remaining.length > 0) {
-        const nextIndex = currentIndex < remaining.length ? currentIndex : currentIndex - 1;
-        const nextTerminal = remaining[nextIndex];
-        if (nextTerminal) {
-          focusNewTerminal(nextTerminal.id);
-        }
-      }
+      // The reducer picks the next active terminal (a split sibling when there
+      // is one), so focus whatever it chose instead of guessing by index.
+      if (wasActive) focusStoreActiveTerminal();
     },
-    [terminals, activeTerminalId, closeTerminal, focusNewTerminal],
+    [activeTerminalId, closeTerminal, focusStoreActiveTerminal],
   );
 
   const handleTabPin = useCallback(
@@ -434,25 +432,13 @@ const TerminalContainer = ({
     const handleCloseActiveTerminal = () => {
       if (!activeTerminalId) return;
 
-      // Find which terminal will become active after closing
-      const currentIndex = terminals.findIndex((t) => t.id === activeTerminalId);
-      const remaining = terminals.filter((t) => t.id !== activeTerminalId);
-
       closeTerminal(activeTerminalId);
-
-      if (remaining.length > 0) {
-        // Focus the next terminal (same logic as reducer)
-        const nextIndex = currentIndex < remaining.length ? currentIndex : currentIndex - 1;
-        const nextTerminal = remaining[nextIndex];
-        if (nextTerminal) {
-          focusNewTerminal(nextTerminal.id);
-        }
-      }
+      focusStoreActiveTerminal();
     };
 
     window.addEventListener("close-active-terminal", handleCloseActiveTerminal);
     return () => window.removeEventListener("close-active-terminal", handleCloseActiveTerminal);
-  }, [activeTerminalId, terminals, closeTerminal, focusNewTerminal]);
+  }, [activeTerminalId, closeTerminal, focusStoreActiveTerminal]);
 
   useEffect(() => {
     const handleCloseTerminal = (event: Event) => {
