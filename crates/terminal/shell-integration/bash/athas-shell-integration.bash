@@ -1,11 +1,29 @@
 # Athas shell integration for bash. Loaded through --init-file, so it first
 # runs the files an interactive shell would have read on its own, then emits
 # OSC 133 prompt and command marks plus OSC 7 working directory reports.
-if [[ -r /etc/bash.bashrc ]]; then
-  source /etc/bash.bashrc
-fi
-if [[ -r "$HOME/.bashrc" ]]; then
-  source "$HOME/.bashrc"
+#
+# ATHAS_SHELL_LOGIN is set when the shell would normally have been a login
+# shell (Git Bash on Windows). A login shell reads the profile files and
+# leaves ~/.bashrc to them, so mirror that instead of reading ~/.bashrc twice.
+if [[ -n "${ATHAS_SHELL_LOGIN-}" ]]; then
+  unset ATHAS_SHELL_LOGIN
+  if [[ -r /etc/profile ]]; then
+    source /etc/profile
+  fi
+  for __athas_profile in "$HOME/.bash_profile" "$HOME/.bash_login" "$HOME/.profile"; do
+    if [[ -r "$__athas_profile" ]]; then
+      source "$__athas_profile"
+      break
+    fi
+  done
+  unset __athas_profile
+else
+  if [[ -r /etc/bash.bashrc ]]; then
+    source /etc/bash.bashrc
+  fi
+  if [[ -r "$HOME/.bashrc" ]]; then
+    source "$HOME/.bashrc"
+  fi
 fi
 
 if [[ -n "${ATHAS_SHELL_INTEGRATION_LOADED-}" || -z "${ATHAS_SHELL_INTEGRATION-}" ]]; then

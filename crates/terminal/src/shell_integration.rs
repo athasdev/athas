@@ -6,7 +6,7 @@ use std::{
 };
 
 /// Bump when any embedded script changes so installed copies get refreshed.
-pub const SHELL_INTEGRATION_VERSION: &str = "1";
+pub const SHELL_INTEGRATION_VERSION: &str = "2";
 
 const SCRIPTS: &[(&str, &str)] = &[
    (
@@ -109,7 +109,7 @@ pub(crate) fn apply_shell_integration(
          cmd.env("ZDOTDIR", &zsh_dir);
          true
       }
-      "bash" if posix_shell_supported => {
+      "bash" => {
          let script = integration_dir
             .join("bash")
             .join("athas-shell-integration.bash");
@@ -118,6 +118,11 @@ pub(crate) fn apply_shell_integration(
          }
          cmd.arg("--init-file");
          cmd.arg(&script);
+         // Git Bash on Windows normally starts as a login shell, which would
+         // ignore --init-file; the script sources the login profile instead.
+         if cfg!(target_os = "windows") {
+            cmd.env("ATHAS_SHELL_LOGIN", "1");
+         }
          true
       }
       "fish" if posix_shell_supported => {
@@ -267,6 +272,34 @@ mod tests {
             "{}:/custom/share",
             dir.join("fish").display()
          )))
+      );
+   }
+
+   #[test]
+   fn git_bash_loads_the_integration_through_an_init_file() {
+      let dir = install_dir();
+      let mut cmd = CommandBuilder::new("bash.exe");
+
+      assert!(apply_shell_integration(
+         &mut cmd,
+         &dir,
+         Some(r"C:\Program Files\Git\bin\bash.exe"),
+         &HashMap::new()
+      ));
+      assert_eq!(
+         argv(&cmd),
+         vec![
+            "bash.exe".to_string(),
+            "--init-file".to_string(),
+            dir.join("bash")
+               .join("athas-shell-integration.bash")
+               .to_string_lossy()
+               .into_owned(),
+         ]
+      );
+      assert_eq!(
+         cmd.get_env("ATHAS_SHELL_LOGIN").is_some(),
+         cfg!(target_os = "windows")
       );
    }
 

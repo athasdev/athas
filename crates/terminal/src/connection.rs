@@ -162,6 +162,9 @@ impl TerminalConnection {
       };
 
       let selected_shell_id = config.shell.as_deref();
+      let shell_integration_requested = config.command.is_none()
+         && config.shell_integration.unwrap_or(true)
+         && config.shell_integration_dir.is_some();
       let (mut cmd, shell_path): (CommandBuilder, Option<String>) =
          if let Some(command) = &config.command {
             let mut builder = CommandBuilder::new(command);
@@ -173,7 +176,13 @@ impl TerminalConnection {
             let default_shell = default_shell();
             let shell_path = Self::resolve_shell_path(selected_shell_id, &default_shell);
             let mut builder = CommandBuilder::new(&shell_path);
-            Self::configure_shell_startup(&mut builder, config, selected_shell_id, &shell_path);
+            Self::configure_shell_startup(
+               &mut builder,
+               config,
+               selected_shell_id,
+               &shell_path,
+               shell_integration_requested,
+            );
 
             (builder, Some(shell_path))
          };
@@ -220,16 +229,24 @@ impl TerminalConnection {
       }
       cmd.env("CLICOLOR", "1");
 
-      if config.command.is_none()
-         && config.shell_integration.unwrap_or(true)
+      if shell_integration_requested
          && let Some(integration_dir) = config.shell_integration_dir.as_deref()
       {
-         crate::shell_integration::apply_shell_integration(
+         let applied = crate::shell_integration::apply_shell_integration(
             &mut cmd,
             std::path::Path::new(integration_dir),
             selected_shell_path,
             &user_env,
          );
+         // Git Bash gave up `--login` so the integration script could run as
+         // the init file; restore it when the script turned out to be missing.
+         if !applied
+            && cfg!(target_os = "windows")
+            && selected_shell_path
+               .is_some_and(|path| Self::is_git_bash_shell(selected_shell_id, path))
+         {
+            cmd.arg("--login");
+         }
       }
 
       Self::remove_inherited_terminal_markers(&mut cmd, &user_env);
@@ -305,9 +322,15 @@ impl TerminalConnection {
       config: &TerminalConfig,
       shell_id: Option<&str>,
       shell_path: &str,
+      shell_integration_requested: bool,
    ) {
       if cfg!(target_os = "windows") {
-         cmd.args(Self::shell_startup_args(config, shell_id, shell_path));
+         cmd.args(Self::shell_startup_args(
+            config,
+            shell_id,
+            shell_path,
+            shell_integration_requested,
+         ));
       }
    }
 
@@ -315,6 +338,7 @@ impl TerminalConnection {
       config: &TerminalConfig,
       shell_id: Option<&str>,
       shell_path: &str,
+      shell_integration_requested: bool,
    ) -> Vec<String> {
       if Self::is_powershell_shell(shell_id, shell_path) {
          return vec!["-NoLogo".to_string()];
@@ -325,6 +349,11 @@ impl TerminalConnection {
       }
 
       if Self::is_git_bash_shell(shell_id, shell_path) {
+         // A login shell ignores --init-file, so when shell integration is on
+         // the integration script sources the login profile itself.
+         if shell_integration_requested {
+            return vec!["-i".to_string()];
+         }
          return vec!["--login".to_string(), "-i".to_string()];
       }
 
@@ -651,6 +680,7 @@ mod tests {
          &config_with_env(HashMap::new()),
          Some("powershell"),
          "powershell.exe",
+         false,
       );
 
       assert_eq!(args, vec!["-NoLogo".to_string()]);
@@ -672,6 +702,7 @@ mod tests {
          &config_with_env(HashMap::new()),
          Some("pwsh"),
          "pwsh.exe",
+         false,
       );
 
       assert_eq!(args, vec!["-NoLogo".to_string()]);
@@ -709,7 +740,8 @@ mod tests {
          TerminalConnection::shell_startup_args(
             &config_with_env(HashMap::new()),
             Some("cmd"),
-            "cmd.exe"
+            "cmd.exe",
+            false
          ),
          Vec::<String>::new()
       );
@@ -721,9 +753,23 @@ mod tests {
          TerminalConnection::shell_startup_args(
             &config_with_env(HashMap::new()),
             Some("bash"),
-            r"C:\Program Files\Git\bin\bash.exe"
+            r"C:\Program Files\Git\bin\bash.exe",
+            false
          ),
          vec!["--login".to_string(), "-i".to_string()]
+      );
+   }
+
+   #[test]
+   fn git_bash_drops_login_when_shell_integration_provides_the_profile() {
+      assert_eq!(
+         TerminalConnection::shell_startup_args(
+            &config_with_env(HashMap::new()),
+            Some("bash"),
+            r"C:\Program Files\Git\bin\bash.exe",
+            true
+         ),
+         vec!["-i".to_string()]
       );
    }
 
@@ -767,7 +813,8 @@ mod tests {
       config.shell = Some("wsl:Ubuntu".to_string());
       config.working_directory = Some("wsl://Ubuntu/home/me/project".to_string());
 
-      let args = TerminalConnection::shell_startup_args(&config, Some("wsl:Ubuntu"), "wsl.exe");
+      let args =
+         TerminalConnection::shell_startup_args(&config, Some("wsl:Ubuntu"), "wsl.exe", false);
 
       assert_eq!(
          args,
@@ -787,7 +834,8 @@ mod tests {
       config.shell = Some("wsl:Ubuntu".to_string());
       config.working_directory = Some(r"C:\Users\me\project".to_string());
 
-      let args = TerminalConnection::shell_startup_args(&config, Some("wsl:Ubuntu"), "wsl.exe");
+      let args =
+         TerminalConnection::shell_startup_args(&config, Some("wsl:Ubuntu"), "wsl.exe", false);
 
       assert_eq!(
          args,

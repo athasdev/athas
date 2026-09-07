@@ -162,7 +162,7 @@ export const TerminalSettings = () => {
 
         <SettingRow
           label="Shell Integration"
-          description="Track commands, exit codes, and the working directory in zsh, bash, and fish"
+          description="Track commands, exit codes, and the working directory in zsh, bash, fish, PowerShell, and Git Bash"
           onReset={() =>
             updateSetting("terminalShellIntegration", getDefaultSetting("terminalShellIntegration"))
           }

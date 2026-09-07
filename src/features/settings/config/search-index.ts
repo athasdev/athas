@@ -977,7 +977,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "terminal",
     section: "Launch",
     label: "Shell Integration",
-    description: "Track commands, exit codes, and the working directory in zsh, bash, and fish",
+    description:
+      "Track commands, exit codes, and the working directory in zsh, bash, fish, PowerShell, and Git Bash",
     keywords: ["terminal", "shell", "integration", "prompt", "command", "marks", "osc 133"],
   },
   {
