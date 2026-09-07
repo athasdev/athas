@@ -2,9 +2,11 @@ import { ask } from "@tauri-apps/plugin-dialog";
 import { open } from "@tauri-apps/plugin-shell";
 import { ClipboardAddon, type ClipboardSelectionType } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
+import { ImageAddon } from "@xterm/addon-image";
+import { ProgressAddon } from "@xterm/addon-progress";
 import { SearchAddon } from "@xterm/addon-search";
 import { SerializeAddon } from "@xterm/addon-serialize";
-import { Unicode11Addon } from "@xterm/addon-unicode11";
+import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
 import type { ILink, ILinkProvider, Terminal } from "@xterm/xterm";
@@ -20,8 +22,12 @@ export interface TerminalAddons {
   fitAddon: FitAddon;
   searchAddon: SearchAddon;
   serializeAddon: SerializeAddon;
+  progressAddon: ProgressAddon;
+  imageAddon: ImageAddon | null;
   webglAddon: WebglAddon | null;
 }
+
+export const TERMINAL_UNICODE_VERSION = "15-graphemes";
 
 export interface CreateTerminalAddonsOptions {
   onRendererFallback?: () => void;
@@ -34,7 +40,8 @@ export function createTerminalAddons(
   const fitAddon = new FitAddon();
   const searchAddon = new SearchAddon();
   const serializeAddon = new SerializeAddon();
-  const unicode11Addon = new Unicode11Addon();
+  const unicodeAddon = new UnicodeGraphemesAddon();
+  const progressAddon = new ProgressAddon();
   const clipboardAddon = new ClipboardAddon(undefined, {
     readText: async () => "",
     writeText: async (selection: ClipboardSelectionType, text: string) => {
@@ -45,12 +52,31 @@ export function createTerminalAddons(
   terminal.loadAddon(fitAddon);
   terminal.loadAddon(searchAddon);
   terminal.loadAddon(serializeAddon);
-  terminal.loadAddon(unicode11Addon);
+  terminal.loadAddon(unicodeAddon);
   terminal.loadAddon(clipboardAddon);
+  terminal.loadAddon(progressAddon);
+  terminal.unicode.activeVersion = TERMINAL_UNICODE_VERSION;
 
+  const imageAddon = loadImageAddon(terminal);
   const webglAddon = loadWebglRenderer(terminal, options.onRendererFallback);
 
-  return { fitAddon, searchAddon, serializeAddon, webglAddon };
+  return { fitAddon, searchAddon, serializeAddon, progressAddon, imageAddon, webglAddon };
+}
+
+function loadImageAddon(terminal: Terminal): ImageAddon | null {
+  try {
+    const imageAddon = new ImageAddon({
+      sixelSupport: true,
+      iipSupport: true,
+      showPlaceholder: true,
+      enableSizeReports: true,
+    });
+    terminal.loadAddon(imageAddon);
+    return imageAddon;
+  } catch (error) {
+    console.warn("Inline terminal images are unavailable in this session.", error);
+    return null;
+  }
 }
 
 export function loadWebglRenderer(

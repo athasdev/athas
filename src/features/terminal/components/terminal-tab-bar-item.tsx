@@ -1,14 +1,17 @@
-import { PinIcon, XIcon } from "@/ui/icons";
+import { PauseIcon, PinIcon, WarningCircleIcon, XIcon } from "@/ui/icons";
 import { memo, useCallback } from "react";
-import type { Terminal } from "@/features/terminal/types/terminal.types";
+import type { Terminal, TerminalProgress } from "@/features/terminal/types/terminal.types";
 import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";
+import { ProgressCircle } from "@/ui/progress";
+import { Spinner } from "@/ui/spinner";
 import { TabItem } from "@/ui/tab-bar";
 import { cn } from "@/utils/cn";
 
 interface TerminalTabBarItemProps {
   terminal: Terminal;
   displayName: string;
+  progress?: TerminalProgress;
   isActive: boolean;
   isDraggedTab: boolean;
   showDropIndicatorBefore: boolean;
@@ -25,9 +28,34 @@ interface TerminalTabBarItemProps {
   onRenameCancel: () => void;
 }
 
+function TerminalProgressIndicator({ progress }: { progress: TerminalProgress }) {
+  const label = `${Math.round(progress.value)}% complete`;
+
+  if (progress.state === 2) {
+    return (
+      <WarningCircleIcon className="shrink-0 text-destructive" aria-label={`${label}, failed`} />
+    );
+  }
+  if (progress.state === 3) {
+    return <Spinner label="Working" compact className="shrink-0" />;
+  }
+  if (progress.state === 4) {
+    return <PauseIcon className="shrink-0 text-warning" aria-label={`${label}, paused`} />;
+  }
+  return (
+    <ProgressCircle
+      value={progress.value}
+      className="size-3.5 shrink-0"
+      role="img"
+      aria-label={label}
+    />
+  );
+}
+
 const TerminalTabBarItem = memo(function TerminalTabBarItem({
   terminal,
   displayName,
+  progress,
   isActive,
   isDraggedTab,
   showDropIndicatorBefore,
@@ -125,20 +153,23 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
             spellCheck={false}
           />
         ) : (
-          <span
-            className={cn(
-              "font-sans ui-text-chrome max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",
-              "text-left",
-              isActive ? "text-foreground" : "text-subtle-foreground",
-            )}
-            title={
-              terminal.currentDirectory
-                ? `${displayName} — ${terminal.currentDirectory}`
-                : displayName
-            }
-          >
-            {displayName}
-          </span>
+          <>
+            {progress ? <TerminalProgressIndicator progress={progress} /> : null}
+            <span
+              className={cn(
+                "font-sans ui-text-chrome max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",
+                "text-left",
+                isActive ? "text-foreground" : "text-subtle-foreground",
+              )}
+              title={
+                terminal.currentDirectory
+                  ? `${displayName} — ${terminal.currentDirectory}`
+                  : displayName
+              }
+            >
+              {displayName}
+            </span>
+          </>
         )}
       </TabItem>
     </>

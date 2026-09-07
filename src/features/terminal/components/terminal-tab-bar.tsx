@@ -594,6 +594,7 @@ const TerminalTabBar = ({
                         {({ isDragging }) => (
                           <TerminalTabBarItem
                             terminal={terminal}
+                            progress={sessions.get(terminal.id)?.progress}
                             displayName={getTerminalDisplayName(terminal)}
                             isActive={terminal.id === activeTerminalId}
                             isDraggedTab={isDragging}
@@ -645,6 +646,7 @@ const TerminalTabBar = ({
                       {({ isDragging }) => (
                         <TerminalTabBarItem
                           terminal={terminal}
+                          progress={sessions.get(terminal.id)?.progress}
                           displayName={getTerminalDisplayName(terminal)}
                           isActive={terminal.id === activeTerminalId}
                           isDraggedTab={isDragging}

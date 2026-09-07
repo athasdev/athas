@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { ClipboardAddon, type ClipboardSelectionType } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
-import { Unicode11Addon } from "@xterm/addon-unicode11";
+import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal } from "@xterm/xterm";
 import { useCallback, useEffect, useRef } from "react";
@@ -15,6 +15,7 @@ import type { TerminalSize } from "@/features/terminal/types/terminal.types";
 import { buildTerminalFontFamily } from "@/features/terminal/utils/resolve-font";
 import { getTerminalKeyAction } from "@/features/terminal/utils/terminal-keyboard";
 import { getTerminalCompatibilityOptions } from "@/features/terminal/utils/terminal-options";
+import { TERMINAL_UNICODE_VERSION } from "@/features/terminal/hooks/use-terminal-addons";
 import { normalizeTerminalTitle } from "@/features/terminal/utils/terminal-title";
 import {
   getTerminalOutputFlowAction,
@@ -156,7 +157,7 @@ export const ExternalEditorTerminal = ({
 
     const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon();
-    const unicodeAddon = new Unicode11Addon();
+    const unicodeAddon = new UnicodeGraphemesAddon();
     const clipboardAddon = new ClipboardAddon(undefined, {
       readText: async () => "",
       writeText: async (selection: ClipboardSelectionType, text: string) => {
@@ -169,7 +170,7 @@ export const ExternalEditorTerminal = ({
     terminal.loadAddon(unicodeAddon);
     terminal.loadAddon(clipboardAddon);
 
-    terminal.unicode.activeVersion = "11";
+    terminal.unicode.activeVersion = TERMINAL_UNICODE_VERSION;
 
     terminal.open(terminalRef.current);
     loadWebglRenderer(terminal, scheduleFit);

@@ -1,6 +1,12 @@
 import type { Terminal as XtermTerminal } from "@xterm/xterm";
 export type TerminalSplitDirection = "right" | "down";
 
+/** OSC 9;4 progress report: 0 clears, 1 sets, 2 errors, 3 is indeterminate, 4 pauses. */
+export interface TerminalProgress {
+  state: 0 | 1 | 2 | 3 | 4;
+  value: number;
+}
+
 export interface Terminal {
   id: string;
   name: string;
@@ -16,6 +22,7 @@ export interface Terminal {
   connectionId?: string;
   selection?: string;
   title?: string;
+  progress?: TerminalProgress;
   customName?: boolean;
   ref?: any;
   splitMode?: boolean;

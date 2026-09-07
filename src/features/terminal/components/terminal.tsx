@@ -371,7 +371,6 @@ export const TerminalEmulator = ({
             .handleFileSelect(link.path, false, link.line, link.column);
         },
       });
-      terminal.unicode.activeVersion = "11";
       injectLinkStyles(sessionId, terminalContainerRef.current.id || `terminal-${sessionId}`);
       shellIntegrationRef.current?.dispose();
       shellIntegrationRef.current = terminalShellIntegration
@@ -380,6 +379,11 @@ export const TerminalEmulator = ({
 
       terminalRef.current = terminal;
       addonsRef.current = addons;
+      addons.progressAddon.onChange((progress) => {
+        updateSession(sessionId, {
+          progress: progress.state === 0 ? undefined : progress,
+        });
+      });
       frontendTrace("info", "bench:terminal-engine", "xterm:ready", {
         durationMs: Math.round(performance.now() - initializationStartedAt),
       });
