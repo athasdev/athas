@@ -1,3 +1,4 @@
+import type { Terminal as XtermTerminal } from "@xterm/xterm";
 export type TerminalSplitDirection = "right" | "down";
 
 export interface Terminal {
@@ -56,6 +57,18 @@ export interface TerminalSize {
 }
 
 export type TerminalInput = { kind: "text"; data: string } | { kind: "binary"; data: number[] };
+
+export type TerminalCommandNavigationDirection = "previous" | "next";
+
+export interface TerminalSessionHandle {
+  focus: () => void;
+  showSearch: () => void;
+  navigateCommand: (direction: TerminalCommandNavigationDirection) => void;
+}
+
+export interface TerminalEmulatorHandle extends TerminalSessionHandle {
+  terminal: XtermTerminal;
+}
 
 export type TerminalEvent =
   | { event: "output"; data: Uint8Array }

@@ -1,0 +1,7 @@
+ATHAS_ZDOTDIR="$ZDOTDIR"
+ZDOTDIR="$ATHAS_USER_ZDOTDIR"
+if [[ -f "$ZDOTDIR/.zshrc" ]]; then
+  builtin source "$ZDOTDIR/.zshrc"
+fi
+ZDOTDIR="$ATHAS_ZDOTDIR"
+builtin source "$ATHAS_ZDOTDIR/athas-shell-integration.zsh"

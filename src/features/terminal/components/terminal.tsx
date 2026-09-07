@@ -34,8 +34,13 @@ import {
   type TerminalAddons,
 } from "../hooks/use-terminal-addons";
 import { useTerminalConnection } from "../hooks/use-terminal-connection";
+import { TerminalShellIntegration } from "../lib/terminal-shell-integration";
 import { useTerminalTheme, type TerminalTheme } from "../hooks/use-terminal-theme";
 import { useTerminalStore } from "../stores/terminal.store";
+import type {
+  TerminalCommandNavigationDirection,
+  TerminalEmulatorHandle,
+} from "../types/terminal.types";
 import { formatDroppedPathsForTerminal } from "../utils/terminal-file-drop";
 import { resolveTerminalFont } from "../utils/resolve-font";
 import { getTerminalKeyAction } from "../utils/terminal-keyboard";
@@ -54,7 +59,7 @@ interface TerminalEmulatorProps {
   isActive: boolean;
   isVisible?: boolean;
   onReady?: () => void;
-  onTerminalRef?: (ref: { focus: () => void; showSearch: () => void; terminal: Terminal }) => void;
+  onTerminalRef?: (ref: TerminalEmulatorHandle) => void;
   onTerminalExit?: (sessionId: string) => void;
   shell?: string;
   initialCommand?: string;
@@ -79,6 +84,7 @@ export const TerminalEmulator = ({
   const terminalContainerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const addonsRef = useRef<TerminalAddons | null>(null);
+  const shellIntegrationRef = useRef<TerminalShellIntegration | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchResults, setSearchResults] = useState({ current: 0, total: 0 });
@@ -112,6 +118,9 @@ export const TerminalEmulator = ({
   );
   const terminalRightClickSelectsWord = useSettingsStore(
     (state) => state.settings.terminalRightClickSelectsWord,
+  );
+  const terminalShellIntegration = useSettingsStore(
+    (state) => state.settings.terminalShellIntegration,
   );
   const zoomLevel = useZoomStore.use.terminalZoomLevel();
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
@@ -211,6 +220,13 @@ export const TerminalEmulator = ({
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const navigateCommand = useCallback((direction: TerminalCommandNavigationDirection) => {
+    const integration = shellIntegrationRef.current;
+    if (!integration) return;
+    if (direction === "previous") integration.scrollToPreviousCommand();
+    else integration.scrollToNextCommand();
   }, []);
 
   const pasteIntoTerminal = useCallback(async (terminal: Terminal, text: string) => {
@@ -357,6 +373,10 @@ export const TerminalEmulator = ({
       });
       terminal.unicode.activeVersion = "11";
       injectLinkStyles(sessionId, terminalContainerRef.current.id || `terminal-${sessionId}`);
+      shellIntegrationRef.current?.dispose();
+      shellIntegrationRef.current = terminalShellIntegration
+        ? new TerminalShellIntegration(terminal)
+        : null;
 
       terminalRef.current = terminal;
       addonsRef.current = addons;
@@ -416,6 +436,7 @@ export const TerminalEmulator = ({
                 wslWorkingDirectory: wslInfo?.linuxPath,
                 environment,
                 size,
+                shellIntegration: terminalShellIntegration,
               },
               onEvent: events.channel,
               ...getFrontendTerminalSessionArgs(),
@@ -452,6 +473,7 @@ export const TerminalEmulator = ({
       onTerminalRef?.({
         focus: () => terminal.focus(),
         showSearch: () => setIsSearchVisible(true),
+        navigateCommand,
         terminal,
       });
       onReady?.();
@@ -486,10 +508,12 @@ export const TerminalEmulator = ({
     terminalMacOptionIsMeta,
     terminalRightClickSelectsWord,
     terminalScrollback,
+    terminalShellIntegration,
     terminalIsRemote,
     updateSession,
     workingDirectory,
     writeBuffered,
+    navigateCommand,
   ]);
 
   useEffect(() => {
@@ -586,6 +610,8 @@ export const TerminalEmulator = ({
         cancelAnimationFrame(fitFrameRef.current);
         fitFrameRef.current = null;
       }
+      shellIntegrationRef.current?.dispose();
+      shellIntegrationRef.current = null;
       if (terminalRef.current) {
         terminalRef.current.dispose();
         terminalRef.current = null;
@@ -604,9 +630,10 @@ export const TerminalEmulator = ({
     onTerminalRef({
       focus: () => terminal.focus(),
       showSearch: () => setIsSearchVisible(true),
+      navigateCommand,
       terminal,
     });
-  }, [isInitialized, onTerminalRef]);
+  }, [isInitialized, navigateCommand, onTerminalRef]);
 
   // Listen for portal-target changes from TerminalHost; force a fit + repaint
   // so PTY/frontend dims match the new slot before any TUI relies on them.
@@ -848,6 +875,9 @@ export const TerminalEmulator = ({
       scrollToBottom: () => terminalRef.current?.scrollToBottom(),
       findNext: (term: string) => addonsRef.current?.searchAddon.findNext(term),
       findPrevious: (term: string) => addonsRef.current?.searchAddon.findPrevious(term),
+      scrollToPreviousCommand: () =>
+        shellIntegrationRef.current?.scrollToPreviousCommand() ?? false,
+      scrollToNextCommand: () => shellIntegrationRef.current?.scrollToNextCommand() ?? false,
       serialize: () => (terminalRef.current ? addonsRef.current?.serializeAddon.serialize() : ""),
       resize: () => fitTerminal(),
     }),

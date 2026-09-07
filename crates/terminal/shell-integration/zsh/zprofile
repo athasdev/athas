@@ -1,0 +1,6 @@
+ATHAS_ZDOTDIR="$ZDOTDIR"
+ZDOTDIR="$ATHAS_USER_ZDOTDIR"
+if [[ -f "$ZDOTDIR/.zprofile" ]]; then
+  builtin source "$ZDOTDIR/.zprofile"
+fi
+ZDOTDIR="$ATHAS_ZDOTDIR"

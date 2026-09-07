@@ -212,13 +212,25 @@ impl TerminalConnection {
             .as_deref()
             .unwrap_or(env!("CARGO_PKG_VERSION")),
       );
-      if let Some(shell_path) = shell_path {
-         cmd.env("SHELL", &shell_path);
-         if cfg!(target_os = "windows") && Self::is_git_bash_shell(selected_shell_id, &shell_path) {
+      if let Some(shell_path) = shell_path.as_deref() {
+         cmd.env("SHELL", shell_path);
+         if cfg!(target_os = "windows") && Self::is_git_bash_shell(selected_shell_id, shell_path) {
             cmd.env("CHERE_INVOKING", "1");
          }
       }
       cmd.env("CLICOLOR", "1");
+
+      if config.command.is_none()
+         && config.shell_integration.unwrap_or(true)
+         && let Some(integration_dir) = config.shell_integration_dir.as_deref()
+      {
+         crate::shell_integration::apply_shell_integration(
+            &mut cmd,
+            std::path::Path::new(integration_dir),
+            selected_shell_path,
+            &user_env,
+         );
+      }
 
       Self::remove_inherited_terminal_markers(&mut cmd, &user_env);
 
@@ -628,6 +640,8 @@ mod tests {
          args: None,
          size: TerminalSize::default(),
          term_program_version: Some("0.9.0-test".to_string()),
+         shell_integration: None,
+         shell_integration_dir: None,
       }
    }
 

@@ -148,6 +148,23 @@ pub fn warm_terminal_environment(terminal_manager: State<'_, Arc<TerminalManager
    terminal_manager.warm_user_environment();
 }
 
+fn shell_integration_dir(app_handle: &AppHandle) -> Option<String> {
+   use tauri::Manager;
+
+   let base_dir = app_handle
+      .path()
+      .app_cache_dir()
+      .ok()?
+      .join("shell-integration");
+   match athas_terminal::ensure_shell_integration_dir(&base_dir) {
+      Ok(dir) => Some(dir.to_string_lossy().into_owned()),
+      Err(error) => {
+         log::warn!("Failed to install terminal shell integration: {error}");
+         None
+      }
+   }
+}
+
 #[tauri::command]
 pub async fn create_terminal(
    mut config: TerminalConfig,
@@ -159,6 +176,7 @@ pub async fn create_terminal(
    terminal_manager: State<'_, Arc<TerminalManager>>,
 ) -> Result<String, String> {
    config.term_program_version = Some(app_handle.package_info().version.to_string());
+   config.shell_integration_dir = shell_integration_dir(&app_handle);
    let event_handler: TerminalEventHandler =
       Arc::new(move |_, event| on_event.send(event.into_ipc_body()).is_ok());
    let connection_id = terminal_manager

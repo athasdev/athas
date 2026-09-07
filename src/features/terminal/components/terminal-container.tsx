@@ -1,5 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import type React from "react";
+import type {
+  TerminalCommandNavigationDirection,
+  TerminalSessionHandle,
+} from "../types/terminal.types";
 import { useCallback, useEffect, useRef } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -108,9 +112,7 @@ const TerminalContainer = ({
   const wasVisibleRef = useRef(false);
   const previousTerminalCountRef = useRef(terminals.length);
   const workspaceDirectoryRef = useRef(currentDirectory);
-  const terminalSessionRefs = useRef<Map<string, { focus: () => void; showSearch: () => void }>>(
-    new Map(),
-  );
+  const terminalSessionRefs = useRef<Map<string, TerminalSessionHandle>>(new Map());
   const tabFocusTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   useEffect(() => {
@@ -387,7 +389,7 @@ const TerminalContainer = ({
 
   // Register terminal session ref
   const registerTerminalRef = useCallback(
-    (terminalId: string, ref: { focus: () => void; showSearch: () => void } | null) => {
+    (terminalId: string, ref: TerminalSessionHandle | null) => {
       if (ref) {
         terminalSessionRefs.current.set(terminalId, ref);
       } else {
@@ -546,6 +548,17 @@ const TerminalContainer = ({
 
     window.addEventListener("terminal-open-search", handleTerminalOpenSearch);
     return () => window.removeEventListener("terminal-open-search", handleTerminalOpenSearch);
+  }, [activeTerminalId]);
+
+  useEffect(() => {
+    const handleNavigateCommand = (event: Event) => {
+      if (!activeTerminalId) return;
+      const direction = (event as CustomEvent<TerminalCommandNavigationDirection>).detail;
+      terminalSessionRefs.current.get(activeTerminalId)?.navigateCommand(direction);
+    };
+
+    window.addEventListener("terminal-navigate-command", handleNavigateCommand);
+    return () => window.removeEventListener("terminal-navigate-command", handleNavigateCommand);
   }, [activeTerminalId]);
 
   // Listen for terminal tab switch events from the keymaps system

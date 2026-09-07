@@ -149,6 +149,18 @@ export const defaultKeymaps: Keybinding[] = [
     when: "terminalFocus",
   },
   {
+    key: "cmd+up",
+    command: "terminal.previousCommand",
+    source: "default",
+    when: "terminalFocus",
+  },
+  {
+    key: "cmd+down",
+    command: "terminal.nextCommand",
+    source: "default",
+    when: "terminalFocus",
+  },
+  {
     key: "cmd+shift+k",
     command: "editor.deleteLine",
     source: "default",

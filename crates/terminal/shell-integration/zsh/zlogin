@@ -1,0 +1,7 @@
+ATHAS_ZDOTDIR="$ZDOTDIR"
+ZDOTDIR="$ATHAS_USER_ZDOTDIR"
+if [[ -f "$ZDOTDIR/.zlogin" ]]; then
+  builtin source "$ZDOTDIR/.zlogin"
+fi
+# Leave the user's ZDOTDIR in place for subshells now that startup is done.
+unset ATHAS_ZDOTDIR

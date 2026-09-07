@@ -87,3 +87,33 @@
 .xterm.xterm-cursor-pointer {
   cursor: pointer !important;
 }
+
+/* Shell integration command marks sit in the gutter left of the prompt line */
+.xterm-container .terminal-command-mark {
+  width: 6px;
+  height: 6px;
+  margin-left: -11px;
+  margin-top: 0.45em;
+  border-radius: 9999px;
+  background-color: var(--success);
+  pointer-events: auto;
+}
+
+.xterm-container .terminal-command-mark[data-command-status="failure"] {
+  background-color: var(--destructive);
+}
+
+.xterm-container .terminal-command-mark[data-command-status="running"] {
+  background-color: var(--primary);
+  animation: terminal-command-mark-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes terminal-command-mark-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}

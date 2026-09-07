@@ -1,0 +1,15 @@
+# Athas shell integration bootstrap for zsh.
+# ZDOTDIR points here so the login files below run first; each one hands
+# control back to the user's own dotfiles before adding Athas hooks.
+if [[ -z "${ATHAS_USER_ZDOTDIR-}" ]]; then
+  ATHAS_USER_ZDOTDIR="$HOME"
+fi
+ATHAS_ZDOTDIR="$ZDOTDIR"
+ZDOTDIR="$ATHAS_USER_ZDOTDIR"
+if [[ -f "$ZDOTDIR/.zshenv" ]]; then
+  builtin source "$ZDOTDIR/.zshenv"
+fi
+if [[ "$ZDOTDIR" != "$ATHAS_USER_ZDOTDIR" ]]; then
+  ATHAS_USER_ZDOTDIR="$ZDOTDIR"
+fi
+ZDOTDIR="$ATHAS_ZDOTDIR"

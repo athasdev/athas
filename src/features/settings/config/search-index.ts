@@ -973,6 +973,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["terminal", "profile", "default", "launch"],
   },
   {
+    id: "terminal-shell-integration",
+    tab: "terminal",
+    section: "Launch",
+    label: "Shell Integration",
+    description: "Track commands, exit codes, and the working directory in zsh, bash, and fish",
+    keywords: ["terminal", "shell", "integration", "prompt", "command", "marks", "osc 133"],
+  },
+  {
     id: "terminal-font-family",
     tab: "terminal",
     section: "Typography",

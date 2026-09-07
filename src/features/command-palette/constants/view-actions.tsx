@@ -1,5 +1,7 @@
 import {
   ArrowCounterClockwiseIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
   ColumnsIcon,
   ListIcon,
   RowsIcon,
@@ -237,6 +239,30 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       action: () => {
         onClose();
         void keymapRegistry.executeCommand("terminal.find");
+      },
+    },
+    {
+      id: "terminal-previous-command",
+      label: "Terminal: Scroll to Previous Command",
+      description: "Jump to the previous prompt in the active terminal",
+      icon: <ArrowUpIcon />,
+      category: "Terminal",
+      commandId: "terminal.previousCommand",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("terminal.previousCommand");
+      },
+    },
+    {
+      id: "terminal-next-command",
+      label: "Terminal: Scroll to Next Command",
+      description: "Jump to the next prompt in the active terminal",
+      icon: <ArrowDownIcon />,
+      category: "Terminal",
+      commandId: "terminal.nextCommand",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("terminal.nextCommand");
       },
     },
     {

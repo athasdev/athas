@@ -300,6 +300,24 @@ const terminalCommands: Command[] = [
       window.dispatchEvent(new CustomEvent("terminal-split", { detail: "down" }));
     },
   },
+  {
+    id: "terminal.previousCommand",
+    title: "Scroll to Previous Command",
+    category: "Terminal",
+    keybinding: "cmd+up",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-navigate-command", { detail: "previous" }));
+    },
+  },
+  {
+    id: "terminal.nextCommand",
+    title: "Scroll to Next Command",
+    category: "Terminal",
+    keybinding: "cmd+down",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-navigate-command", { detail: "next" }));
+    },
+  },
 ];
 
 const lspCommands: Command[] = [

@@ -770,6 +770,8 @@ impl AthasAcpClient {
          args: command_args,
          size: TerminalSize::default(),
          term_program_version: Some(self.app_handle.package_info().version.to_string()),
+         shell_integration: Some(false),
+         shell_integration_dir: None,
       };
 
       let states_for_events = self.terminal_states.clone();

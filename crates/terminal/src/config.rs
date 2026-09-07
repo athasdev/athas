@@ -15,4 +15,11 @@ pub struct TerminalConfig {
    pub size: TerminalSize,
    #[serde(default)]
    pub term_program_version: Option<String>,
+   /// Frontend opt-out; `None` keeps shell integration enabled.
+   #[serde(default)]
+   pub shell_integration: Option<bool>,
+   /// Directory holding the installed shell integration scripts, filled in by
+   /// the host application rather than the frontend.
+   #[serde(default, skip_deserializing)]
+   pub shell_integration_dir: Option<String>,
 }

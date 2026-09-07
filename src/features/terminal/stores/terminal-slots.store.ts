@@ -1,5 +1,5 @@
-import type { Terminal } from "@xterm/xterm";
 import { create } from "zustand";
+import type { TerminalEmulatorHandle } from "../types/terminal.types";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 export interface TerminalSlotProps {
@@ -12,7 +12,7 @@ export interface TerminalSlotProps {
   workingDirectory?: string;
   remoteConnectionId?: string;
   onTerminalExit?: (sessionId: string) => void;
-  onTerminalRef?: (ref: { focus: () => void; showSearch: () => void; terminal: Terminal }) => void;
+  onTerminalRef?: (ref: TerminalEmulatorHandle) => void;
   onReady?: () => void;
   // Fired when the user mouses down inside the terminal — owners use this to
   // mark their pane / tab active (portal breaks React event bubbling).

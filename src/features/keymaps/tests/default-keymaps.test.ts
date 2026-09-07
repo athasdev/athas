@@ -127,6 +127,8 @@ describe("default keymaps", () => {
     expectKeybinding("terminal.find", "cmd+f", "terminalFocus");
     expectKeybinding("terminal.split", "cmd+d", "terminalFocus");
     expectKeybinding("terminal.splitDown", "cmd+shift+d", "terminalFocus");
+    expectKeybinding("terminal.previousCommand", "cmd+up", "terminalFocus");
+    expectKeybinding("terminal.nextCommand", "cmd+down", "terminalFocus");
     expectKeybinding("workbench.toggleActivePaneFullscreen", "cmd+k z");
   });
 

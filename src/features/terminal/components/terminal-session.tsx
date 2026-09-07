@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { Terminal as TerminalType } from "@/features/terminal/types/terminal.types";
+import type {
+  Terminal as TerminalType,
+  TerminalCommandNavigationDirection,
+  TerminalEmulatorHandle,
+  TerminalSessionHandle,
+} from "@/features/terminal/types/terminal.types";
 import { TerminalErrorBoundary } from "./terminal-error-boundary";
 import { TerminalSlot } from "./terminal-slot";
 
@@ -9,10 +14,7 @@ interface TerminalSessionProps {
   isVisible?: boolean;
   onDirectoryChange?: (terminalId: string, directory: string) => void;
   onActivity?: (terminalId: string) => void;
-  onRegisterRef?: (
-    terminalId: string,
-    ref: { focus: () => void; showSearch: () => void } | null,
-  ) => void;
+  onRegisterRef?: (terminalId: string, ref: TerminalSessionHandle | null) => void;
   onTerminalExit?: (terminalId: string) => void;
 }
 
@@ -64,19 +66,23 @@ const TerminalSession = ({
     focusTerminal();
   }, [focusTerminal]);
 
-  const handleTerminalRef = useCallback((ref: any) => {
+  const navigateCommand = useCallback((direction: TerminalCommandNavigationDirection) => {
+    xtermInstanceRef.current?.navigateCommand(direction);
+  }, []);
+
+  const handleTerminalRef = useCallback((ref: TerminalEmulatorHandle) => {
     xtermInstanceRef.current = ref;
     terminalRef.current = ref;
   }, []);
 
   useEffect(() => {
     if (onRegisterRef) {
-      onRegisterRef(terminal.id, { focus: focusTerminal, showSearch });
+      onRegisterRef(terminal.id, { focus: focusTerminal, showSearch, navigateCommand });
       return () => {
         onRegisterRef(terminal.id, null);
       };
     }
-  }, [terminal.id, onRegisterRef, focusTerminal, showSearch]);
+  }, [terminal.id, onRegisterRef, focusTerminal, showSearch, navigateCommand]);
 
   useEffect(() => {
     if (isActive && onActivity) {

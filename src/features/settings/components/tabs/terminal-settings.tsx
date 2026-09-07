@@ -159,6 +159,22 @@ export const TerminalSettings = () => {
             searchableTrigger="input"
           />
         </SettingRow>
+
+        <SettingRow
+          label="Shell Integration"
+          description="Track commands, exit codes, and the working directory in zsh, bash, and fish"
+          onReset={() =>
+            updateSetting("terminalShellIntegration", getDefaultSetting("terminalShellIntegration"))
+          }
+          canReset={
+            settings.terminalShellIntegration !== getDefaultSetting("terminalShellIntegration")
+          }
+        >
+          <Switch
+            checked={settings.terminalShellIntegration}
+            onChange={(checked) => updateSetting("terminalShellIntegration", checked)}
+          />
+        </SettingRow>
       </Section>
 
       <Section
