@@ -161,6 +161,18 @@ export const defaultKeymaps: Keybinding[] = [
     when: "terminalFocus",
   },
   {
+    key: "cmd+alt+right",
+    command: "terminal.focusNextPane",
+    source: "default",
+    when: "terminalFocus",
+  },
+  {
+    key: "cmd+alt+left",
+    command: "terminal.focusPreviousPane",
+    source: "default",
+    when: "terminalFocus",
+  },
+  {
     key: "cmd+k",
     command: "terminal.clear",
     source: "default",

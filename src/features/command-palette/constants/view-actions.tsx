@@ -1,6 +1,8 @@
 import {
   ArrowCounterClockwiseIcon,
   ArrowDownIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
   ArrowUpIcon,
   BroomIcon,
   ColumnsIcon,
@@ -326,6 +328,30 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       action: () => {
         onClose();
         void keymapRegistry.executeCommand("terminal.splitDown");
+      },
+    },
+    {
+      id: "terminal-focus-next-pane",
+      label: "Terminal: Focus Next Pane",
+      description: "Move focus to the next split pane of the active terminal",
+      icon: <ArrowRightIcon />,
+      category: "Terminal",
+      commandId: "terminal.focusNextPane",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("terminal.focusNextPane");
+      },
+    },
+    {
+      id: "terminal-focus-previous-pane",
+      label: "Terminal: Focus Previous Pane",
+      description: "Move focus to the previous split pane of the active terminal",
+      icon: <ArrowLeftIcon />,
+      category: "Terminal",
+      commandId: "terminal.focusPreviousPane",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("terminal.focusPreviousPane");
       },
     },
     {

@@ -5,6 +5,14 @@ import type {
   TerminalAction,
   TerminalState,
 } from "@/features/terminal/types/terminal.types";
+import {
+  distributeTerminalLayout,
+  findTerminalLayout,
+  getLayoutTerminalIds,
+  removeTerminalFromLayouts,
+  resizeTerminalLayout,
+  splitTerminalLayout,
+} from "@/features/terminal/utils/terminal-layout";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 
 export const generateTerminalId = (name: string): string => {
@@ -27,6 +35,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
       } = action.payload;
       if (id && state.terminals.some((terminal) => terminal.id === id)) {
         return {
+          ...state,
           terminals: state.terminals.map((terminal) => ({
             ...terminal,
             isActive: terminal.id === id,
@@ -61,6 +70,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
       };
 
       return {
+        ...state,
         terminals: state.terminals
           .map((terminal) => ({ ...terminal, isActive: false }))
           .concat(newTerminal),
@@ -75,12 +85,19 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
       if (terminalIndex === -1) return state;
 
       const newTerminals = state.terminals.filter((terminal) => terminal.id !== id);
+      const layout = findTerminalLayout(state.layouts, id);
+      const layouts = removeTerminalFromLayouts(state.layouts, id);
 
-      // If we're closing the active terminal, switch to another one
+      // If we're closing the active terminal, prefer a sibling pane from the same
+      // layout, otherwise the neighbouring tab.
       let newActiveTerminalId = state.activeTerminalId;
       if (state.activeTerminalId === id) {
-        if (newTerminals.length > 0) {
-          // Switch to the next terminal, or previous if we were at the end
+        const siblings = layout ? getLayoutTerminalIds(layout) : [];
+        const siblingIndex = siblings.indexOf(id);
+        const sibling = siblings[siblingIndex - 1] ?? siblings[siblingIndex + 1];
+        if (sibling && newTerminals.some((terminal) => terminal.id === sibling)) {
+          newActiveTerminalId = sibling;
+        } else if (newTerminals.length > 0) {
           const nextIndex = terminalIndex < newTerminals.length ? terminalIndex : terminalIndex - 1;
           newActiveTerminalId = newTerminals[nextIndex]?.id || null;
         } else {
@@ -88,27 +105,14 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
         }
       }
 
-      // Also clean up any terminals that were split with the closed terminal
-      const cleanedTerminals = newTerminals.map((terminal) => {
-        if (terminal.splitWithId === id) {
-          // Remove split mode if the paired terminal is being closed
-          return {
-            ...terminal,
-            splitMode: false,
-            splitWithId: undefined,
-            splitDirection: undefined,
-            isActive: terminal.id === newActiveTerminalId,
-          };
-        }
-        return {
+      return {
+        ...state,
+        terminals: newTerminals.map((terminal) => ({
           ...terminal,
           isActive: terminal.id === newActiveTerminalId,
-        };
-      });
-
-      return {
-        terminals: cleanedTerminals,
+        })),
         activeTerminalId: newActiveTerminalId,
+        layouts,
       };
     }
 
@@ -178,20 +182,38 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
       };
     }
 
-    case "SET_TERMINAL_SPLIT_MODE": {
-      const { id, splitMode, splitWithId, splitDirection } = action.payload;
+    case "SPLIT_TERMINAL": {
+      const { terminalId, newTerminalId, direction } = action.payload;
+      const exists = (id: string) => state.terminals.some((terminal) => terminal.id === id);
+      if (!exists(terminalId) || !exists(newTerminalId)) return state;
+
       return {
         ...state,
-        terminals: state.terminals.map((terminal) =>
-          terminal.id === id ? { ...terminal, splitMode, splitWithId, splitDirection } : terminal,
-        ),
+        layouts: splitTerminalLayout(state.layouts, terminalId, newTerminalId, direction),
+        activeTerminalId: newTerminalId,
+        terminals: state.terminals.map((terminal) => ({
+          ...terminal,
+          isActive: terminal.id === newTerminalId,
+        })),
       };
+    }
+
+    case "RESIZE_TERMINAL_SPLIT": {
+      const { splitId, index, sizes } = action.payload;
+      const layouts = resizeTerminalLayout(state.layouts, splitId, index, sizes);
+      return layouts === state.layouts ? state : { ...state, layouts };
+    }
+
+    case "DISTRIBUTE_TERMINAL_SPLIT": {
+      const layouts = distributeTerminalLayout(state.layouts, action.payload.splitId);
+      return layouts === state.layouts ? state : { ...state, layouts };
     }
 
     case "RESET_TERMINALS": {
       return {
         terminals: [],
         activeTerminalId: null,
+        layouts: [],
       };
     }
 
@@ -218,6 +240,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
       return {
         terminals: newTerminals,
         activeTerminalId: newTerminals.length > 0 ? newTerminals[0].id : null,
+        layouts: [],
       };
     }
 
@@ -237,6 +260,7 @@ const createTerminalTabsStore = () =>
   createStore<TerminalTabsStore>()((set) => ({
     terminals: [],
     activeTerminalId: null,
+    layouts: [],
     hasHydrated: false,
     actions: {
       dispatch: (action) =>

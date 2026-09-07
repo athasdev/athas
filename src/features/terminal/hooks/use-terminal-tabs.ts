@@ -12,6 +12,7 @@ export const useTerminalTabs = () => {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const terminals = useTerminalTabsStore((state) => state.terminals);
   const activeTerminalId = useTerminalTabsStore((state) => state.activeTerminalId);
+  const layouts = useTerminalTabsStore((state) => state.layouts);
   const hasHydrated = useTerminalTabsStore((state) => state.hasHydrated);
   const dispatch = useTerminalTabsStore((state) => state.actions.dispatch);
 
@@ -152,17 +153,23 @@ export const useTerminalTabs = () => {
     }
   }, [terminals, activeTerminalId, setActiveTerminal]);
 
-  const setTerminalSplitMode = useCallback(
-    (
-      id: string,
-      splitMode: boolean,
-      splitWithId?: string,
-      splitDirection?: TerminalSplitDirection,
-    ) => {
-      dispatch({
-        type: "SET_TERMINAL_SPLIT_MODE",
-        payload: { id, splitMode, splitWithId, splitDirection },
-      });
+  const splitTerminal = useCallback(
+    (terminalId: string, newTerminalId: string, direction: TerminalSplitDirection) => {
+      dispatch({ type: "SPLIT_TERMINAL", payload: { terminalId, newTerminalId, direction } });
+    },
+    [dispatch],
+  );
+
+  const resizeTerminalSplit = useCallback(
+    (splitId: string, index: number, sizes: [number, number]) => {
+      dispatch({ type: "RESIZE_TERMINAL_SPLIT", payload: { splitId, index, sizes } });
+    },
+    [dispatch],
+  );
+
+  const distributeTerminalSplit = useCallback(
+    (splitId: string) => {
+      dispatch({ type: "DISTRIBUTE_TERMINAL_SPLIT", payload: { splitId } });
     },
     [dispatch],
   );
@@ -170,6 +177,7 @@ export const useTerminalTabs = () => {
   return {
     terminals,
     activeTerminalId,
+    layouts,
     createTerminal,
     closeTerminal,
     setActiveTerminal,
@@ -181,6 +189,8 @@ export const useTerminalTabs = () => {
     getActiveTerminal,
     switchToNextTerminal,
     switchToPrevTerminal,
-    setTerminalSplitMode,
+    splitTerminal,
+    resizeTerminalSplit,
+    distributeTerminalSplit,
   };
 };

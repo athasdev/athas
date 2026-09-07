@@ -18,18 +18,24 @@ import { closeTerminalConnection } from "@/features/terminal/services/terminal-c
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
 import type {
+  Terminal,
   TerminalCommandSummary,
   TerminalSplitDirection,
 } from "@/features/terminal/types/terminal.types";
 import { getTerminalDisplayName } from "@/features/terminal/utils/terminal-display-name";
+import {
+  findTerminalLayout,
+  getAdjacentLayoutTerminalId,
+  getLayoutMemberIds,
+} from "@/features/terminal/utils/terminal-layout";
 import {
   resolveTerminalLaunch,
   SYSTEM_DEFAULT_PROFILE_ID,
 } from "@/features/terminal/utils/terminal-profiles";
 import { shouldCloseTerminalPane } from "@/features/terminal/utils/terminal-pane-lifecycle";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { cn } from "@/utils/cn";
 import TerminalSession from "./terminal-session";
+import { TerminalSplitView } from "./terminal-split-view";
 import TerminalTabBar from "./terminal-tab-bar";
 
 interface TerminalContainerProps {
@@ -85,7 +91,10 @@ const TerminalContainer = ({
     reorderTerminals,
     switchToNextTerminal,
     switchToPrevTerminal,
-    setTerminalSplitMode,
+    splitTerminal,
+    resizeTerminalSplit,
+    distributeTerminalSplit,
+    layouts,
   } = useTerminalTabs();
   const terminalDefaultProfileId = useSettingsStore(
     (state) => state.settings.terminalDefaultProfileId,
@@ -334,36 +343,17 @@ const TerminalContainer = ({
       const activeTerminal = terminals.find((t) => t.id === activeTerminalId);
       if (!activeTerminal) return;
 
-      if (activeTerminal.splitMode) {
-        if (activeTerminal.splitWithId && activeTerminal.splitDirection !== direction) {
-          setTerminalSplitMode(activeTerminalId, true, activeTerminal.splitWithId, direction);
-          return;
-        }
-
-        setTerminalSplitMode(activeTerminalId, false);
-        if (activeTerminal.splitWithId) {
-          closeTerminal(activeTerminal.splitWithId);
-        }
-      } else {
-        const companionName = `${activeTerminal.name} (Split)`;
-        const companionId = createTerminal({
-          name: companionName,
-          currentDirectory: activeTerminal.currentDirectory,
-          shell: activeTerminal.shell,
-          profileId: activeTerminal.profileId,
-        });
-        setTerminalSplitMode(activeTerminalId, true, companionId, direction);
-        setActiveTerminal(activeTerminalId);
-      }
+      const companionId = createTerminal({
+        name: activeTerminal.name,
+        currentDirectory: activeTerminal.currentDirectory,
+        shell: activeTerminal.shell,
+        profileId: activeTerminal.profileId,
+        remoteConnectionId: activeTerminal.remoteConnectionId,
+      });
+      splitTerminal(activeTerminalId, companionId, direction);
+      focusNewTerminal(companionId);
     },
-    [
-      activeTerminalId,
-      terminals,
-      setTerminalSplitMode,
-      createTerminal,
-      closeTerminal,
-      setActiveTerminal,
-    ],
+    [activeTerminalId, terminals, createTerminal, splitTerminal, focusNewTerminal],
   );
 
   const handleSearchTerminal = useCallback(() => {
@@ -594,10 +584,9 @@ const TerminalContainer = ({
       const terminal = terminals.find((candidate) => candidate.id === detail.terminalId);
       if (!terminal) return;
 
-      const activeTerminal = terminals.find((candidate) => candidate.id === activeTerminalId);
       const isShownInPane =
-        terminal.id === activeTerminalId ||
-        (activeTerminal?.splitMode === true && activeTerminal.splitWithId === terminal.id);
+        activeTerminalId !== null &&
+        getLayoutMemberIds(layouts, activeTerminalId).includes(terminal.id);
       const isTerminalVisible = isTerminalPaneVisible && isShownInPane;
 
       if (!isTerminalVisible) {
@@ -635,12 +624,31 @@ const TerminalContainer = ({
   }, [
     activeTerminalId,
     isTerminalPaneVisible,
+    layouts,
     setActiveTerminal,
     setBottomPaneActiveTab,
     setIsBottomPaneVisible,
     terminalCommandNotifications,
     terminals,
   ]);
+
+  useEffect(() => {
+    const handleFocusPane = (event: Event) => {
+      if (!activeTerminalId) return;
+      const direction = (event as CustomEvent<"next" | "previous">).detail;
+      const target = getAdjacentLayoutTerminalId(
+        layouts,
+        activeTerminalId,
+        direction === "previous" ? -1 : 1,
+      );
+      if (!target) return;
+      setActiveTerminal(target);
+      focusNewTerminal(target);
+    };
+
+    window.addEventListener("terminal-focus-pane", handleFocusPane);
+    return () => window.removeEventListener("terminal-focus-pane", handleFocusPane);
+  }, [activeTerminalId, focusNewTerminal, layouts, setActiveTerminal]);
 
   useEffect(() => {
     const handleClear = () => {
@@ -768,59 +776,36 @@ const TerminalContainer = ({
     isFullScreen,
   };
   const activeTerminal = terminals.find((terminal) => terminal.id === activeTerminalId);
-  const companionTerminal = activeTerminal?.splitWithId
-    ? terminals.find((terminal) => terminal.id === activeTerminal.splitWithId)
-    : undefined;
+  const activeLayout = activeTerminalId ? findTerminalLayout(layouts, activeTerminalId) : null;
+  const renderTerminalSession = (terminal: Terminal) => (
+    <TerminalSession
+      terminal={terminal}
+      isActive={terminal.id === activeTerminalId}
+      isVisible={isTerminalPaneVisible}
+      onDirectoryChange={handleDirectoryChange}
+      onActivity={handleActivity}
+      onRegisterRef={registerTerminalRef}
+      onTerminalExit={closeTerminal}
+    />
+  );
 
   const terminalSessions = (
     <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      {activeTerminal && (
-        <div
-          className={cn(
-            "flex h-full min-h-0",
-            activeTerminal.splitDirection === "down" ? "flex-col" : "flex-row",
-          )}
-        >
-          <div
-            className={cn(
-              "min-h-0 min-w-0",
-              activeTerminal.splitMode && companionTerminal
-                ? activeTerminal.splitDirection === "down"
-                  ? "h-1/2 w-full border-border border-b"
-                  : "h-full w-1/2 border-border border-r"
-                : "size-full",
-            )}
-          >
-            <TerminalSession
-              terminal={activeTerminal}
-              isActive
-              isVisible={isTerminalPaneVisible}
-              onDirectoryChange={handleDirectoryChange}
-              onActivity={handleActivity}
-              onRegisterRef={registerTerminalRef}
-              onTerminalExit={closeTerminal}
-            />
-          </div>
-          {activeTerminal.splitMode && companionTerminal && (
-            <div
-              className={cn(
-                "min-h-0 min-w-0",
-                activeTerminal.splitDirection === "down" ? "h-1/2 w-full" : "h-full w-1/2",
-              )}
-            >
-              <TerminalSession
-                terminal={companionTerminal}
-                isActive={false}
-                isVisible={isTerminalPaneVisible}
-                onDirectoryChange={handleDirectoryChange}
-                onActivity={handleActivity}
-                onRegisterRef={registerTerminalRef}
-                onTerminalExit={closeTerminal}
-              />
-            </div>
-          )}
-        </div>
-      )}
+      {activeTerminal && activeLayout ? (
+        <TerminalSplitView
+          layout={activeLayout}
+          activeTerminalId={activeTerminalId}
+          renderTerminal={(terminalId) => {
+            const terminal = terminals.find((candidate) => candidate.id === terminalId);
+            return terminal ? renderTerminalSession(terminal) : null;
+          }}
+          onActivate={setActiveTerminal}
+          onResize={resizeTerminalSplit}
+          onDistribute={distributeTerminalSplit}
+        />
+      ) : activeTerminal ? (
+        <div className="size-full min-h-0 min-w-0">{renderTerminalSession(activeTerminal)}</div>
+      ) : null}
     </div>
   );
 

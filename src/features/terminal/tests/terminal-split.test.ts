@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.store";
+import { getLayoutTerminalIds } from "@/features/terminal/utils/terminal-layout";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+
+function createTerminal(id: string) {
+  useTerminalTabsStore.getState().actions.dispatch({
+    type: "CREATE_TERMINAL",
+    payload: { id, name: id, currentDirectory: "/workspace" },
+  });
+}
 
 describe("terminal splits", () => {
   beforeEach(() => {
@@ -12,48 +20,50 @@ describe("terminal splits", () => {
     });
   });
 
-  it("tracks right and down split directions and clears them with the companion", () => {
-    const dispatch = useTerminalTabsStore.getState().actions.dispatch;
-    dispatch({
-      type: "CREATE_TERMINAL",
-      payload: { id: "primary", name: "Primary", currentDirectory: "/workspace" },
-    });
-    dispatch({
-      type: "CREATE_TERMINAL",
-      payload: { id: "companion", name: "Companion", currentDirectory: "/workspace" },
-    });
+  it("keeps split terminals in a layout tree and focuses the new pane", () => {
+    const { dispatch } = useTerminalTabsStore.getState().actions;
+    createTerminal("primary");
+    createTerminal("companion");
 
     dispatch({
-      type: "SET_TERMINAL_SPLIT_MODE",
-      payload: {
-        id: "primary",
-        splitMode: true,
-        splitWithId: "companion",
-        splitDirection: "right",
-      },
-    });
-    expect(useTerminalTabsStore.getState().terminals[0]).toMatchObject({
-      splitMode: true,
-      splitWithId: "companion",
-      splitDirection: "right",
+      type: "SPLIT_TERMINAL",
+      payload: { terminalId: "primary", newTerminalId: "companion", direction: "right" },
     });
 
+    const state = useTerminalTabsStore.getState();
+    expect(state.layouts).toHaveLength(1);
+    expect(getLayoutTerminalIds(state.layouts[0])).toEqual(["primary", "companion"]);
+    expect(state.activeTerminalId).toBe("companion");
+  });
+
+  it("activates a sibling pane when the active member of a layout closes", () => {
+    const { dispatch } = useTerminalTabsStore.getState().actions;
+    createTerminal("standalone");
+    createTerminal("primary");
+    createTerminal("companion");
     dispatch({
-      type: "SET_TERMINAL_SPLIT_MODE",
-      payload: {
-        id: "primary",
-        splitMode: true,
-        splitWithId: "companion",
-        splitDirection: "down",
-      },
+      type: "SPLIT_TERMINAL",
+      payload: { terminalId: "primary", newTerminalId: "companion", direction: "down" },
     });
-    expect(useTerminalTabsStore.getState().terminals[0]?.splitDirection).toBe("down");
 
     dispatch({ type: "CLOSE_TERMINAL", payload: { id: "companion" } });
-    expect(useTerminalTabsStore.getState().terminals[0]).toMatchObject({
-      splitMode: false,
-      splitWithId: undefined,
-      splitDirection: undefined,
+
+    const state = useTerminalTabsStore.getState();
+    expect(state.activeTerminalId).toBe("primary");
+    expect(state.layouts).toEqual([]);
+    expect(state.terminals.map((terminal) => terminal.id)).toEqual(["standalone", "primary"]);
+  });
+
+  it("drops layouts when terminals are reset or restored", () => {
+    const { dispatch } = useTerminalTabsStore.getState().actions;
+    createTerminal("primary");
+    createTerminal("companion");
+    dispatch({
+      type: "SPLIT_TERMINAL",
+      payload: { terminalId: "primary", newTerminalId: "companion", direction: "right" },
     });
+
+    dispatch({ type: "RESET_TERMINALS", payload: {} });
+    expect(useTerminalTabsStore.getState().layouts).toEqual([]);
   });
 });

@@ -1,4 +1,5 @@
 import type { Terminal as XtermTerminal } from "@xterm/xterm";
+import type { PaneNode } from "@/features/panes/types/pane.types";
 export type TerminalSplitDirection = "right" | "down";
 
 /** OSC 9;4 progress report: 0 clears, 1 sets, 2 errors, 3 is indeterminate, 4 pauses. */
@@ -33,9 +34,6 @@ export interface Terminal {
   lastCommand?: TerminalCommandSummary;
   customName?: boolean;
   ref?: any;
-  splitMode?: boolean;
-  splitWithId?: string;
-  splitDirection?: TerminalSplitDirection;
   remoteConnectionId?: string;
 }
 
@@ -62,6 +60,7 @@ export interface TerminalProfile {
 export interface TerminalState {
   terminals: Terminal[];
   activeTerminalId: string | null;
+  layouts: PaneNode[];
 }
 
 export interface TerminalSize {
@@ -135,13 +134,13 @@ export type TerminalAction =
       payload: { fromIndex: number; toIndex: number };
     }
   | {
-      type: "SET_TERMINAL_SPLIT_MODE";
-      payload: {
-        id: string;
-        splitMode: boolean;
-        splitWithId?: string;
-        splitDirection?: TerminalSplitDirection;
-      };
+      type: "SPLIT_TERMINAL";
+      payload: { terminalId: string; newTerminalId: string; direction: TerminalSplitDirection };
     }
+  | {
+      type: "RESIZE_TERMINAL_SPLIT";
+      payload: { splitId: string; index: number; sizes: [number, number] };
+    }
+  | { type: "DISTRIBUTE_TERMINAL_SPLIT"; payload: { splitId: string } }
   | { type: "RESET_TERMINALS"; payload: Record<string, never> }
   | { type: "RESTORE_TERMINALS"; payload: { terminals: PersistedTerminal[] } };

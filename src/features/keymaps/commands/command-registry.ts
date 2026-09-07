@@ -319,6 +319,24 @@ const terminalCommands: Command[] = [
     },
   },
   {
+    id: "terminal.focusNextPane",
+    title: "Focus Next Terminal Pane",
+    category: "Terminal",
+    keybinding: "cmd+alt+right",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-focus-pane", { detail: "next" }));
+    },
+  },
+  {
+    id: "terminal.focusPreviousPane",
+    title: "Focus Previous Terminal Pane",
+    category: "Terminal",
+    keybinding: "cmd+alt+left",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-focus-pane", { detail: "previous" }));
+    },
+  },
+  {
     id: "terminal.clear",
     title: "Clear Terminal",
     category: "Terminal",
