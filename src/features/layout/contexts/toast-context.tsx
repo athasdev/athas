@@ -16,7 +16,7 @@ function clearActiveToast(id: string) {
   window.dispatchEvent(new CustomEvent("toast-dismissed", { detail: { toastId: id } }));
 }
 
-function showToast(value: ToastInput, forcedId?: string) {
+export function showToast(value: ToastInput, forcedId?: string) {
   const id = forcedId ?? value.key ?? globalThis.crypto?.randomUUID?.() ?? Date.now().toString();
   const options = {
     id,

@@ -65,18 +65,13 @@ import type {
   PRFilter,
   PullRequest,
   WorkflowRunFilter,
-  WorkflowRunListItem,
 } from "../types/github.types";
+import { useGitHubActionsStore } from "../stores/github-actions.store";
 import GitHubActionsView from "./github-actions-view";
 import { GitHubAvatar } from "./github-avatar";
 import GitHubIssuesView from "./github-issues-view";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
-import {
-  GITHUB_ACTION_LIST_TTL_MS,
-  GITHUB_ISSUE_LIST_TTL_MS,
-  githubActionListCache,
-  githubIssueListCache,
-} from "../utils/github-data-cache";
+import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../utils/github-data-cache";
 
 const filterLabels: Record<PRFilter, string> = {
   all: "Open PRs",
@@ -354,16 +349,7 @@ const GitHubPRsView = memo(() => {
       }
 
       if (showGitHubActions) {
-        void githubActionListCache
-          .load(
-            effectiveRepoPath,
-            () =>
-              invoke<WorkflowRunListItem[]>("github_list_workflow_runs", {
-                repoPath: effectiveRepoPath,
-              }),
-            { ttlMs: GITHUB_ACTION_LIST_TTL_MS },
-          )
-          .catch(() => undefined);
+        void useGitHubActionsStore.getState().actions.loadRuns(effectiveRepoPath, { quiet: true });
       }
     };
 
@@ -409,7 +395,6 @@ const GitHubPRsView = memo(() => {
     }
 
     if (activeSection === "actions") {
-      githubActionListCache.clear(effectiveRepoPath);
       setSectionRefreshNonce((value) => value + 1);
       return;
     }
@@ -870,6 +855,7 @@ const GitHubPRsView = memo(() => {
                   refreshNonce={sectionRefreshNonce}
                   searchQuery={searchQuery}
                   filter={actionFilter}
+                  onFilterChange={handleActionFilterChange}
                 />
               )}
             </div>

@@ -90,6 +90,7 @@ type SyncableSettingsKey =
   | "showGitHubPullRequests"
   | "showGitHubIssues"
   | "showGitHubActions"
+  | "githubActionNotifications"
   | "keybindingPreset"
   | "vimMode"
   | "vimRelativeLineNumbers"
@@ -212,6 +213,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "showGitHubPullRequests",
   "showGitHubIssues",
   "showGitHubActions",
+  "githubActionNotifications",
   "keybindingPreset",
   "vimMode",
   "vimRelativeLineNumbers",

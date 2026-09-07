@@ -126,7 +126,7 @@ export function createAgentNativeNotificationService(
   };
 }
 
-async function isAnyAthasWindowFocused(): Promise<boolean> {
+export async function isAnyAthasWindowFocused(): Promise<boolean> {
   try {
     const windows = await getAllWindows();
     const focusStates = await Promise.all(windows.map((window) => window.isFocused()));

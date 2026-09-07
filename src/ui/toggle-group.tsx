@@ -18,6 +18,7 @@ interface ToggleGroupCommonProps<Value extends string> {
   variant?: "default" | "segmented";
   className?: string;
   wrap?: boolean;
+  width?: "content" | "full";
   iconOnly?: boolean;
   disabled?: boolean;
 }
@@ -46,9 +47,14 @@ const toggleGroupVariants = cva(
         true: "h-auto flex-wrap overflow-visible",
         false: "w-fit overflow-hidden",
       },
+      width: {
+        content: "",
+        full: "w-full self-stretch",
+      },
     },
     defaultVariants: {
       wrap: true,
+      width: "content",
     },
   },
 );
@@ -65,10 +71,15 @@ const toggleGroupItemVariants = cva(
         true: "aspect-square px-0",
         false: "",
       },
+      width: {
+        content: "",
+        full: "min-w-0 flex-1",
+      },
     },
     defaultVariants: {
       variant: "default",
       iconOnly: false,
+      width: "content",
     },
   },
 );
@@ -84,6 +95,7 @@ export function ToggleGroup<Value extends string>(props: ToggleGroupProps<Value>
     variant = "default",
     className,
     wrap = true,
+    width = "content",
     iconOnly = false,
     disabled = false,
   } = props;
@@ -105,7 +117,7 @@ export function ToggleGroup<Value extends string>(props: ToggleGroupProps<Value>
       }}
       aria-label={ariaLabel}
       data-slot="toggle-group"
-      className={cn(toggleGroupVariants({ variant, wrap }), className)}
+      className={cn(toggleGroupVariants({ variant, wrap, width }), className)}
     >
       {options.map((option) => {
         const item = (
@@ -114,7 +126,7 @@ export function ToggleGroup<Value extends string>(props: ToggleGroupProps<Value>
             disabled={disabled || option.disabled}
             data-slot="toggle-group-item"
             aria-label={iconOnly ? option.label : undefined}
-            className={toggleGroupItemVariants({ variant, iconOnly })}
+            className={toggleGroupItemVariants({ variant, iconOnly, width })}
           >
             {option.icon}
             {iconOnly ? (

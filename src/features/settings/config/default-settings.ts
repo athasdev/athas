@@ -108,6 +108,7 @@ export const defaultSettings: Settings = {
   showGitHubPullRequests: true,
   showGitHubIssues: true,
   showGitHubActions: true,
+  githubActionNotifications: true,
   // Keyboard
   keybindingPreset: "none",
   vimMode: false,

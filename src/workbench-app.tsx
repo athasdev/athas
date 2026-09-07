@@ -1,4 +1,5 @@
 import { SharingRuntime } from "@/features/sharing/components/sharing-runtime";
+import { GitHubActionsWatcher } from "@/features/github/components/github-actions-watcher";
 import { SettingsDialog } from "@/features/settings/components/settings-dialog";
 import { ShareDialog } from "@/features/sharing/components/share-dialog";
 import { useEffect } from "react";
@@ -107,6 +108,7 @@ function WorkbenchApp() {
             <ShareDialog />
             <SharingRuntime />
             <SettingsDialog />
+            <GitHubActionsWatcher />
           </div>
         </TooltipProvider>
       </DialogServiceProvider>

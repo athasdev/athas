@@ -34,7 +34,8 @@ import type {
   WorkflowListItem,
 } from "../types/github.types";
 import { useGitHubStore } from "../stores/github.store";
-import { githubActionListCache, githubIssueListCache } from "../utils/github-data-cache";
+import { githubIssueListCache } from "../utils/github-data-cache";
+import { useGitHubActionsStore } from "../stores/github-actions.store";
 import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { getRepositoryDisplayName } from "../utils/github-viewer-utils";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
@@ -117,7 +118,9 @@ export function GitHubCreateView({ buffer }: { buffer: GitHubFormContent }) {
         });
       }}
       onWorkflowDispatched={() => {
-        githubActionListCache.clear(buffer.repoPath);
+        void useGitHubActionsStore
+          .getState()
+          .actions.loadRuns(buffer.repoPath, { force: true, quiet: true });
         close();
       }}
     />

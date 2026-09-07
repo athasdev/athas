@@ -876,6 +876,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["git", "source", "control", "version"],
   },
   {
+    id: "github-action-notifications",
+    tab: "git",
+    section: "GitHub",
+    label: "Workflow Run Notifications",
+    description: "Notify when GitHub Actions runs start, pass, or fail",
+    keywords: ["github", "actions", "workflow", "ci", "notifications", "toast", "native"],
+  },
+  {
     id: "features-remote",
     tab: "advanced",
     section: "Features",

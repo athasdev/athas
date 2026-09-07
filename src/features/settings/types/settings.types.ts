@@ -134,6 +134,7 @@ export interface Settings {
   showGitHubPullRequests: boolean;
   showGitHubIssues: boolean;
   showGitHubActions: boolean;
+  githubActionNotifications: boolean;
   // Keyboard
   keybindingPreset:
     | "none"
