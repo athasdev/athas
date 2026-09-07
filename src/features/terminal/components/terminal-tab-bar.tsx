@@ -25,7 +25,7 @@ import { getOrCreatePaneDropTarget } from "@/features/panes/utils/pane-drop-acti
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
-import { normalizeTerminalTitle } from "@/features/terminal/utils/terminal-title";
+import { getTerminalDisplayName as getTerminalDisplayNameForSession } from "@/features/terminal/utils/terminal-display-name";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -380,36 +380,8 @@ const TerminalTabBar = ({
   );
   const pinnedTerminals = sortedTerminals.filter((terminal) => terminal.isPinned);
   const regularTerminals = sortedTerminals.filter((terminal) => !terminal.isPinned);
-  const getDirectoryLabel = (directory?: string) => {
-    if (!directory) return "";
-    const normalized = directory.replace(/[\\/]+$/, "");
-    return normalized.split(/[\\/]/).pop() || directory;
-  };
-  const getCommandLabel = (command?: string) => {
-    if (!command) return "";
-    const firstSegment = command.trim().split(/\s+/)[0];
-    return firstSegment?.split(/[\\/]/).pop() || "";
-  };
-  const isUsefulTerminalTitle = (title?: string) => {
-    if (!title) return false;
-    if (title === "Default Terminal") return false;
-    if (title.length > 28) return false;
-    if (title.includes("@")) return false;
-    if (title.includes("/") || title.includes("\\")) return false;
-    return true;
-  };
-  const getTerminalDisplayName = (terminal: Terminal) => {
-    if (terminal.customName && terminal.name.trim()) return terminal.name;
-
-    const session = sessions.get(terminal.id);
-    const title = normalizeTerminalTitle(session?.title ?? "");
-    if (title && isUsefulTerminalTitle(title)) return title;
-    const commandLabel = getCommandLabel(terminal.initialCommand);
-    if (commandLabel) return commandLabel;
-    const dirLabel = getDirectoryLabel(session?.currentDirectory || terminal.currentDirectory);
-    if (dirLabel) return dirLabel;
-    return terminal.name;
-  };
+  const getTerminalDisplayName = (terminal: Terminal) =>
+    getTerminalDisplayNameForSession(terminal, sessions.get(terminal.id));
   const getClientPoint = (event: Event) => {
     const candidate = event as Partial<MouseEvent>;
     if (typeof candidate.clientX === "number" && typeof candidate.clientY === "number") {
@@ -595,6 +567,7 @@ const TerminalTabBar = ({
                           <TerminalTabBarItem
                             terminal={terminal}
                             progress={sessions.get(terminal.id)?.progress}
+                            lastCommand={sessions.get(terminal.id)?.lastCommand}
                             displayName={getTerminalDisplayName(terminal)}
                             isActive={terminal.id === activeTerminalId}
                             isDraggedTab={isDragging}
@@ -647,6 +620,7 @@ const TerminalTabBar = ({
                         <TerminalTabBarItem
                           terminal={terminal}
                           progress={sessions.get(terminal.id)?.progress}
+                          lastCommand={sessions.get(terminal.id)?.lastCommand}
                           displayName={getTerminalDisplayName(terminal)}
                           isActive={terminal.id === activeTerminalId}
                           isDraggedTab={isDragging}

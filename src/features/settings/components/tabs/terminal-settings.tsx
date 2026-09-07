@@ -175,6 +175,27 @@ export const TerminalSettings = () => {
             onChange={(checked) => updateSetting("terminalShellIntegration", checked)}
           />
         </SettingRow>
+
+        <SettingRow
+          label="Command Notifications"
+          description="Notify when a command longer than ten seconds finishes in a terminal you are not looking at. Requires shell integration."
+          onReset={() =>
+            updateSetting(
+              "terminalCommandNotifications",
+              getDefaultSetting("terminalCommandNotifications"),
+            )
+          }
+          canReset={
+            settings.terminalCommandNotifications !==
+            getDefaultSetting("terminalCommandNotifications")
+          }
+        >
+          <Switch
+            checked={settings.terminalCommandNotifications}
+            disabled={!settings.terminalShellIntegration}
+            onChange={(checked) => updateSetting("terminalCommandNotifications", checked)}
+          />
+        </SettingRow>
       </Section>
 
       <Section

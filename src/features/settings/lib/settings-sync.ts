@@ -43,6 +43,7 @@ type SyncableSettingsKey =
   | "terminalLetterSpacing"
   | "terminalScrollback"
   | "terminalShellIntegration"
+  | "terminalCommandNotifications"
   | "terminalCursorStyle"
   | "terminalCursorBlink"
   | "terminalCursorWidth"
@@ -167,6 +168,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "terminalLetterSpacing",
   "terminalScrollback",
   "terminalShellIntegration",
+  "terminalCommandNotifications",
   "terminalCursorStyle",
   "terminalCursorBlink",
   "terminalCursorWidth",

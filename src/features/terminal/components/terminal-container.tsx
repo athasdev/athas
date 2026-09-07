@@ -13,10 +13,15 @@ import {
 } from "@/features/terminal/constants/terminal-events";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
+import { notifyTerminalCommandFinished } from "@/features/terminal/services/terminal-command-notifications";
 import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
-import type { TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
+import type {
+  TerminalCommandSummary,
+  TerminalSplitDirection,
+} from "@/features/terminal/types/terminal.types";
+import { getTerminalDisplayName } from "@/features/terminal/utils/terminal-display-name";
 import {
   resolveTerminalLaunch,
   SYSTEM_DEFAULT_PROFILE_ID,
@@ -86,6 +91,9 @@ const TerminalContainer = ({
     (state) => state.settings.terminalDefaultProfileId,
   );
   const terminalDefaultShellId = useSettingsStore((state) => state.settings.terminalDefaultShellId);
+  const terminalCommandNotifications = useSettingsStore(
+    (state) => state.settings.terminalCommandNotifications,
+  );
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
 
@@ -560,6 +568,79 @@ const TerminalContainer = ({
     window.addEventListener("terminal-navigate-command", handleNavigateCommand);
     return () => window.removeEventListener("terminal-navigate-command", handleNavigateCommand);
   }, [activeTerminalId]);
+
+  useEffect(() => {
+    if (!activeTerminalId || !isTerminalPaneVisible) return;
+    const session = useTerminalStore.getState().sessions.get(activeTerminalId);
+    if (session?.lastCommand) {
+      useTerminalStore.getState().actions.updateSession(activeTerminalId, {
+        lastCommand: undefined,
+      });
+    }
+  }, [activeTerminalId, isTerminalPaneVisible]);
+
+  useEffect(() => {
+    const activateTerminal = (terminalId: string) => {
+      if (!terminals.some((terminal) => terminal.id === terminalId)) return;
+      setBottomPaneActiveTab("terminal");
+      setIsBottomPaneVisible(true);
+      setActiveTerminal(terminalId);
+      requestAnimationFrame(() => terminalSessionRefs.current.get(terminalId)?.focus());
+    };
+
+    const handleCommandFinished = (event: Event) => {
+      const detail = (event as CustomEvent<{ terminalId: string; command: TerminalCommandSummary }>)
+        .detail;
+      const terminal = terminals.find((candidate) => candidate.id === detail.terminalId);
+      if (!terminal) return;
+
+      const activeTerminal = terminals.find((candidate) => candidate.id === activeTerminalId);
+      const isShownInPane =
+        terminal.id === activeTerminalId ||
+        (activeTerminal?.splitMode === true && activeTerminal.splitWithId === terminal.id);
+      const isTerminalVisible = isTerminalPaneVisible && isShownInPane;
+
+      if (!isTerminalVisible) {
+        useTerminalStore.getState().actions.updateSession(terminal.id, {
+          lastCommand: detail.command,
+        });
+      }
+
+      if (!terminalCommandNotifications) return;
+      void notifyTerminalCommandFinished(
+        {
+          terminalId: terminal.id,
+          terminalName: getTerminalDisplayName(
+            terminal,
+            useTerminalStore.getState().sessions.get(terminal.id),
+          ),
+          command: detail.command,
+          isTerminalVisible,
+        },
+        activateTerminal,
+      );
+    };
+
+    const handleActivateTerminal = (event: Event) => {
+      const terminalId = (event as CustomEvent<{ terminalId?: string }>).detail?.terminalId;
+      if (terminalId) activateTerminal(terminalId);
+    };
+
+    window.addEventListener("terminal-command-finished", handleCommandFinished);
+    window.addEventListener("terminal-activate", handleActivateTerminal);
+    return () => {
+      window.removeEventListener("terminal-command-finished", handleCommandFinished);
+      window.removeEventListener("terminal-activate", handleActivateTerminal);
+    };
+  }, [
+    activeTerminalId,
+    isTerminalPaneVisible,
+    setActiveTerminal,
+    setBottomPaneActiveTab,
+    setIsBottomPaneVisible,
+    terminalCommandNotifications,
+    terminals,
+  ]);
 
   useEffect(() => {
     const handleClear = () => {

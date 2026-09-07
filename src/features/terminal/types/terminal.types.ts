@@ -7,6 +7,13 @@ export interface TerminalProgress {
   value: number;
 }
 
+export interface TerminalCommandSummary {
+  status: "success" | "failure";
+  exitCode: number | null;
+  durationMs: number;
+  finishedAt: number;
+}
+
 export interface Terminal {
   id: string;
   name: string;
@@ -23,6 +30,7 @@ export interface Terminal {
   selection?: string;
   title?: string;
   progress?: TerminalProgress;
+  lastCommand?: TerminalCommandSummary;
   customName?: boolean;
   ref?: any;
   splitMode?: boolean;

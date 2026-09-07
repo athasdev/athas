@@ -79,6 +79,7 @@ export interface Settings {
   terminalLetterSpacing: number;
   terminalScrollback: number;
   terminalShellIntegration: boolean;
+  terminalCommandNotifications: boolean;
   terminalCursorStyle: "block" | "underline" | "bar";
   terminalCursorBlink: boolean;
   terminalCursorWidth: number;

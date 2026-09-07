@@ -1,6 +1,10 @@
 import { PauseIcon, PinIcon, WarningCircleIcon, XIcon } from "@/ui/icons";
 import { memo, useCallback } from "react";
-import type { Terminal, TerminalProgress } from "@/features/terminal/types/terminal.types";
+import type {
+  Terminal,
+  TerminalCommandSummary,
+  TerminalProgress,
+} from "@/features/terminal/types/terminal.types";
 import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";
 import { ProgressCircle } from "@/ui/progress";
@@ -12,6 +16,7 @@ interface TerminalTabBarItemProps {
   terminal: Terminal;
   displayName: string;
   progress?: TerminalProgress;
+  lastCommand?: TerminalCommandSummary;
   isActive: boolean;
   isDraggedTab: boolean;
   showDropIndicatorBefore: boolean;
@@ -52,10 +57,22 @@ function TerminalProgressIndicator({ progress }: { progress: TerminalProgress })
   );
 }
 
+function TerminalCommandBadge({ command }: { command: TerminalCommandSummary }) {
+  const failed = command.status === "failure";
+  return (
+    <span
+      role="img"
+      aria-label={failed ? "Last command failed" : "Last command finished"}
+      className={cn("size-1.5 shrink-0 rounded-full", failed ? "bg-destructive" : "bg-success")}
+    />
+  );
+}
+
 const TerminalTabBarItem = memo(function TerminalTabBarItem({
   terminal,
   displayName,
   progress,
+  lastCommand,
   isActive,
   isDraggedTab,
   showDropIndicatorBefore,
@@ -155,6 +172,9 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         ) : (
           <>
             {progress ? <TerminalProgressIndicator progress={progress} /> : null}
+            {!progress && lastCommand && !isActive ? (
+              <TerminalCommandBadge command={lastCommand} />
+            ) : null}
             <span
               className={cn(
                 "font-sans ui-text-chrome max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",

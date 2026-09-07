@@ -42,6 +42,7 @@ import { useTerminalTheme, type TerminalTheme } from "../hooks/use-terminal-them
 import { useTerminalStore } from "../stores/terminal.store";
 import type {
   TerminalCommandNavigationDirection,
+  TerminalCommandSummary,
   TerminalEmulatorHandle,
 } from "../types/terminal.types";
 import { formatDroppedPathsForTerminal } from "../utils/terminal-file-drop";
@@ -431,7 +432,23 @@ export const TerminalEmulator = ({
       injectLinkStyles(sessionId, terminalContainerRef.current.id || `terminal-${sessionId}`);
       shellIntegrationRef.current?.dispose();
       shellIntegrationRef.current = terminalShellIntegration
-        ? new TerminalShellIntegration(terminal)
+        ? new TerminalShellIntegration(terminal, {
+            onCommandFinished: (command) => {
+              if (command.startedAt === null || command.finishedAt === null) return;
+              if (command.status === "running") return;
+              const summary: TerminalCommandSummary = {
+                status: command.status,
+                exitCode: command.exitCode,
+                durationMs: command.finishedAt - command.startedAt,
+                finishedAt: command.finishedAt,
+              };
+              window.dispatchEvent(
+                new CustomEvent("terminal-command-finished", {
+                  detail: { terminalId: sessionId, command: summary },
+                }),
+              );
+            },
+          })
         : null;
 
       terminalRef.current = terminal;

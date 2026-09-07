@@ -981,6 +981,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["terminal", "shell", "integration", "prompt", "command", "marks", "osc 133"],
   },
   {
+    id: "terminal-command-notifications",
+    tab: "terminal",
+    section: "Launch",
+    label: "Command Notifications",
+    description: "Notify when a long command finishes in a terminal you are not looking at",
+    keywords: ["terminal", "notification", "command", "finished", "toast", "background"],
+  },
+  {
     id: "terminal-font-family",
     tab: "terminal",
     section: "Typography",
