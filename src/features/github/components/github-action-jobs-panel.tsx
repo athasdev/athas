@@ -1,4 +1,7 @@
-import { ChevronDownIcon, ChevronRightIcon } from "@/ui/icons";
+import { ChevronDownIcon, ChevronRightIcon, CopyIcon, OpenExternalIcon } from "@/ui/icons";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { useState } from "react";
+import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
@@ -9,7 +12,14 @@ import {
   getWorkflowRunState,
   getWorkflowStepTiming,
 } from "../utils/github-workflow-status";
+import { copyToClipboard } from "../utils/github-viewer-utils";
 import { WORKFLOW_TONE_TEXT_CLASS, WorkflowStatusIcon } from "./github-workflow-status-icon";
+
+interface JobsContextMenuState {
+  point: { x: number; y: number };
+  job: WorkflowRunJob;
+  stepIndex: number | null;
+}
 
 interface GitHubActionJobsPanelProps {
   jobs: WorkflowRunJob[];
@@ -31,12 +41,70 @@ export function GitHubActionJobsPanel({
   onSelectJob,
   onSelectStep,
 }: GitHubActionJobsPanelProps) {
+  const [contextMenu, setContextMenu] = useState<JobsContextMenuState | null>(null);
+
   if (jobs.length === 0) {
     return <EmptyState className="min-h-32" message="No jobs reported for this run yet" />;
   }
 
+  const openContextMenu = (
+    event: React.MouseEvent,
+    job: WorkflowRunJob,
+    stepIndex: number | null,
+  ) => {
+    event.preventDefault();
+    setContextMenu({ point: { x: event.clientX, y: event.clientY }, job, stepIndex });
+  };
+
+  const contextStep =
+    contextMenu && contextMenu.stepIndex !== null
+      ? (contextMenu.job.steps[contextMenu.stepIndex] ?? null)
+      : null;
+  const contextGroups = contextMenu
+    ? createContextMenuGroups([
+        ...(contextStep
+          ? [
+              {
+                id: "copy-step",
+                label: "Copy step name",
+                icon: <CopyIcon />,
+                onClick: () => void copyToClipboard(contextStep.name, "Step name copied"),
+              },
+            ]
+          : []),
+        {
+          id: "copy-job",
+          label: "Copy job name",
+          icon: <CopyIcon />,
+          onClick: () => void copyToClipboard(contextMenu.job.name, "Job name copied"),
+        },
+        ...(contextMenu.job.url
+          ? [
+              { id: "sep", separator: true as const },
+              {
+                id: "open-job",
+                label: "Open job on GitHub",
+                icon: <OpenExternalIcon />,
+                onClick: () => void openUrl(contextMenu.job.url ?? ""),
+              },
+              {
+                id: "copy-job-link",
+                label: "Copy job link",
+                onClick: () => void copyToClipboard(contextMenu.job.url ?? "", "Job link copied"),
+              },
+            ]
+          : []),
+      ])
+    : [];
+
   return (
     <ScrollArea className="min-h-0 flex-1" contentClassName="p-2">
+      <ContextMenuPopup
+        isOpen={contextMenu !== null}
+        point={contextMenu?.point ?? { x: 0, y: 0 }}
+        groups={contextGroups}
+        onClose={() => setContextMenu(null)}
+      />
       <nav aria-label="Workflow jobs" className="flex flex-col gap-0.5">
         {jobs.map((job, jobIndex) => {
           const isSelected = job.id != null && selectedJobId === job.id;
@@ -52,6 +120,7 @@ export function GitHubActionJobsPanel({
                 aria-expanded={isSelected}
                 aria-current={isSelected ? "true" : undefined}
                 onClick={() => onSelectJob(job)}
+                onContextMenu={(event) => openContextMenu(event, job, null)}
                 className={cn(
                   rowClassName,
                   "h-8",
@@ -95,6 +164,7 @@ export function GitHubActionJobsPanel({
                             type="button"
                             aria-current={isStepSelected ? "true" : undefined}
                             onClick={() => onSelectStep(job, stepIndex)}
+                            onContextMenu={(event) => openContextMenu(event, job, stepIndex)}
                             className={cn(
                               rowClassName,
                               "h-7",

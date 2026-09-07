@@ -3,8 +3,8 @@ import { Button } from "@/ui/button";
 import { ResourceDetailSection, ResourceDetailSidebar } from "@/ui/resource";
 import type { Label, PullRequestDetails } from "../types/github.types";
 import { getTimeAgo } from "../utils/github-viewer-utils";
-import { GitHubAvatar } from "./github-avatar";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
+import { GitHubUserChip } from "./github-resource-chips";
 import { CIStatusIndicator, LabelBadges, LinkedIssuesList, MergeStatusBadge } from "./pr-status";
 
 interface GitHubPRSidebarProps {
@@ -17,6 +17,8 @@ interface GitHubPRSidebarProps {
   availableLabels: Label[];
   onLabelsChange: (labels: Label[]) => void;
   onAssigneesChange: (assignees: PullRequestDetails["assignees"]) => void;
+  repoPath?: string;
+  repositoryUrl?: string;
 }
 
 export function GitHubPRSidebar({
@@ -29,6 +31,8 @@ export function GitHubPRSidebar({
   availableLabels,
   onLabelsChange,
   onAssigneesChange,
+  repoPath,
+  repositoryUrl,
 }: GitHubPRSidebarProps) {
   const isClosed = pr.state === "closed";
 
@@ -53,14 +57,13 @@ export function GitHubPRSidebar({
         {pr.reviewRequests.length > 0 ? (
           <div className="space-y-2">
             {pr.reviewRequests.map((reviewer) => (
-              <div key={reviewer.login} className="flex min-w-0 items-center gap-2">
-                <GitHubAvatar
+              <div key={reviewer.login} className="flex min-w-0 items-center">
+                <GitHubUserChip
                   login={reviewer.login}
                   avatarUrl={reviewer.avatarUrl}
-                  size={32}
-                  className="size-5"
+                  className="text-foreground"
+                  avatarClassName="size-5"
                 />
-                <span className="min-w-0 truncate">{reviewer.login}</span>
               </div>
             ))}
             {reviewSummary ? (
@@ -74,7 +77,11 @@ export function GitHubPRSidebar({
 
       <ResourceDetailSection label="Checks">
         {pr.statusChecks.length > 0 ? (
-          <CIStatusIndicator checks={pr.statusChecks} />
+          <CIStatusIndicator
+            checks={pr.statusChecks}
+            repoPath={repoPath}
+            repositoryUrl={repositoryUrl}
+          />
         ) : (
           <div className="flex items-center gap-2 text-subtle-foreground">
             <CheckCircleIcon />
@@ -133,14 +140,13 @@ export function GitHubPRSidebar({
         {pr.assignees.length > 0 ? (
           <div className="space-y-2">
             {pr.assignees.map((assignee) => (
-              <div key={assignee.login} className="flex min-w-0 items-center gap-2">
-                <GitHubAvatar
+              <div key={assignee.login} className="flex min-w-0 items-center">
+                <GitHubUserChip
                   login={assignee.login}
                   avatarUrl={assignee.avatarUrl}
-                  size={32}
-                  className="size-5"
+                  className="text-foreground"
+                  avatarClassName="size-5"
                 />
-                <span className="min-w-0 truncate">{assignee.login}</span>
               </div>
             ))}
           </div>
@@ -151,7 +157,11 @@ export function GitHubPRSidebar({
 
       {pr.linkedIssues.length > 0 ? (
         <ResourceDetailSection label="Linked issues">
-          <LinkedIssuesList issues={pr.linkedIssues} />
+          <LinkedIssuesList
+            issues={pr.linkedIssues}
+            repoPath={repoPath}
+            repositoryUrl={repositoryUrl}
+          />
         </ResourceDetailSection>
       ) : null}
 
@@ -168,7 +178,7 @@ export function GitHubPRSidebar({
         }
       >
         {pr.labels.length > 0 ? (
-          <LabelBadges labels={pr.labels} />
+          <LabelBadges labels={pr.labels} repositoryUrl={repositoryUrl} kind="pulls" />
         ) : (
           <span className="text-subtle-foreground">No labels</span>
         )}

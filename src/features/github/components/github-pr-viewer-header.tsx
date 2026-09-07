@@ -8,7 +8,9 @@ import {
 } from "@/ui/resource";
 import type { Commit } from "../types/github-pr-viewer.types";
 import type { PullRequestDetails } from "../types/github.types";
+import { getGitHubCompareUrl, getRepositoryUrlFromEntityUrl } from "../utils/github-link-utils";
 import { getTimeAgo } from "../utils/github-viewer-utils";
+import { GitHubMetaChip } from "./github-resource-chips";
 import { PRCommitsDropdown } from "./pr-commits-dropdown";
 
 interface GitHubPRViewerHeaderProps {
@@ -58,6 +60,7 @@ export function GitHubPRViewerHeader({
 }: GitHubPRViewerHeaderProps) {
   const isClosed = pr.state === "closed";
   const canMerge = !isClosed && !pr.isDraft && pr.mergeable !== "CONFLICTING";
+  const repositoryUrl = getRepositoryUrlFromEntityUrl(pr.url);
 
   return (
     <ResourceViewerHeader
@@ -77,18 +80,23 @@ export function GitHubPRViewerHeader({
       }
       meta={
         <>
-          <span>{pr.isDraft ? "Draft" : pr.state}</span>
+          <span className="capitalize">{pr.isDraft ? "Draft" : pr.state}</span>
           <span>&middot;</span>
-          <span>{`Updated ${getTimeAgo(pr.updatedAt)}`}</span>
+          <span title={new Date(pr.updatedAt).toLocaleString()}>
+            {`Updated ${getTimeAgo(pr.updatedAt)}`}
+          </span>
           <span>&middot;</span>
-          <span className="font-mono">{`${pr.baseRef} ← ${pr.headRef}`}</span>
+          <GitHubMetaChip
+            mono
+            title="Compare branches on GitHub"
+            href={repositoryUrl ? getGitHubCompareUrl(repositoryUrl, pr.baseRef, pr.headRef) : null}
+          >
+            {`${pr.baseRef} ← ${pr.headRef}`}
+          </GitHubMetaChip>
         </>
       }
       actions={
         <ResourceViewerActionsMenu label="Pull request actions">
-          <DropdownMenuItem disabled={isRefreshingDetails} onClick={onRefresh}>
-            {isRefreshingDetails ? "Refreshing..." : "Refresh"}
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={onCheckout}>Checkout branch</DropdownMenuItem>
           <DropdownMenuItem disabled={isClosed} onClick={onApprove}>
             Approve
@@ -98,6 +106,9 @@ export function GitHubPRViewerHeader({
           </DropdownMenuItem>
           <DropdownMenuItem disabled={isClosed} onClick={onClosePR}>
             Close pull request
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={isRefreshingDetails} onClick={onRefresh}>
+            {isRefreshingDetails ? "Refreshing..." : "Refresh"}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onOpenInBrowser}>Open on GitHub</DropdownMenuItem>
           <DropdownMenuItem onClick={onCopyPRLink}>Copy link</DropdownMenuItem>

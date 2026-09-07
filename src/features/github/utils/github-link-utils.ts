@@ -167,3 +167,72 @@ function isNumericId(value: string | undefined): value is string {
 function isCommitSha(value: string | undefined): value is string {
   return typeof value === "string" && /^[0-9a-f]{7,64}$/i.test(value);
 }
+
+/**
+ * Reduces any github.com entity URL (pull, issue, run, commit, tree) to the
+ * repository URL it belongs to.
+ */
+export function getRepositoryUrlFromEntityUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (!isGitHubHost(url.hostname)) return null;
+    const [owner, repo] = url.pathname.split("/").filter(Boolean);
+    if (!owner || !repo) return null;
+    return `https://github.com/${owner}/${repo.replace(/\.git$/, "")}`;
+  } catch {
+    return null;
+  }
+}
+
+function joinRepositoryUrl(repositoryUrl: string, path: string): string {
+  return `${repositoryUrl.replace(/\/+$/, "")}/${path}`;
+}
+
+export function getGitHubUserUrl(login: string): string {
+  return `https://github.com/${encodeURIComponent(login)}`;
+}
+
+export function getGitHubBranchUrl(repositoryUrl: string, branch: string): string {
+  return joinRepositoryUrl(
+    repositoryUrl,
+    `tree/${branch.split("/").map(encodeURIComponent).join("/")}`,
+  );
+}
+
+export function getGitHubCommitUrl(repositoryUrl: string, sha: string): string {
+  return joinRepositoryUrl(repositoryUrl, `commit/${sha}`);
+}
+
+export function getGitHubLabelUrl(
+  repositoryUrl: string,
+  label: string,
+  kind: "issues" | "pulls" = "issues",
+): string {
+  return joinRepositoryUrl(
+    repositoryUrl,
+    `${kind}?q=${encodeURIComponent(`is:open label:"${label}"`)}`,
+  );
+}
+
+export function getGitHubMilestoneUrl(repositoryUrl: string, milestoneNumber: number): string {
+  return joinRepositoryUrl(repositoryUrl, `milestone/${milestoneNumber}`);
+}
+
+export function getGitHubWorkflowRunsUrl(repositoryUrl: string, workflowName: string): string {
+  return joinRepositoryUrl(
+    repositoryUrl,
+    `actions?query=${encodeURIComponent(`workflow:"${workflowName}"`)}`,
+  );
+}
+
+export function getGitHubCompareUrl(
+  repositoryUrl: string,
+  baseRef: string,
+  headRef: string,
+): string {
+  return joinRepositoryUrl(
+    repositoryUrl,
+    `compare/${encodeURIComponent(baseRef)}...${encodeURIComponent(headRef)}`,
+  );
+}

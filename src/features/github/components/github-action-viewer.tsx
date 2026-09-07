@@ -7,14 +7,13 @@ import {
   ArrowCounterClockwiseIcon,
   BoltIcon,
   ChevronDownIcon,
-  GitBranchIcon,
-  GitCommitIcon,
   OpenExternalIcon,
   StopIcon,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -42,6 +41,10 @@ import type {
   WorkflowRunListItem,
 } from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
+import {
+  getGitHubWorkflowRunsUrl,
+  getRepositoryUrlFromEntityUrl,
+} from "../utils/github-link-utils";
 import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
 import {
   filterWorkflowLog,
@@ -64,7 +67,13 @@ import {
 } from "../utils/github-workflow-status";
 import { GitHubActionJobsPanel } from "./github-action-jobs-panel";
 import { GitHubActionLogPanel } from "./github-action-log-panel";
-import { GitHubAvatar } from "./github-avatar";
+import {
+  GitHubBranchChip,
+  GitHubCommitChip,
+  GitHubMetaChip,
+  GitHubResourceSummary,
+  GitHubUserChip,
+} from "./github-resource-chips";
 import {
   WORKFLOW_TONE_BADGE_VARIANT,
   WORKFLOW_TONE_TEXT_CLASS,
@@ -93,31 +102,6 @@ const areJobLogsAvailable = (job: WorkflowRunJob | null) => {
   const state = getWorkflowRunState(job.status, job.conclusion);
   return state.phase !== "queued" && state.phase !== "waiting" && state.phase !== "skipped";
 };
-
-function MetaChip({
-  icon,
-  children,
-  mono,
-  title,
-}: {
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-  mono?: boolean;
-  title?: string;
-}) {
-  return (
-    <span
-      title={title}
-      className={cn(
-        "inline-flex min-w-0 items-center gap-1 text-subtle-foreground ui-text-sm",
-        mono && "font-mono",
-      )}
-    >
-      {icon}
-      <span className="truncate">{children}</span>
-    </span>
-  );
-}
 
 const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
   const { runId, notification, repoPath, bufferId } = props;
@@ -477,6 +461,23 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
     if (selectedJobId !== null) void loadJobLogs(selectedJobId, true);
   }, [details, fetchWorkflowRun, loadJobLogs, resolveNotification, resolvedRunId, selectedJobId]);
 
+  const repositoryUrl = getRepositoryUrlFromEntityUrl(details?.url);
+  const handleOpenCommit = useCallback(async () => {
+    if (!details?.headSha) return;
+    if (repoPath) {
+      const bufferId = await openCommitDiffBuffer({
+        repoPath,
+        commitHash: details.headSha,
+        message: details.headCommitMessage ?? getWorkflowRunTitle(details),
+        author: details.actor?.login ?? "",
+        date: details.runStartedAt ?? details.createdAt ?? undefined,
+      });
+      if (bufferId) return;
+    }
+    if (repositoryUrl) void openUrl(`${repositoryUrl}/commit/${details.headSha}`);
+    else toast.error("Commit is not available.");
+  }, [details, repoPath, repositoryUrl]);
+
   const runTitle = details
     ? getWorkflowRunTitle(details)
     : (buffer?.name ?? (resolvedRunId === null ? "Resolving action run" : `Run #${resolvedRunId}`));
@@ -640,117 +641,119 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
         />
       ) : details ? (
         <div className="flex h-full min-h-0 flex-col">
-          <div className="flex shrink-0 flex-wrap items-start justify-between gap-x-6 gap-y-3 border-border/60 border-b px-4 py-3 sm:px-6">
-            <div className="min-w-0 flex-1 basis-80">
-              <div className="flex min-w-0 items-center gap-2">
-                <WorkflowStatusIcon
-                  status={details.status}
-                  conclusion={details.conclusion}
-                  className="shrink-0 [&_svg]:size-5"
-                />
-                <h1 className="min-w-0 truncate font-semibold text-foreground ui-text-lg">
-                  {runTitle}
-                </h1>
-                <Badge variant={WORKFLOW_TONE_BADGE_VARIANT[runState.tone]}>{runState.label}</Badge>
-                {details.runAttempt && details.runAttempt > 1 ? (
-                  <Badge variant="warning">Attempt {details.runAttempt}</Badge>
-                ) : null}
-              </div>
-              {details.headCommitMessage && details.headCommitMessage !== runTitle ? (
-                <p className="mt-1 truncate text-subtle-foreground ui-text-sm">
-                  {details.headCommitMessage}
-                </p>
-              ) : null}
-              <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
-                {details.workflowName ? (
-                  <MetaChip icon={<BoltIcon />} title="Workflow">
-                    {details.workflowName}
-                  </MetaChip>
-                ) : null}
-                <MetaChip title="Run number" mono>
-                  {getWorkflowRunLabel(details)}
-                </MetaChip>
-                {details.headBranch ? (
-                  <MetaChip icon={<GitBranchIcon />} title="Branch" mono>
-                    {details.headBranch}
-                  </MetaChip>
-                ) : null}
-                {details.headSha ? (
-                  <MetaChip icon={<GitCommitIcon />} title="Commit" mono>
-                    {details.headSha.slice(0, 7)}
-                  </MetaChip>
-                ) : null}
-                {details.event ? <MetaChip title="Event">{details.event}</MetaChip> : null}
-                {details.actor ? (
-                  <MetaChip
-                    title="Triggered by"
-                    icon={
-                      <GitHubAvatar
-                        login={details.actor.login}
-                        avatarUrl={details.actor.avatarUrl}
-                        size={32}
-                        className="size-4"
-                      />
-                    }
-                  >
-                    {details.actor.login}
-                  </MetaChip>
-                ) : null}
-                {startedLabel ? (
-                  <MetaChip title={new Date(startedLabel).toLocaleString()}>
-                    {runState.isActive ? "Started" : "Ran"} {getTimeAgo(startedLabel)}
-                  </MetaChip>
-                ) : null}
-                {duration ? (
-                  <MetaChip title={runState.isActive ? "Elapsed" : "Duration"}>
-                    <span
-                      className={cn(
-                        "tabular-nums",
-                        runState.isActive && WORKFLOW_TONE_TEXT_CLASS.accent,
-                      )}
+          <div className="shrink-0 border-border/60 border-b px-4 py-3 sm:px-6">
+            <GitHubResourceSummary
+              icon={<WorkflowStatusIcon status={details.status} conclusion={details.conclusion} />}
+              title={<span className="block truncate">{runTitle}</span>}
+              badges={
+                <>
+                  <Badge variant={WORKFLOW_TONE_BADGE_VARIANT[runState.tone]}>
+                    {runState.label}
+                  </Badge>
+                  {details.runAttempt && details.runAttempt > 1 ? (
+                    <Badge variant="warning">Attempt {details.runAttempt}</Badge>
+                  ) : null}
+                </>
+              }
+              description={
+                details.headCommitMessage && details.headCommitMessage !== runTitle
+                  ? details.headCommitMessage
+                  : null
+              }
+              chips={
+                <>
+                  {details.workflowName ? (
+                    <GitHubMetaChip
+                      icon={<BoltIcon />}
+                      title={`Open ${details.workflowName} runs on GitHub`}
+                      href={
+                        repositoryUrl
+                          ? getGitHubWorkflowRunsUrl(repositoryUrl, details.workflowName)
+                          : null
+                      }
                     >
-                      {duration}
-                    </span>
-                  </MetaChip>
-                ) : null}
-              </div>
-            </div>
-            {jobSummary.total > 0 ? (
-              <div className="w-full max-w-80 shrink-0 basis-72">
-                <Progress
-                  value={progressValue}
-                  tone={progressTone}
-                  aria-label="Job progress"
-                  className="gap-1.5"
-                >
-                  <div className="flex w-full items-center justify-between gap-2 text-subtle-foreground ui-text-sm">
-                    <span className="truncate">{jobsLabel}</span>
-                    <span className="flex shrink-0 items-center gap-2 tabular-nums">
-                      {jobSummary.failed > 0 ? (
-                        <span className={WORKFLOW_TONE_TEXT_CLASS.error}>
-                          {jobSummary.failed} failed
-                        </span>
-                      ) : null}
-                      {jobSummary.running > 0 ? (
-                        <span className={WORKFLOW_TONE_TEXT_CLASS.accent}>
-                          {jobSummary.running} running
-                        </span>
-                      ) : null}
-                      {jobSummary.queued > 0 ? (
-                        <span className={WORKFLOW_TONE_TEXT_CLASS.warning}>
-                          {jobSummary.queued} queued
-                        </span>
-                      ) : null}
-                      {jobSummary.succeeded > 0 ? (
-                        <span className={WORKFLOW_TONE_TEXT_CLASS.success}>
-                          {jobSummary.succeeded} passed
-                        </span>
-                      ) : null}
-                    </span>
-                  </div>
-                </Progress>
-              </div>
-            ) : null}
+                      {details.workflowName}
+                    </GitHubMetaChip>
+                  ) : null}
+                  <GitHubMetaChip mono title="Open run on GitHub" href={details.url}>
+                    {getWorkflowRunLabel(details)}
+                  </GitHubMetaChip>
+                  {details.headBranch ? (
+                    <GitHubBranchChip name={details.headBranch} repositoryUrl={repositoryUrl} />
+                  ) : null}
+                  {details.headSha ? (
+                    <GitHubCommitChip
+                      sha={details.headSha}
+                      repositoryUrl={repositoryUrl}
+                      onOpen={() => void handleOpenCommit()}
+                    />
+                  ) : null}
+                  {details.event ? (
+                    <GitHubMetaChip title="Event">{details.event}</GitHubMetaChip>
+                  ) : null}
+                  {details.actor ? (
+                    <GitHubUserChip
+                      login={details.actor.login}
+                      avatarUrl={details.actor.avatarUrl}
+                      title={`Triggered by ${details.actor.login}. Open profile on GitHub`}
+                    />
+                  ) : null}
+                  {startedLabel ? (
+                    <GitHubMetaChip title={new Date(startedLabel).toLocaleString()}>
+                      {runState.isActive ? "Started" : "Ran"} {getTimeAgo(startedLabel)}
+                    </GitHubMetaChip>
+                  ) : null}
+                  {duration ? (
+                    <GitHubMetaChip title={runState.isActive ? "Elapsed" : "Duration"}>
+                      <span
+                        className={cn(
+                          "tabular-nums",
+                          runState.isActive && WORKFLOW_TONE_TEXT_CLASS.accent,
+                        )}
+                      >
+                        {duration}
+                      </span>
+                    </GitHubMetaChip>
+                  ) : null}
+                </>
+              }
+              aside={
+                jobSummary.total > 0 ? (
+                  <Progress
+                    value={progressValue}
+                    tone={progressTone}
+                    aria-label="Job progress"
+                    className="gap-1.5"
+                  >
+                    <div className="flex w-full items-center justify-between gap-2 text-subtle-foreground ui-text-sm">
+                      <span className="truncate">{jobsLabel}</span>
+                      <span className="flex shrink-0 items-center gap-2 tabular-nums">
+                        {jobSummary.failed > 0 ? (
+                          <span className={WORKFLOW_TONE_TEXT_CLASS.error}>
+                            {jobSummary.failed} failed
+                          </span>
+                        ) : null}
+                        {jobSummary.running > 0 ? (
+                          <span className={WORKFLOW_TONE_TEXT_CLASS.accent}>
+                            {jobSummary.running} running
+                          </span>
+                        ) : null}
+                        {jobSummary.queued > 0 ? (
+                          <span className={WORKFLOW_TONE_TEXT_CLASS.warning}>
+                            {jobSummary.queued} queued
+                          </span>
+                        ) : null}
+                        {jobSummary.succeeded > 0 ? (
+                          <span className={WORKFLOW_TONE_TEXT_CLASS.success}>
+                            {jobSummary.succeeded} passed
+                          </span>
+                        ) : null}
+                      </span>
+                    </div>
+                  </Progress>
+                ) : null
+              }
+            />
           </div>
 
           <div className="flex min-h-0 flex-1 @max-[48rem]/resource-viewer:flex-col">

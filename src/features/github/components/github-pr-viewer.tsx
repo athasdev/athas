@@ -37,6 +37,7 @@ import {
 } from "./github-pr-inline-action";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubInlineTitle } from "./github-inline-editors";
+import { GitHubBranchChip, GitHubMetaChip, GitHubUserChip } from "./github-resource-chips";
 
 interface GitHubPRViewerProps {
   prNumber: number;
@@ -601,22 +602,29 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
               availableLabels={availableLabels}
               onLabelsChange={(nextLabels) => void updatePR({ labels: nextLabels })}
               onAssigneesChange={(assignees) => void updatePR({ assignees })}
+              repoPath={repoPath ?? undefined}
+              repositoryUrl={repositoryUrl}
             />
           }
         >
           <div className="space-y-8">
             <section className="space-y-2">
               <GitHubInlineTitle value={pr.title} onSave={(title) => updatePR({ title })} />
-              <div className="font-sans ui-text-sm flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-subtle-foreground">
-                <GitHubAvatar
+              <div className="font-sans ui-text-sm flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-subtle-foreground">
+                <GitHubUserChip
                   login={pr.author.login}
                   avatarUrl={pr.author.avatarUrl}
-                  size={32}
-                  className="size-5"
+                  className="text-foreground"
+                  avatarClassName="size-5"
                 />
-                <span className="text-foreground">{pr.author.login}</span>
-                <span>&middot;</span>
-                <span>{`Opened ${getTimeAgo(pr.createdAt)}`}</span>
+                <GitHubMetaChip title={new Date(pr.createdAt).toLocaleString()}>
+                  {`Opened ${getTimeAgo(pr.createdAt)}`}
+                </GitHubMetaChip>
+                <span className="flex min-w-0 items-center gap-1">
+                  <GitHubBranchChip name={pr.headRef} repositoryUrl={repositoryUrl} />
+                  <span aria-hidden="true">→</span>
+                  <GitHubBranchChip name={pr.baseRef} repositoryUrl={repositoryUrl} />
+                </span>
               </div>
             </section>
 

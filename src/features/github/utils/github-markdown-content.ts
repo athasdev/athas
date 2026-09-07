@@ -1,5 +1,9 @@
+import { parseGitHubEntityLink } from "./github-link-utils";
+
 const GITHUB_ATTACHMENT_PATH_PREFIX = "/user-attachments/assets/";
 const PROTECTED_MARKDOWN_SEGMENT = /(`+[^`]*`+|!?\[[^\]]*\]\([^)]+\)|<[^>]+>)/g;
+const BARE_URL_PATTERN = /(^|[^\w"'(<[\]/])(https?:\/\/[^\s<>"']+)/g;
+const TRAILING_URL_PUNCTUATION = /[.,;:!?'"]+$/;
 
 export function normalizeGitHubMarkdown(content: string, repositoryUrl?: string): string {
   const normalizedRepositoryUrl = normalizeRepositoryUrl(repositoryUrl);
@@ -25,7 +29,10 @@ export function normalizeGitHubMarkdown(content: string, repositoryUrl?: string)
       const trimmedLine = line.trim();
       if (trimmedLine.startsWith("<") && trimmedLine.endsWith(">")) return line;
 
-      return normalizedRepositoryUrl ? linkGitHubReferences(line, normalizedRepositoryUrl) : line;
+      const autolinked = linkBareUrls(line, normalizedRepositoryUrl);
+      return normalizedRepositoryUrl
+        ? linkGitHubReferences(autolinked, normalizedRepositoryUrl)
+        : autolinked;
     })
     .join("\n");
 }
@@ -75,6 +82,53 @@ function parseStandaloneGitHubAttachmentUrl(line: string): string | null {
   } catch {
     return null;
   }
+}
+
+function splitTrailingPunctuation(url: string): [string, string] {
+  let value = url;
+  let trailing = "";
+  for (;;) {
+    const punctuation = value.match(TRAILING_URL_PUNCTUATION);
+    if (punctuation) {
+      value = value.slice(0, -punctuation[0].length);
+      trailing = punctuation[0] + trailing;
+      continue;
+    }
+    const openParens = (value.match(/\(/g) ?? []).length;
+    const closeParens = (value.match(/\)/g) ?? []).length;
+    if (value.endsWith(")") && closeParens > openParens) {
+      value = value.slice(0, -1);
+      trailing = `)${trailing}`;
+      continue;
+    }
+    return [value, trailing];
+  }
+}
+
+/**
+ * Turns bare URLs into Markdown links the way GitHub renders them. Links to
+ * issues, pull requests and commits of the current repository get GitHub's
+ * short form (#12, abc1234) so bodies stay readable.
+ */
+function linkBareUrls(line: string, repositoryUrl: string | null): string {
+  return transformUnprotectedMarkdown(line, (segment) =>
+    segment.replace(BARE_URL_PATTERN, (_match, prefix: string, rawUrl: string) => {
+      const [url, trailing] = splitTrailingPunctuation(rawUrl);
+      if (!url) return `${prefix}${rawUrl}`;
+      return `${prefix}[${describeBareUrl(url, repositoryUrl)}](${url})${trailing}`;
+    }),
+  );
+}
+
+function describeBareUrl(url: string, repositoryUrl: string | null): string {
+  const entityLink = repositoryUrl ? parseGitHubEntityLink(url) : null;
+  if (entityLink && `https://github.com/${entityLink.owner}/${entityLink.repo}` === repositoryUrl) {
+    if (entityLink.kind === "pullRequest" || entityLink.kind === "issue") {
+      return `#${entityLink.number}`;
+    }
+    if (entityLink.kind === "commit") return entityLink.sha.slice(0, 7);
+  }
+  return url;
 }
 
 function linkGitHubReferences(line: string, repositoryUrl: string): string {

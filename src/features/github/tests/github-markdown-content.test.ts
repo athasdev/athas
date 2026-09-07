@@ -11,6 +11,41 @@ vi.mock("dompurify", () => ({
 describe("normalizeGitHubMarkdown", () => {
   const repositoryUrl = "https://github.com/athasdev/athas";
 
+  it("autolinks bare URLs and shortens same-repository entity links", () => {
+    expect(
+      normalizeGitHubMarkdown(
+        "Tracked in https://github.com/athasdev/athas/actions/runs/42.",
+        repositoryUrl,
+      ),
+    ).toBe(
+      "Tracked in [https://github.com/athasdev/athas/actions/runs/42](https://github.com/athasdev/athas/actions/runs/42).",
+    );
+    expect(
+      normalizeGitHubMarkdown(
+        "See https://github.com/athasdev/athas/pull/734, thanks",
+        repositoryUrl,
+      ),
+    ).toBe("See [#734](https://github.com/athasdev/athas/pull/734), thanks");
+    expect(
+      normalizeGitHubMarkdown(
+        "Fixed in https://github.com/athasdev/athas/commit/bb423c6a1b2c3d4e5f60718293a4b5c6d7e8f901",
+        repositoryUrl,
+      ),
+    ).toBe(
+      "Fixed in [bb423c6](https://github.com/athasdev/athas/commit/bb423c6a1b2c3d4e5f60718293a4b5c6d7e8f901)",
+    );
+    expect(
+      normalizeGitHubMarkdown("Other repo https://github.com/foo/bar/pull/1", repositoryUrl),
+    ).toBe("Other repo [https://github.com/foo/bar/pull/1](https://github.com/foo/bar/pull/1)");
+    expect(normalizeGitHubMarkdown("(see https://example.com/docs)", repositoryUrl)).toBe(
+      "(see [https://example.com/docs](https://example.com/docs))",
+    );
+    expect(normalizeGitHubMarkdown("[already](https://example.com) and `https://in.code`")).toBe(
+      "[already](https://example.com) and `https://in.code`",
+    );
+    expect(normalizeGitHubMarkdown("<https://example.com>")).toBe("<https://example.com>");
+  });
+
   it("renders standalone GitHub attachments as inline video", () => {
     const attachmentUrl =
       "https://github.com/user-attachments/assets/01234567-89ab-cdef-0123-456789abcdef";
@@ -56,9 +91,11 @@ describe("normalizeGitHubMarkdown", () => {
     );
   });
 
-  it("leaves malformed attachment paths as ordinary text", () => {
+  it("links malformed attachment paths instead of embedding them", () => {
     const nestedAttachment = "https://github.com/user-attachments/assets/01234567/preview";
 
-    expect(normalizeGitHubMarkdown(nestedAttachment, repositoryUrl)).toBe(nestedAttachment);
+    expect(normalizeGitHubMarkdown(nestedAttachment, repositoryUrl)).toBe(
+      `[${nestedAttachment}](${nestedAttachment})`,
+    );
   });
 });

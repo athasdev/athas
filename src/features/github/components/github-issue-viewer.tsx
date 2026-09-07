@@ -6,6 +6,7 @@ import {
   CircleDotIcon,
   LockIcon,
   LockOpenIcon,
+  OpenExternalIcon,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -42,11 +43,12 @@ import {
   githubIssueDetailsCache,
   githubIssueListCache,
 } from "../utils/github-data-cache";
+import { getGitHubMilestoneUrl } from "../utils/github-link-utils";
 import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { CommentItem } from "./comment-item";
-import { GitHubAvatar } from "./github-avatar";
 import { GitHubInlineMarkdown, GitHubInlineTitle } from "./github-inline-editors";
+import { GitHubMetaChip, GitHubUserChip } from "./github-resource-chips";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 import { LabelBadges } from "./pr-status";
@@ -400,11 +402,13 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
           meta={
             details ? (
               <>
-                <span>{details.author.login}</span>
-                <span>&middot;</span>
-                <span>{`Updated ${getTimeAgo(details.updatedAt)}`}</span>
-                <span>&middot;</span>
                 <span className="capitalize">{details.state.toLowerCase()}</span>
+                <span>&middot;</span>
+                <span title={new Date(details.updatedAt).toLocaleString()}>
+                  {`Updated ${getTimeAgo(details.updatedAt)}`}
+                </span>
+                <span>&middot;</span>
+                <span>{`${details.comments.length} comment${details.comments.length === 1 ? "" : "s"}`}</span>
               </>
             ) : null
           }
@@ -561,7 +565,26 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 />
               </ResourceDetailSection>
 
-              <ResourceDetailSection label="Milestone">
+              <ResourceDetailSection
+                label="Milestone"
+                action={
+                  details.milestone && repositoryUrl ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      iconOnly
+                      tooltip="Open milestone on GitHub"
+                      onClick={() =>
+                        void openUrl(
+                          getGitHubMilestoneUrl(repositoryUrl, details.milestone?.number ?? 0),
+                        )
+                      }
+                    >
+                      <OpenExternalIcon />
+                    </Button>
+                  ) : null
+                }
+              >
                 <Select
                   value={details.milestone?.number.toString() ?? "none"}
                   options={[
@@ -604,14 +627,13 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 {details.assignees.length > 0 ? (
                   <div className="space-y-2">
                     {details.assignees.map((assignee) => (
-                      <div key={assignee.login} className="flex min-w-0 items-center gap-2">
-                        <GitHubAvatar
+                      <div key={assignee.login} className="flex min-w-0 items-center">
+                        <GitHubUserChip
                           login={assignee.login}
                           avatarUrl={assignee.avatarUrl}
-                          size={32}
-                          className="size-5"
+                          className="text-foreground"
+                          avatarClassName="size-5"
                         />
-                        <span className="min-w-0 truncate">{assignee.login}</span>
                       </div>
                     ))}
                   </div>
@@ -635,7 +657,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 }
               >
                 {details.labels.length > 0 ? (
-                  <LabelBadges labels={details.labels} />
+                  <LabelBadges labels={details.labels} repositoryUrl={repositoryUrl} />
                 ) : (
                   <span className="text-subtle-foreground">No labels</span>
                 )}
@@ -647,7 +669,13 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   <p>{`Opened ${getTimeAgo(details.createdAt)}`}</p>
                   <p>{`Updated ${getTimeAgo(details.updatedAt)}`}</p>
                   {details.closedAt ? <p>{`Closed ${getTimeAgo(details.closedAt)}`}</p> : null}
-                  {details.closedBy ? <p>{`Closed by ${details.closedBy.login}`}</p> : null}
+                  {details.closedBy ? (
+                    <GitHubUserChip
+                      login={details.closedBy.login}
+                      avatarUrl={details.closedBy.avatarUrl}
+                      prefix={<span className="mr-1 text-subtle-foreground">Closed by</span>}
+                    />
+                  ) : null}
                 </div>
               </ResourceDetailSection>
             </ResourceDetailSidebar>
@@ -656,16 +684,16 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
           <div className="space-y-8">
             <section className="space-y-2">
               <GitHubInlineTitle value={details.title} onSave={(title) => updateIssue({ title })} />
-              <div className="font-sans ui-text-sm flex items-center gap-2 text-subtle-foreground">
-                <GitHubAvatar
+              <div className="font-sans ui-text-sm flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-subtle-foreground">
+                <GitHubUserChip
                   login={details.author.login}
                   avatarUrl={details.author.avatarUrl}
-                  size={32}
-                  className="size-5"
+                  className="text-foreground"
+                  avatarClassName="size-5"
                 />
-                <span className="text-foreground">{details.author.login}</span>
-                <span>&middot;</span>
-                <span>{getTimeAgo(details.createdAt)}</span>
+                <GitHubMetaChip title={new Date(details.createdAt).toLocaleString()}>
+                  {`Opened ${getTimeAgo(details.createdAt)}`}
+                </GitHubMetaChip>
               </div>
             </section>
 

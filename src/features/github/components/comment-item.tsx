@@ -11,7 +11,7 @@ import {
 } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { getTimeAgo } from "../utils/github-viewer-utils";
-import { GitHubAvatar } from "./github-avatar";
+import { GitHubUserChip } from "./github-resource-chips";
 import GitHubMarkdown from "./github-markdown";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 
@@ -57,10 +57,18 @@ export const CommentItem = memo(
     return (
       <Card variant="default" className="bg-surface/35">
         <div className="flex items-center gap-2 border-border/60 border-b px-3 py-2.5">
-          <GitHubAvatar login={authorLogin} size={40} className="size-6" />
           <div className="ui-text-sm flex min-w-0 flex-1 items-center gap-2">
-            <span className="min-w-0 truncate font-medium text-foreground">{authorLogin}</span>
-            <span className="shrink-0 text-subtle-foreground">{getTimeAgo(comment.createdAt)}</span>
+            <GitHubUserChip
+              login={authorLogin}
+              className="min-w-0 font-medium text-foreground"
+              avatarClassName="size-6"
+            />
+            <span
+              className="shrink-0 text-subtle-foreground"
+              title={new Date(comment.createdAt).toLocaleString()}
+            >
+              {getTimeAgo(comment.createdAt)}
+            </span>
             {wasEdited ? <span className="shrink-0 text-subtle-foreground">edited</span> : null}
           </div>
           {canManage && onEdit && onDelete ? (

@@ -45,6 +45,13 @@ import type {
 } from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
 import { groupWorkflowRuns } from "../utils/github-sidebar-groups";
+import {
+  getGitHubBranchUrl,
+  getGitHubCommitUrl,
+  getGitHubUserUrl,
+  getGitHubWorkflowRunsUrl,
+  getRepositoryUrlFromEntityUrl,
+} from "../utils/github-link-utils";
 import { getTimeAgo } from "../utils/github-viewer-utils";
 import {
   formatWorkflowDuration,
@@ -88,6 +95,7 @@ const WorkflowRunRow = memo(
     const updatedLabel = run.updatedAt ? getTimeAgo(run.updatedAt) : null;
     const trailing = state.isActive ? duration : updatedLabel;
     const shortSha = run.headSha ? run.headSha.slice(0, 7) : null;
+    const repositoryUrl = getRepositoryUrlFromEntityUrl(run.url);
     const toneClass = WORKFLOW_TONE_TEXT_CLASS[state.tone];
     const leading = pendingAction ? (
       <Spinner label={pendingAction === "cancel" ? "Cancelling" : "Re-running"} compact />
@@ -162,11 +170,52 @@ const WorkflowRunRow = memo(
           icon: <WorkflowStatusIcon status={run.status} conclusion={run.conclusion} />,
           badges,
           details: [
-            { label: "Workflow", value: run.workflowName, mono: true },
-            { label: "Run", value: getWorkflowRunLabel(run), mono: true },
-            { label: "Branch", value: run.headBranch, mono: true },
-            { label: "Commit", value: shortSha, mono: true },
-            { label: "Actor", value: run.actor?.login },
+            {
+              label: "Workflow",
+              value: run.workflowName,
+              mono: true,
+              onClick:
+                repositoryUrl && run.workflowName
+                  ? () =>
+                      void openUrl(getGitHubWorkflowRunsUrl(repositoryUrl, run.workflowName ?? ""))
+                  : undefined,
+              actionLabel: "Open workflow runs on GitHub",
+            },
+            {
+              label: "Run",
+              value: getWorkflowRunLabel(run),
+              mono: true,
+              onClick: run.url ? () => void openUrl(run.url) : undefined,
+              actionLabel: "Open run on GitHub",
+            },
+            {
+              label: "Branch",
+              value: run.headBranch,
+              mono: true,
+              onClick:
+                repositoryUrl && run.headBranch
+                  ? () => void openUrl(getGitHubBranchUrl(repositoryUrl, run.headBranch ?? ""))
+                  : undefined,
+              actionLabel: "Open branch on GitHub",
+            },
+            {
+              label: "Commit",
+              value: shortSha,
+              mono: true,
+              onClick:
+                repositoryUrl && run.headSha
+                  ? () => void openUrl(getGitHubCommitUrl(repositoryUrl, run.headSha ?? ""))
+                  : undefined,
+              actionLabel: "Open commit on GitHub",
+            },
+            {
+              label: "Actor",
+              value: run.actor?.login,
+              onClick: run.actor
+                ? () => void openUrl(getGitHubUserUrl(run.actor?.login ?? ""))
+                : undefined,
+              actionLabel: "Open profile on GitHub",
+            },
             {
               label: state.isActive ? "Elapsed" : "Duration",
               value: duration,

@@ -12,17 +12,25 @@ import {
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { memo, useMemo, useState } from "react";
 import type { ComponentProps } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Spinner } from "@/ui/spinner";
-import { TextLink } from "@/ui/text-link";
 import { cn } from "@/utils/cn";
 import type { Label, LinkedIssue, StatusCheck } from "../types/github.types";
+import {
+  getGitHubLabelUrl,
+  isGitHubEntityLinkForRepository,
+  parseGitHubEntityLink,
+} from "../utils/github-link-utils";
 
 // CI Status Indicator
 interface CIStatusProps {
   checks: StatusCheck[];
+  /** When set, checks backed by an Actions run of this repository open inside Athas. */
+  repoPath?: string;
+  repositoryUrl?: string;
 }
 
 type BadgeVariant = ComponentProps<typeof Badge>["variant"];
@@ -38,8 +46,29 @@ function getCheckBadgeVariant(check: StatusCheck): BadgeVariant {
   return "muted";
 }
 
-export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
+export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CIStatusProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { openGitHubActionBuffer } = useBufferStore.use.actions();
+
+  const openCheck = (check: StatusCheck) => {
+    if (!check.detailsUrl) return;
+    const entityLink = parseGitHubEntityLink(check.detailsUrl);
+    if (
+      entityLink?.kind === "actionRun" &&
+      repoPath &&
+      isGitHubEntityLinkForRepository(entityLink, repositoryUrl)
+    ) {
+      setIsExpanded(false);
+      openGitHubActionBuffer({
+        runId: entityLink.runId,
+        repoPath,
+        title: check.name ?? check.workflowName ?? `Run #${entityLink.runId}`,
+        url: entityLink.url,
+      });
+      return;
+    }
+    void openUrl(check.detailsUrl);
+  };
 
   const summary = useMemo(() => {
     if (checks.length === 0) return null;
@@ -103,11 +132,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
           <button
             key={idx}
             type="button"
-            onClick={() => {
-              if (check.detailsUrl) {
-                void openUrl(check.detailsUrl);
-              }
-            }}
+            onClick={() => openCheck(check)}
             disabled={!check.detailsUrl}
             className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground transition-colors hover:bg-accent disabled:cursor-default disabled:hover:bg-transparent"
           >
@@ -210,10 +235,32 @@ MergeStatusBadge.displayName = "MergeStatusBadge";
 // Linked Issues
 interface LinkedIssuesProps {
   issues: LinkedIssue[];
+  /** When set, issues of this repository open inside Athas instead of the browser. */
+  repoPath?: string;
+  repositoryUrl?: string;
 }
 
-export const LinkedIssuesList = memo(({ issues }: LinkedIssuesProps) => {
+export const LinkedIssuesList = memo(({ issues, repoPath, repositoryUrl }: LinkedIssuesProps) => {
+  const { openGitHubIssueBuffer } = useBufferStore.use.actions();
   if (issues.length === 0) return null;
+
+  const openIssue = (issue: LinkedIssue) => {
+    const entityLink = parseGitHubEntityLink(issue.url);
+    if (
+      entityLink?.kind === "issue" &&
+      repoPath &&
+      isGitHubEntityLinkForRepository(entityLink, repositoryUrl)
+    ) {
+      openGitHubIssueBuffer({
+        issueNumber: issue.number,
+        repoPath,
+        title: `Issue #${issue.number}`,
+        url: issue.url,
+      });
+      return;
+    }
+    void openUrl(issue.url);
+  };
 
   return (
     <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-subtle-foreground">
@@ -221,16 +268,16 @@ export const LinkedIssuesList = memo(({ issues }: LinkedIssuesProps) => {
       <span>Linked</span>
       <span className="inline-flex items-center gap-1">
         {issues.map((issue, idx) => (
-          <TextLink
+          <button
             key={idx}
-            href={issue.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-sans ui-text-sm"
+            type="button"
+            onClick={() => openIssue(issue)}
+            className="rounded-chrome px-0.5 font-sans text-primary ui-text-sm hover:underline focus-visible:underline focus-visible:outline-none"
+            aria-label={`Open issue #${issue.number}`}
           >
             #{issue.number}
             {idx < issues.length - 1 && ","}
-          </TextLink>
+          </button>
         ))}
       </span>
     </span>
@@ -242,24 +289,40 @@ LinkedIssuesList.displayName = "LinkedIssuesList";
 // Labels
 interface LabelBadgesProps {
   labels: Label[];
+  /** When set, clicking a label opens the matching filtered list on GitHub. */
+  repositoryUrl?: string;
+  kind?: "issues" | "pulls";
 }
 
-export const LabelBadges = memo(({ labels }: LabelBadgesProps) => {
+export const LabelBadges = memo(({ labels, repositoryUrl, kind = "issues" }: LabelBadgesProps) => {
   if (labels.length === 0) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-1">
-      {labels.map((label, idx) => (
-        <Badge
-          key={idx}
-          style={{
-            backgroundColor: `#${label.color}20`,
-            color: `#${label.color}`,
-          }}
-        >
-          {label.name}
-        </Badge>
-      ))}
+      {labels.map((label, idx) => {
+        const style = {
+          backgroundColor: `#${label.color}20`,
+          color: `#${label.color}`,
+        };
+        if (!repositoryUrl) {
+          return (
+            <Badge key={idx} style={style}>
+              {label.name}
+            </Badge>
+          );
+        }
+        return (
+          <button
+            key={idx}
+            type="button"
+            title={`Open ${kind === "pulls" ? "pull requests" : "issues"} labelled ${label.name} on GitHub`}
+            onClick={() => void openUrl(getGitHubLabelUrl(repositoryUrl, label.name, kind))}
+            className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-primary/30"
+          >
+            <Badge style={style}>{label.name}</Badge>
+          </button>
+        );
+      })}
     </div>
   );
 });
