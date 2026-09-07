@@ -16,21 +16,21 @@ function isBlankWindowOpen() {
   return Boolean(diagnostics.traceId && !diagnostics.target);
 }
 
+function handleInitialWindowShellMouseDown(event: React.MouseEvent<HTMLDivElement>) {
+  if (event.button !== 0) return;
+
+  void getCurrentWindow()
+    .startDragging()
+    .catch(() => {});
+}
+
 function InitialWindowShell() {
-  const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
-
-    void getCurrentWindow()
-      .startDragging()
-      .catch(() => {});
-  };
-
   return (
     <div className="athas-layout-shell relative h-dvh w-dvw overflow-hidden bg-surface">
       <div
         className="athas-title-bar absolute inset-x-0 top-0 h-title-bar bg-transparent"
         data-tauri-drag-region
-        onMouseDown={handleMouseDown}
+        onMouseDown={handleInitialWindowShellMouseDown}
       />
     </div>
   );
