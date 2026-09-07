@@ -1,8 +1,4 @@
-import {
-  CaretRightIcon as ChevronRight,
-  CheckCircleIcon as CheckCircle2,
-  GitPullRequestIcon as GitPullRequest,
-} from "@/ui/icons";
+import { CheckCircleIcon, ChevronRightIcon, GitPullRequestIcon } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { ResourceDetailSection, ResourceDetailSidebar } from "@/ui/resource";
 import type { Label, PullRequestDetails } from "../types/github.types";
@@ -40,7 +36,7 @@ export function GitHubPRSidebar({
     <ResourceDetailSidebar>
       <ResourceDetailSection label="Status">
         <div className="flex items-center gap-2">
-          <GitPullRequest className={isClosed ? "text-destructive" : "text-success"} />
+          <GitPullRequestIcon className={isClosed ? "text-destructive" : "text-success"} />
           <span className="capitalize">{pr.isDraft ? "Draft" : pr.state}</span>
         </div>
       </ResourceDetailSection>
@@ -81,7 +77,7 @@ export function GitHubPRSidebar({
           <CIStatusIndicator checks={pr.statusChecks} />
         ) : (
           <div className="flex items-center gap-2 text-subtle-foreground">
-            <CheckCircle2 />
+            <CheckCircleIcon />
             <span>{checksSummary}</span>
           </div>
         )}
@@ -97,7 +93,7 @@ export function GitHubPRSidebar({
             onClick={onShowFiles}
             tooltip="Show changed files"
           >
-            <ChevronRight />
+            <ChevronRightIcon />
           </Button>
         }
       >

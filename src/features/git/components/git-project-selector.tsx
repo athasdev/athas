@@ -1,10 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import {
-  CaretDownIcon as CaretDown,
-  FolderOpenIcon as FolderOpen,
-  PlusIcon as Plus,
-  ArrowClockwiseIcon as RefreshCw,
-} from "@/ui/icons";
+import { ArrowClockwiseIcon, ChevronDownIcon, FolderOpenIcon, PlusIcon } from "@/ui/icons";
 import { useCallback, useMemo, useState } from "react";
 import {
   DropdownMenu,
@@ -118,9 +113,9 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
             />
           }
         >
-          <FolderOpen />
+          <FolderOpenIcon />
           <span className="ui-text-sm min-w-0 flex-1 truncate font-medium">{activeRepoLabel}</span>
-          <CaretDown
+          <ChevronDownIcon
             className={cn(
               "size-3.5 shrink-0 text-subtle-foreground transition-transform",
               isOpen && "rotate-180 text-foreground",
@@ -156,7 +151,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
                   closeOnClick
                   className="min-w-0"
                 >
-                  <FolderOpen />
+                  <FolderOpenIcon />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{getFolderName(repoPath)}</span>
                     <span className="block truncate text-subtle-foreground ui-text-sm">
@@ -179,7 +174,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
             onClick={() => void handleBrowseRepository()}
             disabled={isSelectingRepo}
           >
-            <Plus />
+            <PlusIcon />
             {isSelectingRepo ? "Adding Repository..." : "Add Repository..."}
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -187,7 +182,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
             disabled={isDiscovering}
             onClick={() => void refreshWorkspaceRepositories()}
           >
-            {isDiscovering ? <Spinner compact /> : <RefreshCw />}
+            {isDiscovering ? <Spinner compact /> : <ArrowClockwiseIcon />}
             Refresh
           </DropdownMenuItem>
           {manualRepoPaths.length > 0 ? (

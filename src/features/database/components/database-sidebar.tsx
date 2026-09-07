@@ -1,11 +1,11 @@
 import {
-  ArrowLeftIcon as ArrowLeft,
-  DatabaseIcon as Database,
-  FilePlusIcon as FilePlus,
-  FolderOpenIcon as FolderOpen,
-  PlugsConnectedIcon as PlugsConnected,
-  PlusIcon as Plus,
-  TrashIcon as Trash,
+  ArrowLeftIcon,
+  DatabaseIcon,
+  FilePlusIcon,
+  FolderOpenIcon,
+  PlugsConnectedIcon,
+  PlusIcon,
+  TrashIcon,
 } from "@/ui/icons";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -401,7 +401,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
     mode === "list" ? (
       <CommandHeader onClose={onClose}>
         <CommandHeaderAction type="button" onClick={onBack} aria-label="Back to commands">
-          <ArrowLeft />
+          <ArrowLeftIcon />
         </CommandHeaderAction>
         <CommandInput
           ref={inputRef}
@@ -410,17 +410,17 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
           placeholder="Search databases"
         />
         <CommandHeaderAction type="button" onClick={showProviderStep} aria-label="Add database">
-          <Plus />
+          <PlusIcon />
         </CommandHeaderAction>
       </CommandHeader>
     ) : (
       <CommandHeader onClose={onClose}>
         <CommandHeaderAction type="button" onClick={() => setMode("list")}>
-          <ArrowLeft />
+          <ArrowLeftIcon />
           <span>Databases</span>
         </CommandHeaderAction>
         <CommandHeaderAction type="button" onClick={showProviderStep} aria-label="Add database">
-          <Plus />
+          <PlusIcon />
         </CommandHeaderAction>
       </CommandHeader>
     );
@@ -457,7 +457,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                 <CommandItemRow
                   key={type}
                   onClick={() => chooseProvider(type)}
-                  icon={<Database className="size-4" weight="duotone" />}
+                  icon={<DatabaseIcon className="size-4" />}
                   title={PROVIDER_REGISTRY[type].label}
                 />
               ))
@@ -473,7 +473,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
               )}
               onClick={() => void chooseDatabaseFile(selectedDbType)}
             >
-              <FolderOpen className="size-5" weight="duotone" />
+              <FolderOpenIcon className="size-5" />
               <span className="font-sans ui-text-sm">
                 Choose or drop a {PROVIDER_REGISTRY[selectedDbType].label} file
               </span>
@@ -568,13 +568,13 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                   className="group"
                   disabled={isBusy}
                   onClick={() => void openConnection(connection)}
-                  icon={<Database className="size-4" weight="duotone" />}
+                  icon={<DatabaseIcon className="size-4" />}
                   title={connection.name}
                   description={getConnectionSubtitle(connection)}
                   accessory={
                     status === "connected" ? (
                       <CommandItemBadge>
-                        <PlugsConnected className="size-3.5" weight="duotone" />
+                        <PlugsConnectedIcon className="size-3.5" />
                         Connected
                       </CommandItemBadge>
                     ) : null
@@ -590,7 +590,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                         void handleDeleteConnection(connection.id);
                       }}
                     >
-                      <Trash />
+                      <TrashIcon />
                     </CommandItemAction>
                   }
                 />
@@ -600,7 +600,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
               <CommandItemRow
                 key={file.id}
                 onClick={() => openDetectedDatabase(file)}
-                icon={<Database className="size-4" weight="duotone" />}
+                icon={<DatabaseIcon className="size-4" />}
                 title={file.name}
                 description={`${PROVIDER_REGISTRY[file.dbType].label} / ${file.relativePath}`}
                 accessory={<CommandItemBadge>Detected</CommandItemBadge>}
@@ -617,8 +617,8 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
             disabled={busyConnectionId !== null}
             onClick={() => void saveNetworkConnection()}
           >
-            <FilePlus />
-            Add Database
+            <FilePlusIcon />
+            Add DatabaseIcon
           </CommandFooterAction>
         </CommandFooter>
       ) : null}

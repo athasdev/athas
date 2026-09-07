@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
 import { Toaster as SonnerToaster, type ToasterProps } from "sonner";
-import {
-  WarningIcon as AlertTriangle,
-  CheckCircleIcon as CheckCircle2,
-  InfoIcon as Info,
-  XIcon as X,
-} from "@/ui/icons";
+import { CheckCircleIcon, InfoIcon, WarningIcon, XIcon } from "@/ui/icons";
 import { ThinkingOrb } from "@/ui/thinking-orb";
 
 function getToastTheme(): ToasterProps["theme"] {
@@ -36,12 +31,12 @@ export function Toaster() {
       expand
       theme={theme}
       icons={{
-        success: <CheckCircle2 size={18} />,
-        info: <Info size={18} />,
-        warning: <AlertTriangle size={18} />,
-        error: <AlertTriangle size={18} />,
+        success: <CheckCircleIcon size={18} />,
+        info: <InfoIcon size={18} />,
+        warning: <WarningIcon size={18} />,
+        error: <WarningIcon size={18} />,
         loading: <ThinkingOrb state="working" size={20} aria-label="Loading" />,
-        close: <X size={14} />,
+        close: <XIcon size={14} />,
       }}
       toastOptions={{
         closeButton: true,

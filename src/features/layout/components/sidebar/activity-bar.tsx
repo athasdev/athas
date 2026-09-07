@@ -16,7 +16,7 @@ import { claimContextualTip } from "@/features/onboarding/lib/contextual-teachin
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
-import { MagnifyingGlassIcon } from "@/ui/icons";
+import { SearchIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
 interface ActivityBarProps {
@@ -116,7 +116,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
         {
           id: "search",
           label: "Search",
-          icon: <MagnifyingGlassIcon />,
+          icon: <SearchIcon />,
           active: isGlobalSearchBufferActive,
           onClick: handleOpenGlobalSearch,
           ariaLabel: "Search",

@@ -1,4 +1,4 @@
-import { KeyIcon as KeyRound } from "@/ui/icons";
+import { KeyIcon } from "@/ui/icons";
 import type { AcpEvent, AcpPermissionOption } from "@/features/ai/types/acp.types";
 import Badge from "@/ui/badge";
 import { Button, type ButtonVariant } from "@/ui/button";
@@ -82,7 +82,7 @@ export function AcpPermissionPrompt({
   return (
     <div className="bg-transparent px-3 pt-2 ui-text-sm">
       <div className="flex h-9 items-center gap-2 rounded-lg border border-border/70 bg-background/92 px-2 shadow-(--shadow-card)">
-        <KeyRound className="size-3.5 shrink-0 text-subtle-foreground" weight="duotone" />
+        <KeyIcon className="size-3.5 shrink-0 text-subtle-foreground" />
         <div
           className="min-w-0 flex-1 truncate text-foreground"
           title={`${permission.permissionType} - ${permission.resource}`}

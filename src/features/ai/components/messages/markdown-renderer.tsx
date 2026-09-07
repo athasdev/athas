@@ -1,9 +1,9 @@
 import {
-  CaretDownIcon as ChevronDown,
-  CaretRightIcon as ChevronRight,
-  CopyIcon as Copy,
-  TerminalWindowIcon as Terminal,
-  WarningCircleIcon as AlertCircle,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  CopyIcon,
+  TerminalWindowIcon,
+  WarningCircleIcon,
 } from "@/ui/icons";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -169,7 +169,7 @@ function CodeBlock({
                 tooltip="Copy code"
                 iconOnly
               >
-                <Copy className="text-subtle-foreground" size={12} />
+                <CopyIcon className="text-subtle-foreground" size={12} />
               </Button>
               {onApplyCode && (
                 <Button
@@ -273,7 +273,7 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
   return (
     <Marker role="alert" tone="error" className="my-1 items-start">
       <MarkerIcon>
-        <AlertCircle />
+        <WarningCircleIcon />
       </MarkerIcon>
       <MarkerContent className="flex min-w-0 flex-col gap-1">
         <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
@@ -286,7 +286,7 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
               onClick={() => setIsExpanded(!isExpanded)}
               className="h-auto px-0 text-destructive/70 hover:bg-transparent hover:text-destructive"
             >
-              {isExpanded ? <ChevronDown /> : <ChevronRight />}
+              {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
               {isExpanded ? "Hide details" : "Details"}
             </Button>
           ) : null}
@@ -303,7 +303,7 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
               disabled={isRestartingSession}
               className="h-auto gap-1.5"
             >
-              <Terminal size={12} />
+              <TerminalWindowIcon size={12} />
               {isRestartingSession ? "Restarting..." : "Restart Agent Session"}
             </Button>
             <Button
@@ -313,7 +313,7 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
               disabled={isOpeningTerminal}
               className="h-auto gap-1.5"
             >
-              <Terminal size={12} />
+              <TerminalWindowIcon size={12} />
               {isOpeningTerminal ? "Opening..." : "Open Agent Terminal"}
             </Button>
             <span className="text-destructive/70">

@@ -1,13 +1,13 @@
 import {
-  BracketsCurlyIcon as Braces,
-  CaretLeftIcon as ChevronLeft,
-  CaretRightIcon as ChevronRight,
-  CaretDoubleLeftIcon as ChevronsLeft,
-  CaretDoubleRightIcon as ChevronsRight,
-  DatabaseIcon as Database,
-  StackIcon as Layers,
-  ArrowClockwiseIcon as RefreshCw,
-  TrashIcon as Trash2,
+  ArrowClockwiseIcon,
+  BracketsCurlyIcon,
+  ChevronDoubleLeftIcon,
+  ChevronDoubleRightIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  DatabaseIcon,
+  StackIcon,
+  TrashIcon,
 } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
@@ -68,7 +68,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
         context={
           <PathBreadcrumb
             segments={[store.fileName, ...(store.selectedDatabase ? [store.selectedDatabase] : [])]}
-            icons={[<Database key="database" />]}
+            icons={[<DatabaseIcon key="database" />]}
             ariaLabel="MongoDB database"
           />
         }
@@ -88,7 +88,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
 
       <div className="flex min-h-0 flex-1">
         <div className={databasePanelClassName("w-56 shrink-0 border-border/60 border-r")}>
-          <PaneContentHeader leading={<Layers />} title="Collections" />
+          <PaneContentHeader leading={<StackIcon />} title="Collections" />
           <ScrollArea className="flex-1" contentClassName="space-y-0.5 p-1.5">
             {store.collections.map((col) => (
               <Button
@@ -132,7 +132,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
             actions={
               <>
                 <Button onClick={handleApplyQuery} className="gap-1.5" aria-label="Apply query">
-                  <Braces />
+                  <BracketsCurlyIcon />
                   Apply
                 </Button>
                 <Button
@@ -150,7 +150,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   className="text-subtle-foreground"
                   aria-label="Refresh"
                 >
-                  <RefreshCw />
+                  <ArrowClockwiseIcon />
                 </Button>
               </>
             }
@@ -214,7 +214,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                           className="text-destructive opacity-0 transition-[opacity,background-color] duration-fast ease-smooth hover:bg-destructive/10 group-hover:opacity-100"
                           aria-label={`Delete document ${id}`}
                         >
-                          <Trash2 />
+                          <TrashIcon />
                         </Button>
                       </div>
                       <pre
@@ -269,7 +269,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   iconOnly
                   aria-label="First page"
                 >
-                  <ChevronsLeft />
+                  <ChevronDoubleLeftIcon />
                 </Button>
                 <Button
                   onClick={() => actions.setCurrentPage(store.currentPage - 1)}
@@ -278,7 +278,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   iconOnly
                   aria-label="Previous page"
                 >
-                  <ChevronLeft />
+                  <ChevronLeftIcon />
                 </Button>
                 <Button
                   onClick={() => actions.setCurrentPage(store.currentPage + 1)}
@@ -287,7 +287,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   iconOnly
                   aria-label="Next page"
                 >
-                  <ChevronRight />
+                  <ChevronRightIcon />
                 </Button>
                 <Button
                   onClick={() => actions.setCurrentPage(store.totalPages)}
@@ -296,7 +296,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   iconOnly
                   aria-label="Last page"
                 >
-                  <ChevronsRight />
+                  <ChevronDoubleRightIcon />
                 </Button>
               </div>
             </div>

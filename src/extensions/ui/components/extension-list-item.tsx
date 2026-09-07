@@ -1,10 +1,10 @@
 import type { MouseEvent } from "react";
 import {
-  ArrowClockwiseIcon as RefreshCw,
-  CheckIcon as Check,
-  PlusIcon as Plus,
-  WarningCircleIcon as WarningCircle,
-  XCircleIcon as XCircle,
+  ArrowClockwiseIcon,
+  CheckIcon,
+  PlusIcon,
+  WarningCircleIcon,
+  XCircleIcon,
 } from "@/ui/icons";
 import { SidebarListItem } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
@@ -33,15 +33,15 @@ export function ExtensionListItem({
   const status = isInstalling ? (
     <Spinner label="Installing" compact />
   ) : hasRuntimeIssue ? (
-    <WarningCircle className="size-4 text-destructive" weight="duotone" />
+    <WarningCircleIcon className="size-4 text-destructive" />
   ) : hasUpdate ? (
-    <RefreshCw className="size-4 text-primary" weight="duotone" />
+    <ArrowClockwiseIcon className="size-4 text-primary" />
   ) : isUnavailableAgent ? (
-    <XCircle className="size-4" weight="duotone" />
+    <XCircleIcon className="size-4" />
   ) : extension.isInstalled ? (
-    <Check className="size-4" weight="bold" />
+    <CheckIcon className="size-4" optical="md" />
   ) : (
-    <Plus className="size-4" />
+    <PlusIcon className="size-4" />
   );
 
   return (

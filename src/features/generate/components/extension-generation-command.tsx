@@ -1,12 +1,12 @@
 import {
-  ArrowLeftIcon as ArrowLeft,
-  CheckIcon as Check,
-  CursorClickIcon as CursorClick,
-  PackageIcon as Package,
-  RowsPlusTopIcon as Sidebar,
-  ShieldWarningIcon as ShieldWarning,
-  SparkleIcon as Sparkles,
-  TerminalWindowIcon as Terminal,
+  ArrowLeftIcon,
+  CheckIcon,
+  ClickIcon,
+  PackageIcon,
+  RowsPlusTopIcon,
+  ShieldWarningIcon,
+  SparkleIcon,
+  TerminalWindowIcon,
 } from "@/ui/icons";
 import type { KeyboardEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -48,7 +48,7 @@ interface ContributionOption {
   label: string;
   description: string;
   detailPrompt: string;
-  icon: typeof Sidebar;
+  icon: typeof RowsPlusTopIcon;
 }
 
 interface IntentOption {
@@ -64,21 +64,21 @@ const CONTRIBUTION_OPTIONS: ContributionOption[] = [
     label: "Sidebar view",
     description: "Panel",
     detailPrompt: "Project release dashboard with build status and rollback actions",
-    icon: Sidebar,
+    icon: RowsPlusTopIcon,
   },
   {
     id: "toolbar",
     label: "Toolbar action",
     description: "Editor button",
     detailPrompt: "Summarize the current file and show a short review checklist",
-    icon: CursorClick,
+    icon: ClickIcon,
   },
   {
     id: "command",
     label: "Command",
     description: "Palette action",
     detailPrompt: "Create a changelog draft from the current git diff",
-    icon: Terminal,
+    icon: TerminalWindowIcon,
   },
 ];
 
@@ -440,7 +440,7 @@ export function ExtensionGenerationCommand() {
         <>
           <CommandHeader onClose={close}>
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <Sparkles className="size-4 shrink-0 text-primary" />
+              <SparkleIcon className="size-4 shrink-0 text-primary" />
               <div className="min-w-0 truncate font-sans ui-text-base text-foreground">
                 Generate Extension
               </div>
@@ -521,7 +521,7 @@ export function ExtensionGenerationCommand() {
           </CommandList>
           <CommandFooter>
             <CommandFooterAction onClick={goToType}>
-              <ArrowLeft />
+              <ArrowLeftIcon />
               Type
             </CommandFooterAction>
           </CommandFooter>
@@ -530,7 +530,7 @@ export function ExtensionGenerationCommand() {
         <>
           <CommandHeader onClose={close}>
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <Package className="size-4 shrink-0 text-primary" />
+              <PackageIcon className="size-4 shrink-0 text-primary" />
               <div className="min-w-0 truncate font-sans ui-text-base text-foreground">
                 {selectedIntent?.detailPrompt ?? selectedOption.detailPrompt}
               </div>
@@ -575,11 +575,11 @@ export function ExtensionGenerationCommand() {
                 setQuery("");
               }}
             >
-              <ArrowLeft />
+              <ArrowLeftIcon />
               Choice
             </CommandFooterAction>
             <CommandFooterAction onClick={() => void generate()} disabled={!canGenerate}>
-              <Sparkles />
+              <SparkleIcon />
               Generate
             </CommandFooterAction>
           </CommandFooter>
@@ -588,7 +588,7 @@ export function ExtensionGenerationCommand() {
         <>
           <CommandHeader onClose={close}>
             <div className="flex min-w-0 flex-1 items-center gap-2 font-sans ui-text-base text-foreground">
-              <Sparkles className="size-4 shrink-0 text-primary" />
+              <SparkleIcon className="size-4 shrink-0 text-primary" />
               Generating {selectedOption.label.toLowerCase()}
             </div>
           </CommandHeader>
@@ -609,14 +609,14 @@ export function ExtensionGenerationCommand() {
         <>
           <CommandHeader onClose={close}>
             <div className="flex min-w-0 flex-1 items-center gap-2 font-sans ui-text-base text-foreground">
-              <Check className="size-4 shrink-0 text-success" />
+              <CheckIcon className="size-4 shrink-0 text-success" />
               Extension installed
             </div>
           </CommandHeader>
           <CommandList>
             <div className="space-y-2 p-2">
               <Alert tone="success" role="status">
-                <Check />
+                <CheckIcon />
                 <AlertTitle>{result?.name}</AlertTitle>
                 <AlertDescription>
                   {selectedType === "sidebar"
@@ -638,9 +638,9 @@ export function ExtensionGenerationCommand() {
           <CommandHeader onClose={close}>
             <div className="flex min-w-0 flex-1 items-center gap-2 font-sans ui-text-base text-foreground">
               {error ? (
-                <Sparkles className="size-4 shrink-0 text-destructive" />
+                <SparkleIcon className="size-4 shrink-0 text-destructive" />
               ) : (
-                <Check className="size-4 shrink-0 text-success" />
+                <CheckIcon className="size-4 shrink-0 text-success" />
               )}
               {error ? "Generation failed" : "Preview extension"}
             </div>
@@ -656,7 +656,7 @@ export function ExtensionGenerationCommand() {
                 <>
                   <div className="rounded-lg border border-border/70 bg-surface/50 p-3">
                     <div className="flex min-w-0 items-center gap-2">
-                      <Package className="size-4 shrink-0 text-primary" />
+                      <PackageIcon className="size-4 shrink-0 text-primary" />
                       <div className="min-w-0 truncate font-sans ui-text-base font-medium text-foreground">
                         {result.preview?.title ?? result.name}
                       </div>
@@ -672,7 +672,7 @@ export function ExtensionGenerationCommand() {
                           key={highlight}
                           className="flex h-8 items-center gap-2 rounded-lg border border-border/60 bg-background/70 px-3 font-sans ui-text-base text-foreground"
                         >
-                          <Check className="size-3.5 shrink-0 text-success" />
+                          <CheckIcon className="size-3.5 shrink-0 text-success" />
                           <span className="min-w-0 truncate">{highlight}</span>
                         </div>
                       ),
@@ -680,7 +680,7 @@ export function ExtensionGenerationCommand() {
                   </div>
                   {permissionLabels.length > 0 ? (
                     <Alert tone="warning" role="status">
-                      <ShieldWarning />
+                      <ShieldWarningIcon />
                       <AlertTitle>Access requested</AlertTitle>
                       <AlertDescription>
                         <ul className="space-y-1">
@@ -715,7 +715,7 @@ export function ExtensionGenerationCommand() {
                 setError(null);
               }}
             >
-              <ArrowLeft />
+              <ArrowLeftIcon />
               Details
             </CommandFooterAction>
             {error ? (

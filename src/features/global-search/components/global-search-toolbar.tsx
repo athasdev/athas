@@ -1,5 +1,5 @@
 import { memo, type KeyboardEventHandler, type RefObject } from "react";
-import { FilesIcon as Files, MagnifyingGlassIcon as MagnifyingGlass, XIcon as X } from "@/ui/icons";
+import { FilesIcon, SearchIcon, XIcon } from "@/ui/icons";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -105,7 +105,7 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
         }
         context={
           <div className="flex h-6 min-w-0 flex-1 items-center gap-2">
-            <MagnifyingGlass className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
+            <SearchIcon className="size-4 shrink-0 text-subtle-foreground" />
             <CommandInput
               ref={inputRef}
               value={query}
@@ -129,7 +129,7 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
                 aria-label="Clear search"
                 className="shrink-0 text-subtle-foreground"
               >
-                <X />
+                <XIcon />
               </Button>
             ) : null}
           </div>
@@ -173,7 +173,7 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
                 onPressedChange={onFileNavigatorVisibleChange}
                 tooltip={fileNavigatorVisible ? "Hide result files" : "Show result files"}
               >
-                <Files />
+                <FilesIcon />
               </Toggle>
             ) : null}
           </>

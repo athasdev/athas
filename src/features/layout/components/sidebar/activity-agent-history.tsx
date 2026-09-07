@@ -20,7 +20,7 @@ import {
   ContextMenuTrigger,
 } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import { DotsThreeIcon, PencilSimpleLineIcon, PlusIcon, SparkleIcon, TrashIcon } from "@/ui/icons";
+import { DotsIcon, PencilLineIcon, PlusIcon, SparkleIcon, TrashIcon } from "@/ui/icons";
 import { InlineRenameInput } from "@/ui/input";
 import { SidebarIconButton, SidebarListEditor, SidebarListItem } from "@/ui/sidebar";
 
@@ -138,7 +138,7 @@ export function ActivityAgentRow({
             setIsRenaming(true);
           }}
         >
-          <PencilSimpleLineIcon />
+          <PencilLineIcon />
           Rename
         </ContextMenuItem>
         <ContextMenuItem
@@ -222,7 +222,7 @@ export function ActivityAgentHistory({ workspacePath }: { workspacePath: string 
         />
       ))}
       {olderChats.length > 0 ? (
-        <SidebarListItem leading={<DotsThreeIcon />} onClick={handleShowMoreAgents}>
+        <SidebarListItem leading={<DotsIcon />} onClick={handleShowMoreAgents}>
           More
         </SidebarListItem>
       ) : null}

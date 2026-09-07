@@ -17,17 +17,17 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import {
-  DatabaseIcon as Database,
-  FileTextIcon as FileText,
-  FilesIcon as Files,
-  GitBranchIcon as GitBranch,
-  GithubLogoIcon as GithubLogo,
-  GitPullRequestIcon as GitPullRequest,
-  PlayCircleIcon as PlayCircle,
-  PlusIcon as Plus,
-  TerminalWindowIcon as TerminalWindow,
-  UploadIcon as Upload,
+  DatabaseIcon,
+  FileTextIcon,
+  FilesIcon,
+  GitBranchIcon,
+  GitPullRequestIcon,
+  PlayCircleIcon,
+  PlusIcon,
+  TerminalWindowIcon,
+  UploadIcon,
 } from "@/ui/icons";
+import { GithubMark } from "@/ui/brand-marks";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { AIFileSelector } from "../mentions/ai-file-selector";
 import {
@@ -45,11 +45,11 @@ function getBufferContextDescription(buffer: PaneContent) {
 }
 
 function getBufferContextIcon(buffer: PaneContent) {
-  if (buffer.type === "terminal") return <TerminalWindow />;
-  if (buffer.type === "database") return <Database />;
-  if (buffer.type === "pullRequest") return <GitPullRequest />;
-  if (buffer.type === "githubIssue") return <FileText />;
-  if (buffer.type === "githubAction") return <PlayCircle />;
+  if (buffer.type === "terminal") return <TerminalWindowIcon />;
+  if (buffer.type === "database") return <DatabaseIcon />;
+  if (buffer.type === "pullRequest") return <GitPullRequestIcon />;
+  if (buffer.type === "githubIssue") return <FileTextIcon />;
+  if (buffer.type === "githubAction") return <PlayCircleIcon />;
   return <ThemedFileIcon fileName={buffer.name} isDir={false} />;
 }
 
@@ -176,17 +176,17 @@ export function ContextSelector({
           />
         }
       >
-        <Plus />
+        <PlusIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-52">
         <DropdownMenuItem onClick={() => void handleAttachFiles()}>
-          <Upload />
+          <UploadIcon />
           Attach files…
         </DropdownMenuItem>
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <FileText />
+            <FileTextIcon />
             Project files
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent
@@ -219,7 +219,7 @@ export function ContextSelector({
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <GitBranch />
+            <GitBranchIcon />
             <span className="min-w-0 flex-1 truncate">Git changes</span>
             <span className="shrink-0 text-subtle-foreground tabular-nums">
               {gitContextFiles.length}
@@ -249,7 +249,7 @@ export function ContextSelector({
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <GithubLogo />
+            <GithubMark />
             <span className="min-w-0 flex-1 truncate">GitHub</span>
             <span className="shrink-0 text-subtle-foreground tabular-nums">
               {githubBuffers.length}
@@ -268,7 +268,7 @@ export function ContextSelector({
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <Files />
+            <FilesIcon />
             <span className="min-w-0 flex-1 truncate">Open tabs</span>
             <span className="shrink-0 text-subtle-foreground tabular-nums">{openTabs.length}</span>
           </DropdownMenuSubTrigger>

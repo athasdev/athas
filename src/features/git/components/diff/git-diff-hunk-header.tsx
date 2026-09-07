@@ -1,9 +1,4 @@
-import {
-  CaretDownIcon as ChevronDown,
-  CaretRightIcon as ChevronRight,
-  MinusIcon as Minus,
-  PlusIcon as Plus,
-} from "@/ui/icons";
+import { ChevronDownIcon, ChevronRightIcon, MinusIcon, PlusIcon } from "@/ui/icons";
 import { memo, useCallback, useMemo } from "react";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
@@ -96,7 +91,11 @@ const DiffHunkHeader = memo(
         >
           <span className="flex items-center justify-center border-border border-r text-subtle-foreground">
             <span className="flex size-4 items-center justify-center">
-              {isCollapsed ? <ChevronRight size={iconSize} /> : <ChevronDown size={iconSize} />}
+              {isCollapsed ? (
+                <ChevronRightIcon size={iconSize} />
+              ) : (
+                <ChevronDownIcon size={iconSize} />
+              )}
             </span>
           </span>
 
@@ -130,7 +129,7 @@ const DiffHunkHeader = memo(
               className={cn(isStaged ? "text-git-deleted" : "text-git-added")}
               tooltip={isStaged ? "Unstage hunk" : "Stage hunk"}
             >
-              {isStaged ? <Minus size={iconSize} /> : <Plus size={iconSize} />}
+              {isStaged ? <MinusIcon size={iconSize} /> : <PlusIcon size={iconSize} />}
               {isStaged ? "Unstage" : "Stage"}
             </Button>
           </span>

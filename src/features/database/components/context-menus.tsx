@@ -1,4 +1,4 @@
-import { PencilSimpleIcon as EditIcon, PlusIcon, TrashIcon } from "@/ui/icons";
+import { PenIcon, PlusIcon, TrashIcon } from "@/ui/icons";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { menuSeparator, type MenuItem } from "@/ui/dropdown";
@@ -74,7 +74,7 @@ export const SqlRowMenu = ({
         {
           id: "edit-row",
           label: "Edit Row",
-          icon: <EditIcon />,
+          icon: <PenIcon />,
           onClick: () => onEditRow(databaseRowMenu.tableName, databaseRowMenu.rowData),
         },
         {

@@ -1,10 +1,10 @@
 import {
-  CircleIcon as Circle,
-  FolderOpenIcon as FolderOpen,
-  PauseIcon as Pause,
-  PencilIcon as Pencil,
-  StackIcon as Stack,
-  TrashIcon as Trash,
+  CircleDottedIcon,
+  FolderOpenIcon,
+  PauseIcon,
+  PencilIcon,
+  StackIcon,
+  TrashIcon,
 } from "@/ui/icons";
 import { useState } from "react";
 import { Button } from "@/ui/button";
@@ -41,10 +41,10 @@ export function DebugSessionStatusIcon({ status }: { status: "idle" | "running" 
   }
 
   if (status === "paused") {
-    return <Pause size={12} className="shrink-0 text-warning" weight="fill" />;
+    return <PauseIcon size={12} className="shrink-0 text-warning" optical="md" />;
   }
 
-  return <Circle size={10} className="shrink-0 text-subtle-foreground" weight="fill" />;
+  return <CircleDottedIcon size={10} className="shrink-0 text-subtle-foreground" optical="md" />;
 }
 
 export function DebugStackFrames({
@@ -74,7 +74,7 @@ export function DebugStackFrames({
             )}
             onClick={() => void onSelect(frame.id, frame.sourcePath, frame.line)}
           >
-            <Stack size={13} className="mt-0.5 shrink-0 text-subtle-foreground" />
+            <StackIcon size={13} className="mt-0.5 shrink-0 text-subtle-foreground" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-foreground">{frame.name}</span>
               <span className="block truncate ui-text-sm text-subtle-foreground">
@@ -159,21 +159,21 @@ export function DebugBreakpointsList({
               onClick={() => onRemove(breakpoint)}
               iconOnly
             >
-              <Trash />
+              <TrashIcon />
             </Button>
           </ContextMenuTrigger>
           <ContextMenuContent>
             <ContextMenuItem onClick={() => void onOpen(breakpoint)}>
-              <FolderOpen />
+              <FolderOpenIcon />
               Go to Breakpoint
             </ContextMenuItem>
             <ContextMenuItem onClick={() => onToggle(breakpoint)}>
-              <Circle />
+              <CircleDottedIcon />
               {breakpoint.enabled ? "Disable Breakpoint" : "Enable Breakpoint"}
             </ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuItem variant="destructive" onClick={() => onRemove(breakpoint)}>
-              <Trash />
+              <TrashIcon />
               Remove Breakpoint
             </ContextMenuItem>
           </ContextMenuContent>
@@ -254,7 +254,7 @@ function BreakpointOptions({
           />
         }
       >
-        <Pencil />
+        <PencilIcon />
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80">
         <PopoverTitle>Breakpoint options</PopoverTitle>

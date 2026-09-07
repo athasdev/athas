@@ -1,4 +1,4 @@
-import { CaretLeftIcon as CaretLeft, CaretRightIcon as CaretRight } from "@/ui/icons";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/ui/icons";
 import { motion } from "motion/react";
 import { memo, useEffect, useMemo } from "react";
 import type { FileNavigatorItem } from "@/features/file-explorer/components/file-navigator-sidebar";
@@ -109,7 +109,7 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
           aria-label="Previous changed file"
           className="shrink-0"
         >
-          <CaretLeft />
+          <ChevronLeftIcon />
           <Kbd>J</Kbd>
         </Button>
         <div className="flex shrink-0 items-center justify-center px-1.5">
@@ -126,7 +126,7 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
           className="shrink-0"
         >
           <Kbd>K</Kbd>
-          <CaretRight />
+          <ChevronRightIcon />
         </Button>
       </div>
     </motion.div>

@@ -1,14 +1,14 @@
 import {
-  ArrowSquareOutIcon as OpenExternal,
-  BugIcon as Bug,
-  DotsThreeIcon as More,
-  PauseIcon as Pause,
-  PlayIcon as Play,
-  ArrowsClockwiseIcon as Restart,
-  StackIcon as ImageIcon,
-  StopIcon as Stop,
-  TerminalWindowIcon as Terminal,
-  TrashIcon as Trash,
+  ArrowsClockwiseIcon,
+  BugIcon,
+  DotsIcon,
+  OpenExternalIcon,
+  PauseIcon,
+  PlayIcon,
+  StackIcon,
+  StopIcon,
+  TerminalWindowIcon,
+  TrashIcon,
 } from "@/ui/icons";
 import { Fragment, type ComponentProps, type ReactNode } from "react";
 import Badge from "@/ui/badge";
@@ -55,7 +55,7 @@ export function DockerActionMenu({
           <Button type="button" variant="ghost" iconOnly tooltip={label} aria-label={label} />
         }
       >
-        <More />
+        <DotsIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {actions.map((action) => (
@@ -151,38 +151,38 @@ function ContainerActions({
           />
         }
       >
-        <More className="size-3.5" />
+        <DotsIcon className="size-3.5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem
           disabled={busy || isRunning || isPaused}
           onClick={() => onAction(container, "start")}
         >
-          <Play />
+          <PlayIcon />
           Start
         </DropdownMenuItem>
         <DropdownMenuItem disabled={busy || !isRunning} onClick={() => onAction(container, "stop")}>
-          <Stop />
+          <StopIcon />
           Stop
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={busy || (!isRunning && !isPaused)}
           onClick={() => onAction(container, isPaused ? "unpause" : "pause")}
         >
-          {isPaused ? <Play /> : <Pause />}
+          {isPaused ? <PlayIcon /> : <PauseIcon />}
           {isPaused ? "Unpause" : "Pause"}
         </DropdownMenuItem>
         <DropdownMenuItem disabled={busy} onClick={() => onAction(container, "restart")}>
-          <Restart />
+          <ArrowsClockwiseIcon />
           Restart
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={busy || !isRunning} onClick={() => onOpenTerminal(container)}>
-          <Terminal />
+          <TerminalWindowIcon />
           Open shell
         </DropdownMenuItem>
         <DropdownMenuItem disabled={busy || !isRunning} onClick={() => onDebug(container)}>
-          <Bug />
+          <BugIcon />
           Debug
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -191,7 +191,7 @@ function ContainerActions({
             if (quickUrl) onOpenUrl(quickUrl);
           }}
         >
-          <OpenExternal />
+          <OpenExternalIcon />
           Open service URL
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -200,7 +200,7 @@ function ContainerActions({
           disabled={busy || isRunning}
           onClick={() => onAction(container, "remove")}
         >
-          <Trash />
+          <TrashIcon />
           Remove
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -299,23 +299,23 @@ function ComposeServiceActions({
           />
         }
       >
-        <More className="size-3.5" />
+        <DotsIcon className="size-3.5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem disabled={busy} onClick={() => onAction(service, "up")}>
-          <Play />
+          <PlayIcon />
           Start
         </DropdownMenuItem>
         <DropdownMenuItem disabled={busy || !isRunning} onClick={() => onAction(service, "stop")}>
-          <Stop />
+          <StopIcon />
           Stop
         </DropdownMenuItem>
         <DropdownMenuItem disabled={busy} onClick={() => onAction(service, "restart")}>
-          <Restart />
+          <ArrowsClockwiseIcon />
           Restart
         </DropdownMenuItem>
         <DropdownMenuItem disabled={busy} onClick={() => onAction(service, "rebuild")}>
-          <ImageIcon />
+          <StackIcon />
           Rebuild
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -325,7 +325,7 @@ function ComposeServiceActions({
             if (quickUrl) onOpenUrl(quickUrl);
           }}
         >
-          <OpenExternal />
+          <OpenExternalIcon />
           Open service URL
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -401,16 +401,16 @@ export function ImageRow({
               />
             }
           >
-            <More className="size-3.5" />
+            <DotsIcon className="size-3.5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem disabled={busy} onClick={() => onRun(image)}>
-              <Play />
+              <PlayIcon />
               Run
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" disabled={busy} onClick={() => onRemove(image)}>
-              <Trash />
+              <TrashIcon />
               Remove
             </DropdownMenuItem>
           </DropdownMenuContent>

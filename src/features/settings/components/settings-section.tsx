@@ -1,4 +1,4 @@
-import { ArrowCounterClockwiseIcon as RotateCcw } from "@/ui/icons";
+import { ArrowCounterClockwiseIcon } from "@/ui/icons";
 import {
   useCallback,
   useId,
@@ -212,7 +212,7 @@ export function SettingRow({
                 className={cn(!canReset && "pointer-events-none invisible")}
                 iconOnly
               >
-                <RotateCcw />
+                <ArrowCounterClockwiseIcon />
               </Button>
             </span>
           ) : null}

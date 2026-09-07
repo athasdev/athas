@@ -14,14 +14,14 @@ import {
   AiLoadingIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
-  ChatCircleTextIcon,
+  BoltIcon,
+  ChatBubbleTextIcon,
   CheckIcon,
   CodeIcon,
   CopyIcon,
   EyeIcon,
   FileCodeIcon,
   LightbulbIcon,
-  LightningIcon,
   ListChecksIcon,
   ShieldWarningIcon,
   SparkleIcon,
@@ -46,7 +46,7 @@ const INSIGHT_ACTIONS: Array<{
   { kind: "explain", label: "Explain", icon: LightbulbIcon },
   { kind: "risks", label: "Find risks", icon: ShieldWarningIcon },
   { kind: "tests", label: "Suggest tests", icon: ListChecksIcon },
-  { kind: "comment", label: "Draft comment", icon: ChatCircleTextIcon },
+  { kind: "comment", label: "Draft comment", icon: ChatBubbleTextIcon },
 ];
 
 interface ReviewHunkCardProps {
@@ -287,7 +287,7 @@ export function ReviewHunkCard({
           </Button>
           {streak >= 2 ? (
             <Badge variant="warning">
-              <LightningIcon />
+              <BoltIcon />
               {streak} streak
             </Badge>
           ) : null}

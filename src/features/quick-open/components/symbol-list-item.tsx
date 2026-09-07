@@ -1,13 +1,13 @@
 import {
-  SquaresFourIcon as Blocks,
-  CubeIcon as Box,
-  BracketsCurlyIcon as Braces,
-  CodeIcon as Code2,
-  HashIcon as Hash,
-  StackIcon as Layers,
-  TextTIcon as LetterText,
-  PuzzlePieceIcon as Puzzle,
-  FunctionIcon as Variable,
+  BracketsCurlyIcon,
+  CodeIcon,
+  CubeIcon,
+  FunctionIcon,
+  GridIcon,
+  HashIcon,
+  PuzzlePieceIcon,
+  StackIcon,
+  TextIcon,
 } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { CommandItemBadge, CommandItemRow } from "@/ui/command";
@@ -15,19 +15,19 @@ import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import type { SymbolItem } from "../hooks/use-symbol-search";
 
 const SYMBOL_ICONS: Record<string, ReactNode> = {
-  function: <Code2 size={14} className="text-symbol-function" />,
-  method: <Code2 size={14} className="text-symbol-function" />,
-  constructor: <Code2 size={14} className="text-symbol-function" />,
-  class: <Blocks size={14} className="text-symbol-type" />,
-  interface: <Puzzle size={14} className="text-symbol-interface" />,
-  struct: <Box size={14} className="text-symbol-type" />,
-  enum: <Layers size={14} className="text-symbol-enum" />,
-  "enum-member": <Hash size={14} className="text-symbol-enum" />,
-  variable: <Variable size={14} className="text-symbol-variable" />,
-  constant: <Variable size={14} className="text-symbol-variable" />,
-  property: <Braces size={14} className="text-symbol-property" />,
-  field: <Braces size={14} className="text-symbol-property" />,
-  "type-parameter": <LetterText size={14} className="text-symbol-type-parameter" />,
+  function: <CodeIcon size={14} className="text-symbol-function" />,
+  method: <CodeIcon size={14} className="text-symbol-function" />,
+  constructor: <CodeIcon size={14} className="text-symbol-function" />,
+  class: <GridIcon size={14} className="text-symbol-type" />,
+  interface: <PuzzlePieceIcon size={14} className="text-symbol-interface" />,
+  struct: <CubeIcon size={14} className="text-symbol-type" />,
+  enum: <StackIcon size={14} className="text-symbol-enum" />,
+  "enum-member": <HashIcon size={14} className="text-symbol-enum" />,
+  variable: <FunctionIcon size={14} className="text-symbol-variable" />,
+  constant: <FunctionIcon size={14} className="text-symbol-variable" />,
+  property: <BracketsCurlyIcon size={14} className="text-symbol-property" />,
+  field: <BracketsCurlyIcon size={14} className="text-symbol-property" />,
+  "type-parameter": <TextIcon size={14} className="text-symbol-type-parameter" />,
 };
 
 interface SymbolListItemProps {
@@ -51,7 +51,9 @@ export const SymbolListItem = ({
   searchQuery,
   showFilePath = false,
 }: SymbolListItemProps) => {
-  const icon = SYMBOL_ICONS[symbol.kind] || <Code2 size={14} className="text-subtle-foreground" />;
+  const icon = SYMBOL_ICONS[symbol.kind] || (
+    <CodeIcon size={14} className="text-subtle-foreground" />
+  );
   const fileBaseName = showFilePath ? symbol.filePath.split(/[/\\]/).pop() : undefined;
 
   return (

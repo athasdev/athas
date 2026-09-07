@@ -1,11 +1,6 @@
 import { useGitHubList } from "../hooks/use-github-list";
 import { invoke } from "@tauri-apps/api/core";
-import {
-  CheckCircleIcon as CheckCircle2,
-  ClockIcon as Clock,
-  PulseIcon as Activity,
-  XCircleIcon as XCircle,
-} from "@/ui/icons";
+import { ActivityIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@/ui/icons";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { memo, startTransition, useCallback, useDeferredValue, useEffect, useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -39,7 +34,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
   if (normalizedConclusion === "success") {
     return {
       label: "Success",
-      icon: CheckCircle2,
+      icon: CheckCircleIcon,
       className: "text-success",
       animate: false,
     };
@@ -52,7 +47,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
   ) {
     return {
       label: "Failed",
-      icon: XCircle,
+      icon: XCircleIcon,
       className: "text-destructive",
       animate: false,
     };
@@ -61,7 +56,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
   if (normalizedConclusion === "cancelled" || normalizedConclusion === "skipped") {
     return {
       label: normalizedConclusion === "skipped" ? "Skipped" : "Cancelled",
-      icon: XCircle,
+      icon: XCircleIcon,
       className: "text-subtle-foreground",
       animate: false,
     };
@@ -83,7 +78,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
   if (normalizedStatus === "queued" || normalizedStatus === "pending") {
     return {
       label: "Queued",
-      icon: Clock,
+      icon: ClockIcon,
       className: "text-warning",
       animate: false,
     };
@@ -91,7 +86,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
 
   return {
     label: normalizedConclusion || normalizedStatus || "Unknown",
-    icon: Activity,
+    icon: ActivityIcon,
     className: "text-subtle-foreground",
     animate: false,
   };
@@ -116,7 +111,7 @@ function WorkflowRunStatusIcon({
       {state.animate || !Icon ? (
         <Spinner label={state.label} compact />
       ) : (
-        <Icon className="size-4" weight="fill" />
+        <Icon className="size-4" optical="md" />
       )}
     </span>
   );

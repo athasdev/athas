@@ -1,12 +1,12 @@
 import "../styles/github-viewer.css";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  ChatCircleTextIcon as Issue,
-  GitBranchIcon as GitBranch,
-  GitPullRequestIcon as GitPullRequest,
-  PlusIcon as Plus,
-  PulseIcon as Activity,
-  SparkleIcon as Sparkle,
+  ActivityIcon,
+  ChatBubbleTextIcon,
+  GitBranchIcon,
+  GitPullRequestIcon,
+  PlusIcon,
+  SparkleIcon,
 } from "@/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -393,11 +393,11 @@ ${statusSummary}`;
           title={
             <span className="flex min-w-0 items-center gap-2">
               {kind === "pull-request" ? (
-                <GitPullRequest className="text-primary" />
+                <GitPullRequestIcon className="text-primary" />
               ) : kind === "issue" ? (
-                <Issue className="text-primary" />
+                <ChatBubbleTextIcon className="text-primary" />
               ) : (
-                <Activity className="text-primary" />
+                <ActivityIcon className="text-primary" />
               )}
               <span>{titleByKind[kind]}</span>
               <span className="truncate font-normal text-subtle-foreground">
@@ -418,7 +418,7 @@ ${statusSummary}`;
           <div>
             <div className="space-y-2 pb-6">
               <div className="flex items-center gap-2 font-sans ui-text-sm text-subtle-foreground">
-                <Activity />
+                <ActivityIcon />
                 <span>{repositoryName}</span>
               </div>
               <h1 className="font-sans ui-text-base leading-tight font-semibold tracking-tight text-foreground">
@@ -477,7 +477,7 @@ ${statusSummary}`;
                 disabled={!canSubmit || isSubmitting}
                 onClick={() => void handleSubmit()}
               >
-                {isSubmitting ? <Spinner label="Running" compact /> : <Plus />}
+                {isSubmitting ? <Spinner label="Running" compact /> : <PlusIcon />}
                 Run workflow
               </Button>
             </div>
@@ -486,7 +486,7 @@ ${statusSummary}`;
           <div>
             <div className="pb-5">
               <div className="mb-2 flex items-center gap-2 font-sans ui-text-sm text-subtle-foreground">
-                {kind === "pull-request" ? <GitPullRequest /> : <Issue />}
+                {kind === "pull-request" ? <GitPullRequestIcon /> : <ChatBubbleTextIcon />}
                 <span>{repositoryName}</span>
               </div>
               <Input
@@ -507,7 +507,7 @@ ${statusSummary}`;
 
             {kind === "pull-request" ? (
               <div className="flex flex-wrap items-center gap-2 border-border/60 border-y py-3">
-                <GitBranch className="text-subtle-foreground" />
+                <GitBranchIcon className="text-subtle-foreground" />
                 <span className="font-sans ui-text-sm text-subtle-foreground">Head</span>
                 <Select
                   value={head}
@@ -611,7 +611,7 @@ ${statusSummary}`;
                   disabled={isGenerating || isSubmitting}
                   onClick={() => void handleGenerateDraft()}
                 >
-                  {isGenerating ? <Spinner label="Generating" compact /> : <Sparkle />}
+                  {isGenerating ? <Spinner label="Generating" compact /> : <SparkleIcon />}
                   Generate
                 </Button>
                 <Button
@@ -620,7 +620,7 @@ ${statusSummary}`;
                   disabled={!canSubmit || isSubmitting}
                   onClick={() => void handleSubmit()}
                 >
-                  {isSubmitting ? <Spinner label="Creating" compact /> : <Plus />}
+                  {isSubmitting ? <Spinner label="Creating" compact /> : <PlusIcon />}
                   Create
                 </Button>
               </div>

@@ -1,9 +1,4 @@
-import {
-  CheckCircleIcon as CheckCircle,
-  MagnifyingGlassIcon as Search,
-  TrashIcon as Trash,
-  WarningCircleIcon as WarningCircle,
-} from "@/ui/icons";
+import { CheckCircleIcon, SearchIcon, TrashIcon, WarningCircleIcon } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import {
@@ -165,7 +160,7 @@ function ProviderApiKeyCommandContent({
   return (
     <>
       <CommandHeader onClose={onClose}>
-        <Search className="shrink-0 text-subtle-foreground" size={14} />
+        <SearchIcon className="shrink-0 text-subtle-foreground" size={14} />
         <CommandInput
           ref={searchRef}
           value={query}
@@ -204,9 +199,9 @@ function ProviderApiKeyCommandContent({
                   title={provider.name}
                   accessory={
                     hasKey ? (
-                      <CheckCircle className="text-success" size={13} />
+                      <CheckCircleIcon className="text-success" size={13} />
                     ) : (
-                      <WarningCircle className="text-warning" size={13} />
+                      <WarningCircleIcon className="text-warning" size={13} />
                     )
                   }
                 />
@@ -256,13 +251,13 @@ function ProviderApiKeyCommandContent({
 
               {status === "valid" && (
                 <div className="flex items-center gap-1.5 text-success ui-text-base">
-                  <CheckCircle />
+                  <CheckCircleIcon />
                   API key saved.
                 </div>
               )}
               {status === "invalid" && errorMessage && (
                 <div className="flex items-center gap-1.5 text-destructive ui-text-base">
-                  <WarningCircle />
+                  <WarningCircleIcon />
                   {errorMessage}
                 </div>
               )}
@@ -283,7 +278,7 @@ function ProviderApiKeyCommandContent({
                 <div className="flex items-center gap-1.5">
                   {hasExistingKey && (
                     <Button type="button" variant="danger" onClick={() => void handleRemove()}>
-                      <Trash />
+                      <TrashIcon />
                       <span>Remove</span>
                     </Button>
                   )}

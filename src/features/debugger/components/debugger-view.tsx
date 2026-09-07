@@ -1,18 +1,18 @@
 import {
-  ArrowBendDownLeftIcon as ArrowBendDownLeft,
-  ArrowDownIcon as ArrowDown,
-  ArrowUpIcon as ArrowUp,
-  ArrowsClockwiseIcon as ArrowsClockwise,
-  ArrowsInIcon as Minimize,
-  ArrowsOutIcon as Maximize,
-  BugIcon as Bug,
-  CircleIcon as Circle,
-  FolderOpenIcon as FolderOpen,
-  PauseIcon as Pause,
-  PlayIcon as Play,
-  SquareIcon as Square,
-  TrashIcon as Trash,
-  XIcon as X,
+  ArrowCornerDownLeftIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ArrowsClockwiseIcon,
+  ArrowsInIcon,
+  ArrowsOutIcon,
+  BugIcon,
+  CircleDottedIcon,
+  FolderOpenIcon,
+  PauseIcon,
+  PlayIcon,
+  SquareIcon,
+  TrashIcon,
+  XIcon,
 } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -478,7 +478,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
         <ContextMenuTrigger
           render={<TabBarSurface className="scrollbar-none justify-between overscroll-x-contain" />}
         >
-          <Bug className="text-subtle-foreground" weight="duotone" />
+          <BugIcon className="text-subtle-foreground" />
           <div className="scrollbar-none min-w-0 flex-1 overflow-x-auto">
             <TabsList variant="bare" aria-label="Debugger panels">
               <TabsTrigger value="stack" className="w-fit flex-none">
@@ -521,7 +521,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
               onClick={debuggerActions.clearAdapterTranscript}
               iconOnly
             >
-              <Trash />
+              <TrashIcon />
             </Button>
           ) : null}
           {activePanel === "breakpoints" && sortedBreakpoints.length > 0 ? (
@@ -531,7 +531,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
               onClick={debuggerActions.clearBreakpoints}
               iconOnly
             >
-              <Trash />
+              <TrashIcon />
             </Button>
           ) : null}
           <Button
@@ -542,7 +542,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
             disabled={!activeFile}
             iconOnly
           >
-            <Circle />
+            <CircleDottedIcon />
           </Button>
           <Button
             variant="ghost"
@@ -554,7 +554,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
             }
             iconOnly
           >
-            {isFullScreen ? <Minimize /> : <Maximize />}
+            {isFullScreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
           </Button>
           <Button
             variant="ghost"
@@ -563,7 +563,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
             aria-label="Close Run and Debug"
             iconOnly
           >
-            <X />
+            <XIcon />
           </Button>
         </ContextMenuTrigger>
         <ContextMenuContent>
@@ -571,36 +571,36 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
             disabled={!canStartDebugging || isActiveSession}
             onClick={() => void startDebugging()}
           >
-            <Play />
+            <PlayIcon />
             Start Debugging
           </ContextMenuItem>
           <ContextMenuItem
             disabled={!canSendAdapterThreadRequest}
             onClick={() => void sendAdapterThreadRequest(isPaused ? "continue" : "pause")}
           >
-            {isPaused ? <Play /> : <Pause />}
+            {isPaused ? <PlayIcon /> : <PauseIcon />}
             {isPaused ? "Continue Debugging" : "Pause Debugging"}
           </ContextMenuItem>
           <ContextMenuItem disabled={!isActiveSession} onClick={() => void stopDebugging()}>
-            <Square />
+            <SquareIcon />
             Stop Debugging
           </ContextMenuItem>
           <ContextMenuItem disabled={!canStartDebugging} onClick={() => void restartDebugging()}>
-            <ArrowsClockwise />
+            <ArrowsClockwiseIcon />
             Restart Debugging
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem disabled={!activeFile} onClick={toggleCurrentLineBreakpoint}>
-            <Circle />
+            <CircleDottedIcon />
             Toggle Breakpoint at Cursor
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem onClick={onFullScreen}>
-            {isFullScreen ? <Minimize /> : <Maximize />}
+            {isFullScreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
             {isFullScreen ? "Exit Full Screen" : "Full Screen"}
           </ContextMenuItem>
           <ContextMenuItem onClick={onClose}>
-            <X />
+            <XIcon />
             Close Run and Debug
           </ContextMenuItem>
         </ContextMenuContent>
@@ -645,7 +645,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 commandId="debug.start"
                 iconOnly
               >
-                <Play />
+                <PlayIcon />
               </Button>
               <Button
                 variant="default"
@@ -655,7 +655,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 aria-label={isPaused ? "Continue debugging" : "Pause debugging"}
                 iconOnly
               >
-                {isPaused ? <Play /> : <Pause />}
+                {isPaused ? <PlayIcon /> : <PauseIcon />}
               </Button>
               <Button
                 variant="danger"
@@ -665,7 +665,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 commandId="debug.stop"
                 iconOnly
               >
-                <Square />
+                <SquareIcon />
               </Button>
               <Button
                 variant="default"
@@ -674,7 +674,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 onClick={() => void sendAdapterThreadRequest("next")}
                 iconOnly
               >
-                <ArrowBendDownLeft />
+                <ArrowCornerDownLeftIcon />
               </Button>
               <Button
                 variant="default"
@@ -683,7 +683,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 onClick={() => void sendAdapterThreadRequest("stepIn")}
                 iconOnly
               >
-                <ArrowDown />
+                <ArrowDownIcon />
               </Button>
               <Button
                 variant="default"
@@ -692,7 +692,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 onClick={() => void sendAdapterThreadRequest("stepOut")}
                 iconOnly
               >
-                <ArrowUp />
+                <ArrowUpIcon />
               </Button>
               <Button
                 variant="default"
@@ -702,7 +702,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                 commandId="debug.restart"
                 iconOnly
               >
-                <ArrowsClockwise />
+                <ArrowsClockwiseIcon />
               </Button>
               {isAdapterSession && resolvedActiveConfig.runtime === "java" ? (
                 <Button
@@ -711,7 +711,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
                   onClick={() => void hotCodeReplace()}
                   iconOnly
                 >
-                  <ArrowsClockwise />
+                  <ArrowsClockwiseIcon />
                 </Button>
               ) : null}
             </div>
@@ -738,7 +738,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
 
           <div className="mt-auto border-border/70 border-t px-3 py-2 ui-text-sm text-subtle-foreground">
             <div className="flex items-center gap-1.5">
-              <FolderOpen size={12} />
+              <FolderOpenIcon size={12} />
               <span className="truncate">
                 {rootFolderPath || launchLoadError || "Open a project to load launch.json"}
               </span>

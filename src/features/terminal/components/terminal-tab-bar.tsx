@@ -4,13 +4,13 @@ import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortabl
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import {
-  ArrowDownIcon as ArrowDown,
-  ArrowUpIcon as ArrowUp,
-  ArrowsOutIcon as Maximize2,
-  ArrowsInIcon as Minimize2,
-  PlusIcon as Plus,
-  MagnifyingGlassIcon as Search,
-  TerminalWindowIcon as TerminalIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ArrowsInIcon,
+  ArrowsOutIcon,
+  PlusIcon,
+  SearchIcon,
+  TerminalWindowIcon,
 } from "@/ui/icons";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -74,7 +74,7 @@ const ToolbarContextMenu = ({
           {
             id: "new-terminal",
             label: "New Terminal",
-            icon: <Plus weight="bold" />,
+            icon: <PlusIcon optical="md" />,
             onClick: onNewTerminal,
           },
         ]
@@ -84,7 +84,7 @@ const ToolbarContextMenu = ({
           {
             id: "search-terminal",
             label: "Search",
-            icon: <Search />,
+            icon: <SearchIcon />,
             onClick: onSearchTerminal,
           },
         ]
@@ -94,7 +94,7 @@ const ToolbarContextMenu = ({
           {
             id: "next-terminal",
             label: "Next Tab",
-            icon: <ArrowDown />,
+            icon: <ArrowDownIcon />,
             onClick: onNextTerminal,
           },
         ]
@@ -104,7 +104,7 @@ const ToolbarContextMenu = ({
           {
             id: "previous-terminal",
             label: "Previous Tab",
-            icon: <ArrowUp />,
+            icon: <ArrowUpIcon />,
             onClick: onPrevTerminal,
           },
         ]
@@ -114,7 +114,7 @@ const ToolbarContextMenu = ({
           {
             id: "toggle-fullscreen",
             label: isFullScreen ? "Exit Full Screen" : "Full Screen",
-            icon: isFullScreen ? <Minimize2 /> : <Maximize2 />,
+            icon: isFullScreen ? <ArrowsInIcon /> : <ArrowsOutIcon />,
             onClick: onFullScreen,
           },
         ]
@@ -336,7 +336,7 @@ const TerminalTabBar = ({
           commandId="terminal.find"
           aria-label="Find in terminal"
         >
-          <Search />
+          <SearchIcon />
         </Button>
       )}
       {onNewTerminal && (
@@ -353,7 +353,7 @@ const TerminalTabBar = ({
               />
             }
           >
-            <Plus weight="bold" />
+            <PlusIcon optical="md" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {terminalProfiles.map((profile) => (
@@ -373,7 +373,7 @@ const TerminalTabBar = ({
           commandId="workbench.toggleActivePaneFullscreen"
           aria-label={isFullScreen ? "Exit full screen terminal" : "Full screen terminal"}
         >
-          {isFullScreen ? <Minimize2 /> : <Maximize2 />}
+          {isFullScreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
         </Button>
       )}
     </div>
@@ -572,7 +572,7 @@ const TerminalTabBar = ({
             <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-hidden">
               {terminals.length === 0 && (
                 <div className="flex shrink-0 items-center gap-1.5">
-                  <TerminalIcon className="text-subtle-foreground" />
+                  <TerminalWindowIcon className="text-subtle-foreground" />
                   <span className="font-sans ui-text-sm text-subtle-foreground">No terminals</span>
                 </div>
               )}

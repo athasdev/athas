@@ -1,12 +1,12 @@
 import {
-  ArrowCounterClockwiseIcon as ArrowCounterClockwise,
-  ArrowLeftIcon as ArrowLeft,
-  ArrowsLeftRightIcon as ArrowsLeftRight,
-  ClockCounterClockwiseIcon as ClockCounterClockwise,
-  EyeIcon as Eye,
-  PencilSimpleIcon as PencilSimple,
-  PlusIcon as Plus,
-  TrashIcon as Trash,
+  ArrowCounterClockwiseIcon,
+  ArrowLeftIcon,
+  ArrowsLeftRightIcon,
+  EyeIcon,
+  HistoryIcon,
+  PenIcon,
+  PlusIcon,
+  TrashIcon,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -381,9 +381,9 @@ export function LocalHistoryCommandContent({
     <>
       <CommandHeader onClose={onClose}>
         <CommandHeaderAction aria-label="Back" onClick={onBack}>
-          <ArrowLeft />
+          <ArrowLeftIcon />
         </CommandHeaderAction>
-        <ClockCounterClockwise className="size-4 shrink-0 text-subtle-foreground" />
+        <HistoryIcon className="size-4 shrink-0 text-subtle-foreground" />
         <div className="min-w-0 flex-1">
           <div className="truncate font-sans ui-text-base text-foreground">
             Local History: {fileName}
@@ -395,7 +395,7 @@ export function LocalHistoryCommandContent({
           onClick={() => void createSnapshot()}
           tooltip="Create entry"
         >
-          <Plus />
+          <PlusIcon />
         </CommandHeaderAction>
       </CommandHeader>
 
@@ -430,7 +430,7 @@ export function LocalHistoryCommandContent({
                   : "bg-transparent text-foreground",
               )}
             >
-              <ClockCounterClockwise className="size-4 shrink-0 text-subtle-foreground" />
+              <HistoryIcon className="size-4 shrink-0 text-subtle-foreground" />
               <div className="min-w-0 flex-1">
                 {renamingEntryId === entry.id ? (
                   <InlineRenameInput
@@ -469,7 +469,7 @@ export function LocalHistoryCommandContent({
                   }}
                   iconOnly
                 >
-                  <Eye />
+                  <EyeIcon />
                 </Button>
                 <Button
                   type="button"
@@ -481,7 +481,7 @@ export function LocalHistoryCommandContent({
                   }}
                   iconOnly
                 >
-                  <ArrowsLeftRight />
+                  <ArrowsLeftRightIcon />
                 </Button>
                 <Button
                   type="button"
@@ -493,7 +493,7 @@ export function LocalHistoryCommandContent({
                   }}
                   iconOnly
                 >
-                  <ClockCounterClockwise />
+                  <HistoryIcon />
                 </Button>
                 <Button
                   type="button"
@@ -505,7 +505,7 @@ export function LocalHistoryCommandContent({
                   }}
                   iconOnly
                 >
-                  <ArrowCounterClockwise />
+                  <ArrowCounterClockwiseIcon />
                 </Button>
                 <Button
                   type="button"
@@ -518,7 +518,7 @@ export function LocalHistoryCommandContent({
                   }}
                   iconOnly
                 >
-                  <PencilSimple />
+                  <PenIcon />
                 </Button>
                 <Button
                   type="button"
@@ -530,7 +530,7 @@ export function LocalHistoryCommandContent({
                   }}
                   iconOnly
                 >
-                  <Trash />
+                  <TrashIcon />
                 </Button>
               </div>
             </div>

@@ -1,11 +1,11 @@
 import {
-  WarningCircleIcon as AlertCircle,
-  WarningIcon as AlertTriangle,
-  CheckIcon as Check,
-  CopyIcon as Copy,
-  FunnelIcon as Filter,
-  InfoIcon as Info,
-  MagicWandIcon as WandSparkles,
+  CheckIcon,
+  CopyIcon,
+  FilterIcon,
+  InfoIcon,
+  MagicWandIcon,
+  WarningCircleIcon,
+  WarningIcon,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
@@ -107,13 +107,13 @@ const SEVERITY_LABEL: Record<Diagnostic["severity"], string> = {
 const getSeverityIcon = (severity: Diagnostic["severity"], size = 11) => {
   switch (severity) {
     case "error":
-      return <AlertCircle size={size} className="text-destructive" />;
+      return <WarningCircleIcon size={size} className="text-destructive" />;
     case "warning":
-      return <AlertTriangle size={size} className="text-warning" />;
+      return <WarningIcon size={size} className="text-warning" />;
     case "info":
-      return <Info size={size} className="text-info" />;
+      return <InfoIcon size={size} className="text-info" />;
     default:
-      return <Info size={size} className="text-subtle-foreground" />;
+      return <InfoIcon size={size} className="text-subtle-foreground" />;
   }
 };
 
@@ -581,7 +581,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       items.push({
         id: "loading-actions",
         label: "Loading quick fixes...",
-        icon: <WandSparkles />,
+        icon: <MagicWandIcon />,
         onClick: () => {},
         disabled: true,
       });
@@ -593,7 +593,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
         items.push({
           id: `quick-fix-${action.id}`,
           label: action.title,
-          icon: <WandSparkles />,
+          icon: <MagicWandIcon />,
           onClick: () => {
             void applyCodeAction(diagnostic, action);
           },
@@ -604,7 +604,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       items.push({
         id: "no-actions",
         label: "No quick fixes available",
-        icon: <WandSparkles />,
+        icon: <MagicWandIcon />,
         onClick: () => {},
         disabled: true,
       });
@@ -621,7 +621,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       {
         id: "copy-message",
         label: "Copy Message",
-        icon: <Copy />,
+        icon: <CopyIcon />,
         onClick: () => {
           void copyDiagnosticMessage(diagnostic);
         },
@@ -629,7 +629,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       {
         id: "copy-location",
         label: "Copy Location",
-        icon: <Copy />,
+        icon: <CopyIcon />,
         onClick: () => {
           void copyDiagnosticLocation(diagnostic);
         },
@@ -637,7 +637,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       {
         id: "copy-details",
         label: "Copy Full Details",
-        icon: <Copy />,
+        icon: <CopyIcon />,
         onClick: () => {
           void copyDiagnosticDetails(diagnostic);
         },
@@ -650,14 +650,14 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
         items.push({
           id: "clear-source-filter",
           label: "Clear Source Filter",
-          icon: <Filter />,
+          icon: <FilterIcon />,
           onClick: () => setSourceFilter(null),
         });
       } else {
         items.push({
           id: "filter-by-source",
           label: `Filter by Source: ${source}`,
-          icon: <Filter />,
+          icon: <FilterIcon />,
           onClick: () => setSourceFilter(source),
         });
       }
@@ -731,7 +731,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       ...GROUP_OPTIONS.map((option) => ({
         id: `group-${option.value}`,
         label: `Group by: ${option.label}`,
-        icon: preferences.groupBy === option.value ? <Check /> : undefined,
+        icon: preferences.groupBy === option.value ? <CheckIcon /> : undefined,
         onClick: () => {
           setPreferences((prev) => ({
             ...prev,
@@ -747,7 +747,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       ...SORT_OPTIONS.map((option) => ({
         id: `sort-${option.value}`,
         label: `Sort by: ${option.label}`,
-        icon: preferences.sortBy === option.value ? <Check /> : undefined,
+        icon: preferences.sortBy === option.value ? <CheckIcon /> : undefined,
         onClick: () => {
           setPreferences((prev) => ({
             ...prev,
@@ -763,7 +763,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       items.push({
         id: `severity-${severity}`,
         label: `${SEVERITY_LABEL[severity]} (${visibleBySeverity[severity]}/${totalBySeverity[severity]})`,
-        icon: severityFilter[severity] ? <Check /> : undefined,
+        icon: severityFilter[severity] ? <CheckIcon /> : undefined,
         onClick: () => toggleSeverity(severity),
       });
     }
@@ -772,7 +772,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       items.push({
         id: "only-current-file",
         label: "Only Current File",
-        icon: preferences.onlyCurrentFile ? <Check /> : undefined,
+        icon: preferences.onlyCurrentFile ? <CheckIcon /> : undefined,
         onClick: () => togglePreference("onlyCurrentFile"),
       });
     }
@@ -921,7 +921,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
             <Empty>
               <EmptyHeader>
                 <EmptyMedia variant="icon">
-                  <Check />
+                  <CheckIcon />
                 </EmptyMedia>
                 <EmptyTitle>No problems detected</EmptyTitle>
                 <EmptyDescription>

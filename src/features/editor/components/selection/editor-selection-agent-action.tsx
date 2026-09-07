@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { Button } from "@/ui/button";
-import { SparkleIcon as Sparkles } from "@/ui/icons";
+import { SparkleIcon } from "@/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 
 interface EditorSelectionAgentActionProps {
@@ -53,7 +53,7 @@ export function EditorSelectionAgentAction({
           onMouseDown={(event) => event.preventDefault()}
           onClick={onSelect}
         >
-          <Sparkles />
+          <SparkleIcon />
           Edit with agent
         </Button>
       </PopoverContent>

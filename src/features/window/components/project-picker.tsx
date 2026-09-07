@@ -3,15 +3,15 @@ import { ProjectCustomIcon } from "./project-custom-icon";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  ArrowLeftIcon as ArrowLeft,
-  FolderIcon as Folder,
-  FolderOpenIcon as FolderOpen,
-  PushPinIcon as PushPin,
-  HardDrivesIcon as Server,
-  MagnifyingGlassIcon as Search,
-  PlusIcon as Plus,
-  WarningCircleIcon as WarningCircle,
-  XIcon as X,
+  ArrowLeftIcon,
+  FolderIcon,
+  FolderOpenIcon,
+  HardDrivesIcon,
+  PinIcon,
+  PlusIcon,
+  SearchIcon,
+  WarningCircleIcon,
+  XIcon,
 } from "@/ui/icons";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import type { ProjectPickerInitialStep } from "@/features/window/stores/ui-state/modal-slice";
@@ -449,7 +449,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
           <NewProjectContent onBack={handleBackToPicker} onClose={onClose} />
         ) : commandStep === "picker" ? (
           <CommandHeader onClose={onClose}>
-            <Search className="size-4 shrink-0 text-subtle-foreground" />
+            <SearchIcon className="size-4 shrink-0 text-subtle-foreground" />
             <CommandInput
               ref={inputRef}
               value={query}
@@ -461,10 +461,10 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
         ) : (
           <CommandHeader onClose={onClose}>
             <CommandHeaderAction aria-label="Back to projects" onClick={handleBackToPicker}>
-              <ArrowLeft />
+              <ArrowLeftIcon />
             </CommandHeaderAction>
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <Server className="shrink-0 text-subtle-foreground" />
+              <HardDrivesIcon className="shrink-0 text-subtle-foreground" />
               <span className="min-w-0 truncate font-sans ui-text-base font-medium text-foreground">
                 Add Remote Connection
               </span>
@@ -492,16 +492,16 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
                         iconPath ? (
                           <ProjectCustomIcon value={iconPath} />
                         ) : folder.missing ? (
-                          <WarningCircle className="text-warning" />
+                          <WarningCircleIcon className="text-warning" />
                         ) : (
-                          <Folder className="text-subtle-foreground" />
+                          <FolderIcon className="text-subtle-foreground" />
                         )
                       }
                       title={folder.name}
                       description={folder.path}
                       accessory={
                         <>
-                          {folder.pinned ? <PushPin className="fill-current text-primary" /> : null}
+                          {folder.pinned ? <PinIcon className="fill-current text-primary" /> : null}
                           {folder.missing ? (
                             <CommandItemBadge variant="warning">Missing</CommandItemBadge>
                           ) : null}
@@ -517,7 +517,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
                           tooltip="Remove from recent projects"
                           aria-label={`Remove ${folder.name} from recent projects`}
                         >
-                          <X />
+                          <XIcon />
                         </CommandItemAction>
                       }
                     />
@@ -541,7 +541,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
                         connectingMap[connection.id] ? "cursor-not-allowed opacity-70" : undefined
                       }
                       disabled={!!connectingMap[connection.id]}
-                      icon={<Server className="text-subtle-foreground" />}
+                      icon={<HardDrivesIcon className="text-subtle-foreground" />}
                       title={connection.name}
                       description={
                         <>
@@ -585,7 +585,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
                       isSelected={selectedIndex === entryIndex}
                       onMouseEnter={() => setSelectedIndex(entryIndex)}
                       onClick={() => handleOpenWslDistribution(distribution)}
-                      icon={<Server className="text-subtle-foreground" />}
+                      icon={<HardDrivesIcon className="text-subtle-foreground" />}
                       title={distribution.name}
                       description={
                         <>
@@ -639,20 +639,20 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
         {commandStep === "newProject" ? null : commandStep === "picker" ? (
           <CommandFooter>
             <CommandFooterAction onClick={() => void handleOpenFolderClick()}>
-              <FolderOpen />
-              Open Folder
+              <FolderOpenIcon />
+              Open FolderIcon
             </CommandFooterAction>
             <CommandFooterAction onClick={handleNewProjectClick}>
-              <Plus />
+              <PlusIcon />
               New Project
             </CommandFooterAction>
             <CommandFooterAction onClick={handleAddRemoteConnectionClick}>
-              <Plus />
+              <PlusIcon />
               Add Remote
             </CommandFooterAction>
             {missingRecentFolderCount > 0 ? (
               <CommandFooterAction onClick={handleRemoveMissingRecentFolders}>
-                <X />
+                <XIcon />
                 Remove Missing
               </CommandFooterAction>
             ) : null}

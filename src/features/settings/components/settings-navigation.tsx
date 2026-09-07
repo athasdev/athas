@@ -33,7 +33,7 @@ export function SettingsNavigation({
         {
           id: item.id,
           label: item.label,
-          icon: <Icon weight="duotone" />,
+          icon: <Icon />,
           tabId: `settings-tab-${item.id}`,
           panelId: `settings-panel-${item.id}`,
         },

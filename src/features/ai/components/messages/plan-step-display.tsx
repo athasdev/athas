@@ -1,9 +1,4 @@
-import {
-  CheckCircleIcon as CheckCircle2,
-  CaretRightIcon as ChevronRight,
-  CircleIcon as Circle,
-  PlayIcon as Play,
-} from "@/ui/icons";
+import { CheckCircleIcon, ChevronRightIcon, CircleDottedIcon, PlayIcon } from "@/ui/icons";
 import { memo, useState } from "react";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { Button } from "@/ui/button";
@@ -22,7 +17,8 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
 }: PlanStepDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const StatusIcon = status === "completed" ? CheckCircle2 : status === "current" ? Play : Circle;
+  const StatusIcon =
+    status === "completed" ? CheckCircleIcon : status === "current" ? PlayIcon : CircleDottedIcon;
 
   const statusColor =
     status === "completed"
@@ -47,7 +43,7 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
           {step.index + 1}. {step.title}
         </span>
         {step.description && (
-          <ChevronRight
+          <ChevronRightIcon
             className={cn(
               "shrink-0 text-subtle-foreground transition-transform",
               isExpanded && "rotate-90",

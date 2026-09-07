@@ -1,12 +1,12 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  CaretDownIcon as CaretDown,
-  ClockCounterClockwiseIcon as ClockCounterClockwise,
-  DownloadIcon as Download,
-  FolderSimpleStarIcon as FolderSimpleStar,
-  GitBranchIcon as GitBranch,
-  ArrowClockwiseIcon as RefreshCw,
-  UploadIcon as Upload,
+  ArrowClockwiseIcon,
+  ChevronDownIcon,
+  DownloadIcon,
+  FolderStarIcon,
+  GitBranchIcon,
+  HistoryIcon,
+  UploadIcon,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -435,7 +435,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       {
         id: "push",
         label: aheadCount > 0 ? `Push ${aheadCount} commit${aheadCount !== 1 ? "s" : ""}` : "Push",
-        icon: <Upload />,
+        icon: <UploadIcon />,
         disabled: isRemoteActionLoading,
         onClick: () => void handleRemoteAction("push"),
       },
@@ -443,14 +443,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         id: "pull",
         label:
           behindCount > 0 ? `Pull ${behindCount} commit${behindCount !== 1 ? "s" : ""}` : "Pull",
-        icon: <Download weight="fill" />,
+        icon: <DownloadIcon optical="md" />,
         disabled: isRemoteActionLoading,
         onClick: () => void handleRemoteAction("pull"),
       },
       {
         id: "fetch",
         label: "Fetch",
-        icon: <RefreshCw />,
+        icon: <ArrowClockwiseIcon />,
         disabled: isRemoteActionLoading,
         onClick: () => void handleRemoteAction("fetch"),
       },
@@ -725,13 +725,13 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             message={repoSelectionError}
             action={{
               label: isSelectingRepo ? "Selecting..." : "Browse",
-              icon: <FolderSimpleStar weight="duotone" />,
+              icon: <FolderStarIcon />,
               disabled: isSelectingRepo,
               onClick: () => void handleSelectRepository(),
             }}
             secondaryAction={{
               label: isInitializingRepo ? "Initializing..." : "Initialize",
-              icon: <GitBranch weight="duotone" />,
+              icon: <GitBranchIcon />,
               variant: "ghost",
               disabled: !repoPath || isInitializingRepo,
               tooltip: repoPath
@@ -776,13 +776,13 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             message={repoSelectionError}
             action={{
               label: isSelectingRepo ? "Selecting..." : "Browse",
-              icon: <FolderSimpleStar weight="duotone" />,
+              icon: <FolderStarIcon />,
               disabled: isSelectingRepo,
               onClick: () => void handleSelectRepository(),
             }}
             secondaryAction={{
               label: isInitializingRepo ? "Initializing..." : "Initialize",
-              icon: <GitBranch weight="duotone" />,
+              icon: <GitBranchIcon />,
               variant: "ghost",
               disabled: !repoPath || isInitializingRepo,
               tooltip: repoPath
@@ -852,7 +852,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 aria-haspopup="menu"
                 aria-expanded={isSyncMenuOpen}
               >
-                <CaretDown className="size-3" />
+                <ChevronDownIcon className="size-3" />
               </Button>
             </ButtonGroup>
             <Dropdown
@@ -995,7 +995,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                   <CommandItemRow
                     key={commit.hash}
                     type="button"
-                    icon={<ClockCounterClockwise />}
+                    icon={<HistoryIcon />}
                     title={commit.message}
                     accessory={<CommandItemBadge>{shortHash}</CommandItemBadge>}
                     onClick={() => {
@@ -1033,7 +1033,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 <CommandItemRow
                   key={branch}
                   type="button"
-                  icon={<GitBranch />}
+                  icon={<GitBranchIcon />}
                   title={branch}
                   description={`compare with ${gitStatus.branch}`}
                   onClick={() => void handleViewBranchDiff(branch)}

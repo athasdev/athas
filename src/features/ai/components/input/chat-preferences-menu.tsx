@@ -39,14 +39,13 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import {
-  BookOpenIcon as BookOpen,
-  BrainIcon as Brain,
-  ClockCounterClockwiseIcon as History,
-  FadersHorizontalIcon as Preferences,
-  ArrowClockwiseIcon as Retry,
-  SlidersHorizontalIcon as Sliders,
-  SparkleIcon as Sparkles,
-  WarningIcon as Warning,
+  ArrowClockwiseIcon,
+  BookOpenIcon,
+  BrainIcon,
+  HistoryIcon,
+  SlidersIcon,
+  SparkleIcon,
+  WarningIcon,
 } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -221,7 +220,7 @@ function ProviderPreferencesSubmenu({
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
-        <Sparkles />
+        <SparkleIcon />
         <PreferenceLabel>Provider</PreferenceLabel>
         <CurrentValue>{currentName}</CurrentValue>
       </DropdownMenuSubTrigger>
@@ -235,9 +234,9 @@ function ProviderPreferencesSubmenu({
         ) : null}
         {loadError ? (
           <DropdownMenuItem closeOnClick={false} title={loadError} onClick={() => void refresh()}>
-            <Warning />
+            <WarningIcon />
             <span className="min-w-0 flex-1 truncate">Some agents could not be checked</span>
-            <Retry />
+            <ArrowClockwiseIcon />
             Retry
           </DropdownMenuItem>
         ) : null}
@@ -361,7 +360,7 @@ function ModePreferencesSubmenu({ currentAgentId }: { currentAgentId: AgentType 
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
-        <Sliders />
+        <SlidersIcon />
         <PreferenceLabel>Mode</PreferenceLabel>
         <CurrentValue>{selectedModeName}</CurrentValue>
       </DropdownMenuSubTrigger>
@@ -482,13 +481,13 @@ function SkillsMenu({
       <DropdownMenuTrigger
         render={<Button variant="ghost" iconOnly tooltip="Skills" aria-label="Skills" />}
       >
-        <BookOpen />
+        <BookOpenIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="max-h-80 min-w-64 overflow-y-auto">
         <MenuSearchInput value={query} onChange={setQuery} placeholder="Search skills..." />
         {filteredSkills.map((skill) => (
           <DropdownMenuItem key={skill.id} onClick={() => onSelectSkill(skill)}>
-            <BookOpen />
+            <BookOpenIcon />
             <span className="min-w-0 flex-1 truncate">{skill.title}</span>
           </DropdownMenuItem>
         ))}
@@ -514,11 +513,11 @@ function CodexCatalogError({
   return (
     <>
       <DropdownMenuItem disabled title={message}>
-        <Warning className="text-warning" />
+        <WarningIcon className="text-warning" />
         <span className="min-w-0 flex-1 truncate">{label}</span>
       </DropdownMenuItem>
       <DropdownMenuItem closeOnClick={false} onClick={onRetry}>
-        <Retry />
+        <ArrowClockwiseIcon />
         Retry
       </DropdownMenuItem>
     </>
@@ -557,7 +556,7 @@ function CodexSessionsMenu({
       <DropdownMenuTrigger
         render={<Button variant="ghost" iconOnly tooltip="Sessions" aria-label="Sessions" />}
       >
-        <History />
+        <HistoryIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="max-h-80 w-72 overflow-y-auto">
         <MenuSearchInput value={query} onChange={setQuery} placeholder="Search sessions..." />
@@ -587,7 +586,7 @@ function CodexSessionsMenu({
                 onClick={() => openCodexThread(thread)}
                 title={thread.preview || title}
               >
-                <History />
+                <HistoryIcon />
                 <span className="min-w-0 flex-1 truncate">{title}</span>
                 {updatedAt ? (
                   <span className="shrink-0 text-subtle-foreground">
@@ -614,7 +613,7 @@ function CodexSessionsMenu({
             {state.status === "loading-more" ? (
               <Spinner label="Loading more sessions" compact />
             ) : (
-              <History />
+              <HistoryIcon />
             )}
             {state.status === "loading-more" ? "Loading more…" : "Load more sessions"}
           </DropdownMenuItem>
@@ -625,7 +624,7 @@ function CodexSessionsMenu({
             disabled={state.status === "loading" || state.status === "loading-more"}
             onClick={onRetry}
           >
-            <Retry />
+            <ArrowClockwiseIcon />
             Refresh sessions
           </DropdownMenuItem>
         ) : null}
@@ -665,7 +664,7 @@ function CodexSkillsMenu({
       <DropdownMenuTrigger
         render={<Button variant="ghost" iconOnly tooltip="Skills" aria-label="Skills" />}
       >
-        <BookOpen />
+        <BookOpenIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="max-h-80 w-72 overflow-y-auto">
         <MenuSearchInput value={query} onChange={setQuery} placeholder="Search Codex skills..." />
@@ -692,7 +691,7 @@ function CodexSkillsMenu({
               title={skill.description}
               disabled={!skill.enabled}
             >
-              <BookOpen />
+              <BookOpenIcon />
               <span className="min-w-0 flex-1 truncate">{skill.name}</span>
               {skill.scope ? (
                 <span className="shrink-0 text-subtle-foreground">{skill.scope}</span>
@@ -702,7 +701,7 @@ function CodexSkillsMenu({
         )}
         {state.skills.length > 0 && state.skillErrors.length > 0 ? (
           <DropdownMenuItem disabled title={state.skillErrors.join("\n")}>
-            <Warning className="text-warning" />
+            <WarningIcon className="text-warning" />
             Some skills could not be loaded
           </DropdownMenuItem>
         ) : null}
@@ -719,7 +718,7 @@ function CodexSkillsMenu({
             disabled={state.status === "loading"}
             onClick={onRetry}
           >
-            <Retry />
+            <ArrowClockwiseIcon />
             Refresh skills
           </DropdownMenuItem>
         ) : null}
@@ -744,7 +743,7 @@ function AcpConfigPreferences({
           onCheckedChange={(checked) => onChange(option.id, checked)}
           title={option.description}
         >
-          <Brain />
+          <BrainIcon />
           <PreferenceLabel>{option.name}</PreferenceLabel>
         </DropdownMenuCheckboxItem>
       );
@@ -758,7 +757,7 @@ function AcpConfigPreferences({
     return (
       <DropdownMenuSub key={option.id}>
         <DropdownMenuSubTrigger>
-          <Brain />
+          <BrainIcon />
           <PreferenceLabel>{option.name}</PreferenceLabel>
           <CurrentValue>{currentName}</CurrentValue>
         </DropdownMenuSubTrigger>
@@ -982,7 +981,7 @@ export function ChatPreferencesMenu({
             />
           }
         >
-          <Preferences />
+          <SlidersIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-64">
           <DropdownMenuGroup>
@@ -1015,7 +1014,7 @@ export function ChatPreferencesMenu({
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => useUIState.getState().openSettingsDialog("ai")}>
-            <Preferences />
+            <SlidersIcon />
             AI settings…
           </DropdownMenuItem>
         </DropdownMenuContent>

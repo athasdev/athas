@@ -22,7 +22,7 @@ describe("follow-up actions", () => {
 
 [FOLLOW_UP_ACTIONS]
 [
-  {"label":"Deploy","prompt":"Deploy this change and verify it.","icon":"RocketLaunch"},
+  {"label":"Deploy","prompt":"Deploy this change and verify it.","icon":"Rocket"},
   {"label":"Review","prompt":"Review the diff.","icon":"ShieldCheck"}
 ]
 [/FOLLOW_UP_ACTIONS]`);
@@ -33,7 +33,7 @@ describe("follow-up actions", () => {
         id: "deploy-0",
         label: "Deploy",
         prompt: "Deploy this change and verify it.",
-        icon: "RocketLaunch",
+        icon: "Rocket",
       },
       {
         id: "review-1",
@@ -113,7 +113,7 @@ describe("follow-up actions", () => {
               id: "deploy-0",
               label: "Deploy",
               prompt: "Deploy this change.",
-              icon: "RocketLaunch",
+              icon: "Rocket",
             },
           ],
         }),

@@ -23,7 +23,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/ui/field";
-import { ChatCircleTextIcon } from "@/ui/icons";
+import { ChatBubbleTextIcon } from "@/ui/icons";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
 
@@ -106,7 +106,7 @@ export function ProductFeedbackDialog() {
   return (
     <Dialog
       title="Send Product Feedback"
-      icon={ChatCircleTextIcon}
+      icon={ChatBubbleTextIcon}
       onClose={close}
       size="lg"
       footer={

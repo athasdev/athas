@@ -1,10 +1,10 @@
-import type React from "react";
+import type { Icon } from "@/ui/icons";
 
 export interface CoreFeature {
   id: string;
   name: string;
   description: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: Icon;
   enabled: boolean;
   status?: "experimental";
 }

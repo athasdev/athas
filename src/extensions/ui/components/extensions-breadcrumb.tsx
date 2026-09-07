@@ -1,4 +1,4 @@
-import { ExtensionsIcon as Extensions } from "@/ui/icons";
+import { ExtensionsIcon } from "@/ui/icons";
 import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
 import { ExtensionCategoryIcon, ExtensionInlineIcon } from "./extension-catalog-icon";
 import {
@@ -20,7 +20,7 @@ export function ExtensionsBreadcrumb({
 }) {
   const categoryLabel = EXTENSION_CATEGORIES.find((item) => item.id === category)?.label;
   const segments = ["Extensions"];
-  const icons = [<Extensions key="extensions" className="size-4" weight="duotone" />];
+  const icons = [<ExtensionsIcon key="extensions" className="size-4" />];
 
   if (category && categoryLabel) {
     segments.push(categoryLabel);

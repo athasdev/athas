@@ -1,4 +1,4 @@
-import { ArrowBendDownLeftIcon as CornerDownLeft, XIcon as X } from "@/ui/icons";
+import { ArrowCornerDownLeftIcon, XIcon } from "@/ui/icons";
 import { forwardRef } from "react";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
@@ -116,7 +116,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               tooltip="Apply inline edit"
               shortcut="enter"
             >
-              <CornerDownLeft />
+              <ArrowCornerDownLeftIcon />
             </Button>
             <Button
               type="button"
@@ -127,7 +127,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               tooltip="Close inline edit"
               shortcut="escape"
             >
-              <X />
+              <XIcon />
             </Button>
           </div>
           {state.inlineEditError && (

@@ -1,10 +1,10 @@
 import {
-  ArrowClockwiseIcon as RefreshCw,
-  ArrowCounterClockwiseIcon as Reset,
-  CheckIcon as Check,
-  DownloadSimpleIcon as Download,
-  TrashIcon as Trash,
-  XCircleIcon as XCircle,
+  ArrowClockwiseIcon,
+  ArrowCounterClockwiseIcon,
+  CheckIcon,
+  DownloadIcon,
+  TrashIcon,
+  XCircleIcon,
 } from "@/ui/icons";
 import type { MenuItem } from "@/ui/dropdown";
 import { hasSkillLocalOverride } from "@/features/ai/lib/skill-library";
@@ -44,7 +44,7 @@ export function buildExtensionContextMenuItems({
     items.push({
       id: "built-in",
       label: "Built-in",
-      icon: <Check className="size-3.5 text-primary" />,
+      icon: <CheckIcon className="size-3.5 text-primary" />,
       disabled: true,
       onClick: () => {},
     });
@@ -57,7 +57,7 @@ export function buildExtensionContextMenuItems({
         items.push({
           id: "activate",
           label: "Activate",
-          icon: <Check className="size-3.5 text-primary" weight="bold" />,
+          icon: <CheckIcon className="size-3.5 text-primary" optical="md" />,
           disabled: isInstalling,
           onClick: () => {
             void actions.activate(extension);
@@ -67,7 +67,7 @@ export function buildExtensionContextMenuItems({
         items.push({
           id: "deactivate",
           label: "Deactivate",
-          icon: <XCircle className="size-3.5" weight="duotone" />,
+          icon: <XCircleIcon className="size-3.5" />,
           disabled: isInstalling,
           onClick: () => {
             void actions.deactivate(extension);
@@ -93,9 +93,7 @@ export function buildExtensionContextMenuItems({
           items.push({
             id: `use-${option.id}`,
             label: isCurrent ? `Current: ${option.name}` : `Use ${option.name}`,
-            icon: (
-              <Check className="size-3.5 text-primary" weight={isCurrent ? "bold" : "regular"} />
-            ),
+            icon: <CheckIcon className="size-3.5 text-primary" optical={isCurrent ? "md" : "sm"} />,
             disabled: isCurrent || isInstalling,
             onClick: () => {
               void actions.applyAppearance(extension, option.id);
@@ -106,7 +104,7 @@ export function buildExtensionContextMenuItems({
         items.push({
           id: extension.isActive ? "active" : "use",
           label: extension.isActive ? "Current" : "Use",
-          icon: <Check className="size-3.5 text-primary" weight="bold" />,
+          icon: <CheckIcon className="size-3.5 text-primary" optical="md" />,
           disabled: extension.isActive || isInstalling,
           onClick: () => {
             void actions.applyAppearance(extension);
@@ -118,9 +116,9 @@ export function buildExtensionContextMenuItems({
         id: extension.isEnabled ? "deactivate" : "activate",
         label: extension.isEnabled ? "Deactivate" : "Activate",
         icon: extension.isEnabled ? (
-          <XCircle className="size-3.5" weight="duotone" />
+          <XCircleIcon className="size-3.5" />
         ) : (
-          <Check className="size-3.5 text-primary" weight="bold" />
+          <CheckIcon className="size-3.5 text-primary" optical="md" />
         ),
         disabled: isInstalling,
         onClick: () => {
@@ -134,7 +132,7 @@ export function buildExtensionContextMenuItems({
     items.push({
       id: "update",
       label: hasRuntimeIssue ? "Reinstall" : "Update",
-      icon: <RefreshCw className="size-3.5" weight="duotone" />,
+      icon: <ArrowClockwiseIcon className="size-3.5" />,
       disabled: isInstalling,
       onClick: () => {
         void actions.update(extension);
@@ -146,7 +144,7 @@ export function buildExtensionContextMenuItems({
     items.push({
       id: "reset",
       label: "Reset to Marketplace Version",
-      icon: <Reset className="size-3.5" weight="duotone" />,
+      icon: <ArrowCounterClockwiseIcon className="size-3.5" />,
       disabled: isInstalling,
       onClick: () => {
         void actions.resetSkillOverride(extension);
@@ -162,7 +160,7 @@ export function buildExtensionContextMenuItems({
     items.push({
       id: "install",
       label: primaryActionLabel,
-      icon: <Download className="size-3.5" weight="fill" />,
+      icon: <DownloadIcon className="size-3.5" optical="md" />,
       disabled: isInstalling || isUnavailableAgent,
       onClick: () => {
         void actions.toggle(extension);
@@ -172,7 +170,7 @@ export function buildExtensionContextMenuItems({
     items.push({
       id: "toggle",
       label: primaryActionLabel,
-      icon: <Trash className="size-3.5" weight="duotone" />,
+      icon: <TrashIcon className="size-3.5" />,
       disabled: isInstalling,
       tone: "destructive",
       onClick: () => {
@@ -183,7 +181,7 @@ export function buildExtensionContextMenuItems({
     items.push({
       id: "uninstall",
       label: "Uninstall",
-      icon: <Trash className="size-3.5" weight="duotone" />,
+      icon: <TrashIcon className="size-3.5" />,
       disabled: isInstalling,
       tone: "destructive",
       onClick: () => {

@@ -1,11 +1,6 @@
 import { homeDir } from "@tauri-apps/api/path";
 import { readDir } from "@tauri-apps/plugin-fs";
-import {
-  ArrowUpIcon as ArrowUp,
-  FolderIcon as Folder,
-  HouseIcon as House,
-  WarningIcon as Warning,
-} from "@/ui/icons";
+import { ArrowUpIcon, FolderIcon, HouseIcon, WarningIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLinuxFolderPickerStore } from "@/features/file-system/stores/linux-folder-picker.store";
 import { Button } from "@/ui/button";
@@ -152,7 +147,7 @@ export default function LinuxFolderPickerDialog() {
             Cancel
           </Button>
           <Button type="button" variant="accent" onClick={handleOpen}>
-            Open Folder
+            Open FolderIcon
           </Button>
         </>
       }
@@ -170,7 +165,7 @@ export default function LinuxFolderPickerDialog() {
             aria-label="Home"
             iconOnly
           >
-            <House />
+            <HouseIcon />
           </Button>
           <Button
             type="button"
@@ -181,7 +176,7 @@ export default function LinuxFolderPickerDialog() {
             aria-label="Parent folder"
             iconOnly
           >
-            <ArrowUp />
+            <ArrowUpIcon />
           </Button>
           <form
             className="flex min-w-0 flex-1 items-center gap-1.5"
@@ -216,7 +211,7 @@ export default function LinuxFolderPickerDialog() {
           <Empty className="rounded-none px-6" tone="warning" role="alert">
             <EmptyHeader>
               <EmptyMedia>
-                <Warning size={24} />
+                <WarningIcon size={24} />
               </EmptyMedia>
               <EmptyTitle>{error}</EmptyTitle>
               <EmptyDescription className="font-mono">{currentPath}</EmptyDescription>
@@ -243,7 +238,7 @@ export default function LinuxFolderPickerDialog() {
                   "hover:bg-accent focus-visible:bg-accent",
                 )}
               >
-                <Folder className="shrink-0 text-subtle-foreground" />
+                <FolderIcon className="shrink-0 text-subtle-foreground" />
                 <span className="truncate text-foreground">{entry.name}</span>
               </Button>
             ))}

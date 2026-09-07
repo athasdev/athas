@@ -15,7 +15,8 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import Input from "@/ui/input";
-import { GithubLogoIcon, SparkleIcon } from "@/ui/icons";
+import { SparkleIcon } from "@/ui/icons";
+import { GithubMark } from "@/ui/brand-marks";
 import { ScrollArea } from "@/ui/scroll-area";
 import Select from "@/ui/select";
 import Textarea from "@/ui/textarea";
@@ -187,7 +188,7 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
           </Badge>
           {repository ? (
             <span className="flex min-w-0 items-center gap-1.5 font-sans ui-text-sm text-subtle-foreground">
-              <GithubLogoIcon className="shrink-0" />
+              <GithubMark className="shrink-0" />
               <span className="truncate">
                 {repository.owner}/{repository.repo}
               </span>

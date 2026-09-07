@@ -7,14 +7,14 @@ import { createNewDirectory } from "@/features/file-system/controllers/file-oper
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
-  ArrowLeftIcon as ArrowLeft,
-  CodeIcon as Code,
-  FolderOpenIcon as FolderOpen,
-  FolderPlusIcon as FolderPlus,
-  GitBranchIcon as GitBranch,
-  PackageIcon as Package,
-  RocketLaunchIcon as RocketLaunch,
+  ArrowLeftIcon,
+  CodeIcon,
+  FolderOpenIcon,
+  FolderPlusIcon,
+  GitBranchIcon,
   type Icon,
+  PackageIcon,
+  RocketIcon,
 } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/ui/card";
@@ -63,7 +63,7 @@ const projectSourceOptions: ProjectSourceOption[] = [
     label: "Empty Project",
     description: "Create a clean folder and start from scratch.",
     badge: "Built-in",
-    icon: FolderPlus,
+    icon: FolderPlusIcon,
     keywords: ["blank", "folder", "local"],
   },
   {
@@ -71,7 +71,7 @@ const projectSourceOptions: ProjectSourceOption[] = [
     label: "Next.js",
     description: "App Router, TypeScript, Tailwind CSS, ESLint, and a src directory.",
     badge: "Web app",
-    icon: RocketLaunch,
+    icon: RocketIcon,
     keywords: ["react", "typescript", "tailwind", "frontend"],
   },
   {
@@ -79,7 +79,7 @@ const projectSourceOptions: ProjectSourceOption[] = [
     label: "Vite + React",
     description: "A lightweight React and TypeScript starter.",
     badge: "Web app",
-    icon: Code,
+    icon: CodeIcon,
     keywords: ["react", "typescript", "frontend"],
   },
   {
@@ -87,7 +87,7 @@ const projectSourceOptions: ProjectSourceOption[] = [
     label: "Clone Repository",
     description: "Clone an existing Git repository into a new local project.",
     badge: "Git",
-    icon: GitBranch,
+    icon: GitBranchIcon,
     keywords: ["github", "gitlab", "remote", "repository"],
   },
 ];
@@ -270,7 +270,7 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
       <>
         <CommandHeader onClose={onClose}>
           <CommandHeaderAction type="button" aria-label="Back to projects" onClick={onBack}>
-            <ArrowLeft />
+            <ArrowLeftIcon />
           </CommandHeaderAction>
           <CommandInput
             value={query}
@@ -342,7 +342,7 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
           aria-label="Back to project starters"
           onClick={returnToSource}
         >
-          <ArrowLeft />
+          <ArrowLeftIcon />
         </CommandHeaderAction>
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <SourceIcon className="shrink-0 text-primary" />
@@ -406,7 +406,7 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
                   onClick={() => void handleChooseLocation()}
                   aria-label="Choose project location"
                 >
-                  <FolderOpen />
+                  <FolderOpenIcon />
                   Browse
                 </InputGroupButton>
               </InputGroupAddon>
@@ -443,12 +443,18 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
 
       <CommandFooter>
         <Button type="button" variant="ghost" onClick={returnToSource}>
-          <ArrowLeft />
+          <ArrowLeftIcon />
           Starters
         </Button>
         <div className="ml-auto">
           <Button type="submit" form="new-project-form" variant="accent" disabled={!canCreate}>
-            {source === "clone" ? <GitBranch /> : source === "empty" ? <FolderPlus /> : <Package />}
+            {source === "clone" ? (
+              <GitBranchIcon />
+            ) : source === "empty" ? (
+              <FolderPlusIcon />
+            ) : (
+              <PackageIcon />
+            )}
             {getCreationLabel(source)}
           </Button>
         </div>

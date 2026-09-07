@@ -1,15 +1,15 @@
 import {
-  ArrowDownIcon as ArrowDown,
-  ArrowUpIcon as ArrowUp,
-  CalendarIcon as Calendar,
-  CopyIcon as Copy,
-  FileTextIcon as FileText,
-  FunnelIcon as Filter,
-  HashIcon as Hash,
-  KeyIcon as Key,
-  LinkIcon as Link,
-  PlusIcon as Plus,
-  TextTIcon as Type,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CalendarIcon,
+  CopyIcon,
+  FileTextIcon,
+  FilterIcon,
+  HashIcon,
+  KeyIcon,
+  LinkIcon,
+  PlusIcon,
+  TextIcon,
 } from "@/ui/icons";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -41,26 +41,26 @@ const MIN_COLUMN_WIDTH = 60;
 const DEFAULT_COLUMN_WIDTH = 150;
 const DATA_GRID_ROW_HEIGHT = 34;
 
-const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
-  int: { icon: Hash, color: "text-primary" },
-  num: { icon: Hash, color: "text-primary" },
-  text: { icon: Type, color: "text-subtle-foreground" },
-  varchar: { icon: Type, color: "text-subtle-foreground" },
-  char: { icon: Type, color: "text-subtle-foreground" },
-  date: { icon: Calendar, color: "text-primary" },
-  time: { icon: Calendar, color: "text-primary" },
-  blob: { icon: FileText, color: "text-subtle-foreground" },
-  binary: { icon: FileText, color: "text-subtle-foreground" },
+const COLUMN_ICONS: Record<string, { icon: typeof HashIcon; color: string }> = {
+  int: { icon: HashIcon, color: "text-primary" },
+  num: { icon: HashIcon, color: "text-primary" },
+  text: { icon: TextIcon, color: "text-subtle-foreground" },
+  varchar: { icon: TextIcon, color: "text-subtle-foreground" },
+  char: { icon: TextIcon, color: "text-subtle-foreground" },
+  date: { icon: CalendarIcon, color: "text-primary" },
+  time: { icon: CalendarIcon, color: "text-primary" },
+  blob: { icon: FileTextIcon, color: "text-subtle-foreground" },
+  binary: { icon: FileTextIcon, color: "text-subtle-foreground" },
 };
 
 function getColumnIcon(type: string, isPrimaryKey: boolean, isForeignKey: boolean) {
-  if (isPrimaryKey) return <Key className="text-subtle-foreground" />;
-  if (isForeignKey) return <Link className="text-primary" />;
+  if (isPrimaryKey) return <KeyIcon className="text-subtle-foreground" />;
+  if (isForeignKey) return <LinkIcon className="text-primary" />;
   const lowerType = type.toLowerCase();
   for (const [key, { icon: Icon, color }] of Object.entries(COLUMN_ICONS)) {
     if (lowerType.includes(key)) return <Icon className={color} />;
   }
-  return <Type className="text-subtle-foreground" />;
+  return <TextIcon className="text-subtle-foreground" />;
 }
 
 interface DataGridProps {
@@ -362,7 +362,7 @@ export default function DataGrid({
     {
       id: "copy-value",
       label: cellMenu?.copyText ? "Copy selection" : "Copy value",
-      icon: <Copy />,
+      icon: <CopyIcon />,
       onClick: copyValue,
     },
     ...(cellMenu?.copyTextWithHeaders
@@ -370,7 +370,7 @@ export default function DataGrid({
           {
             id: "copy-selection-with-headers",
             label: "Copy selection with headers",
-            icon: <Copy />,
+            icon: <CopyIcon />,
             onClick: copyValueWithHeaders,
           },
         ]
@@ -407,7 +407,7 @@ export default function DataGrid({
           disabled={!canCreateRows}
           iconOnly
         >
-          <Plus className="text-subtle-foreground hover:text-foreground" />
+          <PlusIcon className="text-subtle-foreground hover:text-foreground" />
         </Button>
       </div>
       <div
@@ -447,9 +447,9 @@ export default function DataGrid({
                           {col}
                           {sorted &&
                             (sortDirection === "asc" ? (
-                              <ArrowUp className="text-primary" />
+                              <ArrowUpIcon className="text-primary" />
                             ) : (
-                              <ArrowDown className="text-primary" />
+                              <ArrowDownIcon className="text-primary" />
                             ))}
                         </span>
                         {fk && (
@@ -474,7 +474,7 @@ export default function DataGrid({
                           aria-label={`Filter by ${col}`}
                           iconOnly
                         >
-                          <Filter className="text-subtle-foreground hover:text-foreground" />
+                          <FilterIcon className="text-subtle-foreground hover:text-foreground" />
                         </Button>
                       </div>
                       {showColumnTypes && info && (

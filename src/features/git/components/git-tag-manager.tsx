@@ -1,15 +1,15 @@
 import {
-  CaretDownIcon as CaretDown,
-  CaretRightIcon as CaretRight,
-  ClockCounterClockwiseIcon as ClockCounterClockwise,
-  CopyIcon as Copy,
-  GitBranchIcon as GitBranch,
-  GitCommitIcon as GitCommit,
-  PlusIcon as Plus,
-  TagIcon as Tag,
-  TrashIcon as Trash2,
-  UploadIcon as Upload,
-  XIcon as X,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  CopyIcon,
+  GitBranchIcon,
+  GitCommitIcon,
+  HistoryIcon,
+  PlusIcon,
+  TagIcon,
+  TrashIcon,
+  UploadIcon,
+  XIcon,
 } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Badge from "@/ui/badge";
@@ -326,20 +326,20 @@ const GitTagManager = ({ query, repoPath, onRefresh, onViewTagComparison }: GitT
                   onClick={toggleTagDetails}
                   aria-expanded={isExpanded}
                   disabled={isActionLoading}
-                  leading={<Tag />}
+                  leading={<TagIcon />}
                   description={[shortCommit, tag.date && formatShortDate(tag.date)]
                     .filter(Boolean)
                     .join(" · ")}
-                  trailing={isExpanded ? <CaretDown /> : <CaretRight />}
+                  trailing={isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
                   menuLabel={`Actions for ${tag.name}`}
                   menu={
                     <>
                       <DropdownMenuItem onClick={() => void handleCopy(tag.name, "Tag name")}>
-                        <Copy />
+                        <CopyIcon />
                         Copy tag name
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => void handleCopy(tag.commit, "Commit SHA")}>
-                        <GitCommit />
+                        <GitCommitIcon />
                         Copy commit SHA
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -355,7 +355,7 @@ const GitTagManager = ({ query, repoPath, onRefresh, onViewTagComparison }: GitT
                           resetTransientState();
                         }}
                       >
-                        <ClockCounterClockwise />
+                        <HistoryIcon />
                         Compare with previous tag
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -364,14 +364,14 @@ const GitTagManager = ({ query, repoPath, onRefresh, onViewTagComparison }: GitT
                           resetTransientState();
                         }}
                       >
-                        <GitBranch />
+                        <GitBranchIcon />
                         Compare with HEAD
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         disabled={actionLoading.has(`checkout:${tag.name}`)}
                         onClick={() => void handleCheckoutTag(tag.name)}
                       >
-                        <Tag />
+                        <TagIcon />
                         Checkout tag
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -384,7 +384,7 @@ const GitTagManager = ({ query, repoPath, onRefresh, onViewTagComparison }: GitT
                           );
                         }}
                       >
-                        <Upload />
+                        <UploadIcon />
                         {selectedRemoteName ? `Push to ${selectedRemoteName}` : "Push tag"}
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -405,7 +405,7 @@ const GitTagManager = ({ query, repoPath, onRefresh, onViewTagComparison }: GitT
                           });
                         }}
                       >
-                        <X />
+                        <XIcon />
                         {selectedRemoteName
                           ? `Delete from ${selectedRemoteName}`
                           : "Delete remote tag"}
@@ -415,7 +415,7 @@ const GitTagManager = ({ query, repoPath, onRefresh, onViewTagComparison }: GitT
                         disabled={isActionLoading}
                         onClick={() => void handleDeleteTag(tag.name)}
                       >
-                        <Trash2 />
+                        <TrashIcon />
                         Delete local tag
                       </DropdownMenuItem>
                     </>
@@ -492,7 +492,7 @@ const GitTagManager = ({ query, repoPath, onRefresh, onViewTagComparison }: GitT
               />
             ) : null}
             <Button className="min-w-0 flex-1" type="button" onClick={() => setIsCreateOpen(true)}>
-              <Plus />
+              <PlusIcon />
               Add tag
             </Button>
           </div>

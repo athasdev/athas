@@ -1,7 +1,7 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { AnimatePresence, motion, useReducedMotionConfig } from "motion/react";
-import { ArrowClockwiseIcon as RefreshCwIcon, DotsThreeIcon, XIcon as X } from "@/ui/icons";
+import { ArrowClockwiseIcon, DotsIcon, XIcon } from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type React from "react";
@@ -105,7 +105,7 @@ export const CommandItemMenu = ({
         />
       }
     >
-      <DotsThreeIcon />
+      <DotsIcon />
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">{children}</DropdownMenuContent>
   </DropdownMenu>
@@ -212,11 +212,11 @@ export const CommandHeader = ({
         {children}
         {showClearButton && (
           <CommandHeaderAction aria-label="Clear persisted actions" onClick={clearActionsStack}>
-            <RefreshCwIcon />
+            <ArrowClockwiseIcon />
           </CommandHeaderAction>
         )}
         <CommandHeaderAction aria-label="Close command palette" onClick={onClose}>
-          <X />
+          <XIcon />
         </CommandHeaderAction>
       </div>
     </div>
@@ -287,7 +287,7 @@ export const CommandForm = ({
             onClick={onCancel}
             aria-label={`Cancel ${submitLabel.toLowerCase()}`}
           >
-            <X />
+            <XIcon />
           </Button>
         ) : null}
         <Button type="submit" variant="accent" disabled={submitDisabled || isPending}>

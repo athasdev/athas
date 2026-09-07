@@ -1,11 +1,6 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import {
-  SlidersHorizontalIcon as SlidersHorizontal,
-  SquareIcon as Square,
-  LightningIcon as Zap,
-  LightningSlashIcon as ZapOff,
-} from "@/ui/icons";
+import { BoltIcon, BoltSlashIcon, SlidersIcon, SquareIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -86,7 +81,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
     switch (status) {
       case "connected":
         return {
-          icon: <Zap className="[&_path]:fill-current" weight="fill" />,
+          icon: <BoltIcon className="[&_path]:fill-current" optical="md" />,
           color: "text-success",
           title: "Language Servers Active",
         };
@@ -98,13 +93,13 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
         };
       case "error":
         return {
-          icon: <ZapOff weight="duotone" />,
+          icon: <BoltSlashIcon />,
           color: "text-destructive",
           title: "Language server issue",
         };
       default:
         return {
-          icon: <ZapOff weight="duotone" />,
+          icon: <BoltSlashIcon />,
           color: "text-subtle-foreground opacity-50",
           title: "No active language servers",
         };
@@ -495,7 +490,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                   return (
                     <div key={entry.key} className={editorMenuRowClass}>
                       <div className="flex min-w-0 items-center gap-2">
-                        <Zap className="shrink-0 text-success" weight="duotone" />
+                        <BoltIcon className="shrink-0 text-success" />
                         <span className="truncate text-foreground ui-text-sm">
                           {entry.displayName}
                         </span>
@@ -519,7 +514,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                           className={editorMenuActionButtonClass}
                           aria-label={`Stop ${entry.displayName} language server`}
                         >
-                          <Square weight="duotone" />
+                          <SquareIcon />
                         </Button>
                       </div>
                     </div>
@@ -528,7 +523,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                 {!currentServerEntry && isCurrentFileLspAvailable && currentFileDisplayName && (
                   <div className={editorMenuRowClass}>
                     <div className="flex min-w-0 items-center gap-2">
-                      <ZapOff className="shrink-0 opacity-60" weight="duotone" />
+                      <BoltSlashIcon className="shrink-0 opacity-60" />
                       <span className="truncate text-foreground ui-text-sm">
                         {currentFileDisplayName}
                       </span>
@@ -561,7 +556,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
               >
                 <EmptyHeader className="items-start">
                   <EmptyTitle className="flex items-center gap-2">
-                    <ZapOff weight="duotone" />
+                    <BoltSlashIcon />
                     Language server issue
                   </EmptyTitle>
                   <EmptyDescription>
@@ -573,7 +568,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
             ) : (
               <Empty className="min-h-0 flex-none items-start rounded-lg px-2 py-2 text-left">
                 <EmptyDescription className="flex items-center gap-2">
-                  <ZapOff className="opacity-50" weight="duotone" />
+                  <BoltSlashIcon className="opacity-50" />
                   No active language servers
                 </EmptyDescription>
               </Empty>
@@ -596,7 +591,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
           tooltip="Editor preferences"
         >
           <span className="flex size-full items-center justify-center">
-            <SlidersHorizontal weight="duotone" />
+            <SlidersIcon />
           </span>
         </Button>
         <Dropdown

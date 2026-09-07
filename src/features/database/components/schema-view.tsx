@@ -1,11 +1,11 @@
 import {
-  CalendarIcon as Calendar,
-  FileTextIcon as FileText,
-  FunnelIcon as Filter,
-  HashIcon as Hash,
-  KeyIcon as Key,
-  LinkIcon as Link,
-  TextTIcon as Type,
+  CalendarIcon,
+  FileTextIcon,
+  FilterIcon,
+  HashIcon,
+  KeyIcon,
+  LinkIcon,
+  TextIcon,
 } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { ScrollArea } from "@/ui/scroll-area";
@@ -17,26 +17,26 @@ import {
 import type { ColumnInfo, ForeignKeyInfo } from "../types/common.types";
 import { databaseCardClassName } from "../utils/database-surface";
 
-const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
-  int: { icon: Hash, color: "text-primary" },
-  num: { icon: Hash, color: "text-primary" },
-  text: { icon: Type, color: "text-subtle-foreground" },
-  varchar: { icon: Type, color: "text-subtle-foreground" },
-  char: { icon: Type, color: "text-subtle-foreground" },
-  date: { icon: Calendar, color: "text-primary" },
-  time: { icon: Calendar, color: "text-primary" },
-  blob: { icon: FileText, color: "text-subtle-foreground" },
-  binary: { icon: FileText, color: "text-subtle-foreground" },
+const COLUMN_ICONS: Record<string, { icon: typeof HashIcon; color: string }> = {
+  int: { icon: HashIcon, color: "text-primary" },
+  num: { icon: HashIcon, color: "text-primary" },
+  text: { icon: TextIcon, color: "text-subtle-foreground" },
+  varchar: { icon: TextIcon, color: "text-subtle-foreground" },
+  char: { icon: TextIcon, color: "text-subtle-foreground" },
+  date: { icon: CalendarIcon, color: "text-primary" },
+  time: { icon: CalendarIcon, color: "text-primary" },
+  blob: { icon: FileTextIcon, color: "text-subtle-foreground" },
+  binary: { icon: FileTextIcon, color: "text-subtle-foreground" },
 };
 
 function getColumnIcon(type: string, isPrimaryKey: boolean, isForeignKey: boolean) {
-  if (isPrimaryKey) return <Key className="text-subtle-foreground" />;
-  if (isForeignKey) return <Link className="text-primary" />;
+  if (isPrimaryKey) return <KeyIcon className="text-subtle-foreground" />;
+  if (isForeignKey) return <LinkIcon className="text-primary" />;
   const lowerType = type.toLowerCase();
   for (const [key, { icon: Icon, color }] of Object.entries(COLUMN_ICONS)) {
     if (lowerType.includes(key)) return <Icon className={color} />;
   }
-  return <Type className="text-subtle-foreground" />;
+  return <TextIcon className="text-subtle-foreground" />;
 }
 
 interface SchemaViewProps {
@@ -95,7 +95,7 @@ export default function SchemaView({
                   aria-label={`Filter by ${column.name}`}
                   iconOnly
                 >
-                  <Filter />
+                  <FilterIcon />
                 </Button>
               )}
             </div>

@@ -1,14 +1,14 @@
 import "../markdown/styles.css";
 import DOMPurify from "dompurify";
 import {
-  EyeIcon as Eye,
-  PencilSimpleIcon as Edit,
-  PlayIcon as Play,
-  PlusIcon as Plus,
-  CodeIcon as Code,
-  TextTIcon as Text,
-  TrashIcon as Trash,
-  WarningCircleIcon as Warning,
+  CodeIcon,
+  EyeIcon,
+  PenIcon,
+  PlayIcon,
+  PlusIcon,
+  TextIcon,
+  TrashIcon,
+  WarningCircleIcon,
 } from "@/ui/icons";
 import {
   closestCenter,
@@ -469,7 +469,7 @@ function NotebookCellView({
                 disabled={isRunning}
                 tooltip={isRunning ? "Running cell" : "Run cell"}
               >
-                <Play weight="duotone" />
+                <PlayIcon />
               </Button>
             ) : null}
             <Button
@@ -479,7 +479,7 @@ function NotebookCellView({
               onClick={() => onTypeChange(cellIndex, isCode ? "markdown" : "code")}
               tooltip={isCode ? "Convert to Markdown" : "Convert to Code"}
             >
-              {isCode ? <Text /> : <Code />}
+              {isCode ? <TextIcon /> : <CodeIcon />}
             </Button>
             <Button
               variant="ghost"
@@ -488,7 +488,7 @@ function NotebookCellView({
               onClick={() => onInsertBelow(cellIndex, isCode ? "code" : "markdown")}
               tooltip="Insert cell below"
             >
-              <Plus />
+              <PlusIcon />
             </Button>
             <Button
               variant="ghost"
@@ -497,7 +497,7 @@ function NotebookCellView({
               onClick={() => onDelete(cellIndex)}
               tooltip="Delete cell"
             >
-              <Trash weight="duotone" />
+              <TrashIcon />
             </Button>
             <Button
               variant="ghost"
@@ -506,7 +506,7 @@ function NotebookCellView({
               onClick={() => onEditToggle(cellIndex)}
               tooltip={isEditing ? "Preview cell" : "Edit cell"}
             >
-              {isEditing ? <Eye weight="duotone" /> : <Edit weight="duotone" />}
+              {isEditing ? <EyeIcon /> : <PenIcon />}
             </Button>
           </div>
         </div>
@@ -780,7 +780,7 @@ export function NotebookEditor() {
         style={{ fontSize, fontFamily: uiFontFamily }}
       >
         <EmptyMedia>
-          <Warning weight="duotone" />
+          <WarningCircleIcon />
         </EmptyMedia>
         <EmptyDescription>{parsed.message}</EmptyDescription>
       </Empty>
@@ -802,7 +802,7 @@ export function NotebookEditor() {
             className="h-7 gap-1.5 text-subtle-foreground hover:text-foreground"
             onClick={() => handleAddCell("code")}
           >
-            <Code weight="duotone" />
+            <CodeIcon />
             Code
           </Button>
           <Button
@@ -810,7 +810,7 @@ export function NotebookEditor() {
             className="h-7 gap-1.5 text-subtle-foreground hover:text-foreground"
             onClick={() => handleAddCell("markdown")}
           >
-            <Text weight="duotone" />
+            <TextIcon />
             Markdown
           </Button>
         </div>

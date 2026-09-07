@@ -1,9 +1,4 @@
-import {
-  BookOpenIcon as BookOpen,
-  MagnifyingGlassIcon as Search,
-  SparkleIcon as Sparkles,
-  TerminalWindowIcon as Terminal,
-} from "@/ui/icons";
+import { BookOpenIcon, SearchIcon, SparkleIcon, TerminalWindowIcon } from "@/ui/icons";
 import { useMemo } from "react";
 import { dispatchAIChatSkillInsert } from "@/features/ai/lib/skill-events";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
@@ -11,7 +6,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
-const shortcutIcons = [Sparkles, Search, Terminal, BookOpen];
+const shortcutIcons = [SparkleIcon, SearchIcon, TerminalWindowIcon, BookOpenIcon];
 const shortcutIconClassNames = ["text-primary", "text-success", "text-warning", "text-destructive"];
 const builtinShortcuts: AIChatSkill[] = [
   {

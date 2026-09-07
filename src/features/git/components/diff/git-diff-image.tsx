@@ -1,9 +1,4 @@
-import {
-  MinusIcon as Minus,
-  PlusIcon as Plus,
-  MagnifyingGlassPlusIcon as ZoomIn,
-  MagnifyingGlassMinusIcon as ZoomOut,
-} from "@/ui/icons";
+import { MinusIcon, PlusIcon, ZoomInIcon, ZoomOutIcon } from "@/ui/icons";
 import { memo, useCallback, useState } from "react";
 import { Button } from "@/ui/button";
 import { Empty, EmptyDescription } from "@/ui/empty";
@@ -26,7 +21,7 @@ const ImageContainer = memo(
           labelColor,
         )}
       >
-        {label === "Removed" ? <Minus /> : <Plus />}
+        {label === "Removed" ? <MinusIcon /> : <PlusIcon />}
         {label}
       </div>
       <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
@@ -85,7 +80,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           aria-label="Zoom out"
           iconOnly
         >
-          <ZoomOut />
+          <ZoomOutIcon />
         </Button>
         <span className="font-sans w-12 text-center text-subtle-foreground ui-text-sm">
           {Math.round(zoom * 100)}%
@@ -99,7 +94,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           tooltip="Zoom in"
           aria-label="Zoom in"
         >
-          <ZoomIn />
+          <ZoomInIcon />
         </Button>
       </div>
 
@@ -107,7 +102,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
         {status === "added" ? (
           <div className="flex flex-1 flex-col">
             <div className="flex items-center justify-center gap-1 border-border border-b bg-git-added/20 py-1 font-medium ui-text-sm text-git-added">
-              <Plus />
+              <PlusIcon />
               New Image
             </div>
             <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">
@@ -122,7 +117,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
         ) : status === "deleted" ? (
           <div className="flex flex-1 flex-col">
             <div className="flex items-center justify-center gap-1 border-border border-b bg-git-deleted/20 py-1 font-medium ui-text-sm text-git-deleted">
-              <Minus />
+              <MinusIcon />
               Removed Image
             </div>
             <div className="flex flex-1 items-center justify-center overflow-auto bg-size-[16px_16px] bg-[repeating-conic-gradient(#1a1a1a_0%_25%,#252525_0%_50%)] p-4">

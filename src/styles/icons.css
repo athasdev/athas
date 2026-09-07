@@ -1,0 +1,15 @@
+@layer base {
+  /*
+   * Nucleo draws on an 18px grid with the stroke measured in grid units, so a
+   * fixed grid stroke renders 0.83px at 10px and 2px at 24px. Pinning the
+   * stroke to real pixels keeps every icon at the weight its optical tier asks
+   * for, whatever the UI font size is scaled to.
+   */
+  [data-athas-icon] :is(circle, ellipse, line, path, polygon, polyline, rect) {
+    vector-effect: non-scaling-stroke;
+  }
+
+  [data-athas-icon] :is(circle, ellipse, line, path, polygon, polyline, rect)[stroke] {
+    stroke-width: var(--icon-stroke, 1.25px);
+  }
+}

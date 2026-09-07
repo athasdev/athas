@@ -1,13 +1,13 @@
 import {
-  WarningCircleIcon as AlertCircle,
-  CheckCircleIcon as CheckCircle2,
-  CaretDownIcon as ChevronDown,
-  CaretRightIcon as ChevronRight,
-  DotOutlineIcon as CircleDot,
-  GitMergeIcon as GitMerge,
-  LinkSimpleIcon as Link2,
-  UserIcon as User,
-  XCircleIcon as XCircle,
+  CheckCircleIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  CircleDotIcon,
+  GitMergeIcon,
+  LinkIcon,
+  UserIcon,
+  WarningCircleIcon,
+  XCircleIcon,
 } from "@/ui/icons";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { memo, useMemo, useState } from "react";
@@ -54,7 +54,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
 
     if (failedCount > 0) {
       return {
-        icon: <XCircle className="text-destructive" />,
+        icon: <XCircleIcon className="text-destructive" />,
         label: `${failedCount} failed`,
         tone: "text-destructive",
       };
@@ -70,14 +70,14 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
 
     if (passedCount === checks.length) {
       return {
-        icon: <CheckCircle2 className="text-success" />,
+        icon: <CheckCircleIcon className="text-success" />,
         label: `${passedCount} checks passed`,
         tone: "text-success",
       };
     }
 
     return {
-      icon: <CircleDot className="text-subtle-foreground" />,
+      icon: <CircleDotIcon className="text-subtle-foreground" />,
       label: `${passedCount}/${checks.length} passed`,
       tone: "text-subtle-foreground",
     };
@@ -93,9 +93,9 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
         {summary.icon}
         <span className={cn("font-sans", summary.tone)}>{summary.label}</span>
         {isExpanded ? (
-          <ChevronDown className="text-subtle-foreground" />
+          <ChevronDownIcon className="text-subtle-foreground" />
         ) : (
-          <ChevronRight className="text-subtle-foreground" />
+          <ChevronRightIcon className="text-subtle-foreground" />
         )}
       </PopoverTrigger>
       <PopoverContent align="start" className="min-w-[320px] p-1.5">
@@ -112,9 +112,9 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
             className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground transition-colors hover:bg-accent disabled:cursor-default disabled:hover:bg-transparent"
           >
             {check.conclusion === "SUCCESS" ? (
-              <CheckCircle2 className="text-success" />
+              <CheckCircleIcon className="text-success" />
             ) : check.conclusion === "FAILURE" || check.conclusion === "ERROR" ? (
-              <XCircle className="text-destructive" />
+              <XCircleIcon className="text-destructive" />
             ) : (
               <Spinner label="Pending check" compact />
             )}
@@ -152,40 +152,40 @@ export const MergeStatusBadge = memo(
     const getStatusInfo = (): {
       text: string;
       variant: BadgeVariant;
-      icon: typeof AlertCircle;
+      icon: typeof WarningCircleIcon;
     } | null => {
       if (mergeable === "CONFLICTING") {
-        return { text: "Has conflicts", variant: "error", icon: AlertCircle };
+        return { text: "Has conflicts", variant: "error", icon: WarningCircleIcon };
       }
       if (mergeStateStatus === "BLOCKED") {
         if (reviewDecision === "CHANGES_REQUESTED") {
           return {
             text: "Changes requested",
             variant: "error",
-            icon: AlertCircle,
+            icon: WarningCircleIcon,
           };
         }
         if (!reviewDecision || reviewDecision === "REVIEW_REQUIRED") {
           return {
             text: "Review required",
             variant: "warning",
-            icon: AlertCircle,
+            icon: WarningCircleIcon,
           };
         }
-        return { text: "Blocked", variant: "warning", icon: AlertCircle };
+        return { text: "Blocked", variant: "warning", icon: WarningCircleIcon };
       }
       if (
         mergeStateStatus === "CLEAN" ||
         mergeStateStatus === "HAS_HOOKS" ||
         mergeStateStatus === "UNSTABLE"
       ) {
-        return { text: "Ready to merge", variant: "success", icon: GitMerge };
+        return { text: "Ready to merge", variant: "success", icon: GitMergeIcon };
       }
       if (mergeStateStatus === "BEHIND") {
         return {
           text: "Behind base",
           variant: "warning",
-          icon: AlertCircle,
+          icon: WarningCircleIcon,
         };
       }
       return null;
@@ -217,7 +217,7 @@ export const LinkedIssuesList = memo(({ issues }: LinkedIssuesProps) => {
 
   return (
     <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-subtle-foreground">
-      <Link2 className="text-subtle-foreground" />
+      <LinkIcon className="text-subtle-foreground" />
       <span>Linked</span>
       <span className="inline-flex items-center gap-1">
         {issues.map((issue, idx) => (
@@ -276,7 +276,7 @@ export const AssigneesList = memo(({ assignees }: AssigneesProps) => {
 
   return (
     <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-subtle-foreground">
-      <User />
+      <UserIcon />
       <span>Assigned</span>
       <span className="text-foreground">
         {assignees.map((assignee) => `@${assignee.login}`).join(", ")}

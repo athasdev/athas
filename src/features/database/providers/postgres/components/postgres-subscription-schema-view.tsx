@@ -1,4 +1,4 @@
-import { RadioButtonIcon as Radio } from "@/ui/icons";
+import { BroadcastIcon } from "@/ui/icons";
 import { ScrollArea } from "@/ui/scroll-area";
 import type { PostgresSubscriptionInfo } from "../../../types/common.types";
 
@@ -47,7 +47,7 @@ export default function PostgresSubscriptionSchemaView({
   return (
     <ScrollArea className="flex-1" orientation="both">
       <div className="flex items-center gap-2 px-3 py-3">
-        <Radio className="text-subtle-foreground" />
+        <BroadcastIcon className="text-subtle-foreground" />
         <div>
           <div className="ui-text-sm">{subscriptionInfo.name}</div>
           <div className="text-subtle-foreground ui-text-sm">logical replication subscription</div>

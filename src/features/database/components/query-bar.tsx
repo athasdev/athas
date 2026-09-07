@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon as Search, XIcon as X } from "@/ui/icons";
+import { SearchIcon, XIcon } from "@/ui/icons";
 import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { useTokenizer } from "@/features/editor/hooks/use-tokenizer";
 import { Button } from "@/ui/button";
@@ -305,7 +305,7 @@ export default function QueryBar({
       <div className="flex items-center gap-2">
         <InputGroup className="flex-1">
           <InputGroupAddon>
-            <Search />
+            <SearchIcon />
           </InputGroupAddon>
           <InputGroupInput
             value={draftSearchTerm}
@@ -325,7 +325,7 @@ export default function QueryBar({
                 tooltip="Clear search"
                 iconOnly
               >
-                <X />
+                <XIcon />
               </InputGroupButton>
             </InputGroupAddon>
           )}

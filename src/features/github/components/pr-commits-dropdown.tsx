@@ -8,7 +8,7 @@ import {
   DropdownMenuSearch,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import { CaretDownIcon, GitCommitIcon } from "@/ui/icons";
+import { ChevronDownIcon, GitCommitIcon } from "@/ui/icons";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { toast } from "sonner";
 import type { Commit } from "../types/github-pr-viewer.types";
@@ -71,7 +71,7 @@ export function PRCommitsDropdown({ commits, repoPath }: PRCommitsDropdownProps)
       >
         <GitCommitIcon />
         <span>{`Commits ${commits.length}`}</span>
-        <CaretDownIcon />
+        <ChevronDownIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-96 max-w-[calc(100vw-1rem)]">
         <DropdownMenuSearch

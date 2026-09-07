@@ -1,6 +1,6 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { getServiceUrls } from "@/config/services";
-import { UsersThreeIcon as UsersThree } from "@/ui/icons";
+import { UsersIcon } from "@/ui/icons";
 import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
@@ -44,7 +44,7 @@ export const CollaborationSettings = () => {
       >
         <SettingRow label="Dashboard" description="Open the full collaboration workspace.">
           <Button type="button" variant="default" onClick={openDashboardCollaboration}>
-            <UsersThree />
+            <UsersIcon />
             Open
           </Button>
         </SettingRow>

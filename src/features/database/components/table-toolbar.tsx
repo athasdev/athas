@@ -1,14 +1,14 @@
 import {
-  ArrowClockwiseIcon as ArrowClockwise,
-  ClipboardTextIcon as ClipboardText,
-  CodeIcon as Code,
-  ColumnsIcon as Columns,
-  DatabaseIcon as Database,
-  DownloadIcon as Download,
-  MinusCircleIcon as MinusCircle,
-  PlusCircleIcon as PlusCircle,
-  RadioButtonIcon as RadioButton,
-  TrashIcon as Trash,
+  ArrowClockwiseIcon,
+  BroadcastIcon,
+  ClipboardTextIcon,
+  CodeIcon,
+  ColumnsIcon,
+  DatabaseIcon,
+  DownloadIcon,
+  MinusCircleIcon,
+  PlusCircleIcon,
+  TrashIcon,
 } from "@/ui/icons";
 import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
@@ -100,7 +100,7 @@ export default function TableToolbar({
       context={
         <PathBreadcrumb
           segments={[fileName, ...(selectedObjectName ? [selectedObjectName] : [])]}
-          icons={[<Database key="database" />]}
+          icons={[<DatabaseIcon key="database" />]}
           ariaLabel="Database object"
         />
       }
@@ -125,7 +125,7 @@ export default function TableToolbar({
               aria-label="Toggle column types"
               tooltip={showColumnTypes ? "Hide column types" : "Show column types"}
             >
-              <Columns />
+              <ColumnsIcon />
             </Button>
           )}
           {resultSummary && (
@@ -145,7 +145,7 @@ export default function TableToolbar({
               aria-label="Open SQL editor"
               tooltip="Open SQL editor"
             >
-              <Code />
+              <CodeIcon />
             </Button>
           )}
           {onCreateSubscription && (
@@ -157,7 +157,7 @@ export default function TableToolbar({
               tooltip="Create subscription"
               iconOnly
             >
-              <RadioButton />
+              <BroadcastIcon />
             </Button>
           )}
           {isSubscription && subscriptionInfo && onToggleSubscription && (
@@ -169,7 +169,7 @@ export default function TableToolbar({
               tooltip={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
               iconOnly
             >
-              {subscriptionInfo.enabled ? <MinusCircle /> : <PlusCircle />}
+              {subscriptionInfo.enabled ? <MinusCircleIcon /> : <PlusCircleIcon />}
             </Button>
           )}
           {isSubscription && onRefreshSubscription && (
@@ -181,7 +181,7 @@ export default function TableToolbar({
               tooltip="Refresh subscription"
               iconOnly
             >
-              <ArrowClockwise />
+              <ArrowClockwiseIcon />
             </Button>
           )}
           {isSubscription && onDropSubscription && (
@@ -193,7 +193,7 @@ export default function TableToolbar({
               tooltip="Drop subscription"
               iconOnly
             >
-              <Trash />
+              <TrashIcon />
             </Button>
           )}
           {hasData && (
@@ -206,7 +206,7 @@ export default function TableToolbar({
                 tooltip={exportTooltip}
                 iconOnly
               >
-                <Download weight="fill" />
+                <DownloadIcon optical="md" />
               </Button>
               <Button
                 onClick={copyAsJSON}
@@ -216,7 +216,7 @@ export default function TableToolbar({
                 tooltip={jsonTooltip}
                 iconOnly
               >
-                <ClipboardText />
+                <ClipboardTextIcon />
               </Button>
             </>
           )}

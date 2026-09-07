@@ -1,4 +1,4 @@
-import { WarningCircleIcon as WarningCircle } from "@/ui/icons";
+import { WarningCircleIcon } from "@/ui/icons";
 import type { ComponentProps, ReactNode } from "react";
 import { Button } from "@/ui/button";
 import {
@@ -110,7 +110,7 @@ function ViewerErrorState({
     >
       <EmptyHeader className="max-w-md">
         <EmptyMedia>
-          <WarningCircle />
+          <WarningCircleIcon />
         </EmptyMedia>
         <EmptyDescription>{message}</EmptyDescription>
       </EmptyHeader>

@@ -1,11 +1,11 @@
 import {
-  ArrowLeftIcon as ArrowLeft,
-  ArrowRightIcon as ArrowRight,
-  ArrowsOutIcon as Maximize,
-  ColumnsIcon as Columns,
-  LockIcon as Lock,
-  RowsIcon as Rows,
-  XIcon as X,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowsOutIcon,
+  ColumnsIcon,
+  LockIcon,
+  RowsIcon,
+  XIcon,
 } from "@/ui/icons";
 import {
   closeActiveEditorGroup,
@@ -27,7 +27,7 @@ export const createPaneActions = ({ onClose }: PaneActionsParams): Action[] => [
     id: "pane-toggle-fullscreen",
     label: "View: Toggle Active Pane Full Screen",
     description: "Expand the active pane or return it to the workbench layout",
-    icon: <Maximize />,
+    icon: <ArrowsOutIcon />,
     category: "View",
     commandId: "workbench.toggleActivePaneFullscreen",
     action: () => {
@@ -39,7 +39,7 @@ export const createPaneActions = ({ onClose }: PaneActionsParams): Action[] => [
     id: "pane-split-editor-right",
     label: "View: Split Editor Right",
     description: "Split the active editor group to the right",
-    icon: <Columns />,
+    icon: <ColumnsIcon />,
     category: "View",
     commandId: "workbench.splitEditorRight",
     action: () => {
@@ -51,7 +51,7 @@ export const createPaneActions = ({ onClose }: PaneActionsParams): Action[] => [
     id: "pane-split-editor-down",
     label: "View: Split Editor Down",
     description: "Split the active editor group downward",
-    icon: <Rows />,
+    icon: <RowsIcon />,
     category: "View",
     commandId: "workbench.splitEditorDown",
     action: () => {
@@ -63,7 +63,7 @@ export const createPaneActions = ({ onClose }: PaneActionsParams): Action[] => [
     id: "pane-close-editor-group",
     label: "View: Close Editor Group",
     description: "Close the active editor group and move its editors to a nearby group",
-    icon: <X />,
+    icon: <XIcon />,
     category: "View",
     commandId: "workbench.closeEditorGroup",
     action: () => {
@@ -75,7 +75,7 @@ export const createPaneActions = ({ onClose }: PaneActionsParams): Action[] => [
     id: "pane-close-other-editor-groups",
     label: "View: Close Other Editor Groups",
     description: "Close every editor group except the active group",
-    icon: <X />,
+    icon: <XIcon />,
     category: "View",
     commandId: "workbench.closeOtherEditorGroups",
     action: () => {
@@ -87,7 +87,7 @@ export const createPaneActions = ({ onClose }: PaneActionsParams): Action[] => [
     id: "pane-move-editor-next-group",
     label: "View: Move Editor Into Next Group",
     description: "Move the active editor into the next editor group",
-    icon: <ArrowRight />,
+    icon: <ArrowRightIcon />,
     category: "View",
     commandId: "workbench.moveEditorToNextGroup",
     action: () => {
@@ -99,7 +99,7 @@ export const createPaneActions = ({ onClose }: PaneActionsParams): Action[] => [
     id: "pane-move-editor-previous-group",
     label: "View: Move Editor Into Previous Group",
     description: "Move the active editor into the previous editor group",
-    icon: <ArrowLeft />,
+    icon: <ArrowLeftIcon />,
     category: "View",
     commandId: "workbench.moveEditorToPreviousGroup",
     action: () => {
@@ -111,7 +111,7 @@ export const createPaneActions = ({ onClose }: PaneActionsParams): Action[] => [
     id: "pane-reset-editor-group-sizes",
     label: "View: Reset Editor Group Sizes",
     description: "Reset editor groups to equal sizes",
-    icon: <Columns />,
+    icon: <ColumnsIcon />,
     category: "View",
     commandId: "workbench.resetEditorGroupSizes",
     action: () => {
@@ -123,7 +123,7 @@ export const createPaneActions = ({ onClose }: PaneActionsParams): Action[] => [
     id: "pane-toggle-editor-group-lock",
     label: "View: Toggle Editor Group Lock",
     description: "Keep the active editor group from receiving newly opened buffers",
-    icon: <Lock />,
+    icon: <LockIcon />,
     category: "View",
     commandId: "workbench.toggleEditorGroupLock",
     action: () => {

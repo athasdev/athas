@@ -4,6 +4,7 @@
 
 @import "./styles/theme.css";
 @import "./styles/base.css";
+@import "./styles/icons.css";
 @import "./styles/scrollbars.css";
 @import "./styles/syntax-tokens.css";
 @import "./styles/rendered-code-tokens.css";

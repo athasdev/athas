@@ -78,10 +78,20 @@
 - If the same visual utility sequence appears in two feature consumers, move that contract into a shared primitive before finishing the change.
 - New app-wide visual concepts require semantic variables in `src/styles/theme.css`, derived from the existing theme colors when possible. Do not add feature-local color mixes or hardcoded light/dark values.
 - Prefer spacing and surface contrast over borders. Borders should communicate a real boundary and should be owned by the primitive rather than added independently by consumers.
-- Use line chevrons for disclosure, expansion, submenu, and directional navigation controls. Reserve triangular play icons for actions that actually start or resume something.
 - Keep `className` escape hatches focused on layout and placement. Repeated visual overrides are evidence that the primitive API needs a semantic variant.
 - When touching a shared primitive, audit all import sites and remove confirmed dead or redundant code in that primitive's module.
 - Before finishing UI work, verify light and dark themes plus hover, active, focus-visible, disabled, overflow, and resized states in the real Tauri app when practical.
+
+## Icons
+
+- Three registries, three sets of rules. `src/ui/icons.tsx` owns UI icons: one outline drawing per product concept, tinted with `currentColor`. `src/ui/brand-marks.tsx` owns third-party marks, which keep their own artwork and stay out of the stroke system. Icon themes under `src/extensions/icon-themes/` own file-type art, which the user can replace.
+- `src/ui/icons.tsx` is the only module allowed to import `nucleo-ui-outline-18`. Add a new icon by exporting it there, never by reaching into the library from a feature.
+- One concept, one name, one drawing. Two exports must never wrap the same Nucleo drawing, and an export's name must describe what it draws. Import icons under their own name; `import { XIcon as Close }` splits one concept back into two vocabularies.
+- Icons carry no stroke decisions at the call site. Stroke lives in `src/styles/icons.css`, pinned to real pixels with `vector-effect: non-scaling-stroke` so it does not drift when the UI font size scales the 18px drawing grid. Choose weight with the `optical` prop only: `sm` (1.25px) up to 20px, `md` (1.5px) to 28px, `lg` (2px) above that. A numeric `size` picks the tier on its own.
+- Pin a concept in `src/ui/icon-concepts.ts` when it shows up in more than one feature and more than one glyph would be defensible. Two concepts must never resolve to the same icon.
+- Use line chevrons for disclosure, expansion, submenu, and directional navigation controls. Reserve triangular play icons for actions that actually start or resume something.
+- Prefer sizing icons by inheritance (the default `1em`) so they track the UI font size. Reach for an explicit `size` only when the icon is not sitting next to text.
+- `src/features/settings/tests/ui-icon-contract.test.ts` enforces the structural half of these rules. Run it after touching the icon layer.
 
 ## Zustand
 

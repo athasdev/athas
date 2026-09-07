@@ -1,15 +1,14 @@
 import {
-  WarningCircleIcon as AlertCircle,
-  ColumnsIcon as Columns,
-  ListIcon as Menu,
-  RowsIcon as Rows,
-  SidebarSimpleIcon as PanelBottom,
-  SidebarSimpleIcon as PanelLeft,
-  ArrowCounterClockwiseIcon as RotateCcw,
-  MagnifyingGlassIcon as Search,
-  TerminalWindowIcon as Terminal,
-  MagnifyingGlassPlusIcon as ZoomIn,
-  MagnifyingGlassMinusIcon as ZoomOut,
+  ArrowCounterClockwiseIcon,
+  ColumnsIcon,
+  ListIcon,
+  RowsIcon,
+  SearchIcon,
+  SidebarIcon,
+  TerminalWindowIcon,
+  WarningCircleIcon,
+  ZoomInIcon,
+  ZoomOutIcon,
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
@@ -61,7 +60,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: settings.activityRailExpanded
         ? "Collapse the activity sidebar"
         : "Expand the activity sidebar",
-      icon: <PanelLeft />,
+      icon: <SidebarIcon />,
       category: "View",
       commandId: "workbench.toggleActivitySidebar",
       action: () => {
@@ -75,7 +74,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: isSidebarVisible
         ? "Hide the secondary sidebar panel"
         : "Show the secondary sidebar panel",
-      icon: <PanelLeft />,
+      icon: <SidebarIcon />,
       category: "View",
       commandId: "workbench.toggleSidebar",
       action: () => {
@@ -87,7 +86,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "toggle-bottom-pane",
       label: isBottomPaneVisible ? "View: Hide Bottom Pane" : "View: Show Bottom Pane",
       description: isBottomPaneVisible ? "Hide the bottom pane" : "Show the bottom pane",
-      icon: <PanelBottom />,
+      icon: <SidebarIcon />,
       category: "View",
       action: () => {
         setIsBottomPaneVisible(!isBottomPaneVisible);
@@ -101,7 +100,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
           ? "View: Hide Terminal"
           : "View: Show Terminal",
       description: "Toggle integrated terminal panel",
-      icon: <Terminal />,
+      icon: <TerminalWindowIcon />,
       category: "View",
       commandId: "workbench.toggleTerminalAlt",
       action: () => {
@@ -119,7 +118,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "toggle-diagnostics-panel",
       label: "View: Show Diagnostics",
       description: "Open diagnostics",
-      icon: <AlertCircle />,
+      icon: <WarningCircleIcon />,
       category: "View",
       commandId: "workbench.toggleDiagnostics",
       action: () => {
@@ -131,7 +130,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "toggle-find-view",
       label: "View: Find",
       description: "Find in the active editor",
-      icon: <Search />,
+      icon: <SearchIcon />,
       category: "View",
       commandId: "workbench.showFind",
       action: () => {
@@ -149,7 +148,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
             description: settings.nativeMenuBar
               ? "Use custom menu bar"
               : "Use native operating system menu bar",
-            icon: <Menu />,
+            icon: <ListIcon />,
             category: "View",
             action: async () => {
               const newValue = !settings.nativeMenuBar;
@@ -171,7 +170,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
             description: settings.compactMenuBar
               ? "Show full menu bar"
               : "Use compact menu bar with hamburger icon",
-            icon: <Menu />,
+            icon: <ListIcon />,
             category: "View",
             action: () => {
               updateSetting("compactMenuBar", !settings.compactMenuBar);
@@ -184,7 +183,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "view-zoom-in",
       label: "Editor: Zoom In",
       description: "Increase editor zoom level",
-      icon: <ZoomIn />,
+      icon: <ZoomInIcon />,
       category: "View",
       commandId: "workbench.zoomIn",
       action: () => {
@@ -196,7 +195,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "view-zoom-out",
       label: "Editor: Zoom Out",
       description: "Decrease editor zoom level",
-      icon: <ZoomOut />,
+      icon: <ZoomOutIcon />,
       category: "View",
       commandId: "workbench.zoomOut",
       action: () => {
@@ -208,7 +207,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "view-reset-zoom",
       label: "Editor: Reset Zoom",
       description: "Reset editor zoom to default level",
-      icon: <RotateCcw />,
+      icon: <ArrowCounterClockwiseIcon />,
       category: "View",
       commandId: "workbench.zoomReset",
       action: () => {
@@ -220,7 +219,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-new",
       label: "Terminal: New Terminal",
       description: "Create a new integrated terminal",
-      icon: <Terminal />,
+      icon: <TerminalWindowIcon />,
       category: "Terminal",
       commandId: "terminal.new",
       action: () => {
@@ -232,7 +231,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-find",
       label: "Terminal: Find",
       description: "Search in the active terminal",
-      icon: <Search />,
+      icon: <SearchIcon />,
       category: "Terminal",
       commandId: "terminal.find",
       action: () => {
@@ -244,7 +243,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-split-right",
       label: "Terminal: Split Right",
       description: "Open a terminal beside the active terminal",
-      icon: <Columns />,
+      icon: <ColumnsIcon />,
       category: "Terminal",
       commandId: "terminal.split",
       action: () => {
@@ -256,7 +255,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-split-down",
       label: "Terminal: Split Down",
       description: "Open a terminal below the active terminal",
-      icon: <Rows />,
+      icon: <RowsIcon />,
       category: "Terminal",
       commandId: "terminal.splitDown",
       action: () => {
@@ -268,7 +267,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-zoom-in",
       label: "Terminal: Zoom In",
       description: "Increase terminal zoom level",
-      icon: <ZoomIn />,
+      icon: <ZoomInIcon />,
       category: "Terminal",
       action: () => {
         zoomIn("terminal");
@@ -279,7 +278,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-zoom-out",
       label: "Terminal: Zoom Out",
       description: "Decrease terminal zoom level",
-      icon: <ZoomOut />,
+      icon: <ZoomOutIcon />,
       category: "Terminal",
       action: () => {
         zoomOut("terminal");
@@ -290,7 +289,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       id: "terminal-reset-zoom",
       label: "Terminal: Reset Zoom",
       description: "Reset terminal zoom to default level",
-      icon: <RotateCcw />,
+      icon: <ArrowCounterClockwiseIcon />,
       category: "Terminal",
       action: () => {
         resetZoom("terminal");

@@ -1,4 +1,4 @@
-import { XIcon as X } from "@/ui/icons";
+import { XIcon } from "@/ui/icons";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
 import { ExtensionErrorBoundary } from "./extension-error-boundary";
 import { Button } from "@/ui/button";
@@ -33,7 +33,7 @@ export function ExtensionDialogs() {
             <DialogHeader className="flex-row items-center justify-between gap-2 border-border border-b px-4 py-3">
               <DialogTitle>{dialog.title}</DialogTitle>
               <DialogClose render={<Button variant="ghost" iconOnly aria-label="Close dialog" />}>
-                <X />
+                <XIcon />
               </DialogClose>
             </DialogHeader>
             <ScrollArea className="min-h-0 flex-1" contentClassName="p-4">

@@ -1,26 +1,26 @@
 import {
-  CaretDoubleUpIcon as CaretDoubleUp,
-  ClipboardIcon as Clipboard,
-  ClockCounterClockwiseIcon as ClockCounterClockwise,
-  CopyIcon as Copy,
-  PencilSimpleIcon as Edit,
-  EyeIcon as Eye,
-  FilePlusIcon as FilePlus,
-  FileTextIcon as FileText,
-  FolderOpenIcon as FolderOpen,
-  FolderPlusIcon as FolderPlus,
+  ArrowClockwiseIcon,
+  ChevronDoubleUpIcon,
+  ClipboardIcon,
+  CopyIcon,
+  EyeIcon,
+  FilePlusIcon,
+  FileTextIcon,
+  FolderOpenIcon,
+  FolderPlusIcon,
+  HistoryIcon,
   ImageIcon,
-  InfoIcon as Info,
-  LinkIcon as Link,
-  ArrowClockwiseIcon as RefreshCw,
-  ArrowSquareUpIcon as Share,
-  ScissorsIcon as Scissors,
-  MagnifyingGlassIcon as Search,
-  TerminalWindowIcon as Terminal,
-  TrashIcon as Trash,
-  XIcon as X,
-  UploadIcon as Upload,
-  WarningIcon as Warning,
+  InfoIcon,
+  LinkIcon,
+  PenIcon,
+  ScissorsIcon,
+  SearchIcon,
+  SquareArrowUpIcon,
+  TerminalWindowIcon,
+  TrashIcon,
+  UploadIcon,
+  WarningIcon,
+  XIcon,
 } from "@/ui/icons";
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useMemo, useState } from "react";
@@ -206,13 +206,13 @@ export function useFileExplorerContextMenu({
         {
           id: "new-file",
           label: "New File",
-          icon: <FilePlus />,
+          icon: <FilePlusIcon />,
           onClick: () => onStartInlineEditing(contextMenu.path, false),
         },
         {
           id: "new-folder",
           label: "New Folder",
-          icon: <FolderPlus />,
+          icon: <FolderPlusIcon />,
           onClick: () => {
             if (onCreateNewFolderInDirectory) onStartInlineEditing(contextMenu.path, true);
           },
@@ -220,19 +220,19 @@ export function useFileExplorerContextMenu({
         {
           id: "upload-files",
           label: "Upload Files",
-          icon: <Upload />,
+          icon: <UploadIcon />,
           onClick: () => onUploadFile?.(contextMenu.path),
         },
         {
           id: "refresh",
           label: "Refresh",
-          icon: <RefreshCw />,
+          icon: <ArrowClockwiseIcon />,
           onClick: () => onRefreshDirectory?.(contextMenu.path, { force: true }),
         },
         {
           id: "add-folder-to-workspace",
           label: "Add Folder to Workspace",
-          icon: <FolderPlus />,
+          icon: <FolderPlusIcon />,
           onClick: () => onAddFolderToWorkspace?.(),
         },
         ...(canRemoveWorkspaceRootPath?.(contextMenu.path)
@@ -240,7 +240,7 @@ export function useFileExplorerContextMenu({
               {
                 id: "remove-folder-from-workspace",
                 label: "Remove Folder from Workspace",
-                icon: <X />,
+                icon: <XIcon />,
                 onClick: () => onRemoveFolderFromWorkspace?.(contextMenu.path),
               },
             ]
@@ -248,19 +248,19 @@ export function useFileExplorerContextMenu({
         {
           id: "open-all-files",
           label: "Open All Files",
-          icon: <FolderOpen />,
+          icon: <FolderOpenIcon />,
           onClick: () => void onOpenAllFilesInDirectory(contextMenu.path),
         },
         {
           id: "collapse-all",
           label: "Collapse All",
-          icon: <CaretDoubleUp />,
+          icon: <ChevronDoubleUpIcon />,
           onClick: () => useFileTreeStore.getState().actions.collapsePath(contextMenu.path),
         },
         {
           id: "open-terminal",
           label: "Open in Terminal",
-          icon: <Terminal />,
+          icon: <TerminalWindowIcon />,
           onClick: () => {
             const folderName = getBaseName(contextMenu.path, "terminal");
             const { openTerminalBuffer } = useBufferStore.getState().actions;
@@ -273,7 +273,7 @@ export function useFileExplorerContextMenu({
         {
           id: "find-in-folder",
           label: "Find in Folder",
-          icon: <Search />,
+          icon: <SearchIcon />,
           onClick: () => {},
         },
       );
@@ -299,13 +299,13 @@ export function useFileExplorerContextMenu({
         {
           id: "open",
           label: "Open",
-          icon: <FolderOpen />,
+          icon: <FolderOpenIcon />,
           onClick: () => onFileSelect(contextMenu.path, false),
         },
         {
           id: "copy-content",
           label: "Copy Content",
-          icon: <Copy />,
+          icon: <CopyIcon />,
           onClick: async () => {
             try {
               const response = await fetch(contextMenu.path);
@@ -318,13 +318,13 @@ export function useFileExplorerContextMenu({
         {
           id: "duplicate-file",
           label: "Duplicate",
-          icon: <FileText />,
+          icon: <FileTextIcon />,
           onClick: () => onDuplicatePath?.(contextMenu.path),
         },
         {
           id: "local-history",
           label: "Local History",
-          icon: <ClockCounterClockwise />,
+          icon: <HistoryIcon />,
           onClick: () => openLocalHistoryForPath(contextMenu.path),
         },
         ...(canCreateEnvTemplate
@@ -333,7 +333,7 @@ export function useFileExplorerContextMenu({
               ...ENV_TEMPLATE_TARGETS.map((target, index) => ({
                 id: target.id,
                 label: target.label,
-                icon: index === 0 ? <FilePlus /> : menuIconSpacer,
+                icon: index === 0 ? <FilePlusIcon /> : menuIconSpacer,
                 onClick: () => void createEnvTemplateFile(contextMenu.path, target.fileName),
               })),
             ]
@@ -341,7 +341,7 @@ export function useFileExplorerContextMenu({
         {
           id: "properties",
           label: "Properties",
-          icon: <Info />,
+          icon: <InfoIcon />,
           onClick: async () => {
             const fileName = getBaseName(contextMenu.path, "");
             const extension = fileName.includes(".") ? fileName.split(".").pop() : undefined;
@@ -371,7 +371,7 @@ export function useFileExplorerContextMenu({
       {
         id: "copy-path",
         label: "Copy Path",
-        icon: <Link />,
+        icon: <LinkIcon />,
         onClick: async () => {
           try {
             await writeClipboardText(contextMenu.path);
@@ -381,7 +381,7 @@ export function useFileExplorerContextMenu({
       {
         id: "copy-relative-path",
         label: "Copy Relative Path",
-        icon: <FileText />,
+        icon: <FileTextIcon />,
         onClick: async () => {
           try {
             const relativePath = getRelativePath(contextMenu.path, rootFolderPath);
@@ -392,14 +392,14 @@ export function useFileExplorerContextMenu({
       {
         id: "copy",
         label: "Copy",
-        icon: <Copy />,
+        icon: <CopyIcon />,
         onClick: () =>
           clipboardActions.copy([{ path: contextMenu.path, is_dir: contextMenu.isDir }]),
       },
       {
         id: "cut",
         label: "Cut",
-        icon: <Scissors />,
+        icon: <ScissorsIcon />,
         onClick: () =>
           clipboardActions.cut([{ path: contextMenu.path, is_dir: contextMenu.isDir }]),
       },
@@ -409,7 +409,7 @@ export function useFileExplorerContextMenu({
       items.push({
         id: "paste",
         label: "Paste",
-        icon: <Clipboard />,
+        icon: <ClipboardIcon />,
         onClick: () => {
           clipboardActions.paste(contextMenu.path).then(() => {
             onRefreshDirectory?.(contextMenu.path, { force: true });
@@ -424,7 +424,7 @@ export function useFileExplorerContextMenu({
           {
             id: "quick-look",
             label: "Quick Look",
-            icon: <Eye />,
+            icon: <EyeIcon />,
             onClick: () => {
               void invoke("toggle_quick_look", { path: contextMenu.path }).catch((error) => {
                 toast.error(`Unable to preview file: ${String(error)}`);
@@ -434,7 +434,7 @@ export function useFileExplorerContextMenu({
           {
             id: "share",
             label: "Share…",
-            icon: <Share />,
+            icon: <SquareArrowUpIcon />,
             onClick: () => {
               void invoke("show_share_picker", { path: contextMenu.path }).catch((error) => {
                 toast.error(`Unable to share file: ${String(error)}`);
@@ -448,13 +448,13 @@ export function useFileExplorerContextMenu({
         {
           id: "rename",
           label: "Rename",
-          icon: <Edit />,
+          icon: <PenIcon />,
           onClick: () => onRenamePath?.(contextMenu.path),
         },
         {
           id: "reveal",
           label: "Reveal in Finder",
-          icon: <Eye />,
+          icon: <EyeIcon />,
           onClick: () => {
             if (onRevealInFinder) onRevealInFinder(contextMenu.path);
             else if (window.electron) window.electron.shell.showItemInFolder(contextMenu.path);
@@ -468,7 +468,7 @@ export function useFileExplorerContextMenu({
         {
           id: "delete",
           label: "Delete",
-          icon: <Trash />,
+          icon: <TrashIcon />,
           tone: "destructive",
           onClick: () => onDeleteRequested({ path: contextMenu.path, isDir: contextMenu.isDir }),
         },
@@ -477,7 +477,7 @@ export function useFileExplorerContextMenu({
       items.push({
         id: "reveal",
         label: "Reveal in Finder",
-        icon: <Eye />,
+        icon: <EyeIcon />,
         onClick: () => onRevealInFinder?.(contextMenu.path),
       });
     }
@@ -523,7 +523,7 @@ export function useFileExplorerContextMenu({
         {envOverwriteDialog && (
           <Dialog
             title="Overwrite Env File"
-            icon={Warning}
+            icon={WarningIcon}
             onClose={() => setEnvOverwriteDialog(null)}
             footer={
               <>
@@ -551,7 +551,7 @@ export function useFileExplorerContextMenu({
         )}
 
         {propertiesDialog && (
-          <Dialog title="Properties" icon={Info} onClose={() => setPropertiesDialog(null)}>
+          <Dialog title="Properties" icon={InfoIcon} onClose={() => setPropertiesDialog(null)}>
             <dl className="grid grid-cols-[72px_1fr] gap-x-3 gap-y-2 font-sans ui-text-base">
               <dt className="text-subtle-foreground">File</dt>
               <dd className="min-w-0 wrap-break-word text-foreground">

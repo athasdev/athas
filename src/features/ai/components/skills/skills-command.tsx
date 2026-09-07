@@ -1,12 +1,12 @@
 import {
-  CloudArrowDownIcon as CloudArrowDown,
-  CloudCheckIcon as CloudCheck,
-  CloudSlashIcon as CloudSlash,
-  CloudWarningIcon as CloudWarning,
-  MagnifyingGlassIcon as Search,
-  PencilSimpleIcon as PencilSimple,
-  PlusIcon as Plus,
-  TrashIcon as Trash,
+  CloudArrowDownIcon,
+  CloudIcon,
+  CloudSlashIcon,
+  CloudWarningIcon,
+  PenIcon,
+  PlusIcon,
+  SearchIcon,
+  TrashIcon,
 } from "@/ui/icons";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -59,9 +59,9 @@ function getSyncLabel(enabled: boolean, status: string) {
 }
 
 function getSyncIcon(enabled: boolean, status: string) {
-  if (!enabled) return CloudSlash;
-  if (status === "error") return CloudWarning;
-  return CloudCheck;
+  if (!enabled) return CloudSlashIcon;
+  if (status === "error") return CloudWarningIcon;
+  return CloudIcon;
 }
 
 export function SkillsCommand({
@@ -350,7 +350,7 @@ export function SkillsCommand({
     view === "list" || view === "browse" ? (
       <>
         <CommandHeader onClose={handleClose}>
-          <Search className="shrink-0 text-subtle-foreground" size={14} />
+          <SearchIcon className="shrink-0 text-subtle-foreground" size={14} />
           <CommandInput
             ref={inputRef}
             value={query}
@@ -359,7 +359,7 @@ export function SkillsCommand({
           />
           {view === "list" ? (
             <CommandHeaderAction type="button" onClick={openNewSkill}>
-              <Plus />
+              <PlusIcon />
               <span>New</span>
             </CommandHeaderAction>
           ) : (
@@ -368,7 +368,7 @@ export function SkillsCommand({
             </CommandHeaderAction>
           )}
           <CommandHeaderAction type="button" onClick={openBrowseSkills} active={view === "browse"}>
-            <CloudArrowDown weight="fill" />
+            <CloudArrowDownIcon optical="md" />
             <span>Browse</span>
           </CommandHeaderAction>
         </CommandHeader>
@@ -485,7 +485,7 @@ export function SkillsCommand({
                         aria-label={`Edit ${skill.title}`}
                         iconOnly
                       >
-                        <PencilSimple size={13} />
+                        <PenIcon size={13} />
                       </Button>
                       <Button
                         type="button"
@@ -499,7 +499,7 @@ export function SkillsCommand({
                         aria-label={`Delete ${skill.title}`}
                         iconOnly
                       >
-                        <Trash size={13} />
+                        <TrashIcon size={13} />
                       </Button>
                     </>
                   }

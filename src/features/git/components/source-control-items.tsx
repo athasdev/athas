@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import {
   ArchiveIcon,
-  ClockCounterClockwiseIcon,
   GitDiffIcon,
+  HistoryIcon,
   ListChecksIcon,
-  NetworkIcon,
+  NodesIcon,
   TagIcon,
 } from "@/ui/icons";
 
@@ -20,9 +20,9 @@ export const SOURCE_CONTROL_ITEM_LABELS: Record<GitSidebarItemId, string> = {
 
 export const SOURCE_CONTROL_ITEM_ICONS: Record<GitSidebarItemId, ReactNode> = {
   changes: <GitDiffIcon />,
-  history: <ClockCounterClockwiseIcon />,
+  history: <HistoryIcon />,
   review: <ListChecksIcon />,
-  remotes: <NetworkIcon />,
+  remotes: <NodesIcon />,
   tags: <TagIcon />,
   stashes: <ArchiveIcon />,
 };

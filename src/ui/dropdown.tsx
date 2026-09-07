@@ -18,7 +18,7 @@ import { quickTransition } from "@/utils/motion";
 import { FloatingPopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
-import { CaretRightIcon, CheckIcon, MagnifyingGlassIcon as Search } from "@/ui/icons";
+import { CheckIcon, ChevronRightIcon, SearchIcon } from "@/ui/icons";
 import Keybinding from "@/features/keymaps/components/keybinding";
 
 const menuSurfaceVariants = cva(
@@ -212,13 +212,13 @@ export function MenuItemsList({
             <span className="ml-auto flex shrink-0 items-center gap-2">
               {item.shortcut ? <Keybinding binding={item.shortcut} /> : null}
               {item.trailing === "disclosure" ? (
-                <CaretRightIcon className="size-3 text-subtle-foreground" />
+                <ChevronRightIcon className="size-3 text-subtle-foreground" />
               ) : item.trailing?.type === "text" ? (
                 <span className="text-subtle-foreground tabular-nums">{item.trailing.label}</span>
               ) : null}
               {item.checked !== undefined ? (
                 <span className="flex size-4 items-center justify-center">
-                  {item.checked ? <CheckIcon className="text-primary" weight="duotone" /> : null}
+                  {item.checked ? <CheckIcon className="text-primary" /> : null}
                 </span>
               ) : null}
             </span>
@@ -683,7 +683,7 @@ export function Dropdown(props: DropdownProps) {
                 setSearchQuery(e.target.value);
                 setFocusIndex(-1);
               }}
-              leftIcon={Search}
+              leftIcon={SearchIcon}
               variant="ghost"
               className="w-full"
             />
@@ -729,7 +729,7 @@ function DropdownMenuSearch({
   className,
   containerClassName,
   onKeyDown,
-  leftIcon = Search,
+  leftIcon = SearchIcon,
   variant = "ghost",
   ...props
 }: InputProps) {
@@ -1038,7 +1038,7 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      {appearance === "item" ? <CaretRightIcon className="ml-auto" /> : null}
+      {appearance === "item" ? <ChevronRightIcon className="ml-auto" /> : null}
     </DropdownMenuPrimitive.SubmenuTrigger>
   );
 }

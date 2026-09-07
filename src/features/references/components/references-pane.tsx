@@ -1,10 +1,10 @@
 import {
-  CaretDownIcon as ChevronDown,
-  CaretRightIcon as ChevronRight,
-  FileCodeIcon as FileCode,
-  ArrowsOutIcon as Maximize2,
-  ArrowsInIcon as Minimize2,
-  XIcon as X,
+  ArrowsInIcon,
+  ArrowsOutIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  FileCodeIcon,
+  XIcon,
 } from "@/ui/icons";
 import { useCallback, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -81,7 +81,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
                 variant="ghost"
                 iconOnly
               >
-                {isFullScreen ? <Minimize2 /> : <Maximize2 />}
+                {isFullScreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
               </Button>
             )}
             <Button
@@ -90,7 +90,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
               variant="ghost"
               iconOnly
             >
-              <X />
+              <XIcon />
             </Button>
           </>
         }
@@ -121,11 +121,11 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
                   className="flex w-full items-center gap-1 px-2 py-1 text-left transition-colors hover:bg-accent/50"
                 >
                   {isCollapsed ? (
-                    <ChevronRight size={12} className="shrink-0 text-subtle-foreground" />
+                    <ChevronRightIcon size={12} className="shrink-0 text-subtle-foreground" />
                   ) : (
-                    <ChevronDown size={12} className="shrink-0 text-subtle-foreground" />
+                    <ChevronDownIcon size={12} className="shrink-0 text-subtle-foreground" />
                   )}
-                  <FileCode size={12} className="shrink-0 text-primary" />
+                  <FileCodeIcon size={12} className="shrink-0 text-primary" />
                   <span className="font-sans ui-text-sm truncate text-foreground">
                     {group.fileName}
                   </span>

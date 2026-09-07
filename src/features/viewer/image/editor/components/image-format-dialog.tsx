@@ -1,4 +1,4 @@
-import { ImageIcon as Image } from "@/ui/icons";
+import { ImageIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
@@ -132,7 +132,7 @@ export function ImageFormatDialog({
   return (
     <Dialog
       title={`Convert to ${config.name}`}
-      icon={Image}
+      icon={ImageIcon}
       onClose={onClose}
       classNames={{ content: "space-y-4 p-4" }}
       footer={

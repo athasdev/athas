@@ -1,4 +1,4 @@
-import { EyeIcon as Eye, EyeSlashIcon as EyeOff } from "@/ui/icons";
+import { EyeIcon, EyeSlashIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
@@ -126,7 +126,7 @@ const PasswordPromptDialog = ({
                 tooltip={showPassword ? "Hide password" : "Show password"}
                 iconOnly
               >
-                {showPassword ? <EyeOff /> : <Eye />}
+                {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
               </InputGroupButton>
             </InputGroupAddon>
           </InputGroup>

@@ -18,15 +18,15 @@ import {
   FieldTitle,
 } from "@/ui/field";
 import {
-  ArrowsClockwiseIcon as Continuous,
-  ClockIcon as Clock,
-  PauseIcon as Pause,
-  PlayIcon as Play,
-  PlusIcon as Plus,
-  SparkleIcon as Sparkles,
-  SquaresFourIcon as Overview,
-  TrashIcon as Trash,
-  WarningCircleIcon as Warning,
+  ArrowsClockwiseIcon,
+  ClockIcon,
+  GridIcon,
+  PauseIcon,
+  PlayIcon,
+  PlusIcon,
+  SparkleIcon,
+  TrashIcon,
+  WarningCircleIcon,
 } from "@/ui/icons";
 import Input from "@/ui/input";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";
@@ -128,7 +128,7 @@ function ContinuousAgentsSidebar({
             active={selection === "create"}
             onClick={() => onSelect("create")}
           >
-            <Plus />
+            <PlusIcon />
           </SidebarIconButton>
         }
       >
@@ -136,7 +136,7 @@ function ContinuousAgentsSidebar({
           <SidebarSection title="Workspace" forceExpanded>
             <SidebarListItem
               active={selection === "overview"}
-              leading={<Overview />}
+              leading={<GridIcon />}
               trailing={tasks.length || undefined}
               onClick={() => onSelect("overview")}
             >
@@ -144,7 +144,7 @@ function ContinuousAgentsSidebar({
             </SidebarListItem>
             <SidebarListItem
               active={selection === "create"}
-              leading={<Plus />}
+              leading={<PlusIcon />}
               onClick={() => onSelect("create")}
             >
               New agent
@@ -187,7 +187,7 @@ function ContinuousAgentsSidebar({
 
         <SidebarFooter>
           <div className="flex items-start gap-2 px-2 py-2 text-subtle-foreground ui-text-sm">
-            <Clock className="mt-0.5 shrink-0" />
+            <ClockIcon className="mt-0.5 shrink-0" />
             <span>
               {activeCount > 0
                 ? `${activeCount} active while Athas is open`
@@ -234,7 +234,7 @@ function OverviewContent({
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button type="button" variant="accent" onClick={onCreate}>
-            <Plus />
+            <PlusIcon />
             New continuous agent
           </Button>
           {GOAL_TEMPLATES.slice(0, 2).map((template) => (
@@ -242,7 +242,7 @@ function OverviewContent({
               key={template.name}
               className="inline-flex items-center gap-1.5 text-subtle-foreground ui-text-sm"
             >
-              <Sparkles />
+              <SparkleIcon />
               {template.name}
             </span>
           ))}
@@ -339,7 +339,7 @@ function OverviewContent({
             </CardHeader>
             <CardContent>
               <Button type="button" variant="accent" onClick={onCreate}>
-                <Plus />
+                <PlusIcon />
                 Create continuous agent
               </Button>
             </CardContent>
@@ -493,7 +493,7 @@ function CreateContent({ onCreated }: { onCreated: (taskId: string) => void }) {
           </FieldGroup>
           {!workspacePath ? (
             <div className="mt-4 flex items-center gap-2 text-warning ui-text-sm" role="status">
-              <Warning />
+              <WarningCircleIcon />
               Open a workspace before creating a continuous agent.
             </div>
           ) : null}
@@ -502,7 +502,7 @@ function CreateContent({ onCreated }: { onCreated: (taskId: string) => void }) {
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="flex items-center gap-1.5 text-subtle-foreground ui-text-sm">
-          <Sparkles />
+          <SparkleIcon />
           Start from a template
         </span>
         {GOAL_TEMPLATES.map((template) => (
@@ -522,7 +522,7 @@ function CreateContent({ onCreated }: { onCreated: (taskId: string) => void }) {
 
       <div className="flex justify-end border-border/70 border-t pt-5">
         <Button type="button" variant="accent" disabled={!canCreate} onClick={handleCreate}>
-          <Play />
+          <PlayIcon />
           Start continuous agent
         </Button>
       </div>
@@ -595,7 +595,7 @@ function TaskContent({
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2 text-warning">
-              <Warning />
+              <WarningCircleIcon />
               <CardTitle>Needs attention</CardTitle>
             </div>
             <CardDescription>{task.lastError}</CardDescription>
@@ -644,7 +644,7 @@ function TaskContent({
           disabled={isRunning}
           onClick={() => requestTaskRun(task.id)}
         >
-          <Play />
+          <PlayIcon />
           Run now
         </Button>
         <Button
@@ -652,11 +652,11 @@ function TaskContent({
           variant="default"
           onClick={() => setTaskEnabled(task.id, !task.enabled)}
         >
-          {task.enabled ? <Pause /> : <Continuous />}
+          {task.enabled ? <PauseIcon /> : <ArrowsClockwiseIcon />}
           {task.enabled ? "Pause" : "Resume"}
         </Button>
         <Button type="button" variant="danger" className="ml-auto" onClick={onDelete}>
-          <Trash />
+          <TrashIcon />
           Delete
         </Button>
       </div>
@@ -737,7 +737,7 @@ export default function ContinuousAgentsResource() {
         <ResourceViewer
           header={
             <ResourceViewerHeader
-              leading={<Continuous />}
+              leading={<ArrowsClockwiseIcon />}
               title={
                 <ResourceViewerTitle
                   kind="Continuous Agents"
@@ -749,7 +749,7 @@ export default function ContinuousAgentsResource() {
               actions={
                 selection !== "create" ? (
                   <Button type="button" variant="ghost" onClick={() => setSelection("create")}>
-                    <Plus />
+                    <PlusIcon />
                     New agent
                   </Button>
                 ) : undefined

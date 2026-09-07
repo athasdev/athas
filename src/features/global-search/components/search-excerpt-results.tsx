@@ -1,4 +1,4 @@
-import { MinusIcon as Minus, PlusIcon as Plus } from "@/ui/icons";
+import { MinusIcon, PlusIcon } from "@/ui/icons";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -116,7 +116,7 @@ function SearchExcerptFileHeader({
             className="shrink-0 text-subtle-foreground"
             iconOnly
           >
-            {isExpanded ? <Minus size={14} /> : <Plus size={14} />}
+            {isExpanded ? <MinusIcon size={14} /> : <PlusIcon size={14} />}
           </Button>
         ) : null
       }

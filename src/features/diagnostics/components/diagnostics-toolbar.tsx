@@ -1,10 +1,5 @@
 import type { MouseEvent, RefObject } from "react";
-import {
-  FilesIcon as Files,
-  FunnelIcon as Filter,
-  MagnifyingGlassIcon as Search,
-  XIcon as X,
-} from "@/ui/icons";
+import { FilesIcon, FilterIcon, SearchIcon, XIcon } from "@/ui/icons";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -40,7 +35,7 @@ export function DiagnosticsToolbar({
     <PaneContentHeader
       context={
         <div className="flex h-6 min-w-0 flex-1 items-center gap-2">
-          <Search className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
+          <SearchIcon className="size-4 shrink-0 text-subtle-foreground" />
           <CommandInput
             ref={inputRef}
             value={query}
@@ -63,7 +58,7 @@ export function DiagnosticsToolbar({
               aria-label="Clear problem search"
               className="shrink-0 text-subtle-foreground"
             >
-              <X />
+              <XIcon />
             </Button>
           ) : null}
         </div>
@@ -79,7 +74,7 @@ export function DiagnosticsToolbar({
             tooltip={activeFilterCount > 0 ? `Filters (${activeFilterCount})` : "Filter problems"}
             aria-label="Filter problems"
           >
-            <Filter />
+            <FilterIcon />
           </Button>
           <Badge className="max-w-56 shrink truncate" title={resultSummary} role="status">
             {resultLabel}
@@ -90,7 +85,7 @@ export function DiagnosticsToolbar({
               onPressedChange={onFileNavigatorVisibleChange}
               tooltip={fileNavigatorVisible ? "Hide problem files" : "Show problem files"}
             >
-              <Files />
+              <FilesIcon />
             </Toggle>
           ) : null}
         </>

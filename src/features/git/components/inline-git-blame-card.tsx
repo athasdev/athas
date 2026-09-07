@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
-import { CheckIcon as Check, CopyIcon as Copy } from "@/ui/icons";
+import { CheckIcon, CopyIcon } from "@/ui/icons";
 import { Popover, PopoverContent } from "@/ui/popover";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getGitAuthorAvatarUrl } from "../utils/git-author-avatar";
@@ -89,7 +89,7 @@ export function InlineGitBlameCard({
             aria-label={copied ? "Commit hash copied" : "Copy commit hash"}
             onClick={() => void copyCommitHash()}
           >
-            {copied ? <Check /> : <Copy />}
+            {copied ? <CheckIcon /> : <CopyIcon />}
           </Button>
         </div>
       </PopoverContent>

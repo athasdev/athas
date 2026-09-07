@@ -15,17 +15,17 @@ import { Button } from "@/ui/button";
 import { Dropdown, type DropdownSection, type MenuItem } from "@/ui/dropdown";
 import {
   BookOpenIcon,
-  ChatCircleTextIcon,
-  ClockCounterClockwiseIcon,
+  ChatBubbleTextIcon,
   CreditCardIcon,
-  GearSixIcon,
-  GithubLogoIcon,
+  HistoryIcon,
   MegaphoneIcon,
+  SettingsIcon,
   SignInIcon,
   SignOutIcon,
   UserIcon,
-  UsersThreeIcon,
+  UsersIcon,
 } from "@/ui/icons";
+import { GithubMark } from "@/ui/brand-marks";
 import Tooltip from "@/ui/tooltip";
 
 const COMMUNITY_URL = "https://discord.gg/DD8F38wFMv";
@@ -120,7 +120,7 @@ export const AccountMenu = memo(function AccountMenu() {
     {
       id: "settings",
       label: "Settings",
-      icon: <GearSixIcon />,
+      icon: <SettingsIcon />,
       shortcut: settingsShortcut,
       onClick: handleOpenSettings,
     },
@@ -155,7 +155,7 @@ export const AccountMenu = memo(function AccountMenu() {
           {
             id: "github-profile",
             label: "GitHub Profile",
-            icon: <GithubLogoIcon />,
+            icon: <GithubMark />,
             trailing: { type: "text" as const, label: "Connected" },
             onClick: () => openUrl(`https://github.com/${encodeURIComponent(githubLogin)}`),
           },
@@ -164,7 +164,7 @@ export const AccountMenu = memo(function AccountMenu() {
           {
             id: "github-connect",
             label: "Connect GitHub",
-            icon: <GithubLogoIcon />,
+            icon: <GithubMark />,
             onClick: () => openUrl(services.dashboardIntegrationsUrl),
           },
         ]),
@@ -173,7 +173,7 @@ export const AccountMenu = memo(function AccountMenu() {
           {
             id: "collaboration",
             label: "Collaboration",
-            icon: <UsersThreeIcon />,
+            icon: <UsersIcon />,
             onClick: handleOpenCollaboration,
           },
         ]
@@ -181,7 +181,7 @@ export const AccountMenu = memo(function AccountMenu() {
     {
       id: "settings",
       label: "Settings",
-      icon: <GearSixIcon />,
+      icon: <SettingsIcon />,
       shortcut: settingsShortcut,
       onClick: handleOpenSettings,
     },
@@ -197,7 +197,7 @@ export const AccountMenu = memo(function AccountMenu() {
     {
       id: "changelog",
       label: "Changelog",
-      icon: <ClockCounterClockwiseIcon />,
+      icon: <HistoryIcon />,
       onClick: handleOpenChangelog,
     },
     {
@@ -209,7 +209,7 @@ export const AccountMenu = memo(function AccountMenu() {
     {
       id: "community",
       label: "Community",
-      icon: <ChatCircleTextIcon />,
+      icon: <ChatBubbleTextIcon />,
       onClick: handleOpenCommunity,
     },
   ];

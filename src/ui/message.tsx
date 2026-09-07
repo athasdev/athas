@@ -1,6 +1,6 @@
 import type * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { CopyIcon as Copy, type Icon as AppIcon } from "@/ui/icons";
+import { CopyIcon, type Icon } from "@/ui/icons";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
@@ -148,14 +148,14 @@ function MessageActions({ className, ...props }: React.ComponentProps<"div">) {
 function MessageAction({
   label,
   tooltip,
-  icon: Icon = Copy,
+  icon: Icon = CopyIcon,
   children,
   className,
   ...props
 }: Omit<ButtonProps, "tooltip"> & {
   label: string;
   tooltip?: string;
-  icon?: AppIcon;
+  icon?: Icon;
   children?: React.ReactNode;
 }) {
   return (

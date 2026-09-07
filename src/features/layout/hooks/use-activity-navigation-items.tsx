@@ -6,15 +6,15 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import {
-  BoxIcon,
-  BugBeetleIcon,
+  BugIcon,
   DatabaseIcon,
   ExtensionsIcon,
   FilesIcon,
   GitBranchIcon,
-  GithubLogoIcon,
-  StackIcon as LayersIcon,
+  PackageIcon,
+  StackIcon,
 } from "@/ui/icons";
+import { GithubMark } from "@/ui/brand-marks";
 
 export interface ActivityNavigationItem {
   id: string;
@@ -104,7 +104,7 @@ export function useActivityNavigationItems({
             {
               id: "github-prs",
               label: "GitHub",
-              icon: <GithubLogoIcon />,
+              icon: <GithubMark />,
               active: isPrimarySidebarItemActive && isGitHubPRsViewActive,
               onClick: () => onViewChange("github-prs"),
               ariaLabel: "GitHub",
@@ -114,7 +114,7 @@ export function useActivityNavigationItems({
       {
         id: "views",
         label: "Views",
-        icon: <LayersIcon />,
+        icon: <StackIcon />,
         active: isPrimarySidebarItemActive && activeSidebarView === "views",
         onClick: () => onViewChange("views"),
         ariaLabel: "Views",
@@ -124,7 +124,7 @@ export function useActivityNavigationItems({
             {
               id: "debugger",
               label: "Run and Debug",
-              icon: <BugBeetleIcon />,
+              icon: <BugIcon />,
               active: isDebuggerActive,
               onClick: onToggleDebugger,
               ariaLabel: "Run and Debug",
@@ -145,7 +145,7 @@ export function useActivityNavigationItems({
             {
               id: "docker",
               label: "Docker",
-              icon: <BoxIcon />,
+              icon: <PackageIcon />,
               active: isPrimarySidebarItemActive && activeSidebarView === "docker",
               onClick: () => onViewChange("docker"),
               ariaLabel: "Docker",

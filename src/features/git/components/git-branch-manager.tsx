@@ -1,11 +1,15 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  CheckIcon as Check,
-  CopyIcon as Copy,
-  DotsThreeIcon as DotsThree,
-  PlusIcon as Plus,
-  ArrowClockwiseIcon as RefreshCw,
-  TrashIcon as Trash2,
+  ArrowClockwiseIcon,
+  CheckIcon,
+  ChevronExpandYIcon,
+  CopyIcon,
+  DotsIcon,
+  FolderOpenIcon,
+  GitBranchIcon,
+  NodesIcon,
+  PlusIcon,
+  TrashIcon,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
@@ -36,7 +40,6 @@ import {
   CommandTabs,
   useCommandListNavigation,
 } from "@/ui/command";
-import { ChevronExpandYIcon, GitBranchIcon, FolderOpenIcon, NodesIcon } from "@/ui/icons";
 import { showConfirmDialog, showPromptDialog } from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
@@ -624,7 +627,7 @@ const GitBranchManager = ({
           </DropdownMenuViewport>
           <DropdownMenuFooter>
             <DropdownMenuItem onClick={() => void handlePromptCreateBranch()}>
-              <Plus />
+              <PlusIcon />
               New branch…
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -632,7 +635,7 @@ const GitBranchManager = ({
               disabled={isLoading}
               onClick={() => void loadBranches()}
             >
-              <RefreshCw />
+              <ArrowClockwiseIcon />
               Refresh branches
             </DropdownMenuItem>
           </DropdownMenuFooter>
@@ -726,7 +729,7 @@ const GitBranchManager = ({
               {createBranchName ? (
                 <CommandItemRow
                   as="div"
-                  icon={<Plus />}
+                  icon={<PlusIcon />}
                   title={`Create new branch "${createBranchName}"`}
                   onClick={() => void handleCreateBranch(createBranchName)}
                   disabled={isLoading}
@@ -762,7 +765,7 @@ const GitBranchManager = ({
               {createWorktreePath ? (
                 <CommandItemRow
                   as="div"
-                  icon={<Plus />}
+                  icon={<PlusIcon />}
                   title={`Create worktree "${createWorktreePath}"`}
                   onClick={() => void handleCreateWorktree(createWorktreePath)}
                   disabled={isLoadingWorktrees}
@@ -815,7 +818,7 @@ const GitBranchManager = ({
                 onClick={() => createBranchName && void handleCreateBranch(createBranchName)}
                 disabled={!createBranchName || isLoading}
               >
-                <Plus />
+                <PlusIcon />
                 New Branch
               </CommandFooterAction>
               <CommandFooterAction
@@ -823,7 +826,7 @@ const GitBranchManager = ({
                 onClick={() => void loadBranches()}
                 disabled={isLoading}
               >
-                <RefreshCw />
+                <ArrowClockwiseIcon />
                 Refresh
               </CommandFooterAction>
             </>
@@ -835,7 +838,7 @@ const GitBranchManager = ({
                 onClick={() => createWorktreePath && void handleCreateWorktree(createWorktreePath)}
                 disabled={!createWorktreePath || isLoadingWorktrees}
               >
-                <Plus />
+                <PlusIcon />
                 {isLoadingWorktrees ? "Adding..." : "Add"}
               </CommandFooterAction>
               <CommandFooterAction
@@ -843,7 +846,7 @@ const GitBranchManager = ({
                 onClick={() => void loadWorktrees()}
                 disabled={isLoadingWorktrees}
               >
-                <RefreshCw />
+                <ArrowClockwiseIcon />
                 Refresh
               </CommandFooterAction>
             </>
@@ -855,7 +858,7 @@ const GitBranchManager = ({
                 onClick={() => void handleBrowseRepository()}
                 disabled={isSelectingRepo}
               >
-                <Plus />
+                <PlusIcon />
                 {isSelectingRepo ? "Adding..." : "Add"}
               </CommandFooterAction>
               <CommandFooterAction
@@ -863,7 +866,7 @@ const GitBranchManager = ({
                 onClick={() => void refreshWorkspaceRepositories()}
                 disabled={isDiscoveringRepos}
               >
-                <RefreshCw />
+                <ArrowClockwiseIcon />
                 Refresh
               </CommandFooterAction>
               {manualRepoPaths.length > 0 ? (
@@ -904,7 +907,7 @@ function BranchRow({
   return (
     <CommandItemRow
       as="div"
-      icon={isCurrent ? <Check className="text-success" /> : <GitBranchIcon />}
+      icon={isCurrent ? <CheckIcon className="text-success" /> : <GitBranchIcon />}
       title={branch}
       isSelected={isSelected}
       disabled={isLoading}
@@ -929,7 +932,7 @@ function BranchRow({
             aria-label={`Delete branch ${branch}`}
             type="button"
           >
-            <Trash2 />
+            <TrashIcon />
           </CommandItemAction>
         ) : null
       }
@@ -966,20 +969,20 @@ function BranchDropdownActions({
           />
         }
       >
-        <DotsThree />
+        <DotsIcon />
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="min-w-44">
         <DropdownMenuItem disabled={isLoading} onClick={onCreateFrom}>
-          <Plus />
+          <PlusIcon />
           New branch from…
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onCopy}>
-          <Copy />
+          <CopyIcon />
           Copy branch name
         </DropdownMenuItem>
         {!isCurrent ? (
           <DropdownMenuItem variant="destructive" disabled={isLoading} onClick={onDelete}>
-            <Trash2 />
+            <TrashIcon />
             Delete branch…
           </DropdownMenuItem>
         ) : null}
@@ -1009,7 +1012,7 @@ function RepositoryRow({
   return (
     <CommandItemRow
       as="div"
-      icon={isCurrent ? <Check className="text-success" /> : <FolderOpenIcon />}
+      icon={isCurrent ? <CheckIcon className="text-success" /> : <FolderOpenIcon />}
       title={getFolderName(repoPath)}
       description={relativePath === "." ? repoPath : relativePath}
       isSelected={isSelected}
@@ -1041,7 +1044,7 @@ function WorktreeRow({
   return (
     <CommandItemRow
       as="div"
-      icon={isCurrent ? <Check className="text-success" /> : <NodesIcon />}
+      icon={isCurrent ? <CheckIcon className="text-success" /> : <NodesIcon />}
       title={getFolderName(worktree.path)}
       description={
         <>

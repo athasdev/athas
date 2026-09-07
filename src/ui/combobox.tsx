@@ -1,5 +1,4 @@
-import { CheckIcon as Check, CaretDownIcon as ChevronDown, XIcon as X } from "@/ui/icons";
-import type { Icon as AppIcon } from "@/ui/icons";
+import { CheckIcon, ChevronDownIcon, type Icon, XIcon } from "@/ui/icons";
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { forwardRef, type CSSProperties } from "react";
@@ -66,7 +65,7 @@ function ComboboxTrigger({
 }: ComboboxPrimitive.Trigger.Props) {
   return (
     <ComboboxPrimitive.Trigger data-slot="combobox-trigger" render={render} {...props}>
-      {children ?? <ChevronDown className="pointer-events-none size-3.5" />}
+      {children ?? <ChevronDownIcon className="pointer-events-none size-3.5" />}
     </ComboboxPrimitive.Trigger>
   );
 }
@@ -78,7 +77,7 @@ function ComboboxClear({
 }: ComboboxPrimitive.Clear.Props) {
   return (
     <ComboboxPrimitive.Clear data-slot="combobox-clear" render={render} {...props}>
-      {children ?? <X className="pointer-events-none size-3.5" />}
+      {children ?? <XIcon className="pointer-events-none size-3.5" />}
     </ComboboxPrimitive.Clear>
   );
 }
@@ -87,7 +86,7 @@ type ComboboxInputProps = Omit<ComboboxPrimitive.Input.Props, "size"> & {
   containerStyle?: CSSProperties;
   inputClassName?: string;
   inputStyle?: CSSProperties;
-  leftIcon?: AppIcon;
+  leftIcon?: Icon;
   leftIconSize?: number;
   htmlSize?: number;
   variant?: ComboboxVariant;
@@ -223,7 +222,7 @@ function ComboboxItem({
       {children}
       {showIndicator ? (
         <ComboboxPrimitive.ItemIndicator className="pointer-events-none absolute right-2 flex size-4 items-center justify-center text-primary">
-          <Check className="pointer-events-none size-3.5" />
+          <CheckIcon className="pointer-events-none size-3.5" />
         </ComboboxPrimitive.ItemIndicator>
       ) : null}
     </ComboboxPrimitive.Item>

@@ -1,17 +1,17 @@
 import {
-  ArchiveIcon as Archive,
-  DownloadIcon as Download,
-  DotsThreeIcon,
+  ArchiveIcon,
+  ArrowClockwiseIcon,
+  ArrowCounterClockwiseIcon,
+  DotsIcon,
+  DownloadIcon,
   EyeIcon,
-  GitBranchIcon as GitBranch,
-  FolderOpenIcon as FolderOpen,
-  GitPullRequestIcon as GitPullRequest,
-  ArrowClockwiseIcon as RefreshCw,
-  ArrowCounterClockwiseIcon as RotateCcw,
-  HardDrivesIcon as Server,
-  GearSixIcon as Settings,
-  TagIcon as Tag,
-  UploadIcon as Upload,
+  FolderOpenIcon,
+  GitBranchIcon,
+  GitPullRequestIcon,
+  HardDrivesIcon,
+  SettingsIcon,
+  TagIcon,
+  UploadIcon,
 } from "@/ui/icons";
 import { useState } from "react";
 import {
@@ -210,7 +210,7 @@ const GitActionsMenu = ({
       <DropdownMenuTrigger
         render={<SidebarIconButton tooltip="Git actions" aria-label="Git actions" />}
       >
-        <DotsThreeIcon />
+        <DotsIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
         {hasGitRepo ? (
@@ -219,41 +219,41 @@ const GitActionsMenu = ({
               disabled={isSelectingRepository}
               onClick={() => void handleSelectRepository()}
             >
-              <FolderOpen />
+              <FolderOpenIcon />
               {isSelectingRepository ? "Selecting..." : "Select repository"}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleBranchManager}>
-              <GitBranch />
+              <GitBranchIcon />
               Manage branches
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleShowBranchDiff}>
-              <GitPullRequest />
+              <GitPullRequestIcon />
               Show branch diff
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled={isLoading} onClick={handlePush}>
-              <Upload />
+              <UploadIcon />
               Push changes
             </DropdownMenuItem>
             <DropdownMenuItem disabled={isLoading} onClick={handlePull}>
-              <Download weight="fill" />
+              <DownloadIcon optical="md" />
               Pull changes
             </DropdownMenuItem>
             <DropdownMenuItem disabled={isLoading} onClick={handleFetch}>
-              <GitPullRequest />
+              <GitPullRequestIcon />
               Fetch
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleRemoteManager}>
-              <Server />
+              <HardDrivesIcon />
               Manage remotes
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleTagManager}>
-              <Tag />
+              <TagIcon />
               Manage tags
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleViewStashes}>
-              <Archive />
+              <ArchiveIcon />
               View stashes
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -264,7 +264,7 @@ const GitActionsMenu = ({
               disabled={isLoading || isInitializingRepository}
               onClick={handleInitRepository}
             >
-              <Settings />
+              <SettingsIcon />
               {isInitializingRepository ? "Initializing..." : "Initialize repository"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -313,7 +313,7 @@ const GitActionsMenu = ({
         </DropdownMenuSub>
 
         <DropdownMenuItem disabled={isRefreshing} onClick={() => void handleRefresh()}>
-          {isRefreshing ? <Spinner label="Refreshing status" compact /> : <RefreshCw />}
+          {isRefreshing ? <Spinner label="Refreshing status" compact /> : <ArrowClockwiseIcon />}
           Refresh status
         </DropdownMenuItem>
         {hasGitRepo ? (
@@ -324,7 +324,7 @@ const GitActionsMenu = ({
               disabled={isLoading}
               onClick={() => void handleDiscardAllChanges()}
             >
-              <RotateCcw />
+              <ArrowCounterClockwiseIcon />
               Discard all changes
             </DropdownMenuItem>
           </>

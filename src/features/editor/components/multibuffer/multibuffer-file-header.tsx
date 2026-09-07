@@ -1,4 +1,4 @@
-import { ChevronDownIcon as ChevronDown, ChevronRightIcon as ChevronRight } from "@/ui/icons";
+import { ChevronDownIcon, ChevronRightIcon } from "@/ui/icons";
 import { memo, type ReactNode } from "react";
 import { cva } from "class-variance-authority";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
@@ -72,9 +72,9 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
               aria-expanded={expanded}
             >
               {expanded ? (
-                <ChevronDown className="size-3.5" />
+                <ChevronDownIcon className="size-3.5" />
               ) : (
-                <ChevronRight className="size-3.5" />
+                <ChevronRightIcon className="size-3.5" />
               )}
             </button>
           ) : null}

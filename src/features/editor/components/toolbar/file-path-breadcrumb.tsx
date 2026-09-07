@@ -1,5 +1,5 @@
 import type React from "react";
-import { CaretLeftIcon as ChevronLeft } from "@/ui/icons";
+import { ChevronLeftIcon } from "@/ui/icons";
 import { useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
@@ -202,7 +202,7 @@ export function FilePathBreadcrumb({
               {
                 id: "go-back",
                 label: "Go back",
-                icon: <ChevronLeft className="text-subtle-foreground" weight="duotone" />,
+                icon: <ChevronLeftIcon className="text-subtle-foreground" />,
                 onClick: () => void handleGoBack(),
               },
               menuSeparator("go-back-separator"),

@@ -1,17 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  WarningCircleIcon as AlertCircle,
-  CheckCircleIcon as CheckCircle,
-  CloudIcon as Cloud,
-  ArrowSquareOutIcon as ExternalLink,
-  GlobeHemisphereWestIcon as Globe,
-  KeyIcon as Key,
-  LaptopIcon as Laptop,
-  PaletteIcon as Palette,
-  SparkleIcon as Sparkles,
-  ArrowClockwiseIcon as RefreshCw,
-  ArrowCounterClockwiseIcon as RotateCcw,
-  TrashIcon as Trash2,
+  ArrowClockwiseIcon,
+  ArrowCounterClockwiseIcon,
+  CheckCircleIcon,
+  CloudIcon,
+  GlobeIcon,
+  KeyIcon,
+  LaptopIcon,
+  OpenExternalIcon,
+  PaletteIcon,
+  SparkleIcon,
+  TrashIcon,
+  WarningCircleIcon,
 } from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -552,13 +552,13 @@ export const AISettings = () => {
             onClick={() => setIsApiKeyManagerOpen(true)}
             className="w-fit"
           >
-            <Key />
+            <KeyIcon />
             <span>Manage keys</span>
           </Button>
         </SettingRow>
 
         {providerSettingsActions.map((action) => {
-          const Icon = action.icon === "sparkles" ? Sparkles : Palette;
+          const Icon = action.icon === "sparkles" ? SparkleIcon : PaletteIcon;
 
           return (
             <SettingRow
@@ -604,7 +604,7 @@ export const AISettings = () => {
               }}
               placeholder="http://localhost:11434/v1"
               spellCheck={false}
-              leftIcon={Globe}
+              leftIcon={GlobeIcon}
             />
           </SettingRow>
           <SettingRow
@@ -662,8 +662,8 @@ export const AISettings = () => {
               }}
               ariaLabel="Ollama mode"
               options={[
-                { value: "local", label: "Local", icon: <Laptop /> },
-                { value: "cloud", label: "Cloud", icon: <Cloud /> },
+                { value: "local", label: "Local", icon: <LaptopIcon /> },
+                { value: "cloud", label: "Cloud", icon: <CloudIcon /> },
               ]}
             />
           </SettingRow>
@@ -688,15 +688,15 @@ export const AISettings = () => {
                 }}
                 placeholder={DEFAULT_OLLAMA_BASE_URL}
                 spellCheck={false}
-                leftIcon={Globe}
+                leftIcon={GlobeIcon}
                 className={cn(
                   "w-56 max-w-full",
                   ollamaStatus === "error" && "border-destructive/60",
                 )}
               />
               {ollamaStatus === "checking" && <Spinner label="Checking" compact />}
-              {ollamaStatus === "ok" && <CheckCircle className="text-success" />}
-              {ollamaStatus === "error" && <AlertCircle className="text-destructive" />}
+              {ollamaStatus === "ok" && <CheckCircleIcon className="text-success" />}
+              {ollamaStatus === "error" && <WarningCircleIcon className="text-destructive" />}
               {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
                 <Button
                   type="button"
@@ -706,7 +706,7 @@ export const AISettings = () => {
                   aria-label="Reset Ollama URL to default"
                   iconOnly
                 >
-                  <RotateCcw />
+                  <ArrowCounterClockwiseIcon />
                 </Button>
               )}
             </div>
@@ -722,7 +722,7 @@ export const AISettings = () => {
                 onChange={(e) => setOllamaApiKeyInput(e.target.value)}
                 placeholder={hasStoredOllamaKey ? "••••••••  (saved)" : "ollama-…"}
                 spellCheck={false}
-                leftIcon={Key}
+                leftIcon={KeyIcon}
                 className={cn(
                   "w-56 max-w-full",
                   needsApiKey && !hasStoredOllamaKey && "border-warning/60",
@@ -746,7 +746,7 @@ export const AISettings = () => {
                   tooltip="Remove saved API key"
                   iconOnly
                 >
-                  <Trash2 />
+                  <TrashIcon />
                 </Button>
               )}
             </div>
@@ -754,14 +754,14 @@ export const AISettings = () => {
           {needsApiKey && !hasStoredOllamaKey && (
             <SettingRow label="Ollama Cloud Key" description="Ollama Cloud requires an API key.">
               <div className="flex items-center gap-1.5">
-                <AlertCircle className="shrink-0 text-warning" />
+                <WarningCircleIcon className="shrink-0 text-warning" />
                 <TextLink
                   href="https://ollama.com/settings/keys"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1"
                 >
-                  Get key <ExternalLink className="size-3" />
+                  Get key <OpenExternalIcon className="size-3" />
                 </TextLink>
               </div>
             </SettingRow>
@@ -926,7 +926,7 @@ export const AISettings = () => {
                     {isLoadingAutocompleteModels ? (
                       <Spinner label="Loading models" compact />
                     ) : (
-                      <RefreshCw />
+                      <ArrowClockwiseIcon />
                     )}
                   </Button>
                   <Select

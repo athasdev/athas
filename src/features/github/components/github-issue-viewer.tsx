@@ -1,11 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  ChatCircleTextIcon as MessageSquare,
-  CheckCircleIcon as CheckCircle,
-  DotOutlineIcon as CircleDot,
-  LockIcon as Lock,
-  LockOpenIcon as LockOpen,
+  ChatBubbleTextIcon,
+  CheckCircleIcon,
+  CircleDotIcon,
+  LockIcon,
+  LockOpenIcon,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -417,7 +417,11 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   disabled={Boolean(mutationKey)}
                   variant="ghost"
                 >
-                  {mutationKey === "state" ? <Spinner label="Closing" compact /> : <CheckCircle />}
+                  {mutationKey === "state" ? (
+                    <Spinner label="Closing" compact />
+                  ) : (
+                    <CheckCircleIcon />
+                  )}
                   Close
                 </Button>
               ) : (
@@ -427,7 +431,11 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   disabled={!details || Boolean(mutationKey)}
                   variant="ghost"
                 >
-                  {mutationKey === "state" ? <Spinner label="Reopening" compact /> : <CircleDot />}
+                  {mutationKey === "state" ? (
+                    <Spinner label="Reopening" compact />
+                  ) : (
+                    <CircleDotIcon />
+                  )}
                   Reopen
                 </Button>
               )}
@@ -445,7 +453,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                     disabled={Boolean(mutationKey)}
                     onClick={() => void updateLock()}
                   >
-                    <LockOpen />
+                    <LockOpenIcon />
                     Unlock conversation
                   </DropdownMenuItem>
                 ) : (
@@ -454,7 +462,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                       disabled={Boolean(mutationKey)}
                       onClick={() => void updateLock("resolved")}
                     >
-                      <Lock />
+                      <LockIcon />
                       Lock as resolved
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -505,7 +513,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               <ResourceDetailSection label="Status">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <CircleDot
+                    <CircleDotIcon
                       className={
                         details.state.toLowerCase() === "open"
                           ? "text-success"
@@ -521,7 +529,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   ) : null}
                   {details.locked ? (
                     <div className="flex items-center gap-2 text-subtle-foreground">
-                      <Lock />
+                      <LockIcon />
                       <span>
                         {details.activeLockReason
                           ? `Locked as ${details.activeLockReason}`
@@ -723,7 +731,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                       {mutationKey === "new-comment" ? (
                         <Spinner label="Commenting" compact />
                       ) : (
-                        <MessageSquare />
+                        <ChatBubbleTextIcon />
                       )}
                       Comment
                     </Button>

@@ -2,16 +2,16 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import {
-  CopyIcon as Copy,
-  ChatCircleTextIcon,
-  FunnelIcon as Funnel,
-  GitBranchIcon as GitBranch,
-  GithubLogoIcon as GithubLogo,
-  GitPullRequestIcon as GitPullRequest,
-  LightningIcon,
-  PlusIcon as Plus,
+  ArrowClockwiseIcon,
+  BoltIcon,
+  ChatBubbleTextIcon,
+  CopyIcon,
+  FilterIcon,
+  GitBranchIcon,
+  GitPullRequestIcon,
+  PlusIcon,
 } from "@/ui/icons";
-import { ArrowClockwiseIcon as RefreshCw } from "@/ui/icons";
+import { GithubMark } from "@/ui/brand-marks";
 import {
   memo,
   startTransition,
@@ -520,7 +520,7 @@ const GitHubPRsView = memo(() => {
         {
           id: "open-pr",
           label: "Open PR",
-          icon: <GitPullRequest />,
+          icon: <GitPullRequestIcon />,
           onClick: () => {
             handleSelectPR(selectedPR);
           },
@@ -528,7 +528,7 @@ const GitHubPRsView = memo(() => {
         {
           id: "open-on-github",
           label: "Open on GitHub",
-          icon: <GithubLogo />,
+          icon: <GithubMark />,
           onClick: () => {
             if (effectiveRepoPath) {
               void openPRInBrowser(effectiveRepoPath, selectedPR.number);
@@ -538,7 +538,7 @@ const GitHubPRsView = memo(() => {
         {
           id: "checkout-branch",
           label: "Checkout Branch",
-          icon: <GitBranch />,
+          icon: <GitBranchIcon />,
           onClick: () => {
             if (effectiveRepoPath) {
               void checkoutPR(effectiveRepoPath, selectedPR.number);
@@ -548,7 +548,7 @@ const GitHubPRsView = memo(() => {
         {
           id: "copy-title",
           label: "Copy Title",
-          icon: <Copy />,
+          icon: <CopyIcon />,
           onClick: () => {
             void writeClipboardText(selectedPR.title);
           },
@@ -564,14 +564,14 @@ const GitHubPRsView = memo(() => {
           : activeSection === "issues"
             ? "Refresh Issues"
             : "Refresh Workflow Runs",
-      icon: <RefreshCw />,
+      icon: <ArrowClockwiseIcon />,
       disabled: isLoading || !effectiveRepoPath,
       onClick: handleRefreshActiveSection,
     },
     {
       id: "select-repository",
       label: "Browse Repository",
-      icon: <GitBranch />,
+      icon: <GitBranchIcon />,
       disabled: isSelectingRepo,
       onClick: () => void handleSelectRepository(),
     },
@@ -720,7 +720,7 @@ const GitHubPRsView = memo(() => {
                   }
                 }}
               >
-                <Plus />
+                <PlusIcon />
               </SidebarIconButton>
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -732,7 +732,7 @@ const GitHubPRsView = memo(() => {
                     />
                   }
                 >
-                  <Funnel />
+                  <FilterIcon />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuRadioGroup
@@ -769,11 +769,11 @@ const GitHubPRsView = memo(() => {
                 section === "pull-requests" ? "PRs" : section === "issues" ? "Issues" : "Actions",
               icon:
                 section === "pull-requests" ? (
-                  <GitPullRequest />
+                  <GitPullRequestIcon />
                 ) : section === "issues" ? (
-                  <ChatCircleTextIcon />
+                  <ChatBubbleTextIcon />
                 ) : (
-                  <LightningIcon />
+                  <BoltIcon />
                 ),
               badge: section === "pull-requests" && prs.length > 0 ? prs.length : undefined,
               ariaLabel:

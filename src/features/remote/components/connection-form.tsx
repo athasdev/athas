@@ -1,10 +1,10 @@
 import {
-  WarningCircleIcon as AlertCircle,
-  CheckCircleIcon as CheckCircle,
-  EyeIcon as Eye,
-  EyeSlashIcon as EyeOff,
-  FolderOpenIcon as FolderOpen,
-  KeyIcon as Key,
+  CheckCircleIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  FolderOpenIcon,
+  KeyIcon,
+  WarningCircleIcon,
 } from "@/ui/icons";
 import type { Dispatch, FormEvent, Ref, SetStateAction } from "react";
 import { Checkbox } from "@/ui/checkbox";
@@ -167,7 +167,7 @@ export default function ConnectionForm({
             </FieldLabel>
             <InputGroup variant="surface">
               <InputGroupAddon align="inline-start">
-                <Key />
+                <KeyIcon />
               </InputGroupAddon>
               <InputGroupInput
                 id={`${idPrefix}-keypath`}
@@ -183,7 +183,7 @@ export default function ConnectionForm({
               />
               <InputGroupAddon align="inline-end">
                 <InputGroupButton onClick={onChooseKey} disabled={disabled}>
-                  <FolderOpen />
+                  <FolderOpenIcon />
                   Browse
                 </InputGroupButton>
               </InputGroupAddon>
@@ -213,7 +213,7 @@ export default function ConnectionForm({
                   tooltip={showPassword ? "Hide password" : "Show password"}
                   iconOnly
                 >
-                  {showPassword ? <EyeOff /> : <Eye />}
+                  {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
                 </InputGroupButton>
               </InputGroupAddon>
             </InputGroup>
@@ -238,7 +238,9 @@ export default function ConnectionForm({
       <div className="space-y-2" aria-live="polite">
         {testStatus !== "idle" ? (
           <Marker tone={testStatus === "success" ? "success" : "error"}>
-            <MarkerIcon>{testStatus === "success" ? <CheckCircle /> : <AlertCircle />}</MarkerIcon>
+            <MarkerIcon>
+              {testStatus === "success" ? <CheckCircleIcon /> : <WarningCircleIcon />}
+            </MarkerIcon>
             <MarkerContent>{testMessage}</MarkerContent>
           </Marker>
         ) : null}
@@ -246,7 +248,7 @@ export default function ConnectionForm({
         {validationStatus === "valid" ? (
           <Marker tone="success">
             <MarkerIcon>
-              <CheckCircle />
+              <CheckCircleIcon />
             </MarkerIcon>
             <MarkerContent>Connection saved successfully.</MarkerContent>
           </Marker>
@@ -255,7 +257,7 @@ export default function ConnectionForm({
         {validationStatus === "invalid" ? (
           <Marker tone="error">
             <MarkerIcon>
-              <AlertCircle />
+              <WarningCircleIcon />
             </MarkerIcon>
             <MarkerContent>{errorMessage}</MarkerContent>
           </Marker>

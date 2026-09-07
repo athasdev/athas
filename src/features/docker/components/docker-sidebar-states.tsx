@@ -1,9 +1,4 @@
-import {
-  ArrowClockwiseIcon as Refresh,
-  ArrowSquareOutIcon as OpenExternal,
-  WarningCircleIcon as WarningCircle,
-  XIcon as X,
-} from "@/ui/icons";
+import { ArrowClockwiseIcon, OpenExternalIcon, WarningCircleIcon, XIcon } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/ui/alert";
@@ -66,7 +61,7 @@ export function DockerUnavailableState({
     <Empty className="min-h-0 flex-none gap-3 px-4 py-5" role="status">
       <EmptyHeader className="gap-1.5">
         <EmptyMedia variant="icon" className="size-9 border border-border/70 bg-accent">
-          <WarningCircle className="size-4.5 text-subtle-foreground" />
+          <WarningCircleIcon className="size-4.5 text-subtle-foreground" />
         </EmptyMedia>
         <EmptyTitle className="ui-text-base">{title ?? fallbackCopy.title}</EmptyTitle>
         <EmptyDescription className="max-w-[34ch]">
@@ -75,7 +70,7 @@ export function DockerUnavailableState({
       </EmptyHeader>
       <EmptyContent className="flex-row justify-center gap-1.5">
         <Button type="button" variant="default" disabled={isRetrying} onClick={onRetry}>
-          {isRetrying ? <Spinner compact /> : <Refresh />}
+          {isRetrying ? <Spinner compact /> : <ArrowClockwiseIcon />}
           Retry
         </Button>
         <Button
@@ -83,7 +78,7 @@ export function DockerUnavailableState({
           variant="ghost"
           onClick={() => openDockerConnectionDetailsBuffer(error)}
         >
-          <OpenExternal />
+          <OpenExternalIcon />
           Details
         </Button>
       </EmptyContent>
@@ -117,7 +112,7 @@ export function DockerInlineError({
           aria-label={`Dismiss ${title.toLowerCase()}`}
           onClick={onDismiss}
         >
-          <X />
+          <XIcon />
         </Button>
       </AlertAction>
     </Alert>
@@ -133,7 +128,7 @@ export function DockerCapabilityNotice({
 }) {
   return (
     <Alert tone="warning" role="status" className={cn("mx-2 mb-2 w-auto", className)}>
-      <WarningCircle />
+      <WarningCircleIcon />
       <AlertDescription>{children}</AlertDescription>
     </Alert>
   );

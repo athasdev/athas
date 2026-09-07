@@ -1,4 +1,4 @@
-import { ImageIcon as Image } from "@/ui/icons";
+import { ImageIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
@@ -57,7 +57,7 @@ export function ImageResizeDialog({
   return (
     <Dialog
       title="Resize Image"
-      icon={Image}
+      icon={ImageIcon}
       onClose={onClose}
       size="sm"
       classNames={{ content: "space-y-4 p-4" }}

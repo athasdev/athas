@@ -1,9 +1,4 @@
-import {
-  ArrowLeftIcon as ArrowLeft,
-  ArrowRightIcon as ArrowRight,
-  ArrowCounterClockwiseIcon as RotateCcw,
-  XIcon as X,
-} from "@/ui/icons";
+import { ArrowCounterClockwiseIcon, ArrowLeftIcon, ArrowRightIcon, XIcon } from "@/ui/icons";
 import type { Action } from "@/features/command-palette/types/action.types";
 
 interface TabActionsParams {
@@ -30,7 +25,7 @@ export const createTabActions = (params: TabActionsParams): Action[] => {
       id: "tab-close",
       label: "Tab: Close Tab",
       description: "Close current tab",
-      icon: <X />,
+      icon: <XIcon />,
       category: "File",
       commandId: "file.close",
       action: () => {
@@ -44,7 +39,7 @@ export const createTabActions = (params: TabActionsParams): Action[] => {
       id: "tab-next",
       label: "Tab: Next Tab",
       description: "Switch to the next open tab",
-      icon: <ArrowRight />,
+      icon: <ArrowRightIcon />,
       category: "File",
       commandId: "workbench.nextTab",
       action: () => {
@@ -56,7 +51,7 @@ export const createTabActions = (params: TabActionsParams): Action[] => {
       id: "tab-previous",
       label: "Tab: Previous Tab",
       description: "Switch to the previous open tab",
-      icon: <ArrowLeft />,
+      icon: <ArrowLeftIcon />,
       category: "File",
       commandId: "workbench.previousTab",
       action: () => {
@@ -68,7 +63,7 @@ export const createTabActions = (params: TabActionsParams): Action[] => {
       id: "tab-reopen",
       label: "Tab: Reopen Closed Tab",
       description: "Reopen the most recently closed tab",
-      icon: <RotateCcw />,
+      icon: <ArrowCounterClockwiseIcon />,
       category: "File",
       commandId: "file.reopenClosed",
       action: async () => {

@@ -15,11 +15,11 @@ import {
 } from "@/ui/context-menu";
 import { Empty, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
-  FileTextIcon as FileText,
-  FolderOpenIcon as FolderOpen,
-  PlusIcon as Plus,
-  SparkleIcon as Sparkles,
-  TerminalWindowIcon as Terminal,
+  FileTextIcon,
+  FolderOpenIcon,
+  PlusIcon,
+  SparkleIcon,
+  TerminalWindowIcon,
 } from "@/ui/icons";
 
 interface AgentStartViewProps {
@@ -65,25 +65,25 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
     {
       id: "new-file",
       label: "New file",
-      icon: <Plus />,
+      icon: <PlusIcon />,
       action: handleNewFile,
     },
     {
       id: "find",
       label: "Open file",
-      icon: <FileText />,
+      icon: <FileTextIcon />,
       action: handleOpenFile,
     },
     {
       id: "terminal",
       label: "New terminal",
-      icon: <Terminal />,
+      icon: <TerminalWindowIcon />,
       action: handleOpenTerminal,
     },
     {
       id: "research",
       label: "Open folder",
-      icon: <FolderOpen />,
+      icon: <FolderOpenIcon />,
       action: handleOpenFolder,
     },
   ];
@@ -128,24 +128,24 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onClick={handleNewFile}>
-          <Plus />
+          <PlusIcon />
           New File
         </ContextMenuItem>
         <ContextMenuItem onClick={handleOpenFolder}>
-          <FolderOpen />
+          <FolderOpenIcon />
           Open Folder
         </ContextMenuItem>
         <ContextMenuItem onClick={() => void handleOpenFile()}>
-          <FileText />
+          <FileTextIcon />
           Open File
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={handleOpenTerminal}>
-          <Terminal />
-          New Terminal
+          <TerminalWindowIcon />
+          New TerminalWindowIcon
         </ContextMenuItem>
         <ContextMenuItem onClick={handleOpenAgent}>
-          <Sparkles />
+          <SparkleIcon />
           New Agent
         </ContextMenuItem>
       </ContextMenuContent>

@@ -13,12 +13,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import {
-  ArrowCounterClockwiseIcon as Restore,
-  CheckIcon as Check,
-  ClockCounterClockwiseIcon as History,
-  TrashIcon as Trash,
-} from "@/ui/icons";
+import { ArrowCounterClockwiseIcon, CheckIcon, HistoryIcon, TrashIcon } from "@/ui/icons";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { ProviderIcon } from "../icons/provider-icons";
 
@@ -56,7 +51,7 @@ export default function ChatHistoryDropdown({
           />
         }
       >
-        <History />
+        <HistoryIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-96 min-w-72">
         <DropdownMenuSearch
@@ -82,22 +77,26 @@ export default function ChatHistoryDropdown({
                   <span className="shrink-0 text-subtle-foreground">
                     {getRelativeTime(chat.lastMessageAt)}
                   </span>
-                  {isCurrent ? <Check className="shrink-0 text-primary" /> : null}
+                  {isCurrent ? <CheckIcon className="shrink-0 text-primary" /> : null}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuItem onClick={() => onSwitchToChat(chat.id)}>
-                    {isCurrent ? <Check /> : <ProviderIcon providerId={chat.agentId} size={14} />}
+                    {isCurrent ? (
+                      <CheckIcon />
+                    ) : (
+                      <ProviderIcon providerId={chat.agentId} size={14} />
+                    )}
                     {isCurrent ? "Current session" : "Open session"}
                   </DropdownMenuItem>
                   {chat.archivedAt ? (
                     <DropdownMenuItem onClick={() => onSetChatArchived(chat.id, false)}>
-                      <Restore />
+                      <ArrowCounterClockwiseIcon />
                       Restore session
                     </DropdownMenuItem>
                   ) : null}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem variant="destructive" onClick={() => onDeleteChat(chat.id)}>
-                    <Trash />
+                    <TrashIcon />
                     Delete session
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>

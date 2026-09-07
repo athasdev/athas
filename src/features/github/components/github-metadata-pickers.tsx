@@ -8,7 +8,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/ui/combobox";
-import { PlusIcon as Plus, TagIcon as Tag, UserIcon as User, XIcon as X } from "@/ui/icons";
+import { PlusIcon, TagIcon, UserIcon, XIcon } from "@/ui/icons";
 import Input from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -61,7 +61,7 @@ export function GitHubLabelPicker({
     >
       <div className="w-44 min-w-0">
         <ComboboxInput
-          leftIcon={Tag}
+          leftIcon={TagIcon}
           placeholder={summary}
           aria-label="Choose labels"
           variant="ghost"
@@ -119,7 +119,7 @@ export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerPr
           <Button type="button" variant="ghost" className="max-w-44 justify-start font-normal" />
         }
       >
-        <User />
+        <UserIcon />
         <span className="truncate">{summary}</span>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 gap-2 p-2">
@@ -145,7 +145,7 @@ export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerPr
             disabled={!draft.trim()}
             aria-label="Add assignee"
           >
-            <Plus />
+            <PlusIcon />
           </Button>
         </div>
         {value.length > 0 ? (
@@ -160,7 +160,7 @@ export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerPr
                 aria-label={`Remove @${assignee}`}
               >
                 @{assignee}
-                <X />
+                <XIcon />
               </Button>
             ))}
           </div>

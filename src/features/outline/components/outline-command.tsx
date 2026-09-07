@@ -1,4 +1,4 @@
-import { ArrowLeftIcon as ArrowLeft } from "@/ui/icons";
+import { ArrowLeftIcon } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CommandEmpty,
@@ -83,7 +83,7 @@ export function OutlineCommandContent({ isActive, onBack, onClose }: OutlineComm
     <>
       <CommandHeader onClose={onClose}>
         <CommandHeaderAction onClick={onBack} aria-label="Back to commands">
-          <ArrowLeft />
+          <ArrowLeftIcon />
         </CommandHeaderAction>
         <CommandInput
           ref={inputRef}

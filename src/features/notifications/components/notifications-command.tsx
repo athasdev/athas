@@ -27,15 +27,15 @@ import Command, {
 } from "@/ui/command";
 import {
   BellIcon,
-  ChatCircleTextIcon,
+  BoltIcon,
+  ChatBubbleTextIcon,
   CopyIcon,
   GitPullRequestIcon,
-  GithubLogoIcon,
-  LightningIcon,
-  MagnifyingGlassIcon,
+  SearchIcon,
   SparkleIcon,
   TrashIcon,
 } from "@/ui/icons";
+import { GithubMark } from "@/ui/brand-marks";
 import { writeClipboardText } from "@/utils/clipboard";
 import { matchesSearchQuery } from "@/utils/search-match";
 
@@ -62,9 +62,9 @@ function notificationReasonLabel(reason: string) {
 
 function GitHubNotificationIcon({ subjectType }: { subjectType: string }) {
   if (subjectType === "PullRequest") return <GitPullRequestIcon />;
-  if (subjectType === "Issue") return <ChatCircleTextIcon />;
-  if (subjectType === "CheckSuite") return <LightningIcon />;
-  return <GithubLogoIcon />;
+  if (subjectType === "Issue") return <ChatBubbleTextIcon />;
+  if (subjectType === "CheckSuite") return <BoltIcon />;
+  return <GithubMark />;
 }
 
 export function NotificationsCommand({
@@ -164,7 +164,7 @@ export function NotificationsCommand({
     <>
       <Command isVisible={isVisible} onClose={onClose} title="Notifications">
         <CommandHeader onClose={onClose}>
-          <MagnifyingGlassIcon className="shrink-0 text-subtle-foreground" />
+          <SearchIcon className="shrink-0 text-subtle-foreground" />
           <CommandInput
             value={searchQuery}
             onChange={setSearchQuery}
@@ -206,7 +206,7 @@ export function NotificationsCommand({
             {
               id: "github",
               label: "GitHub",
-              icon: <GithubLogoIcon />,
+              icon: <GithubMark />,
               isActive: category === "github",
               onSelect: () => setCategory("github"),
             },

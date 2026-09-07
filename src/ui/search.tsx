@@ -1,14 +1,14 @@
 import {
-  TextAaIcon as CaseSensitive,
-  ChevronDownIcon as ChevronDown,
-  ChevronRightIcon as ChevronRight,
-  ChevronUpIcon as ChevronUp,
-  BracketsCurlyIcon as Regex,
-  ArrowsLeftRightIcon as Replace,
-  MagnifyingGlassIcon as Search,
-  TextTIcon as WholeWord,
-  XIcon as X,
-  type Icon as AppIcon,
+  ArrowsLeftRightIcon,
+  BracketsCurlyIcon,
+  CaseSensitiveIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+  type Icon,
+  SearchIcon,
+  TextIcon,
+  XIcon,
 } from "@/ui/icons";
 import { forwardRef, type ComponentProps, type ReactNode, type RefObject } from "react";
 import { Button } from "@/ui/button";
@@ -49,10 +49,10 @@ export const SearchField = forwardRef<
   Omit<ComponentProps<typeof Input>, "onChange" | "value" | "leftIcon"> & {
     value: string;
     onChange: (value: string) => void;
-    leftIcon?: AppIcon;
+    leftIcon?: Icon;
   }
 >(function SearchField(
-  { value, onChange, leftIcon = Search, placeholder = "Search", ...props },
+  { value, onChange, leftIcon = SearchIcon, placeholder = "Search", ...props },
   ref,
 ) {
   return (
@@ -99,7 +99,7 @@ export function SearchPopover({
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={onKeyDown}
             placeholder={placeholder}
-            leftIcon={Search}
+            leftIcon={SearchIcon}
             className="pr-8"
           />
           {value && (
@@ -111,7 +111,7 @@ export function SearchPopover({
               className="-translate-y-1/2 absolute top-1/2 right-1"
               aria-label="Clear search"
             >
-              <X />
+              <XIcon />
             </Button>
           )}
         </div>
@@ -130,7 +130,7 @@ export function SearchPopover({
         {extraActions}
 
         <Button type="button" onClick={onClose} variant="ghost" aria-label="Close search" iconOnly>
-          <X />
+          <XIcon />
         </Button>
       </div>
 
@@ -162,7 +162,7 @@ export function SearchPopover({
                   aria-label="Previous match"
                   iconOnly
                 >
-                  <ChevronUp />
+                  <ChevronUpIcon />
                 </Button>
               )}
               {onNext && (
@@ -174,7 +174,7 @@ export function SearchPopover({
                   aria-label="Next match"
                   iconOnly
                 >
-                  <ChevronDown />
+                  <ChevronDownIcon />
                 </Button>
               )}
             </div>
@@ -209,7 +209,7 @@ export function SearchReplaceToggle({
       aria-label={label}
       iconOnly
     >
-      <ChevronRight className={cn("transition-transform", isExpanded && "rotate-90")} />
+      <ChevronRightIcon className={cn("transition-transform", isExpanded && "rotate-90")} />
     </Button>
   );
 }
@@ -238,7 +238,7 @@ export function SearchReplaceRow({
   return (
     <div className="flex items-center gap-1.5 border-border/60 border-t pt-1.5">
       <span className="flex size-8 shrink-0 items-center justify-center text-subtle-foreground">
-        <Replace />
+        <ArrowsLeftRightIcon />
       </span>
 
       <Input
@@ -303,7 +303,7 @@ export function SearchInput({
           onKeyDown={onKeyDown}
           onFocus={onFocus}
           placeholder={placeholder}
-          leftIcon={Search}
+          leftIcon={SearchIcon}
           className="pr-8"
         />
         {value && (
@@ -315,7 +315,7 @@ export function SearchInput({
             className="-translate-y-1/2 absolute top-1/2 right-1"
             aria-label="Clear search"
           >
-            <X />
+            <XIcon />
           </Button>
         )}
       </div>
@@ -347,8 +347,8 @@ export function SearchInput({
 }
 
 export const SEARCH_TOGGLE_ICONS = {
-  caseSensitive: <CaseSensitive />,
-  wholeWord: <WholeWord />,
-  regex: <Regex />,
+  caseSensitive: <CaseSensitiveIcon />,
+  wholeWord: <TextIcon />,
+  regex: <BracketsCurlyIcon />,
   preserveCase: <span className="font-sans ui-text-sm font-semibold">Aa</span>,
 };

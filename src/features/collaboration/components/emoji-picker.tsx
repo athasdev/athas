@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon as Search } from "@/ui/icons";
+import { SearchIcon } from "@/ui/icons";
 import { useMemo, useState } from "react";
 import { Button } from "@/ui/button";
 import { Empty, EmptyDescription } from "@/ui/empty";
@@ -109,7 +109,7 @@ export function EmojiPicker({
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Search emoji..."
         aria-label="Search emoji"
-        leftIcon={Search}
+        leftIcon={SearchIcon}
       />
 
       {visibleRecentEmojis.length > 0 ? (

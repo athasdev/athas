@@ -3,11 +3,11 @@ import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
-  ArrowClockwiseIcon as RefreshCw,
-  ArrowsClockwiseIcon as Continuous,
-  SparkleIcon as Sparkles,
-  SquareIcon as Square,
-  TerminalWindowIcon as Terminal,
+  ArrowClockwiseIcon,
+  ArrowsClockwiseIcon,
+  SparkleIcon,
+  SquareIcon,
+  TerminalWindowIcon,
 } from "@/ui/icons";
 import {
   restartAllLanguageServers,
@@ -43,7 +43,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "ai-open-agent-window",
       label: "AI: Open Agent in New Window",
       description: "Open the active agent session in its own window",
-      icon: <Sparkles />,
+      icon: <SparkleIcon />,
       category: "AI",
       action: async () => {
         onClose();
@@ -57,7 +57,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "ai-new-agent",
       label: "AI: New Agent",
       description: "Open a new agent chat",
-      icon: <Sparkles />,
+      icon: <SparkleIcon />,
       category: "AI",
       commandId: "workbench.agentLauncher",
       action: () => {
@@ -69,7 +69,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "ai-continuous-agents",
       label: "AI: Continuous Agents",
       description: "Create and manage recurring workspace goals",
-      icon: <Continuous />,
+      icon: <ArrowsClockwiseIcon />,
       category: "AI",
       action: () => {
         useBufferStore.getState().actions.openContinuousAgentsBuffer();
@@ -80,7 +80,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "ai-quick-edit",
       label: "AI: Quick Edit Selection",
       description: "Edit selected text using AI inline",
-      icon: <Sparkles />,
+      icon: <SparkleIcon />,
       category: "AI",
       action: () => {
         const selection = window.getSelection();
@@ -98,7 +98,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "lsp-status",
       label: "LSP: Show Status",
       description: `Status: ${lspStatus.status} (${lspStatus.activeWorkspaces.length} workspaces)`,
-      icon: <Terminal />,
+      icon: <TerminalWindowIcon />,
       category: "LSP",
       action: async () => {
         await showAlertDialog(
@@ -112,7 +112,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "developer-open-athas-log",
       label: "Developer: Open Athas Log",
       description: "Open the current Athas application log in a read-only editor tab",
-      icon: <Terminal />,
+      icon: <TerminalWindowIcon />,
       category: "Developer",
       action: async () => {
         try {
@@ -130,7 +130,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "lsp.restartAllServers",
       label: "Language Server: Restart All Servers",
       description: "Restart every active language server",
-      icon: <RefreshCw />,
+      icon: <ArrowClockwiseIcon />,
       category: "Language Server",
       commandId: "lsp.restartAllServers",
       action: async () => {
@@ -142,7 +142,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "lsp.stopAllServers",
       label: "Language Server: Stop All Servers",
       description: "Stop every active language server",
-      icon: <Square />,
+      icon: <SquareIcon />,
       category: "Language Server",
       commandId: "lsp.stopAllServers",
       action: async () => {
@@ -154,7 +154,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       id: "cli-install",
       label: "CLI: Install Terminal Command",
       description: "Install 'athas' command for terminal",
-      icon: <Terminal />,
+      icon: <TerminalWindowIcon />,
       category: "CLI",
       action: async () => {
         try {

@@ -1,4 +1,4 @@
-import { CaretDownIcon as ChevronDown, CaretRightIcon as ChevronRight } from "@/ui/icons";
+import { ChevronDownIcon, ChevronRightIcon } from "@/ui/icons";
 import { memo, useMemo } from "react";
 import {
   ViewerErrorState,
@@ -91,9 +91,9 @@ export const FileDiffView = memo(
             aria-label={`${isExpanded ? "Collapse" : "Expand"} diff for ${file.path}`}
           >
             {isExpanded ? (
-              <ChevronDown className="text-subtle-foreground" />
+              <ChevronDownIcon className="text-subtle-foreground" />
             ) : (
-              <ChevronRight className="text-subtle-foreground" />
+              <ChevronRightIcon className="text-subtle-foreground" />
             )}
             <div className="min-w-0 flex-1">
               <div className="ui-text-sm truncate text-foreground">{file.path}</div>

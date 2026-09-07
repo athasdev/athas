@@ -1,4 +1,4 @@
-import { DownloadSimpleIcon as Download, MagnifyingGlassIcon as Search } from "@/ui/icons";
+import { DownloadIcon, SearchIcon } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
@@ -78,8 +78,8 @@ export function DockerRegistrySection({
               disabled={isBusy || !query.trim()}
               onClick={() => void onSearch()}
             >
-              {isBusy ? <Spinner compact /> : <Search />}
-              Search
+              {isBusy ? <Spinner compact /> : <SearchIcon />}
+              SearchIcon
             </Button>
           </div>
         </div>
@@ -190,7 +190,7 @@ export function DockerRegistrySection({
                 actions={[
                   {
                     label: "Pull",
-                    icon: <Download />,
+                    icon: <DownloadIcon />,
                     disabled: isBusy || !isDockerDaemonReady,
                     onSelect: () => void onPull(result.name),
                   },

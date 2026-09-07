@@ -1,4 +1,4 @@
-import { MicrophoneIcon as Mic, MonitorIcon as Monitor } from "@/ui/icons";
+import { MicrophoneIcon, MonitorIcon } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { SidebarFooter } from "@/ui/sidebar";
 
@@ -36,7 +36,7 @@ export function CollaborationMediaFooter({
           onClick={onToggleMic}
           iconOnly
         >
-          <Mic />
+          <MicrophoneIcon />
         </Button>
         <Button
           type="button"
@@ -46,7 +46,7 @@ export function CollaborationMediaFooter({
           onClick={onToggleScreenShare}
           iconOnly
         >
-          <Monitor />
+          <MonitorIcon />
         </Button>
         <div className="ui-text-sm min-w-0 flex-1 truncate px-1">
           <span className="font-medium text-foreground">{workspaceName}</span>

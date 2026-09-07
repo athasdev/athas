@@ -1,9 +1,4 @@
-import {
-  GlobeHemisphereWestIcon as Globe,
-  CopyIcon,
-  PlusIcon as Plus,
-  TrashIcon as Trash2,
-} from "@/ui/icons";
+import { CopyIcon, GlobeIcon, PlusIcon, TrashIcon } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
@@ -172,7 +167,7 @@ const GitRemoteManager = ({ query, repoPath, onRefresh }: GitRemoteManagerProps)
             return (
               <SidebarListMenuItem
                 key={remote.name}
-                leading={<Globe />}
+                leading={<GlobeIcon />}
                 description={remote.url}
                 disabled={isActionLoading}
                 onClick={() => void handleCopyRemoteUrl(remote)}
@@ -191,7 +186,7 @@ const GitRemoteManager = ({ query, repoPath, onRefresh }: GitRemoteManagerProps)
                       onClick={() => void handleRemoveRemote(remote.name)}
                       disabled={isActionLoading}
                     >
-                      <Trash2 />
+                      <TrashIcon />
                       Remove remote
                     </DropdownMenuItem>
                   </>
@@ -207,7 +202,7 @@ const GitRemoteManager = ({ query, repoPath, onRefresh }: GitRemoteManagerProps)
         <SidebarFooter>
           <div className="p-1 pb-0">
             <Button className="w-full" type="button" onClick={() => setIsCreateOpen(true)}>
-              <Plus />
+              <PlusIcon />
               Add remote
             </Button>
           </div>

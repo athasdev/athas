@@ -1,4 +1,4 @@
-import { FilePlusIcon as FilePlus, PaperPlaneTiltIcon as PaperPlaneTilt } from "@/ui/icons";
+import { FilePlusIcon, PaperPlaneIcon } from "@/ui/icons";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
@@ -61,7 +61,7 @@ export function CollaborationMessageComposer({
             onClick={onShareDocuments}
             iconOnly
           >
-            <FilePlus />
+            <FilePlusIcon />
           </Button>
         ) : (
           <span />
@@ -74,7 +74,7 @@ export function CollaborationMessageComposer({
           onClick={onSubmit}
           iconOnly
         >
-          {isSending ? <Spinner label="Sending" compact /> : <PaperPlaneTilt />}
+          {isSending ? <Spinner label="Sending" compact /> : <PaperPlaneIcon />}
         </Button>
       </div>
     </SidebarFooter>

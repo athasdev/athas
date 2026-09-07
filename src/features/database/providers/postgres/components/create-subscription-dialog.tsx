@@ -1,4 +1,4 @@
-import { RadioButtonIcon as Radio } from "@/ui/icons";
+import { BroadcastIcon } from "@/ui/icons";
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
@@ -58,7 +58,7 @@ export default function CreateSubscriptionDialog({
     <Dialog
       onClose={handleClose}
       title="Create Subscription"
-      icon={Radio}
+      icon={BroadcastIcon}
       size="lg"
       footer={
         <>

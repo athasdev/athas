@@ -1,10 +1,4 @@
-import {
-  EyeIcon as Eye,
-  HashIcon as Hash,
-  PlusIcon as Plus,
-  RadioButtonIcon as Radio,
-  TableIcon as Table,
-} from "@/ui/icons";
+import { BroadcastIcon, EyeIcon, HashIcon, PlusIcon, TableIcon } from "@/ui/icons";
 import {
   SidebarIconButton,
   SidebarListItem,
@@ -45,18 +39,18 @@ export default function TableSidebar({
 }: TableSidebarProps) {
   const objectGroups = groupDatabaseObjects(tables);
   const groupIcon = {
-    table: Table,
-    view: Eye,
-    materialized_view: Eye,
-    subscription: Radio,
-    index: Hash,
-  } satisfies Record<DatabaseObjectKind, typeof Table>;
+    table: TableIcon,
+    view: EyeIcon,
+    materialized_view: EyeIcon,
+    subscription: BroadcastIcon,
+    index: HashIcon,
+  } satisfies Record<DatabaseObjectKind, typeof TableIcon>;
 
   return (
     <SidebarPanel className="w-64 shrink-0">
       <SidebarTitleBar title={`Objects (${tables.length})`}>
         <SidebarIconButton onClick={onCreateTable} aria-label="Create table" tooltip="Create table">
-          <Plus />
+          <PlusIcon />
         </SidebarIconButton>
       </SidebarTitleBar>
       <SidebarScrollArea className="min-h-0 flex-1">

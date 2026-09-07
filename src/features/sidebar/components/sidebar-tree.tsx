@@ -1,4 +1,4 @@
-import { ChevronDownIcon as ChevronDown, ChevronRightIcon as ChevronRight } from "@/ui/icons";
+import { ChevronDownIcon, ChevronRightIcon } from "@/ui/icons";
 import type React from "react";
 import { forwardRef, useCallback } from "react";
 import { cn } from "@/utils/cn";
@@ -318,9 +318,9 @@ export function SidebarTreeDisclosure({
     >
       {visible ? (
         expanded ? (
-          <ChevronDown className="size-3" weight="bold" />
+          <ChevronDownIcon className="size-3" optical="md" />
         ) : (
-          <ChevronRight className="size-3" weight="bold" />
+          <ChevronRightIcon className="size-3" optical="md" />
         )
       ) : (
         <span className="size-3" />

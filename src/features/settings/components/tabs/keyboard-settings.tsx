@@ -1,13 +1,13 @@
 import { AnimatePresence, motion } from "motion/react";
-import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 import {
-  ArrowLeftIcon as ArrowLeft,
-  CirclesThreeIcon as CirclesThree,
-  CubeIcon as Cube,
-  DownloadSimpleIcon as DownloadSimple,
-  SlidersIcon as Sliders,
-  UserIcon as User,
-  WarningCircleIcon as WarningCircle,
+  ArrowLeftIcon,
+  CirclesIcon,
+  CubeIcon,
+  DownloadIcon,
+  SearchIcon,
+  SlidersIcon,
+  UserIcon,
+  WarningCircleIcon,
 } from "@/ui/icons";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
@@ -272,7 +272,7 @@ export const KeyboardSettings = () => {
                 onClick={() => setIsEditingKeybindings(false)}
                 className="gap-1.5"
               >
-                <ArrowLeft size={14} weight="duotone" />
+                <ArrowLeftIcon size={14} />
                 Back
               </Button>
               <div className="flex items-center gap-2">
@@ -291,7 +291,7 @@ export const KeyboardSettings = () => {
                 placeholder="Search keybindings..."
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                leftIcon={Search}
+                leftIcon={SearchIcon}
                 containerClassName="w-full"
               />
             </div>
@@ -305,32 +305,32 @@ export const KeyboardSettings = () => {
                   {
                     value: "all",
                     label: "All",
-                    icon: <CirclesThree size={14} weight="duotone" />,
+                    icon: <CirclesIcon size={14} />,
                   },
                   {
                     value: "user",
                     label: "User",
-                    icon: <User size={14} weight="duotone" />,
+                    icon: <UserIcon size={14} />,
                   },
                   {
                     value: "default",
                     label: "Default",
-                    icon: <Sliders size={14} weight="duotone" />,
+                    icon: <SlidersIcon size={14} />,
                   },
                   {
                     value: "preset",
                     label: "Preset",
-                    icon: <DownloadSimple size={14} weight="fill" />,
+                    icon: <DownloadIcon size={14} optical="md" />,
                   },
                   {
                     value: "preset-changes",
                     label: "Preset Changes",
-                    icon: <DownloadSimple size={14} weight="fill" />,
+                    icon: <DownloadIcon size={14} optical="md" />,
                   },
                   {
                     value: "extension",
                     label: "Extension",
-                    icon: <Cube size={14} weight="duotone" />,
+                    icon: <CubeIcon size={14} />,
                   },
                 ]}
               />
@@ -409,7 +409,7 @@ export const KeyboardSettings = () => {
 
             {keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
               <Alert tone="warning">
-                <WarningCircle />
+                <WarningCircleIcon />
                 <AlertDescription>
                   This preset is incomplete. {selectedPresetCoverage.missingCommandIds.length}{" "}
                   built-in command

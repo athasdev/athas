@@ -1,4 +1,4 @@
-import { SparkleIcon as Sparkles } from "@/ui/icons";
+import { SparkleIcon } from "@/ui/icons";
 import { useGenerateStore } from "@/features/generate/stores/generate.store";
 import type { Action } from "../types/action.types";
 
@@ -12,7 +12,7 @@ export function createGenerateActions({ onClose }: GenerateActionsParams): Actio
       id: "generate-extension",
       label: "Generate: Extension",
       description: "Generate a UI extension with Athas Intelligence",
-      icon: <Sparkles />,
+      icon: <SparkleIcon />,
       category: "Generate",
       action: () => {
         onClose();

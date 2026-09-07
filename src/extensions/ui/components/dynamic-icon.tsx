@@ -1,6 +1,5 @@
+import { type Icon, PuzzlePieceIcon } from "@/ui/icons";
 import * as AppIcons from "@/ui/icons";
-import { PuzzlePieceIcon } from "@/ui/icons";
-import type { Icon } from "@/ui/icons";
 
 interface DynamicIconProps {
   name: string;
@@ -18,11 +17,11 @@ function toIconKey(name: string): string {
 export function DynamicIcon({ name, className, size }: DynamicIconProps) {
   const key = toIconKey(name);
   const iconKey = `${key}Icon`;
-  const Icon = AppIcons[iconKey as keyof typeof AppIcons] as Icon | undefined;
+  const IconComponent = AppIcons[iconKey as keyof typeof AppIcons] as Icon | undefined;
 
-  if (!Icon) {
+  if (!IconComponent) {
     return <PuzzlePieceIcon className={className} size={size} />;
   }
 
-  return <Icon className={className} size={size} />;
+  return <IconComponent className={className} size={size} />;
 }

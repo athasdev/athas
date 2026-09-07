@@ -1,4 +1,4 @@
-import { DatabaseIcon as Database } from "@/ui/icons";
+import { DatabaseIcon } from "@/ui/icons";
 import type { Action } from "../types/action.types";
 
 interface DatabaseActionsParams {
@@ -13,7 +13,7 @@ export const createDatabaseActions = (params: DatabaseActionsParams): Action[] =
       id: "database-connect",
       label: "Database: Show Databases",
       description: "Open workspace database connections",
-      icon: <Database />,
+      icon: <DatabaseIcon />,
       category: "Database",
       commandId: "database.connect",
       action: () => {

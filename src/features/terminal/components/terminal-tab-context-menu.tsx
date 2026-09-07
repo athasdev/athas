@@ -1,10 +1,10 @@
 import {
-  CopyIcon as Copy,
-  DownloadIcon as Download,
-  PencilSimpleIcon as Edit,
-  PushPinIcon as Pin,
-  PushPinSlashIcon as PinOff,
-  ArrowCounterClockwiseIcon as RotateCcw,
+  ArrowCounterClockwiseIcon,
+  CopyIcon,
+  DownloadIcon,
+  PenIcon,
+  PinIcon,
+  PinSlashIcon,
 } from "@/ui/icons";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { ContextMenuPopup, type ContextMenuGroupData } from "@/ui/context-menu";
@@ -48,7 +48,7 @@ const TerminalTabContextMenu = ({
             {
               id: "pin",
               label: terminal.isPinned ? "Unpin Terminal" : "Pin Terminal",
-              icon: terminal.isPinned ? <PinOff /> : <Pin />,
+              icon: terminal.isPinned ? <PinSlashIcon /> : <PinIcon />,
               onClick: () => onPin(terminal.id),
             },
           ],
@@ -59,25 +59,25 @@ const TerminalTabContextMenu = ({
             {
               id: "duplicate",
               label: "Duplicate Terminal",
-              icon: <Copy />,
+              icon: <CopyIcon />,
               onClick: () => onDuplicate(terminal.id),
             },
             {
               id: "clear",
               label: "Clear Terminal",
-              icon: <RotateCcw />,
+              icon: <ArrowCounterClockwiseIcon />,
               onClick: () => onClear(terminal.id),
             },
             {
               id: "rename",
               label: "Rename Terminal",
-              icon: <Edit />,
+              icon: <PenIcon />,
               onClick: () => onRename(terminal.id),
             },
             {
               id: "export",
               label: "Export Output",
-              icon: <Download weight="fill" />,
+              icon: <DownloadIcon optical="md" />,
               onClick: () => onExport(terminal.id),
             },
           ],

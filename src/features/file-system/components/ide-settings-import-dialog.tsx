@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ArrowLeftIcon as ArrowLeft, CheckIcon as Check } from "@/ui/icons";
+import { ArrowLeftIcon, CheckIcon } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
@@ -253,7 +253,7 @@ function IdeSettingsImportContent({ onClose, onBack }: IdeSettingsImportContentP
 
   const leadingAction: ReactNode = onBack ? (
     <CommandHeaderAction type="button" aria-label="Back to projects" onClick={onBack}>
-      <ArrowLeft />
+      <ArrowLeftIcon />
     </CommandHeaderAction>
   ) : null;
 
@@ -288,7 +288,7 @@ function IdeSettingsImportContent({ onClose, onBack }: IdeSettingsImportContentP
                 title={capability.label}
                 accessory={
                   <span className="flex size-4 shrink-0 items-center justify-center rounded border border-border text-primary">
-                    {selectedCapabilityIds.includes(capability.id) ? <Check size={12} /> : null}
+                    {selectedCapabilityIds.includes(capability.id) ? <CheckIcon size={12} /> : null}
                   </span>
                 }
               />

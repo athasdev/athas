@@ -1,4 +1,4 @@
-import { ListChecksIcon as ListChecks, PlayIcon as Play } from "@/ui/icons";
+import { ListChecksIcon, PlayIcon } from "@/ui/icons";
 import { memo, useCallback, useState } from "react";
 import type { ParsedPlan, PlanStep } from "@/features/ai/lib/plan-parser";
 import { Button } from "@/ui/button";
@@ -41,7 +41,7 @@ export const PlanBlockDisplay = memo(function PlanBlockDisplay({
 
       <Card className="my-2 border-primary/20 bg-primary/5">
         <CardHeader className="flex flex-row items-center gap-1.5">
-          <ListChecks className="text-primary" />
+          <ListChecksIcon className="text-primary" />
           <CardTitle className="text-primary">
             Plan ({plan.steps.length} {plan.steps.length === 1 ? "step" : "steps"})
           </CardTitle>
@@ -56,7 +56,7 @@ export const PlanBlockDisplay = memo(function PlanBlockDisplay({
         {!isStreaming && onExecuteStep && (
           <CardFooter className="border-primary/20 bg-transparent">
             <Button type="button" variant="accent" onClick={handleExecutePlan}>
-              <Play />
+              <PlayIcon />
               Execute Plan
             </Button>
           </CardFooter>

@@ -53,7 +53,7 @@ describe("title bar controls", () => {
 
   it("removes the relocated controls from the activity sidebar", () => {
     expect(activityBarSource).toContain('id: "search"');
-    expect(activityBarSource).toContain("<MagnifyingGlassIcon />");
+    expect(activityBarSource).toContain("<SearchIcon />");
     expect(activityBarSource).toContain(
       'visibleNavigationItems.findIndex((item) => item.id === "files")',
     );

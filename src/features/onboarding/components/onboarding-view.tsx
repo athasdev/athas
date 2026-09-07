@@ -1,4 +1,4 @@
-import { FolderOpenIcon as FolderOpen } from "@/ui/icons";
+import { FolderOpenIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -203,7 +203,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
             </Button>
           ) : null}
           <Button variant="accent" onClick={() => void handlePrimaryAction()}>
-            {viewModel.primaryAction === "open-folder" && <FolderOpen />}
+            {viewModel.primaryAction === "open-folder" && <FolderOpenIcon />}
             {viewModel.primaryLabel}
           </Button>
         </div>

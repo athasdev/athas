@@ -1,13 +1,13 @@
 import { shareAgent } from "@/features/sharing/services/open-share";
-import { UploadSimpleIcon } from "@/ui/icons";
+import { UploadIcon } from "@/ui/icons";
 import {
-  ArrowDownIcon as ArrowDown,
-  ArrowUpIcon as ArrowUp,
-  MagnifyingGlassIcon as Search,
-  PlusIcon as Plus,
-  XIcon as X,
-  WindowExpandIcon,
+  ArrowDownIcon,
   ArrowLeftIcon,
+  ArrowUpIcon,
+  PlusIcon,
+  SearchIcon,
+  WindowExpandIcon,
+  XIcon,
 } from "@/ui/icons";
 import { useEffect, useMemo, useRef } from "react";
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
@@ -109,7 +109,7 @@ export function ChatHeader({
               }}
               placeholder="Search messages"
               variant="ghost"
-              leftIcon={Search}
+              leftIcon={SearchIcon}
             />
           }
           detail={messageSearchPosition}
@@ -124,7 +124,7 @@ export function ChatHeader({
                 tooltip="Previous match"
                 aria-label="Previous search match"
               >
-                <ArrowUp />
+                <ArrowUpIcon />
               </Button>
               <Button
                 type="button"
@@ -135,7 +135,7 @@ export function ChatHeader({
                 tooltip="Next match"
                 aria-label="Next search match"
               >
-                <ArrowDown />
+                <ArrowDownIcon />
               </Button>
               <Button
                 type="button"
@@ -145,7 +145,7 @@ export function ChatHeader({
                 tooltip="Close search"
                 aria-label="Close message search"
               >
-                <X />
+                <XIcon />
               </Button>
             </>
           }
@@ -164,7 +164,7 @@ export function ChatHeader({
                 tooltip="Search messages"
                 aria-label="Search messages"
               >
-                <Search />
+                <SearchIcon />
               </Button>
 
               <Button
@@ -175,7 +175,7 @@ export function ChatHeader({
                 disabled={!currentChat?.messages.length}
                 onClick={() => shareAgent(effectiveChatId ?? undefined)}
               >
-                <UploadSimpleIcon />
+                <UploadIcon />
               </Button>
 
               {!standalone && (
@@ -198,7 +198,7 @@ export function ChatHeader({
                   commandId="workbench.agentLauncher"
                   aria-label="New Agent"
                 >
-                  <Plus />
+                  <PlusIcon />
                 </Button>
               )}
               {effectiveChatId && (

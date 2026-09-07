@@ -1,4 +1,5 @@
 import {
+  BoltIcon,
   BugIcon,
   CloudIcon,
   CodeIcon,
@@ -7,17 +8,16 @@ import {
   FolderIcon,
   GearIcon,
   GlobeIcon,
-  LightningIcon,
+  type Icon,
   MoonIcon,
   PaletteIcon,
-  RocketLaunchIcon,
+  RocketIcon,
   ShieldIcon,
   SparkleIcon,
   StackIcon,
   SunIcon,
   TerminalIcon,
   WrenchIcon,
-  type Icon,
 } from "@/ui/icons";
 import { defaultEmojiPickerOptions, emojiLabels } from "@/utils/emoji-catalog";
 
@@ -40,8 +40,8 @@ const projectIcons: Array<[string, string, Icon, string[]]> = [
   ["cloud", "Cloud", CloudIcon, ["server", "hosting", "deploy"]],
   ["cube", "Cube", CubeIcon, ["package", "module", "box"]],
   ["stack", "Stack", StackIcon, ["layers", "library"]],
-  ["rocket", "Rocket", RocketLaunchIcon, ["launch", "release", "ship"]],
-  ["lightning", "Lightning", LightningIcon, ["fast", "performance"]],
+  ["rocket", "Rocket", RocketIcon, ["launch", "release", "ship"]],
+  ["lightning", "Lightning", BoltIcon, ["fast", "performance"]],
   ["bug", "Bug", BugIcon, ["debug", "issue", "test"]],
   ["shield", "Shield", ShieldIcon, ["security", "privacy"]],
   ["palette", "Palette", PaletteIcon, ["design", "color", "art"]],

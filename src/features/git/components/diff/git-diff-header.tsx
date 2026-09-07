@@ -1,11 +1,11 @@
 import {
-  CheckIcon as Check,
-  CaretDownIcon as ChevronDown,
-  CaretUpIcon as ChevronUp,
-  ColumnsIcon as Columns2,
-  RowsIcon as Rows3,
-  TrashIcon as Trash2,
-  XIcon as X,
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ColumnsIcon,
+  RowsIcon,
+  TrashIcon,
+  XIcon,
 } from "@/ui/icons";
 import { memo } from "react";
 import Breadcrumb, {
@@ -114,14 +114,14 @@ const DiffHeader = memo(
                     tooltip="Expand all"
                     aria-label="Expand all files"
                   >
-                    <ChevronDown weight="duotone" />
+                    <ChevronDownIcon />
                   </BreadcrumbActionButton>
                   <BreadcrumbActionButton
                     onClick={onCollapseAll}
                     tooltip="Collapse all"
                     aria-label="Collapse all files"
                   >
-                    <ChevronUp weight="duotone" />
+                    <ChevronUpIcon />
                   </BreadcrumbActionButton>
                   <div className="mx-1 h-4 w-px bg-border" />
                 </>
@@ -136,8 +136,8 @@ const DiffHeader = memo(
                     tooltip={showWhitespace ? "Hide whitespace" : "Show whitespace"}
                     aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
                   >
-                    <Trash2 weight="duotone" />
-                    {showWhitespace && <Check weight="duotone" />}
+                    <TrashIcon />
+                    {showWhitespace && <CheckIcon />}
                   </BreadcrumbActionButton>
 
                   {onViewModeChange && (
@@ -148,7 +148,7 @@ const DiffHeader = memo(
                         tooltip="Unified view"
                         aria-label="Unified diff view"
                       >
-                        <Rows3 weight="duotone" />
+                        <RowsIcon />
                       </BreadcrumbActionButton>
                       <BreadcrumbActionButton
                         onClick={() => onViewModeChange("split")}
@@ -156,7 +156,7 @@ const DiffHeader = memo(
                         tooltip="Split view"
                         aria-label="Split diff view"
                       >
-                        <Columns2 weight="duotone" />
+                        <ColumnsIcon />
                       </BreadcrumbActionButton>
                     </div>
                   )}
@@ -171,7 +171,7 @@ const DiffHeader = memo(
                 shortcut="escape"
                 aria-label="Close diff view"
               >
-                <X weight="duotone" />
+                <XIcon />
               </BreadcrumbActionButton>
             </div>
           }

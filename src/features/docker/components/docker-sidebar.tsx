@@ -1,16 +1,16 @@
 import {
-  ArrowClockwiseIcon as Refresh,
-  ArrowSquareOutIcon as OpenExternal,
-  BugIcon as Bug,
+  ArrowClockwiseIcon,
+  BugIcon,
   CloudArrowDownIcon,
   CubeIcon,
   FileIcon,
   FolderOpenIcon,
   NodesIcon,
-  PlayIcon as Play,
-  StackIcon as ImageIcon,
-  SlidersHorizontalIcon as Sliders,
-  TrashIcon as Trash,
+  OpenExternalIcon,
+  PlayIcon,
+  SlidersIcon,
+  StackIcon,
+  TrashIcon,
 } from "@/ui/icons";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useState } from "react";
@@ -1016,7 +1016,7 @@ export function DockerSidebar() {
                   />
                 }
               >
-                <Sliders />
+                <SlidersIcon />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuRadioGroup
@@ -1036,8 +1036,8 @@ export function DockerSidebar() {
                 </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem disabled={isActiveSectionLoading} onClick={refreshDocker}>
-                  {isActiveSectionLoading ? <Spinner compact /> : <Refresh />}
-                  Refresh
+                  {isActiveSectionLoading ? <Spinner compact /> : <ArrowClockwiseIcon />}
+                  ArrowClockwiseIcon
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1199,7 +1199,7 @@ export function DockerSidebar() {
                             className="h-6 px-1.5 ui-text-sm"
                             onClick={() => void handleSaveDebugPreset()}
                           >
-                            <Bug className="size-3.5" />
+                            <BugIcon className="size-3.5" />
                             Save Debug
                           </Button>
                         </div>
@@ -1218,7 +1218,7 @@ export function DockerSidebar() {
                                 },
                                 {
                                   label: "Save debug preset",
-                                  icon: <Bug />,
+                                  icon: <BugIcon />,
                                   onSelect: () => void handleSaveDebugPreset(),
                                 },
                               ]}
@@ -1255,7 +1255,7 @@ export function DockerSidebar() {
                                           busyDevContainerPath === devContainer.configPath ? (
                                             <Spinner compact />
                                           ) : (
-                                            <OpenExternal />
+                                            <OpenExternalIcon />
                                           ),
                                         disabled:
                                           !isDockerDaemonReady ||
@@ -1289,7 +1289,7 @@ export function DockerSidebar() {
                                     actions={[
                                       {
                                         label: "Run",
-                                        icon: <Play />,
+                                        icon: <PlayIcon />,
                                         disabled: !isDockerDaemonReady,
                                         onSelect: () => handleRunDebugPreset(preset),
                                       },
@@ -1319,13 +1319,13 @@ export function DockerSidebar() {
                                     actions={[
                                       {
                                         label: "Run",
-                                        icon: <Play />,
+                                        icon: <PlayIcon />,
                                         disabled: !isDockerDaemonReady,
                                         onSelect: () => handleRunDebugPreset(preset),
                                       },
                                       {
                                         label: "Delete",
-                                        icon: <Trash />,
+                                        icon: <TrashIcon />,
                                         destructive: true,
                                         separatorBefore: true,
                                         onSelect: () =>
@@ -1365,7 +1365,7 @@ export function DockerSidebar() {
                                       },
                                       {
                                         label: "Delete",
-                                        icon: <Trash />,
+                                        icon: <TrashIcon />,
                                         destructive: true,
                                         separatorBefore: true,
                                         onSelect: () => void handleDeleteEnvFile(envFile),
@@ -1391,12 +1391,12 @@ export function DockerSidebar() {
                                     actions={[
                                       {
                                         label: "Use preset",
-                                        icon: <ImageIcon />,
+                                        icon: <StackIcon />,
                                         onSelect: () => applyBuildPreset(preset),
                                       },
                                       {
                                         label: "Delete",
-                                        icon: <Trash />,
+                                        icon: <TrashIcon />,
                                         destructive: true,
                                         separatorBefore: true,
                                         onSelect: () =>
@@ -1428,12 +1428,12 @@ export function DockerSidebar() {
                                     actions={[
                                       {
                                         label: "Use preset",
-                                        icon: <Play />,
+                                        icon: <PlayIcon />,
                                         onSelect: () => applyRunPreset(preset),
                                       },
                                       {
                                         label: "Delete",
-                                        icon: <Trash />,
+                                        icon: <TrashIcon />,
                                         destructive: true,
                                         separatorBefore: true,
                                         onSelect: () => void handleDeletePreset("run", preset.name),
@@ -1471,7 +1471,7 @@ export function DockerSidebar() {
                                           busyComposeService === `preset:${preset.name}` ? (
                                             <Spinner compact />
                                           ) : (
-                                            <Play />
+                                            <PlayIcon />
                                           ),
                                         disabled:
                                           !isDockerDaemonReady || busyComposeService !== null,
@@ -1479,7 +1479,7 @@ export function DockerSidebar() {
                                       },
                                       {
                                         label: "Delete",
-                                        icon: <Trash />,
+                                        icon: <TrashIcon />,
                                         destructive: true,
                                         separatorBefore: true,
                                         onSelect: () =>
@@ -1511,7 +1511,7 @@ export function DockerSidebar() {
                       disabled={busyImageId !== null}
                       onClick={openBuildDialog}
                     >
-                      <ImageIcon className="size-3.5" />
+                      <StackIcon className="size-3.5" />
                       Build
                     </Button>
                   </div>
@@ -1575,7 +1575,7 @@ export function DockerSidebar() {
                       {busyPruneTarget === target ? (
                         <Spinner compact />
                       ) : (
-                        <Trash className="size-3.5" />
+                        <TrashIcon className="size-3.5" />
                       )}
                       Prune {label}
                     </Button>

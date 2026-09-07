@@ -1,7 +1,7 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cva } from "class-variance-authority";
-import type { ComponentType, CSSProperties, ReactElement, ReactNode } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";
 import {
@@ -13,12 +13,7 @@ import {
   ComboboxList,
 } from "@/ui/combobox";
 import { menuItemVariants, menuSurfaceVariants } from "@/ui/dropdown";
-import {
-  CaretDownIcon as ChevronDown,
-  CheckIcon as Check,
-  MagnifyingGlassIcon as Search,
-  type Icon as AppIcon,
-} from "@/ui/icons";
+import { CheckIcon, ChevronDownIcon, type Icon, SearchIcon } from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -52,7 +47,7 @@ export interface SelectProps {
   customValueLabel?: (value: string) => string;
   emptyLabel?: string;
   openDirection?: "up" | "down" | "auto";
-  leftIcon?: ReactNode | ComponentType<{ size?: number; className?: string }>;
+  leftIcon?: ReactNode | Icon;
   id?: string;
   title?: string;
   hideChevron?: boolean;
@@ -75,9 +70,7 @@ const selectContainerVariants = cva("min-w-0", {
   },
 });
 
-function isIconComponent(
-  icon: SelectProps["leftIcon"],
-): icon is ComponentType<{ size?: number; className?: string }> {
+function isIconComponent(icon: SelectProps["leftIcon"]): icon is Icon {
   return (
     typeof icon === "function" || (typeof icon === "object" && icon !== null && "render" in icon)
   );
@@ -130,7 +123,9 @@ function SelectTriggerContent({
           </span>
         </span>
       )}
-      {!hideChevron ? <ChevronDown size={12} className="shrink-0 text-subtle-foreground" /> : null}
+      {!hideChevron ? (
+        <ChevronDownIcon size={12} className="shrink-0 text-subtle-foreground" />
+      ) : null}
     </>
   );
 }
@@ -260,7 +255,7 @@ function PlainSelect({
                     </SelectPrimitive.ItemText>
                     {option.accessory}
                     <SelectPrimitive.ItemIndicator className="ml-auto flex size-4 shrink-0 items-center justify-center text-primary">
-                      <Check />
+                      <CheckIcon />
                     </SelectPrimitive.ItemIndicator>
                   </SelectPrimitive.Item>
                 ))}
@@ -336,7 +331,7 @@ function SearchableSelect({
     ];
   }, [allowCustomValue, customValueLabel, options, query]);
   const selectedOption = resolvedOptions.find((option) => option.value === value) ?? null;
-  const componentIcon = isIconComponent(leftIcon) ? (leftIcon as AppIcon) : undefined;
+  const componentIcon = isIconComponent(leftIcon) ? (leftIcon as Icon) : undefined;
   const popupStyle = menuMinWidth
     ? ({ minWidth: menuMinWidth } satisfies CSSProperties)
     : undefined;
@@ -456,7 +451,7 @@ function SearchableSelect({
           <div className="border-border/60 border-b p-1.5">
             <ComboboxInput
               ref={searchInputRef}
-              leftIcon={Search}
+              leftIcon={SearchIcon}
               variant="ghost"
               placeholder="Search..."
               aria-label="Search options"

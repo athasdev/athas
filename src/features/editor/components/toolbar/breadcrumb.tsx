@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { MagnifyingGlassIcon as Search } from "@/ui/icons";
+import { SearchIcon } from "@/ui/icons";
 import { useShallow } from "zustand/react/shallow";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -81,7 +81,7 @@ export default function Breadcrumb({
             commandId="workbench.showFind"
             tooltip="Find in file"
           >
-            <Search />
+            <SearchIcon />
           </BreadcrumbActionButton>
         ) : null}
         <EditorStatusActions bufferId={resolvedBufferId ?? undefined} />

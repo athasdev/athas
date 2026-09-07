@@ -1,18 +1,19 @@
 import {
-  ArrowRightIcon as ArrowRight,
-  BugIcon as Bug,
-  CheckCircleIcon as CheckCircle,
-  FileTextIcon as FileText,
-  GitBranchIcon as GitBranch,
-  MagnifyingGlassIcon as MagnifyingGlass,
-  PlayIcon as Play,
-  RocketLaunchIcon as RocketLaunch,
-  ShieldCheckIcon as ShieldCheck,
-  StackIcon as Stack,
-  TerminalIcon as Terminal,
-  UploadSimpleIcon as UploadSimple,
-  WarningCircleIcon as WarningCircle,
-  WrenchIcon as Wrench,
+  type Icon,
+  ArrowRightIcon,
+  BugIcon,
+  CheckCircleIcon,
+  FileTextIcon,
+  GitBranchIcon,
+  PlayIcon,
+  RocketIcon,
+  SearchIcon,
+  ShieldCheckIcon,
+  StackIcon,
+  TerminalIcon,
+  UploadIcon,
+  WarningCircleIcon,
+  WrenchIcon,
 } from "@/ui/icons";
 import { memo } from "react";
 import { MessageActions } from "@/ui/message";
@@ -25,21 +26,21 @@ interface ChatFollowUpActionsProps {
 }
 
 const ICONS = {
-  ArrowRight,
-  Bug,
-  CheckCircle,
-  FileText,
-  GitBranch,
-  MagnifyingGlass,
-  Play,
-  RocketLaunch,
-  ShieldCheck,
-  Stack,
-  Terminal,
-  UploadSimple,
-  WarningCircle,
-  Wrench,
-} as const;
+  ArrowRight: ArrowRightIcon,
+  Bug: BugIcon,
+  CheckCircle: CheckCircleIcon,
+  FileText: FileTextIcon,
+  GitBranch: GitBranchIcon,
+  Play: PlayIcon,
+  Rocket: RocketIcon,
+  Search: SearchIcon,
+  ShieldCheck: ShieldCheckIcon,
+  Stack: StackIcon,
+  Terminal: TerminalIcon,
+  Upload: UploadIcon,
+  WarningCircle: WarningCircleIcon,
+  Wrench: WrenchIcon,
+} as const satisfies Record<ChatFollowUpAction["icon"], Icon>;
 
 export const ChatFollowUpActions = memo(function ChatFollowUpActions({
   actions,
@@ -63,7 +64,7 @@ function FollowUpButton({
   action: ChatFollowUpAction;
   onSelect: (prompt: string) => void;
 }) {
-  const Icon = ICONS[action.icon] || ArrowRight;
+  const Icon = ICONS[action.icon] || ArrowRightIcon;
 
   return (
     <Button

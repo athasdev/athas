@@ -1,4 +1,4 @@
-import { EyeIcon as Eye } from "@/ui/icons";
+import { EyeIcon } from "@/ui/icons";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { Action } from "../types/action.types";
 
@@ -34,7 +34,7 @@ export const createMarkdownActions = (params: MarkdownActionsParams): Action[] =
       id: "markdown-preview",
       label: "Markdown: Preview Markdown",
       description: "Open markdown preview in a new tab",
-      icon: <Eye />,
+      icon: <EyeIcon />,
       category: "Markdown",
       action: () => {
         // Create a virtual path for the preview

@@ -1,10 +1,5 @@
 import type { Window as TauriWindow } from "@tauri-apps/api/window";
-import {
-  CornersInIcon as CornersIn,
-  CornersOutIcon as CornersOut,
-  MinusIcon as Minus,
-  XIcon as X,
-} from "@/ui/icons";
+import { ArrowsInIcon, ArrowsOutIcon, MinusIcon, XIcon } from "@/ui/icons";
 import { requestWindowClose } from "@/features/window/utils/request-window-close";
 import { Button } from "@/ui/button";
 import { ChromeGroup } from "@/ui/chrome";
@@ -56,7 +51,7 @@ export function WindowControls({
         commandId="window.minimize.alt"
         aria-label="Minimize"
       >
-        <Minus weight="bold" />
+        <MinusIcon optical="md" />
       </Button>
       <Button
         onClick={handleToggleMaximize}
@@ -68,7 +63,7 @@ export function WindowControls({
         commandId="window.maximize"
         aria-label={isMaximized ? "Restore" : "Maximize"}
       >
-        {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
+        {isMaximized ? <ArrowsInIcon /> : <ArrowsOutIcon />}
       </Button>
       <Button
         onClick={handleClose}
@@ -80,7 +75,7 @@ export function WindowControls({
         commandId="workbench.closeWindow"
         aria-label="Close"
       >
-        <X weight="bold" />
+        <XIcon optical="md" />
       </Button>
     </ChromeGroup>
   );

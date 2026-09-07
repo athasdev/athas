@@ -1,10 +1,4 @@
-import {
-  ClipboardTextIcon as ClipboardText,
-  CodeIcon as Code,
-  PlayIcon as Play,
-  TrashIcon as Trash,
-  XIcon as X,
-} from "@/ui/icons";
+import { ClipboardTextIcon, CodeIcon, PlayIcon, TrashIcon, XIcon } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { formatSqlHistoryPreview } from "../lib/sql-history";
 import { writeDatabaseClipboardText } from "../utils/clipboard";
@@ -47,7 +41,7 @@ export default function SqlHistoryList({
           aria-label="Clear recent queries"
           tooltip="Clear recent queries"
         >
-          <Trash />
+          <TrashIcon />
         </Button>
       </div>
       <div className={cn("overflow-y-auto pb-1", compact ? "max-h-32" : "max-h-56 px-1")}>
@@ -69,7 +63,7 @@ export default function SqlHistoryList({
                 tooltip={query}
                 aria-label={`Open query: ${preview}`}
               >
-                <Code className="mr-1.5 shrink-0" />
+                <CodeIcon className="mr-1.5 shrink-0" />
                 <span className="truncate">{preview}</span>
               </Button>
               {onRun && (
@@ -85,7 +79,7 @@ export default function SqlHistoryList({
                   aria-label={`Run query from history: ${preview}`}
                   tooltip="Run query"
                 >
-                  <Play />
+                  <PlayIcon />
                 </Button>
               )}
               <Button
@@ -100,7 +94,7 @@ export default function SqlHistoryList({
                 aria-label={`Copy query from history: ${preview}`}
                 tooltip="Copy query"
               >
-                <ClipboardText />
+                <ClipboardTextIcon />
               </Button>
               <Button
                 type="button"
@@ -114,7 +108,7 @@ export default function SqlHistoryList({
                 aria-label={`Remove query from history: ${preview}`}
                 tooltip="Remove from history"
               >
-                <X />
+                <XIcon />
               </Button>
             </div>
           );

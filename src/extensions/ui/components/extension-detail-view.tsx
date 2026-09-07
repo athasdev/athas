@@ -1,14 +1,14 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { ReactNode } from "react";
 import {
-  ArrowSquareOutIcon as OpenExternal,
-  ArrowClockwiseIcon as RefreshCw,
-  ArrowCounterClockwiseIcon as Reset,
-  CheckIcon as Check,
-  DownloadSimpleIcon as Download,
-  PencilSimpleIcon as Pencil,
-  TrashIcon as Trash,
-  XCircleIcon as XCircle,
+  ArrowClockwiseIcon,
+  ArrowCounterClockwiseIcon,
+  CheckIcon,
+  DownloadIcon,
+  OpenExternalIcon,
+  PenIcon,
+  TrashIcon,
+  XCircleIcon,
 } from "@/ui/icons";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
@@ -81,7 +81,7 @@ export function ExtensionDetailView({
     <>
       {extension.skill ? (
         <Button variant="accent" onClick={() => extension.skill && onEditSkill(extension.skill.id)}>
-          <Pencil />
+          <PenIcon />
           Edit
         </Button>
       ) : null}
@@ -90,7 +90,7 @@ export function ExtensionDetailView({
           variant="ghost"
           onClick={() => extension.sourceUrl && void openUrl(extension.sourceUrl)}
         >
-          <OpenExternal />
+          <OpenExternalIcon />
           Source
         </Button>
       ) : null}
@@ -118,16 +118,16 @@ export function ExtensionDetailView({
           }
         >
           {isAppearanceExtension(extension) && extension.isInstalled ? (
-            <Check />
+            <CheckIcon />
           ) : extension.isInstalled &&
             (extension.category === "agent" || extension.category === "skill") ? (
-            <Trash />
+            <TrashIcon />
           ) : extension.isInstalled && extension.isEnabled ? (
-            <XCircle />
+            <XCircleIcon />
           ) : extension.isInstalled ? (
-            <Check />
+            <CheckIcon />
           ) : (
-            <Download weight="fill" />
+            <DownloadIcon optical="md" />
           )}
           {getPrimaryActionLabel(extension)}
         </Button>
@@ -141,7 +141,7 @@ export function ExtensionDetailView({
           onClick={() => void actions.uninstall(extension)}
           disabled={isInstalling}
         >
-          <Trash />
+          <TrashIcon />
           Uninstall
         </Button>
       ) : null}
@@ -151,7 +151,7 @@ export function ExtensionDetailView({
           onClick={() => void actions.update(extension)}
           disabled={isInstalling}
         >
-          <RefreshCw />
+          <ArrowClockwiseIcon />
           Update
         </Button>
       ) : null}
@@ -161,13 +161,13 @@ export function ExtensionDetailView({
           disabled={isInstalling}
           onClick={() => void actions.deactivate(extension)}
         >
-          <XCircle />
+          <XCircleIcon />
           Deactivate
         </Button>
       ) : null}
       {extension.skill && hasSkillLocalOverride(extension.skill) ? (
         <Button variant="default" onClick={() => void actions.resetSkillOverride(extension)}>
-          <Reset />
+          <ArrowCounterClockwiseIcon />
           Reset
         </Button>
       ) : null}
@@ -268,7 +268,7 @@ export function ExtensionDetailView({
                             disabled={!extension.isInstalled || isCurrent || isInstalling}
                             onClick={() => void actions.applyAppearance(extension, option.id)}
                           >
-                            <Check />
+                            <CheckIcon />
                             {isCurrent
                               ? "Current"
                               : extension.isEnabled
@@ -341,7 +341,7 @@ export function ExtensionDetailView({
                 ).map((item) => (
                   <Item key={item} role="listitem">
                     <ItemMedia variant="icon">
-                      <Check />
+                      <CheckIcon />
                     </ItemMedia>
                     <ItemContent>
                       <ItemTitle>{item}</ItemTitle>

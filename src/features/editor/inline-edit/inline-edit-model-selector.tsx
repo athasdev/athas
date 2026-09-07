@@ -1,8 +1,4 @@
-import {
-  CaretLeftIcon as CaretLeft,
-  CheckIcon as Check,
-  MagnifyingGlassIcon as Search,
-} from "@/ui/icons";
+import { CheckIcon, ChevronLeftIcon, SearchIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
@@ -199,10 +195,10 @@ export const InlineEditModelSelector = ({
         <CommandHeader onClose={closeSelector}>
           {selectedProvider ? (
             <CommandHeaderAction type="button" onClick={handleBack} aria-label="Back to providers">
-              <CaretLeft />
+              <ChevronLeftIcon />
             </CommandHeaderAction>
           ) : (
-            <Search className="shrink-0 text-subtle-foreground" size={14} />
+            <SearchIcon className="shrink-0 text-subtle-foreground" size={14} />
           )}
           <CommandInput
             ref={inputRef}
@@ -235,7 +231,9 @@ export const InlineEditModelSelector = ({
                         />
                       }
                       title={model.name}
-                      accessory={isSelected ? <Check className="text-primary" size={13} /> : null}
+                      accessory={
+                        isSelected ? <CheckIcon className="text-primary" size={13} /> : null
+                      }
                     />
                   );
                 })

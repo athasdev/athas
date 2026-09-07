@@ -19,7 +19,7 @@ import Command, {
   CommandTabs,
   useCommandListNavigation,
 } from "@/ui/command";
-import { MagnifyingGlassIcon, TrashIcon } from "@/ui/icons";
+import { SearchIcon, TrashIcon } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { ProjectCustomIcon } from "./project-custom-icon";
 import {
@@ -116,7 +116,7 @@ function ProjectIconPickerContent({
   return (
     <Command isVisible title="Select project icon" onClose={onClose}>
       <CommandHeader onClose={onClose}>
-        <MagnifyingGlassIcon className="size-4 shrink-0 text-subtle-foreground" />
+        <SearchIcon className="size-4 shrink-0 text-subtle-foreground" />
         <CommandInput
           value={query}
           onChange={setQuery}

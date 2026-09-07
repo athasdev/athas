@@ -28,7 +28,7 @@ import {
   FilesIcon,
   FolderOpenIcon,
   ListIcon,
-  SidebarSimpleIcon,
+  SidebarIcon,
   TrashIcon,
   WindowExpandIcon,
 } from "@/ui/icons";
@@ -270,7 +270,7 @@ const TitleBar = ({
       }}
       aria-label={effectiveActivityBarExpanded ? "Collapse activity bar" : "Expand activity bar"}
     >
-      <SidebarSimpleIcon />
+      <SidebarIcon />
     </Toggle>
   );
 

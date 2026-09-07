@@ -1,5 +1,5 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { ArrowDownIcon as ArrowDown, ArrowUpIcon as ArrowUp, XIcon as X } from "@/ui/icons";
+import { ArrowDownIcon, ArrowUpIcon, XIcon } from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
@@ -256,7 +256,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
             />
             {onClose && (
               <Button onClick={handleClose} variant="ghost" tooltip="Close image viewer" iconOnly>
-                <X />
+                <XIcon />
               </Button>
             )}
           </>
@@ -300,9 +300,9 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
           {imageOperations.hasChanges && originalSize !== currentSize ? (
             <span className="flex items-center gap-0.5 text-primary">
               {currentSize < originalSize ? (
-                <ArrowDown className="inline" />
+                <ArrowDownIcon className="inline" />
               ) : (
-                <ArrowUp className="inline" />
+                <ArrowUpIcon className="inline" />
               )}
               {Math.abs(Math.round(((currentSize - originalSize) / originalSize) * 100))}%
             </span>

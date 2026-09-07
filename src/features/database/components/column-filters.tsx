@@ -1,4 +1,4 @@
-import { PlusIcon as Plus, XIcon as X } from "@/ui/icons";
+import { PlusIcon, XIcon } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
@@ -55,7 +55,7 @@ export default function ColumnFilters({
               className="gap-0.5 text-subtle-foreground"
               aria-label="Add filter"
             >
-              <Plus />
+              <PlusIcon />
               Add
             </Button>
           )}
@@ -110,7 +110,7 @@ export default function ColumnFilters({
               className="text-subtle-foreground hover:text-destructive"
               aria-label="Remove filter"
             >
-              <X />
+              <XIcon />
             </Button>
           </div>
         ))}

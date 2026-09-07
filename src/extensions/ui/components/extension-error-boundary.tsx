@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { WarningIcon as AlertTriangle } from "@/ui/icons";
+import { WarningIcon } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import {
   Empty,
@@ -42,7 +42,7 @@ export class ExtensionErrorBoundary extends Component<Props, State> {
         <Empty className="h-full rounded-none p-4" tone="warning" role="alert">
           <EmptyHeader>
             <EmptyMedia>
-              <AlertTriangle className="size-8" />
+              <WarningIcon className="size-8" />
             </EmptyMedia>
             <EmptyTitle>{this.props.name} crashed</EmptyTitle>
             <EmptyDescription>

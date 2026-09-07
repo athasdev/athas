@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { WarningCircleIcon as WarningCircle } from "@/ui/icons";
+import { WarningCircleIcon } from "@/ui/icons";
 import { cva } from "class-variance-authority";
 import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
@@ -140,7 +140,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
         <TableRow className="bg-destructive/5 hover:bg-destructive/5">
           <TableCell colSpan={5} className="pt-0">
             <Alert tone="error" className="py-1.5">
-              <WarningCircle />
+              <WarningCircleIcon />
               <AlertDescription>
                 Conflicts with: {conflictingCommands.map((conflict) => conflict.title).join(", ")}
               </AlertDescription>

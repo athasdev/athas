@@ -1,5 +1,5 @@
 import { appDataDir } from "@tauri-apps/api/path";
-import { MagnifyingGlassIcon as Search, PuzzlePieceIcon as Puzzle } from "@/ui/icons";
+import { PuzzlePieceIcon, SearchIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
@@ -324,7 +324,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       description: command.category
         ? `${command.category} extension command`
         : "Installed extension command",
-      icon: <Puzzle />,
+      icon: <PuzzlePieceIcon />,
       category: command.category ?? "Extensions",
       action: () => {
         onClose();
@@ -487,7 +487,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
             onClose={onClose}
             showClearButton={commandSettings.coreFeatures.persistentCommands}
           >
-            <Search className="size-4 shrink-0 text-subtle-foreground" />
+            <SearchIcon className="size-4 shrink-0 text-subtle-foreground" />
             <CommandInput
               value={query}
               onChange={setQuery}

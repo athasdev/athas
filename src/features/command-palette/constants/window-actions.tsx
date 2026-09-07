@@ -1,4 +1,4 @@
-import { ArrowsOutIcon as Maximize, ArrowsInIcon as Minimize } from "@/ui/icons";
+import { ArrowsInIcon, ArrowsOutIcon } from "@/ui/icons";
 import type { Action } from "../types/action.types";
 
 interface WindowActionsParams {
@@ -13,7 +13,7 @@ export const createWindowActions = (params: WindowActionsParams): Action[] => {
       id: "window-minimize",
       label: "Window: Minimize",
       description: "Minimize the window",
-      icon: <Minimize />,
+      icon: <ArrowsInIcon />,
       category: "Window",
       action: () => {
         window.dispatchEvent(new CustomEvent("minimize-window"));
@@ -24,7 +24,7 @@ export const createWindowActions = (params: WindowActionsParams): Action[] => {
       id: "window-maximize",
       label: "Window: Maximize",
       description: "Maximize or restore the window",
-      icon: <Maximize />,
+      icon: <ArrowsOutIcon />,
       category: "Window",
       action: () => {
         window.dispatchEvent(new CustomEvent("maximize-window"));
@@ -35,7 +35,7 @@ export const createWindowActions = (params: WindowActionsParams): Action[] => {
       id: "window-fullscreen",
       label: "Window: Toggle Fullscreen",
       description: "Enter or exit fullscreen mode",
-      icon: <Maximize />,
+      icon: <ArrowsOutIcon />,
       category: "Window",
       commandId: "window.toggleFullscreen",
       action: () => {

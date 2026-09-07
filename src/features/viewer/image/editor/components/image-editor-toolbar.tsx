@@ -1,12 +1,11 @@
 import {
-  CaretDownIcon as ChevronDown,
-  FlipHorizontalIcon as FlipHorizontal,
-  FlipVerticalIcon as FlipVertical,
-  ImageIcon as Image,
-  ArrowCounterClockwiseIcon as RotateCcw,
-  ArrowClockwiseIcon as RotateCw,
-  FloppyDiskIcon as Save,
-  ArrowCounterClockwiseIcon as Undo2,
+  ArrowClockwiseIcon,
+  ArrowCounterClockwiseIcon,
+  ChevronDownIcon,
+  FlipHorizontalIcon,
+  FlipVerticalIcon,
+  ImageIcon,
+  SaveIcon,
 } from "@/ui/icons";
 import { useState } from "react";
 import { Button } from "@/ui/button";
@@ -84,7 +83,7 @@ export function ImageEditorToolbar({
           tooltip="Edit operations"
         >
           <span className="ui-text-sm">Edit</span>
-          <ChevronDown className="ml-1" />
+          <ChevronDownIcon className="ml-1" />
         </Button>
 
         {showEditMenu && (
@@ -107,7 +106,7 @@ export function ImageEditorToolbar({
                   variant="ghost"
                   className={menuItemClass}
                 >
-                  <Image />
+                  <ImageIcon />
                   <span>Resize...</span>
                 </Button>
                 <div className="my-1 h-px bg-border" />
@@ -117,7 +116,7 @@ export function ImageEditorToolbar({
                   variant="ghost"
                   className={menuItemClass}
                 >
-                  <RotateCw />
+                  <ArrowClockwiseIcon />
                   <span>Rotate 90° CW</span>
                 </Button>
                 <Button
@@ -126,7 +125,7 @@ export function ImageEditorToolbar({
                   variant="ghost"
                   className={menuItemClass}
                 >
-                  <RotateCcw />
+                  <ArrowCounterClockwiseIcon />
                   <span>Rotate 90° CCW</span>
                 </Button>
                 <Button
@@ -135,7 +134,7 @@ export function ImageEditorToolbar({
                   variant="ghost"
                   className={menuItemClass}
                 >
-                  <RotateCw />
+                  <ArrowClockwiseIcon />
                   <span>Rotate 180°</span>
                 </Button>
                 <div className="my-1 h-px bg-border" />
@@ -145,7 +144,7 @@ export function ImageEditorToolbar({
                   variant="ghost"
                   className={menuItemClass}
                 >
-                  <FlipHorizontal />
+                  <FlipHorizontalIcon />
                   <span>Flip Horizontal</span>
                 </Button>
                 <Button
@@ -154,7 +153,7 @@ export function ImageEditorToolbar({
                   variant="ghost"
                   className={menuItemClass}
                 >
-                  <FlipVertical />
+                  <FlipVerticalIcon />
                   <span>Flip Vertical</span>
                 </Button>
               </div>
@@ -172,7 +171,7 @@ export function ImageEditorToolbar({
           tooltip="Convert format"
         >
           <span className="ui-text-sm">Convert</span>
-          <ChevronDown className="ml-1" />
+          <ChevronDownIcon className="ml-1" />
         </Button>
 
         {showConvertMenu && (
@@ -195,7 +194,7 @@ export function ImageEditorToolbar({
                   variant="ghost"
                   className={menuItemClass}
                 >
-                  <Image />
+                  <ImageIcon />
                   <span>PNG</span>
                 </Button>
                 <Button
@@ -204,7 +203,7 @@ export function ImageEditorToolbar({
                   variant="ghost"
                   className={menuItemClass}
                 >
-                  <Image />
+                  <ImageIcon />
                   <span>JPEG</span>
                 </Button>
                 <Button
@@ -213,7 +212,7 @@ export function ImageEditorToolbar({
                   variant="ghost"
                   className={menuItemClass}
                 >
-                  <Image />
+                  <ImageIcon />
                   <span>WebP</span>
                 </Button>
                 <Button
@@ -222,7 +221,7 @@ export function ImageEditorToolbar({
                   variant="ghost"
                   className={menuItemClass}
                 >
-                  <Image />
+                  <ImageIcon />
                   <span>AVIF</span>
                 </Button>
               </div>
@@ -242,7 +241,7 @@ export function ImageEditorToolbar({
         tooltip="Undo last operation"
         iconOnly
       >
-        <Undo2 />
+        <ArrowCounterClockwiseIcon />
       </Button>
 
       {/* Save Button - shows when there are changes */}
@@ -255,7 +254,7 @@ export function ImageEditorToolbar({
           className="text-primary"
           iconOnly
         >
-          <Save />
+          <SaveIcon />
         </Button>
       )}
 

@@ -1,4 +1,4 @@
-import { FunnelIcon as Funnel } from "@/ui/icons";
+import { FilterIcon } from "@/ui/icons";
 import { memo, useCallback, useMemo } from "react";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import {
@@ -81,7 +81,7 @@ export function GitCommitHistoryControls({
             />
           }
         >
-          <Funnel />
+          <FilterIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuRadioGroup

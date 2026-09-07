@@ -1,4 +1,4 @@
-import { WarningCircleIcon as WarningCircle } from "@/ui/icons";
+import { WarningCircleIcon } from "@/ui/icons";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
 import { Alert, AlertDescription } from "@/ui/alert";
 import Select from "@/ui/select";
@@ -70,7 +70,7 @@ export function ModelSelector({
       menuHeader={
         modelFetchError ? (
           <Alert tone="warning" role="status" className="m-1 w-auto">
-            <WarningCircle />
+            <WarningCircleIcon />
             <AlertDescription>{modelFetchError}</AlertDescription>
           </Alert>
         ) : undefined

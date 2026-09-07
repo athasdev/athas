@@ -1,4 +1,4 @@
-import { ArrowDownIcon, ArrowUpIcon, ListIcon, PencilSimpleIcon, TrashIcon } from "@/ui/icons";
+import { ArrowDownIcon, ArrowUpIcon, ListIcon, PenIcon, TrashIcon } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { ButtonGroup } from "@/ui/button-group";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/ui/item";
@@ -76,7 +76,7 @@ export function AgentMessageQueue({ messages, onEdit, onMove, onRemove }: AgentM
                     onClick={() => onEdit(index)}
                     tooltip="Edit queued guidance"
                   >
-                    <PencilSimpleIcon />
+                    <PenIcon />
                   </Button>
                   <Button
                     type="button"

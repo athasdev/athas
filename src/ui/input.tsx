@@ -1,14 +1,14 @@
-import { type Icon as AppIcon } from "@/ui/icons";
 import { cva } from "class-variance-authority";
 import type React from "react";
 import { forwardRef, useEffect, useRef } from "react";
+import type { Icon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   variant?: "default" | "ghost" | "inline";
   shape?: "default" | "pill";
-  leftIcon?: AppIcon;
-  rightIcon?: AppIcon;
+  leftIcon?: Icon;
+  rightIcon?: Icon;
   containerClassName?: string;
 }
 

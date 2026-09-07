@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
-import { PlayIcon as Play, StackIcon as ImageIcon } from "@/ui/icons";
+import { PlayIcon, StackIcon } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
@@ -59,7 +59,7 @@ export function DockerImageDialog({
   return (
     <Dialog
       title={mode === "build" ? "Build Docker Image" : "Run Docker Image"}
-      icon={mode === "build" ? ImageIcon : Play}
+      icon={mode === "build" ? StackIcon : PlayIcon}
       onClose={onClose}
       footer={
         <>

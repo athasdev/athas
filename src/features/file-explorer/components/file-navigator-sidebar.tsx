@@ -1,4 +1,4 @@
-import { ListBulletsIcon as ListBullets, TreeStructureIcon as TreeStructure } from "@/ui/icons";
+import { ListIcon, SitemapIcon } from "@/ui/icons";
 import {
   memo,
   type KeyboardEvent,
@@ -482,7 +482,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               tooltip="Flat list"
               aria-label="Flat list"
             >
-              <ListBullets />
+              <ListIcon />
             </SidebarIconButton>
             <SidebarIconButton
               active={viewMode === "tree"}
@@ -490,7 +490,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               tooltip="File tree"
               aria-label="File tree"
             >
-              <TreeStructure />
+              <SitemapIcon />
             </SidebarIconButton>
           </div>
         </SidebarHeader>

@@ -2,7 +2,7 @@ import { Menu, Menubar as BaseMenubar } from "@base-ui/react";
 import { createContext, useContext, useMemo, type ComponentProps } from "react";
 import Keybinding from "@/features/keymaps/components/keybinding";
 import { menuItemVariants, menuSeparatorVariants, menuSurfaceVariants } from "@/ui/dropdown";
-import { CaretRightIcon } from "@/ui/icons";
+import { ChevronRightIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
 interface MenubarContextValue {
@@ -192,7 +192,7 @@ function MenubarSubTrigger({
       {...props}
     >
       <span className="min-w-0 flex-1 truncate whitespace-nowrap">{children}</span>
-      <CaretRightIcon className="ml-2 size-4 shrink-0 text-subtle-foreground" />
+      <ChevronRightIcon className="ml-2 size-4 shrink-0 text-subtle-foreground" />
     </Menu.SubmenuTrigger>
   );
 }

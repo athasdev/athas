@@ -1,13 +1,13 @@
 import type { KeyboardEvent, MouseEvent } from "react";
 import {
-  ArrowClockwiseIcon as Refresh,
-  CheckIcon as Check,
-  PackageIcon as Package,
-  PlusIcon as Plus,
-  TagIcon as Tag,
-  UserIcon as User,
-  WarningCircleIcon as Warning,
-  XCircleIcon as Unavailable,
+  ArrowClockwiseIcon,
+  CheckIcon,
+  PackageIcon,
+  PlusIcon,
+  TagIcon,
+  UserIcon,
+  WarningCircleIcon,
+  XCircleIcon,
 } from "@/ui/icons";
 import { Card, CardContent, CardDescription, CardTitle } from "@/ui/card";
 import { Spinner } from "@/ui/spinner";
@@ -41,15 +41,15 @@ export function ExtensionCatalogCard({
   const status = isInstalling ? (
     <Spinner label="Installing" compact />
   ) : hasRuntimeIssue ? (
-    <Warning className="size-4 text-destructive" weight="duotone" />
+    <WarningCircleIcon className="size-4 text-destructive" />
   ) : hasUpdate ? (
-    <Refresh className="size-4 text-primary" weight="duotone" />
+    <ArrowClockwiseIcon className="size-4 text-primary" />
   ) : isUnavailableAgent ? (
-    <Unavailable className="size-4 text-subtle-foreground" weight="duotone" />
+    <XCircleIcon className="size-4 text-subtle-foreground" />
   ) : extension.isInstalled ? (
-    <Check className="size-4 text-primary" weight="bold" />
+    <CheckIcon className="size-4 text-primary" optical="md" />
   ) : (
-    <Plus className="size-4 text-subtle-foreground" />
+    <PlusIcon className="size-4 text-subtle-foreground" />
   );
 
   return (
@@ -68,18 +68,18 @@ export function ExtensionCatalogCard({
           <CardTitle className="truncate">{extension.name}</CardTitle>
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-subtle-foreground ui-text-sm">
             <span className="flex shrink-0 items-center gap-1">
-              <Tag className="size-3.5" />
+              <TagIcon className="size-3.5" />
               {getCategoryLabel(extension.category)}
             </span>
             {extension.publisher ? (
               <span className="flex min-w-0 items-center gap-1">
-                <User className="size-3.5 shrink-0" />
+                <UserIcon className="size-3.5 shrink-0" />
                 <span className="truncate">{extension.publisher}</span>
               </span>
             ) : null}
             {extension.isBundled ? (
               <span className="flex shrink-0 items-center gap-1">
-                <Package className="size-3.5" />
+                <PackageIcon className="size-3.5" />
                 Built-in
               </span>
             ) : null}

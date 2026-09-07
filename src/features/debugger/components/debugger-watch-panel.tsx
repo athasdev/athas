@@ -1,8 +1,4 @@
-import {
-  ArrowsClockwiseIcon as ArrowsClockwise,
-  PlusIcon as Plus,
-  TrashIcon as Trash,
-} from "@/ui/icons";
+import { ArrowsClockwiseIcon, PlusIcon, TrashIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { sendDebugAdapterRequest } from "../services/debug-adapter-service";
 import { useDebuggerStore } from "../stores/debugger.store";
@@ -111,7 +107,7 @@ export function DebugWatchPanel({
           onClick={addExpression}
           iconOnly
         >
-          <Plus />
+          <PlusIcon />
         </Button>
         <Button
           variant="ghost"
@@ -120,7 +116,7 @@ export function DebugWatchPanel({
           onClick={evaluateAll}
           iconOnly
         >
-          <ArrowsClockwise />
+          <ArrowsClockwiseIcon />
         </Button>
       </div>
 
@@ -155,7 +151,7 @@ export function DebugWatchPanel({
                       onClick={() => debuggerActions.removeWatchExpression(watchExpression.id)}
                       iconOnly
                     >
-                      <Trash />
+                      <TrashIcon />
                     </Button>
                   </div>
                   <div className="mt-1 truncate font-mono ui-text-sm text-subtle-foreground">
@@ -176,7 +172,7 @@ export function DebugWatchPanel({
                       void evaluateExpression(watchExpression.id, watchExpression.expression)
                     }
                   >
-                    <ArrowsClockwise />
+                    <ArrowsClockwiseIcon />
                     Refresh Watch
                   </ContextMenuItem>
                   <ContextMenuSeparator />
@@ -184,7 +180,7 @@ export function DebugWatchPanel({
                     variant="destructive"
                     onClick={() => debuggerActions.removeWatchExpression(watchExpression.id)}
                   >
-                    <Trash />
+                    <TrashIcon />
                     Remove Watch
                   </ContextMenuItem>
                 </ContextMenuContent>

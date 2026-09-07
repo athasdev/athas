@@ -1,15 +1,15 @@
 import ignore from "ignore";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  CursorClickIcon as CursorClick,
-  EyeIcon as Eye,
-  FadersHorizontalIcon as Preferences,
-  ListBulletsIcon as ListBullets,
-  PaletteIcon as Palette,
-  TextIndentIcon as TextIndent,
-  TrashIcon as Trash,
-  WarningIcon as AlertTriangle,
-  XIcon as X,
+  ClickIcon,
+  EyeIcon,
+  ListIcon,
+  PaletteIcon,
+  SlidersIcon,
+  TextIndentIcon,
+  TrashIcon,
+  WarningIcon,
+  XIcon,
 } from "@/ui/icons";
 import type React from "react";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -1321,7 +1321,7 @@ function FileExplorerTreeComponent({
               requestAnimationFrame(() => searchInputRef.current?.focus());
             }}
           >
-            <X />
+            <XIcon />
           </SidebarIconButton>
         ) : null}
         <DropdownMenu>
@@ -1333,12 +1333,12 @@ function FileExplorerTreeComponent({
               />
             }
           >
-            <Preferences />
+            <SlidersIcon />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
-                <Eye />
+                <EyeIcon />
                 Visibility
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
@@ -1373,7 +1373,7 @@ function FileExplorerTreeComponent({
             </DropdownMenuSub>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
-                <Palette />
+                <PaletteIcon />
                 Appearance
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
@@ -1426,7 +1426,7 @@ function FileExplorerTreeComponent({
             </DropdownMenuSub>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
-                <ListBullets />
+                <ListIcon />
                 Sort Order
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
@@ -1449,7 +1449,7 @@ function FileExplorerTreeComponent({
             </DropdownMenuSub>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
-                <TextIndent />
+                <TextIndentIcon />
                 Indentation
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
@@ -1480,7 +1480,7 @@ function FileExplorerTreeComponent({
                 void updateSetting("autoRevealActiveFileInFileTree", checked)
               }
             >
-              <CursorClick />
+              <ClickIcon />
               Auto Reveal Active File
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
@@ -1488,7 +1488,7 @@ function FileExplorerTreeComponent({
               closeOnClick={false}
               onCheckedChange={(checked) => void updateSetting("confirmBeforeFileDelete", checked)}
             >
-              <Trash />
+              <TrashIcon />
               Confirm Before Delete
             </DropdownMenuCheckboxItem>
           </DropdownMenuContent>
@@ -1591,7 +1591,7 @@ function FileExplorerTreeComponent({
       {alertDialog && (
         <Dialog
           title={alertDialog.title}
-          icon={AlertTriangle}
+          icon={WarningIcon}
           onClose={() => setAlertDialog(null)}
           footer={
             <Button onClick={() => setAlertDialog(null)} variant="accent" className="ui-text-base">
@@ -1605,7 +1605,7 @@ function FileExplorerTreeComponent({
       {openAllFilesDialog && (
         <Dialog
           title="Open All Files"
-          icon={AlertTriangle}
+          icon={WarningIcon}
           onClose={() => {
             if (!isOpeningAllFiles) setOpenAllFilesDialog(null);
           }}
@@ -1638,7 +1638,7 @@ function FileExplorerTreeComponent({
       {deleteCandidate && (
         <Dialog
           title={deleteCandidate.isDir ? "Delete Folder" : "Delete File"}
-          icon={AlertTriangle}
+          icon={WarningIcon}
           onClose={() => {
             if (!isDeletingPath) setDeleteCandidate(null);
           }}

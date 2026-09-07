@@ -1,27 +1,27 @@
 import type { ReactNode } from "react";
 import {
-  BrainIcon as Brain,
-  DatabaseIcon as Database,
-  PaletteIcon as Palette,
-  PlugsConnectedIcon as PlugsConnected,
-  RobotIcon as Robot,
-  SparkleIcon as Sparkles,
-  TextTIcon as TextT,
-  SquaresFourIcon as SquaresFour,
+  BrainIcon,
+  DatabaseIcon,
+  GridIcon,
+  PaletteIcon,
+  PlugsConnectedIcon,
+  RobotIcon,
+  SparkleIcon,
+  TextIcon,
 } from "@/ui/icons";
 import { AppearancePreviewGraphic } from "@/extensions/appearance/components/appearance-preview";
 import type { UnifiedExtension } from "./extension-catalog-types";
 
 function categoryIcon(category: UnifiedExtension["category"], className: string): ReactNode {
   const icons = {
-    language: <TextT className={className} weight="duotone" />,
-    theme: <Palette className={className} weight="duotone" />,
-    "icon-theme": <SquaresFour className={className} weight="duotone" />,
-    database: <Database className={className} weight="duotone" />,
-    ai: <Sparkles className={className} weight="duotone" />,
-    integration: <PlugsConnected className={className} weight="duotone" />,
-    skill: <Brain className={className} weight="duotone" />,
-    agent: <Robot className={className} weight="duotone" />,
+    language: <TextIcon className={className} />,
+    theme: <PaletteIcon className={className} />,
+    "icon-theme": <GridIcon className={className} />,
+    database: <DatabaseIcon className={className} />,
+    ai: <SparkleIcon className={className} />,
+    integration: <PlugsConnectedIcon className={className} />,
+    skill: <BrainIcon className={className} />,
+    agent: <RobotIcon className={className} />,
   };
 
   return icons[category];

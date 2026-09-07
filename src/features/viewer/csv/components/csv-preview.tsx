@@ -1,4 +1,4 @@
-import { DownloadIcon as Download, FileCodeIcon as FileJson, RowsIcon as Rows } from "@/ui/icons";
+import { DownloadIcon, FileCodeIcon, RowsIcon } from "@/ui/icons";
 import { useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
@@ -110,7 +110,7 @@ export function CsvPreview() {
               className="h-6 gap-1 text-subtle-foreground"
               tooltip="Toggle header row"
             >
-              <Rows /> {hasHeader ? "Header On" : "Header Off"}
+              <RowsIcon /> {hasHeader ? "Header On" : "Header Off"}
             </Button>
 
             {/* Copy CSV */}
@@ -120,7 +120,7 @@ export function CsvPreview() {
               className="h-6 gap-1 text-subtle-foreground"
               tooltip="Copy as CSV"
             >
-              <Download weight="fill" /> CSV
+              <DownloadIcon optical="md" /> CSV
             </Button>
 
             {/* Copy JSON */}
@@ -130,7 +130,7 @@ export function CsvPreview() {
               className="h-6 gap-1 text-subtle-foreground"
               tooltip="Copy as JSON"
             >
-              <FileJson /> JSON
+              <FileCodeIcon /> JSON
             </Button>
           </div>
         }

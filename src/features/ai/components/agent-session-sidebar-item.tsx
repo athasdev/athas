@@ -1,14 +1,7 @@
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import type { ReactNode } from "react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
-import {
-  ArchiveIcon,
-  CubeIcon,
-  FolderIcon,
-  GitBranchIcon,
-  PushPinIcon,
-  SparkleIcon,
-} from "@/ui/icons";
+import { ArchiveIcon, CubeIcon, FolderIcon, GitBranchIcon, PinIcon, SparkleIcon } from "@/ui/icons";
 import { SidebarIconButton, SidebarListActionRow, SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
@@ -96,7 +89,7 @@ export function AgentSessionSidebarItem({
               onPinChange(!pinned);
             }}
           >
-            <PushPinIcon />
+            <PinIcon />
           </SidebarIconButton>,
           <SidebarIconButton
             key="archive"
@@ -145,7 +138,7 @@ export function AgentSessionSidebarItem({
               <span className="min-w-0 truncate">{formattedDate}</span>
               {pinned ? (
                 <span className="flex shrink-0 items-center gap-1 rounded-full bg-background px-1.5 py-0.5 text-subtle-foreground ring-1 ring-border/60">
-                  <PushPinIcon className="size-3" />
+                  <PinIcon className="size-3" />
                   Pinned
                 </span>
               ) : null}

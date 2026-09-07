@@ -7,7 +7,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import { CaretDownIcon as CaretDown } from "@/ui/icons";
+import { ChevronDownIcon } from "@/ui/icons";
 import { ScrollArea } from "@/ui/scroll-area";
 import { SidebarListItem, SidebarSectionLabel } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
@@ -81,7 +81,7 @@ export function WorkbenchNavigation<TValue extends string>({
                     {activeItem?.icon}
                     <span className="truncate">{activeItem?.label}</span>
                   </span>
-                  <CaretDown />
+                  <ChevronDownIcon />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-(--anchor-width)">
                   <DropdownMenuRadioGroup

@@ -1,9 +1,4 @@
-import {
-  ColumnsIcon as Columns2,
-  DotsThreeIcon as MoreHorizontal,
-  MagnifyingGlassIcon as Search,
-  RowsIcon as Rows3,
-} from "@/ui/icons";
+import { ColumnsIcon, DotsIcon, RowsIcon, SearchIcon } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import Breadcrumb, {
@@ -444,7 +439,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               tooltip="Search changes"
               aria-label="Search changes"
             >
-              <Search />
+              <SearchIcon />
             </BreadcrumbActionButton>
             <div className="flex items-center gap-0.5">
               <BreadcrumbActionButton
@@ -454,7 +449,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 tooltip="Unified view"
                 aria-label="Unified view"
               >
-                <Rows3 weight="duotone" />
+                <RowsIcon />
               </BreadcrumbActionButton>
               <BreadcrumbActionButton
                 type="button"
@@ -463,7 +458,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 tooltip="Split view"
                 aria-label="Split view"
               >
-                <Columns2 weight="duotone" />
+                <ColumnsIcon />
               </BreadcrumbActionButton>
             </div>
             <DropdownMenu>
@@ -473,7 +468,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                     <Button type="button" variant="ghost" iconOnly aria-label="Diff actions" />
                   }
                 >
-                  <MoreHorizontal />
+                  <DotsIcon />
                 </DropdownMenuTrigger>
               </Tooltip>
               <DropdownMenuContent>

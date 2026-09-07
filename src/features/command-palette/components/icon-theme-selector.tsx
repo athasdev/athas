@@ -1,4 +1,4 @@
-import { CaretLeftIcon as CaretLeft } from "@/ui/icons";
+import { ChevronLeftIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getIconThemeAppearancePreview,
@@ -174,7 +174,7 @@ export const IconThemeSelectorContent = ({
     <>
       <CommandHeader onClose={handleClose}>
         <CommandHeaderAction type="button" onClick={handleBack} aria-label="Back to commands">
-          <CaretLeft />
+          <ChevronLeftIcon />
         </CommandHeaderAction>
         <CommandInput
           ref={inputRef}

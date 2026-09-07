@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { FolderOpenIcon as FolderOpen, PlugsConnectedIcon as PlugZap } from "@/ui/icons";
+import { FolderOpenIcon, PlugsConnectedIcon } from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -220,7 +220,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               className="gap-1.5"
               aria-label="Test connection"
             >
-              {isTesting ? <Spinner label="Testing" compact /> : <PlugZap />}
+              {isTesting ? <Spinner label="Testing" compact /> : <PlugsConnectedIcon />}
               Test
             </Button>
           )}
@@ -295,7 +295,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   className="gap-1.5"
                   onClick={handleBrowseDatabaseFile}
                 >
-                  <FolderOpen />
+                  <FolderOpenIcon />
                   Browse
                 </Button>
               </div>

@@ -1,11 +1,11 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  ArrowClockwiseIcon as RefreshCw,
-  ChatCircleTextIcon as Issue,
-  GitPullRequestIcon as GitPullRequest,
-  LightningIcon as Lightning,
-  LinkIcon as Link,
-  WarningCircleIcon as WarningCircle,
+  ArrowClockwiseIcon,
+  BoltIcon,
+  ChatBubbleTextIcon,
+  GitPullRequestIcon,
+  LinkIcon,
+  WarningCircleIcon,
 } from "@/ui/icons";
 import type { Settings } from "@/features/settings/types/settings.types";
 import { GITHUB_CONNECTION_URL } from "@/features/github/services/github-token-service";
@@ -80,7 +80,7 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
       id: "github-new-issue",
       label: "GitHub: New Issue",
       description: "Create an issue in the active repository",
-      icon: <Issue />,
+      icon: <ChatBubbleTextIcon />,
       category: "GitHub",
       action: () => openGitHubForm("issue"),
     },
@@ -88,7 +88,7 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
       id: "github-new-pull-request",
       label: "GitHub: New Pull Request",
       description: "Create a pull request in the active repository",
-      icon: <GitPullRequest />,
+      icon: <GitPullRequestIcon />,
       category: "GitHub",
       action: () => openGitHubForm("pull-request"),
     },
@@ -96,7 +96,7 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
       id: "github-run-workflow",
       label: "GitHub: Run Workflow",
       description: "Dispatch a workflow in the active repository",
-      icon: <Lightning />,
+      icon: <BoltIcon />,
       category: "GitHub",
       action: () => openGitHubForm("action"),
     },
@@ -104,7 +104,7 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
       id: "github-show-pull-requests",
       label: "GitHub: Show Pull Requests",
       description: "Open GitHub pull requests",
-      icon: <GitPullRequest />,
+      icon: <GitPullRequestIcon />,
       category: "GitHub",
       commandId: "workbench.showGitHub",
       action: () => void openGitHubSection("pull-requests"),
@@ -113,7 +113,7 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
       id: "github-show-issues",
       label: "GitHub: Show Issues",
       description: "Open GitHub issues",
-      icon: <WarningCircle />,
+      icon: <WarningCircleIcon />,
       category: "GitHub",
       action: () => void openGitHubSection("issues"),
     },
@@ -121,7 +121,7 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
       id: "github-show-actions",
       label: "GitHub: Show Actions",
       description: "Open GitHub workflow runs",
-      icon: <Lightning />,
+      icon: <BoltIcon />,
       category: "GitHub",
       action: () => void openGitHubSection("actions"),
     },
@@ -129,7 +129,7 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
       id: "github-refresh",
       label: "GitHub: Refresh Current View",
       description: "Refresh the active GitHub sidebar section",
-      icon: <RefreshCw />,
+      icon: <ArrowClockwiseIcon />,
       category: "GitHub",
       action: () => {
         setIsSidebarVisible(true);
@@ -148,7 +148,7 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
       id: "github-check-auth",
       label: "GitHub: Check Authentication",
       description: "Refresh GitHub account authentication",
-      icon: <RefreshCw />,
+      icon: <ArrowClockwiseIcon />,
       category: "GitHub",
       action: async () => {
         onClose();
@@ -164,7 +164,7 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
       id: "github-connect-account",
       label: "GitHub: Connect Account",
       description: "Open GitHub integration settings",
-      icon: <Link />,
+      icon: <LinkIcon />,
       category: "GitHub",
       action: () => {
         onClose();

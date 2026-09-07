@@ -14,13 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/ui/alert-dialog";
 import { Button, type ButtonVariant } from "@/ui/button";
-import {
-  InfoIcon as Info,
-  type IconProps as AppIconProps,
-  QuestionIcon as Question,
-  WarningIcon as Warning,
-  XIcon as X,
-} from "@/ui/icons";
+import { type IconProps, InfoIcon, QuestionIcon, WarningIcon, XIcon } from "@/ui/icons";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import { instantTransition, overlayEntrance, quickTransition } from "@/utils/motion";
@@ -33,7 +27,7 @@ interface DialogProps {
   title: ReactNode;
   scrollable?: boolean;
   icon?: React.ForwardRefExoticComponent<
-    Omit<AppIconProps, "ref"> & React.RefAttributes<SVGSVGElement>
+    Omit<IconProps, "ref"> & React.RefAttributes<SVGSVGElement>
   >;
   headerActions?: ReactNode;
   footer?: ReactNode;
@@ -121,7 +115,7 @@ function DialogContent({
             className="absolute top-2.5 right-2.5 text-subtle-foreground hover:text-foreground"
             aria-label="Close dialog"
           >
-            <X />
+            <XIcon />
           </DialogPrimitive.Close>
         ) : null}
       </DialogPrimitive.Popup>
@@ -265,7 +259,7 @@ const AppDialog = ({
                 render={<Button variant="ghost" iconOnly />}
                 aria-label="Close dialog"
               >
-                <X />
+                <XIcon />
               </DialogPrimitive.Close>
             </div>
           </div>
@@ -478,7 +472,7 @@ function PrimitiveDialogHost({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogMedia>
-              <Info />
+              <InfoIcon />
             </AlertDialogMedia>
             <AlertDialogTitle>{dialog.title}</AlertDialogTitle>
             <AlertDialogDescription>{dialog.message}</AlertDialogDescription>
@@ -504,7 +498,7 @@ function PrimitiveDialogHost({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogMedia>
-              <Question />
+              <QuestionIcon />
             </AlertDialogMedia>
             <AlertDialogTitle>{dialog.title}</AlertDialogTitle>
             <AlertDialogDescription>{dialog.message}</AlertDialogDescription>
@@ -531,7 +525,7 @@ function PrimitiveDialogHost({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogMedia>
-              <Warning />
+              <WarningIcon />
             </AlertDialogMedia>
             <AlertDialogTitle>{dialog.title}</AlertDialogTitle>
             <AlertDialogDescription>{dialog.message}</AlertDialogDescription>
@@ -556,7 +550,7 @@ function PrimitiveDialogHost({
   return (
     <AppDialog
       title={dialog.title}
-      icon={Warning}
+      icon={WarningIcon}
       onClose={() => onClose(() => dialog.resolve(null))}
       size="sm"
       footer={

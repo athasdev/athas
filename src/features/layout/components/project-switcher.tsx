@@ -29,7 +29,7 @@ import {
 } from "@/ui/dropdown";
 import {
   ChevronExpandYIcon,
-  DotsThreeIcon,
+  DotsIcon,
   FolderOpenIcon,
   ImageIcon,
   RemoteIcon,
@@ -335,7 +335,7 @@ function ProjectRowActions({
           />
         }
       >
-        <DotsThreeIcon />
+        <DotsIcon />
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="min-w-44">
         {onSelectIcon ? (

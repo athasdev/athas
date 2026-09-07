@@ -1,14 +1,14 @@
 import {
-  FileTextIcon as FileText,
-  FolderOpenIcon as FolderOpen,
-  BugBeetleIcon as BugBeetle,
-  GitBranchIcon as GitBranch,
-  GitPullRequestIcon as GitPullRequest,
-  ListBulletsIcon as ListBullets,
-  ListChecksIcon as ListChecks,
-  PackageIcon as Package,
-  MagnifyingGlassIcon as Search,
-  StackIcon as Views,
+  BugIcon,
+  FileTextIcon,
+  FolderOpenIcon,
+  GitBranchIcon,
+  GitPullRequestIcon,
+  ListChecksIcon,
+  ListIcon,
+  PackageIcon,
+  SearchIcon,
+  StackIcon,
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
@@ -51,7 +51,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "view-show-files",
       label: "View: Show Files",
       description: "Switch to files view",
-      icon: <FolderOpen />,
+      icon: <FolderOpenIcon />,
       category: "Navigation",
       commandId: "workbench.showFileExplorer",
       action: () => {
@@ -64,7 +64,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "view-show-git",
       label: "View: Show Git",
       description: "Switch to Git view",
-      icon: <GitBranch />,
+      icon: <GitBranchIcon />,
       category: "Navigation",
       commandId: "workbench.showSourceControl",
       action: () => {
@@ -77,7 +77,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "view-show-github-prs",
       label: "View: Show Pull Requests",
       description: "Switch to GitHub Pull Requests view",
-      icon: <GitPullRequest />,
+      icon: <GitPullRequestIcon />,
       category: "Navigation",
       commandId: "workbench.showGitHub",
       action: () => {
@@ -92,7 +92,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
             id: "view-show-review",
             label: "Source Control: Show Review",
             description: "Open review checkpoints in Source Control",
-            icon: <ListChecks />,
+            icon: <ListChecksIcon />,
             category: "Navigation",
             action: () => {
               useSidebarStore.getState().actions.setGitSection("review");
@@ -114,7 +114,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "view-show-views",
       label: "View: Show Views",
       description: "Switch to project custom views",
-      icon: <Views />,
+      icon: <StackIcon />,
       category: "Navigation",
       commandId: "workbench.showViews",
       action: () => {
@@ -127,7 +127,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "view-show-debugger",
       label: "View: Show Run and Debug",
       description: "Switch to debugger view",
-      icon: <BugBeetle />,
+      icon: <BugIcon />,
       category: "Navigation",
       commandId: "workbench.showDebugger",
       action: () => {
@@ -142,7 +142,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
             id: "view-show-outline",
             label: "View: Show Outline",
             description: "Show symbols for the active file in the sidebar",
-            icon: <ListBullets />,
+            icon: <ListIcon />,
             category: "Navigation",
             commandId: "workbench.showOutline",
             action: () => {
@@ -156,7 +156,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "search-global",
       label: "Search: Global Search",
       description: "Search across files in workspace",
-      icon: <Search />,
+      icon: <SearchIcon />,
       category: "Navigation",
       commandId: "workbench.showGlobalSearch",
       action: () => {
@@ -168,7 +168,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "view-show-extensions",
       label: "View: Show Extensions",
       description: "Open the extensions tab",
-      icon: <Package />,
+      icon: <PackageIcon />,
       category: "Navigation",
       action: () => {
         onClose();
@@ -179,7 +179,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "quick-open",
       label: "Go: Quick Open",
       description: "Jump to any file with fuzzy search",
-      icon: <FileText />,
+      icon: <FileTextIcon />,
       category: "Navigation",
       commandId: "file.quickOpen",
       action: () => {
@@ -191,7 +191,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       id: "go-to-symbol-in-editor",
       label: "Go: Symbol in Editor",
       description: "Open the active file outline picker",
-      icon: <ListBullets />,
+      icon: <ListIcon />,
       category: "Navigation",
       commandId: "editor.showOutline",
       action: () => {

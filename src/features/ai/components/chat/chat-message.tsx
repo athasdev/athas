@@ -1,8 +1,4 @@
-import {
-  CopySimpleIcon as CopySimple,
-  FileTextIcon as FileText,
-  UploadSimpleIcon as Share,
-} from "@/ui/icons";
+import { CopyIcon, FileTextIcon, UploadIcon } from "@/ui/icons";
 import type { FormEvent, ReactNode } from "react";
 import { memo, useCallback, useState } from "react";
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
@@ -220,7 +216,7 @@ export const ChatMessage = memo(function ChatMessage({
             <MessageFooter reserveSpace={false}>
               <span>{messageTime}</span>
               <MessageAction onClick={() => void copyText(message.content)} label="Copy prompt">
-                <CopySimple className="size-3.5" />
+                <CopyIcon className="size-3.5" />
               </MessageAction>
             </MessageFooter>
           )}
@@ -284,7 +280,7 @@ export const ChatMessage = memo(function ChatMessage({
                   return (
                     <Attachment key={`${message.id}-resource-${index}`}>
                       <AttachmentMedia>
-                        <FileText />
+                        <FileTextIcon />
                       </AttachmentMedia>
                       <AttachmentContent>
                         <AttachmentTitle>{resourceName}</AttachmentTitle>
@@ -345,13 +341,13 @@ export const ChatMessage = memo(function ChatMessage({
         {showActions && message.content.trim() ? (
           <MessageFooter reserveSpace={false}>
             <MessageAction onClick={() => void copyText(message.content)} label="Copy response">
-              <CopySimple className="size-3.5" />
+              <CopyIcon className="size-3.5" />
             </MessageAction>
             {isLastMessage && !message.isStreaming ? (
               <MessageAction
                 onClick={() => void copyText(buildShareableOutcomeMarkdown(message.content))}
                 label="Copy outcome as Markdown"
-                icon={Share}
+                icon={UploadIcon}
               />
             ) : null}
           </MessageFooter>

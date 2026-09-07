@@ -3,18 +3,18 @@ import { useMemo, useState, type RefObject } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { Button } from "@/ui/button";
 import {
-  CaretDownIcon,
+  ChevronDownIcon,
   CodeBlockIcon,
   DatabaseIcon,
   FilesIcon,
   GitDiffIcon,
-  GithubLogoIcon,
   GitPullRequestIcon,
   ImageIcon,
-  TerminalWindowIcon,
   StackIcon,
+  TerminalWindowIcon,
   XIcon,
 } from "@/ui/icons";
+import { GithubMark } from "@/ui/brand-marks";
 import {
   Item,
   ItemActions,
@@ -40,7 +40,7 @@ const groupIcons = {
   selections: CodeBlockIcon,
   terminals: TerminalWindowIcon,
   databases: DatabaseIcon,
-  github: GithubLogoIcon,
+  github: GithubMark,
   other: StackIcon,
 };
 
@@ -133,7 +133,7 @@ export function ComposerAttachments({
                     {group.items.length}
                   </motion.span>
                   <span>{group.noun}</span>
-                  <CaretDownIcon className="size-3 shrink-0 text-subtle-foreground transition-transform duration-fast group-data-popup-open:rotate-180 motion-reduce:transition-none" />
+                  <ChevronDownIcon className="size-3 shrink-0 text-subtle-foreground transition-transform duration-fast group-data-popup-open:rotate-180 motion-reduce:transition-none" />
                 </PopoverTrigger>
                 <PopoverContent side="top" align="start" className="w-80 max-w-[calc(100vw-16px)]">
                   <div className="flex items-center justify-between gap-2 px-1">

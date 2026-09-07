@@ -1,8 +1,4 @@
-import {
-  FileTextIcon as FileText,
-  GitDiffIcon as GitDiff,
-  TerminalWindowIcon as TerminalSquare,
-} from "@/ui/icons";
+import { FileTextIcon, GitDiffIcon, TerminalWindowIcon } from "@/ui/icons";
 import {
   createAcpDiffViewNode,
   getAcpDiffOutputs,
@@ -331,7 +327,7 @@ function ToolCallDisplay({
             void openToolDiff(toolPath, output);
           }}
         >
-          <GitDiff weight="duotone" />
+          <GitDiffIcon />
         </Button>
       ) : null}
       {toolPath ? (
@@ -345,7 +341,7 @@ function ToolCallDisplay({
             void openToolPath(toolPath);
           }}
         >
-          <FileText weight="duotone" />
+          <FileTextIcon />
         </Button>
       ) : null}
       {hasTerminalOutput ? (
@@ -359,7 +355,7 @@ function ToolCallDisplay({
             openAcpTerminalOutput(output);
           }}
         >
-          <TerminalSquare weight="duotone" />
+          <TerminalWindowIcon />
         </Button>
       ) : null}
     </span>

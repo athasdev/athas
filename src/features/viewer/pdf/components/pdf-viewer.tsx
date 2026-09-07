@@ -6,7 +6,7 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
 import { openUrl } from "@tauri-apps/plugin-opener"; // Keep for external links
-import { ArrowSquareOutIcon as ExternalLink } from "@/ui/icons";
+import { OpenExternalIcon } from "@/ui/icons";
 // Configure PDF.js worker
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { FilePathBreadcrumb } from "@/features/editor/components/toolbar/file-path-breadcrumb";
@@ -175,7 +175,7 @@ export function PdfViewer({ filePath }: PdfViewerProps) {
               tooltip="Open in external viewer"
               iconOnly
             >
-              <ExternalLink className="text-foreground" />
+              <OpenExternalIcon className="text-foreground" />
             </Button>
             <div className="mx-1 h-4 w-px bg-border" />
             <ViewerZoomControls

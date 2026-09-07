@@ -11,12 +11,12 @@ import {
   ContextMenuSubTrigger,
 } from "@/ui/context-menu";
 import {
-  EyeIcon,
   ExtensionsIcon,
+  EyeIcon,
   FolderIcon,
   FolderOpenIcon,
-  MagnifyingGlassIcon,
   NodesIcon,
+  SearchIcon,
   SparkleIcon,
   TerminalWindowIcon,
 } from "@/ui/icons";
@@ -86,7 +86,7 @@ export function ActivityBarMenu({
           Open Project…
         </ContextMenuItem>
         <ContextMenuItem onClick={onSearch}>
-          <MagnifyingGlassIcon />
+          <SearchIcon />
           Search
         </ContextMenuItem>
         <ContextMenuItem onClick={onOpenExtensions}>

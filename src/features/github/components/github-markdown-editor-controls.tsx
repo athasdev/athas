@@ -37,14 +37,13 @@ import {
 import { createPortal } from "react-dom";
 import { CommandEmpty, CommandItemRow, CommandList } from "@/ui/command";
 import {
-  ChatCircleTextIcon,
+  ChatBubbleTextIcon,
   CodeBlockIcon,
-  ListBulletsIcon,
   ListChecksIcon,
   ListIcon,
   MinusIcon,
   TableIcon,
-  TextTIcon,
+  TextIcon,
 } from "@/ui/icons";
 import type {
   GitHubMarkdownCommandDefinition,
@@ -67,7 +66,7 @@ class MarkdownSlashCommandOption extends MenuOption {
 }
 
 function getCommandIcon(id: GitHubMarkdownCommandId): ReactNode {
-  if (id === "paragraph") return <TextTIcon />;
+  if (id === "paragraph") return <TextIcon />;
   if (id.startsWith("heading-")) {
     return (
       <span className="github-markdown-command-heading-icon" aria-hidden="true">
@@ -75,8 +74,8 @@ function getCommandIcon(id: GitHubMarkdownCommandId): ReactNode {
       </span>
     );
   }
-  if (id === "quote") return <ChatCircleTextIcon />;
-  if (id === "bullet-list") return <ListBulletsIcon />;
+  if (id === "quote") return <ChatBubbleTextIcon />;
+  if (id === "bullet-list") return <ListIcon />;
   if (id === "numbered-list") return <ListIcon />;
   if (id === "task-list") return <ListChecksIcon />;
   if (id === "code-block") return <CodeBlockIcon />;

@@ -5,7 +5,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@/ui/dropdown";
-import { DotsThreeIcon, PenIcon, PlayIcon, TrashIcon } from "@/ui/icons";
+import { DotsIcon, PenIcon, PlayIcon, TrashIcon } from "@/ui/icons";
 import type { RunActionItem } from "../types/run-action.types";
 
 interface RunActionRowProps {
@@ -36,7 +36,7 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
                 />
               }
             >
-              <DotsThreeIcon />
+              <DotsIcon />
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="min-w-44">
               {onEdit ? (

@@ -15,7 +15,7 @@ import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { ChromeBar } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { FieldTitle } from "@/ui/field";
-import { CaretDownIcon as CaretDown, DotsThreeIcon, MagnifyingGlassIcon } from "@/ui/icons";
+import { ChevronDownIcon, DotsIcon, SearchIcon } from "@/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { ScrollArea } from "@/ui/scroll-area";
 import { SearchField } from "@/ui/search";
@@ -240,7 +240,7 @@ export function SidebarSectionHeader({
         {...props}
       >
         <span className="min-w-0 truncate">{children}</span>
-        <CaretDown
+        <ChevronDownIcon
           className={cn(
             "size-3 shrink-0 text-subtle-foreground transition-transform",
             !expanded && "-rotate-90",
@@ -524,14 +524,14 @@ export const SidebarSearchPopover = forwardRef<
           />
         }
       >
-        <MagnifyingGlassIcon />
+        <SearchIcon />
       </PopoverTrigger>
       <PopoverContent align="end" className="p-1.5">
         <SearchField
           ref={ref}
           value={value}
           onChange={onChange}
-          leftIcon={MagnifyingGlassIcon}
+          leftIcon={SearchIcon}
           placeholder={placeholder}
           aria-label={ariaLabel}
           autoFocus
@@ -651,7 +651,7 @@ export function SidebarListMenuItem({
           <DropdownMenuTrigger
             render={<SidebarIconButton aria-label={menuLabel} disabled={disabled} />}
           >
-            <DotsThreeIcon />
+            <DotsIcon />
           </DropdownMenuTrigger>
           <SidebarMenuContent>{menu}</SidebarMenuContent>
         </DropdownMenu>

@@ -2,13 +2,13 @@ import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import {
-  ArrowLeftIcon as ArrowLeft,
-  ArrowRightIcon as ArrowRight,
-  ArrowsOutIcon as Maximize2,
-  ArrowsInIcon as Minimize2,
-  DotsThreeIcon as MoreHorizontal,
-  PlusIcon as Plus,
-  SidebarSimpleIcon as PanelLeftClose,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowsInIcon,
+  ArrowsOutIcon,
+  DotsIcon,
+  PlusIcon,
+  SidebarIcon,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -662,7 +662,7 @@ const TabBar = ({
               aria-label="Go back to previous location"
               iconOnly
             >
-              <ArrowLeft />
+              <ArrowLeftIcon />
             </Button>
             <Button
               type="button"
@@ -674,7 +674,7 @@ const TabBar = ({
               aria-label="Go forward to next location"
               iconOnly
             >
-              <ArrowRight />
+              <ArrowRightIcon />
             </Button>
           </div>
 
@@ -791,7 +791,7 @@ const TabBar = ({
                 commandId="workbench.newTab"
                 aria-label="New tab"
               >
-                <Plus weight="bold" />
+                <PlusIcon optical="md" />
               </Button>
             )}
             {paneId && !disablePaneActions && !isBottomPane && (
@@ -807,16 +807,16 @@ const TabBar = ({
                     />
                   }
                 >
-                  <MoreHorizontal />
+                  <DotsIcon />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleTogglePaneFullscreen}>
-                    {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
+                    {isPaneFullscreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
                     {isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
                   </DropdownMenuItem>
                   {isInSplit ? (
                     <DropdownMenuItem onClick={() => closePane(paneId)}>
-                      <PanelLeftClose />
+                      <SidebarIcon />
                       Close split
                     </DropdownMenuItem>
                   ) : null}

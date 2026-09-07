@@ -1,4 +1,4 @@
-import { ArrowFatLineDownIcon as Down, FileIcon } from "@/ui/icons";
+import { ArrowDownToLineIcon, FileIcon } from "@/ui/icons";
 import Badge from "@/ui/badge";
 import { EmptyState } from "@/ui/empty";
 import type {
@@ -69,7 +69,7 @@ export function DockerComposeSection({
               },
               {
                 label: "Stop project",
-                icon: <Down />,
+                icon: <ArrowDownToLineIcon />,
                 disabled: busyService !== null,
                 separatorBefore: true,
                 onSelect: () => void onProjectAction("down"),

@@ -1,13 +1,13 @@
 import {
-  ArrowSquareOutIcon as ArrowSquareOut,
-  BracketsCurlyIcon as Braces,
-  CaretDownIcon as CaretDown,
-  CaretRightIcon as CaretRight,
-  CodeIcon as Code,
-  CopyIcon as Copy,
-  FunnelIcon as Funnel,
+  BracketsCurlyIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  CodeIcon,
+  CopyIcon,
+  FilterIcon,
   FunctionIcon,
-  SquaresFourIcon as SquaresFour,
+  GridIcon,
+  OpenExternalIcon,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
@@ -52,11 +52,11 @@ const OUTLINE_FILTER_OPTIONS: Array<{
   label: string;
   icon: ReactNode;
 }> = [
-  { id: "types", label: "Types", icon: <SquaresFour /> },
+  { id: "types", label: "Types", icon: <GridIcon /> },
   { id: "functions", label: "Functions", icon: <FunctionIcon /> },
-  { id: "properties", label: "Properties", icon: <Braces /> },
-  { id: "variables", label: "Variables", icon: <Code /> },
-  { id: "other", label: "Other", icon: <Code /> },
+  { id: "properties", label: "Properties", icon: <BracketsCurlyIcon /> },
+  { id: "variables", label: "Variables", icon: <CodeIcon /> },
+  { id: "other", label: "Other", icon: <CodeIcon /> },
 ];
 
 function matchesOutlineFilter(kind: string, selectedFilters: Set<OutlineFilter>) {
@@ -297,7 +297,7 @@ export function OutlineSidebar() {
               />
             }
           >
-            <Funnel />
+            <FilterIcon />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem
@@ -305,7 +305,7 @@ export function OutlineSidebar() {
               closeOnClick={false}
               onClick={setAllFilters}
             >
-              <Funnel />
+              <FilterIcon />
               Show All
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -384,11 +384,11 @@ export function OutlineSidebar() {
                     openOutlineSymbol(symbol);
                   }}
                 >
-                  <ArrowSquareOut />
+                  <OpenExternalIcon />
                   Go to Symbol
                 </ContextMenuItem>
                 <ContextMenuItem onClick={() => copyText(symbol.name)}>
-                  <Copy />
+                  <CopyIcon />
                   Copy Name
                 </ContextMenuItem>
                 <ContextMenuItem
@@ -396,7 +396,7 @@ export function OutlineSidebar() {
                     copyText(`${symbol.filePath}:${symbol.line + 1}:${symbol.character + 1}`)
                   }
                 >
-                  <Copy />
+                  <CopyIcon />
                   Copy Location
                 </ContextMenuItem>
                 <ContextMenuSeparator />
@@ -404,18 +404,18 @@ export function OutlineSidebar() {
                   disabled={symbol.childCount === 0}
                   onClick={() => toggleSymbol(symbol)}
                 >
-                  {collapsedIds.has(symbol.id) ? <CaretDown /> : <CaretRight />}
+                  {collapsedIds.has(symbol.id) ? <ChevronDownIcon /> : <ChevronRightIcon />}
                   {collapsedIds.has(symbol.id) ? "Expand" : "Collapse"}
                 </ContextMenuItem>
                 <ContextMenuItem
                   disabled={symbolsWithChildren.length === 0}
                   onClick={collapseAllSymbols}
                 >
-                  <CaretRight />
+                  <ChevronRightIcon />
                   Collapse All
                 </ContextMenuItem>
                 <ContextMenuItem disabled={collapsedIds.size === 0} onClick={expandAllSymbols}>
-                  <CaretDown />
+                  <ChevronDownIcon />
                   Expand All
                 </ContextMenuItem>
               </ContextMenuContent>

@@ -1,8 +1,4 @@
-import {
-  CaretLeftIcon as CaretLeft,
-  GearSixIcon as Settings,
-  UploadIcon as Upload,
-} from "@/ui/icons";
+import { ChevronLeftIcon, SettingsIcon, UploadIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getThemeAppearancePreview } from "@/extensions/appearance/appearance-preview";
 import { AppearancePreviewGraphic } from "@/extensions/appearance/components/appearance-preview";
@@ -206,7 +202,7 @@ export const ThemeSelectorContent = ({
     <>
       <CommandHeader onClose={handleClose}>
         <CommandHeaderAction type="button" onClick={handleBack} aria-label="Back to commands">
-          <CaretLeft />
+          <ChevronLeftIcon />
         </CommandHeaderAction>
         <CommandInput
           ref={inputRef}
@@ -223,7 +219,7 @@ export const ThemeSelectorContent = ({
           }
         />
         <CommandHeaderAction onClick={handleUploadTheme} aria-label="Upload theme">
-          <Upload />
+          <UploadIcon />
         </CommandHeaderAction>
         <CommandHeaderAction
           onClick={() => {
@@ -232,7 +228,7 @@ export const ThemeSelectorContent = ({
           }}
           aria-label="Open appearance settings"
         >
-          <Settings />
+          <SettingsIcon />
         </CommandHeaderAction>
       </CommandHeader>
 

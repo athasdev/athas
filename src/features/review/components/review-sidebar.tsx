@@ -9,7 +9,7 @@ import {
   ArrowClockwiseIcon,
   CheckCircleIcon,
   CheckIcon,
-  ClockCounterClockwiseIcon,
+  HistoryIcon,
   ListChecksIcon,
   ShieldWarningIcon,
 } from "@/ui/icons";
@@ -36,7 +36,7 @@ const MODE_ITEMS: Array<{
   icon: typeof ListChecksIcon;
 }> = [
   { id: "queue", label: "Queue", icon: ListChecksIcon },
-  { id: "timeline", label: "Timeline", icon: ClockCounterClockwiseIcon },
+  { id: "timeline", label: "Timeline", icon: HistoryIcon },
   { id: "risk", label: "Risk", icon: ShieldWarningIcon },
 ];
 

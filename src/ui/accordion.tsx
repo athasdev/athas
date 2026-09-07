@@ -1,7 +1,7 @@
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
 import type { ReactNode } from "react";
 
-import { CaretDownIcon as CaretDown } from "@/ui/icons";
+import { ChevronDownIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
 function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
@@ -43,7 +43,7 @@ function AccordionTrigger({
         {...props}
       >
         <span className="min-w-0 truncate">{children}</span>
-        <CaretDown
+        <ChevronDownIcon
           data-slot="accordion-trigger-icon"
           className="pointer-events-none size-3 shrink-0 -rotate-90 text-subtle-foreground transition-transform group-aria-expanded/accordion-trigger:rotate-0"
         />

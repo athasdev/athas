@@ -1,4 +1,4 @@
-import { ArrowLeftIcon as ArrowLeft } from "@/ui/icons";
+import { ArrowLeftIcon } from "@/ui/icons";
 import { memo, useMemo } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -87,7 +87,7 @@ export const GitCommitFilesPanel = memo(function GitCommitFilesPanel({
             className="max-w-full justify-start px-1.5"
             aria-label="Back to Source Control history"
           >
-            <ArrowLeft />
+            <ArrowLeftIcon />
             <span className="truncate">Source Control</span>
           </Button>
         }

@@ -1,4 +1,4 @@
-import { PushPinIcon as Pin, XIcon as X } from "@/ui/icons";
+import { PinIcon, XIcon } from "@/ui/icons";
 import { memo, useCallback } from "react";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { Button } from "@/ui/button";
@@ -98,9 +98,9 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
               draggable={false}
             >
               {terminal.isPinned ? (
-                <Pin className="pointer-events-none select-none fill-current text-primary" />
+                <PinIcon className="pointer-events-none select-none fill-current text-primary" />
               ) : (
-                <X className="pointer-events-none select-none" />
+                <XIcon className="pointer-events-none select-none" />
               )}
             </Button>
           ) : null

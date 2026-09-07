@@ -1,19 +1,19 @@
 import {
-  ArrowsClockwiseIcon as Continuous,
-  PulseIcon as Activity,
-  DatabaseIcon as Database,
-  GitBranchIcon as GitBranch,
-  GitPullRequestIcon as GitPullRequest,
-  GearSixIcon as Settings,
-  MagnifyingGlassIcon as Search,
-  ChatCircleTextIcon as MessageSquare,
-  PackageIcon as Package,
-  PushPinIcon as Pin,
-  SparkleIcon as Sparkles,
-  SquaresFourIcon as Views,
-  TerminalWindowIcon as Terminal,
-  WarningCircleIcon as WarningCircle,
-  XIcon as X,
+  ActivityIcon,
+  ArrowsClockwiseIcon,
+  ChatBubbleTextIcon,
+  DatabaseIcon,
+  GitBranchIcon,
+  GitPullRequestIcon,
+  GridIcon,
+  PackageIcon,
+  PinIcon,
+  SearchIcon,
+  SettingsIcon,
+  SparkleIcon,
+  TerminalWindowIcon,
+  WarningCircleIcon,
+  XIcon,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useState } from "react";
 import type { RefCallback } from "react";
@@ -154,9 +154,9 @@ const TabBarItem = memo(function TabBarItem({
               draggable={false}
             >
               {buffer.isPinned ? (
-                <Pin className="pointer-events-none select-none fill-current text-primary" />
+                <PinIcon className="pointer-events-none select-none fill-current text-primary" />
               ) : (
-                <X className="pointer-events-none select-none" />
+                <XIcon className="pointer-events-none select-none" />
               )}
             </Button>
           ) : null
@@ -165,15 +165,15 @@ const TabBarItem = memo(function TabBarItem({
         {showTabIcons && buffer.type !== "newTab" ? (
           <div className="grid size-3 shrink-0 place-content-center">
             {buffer.type === "extension" ? (
-              <Package className="text-subtle-foreground" />
+              <PackageIcon className="text-subtle-foreground" />
             ) : buffer.type === "diff" && isMultiFileDiff(buffer.diffData) ? (
-              <GitBranch className="text-subtle-foreground" />
+              <GitBranchIcon className="text-subtle-foreground" />
             ) : buffer.type === "terminal" ? (
-              <Terminal className="text-subtle-foreground" />
+              <TerminalWindowIcon className="text-subtle-foreground" />
             ) : buffer.type === "agent" ? (
-              <Sparkles className="text-subtle-foreground" />
+              <SparkleIcon className="text-subtle-foreground" />
             ) : buffer.type === "database" ? (
-              <Database className="text-subtle-foreground" />
+              <DatabaseIcon className="text-subtle-foreground" />
             ) : buffer.type === "pullRequest" ? (
               authorAvatarUrl && !avatarError ? (
                 <img
@@ -184,7 +184,7 @@ const TabBarItem = memo(function TabBarItem({
                   onError={() => setAvatarError(true)}
                 />
               ) : (
-                <GitPullRequest className="text-subtle-foreground" />
+                <GitPullRequestIcon className="text-subtle-foreground" />
               )
             ) : buffer.type === "githubIssue" ? (
               authorAvatarUrl && !avatarError ? (
@@ -196,30 +196,30 @@ const TabBarItem = memo(function TabBarItem({
                   onError={() => setAvatarError(true)}
                 />
               ) : (
-                <MessageSquare className="text-subtle-foreground" />
+                <ChatBubbleTextIcon className="text-subtle-foreground" />
               )
             ) : buffer.type === "githubAction" ? (
-              <Activity className="text-subtle-foreground" />
+              <ActivityIcon className="text-subtle-foreground" />
             ) : buffer.type === "githubForm" ? (
               buffer.formKind === "pull-request" ? (
-                <GitPullRequest className="text-subtle-foreground" />
+                <GitPullRequestIcon className="text-subtle-foreground" />
               ) : buffer.formKind === "issue" ? (
-                <MessageSquare className="text-subtle-foreground" />
+                <ChatBubbleTextIcon className="text-subtle-foreground" />
               ) : (
-                <Activity className="text-subtle-foreground" />
+                <ActivityIcon className="text-subtle-foreground" />
               )
             ) : buffer.type === "customView" ? (
-              <Views className="text-subtle-foreground" />
+              <GridIcon className="text-subtle-foreground" />
             ) : buffer.type === "globalSearch" ? (
-              <Search className="text-subtle-foreground" />
+              <SearchIcon className="text-subtle-foreground" />
             ) : buffer.type === "diagnostics" ? (
-              <WarningCircle className="text-subtle-foreground" />
+              <WarningCircleIcon className="text-subtle-foreground" />
             ) : buffer.type === "references" ? (
-              <Search className="text-subtle-foreground" />
+              <SearchIcon className="text-subtle-foreground" />
             ) : buffer.type === "continuousAgents" ? (
-              <Continuous className="text-subtle-foreground" />
+              <ArrowsClockwiseIcon className="text-subtle-foreground" />
             ) : buffer.type === "settings" ? (
-              <Settings className="text-subtle-foreground" />
+              <SettingsIcon className="text-subtle-foreground" />
             ) : (
               <ThemedFileIcon
                 fileName={getDiffIconName() ?? buffer.name}

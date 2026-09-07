@@ -9,7 +9,7 @@ import {
 import { Button } from "@/ui/button";
 import { ChromeBar, ChromeGroup, ChromeLabel } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
-import { DotsThreeIcon as MoreHorizontal } from "@/ui/icons";
+import { DotsIcon } from "@/ui/icons";
 import { ScrollArea } from "@/ui/scroll-area";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -155,7 +155,7 @@ export function ResourceViewerActionsMenu({
         <DropdownMenuTrigger
           render={<Button type="button" variant="ghost" iconOnly aria-label={label} />}
         >
-          <MoreHorizontal />
+          <DotsIcon />
         </DropdownMenuTrigger>
       </Tooltip>
       <DropdownMenuContent>{children}</DropdownMenuContent>

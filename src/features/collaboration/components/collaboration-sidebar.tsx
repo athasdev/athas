@@ -1,15 +1,15 @@
 import type { ReactNode } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  CaretLeftIcon as CaretLeft,
-  ChatCircleTextIcon as ChatCircleText,
-  FileTextIcon as FileText,
-  FolderIcon as Folder,
-  FunnelIcon as Funnel,
-  HashIcon as Hash,
-  MicrophoneIcon as Mic,
-  MonitorIcon as Monitor,
-  UsersThreeIcon as UsersThree,
+  ChatBubbleTextIcon,
+  ChevronLeftIcon,
+  FileTextIcon,
+  FilterIcon,
+  FolderIcon,
+  HashIcon,
+  MicrophoneIcon,
+  MonitorIcon,
+  UsersIcon,
 } from "@/ui/icons";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -111,17 +111,17 @@ const COLLABORATION_TABS: Array<{
   {
     id: "channels",
     label: "Channels",
-    icon: <ChatCircleText />,
+    icon: <ChatBubbleTextIcon />,
   },
   {
     id: "people",
     label: "People",
-    icon: <UsersThree />,
+    icon: <UsersIcon />,
   },
   {
     id: "notes",
     label: "Notes",
-    icon: <FileText />,
+    icon: <FileTextIcon />,
   },
 ];
 
@@ -849,13 +849,13 @@ export function CollaborationSidebarView() {
           {
             id: "open",
             label: "Open Channel",
-            icon: <ChatCircleText />,
+            icon: <ChatBubbleTextIcon />,
             onClick: () => openChannelChat(channel.id),
           },
           {
             id: "change-icon",
             label: "Change Icon",
-            icon: <Hash />,
+            icon: <HashIcon />,
             onClick: () => channelContextMenu.openAt(channelsContextMenu.position, channel),
           },
         ]
@@ -863,7 +863,7 @@ export function CollaborationSidebarView() {
     {
       id: "new-channel",
       label: "New Channel",
-      icon: <Hash />,
+      icon: <HashIcon />,
       disabled: !collaboration?.capabilities.canCreateChannels,
       onClick: beginCreateChannel,
     },
@@ -875,13 +875,13 @@ export function CollaborationSidebarView() {
         {
           id: "message",
           label: "Message",
-          icon: <ChatCircleText />,
+          icon: <ChatBubbleTextIcon />,
           onClick: () => openPrivateChat(participant.id),
         },
         {
           id: "follow",
           label: "Follow",
-          icon: <UsersThree />,
+          icon: <UsersIcon />,
           disabled: !participant.followableUserId || participant.followableUserId === user?.id,
           onClick: () =>
             participant.followableUserId &&
@@ -890,7 +890,7 @@ export function CollaborationSidebarView() {
         {
           id: "open-file",
           label: "Open Active File",
-          icon: <FileText />,
+          icon: <FileTextIcon />,
           disabled: !participant.activeFilePath,
           onClick: () =>
             participant.activeFilePath && void openParticipantFile(participant.activeFilePath),
@@ -903,14 +903,14 @@ export function CollaborationSidebarView() {
     {
       id: "new-file",
       label: "New Markdown File",
-      icon: <FileText />,
+      icon: <FileTextIcon />,
       disabled: !model.canEditNotes,
       onClick: () => void createNoteFile(item?.type === "folder" ? item.path : null),
     },
     {
       id: "new-folder",
       label: "New Folder",
-      icon: <Folder />,
+      icon: <FolderIcon />,
       disabled: !model.canEditNotes,
       onClick: () => void createNoteFolder(),
     },
@@ -919,7 +919,7 @@ export function CollaborationSidebarView() {
           {
             id: "rename",
             label: "Rename",
-            icon: <FileText />,
+            icon: <FileTextIcon />,
             disabled: !model.canEditNotes,
             onClick: () => {
               setRenamingNotePath(item.path);
@@ -929,7 +929,7 @@ export function CollaborationSidebarView() {
           {
             id: "delete",
             label: "Delete",
-            icon: <FileText />,
+            icon: <FileTextIcon />,
             tone: "destructive" as const,
             disabled: !model.canEditNotes,
             onClick: () => void deleteNoteItem(item),
@@ -962,7 +962,7 @@ export function CollaborationSidebarView() {
                   />
                 }
               >
-                <Funnel />
+                <FilterIcon />
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuRadioGroup
@@ -995,12 +995,7 @@ export function CollaborationSidebarView() {
                       }}
                     >
                       <SidebarListEditor
-                        leading={
-                          <Hash
-                            className="size-3.5 shrink-0 text-subtle-foreground"
-                            weight="duotone"
-                          />
-                        }
+                        leading={<HashIcon className="size-3.5 shrink-0 text-subtle-foreground" />}
                         trailing={
                           <Button
                             type="submit"
@@ -1099,7 +1094,7 @@ export function CollaborationSidebarView() {
               onClick={() => setOpenConversation(null)}
               iconOnly
             >
-              <CaretLeft />
+              <ChevronLeftIcon />
             </Button>
             <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
               {model.channels.map((channel) => (
@@ -1134,7 +1129,7 @@ export function CollaborationSidebarView() {
                             <CardContent className="px-2.5 py-1.5">
                               {entry.kind === "document" ? (
                                 <span className="mb-0.5 flex items-center gap-1.5 text-subtle-foreground">
-                                  <FileText className="size-3" weight="duotone" />
+                                  <FileTextIcon className="size-3" />
                                   Document
                                 </span>
                               ) : null}
@@ -1177,7 +1172,7 @@ export function CollaborationSidebarView() {
               onClick={() => setOpenConversation(null)}
               iconOnly
             >
-              <CaretLeft />
+              <ChevronLeftIcon />
             </Button>
             {openPrivateParticipant ? (
               <>
@@ -1254,7 +1249,7 @@ export function CollaborationSidebarView() {
               />
             }
           >
-            <Funnel />
+            <FilterIcon />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuRadioGroup
@@ -1295,8 +1290,8 @@ export function CollaborationSidebarView() {
               trailing={
                 <span className="flex items-center gap-1">
                   <PresenceStatusDot online={participant.online} />
-                  {participant.microphone ? <Mic className="size-3 shrink-0" /> : null}
-                  {participant.screen ? <Monitor className="size-3 shrink-0" /> : null}
+                  {participant.microphone ? <MicrophoneIcon className="size-3 shrink-0" /> : null}
+                  {participant.screen ? <MonitorIcon className="size-3 shrink-0" /> : null}
                   {participant.activeFilePath ? (
                     <Button
                       type="button"
@@ -1351,7 +1346,7 @@ export function CollaborationSidebarView() {
               />
             }
           >
-            <Funnel />
+            <FilterIcon />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuRadioGroup
@@ -1375,9 +1370,9 @@ export function CollaborationSidebarView() {
                 key={`${item.type}:${item.path}`}
                 leading={
                   item.type === "folder" ? (
-                    <Folder className="size-3.5" weight="duotone" />
+                    <FolderIcon className="size-3.5" />
                   ) : (
-                    <FileText className="size-3.5" weight="duotone" />
+                    <FileTextIcon className="size-3.5" />
                   )
                 }
               >
@@ -1426,9 +1421,9 @@ export function CollaborationSidebarView() {
               onContextMenu={(event) => notesContextMenu.open(event, item)}
               leading={
                 item.type === "folder" ? (
-                  <Folder className="size-3.5" weight="duotone" />
+                  <FolderIcon className="size-3.5" />
                 ) : (
-                  <FileText className="size-3.5" weight="duotone" />
+                  <FileTextIcon className="size-3.5" />
                 )
               }
             >

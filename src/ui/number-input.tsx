@@ -1,7 +1,7 @@
 import { NumberField as NumberFieldPrimitive } from "@base-ui/react/number-field";
 import { cva } from "class-variance-authority";
 import type React from "react";
-import { MinusIcon as Minus, PlusIcon as Plus } from "@/ui/icons";
+import { MinusIcon, PlusIcon } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
@@ -76,7 +76,7 @@ export default function NumberInput({
         render={<Button type="button" variant="ghost" iconOnly className="shrink-0" />}
         aria-label="Decrease value"
       >
-        <Minus size={12} />
+        <MinusIcon size={12} />
       </NumberFieldPrimitive.Decrement>
 
       <NumberFieldPrimitive.Input
@@ -89,7 +89,7 @@ export default function NumberInput({
         render={<Button type="button" variant="ghost" iconOnly className="shrink-0" />}
         aria-label="Increase value"
       >
-        <Plus size={12} />
+        <PlusIcon size={12} />
       </NumberFieldPrimitive.Increment>
     </NumberFieldPrimitive.Root>
   );

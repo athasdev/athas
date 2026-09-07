@@ -19,7 +19,7 @@ import {
   ArrowClockwiseIcon,
   ColumnsIcon,
   ListIcon,
-  PencilSimpleLineIcon,
+  PencilLineIcon,
   StackIcon,
   TableIcon,
   WarningCircleIcon,
@@ -229,7 +229,7 @@ export function CustomView({ buffer }: CustomViewProps) {
               Refresh
             </Button>
             <Button type="button" variant="ghost" onClick={() => setIsConfiguring(true)}>
-              <PencilSimpleLineIcon />
+              <PencilLineIcon />
               Configure
             </Button>
           </>

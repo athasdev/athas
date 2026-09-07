@@ -1,12 +1,12 @@
 import {
-  ArchiveIcon as Archive,
-  CaretDownIcon as CaretDown,
-  CheckIcon as Check,
-  DotsThreeIcon as MoreHorizontal,
-  FileTextIcon as FileText,
-  MinusIcon as Minus,
-  PlusIcon as Plus,
-  TrashIcon as Trash2,
+  ArchiveIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  DotsIcon,
+  FileTextIcon,
+  MinusIcon,
+  PlusIcon,
+  TrashIcon,
 } from "@/ui/icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -569,7 +569,7 @@ const GitStatusPanel = ({
                   aria-haspopup="menu"
                   aria-expanded={isDiffMenuOpen}
                 >
-                  <CaretDown className="size-3" />
+                  <ChevronDownIcon className="size-3" />
                 </Button>
               </ButtonGroup>
               <Dropdown
@@ -593,7 +593,7 @@ const GitStatusPanel = ({
                   tooltip="Stash all unstaged changes"
                   aria-label="Stash all unstaged changes"
                 >
-                  <Archive />
+                  <ArchiveIcon />
                 </SidebarIconButton>
               )}
               {unstagedFiles.length > 0 && (
@@ -603,7 +603,7 @@ const GitStatusPanel = ({
                   tooltip="Stage all changes"
                   aria-label="Stage all changes"
                 >
-                  <Plus />
+                  <PlusIcon />
                 </SidebarIconButton>
               )}
               {stagedFiles.length > 0 && (
@@ -613,7 +613,7 @@ const GitStatusPanel = ({
                   tooltip="Unstage all changes"
                   aria-label="Unstage all changes"
                 >
-                  <Minus />
+                  <MinusIcon />
                 </SidebarIconButton>
               )}
             </div>
@@ -624,12 +624,12 @@ const GitStatusPanel = ({
                     <SidebarIconButton tooltip="Change actions" aria-label="Change actions" />
                   }
                 >
-                  <MoreHorizontal />
+                  <DotsIcon />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {unstagedFiles.length > 0 ? (
                     <DropdownMenuItem onClick={handleStashAllUnstaged} disabled={isLoading}>
-                      <Archive />
+                      <ArchiveIcon />
                       Stash all unstaged changes
                     </DropdownMenuItem>
                   ) : null}
@@ -638,7 +638,7 @@ const GitStatusPanel = ({
                       onClick={() => void handleStageAll()}
                       disabled={isLoading || isStageLoading}
                     >
-                      <Plus />
+                      <PlusIcon />
                       Stage all changes
                     </DropdownMenuItem>
                   ) : null}
@@ -647,7 +647,7 @@ const GitStatusPanel = ({
                       onClick={() => void handleUnstageAll()}
                       disabled={isLoading || isStageLoading}
                     >
-                      <Minus />
+                      <MinusIcon />
                       Unstage all changes
                     </DropdownMenuItem>
                   ) : null}
@@ -690,7 +690,12 @@ const GitStatusPanel = ({
           </SidebarScrollArea>
         </>
       ) : (
-        <EmptyState layout="sidebar" tone="success" icon={<Check />} title="Working tree clean" />
+        <EmptyState
+          layout="sidebar"
+          tone="success"
+          icon={<CheckIcon />}
+          title="Working tree clean"
+        />
       )}
 
       <ContextMenuPopup
@@ -704,7 +709,7 @@ const GitStatusPanel = ({
                       {
                         id: "open-file",
                         label: "Open File",
-                        icon: <FileText />,
+                        icon: <FileTextIcon />,
                         onClick: () => onOpenFile(contextMenuData.filePath),
                       },
                     ]
@@ -714,7 +719,7 @@ const GitStatusPanel = ({
                       {
                         id: "unstage-file",
                         label: "Unstage File",
-                        icon: <Minus />,
+                        icon: <MinusIcon />,
                         onClick: () => void handleUnstageFile(contextMenuData.filePath),
                       },
                     ]
@@ -722,13 +727,13 @@ const GitStatusPanel = ({
                       {
                         id: "stage-file",
                         label: "Stage File",
-                        icon: <Plus />,
+                        icon: <PlusIcon />,
                         onClick: () => void handleStageFile(contextMenuData.filePath),
                       },
                       {
                         id: "stash-file",
                         label: "Stash File",
-                        icon: <Archive />,
+                        icon: <ArchiveIcon />,
                         onClick: () => void handleStashFile(contextMenuData.filePath),
                       },
                     ]),
@@ -737,7 +742,7 @@ const GitStatusPanel = ({
                       {
                         id: "discard-file",
                         label: "Discard Changes",
-                        icon: <Trash2 />,
+                        icon: <TrashIcon />,
                         tone: "destructive" as const,
                         onClick: () => void handleDiscardFile(contextMenuData.filePath),
                       },

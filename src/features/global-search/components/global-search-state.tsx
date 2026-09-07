@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon as MagnifyingGlass } from "@/ui/icons";
+import { SearchIcon } from "@/ui/icons";
 import { EmptyState } from "@/ui/empty";
 import type { ContentSearchAvailability } from "../hooks/use-content-search";
 
@@ -27,7 +27,7 @@ export function GlobalSearchState({
     return (
       <EmptyState
         layout="sidebar"
-        icon={<MagnifyingGlass weight="duotone" />}
+        icon={<SearchIcon />}
         message="Open a project to search files."
       />
     );
@@ -41,7 +41,7 @@ export function GlobalSearchState({
     return (
       <EmptyState
         layout="sidebar"
-        icon={<MagnifyingGlass weight="duotone" />}
+        icon={<SearchIcon />}
         message="Enter a query to search files and lines."
       />
     );

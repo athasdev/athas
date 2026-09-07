@@ -1,13 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  CheckCircleIcon as CheckCircle2,
-  ClockIcon as Clock,
-  PulseIcon as Activity,
-  CopyIcon as Copy,
-  MagnifyingGlassIcon as Search,
-  ArrowClockwiseIcon as RefreshCw,
-  XCircleIcon as XCircle,
+  ActivityIcon,
+  ArrowClockwiseIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  CopyIcon,
+  SearchIcon,
+  XCircleIcon,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -55,7 +55,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
   const normalizedConclusion = conclusion?.toLowerCase() ?? "";
 
   if (normalizedConclusion === "success") {
-    return { label: "Success", icon: CheckCircle2, className: "text-success", animate: false };
+    return { label: "Success", icon: CheckCircleIcon, className: "text-success", animate: false };
   }
 
   if (
@@ -63,13 +63,13 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
     normalizedConclusion === "timed_out" ||
     normalizedConclusion === "startup_failure"
   ) {
-    return { label: "Failed", icon: XCircle, className: "text-destructive", animate: false };
+    return { label: "Failed", icon: XCircleIcon, className: "text-destructive", animate: false };
   }
 
   if (normalizedConclusion === "cancelled" || normalizedConclusion === "skipped") {
     return {
       label: normalizedConclusion === "skipped" ? "Skipped" : "Cancelled",
-      icon: XCircle,
+      icon: XCircleIcon,
       className: "text-subtle-foreground",
       animate: false,
     };
@@ -84,12 +84,12 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
   }
 
   if (normalizedStatus === "queued" || normalizedStatus === "pending") {
-    return { label: "Queued", icon: Clock, className: "text-warning", animate: false };
+    return { label: "Queued", icon: ClockIcon, className: "text-warning", animate: false };
   }
 
   return {
     label: normalizedConclusion || normalizedStatus || "Unknown",
-    icon: Activity,
+    icon: ActivityIcon,
     className: "text-subtle-foreground",
     animate: false,
   };
@@ -112,7 +112,7 @@ function WorkflowStatusIcon({
       {state.animate || !Icon ? (
         <Spinner label={state.label} compact />
       ) : (
-        <Icon className="size-4" weight="fill" />
+        <Icon className="size-4" optical="md" />
       )}
     </span>
   );
@@ -774,7 +774,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
                               iconOnly
                               tooltip={isLogSearchVisible ? "Hide log search" : "Search logs"}
                             >
-                              <Search />
+                              <SearchIcon />
                             </Button>
                             {job.id ? (
                               <Button
@@ -788,7 +788,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
                                 {loadingJobLogId === job.id ? (
                                   <Spinner label="Loading job logs" compact />
                                 ) : (
-                                  <RefreshCw />
+                                  <ArrowClockwiseIcon />
                                 )}
                               </Button>
                             ) : null}
@@ -800,7 +800,7 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
                               disabled={!job.id || !selectedStepLogs}
                               iconOnly
                             >
-                              <Copy />
+                              <CopyIcon />
                             </Button>
                           </div>
                         </div>

@@ -1,10 +1,5 @@
 import { shareEditor, shareAgent } from "@/features/sharing/services/open-share";
-import {
-  ClockCounterClockwiseIcon as ClockCounterClockwise,
-  FilePlusIcon as FilePlus,
-  FloppyDiskIcon as Save,
-  FolderOpenIcon as FolderOpen,
-} from "@/ui/icons";
+import { FilePlusIcon, FolderOpenIcon, HistoryIcon, SaveIcon } from "@/ui/icons";
 import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
 import { createTabActions } from "@/features/tabs/constants/tab-actions";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
@@ -29,7 +24,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       label: "File: Share Buffer to Web",
       description: "Create a read-only snapshot link",
       category: "File",
-      icon: <FilePlus />,
+      icon: <FilePlusIcon />,
       action: () => {
         onClose();
         shareEditor();
@@ -40,7 +35,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       label: "File: Share Selection to Web",
       description: "Share the selected code",
       category: "File",
-      icon: <FilePlus />,
+      icon: <FilePlusIcon />,
       action: () => {
         onClose();
         shareEditor(true);
@@ -51,7 +46,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       label: "AI: Share Agent to Web",
       description: "Share the current conversation",
       category: "AI",
-      icon: <FilePlus />,
+      icon: <FilePlusIcon />,
       action: () => {
         onClose();
         shareAgent();
@@ -61,7 +56,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       id: "file-new",
       label: "File: New File",
       description: "Create a file in the current workspace",
-      icon: <FilePlus />,
+      icon: <FilePlusIcon />,
       category: "File",
       commandId: "file.new",
       action: () => {
@@ -73,7 +68,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       id: "file-new-document",
       label: "File: New Document",
       description: "Open an untitled document in the rich Markdown editor",
-      icon: <FilePlus />,
+      icon: <FilePlusIcon />,
       category: "File",
       action: () => {
         onClose();
@@ -84,7 +79,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       id: "file-open-project",
       label: "File: Open Project",
       description: "Open a folder or project",
-      icon: <FolderOpen />,
+      icon: <FolderOpenIcon />,
       category: "File",
       commandId: "file.open",
       action: () => {
@@ -96,7 +91,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       id: "file-save",
       label: "File: Save",
       description: "Save the active file",
-      icon: <Save />,
+      icon: <SaveIcon />,
       category: "File",
       commandId: "file.save",
       action: () => {
@@ -108,7 +103,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       id: "file-save-all",
       label: "File: Save All",
       description: "Save all modified files",
-      icon: <Save />,
+      icon: <SaveIcon />,
       category: "File",
       commandId: "file.saveAll",
       action: () => {
@@ -120,7 +115,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       id: "file-save-as",
       label: "File: Save As",
       description: "Save current file with a new name",
-      icon: <FilePlus />,
+      icon: <FilePlusIcon />,
       category: "File",
       commandId: "file.saveAs",
       action: () => {
@@ -132,7 +127,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       id: "file-local-history",
       label: "File: Show Local History",
       description: "Open the selected file timeline",
-      icon: <ClockCounterClockwise />,
+      icon: <HistoryIcon />,
       category: "File",
       commandId: "file.localHistory",
       action: () => {

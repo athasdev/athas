@@ -1,4 +1,4 @@
-import { WarningIcon as AlertTriangle } from "@/ui/icons";
+import { WarningIcon } from "@/ui/icons";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/ui/button";
@@ -46,7 +46,7 @@ const UnsavedChangesDialog = ({ onSave, onDiscard, onCancel, fileName }: Props) 
   return (
     <Dialog
       title="Unsaved Changes"
-      icon={AlertTriangle}
+      icon={WarningIcon}
       onClose={onCancel}
       size="sm"
       footer={

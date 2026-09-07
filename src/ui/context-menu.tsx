@@ -1,7 +1,7 @@
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { Fragment, type ReactNode, useMemo } from "react";
-import { CaretRightIcon, CheckIcon } from "@/ui/icons";
+import { CheckIcon, ChevronRightIcon } from "@/ui/icons";
 import { menuItemVariants, menuSeparatorVariants, menuSurfaceVariants } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 
@@ -169,7 +169,7 @@ function ContextMenuSubTrigger({
       {...props}
     >
       {children}
-      <CaretRightIcon className="ml-auto text-subtle-foreground" />
+      <ChevronRightIcon className="ml-auto text-subtle-foreground" />
     </ContextMenuPrimitive.SubmenuTrigger>
   );
 }
@@ -284,7 +284,7 @@ function ContextMenuPopup({ isOpen, point, groups, onClose }: ContextMenuPopupPr
                             {item.label}
                           </span>
                           {item.trailing === "disclosure" ? (
-                            <CaretRightIcon className="ml-auto size-3 text-subtle-foreground" />
+                            <ChevronRightIcon className="ml-auto size-3 text-subtle-foreground" />
                           ) : item.trailing?.type === "text" ? (
                             <span className="ml-auto text-subtle-foreground tabular-nums">
                               {item.trailing.label}

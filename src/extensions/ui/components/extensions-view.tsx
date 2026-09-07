@@ -1,10 +1,4 @@
-import {
-  BrainIcon as Brain,
-  ExtensionsIcon as Extensions,
-  PackageIcon as Package,
-  PlusIcon as Plus,
-  SparkleIcon as Sparkles,
-} from "@/ui/icons";
+import { BrainIcon, ExtensionsIcon, PackageIcon, PlusIcon, SparkleIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -140,12 +134,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const extensionCategories = EXTENSION_FILTERS.map((filter) => ({
     id: filter.id,
     label: filter.label,
-    icon:
-      filter.id === "all" ? (
-        <Extensions weight="duotone" />
-      ) : (
-        <ExtensionCategoryIcon category={filter.id} />
-      ),
+    icon: filter.id === "all" ? <ExtensionsIcon /> : <ExtensionCategoryIcon category={filter.id} />,
   }));
   const visibleExtensions = extensions.filter((extension) => {
     const matchesCategory = activeFilter === "all" || extension.category === activeFilter;
@@ -327,7 +316,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
             actions={
               <DropdownMenu>
                 <DropdownMenuTrigger render={<Button variant="ghost" />}>
-                  <Plus />
+                  <PlusIcon />
                   Add
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -337,8 +326,8 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
                       void updateSetting("extensionsActiveTab", "all");
                     }}
                   >
-                    <Package />
-                    Browse Extensions
+                    <PackageIcon />
+                    Browse ExtensionsIcon
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
@@ -346,14 +335,14 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
                       setIsSkillsCommandOpen(true);
                     }}
                   >
-                    <Brain />
+                    <BrainIcon />
                     Create Skill
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => useGenerateStore.getState().actions.openExtensionGeneration()}
                   >
-                    <Sparkles />
+                    <SparkleIcon />
                     Generate Extension
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -363,14 +352,14 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
             {isLoading ? (
               <EmptyState
                 className="min-h-64"
-                icon={<Extensions />}
+                icon={<ExtensionsIcon />}
                 title="Loading extensions"
                 message={<Spinner label="Loading extensions" showLabel compact />}
               />
             ) : visibleExtensions.length === 0 ? (
               <EmptyState
                 className="min-h-64"
-                icon={<Package />}
+                icon={<PackageIcon />}
                 title="No extensions found"
                 message="Try another search or category."
                 action={

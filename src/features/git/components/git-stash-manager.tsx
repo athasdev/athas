@@ -1,9 +1,4 @@
-import {
-  ArchiveIcon as Archive,
-  DownloadIcon as Download,
-  TrashIcon as Trash,
-  UploadIcon as Upload,
-} from "@/ui/icons";
+import { ArchiveIcon, DownloadIcon, TrashIcon, UploadIcon } from "@/ui/icons";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { SidebarListMenuItem, SidebarScrollArea } from "@/ui/sidebar";
@@ -45,7 +40,7 @@ export function GitStashManager({
         return (
           <SidebarListMenuItem
             key={stash.index}
-            leading={<Archive />}
+            leading={<ArchiveIcon />}
             description={`${formatRelativeDate(stash.date)} · ${getStashPositionLabel(stash.index)}`}
             disabled={loading}
             onClick={() => onView(stash.index)}
@@ -53,11 +48,11 @@ export function GitStashManager({
             menu={
               <>
                 <DropdownMenuItem disabled={loading} onClick={() => onApply(stash.index)}>
-                  <Download weight="fill" />
+                  <DownloadIcon optical="md" />
                   Apply stash
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled={loading} onClick={() => onPop(stash.index)}>
-                  <Upload />
+                  <UploadIcon />
                   Pop stash
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -66,7 +61,7 @@ export function GitStashManager({
                   disabled={loading}
                   onClick={() => onDrop(stash.index)}
                 >
-                  <Trash />
+                  <TrashIcon />
                   Drop stash
                 </DropdownMenuItem>
               </>

@@ -6,10 +6,10 @@ import {
 } from "@/features/layout/hooks/use-activity-terminal-items";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
-  PencilSimpleLineIcon,
+  PencilLineIcon,
+  PinIcon,
+  PinSlashIcon,
   PlusIcon,
-  PushPinIcon,
-  PushPinSlashIcon,
   TerminalWindowIcon,
   XIcon,
 } from "@/ui/icons";
@@ -63,7 +63,7 @@ export function ActivityTerminalRow({
             setIsRenaming(true);
           }}
         >
-          <PencilSimpleLineIcon />
+          <PencilLineIcon />
         </SidebarIconButton>,
         <SidebarIconButton
           key="pin"
@@ -75,7 +75,7 @@ export function ActivityTerminalRow({
             onPinChange();
           }}
         >
-          {pinned ? <PushPinSlashIcon /> : <PushPinIcon />}
+          {pinned ? <PinSlashIcon /> : <PinIcon />}
         </SidebarIconButton>,
         <SidebarIconButton
           key="close"

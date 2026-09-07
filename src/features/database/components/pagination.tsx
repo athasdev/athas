@@ -1,4 +1,4 @@
-import { ArrowLeftIcon as ArrowLeft, ArrowRightIcon as ArrowRight } from "@/ui/icons";
+import { ArrowLeftIcon, ArrowRightIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -77,7 +77,7 @@ export default function Pagination({
           aria-label="Previous page"
           tooltip="Previous page"
         >
-          <ArrowLeft />
+          <ArrowLeftIcon />
         </Button>
 
         <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
@@ -105,7 +105,7 @@ export default function Pagination({
           aria-label="Next page"
           tooltip="Next page"
         >
-          <ArrowRight />
+          <ArrowRightIcon />
         </Button>
       </div>
     </div>

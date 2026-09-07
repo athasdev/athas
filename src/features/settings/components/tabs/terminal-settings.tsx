@@ -1,4 +1,4 @@
-import { InfoIcon as Info, PlusIcon as Plus, TrashIcon as Trash2 } from "@/ui/icons";
+import { InfoIcon, PlusIcon, TrashIcon } from "@/ui/icons";
 import { useEffect } from "react";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useFontStore } from "@/features/settings/stores/font.store";
@@ -182,7 +182,7 @@ export const TerminalSettings = () => {
                 })
               }
             >
-              <Plus className="mr-1" />
+              <PlusIcon className="mr-1" />
               Add Profile
             </Button>
           </div>
@@ -214,7 +214,7 @@ export const TerminalSettings = () => {
                     aria-label={`Delete ${profile.name}`}
                     iconOnly
                   >
-                    <Trash2 />
+                    <TrashIcon />
                   </Button>
                 </div>
 
@@ -316,7 +316,7 @@ export const TerminalSettings = () => {
               placeholder="Select font..."
             />
             <Tooltip content={FONT_HELP_TEXT}>
-              <Info className="size-4 cursor-help text-subtle-foreground transition-colors hover:text-foreground" />
+              <InfoIcon className="size-4 cursor-help text-subtle-foreground transition-colors hover:text-foreground" />
             </Tooltip>
           </div>
         </SettingRow>

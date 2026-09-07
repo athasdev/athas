@@ -1,10 +1,4 @@
-import {
-  ArrowClockwiseIcon as Refresh,
-  DownloadSimpleIcon as Download,
-  FileIcon,
-  FolderIcon,
-  UploadSimpleIcon as Upload,
-} from "@/ui/icons";
+import { ArrowClockwiseIcon, DownloadIcon, FileIcon, FolderIcon, UploadIcon } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import { SearchField } from "@/ui/search";
@@ -103,7 +97,7 @@ export function DockerContainerDetail({
               className="h-6 px-1.5 ui-text-sm"
               onClick={() => void onCopyToContainer()}
             >
-              <Upload className="size-3.5" />
+              <UploadIcon className="size-3.5" />
               Copy In
             </Button>
           )}
@@ -180,7 +174,7 @@ export function DockerContainerDetail({
               onClick={() => void onRefreshFiles()}
               aria-label="Refresh container files"
             >
-              {isFilesLoading ? <Spinner compact /> : <Refresh className="size-3.5" />}
+              {isFilesLoading ? <Spinner compact /> : <ArrowClockwiseIcon className="size-3.5" />}
             </Button>
           </div>
           {filesError ? (
@@ -213,12 +207,9 @@ export function DockerContainerDetail({
                   }}
                 >
                   {entry.isDirectory ? (
-                    <FolderIcon
-                      className="size-4 shrink-0 text-subtle-foreground"
-                      weight="duotone"
-                    />
+                    <FolderIcon className="size-4 shrink-0 text-subtle-foreground" />
                   ) : (
-                    <FileIcon className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
+                    <FileIcon className="size-4 shrink-0 text-subtle-foreground" />
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="truncate ui-text-sm text-foreground">{entry.name}</div>
@@ -239,7 +230,7 @@ export function DockerContainerDetail({
                       void onCopyFromContainer(entry);
                     }}
                   >
-                    <Download className="size-3.5" weight="fill" />
+                    <DownloadIcon className="size-3.5" optical="md" />
                   </Button>
                 </div>
               ))

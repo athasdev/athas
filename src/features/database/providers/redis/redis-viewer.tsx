@@ -1,10 +1,10 @@
 import {
-  ClockIcon as Clock,
-  KeyIcon as Key,
-  ArrowClockwiseIcon as RefreshCw,
-  MagnifyingGlassIcon as Search,
-  HardDrivesIcon as Server,
-  TrashIcon as Trash2,
+  ArrowClockwiseIcon,
+  ClockIcon,
+  HardDrivesIcon,
+  KeyIcon,
+  SearchIcon,
+  TrashIcon,
 } from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
 import { PathBreadcrumb } from "@/features/editor/components/toolbar/path-breadcrumb";
@@ -87,7 +87,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
         context={
           <PathBreadcrumb
             segments={[store.fileName]}
-            icons={[<Server key="server" />]}
+            icons={[<HardDrivesIcon key="server" />]}
             ariaLabel="Redis connection"
           />
         }
@@ -108,7 +108,11 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               disabled={store.isScanningKeys}
               aria-label="Refresh keys"
             >
-              {store.isScanningKeys ? <Spinner label="Refreshing keys" compact /> : <RefreshCw />}
+              {store.isScanningKeys ? (
+                <Spinner label="Refreshing keys" compact />
+              ) : (
+                <ArrowClockwiseIcon />
+              )}
             </Button>
           </>
         }
@@ -117,7 +121,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
       <div className="flex min-h-0 flex-1">
         <div className={databasePanelClassName("w-64 shrink-0 border-border/60 border-r")}>
           <PaneContentHeader
-            leading={<Search />}
+            leading={<SearchIcon />}
             context={
               <Input
                 className="min-w-0 flex-1 border-0 bg-transparent p-0 focus:border-transparent focus:ring-0"
@@ -136,7 +140,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 aria-label="Search keys"
                 iconOnly
               >
-                {store.isScanningKeys ? <Spinner label="Scanning keys" compact /> : <Search />}
+                {store.isScanningKeys ? <Spinner label="Scanning keys" compact /> : <SearchIcon />}
               </Button>
             }
           />
@@ -168,7 +172,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 <span className="flex-1 truncate leading-row">{keyInfo.key}</span>
                 {keyInfo.ttl > 0 && (
                   <span className="flex items-center gap-0.5 text-subtle-foreground">
-                    <Clock />
+                    <ClockIcon />
                     <span className="ui-text-sm">{keyInfo.ttl}s</span>
                   </span>
                 )}
@@ -225,7 +229,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
           {!store.isLoading && !showInfo && store.selectedKey && (
             <div className="flex flex-1 flex-col overflow-hidden">
               <PaneContentHeader
-                leading={<Key />}
+                leading={<KeyIcon />}
                 title={store.selectedKey}
                 detail={store.selectedKeyType}
                 actions={
@@ -236,7 +240,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                     aria-label="Delete key"
                   >
-                    <Trash2 />
+                    <TrashIcon />
                   </Button>
                 }
               />

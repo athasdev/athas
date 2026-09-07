@@ -1,4 +1,4 @@
-import { CaretRightIcon as CaretRight } from "@/ui/icons";
+import { ChevronRightIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/ui/empty";
 import { showPromptDialog } from "@/ui/dialog";
@@ -117,7 +117,7 @@ export function DebugVariablesPanel({
               disabled={!canExpand}
               onClick={() => void toggleVariableExpansion(variable.variablesReference)}
             >
-              <CaretRight
+              <ChevronRightIcon
                 size={10}
                 className={cn(
                   "shrink-0 transition-transform",

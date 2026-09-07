@@ -1,10 +1,4 @@
-import {
-  CommandIcon,
-  ArrowUpIcon as ArrowUp,
-  LightningIcon as Lightning,
-  MicrophoneIcon as Mic,
-  StopIcon as Stop,
-} from "@/ui/icons";
+import { ArrowUpIcon, BoltIcon, CommandIcon, MicrophoneIcon, StopIcon } from "@/ui/icons";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { registerAgentDraft, takeAgentDraft } from "@/features/ai/detached/agent-window-drafts";
 import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
@@ -1163,7 +1157,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             }
             aria-label={isListening ? "Stop voice input" : "Start voice input"}
           >
-            <Mic className={cn(isListening && "animate-pulse")} />
+            <MicrophoneIcon className={cn(isListening && "animate-pulse")} />
           </Button>
 
           {isStreaming ? (
@@ -1177,7 +1171,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 shortcut="enter"
                 iconOnly
               >
-                <ArrowUp />
+                <ArrowUpIcon />
               </Button>
               <ButtonGroupSeparator />
               <Button
@@ -1188,7 +1182,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 tooltip="Interrupt and send now"
                 iconOnly
               >
-                <Lightning />
+                <BoltIcon />
               </Button>
               <ButtonGroupSeparator />
               <Button
@@ -1199,7 +1193,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 shortcut="escape"
                 iconOnly
               >
-                <Stop />
+                <StopIcon />
               </Button>
             </ButtonGroup>
           ) : (
@@ -1212,7 +1206,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               shortcut="enter"
               iconOnly
             >
-              <ArrowUp />
+              <ArrowUpIcon />
             </Button>
           )}
         </div>

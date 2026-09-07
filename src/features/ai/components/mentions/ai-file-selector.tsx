@@ -1,4 +1,4 @@
-import { ClockIcon, MagnifyingGlassIcon as Search } from "@/ui/icons";
+import { ClockIcon, SearchIcon } from "@/ui/icons";
 import {
   Fragment,
   useEffect,
@@ -214,7 +214,7 @@ export function AIFileSelector({
             ref={searchInputRef}
             placeholder="Search files..."
             variant="ghost"
-            leftIcon={Search}
+            leftIcon={SearchIcon}
             showTrigger={false}
             className="w-full"
             aria-label="Search files"

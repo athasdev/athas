@@ -1,4 +1,4 @@
-import { CaretRightIcon as CaretRight } from "@/ui/icons";
+import { ChevronRightIcon } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
@@ -52,7 +52,7 @@ export function ChatActivityLine({
           <MarkerContent className="flex flex-1 items-center gap-1">
             <span className="min-w-0 flex-1 truncate">{summary}</span>
             {canExpand ? (
-              <CaretRight
+              <ChevronRightIcon
                 className={cn(
                   "shrink-0 opacity-35 transition-transform",
                   isExpanded && "rotate-90",

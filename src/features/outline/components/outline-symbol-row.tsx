@@ -1,15 +1,14 @@
 import {
-  BracketsCurlyIcon as Braces,
-  CodeIcon as Code,
-  CubeIcon as Cube,
+  BracketsCurlyIcon,
+  CodeIcon,
+  CubeIcon,
   FunctionIcon,
-  HashIcon as Hash,
-  IconContext,
-  PackageIcon as Package,
-  PuzzlePieceIcon as PuzzlePiece,
-  SquaresFourIcon as SquaresFour,
-  StackIcon as Stack,
-  TextTIcon as TextT,
+  GridIcon,
+  HashIcon,
+  PackageIcon,
+  PuzzlePieceIcon,
+  StackIcon,
+  TextIcon,
 } from "@/ui/icons";
 import { forwardRef } from "react";
 import {
@@ -21,40 +20,40 @@ import type { OutlineSymbol } from "../types/outline-symbol.types";
 
 function OutlineSymbolIcon({ kind, className = "size-3.5" }: { kind: string; className?: string }) {
   return (
-    <IconContext.Provider value={{ weight: "regular" }}>
+    <>
       {(() => {
         switch (kind) {
           case "class":
-            return <SquaresFour className={`${className} text-symbol-type`} />;
+            return <GridIcon className={`${className} text-symbol-type`} />;
           case "interface":
-            return <PuzzlePiece className={`${className} text-symbol-interface`} />;
+            return <PuzzlePieceIcon className={`${className} text-symbol-interface`} />;
           case "struct":
-            return <Cube className={`${className} text-symbol-type`} />;
+            return <CubeIcon className={`${className} text-symbol-type`} />;
           case "enum":
-            return <Stack className={`${className} text-symbol-enum`} />;
+            return <StackIcon className={`${className} text-symbol-enum`} />;
           case "enum-member":
-            return <Hash className={`${className} text-symbol-enum`} />;
+            return <HashIcon className={`${className} text-symbol-enum`} />;
           case "property":
           case "field":
-            return <Braces className={`${className} text-symbol-property`} />;
+            return <BracketsCurlyIcon className={`${className} text-symbol-property`} />;
           case "function":
           case "method":
           case "constructor":
             return <FunctionIcon className={`${className} text-symbol-function`} />;
           case "variable":
           case "constant":
-            return <Code className={`${className} text-symbol-variable`} />;
+            return <CodeIcon className={`${className} text-symbol-variable`} />;
           case "module":
           case "namespace":
           case "package":
-            return <Package className={`${className} text-subtle-foreground`} />;
+            return <PackageIcon className={`${className} text-subtle-foreground`} />;
           case "type-parameter":
-            return <TextT className={`${className} text-symbol-type-parameter`} />;
+            return <TextIcon className={`${className} text-symbol-type-parameter`} />;
           default:
-            return <Code className={`${className} text-subtle-foreground`} />;
+            return <CodeIcon className={`${className} text-subtle-foreground`} />;
         }
       })()}
-    </IconContext.Provider>
+    </>
   );
 }
 

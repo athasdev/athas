@@ -1,4 +1,4 @@
-import { DotsThreeIcon as MoreHorizontal } from "@/ui/icons";
+import { DotsIcon } from "@/ui/icons";
 import { memo, useState } from "react";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
@@ -76,7 +76,7 @@ export const CommentItem = memo(
                   />
                 }
               >
-                {isBusy ? <Spinner label="Updating comment" compact /> : <MoreHorizontal />}
+                {isBusy ? <Spinner label="Updating comment" compact /> : <DotsIcon />}
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem

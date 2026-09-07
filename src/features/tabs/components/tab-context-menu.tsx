@@ -1,16 +1,16 @@
 import {
-  ArrowSquareUpIcon as Share,
-  ColumnsIcon as Columns2,
-  CopyIcon as Copy,
-  FolderOpenIcon as FolderOpen,
-  LockIcon as Lock,
-  LockOpenIcon as LockOpen,
-  PencilSimpleLineIcon as PencilSimpleLine,
-  PushPinIcon as Pin,
-  PushPinSlashIcon as PinOff,
-  ArrowCounterClockwiseIcon as RotateCcw,
-  RowsIcon as Rows2,
-  TerminalWindowIcon as Terminal,
+  ArrowCounterClockwiseIcon,
+  ColumnsIcon,
+  CopyIcon,
+  FolderOpenIcon,
+  LockIcon,
+  LockOpenIcon,
+  PencilLineIcon,
+  PinIcon,
+  PinSlashIcon,
+  RowsIcon,
+  SquareArrowUpIcon,
+  TerminalWindowIcon,
 } from "@/ui/icons";
 import { invoke } from "@tauri-apps/api/core";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -64,7 +64,7 @@ const TabContextMenu = ({
     {
       id: "pin",
       label: buffer.isPinned ? "Unpin Tab" : "Pin Tab",
-      icon: buffer.isPinned ? <PinOff /> : <Pin />,
+      icon: buffer.isPinned ? <PinSlashIcon /> : <PinIcon />,
       onClick: () => onPin(buffer.id),
     },
     ...(buffer.type === "terminal"
@@ -72,7 +72,7 @@ const TabContextMenu = ({
           {
             id: "rename-terminal",
             label: "Rename",
-            icon: <PencilSimpleLine />,
+            icon: <PencilLineIcon />,
             onClick: () => onRename?.(buffer.id),
           },
         ]
@@ -82,7 +82,7 @@ const TabContextMenu = ({
           {
             id: "split-right",
             label: "Split Right",
-            icon: <Columns2 />,
+            icon: <ColumnsIcon />,
             onClick: () => onSplitRight(paneId, buffer.id),
           },
         ]
@@ -92,7 +92,7 @@ const TabContextMenu = ({
           {
             id: "split-down",
             label: "Split Down",
-            icon: <Rows2 />,
+            icon: <RowsIcon />,
             onClick: () => onSplitDown(paneId, buffer.id),
           },
         ]
@@ -102,7 +102,7 @@ const TabContextMenu = ({
           {
             id: "toggle-editor-group-lock",
             label: isPaneLocked ? "Unlock Editor Group" : "Lock Editor Group",
-            icon: isPaneLocked ? <LockOpen /> : <Lock />,
+            icon: isPaneLocked ? <LockOpenIcon /> : <LockIcon />,
             onClick: onTogglePaneLocked,
           },
         ]
@@ -114,7 +114,7 @@ const TabContextMenu = ({
           {
             id: "copy-path",
             label: "Copy Path",
-            icon: <Copy />,
+            icon: <CopyIcon />,
             onClick: async () => {
               if (onCopyPath) {
                 onCopyPath(buffer.path);
@@ -131,13 +131,13 @@ const TabContextMenu = ({
           {
             id: "copy-relative-path",
             label: "Copy Relative Path",
-            icon: <Copy />,
+            icon: <CopyIcon />,
             onClick: () => onCopyRelativePath?.(buffer.path),
           },
           {
             id: "reveal",
             label: "Reveal in Finder",
-            icon: <FolderOpen />,
+            icon: <FolderOpenIcon />,
             onClick: () => onRevealInFinder?.(buffer.path),
           },
         ]
@@ -149,7 +149,7 @@ const TabContextMenu = ({
                 {
                   id: "share",
                   label: "Share…",
-                  icon: <Share />,
+                  icon: <SquareArrowUpIcon />,
                   onClick: () => {
                     void invoke("show_share_picker", { path: buffer.path }).catch((error) => {
                       toast.error(`Unable to share file: ${String(error)}`);
@@ -161,7 +161,7 @@ const TabContextMenu = ({
           {
             id: "terminal",
             label: "Open in Terminal",
-            icon: <Terminal />,
+            icon: <TerminalWindowIcon />,
             onClick: () => {
               const dirPath = getDirName(buffer.path);
               const dirName = getBaseName(dirPath, "terminal");
@@ -179,7 +179,7 @@ const TabContextMenu = ({
           {
             id: "reload",
             label: "Reload",
-            icon: <RotateCcw />,
+            icon: <ArrowCounterClockwiseIcon />,
             onClick: () => onReload?.(buffer.id),
           },
         ]

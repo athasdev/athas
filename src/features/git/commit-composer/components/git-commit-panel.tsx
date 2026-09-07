@@ -1,9 +1,9 @@
 import {
-  ArrowDownIcon as ArrowDown,
-  ArrowUpIcon as ArrowUp,
-  CaretDownIcon as ChevronDown,
-  WarningCircleIcon as AlertCircle,
-  SparkleIcon as Sparkles,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ChevronDownIcon,
+  SparkleIcon,
+  WarningCircleIcon,
 } from "@/ui/icons";
 import type React from "react";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -244,7 +244,7 @@ const GitCommitPanel = ({
       <SidebarComposerBody variant="plain">
         {error ? (
           <Alert tone="error" className="mx-2 mt-2 w-auto">
-            <AlertCircle />
+            <WarningCircleIcon />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
@@ -285,7 +285,7 @@ const GitCommitPanel = ({
                   className="text-git-added hover:text-git-added"
                   tooltip={`Push ${ahead} commit${ahead !== 1 ? "s" : ""}`}
                 >
-                  <ArrowUp />
+                  <ArrowUpIcon />
                   <span>{ahead}</span>
                 </Button>
               )}
@@ -299,7 +299,7 @@ const GitCommitPanel = ({
                   className="text-git-deleted hover:text-git-deleted"
                   tooltip={`Pull ${behind} commit${behind !== 1 ? "s" : ""}`}
                 >
-                  <ArrowDown />
+                  <ArrowDownIcon />
                   <span>{behind}</span>
                 </Button>
               )}
@@ -317,7 +317,7 @@ const GitCommitPanel = ({
               tooltip="Generate commit message with AI"
               aria-label="Generate commit message with AI"
             >
-              <Sparkles />
+              <SparkleIcon />
             </Button>
             <ButtonGroupSeparator />
             <DropdownMenu open={isGenerateModeMenuOpen} onOpenChange={setIsGenerateModeMenuOpen}>
@@ -334,7 +334,7 @@ const GitCommitPanel = ({
                   />
                 }
               >
-                <ChevronDown />
+                <ChevronDownIcon />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-37.5">
                 <DropdownMenuRadioGroup
