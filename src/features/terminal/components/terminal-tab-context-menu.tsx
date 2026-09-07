@@ -1,10 +1,13 @@
 import {
   ArrowCounterClockwiseIcon,
+  ColumnsIcon,
   CopyIcon,
   DownloadIcon,
   PenIcon,
   PinIcon,
   PinSlashIcon,
+  RowsIcon,
+  TerminalWindowIcon,
 } from "@/ui/icons";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { ContextMenuPopup, type ContextMenuGroupData } from "@/ui/context-menu";
@@ -13,7 +16,11 @@ interface TerminalTabContextMenuProps {
   isOpen: boolean;
   position: { x: number; y: number };
   terminal: Terminal | null;
+  isSplit: boolean;
   onClose: () => void;
+  onSplitRight: (terminalId: string) => void;
+  onSplitDown: (terminalId: string) => void;
+  onUnsplit: (terminalId: string) => void;
   onPin: (terminalId: string) => void;
   onCloseTab: (terminalId: string) => void;
   onCloseOthers: (terminalId: string) => void;
@@ -29,7 +36,11 @@ const TerminalTabContextMenu = ({
   isOpen,
   position,
   terminal,
+  isSplit,
   onClose,
+  onSplitRight,
+  onSplitDown,
+  onUnsplit,
   onPin,
   onCloseTab,
   onCloseOthers,
@@ -51,6 +62,33 @@ const TerminalTabContextMenu = ({
               icon: terminal.isPinned ? <PinSlashIcon /> : <PinIcon />,
               onClick: () => onPin(terminal.id),
             },
+          ],
+        },
+        {
+          id: "split",
+          items: [
+            {
+              id: "split-right",
+              label: "Split Right",
+              icon: <ColumnsIcon />,
+              onClick: () => onSplitRight(terminal.id),
+            },
+            {
+              id: "split-down",
+              label: "Split Down",
+              icon: <RowsIcon />,
+              onClick: () => onSplitDown(terminal.id),
+            },
+            ...(isSplit
+              ? [
+                  {
+                    id: "unsplit",
+                    label: "Unsplit",
+                    icon: <TerminalWindowIcon />,
+                    onClick: () => onUnsplit(terminal.id),
+                  },
+                ]
+              : []),
           ],
         },
         {

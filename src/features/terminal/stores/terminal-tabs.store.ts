@@ -183,19 +183,30 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
     }
 
     case "SPLIT_TERMINAL": {
-      const { terminalId, newTerminalId, direction } = action.payload;
+      const { terminalId, newTerminalId, direction, placement } = action.payload;
       const exists = (id: string) => state.terminals.some((terminal) => terminal.id === id);
       if (!exists(terminalId) || !exists(newTerminalId)) return state;
 
       return {
         ...state,
-        layouts: splitTerminalLayout(state.layouts, terminalId, newTerminalId, direction),
+        layouts: splitTerminalLayout(
+          state.layouts,
+          terminalId,
+          newTerminalId,
+          direction,
+          placement,
+        ),
         activeTerminalId: newTerminalId,
         terminals: state.terminals.map((terminal) => ({
           ...terminal,
           isActive: terminal.id === newTerminalId,
         })),
       };
+    }
+
+    case "UNSPLIT_TERMINAL": {
+      const layouts = removeTerminalFromLayouts(state.layouts, action.payload.terminalId);
+      return layouts === state.layouts ? state : { ...state, layouts };
     }
 
     case "RESIZE_TERMINAL_SPLIT": {

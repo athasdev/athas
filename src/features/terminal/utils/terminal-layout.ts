@@ -1,4 +1,4 @@
-import type { PaneNode, PaneSplit } from "@/features/panes/types/pane.types";
+import type { PaneNode, PaneSplit, SplitPlacement } from "@/features/panes/types/pane.types";
 import {
   closePane,
   createPaneGroup,
@@ -34,6 +34,7 @@ export function splitTerminalLayout(
   terminalId: string,
   newTerminalId: string,
   direction: TerminalSplitDirection,
+  placement: SplitPlacement = "after",
 ): TerminalLayout[] {
   if (terminalId === newTerminalId) return layouts;
   const splitDirection = direction === "down" ? "vertical" : "horizontal";
@@ -42,12 +43,12 @@ export function splitTerminalLayout(
 
   if (!existing) {
     const group = createPaneGroup([terminalId], terminalId);
-    return [...withoutNew, splitPane(group, group.id, splitDirection, newTerminalId)];
+    return [...withoutNew, splitPane(group, group.id, splitDirection, newTerminalId, placement)];
   }
 
   const group = findPaneGroupByBufferId(existing, terminalId);
   if (!group) return withoutNew;
-  const next = splitPane(existing, group.id, splitDirection, newTerminalId);
+  const next = splitPane(existing, group.id, splitDirection, newTerminalId, placement);
   return withoutNew.map((layout) => (layout === existing ? next : layout));
 }
 

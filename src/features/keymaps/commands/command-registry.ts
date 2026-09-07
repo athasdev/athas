@@ -319,6 +319,14 @@ const terminalCommands: Command[] = [
     },
   },
   {
+    id: "terminal.unsplit",
+    title: "Unsplit Terminal",
+    category: "Terminal",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-unsplit"));
+    },
+  },
+  {
     id: "terminal.focusNextPane",
     title: "Focus Next Terminal Pane",
     category: "Terminal",

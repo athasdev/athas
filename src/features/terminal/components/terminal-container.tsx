@@ -4,7 +4,7 @@ import type {
   TerminalCommandNavigationDirection,
   TerminalSessionHandle,
 } from "../types/terminal.types";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
@@ -17,6 +17,7 @@ import { notifyTerminalCommandFinished } from "@/features/terminal/services/term
 import { closeTerminalConnection } from "@/features/terminal/services/terminal-connection-lifecycle";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
+import type { PaneNode, SplitPlacement } from "@/features/panes/types/pane.types";
 import type {
   Terminal,
   TerminalCommandSummary,
@@ -92,6 +93,7 @@ const TerminalContainer = ({
     switchToNextTerminal,
     switchToPrevTerminal,
     splitTerminal,
+    unsplitTerminal,
     resizeTerminalSplit,
     distributeTerminalSplit,
     layouts,
@@ -337,23 +339,45 @@ const TerminalContainer = ({
   );
 
   const handleSplitView = useCallback(
-    (direction: TerminalSplitDirection) => {
-      if (!activeTerminalId) return;
+    (direction: TerminalSplitDirection, terminalId: string | null = activeTerminalId) => {
+      if (!terminalId) return;
 
-      const activeTerminal = terminals.find((t) => t.id === activeTerminalId);
-      if (!activeTerminal) return;
+      const sourceTerminal = terminals.find((t) => t.id === terminalId);
+      if (!sourceTerminal) return;
 
       const companionId = createTerminal({
-        name: activeTerminal.name,
-        currentDirectory: activeTerminal.currentDirectory,
-        shell: activeTerminal.shell,
-        profileId: activeTerminal.profileId,
-        remoteConnectionId: activeTerminal.remoteConnectionId,
+        name: sourceTerminal.name,
+        currentDirectory: sourceTerminal.currentDirectory,
+        shell: sourceTerminal.shell,
+        profileId: sourceTerminal.profileId,
+        remoteConnectionId: sourceTerminal.remoteConnectionId,
       });
-      splitTerminal(activeTerminalId, companionId, direction);
+      splitTerminal(terminalId, companionId, direction);
       focusNewTerminal(companionId);
     },
     [activeTerminalId, terminals, createTerminal, splitTerminal, focusNewTerminal],
+  );
+
+  const handleSplitWithTerminal = useCallback(
+    (
+      targetTerminalId: string,
+      droppedTerminalId: string,
+      direction: TerminalSplitDirection,
+      placement: SplitPlacement,
+    ) => {
+      splitTerminal(targetTerminalId, droppedTerminalId, direction, placement);
+      focusNewTerminal(droppedTerminalId);
+    },
+    [splitTerminal, focusNewTerminal],
+  );
+
+  const handleUnsplit = useCallback(
+    (terminalId: string) => {
+      unsplitTerminal(terminalId);
+      setActiveTerminal(terminalId);
+      focusNewTerminal(terminalId);
+    },
+    [unsplitTerminal, setActiveTerminal, focusNewTerminal],
   );
 
   const handleSearchTerminal = useCallback(() => {
@@ -646,9 +670,17 @@ const TerminalContainer = ({
       focusNewTerminal(target);
     };
 
+    const handleUnsplitEvent = () => {
+      if (activeTerminalId) handleUnsplit(activeTerminalId);
+    };
+
     window.addEventListener("terminal-focus-pane", handleFocusPane);
-    return () => window.removeEventListener("terminal-focus-pane", handleFocusPane);
-  }, [activeTerminalId, focusNewTerminal, layouts, setActiveTerminal]);
+    window.addEventListener("terminal-unsplit", handleUnsplitEvent);
+    return () => {
+      window.removeEventListener("terminal-focus-pane", handleFocusPane);
+      window.removeEventListener("terminal-unsplit", handleUnsplitEvent);
+    };
+  }, [activeTerminalId, focusNewTerminal, handleUnsplit, layouts, setActiveTerminal]);
 
   useEffect(() => {
     const handleClear = () => {
@@ -770,13 +802,27 @@ const TerminalContainer = ({
     onCloseAllTabs: handleCloseAllTabs,
     onCloseTabsToRight: handleCloseTabsToRight,
     onSearchTerminal: handleSearchTerminal,
+    onSplitTerminal: handleSplitView,
+    onSplitWithTerminal: handleSplitWithTerminal,
+    onUnsplitTerminal: handleUnsplit,
+    layouts,
     onNextTerminal: switchToNextTerminal,
     onPrevTerminal: switchToPrevTerminal,
     onFullScreen,
     isFullScreen,
   };
   const activeTerminal = terminals.find((terminal) => terminal.id === activeTerminalId);
-  const activeLayout = activeTerminalId ? findTerminalLayout(layouts, activeTerminalId) : null;
+  const activeLayout = useMemo<PaneNode | null>(() => {
+    if (!activeTerminalId) return null;
+    return (
+      findTerminalLayout(layouts, activeTerminalId) ?? {
+        id: `terminal-standalone-${activeTerminalId}`,
+        type: "group",
+        bufferIds: [activeTerminalId],
+        activeBufferId: activeTerminalId,
+      }
+    );
+  }, [activeTerminalId, layouts]);
   const renderTerminalSession = (terminal: Terminal) => (
     <TerminalSession
       terminal={terminal}
@@ -803,8 +849,6 @@ const TerminalContainer = ({
           onResize={resizeTerminalSplit}
           onDistribute={distributeTerminalSplit}
         />
-      ) : activeTerminal ? (
-        <div className="size-full min-h-0 min-w-0">{renderTerminalSession(activeTerminal)}</div>
       ) : null}
     </div>
   );

@@ -1,7 +1,13 @@
-import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
+import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PaneResizeHandle } from "@/features/panes/components/pane-resize-handle";
+import { SplitDropOverlay } from "@/features/panes/components/split-drop-overlay";
 import type { PaneNode, PaneSplit } from "@/features/panes/types/pane.types";
 import { flattenPaneSplit } from "@/features/panes/utils/pane-tree";
+import type { PaneDropZone } from "@/features/panes/utils/pane-drop-zones";
+import {
+  getTerminalPaneDropHover,
+  TERMINAL_PANE_DROP_HOVER_EVENT,
+} from "@/features/terminal/utils/terminal-pane-drop";
 import { cn } from "@/utils/cn";
 
 interface TerminalSplitViewProps {
@@ -58,6 +64,7 @@ interface TerminalSplitLeafProps {
 // terminal never bubble through this wrapper. A native capture listener does.
 function TerminalSplitLeaf({ terminalId, isActive, onActivate, children }: TerminalSplitLeafProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const [dropZone, setDropZone] = useState<PaneDropZone>(null);
 
   useEffect(() => {
     const element = ref.current;
@@ -67,17 +74,30 @@ function TerminalSplitLeaf({ terminalId, isActive, onActivate, children }: Termi
     return () => element.removeEventListener("mousedown", handleMouseDown, true);
   }, [isActive, onActivate, terminalId]);
 
+  useEffect(() => {
+    const syncHover = () => {
+      const hover = getTerminalPaneDropHover();
+      setDropZone(hover?.terminalId === terminalId ? hover.zone : null);
+    };
+    syncHover();
+    window.addEventListener(TERMINAL_PANE_DROP_HOVER_EVENT, syncHover);
+    return () => window.removeEventListener(TERMINAL_PANE_DROP_HOVER_EVENT, syncHover);
+  }, [terminalId]);
+
   return (
     <div
       ref={ref}
-      className="size-full min-h-0 min-w-0"
+      className="relative size-full min-h-0 min-w-0"
       data-terminal-pane={terminalId}
       data-active={isActive ? "true" : undefined}
     >
       {children}
+      <SplitDropOverlay activeZoneOverride={dropZone} visible={dropZone !== null} onDrop={noop} />
     </div>
   );
 }
+
+const noop = () => undefined;
 
 export function TerminalSplitView({
   layout,

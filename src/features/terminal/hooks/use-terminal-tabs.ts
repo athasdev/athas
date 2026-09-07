@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import type { SplitPlacement } from "@/features/panes/types/pane.types";
 import type { Terminal, TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import {
@@ -154,8 +155,23 @@ export const useTerminalTabs = () => {
   }, [terminals, activeTerminalId, setActiveTerminal]);
 
   const splitTerminal = useCallback(
-    (terminalId: string, newTerminalId: string, direction: TerminalSplitDirection) => {
-      dispatch({ type: "SPLIT_TERMINAL", payload: { terminalId, newTerminalId, direction } });
+    (
+      terminalId: string,
+      newTerminalId: string,
+      direction: TerminalSplitDirection,
+      placement?: SplitPlacement,
+    ) => {
+      dispatch({
+        type: "SPLIT_TERMINAL",
+        payload: { terminalId, newTerminalId, direction, placement },
+      });
+    },
+    [dispatch],
+  );
+
+  const unsplitTerminal = useCallback(
+    (terminalId: string) => {
+      dispatch({ type: "UNSPLIT_TERMINAL", payload: { terminalId } });
     },
     [dispatch],
   );
@@ -190,6 +206,7 @@ export const useTerminalTabs = () => {
     switchToNextTerminal,
     switchToPrevTerminal,
     splitTerminal,
+    unsplitTerminal,
     resizeTerminalSplit,
     distributeTerminalSplit,
   };

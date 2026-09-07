@@ -54,6 +54,22 @@ describe("terminal splits", () => {
     expect(state.terminals.map((terminal) => terminal.id)).toEqual(["standalone", "primary"]);
   });
 
+  it("unsplits a terminal back into a standalone tab", () => {
+    const { dispatch } = useTerminalTabsStore.getState().actions;
+    createTerminal("primary");
+    createTerminal("companion");
+    dispatch({
+      type: "SPLIT_TERMINAL",
+      payload: { terminalId: "primary", newTerminalId: "companion", direction: "right" },
+    });
+
+    dispatch({ type: "UNSPLIT_TERMINAL", payload: { terminalId: "companion" } });
+
+    const state = useTerminalTabsStore.getState();
+    expect(state.layouts).toEqual([]);
+    expect(state.terminals).toHaveLength(2);
+  });
+
   it("drops layouts when terminals are reset or restored", () => {
     const { dispatch } = useTerminalTabsStore.getState().actions;
     createTerminal("primary");

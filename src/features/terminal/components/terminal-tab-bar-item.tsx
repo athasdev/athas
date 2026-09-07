@@ -1,4 +1,4 @@
-import { PauseIcon, PinIcon, WarningCircleIcon, XIcon } from "@/ui/icons";
+import { ColumnsIcon, PauseIcon, PinIcon, WarningCircleIcon, XIcon } from "@/ui/icons";
 import { memo, useCallback } from "react";
 import type {
   Terminal,
@@ -17,6 +17,7 @@ interface TerminalTabBarItemProps {
   displayName: string;
   progress?: TerminalProgress;
   lastCommand?: TerminalCommandSummary;
+  isSplit?: boolean;
   isActive: boolean;
   isDraggedTab: boolean;
   showDropIndicatorBefore: boolean;
@@ -73,6 +74,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
   displayName,
   progress,
   lastCommand,
+  isSplit = false,
   isActive,
   isDraggedTab,
   showDropIndicatorBefore,
@@ -174,6 +176,12 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
             {progress ? <TerminalProgressIndicator progress={progress} /> : null}
             {!progress && lastCommand && !isActive ? (
               <TerminalCommandBadge command={lastCommand} />
+            ) : null}
+            {isSplit ? (
+              <ColumnsIcon
+                className="size-3 shrink-0 text-subtle-foreground"
+                aria-label="Part of a split group"
+              />
             ) : null}
             <span
               className={cn(

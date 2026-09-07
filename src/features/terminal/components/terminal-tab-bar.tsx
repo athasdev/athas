@@ -23,7 +23,14 @@ import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboar
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getOrCreatePaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
-import type { Terminal } from "@/features/terminal/types/terminal.types";
+import type { PaneNode, SplitPlacement } from "@/features/panes/types/pane.types";
+import type { Terminal, TerminalSplitDirection } from "@/features/terminal/types/terminal.types";
+import { findTerminalLayout } from "@/features/terminal/utils/terminal-layout";
+import {
+  getTerminalSplitDropOptions,
+  resolveTerminalPaneDropTarget,
+  setTerminalPaneDropHover,
+} from "@/features/terminal/utils/terminal-pane-drop";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
 import { getTerminalDisplayName as getTerminalDisplayNameForSession } from "@/features/terminal/utils/terminal-display-name";
 import {
@@ -39,6 +46,7 @@ import {
   clearInternalTabDragData,
   resolveDropTarget,
   setInternalTabDragHover,
+  setInternalTabDragHoverTarget,
   setInternalTabDragData,
 } from "@/features/tabs/utils/internal-tab-drag";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -149,6 +157,15 @@ interface TerminalTabBarProps {
   onPrevTerminal?: () => void;
   onFullScreen?: () => void;
   isFullScreen?: boolean;
+  onSplitTerminal?: (direction: TerminalSplitDirection, terminalId: string) => void;
+  onSplitWithTerminal?: (
+    targetTerminalId: string,
+    droppedTerminalId: string,
+    direction: TerminalSplitDirection,
+    placement: SplitPlacement,
+  ) => void;
+  onUnsplitTerminal?: (terminalId: string) => void;
+  layouts?: PaneNode[];
 }
 
 const TerminalTabBar = ({
@@ -169,6 +186,10 @@ const TerminalTabBar = ({
   onPrevTerminal,
   onFullScreen,
   isFullScreen = false,
+  onSplitTerminal,
+  onSplitWithTerminal,
+  onUnsplitTerminal,
+  layouts = [],
 }: TerminalTabBarProps) => {
   const [editingTerminalId, setEditingTerminalId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -419,6 +440,7 @@ const TerminalTabBar = ({
     setDraggedTerminalId(null);
     dragPointRef.current = null;
     pointerPointRef.current = null;
+    setTerminalPaneDropHover(null);
     clearInternalTabDragData();
     releaseClickSuppression();
   };
@@ -446,9 +468,16 @@ const TerminalTabBar = ({
     if (!point) return;
 
     dragPointRef.current = point;
-    if (isPointOutsideTabBar(point)) {
-      setInternalTabDragHover(point);
+    if (!isPointOutsideTabBar(point)) return;
+
+    const paneTarget = resolveTerminalPaneDropTarget(point);
+    if (paneTarget && paneTarget.terminalId !== draggedTerminalId) {
+      setTerminalPaneDropHover(paneTarget);
+      setInternalTabDragHoverTarget({ paneId: null, zone: null });
+      return;
     }
+    setTerminalPaneDropHover(null);
+    setInternalTabDragHover(point);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -457,8 +486,19 @@ const TerminalTabBar = ({
     const point = getDragPoint(event);
     const target = point ? resolveDropTarget(point) : { paneId: null, zone: null };
     const isOutsideTabBar = point ? isPointOutsideTabBar(point) : false;
+    const paneTarget = point && isOutsideTabBar ? resolveTerminalPaneDropTarget(point) : null;
+    const splitOptions = paneTarget ? getTerminalSplitDropOptions(paneTarget.zone) : null;
 
-    if (terminal && isOutsideTabBar && target.paneId) {
+    if (terminal && paneTarget && paneTarget.terminalId !== terminal.id && splitOptions) {
+      onSplitWithTerminal?.(
+        paneTarget.terminalId,
+        terminal.id,
+        splitOptions.direction,
+        splitOptions.placement,
+      );
+    } else if (terminal && paneTarget) {
+      // Dropped on the middle of a terminal pane: keep the tab where it is.
+    } else if (terminal && isOutsideTabBar && target.paneId) {
       const destinationPaneId = getOrCreatePaneDropTarget({
         paneId: target.paneId,
         zone: target.zone,
@@ -568,6 +608,7 @@ const TerminalTabBar = ({
                             terminal={terminal}
                             progress={sessions.get(terminal.id)?.progress}
                             lastCommand={sessions.get(terminal.id)?.lastCommand}
+                            isSplit={findTerminalLayout(layouts, terminal.id) !== null}
                             displayName={getTerminalDisplayName(terminal)}
                             isActive={terminal.id === activeTerminalId}
                             isDraggedTab={isDragging}
@@ -621,6 +662,7 @@ const TerminalTabBar = ({
                           terminal={terminal}
                           progress={sessions.get(terminal.id)?.progress}
                           lastCommand={sessions.get(terminal.id)?.lastCommand}
+                          isSplit={findTerminalLayout(layouts, terminal.id) !== null}
                           displayName={getTerminalDisplayName(terminal)}
                           isActive={terminal.id === activeTerminalId}
                           isDraggedTab={isDragging}
@@ -655,7 +697,14 @@ const TerminalTabBar = ({
             isOpen={contextMenu.isOpen}
             position={contextMenu.position}
             terminal={contextMenu.terminal}
+            isSplit={
+              contextMenu.terminal !== null &&
+              findTerminalLayout(layouts, contextMenu.terminal.id) !== null
+            }
             onClose={closeContextMenu}
+            onSplitRight={(terminalId) => onSplitTerminal?.("right", terminalId)}
+            onSplitDown={(terminalId) => onSplitTerminal?.("down", terminalId)}
+            onUnsplit={(terminalId) => onUnsplitTerminal?.(terminalId)}
             onPin={(terminalId) => {
               onTabPin?.(terminalId);
             }}

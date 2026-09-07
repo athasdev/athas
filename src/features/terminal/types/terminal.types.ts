@@ -1,5 +1,5 @@
 import type { Terminal as XtermTerminal } from "@xterm/xterm";
-import type { PaneNode } from "@/features/panes/types/pane.types";
+import type { PaneNode, SplitPlacement } from "@/features/panes/types/pane.types";
 export type TerminalSplitDirection = "right" | "down";
 
 /** OSC 9;4 progress report: 0 clears, 1 sets, 2 errors, 3 is indeterminate, 4 pauses. */
@@ -135,8 +135,14 @@ export type TerminalAction =
     }
   | {
       type: "SPLIT_TERMINAL";
-      payload: { terminalId: string; newTerminalId: string; direction: TerminalSplitDirection };
+      payload: {
+        terminalId: string;
+        newTerminalId: string;
+        direction: TerminalSplitDirection;
+        placement?: SplitPlacement;
+      };
     }
+  | { type: "UNSPLIT_TERMINAL"; payload: { terminalId: string } }
   | {
       type: "RESIZE_TERMINAL_SPLIT";
       payload: { splitId: string; index: number; sizes: [number, number] };

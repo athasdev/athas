@@ -24,6 +24,21 @@ describe("terminal layouts", () => {
     expect(getLayoutMemberIds(layouts, "c")).toEqual(["c"]);
   });
 
+  it("places the new terminal before the target when asked", () => {
+    const layouts = splitTerminalLayout([], "a", "b", "down", "before");
+    expect(getLayoutTerminalIds(layouts[0])).toEqual(["b", "a"]);
+  });
+
+  it("moves a terminal out of its previous layout when it is dropped elsewhere", () => {
+    const first = splitTerminalLayout([], "a", "b", "right");
+    const withSecond = splitTerminalLayout(first, "c", "d", "right");
+    const moved = splitTerminalLayout(withSecond, "c", "b", "down");
+
+    expect(moved).toHaveLength(1);
+    expect(getLayoutTerminalIds(moved[0])).toEqual(["c", "b", "d"]);
+    expect(findTerminalLayout(moved, "a")).toBeNull();
+  });
+
   it("nests splits in the opposite direction inside the existing layout", () => {
     const layouts = splitTerminalLayout(
       splitTerminalLayout([], "a", "b", "right"),

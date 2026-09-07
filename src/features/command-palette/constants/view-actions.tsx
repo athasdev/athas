@@ -331,6 +331,18 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       },
     },
     {
+      id: "terminal-unsplit",
+      label: "Terminal: Unsplit",
+      description: "Move the focused terminal pane back into its own tab",
+      icon: <TerminalWindowIcon />,
+      category: "Terminal",
+      commandId: "terminal.unsplit",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("terminal.unsplit");
+      },
+    },
+    {
       id: "terminal-focus-next-pane",
       label: "Terminal: Focus Next Pane",
       description: "Move focus to the next split pane of the active terminal",
