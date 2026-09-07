@@ -71,6 +71,9 @@ export interface TerminalSessionHandle {
   focus: () => void;
   showSearch: () => void;
   navigateCommand: (direction: TerminalCommandNavigationDirection) => void;
+  clear: () => void;
+  selectAll: () => void;
+  copyLastCommandOutput: () => void;
 }
 
 export interface TerminalEmulatorHandle extends TerminalSessionHandle {

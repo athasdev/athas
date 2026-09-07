@@ -87,6 +87,15 @@ describe("terminal keyboard input", () => {
     });
   });
 
+  it("leaves app-level terminal chords to the keymap system", () => {
+    expect(getTerminalKeyAction(keyboardEvent({ key: "k", metaKey: true }))).toEqual({
+      type: "block",
+    });
+    expect(
+      getTerminalKeyAction(keyboardEvent({ key: "a", metaKey: true, shiftKey: true })),
+    ).toEqual({ type: "block" });
+  });
+
   it("reserves terminal tab switching for the app", () => {
     expect(getTerminalKeyAction(keyboardEvent({ ctrlKey: true, key: "PageDown" }))).toEqual({
       type: "switchTab",

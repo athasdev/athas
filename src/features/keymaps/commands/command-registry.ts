@@ -318,6 +318,33 @@ const terminalCommands: Command[] = [
       window.dispatchEvent(new CustomEvent("terminal-navigate-command", { detail: "next" }));
     },
   },
+  {
+    id: "terminal.clear",
+    title: "Clear Terminal",
+    category: "Terminal",
+    keybinding: "cmd+k",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-clear"));
+    },
+  },
+  {
+    id: "terminal.selectAll",
+    title: "Select All in Terminal",
+    category: "Terminal",
+    keybinding: "cmd+shift+a",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-select-all"));
+    },
+  },
+  {
+    id: "terminal.copyLastCommandOutput",
+    title: "Copy Last Command Output",
+    category: "Terminal",
+    keybinding: "cmd+shift+c",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-copy-last-command-output"));
+    },
+  },
 ];
 
 const lspCommands: Command[] = [

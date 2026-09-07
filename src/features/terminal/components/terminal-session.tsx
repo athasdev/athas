@@ -70,6 +70,18 @@ const TerminalSession = ({
     xtermInstanceRef.current?.navigateCommand(direction);
   }, []);
 
+  const clear = useCallback(() => {
+    xtermInstanceRef.current?.clear();
+  }, []);
+
+  const selectAll = useCallback(() => {
+    xtermInstanceRef.current?.selectAll();
+  }, []);
+
+  const copyLastCommandOutput = useCallback(() => {
+    xtermInstanceRef.current?.copyLastCommandOutput();
+  }, []);
+
   const handleTerminalRef = useCallback((ref: TerminalEmulatorHandle) => {
     xtermInstanceRef.current = ref;
     terminalRef.current = ref;
@@ -77,12 +89,28 @@ const TerminalSession = ({
 
   useEffect(() => {
     if (onRegisterRef) {
-      onRegisterRef(terminal.id, { focus: focusTerminal, showSearch, navigateCommand });
+      onRegisterRef(terminal.id, {
+        focus: focusTerminal,
+        showSearch,
+        navigateCommand,
+        clear,
+        selectAll,
+        copyLastCommandOutput,
+      });
       return () => {
         onRegisterRef(terminal.id, null);
       };
     }
-  }, [terminal.id, onRegisterRef, focusTerminal, showSearch, navigateCommand]);
+  }, [
+    terminal.id,
+    onRegisterRef,
+    focusTerminal,
+    showSearch,
+    navigateCommand,
+    clear,
+    selectAll,
+    copyLastCommandOutput,
+  ]);
 
   useEffect(() => {
     if (isActive && onActivity) {

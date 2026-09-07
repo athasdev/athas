@@ -56,6 +56,40 @@ export class TerminalShellIntegration implements IDisposable {
     return this.commands;
   }
 
+  getLastCommandOutput(): string | null {
+    const index = this.findLastIndex((command) => command.commandMarker !== null);
+    if (index === -1) return null;
+
+    const command = this.commands[index];
+    const commandMarker = command.commandMarker;
+    if (!commandMarker || commandMarker.isDisposed || commandMarker.line < 0) return null;
+
+    const buffer = this.terminal.buffer.active;
+    const next = this.commands[index + 1]?.promptMarker ?? this.pending?.promptMarker ?? null;
+    const endLine =
+      next && !next.isDisposed && next.line >= 0
+        ? next.line
+        : command.status === "running"
+          ? buffer.baseY + buffer.cursorY
+          : buffer.length;
+
+    const lines: string[] = [];
+    for (let line = commandMarker.line; line < endLine; line += 1) {
+      const row = buffer.getLine(line);
+      if (!row) break;
+      lines.push(row.translateToString(true));
+    }
+    while (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
+    return lines.join("\n");
+  }
+
+  private findLastIndex(predicate: (command: TerminalCommandRecord) => boolean): number {
+    for (let index = this.commands.length - 1; index >= 0; index -= 1) {
+      if (predicate(this.commands[index])) return index;
+    }
+    return -1;
+  }
+
   scrollToPreviousCommand(): boolean {
     const current = this.terminal.buffer.active.viewportY;
     const target = [...this.commands]

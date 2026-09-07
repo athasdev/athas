@@ -161,6 +161,24 @@ export const defaultKeymaps: Keybinding[] = [
     when: "terminalFocus",
   },
   {
+    key: "cmd+k",
+    command: "terminal.clear",
+    source: "default",
+    when: "terminalFocus",
+  },
+  {
+    key: "cmd+shift+a",
+    command: "terminal.selectAll",
+    source: "default",
+    when: "terminalFocus",
+  },
+  {
+    key: "cmd+shift+c",
+    command: "terminal.copyLastCommandOutput",
+    source: "default",
+    when: "terminalFocus",
+  },
+  {
     key: "cmd+shift+k",
     command: "editor.deleteLine",
     source: "default",

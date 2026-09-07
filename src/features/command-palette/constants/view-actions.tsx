@@ -2,10 +2,13 @@ import {
   ArrowCounterClockwiseIcon,
   ArrowDownIcon,
   ArrowUpIcon,
+  BroomIcon,
   ColumnsIcon,
+  CopyIcon,
   ListIcon,
   RowsIcon,
   SearchIcon,
+  SelectAllIcon,
   SidebarIcon,
   TerminalWindowIcon,
   WarningCircleIcon,
@@ -263,6 +266,42 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       action: () => {
         onClose();
         void keymapRegistry.executeCommand("terminal.nextCommand");
+      },
+    },
+    {
+      id: "terminal-clear",
+      label: "Terminal: Clear",
+      description: "Clear the scrollback of the active terminal",
+      icon: <BroomIcon />,
+      category: "Terminal",
+      commandId: "terminal.clear",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("terminal.clear");
+      },
+    },
+    {
+      id: "terminal-select-all",
+      label: "Terminal: Select All",
+      description: "Select the whole buffer of the active terminal",
+      icon: <SelectAllIcon />,
+      category: "Terminal",
+      commandId: "terminal.selectAll",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("terminal.selectAll");
+      },
+    },
+    {
+      id: "terminal-copy-last-command-output",
+      label: "Terminal: Copy Last Command Output",
+      description: "Copy the output of the most recent command to the clipboard",
+      icon: <CopyIcon />,
+      category: "Terminal",
+      commandId: "terminal.copyLastCommandOutput",
+      action: () => {
+        onClose();
+        void keymapRegistry.executeCommand("terminal.copyLastCommandOutput");
       },
     },
     {

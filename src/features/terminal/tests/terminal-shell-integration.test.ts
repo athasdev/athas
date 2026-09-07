@@ -9,11 +9,13 @@ interface FakeTerminal {
   decorations: Array<{ element: HTMLElement; disposed: boolean }>;
   setCursorLine: (line: number) => void;
   setViewportY: (line: number) => void;
+  setLines: (lines: string[]) => void;
 }
 
 function createFakeTerminal(): FakeTerminal {
   let cursorLine = 0;
   let viewportY = 0;
+  let lines: string[] = [];
   let oscHandler: ((payload: string) => boolean) | null = null;
   const scrolledTo: number[] = [];
   const decorations: Array<{ element: HTMLElement; disposed: boolean }> = [];
@@ -21,7 +23,14 @@ function createFakeTerminal(): FakeTerminal {
   const terminal = {
     buffer: {
       get active() {
-        return { viewportY };
+        return {
+          viewportY,
+          baseY: 0,
+          cursorY: cursorLine,
+          length: lines.length,
+          getLine: (line: number) =>
+            line < lines.length ? { translateToString: () => lines[line] } : undefined,
+        };
       },
     },
     parser: {
@@ -80,6 +89,9 @@ function createFakeTerminal(): FakeTerminal {
     setViewportY: (line) => {
       viewportY = line;
     },
+    setLines: (next) => {
+      lines = next;
+    },
   };
 }
 
@@ -132,6 +144,27 @@ describe("terminal shell integration", () => {
     expect(integration.getCommands()).toHaveLength(1);
     expect(integration.getCommands()[0].promptMarker.line).toBe(3);
     expect(integration.getCommands()[0].status).toBe("success");
+  });
+
+  it("extracts the output printed between a command and the next prompt", () => {
+    const fake = createFakeTerminal();
+    const integration = new TerminalShellIntegration(fake.terminal);
+    fake.setLines(["$ ls", "a.txt", "b.txt", "", "$ ", ""]);
+
+    expect(integration.getLastCommandOutput()).toBeNull();
+
+    fake.setCursorLine(0);
+    fake.emit("A");
+    fake.emit("B");
+    fake.setCursorLine(1);
+    fake.emit("C");
+    fake.setCursorLine(3);
+    expect(integration.getLastCommandOutput()).toBe("a.txt\nb.txt");
+
+    fake.emit("D;0");
+    fake.setCursorLine(4);
+    fake.emit("A");
+    expect(integration.getLastCommandOutput()).toBe("a.txt\nb.txt");
   });
 
   it("scrolls between prompts relative to the viewport", () => {

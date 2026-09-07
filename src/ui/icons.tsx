@@ -189,6 +189,7 @@ export const CircleDottedIcon = createIconComponent(
 export const CirclesIcon = createIconComponent(Nucleo.IconCirclesOutline18, "CirclesIcon");
 export const ClickIcon = createIconComponent(Nucleo.IconTouchClickOutline18, "ClickIcon");
 export const ClipboardIcon = createIconComponent(Nucleo.IconClipboardOutline18, "ClipboardIcon");
+export const BroomIcon = createIconComponent(Nucleo.IconBroomOutline18, "BroomIcon");
 export const ClipboardTextIcon = createIconComponent(
   Nucleo.IconClipboardContentOutline18,
   "ClipboardTextIcon",
@@ -363,6 +364,7 @@ export const TextAlignLeftIcon = createIconComponent(
   Nucleo.IconTextAlignLeftOutline18,
   "TextAlignLeftIcon",
 );
+export const SelectAllIcon = createIconComponent(Nucleo.IconSelectOutline18, "SelectAllIcon");
 export const TextIcon = createIconComponent(Nucleo.IconTextOutline18, "TextIcon");
 export const TextIndentIcon = createIconComponent(
   Nucleo.IconIndentIncreaseOutline18,

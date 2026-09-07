@@ -22,6 +22,7 @@ import {
   type TerminalFileDropDetail,
 } from "@/features/file-system/utils/file-system-drop-controller";
 import { showConfirmDialog } from "@/ui/dialog";
+import { showToast } from "@/features/layout/contexts/toast-context";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { currentPlatform } from "@/utils/platform";
@@ -225,12 +226,55 @@ export const TerminalEmulator = ({
     event.dataTransfer.dropEffect = "copy";
   }, []);
 
+  const copyLastCommandOutput = useCallback(() => {
+    const output = shellIntegrationRef.current?.getLastCommandOutput() ?? null;
+    if (output === null) {
+      showToast({
+        key: "terminal-copy-output",
+        type: "info",
+        message: "No command output to copy",
+        description: "Enable shell integration to track command output.",
+      });
+      return;
+    }
+    if (output === "") {
+      showToast({
+        key: "terminal-copy-output",
+        type: "info",
+        message: "The last command produced no output",
+      });
+      return;
+    }
+    void writeClipboardText(output)
+      .then(() =>
+        showToast({
+          key: "terminal-copy-output",
+          type: "success",
+          message: "Copied last command output",
+        }),
+      )
+      .catch((error) => console.error("Failed to copy command output:", error));
+  }, []);
+
   const navigateCommand = useCallback((direction: TerminalCommandNavigationDirection) => {
     const integration = shellIntegrationRef.current;
     if (!integration) return;
     if (direction === "previous") integration.scrollToPreviousCommand();
     else integration.scrollToNextCommand();
   }, []);
+
+  const createSessionHandle = useCallback(
+    (terminal: Terminal): TerminalEmulatorHandle => ({
+      focus: () => terminal.focus(),
+      showSearch: () => setIsSearchVisible(true),
+      navigateCommand,
+      clear: () => terminal.clear(),
+      selectAll: () => terminal.selectAll(),
+      copyLastCommandOutput,
+      terminal,
+    }),
+    [copyLastCommandOutput, navigateCommand],
+  );
 
   const pasteIntoTerminal = useCallback(async (terminal: Terminal, text: string) => {
     if (!text) return;
@@ -487,12 +531,7 @@ export const TerminalEmulator = ({
         }),
       );
 
-      onTerminalRef?.({
-        focus: () => terminal.focus(),
-        showSearch: () => setIsSearchVisible(true),
-        navigateCommand,
-        terminal,
-      });
+      onTerminalRef?.(createSessionHandle(terminal));
       onReady?.();
     } catch (error) {
       console.error("Failed to initialize terminal:", error);
@@ -646,13 +685,8 @@ export const TerminalEmulator = ({
     const terminal = terminalRef.current;
     if (!isInitialized || !terminal || !onTerminalRef) return;
 
-    onTerminalRef({
-      focus: () => terminal.focus(),
-      showSearch: () => setIsSearchVisible(true),
-      navigateCommand,
-      terminal,
-    });
-  }, [isInitialized, navigateCommand, onTerminalRef]);
+    onTerminalRef(createSessionHandle(terminal));
+  }, [createSessionHandle, isInitialized, onTerminalRef]);
 
   // Listen for portal-target changes from TerminalHost; force a fit + repaint
   // so PTY/frontend dims match the new slot before any TUI relies on them.

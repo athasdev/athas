@@ -561,6 +561,30 @@ const TerminalContainer = ({
     return () => window.removeEventListener("terminal-navigate-command", handleNavigateCommand);
   }, [activeTerminalId]);
 
+  useEffect(() => {
+    const handleClear = () => {
+      if (!activeTerminalId) return;
+      terminalSessionRefs.current.get(activeTerminalId)?.clear();
+    };
+    const handleSelectAll = () => {
+      if (!activeTerminalId) return;
+      terminalSessionRefs.current.get(activeTerminalId)?.selectAll();
+    };
+    const handleCopyLastCommandOutput = () => {
+      if (!activeTerminalId) return;
+      terminalSessionRefs.current.get(activeTerminalId)?.copyLastCommandOutput();
+    };
+
+    window.addEventListener("terminal-clear", handleClear);
+    window.addEventListener("terminal-select-all", handleSelectAll);
+    window.addEventListener("terminal-copy-last-command-output", handleCopyLastCommandOutput);
+    return () => {
+      window.removeEventListener("terminal-clear", handleClear);
+      window.removeEventListener("terminal-select-all", handleSelectAll);
+      window.removeEventListener("terminal-copy-last-command-output", handleCopyLastCommandOutput);
+    };
+  }, [activeTerminalId]);
+
   // Listen for terminal tab switch events from the keymaps system
   useEffect(() => {
     const handleTerminalSwitchTab = (e: Event) => {

@@ -61,10 +61,9 @@ export function getTerminalKeyAction(
 
   if (isTerminalAltTextInput(event)) return { type: "passthrough" };
 
-  if (event.metaKey && !event.ctrlKey && !event.altKey) {
+  if (event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) {
     const metaSequences: Record<string, string> = {
       Backspace: "\u0015",
-      k: "\u000c",
       a: "\u0001",
       e: "\u0005",
       ArrowLeft: "\u0001",
