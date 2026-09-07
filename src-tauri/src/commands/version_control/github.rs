@@ -482,6 +482,31 @@ pub async fn github_get_workflow_run_details(
 }
 
 #[tauri::command]
+pub async fn github_rerun_workflow_run(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   run_id: i64,
+   failed_jobs_only: bool,
+) -> Result<(), String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_rerun_workflow_run(repo_path, run_id, failed_jobs_only, github_token)
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_cancel_workflow_run(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   run_id: i64,
+) -> Result<(), String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_cancel_workflow_run(repo_path, run_id, github_token))
+      .await
+}
+
+#[tauri::command]
 pub async fn github_get_workflow_job_logs(
    app: crate::app_runtime::AppHandle,
    repo_path: String,

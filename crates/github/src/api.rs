@@ -52,7 +52,7 @@ struct GitHubApi {
    github_token: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 struct RestUser {
    login: String,
    avatar_url: Option<String>,
@@ -248,9 +248,20 @@ struct RestWorkflowRun {
    conclusion: Option<String>,
    created_at: Option<String>,
    updated_at: Option<String>,
+   run_started_at: Option<String>,
+   run_number: Option<i64>,
+   run_attempt: Option<i64>,
+   workflow_id: Option<i64>,
+   actor: Option<RestUser>,
+   head_commit: Option<RestHeadCommit>,
    html_url: Option<String>,
    head_branch: Option<String>,
    head_sha: Option<String>,
+}
+
+#[derive(Clone, Deserialize)]
+struct RestHeadCommit {
+   message: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -273,6 +284,8 @@ struct RestWorkflowStep {
    status: Option<String>,
    conclusion: Option<String>,
    number: Option<i64>,
+   started_at: Option<String>,
+   completed_at: Option<String>,
 }
 
 impl GitHubApi {
@@ -870,6 +883,20 @@ fn load_issue_details(
    ))
 }
 
+fn head_commit_summary(commit: Option<RestHeadCommit>) -> Option<String> {
+   commit
+      .and_then(|commit| commit.message)
+      .map(|message| {
+         message
+            .lines()
+            .next()
+            .unwrap_or_default()
+            .trim()
+            .to_string()
+      })
+      .filter(|summary| !summary.is_empty())
+}
+
 fn workflow_run_from_rest(run: RestWorkflowRun) -> WorkflowRunListItem {
    WorkflowRunListItem {
       database_id: run.id,
@@ -880,6 +907,13 @@ fn workflow_run_from_rest(run: RestWorkflowRun) -> WorkflowRunListItem {
       status: run.status,
       conclusion: run.conclusion,
       updated_at: run.updated_at,
+      created_at: run.created_at,
+      run_started_at: run.run_started_at,
+      run_number: run.run_number,
+      run_attempt: run.run_attempt,
+      workflow_id: run.workflow_id,
+      actor: run.actor.map(|actor| user_to_author(Some(actor))),
+      head_commit_message: head_commit_summary(run.head_commit),
       url: run.html_url.unwrap_or_default(),
       head_branch: run.head_branch,
       head_sha: run.head_sha,
@@ -909,6 +943,12 @@ fn workflow_details_from_rest(
       conclusion: run.conclusion,
       created_at: run.created_at,
       updated_at: run.updated_at,
+      run_started_at: run.run_started_at,
+      run_number: run.run_number,
+      run_attempt: run.run_attempt,
+      workflow_id: run.workflow_id,
+      actor: run.actor.map(|actor| user_to_author(Some(actor))),
+      head_commit_message: head_commit_summary(run.head_commit),
       url: run.html_url.unwrap_or_default(),
       head_branch: run.head_branch,
       head_sha: run.head_sha,
@@ -936,6 +976,8 @@ fn workflow_job_from_rest(job: RestWorkflowJob) -> WorkflowRunJob {
             status: step.status,
             conclusion: step.conclusion,
             number: step.number,
+            started_at: step.started_at,
+            completed_at: step.completed_at,
          })
          .collect(),
    }
@@ -1968,6 +2010,38 @@ pub fn github_get_workflow_run_details(
    ))
 }
 
+pub fn github_rerun_workflow_run(
+   repo_path_value: String,
+   run_id: i64,
+   failed_jobs_only: bool,
+   github_token: Option<String>,
+) -> Result<(), String> {
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let action = if failed_jobs_only {
+      "rerun-failed-jobs"
+   } else {
+      "rerun"
+   };
+   api.post_empty(
+      &repo_path(&slug, &format!("actions/runs/{run_id}/{action}")),
+      &serde_json::json!({}),
+   )
+}
+
+pub fn github_cancel_workflow_run(
+   repo_path_value: String,
+   run_id: i64,
+   github_token: Option<String>,
+) -> Result<(), String> {
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   api.post_empty(
+      &repo_path(&slug, &format!("actions/runs/{run_id}/cancel")),
+      &serde_json::json!({}),
+   )
+}
+
 pub fn github_get_workflow_job_logs(
    repo_path_value: String,
    job_id: i64,
@@ -2007,6 +2081,12 @@ mod api_tests {
          conclusion: Some(conclusion.to_string()),
          created_at: None,
          updated_at: Some(updated_at.to_string()),
+         run_started_at: None,
+         run_number: None,
+         run_attempt: None,
+         workflow_id: None,
+         actor: None,
+         head_commit: None,
          html_url: None,
          head_branch: Some(branch.to_string()),
          head_sha: None,

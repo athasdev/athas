@@ -308,6 +308,10 @@ pub struct WorkflowRunStep {
    pub conclusion: Option<String>,
    #[serde(default)]
    pub number: Option<i64>,
+   #[serde(rename = "startedAt", default)]
+   pub started_at: Option<String>,
+   #[serde(rename = "completedAt", default)]
+   pub completed_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -354,6 +358,18 @@ pub struct WorkflowRunDetails {
    pub created_at: Option<String>,
    #[serde(rename = "updatedAt", default)]
    pub updated_at: Option<String>,
+   #[serde(rename = "runStartedAt", default)]
+   pub run_started_at: Option<String>,
+   #[serde(rename = "runNumber", default)]
+   pub run_number: Option<i64>,
+   #[serde(rename = "runAttempt", default)]
+   pub run_attempt: Option<i64>,
+   #[serde(rename = "workflowId", default)]
+   pub workflow_id: Option<i64>,
+   #[serde(default)]
+   pub actor: Option<PullRequestAuthor>,
+   #[serde(rename = "headCommitMessage", default)]
+   pub head_commit_message: Option<String>,
    #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub url: String,
    #[serde(rename = "headBranch", default)]
@@ -382,6 +398,20 @@ pub struct WorkflowRunListItem {
    pub conclusion: Option<String>,
    #[serde(rename = "updatedAt", default)]
    pub updated_at: Option<String>,
+   #[serde(rename = "createdAt", default)]
+   pub created_at: Option<String>,
+   #[serde(rename = "runStartedAt", default)]
+   pub run_started_at: Option<String>,
+   #[serde(rename = "runNumber", default)]
+   pub run_number: Option<i64>,
+   #[serde(rename = "runAttempt", default)]
+   pub run_attempt: Option<i64>,
+   #[serde(rename = "workflowId", default)]
+   pub workflow_id: Option<i64>,
+   #[serde(default)]
+   pub actor: Option<PullRequestAuthor>,
+   #[serde(rename = "headCommitMessage", default)]
+   pub head_commit_message: Option<String>,
    #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub url: String,
    #[serde(rename = "headBranch", default)]

@@ -174,6 +174,8 @@ fn main() {
          github_get_issue_details,
          github_get_workflow_run_details,
          github_get_workflow_job_logs,
+         github_rerun_workflow_run,
+         github_cancel_workflow_run,
          // AI Provider token commands
          store_ai_provider_token,
          get_ai_provider_token,
