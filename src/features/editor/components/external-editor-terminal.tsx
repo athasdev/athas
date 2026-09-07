@@ -2,14 +2,19 @@ import { invoke } from "@tauri-apps/api/core";
 import { ClipboardAddon, type ClipboardSelectionType } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
-import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal } from "@xterm/xterm";
 import { useCallback, useEffect, useRef } from "react";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useTerminalTheme } from "@/features/terminal/hooks/use-terminal-theme";
-import { loadWebglRenderer } from "@/features/terminal/hooks/use-terminal-addons";
+import {
+  createTerminalLinkHandler,
+  loadWebglRenderer,
+  loadWebLinksAddon,
+} from "@/features/terminal/hooks/use-terminal-addons";
+import { TerminalLinkTooltip } from "@/features/terminal/lib/terminal-link-tooltip";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useTerminalWriteBuffer } from "@/features/terminal/hooks/use-terminal-write-buffer";
 import type { TerminalSize } from "@/features/terminal/types/terminal.types";
 import { buildTerminalFontFamily } from "@/features/terminal/utils/resolve-font";
@@ -142,7 +147,21 @@ export const ExternalEditorTerminal = ({
 
     isInitializingRef.current = true;
 
+    let linkTooltip: TerminalLinkTooltip | null = null;
+    const linkOptions = {
+      get tooltip() {
+        if (!linkTooltip) throw new Error("Terminal link tooltip is not ready.");
+        return linkTooltip;
+      },
+      getWorkspaceRoot: () => rootFolderPath || undefined,
+      openFile: async (link: { path: string; line?: number; column?: number }) => {
+        await useFileSystemStore
+          .getState()
+          .handleFileSelect(link.path, false, link.line, link.column);
+      },
+    };
     const terminal = new Terminal({
+      linkHandler: createTerminalLinkHandler(linkOptions),
       cursorBlink: true,
       fontSize: editorFontSize,
       fontFamily: buildTerminalFontFamily(editorFontFamily),
@@ -156,7 +175,6 @@ export const ExternalEditorTerminal = ({
     });
 
     const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon();
     const unicodeAddon = new UnicodeGraphemesAddon();
     const clipboardAddon = new ClipboardAddon(undefined, {
       readText: async () => "",
@@ -166,13 +184,14 @@ export const ExternalEditorTerminal = ({
     });
 
     terminal.loadAddon(fitAddon);
-    terminal.loadAddon(webLinksAddon);
+    loadWebLinksAddon(terminal, linkOptions);
     terminal.loadAddon(unicodeAddon);
     terminal.loadAddon(clipboardAddon);
 
     terminal.unicode.activeVersion = TERMINAL_UNICODE_VERSION;
 
     terminal.open(terminalRef.current);
+    linkTooltip = new TerminalLinkTooltip(terminal);
     loadWebglRenderer(terminal, scheduleFit);
 
     xtermRef.current = terminal;
@@ -269,6 +288,7 @@ export const ExternalEditorTerminal = ({
       if (outputPausedRef.current) setOutputPaused(false);
       titleDisposable.dispose();
       unsubscribeEvents();
+      linkTooltip?.dispose();
     };
 
     isInitializingRef.current = false;
@@ -292,6 +312,7 @@ export const ExternalEditorTerminal = ({
     fileName,
     getEditorCommand,
     onEditorExit,
+    rootFolderPath,
     scheduleFit,
     updateExternalEditorBufferTitle,
     write,
