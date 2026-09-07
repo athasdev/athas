@@ -13,9 +13,21 @@ const eventStreams = new Map<string, TerminalEventStream>();
 const TERMINAL_OUTPUT_HIGH_WATERMARK = 500_000;
 const TERMINAL_OUTPUT_LOW_WATERMARK = 100_000;
 
+export type TerminalChannelMessage = ArrayBuffer | Uint8Array | TerminalEvent;
+
 export interface PendingTerminalEventChannel {
-  channel: Channel<TerminalEvent>;
+  channel: Channel<TerminalChannelMessage>;
   bind: (connectionId: string) => void;
+}
+
+export function toTerminalEvent(message: TerminalChannelMessage): TerminalEvent {
+  if (message instanceof ArrayBuffer) {
+    return { event: "output", data: new Uint8Array(message) };
+  }
+  if (message instanceof Uint8Array) {
+    return { event: "output", data: message };
+  }
+  return message;
 }
 
 export function createTerminalEventChannel(): PendingTerminalEventChannel {
@@ -25,7 +37,8 @@ export function createTerminalEventChannel(): PendingTerminalEventChannel {
   };
   let connectionId: string | null = null;
 
-  const channel = new Channel<TerminalEvent>((event) => {
+  const channel = new Channel<TerminalChannelMessage>((message) => {
+    const event = toTerminalEvent(message);
     if (!connectionId) {
       stream.pending.push(event);
       return;

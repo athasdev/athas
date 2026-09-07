@@ -1,13 +1,15 @@
 use crate::app_runtime::AppHandle;
 use athas_terminal::{
-   TerminalConfig, TerminalEvent, TerminalEventHandler, TerminalInput, TerminalManager,
-   TerminalSize, shell::Shell,
+   TerminalConfig, TerminalEventHandler, TerminalInput, TerminalManager, TerminalSize, shell::Shell,
 };
 use std::{
    collections::{HashMap, HashSet},
    sync::{Arc, Mutex},
 };
-use tauri::{State, ipc::Channel};
+use tauri::{
+   State,
+   ipc::{Channel, InvokeResponseBody},
+};
 
 #[derive(Default)]
 pub(crate) struct FrontendTerminalSessions {
@@ -149,7 +151,7 @@ pub fn warm_terminal_environment(terminal_manager: State<'_, Arc<TerminalManager
 #[tauri::command]
 pub async fn create_terminal(
    mut config: TerminalConfig,
-   on_event: Channel<TerminalEvent>,
+   on_event: Channel<InvokeResponseBody>,
    window_label: String,
    frontend_session_id: String,
    app_handle: AppHandle,
@@ -157,7 +159,8 @@ pub async fn create_terminal(
    terminal_manager: State<'_, Arc<TerminalManager>>,
 ) -> Result<String, String> {
    config.term_program_version = Some(app_handle.package_info().version.to_string());
-   let event_handler: TerminalEventHandler = Arc::new(move |_, event| on_event.send(event).is_ok());
+   let event_handler: TerminalEventHandler =
+      Arc::new(move |_, event| on_event.send(event.into_ipc_body()).is_ok());
    let connection_id = terminal_manager
       .create_terminal(config, event_handler)
       .map_err(|e| e.to_string())?;

@@ -18,10 +18,13 @@ use crate::{
       set_remote_terminal_paused, write_remote_terminal,
    },
 };
-use athas_terminal::{TerminalEvent, TerminalInput, TerminalSize};
+use athas_terminal::{TerminalInput, TerminalSize};
 pub use file_ops::RemoteFileEntry;
 use serde::{Deserialize, Serialize};
-use tauri::{Manager, ipc::Channel};
+use tauri::{
+   Manager,
+   ipc::{Channel, InvokeResponseBody},
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SshConnection {
@@ -226,7 +229,7 @@ pub async fn create_remote_terminal(
    working_directory: Option<String>,
    size: TerminalSize,
    term_program_version: String,
-   on_event: Channel<TerminalEvent>,
+   on_event: Channel<InvokeResponseBody>,
 ) -> Result<String, String> {
    create_remote_terminal_inner(
       host,

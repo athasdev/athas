@@ -24,10 +24,10 @@ import {
 describe("terminal protocol", () => {
   it("preserves channel event order across creation and subscription", () => {
     const events = createTerminalEventChannel();
-    const output: TerminalEvent = { event: "output", data: [0xf0, 0x9f] };
+    const output: TerminalEvent = { event: "output", data: new Uint8Array([0xf0, 0x9f]) };
     const closed: TerminalEvent = { event: "closed" };
 
-    events.channel.onmessage(output);
+    events.channel.onmessage(new Uint8Array([0xf0, 0x9f]).buffer);
     events.bind("terminal-1");
     events.channel.onmessage(closed);
 

@@ -5,7 +5,8 @@ import { closeTerminalConnection } from "../services/terminal-connection-lifecyc
 import type { IDisposable, Terminal } from "@xterm/xterm";
 import type { TerminalInput, TerminalSize } from "../types/terminal.types";
 import type { TerminalTheme } from "./use-terminal-theme";
-import { TerminalOscStream } from "../utils/terminal-osc-stream";
+import { parseOsc7Directory } from "../utils/terminal-osc";
+import { normalizeTerminalTitle } from "../utils/terminal-title";
 import {
   getTerminalOutputFlowAction,
   getTerminalSize,
@@ -57,8 +58,6 @@ export function useTerminalConnection({
   const lastSizeRef = useRef<TerminalSize | null>(null);
   const queuedOutputBytesRef = useRef(0);
   const outputPausedRef = useRef(false);
-  const outputDecoderRef = useRef(new TextDecoder());
-  const oscStreamRef = useRef(new TerminalOscStream());
 
   const writeInput = useCallback(
     async (activeConnectionId: string, input: TerminalInput) => {
@@ -137,8 +136,6 @@ export function useTerminalConnection({
     lastSizeRef.current = null;
     queuedOutputBytesRef.current = 0;
     outputPausedRef.current = false;
-    outputDecoderRef.current = new TextDecoder();
-    oscStreamRef.current.reset();
     if (connectionId) updateSession(sessionId, { title: "" });
     void flush();
   }, [connectionId, flush, sessionId, updateSession]);
@@ -152,6 +149,18 @@ export function useTerminalConnection({
     if (terminal.onBinary) disposables.push(terminal.onBinary(writeBinary));
     disposables.push(terminal.onResize(() => sendTerminalSize(terminal)));
     disposables.push(
+      terminal.onTitleChange((title) => {
+        updateSession(sessionId, { title: normalizeTerminalTitle(title) ?? "" });
+      }),
+    );
+    disposables.push(
+      terminal.parser.registerOscHandler(7, (payload) => {
+        const currentDirectory = parseOsc7Directory(payload);
+        if (currentDirectory) updateSession(sessionId, { currentDirectory });
+        return true;
+      }),
+    );
+    disposables.push(
       terminal.onSelectionChange(() => {
         const selection = terminal.getSelection();
         if (selection) updateSession(sessionId, { selection });
@@ -163,7 +172,7 @@ export function useTerminalConnection({
 
     const unsubscribeEvents = subscribeToTerminalEvents(connectionId, (event) => {
       if (event.event === "output") {
-        const bytes = Uint8Array.from(event.data);
+        const bytes = event.data;
         queuedOutputBytesRef.current += bytes.byteLength;
 
         if (
@@ -171,12 +180,6 @@ export function useTerminalConnection({
           "pause"
         ) {
           setOutputPaused(true);
-        }
-
-        const decoded = outputDecoderRef.current.decode(bytes, { stream: true });
-        const oscUpdates = oscStreamRef.current.feed(decoded);
-        if (oscUpdates.title !== undefined || oscUpdates.currentDirectory !== undefined) {
-          updateSession(sessionId, oscUpdates);
         }
 
         terminal.write(bytes, () => {

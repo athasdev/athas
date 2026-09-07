@@ -12,8 +12,11 @@ use athas_remote::{
    ssh_read_directory as remote_ssh_read_directory, ssh_read_file as remote_ssh_read_file,
    ssh_rename_path as remote_ssh_rename_path, ssh_write_file as remote_ssh_write_file,
 };
-use athas_terminal::{TerminalEvent, TerminalInput, TerminalSize};
-use tauri::{Emitter, State, ipc::Channel};
+use athas_terminal::{TerminalInput, TerminalSize};
+use tauri::{
+   Emitter, State,
+   ipc::{Channel, InvokeResponseBody},
+};
 
 #[tauri::command]
 pub async fn ssh_connect(
@@ -162,7 +165,7 @@ pub async fn create_remote_terminal(
    key_path: Option<String>,
    working_directory: Option<String>,
    size: TerminalSize,
-   on_event: Channel<TerminalEvent>,
+   on_event: Channel<InvokeResponseBody>,
    window_label: String,
    frontend_session_id: String,
    frontend_sessions: State<'_, FrontendTerminalSessions>,

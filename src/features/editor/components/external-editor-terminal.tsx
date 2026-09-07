@@ -15,7 +15,7 @@ import type { TerminalSize } from "@/features/terminal/types/terminal.types";
 import { buildTerminalFontFamily } from "@/features/terminal/utils/resolve-font";
 import { getTerminalKeyAction } from "@/features/terminal/utils/terminal-keyboard";
 import { getTerminalCompatibilityOptions } from "@/features/terminal/utils/terminal-options";
-import { TerminalOscStream } from "@/features/terminal/utils/terminal-osc-stream";
+import { normalizeTerminalTitle } from "@/features/terminal/utils/terminal-title";
 import {
   getTerminalOutputFlowAction,
   getTerminalSize,
@@ -53,8 +53,6 @@ export const ExternalEditorTerminal = ({
   const lastSizeRef = useRef<TerminalSize | null>(null);
   const queuedOutputBytesRef = useRef(0);
   const outputPausedRef = useRef(false);
-  const outputDecoderRef = useRef(new TextDecoder());
-  const oscStreamRef = useRef(new TerminalOscStream());
 
   const editorFontSize = useEditorSettingsStore.use.fontSize();
   const editorFontFamily = useEditorSettingsStore.use.fontFamily();
@@ -225,12 +223,14 @@ export const ExternalEditorTerminal = ({
       });
     };
 
+    const titleDisposable = terminal.onTitleChange((rawTitle) => {
+      const title = normalizeTerminalTitle(rawTitle);
+      if (title && title !== fileName) updateExternalEditorBufferTitle(title);
+    });
+
     const unsubscribeEvents = subscribeToTerminalEvents(terminalConnectionId, (event) => {
       if (event.event === "output") {
-        const bytes = Uint8Array.from(event.data);
-        const decoded = outputDecoderRef.current.decode(bytes, { stream: true });
-        const title = oscStreamRef.current.feed(decoded).title;
-        if (title && title !== fileName) updateExternalEditorBufferTitle(title);
+        const bytes = event.data;
         queuedOutputBytesRef.current += bytes.byteLength;
         if (
           getTerminalOutputFlowAction(queuedOutputBytesRef.current, outputPausedRef.current) ===
@@ -266,6 +266,7 @@ export const ExternalEditorTerminal = ({
 
     (terminal as unknown as { _cleanupListeners: () => void })._cleanupListeners = () => {
       if (outputPausedRef.current) setOutputPaused(false);
+      titleDisposable.dispose();
       unsubscribeEvents();
     };
 

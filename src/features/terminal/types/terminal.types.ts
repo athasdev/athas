@@ -58,7 +58,7 @@ export interface TerminalSize {
 export type TerminalInput = { kind: "text"; data: string } | { kind: "binary"; data: number[] };
 
 export type TerminalEvent =
-  | { event: "output"; data: number[] }
+  | { event: "output"; data: Uint8Array }
   | { event: "error"; message: string }
   | { event: "exit"; exitCode?: number | null; signal?: string | null }
   | { event: "closed" };

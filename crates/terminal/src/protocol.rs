@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Condvar, Mutex};
+use tauri::ipc::InvokeResponseBody;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -65,6 +66,19 @@ pub enum TerminalEvent {
       signal: Option<String>,
    },
    Closed,
+}
+
+impl TerminalEvent {
+   /// Output travels as raw bytes so the webview receives an ArrayBuffer instead
+   /// of a JSON array with one number per byte; every other event stays JSON.
+   pub fn into_ipc_body(self) -> InvokeResponseBody {
+      match self {
+         Self::Output { data } => InvokeResponseBody::Raw(data),
+         event => InvokeResponseBody::Json(
+            serde_json::to_string(&event).unwrap_or_else(|_| "{\"event\":\"closed\"}".to_string()),
+         ),
+      }
+   }
 }
 
 pub type TerminalEventHandler = Arc<dyn Fn(&str, TerminalEvent) -> bool + Send + Sync>;
