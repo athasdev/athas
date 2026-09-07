@@ -161,6 +161,8 @@ export interface WorkflowRunStep {
   status: string | null;
   conclusion: string | null;
   number?: number | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
 }
 
 export interface WorkflowRunJob {
@@ -176,35 +178,32 @@ export interface WorkflowRunJob {
   steps: WorkflowRunStep[];
 }
 
-export interface WorkflowRunDetails {
+export interface WorkflowRunSummary {
   databaseId: number;
-  name: string | null;
   displayTitle: string | null;
+  name: string | null;
   workflowName: string | null;
   event: string | null;
   status: string | null;
   conclusion: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  runStartedAt: string | null;
+  runNumber: number | null;
+  runAttempt: number | null;
+  workflowId: number | null;
+  actor: PullRequestAuthor | null;
+  headCommitMessage: string | null;
   url: string;
   headBranch: string | null;
   headSha: string | null;
+}
+
+export interface WorkflowRunDetails extends WorkflowRunSummary {
   jobs: WorkflowRunJob[];
 }
 
-export interface WorkflowRunListItem {
-  databaseId: number;
-  displayTitle: string | null;
-  name: string | null;
-  workflowName: string | null;
-  event: string | null;
-  status: string | null;
-  conclusion: string | null;
-  updatedAt: string | null;
-  url: string;
-  headBranch: string | null;
-  headSha: string | null;
-}
+export type WorkflowRunListItem = WorkflowRunSummary;
 
 export interface WorkflowListItem {
   id: number;
