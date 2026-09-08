@@ -726,23 +726,21 @@ function DropdownMenuTrigger(props: DropdownMenuPrimitive.Trigger.Props) {
 }
 
 function DropdownMenuSearch({
-  className,
-  containerClassName,
   onKeyDown,
-  leftIcon = SearchIcon,
-  variant = "ghost",
   ...props
-}: InputProps) {
+}: Omit<
+  InputProps,
+  "className" | "style" | "variant" | "shape" | "font" | "leftIcon" | "rightIcon"
+> & { className?: never; style?: never }) {
   return (
     <div
       data-slot="dropdown-menu-search"
       className="sticky top-0 z-20 shrink-0 overflow-clip border-border/60 border-b bg-surface p-1"
     >
       <Input
-        leftIcon={leftIcon}
-        variant={variant}
-        containerClassName={containerClassName}
-        className={cn("ui-text-chrome", className)}
+        leftIcon={SearchIcon}
+        variant="ghost"
+        className="ui-text-chrome"
         aria-label={props["aria-label"] ?? props.placeholder ?? "Search menu"}
         onKeyDown={(event) => {
           onKeyDown?.(event);

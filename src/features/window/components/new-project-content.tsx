@@ -399,7 +399,7 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
                   setErrorMessage("");
                 }}
                 placeholder="Choose a parent folder"
-                className="font-mono"
+                font="mono"
               />
               <InputGroupAddon align="inline-end">
                 <InputGroupButton

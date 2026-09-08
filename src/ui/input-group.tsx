@@ -77,23 +77,16 @@ function InputGroupAddon({
 }
 
 function InputGroupButton({
-  className,
   type = "button",
   variant = "ghost",
   iconOnly = false,
   ...props
-}: Omit<ButtonProps, "type"> & {
+}: Omit<ButtonProps, "type" | "size" | "className" | "style" | "render"> & {
+  className?: never;
+  style?: never;
   type?: "button" | "submit" | "reset";
 }) {
-  return (
-    <Button
-      type={type}
-      variant={variant}
-      iconOnly={iconOnly}
-      className={cn("h-5 shadow-none", iconOnly ? "w-5" : "px-1.5", className)}
-      {...props}
-    />
-  );
+  return <Button type={type} variant={variant} iconOnly={iconOnly} size="compact" {...props} />;
 }
 
 function InputGroupText({ className, ...props }: ComponentProps<"span">) {

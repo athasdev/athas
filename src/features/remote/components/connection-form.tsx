@@ -176,7 +176,7 @@ export default function ConnectionForm({
                 onChange={(event) => onChange({ keyPath: event.target.value })}
                 placeholder="~/.ssh/id_ed25519"
                 disabled={disabled}
-                className="font-mono"
+                font="mono"
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}

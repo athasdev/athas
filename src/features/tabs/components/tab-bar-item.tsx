@@ -241,7 +241,6 @@ const TabBarItem = memo(function TabBarItem({
             onDoubleClick={(event) => event.stopPropagation()}
             tone={isActive ? "default" : "muted"}
             width="content"
-            className="min-w-0 max-w-full text-left"
             placeholder="Terminal name"
             aria-label={`Rename ${displayName}`}
             spellCheck={false}

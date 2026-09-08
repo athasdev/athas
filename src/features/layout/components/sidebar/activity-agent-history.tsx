@@ -81,7 +81,6 @@ export function ActivityAgentRow({
     return (
       <SidebarListEditor leading={<ProviderIcon providerId={chat.agentId || "custom"} size={16} />}>
         <InlineRenameInput
-          className="select-text"
           value={renameValue}
           onValueChange={setRenameValue}
           onSubmit={(nextTitle) => {

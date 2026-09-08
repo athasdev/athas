@@ -9,18 +9,23 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
   shape?: "default" | "pill";
   leftIcon?: Icon;
   rightIcon?: Icon;
-  containerClassName?: string;
+  font?: "default" | "mono";
+  containerClassName?: never;
 }
 
 const inputVariants = cva(
   [
-    "h-7 w-full min-w-0 font-sans ui-text-sm text-foreground outline-none transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth disabled:cursor-not-allowed disabled:opacity-50",
+    "h-7 w-full min-w-0 ui-text-sm text-foreground outline-none transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth disabled:cursor-not-allowed disabled:opacity-50",
     "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
     "placeholder:text-subtle-foreground",
     "aria-invalid:ring-1 aria-invalid:ring-destructive/45 aria-invalid:focus:ring-destructive/45",
   ],
   {
     variants: {
+      font: {
+        default: "font-sans",
+        mono: "font-mono",
+      },
       variant: {
         default:
           "rounded-chrome border-0 bg-surface focus:border-0 focus:bg-surface focus:ring-1 focus:ring-border-strong/35",
@@ -55,32 +60,48 @@ const inputVariants = cva(
   },
 );
 
-const inlineRenameInputVariants = cva("font-sans ui-text-sm", {
-  variants: {
-    appearance: {
-      inline: "px-0",
-      field: "",
+const inlineRenameInputVariants = cva(
+  "relative z-1 max-w-full select-text text-left font-sans ui-text-sm",
+  {
+    variants: {
+      appearance: {
+        inline: "px-0",
+        field: "",
+      },
+      tone: {
+        default: "text-foreground",
+        muted: "text-subtle-foreground focus:text-foreground",
+      },
+      width: {
+        full: "w-full flex-1",
+        content: "w-auto min-w-[1ch] field-sizing-content",
+      },
     },
-    tone: {
-      default: "text-foreground",
-      muted: "text-subtle-foreground focus:text-foreground",
-    },
-    width: {
-      full: "w-full",
-      content: "w-auto min-w-[1ch] max-w-full field-sizing-content",
+    defaultVariants: {
+      appearance: "inline",
+      tone: "default",
+      width: "full",
     },
   },
-  defaultVariants: {
-    appearance: "inline",
-    tone: "default",
-    width: "full",
-  },
-});
+);
 
 type InlineRenameInputProps = Omit<
   InputProps,
-  "onBlur" | "onChange" | "onKeyDown" | "onSubmit" | "value" | "variant"
+  | "onBlur"
+  | "onChange"
+  | "onKeyDown"
+  | "onSubmit"
+  | "value"
+  | "variant"
+  | "className"
+  | "style"
+  | "shape"
+  | "font"
+  | "leftIcon"
+  | "rightIcon"
 > & {
+  className?: never;
+  style?: never;
   value: string;
   onValueChange: (value: string) => void;
   onSubmit: (value: string) => void;
@@ -98,7 +119,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     className,
     leftIcon: LeftIcon,
     rightIcon: RightIcon,
-    containerClassName,
+    font = "default",
     autoComplete = "off",
     autoCorrect = "off",
     spellCheck = "false",
@@ -116,14 +137,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         autoComplete={autoComplete}
         autoCorrect={autoCorrect}
         spellCheck={spellCheck}
-        className={cn(inputVariants({ variant, shape, hasLeftIcon, hasRightIcon }), className)}
+        className={cn(
+          inputVariants({ variant, shape, font, hasLeftIcon, hasRightIcon }),
+          className,
+        )}
         {...props}
       />
     );
   }
 
   return (
-    <div className={cn("relative", containerClassName)}>
+    <div className="relative w-full min-w-0">
       {LeftIcon && (
         <LeftIcon
           className="-translate-y-1/2 absolute top-1/2 left-2 text-subtle-foreground"
@@ -135,7 +159,10 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         autoComplete={autoComplete}
         autoCorrect={autoCorrect}
         spellCheck={spellCheck}
-        className={cn(inputVariants({ variant, shape, hasLeftIcon, hasRightIcon }), className)}
+        className={cn(
+          inputVariants({ variant, shape, font, hasLeftIcon, hasRightIcon }),
+          className,
+        )}
         {...props}
       />
       {RightIcon && (
@@ -157,7 +184,6 @@ export function InlineRenameInput({
   appearance = "inline",
   tone = "default",
   width = "full",
-  className,
   ...props
 }: InlineRenameInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -208,7 +234,7 @@ export function InlineRenameInput({
         }
       }}
       variant={appearance === "field" ? "default" : "inline"}
-      className={cn(inlineRenameInputVariants({ appearance, tone, width }), className)}
+      className={inlineRenameInputVariants({ appearance, tone, width })}
       {...props}
     />
   );

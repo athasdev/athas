@@ -37,7 +37,6 @@ export function ActivityTerminalRow({
     return (
       <SidebarListEditor leading={<TerminalWindowIcon />}>
         <InlineRenameInput
-          className="select-text"
           value={renameValue}
           onValueChange={setRenameValue}
           onSubmit={(nextName) => {

@@ -190,7 +190,7 @@ export default function LinuxFolderPickerDialog() {
               onChange={(event) => setPathInput(event.target.value)}
               aria-label="Folder path"
               spellCheck={false}
-              className="font-mono"
+              font="mono"
             />
             <Button type="submit" variant="default">
               Go

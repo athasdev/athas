@@ -166,7 +166,6 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
             onDoubleClick={(e) => e.stopPropagation()}
             tone={isActive ? "default" : "muted"}
             width="content"
-            className="min-w-0 max-w-full text-left"
             placeholder="Terminal name"
             aria-label={`Rename ${displayName}`}
             spellCheck={false}

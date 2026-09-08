@@ -288,7 +288,6 @@ export const KeyboardSettings = () => {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 leftIcon={SearchIcon}
-                containerClassName="w-full"
               />
             </div>
 

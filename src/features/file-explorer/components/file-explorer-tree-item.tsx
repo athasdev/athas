@@ -186,7 +186,6 @@ function FileExplorerTreeItemComponent({
             onValueChange={onEditingValueChange}
             onSubmit={(value) => onSubmit(value, file)}
             onCancel={() => onCancel(file)}
-            className="relative z-1 min-w-0 flex-1"
             placeholder={file.isDir ? "folder name" : "file name"}
             aria-label={
               file.isRenaming ? `Rename ${file.name}` : `Name new ${file.isDir ? "folder" : "file"}`

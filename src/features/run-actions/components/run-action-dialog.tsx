@@ -71,7 +71,7 @@ export default function RunActionDialog({
             value={draft.command}
             onChange={(event) => onChange({ ...draft, command: event.target.value })}
             placeholder="bun run dev"
-            className="font-mono"
+            font="mono"
             onKeyDown={(event) => {
               if (event.key === "Enter" && canSave) {
                 event.preventDefault();
@@ -88,7 +88,7 @@ export default function RunActionDialog({
             value={draft.workingDirectory}
             onChange={(event) => onChange({ ...draft, workingDirectory: event.target.value })}
             placeholder="."
-            className="font-mono"
+            font="mono"
           />
           <FieldDescription>
             Leave empty for the project root, or enter a relative path such as{" "}
