@@ -1,9 +1,8 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type { HTMLAttributes } from "react";
-import { cn } from "@/utils/cn";
 
 const badgeVariants = cva(
-  "font-sans ui-text-sm inline-flex h-6 items-center justify-center rounded-chrome border-0 px-1.5 py-0.5 font-normal leading-none",
+  "ui-text-sm inline-flex max-w-full items-center justify-center gap-1 rounded-chrome border-0 px-1.5 py-0.5 font-normal leading-none tabular-nums",
   {
     variants: {
       variant: {
@@ -14,17 +13,43 @@ const badgeVariants = cva(
         warning: "bg-warning/10 text-warning",
         error: "bg-destructive/8 text-destructive",
       },
+      size: { default: "h-6", compact: "h-5" },
+      font: { default: "font-sans", mono: "font-mono" },
+      truncate: { true: "min-w-0 shrink overflow-hidden", false: "shrink-0" },
     },
-    defaultVariants: {
-      variant: "default",
-    },
+    defaultVariants: { variant: "default", size: "default", font: "default", truncate: false },
   },
 );
 
-type BadgeProps = HTMLAttributes<HTMLSpanElement> & VariantProps<typeof badgeVariants>;
+type BadgeProps = Omit<HTMLAttributes<HTMLSpanElement>, "className" | "style" | "color"> &
+  VariantProps<typeof badgeVariants> & {
+    className?: never;
+    style?: never;
+    labelColor?: string;
+  };
 
-export default function Badge({ className, variant, ...props }: BadgeProps) {
-  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
+export default function Badge({
+  variant,
+  size,
+  font,
+  truncate,
+  labelColor,
+  children,
+  ...props
+}: BadgeProps) {
+  const color =
+    labelColor && /^#?[\da-f]{6}$/i.test(labelColor)
+      ? `#${labelColor.replace(/^#/, "")}`
+      : undefined;
+  return (
+    <span
+      {...props}
+      className={badgeVariants({ variant, size, font, truncate })}
+      style={color ? { color, backgroundColor: `${color}20` } : undefined}
+    >
+      {truncate ? <span className="min-w-0 truncate">{children}</span> : children}
+    </span>
+  );
 }
 
 export { badgeVariants };

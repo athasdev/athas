@@ -159,9 +159,9 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
                     </span>
                   </span>
                   {manualRepoPaths.includes(repoPath) ? (
-                    <Badge variant="muted" className="mr-4">
-                      Added
-                    </Badge>
+                    <span className="inline-flex min-w-0 mr-4">
+                      <Badge variant="muted">Added</Badge>
+                    </span>
                   ) : null}
                 </DropdownMenuRadioItem>
               );

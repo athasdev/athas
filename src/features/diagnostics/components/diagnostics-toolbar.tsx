@@ -76,7 +76,7 @@ export function DiagnosticsToolbar({
           >
             <FilterIcon />
           </Button>
-          <Badge className="max-w-56 shrink truncate" title={resultSummary} role="status">
+          <Badge truncate title={resultSummary} role="status">
             {resultLabel}
           </Badge>
           {fileNavigatorAvailable ? (

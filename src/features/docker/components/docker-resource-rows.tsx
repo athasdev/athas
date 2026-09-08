@@ -234,7 +234,7 @@ export function ContainerRow({
       active={selected}
       title={container.name}
       status={
-        <Badge variant={getContainerStateVariant(container)} className="capitalize">
+        <Badge variant={getContainerStateVariant(container)}>
           {container.health ?? container.state}
         </Badge>
       }
@@ -350,9 +350,7 @@ export function ComposeServiceRow({
     <DockerResourceRow
       title={service.name}
       status={
-        <Badge variant={getComposeServiceVariant(service)} className="capitalize">
-          {service.health ?? service.state}
-        </Badge>
+        <Badge variant={getComposeServiceVariant(service)}>{service.health ?? service.state}</Badge>
       }
       actions={
         <ComposeServiceActions

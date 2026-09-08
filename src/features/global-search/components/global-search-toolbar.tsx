@@ -155,7 +155,7 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
             {searchWarning ? (
               <Badge
                 variant="warning"
-                className="max-w-64 shrink truncate"
+                truncate
                 title={searchWarning}
                 role="status"
                 aria-live="polite"
@@ -163,7 +163,7 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
                 {searchWarning}
               </Badge>
             ) : resultLabel ? (
-              <Badge className="max-w-56 shrink truncate" title={resultLabel} role="status">
+              <Badge truncate title={resultLabel} role="status">
                 {resultLabel}
               </Badge>
             ) : null}

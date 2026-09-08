@@ -91,11 +91,7 @@ export function AcpPermissionPrompt({
           <span className="px-1.5 text-subtle-foreground">/</span>
           <span className="font-mono">{summary}</span>
         </div>
-        {queuedCount > 0 ? (
-          <Badge variant="muted" className="shrink-0">
-            +{queuedCount}
-          </Badge>
-        ) : null}
+        {queuedCount > 0 ? <Badge variant="muted">+{queuedCount}</Badge> : null}
         <div className="flex shrink-0 items-center gap-1">
           {options.map((option) => {
             return (

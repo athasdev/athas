@@ -285,9 +285,7 @@ export const AccountMenu = memo(function AccountMenu() {
                   <div className="truncate text-subtle-foreground">{accountDetail}</div>
                 ) : null}
               </div>
-              <Badge variant="muted" className="shrink-0">
-                {planLabel}
-              </Badge>
+              <Badge variant="muted">{planLabel}</Badge>
             </div>
           ) : undefined
         }

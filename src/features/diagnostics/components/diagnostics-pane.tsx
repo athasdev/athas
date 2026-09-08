@@ -986,9 +986,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
                     <span className="flex min-w-0 flex-1 items-center gap-1.5">
                       {group.severity ? getSeverityIcon(group.severity, 13) : null}
                       <span className="min-w-0 flex-1 truncate">{group.label}</span>
-                      <Badge variant="muted" className="shrink-0">
-                        {group.items.length}
-                      </Badge>
+                      <Badge variant="muted">{group.items.length}</Badge>
                     </span>
                   </AccordionTrigger>
                   <AccordionContent>{renderDiagnosticItems(group.items)}</AccordionContent>

@@ -153,7 +153,7 @@ export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CISt
                 </p>
               )}
             </div>
-            <Badge variant={getCheckBadgeVariant(check)} className="capitalize">
+            <Badge variant={getCheckBadgeVariant(check)}>
               {(check.conclusion ?? check.status ?? "pending").toLowerCase()}
             </Badge>
           </button>
@@ -222,7 +222,7 @@ export const MergeStatusBadge = memo(
     const Icon = status.icon;
 
     return (
-      <Badge variant={status.variant} className="gap-1">
+      <Badge variant={status.variant}>
         <Icon />
         <span>{status.text}</span>
       </Badge>
@@ -300,13 +300,9 @@ export const LabelBadges = memo(({ labels, repositoryUrl, kind = "issues" }: Lab
   return (
     <div className="flex flex-wrap items-center gap-1">
       {labels.map((label, idx) => {
-        const style = {
-          backgroundColor: `#${label.color}20`,
-          color: `#${label.color}`,
-        };
         if (!repositoryUrl) {
           return (
-            <Badge key={idx} style={style}>
+            <Badge key={idx} labelColor={label.color}>
               {label.name}
             </Badge>
           );
@@ -319,7 +315,7 @@ export const LabelBadges = memo(({ labels, repositoryUrl, kind = "issues" }: Lab
             onClick={() => void openUrl(getGitHubLabelUrl(repositoryUrl, label.name, kind))}
             className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            <Badge style={style}>{label.name}</Badge>
+            <Badge labelColor={label.color}>{label.name}</Badge>
           </button>
         );
       })}

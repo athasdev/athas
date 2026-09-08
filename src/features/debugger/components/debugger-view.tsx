@@ -90,7 +90,7 @@ function DebugStatusBadge({ status }: { status: "idle" | "running" | "paused" })
   const variant = status === "paused" ? "default" : status === "running" ? "accent" : "muted";
 
   return (
-    <Badge variant={variant} className="gap-1.5 capitalize">
+    <Badge variant={variant}>
       <DebugSessionStatusIcon status={status} />
       {status}
     </Badge>
@@ -483,31 +483,23 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
             <TabsList variant="bare" aria-label="Debugger panels">
               <TabsTrigger value="stack" className="w-fit flex-none">
                 Call Stack
-                <Badge variant="muted" className="tabular-nums">
-                  {stackFrames.length}
-                </Badge>
+                <Badge variant="muted">{stackFrames.length}</Badge>
               </TabsTrigger>
               <TabsTrigger value="variables" className="w-fit flex-none">
                 Variables
-                <Badge variant="muted" className="tabular-nums">
-                  {scopes.length}
-                </Badge>
+                <Badge variant="muted">{scopes.length}</Badge>
               </TabsTrigger>
               <TabsTrigger value="watch" className="w-fit flex-none">
                 Watch
-                <Badge variant="muted" className="tabular-nums">
-                  {watchExpressions.length}
-                </Badge>
+                <Badge variant="muted">{watchExpressions.length}</Badge>
               </TabsTrigger>
               <TabsTrigger value="console" className="w-fit flex-none">
                 Console
-                <Badge variant="muted" className="tabular-nums">
-                  {activeAdapterOutput.length}
-                </Badge>
+                <Badge variant="muted">{activeAdapterOutput.length}</Badge>
               </TabsTrigger>
               <TabsTrigger value="breakpoints" className="w-fit flex-none">
                 Breakpoints
-                <Badge variant="muted" className="tabular-nums">
+                <Badge variant="muted">
                   {sortedBreakpoints.length + enabledExceptionFilters.size}
                 </Badge>
               </TabsTrigger>

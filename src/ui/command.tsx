@@ -64,12 +64,7 @@ CommandHeaderAction.displayName = "CommandHeaderAction";
 
 type CommandHeaderBadgeProps = React.ComponentProps<typeof Badge>;
 
-export const CommandHeaderBadge = ({ className, ...props }: CommandHeaderBadgeProps) => (
-  <Badge
-    className={cn("max-w-40 shrink-0 text-subtle-foreground ui-text-chrome", className)}
-    {...props}
-  />
-);
+export const CommandHeaderBadge = (props: CommandHeaderBadgeProps) => <Badge truncate {...props} />;
 
 CommandHeaderBadge.displayName = "CommandHeaderBadge";
 
@@ -545,8 +540,8 @@ export const CommandItemIcon = ({ className, ...props }: CommandItemIconProps) =
 
 CommandItemIcon.displayName = "CommandItemIcon";
 
-export const CommandItemBadge = ({ className, ...props }: React.ComponentProps<typeof Badge>) => (
-  <Badge className={cn("h-auto max-w-32 shrink-0 gap-1 truncate", className)} {...props} />
+export const CommandItemBadge = (props: React.ComponentProps<typeof Badge>) => (
+  <Badge size="compact" truncate {...props} />
 );
 
 CommandItemBadge.displayName = "CommandItemBadge";

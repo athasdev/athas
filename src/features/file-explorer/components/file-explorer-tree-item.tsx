@@ -240,13 +240,11 @@ function FileExplorerTreeItemComponent({
       }
       trailing={
         formattedDirectorySize === null ? null : (
-          <Badge
-            variant="muted"
-            className="shrink-0 font-mono opacity-0 tabular-nums group-hover/file-tree-row:opacity-100"
-            title={`Folder size: ${formattedDirectorySize}`}
-          >
-            {formattedDirectorySize}
-          </Badge>
+          <span className="inline-flex min-w-0 opacity-0 group-hover/file-tree-row:opacity-100">
+            <Badge variant="muted" font="mono" title={`Folder size: ${formattedDirectorySize}`}>
+              {formattedDirectorySize}
+            </Badge>
+          </span>
         )
       }
     />

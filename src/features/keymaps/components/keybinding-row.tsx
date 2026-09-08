@@ -101,9 +101,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
         </TableCell>
 
         <TableCell>
-          <Badge variant={isUserOverride ? "accent" : "default"} className="h-6 min-w-17 px-2">
-            {sourceLabel}
-          </Badge>
+          <Badge variant={isUserOverride ? "accent" : "default"}>{sourceLabel}</Badge>
         </TableCell>
 
         <TableCell>

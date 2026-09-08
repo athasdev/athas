@@ -77,9 +77,7 @@ function GroupHeader({ label, count }: { label: string; count: number }) {
   return (
     <div className="flex items-center gap-2 px-1">
       <h2 className="font-sans ui-text-sm text-foreground">{label}</h2>
-      <Badge variant="muted" className="tabular-nums">
-        {count}
-      </Badge>
+      <Badge variant="muted">{count}</Badge>
     </div>
   );
 }

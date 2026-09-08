@@ -33,7 +33,6 @@ import { showConfirmDialog } from "@/ui/dialog";
 import { SidebarIconButton, SidebarScrollArea, SidebarToolbar } from "@/ui/sidebar";
 import { SidebarTree, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { compactPathTreeBranch, type PathTreeNode } from "@/features/sidebar/lib/path-tree";
-import { cn } from "@/utils/cn";
 import { createStash } from "../../api/git-stash-api";
 import {
   discardFileChanges,
@@ -375,13 +374,12 @@ const GitStatusPanel = ({
   };
 
   const renderDiffStatsBadge = (stats: GitFileDiffStats, className?: string) => (
-    <Badge
-      variant="default"
-      className={cn("h-5 gap-1 border-border/50 bg-accent/60 tabular-nums", className)}
-    >
-      <span className="text-git-added">+{stats.additions}</span>
-      <span className="text-git-deleted">-{stats.deletions}</span>
-    </Badge>
+    <span className={className}>
+      <Badge variant="muted" size="compact">
+        <span className="text-git-added">+{stats.additions}</span>
+        <span className="text-git-deleted">-{stats.deletions}</span>
+      </Badge>
+    </span>
   );
 
   const renderFolderTree = (tree: GitFolderTree, section: "changes") => {

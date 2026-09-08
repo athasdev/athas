@@ -182,7 +182,7 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
     >
       <div className="mb-7 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Badge variant="muted" className="gap-1">
+          <Badge variant="muted">
             <SparkleIcon />
             Athas Intelligence
           </Badge>

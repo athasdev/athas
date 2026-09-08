@@ -20,15 +20,6 @@ import { cn } from "@/utils/cn";
 import { databaseCodeBlockClassName, databasePanelClassName } from "../../utils/database-surface";
 import { createRedisStore } from "./stores/redis.store";
 
-const TYPE_COLORS: Record<string, string> = {
-  string: "text-primary",
-  list: "text-foreground",
-  set: "text-foreground",
-  hash: "text-foreground",
-  zset: "text-foreground",
-  stream: "text-foreground",
-};
-
 interface RedisViewerProps {
   connectionId: string;
 }
@@ -162,12 +153,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 )}
                 aria-label={`Select key ${keyInfo.key}`}
               >
-                <Badge
-                  className={cn(
-                    "border-0 bg-surface/70 px-1.5 font-bold uppercase",
-                    TYPE_COLORS[keyInfo.type] || "text-subtle-foreground",
-                  )}
-                >
+                <Badge variant={keyInfo.type === "string" ? "accent" : "muted"}>
                   {keyInfo.type.substring(0, 3)}
                 </Badge>
                 <span className="flex-1 truncate leading-row">{keyInfo.key}</span>
