@@ -21,8 +21,8 @@ import {
 } from "@/ui/icons";
 import { settingsSearchIndex } from "@/features/settings/config/search-index";
 import { openProductFeedback } from "@/features/feedback/services/product-feedback";
-import type { Settings as AppSettings } from "@/features/settings/stores/settings.store";
-import type { SettingsTab } from "@/features/window/stores/ui-state.store";
+import type { Settings as AppSettings } from "@/features/settings/types/settings.types";
+import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import { scoreSearchQuery } from "@/utils/search-match";
 import type { Action } from "../types/action.types";
 import type { CommandPaletteViewId } from "../types/view.types";

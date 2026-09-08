@@ -9,13 +9,6 @@ import {
 import type { ProviderModel } from "./ai-provider-interface";
 import { AIProvider, type ProviderHeaders, type StreamRequest } from "./ai-provider-interface";
 
-export {
-  DEFAULT_OLLAMA_BASE_URL,
-  OLLAMA_CLOUD_BASE_URL,
-  isOllamaCloudUrl,
-  normalizeOllamaBaseUrl,
-} from "@/features/ai/lib/ollama-endpoint";
-
 /**
  * Ollama provider.
  *

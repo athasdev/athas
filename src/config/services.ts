@@ -1,4 +1,4 @@
-import { SERVICE_DEFAULTS } from "@/config/service-defaults";
+import SERVICE_DEFAULTS from "@/config/services.json";
 import { getApiBase } from "@/utils/api-base";
 
 function trimTrailingSlash(value: string): string {

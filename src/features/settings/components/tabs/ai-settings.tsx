@@ -25,7 +25,8 @@ import type { AgentConfig, SessionConfigOption } from "@/features/ai/types/acp.t
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { Spinner } from "@/ui/spinner";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
+import { getDefaultSetting } from "@/features/settings/config/default-settings";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -48,9 +49,9 @@ import {
 import {
   DEFAULT_OLLAMA_BASE_URL,
   OLLAMA_CLOUD_BASE_URL,
-  checkOllamaConnection,
   isOllamaCloudUrl,
-} from "@/features/ai/services/providers/ollama-provider";
+} from "@/features/ai/lib/ollama-endpoint";
+import { checkOllamaConnection } from "@/features/ai/services/providers/ollama-provider";
 import { resolveOllamaBaseUrl } from "@/features/ai/lib/ollama-endpoint";
 import {
   getProviderApiToken,

@@ -17,7 +17,7 @@ import {
   getProvider,
   shouldUseTauriFetchForProvider,
 } from "@/features/ai/services/providers/ai-provider-registry";
-import { isOllamaCloudUrl } from "@/features/ai/services/providers/ollama-provider";
+import { isOllamaCloudUrl } from "@/features/ai/lib/ollama-endpoint";
 import { processStreamingResponse } from "@/utils/stream-utils";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { resolveChatCompletionTokenLimit } from "@/features/ai/lib/chat-completion-budget";

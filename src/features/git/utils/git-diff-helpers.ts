@@ -1,6 +1,5 @@
 import type { DiffLineWithIndex, ParsedHunk } from "../types/git-diff.types";
 import type { GitDiff, GitDiffLine, GitHunk } from "../types/git.types";
-export { getDiffLineVisualState, getDiffLineVisualType } from "./diff-viewer-visuals";
 
 export function hasGitDiffChanges(diff: GitDiff | null): diff is GitDiff {
   return (

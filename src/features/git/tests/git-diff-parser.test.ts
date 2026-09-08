@@ -2,8 +2,8 @@ import { describe, expect, test } from "vite-plus/test";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff } from "../types/git.types";
 import { isDiffFile, parseGitPatchLines, parseRawDiffContent } from "../utils/git-diff-parser";
+import { getDiffLineVisualState } from "@/features/git/utils/diff-viewer-visuals";
 import {
-  getDiffLineVisualState,
   getImageMimeType,
   getImgSrc,
   getSkippedUnchangedLineCount,

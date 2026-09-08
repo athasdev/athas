@@ -1,4 +1,4 @@
-import type { Settings } from "@/features/settings/stores/settings.store";
+import type { Settings } from "@/features/settings/types/settings.types";
 import { getWslShellId, parseWslPath } from "@/features/wsl/utils/wsl-path";
 import type { Shell, TerminalProfile } from "../types/terminal.types";
 

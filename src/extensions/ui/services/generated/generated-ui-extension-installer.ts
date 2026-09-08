@@ -13,9 +13,6 @@ import {
   validateGeneratedExtensionPermissionUsage,
 } from "./generated-ui-extension-permissions";
 
-export type { GeneratedUIExtension } from "./generated-ui-extension-storage";
-export { validateGeneratedExtensionSource } from "./generated-ui-extension-source";
-
 export function wrapGeneratedExtensionSource(code: string): string {
   validateGeneratedExtensionSource(code);
   return `export async function activate(api) {\n"use strict";\n${code}\n}\n`;

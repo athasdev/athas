@@ -13,8 +13,6 @@ export type ProjectTransitionAction =
 
 type UnsavedProjectTransitionChoice = "cancel" | "discard" | "save";
 
-export { getDirtyEditorBuffers } from "@/features/editor/utils/editor-buffer-selectors";
-
 export const getUnsavedProjectTransitionMessage = (
   action: ProjectTransitionAction,
   buffers: PaneContent[],

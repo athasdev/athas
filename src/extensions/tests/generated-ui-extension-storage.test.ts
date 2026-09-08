@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   createGeneratedExtensionManifest,
-  validateGeneratedExtensionSource,
   wrapGeneratedExtensionSource,
 } from "../ui/services/generated/generated-ui-extension-installer";
+import { validateGeneratedExtensionSource } from "@/extensions/ui/services/generated/generated-ui-extension-source";
 import {
   normalizeGeneratedExtensionId,
   readStoredGeneratedExtensions,

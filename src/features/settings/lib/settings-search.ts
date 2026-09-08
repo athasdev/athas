@@ -1,4 +1,4 @@
-import type { SettingsTab } from "@/features/window/stores/ui-state.store";
+import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import { compactSearchText, normalizeSearchText } from "@/utils/search-match";
 import type { SettingSearchRecord } from "../types/search.types";
 

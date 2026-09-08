@@ -1,6 +1,6 @@
 import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { SERVICE_DEFAULTS } from "@/config/service-defaults";
+import SERVICE_DEFAULTS from "@/config/services.json";
 import { getIconThemePreviewDefinitions } from "@/extensions/icon-themes/icon-theme-preview";
 import type { IconThemeContribution } from "@/extensions/types/extension-manifest";
 import {

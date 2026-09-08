@@ -1,5 +1,5 @@
 import type { SettingsAccess } from "./settings-access";
-import type { SettingsTab } from "@/features/window/stores/ui-state.store";
+import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 
 export function filterVisibleSettingsTabs<T extends { id: SettingsTab }>(
   tabs: T[],

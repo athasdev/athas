@@ -14,7 +14,8 @@ import {
   UI_FONT_SIZE_MIN,
   UI_FONT_SIZE_STEP,
 } from "@/features/settings/lib/ui-font-size";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
+import { getDefaultSetting } from "@/features/settings/config/default-settings";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { TabCloseButtonVisibility } from "@/features/settings/types/settings.types";
 import { Button } from "@/ui/button";
 import NumberInput from "@/ui/number-input";

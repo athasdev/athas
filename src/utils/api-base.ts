@@ -1,4 +1,4 @@
-import { SERVICE_DEFAULTS } from "@/config/service-defaults";
+import SERVICE_DEFAULTS from "@/config/services.json";
 
 export const DEFAULT_API_BASE = SERVICE_DEFAULTS.apiBaseUrl;
 

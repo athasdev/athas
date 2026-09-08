@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { GENERATED_CDN_DIR } from "./extension-workspace";
-import { SERVICE_DEFAULTS } from "@/config/service-defaults";
+import SERVICE_DEFAULTS from "@/config/services.json";
 
 type InstallablePackage = {
   url: string;

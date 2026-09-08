@@ -4,7 +4,7 @@ import { $ } from "bun";
 import { createHash } from "node:crypto";
 import { chmod, cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { SERVICE_DEFAULTS } from "@/config/service-defaults";
+import SERVICE_DEFAULTS from "@/config/services.json";
 import { basename, dirname, join, resolve } from "node:path";
 import {
   ATHAS_ROOT,

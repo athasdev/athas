@@ -10,11 +10,11 @@ import {
 } from "@/ui/icons";
 import type { KeyboardEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { requestUIExtensionGeneration } from "@/extensions/ui/services/ui-extension-generation-service";
 import {
-  requestUIExtensionGeneration,
   type UIExtensionContributionType,
   type UIExtensionGenerationResult,
-} from "@/extensions/ui/services/ui-extension-generation-service";
+} from "@/extensions/ui/services/ui-extension-generation-result";
 import { installGeneratedUIExtension } from "@/extensions/ui/services/generated/generated-ui-extension-installer";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
 import { useProFeature } from "@/features/window/hooks/use-pro-feature";

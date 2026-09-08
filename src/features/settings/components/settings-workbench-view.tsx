@@ -12,7 +12,8 @@ import {
   SETTINGS_SEARCH_TAB_LABELS,
 } from "@/features/settings/lib/settings-search";
 import { useAuthStore } from "@/features/window/stores/auth.store";
-import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
+import { type SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import { Empty, EmptyDescription } from "@/ui/empty";

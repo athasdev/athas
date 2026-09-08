@@ -1,10 +1,7 @@
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import {
-  getDefaultSetting,
-  getDefaultSettingsSnapshot,
-} from "@/features/settings/config/default-settings";
+import { getDefaultSettingsSnapshot } from "@/features/settings/config/default-settings";
 import {
   applySettingSideEffect,
   applySettingsSideEffects,
@@ -24,8 +21,6 @@ import type { SearchResult, SearchState } from "../types/search.types";
 import type { Settings } from "../types/settings.types";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { createSelectors } from "@/utils/zustand-selectors";
-
-export type { Settings } from "../types/settings.types";
 
 let settingsStoreInitPromise: Promise<Settings> | null = null;
 
@@ -185,5 +180,3 @@ const useSettingsStoreBase = create(
 );
 
 export const useSettingsStore = createSelectors(useSettingsStoreBase);
-
-export { getDefaultSetting };

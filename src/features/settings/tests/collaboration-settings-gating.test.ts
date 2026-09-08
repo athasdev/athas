@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { SettingsTab } from "@/features/window/stores/ui-state.store";
+import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import { resolveSettingsAccess, resolveVisibleSettingsSection } from "../lib/settings-access";
 import { filterVisibleSettingsTabs } from "../lib/settings-tab-visibility";
 

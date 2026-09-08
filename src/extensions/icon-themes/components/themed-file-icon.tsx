@@ -1,6 +1,7 @@
 import { useMemo, useSyncExternalStore } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
+import { getDefaultSetting } from "@/features/settings/config/default-settings";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { iconThemeRegistry } from "../icon-theme-registry";
 import { FileIcon, FolderIcon } from "@/ui/icons";
 import { IconThemeGraphic } from "./icon-theme-graphic";

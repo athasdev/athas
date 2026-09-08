@@ -20,10 +20,7 @@ import {
   syncBufferToPane as syncBufferToWorkspacePane,
   syncPanePreviewForBuffer as syncWorkspacePanePreviewForBuffer,
 } from "@/features/editor/stores/buffer-pane-sync";
-import {
-  clearQueuedWorkspaceSessionSave,
-  saveSessionToStore,
-} from "@/features/editor/stores/buffer-session-persistence";
+import { saveSessionToStore } from "@/features/editor/stores/buffer-session-persistence";
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
 import { logger } from "@/features/editor/utils/logger";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -1706,5 +1703,3 @@ const createBufferStore = (workspaceId: string) => {
 export const useBufferStore = createSelectors(
   createWorkspaceScopedStore("editor-buffer", createBufferStore, isEqual),
 );
-
-export { clearQueuedWorkspaceSessionSave };

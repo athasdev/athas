@@ -5,7 +5,8 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { createCoreFeaturesList } from "@/features/settings/config/features";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { createSettingsExportPayload } from "@/features/settings/lib/settings-import-export";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
+import { getDefaultSetting } from "@/features/settings/config/default-settings";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { CoreFeature } from "@/features/settings/types/feature.types";
 import {
   clearTelemetryLogEntries,

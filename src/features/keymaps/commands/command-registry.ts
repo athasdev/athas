@@ -25,7 +25,6 @@ import {
   closeTabsToLeft,
   closeTabsToRight,
   createNewFile,
-  openLocalHistoryForActiveFile,
   openProjectPicker,
   openQuickOpen,
   reopenClosedTab,
@@ -35,6 +34,7 @@ import {
   saveAllFiles,
   showNewTab,
 } from "./file-command-actions";
+import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
 import {
   copyActiveEditorLineDown,
   copyActiveEditorLineUp,

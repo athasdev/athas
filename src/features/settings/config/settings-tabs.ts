@@ -14,7 +14,7 @@ import {
   UserCircleIcon,
   UsersIcon,
 } from "@/ui/icons";
-import type { SettingsTab } from "@/features/window/stores/ui-state.store";
+import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 
 export interface SettingsTabItem {
   id: SettingsTab;

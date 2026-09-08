@@ -18,8 +18,6 @@ import { createPathFilterPredicate } from "../utils/path-filters";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useGlobalSearchSessionStore } from "../stores/global-search-session.store";
 
-export type { ContentSearchOptions } from "../types/global-search.types";
-
 export type ContentSearchAvailability = "ready" | "no-workspace" | "unsupported";
 
 const CONTEXT_LINES = 2;

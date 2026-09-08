@@ -3,7 +3,7 @@ import {
   SETTINGS_TAB_GROUPS,
   type SettingsTabItem,
 } from "@/features/settings/config/settings-tabs";
-import type { SettingsTab } from "@/features/window/stores/ui-state.store";
+import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import { WorkbenchNavigation } from "@/ui/workbench";
 
 interface SettingsNavigationProps {

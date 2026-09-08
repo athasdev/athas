@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { GENERATED_CDN_DIR } from "./extension-workspace";
-import { SERVICE_DEFAULTS } from "@/config/service-defaults";
+import SERVICE_DEFAULTS from "@/config/services.json";
 
 const targetDir = process.env.EXTENSIONS_CDN_ROOT;
 const cdnBaseUrl = process.env.EXTENSIONS_CDN_BASE_URL || SERVICE_DEFAULTS.extensionsCdnBaseUrl;

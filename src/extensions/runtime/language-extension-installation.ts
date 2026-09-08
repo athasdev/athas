@@ -21,8 +21,10 @@ export async function registerLanguageProvider(params: {
   const runtimeExtensionId = `${extensionId}:${languageId}`;
   if (languageProviderRegistry.has(runtimeExtensionId)) return;
 
-  const { tokenizeCode, convertToEditorTokens } =
-    await import("@/features/editor/lib/wasm-parser/wasm-parser-api");
+  const [{ tokenizeCode }, { convertToEditorTokens }] = await Promise.all([
+    import("@/features/editor/lib/wasm-parser/tokenizer"),
+    import("@/features/editor/lib/wasm-parser/converter"),
+  ]);
   languageProviderRegistry.register(runtimeExtensionId, {
     id: languageId,
     extensions,

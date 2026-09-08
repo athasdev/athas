@@ -1,6 +1,7 @@
 import { InfoIcon, PlusIcon, TrashIcon } from "@/ui/icons";
 import { useEffect } from "react";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
+import { getDefaultSetting } from "@/features/settings/config/default-settings";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useFontStore } from "@/features/settings/stores/font.store";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";

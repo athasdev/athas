@@ -10,12 +10,10 @@ import type { QuickEditSlice } from "./ui-state/quick-edit-slice";
 import { createQuickEditSlice } from "./ui-state/quick-edit-slice";
 import type { TerminalSlice } from "./ui-state/terminal-slice";
 import { createTerminalSlice } from "./ui-state/terminal-slice";
-import type { SettingsTab } from "./ui-state/types/ui-state.types";
 import type { ViewSlice } from "./ui-state/view-slice";
 import { createViewSlice } from "./ui-state/view-slice";
 
 // Re-export types for convenience
-export type { SettingsTab };
 
 // Combined store type
 export type UIState = ModalSlice &

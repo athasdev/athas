@@ -8,10 +8,8 @@ import { createStore } from "zustand/vanilla";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import { restorePersistedEditorViewState } from "@/features/editor/stores/editor-session-state";
-import {
-  clearQueuedWorkspaceSessionSave,
-  useBufferStore,
-} from "@/features/editor/stores/buffer.store";
+import { clearQueuedWorkspaceSessionSave } from "@/features/editor/stores/buffer-session-persistence";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { getLineSlice } from "@/features/editor/utils/large-file";

@@ -1,5 +1,6 @@
 import { useShallow } from "zustand/react/shallow";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
+import { getDefaultSetting } from "@/features/settings/config/default-settings";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Section, { SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";

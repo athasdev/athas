@@ -30,7 +30,8 @@ import {
   getExportableUserKeybindings,
   parseKeybindingsImportJson,
 } from "@/features/keymaps/utils/keybinding-import-export";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
+import { getDefaultSetting } from "@/features/settings/config/default-settings";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { Button } from "@/ui/button";

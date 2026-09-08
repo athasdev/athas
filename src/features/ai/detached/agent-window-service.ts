@@ -10,7 +10,8 @@ import { useAgentWindowStore } from "./agent-window.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import { getAccountIdentity } from "@/features/window/lib/account-identity";
-import { useUIState, type SettingsTab } from "@/features/window/stores/ui-state.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { type SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import type { AgentAccountIdentity } from "./agent-window-state";
 
 export type AgentWindowMessage =

@@ -7,11 +7,6 @@ import {
   type UIExtensionGenerationResult,
 } from "./ui-extension-generation-result";
 
-export type {
-  UIExtensionContributionType,
-  UIExtensionGenerationResult,
-} from "./ui-extension-generation-result";
-
 const API_BASE = getApiBase();
 
 class UIExtensionGenerationError extends Error {

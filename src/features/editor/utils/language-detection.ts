@@ -3,7 +3,7 @@ import { languageProviderRegistry } from "@/extensions/languages/language-provid
 import {
   ANGULAR_TEMPLATE_LANGUAGE_ID,
   isAngularTemplatePath,
-} from "@/features/editor/lib/wasm-parser/language-overlays";
+} from "@/features/editor/lib/wasm-parser/language-overlays/angular-template";
 
 /**
  * Detect programming language from file extension using the extension registry

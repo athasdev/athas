@@ -1,5 +1,6 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
+import { getDefaultSetting } from "@/features/settings/config/default-settings";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { IconThemeContribution, ThemeContribution } from "../types/extension-manifest";
 import { resolveBundledIconThemeAsset } from "../icon-themes/bundled-icon-theme-assets";
 import { iconThemeRegistry } from "../icon-themes/icon-theme-registry";
