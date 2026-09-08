@@ -683,7 +683,6 @@ export function Dropdown(props: DropdownProps) {
               }}
               leftIcon={SearchIcon}
               variant="ghost"
-              className="w-full"
             />
           </div>
         )}
@@ -738,7 +737,6 @@ function DropdownMenuSearch({
       <Input
         leftIcon={SearchIcon}
         variant="ghost"
-        className="ui-text-chrome"
         aria-label={props["aria-label"] ?? props.placeholder ?? "Search menu"}
         onKeyDown={(event) => {
           onKeyDown?.(event);

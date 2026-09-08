@@ -112,21 +112,23 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
             context={
               <div className="flex min-w-0 flex-1 items-center gap-1">
                 <Input
-                  className="min-w-0 flex-1"
+                  grow
+
                   placeholder='Filter JSON, e.g. {"name": "John"}'
                   value={filterInput}
                   onChange={(e) => setFilterInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleApplyQuery()}
                   aria-label="MongoDB filter query"
                 />
-                <Input
-                  className="w-48"
-                  placeholder='Sort JSON, e.g. {"createdAt": -1}'
-                  value={sortInput}
-                  onChange={(e) => setSortInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleApplyQuery()}
-                  aria-label="MongoDB sort query"
-                />
+                <span className="inline-flex min-w-0 w-48">
+                  <Input
+                    placeholder='Sort JSON, e.g. {"createdAt": -1}'
+                    value={sortInput}
+                    onChange={(e) => setSortInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleApplyQuery()}
+                    aria-label="MongoDB sort query"
+                  />
+                </span>
               </div>
             }
             actions={

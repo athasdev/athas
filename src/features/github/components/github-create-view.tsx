@@ -1,4 +1,3 @@
-import "../styles/github-viewer.css";
 import { invoke } from "@tauri-apps/api/core";
 import {
   ActivityIcon,
@@ -502,8 +501,7 @@ ${statusSummary}`;
                   }
                 }}
                 placeholder={kind === "issue" ? "Issue title" : "Pull request title"}
-                variant="ghost"
-                className="github-composer-title h-auto px-0 py-1 font-semibold tracking-tight"
+                variant="title"
                 autoFocus
               />
             </div>

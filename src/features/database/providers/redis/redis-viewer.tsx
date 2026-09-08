@@ -115,7 +115,9 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             leading={<SearchIcon />}
             context={
               <Input
-                className="min-w-0 flex-1 border-0 bg-transparent p-0 focus:border-transparent focus:ring-0"
+                grow
+                variant="bare"
+
                 placeholder="Pattern (e.g. user:*)"
                 value={patternInput}
                 onChange={(e) => setPatternInput(e.target.value)}

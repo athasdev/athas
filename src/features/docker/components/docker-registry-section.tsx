@@ -70,7 +70,7 @@ export function DockerRegistrySection({
               }}
               placeholder="Search images"
               aria-label="Search Docker Hub"
-              className="min-w-0 flex-1 rounded-lg"
+              grow
             />
             <Button
               type="button"
@@ -90,14 +90,12 @@ export function DockerRegistrySection({
             onChange={(event) => onDraftFieldChange("image", event.target.value)}
             placeholder="Image, for example nginx:latest"
             aria-label="Registry image"
-            className="w-full rounded-lg"
           />
           <Input
             value={draft.target}
             onChange={(event) => onDraftFieldChange("target", event.target.value)}
             placeholder="Target tag"
             aria-label="Target image tag"
-            className="w-full rounded-lg"
           />
           <div className="flex flex-wrap items-center gap-1">
             <Button
@@ -135,14 +133,12 @@ export function DockerRegistrySection({
             onChange={(event) => onDraftFieldChange("registry", event.target.value)}
             placeholder="Registry (optional)"
             aria-label="Registry host"
-            className="w-full rounded-lg"
           />
           <Input
             value={draft.username}
             onChange={(event) => onDraftFieldChange("username", event.target.value)}
             placeholder="Username"
             aria-label="Registry username"
-            className="w-full rounded-lg"
           />
           <Input
             value={draft.password}
@@ -150,7 +146,6 @@ export function DockerRegistrySection({
             type="password"
             placeholder="Password"
             aria-label="Registry password"
-            className="w-full rounded-lg"
           />
           <Button
             type="button"

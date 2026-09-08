@@ -67,19 +67,24 @@ const RenameInput = forwardRef(
           }}
         >
           <div className="flex items-center gap-1 rounded-md border border-primary/60 bg-surface p-0.5 shadow-(--shadow-popover)">
-            <Input
-              ref={inputRef}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onBlur={onCancel}
-              className="font-sans h-6 min-w-30 rounded border-none bg-background px-1.5 text-foreground"
+            <span
+              className="inline-flex min-w-0 min-w-30"
               style={{
                 fontSize: `${fontSize}px`,
                 width: `${Math.max(value.length, symbol.length) * charWidth + 24}px`,
               }}
-              aria-label="Rename symbol"
-            />
+            >
+              <Input
+                size="compact"
+                font="inherit"
+                ref={inputRef}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={onCancel}
+                aria-label="Rename symbol"
+              />
+            </span>
           </div>
         </div>
       </div>

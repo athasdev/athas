@@ -583,20 +583,21 @@ export const AISettings = () => {
             }}
             canReset={settings.aiCustomBaseUrl !== getDefaultSetting("aiCustomBaseUrl")}
           >
-            <Input
-              value={customChatBaseUrlInput}
-              onChange={(event) => setCustomChatBaseUrlInput(event.currentTarget.value)}
-              onBlur={commitCustomChatBaseUrl}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.currentTarget.blur();
-                }
-              }}
-              placeholder="http://localhost:11434/v1"
-              spellCheck={false}
-              leftIcon={GlobeIcon}
-              className="w-56 max-w-full"
-            />
+            <span className="inline-flex min-w-0 w-56 max-w-full">
+              <Input
+                value={customChatBaseUrlInput}
+                onChange={(event) => setCustomChatBaseUrlInput(event.currentTarget.value)}
+                onBlur={commitCustomChatBaseUrl}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.currentTarget.blur();
+                  }
+                }}
+                placeholder="http://localhost:11434/v1"
+                spellCheck={false}
+                leftIcon={GlobeIcon}
+              />
+            </span>
           </SettingRow>
           <SettingRow
             label="API Key"
@@ -607,17 +608,18 @@ export const AISettings = () => {
             }
           >
             <div className="flex items-center gap-2">
-              <Input
-                type="password"
-                value={customChatApiKeyInput}
-                onChange={(event) => setCustomChatApiKeyInput(event.currentTarget.value)}
-                placeholder={hasCustomChatApiKey ? "Saved" : "API key"}
-                spellCheck={false}
-                autoComplete="off"
-                disabled={isSavingCustomChatApiKey}
-                leftIcon={KeyIcon}
-                className="w-56 max-w-full"
-              />
+              <span className="inline-flex min-w-0 w-56 max-w-full">
+                <Input
+                  type="password"
+                  value={customChatApiKeyInput}
+                  onChange={(event) => setCustomChatApiKeyInput(event.currentTarget.value)}
+                  placeholder={hasCustomChatApiKey ? "Saved" : "API key"}
+                  spellCheck={false}
+                  autoComplete="off"
+                  disabled={isSavingCustomChatApiKey}
+                  leftIcon={KeyIcon}
+                />
+              </span>
               <Button
                 type="button"
                 variant="default"
@@ -667,24 +669,25 @@ export const AISettings = () => {
             canReset={settings.ollamaBaseUrl !== getDefaultSetting("ollamaBaseUrl")}
           >
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <Input
-                type="text"
-                value={ollamaUrl}
-                onChange={(e) => handleOllamaUrlChange(e.target.value)}
-                onBlur={(e) => {
-                  void commitOllamaUrl(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key !== "Enter") return;
-                  e.preventDefault();
-                  e.currentTarget.blur();
-                }}
-                placeholder={DEFAULT_OLLAMA_BASE_URL}
-                spellCheck={false}
-                leftIcon={GlobeIcon}
-                className="w-56 max-w-full"
-                aria-invalid={ollamaStatus === "error" || undefined}
-              />
+              <span className="inline-flex min-w-0 w-56 max-w-full">
+                <Input
+                  type="text"
+                  value={ollamaUrl}
+                  onChange={(e) => handleOllamaUrlChange(e.target.value)}
+                  onBlur={(e) => {
+                    void commitOllamaUrl(e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }}
+                  placeholder={DEFAULT_OLLAMA_BASE_URL}
+                  spellCheck={false}
+                  leftIcon={GlobeIcon}
+                  aria-invalid={ollamaStatus === "error" || undefined}
+                />
+              </span>
               {ollamaStatus === "checking" && <Spinner label="Checking" compact />}
               {ollamaStatus === "ok" && <CheckCircleIcon className="text-success" />}
               {ollamaStatus === "error" && <WarningCircleIcon className="text-destructive" />}
@@ -707,18 +710,19 @@ export const AISettings = () => {
             description="Used for authenticated Ollama endpoints and Ollama Cloud"
           >
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <Input
-                type="password"
-                value={ollamaApiKeyInput}
-                onChange={(e) => setOllamaApiKeyInput(e.target.value)}
-                placeholder={hasStoredOllamaKey ? "••••••••  (saved)" : "ollama-…"}
-                spellCheck={false}
-                leftIcon={KeyIcon}
-                className="w-56 max-w-full"
-                aria-invalid={(needsApiKey && !hasStoredOllamaKey) || undefined}
-                autoComplete="off"
-                disabled={isSavingOllamaKey}
-              />
+              <span className="inline-flex min-w-0 w-56 max-w-full">
+                <Input
+                  type="password"
+                  value={ollamaApiKeyInput}
+                  onChange={(e) => setOllamaApiKeyInput(e.target.value)}
+                  placeholder={hasStoredOllamaKey ? "••••••••  (saved)" : "ollama-…"}
+                  spellCheck={false}
+                  leftIcon={KeyIcon}
+                  aria-invalid={(needsApiKey && !hasStoredOllamaKey) || undefined}
+                  autoComplete="off"
+                  disabled={isSavingOllamaKey}
+                />
+              </span>
               <Button
                 type="button"
                 variant="default"
@@ -890,19 +894,20 @@ export const AISettings = () => {
               }
             >
               {settings.aiAutocompleteProvider === "custom" ? (
-                <Input
-                  value={customAutocompleteModelInput}
-                  onChange={(event) => setCustomAutocompleteModelInput(event.currentTarget.value)}
-                  onBlur={commitCustomAutocompleteModel}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.currentTarget.blur();
-                    }
-                  }}
-                  placeholder="qwen2.5-coder:7b"
-                  disabled={!aiCompletionAllowedByPolicy}
-                  className="w-56 max-w-full"
-                />
+                <span className="inline-flex min-w-0 w-56 max-w-full">
+                  <Input
+                    value={customAutocompleteModelInput}
+                    onChange={(event) => setCustomAutocompleteModelInput(event.currentTarget.value)}
+                    onBlur={commitCustomAutocompleteModel}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    placeholder="qwen2.5-coder:7b"
+                    disabled={!aiCompletionAllowedByPolicy}
+                  />
+                </span>
               ) : (
                 <div className="flex items-center gap-2">
                   <Button
@@ -956,22 +961,23 @@ export const AISettings = () => {
                     getDefaultSetting("aiAutocompleteCustomBaseUrl")
                   }
                 >
-                  <Input
-                    value={customAutocompleteBaseUrlInput}
-                    onChange={(event) =>
-                      setCustomAutocompleteBaseUrlInput(event.currentTarget.value)
-                    }
-                    onBlur={commitCustomAutocompleteBaseUrl}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.currentTarget.blur();
+                  <span className="inline-flex min-w-0 w-56 max-w-full">
+                    <Input
+                      value={customAutocompleteBaseUrlInput}
+                      onChange={(event) =>
+                        setCustomAutocompleteBaseUrlInput(event.currentTarget.value)
                       }
-                    }}
-                    placeholder="http://localhost:11434/v1"
-                    disabled={!aiCompletionAllowedByPolicy}
-                    leftIcon={GlobeIcon}
-                    className="w-56 max-w-full"
-                  />
+                      onBlur={commitCustomAutocompleteBaseUrl}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                      placeholder="http://localhost:11434/v1"
+                      disabled={!aiCompletionAllowedByPolicy}
+                      leftIcon={GlobeIcon}
+                    />
+                  </span>
                 </SettingRow>
                 <SettingRow
                   label="Custom API Key"
@@ -982,17 +988,18 @@ export const AISettings = () => {
                   }
                 >
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="password"
-                      value={customAutocompleteApiKeyInput}
-                      onChange={(event) =>
-                        setCustomAutocompleteApiKeyInput(event.currentTarget.value)
-                      }
-                      placeholder={hasCustomAutocompleteApiKey ? "Saved" : "API key"}
-                      disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
-                      leftIcon={KeyIcon}
-                      className="w-56 max-w-full"
-                    />
+                    <span className="inline-flex min-w-0 w-56 max-w-full">
+                      <Input
+                        type="password"
+                        value={customAutocompleteApiKeyInput}
+                        onChange={(event) =>
+                          setCustomAutocompleteApiKeyInput(event.currentTarget.value)
+                        }
+                        placeholder={hasCustomAutocompleteApiKey ? "Saved" : "API key"}
+                        disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
+                        leftIcon={KeyIcon}
+                      />
+                    </span>
                     <Button
                       variant="default"
                       onClick={handleSaveCustomAutocompleteApiKey}

@@ -93,6 +93,7 @@ export function SearchPopover({
 
         <div className="relative min-w-0 flex-1">
           <Input
+            reserveEndSpace
             ref={inputRef}
             type="text"
             value={value}
@@ -100,7 +101,6 @@ export function SearchPopover({
             onKeyDown={onKeyDown}
             placeholder={placeholder}
             leftIcon={SearchIcon}
-            className="pr-8"
           />
           {value && (
             <Button
@@ -242,13 +242,13 @@ export function SearchReplaceRow({
       </span>
 
       <Input
+        grow
         ref={inputRef}
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
         placeholder="Replace with..."
-        className="flex-1"
       />
 
       <Button type="button" onClick={onReplace} disabled={!canReplace} variant="ghost">
@@ -296,6 +296,7 @@ export function SearchInput({
     <div className={cn("flex min-w-0 flex-1 items-center gap-1.5", className)}>
       <div className="relative min-w-0 flex-1">
         <Input
+          reserveEndSpace
           ref={inputRef}
           type="text"
           value={value}
@@ -304,7 +305,6 @@ export function SearchInput({
           onFocus={onFocus}
           placeholder={placeholder}
           leftIcon={SearchIcon}
-          className="pr-8"
         />
         {value && (
           <Button

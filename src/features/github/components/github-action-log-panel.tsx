@@ -360,14 +360,15 @@ export function GitHubActionLogPanel({
               </Tooltip>
             </div>
           ) : null}
-          <Input
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Filter lines"
-            aria-label="Filter log lines"
-            leftIcon={SearchIcon}
-            className="w-44"
-          />
+          <span className="inline-flex min-w-0 w-44">
+            <Input
+              value={query}
+              onChange={(event) => onQueryChange(event.target.value)}
+              placeholder="Filter lines"
+              aria-label="Filter log lines"
+              leftIcon={SearchIcon}
+            />
+          </span>
           <Toggle
             pressed={showTimestamps}
             onClick={onToggleTimestamps}

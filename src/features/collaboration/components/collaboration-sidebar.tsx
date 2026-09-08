@@ -1012,7 +1012,7 @@ export function CollaborationSidebarView() {
                           variant="ghost"
                           placeholder="channel-name"
                           disabled={isSending}
-                          className="min-w-0"
+
                           onChange={(event) => setNewChannelName(event.target.value)}
                           onKeyDown={(event) => {
                             if (event.key === "Escape") {

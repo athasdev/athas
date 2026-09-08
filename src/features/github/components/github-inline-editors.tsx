@@ -74,8 +74,7 @@ export function GitHubInlineTitle({ value, onSave }: GitHubInlineTitleProps) {
             setIsEditing(false);
           }
         }}
-        variant="ghost"
-        className="github-composer-title h-auto px-0 py-0.5 font-semibold tracking-tight"
+        variant="title"
         aria-label="Title"
         disabled={isSaving}
         autoFocus

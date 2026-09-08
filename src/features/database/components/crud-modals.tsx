@@ -69,7 +69,7 @@ export const CreateRowModal = ({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setValues((prev) => ({ ...prev, [column.name]: e.target.value }))
                   }
-                  className="w-full"
+
                   placeholder={column.notnull ? "Required" : "Optional"}
                 />
               </div>
@@ -155,7 +155,7 @@ export const EditRowModal = ({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setValues((prev) => ({ ...prev, [column.name]: e.target.value }))
                   }
-                  className="w-full"
+
                   placeholder={column.notnull ? "Required" : "Optional"}
                 />
               </div>
@@ -240,12 +240,13 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
           {columns.map((column, index) => (
             <div key={index} className="flex items-center gap-2">
               <Input
+                grow
                 value={column.name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   updateColumn(index, "name", e.target.value)
                 }
                 placeholder="Column name"
-                className="flex-1"
+
                 required
               />
               <Select

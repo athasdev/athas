@@ -489,40 +489,40 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
             />
             <div className="flex gap-2">
               <Input
+                grow
                 value={host}
                 onChange={(event) => setHost(event.target.value)}
                 placeholder="Host"
-                className="h-7 flex-1"
               />
-              <Input
-                type="number"
-                value={port}
-                onChange={(event) => setPort(Number(event.target.value))}
-                placeholder="Port"
-                className="h-7 w-20"
-              />
+              <span className="inline-flex min-w-0 w-20">
+                <Input
+                  type="number"
+                  value={port}
+                  onChange={(event) => setPort(Number(event.target.value))}
+                  placeholder="Port"
+                />
+              </span>
             </div>
             {selectedDbType !== "redis" ? (
               <Input
                 value={databaseName}
                 onChange={(event) => setDatabaseName(event.target.value)}
                 placeholder="Database"
-                className="h-7"
               />
             ) : null}
             <div className="flex gap-2">
               <Input
+                grow
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 placeholder="Username"
-                className="h-7 flex-1"
               />
               <Input
+                grow
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Password"
-                className="h-7 flex-1"
               />
             </div>
             <label

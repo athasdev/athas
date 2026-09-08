@@ -101,23 +101,11 @@ function InputGroupText({ className, ...props }: ComponentProps<"span">) {
   );
 }
 
-const InputGroupInput = forwardRef<HTMLInputElement, InputProps>(function InputGroupInput(
-  { className, ...props },
-  ref,
-) {
-  return (
-    <Input
-      ref={ref}
-      data-slot="input-group-control"
-      variant="ghost"
-      className={cn(
-        "min-w-0 flex-1 rounded-none border-0 bg-transparent shadow-none ring-0 focus-visible:ring-0",
-        className,
-      )}
-      {...props}
-    />
-  );
-});
+const InputGroupInput = forwardRef<HTMLInputElement, InputProps>(
+  function InputGroupInput(props, ref) {
+    return <Input {...props} ref={ref} data-slot="input-group-control" variant="group" grow />;
+  },
+);
 
 const InputGroupTextarea = forwardRef<HTMLTextAreaElement, ComponentProps<"textarea">>(
   function InputGroupTextarea({ className, ...props }, ref) {

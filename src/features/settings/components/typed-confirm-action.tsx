@@ -44,28 +44,30 @@ export function TypedConfirmAction({
   if (isConfirming) {
     return (
       <div className="flex items-center gap-2">
-        <Input
-          ref={inputRef}
-          data-prevent-dialog-escape="true"
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          placeholder={`Type '${confirmWord}'`}
-          variant="default"
-          className="w-28"
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              event.stopPropagation();
-              setIsConfirming(false);
-              return;
-            }
+        <span className="inline-flex min-w-0 w-28">
+          <Input
+            ref={inputRef}
+            data-prevent-dialog-escape="true"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            placeholder={`Type '${confirmWord}'`}
+            variant="default"
 
-            if (event.key === "Enter" && value.trim().toLowerCase() === confirmWord) {
-              event.preventDefault();
-              void handleConfirm();
-            }
-          }}
-        />
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                event.stopPropagation();
+                setIsConfirming(false);
+                return;
+              }
+
+              if (event.key === "Enter" && value.trim().toLowerCase() === confirmWord) {
+                event.preventDefault();
+                void handleConfirm();
+              }
+            }}
+          />
+        </span>
         <Button
           type="button"
           variant={variant}

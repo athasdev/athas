@@ -42,6 +42,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
           </div>
           <div className="flex items-center gap-1.5 px-2 py-1.5">
             <Input
+              grow
               ref={state.inlineEditInstructionRef}
               autoFocus
               value={state.inlineEditInstruction}
@@ -89,7 +90,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                   : "inline-edit-description"
               }
               aria-invalid={state.inlineEditError ? true : undefined}
-              className="font-sans h-7 min-w-0 flex-1 bg-transparent px-0 ui-text-sm placeholder:text-subtle-foreground/80 focus:bg-transparent"
+
               placeholder={
                 selection && selection.start.offset !== selection.end.offset
                   ? "Edit selection..."

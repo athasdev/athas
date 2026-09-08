@@ -70,7 +70,7 @@ const StashMessageModalContent = ({
           value={message}
           onChange={(event) => setMessage(event.target.value)}
           placeholder={placeholder}
-          className="w-full bg-background ui-text-sm"
+
           onKeyDown={(event) => {
             if (event.key === "Enter") void handleConfirm();
           }}

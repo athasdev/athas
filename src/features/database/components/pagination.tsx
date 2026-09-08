@@ -81,18 +81,21 @@ export default function Pagination({
         </Button>
 
         <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
-          <Input
-            type="number"
-            value={pageInput}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              handlePageInputChange(e.target.value)
-            }
-            onBlur={handlePageInputBlur}
-            min={1}
-            max={totalPages}
-            aria-label="Current page"
-            className="font-sans ui-text-sm h-6 w-12 px-1 py-0 text-center"
-          />
+          <span className="inline-flex min-w-0 w-12">
+            <Input
+              align="center"
+              size="compact"
+              type="number"
+              value={pageInput}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handlePageInputChange(e.target.value)
+              }
+              onBlur={handlePageInputBlur}
+              min={1}
+              max={totalPages}
+              aria-label="Current page"
+            />
+          </span>
           <span className="font-sans ui-text-sm text-subtle-foreground">/ {totalPages}</span>
         </form>
 

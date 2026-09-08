@@ -111,7 +111,7 @@ export function DockerContainerDetail({
               onChange={onLogQueryChange}
               placeholder="Search logs"
               aria-label="Search container logs"
-              className="min-w-0 flex-1"
+              grow
             />
             {(["all", "stderr", "errors"] as DockerLogFilter[]).map((filter) => (
               <Button

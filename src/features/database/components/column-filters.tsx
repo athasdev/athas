@@ -89,18 +89,18 @@ export default function ColumnFilters({
             />
             {!NO_VALUE_OPERATORS.has(filter.operator) && (
               <Input
+                grow
                 value={filter.value}
                 onChange={(e) => onUpdate(index, { value: e.target.value })}
                 placeholder="value"
-                className="flex-1"
               />
             )}
             {filter.operator === "between" && (
               <Input
+                grow
                 value={filter.value2 || ""}
                 onChange={(e) => onUpdate(index, { value2: e.target.value })}
                 placeholder="to"
-                className="flex-1"
               />
             )}
             <Button
