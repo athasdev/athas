@@ -101,6 +101,9 @@ const ExtensionDetails = lazy(() =>
 const OnboardingView = lazy(() => import("@/features/onboarding/components/onboarding-view"));
 const GitHubPRViewer = lazy(() => import("@/features/github/components/github-pr-viewer"));
 const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
+const GitHubDeliveryViewer = lazy(
+  () => import("@/features/github/delivery/components/github-delivery-viewer"),
+);
 const GitHubActionViewer = lazy(() => import("@/features/github/components/github-action-viewer"));
 const GitHubCreateView = lazy(() =>
   import("@/features/github/components/github-create-view").then((module) => ({
@@ -920,6 +923,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
               bufferId={buffer.id}
             />
           );
+
+        case "githubDelivery":
+          return <GitHubDeliveryViewer key={buffer.id} buffer={buffer} />;
 
         case "githubAction":
           return (

@@ -471,6 +471,10 @@ export function normalizeSettings(settings: Settings): Settings {
   ) {
     normalizedSettings.gitLastPanelMode = "changes";
   }
+  normalizedSettings.githubSidebarSectionOrder = normalizeItemOrder(
+    normalizedSettings.githubSidebarSectionOrder,
+    ["pull-requests", "issues", "actions", "releases", "deployments"],
+  );
   normalizedSettings.gitSidebarTabOrder = normalizeItemOrder(
     normalizedSettings.gitSidebarTabOrder,
     GIT_SIDEBAR_TAB_IDS,

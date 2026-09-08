@@ -137,6 +137,8 @@ export interface Settings {
   showGitHubPullRequests: boolean;
   showGitHubIssues: boolean;
   showGitHubActions: boolean;
+  showGitHubReleases: boolean;
+  showGitHubDeployments: boolean;
   githubActionNotifications: boolean;
   // Keyboard
   keybindingPreset:
@@ -211,7 +213,9 @@ export interface Settings {
   gitLastPanelMode: GitSidebarItemId;
   gitSidebarTabOrder: GitSidebarTabId[];
   hiddenGitSidebarItems: GitSidebarItemId[];
-  githubSidebarSectionOrder: Array<"pull-requests" | "issues" | "actions">;
+  githubSidebarSectionOrder: Array<
+    "pull-requests" | "issues" | "actions" | "releases" | "deployments"
+  >;
   enableInlineGitBlame: boolean;
   // Telemetry
   telemetry: boolean;

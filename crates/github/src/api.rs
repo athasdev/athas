@@ -1,3 +1,4 @@
+pub mod delivery;
 use crate::models::{
    GitHubNotification, IssueComment, IssueDetails, IssueListItem, IssueMilestone, IssueType, Label,
    PullRequest, PullRequestAuthor, PullRequestComment, PullRequestDetails, PullRequestFile,
@@ -490,11 +491,12 @@ fn send_github_request(request: RequestBuilder) -> Result<Response, String> {
       thread::sleep(*next_allowed_request_at - now);
    }
 
+   *next_allowed_request_at = Instant::now() + GITHUB_REQUEST_INTERVAL;
+   drop(next_allowed_request_at);
+
    let response = request
       .send()
       .map_err(|e| format!("Failed to call GitHub API: {e}"))?;
-   *next_allowed_request_at = Instant::now() + GITHUB_REQUEST_INTERVAL;
-   drop(next_allowed_request_at);
 
    if response.status().is_success() {
       return Ok(response);

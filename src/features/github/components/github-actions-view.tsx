@@ -3,14 +3,10 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   ArrowClockwiseIcon,
   ArrowCounterClockwiseIcon,
-  CheckCircleIcon,
-  CirclesIcon,
   CopyIcon,
   LinkIcon,
-  PlayCircleIcon,
   PlayIcon,
   StopIcon,
-  XCircleIcon,
 } from "@/ui/icons";
 import {
   memo,
@@ -32,7 +28,6 @@ import { type MenuItem, useDropdownMenu } from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { SidebarScrollArea, SidebarSection } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
-import { ToggleGroup } from "@/ui/toggle-group";
 import { cn } from "@/utils/cn";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useNow } from "../hooks/use-now";
@@ -52,7 +47,7 @@ import {
   getGitHubWorkflowRunsUrl,
   getRepositoryUrlFromEntityUrl,
 } from "../utils/github-link-utils";
-import { getTimeAgo } from "../utils/github-viewer-utils";
+import { getTimeAgo, getSidebarTime } from "../utils/github-viewer-utils";
 import {
   formatWorkflowDuration,
   getWorkflowRunLabel,
@@ -64,7 +59,7 @@ import {
 } from "../utils/github-workflow-status";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
-import { WORKFLOW_TONE_TEXT_CLASS, WorkflowStatusIcon } from "./github-workflow-status-icon";
+import { WorkflowStatusIcon } from "./github-workflow-status-icon";
 
 interface WorkflowRunRowProps {
   run: WorkflowRunListItem;
@@ -93,10 +88,13 @@ const WorkflowRunRow = memo(
     const timing = getWorkflowRunTiming(run, now);
     const duration = formatWorkflowDuration(timing.durationMs);
     const updatedLabel = run.updatedAt ? getTimeAgo(run.updatedAt) : null;
-    const trailing = state.isActive ? duration : updatedLabel;
+    const trailing = state.isActive
+      ? duration
+      : run.updatedAt
+        ? getSidebarTime(run.updatedAt)
+        : null;
     const shortSha = run.headSha ? run.headSha.slice(0, 7) : null;
     const repositoryUrl = getRepositoryUrlFromEntityUrl(run.url);
-    const toneClass = WORKFLOW_TONE_TEXT_CLASS[state.tone];
     const leading = pendingAction ? (
       <Spinner label={pendingAction === "cancel" ? "Cancelling" : "Re-running"} compact />
     ) : (
@@ -123,6 +121,7 @@ const WorkflowRunRow = memo(
     return (
       <GitHubSidebarRow
         title={title}
+        description={[state.label, run.headBranch].filter(Boolean).join(" · ")}
         onClick={() => onSelect(run)}
         onPrefetch={() => onPrefetch(run)}
         onContextMenu={(event) => onContextMenu(event, run)}
@@ -139,23 +138,6 @@ const WorkflowRunRow = memo(
         }}
         active={isActive}
         leading={leading}
-        description={
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className={cn("shrink-0", toneClass)}>{state.label}</span>
-            {run.workflowName ? (
-              <>
-                <span aria-hidden="true">·</span>
-                <span className="truncate">{run.workflowName}</span>
-              </>
-            ) : null}
-            {run.headBranch ? (
-              <>
-                <span aria-hidden="true">·</span>
-                <span className="truncate font-mono">{run.headBranch}</span>
-              </>
-            ) : null}
-          </span>
-        }
         trailing={
           trailing ? (
             <span className={cn(state.isActive && "tabular-nums text-primary")}>{trailing}</span>
@@ -230,13 +212,6 @@ const WorkflowRunRow = memo(
 
 WorkflowRunRow.displayName = "WorkflowRunRow";
 
-const FILTER_OPTIONS: Array<{ value: WorkflowRunFilter; label: string; icon: React.ReactNode }> = [
-  { value: "all", label: "All runs", icon: <CirclesIcon /> },
-  { value: "in-progress", label: "Running", icon: <PlayCircleIcon /> },
-  { value: "failed", label: "Failed", icon: <XCircleIcon /> },
-  { value: "successful", label: "Passed", icon: <CheckCircleIcon /> },
-];
-
 function matchesWorkflowRunFilter(run: WorkflowRunListItem, filter: WorkflowRunFilter) {
   if (filter === "all") return true;
   if (filter === "in-progress") return isWorkflowRunActive(run);
@@ -266,16 +241,10 @@ interface GitHubActionsViewProps {
   refreshNonce?: number;
   searchQuery?: string;
   filter?: WorkflowRunFilter;
-  onFilterChange?: (filter: WorkflowRunFilter) => void;
 }
 
 const GitHubActionsView = memo(
-  ({
-    refreshNonce = 0,
-    searchQuery = "",
-    filter = "all",
-    onFilterChange,
-  }: GitHubActionsViewProps) => {
+  ({ refreshNonce = 0, searchQuery = "", filter = "all" }: GitHubActionsViewProps) => {
     const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
     const activeRepoPath = useRepositoryStore.use.activeRepoPath();
     const repoPath = activeRepoPath ?? rootFolderPath ?? null;
@@ -358,27 +327,13 @@ const GitHubActionsView = memo(
       }
     }, []);
 
-    const counts = useMemo(
-      () => ({
-        all: runs.length,
-        "in-progress": runs.filter((run) => isWorkflowRunActive(run)).length,
-        failed: runs.filter((run) => matchesWorkflowRunFilter(run, "failed")).length,
-        successful: runs.filter((run) => matchesWorkflowRunFilter(run, "successful")).length,
-      }),
-      [runs],
-    );
-
     const filteredRuns = useMemo(() => {
       const query = deferredSearchQuery.trim().toLowerCase();
       return runs.filter(
         (run) => matchesWorkflowRunFilter(run, filter) && matchesWorkflowRunQuery(run, query),
       );
     }, [deferredSearchQuery, filter, runs]);
-    const groupedRuns = useMemo(
-      () => groupWorkflowRuns(filteredRuns, filter),
-      [filter, filteredRuns],
-    );
-    const forceListSectionsExpanded = deferredSearchQuery.trim().length > 0;
+    const groupedRuns = useMemo(() => groupWorkflowRuns(filteredRuns), [filteredRuns]);
 
     useEffect(() => {
       if (!isAuthenticated || !repoPath || filteredRuns.length === 0) return;
@@ -492,35 +447,6 @@ const GitHubActionsView = memo(
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-busy={entry.isLoading}>
-        {runs.length > 0 && onFilterChange ? (
-          <div className="shrink-0 px-2 pt-1.5 pb-1">
-            <ToggleGroup
-              value={filter}
-              onValueChange={onFilterChange}
-              ariaLabel="Filter workflow runs"
-              wrap={false}
-              width="full"
-              options={FILTER_OPTIONS.map((option) => ({
-                value: option.value,
-                label: `${option.label}: ${counts[option.value]}`,
-                icon: (
-                  <span
-                    className={cn(
-                      "flex items-center gap-1",
-                      option.value === "in-progress" && counts[option.value] > 0 && "text-primary",
-                      option.value === "failed" && counts[option.value] > 0 && "text-destructive",
-                      option.value === "successful" && counts[option.value] > 0 && "text-success",
-                    )}
-                  >
-                    {option.icon}
-                    <span className="tabular-nums">{counts[option.value]}</span>
-                  </span>
-                ),
-              }))}
-              iconOnly
-            />
-          </div>
-        ) : null}
         <SidebarScrollArea className="min-h-0 flex-1">
           {entry.error && runs.length === 0 ? (
             <EmptyState
@@ -544,13 +470,13 @@ const GitHubActionsView = memo(
           ) : filteredRuns.length === 0 ? (
             <EmptyState layout="sidebar" message="No matching workflow runs" />
           ) : (
-            <div className="space-y-1 overflow-x-hidden">
+            <div className="min-w-0 space-y-1">
               {groupedRuns.map((group) => (
                 <SidebarSection
+                  forceExpanded={searchQuery.trim().length > 0}
                   key={group.id}
                   title={group.title}
-                  defaultExpanded={group.defaultExpanded}
-                  forceExpanded={forceListSectionsExpanded}
+                  count={group.items.length}
                 >
                   {group.items.map((run) => (
                     <WorkflowRunRow

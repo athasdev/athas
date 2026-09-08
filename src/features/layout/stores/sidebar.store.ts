@@ -3,7 +3,12 @@ import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 
 export type GitActivitySection = GitSidebarItemId;
-export type GitHubActivitySection = "pull-requests" | "issues" | "actions";
+export type GitHubActivitySection =
+  | "pull-requests"
+  | "issues"
+  | "actions"
+  | "releases"
+  | "deployments";
 export type DockerActivitySection = "resources" | "compose" | "project" | "registry";
 
 interface SidebarState {

@@ -111,6 +111,8 @@ export const defaultSettings: Settings = {
   showGitHubPullRequests: true,
   showGitHubIssues: true,
   showGitHubActions: true,
+  showGitHubReleases: true,
+  showGitHubDeployments: true,
   githubActionNotifications: true,
   // Keyboard
   keybindingPreset: "none",
@@ -179,7 +181,7 @@ export const defaultSettings: Settings = {
   gitLastPanelMode: "changes",
   gitSidebarTabOrder: [...GIT_SIDEBAR_TAB_IDS],
   hiddenGitSidebarItems: [],
-  githubSidebarSectionOrder: ["pull-requests", "issues", "actions"],
+  githubSidebarSectionOrder: ["pull-requests", "issues", "actions", "releases", "deployments"],
   enableInlineGitBlame: true,
   // Telemetry
   telemetry: false,

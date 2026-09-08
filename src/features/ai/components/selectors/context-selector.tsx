@@ -1,3 +1,4 @@
+import { TagIcon, RocketIcon } from "@/ui/icons";
 import { useMemo, useRef, useState, type RefObject } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { openFiles } from "@/features/file-system/controllers/platform";
@@ -41,6 +42,8 @@ function getBufferContextDescription(buffer: PaneContent) {
   if (buffer.type === "pullRequest") return `Pull request #${buffer.prNumber}`;
   if (buffer.type === "githubIssue") return `Issue #${buffer.issueNumber}`;
   if (buffer.type === "githubAction") return `Action run #${buffer.runId}`;
+  if (buffer.type === "githubDelivery")
+    return `${buffer.kind === "releases" ? "Release" : "Deployment"} · ${buffer.name}`;
   return buffer.path;
 }
 
@@ -50,6 +53,8 @@ function getBufferContextIcon(buffer: PaneContent) {
   if (buffer.type === "pullRequest") return <GitPullRequestIcon />;
   if (buffer.type === "githubIssue") return <FileTextIcon />;
   if (buffer.type === "githubAction") return <PlayCircleIcon />;
+  if (buffer.type === "githubDelivery")
+    return buffer.kind === "releases" ? <TagIcon /> : <RocketIcon />;
   return <ThemedFileIcon fileName={buffer.name} isDir={false} />;
 }
 

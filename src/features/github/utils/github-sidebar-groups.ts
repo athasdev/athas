@@ -1,45 +1,37 @@
 import type {
-  IssueFilter,
   IssueListItem,
   PRFilter,
   PullRequest,
-  WorkflowRunFilter,
   WorkflowRunListItem,
 } from "../types/github.types";
+import { formatCalendarDateGroup } from "@/utils/date";
 
 export interface GitHubSidebarGroup<T> {
   id: string;
   title: string;
   items: T[];
-  defaultExpanded: boolean;
 }
 
 export function groupPullRequests(
   pullRequests: PullRequest[],
   filter: PRFilter,
 ): GitHubSidebarGroup<PullRequest>[] {
-  if (filter === "review-requests") {
-    return createGroup("review", "Review requested", pullRequests);
-  }
-
+  if (filter === "review-requests") return createGroup("review", "Review requested", pullRequests);
   return [
     ...createGroup(
       "open",
       "Open",
-      pullRequests.filter((pullRequest) => !pullRequest.isDraft),
+      pullRequests.filter((pr) => !pr.isDraft),
     ),
     ...createGroup(
       "drafts",
       "Drafts",
-      pullRequests.filter((pullRequest) => pullRequest.isDraft),
+      pullRequests.filter((pr) => pr.isDraft),
     ),
   ];
 }
 
-export function groupIssues(
-  issues: IssueListItem[],
-  filter: IssueFilter,
-): GitHubSidebarGroup<IssueListItem>[] {
+export function groupIssues(issues: IssueListItem[]): GitHubSidebarGroup<IssueListItem>[] {
   return [
     ...createGroup(
       "open",
@@ -50,51 +42,34 @@ export function groupIssues(
       "closed",
       "Closed",
       issues.filter((issue) => issue.state.toUpperCase() === "CLOSED"),
-      filter !== "all",
     ),
   ];
+}
+
+export function groupByDate<T>(items: T[], getDate: (item: T) => string): GitHubSidebarGroup<T>[] {
+  const timestamp = (item: T) => {
+    const value = new Date(getDate(item)).getTime();
+    return Number.isNaN(value) ? -Infinity : value;
+  };
+  const groups = new Map<string, GitHubSidebarGroup<T>>();
+  for (const item of [...items].sort((a, b) => timestamp(b) - timestamp(a))) {
+    const date = new Date(getDate(item));
+    const id = Number.isNaN(date.getTime())
+      ? "unknown"
+      : `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    const group = groups.get(id) ?? { id, title: formatCalendarDateGroup(date), items: [] };
+    group.items.push(item);
+    groups.set(id, group);
+  }
+  return [...groups.values()];
 }
 
 export function groupWorkflowRuns(
   runs: WorkflowRunListItem[],
-  filter: WorkflowRunFilter,
 ): GitHubSidebarGroup<WorkflowRunListItem>[] {
-  const inProgress = runs.filter((run) => isWorkflowRunInProgress(run));
-  const failed = runs.filter((run) => isWorkflowRunFailed(run));
-  const successful = runs.filter((run) => run.conclusion?.toLowerCase() === "success");
-  const groupedRunIds = new Set(
-    [...inProgress, ...failed, ...successful].map((run) => run.databaseId),
-  );
-
-  return [
-    ...createGroup("in-progress", "In progress", inProgress),
-    ...createGroup("failed", "Failed", failed),
-    ...createGroup("successful", "Successful", successful, filter !== "all"),
-    ...createGroup(
-      "other",
-      "Other",
-      runs.filter((run) => !groupedRunIds.has(run.databaseId)),
-    ),
-  ];
+  return groupByDate(runs, (run) => run.createdAt ?? run.updatedAt ?? "");
 }
 
-function createGroup<T>(
-  id: string,
-  title: string,
-  items: T[],
-  defaultExpanded = true,
-): GitHubSidebarGroup<T>[] {
-  return items.length > 0 ? [{ id, title, items, defaultExpanded }] : [];
-}
-
-function isWorkflowRunInProgress(run: WorkflowRunListItem): boolean {
-  return ["queued", "pending", "in_progress", "waiting", "requested"].includes(
-    run.status?.toLowerCase() ?? "",
-  );
-}
-
-function isWorkflowRunFailed(run: WorkflowRunListItem): boolean {
-  return ["failure", "cancelled", "timed_out", "startup_failure"].includes(
-    run.conclusion?.toLowerCase() ?? "",
-  );
+function createGroup<T>(id: string, title: string, items: T[]): GitHubSidebarGroup<T>[] {
+  return items.length ? [{ id, title, items }] : [];
 }

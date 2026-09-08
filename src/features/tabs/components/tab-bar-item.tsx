@@ -1,3 +1,4 @@
+import { TagIcon, RocketIcon } from "@/ui/icons";
 import {
   ActivityIcon,
   ArrowsClockwiseIcon,
@@ -197,6 +198,12 @@ const TabBarItem = memo(function TabBarItem({
                 />
               ) : (
                 <ChatBubbleTextIcon className="text-subtle-foreground" />
+              )
+            ) : buffer.type === "githubDelivery" ? (
+              buffer.kind === "releases" ? (
+                <TagIcon />
+              ) : (
+                <RocketIcon />
               )
             ) : buffer.type === "githubAction" ? (
               <ActivityIcon className="text-subtle-foreground" />

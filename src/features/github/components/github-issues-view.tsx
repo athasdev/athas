@@ -9,7 +9,7 @@ import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-r
 import { useGitHubStore } from "../stores/github.store";
 import type { IssueDetails, IssueFilter, IssueListItem } from "../types/github.types";
 import { groupIssues } from "../utils/github-sidebar-groups";
-import { getTimeAgo } from "../utils/github-viewer-utils";
+import { getTimeAgo, getSidebarTime } from "../utils/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
@@ -51,6 +51,7 @@ const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: Issu
   return (
     <GitHubSidebarRow
       title={issue.title}
+      description={`#${issue.number} · ${issue.author.login}`}
       onClick={onSelect}
       onPrefetch={onPrefetch}
       draggable
@@ -67,20 +68,7 @@ const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: Issu
       }}
       active={isActive}
       leading={authorAvatar}
-      description={
-        <span className="flex min-w-0 items-center gap-1.5 capitalize">
-          <span className="font-mono">#{issue.number}</span>
-          <span aria-hidden="true">·</span>
-          <span>{issue.state.toLowerCase()}</span>
-          {labels[0] ? (
-            <>
-              <span aria-hidden="true">·</span>
-              <span className="truncate normal-case">{labels[0].name}</span>
-            </>
-          ) : null}
-        </span>
-      }
-      trailing={updatedLabel}
+      trailing={getSidebarTime(issue.updatedAt)}
       preview={{
         title: issue.title,
         subtitle: `#${issue.number} by ${issue.author.login}`,
@@ -185,11 +173,7 @@ const GitHubIssuesView = memo(
         ].some((value) => value.toLowerCase().includes(query)),
       );
     }, [deferredIssues, deferredSearchQuery]);
-    const groupedIssues = useMemo(
-      () => groupIssues(filteredIssues, filter),
-      [filter, filteredIssues],
-    );
-    const forceListSectionsExpanded = deferredSearchQuery.trim().length > 0;
+    const groupedIssues = useMemo(() => groupIssues(filteredIssues), [filter, filteredIssues]);
 
     useEffect(() => {
       if (!isAuthenticated || !repoPath || filteredIssues.length === 0) return;
@@ -244,13 +228,13 @@ const GitHubIssuesView = memo(
           ) : filteredIssues.length === 0 ? (
             <EmptyState layout="sidebar" message="No matching issues" />
           ) : (
-            <div className="space-y-1 overflow-x-hidden">
+            <div className="min-w-0 space-y-1">
               {groupedIssues.map((group) => (
                 <SidebarSection
+                  forceExpanded={searchQuery.trim().length > 0}
                   key={group.id}
                   title={group.title}
-                  defaultExpanded={group.defaultExpanded}
-                  forceExpanded={forceListSectionsExpanded}
+                  count={group.items.length}
                 >
                   {group.items.map((issue) => (
                     <IssueRow

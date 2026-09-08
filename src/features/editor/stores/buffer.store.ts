@@ -1,3 +1,4 @@
+import { deliveryBufferPath } from "@/features/github/delivery/utils/github-delivery";
 import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createStore } from "zustand/vanilla";
@@ -429,7 +430,8 @@ const createBufferStore = (workspaceId: string) => {
             { focus = false, update }: ActivateExistingBufferOptions = {},
           ) => {
             set((state) => {
-              update?.(activateBufferInState(state, bufferId));
+              const activeBuffer = activateBufferInState(state, bufferId);
+              update?.(activeBuffer);
             });
             if (focus) {
               syncAndFocusBufferInPane(bufferId);
@@ -663,6 +665,15 @@ const createBufferStore = (workspaceId: string) => {
                 });
               }
 
+              return openNewContent(path);
+            }
+
+            case "githubDelivery": {
+              const path = deliveryBufferPath(spec.kind, spec.repoPath, spec.resourceId ?? "new");
+              const existing = buffers.find(
+                (buffer) => buffer.type === "githubDelivery" && buffer.path === path,
+              );
+              if (existing) return activateExistingBuffer(existing.id);
               return openNewContent(path);
             }
 

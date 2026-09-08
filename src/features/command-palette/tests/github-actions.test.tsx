@@ -12,11 +12,14 @@ function createParams(repoPath: string | null = "/repo") {
       showGitHubPullRequests: true,
       showGitHubIssues: true,
       showGitHubActions: true,
+      showGitHubReleases: true,
+      showGitHubDeployments: true,
     },
     updateSetting: vi.fn(),
     checkAuth: vi.fn(async () => undefined),
     showToast: vi.fn(),
     openGitHubFormBuffer: vi.fn(() => "github-form"),
+    openReleaseDraft: vi.fn(),
     onClose: vi.fn(),
   };
 }
@@ -46,6 +49,25 @@ describe("createGitHubActions", () => {
 
     expect(params.openGitHubFormBuffer).toHaveBeenCalledWith({ repoPath: "/repo", formKind });
     expect(params.onClose).toHaveBeenCalledOnce();
+  });
+
+  it("opens a release draft and exposes both delivery sections", () => {
+    const params = createParams();
+    const actions = createGitHubActions(params);
+    actions.find((action) => action.id === "github-new-release")?.action();
+    expect(params.openReleaseDraft).toHaveBeenCalledWith("/repo");
+    expect(actions.map((action) => action.id)).toEqual(
+      expect.arrayContaining(["github-show-releases", "github-show-deployments"]),
+    );
+  });
+
+  it("does not create a release draft without a repository", () => {
+    const params = createParams(null);
+    createGitHubActions(params)
+      .find((action) => action.id === "github-new-release")
+      ?.action();
+    expect(params.openReleaseDraft).not.toHaveBeenCalled();
+    expect(params.showToast).toHaveBeenCalledWith({ message: "No repository open", type: "error" });
   });
 
   it("reports when a creation command has no repository", () => {

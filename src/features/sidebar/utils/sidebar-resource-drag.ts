@@ -5,6 +5,13 @@ export const SIDEBAR_RESOURCE_DROP_ON_AI_EVENT = "athas-sidebar-resource-drop-on
 
 export type SidebarDragResource =
   | {
+      type: "github-delivery";
+      kind: "releases" | "deployments";
+      repoPath: string;
+      resourceId: number;
+      name: string;
+    }
+  | {
       type: "file";
       path: string;
       name: string;
@@ -73,6 +80,8 @@ const getSidebarResourceLabel = (resource: SidebarDragResource): string => {
       return `#${resource.number} ${resource.title}`;
     case "github-issue":
       return `#${resource.number} ${resource.title}`;
+    case "github-delivery":
+      return resource.name;
     case "github-action":
       return resource.title || `Run #${resource.runId}`;
   }

@@ -1,5 +1,6 @@
 import { type DragEventHandler, type MouseEventHandler, type ReactNode, useCallback } from "react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
+import { ClockIcon } from "@/ui/icons";
 import { SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
@@ -29,8 +30,8 @@ interface GitHubSidebarPreview {
 }
 
 interface GitHubSidebarRowProps {
-  title: ReactNode;
   description?: ReactNode;
+  title: ReactNode;
   leading: ReactNode;
   trailing?: ReactNode;
   active?: boolean;
@@ -60,8 +61,8 @@ function previewBadgeClassName(tone: PreviewBadgeTone = "default") {
 }
 
 export function GitHubSidebarRow({
-  active = false,
   description,
+  active = false,
   draggable = false,
   leading,
   onClick,
@@ -81,14 +82,22 @@ export function GitHubSidebarRow({
 
   const row = (
     <SidebarListItem
+      description={description}
+      density="compact"
       active={active}
       leading={
         <span className="flex size-[1em] shrink-0 items-center justify-center overflow-hidden">
           {leading}
         </span>
       }
-      description={description}
-      trailing={trailing}
+      trailing={
+        trailing ? (
+          <span className="inline-flex items-center gap-1 tabular-nums">
+            <ClockIcon aria-label="Time" />
+            {trailing}
+          </span>
+        ) : undefined
+      }
       draggable={draggable}
       onClick={onClick}
       onContextMenu={onContextMenu}

@@ -148,6 +148,8 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
   const semanticTokens = useSettingsStore((state) => state.settings.semanticTokens);
+  const showGitHubReleases = useSettingsStore((state) => state.settings.showGitHubReleases);
+  const showGitHubDeployments = useSettingsStore((state) => state.settings.showGitHubDeployments);
   const showGitHubActions = useSettingsStore((state) => state.settings.showGitHubActions);
   const showGitHubIssues = useSettingsStore((state) => state.settings.showGitHubIssues);
   const showGitHubPullRequests = useSettingsStore((state) => state.settings.showGitHubPullRequests);
@@ -202,6 +204,8 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       parameterHints,
       semanticTokens,
       showGitHubActions,
+      showGitHubReleases,
+      showGitHubDeployments,
       showGitHubIssues,
       showGitHubPullRequests,
       showMinimap,
@@ -229,6 +233,8 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       parameterHints,
       semanticTokens,
       showGitHubActions,
+      showGitHubReleases,
+      showGitHubDeployments,
       showGitHubIssues,
       showGitHubPullRequests,
       showMinimap,
@@ -364,11 +370,18 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
         showGitHubPullRequests: commandSettings.showGitHubPullRequests,
         showGitHubIssues: commandSettings.showGitHubIssues,
         showGitHubActions: commandSettings.showGitHubActions,
+        showGitHubReleases: commandSettings.showGitHubReleases,
+        showGitHubDeployments: commandSettings.showGitHubDeployments,
       },
       updateSetting: useSettingsStore.getState().actions.updateSetting as (
         key: string,
         value: any,
       ) => void | Promise<void>,
+      openReleaseDraft: (repoPath) => {
+        useBufferStore
+          .getState()
+          .actions.openContent({ type: "githubDelivery", kind: "releases", repoPath });
+      },
       checkAuth: checkGitHubAuth,
       showToast,
       openGitHubFormBuffer,

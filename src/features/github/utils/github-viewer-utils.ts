@@ -9,6 +9,15 @@ export function getTimeAgo(dateString: string, options: { includeAgo?: boolean }
   });
 }
 
+export function getSidebarTime(dateString: string): string {
+  return formatCompactRelativeDate(dateString, {
+    afterWeek: "days",
+    includeAgo: false,
+    justNowLabel: "0m",
+    fallback: "—",
+  });
+}
+
 export function getRepositoryDisplayName(repoPath: string): string {
   return repoPath.split(/[\\/]/).filter(Boolean).pop() || repoPath;
 }

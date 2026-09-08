@@ -18,6 +18,8 @@ function formatOpenContextSummary(buffer: PaneContent, projectRoot?: string) {
     return `GitHub pull request: ${buffer.name} (#${buffer.prNumber})`;
   if (buffer.type === "githubIssue") return `GitHub issue: ${buffer.name} (#${buffer.issueNumber})`;
   if (buffer.type === "githubAction") return `GitHub action run: ${buffer.name} (#${buffer.runId})`;
+  if (buffer.type === "githubDelivery")
+    return `GitHub ${buffer.kind === "releases" ? "release" : "deployment"}: ${buffer.name} (repository: ${buffer.repoPath}, ID: ${buffer.resourceId ?? "unsaved draft"})`;
   if (buffer.type === "image") return `Image: ${formatContextPath(buffer.path, projectRoot)}`;
   if (buffer.type === "pdf") return `PDF: ${formatContextPath(buffer.path, projectRoot)}`;
   if (buffer.type === "binary")

@@ -536,3 +536,123 @@ pub async fn get_github_token(
 pub async fn remove_github_token(app: crate::app_runtime::AppHandle) -> Result<(), String> {
    remove_secret(&app, "github_token")
 }
+
+#[tauri::command]
+pub async fn github_list_releases(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   page: u32,
+) -> Result<Vec<athas_github::Release>, String> {
+   let token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_list_releases(repo_path, page, token)).await
+}
+
+#[tauri::command]
+pub async fn github_get_release(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   id: i64,
+) -> Result<athas_github::Release, String> {
+   let token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_get_release(repo_path, id, token)).await
+}
+
+#[tauri::command]
+pub async fn github_save_release(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   id: Option<i64>,
+   input: athas_github::ReleaseInput,
+) -> Result<athas_github::Release, String> {
+   let token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_save_release(repo_path, id, input, token)).await
+}
+
+#[tauri::command]
+pub async fn github_publish_release(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   id: i64,
+   make_latest: bool,
+) -> Result<athas_github::Release, String> {
+   let token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_publish_release(repo_path, id, make_latest, token))
+      .await
+}
+
+#[tauri::command]
+pub async fn github_delete_release(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   id: i64,
+) -> Result<(), String> {
+   let token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_delete_release(repo_path, id, token)).await
+}
+
+#[tauri::command]
+pub async fn github_generate_release_notes(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   tag: String,
+   target: String,
+   previous_tag: Option<String>,
+) -> Result<serde_json::Value, String> {
+   let token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_generate_release_notes(repo_path, tag, target, previous_tag, token)
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_list_deployments(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   page: u32,
+) -> Result<Vec<athas_github::Deployment>, String> {
+   let token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_list_deployments(repo_path, page, token)).await
+}
+
+#[tauri::command]
+pub async fn github_get_deployment(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   id: i64,
+) -> Result<athas_github::Deployment, String> {
+   let token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_get_deployment(repo_path, id, token)).await
+}
+
+#[tauri::command]
+pub async fn github_deactivate_deployment(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   id: i64,
+) -> Result<athas_github::DeploymentStatus, String> {
+   let token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_deactivate_deployment(repo_path, id, token)).await
+}
+
+#[tauri::command]
+pub async fn github_upload_release_asset(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   id: i64,
+   file_path: String,
+) -> Result<athas_github::ReleaseAsset, String> {
+   let token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_upload_release_asset(repo_path, id, file_path, token))
+      .await
+}
+
+#[tauri::command]
+pub async fn github_delete_release_asset(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   asset_id: i64,
+) -> Result<(), String> {
+   let token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_delete_release_asset(repo_path, asset_id, token)).await
+}

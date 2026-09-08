@@ -51,6 +51,30 @@ describe("buffer open lifecycle", () => {
     vi.unstubAllGlobals();
   });
 
+  it("keeps delivery tabs unique by repository, resource kind, and ID", async () => {
+    const { useBufferStore } = await import("../stores/buffer.store");
+    const { openContent } = useBufferStore.getState().actions;
+    const release = {
+      type: "githubDelivery",
+      kind: "releases",
+      repoPath: "/workspace-a",
+      resourceId: 42,
+    } as const;
+    const first = openContent(release);
+    expect(openContent(release)).toBe(first);
+    expect(openContent({ ...release, repoPath: "/workspace-b" })).not.toBe(first);
+    expect(openContent({ ...release, kind: "deployments" })).not.toBe(first);
+    expect(openContent({ ...release, resourceId: undefined })).not.toBe(first);
+    expect(
+      useBufferStore.getState().buffers.filter((buffer) => buffer.type === "githubDelivery"),
+    ).toHaveLength(4);
+    expect(openContent(release)).toBe(first);
+    expect(useBufferStore.getState().activeBufferId).toBe(first);
+    expect(useBufferStore.getState().buffers.find((buffer) => buffer.id === first)?.isActive).toBe(
+      true,
+    );
+  });
+
   it("reuses pull request buffers and refreshes navigation metadata", async () => {
     const { useBufferStore } = await import("../stores/buffer.store");
     const actions = useBufferStore.getState().actions;

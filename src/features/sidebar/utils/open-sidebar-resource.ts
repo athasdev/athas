@@ -109,6 +109,15 @@ export const openSidebarResourceBuffer = async (
         url: resource.url,
       });
 
+    case "github-delivery":
+      return bufferActions.openContent({
+        type: "githubDelivery",
+        kind: resource.kind,
+        repoPath: resource.repoPath,
+        resourceId: resource.resourceId,
+        name: resource.name,
+      });
+
     case "github-action":
       return bufferActions.openGitHubActionBuffer({
         runId: resource.runId,

@@ -5,6 +5,7 @@ const GITHUB_CONTEXT_TYPES = new Set<PaneContent["type"]>([
   "pullRequest",
   "githubIssue",
   "githubAction",
+  "githubDelivery",
 ]);
 
 export interface GitContextFile extends GitFile {

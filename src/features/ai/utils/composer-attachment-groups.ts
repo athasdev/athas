@@ -55,6 +55,7 @@ function getBufferKind(buffer: PaneContent): ComposerAttachmentKind {
       return "databases";
     case "pullRequest":
     case "githubIssue":
+    case "githubDelivery":
     case "githubAction":
       return "github";
     case "editor":

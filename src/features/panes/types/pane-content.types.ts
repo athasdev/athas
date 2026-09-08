@@ -27,6 +27,7 @@ export type PaneContentType =
   | "database"
   | "pullRequest"
   | "githubIssue"
+  | "githubDelivery"
   | "githubAction"
   | "githubForm"
   | "customView"
@@ -138,6 +139,13 @@ interface GitHubActionContent extends PaneContentBase {
   url?: string;
 }
 
+export interface GitHubDeliveryContent extends PaneContentBase {
+  type: "githubDelivery";
+  kind: "releases" | "deployments";
+  repoPath: string;
+  resourceId?: number;
+}
+
 export type GitHubActionOpenTarget =
   | { runId: number; notification?: never }
   | { runId?: never; notification: GitHubActionNotificationTarget };
@@ -244,6 +252,7 @@ export type PaneContent =
   | DatabaseContent
   | PullRequestContent
   | GitHubIssueContent
+  | GitHubDeliveryContent
   | GitHubActionContent
   | GitHubFormContent
   | CustomViewContent
@@ -278,6 +287,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "newTab",
   "pullRequest",
   "githubIssue",
+  "githubDelivery",
   "githubAction",
   "githubForm",
   "customView",
@@ -390,6 +400,13 @@ export type OpenContentSpec =
       name?: string;
       url?: string;
     }
+  | {
+      type: "githubDelivery";
+      kind: "releases" | "deployments";
+      repoPath: string;
+      resourceId?: number;
+      name?: string;
+    }
   | ({
       type: "githubAction";
       repoPath?: string;
@@ -461,6 +478,9 @@ export type OpenContentSpec =
       type: "continuousAgents";
     }
   | {
+      type: "workspaces";
+    }
+  | {
       type: "settings";
     }
   | {
@@ -470,9 +490,6 @@ export type OpenContentSpec =
       type: "extension";
       extensionId: string;
       name: string;
-    }
-  | {
-      type: "workspaces";
     }
   | {
       type: "onboarding";

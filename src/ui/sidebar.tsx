@@ -255,12 +255,14 @@ export function SidebarSectionHeader({
 export function SidebarSection({
   title,
   action,
+  count,
   children,
   defaultExpanded = true,
   forceExpanded = false,
 }: {
   title: ReactNode;
   action?: ReactNode;
+  count?: number;
   children: ReactNode;
   defaultExpanded?: boolean;
   forceExpanded?: boolean;
@@ -281,7 +283,18 @@ export function SidebarSection({
       className="pt-2 first:pt-0"
     >
       <AccordionItem value="section">
-        <AccordionTrigger action={action}>{title}</AccordionTrigger>
+        <AccordionTrigger
+          action={
+            action ??
+            (count !== undefined ? (
+              <span className="pr-2 tabular-nums ui-text-sm text-subtle-foreground/80">
+                {count}
+              </span>
+            ) : undefined)
+          }
+        >
+          {title}
+        </AccordionTrigger>
         <AccordionContent>{children}</AccordionContent>
       </AccordionItem>
     </Accordion>
@@ -546,6 +559,7 @@ export function SidebarListItem({
   children,
   active = false,
   description,
+  density = "default",
   leading,
   trailing,
   tone = "default",
@@ -557,6 +571,7 @@ export function SidebarListItem({
   children: ReactNode;
   active?: boolean;
   description?: ReactNode;
+  density?: "default" | "compact";
   leading?: ReactNode;
   trailing?: ReactNode;
   tone?: "default" | "warning" | "error";
@@ -580,7 +595,7 @@ export function SidebarListItem({
         active && tone === "default" && "bg-selected text-foreground",
         active && tone === "warning" && "bg-warning/15 text-warning",
         active && tone === "error" && "bg-destructive/12 text-destructive",
-        description && "h-auto min-h-10 py-1.5",
+        description && (density === "compact" ? "h-auto min-h-9 py-1" : "h-auto min-h-10 py-1.5"),
         width === "content" && "w-fit max-w-full",
       ),
       "data-slot": "sidebar-list-item",
@@ -595,13 +610,19 @@ export function SidebarListItem({
             <span
               className={cn(
                 "block max-w-full truncate",
-                description && "font-medium text-foreground",
+                description && "text-foreground",
+                description && density === "default" && "font-medium",
               )}
             >
               {children}
             </span>
             {description ? (
-              <span className="mt-0.5 block min-w-0 truncate font-normal leading-row text-subtle-foreground/80">
+              <span
+                className={cn(
+                  "block min-w-0 truncate font-normal leading-row text-subtle-foreground/80",
+                  density === "compact" ? "ui-text-caption" : "mt-0.5",
+                )}
+              >
                 {description}
               </span>
             ) : null}

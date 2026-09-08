@@ -1,3 +1,4 @@
+import { deliveryBufferPath } from "@/features/github/delivery/utils/github-delivery";
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
 import { getViewBufferPath } from "@/features/views/lib/view-buffer";
 import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
@@ -129,6 +130,17 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         issueNumber: spec.issueNumber,
         authorAvatarUrl: spec.authorAvatarUrl,
         url: spec.url,
+      };
+    case "githubDelivery":
+      return {
+        ...base,
+        type: "githubDelivery",
+        kind: spec.kind,
+        repoPath: spec.repoPath,
+        resourceId: spec.resourceId,
+        name: spec.name ?? (spec.kind === "releases" ? "New Release" : "Deployment"),
+        path: deliveryBufferPath(spec.kind, spec.repoPath, spec.resourceId ?? "new"),
+        isPreview: false,
       };
     case "githubAction":
       return {

@@ -1,3 +1,4 @@
+import { TagIcon, RocketIcon } from "@/ui/icons";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   ArrowClockwiseIcon,
@@ -11,13 +12,20 @@ import type { Settings } from "@/features/settings/types/settings.types";
 import { GITHUB_CONNECTION_URL } from "@/features/github/services/github-token-service";
 import type { Action } from "../types/action.types";
 
-type GitHubSidebarSection = "pull-requests" | "issues" | "actions";
+type GitHubSidebarSection = "pull-requests" | "issues" | "actions" | "releases" | "deployments";
 
 interface GitHubActionsParams {
   repoPath: string | null;
   setIsSidebarVisible: (v: boolean) => void;
   setActiveView: (view: "files" | "git" | "github-prs") => void;
-  settings: Pick<Settings, "showGitHubPullRequests" | "showGitHubIssues" | "showGitHubActions">;
+  settings: Pick<
+    Settings,
+    | "showGitHubPullRequests"
+    | "showGitHubIssues"
+    | "showGitHubActions"
+    | "showGitHubReleases"
+    | "showGitHubDeployments"
+  >;
   updateSetting: (key: string, value: any) => void | Promise<void>;
   checkAuth: (options?: { force?: boolean }) => Promise<void>;
   showToast: (params: { message: string; type: "success" | "error" | "info" }) => void;
@@ -25,6 +33,7 @@ interface GitHubActionsParams {
     repoPath: string;
     formKind: "pull-request" | "issue" | "action";
   }) => string;
+  openReleaseDraft: (repoPath: string) => void;
   onClose: () => void;
 }
 
@@ -38,6 +47,7 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
     showToast,
     repoPath,
     openGitHubFormBuffer,
+    openReleaseDraft,
     onClose,
   } = params;
 
@@ -46,6 +56,8 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
       "pull-requests": "showGitHubPullRequests",
       issues: "showGitHubIssues",
       actions: "showGitHubActions",
+      releases: "showGitHubReleases",
+      deployments: "showGitHubDeployments",
     };
     const settingKey = settingBySection[section];
 
@@ -76,6 +88,37 @@ export const createGitHubActions = (params: GitHubActionsParams): Action[] => {
   };
 
   return [
+    {
+      id: "github-show-releases",
+      label: "GitHub: Show Releases",
+      description: "Browse release notes, drafts, and assets",
+      icon: <TagIcon />,
+      category: "GitHub",
+      action: () => void openGitHubSection("releases"),
+    },
+    {
+      id: "github-show-deployments",
+      label: "GitHub: Show Deployments",
+      description: "Inspect environments and deployment status history",
+      icon: <RocketIcon />,
+      category: "GitHub",
+      action: () => void openGitHubSection("deployments"),
+    },
+    {
+      id: "github-new-release",
+      label: "GitHub: New Release",
+      description: "Draft a release in the active repository",
+      icon: <TagIcon />,
+      category: "GitHub",
+      action: () => {
+        onClose();
+        if (!repoPath) {
+          showToast({ message: "No repository open", type: "error" });
+          return;
+        }
+        openReleaseDraft(repoPath);
+      },
+    },
     {
       id: "github-new-issue",
       label: "GitHub: New Issue",

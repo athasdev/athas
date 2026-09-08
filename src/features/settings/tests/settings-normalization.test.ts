@@ -7,6 +7,22 @@ import {
 import { normalizeSettings, normalizeSettingValue } from "../lib/settings-normalization";
 
 describe("settings normalization", () => {
+  it("adds delivery sections to saved GitHub ordering without losing user order", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      githubSidebarSectionOrder: ["actions", "issues", "pull-requests", "actions"],
+    });
+    expect(normalized.githubSidebarSectionOrder).toEqual([
+      "actions",
+      "issues",
+      "pull-requests",
+      "releases",
+      "deployments",
+    ]);
+    expect(normalized.showGitHubReleases).toBe(true);
+    expect(normalized.showGitHubDeployments).toBe(true);
+  });
+
   it("migrates previous bundled defaults to the shared typefaces", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
