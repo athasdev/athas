@@ -1,3 +1,4 @@
+import { openWorkspaceManagement } from "@/features/workspace/team/services/open-workspace-management";
 import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import {
   DropdownMenuContent,
@@ -141,6 +142,9 @@ export default function RunActionsMenu({
         ) : null}
       </DropdownMenuViewport>
       <DropdownMenuFooter>
+        <DropdownMenuItem disabled={!canRefresh} onClick={openWorkspaceManagement}>
+          Manage workspace…
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={onCreate}>
           <PlusIcon />
           New action…

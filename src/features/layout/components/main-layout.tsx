@@ -78,7 +78,11 @@ export function MainLayout() {
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const responsiveLayout = useResponsiveWorkbenchLayout(activityRailExpanded);
   const renderedActivityRailExpanded = responsiveLayout.activityBarExpanded;
-  const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
+  const isWorkspaceManagementActive = useBufferStore(
+    (state) => getBufferById(state.buffers, state.activeBufferId)?.type === "workspaces",
+  );
+  const renderedSidebarVisible =
+    isSidebarVisible && !responsiveLayout.narrow && !isWorkspaceManagementActive;
   const activityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
   const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);

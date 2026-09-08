@@ -1,5 +1,6 @@
+import { openWorkspaceManagement } from "@/features/workspace/team/services/open-workspace-management";
 import { shareEditor, shareAgent } from "@/features/sharing/services/open-share";
-import { FilePlusIcon, FolderOpenIcon, HistoryIcon, SaveIcon } from "@/ui/icons";
+import { GridIcon, FilePlusIcon, FolderOpenIcon, HistoryIcon, SaveIcon } from "@/ui/icons";
 import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
 import { createTabActions } from "@/features/tabs/constants/tab-actions";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
@@ -19,6 +20,17 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
   const { onClose } = params;
 
   const baseActions: Action[] = [
+    {
+      id: "team-workspace",
+      label: "Workspace: Manage Workspaces",
+      description: "Share project commands and AI instructions with your team",
+      category: "File",
+      icon: <GridIcon />,
+      action: () => {
+        onClose();
+        openWorkspaceManagement();
+      },
+    },
     {
       id: "share-buffer",
       label: "File: Share Buffer to Web",

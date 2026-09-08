@@ -1,3 +1,4 @@
+import { loadWorkspaceTeamContext } from "@/features/workspace/team/services/workspace-team-context";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat.types";
@@ -155,6 +156,10 @@ export const getChatCompletionStream = async (
   systemPromptOverride?: string,
 ): Promise<void> => {
   try {
+    if (context.projectRoot) {
+      const team = await loadWorkspaceTeamContext(context.projectRoot);
+      context = { ...context, teamInstructions: team?.instructions };
+    }
     if (agentId === CODEX_INTEGRATION_ID) {
       const integration = new CodexIntegrationService(
         {

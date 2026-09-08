@@ -1,6 +1,7 @@
 import type { CodeLensItem } from "@/features/editor/lsp/use-code-lens";
 
 export type RunActionSource =
+  | "team"
   | "custom"
   | "package"
   | "cargo"

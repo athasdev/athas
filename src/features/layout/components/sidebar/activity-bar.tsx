@@ -88,6 +88,18 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const activityBarVisibility = useActivityBarVisibility();
   const handleSidebarViewChange = (view: typeof activeSidebarView) => {
+    const buffers = useBufferStore.getState();
+    if (
+      buffers.buffers.find((buffer) => buffer.id === buffers.activeBufferId)?.type === "workspaces"
+    ) {
+      const editor = [...buffers.buffers].reverse().find((buffer) => buffer.type === "editor");
+      if (editor) buffers.actions.setActiveBuffer(editor.id);
+      else buffers.actions.showNewTabView();
+      const ui = useUIState.getState();
+      ui.setActiveView(view);
+      ui.setIsSidebarVisible(true);
+      return;
+    }
     openSidebarView(view);
   };
 

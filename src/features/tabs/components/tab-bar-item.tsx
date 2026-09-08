@@ -218,6 +218,8 @@ const TabBarItem = memo(function TabBarItem({
               <SearchIcon className="text-subtle-foreground" />
             ) : buffer.type === "continuousAgents" ? (
               <ArrowsClockwiseIcon className="text-subtle-foreground" />
+            ) : buffer.type === "workspaces" ? (
+              <GridIcon />
             ) : buffer.type === "settings" ? (
               <SettingsIcon className="text-subtle-foreground" />
             ) : (

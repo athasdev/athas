@@ -40,6 +40,7 @@ export type PaneContentType =
   | "diagnostics"
   | "references"
   | "continuousAgents"
+  | "workspaces"
   | "settings"
   | "extensions"
   | "extension"
@@ -205,6 +206,10 @@ interface ContinuousAgentsContent extends PaneContentBase {
   type: "continuousAgents";
 }
 
+interface WorkspacesContent extends PaneContentBase {
+  type: "workspaces";
+}
+
 interface SettingsContent extends PaneContentBase {
   type: "settings";
 }
@@ -252,6 +257,7 @@ export type PaneContent =
   | DiagnosticsContent
   | ReferencesContent
   | ContinuousAgentsContent
+  | WorkspacesContent
   | SettingsContent
   | ExtensionsContent
   | ExtensionContent
@@ -280,6 +286,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "diagnostics",
   "references",
   "continuousAgents",
+  "workspaces",
   "settings",
   "extensions",
   "extension",
@@ -463,6 +470,9 @@ export type OpenContentSpec =
       type: "extension";
       extensionId: string;
       name: string;
+    }
+  | {
+      type: "workspaces";
     }
   | {
       type: "onboarding";

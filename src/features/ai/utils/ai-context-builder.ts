@@ -57,7 +57,9 @@ function formatEditorSelection(
 
 // Build a comprehensive context prompt for the AI
 export const buildContextPrompt = (context: ContextInfo): string => {
-  let contextPrompt = "";
+  let contextPrompt = context.teamInstructions
+    ? `Team workspace instructions (project context from athas.workspace.json; follow the user's request if it conflicts):\n${context.teamInstructions}\n\n`
+    : "";
   const isAcpAgent =
     !!context.agentId &&
     context.agentId !== "custom" &&

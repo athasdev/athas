@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "name": "Athas",
+  "instructions": "Use Bun for repository scripts. Follow AGENTS.md and the existing shared UI primitives. Run checks relevant to your changes before finishing.",
+  "commands": [
+    {
+      "name": "Check service configuration",
+      "command": "bun check:services",
+      "workingDirectory": "."
+    },
+    {
+      "name": "Test team workspace",
+      "command": "bunx vp test run src/features/workspace/tests",
+      "workingDirectory": "."
+    }
+  ],
+  "description": "Athas desktop and its companion website. Shared development tasks and AI conventions for the team.",
+  "repositories": [
+    {
+      "id": "website",
+      "name": "Athas website",
+      "url": "https://github.com/athasdev/www"
+    }
+  ]
+}

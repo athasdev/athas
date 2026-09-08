@@ -1,5 +1,6 @@
 export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "files",
+  "workspaces",
   "git",
   "github-prs",
   "views",

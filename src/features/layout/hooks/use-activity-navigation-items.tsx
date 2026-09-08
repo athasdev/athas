@@ -1,3 +1,5 @@
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { openWorkspaceManagement } from "@/features/workspace/team/services/open-workspace-management";
 import { useMemo, type ReactNode } from "react";
 import { normalizeItemOrder } from "@/features/layout/config/item-order";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
@@ -13,6 +15,7 @@ import {
   GitBranchIcon,
   PackageIcon,
   StackIcon,
+  GridIcon,
 } from "@/ui/icons";
 import { GithubMark } from "@/ui/brand-marks";
 
@@ -65,10 +68,14 @@ export function useActivityNavigationItems({
   onOpenDatabases,
 }: ActivityNavigationItemOptions) {
   const extensionViews = useExtensionViews();
+  const isWorkspacesActive = useBufferStore(
+    (state) =>
+      state.buffers.find((buffer) => buffer.id === state.activeBufferId)?.type === "workspaces",
+  );
   const sidebarActivityItemsOrder = useSettingsStore(
     (state) => state.settings.sidebarActivityItemsOrder,
   );
-  const isBufferOwnedSurfaceActive = isExtensionsActive;
+  const isBufferOwnedSurfaceActive = isExtensionsActive || isWorkspacesActive;
   const isPrimarySidebarItemActive = isSidebarVisible && !isBufferOwnedSurfaceActive;
 
   const items = useMemo<ActivityNavigationItem[]>(
@@ -111,6 +118,14 @@ export function useActivityNavigationItems({
             } satisfies ActivityNavigationItem,
           ]
         : []),
+      {
+        id: "workspaces",
+        label: "Workspaces",
+        icon: <GridIcon />,
+        active: isWorkspacesActive,
+        onClick: openWorkspaceManagement,
+        ariaLabel: "Workspaces",
+      },
       {
         id: "views",
         label: "Views",
@@ -180,6 +195,7 @@ export function useActivityNavigationItems({
       coreFeatures.github,
       extensionViews,
       isExtensionsActive,
+      isWorkspacesActive,
       isDatabasesActive,
       isDebuggerActive,
       isGitHubPRsViewActive,

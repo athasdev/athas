@@ -149,7 +149,13 @@ export default function RunActionsButton() {
 
   return (
     <>
-      <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+      <DropdownMenu
+        open={isMenuOpen}
+        onOpenChange={(open) => {
+          setIsMenuOpen(open);
+          if (open) refresh();
+        }}
+      >
         <DropdownMenuTrigger
           render={
             <Button

@@ -1,3 +1,4 @@
+import { TEAM_WORKSPACE_CHANGED_EVENT } from "@/features/workspace/team/services/team-workspace-service";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCodeLens } from "@/features/editor/lsp/use-code-lens";
 import type { RunActionItem } from "../types/run-action.types";
@@ -8,30 +9,40 @@ export function useRunActionDiscovery(
   activeFilePath: string | undefined,
   includeCodeLenses: boolean,
 ) {
-  const [projectActions, setProjectActions] = useState<RunActionItem[]>([]);
+  const [projectResult, setProjectResult] = useState<{
+    workspacePath?: string;
+    actions: RunActionItem[];
+  }>({ actions: [] });
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    const changed = () => setRevision((current) => current + 1);
+    window.addEventListener(TEAM_WORKSPACE_CHANGED_EVENT, changed);
+    return () => window.removeEventListener(TEAM_WORKSPACE_CHANGED_EVENT, changed);
+  }, []);
   const codeLenses = useCodeLens(activeFilePath, includeCodeLenses);
 
   useEffect(() => {
     if (!workspacePath) {
-      setProjectActions([]);
+      setProjectResult({ workspacePath, actions: [] });
       setDiscoveryError(null);
+      setIsDiscovering(false);
       return;
     }
 
     let cancelled = false;
+    setProjectResult({ workspacePath, actions: [] });
     setIsDiscovering(true);
     setDiscoveryError(null);
 
     void discoverProjectRunActions(workspacePath)
       .then((actions) => {
-        if (!cancelled) setProjectActions(actions);
+        if (!cancelled) setProjectResult({ workspacePath, actions });
       })
       .catch((error) => {
         if (cancelled) return;
-        setProjectActions([]);
+        setProjectResult({ workspacePath, actions: [] });
         setDiscoveryError(error instanceof Error ? error.message : "Could not scan project");
       })
       .finally(() => {
@@ -50,7 +61,7 @@ export function useRunActionDiscovery(
   const refresh = useCallback(() => setRevision((current) => current + 1), []);
 
   return {
-    projectActions,
+    projectActions: projectResult.workspacePath === workspacePath ? projectResult.actions : [],
     lspActions,
     isDiscovering,
     discoveryError,

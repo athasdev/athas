@@ -236,6 +236,7 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
     case "diagnostics":
     case "references":
     case "continuousAgents":
+    case "workspaces":
     case "settings":
     case "extensions": {
       const metadata = SINGLETON_TOOL_BUFFER_METADATA[spec.type];

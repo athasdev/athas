@@ -9,6 +9,7 @@ import {
   FileIcon,
   FolderIcon,
   FolderOpenIcon,
+  GridIcon,
   GitBranchIcon,
   GitCommitIcon,
   GitDiffIcon,
@@ -59,6 +60,8 @@ export const ICON_CONCEPTS = {
 
   "disclosure.collapsed": ChevronRightIcon,
   "disclosure.expanded": ChevronDownIcon,
+
+  "workspace.manage": GridIcon,
 
   "fs.file": FileIcon,
   "fs.folder": FolderIcon,

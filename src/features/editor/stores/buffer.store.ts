@@ -773,6 +773,7 @@ const createBufferStore = (workspaceId: string) => {
             case "diagnostics":
             case "references":
             case "continuousAgents":
+            case "workspaces":
             case "settings":
             case "extensions": {
               const existing = buffers.find((b) => b.type === spec.type);

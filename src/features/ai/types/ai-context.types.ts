@@ -26,6 +26,7 @@ export interface ContextInfo {
   mentionedFiles?: MentionedFile[];
   editorSelections?: EditorSelectionContext[];
   projectRoot?: string;
+  teamInstructions?: string;
   language?: string;
   providerId?: string;
   agentId?: string;

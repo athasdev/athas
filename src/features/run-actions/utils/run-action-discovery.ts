@@ -1,3 +1,7 @@
+import {
+  parseTeamWorkspace,
+  TEAM_WORKSPACE_FILE,
+} from "@/features/workspace/team/utils/team-workspace-config";
 import { invoke } from "@tauri-apps/api/core";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
@@ -20,6 +24,7 @@ const SCRIPT_PRIORITY = new Map([
 ]);
 
 const SOURCE_PRIORITY: Record<RunActionSource, number> = {
+  team: -1,
   lsp: 0,
   custom: 1,
   package: 2,
@@ -31,6 +36,7 @@ const SOURCE_PRIORITY: Record<RunActionSource, number> = {
 };
 
 const MANIFEST_NAMES = [
+  TEAM_WORKSPACE_FILE,
   "package.json",
   "bun.lock",
   "bun.lockb",
@@ -275,6 +281,21 @@ export async function discoverProjectRunActions(
   );
   const availableNames = new Set(manifests.keys());
   const actions: RunActionItem[] = [];
+  const teamContent = manifests.get(TEAM_WORKSPACE_FILE);
+  if (teamContent !== undefined) {
+    const team = parseTeamWorkspace(teamContent);
+    actions.push(
+      ...team.commands.map((command) => ({
+        id: `team:${command.name}`,
+        name: command.name,
+        command: command.command,
+        description: team.name,
+        source: "team" as const,
+        sourceLabel: "Team workspace",
+        workingDirectory: resolveRunWorkingDirectory(workspacePath, command.workingDirectory),
+      })),
+    );
+  }
   const packageJson = manifests.get("package.json");
   if (packageJson) {
     actions.push(...parsePackageRunActions(packageJson, workspacePath, availableNames));
