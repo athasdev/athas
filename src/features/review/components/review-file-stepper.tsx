@@ -107,7 +107,6 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
           tooltip="Previous changed file"
           shortcut="J"
           aria-label="Previous changed file"
-          className="shrink-0"
         >
           <ChevronLeftIcon />
           <Kbd>J</Kbd>
@@ -123,7 +122,6 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
           tooltip="Next changed file"
           shortcut="K"
           aria-label="Next changed file"
-          className="shrink-0"
         >
           <Kbd>K</Kbd>
           <ChevronRightIcon />

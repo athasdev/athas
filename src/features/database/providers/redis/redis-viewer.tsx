@@ -16,7 +16,6 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
-import { cn } from "@/utils/cn";
 import { databaseCodeBlockClassName, databasePanelClassName } from "../../utils/database-surface";
 import { createRedisStore } from "./stores/redis.store";
 
@@ -117,7 +116,6 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               <Input
                 grow
                 variant="bare"
-
                 placeholder="Pattern (e.g. user:*)"
                 value={patternInput}
                 onChange={(e) => setPatternInput(e.target.value)}
@@ -147,12 +145,11 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               <Button
                 key={keyInfo.key}
                 type="button"
-                variant="ghost"
+                variant="list"
                 onClick={() => actions.selectKey(keyInfo.key)}
-                className={cn(
-                  "h-auto w-full justify-start gap-1.5 px-2 py-1 leading-row",
-                  store.selectedKey === keyInfo.key && "bg-selected",
-                )}
+                width="full"
+                align="start"
+                active={store.selectedKey === keyInfo.key}
                 aria-label={`Select key ${keyInfo.key}`}
               >
                 <Badge variant={keyInfo.type === "string" ? "accent" : "muted"}>
@@ -224,9 +221,9 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 actions={
                   <Button
                     onClick={() => actions.deleteKey(store.selectedKey!)}
-                    variant="ghost"
+                    variant="danger"
                     iconOnly
-                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    tone="danger"
                     aria-label="Delete key"
                   >
                     <TrashIcon />

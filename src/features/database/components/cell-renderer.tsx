@@ -69,12 +69,14 @@ export default function CellRenderer({
     return (
       <Button
         onClick={() => onFkClick(columnName, value)}
-        variant="ghost"
-        className="block h-auto truncate p-0 text-left font-normal text-primary underline decoration-accent/40"
+        variant="text"
+        align="start"
+        tone="primary"
+        truncate
         tooltip={`FK: ${foreignKey.to_table}.${foreignKey.to_column}`}
         onContextMenu={handleContextMenu}
       >
-        {String(value)}
+        <span>{String(value)}</span>
       </Button>
     );
   }
@@ -128,22 +130,23 @@ function ExpandedCellValue({
 }) {
   return (
     <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            className={cn(
-              "block h-auto max-w-70 truncate p-0 text-left font-normal text-primary",
-              primary && "text-foreground",
-            )}
-            aria-label={ariaLabel}
-            onContextMenu={onContextMenu}
-          />
-        }
-      >
-        {label}
-      </PopoverTrigger>
+      <span className="inline-flex min-w-0 max-w-70">
+        <PopoverTrigger
+          render={
+            <Button
+              type="button"
+              variant="text"
+              align="start"
+              tone={primary ? "foreground" : "primary"}
+              truncate
+              aria-label={ariaLabel}
+              onContextMenu={onContextMenu}
+            />
+          }
+        >
+          <span>{label}</span>
+        </PopoverTrigger>
+      </span>
       <PopoverContent align="start" className="max-h-80 w-96 max-w-[min(24rem,calc(100vw-16px))]">
         <pre className="overflow-auto whitespace-pre-wrap wrap-break-word font-mono ui-text-sm text-foreground">
           {value}

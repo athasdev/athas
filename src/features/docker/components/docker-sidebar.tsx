@@ -1187,7 +1187,7 @@ export function DockerSidebar() {
                           <Button
                             type="button"
                             variant="ghost"
-                            className="h-6 px-1.5 ui-text-sm"
+                            size="chrome"
                             onClick={() => void handleOpenEnvFile()}
                           >
                             <FileIcon className="size-3.5" />
@@ -1196,7 +1196,7 @@ export function DockerSidebar() {
                           <Button
                             type="button"
                             variant="ghost"
-                            className="h-6 px-1.5 ui-text-sm"
+                            size="chrome"
                             onClick={() => void handleSaveDebugPreset()}
                           >
                             <BugIcon className="size-3.5" />
@@ -1507,7 +1507,7 @@ export function DockerSidebar() {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-6 px-1.5 ui-text-sm"
+                      size="chrome"
                       disabled={busyImageId !== null}
                       onClick={openBuildDialog}
                     >
@@ -1568,7 +1568,7 @@ export function DockerSidebar() {
                       key={target}
                       type="button"
                       variant="ghost"
-                      className="h-7 justify-start px-2 ui-text-sm"
+                      align="start"
                       disabled={busyPruneTarget !== null}
                       onClick={() => void handlePrune(target, target === "system")}
                     >

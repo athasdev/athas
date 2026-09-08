@@ -56,7 +56,6 @@ export function DiagnosticsToolbar({
                 inputRef.current?.focus();
               }}
               aria-label="Clear problem search"
-              className="shrink-0 text-subtle-foreground"
             >
               <XIcon />
             </Button>

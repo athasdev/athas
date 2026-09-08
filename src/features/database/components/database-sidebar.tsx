@@ -415,7 +415,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
       </CommandHeader>
     ) : (
       <CommandHeader onClose={onClose}>
-        <CommandHeaderAction type="button" onClick={() => setMode("list")}>
+        <CommandHeaderAction iconOnly={false} type="button" onClick={() => setMode("list")}>
           <ArrowLeftIcon />
           <span>Databases</span>
         </CommandHeaderAction>

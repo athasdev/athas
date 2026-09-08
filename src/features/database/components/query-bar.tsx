@@ -159,7 +159,7 @@ function SqlEditor({
               key={`${item.detail}-${item.value}`}
               type="button"
               variant="ghost"
-              className="h-6 border border-border/60 px-2 text-subtle-foreground"
+              size="chrome"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => applyCompletion(index)}
               aria-label={`Insert SQL ${item.detail} ${item.label}`}

@@ -9,8 +9,7 @@ import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions
 import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-toolbar-action";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { Button, type ButtonProps } from "@/ui/button";
-import { cn } from "@/utils/cn";
+import { Button } from "@/ui/button";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";
 import { SymbolBreadcrumb } from "./symbol-breadcrumb";
 
@@ -23,19 +22,6 @@ export interface BreadcrumbProps {
   showDefaultActions?: boolean;
   interactive?: boolean;
   showPath?: boolean;
-}
-
-type BreadcrumbActionButtonProps = Omit<ButtonProps, "variant">;
-
-export function BreadcrumbActionButton({ className, ...props }: BreadcrumbActionButtonProps) {
-  return (
-    <Button
-      variant="ghost"
-      iconOnly
-      className={cn("text-subtle-foreground", className)}
-      {...props}
-    />
-  );
 }
 
 export default function Breadcrumb({
@@ -76,13 +62,15 @@ export default function Breadcrumb({
     showDefaultActions && activeBuffer ? (
       <>
         {activeBuffer.type === "editor" ? (
-          <BreadcrumbActionButton
+          <Button
+            variant="ghost"
+            iconOnly
             onClick={handleSearchClick}
             commandId="workbench.showFind"
             tooltip="Find in file"
           >
             <SearchIcon />
-          </BreadcrumbActionButton>
+          </Button>
         ) : null}
         <EditorStatusActions bufferId={resolvedBufferId ?? undefined} />
       </>

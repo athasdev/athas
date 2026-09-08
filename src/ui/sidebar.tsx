@@ -422,24 +422,18 @@ const sidebarListRowClassName =
 
 export const SidebarIconButton = forwardRef<
   HTMLButtonElement,
-  Omit<ButtonProps, "variant"> & {
+  Omit<ButtonProps, "variant" | "tone"> & {
     tone?: "default" | "warning" | "error" | "danger";
   }
->(function SidebarIconButton({ className, tone = "default", ...props }, ref) {
+>(function SidebarIconButton({ tone = "default", ...props }, ref) {
   return (
     <Button
       ref={ref}
       type="button"
       variant={tone === "danger" ? "danger" : "ghost"}
       iconOnly
-      className={cn(
-        "size-6 [&_svg:not([class*='size-'])]:size-[1em]",
-        tone === "warning" &&
-          "bg-warning/10 text-warning hover:bg-warning/15 hover:text-warning data-[active=true]:bg-warning/15 data-[active=true]:text-warning",
-        tone === "error" &&
-          "bg-destructive/8 text-destructive hover:bg-destructive/12 hover:text-destructive data-[active=true]:bg-destructive/12 data-[active=true]:text-destructive",
-        className,
-      )}
+      size="chrome"
+      tone={tone === "error" ? "danger" : tone}
       {...props}
     />
   );

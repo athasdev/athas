@@ -5,7 +5,6 @@ import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { Button } from "@/ui/button";
-import { cn } from "@/utils/cn";
 import { stageHunk, unstageHunk } from "../../api/git-status-api";
 import type { DiffHunkHeaderProps } from "../../types/git-diff.types";
 import { createGitHunk, parseDiffHunkRange } from "../../utils/git-diff-helpers";
@@ -126,7 +125,7 @@ const DiffHunkHeader = memo(
               type="button"
               variant="ghost"
               onClick={handleStageHunk}
-              className={cn(isStaged ? "text-git-deleted" : "text-git-added")}
+              tone={isStaged ? "removed" : "added"}
               tooltip={isStaged ? "Unstage hunk" : "Stage hunk"}
             >
               {isStaged ? <MinusIcon size={iconSize} /> : <PlusIcon size={iconSize} />}

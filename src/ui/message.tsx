@@ -150,7 +150,6 @@ function MessageAction({
   tooltip,
   icon: Icon = CopyIcon,
   children,
-  className,
   ...props
 }: Omit<ButtonProps, "tooltip"> & {
   label: string;
@@ -165,7 +164,7 @@ function MessageAction({
       iconOnly
       tooltip={tooltip ?? label}
       aria-label={label}
-      className={cn("size-6", className)}
+      size="chrome"
       {...props}
     >
       {children ?? <Icon className="size-3.5" />}

@@ -16,7 +16,6 @@ import {
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
-import { cn } from "@/utils/cn";
 import { IS_LINUX } from "@/utils/platform";
 
 interface FolderEntry {
@@ -229,12 +228,10 @@ export default function LinuxFolderPickerDialog() {
               <Button
                 key={entry.path}
                 type="button"
-                variant="ghost"
+                variant="list"
                 onClick={() => navigateToPath(entry.path)}
-                className={cn(
-                  "h-8 w-full justify-start gap-2 rounded-none px-3",
-                  "hover:bg-accent focus-visible:bg-accent",
-                )}
+                width="full"
+                align="start"
               >
                 <FolderIcon className="shrink-0 text-subtle-foreground" />
                 <span className="truncate text-foreground">{entry.name}</span>

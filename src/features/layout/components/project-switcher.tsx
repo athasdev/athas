@@ -206,21 +206,23 @@ export function ProjectSwitcher({
           else setQuery("");
         }}
       >
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="chrome"
-              className="min-w-0 max-w-48 shrink"
-              aria-label={`Switch project. Current project: ${projectName}`}
-              title={projectPath || projectName}
-            >
-              <ProjectGlyph projectPath={projectPath} iconPath={displayIconPath} />
-              <span className="min-w-0 truncate">{projectName}</span>
-              <ChevronExpandYIcon className="text-subtle-foreground" />
-            </Button>
-          }
-        />
+        <span className="inline-flex min-w-0 max-w-48">
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="chrome"
+                truncate
+                aria-label={`Switch project. Current project: ${projectName}`}
+                title={projectPath || projectName}
+              >
+                <ProjectGlyph projectPath={projectPath} iconPath={displayIconPath} />
+                <span className="min-w-0 truncate">{projectName}</span>
+                <ChevronExpandYIcon className="text-subtle-foreground" />
+              </Button>
+            }
+          />
+        </span>
         <DropdownMenuContent side="bottom" align="start" viewport="searchable" className="w-64">
           <DropdownMenuSearch
             value={query}

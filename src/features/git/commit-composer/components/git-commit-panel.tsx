@@ -282,7 +282,7 @@ const GitCommitPanel = ({
                   onClick={() => void handleRemoteAction("push", () => pushChanges(repoPath!))}
                   disabled={!repoPath || isRemoteActionLoading}
                   variant="ghost"
-                  className="text-git-added hover:text-git-added"
+                  tone="added"
                   tooltip={`Push ${ahead} commit${ahead !== 1 ? "s" : ""}`}
                 >
                   <ArrowUpIcon />
@@ -296,7 +296,7 @@ const GitCommitPanel = ({
                   onClick={() => void handleRemoteAction("pull", () => pullChanges(repoPath!))}
                   disabled={!repoPath || isRemoteActionLoading}
                   variant="ghost"
-                  className="text-git-deleted hover:text-git-deleted"
+                  tone="removed"
                   tooltip={`Pull ${behind} commit${behind !== 1 ? "s" : ""}`}
                 >
                   <ArrowDownIcon />

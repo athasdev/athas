@@ -396,19 +396,23 @@ export default function DataGrid({
         <span className="ui-text-sm text-subtle-foreground">
           {queryResult.rows.length} {resultLabel}
         </span>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onCreateRow}
-          className={
-            canCreateRows ? "opacity-0 group-hover:opacity-100" : "cursor-default opacity-30"
-          }
-          aria-label="Add row"
-          disabled={!canCreateRows}
-          iconOnly
+        <span
+          className={cn(
+            "inline-flex focus-within:opacity-100",
+            canCreateRows && "opacity-0 group-hover:opacity-100",
+          )}
         >
-          <PlusIcon className="text-subtle-foreground hover:text-foreground" />
-        </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onCreateRow}
+            aria-label="Add row"
+            disabled={!canCreateRows}
+            iconOnly
+          >
+            <PlusIcon className="text-subtle-foreground hover:text-foreground" />
+          </Button>
+        </span>
       </div>
       <div
         ref={scrollContainerRef}
@@ -460,22 +464,21 @@ export default function DataGrid({
                             FK
                           </span>
                         )}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (canFilterColumns) onAddColumnFilter(col);
-                          }}
-                          className={cn(
-                            "opacity-0 group-hover:opacity-100",
-                            !canFilterColumns && "pointer-events-none opacity-20",
-                          )}
-                          aria-label={`Filter by ${col}`}
-                          iconOnly
-                        >
-                          <FilterIcon className="text-subtle-foreground hover:text-foreground" />
-                        </Button>
+                        <span className="inline-flex opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (canFilterColumns) onAddColumnFilter(col);
+                            }}
+                            disabled={!canFilterColumns}
+                            aria-label={`Filter by ${col}`}
+                            iconOnly
+                          >
+                            <FilterIcon className="text-subtle-foreground hover:text-foreground" />
+                          </Button>
+                        </span>
                       </div>
                       {showColumnTypes && info && (
                         <div className="ui-text-sm text-subtle-foreground">

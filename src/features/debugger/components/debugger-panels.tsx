@@ -152,15 +152,16 @@ export function DebugBreakpointsList({
               breakpoint={breakpoint}
               onUpdate={(options) => onUpdateOptions(breakpoint, options)}
             />
-            <Button
-              variant="ghost"
-              className="opacity-0 group-hover:opacity-100"
-              tooltip="Remove breakpoint"
-              onClick={() => onRemove(breakpoint)}
-              iconOnly
-            >
-              <TrashIcon />
-            </Button>
+            <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+              <Button
+                variant="ghost"
+                tooltip="Remove breakpoint"
+                onClick={() => onRemove(breakpoint)}
+                iconOnly
+              >
+                <TrashIcon />
+              </Button>
+            </span>
           </ContextMenuTrigger>
           <ContextMenuContent>
             <ContextMenuItem onClick={() => void onOpen(breakpoint)}>
@@ -244,18 +245,11 @@ function BreakpointOptions({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="ghost"
-            className="opacity-0 group-hover:opacity-100"
-            tooltip="Edit breakpoint"
-            iconOnly
-          />
-        }
-      >
-        <PencilIcon />
-      </PopoverTrigger>
+      <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+        <PopoverTrigger render={<Button variant="ghost" tooltip="Edit breakpoint" iconOnly />}>
+          <PencilIcon />
+        </PopoverTrigger>
+      </span>
       <PopoverContent align="end" className="w-80">
         <PopoverTitle>Breakpoint options</PopoverTitle>
         <label className="flex flex-col gap-1 text-subtle-foreground ui-text-sm">

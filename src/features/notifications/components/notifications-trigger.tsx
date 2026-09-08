@@ -41,26 +41,27 @@ export const NotificationsTrigger = () => {
 
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        iconOnly
-        size="chrome"
-        onClick={() => {
-          setInitialCategory("all");
-          setIsCommandVisible(true);
-        }}
-        active={isCommandVisible}
-        tooltip={tooltip}
-        shortcut={shortcut}
-        aria-label={tooltip}
-        className="relative"
-      >
-        <BellIcon />
-        {unreadCount > 0 ? (
-          <span className="absolute top-0 right-0 size-1.5 rounded-full bg-primary ring-1 ring-background" />
-        ) : null}
-      </Button>
+      <span className="inline-flex min-w-0 relative">
+        <Button
+          type="button"
+          variant="ghost"
+          iconOnly
+          size="chrome"
+          onClick={() => {
+            setInitialCategory("all");
+            setIsCommandVisible(true);
+          }}
+          active={isCommandVisible}
+          tooltip={tooltip}
+          shortcut={shortcut}
+          aria-label={tooltip}
+        >
+          <BellIcon />
+          {unreadCount > 0 ? (
+            <span className="absolute top-0 right-0 size-1.5 rounded-full bg-primary ring-1 ring-background" />
+          ) : null}
+        </Button>
+      </span>
       <NotificationsCommand
         isVisible={isCommandVisible}
         initialCategory={initialCategory}

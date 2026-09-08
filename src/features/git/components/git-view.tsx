@@ -833,7 +833,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               <Button
                 type="button"
                 variant="default"
-                className="min-w-0 flex-1"
+                width="grow"
                 onClick={() => void handleRemoteAction(primaryRemoteAction)}
                 disabled={!activeRepoPath || isRemoteActionLoading}
                 aria-label={`${syncActionLabel} remote changes`}

@@ -527,18 +527,10 @@ export function useFileExplorerContextMenu({
             onClose={() => setEnvOverwriteDialog(null)}
             footer={
               <>
-                <Button
-                  variant="ghost"
-                  onClick={() => setEnvOverwriteDialog(null)}
-                  className="ui-text-base"
-                >
+                <Button variant="ghost" onClick={() => setEnvOverwriteDialog(null)}>
                   Cancel
                 </Button>
-                <Button
-                  variant="danger"
-                  onClick={handleEnvOverwriteConfirm}
-                  className="ui-text-base"
-                >
+                <Button variant="danger" onClick={handleEnvOverwriteConfirm}>
                   Overwrite
                 </Button>
               </>

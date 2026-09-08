@@ -102,34 +102,21 @@ export function CsvPreview() {
               className="min-w-24 rounded border-border px-1"
               title="Change delimiter"
             />
-
             {/* Header toggle */}
             <Button
               onClick={() => setHasHeader((v) => !v)}
               variant="default"
-              className="h-6 gap-1 text-subtle-foreground"
+              size="chrome"
               tooltip="Toggle header row"
             >
               <RowsIcon /> {hasHeader ? "Header On" : "Header Off"}
             </Button>
-
             {/* Copy CSV */}
-            <Button
-              onClick={handleCopyCsv}
-              variant="default"
-              className="h-6 gap-1 text-subtle-foreground"
-              tooltip="Copy as CSV"
-            >
+            <Button onClick={handleCopyCsv} variant="default" size="chrome" tooltip="Copy as CSV">
               <DownloadIcon optical="md" /> CSV
             </Button>
-
             {/* Copy JSON */}
-            <Button
-              onClick={handleCopyJson}
-              variant="default"
-              className="h-6 gap-1 text-subtle-foreground"
-              tooltip="Copy as JSON"
-            >
+            <Button onClick={handleCopyJson} variant="default" size="chrome" tooltip="Copy as JSON">
               <FileCodeIcon /> JSON
             </Button>
           </div>

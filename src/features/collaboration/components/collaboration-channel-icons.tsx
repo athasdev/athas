@@ -101,9 +101,11 @@ export function ChannelIconPicker({
       </div>
 
       {activeTab === "icon" ? (
-        <Button type="button" variant="ghost" className="mt-2 w-full" onClick={onClear}>
-          Reset to default
-        </Button>
+        <span className="inline-flex min-w-0 mt-2">
+          <Button type="button" variant="ghost" width="full" onClick={onClear}>
+            Reset to default
+          </Button>
+        </span>
       ) : null}
     </div>
   );

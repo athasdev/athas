@@ -73,7 +73,6 @@ export default function Pagination({
           disabled={currentPage === 1}
           variant="ghost"
           iconOnly
-          className="text-subtle-foreground hover:text-foreground disabled:opacity-50"
           aria-label="Previous page"
           tooltip="Previous page"
         >
@@ -104,7 +103,6 @@ export default function Pagination({
           disabled={currentPage === totalPages}
           variant="ghost"
           iconOnly
-          className="text-subtle-foreground hover:text-foreground disabled:opacity-50"
           aria-label="Next page"
           tooltip="Next page"
         >

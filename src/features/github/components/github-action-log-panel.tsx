@@ -492,15 +492,12 @@ export function GitHubActionLogPanel({
           />
         )}
         {isLive && !followTail && lines.length > 0 ? (
-          <Button
-            type="button"
-            variant="accent"
-            onClick={scrollToBottom}
-            className="absolute right-4 bottom-3 shadow-(--shadow-card)"
-          >
-            <ArrowDownToLineIcon />
-            Follow output
-          </Button>
+          <span className="inline-flex min-w-0 absolute right-4 bottom-3">
+            <Button type="button" variant="accent" onClick={scrollToBottom}>
+              <ArrowDownToLineIcon />
+              Follow output
+            </Button>
+          </span>
         ) : null}
       </div>
     </section>

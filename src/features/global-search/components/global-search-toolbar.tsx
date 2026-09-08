@@ -127,7 +127,6 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
                   inputRef.current?.focus();
                 }}
                 aria-label="Clear search"
-                className="shrink-0 text-subtle-foreground"
               >
                 <XIcon />
               </Button>

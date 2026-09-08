@@ -138,9 +138,11 @@ export function EmojiPicker({
       ) : null}
 
       {onClear ? (
-        <Button type="button" variant="ghost" className="mt-2 w-full" onClick={onClear}>
-          {clearLabel}
-        </Button>
+        <span className="inline-flex min-w-0 mt-2">
+          <Button type="button" variant="ghost" width="full" onClick={onClear}>
+            {clearLabel}
+          </Button>
+        </span>
       ) : null}
     </div>
   );

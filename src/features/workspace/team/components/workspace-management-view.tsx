@@ -166,13 +166,13 @@ export default function WorkspaceManagementView() {
               onChange={select}
               placeholder="Choose a workspace"
             />
-            <Button variant="ghost" className="w-full" onClick={() => void add()}>
+            <Button variant="ghost" width="full" onClick={() => void add()}>
               Add workspace
             </Button>
             {enterprise ? (
               <Button
                 variant="ghost"
-                className="w-full"
+                width="full"
                 onClick={() => useUIState.getState().openSettingsDialog("enterprise")}
               >
                 Organization controls

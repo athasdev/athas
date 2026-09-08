@@ -133,33 +133,36 @@ const TabBarItem = memo(function TabBarItem({
         onAuxClick={handleAuxClick}
         action={
           !isEditing ? (
-            <Button
-              type="button"
-              iconOnly
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (buffer.isPinned) {
-                  handleTabPin(buffer.id);
-                } else {
-                  handleTabClose(buffer.id);
-                }
-              }}
+            <span
               className={cn(
-                "-translate-y-1/2 absolute top-1/2 right-1 transition-opacity",
+                "inline-flex -translate-y-1/2 absolute top-1/2 right-1 transition-opacity focus-within:opacity-100",
                 showCloseButton ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
               )}
-              tooltip={buffer.isPinned ? "Unpin tab" : "Close"}
-              commandId={buffer.isPinned ? undefined : "file.close"}
-              tabIndex={-1}
-              draggable={false}
             >
-              {buffer.isPinned ? (
-                <PinIcon className="pointer-events-none select-none fill-current text-primary" />
-              ) : (
-                <XIcon className="pointer-events-none select-none" />
-              )}
-            </Button>
+              <Button
+                type="button"
+                iconOnly
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (buffer.isPinned) {
+                    handleTabPin(buffer.id);
+                  } else {
+                    handleTabClose(buffer.id);
+                  }
+                }}
+                tooltip={buffer.isPinned ? "Unpin tab" : "Close"}
+                commandId={buffer.isPinned ? undefined : "file.close"}
+                tabIndex={-1}
+                draggable={false}
+              >
+                {buffer.isPinned ? (
+                  <PinIcon className="pointer-events-none select-none fill-current text-primary" />
+                ) : (
+                  <XIcon className="pointer-events-none select-none" />
+                )}
+              </Button>
+            </span>
           ) : null
         }
       >

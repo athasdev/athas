@@ -73,7 +73,7 @@ export default function NumberInput({
       className={cn(numberInputGroupVariants({ disabled }), className)}
     >
       <NumberFieldPrimitive.Decrement
-        render={<Button type="button" variant="ghost" iconOnly className="shrink-0" />}
+        render={<Button type="button" variant="ghost" iconOnly />}
         aria-label="Decrease value"
       >
         <MinusIcon size={12} />
@@ -86,7 +86,7 @@ export default function NumberInput({
       />
 
       <NumberFieldPrimitive.Increment
-        render={<Button type="button" variant="ghost" iconOnly className="shrink-0" />}
+        render={<Button type="button" variant="ghost" iconOnly />}
         aria-label="Increase value"
       >
         <PlusIcon size={12} />

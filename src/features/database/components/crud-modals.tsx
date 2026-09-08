@@ -69,7 +69,6 @@ export const CreateRowModal = ({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setValues((prev) => ({ ...prev, [column.name]: e.target.value }))
                   }
-
                   placeholder={column.notnull ? "Required" : "Optional"}
                 />
               </div>
@@ -80,7 +79,7 @@ export const CreateRowModal = ({
           <Button type="button" variant="ghost" onClick={handleClose}>
             Cancel
           </Button>
-          <Button type="submit" className="gap-1">
+          <Button type="submit">
             <PlusIcon size="14" />
             Add Row
           </Button>
@@ -155,7 +154,6 @@ export const EditRowModal = ({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setValues((prev) => ({ ...prev, [column.name]: e.target.value }))
                   }
-
                   placeholder={column.notnull ? "Required" : "Optional"}
                 />
               </div>
@@ -246,7 +244,6 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   updateColumn(index, "name", e.target.value)
                 }
                 placeholder="Column name"
-
                 required
               />
               <Select

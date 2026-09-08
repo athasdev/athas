@@ -14,13 +14,7 @@ export function ExtensionToolbarAction({ action }: ExtensionToolbarActionProps) 
 
   return (
     <Tooltip content={action.title}>
-      <Button
-        onClick={action.onClick}
-        variant="ghost"
-        className="text-subtle-foreground"
-        aria-label={action.title}
-        iconOnly
-      >
+      <Button onClick={action.onClick} variant="ghost" aria-label={action.title} iconOnly>
         <DynamicIcon name={action.icon} />
       </Button>
     </Tooltip>

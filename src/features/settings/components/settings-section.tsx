@@ -205,7 +205,9 @@ export function SettingRow({
           </div>
           {labelAccessory}
           {onReset ? (
-            <span className="flex size-5 items-center justify-center">
+            <span
+              className={cn("flex size-5 items-center justify-center", !canReset && "invisible")}
+            >
               <Button
                 type="button"
                 variant="ghost"
@@ -213,7 +215,6 @@ export function SettingRow({
                 disabled={!canReset}
                 aria-label={resetLabel || `Reset ${label}`}
                 tooltip={canReset ? resetLabel || `Reset ${label}` : undefined}
-                className={cn(!canReset && "pointer-events-none invisible")}
                 iconOnly
               >
                 <ArrowCounterClockwiseIcon />

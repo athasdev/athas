@@ -176,7 +176,7 @@ function CodeBlock({
                   type="button"
                   variant="default"
                   onClick={() => onApplyCode(code)}
-                  className="h-5 px-1.5 ui-text-sm"
+                  size="compact"
                   tooltip="Apply this code to current buffer"
                 >
                   Apply
@@ -282,9 +282,9 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
           {normalizedDetails ? (
             <Button
               type="button"
-              variant="ghost"
+              variant="text"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="h-auto px-0 text-destructive/70 hover:bg-transparent hover:text-destructive"
+              tone="danger"
             >
               {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
               {isExpanded ? "Hide details" : "Details"}
@@ -301,7 +301,6 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
               variant="default"
               onClick={() => void handleRestartAgentSession()}
               disabled={isRestartingSession}
-              className="h-auto gap-1.5"
             >
               <TerminalWindowIcon size={12} />
               {isRestartingSession ? "Restarting..." : "Restart Agent Session"}
@@ -311,7 +310,6 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
               variant="default"
               onClick={() => void handleOpenAuthenticationTerminal()}
               disabled={isOpeningTerminal}
-              className="h-auto gap-1.5"
             >
               <TerminalWindowIcon size={12} />
               {isOpeningTerminal ? "Opening..." : "Open Agent Terminal"}

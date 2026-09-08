@@ -41,42 +41,45 @@ export function WindowControls({
 
   return (
     <ChromeGroup gap="tight">
-      <Button
-        onClick={handleMinimize}
-        variant="ghost"
-        className="pointer-events-auto"
-        iconOnly
-        size="chrome"
-        tooltip="Minimize"
-        commandId="window.minimize.alt"
-        aria-label="Minimize"
-      >
-        <MinusIcon optical="md" />
-      </Button>
-      <Button
-        onClick={handleToggleMaximize}
-        variant="ghost"
-        className="pointer-events-auto"
-        iconOnly
-        size="chrome"
-        tooltip={isMaximized ? "Restore" : "Maximize"}
-        commandId="window.maximize"
-        aria-label={isMaximized ? "Restore" : "Maximize"}
-      >
-        {isMaximized ? <ArrowsInIcon /> : <ArrowsOutIcon />}
-      </Button>
-      <Button
-        onClick={handleClose}
-        variant="danger"
-        className="pointer-events-auto group hover:text-white"
-        iconOnly
-        size="chrome"
-        tooltip="Close"
-        commandId="workbench.closeWindow"
-        aria-label="Close"
-      >
-        <XIcon optical="md" />
-      </Button>
+      <span className="inline-flex min-w-0 pointer-events-auto">
+        <Button
+          onClick={handleMinimize}
+          variant="ghost"
+          iconOnly
+          size="chrome"
+          tooltip="Minimize"
+          commandId="window.minimize.alt"
+          aria-label="Minimize"
+        >
+          <MinusIcon optical="md" />
+        </Button>
+      </span>
+      <span className="inline-flex min-w-0 pointer-events-auto">
+        <Button
+          onClick={handleToggleMaximize}
+          variant="ghost"
+          iconOnly
+          size="chrome"
+          tooltip={isMaximized ? "Restore" : "Maximize"}
+          commandId="window.maximize"
+          aria-label={isMaximized ? "Restore" : "Maximize"}
+        >
+          {isMaximized ? <ArrowsInIcon /> : <ArrowsOutIcon />}
+        </Button>
+      </span>
+      <span className="inline-flex min-w-0 pointer-events-auto group">
+        <Button
+          onClick={handleClose}
+          variant="danger"
+          iconOnly
+          size="chrome"
+          tooltip="Close"
+          commandId="workbench.closeWindow"
+          aria-label="Close"
+        >
+          <XIcon optical="md" />
+        </Button>
+      </span>
     </ChromeGroup>
   );
 }

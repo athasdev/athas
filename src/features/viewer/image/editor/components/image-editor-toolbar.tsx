@@ -46,10 +46,6 @@ export function ImageEditorToolbar({
   currentImageSrc,
   currentFileName,
 }: ImageEditorToolbarProps) {
-  const menuItemClass = cn(
-    "font-sans h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-foreground ui-text-sm",
-  );
-
   const [showEditMenu, setShowEditMenu] = useState(false);
   const [showConvertMenu, setShowConvertMenu] = useState(false);
   const [formatDialogState, setFormatDialogState] = useState<{
@@ -103,8 +99,9 @@ export function ImageEditorToolbar({
                 <Button
                   type="button"
                   onClick={() => handleEdit(onResize)}
-                  variant="ghost"
-                  className={menuItemClass}
+                  variant="list"
+                  width="full"
+                  align="start"
                 >
                   <ImageIcon />
                   <span>Resize...</span>
@@ -113,8 +110,9 @@ export function ImageEditorToolbar({
                 <Button
                   type="button"
                   onClick={() => handleEdit(onRotateCW)}
-                  variant="ghost"
-                  className={menuItemClass}
+                  variant="list"
+                  width="full"
+                  align="start"
                 >
                   <ArrowClockwiseIcon />
                   <span>Rotate 90° CW</span>
@@ -122,8 +120,9 @@ export function ImageEditorToolbar({
                 <Button
                   type="button"
                   onClick={() => handleEdit(onRotateCCW)}
-                  variant="ghost"
-                  className={menuItemClass}
+                  variant="list"
+                  width="full"
+                  align="start"
                 >
                   <ArrowCounterClockwiseIcon />
                   <span>Rotate 90° CCW</span>
@@ -131,8 +130,9 @@ export function ImageEditorToolbar({
                 <Button
                   type="button"
                   onClick={() => handleEdit(onRotate180)}
-                  variant="ghost"
-                  className={menuItemClass}
+                  variant="list"
+                  width="full"
+                  align="start"
                 >
                   <ArrowClockwiseIcon />
                   <span>Rotate 180°</span>
@@ -141,8 +141,9 @@ export function ImageEditorToolbar({
                 <Button
                   type="button"
                   onClick={() => handleEdit(onFlipHorizontal)}
-                  variant="ghost"
-                  className={menuItemClass}
+                  variant="list"
+                  width="full"
+                  align="start"
                 >
                   <FlipHorizontalIcon />
                   <span>Flip Horizontal</span>
@@ -150,8 +151,9 @@ export function ImageEditorToolbar({
                 <Button
                   type="button"
                   onClick={() => handleEdit(onFlipVertical)}
-                  variant="ghost"
-                  className={menuItemClass}
+                  variant="list"
+                  width="full"
+                  align="start"
                 >
                   <FlipVerticalIcon />
                   <span>Flip Vertical</span>
@@ -191,8 +193,9 @@ export function ImageEditorToolbar({
                 <Button
                   type="button"
                   onClick={() => handleFormatSelect("png")}
-                  variant="ghost"
-                  className={menuItemClass}
+                  variant="list"
+                  width="full"
+                  align="start"
                 >
                   <ImageIcon />
                   <span>PNG</span>
@@ -200,8 +203,9 @@ export function ImageEditorToolbar({
                 <Button
                   type="button"
                   onClick={() => handleFormatSelect("jpeg")}
-                  variant="ghost"
-                  className={menuItemClass}
+                  variant="list"
+                  width="full"
+                  align="start"
                 >
                   <ImageIcon />
                   <span>JPEG</span>
@@ -209,8 +213,9 @@ export function ImageEditorToolbar({
                 <Button
                   type="button"
                   onClick={() => handleFormatSelect("webp")}
-                  variant="ghost"
-                  className={menuItemClass}
+                  variant="list"
+                  width="full"
+                  align="start"
                 >
                   <ImageIcon />
                   <span>WebP</span>
@@ -218,8 +223,9 @@ export function ImageEditorToolbar({
                 <Button
                   type="button"
                   onClick={() => handleFormatSelect("avif")}
-                  variant="ghost"
-                  className={menuItemClass}
+                  variant="list"
+                  width="full"
+                  align="start"
                 >
                   <ImageIcon />
                   <span>AVIF</span>
@@ -251,7 +257,7 @@ export function ImageEditorToolbar({
           variant="ghost"
           disabled={isProcessing}
           tooltip="Save changes"
-          className="text-primary"
+          tone="primary"
           iconOnly
         >
           <SaveIcon />

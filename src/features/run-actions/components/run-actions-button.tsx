@@ -156,22 +156,23 @@ export default function RunActionsButton() {
           if (open) refresh();
         }}
       >
-        <DropdownMenuTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              iconOnly
-              size="chrome"
-              tooltip="Run actions"
-              aria-label="Run actions"
-              active={isMenuOpen}
-              className="pointer-events-auto"
-            />
-          }
-        >
-          <PlayIcon />
-        </DropdownMenuTrigger>
+        <span className="inline-flex min-w-0 pointer-events-auto">
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                iconOnly
+                size="chrome"
+                tooltip="Run actions"
+                aria-label="Run actions"
+                active={isMenuOpen}
+              />
+            }
+          >
+            <PlayIcon />
+          </DropdownMenuTrigger>
+        </span>
         {isMenuOpen ? (
           <RunActionsMenu
             customActions={customRunActions}

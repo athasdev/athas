@@ -74,20 +74,17 @@ export const FileDiffView = memo(
             </span>
             <span className="ui-text-sm shrink-0 text-git-added">+{file.additions}</span>
             <span className="ui-text-sm shrink-0 text-git-deleted">-{file.deletions}</span>
-            <Button
-              onClick={() => onOpenFile(file.path)}
-              variant="ghost"
-              className="text-subtle-foreground"
-            >
+            <Button onClick={() => onOpenFile(file.path)} variant="ghost">
               Open
             </Button>
           </div>
         ) : showHeader ? (
           <Button
             type="button"
-            variant="ghost"
+            variant="list"
             onClick={onToggle}
-            className="h-auto w-full justify-start rounded-none px-2.5 py-2 text-left hover:bg-accent/60"
+            width="full"
+            align="start"
             aria-label={`${isExpanded ? "Collapse" : "Expand"} diff for ${file.path}`}
           >
             {isExpanded ? (

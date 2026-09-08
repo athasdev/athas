@@ -144,15 +144,16 @@ export function DebugWatchPanel({
                     >
                       {watchExpression.expression}
                     </button>
-                    <Button
-                      variant="ghost"
-                      className="opacity-0 group-hover:opacity-100"
-                      tooltip="Remove watch"
-                      onClick={() => debuggerActions.removeWatchExpression(watchExpression.id)}
-                      iconOnly
-                    >
-                      <TrashIcon />
-                    </Button>
+                    <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                      <Button
+                        variant="ghost"
+                        tooltip="Remove watch"
+                        onClick={() => debuggerActions.removeWatchExpression(watchExpression.id)}
+                        iconOnly
+                      >
+                        <TrashIcon />
+                      </Button>
+                    </span>
                   </div>
                   <div className="mt-1 truncate font-mono ui-text-sm text-subtle-foreground">
                     {isPending

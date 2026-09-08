@@ -66,7 +66,9 @@ export function AgentShortcuts({
             key={skill.id}
             type="button"
             variant="ghost"
-            className="w-full justify-start overflow-hidden"
+            width="full"
+            align="start"
+            truncate
             onClick={() => dispatchAIChatSkillInsert(skill, surfaceId)}
           >
             <Icon className={shortcutIconClassNames[index % shortcutIconClassNames.length]} />

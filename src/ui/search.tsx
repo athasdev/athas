@@ -103,16 +103,17 @@ export function SearchPopover({
             leftIcon={SearchIcon}
           />
           {value && (
-            <Button
-              type="button"
-              onClick={() => onChange("")}
-              variant="ghost"
-              iconOnly
-              className="-translate-y-1/2 absolute top-1/2 right-1"
-              aria-label="Clear search"
-            >
-              <XIcon />
-            </Button>
+            <span className="inline-flex min-w-0 -translate-y-1/2 absolute top-1/2 right-1">
+              <Button
+                type="button"
+                onClick={() => onChange("")}
+                variant="ghost"
+                iconOnly
+                aria-label="Clear search"
+              >
+                <XIcon />
+              </Button>
+            </span>
           )}
         </div>
 
@@ -307,16 +308,17 @@ export function SearchInput({
           leftIcon={SearchIcon}
         />
         {value && (
-          <Button
-            type="button"
-            onClick={() => onChange("")}
-            variant="ghost"
-            iconOnly
-            className="-translate-y-1/2 absolute top-1/2 right-1"
-            aria-label="Clear search"
-          >
-            <XIcon />
-          </Button>
+          <span className="inline-flex min-w-0 -translate-y-1/2 absolute top-1/2 right-1">
+            <Button
+              type="button"
+              onClick={() => onChange("")}
+              variant="ghost"
+              iconOnly
+              aria-label="Clear search"
+            >
+              <XIcon />
+            </Button>
+          </span>
         )}
       </div>
 

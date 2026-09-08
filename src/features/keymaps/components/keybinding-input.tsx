@@ -82,7 +82,6 @@ export function KeybindingInput({
             e.stopPropagation();
             handleCancel();
           }}
-          className="ui-text-sm shrink-0 px-1 text-subtle-foreground hover:bg-transparent hover:text-foreground"
           aria-label="Cancel recording"
         >
           ESC

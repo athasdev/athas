@@ -113,14 +113,12 @@ export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerPr
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <Button type="button" variant="ghost" className="max-w-44 justify-start font-normal" />
-        }
-      >
-        <UserIcon />
-        <span className="truncate">{summary}</span>
-      </PopoverTrigger>
+      <span className="inline-flex min-w-0 max-w-44">
+        <PopoverTrigger render={<Button type="button" variant="ghost" align="start" truncate />}>
+          <UserIcon />
+          <span className="truncate">{summary}</span>
+        </PopoverTrigger>
+      </span>
       <PopoverContent align="start" className="w-72 gap-2 p-2">
         <div className="flex items-center gap-1.5">
           <Input
@@ -154,7 +152,6 @@ export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerPr
                 key={assignee}
                 type="button"
                 variant="ghost"
-                className="gap-1 bg-accent/55 font-normal"
                 onClick={() => onChange(value.filter((item) => item !== assignee))}
                 aria-label={`Remove @${assignee}`}
               >

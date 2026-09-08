@@ -217,7 +217,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               variant="ghost"
               onClick={handleTest}
               disabled={isTesting || isConnecting}
-              className="gap-1.5"
               aria-label="Test connection"
             >
               {isTesting ? <Spinner label="Testing" compact /> : <PlugsConnectedIcon />}
@@ -228,7 +227,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             type="button"
             onClick={handleConnect}
             disabled={installedDbTypes.length === 0 || isConnecting || validationError !== null}
-            className="gap-1.5"
             aria-label={isFileBased ? "Open database" : "Connect"}
           >
             {isConnecting && <Spinner label="Connecting" compact />}
@@ -271,7 +269,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             <FieldLabel htmlFor="db-conn-name">Connection Name</FieldLabel>
             <Input
               id="db-conn-name"
-
               placeholder={`My ${PROVIDER_REGISTRY[dbType].label}`}
               value={name}
               onChange={(e) => updateConnectionField(setName, e.target.value)}
@@ -284,17 +281,11 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               <div className="flex gap-2">
                 <Input
                   id="db-conn-file"
-
                   value={filePath}
                   onChange={(e) => updateConnectionField(setFilePath, e.target.value)}
                   placeholder="Select a SQLite database file"
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="gap-1.5"
-                  onClick={handleBrowseDatabaseFile}
-                >
+                <Button type="button" variant="ghost" onClick={handleBrowseDatabaseFile}>
                   <FolderOpenIcon />
                   Browse
                 </Button>
@@ -307,7 +298,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   <FieldLabel htmlFor="db-conn-host">Host</FieldLabel>
                   <Input
                     id="db-conn-host"
-
                     value={host}
                     onChange={(e) => updateConnectionField(setHost, e.target.value)}
                   />
@@ -317,7 +307,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   <Input
                     id="db-conn-port"
                     type="number"
-
                     value={port}
                     onChange={(e) => updateConnectionField(setPort, Number(e.target.value))}
                   />
@@ -328,7 +317,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   <FieldLabel htmlFor="db-conn-database">Database</FieldLabel>
                   <Input
                     id="db-conn-database"
-
                     value={database}
                     onChange={(e) => updateConnectionField(setDatabase, e.target.value)}
                   />
@@ -339,7 +327,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   <FieldLabel htmlFor="db-conn-username">Username</FieldLabel>
                   <Input
                     id="db-conn-username"
-
                     value={username}
                     onChange={(e) => updateConnectionField(setUsername, e.target.value)}
                   />
@@ -349,7 +336,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   <Input
                     id="db-conn-password"
                     type="password"
-
                     value={password}
                     onChange={(e) => updateConnectionField(setPassword, e.target.value)}
                   />
@@ -374,7 +360,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
           <FieldLabel htmlFor="db-conn-string">Connection String</FieldLabel>
           <Input
             id="db-conn-string"
-
             placeholder={`${dbType}://user:pass@host:port/database`}
             value={connectionString}
             onChange={(e) => updateConnectionField(setConnectionString, e.target.value)}

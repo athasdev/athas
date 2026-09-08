@@ -75,7 +75,6 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           onClick={handleZoomOut}
           disabled={zoom <= MIN_ZOOM}
           variant="ghost"
-          className="text-subtle-foreground disabled:opacity-50"
           tooltip="Zoom out"
           aria-label="Zoom out"
           iconOnly
@@ -90,7 +89,6 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           disabled={zoom >= MAX_ZOOM}
           variant="ghost"
           iconOnly
-          className="text-subtle-foreground disabled:opacity-50"
           tooltip="Zoom in"
           aria-label="Zoom in"
         >

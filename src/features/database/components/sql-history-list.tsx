@@ -37,7 +37,6 @@ export default function SqlHistoryList({
           onClick={onClear}
           variant="ghost"
           iconOnly
-          className="text-subtle-foreground hover:text-foreground"
           aria-label="Clear recent queries"
           tooltip="Clear recent queries"
         >
@@ -55,11 +54,10 @@ export default function SqlHistoryList({
               <Button
                 type="button"
                 onClick={() => onSelect(query)}
-                variant="ghost"
-                className={cn(
-                  "min-w-0 flex-1 justify-start truncate px-2.5 py-1.5 text-left",
-                  "ui-text-sm",
-                )}
+                variant="list"
+                width="grow"
+                align="start"
+                truncate
                 tooltip={query}
                 aria-label={`Open query: ${preview}`}
               >
@@ -67,49 +65,52 @@ export default function SqlHistoryList({
                 <span className="truncate">{preview}</span>
               </Button>
               {onRun && (
+                <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                  <Button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onRun(query);
+                    }}
+                    variant="ghost"
+                    iconOnly
+                    aria-label={`Run query from history: ${preview}`}
+                    tooltip="Run query"
+                  >
+                    <PlayIcon />
+                  </Button>
+                </span>
+              )}
+              <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
                 <Button
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    onRun(query);
+                    void writeDatabaseClipboardText(query);
                   }}
                   variant="ghost"
                   iconOnly
-                  className="shrink-0 text-subtle-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
-                  aria-label={`Run query from history: ${preview}`}
-                  tooltip="Run query"
+                  aria-label={`Copy query from history: ${preview}`}
+                  tooltip="Copy query"
                 >
-                  <PlayIcon />
+                  <ClipboardTextIcon />
                 </Button>
-              )}
-              <Button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void writeDatabaseClipboardText(query);
-                }}
-                variant="ghost"
-                iconOnly
-                className="shrink-0 text-subtle-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
-                aria-label={`Copy query from history: ${preview}`}
-                tooltip="Copy query"
-              >
-                <ClipboardTextIcon />
-              </Button>
-              <Button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onRemove(query);
-                }}
-                variant="ghost"
-                iconOnly
-                className="shrink-0 text-subtle-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
-                aria-label={`Remove query from history: ${preview}`}
-                tooltip="Remove from history"
-              >
-                <XIcon />
-              </Button>
+              </span>
+              <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                <Button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRemove(query);
+                  }}
+                  variant="ghost"
+                  iconOnly
+                  aria-label={`Remove query from history: ${preview}`}
+                  tooltip="Remove from history"
+                >
+                  <XIcon />
+                </Button>
+              </span>
             </div>
           );
         })}

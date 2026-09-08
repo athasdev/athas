@@ -430,18 +430,20 @@ const GitTagManager = ({ query, repoPath, onRefresh, onViewTagComparison }: GitT
                         <span className="ui-text-sm w-14 shrink-0 text-subtle-foreground">
                           Commit
                         </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void handleCopy(tag.commit, "Commit SHA");
-                          }}
-                          className="min-w-0 max-w-full"
-                          title={tag.commit}
-                        >
-                          <span className="truncate">{tag.commit}</span>
-                        </Button>
+                        <span className="inline-flex min-w-0 max-w-full">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleCopy(tag.commit, "Commit SHA");
+                            }}
+                            truncate
+                            title={tag.commit}
+                          >
+                            <span className="truncate">{tag.commit}</span>
+                          </Button>
+                        </span>
                       </div>
                       {tag.date ? (
                         <div className="flex min-w-0 items-center gap-2">
@@ -491,7 +493,7 @@ const GitTagManager = ({ query, repoPath, onRefresh, onViewTagComparison }: GitT
                 aria-label="Tag remote"
               />
             ) : null}
-            <Button className="min-w-0 flex-1" type="button" onClick={() => setIsCreateOpen(true)}>
+            <Button width="grow" type="button" onClick={() => setIsCreateOpen(true)}>
               <PlusIcon />
               Add tag
             </Button>

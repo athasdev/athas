@@ -72,11 +72,7 @@ export function WorkbenchNavigation<TValue extends string>({
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button
-                    variant="default"
-                    className="w-full justify-between"
-                    aria-label={ariaLabel}
-                  />
+                  <Button variant="default" width="full" align="between" aria-label={ariaLabel} />
                 }
               >
                 <span className="flex min-w-0 items-center gap-2">

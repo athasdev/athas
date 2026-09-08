@@ -7,7 +7,7 @@ import type { KeyboardEvent } from "react";
 import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
-import { Button, type ButtonProps } from "@/ui/button";
+import { Button, buttonVariants, type ButtonProps } from "@/ui/button";
 import { instantTransition, quickTransition } from "@/utils/motion";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
@@ -53,11 +53,7 @@ const commandInputClassName = cva(
 type CommandHeaderActionProps = Omit<ButtonProps, "className" | "variant">;
 
 export const CommandHeaderAction = (props: CommandHeaderActionProps) => (
-  <Button
-    variant="ghost"
-    className="ui-text-sm w-7 shrink-0 px-0 text-subtle-foreground hover:text-foreground has-[span]:w-auto has-[span]:px-2.5 [&_svg]:size-4"
-    {...props}
-  />
+  <Button variant="ghost" iconOnly {...props} />
 );
 
 CommandHeaderAction.displayName = "CommandHeaderAction";
@@ -68,17 +64,14 @@ export const CommandHeaderBadge = (props: CommandHeaderBadgeProps) => <Badge tru
 
 CommandHeaderBadge.displayName = "CommandHeaderBadge";
 
-type CommandItemActionProps = Omit<ButtonProps, "className" | "variant"> & {
+type CommandItemActionProps = Omit<ButtonProps, "className" | "variant" | "tone"> & {
   tone?: "neutral" | "danger";
 };
 
 export const CommandItemAction = ({ tone = "neutral", ...props }: CommandItemActionProps) => (
-  <Button
-    variant={tone === "danger" ? "danger" : "ghost"}
-    iconOnly
-    className="shrink-0 opacity-100 transition-[opacity,background-color,color] duration-fast sm:opacity-0 sm:group-hover/command-item:opacity-100 sm:group-focus-within/command-item:opacity-100"
-    {...props}
-  />
+  <span className="inline-flex shrink-0 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/command-item:opacity-100 sm:group-focus-within/command-item:opacity-100">
+    <Button variant={tone === "danger" ? "danger" : "ghost"} iconOnly {...props} />
+  </span>
 );
 
 CommandItemAction.displayName = "CommandItemAction";
@@ -394,7 +387,7 @@ export const CommandItem = ({
   ...props
 }: CommandItemProps &
   Omit<
-    React.ComponentProps<typeof Button>,
+    React.ComponentProps<"button">,
     | "children"
     | "className"
     | "disabled"
@@ -439,18 +432,21 @@ export const CommandItem = ({
   }
 
   return (
-    <Button
+    <button
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       disabled={disabled}
       type={type ?? "button"}
       {...props}
-      variant="ghost"
-      className={cn(commandItemVariants({ selected: isSelected }), className)}
+      className={cn(
+        buttonVariants({ variant: "ghost" }),
+        commandItemVariants({ selected: isSelected }),
+        className,
+      )}
     >
       {children}
-    </Button>
+    </button>
   );
 };
 
@@ -562,7 +558,7 @@ interface CommandItemRowProps
   extends
     Omit<CommandItemProps, "children">,
     Omit<
-      React.ComponentProps<typeof Button>,
+      React.ComponentProps<"button">,
       | "children"
       | "className"
       | "disabled"
@@ -689,7 +685,7 @@ export function useCommandListNavigation({
 type CommandFooterActionProps = Omit<ButtonProps, "className" | "variant">;
 
 export const CommandFooterAction = (props: CommandFooterActionProps) => (
-  <Button variant="default" className="min-w-0 justify-center gap-1.5 [&_svg]:size-4" {...props} />
+  <Button variant="default" {...props} />
 );
 
 CommandFooterAction.displayName = "CommandFooterAction";

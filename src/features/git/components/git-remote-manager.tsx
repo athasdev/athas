@@ -201,7 +201,7 @@ const GitRemoteManager = ({ query, repoPath, onRefresh }: GitRemoteManagerProps)
       {!isCreateOpen ? (
         <SidebarFooter>
           <div className="p-1 pb-0">
-            <Button className="w-full" type="button" onClick={() => setIsCreateOpen(true)}>
+            <Button width="full" type="button" onClick={() => setIsCreateOpen(true)}>
               <PlusIcon />
               Add remote
             </Button>

@@ -80,16 +80,19 @@ export const GitCommitFilesPanel = memo(function GitCommitFilesPanel({
     <SidebarPanel>
       <SidebarTitleBar
         title={
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onBack}
-            className="max-w-full justify-start px-1.5"
-            aria-label="Back to Source Control history"
-          >
-            <ArrowLeftIcon />
-            <span className="truncate">Source Control</span>
-          </Button>
+          <span className="inline-flex min-w-0 max-w-full">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onBack}
+              align="start"
+              truncate
+              aria-label="Back to Source Control history"
+            >
+              <ArrowLeftIcon />
+              <span className="truncate">Source Control</span>
+            </Button>
+          </span>
         }
       >
         <code className="font-mono text-subtle-foreground" title={commit.hash}>

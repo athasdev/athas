@@ -63,14 +63,12 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                   event.currentTarget.select();
                   return;
                 }
-
                 if (event.key === "Enter") {
                   event.preventDefault();
                   event.stopPropagation();
                   void state.handleApplyInlineEdit();
                   return;
                 }
-
                 if (event.key === "Escape") {
                   event.preventDefault();
                   event.stopPropagation();
@@ -79,7 +77,6 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                   }
                   return;
                 }
-
                 event.stopPropagation();
               }}
               variant="ghost"
@@ -90,7 +87,6 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                   : "inline-edit-description"
               }
               aria-invalid={state.inlineEditError ? true : undefined}
-
               placeholder={
                 selection && selection.start.offset !== selection.end.offset
                   ? "Edit selection..."
@@ -112,7 +108,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               iconOnly
               onClick={() => void state.handleApplyInlineEdit()}
               disabled={state.isInlineEditRunning}
-              className="text-primary hover:bg-transparent hover:text-primary/80"
+              tone="primary"
               aria-label={state.isInlineEditRunning ? "Applying inline edit" : "Apply inline edit"}
               tooltip="Apply inline edit"
               shortcut="enter"
@@ -124,7 +120,6 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               variant="ghost"
               iconOnly
               onClick={() => state.inlineEditToolbarActions.hide()}
-              className="text-subtle-foreground hover:text-foreground"
               tooltip="Close inline edit"
               shortcut="escape"
             >

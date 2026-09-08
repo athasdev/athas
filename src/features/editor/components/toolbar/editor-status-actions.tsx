@@ -19,16 +19,13 @@ import {
 } from "@/features/editor/utils/language-id";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { Button } from "@/ui/button";
+import { Button, type ButtonProps } from "@/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Select, { type SelectOption } from "@/ui/select";
 import { toast } from "sonner";
-import { cn } from "@/utils/cn";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
-
-const editorMenuActionButtonClass = "min-h-6 px-2 ui-text-sm text-subtle-foreground";
 
 const editorMenuRowClass =
   "group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent";
@@ -77,30 +74,32 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
   const buttonRef = useRef<HTMLButtonElement>(null);
   const viewButtonRef = useRef<HTMLButtonElement>(null);
 
-  const getStatusConfig = (status: LspStatus) => {
+  const getStatusConfig = (
+    status: LspStatus,
+  ): { icon: React.ReactNode; tone: ButtonProps["tone"]; title: string } => {
     switch (status) {
       case "connected":
         return {
           icon: <BoltIcon className="[&_path]:fill-current" optical="md" />,
-          color: "text-success",
+          tone: "success",
           title: "Language Servers Active",
         };
       case "connecting":
         return {
           icon: <Spinner label="Connecting" compact />,
-          color: "text-warning",
+          tone: "warning",
           title: "Connecting to Language Server...",
         };
       case "error":
         return {
           icon: <BoltSlashIcon />,
-          color: "text-destructive",
+          tone: "danger",
           title: "Language server issue",
         };
       default:
         return {
           icon: <BoltSlashIcon />,
-          color: "text-subtle-foreground opacity-50",
+          tone: "muted",
           title: "No active language servers",
         };
     }
@@ -439,11 +438,8 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
           onClick={() => setIsLspOpen((open) => !open)}
           variant="ghost"
           iconOnly
-          className={cn(
-            "text-subtle-foreground",
-            config.color,
-            isLspOpen && "bg-accent text-foreground",
-          )}
+          tone={config.tone}
+          active={isLspOpen}
           aria-label="Language server status"
           tooltip={config.title}
         >
@@ -470,7 +466,8 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                       onClick={() => void handleRestartAllServers()}
                       disabled={!canRunBulkLspAction}
                       variant="default"
-                      className={cn(editorMenuActionButtonClass, "flex-1")}
+                      size="chrome"
+                      width="grow"
                     >
                       {bulkLspAction === "restart" ? "Restarting..." : "Restart all"}
                     </Button>
@@ -479,7 +476,8 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                       onClick={() => void handleStopAllServers()}
                       disabled={!canRunBulkLspAction}
                       variant="default"
-                      className={cn(editorMenuActionButtonClass, "flex-1")}
+                      size="chrome"
+                      width="grow"
                     >
                       {bulkLspAction === "stop" ? "Stopping..." : "Stop all"}
                     </Button>
@@ -501,7 +499,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                           onClick={() => void handleRestartServer(entry.key)}
                           disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
-                          className={editorMenuActionButtonClass}
+                          size="chrome"
                         >
                           {isBusy ? "..." : "Restart"}
                         </Button>
@@ -511,7 +509,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                           disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
                           iconOnly
-                          className={editorMenuActionButtonClass}
+                          size="chrome"
                           aria-label={`Stop ${entry.displayName} language server`}
                         >
                           <SquareIcon />
@@ -534,7 +532,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                         onClick={() => void handleStartCurrent()}
                         disabled={isRestartingCurrent || isBulkLspBusy}
                         variant="default"
-                        className={editorMenuActionButtonClass}
+                        size="chrome"
                       >
                         {isRestartingCurrent ? "Starting..." : "Start"}
                       </Button>
@@ -584,10 +582,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
           onClick={() => setIsViewMenuOpen((open) => !open)}
           variant="ghost"
           iconOnly
-          className={cn(
-            "text-subtle-foreground",
-            isViewMenuOpen && "border-border/60 bg-accent/80 text-foreground",
-          )}
+          active={isViewMenuOpen}
           tooltip="Editor preferences"
         >
           <span className="flex size-full items-center justify-center">

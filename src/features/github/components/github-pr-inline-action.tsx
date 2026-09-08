@@ -70,7 +70,7 @@ export function GitHubPRInlineAction({
               variant="ghost"
               active={method === option}
               onClick={() => setMethod(option)}
-              className="capitalize"
+              capitalize
               disabled={isSubmitting}
             >
               {option}

@@ -19,7 +19,6 @@ import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import Select from "@/ui/select";
 import { ScrollArea } from "@/ui/scroll-area";
-import { cn } from "@/utils/cn";
 import {
   databaseChipClassName,
   databaseCodeBlockClassName,
@@ -94,11 +93,10 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
               <Button
                 key={col.name}
                 onClick={() => actions.selectCollection(col.name)}
-                variant="ghost"
-                className={cn(
-                  "block h-auto w-full justify-start rounded-lg px-2 py-1 text-left ui-text-sm leading-row",
-                  store.selectedCollection === col.name && "bg-selected",
-                )}
+                variant="list"
+                width="full"
+                align="start"
+                active={store.selectedCollection === col.name}
                 aria-label={`Select collection ${col.name}`}
               >
                 {col.name}
@@ -113,7 +111,6 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
               <div className="flex min-w-0 flex-1 items-center gap-1">
                 <Input
                   grow
-
                   placeholder='Filter JSON, e.g. {"name": "John"}'
                   value={filterInput}
                   onChange={(e) => setFilterInput(e.target.value)}
@@ -133,23 +130,17 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
             }
             actions={
               <>
-                <Button onClick={handleApplyQuery} className="gap-1.5" aria-label="Apply query">
+                <Button onClick={handleApplyQuery} aria-label="Apply query">
                   <BracketsCurlyIcon />
                   Apply
                 </Button>
-                <Button
-                  onClick={handleResetQuery}
-                  variant="ghost"
-                  className="px-2 py-1 text-subtle-foreground"
-                  aria-label="Reset query"
-                >
+                <Button onClick={handleResetQuery} variant="ghost" aria-label="Reset query">
                   Reset
                 </Button>
                 <Button
                   onClick={() => actions.refresh()}
                   variant="ghost"
                   iconOnly
-                  className="text-subtle-foreground"
                   aria-label="Refresh"
                 >
                   <ArrowClockwiseIcon />
@@ -209,15 +200,17 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                         <div className="truncate text-subtle-foreground ui-text-sm">
                           Document {displayIndex}
                         </div>
-                        <Button
-                          onClick={() => actions.deleteDocument(id)}
-                          variant="ghost"
-                          iconOnly
-                          className="text-destructive opacity-0 transition-[opacity,background-color] duration-fast ease-smooth hover:bg-destructive/10 group-hover:opacity-100"
-                          aria-label={`Delete document ${id}`}
-                        >
-                          <TrashIcon />
-                        </Button>
+                        <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                          <Button
+                            onClick={() => actions.deleteDocument(id)}
+                            variant="ghost"
+                            iconOnly
+                            tone="danger"
+                            aria-label={`Delete document ${id}`}
+                          >
+                            <TrashIcon />
+                          </Button>
+                        </span>
                       </div>
                       <pre
                         className={databaseCodeBlockClassName("overflow-x-auto bg-background/70")}

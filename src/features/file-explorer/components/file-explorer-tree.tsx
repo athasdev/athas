@@ -1119,14 +1119,12 @@ function FileExplorerTreeComponent({
           setTreeSearchOpen(true);
           return;
         }
-
         if (!mod && !e.altKey && !e.shiftKey && e.key === "/") {
           e.preventDefault();
           e.stopPropagation();
           setTreeSearchOpen(true);
           return;
         }
-
         // Let inputs handle their own keys
         const tag = (e.target as HTMLElement).tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable) {
@@ -1136,7 +1134,6 @@ function FileExplorerTreeComponent({
         const curIndex = index === -1 ? 0 : index;
         const current = visibleRows[curIndex]?.file;
         const isDir = visibleRows[curIndex]?.file.isDir;
-
         const clipboardActions = useFileClipboardStore.getState().actions;
         if (mod && current) {
           if (e.key === "c") {
@@ -1161,7 +1158,6 @@ function FileExplorerTreeComponent({
             return;
           }
         }
-
         switch (e.key) {
           case "Escape": {
             e.preventDefault();
@@ -1304,7 +1300,6 @@ function FileExplorerTreeComponent({
               closeTreeSearch();
               return;
             }
-
             if (e.key === "Enter") {
               e.preventDefault();
               e.stopPropagation();
@@ -1536,7 +1531,6 @@ function FileExplorerTreeComponent({
         renderRow={(index) => {
           const row = visibleRows[index];
           if (!row) return null;
-
           const previousRow = visibleRows[index - 1];
           const nextRow = visibleRows[index + 1];
           const isEditingRow = row.file.isEditing || row.file.isRenaming;
@@ -1557,7 +1551,6 @@ function FileExplorerTreeComponent({
                     : null,
                 )
               : [];
-
           return (
             <FileExplorerTreeItem
               file={row.file}
@@ -1594,7 +1587,7 @@ function FileExplorerTreeComponent({
           icon={WarningIcon}
           onClose={() => setAlertDialog(null)}
           footer={
-            <Button onClick={() => setAlertDialog(null)} variant="accent" className="ui-text-base">
+            <Button onClick={() => setAlertDialog(null)} variant="accent">
               OK
             </Button>
           }
@@ -1615,7 +1608,6 @@ function FileExplorerTreeComponent({
                 onClick={() => setOpenAllFilesDialog(null)}
                 disabled={isOpeningAllFiles}
                 variant="default"
-                className="ui-text-base"
               >
                 Cancel
               </Button>
@@ -1623,7 +1615,6 @@ function FileExplorerTreeComponent({
                 onClick={() => void handleOpenAllFilesConfirm()}
                 disabled={isOpeningAllFiles}
                 variant="accent"
-                className="ui-text-base"
               >
                 {isOpeningAllFiles ? "Opening..." : "Open"}
               </Button>
@@ -1648,7 +1639,6 @@ function FileExplorerTreeComponent({
                 onClick={() => setDeleteCandidate(null)}
                 disabled={isDeletingPath}
                 variant="default"
-                className="ui-text-base disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </Button>
@@ -1656,7 +1646,6 @@ function FileExplorerTreeComponent({
                 onClick={() => void handleDeleteConfirm()}
                 disabled={isDeletingPath}
                 variant="danger"
-                className="ui-text-base disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isDeletingPath ? "Deleting..." : "Delete"}
               </Button>

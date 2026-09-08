@@ -56,9 +56,11 @@ export function CollaborationMediaFooter({
           <span className="text-subtle-foreground">{streamStatus}</span>
         </div>
         {isFollowing ? (
-          <Button type="button" variant="ghost" className="ml-auto" onClick={onStopFollowing}>
-            Stop
-          </Button>
+          <span className="inline-flex min-w-0 ml-auto">
+            <Button type="button" variant="ghost" onClick={onStopFollowing}>
+              Stop
+            </Button>
+          </span>
         ) : null}
       </div>
     </SidebarFooter>

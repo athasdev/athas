@@ -173,18 +173,21 @@ export const InlineEditModelSelector = ({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={openSelector}
-        disabled={disabled}
-        className="max-w-36 justify-start px-1.5 text-foreground"
-        tooltip="Inline edit model"
-      >
-        <span className="truncate ui-text-base">
-          {currentProviderName} / {currentModelName}
-        </span>
-      </Button>
+      <span className="inline-flex min-w-0 max-w-36">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={openSelector}
+          disabled={disabled}
+          align="start"
+          truncate
+          tooltip="Inline edit model"
+        >
+          <span className="truncate ui-text-base">
+            {currentProviderName} / {currentModelName}
+          </span>
+        </Button>
+      </span>
 
       <Command
         isVisible={isOpen}

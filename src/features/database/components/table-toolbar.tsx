@@ -121,7 +121,6 @@ export default function TableToolbar({
               onClick={() => setShowColumnTypes(!showColumnTypes)}
               variant="ghost"
               iconOnly
-              className="text-subtle-foreground"
               aria-label="Toggle column types"
               tooltip={showColumnTypes ? "Hide column types" : "Show column types"}
             >
@@ -140,7 +139,6 @@ export default function TableToolbar({
               onClick={() => setIsCustomQuery(true)}
               variant="ghost"
               iconOnly
-              className="text-subtle-foreground"
               disabled={isCustomQuery}
               aria-label="Open SQL editor"
               tooltip="Open SQL editor"
@@ -152,7 +150,6 @@ export default function TableToolbar({
             <Button
               onClick={onCreateSubscription}
               variant="ghost"
-              className="text-subtle-foreground"
               aria-label="Create subscription"
               tooltip="Create subscription"
               iconOnly
@@ -164,7 +161,6 @@ export default function TableToolbar({
             <Button
               onClick={onToggleSubscription}
               variant="ghost"
-              className="text-subtle-foreground"
               aria-label={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
               tooltip={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
               iconOnly
@@ -176,7 +172,6 @@ export default function TableToolbar({
             <Button
               onClick={onRefreshSubscription}
               variant="ghost"
-              className="text-subtle-foreground"
               aria-label="Refresh subscription"
               tooltip="Refresh subscription"
               iconOnly
@@ -188,7 +183,6 @@ export default function TableToolbar({
             <Button
               onClick={onDropSubscription}
               variant="ghost"
-              className="text-subtle-foreground"
               aria-label="Drop subscription"
               tooltip="Drop subscription"
               iconOnly
@@ -201,7 +195,6 @@ export default function TableToolbar({
               <Button
                 onClick={exportAsCSV}
                 variant="ghost"
-                className="text-subtle-foreground"
                 aria-label={exportLabel}
                 tooltip={exportTooltip}
                 iconOnly
@@ -211,7 +204,6 @@ export default function TableToolbar({
               <Button
                 onClick={copyAsJSON}
                 variant="ghost"
-                className="text-subtle-foreground"
                 aria-label={jsonLabel}
                 tooltip={jsonTooltip}
                 iconOnly

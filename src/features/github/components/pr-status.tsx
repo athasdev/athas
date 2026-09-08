@@ -116,17 +116,17 @@ export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CISt
 
   return (
     <Popover open={isExpanded} onOpenChange={setIsExpanded}>
-      <PopoverTrigger
-        render={<Button type="button" variant="ghost" className="-ml-1.5 min-w-0 text-left" />}
-      >
-        {summary.icon}
-        <span className={cn("font-sans", summary.tone)}>{summary.label}</span>
-        {isExpanded ? (
-          <ChevronDownIcon className="text-subtle-foreground" />
-        ) : (
-          <ChevronRightIcon className="text-subtle-foreground" />
-        )}
-      </PopoverTrigger>
+      <span className="inline-flex min-w-0 -ml-1.5">
+        <PopoverTrigger render={<Button type="button" variant="ghost" align="start" />}>
+          {summary.icon}
+          <span className={cn("font-sans", summary.tone)}>{summary.label}</span>
+          {isExpanded ? (
+            <ChevronDownIcon className="text-subtle-foreground" />
+          ) : (
+            <ChevronRightIcon className="text-subtle-foreground" />
+          )}
+        </PopoverTrigger>
+      </span>
       <PopoverContent align="start" className="min-w-[320px] p-1.5">
         {checks.map((check, idx) => (
           <button

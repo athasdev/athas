@@ -41,7 +41,6 @@ import {
   useCommandListNavigation,
 } from "@/ui/command";
 import { showConfirmDialog, showPromptDialog } from "@/ui/dialog";
-import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { writeClipboardText } from "@/utils/clipboard";
@@ -565,25 +564,26 @@ const GitBranchManager = ({
           setIsDropdownOpen(open);
         }}
       >
-        <DropdownMenuTrigger
-          render={
-            <Button
-              data-branch-manager-trigger="true"
-              disabled={isLoading}
-              variant="ghost"
-              size="chrome"
-              className={cn(
-                "max-w-48 min-w-0 shrink justify-start overflow-hidden text-left",
-                isDropdownOpen && "bg-accent/80",
-              )}
-              title={selectorRepoPath ?? undefined}
-              aria-label={`Switch branch. Current branch: ${currentBranch}`}
-            />
-          }
-        >
-          <span className="min-w-0 truncate">{currentBranch}</span>
-          <ChevronExpandYIcon className="text-subtle-foreground" />
-        </DropdownMenuTrigger>
+        <span className="inline-flex min-w-0 max-w-48 shrink">
+          <DropdownMenuTrigger
+            render={
+              <Button
+                data-branch-manager-trigger="true"
+                disabled={isLoading}
+                variant="ghost"
+                size="chrome"
+                align="start"
+                active={isDropdownOpen}
+                truncate
+                title={selectorRepoPath ?? undefined}
+                aria-label={`Switch branch. Current branch: ${currentBranch}`}
+              />
+            }
+          >
+            <span className="min-w-0 truncate">{currentBranch}</span>
+            <ChevronExpandYIcon className="text-subtle-foreground" />
+          </DropdownMenuTrigger>
+        </span>
         <DropdownMenuContent align="start" viewport="searchable" className="w-64">
           <DropdownMenuSearch
             value={branchQuery}
@@ -669,29 +669,30 @@ const GitBranchManager = ({
 
   return (
     <>
-      <Button
-        data-branch-manager-trigger="true"
-        onClick={() => void handleOpenDropdown()}
-        disabled={isLoading}
-        variant="ghost"
-        size="default"
-        className={cn(
-          "w-fit max-w-full min-w-0 shrink justify-start overflow-hidden text-left hover:bg-accent/80",
-          isDropdownOpen && "bg-accent/80",
-        )}
-        title={selectorRepoPath ?? undefined}
-        aria-label={`Switch repository or branch. ${activeRepositoryLabel}, branch ${currentBranch}`}
-      >
-        <FolderOpenIcon />
-        <span className="flex min-w-0 flex-1 flex-col items-start overflow-hidden leading-none">
-          <span className="max-w-full truncate font-medium text-foreground ui-text-sm">
-            {activeRepositoryLabel}
+      <span className="inline-flex min-w-0 max-w-full shrink">
+        <Button
+          data-branch-manager-trigger="true"
+          onClick={() => void handleOpenDropdown()}
+          disabled={isLoading}
+          variant="ghost"
+          size="default"
+          align="start"
+          active={isDropdownOpen}
+          truncate
+          title={selectorRepoPath ?? undefined}
+          aria-label={`Switch repository or branch. ${activeRepositoryLabel}, branch ${currentBranch}`}
+        >
+          <FolderOpenIcon />
+          <span className="flex min-w-0 flex-1 flex-col items-start overflow-hidden leading-none">
+            <span className="max-w-full truncate font-medium text-foreground ui-text-sm">
+              {activeRepositoryLabel}
+            </span>
+            <span className="max-w-full truncate font-normal text-subtle-foreground ui-text-caption">
+              {currentBranch}
+            </span>
           </span>
-          <span className="max-w-full truncate font-normal text-subtle-foreground ui-text-caption">
-            {currentBranch}
-          </span>
-        </span>
-      </Button>
+        </Button>
+      </span>
 
       <GitCommandSurface
         isOpen={isDropdownOpen}

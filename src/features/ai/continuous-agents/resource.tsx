@@ -655,10 +655,12 @@ function TaskContent({
           {task.enabled ? <PauseIcon /> : <ArrowsClockwiseIcon />}
           {task.enabled ? "Pause" : "Resume"}
         </Button>
-        <Button type="button" variant="danger" className="ml-auto" onClick={onDelete}>
-          <TrashIcon />
-          Delete
-        </Button>
+        <span className="inline-flex min-w-0 ml-auto">
+          <Button type="button" variant="danger" onClick={onDelete}>
+            <TrashIcon />
+            Delete
+          </Button>
+        </span>
       </div>
     </ResourceViewerBody>
   );

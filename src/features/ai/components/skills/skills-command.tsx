@@ -358,16 +358,21 @@ export function SkillsCommand({
             placeholder={view === "browse" ? "Search available skills..." : "Search skills..."}
           />
           {view === "list" ? (
-            <CommandHeaderAction type="button" onClick={openNewSkill}>
+            <CommandHeaderAction iconOnly={false} type="button" onClick={openNewSkill}>
               <PlusIcon />
               <span>New</span>
             </CommandHeaderAction>
           ) : (
-            <CommandHeaderAction type="button" onClick={() => setView("list")}>
+            <CommandHeaderAction iconOnly={false} type="button" onClick={() => setView("list")}>
               <span>My skills</span>
             </CommandHeaderAction>
           )}
-          <CommandHeaderAction type="button" onClick={openBrowseSkills} active={view === "browse"}>
+          <CommandHeaderAction
+            iconOnly={false}
+            type="button"
+            onClick={openBrowseSkills}
+            active={view === "browse"}
+          >
             <CloudArrowDownIcon optical="md" />
             <span>Browse</span>
           </CommandHeaderAction>
@@ -473,34 +478,36 @@ export function SkillsCommand({
                   }
                   action={
                     <>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openSkillEditor(skill);
-                        }}
-                        className="opacity-0 focus:opacity-100 group-hover:opacity-100"
-                        tooltip="Edit skill"
-                        aria-label={`Edit ${skill.title}`}
-                        iconOnly
-                      >
-                        <PenIcon size={13} />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="danger"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleDelete(skill.id);
-                        }}
-                        className="opacity-0 focus:opacity-100 group-hover:opacity-100"
-                        tooltip="Delete skill"
-                        aria-label={`Delete ${skill.title}`}
-                        iconOnly
-                      >
-                        <TrashIcon size={13} />
-                      </Button>
+                      <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openSkillEditor(skill);
+                          }}
+                          tooltip="Edit skill"
+                          aria-label={`Edit ${skill.title}`}
+                          iconOnly
+                        >
+                          <PenIcon size={13} />
+                        </Button>
+                      </span>
+                      <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                        <Button
+                          type="button"
+                          variant="danger"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleDelete(skill.id);
+                          }}
+                          tooltip="Delete skill"
+                          aria-label={`Delete ${skill.title}`}
+                          iconOnly
+                        >
+                          <TrashIcon size={13} />
+                        </Button>
+                      </span>
                     </>
                   }
                 />

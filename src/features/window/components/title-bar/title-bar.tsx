@@ -236,7 +236,7 @@ const TitleBar = ({
               variant="ghost"
               iconOnly
               size="chrome"
-              className={isCompactMenuVisible ? "bg-accent/70 text-foreground" : undefined}
+              active={isCompactMenuVisible}
               aria-label="Menu"
               aria-expanded={isCompactMenuVisible}
             >

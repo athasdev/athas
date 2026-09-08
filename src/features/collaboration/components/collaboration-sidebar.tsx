@@ -1012,7 +1012,6 @@ export function CollaborationSidebarView() {
                           variant="ghost"
                           placeholder="channel-name"
                           disabled={isSending}
-
                           onChange={(event) => setNewChannelName(event.target.value)}
                           onKeyDown={(event) => {
                             if (event.key === "Escape") {
@@ -1098,20 +1097,21 @@ export function CollaborationSidebarView() {
             </Button>
             <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
               {model.channels.map((channel) => (
-                <Button
-                  key={channel.id}
-                  type="button"
-                  variant="ghost"
-                  active={openChannel?.id === channel.id}
-                  className="max-w-32"
-                  onClick={() => openChannelChat(channel.id)}
-                  onContextMenu={(event) => channelsContextMenu.open(event, channel)}
-                >
-                  <span className="shrink-0 ui-text-sm">
-                    {renderChannelIcon(channelIcons[String(channel.id)])}
-                  </span>
-                  <span className="truncate">#{channel.slug}</span>
-                </Button>
+                <span key={channel.id} className="inline-flex min-w-0 max-w-32">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    active={openChannel?.id === channel.id}
+                    truncate
+                    onClick={() => openChannelChat(channel.id)}
+                    onContextMenu={(event) => channelsContextMenu.open(event, channel)}
+                  >
+                    <span className="shrink-0 ui-text-sm">
+                      {renderChannelIcon(channelIcons[String(channel.id)])}
+                    </span>
+                    <span className="truncate">#{channel.slug}</span>
+                  </Button>
+                </span>
               ))}
             </div>
           </div>
@@ -1412,7 +1412,6 @@ export function CollaborationSidebarView() {
                   setSelectedNoteFolderPath(item.path);
                   return;
                 }
-
                 setSelectedNoteItemType("file");
                 setSelectedNotePath(item.path);
                 setSelectedNoteFolderPath(item.path.split("/").slice(0, -1).join("/") || null);

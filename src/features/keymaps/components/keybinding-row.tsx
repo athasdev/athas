@@ -84,7 +84,8 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
               type="button"
               onClick={() => setIsEditing(true)}
               variant="default"
-              className="ui-text-sm flex h-7 w-full items-center justify-start px-1.5 hover:border hover:border-primary"
+              width="full"
+              align="start"
               aria-label={`Edit keybinding for ${command.title}`}
             >
               {displayedKey ? (
@@ -111,7 +112,6 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
                 type="button"
                 onClick={handleReset}
                 variant="ghost"
-                className="ui-text-sm text-subtle-foreground hover:text-foreground"
                 tooltip="Reset to default"
                 aria-label="Reset to default keybinding"
               >
@@ -122,8 +122,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
               <Button
                 type="button"
                 onClick={handleRemove}
-                variant="ghost"
-                className="ui-text-sm text-subtle-foreground hover:text-destructive"
+                variant="danger"
                 tooltip="Remove keybinding"
                 aria-label="Remove keybinding"
               >

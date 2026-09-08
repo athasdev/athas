@@ -64,10 +64,10 @@ export default function InfoView({
                       <Button
                         key={table.name}
                         onClick={() => onTableChange(table.name)}
-                        variant="ghost"
-                        className={`block h-auto w-full justify-start px-2 py-1 text-left ui-text-sm hover:bg-accent ${
-                          selectedTable === table.name ? "bg-selected" : ""
-                        }`}
+                        variant="list"
+                        width="full"
+                        align="start"
+                        active={selectedTable === table.name}
                       >
                         <span className="flex min-w-0 flex-col items-start">
                           <span className="max-w-full truncate">{table.name}</span>

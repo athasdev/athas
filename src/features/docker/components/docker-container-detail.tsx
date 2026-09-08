@@ -74,7 +74,8 @@ export function DockerContainerDetail({
               key={tab}
               type="button"
               variant={activeTab === tab ? "accent" : "ghost"}
-              className="h-6 px-1.5 ui-text-sm capitalize"
+              size="chrome"
+              capitalize
               onClick={() => onTabChange(tab)}
             >
               {tab}
@@ -84,7 +85,7 @@ export function DockerContainerDetail({
             <Button
               type="button"
               variant="ghost"
-              className="h-6 px-1.5 ui-text-sm"
+              size="chrome"
               disabled={logLines.length === 0}
               onClick={onClearLogs}
             >
@@ -94,7 +95,7 @@ export function DockerContainerDetail({
             <Button
               type="button"
               variant="ghost"
-              className="h-6 px-1.5 ui-text-sm"
+              size="chrome"
               onClick={() => void onCopyToContainer()}
             >
               <UploadIcon className="size-3.5" />
@@ -118,7 +119,8 @@ export function DockerContainerDetail({
                 key={filter}
                 type="button"
                 variant={logFilter === filter ? "accent" : "ghost"}
-                className="h-6 px-1.5 ui-text-sm capitalize"
+                size="chrome"
+                capitalize
                 onClick={() => onLogFilterChange(filter)}
               >
                 {filter === "stderr" ? "Err" : filter}
@@ -156,7 +158,7 @@ export function DockerContainerDetail({
             <Button
               type="button"
               variant="ghost"
-              className="h-6 px-1.5 ui-text-sm"
+              size="chrome"
               disabled={containerPath === "/"}
               onClick={() => onContainerPathChange(getParentContainerPath(containerPath))}
             >
@@ -169,7 +171,6 @@ export function DockerContainerDetail({
               type="button"
               variant="ghost"
               iconOnly
-              className="ui-text-sm"
               disabled={isFilesLoading}
               onClick={() => void onRefreshFiles()}
               aria-label="Refresh container files"
@@ -222,7 +223,6 @@ export function DockerContainerDetail({
                     type="button"
                     variant="ghost"
                     iconOnly
-                    className="ui-text-sm"
                     tooltip="Copy to host"
                     aria-label={`Copy ${entry.name} to host`}
                     onClick={(event) => {

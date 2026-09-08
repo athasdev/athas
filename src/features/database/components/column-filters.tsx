@@ -52,7 +52,6 @@ export default function ColumnFilters({
             <Button
               onClick={() => onAddFilter(columns[0].name)}
               variant="ghost"
-              className="gap-0.5 text-subtle-foreground"
               aria-label="Add filter"
             >
               <PlusIcon />
@@ -60,12 +59,7 @@ export default function ColumnFilters({
             </Button>
           )}
         </div>
-        <Button
-          onClick={onClear}
-          variant="ghost"
-          className="text-subtle-foreground"
-          aria-label="Clear all filters"
-        >
+        <Button onClick={onClear} variant="ghost" aria-label="Clear all filters">
           Clear all
         </Button>
       </div>
@@ -105,9 +99,8 @@ export default function ColumnFilters({
             )}
             <Button
               onClick={() => onRemove(index)}
-              variant="ghost"
+              variant="danger"
               iconOnly
-              className="text-subtle-foreground hover:text-destructive"
               aria-label="Remove filter"
             >
               <XIcon />

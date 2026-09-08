@@ -1,9 +1,7 @@
 import { ColumnsIcon, DotsIcon, RowsIcon, SearchIcon } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import Breadcrumb, {
-  BreadcrumbActionButton,
-} from "@/features/editor/components/toolbar/breadcrumb";
+import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import {
   type FileNavigatorItem,
@@ -432,7 +430,9 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         }
         rightContent={
           <div className="flex items-center gap-1">
-            <BreadcrumbActionButton
+            <Button
+              variant="ghost"
+              iconOnly
               type="button"
               active={isFindVisible}
               onClick={() => setIsFindVisible(!isFindVisible)}
@@ -440,9 +440,11 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               aria-label="Search changes"
             >
               <SearchIcon />
-            </BreadcrumbActionButton>
+            </Button>
             <div className="flex items-center gap-0.5">
-              <BreadcrumbActionButton
+              <Button
+                variant="ghost"
+                iconOnly
                 type="button"
                 active={viewMode === "unified"}
                 onClick={() => setViewMode("unified")}
@@ -450,8 +452,10 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 aria-label="Unified view"
               >
                 <RowsIcon />
-              </BreadcrumbActionButton>
-              <BreadcrumbActionButton
+              </Button>
+              <Button
+                variant="ghost"
+                iconOnly
                 type="button"
                 active={viewMode === "split"}
                 onClick={() => setViewMode("split")}
@@ -459,7 +463,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 aria-label="Split view"
               >
                 <ColumnsIcon />
-              </BreadcrumbActionButton>
+              </Button>
             </div>
             <DropdownMenu>
               <Tooltip content="Diff actions">

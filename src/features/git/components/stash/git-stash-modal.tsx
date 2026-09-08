@@ -70,26 +70,16 @@ const StashMessageModalContent = ({
           value={message}
           onChange={(event) => setMessage(event.target.value)}
           placeholder={placeholder}
-
           onKeyDown={(event) => {
             if (event.key === "Enter") void handleConfirm();
           }}
         />
       </div>
       <DialogFooter>
-        <Button
-          onClick={onClose}
-          variant="ghost"
-          className="text-subtle-foreground ui-text-sm hover:text-foreground"
-        >
+        <Button onClick={onClose} variant="ghost">
           Cancel
         </Button>
-        <Button
-          onClick={() => void handleConfirm()}
-          disabled={isLoading}
-          variant="accent"
-          className="ui-text-sm disabled:opacity-50"
-        >
+        <Button onClick={() => void handleConfirm()} disabled={isLoading} variant="accent">
           {isLoading ? "Stashing..." : "Stash"}
         </Button>
       </DialogFooter>

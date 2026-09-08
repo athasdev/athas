@@ -103,25 +103,30 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
   return (
     <div className={cn("min-w-0 max-w-full", className)}>
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-fit max-w-full min-w-0 justify-start text-left"
-              title={activeRepoTitle ?? undefined}
+        <span className="inline-flex min-w-0 max-w-full">
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                align="start"
+                truncate
+                title={activeRepoTitle ?? undefined}
+              />
+            }
+          >
+            <FolderOpenIcon />
+            <span className="ui-text-sm min-w-0 flex-1 truncate font-medium">
+              {activeRepoLabel}
+            </span>
+            <ChevronDownIcon
+              className={cn(
+                "size-3.5 shrink-0 text-subtle-foreground transition-transform",
+                isOpen && "rotate-180 text-foreground",
+              )}
             />
-          }
-        >
-          <FolderOpenIcon />
-          <span className="ui-text-sm min-w-0 flex-1 truncate font-medium">{activeRepoLabel}</span>
-          <ChevronDownIcon
-            className={cn(
-              "size-3.5 shrink-0 text-subtle-foreground transition-transform",
-              isOpen && "rotate-180 text-foreground",
-            )}
-          />
-        </DropdownMenuTrigger>
+          </DropdownMenuTrigger>
+        </span>
         <DropdownMenuContent align="start" className="w-72">
           {isDiscovering && availableRepoPaths.length === 0 ? (
             <DropdownMenuItem disabled>

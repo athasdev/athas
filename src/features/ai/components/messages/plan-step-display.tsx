@@ -36,7 +36,8 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
         type="button"
         variant="ghost"
         onClick={() => step.description && setIsExpanded(!isExpanded)}
-        className="w-full justify-start text-left"
+        width="full"
+        align="start"
       >
         <StatusIcon className={cn("shrink-0", statusColor)} />
         <span className="min-w-0 flex-1 font-medium text-foreground">

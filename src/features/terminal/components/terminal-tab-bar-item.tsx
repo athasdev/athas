@@ -121,35 +121,38 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         onAuxClick={handleAuxClick}
         action={
           !isEditing ? (
-            <Button
-              type="button"
-              iconOnly
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (terminal.isPinned) {
-                  handleTabPin(terminal.id);
-                } else {
-                  handleTabClose(terminal.id);
-                }
-              }}
+            <span
               className={cn(
-                "-translate-y-1/2 absolute top-1/2 right-1 transition-opacity",
+                "inline-flex -translate-y-1/2 absolute top-1/2 right-1 transition-opacity focus-within:opacity-100",
                 terminal.isPinned || isActive
                   ? "opacity-100"
                   : "opacity-0 group-hover/tab:opacity-100",
               )}
-              tooltip={terminal.isPinned ? "Unpin terminal" : `Close ${terminal.name}`}
-              commandId={terminal.isPinned ? undefined : "terminal.close"}
-              tabIndex={-1}
-              draggable={false}
             >
-              {terminal.isPinned ? (
-                <PinIcon className="pointer-events-none select-none fill-current text-primary" />
-              ) : (
-                <XIcon className="pointer-events-none select-none" />
-              )}
-            </Button>
+              <Button
+                type="button"
+                iconOnly
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (terminal.isPinned) {
+                    handleTabPin(terminal.id);
+                  } else {
+                    handleTabClose(terminal.id);
+                  }
+                }}
+                tooltip={terminal.isPinned ? "Unpin terminal" : `Close ${terminal.name}`}
+                commandId={terminal.isPinned ? undefined : "terminal.close"}
+                tabIndex={-1}
+                draggable={false}
+              >
+                {terminal.isPinned ? (
+                  <PinIcon className="pointer-events-none select-none fill-current text-primary" />
+                ) : (
+                  <XIcon className="pointer-events-none select-none" />
+                )}
+              </Button>
+            </span>
           ) : null
         }
       >

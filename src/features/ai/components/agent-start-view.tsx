@@ -106,7 +106,9 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
               type="button"
               onClick={item.action}
               variant="default"
-              className="w-full min-w-0 justify-start overflow-hidden"
+              width="full"
+              align="start"
+              truncate
             >
               {item.icon}
               <span className="min-w-0 truncate">{item.label}</span>

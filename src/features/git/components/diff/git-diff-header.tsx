@@ -1,3 +1,4 @@
+import { Button } from "@/ui/button";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -8,9 +9,7 @@ import {
   XIcon,
 } from "@/ui/icons";
 import { memo } from "react";
-import Breadcrumb, {
-  BreadcrumbActionButton,
-} from "@/features/editor/components/toolbar/breadcrumb";
+import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { cn } from "@/utils/cn";
 import type { DiffHeaderProps } from "../../types/git-diff.types";
@@ -109,70 +108,77 @@ const DiffHeader = memo(
             <div className="flex items-center gap-1.5 leading-none">
               {isMultiFileView && (
                 <>
-                  <BreadcrumbActionButton
+                  <Button
+                    variant="ghost"
+                    iconOnly
                     onClick={onExpandAll}
                     tooltip="Expand all"
                     aria-label="Expand all files"
                   >
                     <ChevronDownIcon />
-                  </BreadcrumbActionButton>
-                  <BreadcrumbActionButton
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    iconOnly
                     onClick={onCollapseAll}
                     tooltip="Collapse all"
                     aria-label="Collapse all files"
                   >
                     <ChevronUpIcon />
-                  </BreadcrumbActionButton>
+                  </Button>
                   <div className="mx-1 h-4 w-px bg-border" />
                 </>
               )}
-
               {showDisplayControls && (
                 <>
-                  <BreadcrumbActionButton
+                  <Button
+                    variant="ghost"
+                    iconOnly
                     onClick={() => onShowWhitespaceChange?.(!showWhitespace)}
                     active={showWhitespace}
-                    className="gap-1"
                     tooltip={showWhitespace ? "Hide whitespace" : "Show whitespace"}
                     aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
                   >
                     <TrashIcon />
                     {showWhitespace && <CheckIcon />}
-                  </BreadcrumbActionButton>
-
+                  </Button>
                   {onViewModeChange && (
                     <div className="flex items-center gap-0.5">
-                      <BreadcrumbActionButton
+                      <Button
+                        variant="ghost"
+                        iconOnly
                         onClick={() => onViewModeChange("unified")}
                         active={viewMode === "unified"}
                         tooltip="Unified view"
                         aria-label="Unified diff view"
                       >
                         <RowsIcon />
-                      </BreadcrumbActionButton>
-                      <BreadcrumbActionButton
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        iconOnly
                         onClick={() => onViewModeChange("split")}
                         active={viewMode === "split"}
                         tooltip="Split view"
                         aria-label="Split diff view"
                       >
                         <ColumnsIcon />
-                      </BreadcrumbActionButton>
+                      </Button>
                     </div>
                   )}
-
                   <div className="mx-1 h-4 w-px bg-border" />
                 </>
               )}
-
-              <BreadcrumbActionButton
+              <Button
+                variant="ghost"
+                iconOnly
                 onClick={handleClose}
                 tooltip="Close"
                 shortcut="escape"
                 aria-label="Close diff view"
               >
                 <XIcon />
-              </BreadcrumbActionButton>
+              </Button>
             </div>
           }
         />

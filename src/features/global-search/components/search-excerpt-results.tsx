@@ -113,7 +113,6 @@ function SearchExcerptFileHeader({
             onClick={handleContextToggle}
             tooltip={isExpanded ? "Collapse context" : "Expand context"}
             aria-label={isExpanded ? "Collapse context" : "Expand context"}
-            className="shrink-0 text-subtle-foreground"
             iconOnly
           >
             {isExpanded ? <MinusIcon size={14} /> : <PlusIcon size={14} />}
