@@ -1,7 +1,9 @@
 use crate::app_runtime::AthasRuntime;
 use serde::{Deserialize, Serialize};
+#[cfg(target_os = "macos")]
+use std::path::PathBuf;
 use std::{
-   path::{Path, PathBuf},
+   path::Path,
    sync::atomic::{AtomicU32, Ordering},
    time::{Instant, SystemTime, UNIX_EPOCH},
 };
