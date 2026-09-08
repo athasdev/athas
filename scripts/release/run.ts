@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
+import { waitForReleaseCi } from "./ci-gate";
 import {
   bumpStableBase,
   formatVersion,
@@ -232,11 +233,11 @@ async function release() {
     log("  3. Restore all touched files without commit, tag, or push\n", "yellow");
   } else if (tagOnly) {
     log("  2. Create a local commit with these changes", "yellow");
-    log(`  3. Create and push tag v${newVersion}`, "yellow");
+    log(`  3. Validate the release commit in CI, then push tag v${newVersion}`, "yellow");
     log("  4. Let the tag push trigger GitHub Actions to build a draft release\n", "yellow");
   } else {
     log("  2. Create a commit with these changes", "yellow");
-    log(`  3. Create and push tag v${newVersion}`, "yellow");
+    log(`  3. Push main, wait for CI, then push tag v${newVersion}`, "yellow");
     log("  4. Trigger GitHub Actions to build a draft release\n", "yellow");
   }
 
@@ -288,17 +289,29 @@ async function release() {
     await $`git commit -m ${commitMessage} -m "Update version files for the release."`;
     success(`Created commit: ${commitMessage}`);
 
-    await $`git tag v${newVersion}`;
-    success(`Created tag: v${newVersion}`);
-
+    const releaseSha = (await $`git rev-parse HEAD`.text()).trim();
     log("\nPushing to remote...\n", "magenta");
     if (tagOnly) {
-      info("Skipping main push because RELEASE_TAG_ONLY is set");
+      const validationBranch = `release-validation/v${newVersion}`;
+      await $`git push origin ${`${releaseSha}:refs/heads/${validationBranch}`}`;
+      try {
+        await $`gh workflow run ci.yml --repo athasdev/athas --ref ${validationBranch}`;
+        await waitForReleaseCi(releaseSha);
+      } finally {
+        await $`git push origin --delete ${validationBranch}`;
+      }
     } else {
       await $`git push origin main`;
       success("Pushed commits");
+      await waitForReleaseCi(releaseSha);
     }
 
+    if ((await $`git rev-parse HEAD`.text()).trim() !== releaseSha) {
+      throw new Error("HEAD changed during CI validation; refusing to tag another commit");
+    }
+    await checkWorkingDirectory();
+    await $`git tag v${newVersion} ${releaseSha}`;
+    success(`Created tag: v${newVersion}`);
     await $`git push origin v${newVersion}`;
     success("Pushed tag");
 
