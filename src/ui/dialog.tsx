@@ -33,13 +33,12 @@ interface DialogProps {
   footer?: ReactNode;
   size?: "sm" | "md" | "lg" | "settings";
   hideHeader?: boolean;
-  classNames?: Partial<{
-    header: string;
-    title: string;
-    headerActions: string;
-    content: string;
-  }>;
+  contentLayout?: "default" | "form" | "flush";
 }
+
+const dialogBodyVariants = cva("", {
+  variants: { layout: { default: "p-4", form: "space-y-4 p-4", flush: "p-0" } },
+});
 
 const dialogContentVariants = cva(
   "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-9999 flex max-h-[90vh] w-full max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background text-foreground shadow-(--shadow-dialog) ring-1 ring-border/70 outline-none",
@@ -177,7 +176,7 @@ const AppDialog = ({
   size = "md",
   scrollable = true,
   hideHeader = false,
-  classNames,
+  contentLayout,
 }: DialogProps) => {
   const prefersReducedMotion = useReducedMotionConfig();
   const popupMotion = prefersReducedMotion
@@ -245,20 +244,15 @@ const AppDialog = ({
           {hideHeader ? (
             <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
           ) : (
-            <div
-              className={cn(
-                "flex shrink-0 items-center justify-between bg-background px-4 py-3",
-                classNames?.header,
-              )}
-            >
-              <div className={cn("flex min-w-0 items-center gap-2", classNames?.title)}>
+            <div className="flex shrink-0 items-center justify-between bg-background px-4 py-3">
+              <div className="flex min-w-0 items-center gap-2">
                 {Icon && <Icon className="text-subtle-foreground" />}
                 <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium text-foreground">
                   {title}
                 </DialogPrimitive.Title>
               </div>
 
-              <div className={cn("flex items-center gap-1", classNames?.headerActions)}>
+              <div className="flex items-center gap-1">
                 {headerActions}
                 <DialogPrimitive.Close
                   render={<Button variant="ghost" iconOnly />}
@@ -271,12 +265,20 @@ const AppDialog = ({
           )}
 
           {scrollable ? (
-            <ScrollArea className="flex-1" contentClassName={cn("p-4", classNames?.content)}>
+            <ScrollArea
+              className="flex-1"
+              contentClassName={dialogBodyVariants({ layout: contentLayout ?? "default" })}
+            >
               {children}
             </ScrollArea>
           ) : (
             <div
-              className={cn("min-h-0 flex-1", size !== "settings" && "p-4", classNames?.content)}
+              className={cn(
+                "min-h-0 flex-1",
+                dialogBodyVariants({
+                  layout: contentLayout ?? (size === "settings" ? "flush" : "default"),
+                }),
+              )}
             >
               {children}
             </div>

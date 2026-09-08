@@ -208,7 +208,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
     <Dialog
       onClose={onClose}
       title="Connect to Database"
-      classNames={{ content: "space-y-4" }}
+      contentLayout="form"
       footer={
         <>
           {installedDbTypes.length > 0 && !isFileBased && (

@@ -256,7 +256,7 @@ export function MarkdownSlashCommands() {
 
         return createPortal(
           <div className="github-markdown-slash-menu" role="listbox" aria-label="block commands">
-            <CommandList className="max-h-80" contentClassName="p-1.5">
+            <CommandList className="max-h-80">
               {menu.options.length === 0 ? (
                 <CommandEmpty>no matching blocks</CommandEmpty>
               ) : (

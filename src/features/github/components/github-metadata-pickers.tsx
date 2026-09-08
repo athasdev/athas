@@ -66,7 +66,6 @@ export function GitHubLabelPicker({
           aria-label="Choose labels"
           variant="ghost"
           className="w-full bg-transparent hover:bg-accent/60"
-          inputClassName="truncate"
         />
       </div>
       <ComboboxContent className="min-w-72" data-prevent-dialog-escape="true">

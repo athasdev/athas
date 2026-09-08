@@ -60,7 +60,7 @@ export function ImageResizeDialog({
       icon={ImageIcon}
       onClose={onClose}
       size="sm"
-      classNames={{ content: "space-y-4 p-4" }}
+      contentLayout="form"
       footer={
         <>
           <Button type="button" variant="default" onClick={onClose}>

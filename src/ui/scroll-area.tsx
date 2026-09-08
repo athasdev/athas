@@ -148,6 +148,13 @@ function scheduleWheelFallback(
   pendingWheelFallbacks.set(viewport, fallback);
 }
 
+const scrollContentVariants = cva("min-w-full", {
+  variants: {
+    padding: { none: "", xs: "p-1", sm: "p-1.5", md: "p-2", lg: "p-3", xl: "p-4", inline: "px-4" },
+    gap: { none: "", xs: "space-y-0.5", sm: "space-y-2", md: "space-y-3" },
+  },
+});
+
 type ScrollAreaProps = React.ComponentProps<typeof ScrollAreaPrimitive.Root> & {
   orientation?: ScrollAreaOrientation;
   reserveScrollbarGutter?: boolean;
@@ -159,6 +166,8 @@ type ScrollAreaProps = React.ComponentProps<typeof ScrollAreaPrimitive.Root> & {
     [key: `data-${string}`]: string | number | boolean | undefined;
   };
   contentClassName?: string;
+  contentPadding?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "inline";
+  contentGap?: "none" | "xs" | "sm" | "md";
   scrollbarVisibility?: ScrollbarVisibility;
 };
 
@@ -170,6 +179,8 @@ function ScrollArea({
   viewportClassName,
   viewportProps,
   contentClassName,
+  contentPadding = "none",
+  contentGap = "none",
   scrollbarVisibility = "hover",
   ...props
 }: ScrollAreaProps) {
@@ -211,6 +222,7 @@ function ScrollArea({
           className={cn(
             "min-h-full min-w-full",
             orientation !== "vertical" && "w-max",
+            scrollContentVariants({ padding: contentPadding, gap: contentGap }),
             contentClassName,
           )}
           style={

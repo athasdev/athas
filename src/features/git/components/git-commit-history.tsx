@@ -169,7 +169,7 @@ const CommitItem = memo(
             });
           }}
         >
-          <Avatar name={commit.author} src={avatarUrl} className="mt-0.5 size-6" />
+          <Avatar name={commit.author} src={avatarUrl} size="md" className="mt-0.5" />
           <span className="min-w-0 flex-1">
             <span className="flex min-w-0 items-center gap-2">
               <span

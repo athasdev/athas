@@ -64,7 +64,7 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
         detail={metadata.fileType}
       />
 
-      <ScrollArea className="min-h-0 flex-1" contentClassName="px-4">
+      <ScrollArea className="min-h-0 flex-1" contentPadding="inline">
         <div className="mx-auto max-w-2xl divide-y divide-border/60">
           <section className="py-4">
             <h2 className="ui-text-sm mb-3 text-foreground">File Information</h2>

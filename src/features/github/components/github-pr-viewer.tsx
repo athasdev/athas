@@ -509,7 +509,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
                 <GitHubAvatar
                   name={prBuffer.name}
                   avatarUrl={prBuffer.authorAvatarUrl}
-                  className="size-6"
+                  displaySize="md"
                 />
               ) : null
             }
@@ -615,7 +615,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
                   login={pr.author.login}
                   avatarUrl={pr.author.avatarUrl}
                   className="text-foreground"
-                  avatarClassName="size-5"
+                  avatarSize="sm"
                 />
                 <GitHubMetaChip title={new Date(pr.createdAt).toLocaleString()}>
                   {`Opened ${getTimeAgo(pr.createdAt)}`}

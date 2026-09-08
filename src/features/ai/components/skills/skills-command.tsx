@@ -537,7 +537,7 @@ export function SkillsCommand({
           </div>
         </CommandHeader>
 
-        <ScrollArea className="flex-1" contentClassName="space-y-3 p-3">
+        <ScrollArea className="flex-1" contentPadding="lg" contentGap="md">
           <div className="space-y-1.5">
             <label
               className="font-sans ui-text-base text-subtle-foreground"

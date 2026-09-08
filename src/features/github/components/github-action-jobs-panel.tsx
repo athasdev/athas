@@ -98,7 +98,7 @@ export function GitHubActionJobsPanel({
     : [];
 
   return (
-    <ScrollArea className="min-h-0 flex-1" contentClassName="p-2">
+    <ScrollArea className="min-h-0 flex-1" contentPadding="md">
       <ContextMenuPopup
         isOpen={contextMenu !== null}
         point={contextMenu?.point ?? { x: 0, y: 0 }}

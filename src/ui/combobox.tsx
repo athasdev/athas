@@ -1,7 +1,7 @@
 import { CheckIcon, ChevronDownIcon, type Icon, XIcon } from "@/ui/icons";
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
-import { forwardRef, type CSSProperties } from "react";
+import { forwardRef } from "react";
 import { Button } from "@/ui/button";
 import { menuItemVariants, menuSurfaceVariants } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
@@ -83,9 +83,7 @@ function ComboboxClear({
 }
 
 type ComboboxInputProps = Omit<ComboboxPrimitive.Input.Props, "size"> & {
-  containerStyle?: CSSProperties;
-  inputClassName?: string;
-  inputStyle?: CSSProperties;
+  valuePlaceholder?: boolean;
   leftIcon?: Icon;
   leftIconSize?: number;
   htmlSize?: number;
@@ -98,9 +96,7 @@ type ComboboxInputProps = Omit<ComboboxPrimitive.Input.Props, "size"> & {
 const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function ComboboxInput(
   {
     className,
-    containerStyle,
-    inputClassName,
-    inputStyle,
+    valuePlaceholder = false,
     leftIcon: LeftIcon,
     leftIconSize,
     htmlSize,
@@ -121,7 +117,6 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
   return (
     <div
       data-slot="combobox-input-group"
-      style={containerStyle}
       className={cn(comboboxInputGroupVariants({ variant, shape }), className)}
     >
       {LeftIcon ? (
@@ -135,11 +130,11 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
         data-slot="combobox-input"
         disabled={disabled}
         size={htmlSize}
-        style={inputStyle}
         className={cn(
           comboboxInputPaddingVariants({ hasLeftIcon, hasEndActions }),
           "font-sans text-foreground placeholder:text-subtle-foreground disabled:cursor-not-allowed",
-          inputClassName,
+          "min-w-0 max-w-full truncate font-normal",
+          valuePlaceholder && "placeholder:text-foreground",
         )}
         {...props}
       />

@@ -217,7 +217,6 @@ export function ContextSelector({
               emptyLabel="No matching files"
               compact
               autoFocusSearchInput
-              listClassName="max-h-66"
             />
           </DropdownMenuSubContent>
         </DropdownMenuSub>

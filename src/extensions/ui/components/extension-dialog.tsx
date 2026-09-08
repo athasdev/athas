@@ -36,7 +36,7 @@ export function ExtensionDialogs() {
                 <XIcon />
               </DialogClose>
             </DialogHeader>
-            <ScrollArea className="min-h-0 flex-1" contentClassName="p-4">
+            <ScrollArea className="min-h-0 flex-1" contentPadding="xl">
               <ExtensionErrorBoundary extensionId={dialog.extensionId} name={dialog.title}>
                 {dialog.render()}
               </ExtensionErrorBoundary>

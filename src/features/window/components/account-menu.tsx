@@ -264,7 +264,7 @@ export const AccountMenu = memo(function AccountMenu() {
             aria-haspopup="menu"
             aria-label="Account"
           >
-            <Avatar name={accountName} src={accountAvatarUrl} className="size-4" />
+            <Avatar name={accountName} src={accountAvatarUrl} size="xs" />
           </Button>
         </Tooltip>
       </div>

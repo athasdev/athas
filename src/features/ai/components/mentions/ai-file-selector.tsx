@@ -35,7 +35,7 @@ interface AIFileSelectorProps {
   onSelectedIndexChange?: (index: number) => void;
   showSearchInput?: boolean;
   searchInputRef?: RefObject<HTMLInputElement | null>;
-  listClassName?: string;
+  presentation?: "menu" | "panel";
   emptyLabel?: string;
   compact?: boolean;
   autoFocusSearchInput?: boolean;
@@ -79,7 +79,7 @@ export function AIFileSelector({
   onSelectedIndexChange,
   showSearchInput = true,
   searchInputRef,
-  listClassName,
+  presentation = "menu",
   emptyLabel = "No matching files found",
   compact = false,
   autoFocusSearchInput = false,
@@ -226,7 +226,7 @@ export function AIFileSelector({
         className={cn(
           "items-container min-h-0 flex-1 overflow-y-auto bg-surface/95 p-1.5 overscroll-contain",
           compact && "p-0",
-          listClassName,
+          presentation === "menu" ? "max-h-66" : "max-h-full",
         )}
         aria-label="File list"
         aria-busy={isLoadingFiles || isSearching}

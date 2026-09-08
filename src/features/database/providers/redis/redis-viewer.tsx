@@ -146,7 +146,8 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
           />
           <ScrollArea
             className="flex-1"
-            contentClassName="space-y-0.5 p-1.5"
+            contentPadding="sm"
+            contentGap="xs"
             viewportProps={{ ref: keyListRef }}
           >
             {store.keys.map((keyInfo) => (

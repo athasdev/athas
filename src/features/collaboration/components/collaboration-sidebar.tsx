@@ -943,7 +943,7 @@ export function CollaborationSidebarView() {
       {openConversation === null ? (
         <ScrollArea
           className="h-full select-none"
-          contentClassName="px-1 py-1"
+          contentPadding="xs"
           viewportProps={{ onContextMenu: (event) => channelsContextMenu.open(event) }}
         >
           <SidebarHeader>
@@ -1115,7 +1115,7 @@ export function CollaborationSidebarView() {
               ))}
             </div>
           </div>
-          <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
+          <ScrollArea className="min-h-0 flex-1" contentPadding="md">
             <div className="space-y-1.5">
               {model.chatGroups.length > 0 ? (
                 model.chatGroups.slice(-10).map((group) => (
@@ -1187,7 +1187,7 @@ export function CollaborationSidebarView() {
               </>
             ) : null}
           </div>
-          <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
+          <ScrollArea className="min-h-0 flex-1" contentPadding="md">
             <div className="space-y-1.5">
               {privateChatEntries.length > 0 ? (
                 privateChatEntries.map((entry) => {
@@ -1232,7 +1232,7 @@ export function CollaborationSidebarView() {
   );
 
   const peopleContent = (
-    <ScrollArea className="h-full" contentClassName="px-1 py-1">
+    <ScrollArea className="h-full" contentPadding="xs">
       <SidebarHeader>
         <SidebarSearchPopover
           value={peopleSearchQuery}
@@ -1327,7 +1327,7 @@ export function CollaborationSidebarView() {
   const notesContent = (
     <ScrollArea
       className="h-full"
-      contentClassName="px-1 py-1"
+      contentPadding="xs"
       viewportProps={{ onContextMenu: (event) => notesContextMenu.open(event) }}
     >
       <SidebarHeader>

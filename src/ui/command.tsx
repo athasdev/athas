@@ -188,7 +188,6 @@ interface CommandHeaderProps {
   onClose: () => void;
   showClearButton?: boolean;
   className?: string;
-  contentClassName?: string;
 }
 
 export const CommandHeader = ({
@@ -196,7 +195,6 @@ export const CommandHeader = ({
   onClose,
   showClearButton = false,
   className,
-  contentClassName,
 }: CommandHeaderProps) => {
   const clearActionsStack = useActionsStore.use.actions().clearStack;
 
@@ -208,7 +206,7 @@ export const CommandHeader = ({
         className,
       )}
     >
-      <div className={cn(commandHeaderContentClassName, contentClassName)}>
+      <div className={commandHeaderContentClassName}>
         {children}
         {showClearButton && (
           <CommandHeaderAction aria-label="Clear persisted actions" onClick={clearActionsStack}>
@@ -224,7 +222,7 @@ export const CommandHeader = ({
 };
 
 type CommandListProps = React.ComponentProps<"div"> & {
-  contentClassName?: string;
+  padding?: "default" | "spacious";
   ref?: React.Ref<HTMLDivElement>;
 };
 
@@ -232,13 +230,13 @@ export const CommandList = ({
   children,
   ref,
   className,
-  contentClassName,
+  padding = "default",
   ...props
 }: CommandListProps) => (
   <ScrollArea
     className={cn("isolate flex min-h-0 flex-1", className)}
     viewportClassName="h-auto min-h-0 flex-1 overscroll-contain"
-    contentClassName={cn("p-1.5", contentClassName)}
+    contentPadding={padding === "spacious" ? "xl" : "sm"}
     viewportProps={{ ref, ...props }}
   >
     {children}
@@ -584,33 +582,25 @@ interface CommandItemRowProps
       | "variant"
     > {
   icon?: React.ReactNode;
-  iconClassName?: string;
   title: React.ReactNode;
   description?: React.ReactNode;
   accessory?: React.ReactNode;
   action?: React.ReactNode;
   contentLayout?: "inline" | "stacked";
-  contentClassName?: string;
-  trailingClassName?: string;
 }
 
 export const CommandItemRow = ({
   icon,
-  iconClassName,
   title,
   description,
   accessory,
   action,
   contentLayout = "inline",
-  contentClassName,
-  trailingClassName,
   ...props
 }: CommandItemRowProps) => (
   <CommandItem {...props}>
-    {icon ? <CommandItemIcon className={iconClassName}>{icon}</CommandItemIcon> : null}
-    <CommandItemContent
-      className={cn(contentLayout === "inline" && "flex items-center gap-1.5", contentClassName)}
-    >
+    {icon ? <CommandItemIcon>{icon}</CommandItemIcon> : null}
+    <CommandItemContent className={cn(contentLayout === "inline" && "flex items-center gap-1.5")}>
       <CommandItemTitle>{title}</CommandItemTitle>
       {description ? (
         <CommandItemDescription
@@ -623,9 +613,7 @@ export const CommandItemRow = ({
         </CommandItemDescription>
       ) : null}
     </CommandItemContent>
-    {accessory ? (
-      <CommandItemTrailing className={trailingClassName}>{accessory}</CommandItemTrailing>
-    ) : null}
+    {accessory ? <CommandItemTrailing>{accessory}</CommandItemTrailing> : null}
     {action}
   </CommandItem>
 );

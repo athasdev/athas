@@ -131,13 +131,7 @@ function SelectTriggerContent({
 }
 
 function wrapTooltip(node: ReactElement, tooltip: string | undefined) {
-  return tooltip ? (
-    <Tooltip content={tooltip} triggerClassName="min-w-0">
-      {node}
-    </Tooltip>
-  ) : (
-    node
-  );
+  return tooltip ? <Tooltip content={tooltip}>{node}</Tooltip> : node;
 }
 
 function PlainSelect({
@@ -392,10 +386,7 @@ function SearchableSelect({
             leftIcon={componentIcon}
             variant={variant === "default" ? "button" : variant === "surface" ? "surface" : "ghost"}
             className="w-full"
-            inputClassName={cn(
-              "field-sizing-content min-w-0 max-w-full font-normal",
-              selectedOption && "placeholder:text-foreground",
-            )}
+            valuePlaceholder={!!selectedOption}
             showTrigger={!hideChevron}
           />
         </div>

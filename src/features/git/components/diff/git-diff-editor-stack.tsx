@@ -413,7 +413,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         extraLeftContent={
           isCommitDiff ? (
             <div className="ui-text-sm flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap">
-              <Avatar name={commitAuthor} src={commitAvatarUrl} className="size-5" />
+              <Avatar name={commitAuthor} src={commitAvatarUrl} size="sm" />
               <span className="truncate font-medium text-foreground">
                 {multiDiff.commitMessage || multiDiff.title || "Commit"}
               </span>

@@ -61,7 +61,7 @@ export const CommentItem = memo(
             <GitHubUserChip
               login={authorLogin}
               className="min-w-0 font-medium text-foreground"
-              avatarClassName="size-6"
+              avatarSize="md"
             />
             <span
               className="shrink-0 text-subtle-foreground"

@@ -134,7 +134,7 @@ export function ImageFormatDialog({
       title={`Convert to ${config.name}`}
       icon={ImageIcon}
       onClose={onClose}
-      classNames={{ content: "space-y-4 p-4" }}
+      contentLayout="form"
       footer={
         <>
           <Button onClick={onClose} variant="default">

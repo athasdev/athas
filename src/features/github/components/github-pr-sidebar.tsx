@@ -62,7 +62,7 @@ export function GitHubPRSidebar({
                   login={reviewer.login}
                   avatarUrl={reviewer.avatarUrl}
                   className="text-foreground"
-                  avatarClassName="size-5"
+                  avatarSize="sm"
                 />
               </div>
             ))}
@@ -145,7 +145,7 @@ export function GitHubPRSidebar({
                   login={assignee.login}
                   avatarUrl={assignee.avatarUrl}
                   className="text-foreground"
-                  avatarClassName="size-5"
+                  avatarSize="sm"
                 />
               </div>
             ))}

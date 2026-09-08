@@ -632,7 +632,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                           login={assignee.login}
                           avatarUrl={assignee.avatarUrl}
                           className="text-foreground"
-                          avatarClassName="size-5"
+                          avatarSize="sm"
                         />
                       </div>
                     ))}
@@ -689,7 +689,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   login={details.author.login}
                   avatarUrl={details.author.avatarUrl}
                   className="text-foreground"
-                  avatarClassName="size-5"
+                  avatarSize="sm"
                 />
                 <GitHubMetaChip title={new Date(details.createdAt).toLocaleString()}>
                   {`Opened ${getTimeAgo(details.createdAt)}`}

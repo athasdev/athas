@@ -210,7 +210,7 @@ function FileExplorerTreeItemComponent({
       disclosureVisible={showFolderArrows}
       reserveDisclosureSpace={showFolderArrows && !file.isDir}
       guides={renderTreeGuides()}
-      containerClassName="h-(--file-tree-row-height)"
+      rowHeight="file-tree"
       data-file-path={file.path}
       data-is-dir={file.isDir}
       data-path={file.path}

@@ -352,7 +352,7 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
         </div>
       </CommandHeader>
 
-      <CommandList contentClassName="p-4">
+      <CommandList padding="spacious">
         <form
           id="new-project-form"
           className="space-y-4"

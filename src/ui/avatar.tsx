@@ -1,12 +1,18 @@
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar";
 import { memo, useState } from "react";
+import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 
 interface AvatarProps {
   name: string;
   src?: string | null;
   className?: string;
+  size?: "xs" | "sm" | "md" | "lg";
 }
+
+const avatarSizeVariants = cva("", {
+  variants: { size: { xs: "size-4", sm: "size-5", md: "size-6", lg: "size-8" } },
+});
 
 export function getAvatarInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -21,7 +27,7 @@ type AvatarImageStatus = "loading" | "loaded" | "error";
 
 const loadedAvatarImageSources = new Set<string>();
 
-export const Avatar = memo(function Avatar({ name, src, className }: AvatarProps) {
+export const Avatar = memo(function Avatar({ name, src, className, size }: AvatarProps) {
   const imageSource = src?.trim() || undefined;
   const label = name.trim() || "Unknown author";
   const [resolvedImage, setResolvedImage] = useState<{
@@ -53,6 +59,7 @@ export const Avatar = memo(function Avatar({ name, src, className }: AvatarProps
       data-slot="avatar"
       className={cn(
         "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface",
+        avatarSizeVariants({ size }),
         className,
       )}
       title={label}

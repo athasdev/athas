@@ -164,7 +164,7 @@ type SidebarTreeRowProps = Omit<React.ComponentPropsWithoutRef<"button">, "child
   baseIndent?: number;
   previousDepth?: number;
   nextDepth?: number;
-  containerClassName?: string;
+  rowHeight?: "content" | "file-tree";
   expanded?: boolean;
   label?: React.ReactNode;
   leading?: React.ReactNode;
@@ -189,7 +189,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
       baseIndent = SIDEBAR_TREE_BASE_INDENT,
       previousDepth = depth,
       nextDepth = depth,
-      containerClassName,
+      rowHeight = "content",
       expanded,
       label,
       leading,
@@ -214,7 +214,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
       <div
         className={cn(
           "file-tree-item relative flex w-full min-w-full items-center before:pointer-events-none before:absolute before:inset-0 before:z-0 before:rounded-chrome before:bg-transparent hover:before:bg-accent/68",
-          containerClassName,
+          rowHeight === "file-tree" && "h-(--file-tree-row-height)",
         )}
         data-sidebar-tree-row=""
         data-active={active ? "true" : undefined}

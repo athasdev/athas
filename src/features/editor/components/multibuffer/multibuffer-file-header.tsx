@@ -12,7 +12,6 @@ interface MultibufferFileHeaderProps {
   onToggle?: () => void;
   onOpen: () => void;
   openAriaLabel?: string;
-  fileNameClassName?: string;
   trailing?: ReactNode;
   actions?: ReactNode;
   surface?: "card" | "section";
@@ -52,7 +51,6 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
   onToggle,
   onOpen,
   openAriaLabel = `Open ${filePath}`,
-  fileNameClassName,
   trailing,
   actions,
   surface = "card",
@@ -95,12 +93,7 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
               />
             ) : null}
             <span className="flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden">
-              <span
-                className={cn(
-                  "min-w-0 max-w-[45%] truncate font-medium text-foreground",
-                  fileNameClassName,
-                )}
-              >
+              <span className={cn("min-w-0 max-w-[45%] truncate font-medium text-foreground")}>
                 {fileName}
               </span>
               {directoryPath ? (

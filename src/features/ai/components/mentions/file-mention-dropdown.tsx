@@ -79,7 +79,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
           onSelectedIndexChange={onSelectedIndexChange}
           onResultsChange={handleResultsChange}
           showSearchInput={false}
-          listClassName="max-h-full"
+          presentation="panel"
           compact
         />
       </div>

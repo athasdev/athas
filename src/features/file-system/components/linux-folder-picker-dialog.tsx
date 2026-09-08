@@ -151,9 +151,7 @@ export default function LinuxFolderPickerDialog() {
           </Button>
         </>
       }
-      classNames={{
-        content: "p-0",
-      }}
+      contentLayout="flush"
     >
       <div className="border-border border-b px-3 py-2">
         <div className="flex items-center gap-1.5">

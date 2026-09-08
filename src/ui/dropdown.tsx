@@ -243,7 +243,6 @@ interface DropdownBaseProps {
   onClose: () => void;
   header?: ReactNode;
   className?: string;
-  menuClassName?: string;
   style?: CSSProperties;
   portalContainer?: Element | DocumentFragment | null;
   closeOnSelect?: boolean;
@@ -331,7 +330,6 @@ export function Dropdown(props: DropdownProps) {
     onClose,
     header,
     className,
-    menuClassName,
     style,
     searchable,
     searchPlaceholder,
@@ -670,7 +668,7 @@ export function Dropdown(props: DropdownProps) {
       }}
       transition={quickTransition}
     >
-      <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
+      <div role="menu" onKeyDown={handleKeyDown}>
         {header}
         {searchable && (
           <div className="border-border/60 border-b px-1.5 pb-1.5 pt-0.5">

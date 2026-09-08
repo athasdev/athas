@@ -81,7 +81,7 @@ interface GitHubUserChipProps {
   title?: string;
   prefix?: ReactNode;
   className?: string;
-  avatarClassName?: string;
+  avatarSize?: "xs" | "sm" | "md";
 }
 
 export function GitHubUserChip({
@@ -90,21 +90,14 @@ export function GitHubUserChip({
   title,
   prefix,
   className,
-  avatarClassName,
+  avatarSize = "xs",
 }: GitHubUserChipProps) {
   return (
     <GitHubMetaChip
       title={title ?? `Open ${login} on GitHub`}
       href={getGitHubUserUrl(login)}
       className={className}
-      icon={
-        <GitHubAvatar
-          login={login}
-          avatarUrl={avatarUrl}
-          size={32}
-          className={cn("size-4", avatarClassName)}
-        />
-      }
+      icon={<GitHubAvatar login={login} avatarUrl={avatarUrl} size={32} displaySize={avatarSize} />}
     >
       {prefix}
       {login}

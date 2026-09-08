@@ -335,7 +335,7 @@ export function OutlineSidebar() {
             scrollPaddingBlock: "4px",
           },
         }}
-        contentClassName="p-1"
+        contentPadding="xs"
       >
         {!isSupported ? (
           <EmptyState

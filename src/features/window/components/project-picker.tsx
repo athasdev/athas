@@ -616,7 +616,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
             ) : null}
           </CommandList>
         ) : (
-          <CommandList contentClassName="p-4">
+          <CommandList padding="spacious">
             <ConnectionForm
               formId="project-picker-add-remote-form"
               idPrefix="project-picker-remote"

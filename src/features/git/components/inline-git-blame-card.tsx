@@ -56,7 +56,7 @@ export function InlineGitBlameCard({
         onMouseLeave={onPointerLeave}
       >
         <div className="flex min-w-0 items-start gap-2.5 p-3">
-          <Avatar name={presentation.author} src={avatarUrl} className="size-8" />
+          <Avatar name={presentation.author} src={avatarUrl} size="lg" />
           <div className="min-w-0 flex-1">
             <div className="select-text font-medium leading-snug text-foreground ui-text-base">
               {presentation.commitSummary}

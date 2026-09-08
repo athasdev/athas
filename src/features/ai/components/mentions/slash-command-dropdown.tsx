@@ -85,12 +85,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       maxHeight={240}
     >
       {filteredCommands.length > 0 ? (
-        <CommandList
-          ref={listRef}
-          role="listbox"
-          aria-label="Slash command suggestions"
-          contentClassName="p-1.5"
-        >
+        <CommandList ref={listRef} role="listbox" aria-label="Slash command suggestions">
           {filteredCommands.map((command, index) => (
             <CommandItemRow
               key={command.name}
@@ -103,10 +98,8 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
               aria-selected={index === selectedIndex}
               tabIndex={index === selectedIndex ? 0 : -1}
               icon={<span>/</span>}
-              iconClassName="size-4"
               title={command.name}
               description={command.description}
-              contentClassName="[&>span:first-child]:shrink-0"
               accessory={
                 command.input?.hint ? (
                   <CommandItemBadge>{command.input.hint}</CommandItemBadge>

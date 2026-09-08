@@ -8,10 +8,9 @@ interface TooltipProps {
   content: string;
   children: React.ReactNode;
   shortcut?: string;
-  triggerClassName?: string;
 }
 
-interface AnchoredTooltipProps extends Omit<TooltipProps, "children" | "triggerClassName"> {
+interface AnchoredTooltipProps extends Omit<TooltipProps, "children"> {
   anchor: Element | null;
 }
 
@@ -67,12 +66,10 @@ export function AnchoredTooltip({ anchor, content, shortcut }: AnchoredTooltipPr
   );
 }
 
-export default function Tooltip({ content, children, shortcut, triggerClassName }: TooltipProps) {
+export default function Tooltip({ content, children, shortcut }: TooltipProps) {
   return (
     <TooltipPrimitive.Root disableHoverablePopup>
-      <TooltipPrimitive.Trigger
-        render={<span className={cn("inline-flex items-center", triggerClassName)} />}
-      >
+      <TooltipPrimitive.Trigger render={<span className="inline-flex min-w-0 items-center" />}>
         {children}
       </TooltipPrimitive.Trigger>
       <TooltipContent content={content} shortcut={shortcut} />
