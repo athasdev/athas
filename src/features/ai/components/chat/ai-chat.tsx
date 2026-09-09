@@ -456,7 +456,13 @@ const AIChat = memo(function AIChat({
     const access = getAgentMessageAccess(currentAgentId, store.hasApiKey);
     if (!trimmedMessageContent && !options.images?.length && !options.editedUserMessageId) return;
     if (!access.accepted) {
-      showToast({ message: access.error ?? "This agent is not ready.", type: "error" });
+      showToast({
+        message:
+          currentAgentId === "custom" && (targetChat?.providerId ?? aiProviderId) === "athas"
+            ? "Sign in and add Athas Agent balance to use hosted models."
+            : (access.error ?? "This agent is not ready."),
+        type: "error",
+      });
       return;
     }
     const isAcp = isAcpAgent(currentAgentId);
@@ -562,7 +568,12 @@ const AIChat = memo(function AIChat({
         : await loadFilesByPaths(
             Array.from(selectedFilesPaths).filter((path) => !mentionedPaths.has(path)),
           );
-      const latestSettings = useSettingsStore.getState().settings;
+      const settings = useSettingsStore.getState().settings;
+      const latestSettings = {
+        ...settings,
+        aiProviderId: targetChat?.providerId ?? settings.aiProviderId,
+        aiModelId: targetChat?.modelId ?? settings.aiModelId,
+      };
       const context = await buildContext(currentAgentId, latestSettings.aiProviderId);
       context.images = userMessage.images;
       context.mentionedFiles = [...mentionedFiles, ...attachedFiles];
@@ -1000,7 +1011,13 @@ details: ${errorDetails || mainError}
       if (!messageContent.trim() && !images?.length) return { accepted: false };
       const access = getAgentMessageAccess(currentAgentId, chatState.hasApiKey);
       if (!access.accepted) {
-        showToast({ message: access.error ?? "This agent is not ready.", type: "error" });
+        showToast({
+          message:
+            currentAgentId === "custom" && (currentChat?.providerId ?? aiProviderId) === "athas"
+              ? "Sign in and add Athas Agent balance to use hosted models."
+              : (access.error ?? "This agent is not ready."),
+          type: "error",
+        });
         return access;
       }
       if (!isChatMessagesLoaded) {
@@ -1029,6 +1046,8 @@ details: ${errorDetails || mainError}
     [
       chatActions.enqueueAgentMessage,
       chatState.hasApiKey,
+      aiProviderId,
+      currentChat?.providerId,
       currentAgentId,
       effectiveChatId,
       isChatMessagesLoaded,
@@ -1054,7 +1073,13 @@ details: ${errorDetails || mainError}
       if (!messageContent.trim() && !images?.length) return { accepted: false };
       const access = getAgentMessageAccess(currentAgentId, chatState.hasApiKey);
       if (!access.accepted) {
-        showToast({ message: access.error ?? "This agent is not ready.", type: "error" });
+        showToast({
+          message:
+            currentAgentId === "custom" && (currentChat?.providerId ?? aiProviderId) === "athas"
+              ? "Sign in and add Athas Agent balance to use hosted models."
+              : (access.error ?? "This agent is not ready."),
+          type: "error",
+        });
         return access;
       }
 
@@ -1070,6 +1095,8 @@ details: ${errorDetails || mainError}
     [
       chatActions.prependAgentMessage,
       chatState.hasApiKey,
+      aiProviderId,
+      currentChat?.providerId,
       currentAgentId,
       effectiveChatId,
       sendMessage,
@@ -1107,7 +1134,13 @@ details: ${errorDetails || mainError}
 
     const access = getAgentMessageAccess(pendingLaunch.agentId, chatState.hasApiKey);
     if (!access.accepted) {
-      showToast({ message: access.error ?? "This agent is not ready.", type: "error" });
+      showToast({
+        message:
+          currentAgentId === "custom" && (currentChat?.providerId ?? aiProviderId) === "athas"
+            ? "Sign in and add Athas Agent balance to use hosted models."
+            : (access.error ?? "This agent is not ready."),
+        type: "error",
+      });
       return;
     }
 
@@ -1116,6 +1149,9 @@ details: ${errorDetails || mainError}
     chatActions,
     effectiveChatId,
     chatState.hasApiKey,
+    aiProviderId,
+    currentChat?.providerId,
+    currentAgentId,
     isSurfaceTyping,
     chatState.pendingAgentLaunchRequest,
     surfaceStreamingMessageId,

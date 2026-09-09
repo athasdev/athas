@@ -1,6 +1,7 @@
 import { CopyIcon, FileTextIcon, UploadIcon } from "@/ui/icons";
 import type { FormEvent, ReactNode } from "react";
 import { memo, useCallback, useState } from "react";
+import { Shimmer } from "@/ui/shimmer";
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { MessageAction, MessageResponse } from "@/ui/message";
 import { ThinkingOrb, type ThinkingOrbProps } from "@/ui/thinking-orb";
@@ -88,7 +89,9 @@ function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
       <MarkerIcon className="size-5">
         <ThinkingOrb state={state} size={20} aria-hidden="true" />
       </MarkerIcon>
-      <MarkerContent className="text-shimmer">{label}</MarkerContent>
+      <MarkerContent>
+        <Shimmer>{label}</Shimmer>
+      </MarkerContent>
     </Marker>
   );
 }

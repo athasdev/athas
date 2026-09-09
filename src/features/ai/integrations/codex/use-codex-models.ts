@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { listCodexComposerModels } from "./codex-composer-catalog";
+import { getCachedCodexModels, listCodexComposerModels } from "./codex-composer-catalog";
 import type { CodexModelOption } from "./codex-types";
 
 export function useCodexModels(cwd: string) {
@@ -8,11 +8,20 @@ export function useCodexModels(cwd: string) {
     models: CodexModelOption[];
     loading: boolean;
     error: string | null;
-  }>({ cwd, models: [], loading: true, error: null });
+  }>(() => {
+    const cached = getCachedCodexModels(cwd);
+    return { cwd, models: cached ?? [], loading: cached === null, error: null };
+  });
   const [revision, setRevision] = useState(0);
   const retry = useCallback(() => setRevision((value) => value + 1), []);
   useEffect(() => {
     let current = true;
+    const cached = revision > 0 ? null : getCachedCodexModels(cwd);
+    if (cached) {
+      setState({ cwd, models: cached, loading: false, error: null });
+      return;
+    }
+
     setState((state) => ({
       cwd,
       models: state.cwd === cwd ? state.models : [],

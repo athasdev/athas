@@ -1,3 +1,4 @@
+import { getApiBase } from "@/utils/api-base";
 export interface ModelProvider {
   id: string;
   name: string;
@@ -26,6 +27,17 @@ export interface Model {
 // Update agent installation status
 
 const AI_PROVIDERS: ModelProvider[] = [
+  {
+    id: "athas",
+    name: "Athas",
+    apiUrl: `${getApiBase()}/api/ai/chat`,
+    requiresApiKey: false,
+    requiresAuth: true,
+    models: [
+      { id: "qwen/qwen3-coder", name: "Qwen3 Coder", contextWindow: 262144, maxOutputTokens: 4096 },
+      { id: "openai/gpt-5-mini", name: "GPT-5 Mini", contextWindow: 400000, maxOutputTokens: 4096 },
+    ],
+  },
   {
     id: "anthropic",
     name: "Anthropic",

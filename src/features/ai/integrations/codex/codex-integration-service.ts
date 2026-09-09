@@ -1,3 +1,7 @@
+import {
+  ATHAS_BROWSER_TOOL,
+  runHostedBrowserTool,
+} from "@/features/browser-use/services/browser-tool";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -147,6 +151,15 @@ export class CodexIntegrationService {
 
     if (method === "item/tool/call" && event.id != null) {
       const toolName = String(params.tool ?? "");
+      if (toolName === ATHAS_BROWSER_TOOL) {
+        const requestId = event.id;
+        void runHostedBrowserTool(params.arguments, `${this.threadId}:${this.turnId}:${requestId}`)
+          .then((decision) =>
+            invoke("respond_codex_request", { response: { requestId, decision } }),
+          )
+          .catch((error) => this.handlers.onError(String(error), true));
+        return;
+      }
       const result = runCodexDynamicTool(toolName, params.arguments, {
         projectRoot: this.projectRoot,
         openPullRequest: useBufferStore.getState().actions.openPRBuffer,

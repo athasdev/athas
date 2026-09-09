@@ -1,3 +1,5 @@
+import { AthasProvider } from "./athas-provider";
+import { getApiBase } from "@/utils/api-base";
 import { AnthropicProvider } from "./anthropic-provider";
 import { GeminiProvider } from "./gemini-provider";
 import { GrokProvider } from "./grok-provider";
@@ -31,6 +33,17 @@ export interface AIProviderRuntimeContribution {
 }
 
 function initializeProviders(): void {
+  providers.set(
+    "athas",
+    new AthasProvider({
+      id: "athas",
+      name: "Athas",
+      apiUrl: `${getApiBase()}/api/ai/chat`,
+      requiresApiKey: false,
+      maxTokens: 4096,
+    }),
+  );
+  providerFetchModes.set("athas", true);
   const anthropicConfig: ProviderConfig = {
     id: "anthropic",
     name: "Anthropic",

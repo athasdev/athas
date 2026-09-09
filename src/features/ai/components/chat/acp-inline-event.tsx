@@ -26,7 +26,7 @@ export function AcpInlineEvent({ event }: AcpInlineEventProps) {
           : "info";
 
   return (
-    <div className="px-4 py-0.5">
+    <div className="min-w-0 px-4 py-0.5">
       <ChatActivityLine icon={<Icon />} title={text} state={state} />
     </div>
   );

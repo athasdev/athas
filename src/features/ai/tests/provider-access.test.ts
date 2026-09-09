@@ -20,6 +20,29 @@ const subscription: SubscriptionInfo = {
 };
 
 describe("provider access", () => {
+  it("allows signed-in free users to access the prepaid Athas provider", () => {
+    expect(
+      canUseProviderWithoutApiKey({
+        providerId: "athas",
+        subscription: {
+          ...subscription,
+          status: "free",
+          capabilities: { ...subscription.capabilities!, intelligence: false },
+        },
+        hasStoredKey: false,
+        requiresApiKey: false,
+      }),
+    ).toBe(true);
+    expect(
+      canUseProviderWithoutApiKey({
+        providerId: "athas",
+        subscription: null,
+        hasStoredKey: false,
+        requiresApiKey: false,
+      }),
+    ).toBe(false);
+  });
+
   it("uses Athas Intelligence only for focused OpenRouter features", () => {
     expect(canUseIntelligenceProvider("openrouter", subscription)).toBe(true);
     expect(canUseIntelligenceProvider("anthropic", subscription)).toBe(false);

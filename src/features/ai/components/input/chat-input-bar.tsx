@@ -37,7 +37,10 @@ import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { cn } from "@/utils/cn";
 import { Composer, ComposerEditable, ComposerToolbar } from "@/ui/composer";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { chatContentWidth } from "../chat/chat-content-width";
+import { ComposerEffortSelector } from "./composer-effort-selector";
+import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
 import { AgentMessageQueue } from "./agent-message-queue";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
@@ -81,6 +84,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [hasInputText, setHasInputText] = useState(false);
   const [isContextDragOver, setIsContextDragOver] = useState(false);
   const [isComposerFocused, setIsComposerFocused] = useState(false);
+  const projectPath = useProjectStore((state) => state.rootFolderPath || ".");
   const inputValueRef = useRef("");
   const [pastedImages, setPastedImages] = useState<PastedImage[]>([]);
   const { showToast } = useToast();
@@ -1008,51 +1012,54 @@ const AIChatInputBar = memo(function AIChatInputBar({
   }, [autoFocus, isActiveSurface]);
 
   return (
-    <Composer
+    <div
       ref={aiChatContainerRef}
-      data-ai-element="prompt-input"
-      data-ai-context-drop-target
-      onDragOver={handleContextDragOver}
-      onDragLeave={handleContextDragLeave}
-      onDrop={handleContextDrop}
-      dragActive={isContextDragOver}
       className={cn(
-        "ai-chat-container z-20",
+        "ai-chat-container relative z-20 flex min-w-0 shrink-0 flex-col gap-1",
         isInitialPresentation ? "w-full" : [chatContentWidth(), "mb-3"],
       )}
     >
-      <ComposerAttachments
-        buffers={buffers}
-        selectedBufferIds={selectedBufferIds}
-        selectedFilesPaths={selectedFilesPaths}
-        selectedEditorContexts={selectedEditorContexts}
-        pastedImages={pastedImages}
-        contextTriggerRef={contextTriggerRef}
-        onRemove={(source) => {
-          if (source.type === "buffer") toggleBufferSelection(source.id);
-          else if (source.type === "file") toggleFileSelection(source.id);
-          else if (source.type === "selection") onRemoveEditorContext(source.id);
-          else removePastedImage(source.id);
-        }}
-      />
+      <Composer
+        data-ai-element="prompt-input"
+        data-ai-context-drop-target
+        onDragOver={handleContextDragOver}
+        onDragLeave={handleContextDragLeave}
+        onDrop={handleContextDrop}
+        dragActive={isContextDragOver}
+      >
+        <ComposerAttachments
+          buffers={buffers}
+          selectedBufferIds={selectedBufferIds}
+          selectedFilesPaths={selectedFilesPaths}
+          selectedEditorContexts={selectedEditorContexts}
+          pastedImages={pastedImages}
+          contextTriggerRef={contextTriggerRef}
+          onRemove={(source) => {
+            if (source.type === "buffer") toggleBufferSelection(source.id);
+            else if (source.type === "file") toggleFileSelection(source.id);
+            else if (source.type === "selection") onRemoveEditorContext(source.id);
+            else removePastedImage(source.id);
+          }}
+        />
 
-      <ComposerEditable
-        ref={inputRef}
-        data-ai-element="prompt-input-editable"
-        enabled={isInputEnabled}
-        contentEditable={isInputEnabled}
-        onInput={handleInputChange}
-        onKeyDown={handleKeyDown}
-        onMouseDown={handleEditableMouseDown}
-        onFocus={() => setIsComposerFocused(true)}
-        onBlur={() => setIsComposerFocused(false)}
-        onPaste={handlePaste}
-        data-placeholder={inputPlaceholder}
-        role="textbox"
-        aria-multiline
-        aria-label="Message input"
-        tabIndex={isInputEnabled ? 0 : -1}
-      />
+        <ComposerEditable
+          ref={inputRef}
+          data-ai-element="prompt-input-editable"
+          enabled={isInputEnabled}
+          contentEditable={isInputEnabled}
+          onInput={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onMouseDown={handleEditableMouseDown}
+          onFocus={() => setIsComposerFocused(true)}
+          onBlur={() => setIsComposerFocused(false)}
+          onPaste={handlePaste}
+          data-placeholder={inputPlaceholder}
+          role="textbox"
+          aria-multiline
+          aria-label="Message input"
+          tabIndex={isInputEnabled ? 0 : -1}
+        />
+      </Composer>
 
       <ComposerToolbar>
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
@@ -1071,21 +1078,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
               setIsContextDropdownOpen(open);
             }}
           />
-          <ChatPreferencesMenu
-            currentAgentId={currentAgentId}
-            providerId={aiProviderId}
-            modelId={aiModelId}
-            sessionConfigOptions={sessionConfigOptions}
-            onAgentChange={onAgentChange}
-            onProviderChange={handleAthasProviderChange}
-            onModelChange={handleAthasModelChange}
-            onSessionConfigChange={(optionId, value) =>
-              void changeSessionConfigOption(optionId, value)
-            }
-            onSelectSkill={insertSkillAtCursor}
-            onSelectCodexSkill={insertCodexSkillAtCursor}
-            onBeforeOpen={closeInlineMenus}
-          />
         </div>
 
         <AgentMessageQueue
@@ -1101,7 +1093,41 @@ const AIChatInputBar = memo(function AIChatInputBar({
           onRemove={(index) => onRemoveQueuedMessage(index, "discard")}
         />
 
-        <div className="ml-auto flex shrink-0 items-center gap-1">
+        <div className="ml-auto flex min-w-0 shrink items-center gap-1">
+          <ComposerAgentSelector
+            cwd={projectPath}
+            currentAgentId={currentAgentId}
+            providerId={aiProviderId}
+            modelId={aiModelId}
+            sessionConfigOptions={sessionConfigOptions}
+            onAgentChange={onAgentChange}
+            onProviderChange={handleAthasProviderChange}
+            onModelChange={handleAthasModelChange}
+            onSessionConfigChange={(optionId, value) =>
+              void changeSessionConfigOption(optionId, value)
+            }
+            onBeforeOpen={closeInlineMenus}
+          />
+          <ComposerEffortSelector
+            cwd={projectPath}
+            currentAgentId={currentAgentId}
+            sessionConfigOptions={sessionConfigOptions}
+            onSessionConfigChange={(optionId, value) =>
+              void changeSessionConfigOption(optionId, value)
+            }
+            onOpen={closeInlineMenus}
+          />
+          <ChatPreferencesMenu
+            currentAgentId={currentAgentId}
+            canChangeAgent={Boolean(onAgentChange)}
+            sessionConfigOptions={sessionConfigOptions}
+            onSessionConfigChange={(optionId, value) =>
+              void changeSessionConfigOption(optionId, value)
+            }
+            onSelectSkill={insertSkillAtCursor}
+            onSelectCodexSkill={insertCodexSkillAtCursor}
+            onBeforeOpen={closeInlineMenus}
+          />
           {hasSlashCommands && (
             <Button
               type="button"
@@ -1237,7 +1263,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           onClose={hideSlashCommands}
         />
       )}
-    </Composer>
+    </div>
   );
 });
 

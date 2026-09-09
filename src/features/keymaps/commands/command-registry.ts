@@ -680,6 +680,20 @@ const viewCommands: Command[] = [
     execute: showNotifications,
   },
   {
+    id: "workbench.hostedAgent",
+    title: "New Athas Agent",
+    category: "Agent",
+    execute: async () => {
+      const { useSettingsStore } = await import("@/features/settings/stores/settings.store");
+      const { openNewAgentChat } = await import("@/features/ai/lib/open-new-agent-chat");
+      const { useAIChatStore } = await import("@/features/ai/stores/ai-chat.store");
+      await useSettingsStore.getState().actions.updateSetting("aiProviderId", "athas");
+      await useSettingsStore.getState().actions.updateSetting("aiModelId", "qwen/qwen3-coder");
+      await useAIChatStore.getState().actions.checkApiKey("athas");
+      openNewAgentChat("custom");
+    },
+  },
+  {
     id: "workbench.agentLauncher",
     title: "New Agent",
     category: "Agent",
@@ -1122,6 +1136,16 @@ const databaseCommands: Command[] = [
 ];
 
 const windowCommands: Command[] = [
+  {
+    id: "workbench.openBrowserBilling",
+    title: "Manage Athas Cloud Usage",
+    category: "Window",
+    execute: async () => {
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      const { getApiBase } = await import("@/utils/api-base");
+      await openUrl(new URL("/dashboard/settings/billing", getApiBase()).toString());
+    },
+  },
   {
     id: "workbench.openSettings",
     title: "Open Settings",

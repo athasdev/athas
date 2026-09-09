@@ -15,6 +15,7 @@ export function canUseProviderWithoutApiKey(params: {
   requiresApiKey: boolean;
 }): boolean {
   const { hasStoredKey, requiresApiKey } = params;
+  if (params.providerId === "athas") return params.subscription !== null;
 
   if (!requiresApiKey) {
     return true;

@@ -42,7 +42,7 @@ export function ComposerToolbar({ className, ...props }: ComponentProps<"div">) 
   return (
     <div
       data-slot="composer-toolbar"
-      className={cn("flex min-w-0 flex-wrap items-center gap-2 px-2 pb-2", className)}
+      className={cn("flex min-w-0 flex-wrap items-center gap-1 px-1", className)}
       {...props}
     />
   );

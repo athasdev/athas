@@ -28,7 +28,15 @@ async function buildProviderApiKeyMap(
     getAvailableProviders().map(async (provider) => {
       try {
         if (!provider.requiresApiKey) {
-          return [provider.id, true] as const;
+          return [
+            provider.id,
+            canUseProviderWithoutApiKey({
+              providerId: provider.id,
+              subscription,
+              hasStoredKey: false,
+              requiresApiKey: false,
+            }),
+          ] as const;
         }
 
         const token = await getProviderApiToken(provider.id);
@@ -53,7 +61,7 @@ async function buildProviderApiKeyMap(
 function getProviderAccessFromMap(providerId: string, providerApiKeys: Map<string, boolean>) {
   const provider = getProviderById(providerId);
   if (!provider) return false;
-  if (!provider.requiresApiKey) return true;
+  if (!provider.requiresApiKey && providerId !== "athas") return true;
   return providerApiKeys.get(providerId) ?? false;
 }
 
@@ -77,7 +85,12 @@ export function createProviderActions(set: SetAIChatStore, get: GetAIChatStore):
 
         if (provider && !provider.requiresApiKey) {
           set((state) => {
-            state.hasApiKey = true;
+            state.hasApiKey = canUseProviderWithoutApiKey({
+              providerId,
+              subscription,
+              hasStoredKey: false,
+              requiresApiKey: false,
+            });
           });
           return;
         }

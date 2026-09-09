@@ -16,19 +16,26 @@ import { toast } from "sonner";
 import { createTimedResourceCache } from "@/utils/timed-resource-cache";
 
 const availabilityCache = createTimedResourceCache<AgentAvailabilityResult>();
+const availabilityTtlMs = 30_000;
 
 export function useAgentOptions(currentAgentId: AgentType) {
-  const [agentConfigs, setAgentConfigs] = useState<Map<string, AgentConfig>>(new Map());
-  const [codexInstalled, setCodexInstalled] = useState(false);
+  // This hook mounts and unmounts with the menus that use it. Seeding from the
+  // warm cache keeps a reopened menu from flashing "Checking agents…".
+  const cached = availabilityCache.getFreshValue("agents", availabilityTtlMs);
+  const [agentConfigs, setAgentConfigs] = useState<Map<string, AgentConfig>>(
+    () => new Map(cached?.agents?.map((agent) => [agent.id, agent]) ?? []),
+  );
+  const [codexInstalled, setCodexInstalled] = useState(cached?.codexInstalled ?? false);
   const [pendingAction, setPendingAction] = useState<PendingAgentAction | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(cached === null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const loadRequestIdRef = useRef(0);
   const pendingActionRef = useRef<PendingAgentAction | null>(null);
 
   const loadAgents = useCallback(async (showLoading = true, force = false) => {
     const requestId = ++loadRequestIdRef.current;
-    if (showLoading) setIsLoading(true);
+    const isWarm = !force && availabilityCache.getFreshValue("agents", availabilityTtlMs) !== null;
+    if (showLoading && !isWarm) setIsLoading(true);
     setLoadError(null);
 
     try {
@@ -39,7 +46,7 @@ export function useAgentOptions(currentAgentId: AgentType) {
             () => invoke<AgentConfig[]>("get_available_agents"),
             () => CodexIntegrationService.status(),
           ),
-        { ttlMs: 30_000, force },
+        { ttlMs: availabilityTtlMs, force },
       );
       if (requestId !== loadRequestIdRef.current) return;
 

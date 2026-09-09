@@ -59,6 +59,14 @@ export function normalizeCodexModels(value: unknown): CodexModelOption[] {
   });
 }
 
+/**
+ * Warm cache read. Lets a component that mounts and unmounts with a menu paint
+ * the models it already has instead of flashing a loading row on every open.
+ */
+export function getCachedCodexModels(cwd: string): CodexModelOption[] | null {
+  return modelsCache.getFreshValue(cwd, ttlMs);
+}
+
 export function listCodexComposerModels(cwd: string, force = false) {
   return modelsCache.load(
     cwd,

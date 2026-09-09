@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import type {
   CodexSkillSummary,
   CodexThreadSummary,
@@ -10,9 +9,6 @@ import {
   startCodexComposer,
 } from "@/features/ai/integrations/codex/codex-composer-catalog";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
-import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
-import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
-import type { AgentOption } from "@/features/ai/lib/agent-options";
 import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
 import type { AgentType, ChatMode } from "@/features/ai/types/ai-chat.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
@@ -28,7 +24,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSearch,
@@ -38,20 +33,10 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import {
-  ArrowClockwiseIcon,
-  BookOpenIcon,
-  BrainIcon,
-  HistoryIcon,
-  SlidersIcon,
-  SparkleIcon,
-  WarningIcon,
-} from "@/ui/icons";
+import { ArrowClockwiseIcon, SlidersIcon, WarningIcon } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { getChatPreferencesModel } from "@/features/ai/utils/chat-preferences-model";
-import { CodexModelSelector, AcpModelSelector } from "./chat-model-selector";
-import { ModelSelector } from "../selectors/model-selector";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import { useCodexSettings } from "@/features/ai/integrations/codex/use-codex-settings";
 
@@ -134,204 +119,6 @@ function MenuSearchInput({
   );
 }
 
-function AgentRowAction({
-  option,
-  onAction,
-  onSetup,
-}: {
-  option: AgentOption;
-  onAction: () => void;
-  onSetup: () => void;
-}) {
-  if (option.action) {
-    const actionLabel = option.action === "update" ? "Update" : "Install";
-    const busyLabel = option.action === "update" ? "Updating" : "Installing";
-    return (
-      <Button
-        type="button"
-        variant={option.action === "update" ? "accent-ghost" : "ghost"}
-        size="chrome"
-        disabled={option.isBusy}
-        aria-label={`${actionLabel} ${option.name}`}
-        onClick={onAction}
-      >
-        {option.isBusy ? <Spinner label={`${busyLabel} ${option.name}`} compact /> : null}
-        {option.isBusy ? busyLabel : actionLabel}
-      </Button>
-    );
-  }
-
-  if (option.needsSetup) {
-    return (
-      <Button
-        type="button"
-        variant="ghost"
-        size="chrome"
-        aria-label={`Set up ${option.name}`}
-        onClick={onSetup}
-      >
-        Set up
-      </Button>
-    );
-  }
-
-  if (!option.isInstalled) {
-    return <span className="px-1.5 text-subtle-foreground ui-text-chrome">Unavailable</span>;
-  }
-
-  return null;
-}
-
-function ProviderPreferencesSubmenu({
-  currentAgentId,
-  providerId,
-  onAgentChange,
-  onProviderChange,
-}: {
-  currentAgentId: AgentType;
-  providerId: string;
-  onAgentChange: (agentId: AgentType) => void;
-  onProviderChange: (providerId: string) => void;
-}) {
-  const { options, isLoading, loadError, refresh, runAgentAction } =
-    useAgentOptions(currentAgentId);
-  const providers = useAvailableProviders();
-  const [query, setQuery] = useState("");
-  const agentOptions = options.filter((option) => option.id !== "custom");
-  const apiProviders = providers.filter((provider) => provider.id !== "custom");
-  const customProvider = providers.find((provider) => provider.id === "custom");
-  const filteredAgents = agentOptions.filter((option) =>
-    matchesSearchQuery(query, [option.name, option.description ?? "", option.id]),
-  );
-  const filteredApiProviders = apiProviders.filter((provider) =>
-    matchesSearchQuery(query, [provider.name, provider.id]),
-  );
-  const showCustom = Boolean(
-    customProvider && matchesSearchQuery(query, [customProvider.name, customProvider.id]),
-  );
-  const currentName =
-    currentAgentId === "custom"
-      ? (providers.find((provider) => provider.id === providerId)?.name ?? providerId)
-      : (options.find((option) => option.isCurrent)?.name ?? currentAgentId);
-  const selectedValue =
-    currentAgentId === "custom" ? `api:${providerId}` : `agent:${currentAgentId}`;
-  const hasGroupedResults = filteredAgents.length > 0 || filteredApiProviders.length > 0;
-
-  return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <SparkleIcon />
-        <PreferenceLabel>Provider</PreferenceLabel>
-        <CurrentValue>{currentName}</CurrentValue>
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="min-w-64">
-        <MenuSearchInput value={query} onChange={setQuery} placeholder="Search providers..." />
-        {isLoading ? (
-          <DropdownMenuItem disabled>
-            <Spinner label="Checking agents" compact />
-            Checking agents…
-          </DropdownMenuItem>
-        ) : null}
-        {loadError ? (
-          <DropdownMenuItem closeOnClick={false} title={loadError} onClick={() => void refresh()}>
-            <WarningIcon />
-            <span className="min-w-0 flex-1 truncate">Some agents could not be checked</span>
-            <ArrowClockwiseIcon />
-            Retry
-          </DropdownMenuItem>
-        ) : null}
-        <DropdownMenuRadioGroup
-          value={selectedValue}
-          onValueChange={(value) => {
-            const [kind, id] = value.split(":", 2);
-            if (!id) return;
-            if (kind === "api") {
-              onProviderChange(id);
-              onAgentChange("custom");
-              return;
-            }
-
-            const option = agentOptions.find((candidate) => candidate.id === id);
-            if (!option) return;
-            if (option.isInstalled) {
-              onAgentChange(option.id);
-              return;
-            }
-            if (option.action === "install") {
-              void runAgentAction(option.id, option.name, "install");
-              return;
-            }
-            if (option.needsSetup) useUIState.getState().openSettingsDialog("ai");
-          }}
-        >
-          {filteredAgents.length > 0 ? (
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Agents</DropdownMenuLabel>
-              {filteredAgents.map((option) => (
-                <DropdownMenuRadioItem
-                  key={option.id}
-                  value={`agent:${option.id}`}
-                  disabled={
-                    option.isBusy ||
-                    (!option.isInstalled && !option.canInstall && !option.needsSetup)
-                  }
-                  closeOnClick={option.isInstalled}
-                  title={option.description}
-                  aria-busy={option.isBusy || undefined}
-                  onClick={() => {
-                    if (option.isCurrent && option.action === "update") {
-                      void runAgentAction(option.id, option.name, "update");
-                    }
-                  }}
-                  trailingAction={
-                    option.action || option.needsSetup || !option.isInstalled ? (
-                      <AgentRowAction
-                        option={option}
-                        onAction={() => {
-                          if (!option.action) return;
-                          void runAgentAction(option.id, option.name, option.action);
-                        }}
-                        onSetup={() => useUIState.getState().openSettingsDialog("ai")}
-                      />
-                    ) : undefined
-                  }
-                  trailingActionVisibility="always"
-                >
-                  <ProviderIcon providerId={option.id} size={14} />
-                  <span className="min-w-0 flex-1 truncate">{option.name}</span>
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuGroup>
-          ) : null}
-          {filteredApiProviders.length > 0 ? (
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>API</DropdownMenuLabel>
-              {filteredApiProviders.map((provider) => (
-                <DropdownMenuRadioItem key={provider.id} value={`api:${provider.id}`}>
-                  <ProviderIcon providerId={provider.id} size={14} />
-                  {provider.name}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuGroup>
-          ) : null}
-          {showCustom ? (
-            <>
-              {hasGroupedResults ? <DropdownMenuSeparator /> : null}
-              <DropdownMenuRadioItem value="api:custom">
-                <ProviderIcon providerId="custom" size={14} />
-                Custom
-              </DropdownMenuRadioItem>
-            </>
-          ) : null}
-          {!hasGroupedResults && !showCustom ? (
-            <DropdownMenuItem disabled>No matching providers</DropdownMenuItem>
-          ) : null}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
-  );
-}
-
 function ModePreferencesSubmenu({ currentAgentId }: { currentAgentId: AgentType }) {
   const { settings: codexSettings, update: updateCodexSettings } = useCodexSettings();
   const isCodex = currentAgentId === CODEX_INTEGRATION_ID;
@@ -360,7 +147,6 @@ function ModePreferencesSubmenu({ currentAgentId }: { currentAgentId: AgentType 
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
-        <SlidersIcon />
         <PreferenceLabel>Mode</PreferenceLabel>
         <CurrentValue>{selectedModeName}</CurrentValue>
       </DropdownMenuSubTrigger>
@@ -390,81 +176,7 @@ function ModePreferencesSubmenu({ currentAgentId }: { currentAgentId: AgentType 
   );
 }
 
-function AthasAgentPreferences({
-  providerId,
-  onProviderChange,
-  showProviderSelector,
-}: {
-  providerId: string;
-  onProviderChange: (providerId: string) => void;
-  showProviderSelector: boolean;
-}) {
-  const [providerQuery, setProviderQuery] = useState("");
-  const providers = useAvailableProviders();
-  const currentProvider = providers.find((provider) => provider.id === providerId);
-  const filteredApiProviders = providers.filter(
-    (provider) =>
-      provider.id !== "custom" && matchesSearchQuery(providerQuery, [provider.name, provider.id]),
-  );
-  const showCustom = providers.some(
-    (provider) =>
-      provider.id === "custom" && matchesSearchQuery(providerQuery, [provider.name, provider.id]),
-  );
-
-  return (
-    <>
-      {showProviderSelector ? (
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <ProviderIcon providerId={providerId} size={14} />
-            <PreferenceLabel>Provider</PreferenceLabel>
-            <CurrentValue>{currentProvider?.name ?? providerId}</CurrentValue>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="min-w-48">
-            <MenuSearchInput
-              value={providerQuery}
-              onChange={setProviderQuery}
-              placeholder="Search providers..."
-            />
-            <DropdownMenuRadioGroup value={providerId} onValueChange={onProviderChange}>
-              {filteredApiProviders.length > 0 ? (
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>API</DropdownMenuLabel>
-                  {filteredApiProviders.map((provider) => (
-                    <DropdownMenuRadioItem key={provider.id} value={provider.id}>
-                      <ProviderIcon providerId={provider.id} size={14} />
-                      {provider.name}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuGroup>
-              ) : null}
-              {showCustom ? (
-                <>
-                  {filteredApiProviders.length > 0 ? <DropdownMenuSeparator /> : null}
-                  <DropdownMenuRadioItem value="custom">
-                    <ProviderIcon providerId="custom" size={14} />
-                    Custom
-                  </DropdownMenuRadioItem>
-                </>
-              ) : null}
-              {filteredApiProviders.length === 0 && !showCustom ? (
-                <DropdownMenuItem disabled>No matching providers</DropdownMenuItem>
-              ) : null}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-      ) : null}
-    </>
-  );
-}
-
-function SkillsMenu({
-  onSelectSkill,
-  onOpen,
-}: {
-  onSelectSkill: (skill: AIChatSkill) => void;
-  onOpen: () => void;
-}) {
+function SkillsSubmenu({ onSelectSkill }: { onSelectSkill: (skill: AIChatSkill) => void }) {
   const [query, setQuery] = useState("");
   const skills = useSettingsStore((state) => state.settings.aiSkills);
   const filteredSkills = skills.filter((skill) =>
@@ -472,22 +184,15 @@ function SkillsMenu({
   );
 
   return (
-    <DropdownMenu
-      onOpenChange={(open) => {
-        if (open) onOpen();
-        else setQuery("");
-      }}
-    >
-      <DropdownMenuTrigger
-        render={<Button variant="ghost" iconOnly tooltip="Skills" aria-label="Skills" />}
-      >
-        <BookOpenIcon />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="max-h-80 min-w-64 overflow-y-auto">
+    <DropdownMenuSub onOpenChange={(open) => !open && setQuery("")}>
+      <DropdownMenuSubTrigger>
+        <PreferenceLabel>Skills</PreferenceLabel>
+        {skills.length > 0 ? <CurrentValue>{String(skills.length)}</CurrentValue> : null}
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-80 min-w-64 overflow-y-auto">
         <MenuSearchInput value={query} onChange={setQuery} placeholder="Search skills..." />
         {filteredSkills.map((skill) => (
           <DropdownMenuItem key={skill.id} onClick={() => onSelectSkill(skill)}>
-            <BookOpenIcon />
             <span className="min-w-0 flex-1 truncate">{skill.title}</span>
           </DropdownMenuItem>
         ))}
@@ -496,8 +201,8 @@ function SkillsMenu({
             {skills.length === 0 ? "No skills yet" : "No matching skills"}
           </DropdownMenuItem>
         ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }
 
@@ -524,7 +229,7 @@ function CodexCatalogError({
   );
 }
 
-function CodexSessionsMenu({
+function CodexSessionsSubmenu({
   state,
   onOpen,
   onRetry,
@@ -544,7 +249,7 @@ function CodexSessionsMenu({
   const hasInitialError = state.status === "error" && state.threads.length === 0;
 
   return (
-    <DropdownMenu
+    <DropdownMenuSub
       onOpenChange={(open) => {
         if (open) {
           onOpen();
@@ -553,12 +258,10 @@ function CodexSessionsMenu({
         }
       }}
     >
-      <DropdownMenuTrigger
-        render={<Button variant="ghost" iconOnly tooltip="Sessions" aria-label="Sessions" />}
-      >
-        <HistoryIcon />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="max-h-80 w-72 overflow-y-auto">
+      <DropdownMenuSubTrigger>
+        <PreferenceLabel>Sessions</PreferenceLabel>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-80 w-72 overflow-y-auto">
         <MenuSearchInput value={query} onChange={setQuery} placeholder="Search sessions..." />
         {isInitialLoading || state.status === "idle" ? (
           <DropdownMenuItem disabled>
@@ -586,7 +289,6 @@ function CodexSessionsMenu({
                 onClick={() => openCodexThread(thread)}
                 title={thread.preview || title}
               >
-                <HistoryIcon />
                 <span className="min-w-0 flex-1 truncate">{title}</span>
                 {updatedAt ? (
                   <span className="shrink-0 text-subtle-foreground">
@@ -612,9 +314,7 @@ function CodexSessionsMenu({
           >
             {state.status === "loading-more" ? (
               <Spinner label="Loading more sessions" compact />
-            ) : (
-              <HistoryIcon />
-            )}
+            ) : null}
             {state.status === "loading-more" ? "Loading more…" : "Load more sessions"}
           </DropdownMenuItem>
         ) : null}
@@ -628,12 +328,12 @@ function CodexSessionsMenu({
             Refresh sessions
           </DropdownMenuItem>
         ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }
 
-function CodexSkillsMenu({
+function CodexSkillsSubmenu({
   state,
   onOpen,
   onRetry,
@@ -652,7 +352,7 @@ function CodexSkillsMenu({
     state.status === "loaded" && state.skills.length === 0 && state.skillErrors.length > 0;
 
   return (
-    <DropdownMenu
+    <DropdownMenuSub
       onOpenChange={(open) => {
         if (open) {
           onOpen();
@@ -661,12 +361,10 @@ function CodexSkillsMenu({
         }
       }}
     >
-      <DropdownMenuTrigger
-        render={<Button variant="ghost" iconOnly tooltip="Skills" aria-label="Skills" />}
-      >
-        <BookOpenIcon />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="max-h-80 w-72 overflow-y-auto">
+      <DropdownMenuSubTrigger>
+        <PreferenceLabel>Skills</PreferenceLabel>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-80 w-72 overflow-y-auto">
         <MenuSearchInput value={query} onChange={setQuery} placeholder="Search Codex skills..." />
         {(state.status === "loading" || state.status === "idle") && state.skills.length === 0 ? (
           <DropdownMenuItem disabled>
@@ -691,7 +389,6 @@ function CodexSkillsMenu({
               title={skill.description}
               disabled={!skill.enabled}
             >
-              <BookOpenIcon />
               <span className="min-w-0 flex-1 truncate">{skill.name}</span>
               {skill.scope ? (
                 <span className="shrink-0 text-subtle-foreground">{skill.scope}</span>
@@ -722,8 +419,8 @@ function CodexSkillsMenu({
             Refresh skills
           </DropdownMenuItem>
         ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }
 
@@ -743,7 +440,6 @@ function AcpConfigPreferences({
           onCheckedChange={(checked) => onChange(option.id, checked)}
           title={option.description}
         >
-          <BrainIcon />
           <PreferenceLabel>{option.name}</PreferenceLabel>
         </DropdownMenuCheckboxItem>
       );
@@ -757,7 +453,6 @@ function AcpConfigPreferences({
     return (
       <DropdownMenuSub key={option.id}>
         <DropdownMenuSubTrigger>
-          <BrainIcon />
           <PreferenceLabel>{option.name}</PreferenceLabel>
           <CurrentValue>{currentName}</CurrentValue>
         </DropdownMenuSubTrigger>
@@ -780,12 +475,8 @@ function AcpConfigPreferences({
 
 interface ChatPreferencesMenuProps {
   currentAgentId: AgentType;
-  providerId: string;
-  modelId: string;
+  canChangeAgent: boolean;
   sessionConfigOptions: SessionConfigOption[];
-  onAgentChange?: (agentId: AgentType) => void;
-  onProviderChange: (providerId: string) => void;
-  onModelChange: (modelId: string) => void;
   onSessionConfigChange: (optionId: string, value: SessionConfigValue) => void;
   onSelectSkill: (skill: AIChatSkill) => void;
   onSelectCodexSkill: (skillName: string) => void;
@@ -794,12 +485,8 @@ interface ChatPreferencesMenuProps {
 
 export function ChatPreferencesMenu({
   currentAgentId,
-  providerId,
-  modelId,
+  canChangeAgent,
   sessionConfigOptions,
-  onAgentChange,
-  onProviderChange,
-  onModelChange,
   onSessionConfigChange,
   onSelectSkill,
   onSelectCodexSkill,
@@ -916,109 +603,74 @@ export function ChatPreferencesMenu({
     () =>
       getChatPreferencesModel({
         currentAgentId,
-        canChangeAgent: Boolean(onAgentChange),
+        canChangeAgent,
         sessionConfigOptions,
       }),
-    [currentAgentId, onAgentChange, sessionConfigOptions],
+    [canChangeAgent, currentAgentId, sessionConfigOptions],
   );
 
   return (
-    <>
-      {isCodex ? (
-        <CodexModelSelector cwd={cwd} onOpen={onBeforeOpen} />
-      ) : currentAgentId === "custom" ? (
-        <ModelSelector
-          appearance="composer"
-          providerId={providerId}
-          modelId={modelId}
-          onChange={onModelChange}
-          tooltip="Change model"
-        />
-      ) : (
-        <AcpModelSelector
-          agentId={currentAgentId}
-          options={sessionConfigOptions}
-          onChange={onSessionConfigChange}
-        />
-      )}
-      {isCodex ? (
-        <CodexSessionsMenu
-          state={codexThreadsState}
-          onOpen={() => {
-            onBeforeOpen();
-            if (codexThreadsState.status === "idle") loadCodexThreads(false);
-          }}
-          onRetry={() => loadCodexThreads(false, true)}
-          onLoadMore={() => loadCodexThreads(true)}
-        />
-      ) : null}
-      {isCodex ? (
-        <CodexSkillsMenu
-          state={codexSkillsState}
-          onOpen={() => {
-            onBeforeOpen();
-            if (codexSkillsState.status === "idle") loadCodexSkills();
-          }}
-          onRetry={() => loadCodexSkills(true)}
-          onSelectSkill={(skill) => onSelectCodexSkill(skill.name)}
-        />
-      ) : (
-        <SkillsMenu onSelectSkill={onSelectSkill} onOpen={onBeforeOpen} />
-      )}
-      <DropdownMenu
-        onOpenChange={(open) => {
-          if (open) onBeforeOpen();
-        }}
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) onBeforeOpen();
+      }}
+    >
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            tooltip="Agent settings"
+            aria-label="AI preferences"
+          />
+        }
       >
-        <DropdownMenuTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              iconOnly
-              tooltip="Agent settings"
-              aria-label="AI preferences"
+        <SlidersIcon />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" side="top" className="min-w-64">
+        <DropdownMenuGroup>
+          {isCodex ? null : (
+            <AcpConfigPreferences
+              options={preferences.acpConfigOptions.filter((option) => {
+                const category = classifySessionConfigOption(option);
+                // Model and effort each have a dedicated composer control.
+                return category !== "model" && category !== "thought_level";
+              })}
+              onChange={onSessionConfigChange}
             />
-          }
-        >
-          <SlidersIcon />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-64">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>Agent settings</DropdownMenuLabel>
-            {preferences.showAgentPreference && onAgentChange ? (
-              <ProviderPreferencesSubmenu
-                currentAgentId={currentAgentId}
-                providerId={providerId}
-                onAgentChange={onAgentChange}
-                onProviderChange={onProviderChange}
-              />
-            ) : null}
-            {preferences.showAthasAgentPreferences ? (
-              <AthasAgentPreferences
-                providerId={providerId}
-                onProviderChange={onProviderChange}
-                showProviderSelector={!preferences.showAgentPreference}
-              />
-            ) : !isCodex ? (
-              <AcpConfigPreferences
-                options={preferences.acpConfigOptions.filter(
-                  (option) => classifySessionConfigOption(option) !== "model",
-                )}
-                onChange={onSessionConfigChange}
-              />
-            ) : null}
-            {preferences.showModePreference && (
-              <ModePreferencesSubmenu currentAgentId={currentAgentId} />
-            )}
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => useUIState.getState().openSettingsDialog("ai")}>
-            <SlidersIcon />
-            AI settings…
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </>
+          )}
+          {preferences.showModePreference && (
+            <ModePreferencesSubmenu currentAgentId={currentAgentId} />
+          )}
+          {isCodex ? (
+            <CodexSkillsSubmenu
+              state={codexSkillsState}
+              onOpen={() => {
+                if (codexSkillsState.status === "idle") loadCodexSkills();
+              }}
+              onRetry={() => loadCodexSkills(true)}
+              onSelectSkill={(skill) => onSelectCodexSkill(skill.name)}
+            />
+          ) : (
+            <SkillsSubmenu onSelectSkill={onSelectSkill} />
+          )}
+          {isCodex ? (
+            <CodexSessionsSubmenu
+              state={codexThreadsState}
+              onOpen={() => {
+                if (codexThreadsState.status === "idle") loadCodexThreads(false);
+              }}
+              onRetry={() => loadCodexThreads(false, true)}
+              onLoadMore={() => loadCodexThreads(true)}
+            />
+          ) : null}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => useUIState.getState().openSettingsDialog("ai")}>
+          AI settings…
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

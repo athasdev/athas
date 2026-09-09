@@ -2,6 +2,7 @@ import { ChevronRightIcon } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
+import { Shimmer } from "@/ui/shimmer";
 import { cn } from "@/utils/cn";
 
 type ActivityState = "running" | "success" | "error" | "info";
@@ -50,7 +51,9 @@ export function ChatActivityLine({
             {icon ?? <span className="size-1.5 rounded-full bg-current" />}
           </MarkerIcon>
           <MarkerContent className="flex flex-1 items-center gap-1">
-            <span className="min-w-0 flex-1 truncate">{summary}</span>
+            <Shimmer active={state === "running"} className="min-w-0 flex-1 truncate">
+              {summary}
+            </Shimmer>
             {canExpand ? (
               <ChevronRightIcon
                 className={cn(
