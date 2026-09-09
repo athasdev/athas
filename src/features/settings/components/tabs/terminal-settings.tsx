@@ -229,7 +229,9 @@ export const TerminalSettings = () => {
             <SettingBlock key={profile.id} className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="font-sans ui-text-base text-foreground">{profile.name}</div>
+                  <div className="font-sans ui-text-sm font-medium text-foreground">
+                    {profile.name}
+                  </div>
                   <div className="font-sans ui-text-sm text-subtle-foreground">
                     Visible in the terminal profile picker
                   </div>

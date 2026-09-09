@@ -199,7 +199,7 @@ export function SettingRow({
         <div className="flex items-center gap-1.5">
           <div
             id={labelId}
-            className="font-sans ui-text-base min-w-0 cursor-default wrap-break-word text-foreground"
+            className="font-sans ui-text-sm font-medium min-w-0 cursor-default wrap-break-word text-foreground"
           >
             {label}
           </div>

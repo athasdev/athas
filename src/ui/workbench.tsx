@@ -66,7 +66,7 @@ export function WorkbenchNavigation<TValue extends string>({
         className="flex w-56 shrink-0 flex-col gap-4 bg-surface/55 p-3 @max-[680px]/workbench:w-full @max-[680px]/workbench:gap-3"
       >
         <div className="flex shrink-0 flex-col gap-3">
-          <h1 className="px-1.5 font-semibold text-foreground ui-text-base">{title}</h1>
+          <h1 className="px-1.5 font-medium text-foreground ui-text-base">{title}</h1>
           {search}
           <div className="hidden @max-[680px]/workbench:block">
             <DropdownMenu>
@@ -141,7 +141,7 @@ function WorkbenchContentTitle({
   return (
     <div className="min-w-0 flex-1 basis-64">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <h2 className="min-w-0 break-words font-semibold text-foreground ui-text-lg">{title}</h2>
+        <h2 className="min-w-0 break-words font-medium text-foreground ui-text-lg">{title}</h2>
         {status}
       </div>
       {description ? (

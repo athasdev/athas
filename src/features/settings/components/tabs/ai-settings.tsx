@@ -668,7 +668,7 @@ export const AISettings = () => {
             onReset={handleResetOllamaUrl}
             canReset={settings.ollamaBaseUrl !== getDefaultSetting("ollamaBaseUrl")}
           >
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <span className="inline-flex min-w-0 w-56 max-w-full">
                 <Input
                   type="text"
@@ -709,7 +709,7 @@ export const AISettings = () => {
             label="API Key"
             description="Used for authenticated Ollama endpoints and Ollama Cloud"
           >
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <span className="inline-flex min-w-0 w-56 max-w-full">
                 <Input
                   type="password"
@@ -746,7 +746,7 @@ export const AISettings = () => {
           </SettingRow>
           {needsApiKey && !hasStoredOllamaKey && (
             <SettingRow label="Ollama Cloud Key" description="Ollama Cloud requires an API key">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <WarningCircleIcon className="shrink-0 text-warning" />
                 <TextLink
                   href="https://ollama.com/settings/keys"
