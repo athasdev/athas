@@ -21,6 +21,8 @@ interface GitHubLabelPickerProps {
   selectedNames: Set<string>;
   onChange: (value: Set<string>) => void;
   isLoading?: boolean;
+  /** Renders a text button instead of the icon-only trigger. */
+  label?: string;
 }
 
 export function GitHubLabelPicker({
@@ -28,6 +30,7 @@ export function GitHubLabelPicker({
   selectedNames,
   onChange,
   isLoading = false,
+  label,
 }: GitHubLabelPickerProps) {
   const [query, setQuery] = useState("");
   const selectedLabels = useMemo(
@@ -55,13 +58,20 @@ export function GitHubLabelPicker({
       autoHighlight
       modal={false}
     >
-      <Tooltip content="Edit labels">
-        <ComboboxTrigger
-          render={<Button type="button" variant="ghost" iconOnly aria-label="Edit labels" />}
-        >
-          <TagIcon />
+      {label ? (
+        <ComboboxTrigger render={<Button type="button" variant="ghost" />}>
+          <PlusIcon />
+          {label}
         </ComboboxTrigger>
-      </Tooltip>
+      ) : (
+        <Tooltip content="Edit labels">
+          <ComboboxTrigger
+            render={<Button type="button" variant="ghost" iconOnly aria-label="Edit labels" />}
+          >
+            <TagIcon />
+          </ComboboxTrigger>
+        </Tooltip>
+      )}
       <ComboboxContent size="wide" data-prevent-dialog-escape="true">
         <div className="border-border/60 border-b p-1">
           <ComboboxInput
@@ -92,9 +102,11 @@ export function GitHubLabelPicker({
 interface GitHubAssigneePickerProps {
   value: string[];
   onChange: (value: string[]) => void;
+  /** Renders a text button instead of the icon-only trigger. */
+  label?: string;
 }
 
-export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerProps) {
+export function GitHubAssigneePicker({ value, onChange, label }: GitHubAssigneePickerProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
 
@@ -110,14 +122,21 @@ export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerPr
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Tooltip content="Edit assignees">
-        <PopoverTrigger
-          render={<Button type="button" variant="ghost" iconOnly aria-label="Edit assignees" />}
-        >
-          <UserIcon />
+      {label ? (
+        <PopoverTrigger render={<Button type="button" variant="ghost" />}>
+          <PlusIcon />
+          {label}
         </PopoverTrigger>
-      </Tooltip>
-      <PopoverContent align="end" size="wide" className="gap-2 p-2">
+      ) : (
+        <Tooltip content="Edit assignees">
+          <PopoverTrigger
+            render={<Button type="button" variant="ghost" iconOnly aria-label="Edit assignees" />}
+          >
+            <UserIcon />
+          </PopoverTrigger>
+        </Tooltip>
+      )}
+      <PopoverContent align="start" size="wide" className="gap-2 p-2">
         <div className="flex items-center gap-1.5">
           <Input
             value={draft}

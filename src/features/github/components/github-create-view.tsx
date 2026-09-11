@@ -20,7 +20,7 @@ import { hasProductCapability } from "@/features/window/lib/product-capabilities
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import Input from "@/ui/input";
-import { ResourceDocument, ResourceHeader, ResourceSummary } from "@/ui/resource";
+import { ResourceDocument, ResourceSummary } from "@/ui/resource";
 import Select from "@/ui/select";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
@@ -391,17 +391,13 @@ ${statusSummary}`;
 
   return (
     <ResourceDocument
-      header={
-        <ResourceHeader
+      summary={
+        <ResourceSummary
           actions={
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
           }
-        />
-      }
-      summary={
-        <ResourceSummary
           icon={
             kind === "pull-request" ? (
               <GitPullRequestIcon className="text-primary" />

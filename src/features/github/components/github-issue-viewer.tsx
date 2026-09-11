@@ -21,7 +21,6 @@ import Badge from "@/ui/badge";
 import {
   ResourceActionsMenu,
   ResourceDocument,
-  ResourceHeader,
   ResourceSection,
   ResourceSidebarLayout,
   ResourceSummary,
@@ -387,104 +386,115 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
   );
 
   const isOpen = details?.state.toLowerCase() === "open";
+  const assigneeLogins = details?.assignees.map((assignee) => assignee.login) ?? [];
+  const changeAssignees = (usernames: string[]) => {
+    if (!details) return;
+    void updateIssue({
+      assignees: usernames.map(
+        (login) => details.assignees.find((assignee) => assignee.login === login) ?? { login },
+      ),
+    });
+  };
+  const selectedLabelNames = new Set(details?.labels.map((label) => label.name) ?? []);
+  const changeLabels = (selectedNames: Set<string>) => {
+    void updateIssue({
+      labels: availableLabels.filter((label) => selectedNames.has(label.name)),
+    });
+  };
 
   return (
     <ResourceDocument
-      header={
-        <ResourceHeader
-          actions={
-            <>
-              {isOpen ? (
-                <Button
-                  type="button"
-                  onClick={() => void updateIssueState("closed", "completed")}
-                  disabled={Boolean(mutationKey)}
-                  variant="ghost"
-                >
-                  {mutationKey === "state" ? (
-                    <Spinner label="Closing" compact />
-                  ) : (
-                    <CheckCircleIcon />
-                  )}
-                  Close
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={() => void updateIssueState("open", "reopened")}
-                  disabled={!details || Boolean(mutationKey)}
-                  variant="ghost"
-                >
-                  {mutationKey === "state" ? (
-                    <Spinner label="Reopening" compact />
-                  ) : (
-                    <CircleDotIcon />
-                  )}
-                  Reopen
-                </Button>
-              )}
-              <ResourceActionsMenu label="Issue actions">
-                {isOpen ? (
-                  <DropdownMenuItem
-                    disabled={Boolean(mutationKey)}
-                    onClick={() => void updateIssueState("closed", "not_planned")}
-                  >
-                    Close as not planned
-                  </DropdownMenuItem>
-                ) : null}
-                {details?.locked ? (
-                  <DropdownMenuItem
-                    disabled={Boolean(mutationKey)}
-                    onClick={() => void updateLock()}
-                  >
-                    <LockOpenIcon />
-                    Unlock conversation
-                  </DropdownMenuItem>
-                ) : (
-                  <>
-                    <DropdownMenuItem
-                      disabled={Boolean(mutationKey)}
-                      onClick={() => void updateLock("resolved")}
-                    >
-                      <LockIcon />
-                      Lock as resolved
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={Boolean(mutationKey)}
-                      onClick={() => void updateLock("off-topic")}
-                    >
-                      Lock as off-topic
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={Boolean(mutationKey)}
-                      onClick={() => void updateLock("too heated")}
-                    >
-                      Lock as too heated
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={Boolean(mutationKey)}
-                      onClick={() => void updateLock("spam")}
-                    >
-                      Lock as spam
-                    </DropdownMenuItem>
-                  </>
-                )}
-                <DropdownMenuItem
-                  disabled={isLoading && Boolean(details)}
-                  onClick={() => void fetchIssue(true)}
-                >
-                  {isLoading && details ? "Refreshing..." : "Refresh"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCopyIssueLink}>Copy link</DropdownMenuItem>
-              </ResourceActionsMenu>
-            </>
-          }
-        />
-      }
       summary={
         details ? (
           <ResourceSummary
+            actions={
+              <>
+                {isOpen ? (
+                  <Button
+                    type="button"
+                    onClick={() => void updateIssueState("closed", "completed")}
+                    disabled={Boolean(mutationKey)}
+                    variant="ghost"
+                  >
+                    {mutationKey === "state" ? (
+                      <Spinner label="Closing" compact />
+                    ) : (
+                      <CheckCircleIcon />
+                    )}
+                    Close
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={() => void updateIssueState("open", "reopened")}
+                    disabled={!details || Boolean(mutationKey)}
+                    variant="ghost"
+                  >
+                    {mutationKey === "state" ? (
+                      <Spinner label="Reopening" compact />
+                    ) : (
+                      <CircleDotIcon />
+                    )}
+                    Reopen
+                  </Button>
+                )}
+                <ResourceActionsMenu label="Issue actions">
+                  {isOpen ? (
+                    <DropdownMenuItem
+                      disabled={Boolean(mutationKey)}
+                      onClick={() => void updateIssueState("closed", "not_planned")}
+                    >
+                      Close as not planned
+                    </DropdownMenuItem>
+                  ) : null}
+                  {details?.locked ? (
+                    <DropdownMenuItem
+                      disabled={Boolean(mutationKey)}
+                      onClick={() => void updateLock()}
+                    >
+                      <LockOpenIcon />
+                      Unlock conversation
+                    </DropdownMenuItem>
+                  ) : (
+                    <>
+                      <DropdownMenuItem
+                        disabled={Boolean(mutationKey)}
+                        onClick={() => void updateLock("resolved")}
+                      >
+                        <LockIcon />
+                        Lock as resolved
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={Boolean(mutationKey)}
+                        onClick={() => void updateLock("off-topic")}
+                      >
+                        Lock as off-topic
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={Boolean(mutationKey)}
+                        onClick={() => void updateLock("too heated")}
+                      >
+                        Lock as too heated
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={Boolean(mutationKey)}
+                        onClick={() => void updateLock("spam")}
+                      >
+                        Lock as spam
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuItem
+                    disabled={isLoading && Boolean(details)}
+                    onClick={() => void fetchIssue(true)}
+                  >
+                    {isLoading && details ? "Refreshing..." : "Refresh"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleCopyIssueLink}>Copy link</DropdownMenuItem>
+                </ResourceActionsMenu>
+              </>
+            }
             icon={<CircleDotIcon className={isOpen ? "text-success" : "text-subtle-foreground"} />}
             title={
               <GitHubInlineTitle value={details.title} onSave={(title) => updateIssue({ title })} />
@@ -617,19 +627,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               <ResourceSection
                 title="Assignees"
                 action={
-                  <GitHubAssigneePicker
-                    value={details.assignees.map((assignee) => assignee.login)}
-                    onChange={(usernames) => {
-                      void updateIssue({
-                        assignees: usernames.map(
-                          (login) =>
-                            details.assignees.find((assignee) => assignee.login === login) ?? {
-                              login,
-                            },
-                        ),
-                      });
-                    }}
-                  />
+                  details.assignees.length > 0 ? (
+                    <GitHubAssigneePicker value={assigneeLogins} onChange={changeAssignees} />
+                  ) : null
                 }
               >
                 {details.assignees.length > 0 ? (
@@ -646,28 +646,35 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                     ))}
                   </div>
                 ) : (
-                  <span className="text-subtle-foreground">Unassigned</span>
+                  <GitHubAssigneePicker
+                    value={assigneeLogins}
+                    onChange={changeAssignees}
+                    label="Add assignees"
+                  />
                 )}
               </ResourceSection>
 
               <ResourceSection
                 title="Labels"
                 action={
-                  <GitHubLabelPicker
-                    labels={availableLabels}
-                    selectedNames={new Set(details.labels.map((label) => label.name))}
-                    onChange={(selectedNames) => {
-                      void updateIssue({
-                        labels: availableLabels.filter((label) => selectedNames.has(label.name)),
-                      });
-                    }}
-                  />
+                  details.labels.length > 0 ? (
+                    <GitHubLabelPicker
+                      labels={availableLabels}
+                      selectedNames={selectedLabelNames}
+                      onChange={changeLabels}
+                    />
+                  ) : null
                 }
               >
                 {details.labels.length > 0 ? (
                   <LabelBadges labels={details.labels} repositoryUrl={repositoryUrl} />
                 ) : (
-                  <span className="text-subtle-foreground">No labels</span>
+                  <GitHubLabelPicker
+                    labels={availableLabels}
+                    selectedNames={selectedLabelNames}
+                    onChange={changeLabels}
+                    label="Add labels"
+                  />
                 )}
               </ResourceSection>
             </>

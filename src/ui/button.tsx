@@ -14,6 +14,8 @@ export const buttonVariants = cva(
           "border-primary/30 bg-primary/12 text-primary hover:bg-primary/20 data-[active=true]:border-primary/45 data-[active=true]:bg-primary/24",
         "accent-ghost":
           "bg-transparent text-primary hover:bg-primary/10 data-[active=true]:bg-primary/12",
+        solid:
+          "border-primary bg-primary text-background hover:border-primary/90 hover:bg-primary/90",
         ghost:
           "bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground",
         text: "h-auto rounded-none border-0 bg-transparent p-0 text-primary hover:text-primary/80",

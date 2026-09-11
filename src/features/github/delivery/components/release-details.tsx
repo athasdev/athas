@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ReleaseAssets } from "./release-assets";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
@@ -20,11 +21,12 @@ function repositoryUrlOf(release: Release) {
   return release.html_url.split("/releases")[0];
 }
 
-export function ReleaseSummary({ release }: { release: Release }) {
+export function ReleaseSummary({ release, actions }: { release: Release; actions?: ReactNode }) {
   const repositoryUrl = repositoryUrlOf(release);
   const timestamp = release.published_at ?? release.created_at;
   return (
     <ResourceSummary
+      actions={actions}
       icon={<TagIcon className="text-subtle-foreground" />}
       title={<span className="block truncate">{releaseTitle(release)}</span>}
       badges={

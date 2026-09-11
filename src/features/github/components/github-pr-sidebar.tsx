@@ -81,6 +81,18 @@ export function GitHubPRSidebar({
   repositoryUrl,
 }: GitHubPRSidebarProps) {
   const reviewers = getReviewerRows(pr);
+  const assigneeLogins = pr.assignees.map((assignee) => assignee.login);
+  const changeAssignees = (usernames: string[]) => {
+    onAssigneesChange(
+      usernames.map(
+        (login) => pr.assignees.find((assignee) => assignee.login === login) ?? { login },
+      ),
+    );
+  };
+  const selectedLabelNames = new Set(pr.labels.map((label) => label.name));
+  const changeLabels = (selectedNames: Set<string>) => {
+    onLabelsChange(availableLabels.filter((label) => selectedNames.has(label.name)));
+  };
 
   return (
     <>
@@ -140,16 +152,9 @@ export function GitHubPRSidebar({
       <ResourceSection
         title="Assignees"
         action={
-          <GitHubAssigneePicker
-            value={pr.assignees.map((assignee) => assignee.login)}
-            onChange={(usernames) => {
-              onAssigneesChange(
-                usernames.map(
-                  (login) => pr.assignees.find((assignee) => assignee.login === login) ?? { login },
-                ),
-              );
-            }}
-          />
+          pr.assignees.length > 0 ? (
+            <GitHubAssigneePicker value={assigneeLogins} onChange={changeAssignees} />
+          ) : null
         }
       >
         {pr.assignees.length > 0 ? (
@@ -166,26 +171,35 @@ export function GitHubPRSidebar({
             ))}
           </ul>
         ) : (
-          <span className="text-subtle-foreground">No assignees</span>
+          <GitHubAssigneePicker
+            value={assigneeLogins}
+            onChange={changeAssignees}
+            label="Add assignees"
+          />
         )}
       </ResourceSection>
 
       <ResourceSection
         title="Labels"
         action={
-          <GitHubLabelPicker
-            labels={availableLabels}
-            selectedNames={new Set(pr.labels.map((label) => label.name))}
-            onChange={(selectedNames) => {
-              onLabelsChange(availableLabels.filter((label) => selectedNames.has(label.name)));
-            }}
-          />
+          pr.labels.length > 0 ? (
+            <GitHubLabelPicker
+              labels={availableLabels}
+              selectedNames={selectedLabelNames}
+              onChange={changeLabels}
+            />
+          ) : null
         }
       >
         {pr.labels.length > 0 ? (
           <LabelBadges labels={pr.labels} repositoryUrl={repositoryUrl} kind="pulls" />
         ) : (
-          <span className="text-subtle-foreground">No labels</span>
+          <GitHubLabelPicker
+            labels={availableLabels}
+            selectedNames={selectedLabelNames}
+            onChange={changeLabels}
+            label="Add labels"
+          />
         )}
       </ResourceSection>
 

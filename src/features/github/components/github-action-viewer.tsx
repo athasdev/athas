@@ -24,12 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import { Progress } from "@/ui/progress";
-import {
-  ResourceActionsMenu,
-  ResourceHeader,
-  ResourceSummary,
-  ResourceWorkspace,
-} from "@/ui/resource";
+import { ResourceActionsMenu, ResourceSummary, ResourceWorkspace } from "@/ui/resource";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { useNow } from "../hooks/use-now";
@@ -560,43 +555,41 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
 
   return (
     <ResourceWorkspace
-      header={
-        <ResourceHeader
-          actions={
-            <>
-              {isRefreshing ? <Spinner label="Refreshing" compact /> : null}
-              {cancelButton}
-              {rerunButton}
-              <Button
-                type="button"
-                variant="ghost"
-                iconOnly
-                tooltip="Open on GitHub"
-                onClick={handleOpenInBrowser}
-                disabled={!details?.url}
-              >
-                <OpenExternalIcon />
-              </Button>
-              <ResourceActionsMenu label="Action run actions">
-                <DropdownMenuItem disabled={isLoading} onClick={handleRefresh}>
-                  {isRefreshing ? "Refreshing..." : "Refresh"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCopyRunLink}>Copy link</DropdownMenuItem>
-                {details?.headSha ? (
-                  <DropdownMenuItem
-                    onClick={() => void copyToClipboard(details.headSha ?? "", "Commit SHA copied")}
-                  >
-                    Copy commit SHA
-                  </DropdownMenuItem>
-                ) : null}
-              </ResourceActionsMenu>
-            </>
-          }
-        />
-      }
       summary={
         details ? (
           <ResourceSummary
+            actions={
+              <>
+                {isRefreshing ? <Spinner label="Refreshing" compact /> : null}
+                {cancelButton}
+                {rerunButton}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  iconOnly
+                  tooltip="Open on GitHub"
+                  onClick={handleOpenInBrowser}
+                  disabled={!details?.url}
+                >
+                  <OpenExternalIcon />
+                </Button>
+                <ResourceActionsMenu label="Action run actions">
+                  <DropdownMenuItem disabled={isLoading} onClick={handleRefresh}>
+                    {isRefreshing ? "Refreshing..." : "Refresh"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleCopyRunLink}>Copy link</DropdownMenuItem>
+                  {details?.headSha ? (
+                    <DropdownMenuItem
+                      onClick={() =>
+                        void copyToClipboard(details.headSha ?? "", "Commit SHA copied")
+                      }
+                    >
+                      Copy commit SHA
+                    </DropdownMenuItem>
+                  ) : null}
+                </ResourceActionsMenu>
+              </>
+            }
             icon={<WorkflowStatusIcon status={details.status} conclusion={details.conclusion} />}
             title={<span className="block truncate">{runTitle}</span>}
             badges={

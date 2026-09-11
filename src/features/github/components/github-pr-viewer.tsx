@@ -3,16 +3,17 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerErrorState } from "@/features/viewer/components/viewer-state";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
+import { DropdownMenuItem } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import Badge, { badgeVariants } from "@/ui/badge";
 import type { VariantProps } from "class-variance-authority";
-import { GitPullRequestIcon } from "@/ui/icons";
+import { GitMergeIcon, GitPullRequestIcon } from "@/ui/icons";
 import {
+  ResourceActionsMenu,
   ResourceDocument,
-  ResourceHeader,
   ResourceSidebarLayout,
   ResourceSummary,
   ResourceWorkspace,
@@ -40,14 +41,18 @@ import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { useGitHubStore } from "../stores/github.store";
 import { PRTimeline } from "./pr-timeline";
 import { PRFilesPanel } from "./pr-files-panel";
-import { GitHubPRHeader } from "./github-pr-header";
+import { GitHubPRTabs } from "./github-pr-tabs";
+import {
+  GitHubPRBodySkeleton,
+  GitHubPRSummarySkeleton,
+  GitHubPRTabsSkeleton,
+} from "./github-pr-skeleton";
 import { GitHubPRSidebar } from "./github-pr-sidebar";
 import {
   GitHubPRInlineAction,
   type GitHubPRInlineActionKind,
   type GitHubPRMergeMethod,
 } from "./github-pr-inline-action";
-import { GitHubAvatar } from "./github-avatar";
 import { GitHubInlineTitle } from "./github-inline-editors";
 import { GitHubBranchChip, GitHubMetaChip, GitHubUserChip } from "./github-chips";
 
@@ -410,16 +415,6 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     [showActivityTab],
   );
 
-  const focusComposer = useCallback(() => {
-    showActivityTab();
-    requestAnimationFrame(() => {
-      const composer = composerRef.current;
-      if (!composer) return;
-      composer.scrollIntoView({ behavior: "smooth", block: "center" });
-      composer.querySelector("textarea")?.focus();
-    });
-  }, [showActivityTab]);
-
   const submitComment = useCallback(async () => {
     const body = commentDraft.trim();
     if (!repoPath || !body || mutationKey) return;
@@ -549,40 +544,28 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   );
 
   if (!selectedPRDetails) {
+    const failed = Boolean(detailsError) && !isLoadingDetails;
     return (
       <ResourceDocument
-        header={
-          detailsError && !isLoadingDetails ? (
-            <ResourceHeader
+        summary={
+          failed ? (
+            <ResourceSummary
+              icon={<GitPullRequestIcon className="text-subtle-foreground" />}
+              title={<span className="block truncate">{prBuffer?.name || `PR #${prNumber}`}</span>}
+              description={detailsError}
               actions={
                 <Button onClick={handleRefresh} variant="ghost">
                   Retry
                 </Button>
               }
             />
-          ) : undefined
+          ) : (
+            <GitHubPRSummarySkeleton />
+          )
         }
-        summary={
-          <ResourceSummary
-            icon={
-              prBuffer?.authorAvatarUrl ? (
-                <GitHubAvatar
-                  name={prBuffer.name}
-                  avatarUrl={prBuffer.authorAvatarUrl}
-                  displaySize="md"
-                />
-              ) : (
-                <GitPullRequestIcon className="text-subtle-foreground" />
-              )
-            }
-            title={<span className="block truncate">{prBuffer?.name || `PR #${prNumber}`}</span>}
-            description={detailsError && !isLoadingDetails ? detailsError : `#${prNumber}`}
-          />
-        }
+        tabs={failed ? null : <GitHubPRTabsSkeleton />}
       >
-        {detailsError && !isLoadingDetails ? null : (
-          <ViewerLoadingState label={`Loading PR #${prNumber}`} layout="section" />
-        )}
+        {failed ? null : <GitHubPRBodySkeleton />}
       </ResourceDocument>
     );
   }
@@ -590,7 +573,6 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   const isRefreshingDetails = isLoadingDetails && !!selectedPRDetails;
   const pr = selectedPRDetails;
   const status = getPullRequestStatus(pr);
-  const changedFilesCount = pr.changedFiles || selectedPRFiles.length || 0;
   const checksSummary =
     pr.statusChecks?.length > 0
       ? `${passedChecksCount} checks passed${pr.mergeable === "CONFLICTING" ? " · has conflicts" : ""}`
@@ -599,29 +581,45 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
         : "No checks reported";
   const repositoryUrl = pr.url.replace(/\/pull\/\d+$/, "");
 
-  const header = (
-    <GitHubPRHeader
-      pr={pr}
+  const tabs = (
+    <GitHubPRTabs
       activeView={activeTab}
-      changedFilesCount={changedFilesCount}
       commits={commits}
       repoPath={repoPath ?? undefined}
-      isRefreshingDetails={isRefreshingDetails}
-      onRefresh={handleRefresh}
-      onCheckout={() => {
-        void handleCheckout();
-      }}
-      onOpenInBrowser={handleOpenInBrowser}
-      onCopyPRLink={handleCopyPRLink}
-      onCopyBranchName={handleCopyBranchName}
+      additions={pr.additions}
+      deletions={pr.deletions}
       onShowOverview={handleShowOverview}
-      onShowFiles={handleShowFiles}
-      onComment={focusComposer}
-      onApprove={() => openInlineAction("approve")}
-      onRequestChanges={() => openInlineAction("request-changes")}
-      onMerge={() => openInlineAction("merge")}
-      onClosePR={() => void closePullRequest()}
+      onShowChanges={handleShowFiles}
     />
+  );
+
+  const isClosed = status === "closed" || status === "merged";
+  const canMerge = status === "open" && pr.mergeable !== "CONFLICTING" && pr.mergeable !== "false";
+  const actions = (
+    <>
+      <Button onClick={() => openInlineAction("merge")} disabled={!canMerge} variant="solid">
+        <GitMergeIcon />
+        Merge
+      </Button>
+      <ResourceActionsMenu label="Pull request actions">
+        <DropdownMenuItem onClick={() => void handleCheckout()}>Checkout branch</DropdownMenuItem>
+        <DropdownMenuItem disabled={isClosed} onClick={() => openInlineAction("approve")}>
+          Approve
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={isClosed} onClick={() => openInlineAction("request-changes")}>
+          Request changes
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={isClosed} onClick={() => void closePullRequest()}>
+          Close pull request
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={isRefreshingDetails} onClick={handleRefresh}>
+          {isRefreshingDetails ? "Refreshing..." : "Refresh"}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
+        <DropdownMenuItem onClick={handleCopyPRLink}>Copy link</DropdownMenuItem>
+        <DropdownMenuItem onClick={handleCopyBranchName}>Copy branch name</DropdownMenuItem>
+      </ResourceActionsMenu>
+    </>
   );
 
   const summary = (
@@ -631,6 +629,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       badges={
         <Badge variant={PR_STATUS_BADGE_VARIANT[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
       }
+      actions={actions}
       meta={
         <>
           <GitHubMetaChip title="Pull request number">{`#${pr.number}`}</GitHubMetaChip>
@@ -648,24 +647,20 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
           </GitHubMetaChip>
           {isRefreshingDetails ? <Spinner label="Refreshing" compact /> : null}
           <span className="flex min-w-0 items-center gap-1">
-            <GitHubBranchChip name={pr.headRef} repositoryUrl={repositoryUrl} />
+            <GitHubBranchChip
+              name={pr.headRef}
+              repositoryUrl={repositoryUrl}
+              className="max-w-64"
+            />
             <span aria-hidden="true" className="text-subtle-foreground">
               →
             </span>
-            <GitHubBranchChip name={pr.baseRef} repositoryUrl={repositoryUrl} />
+            <GitHubBranchChip
+              name={pr.baseRef}
+              repositoryUrl={repositoryUrl}
+              className="max-w-64"
+            />
           </span>
-          <GitHubMetaChip title="Changed files" onClick={handleShowFiles}>
-            <span className="flex items-center gap-1.5">
-              <span>{`${changedFilesCount} files`}</span>
-              <span className="flex items-center gap-1 font-mono">
-                <span className="text-git-added">+{pr.additions}</span>
-                <span className="text-git-deleted">-{pr.deletions}</span>
-              </span>
-            </span>
-          </GitHubMetaChip>
-          <GitHubMetaChip title="Comments">
-            {`${selectedPRComments.length} comment${selectedPRComments.length === 1 ? "" : "s"}`}
-          </GitHubMetaChip>
         </>
       }
     />
@@ -683,7 +678,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
 
   if (activeTab === "files") {
     return (
-      <ResourceWorkspace header={header} summary={summary}>
+      <ResourceWorkspace summary={summary} tabs={tabs}>
         {errorState}
         <div className="min-h-0 min-w-0 flex-1">
           <PRFilesPanel
@@ -705,7 +700,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   }
 
   return (
-    <ResourceDocument header={header} summary={summary}>
+    <ResourceDocument summary={summary} tabs={tabs}>
       {errorState}
       <ResourceSidebarLayout
         sidebar={

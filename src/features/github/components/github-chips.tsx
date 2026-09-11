@@ -1,6 +1,7 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { GitBranchIcon, GitCommitIcon } from "@/ui/icons";
 import type { ReactNode } from "react";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import {
   getGitHubBranchUrl,
@@ -48,18 +49,9 @@ export function GitHubMetaChip({
     className,
   );
 
-  if (!interactive) {
-    return (
-      <span title={title} className={baseClassName}>
-        {content}
-      </span>
-    );
-  }
-
-  return (
+  const element = interactive ? (
     <button
       type="button"
-      title={title}
       aria-label={title}
       onClick={() => {
         if (onClick) onClick();
@@ -72,7 +64,11 @@ export function GitHubMetaChip({
     >
       {content}
     </button>
+  ) : (
+    <span className={baseClassName}>{content}</span>
   );
+
+  return title ? <Tooltip content={title}>{element}</Tooltip> : element;
 }
 
 interface GitHubUserChipProps {

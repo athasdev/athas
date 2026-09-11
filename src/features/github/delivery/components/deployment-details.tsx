@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { openDeploymentLog } from "../services/open-deployment-log";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
@@ -11,10 +12,17 @@ import { getTimeAgo } from "../../utils/github-viewer-utils";
 import type { Deployment } from "../types/github-delivery.types";
 import { deploymentState, deploymentStatusState, safeDeliveryUrl } from "../utils/github-delivery";
 
-export function DeploymentSummary({ deployment }: { deployment: Deployment }) {
+export function DeploymentSummary({
+  deployment,
+  actions,
+}: {
+  deployment: Deployment;
+  actions?: ReactNode;
+}) {
   const state = deploymentState(deployment);
   return (
     <ResourceSummary
+      actions={actions}
       icon={<RocketIcon className="text-subtle-foreground" />}
       title={<span className="block truncate">{deployment.environment}</span>}
       badges={

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vite-plus/test";
-import { GitHubPRHeader } from "../components/github-pr-header";
+import { GitHubPRTabs } from "../components/github-pr-tabs";
 import type { Commit } from "../types/github-pr-viewer.types";
 import type { PullRequestDetails } from "../types/github.types";
 
@@ -44,42 +44,29 @@ const commits: Commit[] = [
   },
 ];
 
-const actions = {
-  onRefresh: vi.fn(),
-  onCheckout: vi.fn(),
-  onOpenInBrowser: vi.fn(),
-  onCopyPRLink: vi.fn(),
-  onCopyBranchName: vi.fn(),
-  onShowOverview: vi.fn(),
-  onShowFiles: vi.fn(),
-  onComment: vi.fn(),
-  onApprove: vi.fn(),
-  onRequestChanges: vi.fn(),
-  onMerge: vi.fn(),
-  onClosePR: vi.fn(),
-};
-
-describe("GitHubPRHeader", () => {
-  it("keeps commits between overview and files in the top navigation", () => {
+describe("GitHubPRTabs", () => {
+  it("keeps commits between overview and changes", () => {
     const markup = renderToStaticMarkup(
-      <GitHubPRHeader
-        pr={pr}
+      <GitHubPRTabs
         activeView="activity"
-        changedFilesCount={37}
         commits={commits}
         repoPath="/repo"
-        isRefreshingDetails={false}
-        {...actions}
+        additions={pr.additions}
+        deletions={pr.deletions}
+        onShowOverview={vi.fn()}
+        onShowChanges={vi.fn()}
       />,
     );
 
     const overviewIndex = markup.indexOf("Overview");
     const commitsIndex = markup.indexOf("Commits 1");
-    const filesIndex = markup.indexOf("Files 37");
+    const changesIndex = markup.indexOf("Changes");
 
     expect(overviewIndex).toBeGreaterThan(-1);
     expect(commitsIndex).toBeGreaterThan(overviewIndex);
-    expect(filesIndex).toBeGreaterThan(commitsIndex);
+    expect(changesIndex).toBeGreaterThan(commitsIndex);
+    expect(markup).toContain("+1088");
+    expect(markup).toContain("-955");
     expect(markup).toContain('aria-label="Show 1 commit"');
     expect(markup).toContain('aria-pressed="true"');
   });

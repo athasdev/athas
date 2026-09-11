@@ -13,12 +13,7 @@ import { resolveProjectGitHubRepository } from "@/features/views/lib/view-github
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { Button } from "@/ui/button";
 import { ArrowClockwiseIcon, CopyIcon, OpenExternalIcon, TagIcon } from "@/ui/icons";
-import {
-  ResourceActionsMenu,
-  ResourceDocument,
-  ResourceHeader,
-  ResourceSummary,
-} from "@/ui/resource";
+import { ResourceActionsMenu, ResourceDocument, ResourceSummary } from "@/ui/resource";
 import { DropdownMenuItem } from "@/ui/dropdown";
 import {
   AlertDialog,
@@ -180,126 +175,115 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
   const browserUrl = release?.html_url ?? (repositoryUrl ? `${repositoryUrl}/deployments` : null);
   const environmentUrl = safeDeliveryUrl(deployment?.statuses[0]?.environment_url);
   const logUrl = safeDeliveryUrl(deployment?.statuses[0]?.log_url);
+  const summaryActions = !editing && (
+    <>
+      {environmentUrl && (
+        <Button variant="accent" onClick={() => open(environmentUrl)}>
+          <OpenExternalIcon /> Open Environment
+        </Button>
+      )}
+      {logUrl && (
+        <Button
+          variant="ghost"
+          onClick={() => {
+            void openDeploymentLog(logUrl).catch((error) => toast.error(String(error)));
+          }}
+        >
+          Logs
+        </Button>
+      )}
+      {release?.draft && (
+        <Button
+          variant="accent"
+          disabled={pending || assetBusy}
+          onClick={() => {
+            setActionError(null);
+            setConfirm("publish");
+          }}
+        >
+          Publish
+        </Button>
+      )}
+      {release && !release.immutable && (
+        <Button variant="ghost" disabled={pending || assetBusy} onClick={() => setEditing(true)}>
+          Edit
+        </Button>
+      )}
+      <Button
+        variant="ghost"
+        iconOnly
+        tooltip="Refresh"
+        disabled={loading || pending || assetBusy}
+        onClick={refresh}
+      >
+        {loading ? <Spinner compact /> : <ArrowClockwiseIcon />}
+      </Button>
+      <ResourceActionsMenu label="More actions">
+        <DropdownMenuItem disabled={!browserUrl} onClick={() => open(browserUrl)}>
+          <OpenExternalIcon /> Open on GitHub
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            void writeClipboardText(release?.tag_name ?? deployment?.sha ?? "");
+          }}
+        >
+          <CopyIcon /> {release ? "Copy Tag" : "Copy Commit SHA"}
+        </DropdownMenuItem>
+        {deployment && (
+          <DropdownMenuItem
+            onClick={() => {
+              void openCommitDiffBuffer({
+                repoPath,
+                commitHash: deployment.sha,
+                message: deployment.description ?? undefined,
+              })
+                .then((id) => {
+                  if (!id)
+                    toast.info(
+                      "No local changes found for this commit. Fetch the repository to inspect it.",
+                    );
+                })
+                .catch((error) => toast.error(String(error)));
+            }}
+          >
+            View Commit Changes
+          </DropdownMenuItem>
+        )}
+        {deployment && repositoryUrl && (
+          <DropdownMenuItem
+            onClick={() => open(`${repositoryUrl}/commit/${encodeURIComponent(deployment.sha)}`)}
+          >
+            Open Commit on GitHub
+          </DropdownMenuItem>
+        )}
+        {deployment && deployment.statuses[0]?.state !== "inactive" && (
+          <DropdownMenuItem
+            disabled={pending || assetBusy}
+            onClick={() => {
+              setActionError(null);
+              setConfirm("deactivate");
+            }}
+          >
+            Mark Inactive
+          </DropdownMenuItem>
+        )}
+        {release && !release.immutable && (
+          <DropdownMenuItem
+            disabled={pending || assetBusy}
+            onClick={() => {
+              setActionError(null);
+              setConfirm("delete");
+            }}
+          >
+            Delete Release…
+          </DropdownMenuItem>
+        )}
+      </ResourceActionsMenu>
+    </>
+  );
+
   return (
     <ResourceDocument
-      header={
-        <ResourceHeader
-          actions={
-            !editing && (
-              <>
-                {environmentUrl && (
-                  <Button variant="accent" onClick={() => open(environmentUrl)}>
-                    <OpenExternalIcon /> Open Environment
-                  </Button>
-                )}
-                {logUrl && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      void openDeploymentLog(logUrl).catch((error) => toast.error(String(error)));
-                    }}
-                  >
-                    Logs
-                  </Button>
-                )}
-                {release?.draft && (
-                  <Button
-                    variant="accent"
-                    disabled={pending || assetBusy}
-                    onClick={() => {
-                      setActionError(null);
-                      setConfirm("publish");
-                    }}
-                  >
-                    Publish
-                  </Button>
-                )}
-                {release && !release.immutable && (
-                  <Button
-                    variant="ghost"
-                    disabled={pending || assetBusy}
-                    onClick={() => setEditing(true)}
-                  >
-                    Edit
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  iconOnly
-                  tooltip="Refresh"
-                  disabled={loading || pending || assetBusy}
-                  onClick={refresh}
-                >
-                  {loading ? <Spinner compact /> : <ArrowClockwiseIcon />}
-                </Button>
-                <ResourceActionsMenu label="More actions">
-                  <DropdownMenuItem disabled={!browserUrl} onClick={() => open(browserUrl)}>
-                    <OpenExternalIcon /> Open on GitHub
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      void writeClipboardText(release?.tag_name ?? deployment?.sha ?? "");
-                    }}
-                  >
-                    <CopyIcon /> {release ? "Copy Tag" : "Copy Commit SHA"}
-                  </DropdownMenuItem>
-                  {deployment && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        void openCommitDiffBuffer({
-                          repoPath,
-                          commitHash: deployment.sha,
-                          message: deployment.description ?? undefined,
-                        })
-                          .then((id) => {
-                            if (!id)
-                              toast.info(
-                                "No local changes found for this commit. Fetch the repository to inspect it.",
-                              );
-                          })
-                          .catch((error) => toast.error(String(error)));
-                      }}
-                    >
-                      View Commit Changes
-                    </DropdownMenuItem>
-                  )}
-                  {deployment && repositoryUrl && (
-                    <DropdownMenuItem
-                      onClick={() =>
-                        open(`${repositoryUrl}/commit/${encodeURIComponent(deployment.sha)}`)
-                      }
-                    >
-                      Open Commit on GitHub
-                    </DropdownMenuItem>
-                  )}
-                  {deployment && deployment.statuses[0]?.state !== "inactive" && (
-                    <DropdownMenuItem
-                      disabled={pending || assetBusy}
-                      onClick={() => {
-                        setActionError(null);
-                        setConfirm("deactivate");
-                      }}
-                    >
-                      Mark Inactive
-                    </DropdownMenuItem>
-                  )}
-                  {release && !release.immutable && (
-                    <DropdownMenuItem
-                      disabled={pending || assetBusy}
-                      onClick={() => {
-                        setActionError(null);
-                        setConfirm("delete");
-                      }}
-                    >
-                      Delete Release…
-                    </DropdownMenuItem>
-                  )}
-                </ResourceActionsMenu>
-              </>
-            )
-          }
-        />
-      }
       summary={
         editing ? (
           <ResourceSummary
@@ -307,9 +291,9 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
             title={<span className="block truncate">{title}</span>}
           />
         ) : release ? (
-          <ReleaseSummary release={release} />
+          <ReleaseSummary release={release} actions={summaryActions} />
         ) : deployment ? (
-          <DeploymentSummary deployment={deployment} />
+          <DeploymentSummary deployment={deployment} actions={summaryActions} />
         ) : null
       }
     >
