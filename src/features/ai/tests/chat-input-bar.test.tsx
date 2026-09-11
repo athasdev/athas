@@ -54,6 +54,18 @@ describe("Agent composer", () => {
     },
   );
 
+  it("keeps the send action inside the prompt surface", () => {
+    const markup = renderComposer();
+    const surfaceStart = markup.indexOf('data-ai-element="prompt-input"');
+    const toolbarStart = markup.indexOf('data-slot="composer-toolbar"');
+    const sendStart = markup.indexOf('aria-label="Send message"');
+
+    expect(surfaceStart).toBeGreaterThanOrEqual(0);
+    expect(toolbarStart).toBeGreaterThan(surfaceStart);
+    expect(sendStart).toBeGreaterThan(surfaceStart);
+    expect(sendStart).toBeLessThan(toolbarStart);
+  });
+
   it("summarizes attached files without exposing a chip for every filename", () => {
     const markup = renderComposer({ selectedFilesPaths: new Set(["/src/one.ts", "/src/two.ts"]) });
     expect(markup.match(/role="textbox"/g)).toHaveLength(1);

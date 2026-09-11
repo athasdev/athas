@@ -1,3 +1,5 @@
+import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
+import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
 import { listen } from "@tauri-apps/api/event";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
@@ -1195,9 +1197,19 @@ details: ${errorDetails || mainError}
     <AIChatInputBar
       key={effectiveChatId ?? "new-session"}
       surfaceId={surfaceId}
+      chatId={effectiveChatId}
       buffers={buffers}
       allProjectFiles={allProjectFiles}
       currentAgentId={currentAgentId}
+      onAgentChange={(agentId) => {
+        if (agentId === currentAgentId) return;
+        if (isTerminalAgent(agentId)) {
+          openTerminalAgent(agentId);
+          return;
+        }
+        const nextChatId = chatActions.createNewChat(agentId, { activate: !chatId });
+        if (chatId) openAgentHistoryChat(nextChatId);
+      }}
       isTyping={isSurfaceTyping}
       streamingMessageId={surfaceStreamingMessageId}
       queuedMessages={queuedMessages}
@@ -1251,7 +1263,7 @@ details: ${errorDetails || mainError}
         onNextMessageSearchMatch={goToNextMessageSearchMatch}
       />
       {isAiChatBlockedByPolicy ? (
-        <Empty className="h-full rounded-none p-6">
+        <Empty className="h-full p-6">
           <EmptyHeader>
             <EmptyTitle>Agent is disabled</EmptyTitle>
             <EmptyDescription>
@@ -1260,7 +1272,7 @@ details: ${errorDetails || mainError}
           </EmptyHeader>
         </Empty>
       ) : !isChatMessagesLoaded ? (
-        <Empty className="h-full rounded-none p-6">
+        <Empty className="h-full p-6">
           <EmptyHeader>
             <EmptyTitle>
               {chatMessageLoadState === "error"

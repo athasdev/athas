@@ -103,6 +103,7 @@ export interface MarkdownRendererProps {
 }
 
 export interface AIChatInputBarProps {
+  chatId?: string | null;
   surfaceId: string;
   buffers: PaneContent[];
   allProjectFiles: FileEntry[];

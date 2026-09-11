@@ -48,6 +48,7 @@ import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ContextSelector } from "../selectors/context-selector";
 
 const AIChatInputBar = memo(function AIChatInputBar({
+  chatId,
   buffers,
   allProjectFiles,
   surfaceId,
@@ -130,8 +131,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const hasApiKey = useAIChatStore((state) => state.hasApiKey);
   const sessionConfigOptions = useAIChatStore((state) => state.sessionConfigOptions);
-  const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
-  const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
+  const session = useAIChatStore((state) => state.chats.find((chat) => chat.id === chatId));
+  const defaultProviderId = useSettingsStore((state) => state.settings.aiProviderId);
+  const defaultModelId = useSettingsStore((state) => state.settings.aiModelId);
+  const aiProviderId = session?.providerId ?? defaultProviderId;
+  const aiModelId = session?.modelId ?? defaultModelId;
   const aiCustomModelId = useSettingsStore((state) => state.settings.aiCustomModelId);
   const aiAutocompleteCustomModelId = useSettingsStore(
     (state) => state.settings.aiAutocompleteCustomModelId,
@@ -152,25 +156,27 @@ const AIChatInputBar = memo(function AIChatInputBar({
     (nextProviderId: string) => {
       const provider = getProviderById(nextProviderId);
       void updateSetting("aiProviderId", nextProviderId);
-      if (nextProviderId === "custom") {
-        void updateSetting("aiModelId", aiCustomModelId || aiAutocompleteCustomModelId);
-        return;
-      }
-      if (provider && provider.models.length > 0) {
-        void updateSetting("aiModelId", provider.models[0].id);
-      }
+      const nextModelId =
+        nextProviderId === "custom"
+          ? aiCustomModelId || aiAutocompleteCustomModelId
+          : provider?.models[0]?.id || "";
+      void updateSetting("aiModelId", nextModelId);
+      if (chatId)
+        useAIChatStore.getState().actions.setChatModel(chatId, nextProviderId, nextModelId);
     },
-    [aiAutocompleteCustomModelId, aiCustomModelId, updateSetting],
+    [aiAutocompleteCustomModelId, aiCustomModelId, chatId, updateSetting],
   );
 
   const handleAthasModelChange = useCallback(
-    (nextModelId: string) => {
-      if (aiProviderId === "custom") {
+    (nextModelId: string, nextProviderId = aiProviderId) => {
+      if (nextProviderId === "custom") {
         void updateSetting("aiCustomModelId", nextModelId);
       }
       void updateSetting("aiModelId", nextModelId);
+      if (chatId)
+        useAIChatStore.getState().actions.setChatModel(chatId, nextProviderId, nextModelId);
     },
-    [aiProviderId, updateSetting],
+    [aiProviderId, chatId, updateSetting],
   );
 
   const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
@@ -1042,23 +1048,77 @@ const AIChatInputBar = memo(function AIChatInputBar({
           }}
         />
 
-        <ComposerEditable
-          ref={inputRef}
-          data-ai-element="prompt-input-editable"
-          enabled={isInputEnabled}
-          contentEditable={isInputEnabled}
-          onInput={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onMouseDown={handleEditableMouseDown}
-          onFocus={() => setIsComposerFocused(true)}
-          onBlur={() => setIsComposerFocused(false)}
-          onPaste={handlePaste}
-          data-placeholder={inputPlaceholder}
-          role="textbox"
-          aria-multiline
-          aria-label="Message input"
-          tabIndex={isInputEnabled ? 0 : -1}
-        />
+        <div className="flex min-w-0 items-end gap-1">
+          <ComposerEditable
+            ref={inputRef}
+            data-ai-element="prompt-input-editable"
+            enabled={isInputEnabled}
+            contentEditable={isInputEnabled}
+            onInput={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onMouseDown={handleEditableMouseDown}
+            onFocus={() => setIsComposerFocused(true)}
+            onBlur={() => setIsComposerFocused(false)}
+            onPaste={handlePaste}
+            data-placeholder={inputPlaceholder}
+            role="textbox"
+            aria-multiline
+            aria-label="Message input"
+            tabIndex={isInputEnabled ? 0 : -1}
+            className="min-w-0 flex-1 pr-0"
+          />
+          <div className="flex shrink-0 items-center gap-1 pr-2 pb-2">
+            {isStreaming ? (
+              <ButtonGroup variant="ghost">
+                <Button
+                  type="button"
+                  disabled={isSendDisabled}
+                  onClick={handleSendMessage}
+                  variant="accent"
+                  tooltip="Send after current response"
+                  shortcut="enter"
+                  iconOnly
+                >
+                  <ArrowUpIcon />
+                </Button>
+                <ButtonGroupSeparator />
+                <Button
+                  type="button"
+                  disabled={isSendDisabled}
+                  onClick={handleInterruptAndSend}
+                  variant="accent-ghost"
+                  tooltip="Interrupt and send now"
+                  iconOnly
+                >
+                  <BoltIcon />
+                </Button>
+                <ButtonGroupSeparator />
+                <Button
+                  type="button"
+                  onClick={onStopStreaming}
+                  variant="danger"
+                  tooltip="Stop generation"
+                  shortcut="escape"
+                  iconOnly
+                >
+                  <StopIcon />
+                </Button>
+              </ButtonGroup>
+            ) : (
+              <Button
+                type="button"
+                disabled={isSendDisabled}
+                onClick={handleSendMessage}
+                variant="accent"
+                tooltip="Send message"
+                shortcut="enter"
+                iconOnly
+              >
+                <ArrowUpIcon />
+              </Button>
+            )}
+          </div>
+        </div>
       </Composer>
 
       <ComposerToolbar>
@@ -1185,56 +1245,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
           >
             <MicrophoneIcon className={cn(isListening && "animate-pulse")} />
           </Button>
-
-          {isStreaming ? (
-            <ButtonGroup variant="ghost">
-              <Button
-                type="button"
-                disabled={isSendDisabled}
-                onClick={handleSendMessage}
-                variant="accent"
-                tooltip="Send after current response"
-                shortcut="enter"
-                iconOnly
-              >
-                <ArrowUpIcon />
-              </Button>
-              <ButtonGroupSeparator />
-              <Button
-                type="button"
-                disabled={isSendDisabled}
-                onClick={handleInterruptAndSend}
-                variant="accent-ghost"
-                tooltip="Interrupt and send now"
-                iconOnly
-              >
-                <BoltIcon />
-              </Button>
-              <ButtonGroupSeparator />
-              <Button
-                type="button"
-                onClick={onStopStreaming}
-                variant="danger"
-                tooltip="Stop generation"
-                shortcut="escape"
-                iconOnly
-              >
-                <StopIcon />
-              </Button>
-            </ButtonGroup>
-          ) : (
-            <Button
-              type="button"
-              disabled={isSendDisabled}
-              onClick={handleSendMessage}
-              variant="accent"
-              tooltip="Send message"
-              shortcut="enter"
-              iconOnly
-            >
-              <ArrowUpIcon />
-            </Button>
-          )}
         </div>
       </ComposerToolbar>
 
