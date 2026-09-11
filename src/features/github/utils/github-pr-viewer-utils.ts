@@ -5,6 +5,8 @@ import type {
   FileDiff,
   FilePatchData,
 } from "../types/github-pr-viewer.types";
+import type { VariantProps } from "class-variance-authority";
+import { badgeVariants } from "@/ui/badge";
 import type { PullRequestDetails, PullRequestFile } from "../types/github.types";
 
 function inferFileStatus(additions: number, deletions: number): FileDiff["status"] {
@@ -199,6 +201,16 @@ export function normalizeCommit(raw: unknown, index: number): Commit | null {
 }
 
 export type PullRequestStatus = "open" | "draft" | "merged" | "closed";
+
+export const PR_STATUS_BADGE_VARIANT: Record<
+  PullRequestStatus,
+  VariantProps<typeof badgeVariants>["variant"]
+> = {
+  open: "success",
+  draft: "muted",
+  merged: "accent",
+  closed: "error",
+};
 
 export const PULL_REQUEST_STATUS_LABEL: Record<PullRequestStatus, string> = {
   open: "Open",

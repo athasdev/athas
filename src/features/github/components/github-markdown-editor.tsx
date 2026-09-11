@@ -27,6 +27,10 @@ interface GitHubMarkdownEditorProps {
   autoFocus?: boolean;
   minHeight?: number;
   disabled?: boolean;
+  /** Runs on Cmd+Enter or Ctrl+Enter. */
+  onSubmit?: () => void;
+  /** Runs on Escape. */
+  onCancel?: () => void;
 }
 
 export function GitHubMarkdownEditor({
@@ -36,6 +40,8 @@ export function GitHubMarkdownEditor({
   autoFocus = false,
   minHeight = 224,
   disabled = false,
+  onSubmit,
+  onCancel,
 }: GitHubMarkdownEditorProps) {
   const editorRef = useRef<MDXEditorMethods>(null);
   const currentValueRef = useRef(value);
@@ -96,6 +102,15 @@ export function GitHubMarkdownEditor({
       }
       aria-label="Markdown editor"
       aria-disabled={disabled}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && onSubmit) {
+          event.preventDefault();
+          onSubmit();
+        } else if (event.key === "Escape" && onCancel) {
+          event.preventDefault();
+          onCancel();
+        }
+      }}
     >
       {editorError ? (
         <div className="github-markdown-composer-error" role="alert">

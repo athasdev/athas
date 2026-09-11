@@ -884,9 +884,12 @@ fn pr_file_from_rest(file: RestPullRequestFile) -> PullRequestFile {
 
 fn pr_comment_from_rest(comment: RestComment) -> PullRequestComment {
    PullRequestComment {
+      id: comment.id.unwrap_or_default(),
       author: user_to_author(comment.user),
       body: comment.body.unwrap_or_default(),
       created_at: comment.created_at.unwrap_or_default(),
+      updated_at: comment.updated_at.unwrap_or_default(),
+      url: comment.html_url.unwrap_or_default(),
    }
 }
 

@@ -214,6 +214,8 @@ pub struct PullRequestFile {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PullRequestComment {
+   #[serde(default)]
+   pub id: i64,
    #[serde(default, deserialize_with = "deserialize_author_or_default")]
    pub author: PullRequestAuthor,
    #[serde(default, deserialize_with = "deserialize_string_or_default")]
@@ -221,6 +223,11 @@ pub struct PullRequestComment {
    #[serde(rename = "createdAt")]
    #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub created_at: String,
+   #[serde(rename = "updatedAt")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub updated_at: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -89,9 +89,12 @@ export interface PullRequestFile {
 }
 
 export interface PullRequestComment {
+  id: number;
   author: PullRequestAuthor;
   body: string;
   createdAt: string;
+  updatedAt: string;
+  url: string;
 }
 
 export interface IssueListItem {

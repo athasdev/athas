@@ -79,6 +79,10 @@ export function GitHubPRInlineAction({
           autoFocus
           minHeight={160}
           disabled={isSubmitting}
+          onSubmit={() => {
+            if (canSubmit) void onSubmit(body, method);
+          }}
+          onCancel={onCancel}
         />
       )}
       <div className="flex justify-end gap-2">
@@ -90,6 +94,7 @@ export function GitHubPRInlineAction({
           variant="accent"
           onClick={() => void onSubmit(body, method)}
           disabled={!canSubmit}
+          shortcut="mod+enter"
         >
           {isSubmitting ? <Spinner label="Working" compact /> : null}
           {copy.submitLabel}

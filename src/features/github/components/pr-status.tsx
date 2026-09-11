@@ -183,68 +183,62 @@ export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CISt
 CIStatusIndicator.displayName = "CIStatusIndicator";
 
 // Merge Status Badge
-interface MergeStatusProps {
+export interface MergeStatusProps {
   status: PullRequestStatus;
   mergeStateStatus: string | null;
   mergeable: string | null;
   reviewDecision: string | null;
 }
 
-interface MergeStatusInfo {
+export interface MergeStatusInfo {
   text: string;
   variant: BadgeVariant;
   icon: typeof WarningCircleIcon;
+  /** The pull request can be merged right now. */
+  ready: boolean;
 }
 
-function getMergeStatusInfo({
+export function getMergeStatusInfo({
   status,
   mergeStateStatus,
   mergeable,
   reviewDecision,
 }: MergeStatusProps): MergeStatusInfo {
-  if (status === "merged") return { text: "Merged", variant: "accent", icon: GitMergeIcon };
-  if (status === "closed") {
-    return { text: "Closed without merging", variant: "muted", icon: XCircleIcon };
-  }
+  const blocked = (text: string, variant: BadgeVariant, icon: typeof WarningCircleIcon) => ({
+    text,
+    variant,
+    icon,
+    ready: false,
+  });
+  if (status === "merged") return blocked("Merged", "accent", GitMergeIcon);
+  if (status === "closed") return blocked("Closed without merging", "muted", XCircleIcon);
 
   const mergeState = (mergeStateStatus ?? "").toLowerCase();
   const hasConflicts =
     mergeable === "false" || mergeable === "CONFLICTING" || mergeState === "dirty";
-  if (hasConflicts) return { text: "Has conflicts", variant: "error", icon: WarningCircleIcon };
-  if (status === "draft") return { text: "Draft", variant: "muted", icon: CircleDotIcon };
+  if (hasConflicts) return blocked("Has conflicts", "error", WarningCircleIcon);
+  if (status === "draft") return blocked("Draft", "muted", CircleDotIcon);
 
   switch (mergeState) {
     case "blocked":
       if (reviewDecision === "CHANGES_REQUESTED") {
-        return { text: "Changes requested", variant: "error", icon: WarningCircleIcon };
+        return blocked("Changes requested", "error", WarningCircleIcon);
       }
       if (!reviewDecision || reviewDecision === "REVIEW_REQUIRED") {
-        return { text: "Review required", variant: "warning", icon: WarningCircleIcon };
+        return blocked("Review required", "warning", WarningCircleIcon);
       }
-      return { text: "Blocked by checks", variant: "warning", icon: WarningCircleIcon };
+      return blocked("Blocked by checks", "warning", WarningCircleIcon);
     case "behind":
-      return { text: "Behind base branch", variant: "warning", icon: WarningCircleIcon };
+      return blocked("Behind base branch", "warning", WarningCircleIcon);
     case "unstable":
-      return { text: "Mergeable, checks failing", variant: "warning", icon: WarningCircleIcon };
+      return { text: "Merge", variant: "warning", icon: GitMergeIcon, ready: true };
     case "clean":
     case "has_hooks":
-      return { text: "Ready to merge", variant: "success", icon: GitMergeIcon };
+      return { text: "Merge", variant: "success", icon: GitMergeIcon, ready: true };
     default:
-      return { text: "Checking mergeability", variant: "muted", icon: ClockIcon };
+      return blocked("Checking mergeability", "muted", ClockIcon);
   }
 }
-
-export const MergeStatusBadge = memo((props: MergeStatusProps) => {
-  const { text, variant, icon: Icon } = getMergeStatusInfo(props);
-  return (
-    <Badge variant={variant}>
-      <Icon />
-      <span>{text}</span>
-    </Badge>
-  );
-});
-
-MergeStatusBadge.displayName = "MergeStatusBadge";
 
 // Linked Issues
 interface LinkedIssuesProps {

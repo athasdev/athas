@@ -16,20 +16,28 @@ function ResourceRail({ children }: { children: ReactNode }) {
   return <div className="mx-auto w-full min-w-0 max-w-6xl">{children}</div>;
 }
 
+function ResourceBands({ summary, tabs }: Pick<ResourceShellProps, "summary" | "tabs">) {
+  return (
+    <>
+      {summary ? (
+        <div className="shrink-0 px-4 pt-5 pb-3 sm:px-6">
+          <ResourceRail>{summary}</ResourceRail>
+        </div>
+      ) : null}
+      {tabs ? (
+        <div className="sticky top-0 z-20 shrink-0 border-border/60 border-b bg-background/92 px-4 backdrop-blur-xl sm:px-6">
+          <ResourceRail>{tabs}</ResourceRail>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 export function ResourceDocument({ summary, tabs, children }: ResourceShellProps) {
   return (
     <ScrollArea className="@container/resource h-full bg-background" data-slot="resource-document">
       <div className="flex min-h-full flex-col">
-        {summary ? (
-          <div className="border-border/60 border-b px-4 py-5 sm:px-6">
-            <ResourceRail>{summary}</ResourceRail>
-          </div>
-        ) : null}
-        {tabs ? (
-          <div className="sticky top-0 z-20 border-border/60 border-b bg-background/92 px-4 backdrop-blur-xl sm:px-6">
-            <ResourceRail>{tabs}</ResourceRail>
-          </div>
-        ) : null}
+        <ResourceBands summary={summary} tabs={tabs} />
         <div className="px-4 pt-6 pb-8 sm:px-6">
           <ResourceRail>{children}</ResourceRail>
         </div>
@@ -44,12 +52,20 @@ export function ResourceWorkspace({ summary, tabs, children }: ResourceShellProp
       className="@container/resource flex h-full min-h-0 flex-col overflow-hidden bg-background"
       data-slot="resource-workspace"
     >
-      {summary ? (
-        <div className="shrink-0 border-border/60 border-b px-4 py-5 sm:px-6">{summary}</div>
-      ) : null}
-      {tabs ? <div className="shrink-0 border-border/60 border-b px-4 sm:px-6">{tabs}</div> : null}
+      <ResourceBands summary={summary} tabs={tabs} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
     </div>
+  );
+}
+
+/** Scrolling, padded content on the shared rail, for use inside a workspace. */
+export function ResourceContent({ children }: { children: ReactNode }) {
+  return (
+    <ScrollArea className="h-full" data-slot="resource-content">
+      <div className="px-4 pt-6 pb-8 sm:px-6">
+        <ResourceRail>{children}</ResourceRail>
+      </div>
+    </ScrollArea>
   );
 }
 

@@ -168,6 +168,8 @@ export function GitHubInlineMarkdown({
         minHeight={220}
         autoFocus
         disabled={isSaving}
+        onSubmit={() => void save()}
+        onCancel={() => setIsEditing(false)}
       />
       <div className="flex justify-end gap-2">
         <Button

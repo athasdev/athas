@@ -8,11 +8,11 @@ import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
 import { DropdownMenuItem } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
-import Badge, { badgeVariants } from "@/ui/badge";
-import type { VariantProps } from "class-variance-authority";
+import Badge from "@/ui/badge";
 import { GitMergeIcon, GitPullRequestIcon } from "@/ui/icons";
 import {
   ResourceActionsMenu,
+  ResourceContent,
   ResourceDocument,
   ResourceSidebarLayout,
   ResourceSummary,
@@ -31,8 +31,8 @@ import {
   extractFilePatch,
   getPullRequestStatus,
   normalizeCommit,
+  PR_STATUS_BADGE_VARIANT,
   PULL_REQUEST_STATUS_LABEL,
-  type PullRequestStatus,
   resolveSafeRepoFilePath,
   toFileDiffFromMetadata,
 } from "../utils/github-pr-viewer-utils";
@@ -41,6 +41,7 @@ import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { useGitHubStore } from "../stores/github.store";
 import { PRTimeline } from "./pr-timeline";
 import { PRFilesPanel } from "./pr-files-panel";
+import { getMergeStatusInfo } from "./pr-status";
 import { GitHubPRTabs } from "./github-pr-tabs";
 import {
   GitHubPRBodySkeleton,
@@ -53,25 +54,7 @@ import {
   type GitHubPRInlineActionKind,
   type GitHubPRMergeMethod,
 } from "./github-pr-inline-action";
-import { GitHubInlineTitle } from "./github-inline-editors";
 import { GitHubBranchChip, GitHubMetaChip, GitHubUserChip } from "./github-chips";
-
-const PR_STATUS_BADGE_VARIANT: Record<
-  PullRequestStatus,
-  VariantProps<typeof badgeVariants>["variant"]
-> = {
-  open: "success",
-  draft: "muted",
-  merged: "accent",
-  closed: "error",
-};
-
-const PR_STATUS_ICON_CLASS: Record<PullRequestStatus, string> = {
-  open: "text-success",
-  draft: "text-subtle-foreground",
-  merged: "text-primary",
-  closed: "text-destructive",
-};
 
 interface GitHubPRViewerProps {
   prNumber: number;
@@ -431,6 +414,42 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     }
   }, [commentDraft, mutationKey, prNumber, refreshPR, repoPath]);
 
+  const editComment = useCallback(
+    async (commentId: number, body: string) => {
+      if (!repoPath || mutationKey) return false;
+      setMutationKey(`comment-${commentId}`);
+      try {
+        await invoke("github_update_issue_comment", { repoPath, commentId, body });
+        await refreshPR("comments");
+        toast.success("Comment updated");
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not update the comment");
+        return false;
+      } finally {
+        setMutationKey(null);
+      }
+    },
+    [mutationKey, refreshPR, repoPath],
+  );
+
+  const deleteComment = useCallback(
+    async (commentId: number) => {
+      if (!repoPath || mutationKey) return;
+      setMutationKey(`comment-${commentId}`);
+      try {
+        await invoke("github_delete_issue_comment", { repoPath, commentId });
+        await refreshPR("comments");
+        toast.success("Comment deleted");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not delete the comment");
+      } finally {
+        setMutationKey(null);
+      }
+    },
+    [mutationKey, refreshPR, repoPath],
+  );
+
   const submitInlineAction = useCallback(
     async (body: string, method: GitHubPRMergeMethod) => {
       if (!repoPath || !inlineAction || mutationKey) return;
@@ -581,26 +600,28 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
         : "No checks reported";
   const repositoryUrl = pr.url.replace(/\/pull\/\d+$/, "");
 
-  const tabs = (
-    <GitHubPRTabs
-      activeView={activeTab}
-      commits={commits}
-      repoPath={repoPath ?? undefined}
-      additions={pr.additions}
-      deletions={pr.deletions}
-      onShowOverview={handleShowOverview}
-      onShowChanges={handleShowFiles}
-    />
-  );
-
   const isClosed = status === "closed" || status === "merged";
-  const canMerge = status === "open" && pr.mergeable !== "CONFLICTING" && pr.mergeable !== "false";
+  const mergeStatus = getMergeStatusInfo({
+    status,
+    mergeStateStatus: pr.mergeStateStatus,
+    mergeable: pr.mergeable,
+    reviewDecision: pr.reviewDecision,
+  });
+  const MergeStatusIcon = mergeStatus.icon;
   const actions = (
     <>
-      <Button onClick={() => openInlineAction("merge")} disabled={!canMerge} variant="solid">
-        <GitMergeIcon />
-        Merge
-      </Button>
+      <Badge variant={PR_STATUS_BADGE_VARIANT[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
+      {mergeStatus.ready ? (
+        <Button onClick={() => openInlineAction("merge")} variant="solid">
+          <GitMergeIcon />
+          Merge
+        </Button>
+      ) : (
+        <Button variant="default" disabled tooltip={mergeStatus.text}>
+          <MergeStatusIcon />
+          {mergeStatus.text}
+        </Button>
+      )}
       <ResourceActionsMenu label="Pull request actions">
         <DropdownMenuItem onClick={() => void handleCheckout()}>Checkout branch</DropdownMenuItem>
         <DropdownMenuItem disabled={isClosed} onClick={() => openInlineAction("approve")}>
@@ -623,47 +644,44 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   );
 
   const summary = (
-    <ResourceSummary
-      icon={<GitPullRequestIcon className={PR_STATUS_ICON_CLASS[status]} />}
-      title={<GitHubInlineTitle value={pr.title} onSave={(title) => updatePR({ title })} />}
-      badges={
-        <Badge variant={PR_STATUS_BADGE_VARIANT[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
-      }
-      actions={actions}
-      meta={
-        <>
-          <GitHubMetaChip title="Pull request number">{`#${pr.number}`}</GitHubMetaChip>
-          <GitHubUserChip
-            login={pr.author.login}
-            avatarUrl={pr.author.avatarUrl}
-            className="text-foreground"
-            avatarSize="sm"
-          />
-          <GitHubMetaChip title={new Date(pr.createdAt).toLocaleString()}>
-            {`Opened ${getTimeAgo(pr.createdAt)}`}
-          </GitHubMetaChip>
-          <GitHubMetaChip title={new Date(pr.updatedAt).toLocaleString()}>
-            {`Updated ${getTimeAgo(pr.updatedAt)}`}
-          </GitHubMetaChip>
-          {isRefreshingDetails ? <Spinner label="Refreshing" compact /> : null}
-          <span className="flex min-w-0 items-center gap-1">
-            <GitHubBranchChip
-              name={pr.headRef}
-              repositoryUrl={repositoryUrl}
-              className="max-w-64"
-            />
-            <span aria-hidden="true" className="text-subtle-foreground">
-              →
-            </span>
-            <GitHubBranchChip
-              name={pr.baseRef}
-              repositoryUrl={repositoryUrl}
-              className="max-w-64"
-            />
-          </span>
-        </>
-      }
-    />
+    <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+      <GitHubMetaChip title="Pull request number">{`#${pr.number}`}</GitHubMetaChip>
+      <GitHubUserChip
+        login={pr.author.login}
+        avatarUrl={pr.author.avatarUrl}
+        className="text-foreground"
+        avatarSize="sm"
+      />
+      <GitHubMetaChip title={new Date(pr.createdAt).toLocaleString()}>
+        {`Opened ${getTimeAgo(pr.createdAt)}`}
+      </GitHubMetaChip>
+      <GitHubMetaChip title={new Date(pr.updatedAt).toLocaleString()}>
+        {`Updated ${getTimeAgo(pr.updatedAt)}`}
+      </GitHubMetaChip>
+      {isRefreshingDetails ? <Spinner label="Refreshing" compact /> : null}
+      <span className="flex min-w-0 items-center gap-1">
+        <GitHubBranchChip name={pr.headRef} repositoryUrl={repositoryUrl} className="max-w-64" />
+        <span aria-hidden="true" className="text-subtle-foreground">
+          →
+        </span>
+        <GitHubBranchChip name={pr.baseRef} repositoryUrl={repositoryUrl} className="max-w-64" />
+      </span>
+    </div>
+  );
+
+  const tabs = (
+    <div className="flex min-w-0 items-center justify-between gap-3">
+      <GitHubPRTabs
+        activeView={activeTab}
+        commits={commits}
+        repoPath={repoPath ?? undefined}
+        additions={pr.additions}
+        deletions={pr.deletions}
+        onShowOverview={handleShowOverview}
+        onShowChanges={handleShowFiles}
+      />
+      <div className="flex shrink-0 items-center gap-1.5">{actions}</div>
+    </div>
   );
 
   const errorState = detailsError ? (
@@ -676,11 +694,11 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     />
   ) : null;
 
-  if (activeTab === "files") {
-    return (
-      <ResourceWorkspace summary={summary} tabs={tabs}>
-        {errorState}
+  return (
+    <ResourceWorkspace summary={summary} tabs={tabs}>
+      {activeTab === "files" ? (
         <div className="min-h-0 min-w-0 flex-1">
+          {errorState}
           <PRFilesPanel
             selectedPRDiff={selectedPRDiff}
             isLoadingContent={isLoadingContent}
@@ -695,55 +713,59 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
             onOpenChangedFile={handleOpenChangedFile}
           />
         </div>
-      </ResourceWorkspace>
-    );
-  }
-
-  return (
-    <ResourceDocument summary={summary} tabs={tabs}>
-      {errorState}
-      <ResourceSidebarLayout
-        sidebar={
-          <GitHubPRSidebar
-            pr={pr}
-            status={status}
-            checksSummary={checksSummary}
-            availableLabels={availableLabels}
-            onLabelsChange={(nextLabels) => void updatePR({ labels: nextLabels })}
-            onAssigneesChange={(assignees) => void updatePR({ assignees })}
-            repoPath={repoPath ?? undefined}
-            repositoryUrl={repositoryUrl}
-          />
-        }
-      >
-        <PRTimeline
-          pr={pr}
-          commits={commits}
-          comments={selectedPRComments}
-          repositoryUrl={repositoryUrl}
-          repoPath={repoPath ?? undefined}
-          currentUser={currentUser}
-          isLoadingContent={isLoadingContent}
-          contentError={contentError}
-          onRetry={handleRefresh}
-          onBodySave={(body) => updatePR({ body })}
-          commentDraft={commentDraft}
-          onCommentDraftChange={setCommentDraft}
-          onSubmitComment={() => void submitComment()}
-          isSubmittingComment={mutationKey === "comment"}
-          composerRef={composerRef}
-        >
-          {inlineAction ? (
-            <GitHubPRInlineAction
-              kind={inlineAction}
-              isSubmitting={mutationKey === inlineAction}
-              onCancel={() => setInlineAction(null)}
-              onSubmit={submitInlineAction}
-            />
-          ) : null}
-        </PRTimeline>
-      </ResourceSidebarLayout>
-    </ResourceDocument>
+      ) : (
+        <ResourceContent>
+          {errorState}
+          <ResourceSidebarLayout
+            sidebar={
+              <GitHubPRSidebar
+                pr={pr}
+                checksSummary={checksSummary}
+                availableLabels={availableLabels}
+                onLabelsChange={(nextLabels) => void updatePR({ labels: nextLabels })}
+                onAssigneesChange={(assignees) => void updatePR({ assignees })}
+                repoPath={repoPath ?? undefined}
+                repositoryUrl={repositoryUrl}
+              />
+            }
+          >
+            <PRTimeline
+              pr={pr}
+              commits={commits}
+              comments={selectedPRComments}
+              repositoryUrl={repositoryUrl}
+              repoPath={repoPath ?? undefined}
+              currentUser={currentUser}
+              isLoadingContent={isLoadingContent}
+              contentError={contentError}
+              onRetry={handleRefresh}
+              onBodySave={(body) => updatePR({ body })}
+              commentDraft={commentDraft}
+              onCommentDraftChange={setCommentDraft}
+              onSubmitComment={() => void submitComment()}
+              isSubmittingComment={mutationKey === "comment"}
+              onEditComment={editComment}
+              onDeleteComment={deleteComment}
+              busyCommentId={
+                mutationKey?.startsWith("comment-")
+                  ? Number(mutationKey.slice("comment-".length))
+                  : null
+              }
+              composerRef={composerRef}
+            >
+              {inlineAction ? (
+                <GitHubPRInlineAction
+                  kind={inlineAction}
+                  isSubmitting={mutationKey === inlineAction}
+                  onCancel={() => setInlineAction(null)}
+                  onSubmit={submitInlineAction}
+                />
+              ) : null}
+            </PRTimeline>
+          </ResourceSidebarLayout>
+        </ResourceContent>
+      )}
+    </ResourceWorkspace>
   );
 });
 

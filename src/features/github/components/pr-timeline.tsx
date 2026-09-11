@@ -1,6 +1,5 @@
 import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
-import { Button } from "@/ui/button";
 import {
   ChatBubbleTextIcon,
   CheckCircleIcon,
@@ -21,10 +20,9 @@ import type {
 } from "../types/github.types";
 import { getTimeAgo } from "../utils/github-viewer-utils";
 import { CommentItem } from "./comment-item";
-import { GitHubAvatar } from "./github-avatar";
-import { GitHubMetaChip, GitHubUserChip } from "./github-chips";
+import { GitHubUserChip } from "./github-chips";
 import { GitHubInlineMarkdown } from "./github-inline-editors";
-import { GitHubMarkdownEditor } from "./github-markdown-editor";
+import { GitHubCommentComposer } from "./github-comment-composer";
 
 type TimelineEvent =
   | { kind: "opened"; at: string; pr: PullRequestDetails; commitCount: number }
@@ -49,6 +47,9 @@ interface PRTimelineProps {
   onCommentDraftChange: (value: string) => void;
   onSubmitComment: () => void;
   isSubmittingComment: boolean;
+  onEditComment: (commentId: number, body: string) => Promise<boolean>;
+  onDeleteComment: (commentId: number) => Promise<void>;
+  busyCommentId: number | null;
   composerRef?: RefObject<HTMLDivElement | null>;
   children?: ReactNode;
 }
@@ -102,12 +103,19 @@ function EventTime({ at }: { at: string }) {
 function EventRow({
   icon,
   tone = "text-subtle-foreground",
+  onClick,
+  label,
   children,
 }: {
   icon: ReactNode;
   tone?: string;
+  /** Makes the whole row a button. */
+  onClick?: () => void;
+  label?: string;
   children: ReactNode;
 }) {
+  const contentClassName =
+    "flex min-h-6 min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5 font-sans ui-text-sm leading-6 text-subtle-foreground";
   return (
     <div className="flex min-w-0 items-start gap-3">
       <span
@@ -115,9 +123,18 @@ function EventRow({
       >
         {icon}
       </span>
-      <div className="flex min-h-6 min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5 font-sans ui-text-sm leading-6 text-subtle-foreground">
-        {children}
-      </div>
+      {onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={label}
+          className={`${contentClassName} -mx-1.5 -my-0.5 rounded-chrome px-1.5 py-0.5 text-left transition-colors duration-fast hover:bg-accent/60 focus-visible:bg-accent/60 focus-visible:outline-none`}
+        >
+          {children}
+        </button>
+      ) : (
+        <div className={contentClassName}>{children}</div>
+      )}
     </div>
   );
 }
@@ -158,6 +175,9 @@ export function PRTimeline({
   onCommentDraftChange,
   onSubmitComment,
   isSubmittingComment,
+  onEditComment,
+  onDeleteComment,
+  busyCommentId,
   composerRef,
   children,
 }: PRTimelineProps) {
@@ -201,16 +221,14 @@ export function PRTimeline({
         );
       case "commit":
         return (
-          <EventRow icon={<GitCommitIcon />}>
+          <EventRow
+            icon={<GitCommitIcon />}
+            onClick={() => void openCommit(event.commit)}
+            label={`Open commit ${event.commit.oid.slice(0, 7)}`}
+          >
             <span className="text-foreground">{getCommitAuthor(event.commit)}</span>
             <span>committed</span>
-            <GitHubMetaChip
-              mono
-              title={`Open commit ${event.commit.oid.slice(0, 7)}`}
-              onClick={() => void openCommit(event.commit)}
-            >
-              {event.commit.oid.slice(0, 7)}
-            </GitHubMetaChip>
+            <span className="font-mono">{event.commit.oid.slice(0, 7)}</span>
             <span className="min-w-0 truncate text-foreground">{event.commit.messageHeadline}</span>
             <EventTime at={event.at} />
           </EventRow>
@@ -251,6 +269,13 @@ export function PRTimeline({
                 comment={event.comment}
                 repositoryUrl={repositoryUrl}
                 repoPath={repoPath}
+                canManage={
+                  Boolean(currentUser) &&
+                  currentUser?.toLowerCase() === event.comment.author.login.toLowerCase()
+                }
+                isBusy={busyCommentId === event.comment.id}
+                onEdit={(body) => onEditComment(event.comment.id, body)}
+                onDelete={() => onDeleteComment(event.comment.id)}
               />
             </div>
           </div>
@@ -340,34 +365,14 @@ export function PRTimeline({
 
           {children}
 
-          <div
-            ref={composerRef}
-            className="flex items-start gap-3 rounded-lg border border-border/70 bg-surface/35 p-3"
-          >
-            {currentUser ? (
-              <GitHubAvatar login={currentUser} displaySize="md" className="mt-1 shrink-0" />
-            ) : null}
-            <div className="min-w-0 flex-1 space-y-3">
-              <GitHubMarkdownEditor
-                value={commentDraft}
-                onChange={onCommentDraftChange}
-                placeholder="Leave a comment..."
-                minHeight={120}
-                disabled={isSubmittingComment}
-              />
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  variant="accent"
-                  disabled={!commentDraft.trim() || isSubmittingComment}
-                  onClick={onSubmitComment}
-                >
-                  {isSubmittingComment ? <Spinner label="Commenting" compact /> : null}
-                  Comment
-                </Button>
-              </div>
-            </div>
-          </div>
+          <GitHubCommentComposer
+            value={commentDraft}
+            onChange={onCommentDraftChange}
+            onSubmit={onSubmitComment}
+            isSubmitting={isSubmittingComment}
+            currentUser={currentUser}
+            containerRef={composerRef}
+          />
         </div>
       </ResourceSection>
     </div>

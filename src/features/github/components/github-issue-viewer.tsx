@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  ChatBubbleTextIcon,
   CheckCircleIcon,
   CircleDotIcon,
   LockIcon,
@@ -47,7 +46,7 @@ import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { CommentItem } from "./comment-item";
 import { GitHubInlineMarkdown, GitHubInlineTitle } from "./github-inline-editors";
 import { GitHubMetaChip, GitHubUserChip } from "./github-chips";
-import { GitHubMarkdownEditor } from "./github-markdown-editor";
+import { GitHubCommentComposer } from "./github-comment-composer";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 import { LabelBadges } from "./pr-status";
 
@@ -721,34 +720,17 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                     />
                   </div>
                 ) : null}
-                <div className="space-y-3 pt-2">
-                  <GitHubMarkdownEditor
-                    value={commentBody}
-                    onChange={setCommentBody}
-                    placeholder={
-                      details.locked ? "This conversation is locked" : "Leave a comment..."
-                    }
-                    minHeight={150}
-                    disabled={details.locked || Boolean(mutationKey)}
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="accent"
-                      disabled={
-                        details.locked || !commentBody.trim() || mutationKey === "new-comment"
-                      }
-                      onClick={() => void addComment()}
-                    >
-                      {mutationKey === "new-comment" ? (
-                        <Spinner label="Commenting" compact />
-                      ) : (
-                        <ChatBubbleTextIcon />
-                      )}
-                      Comment
-                    </Button>
-                  </div>
-                </div>
+                <GitHubCommentComposer
+                  value={commentBody}
+                  onChange={setCommentBody}
+                  onSubmit={() => void addComment()}
+                  isSubmitting={mutationKey === "new-comment"}
+                  disabled={details.locked || Boolean(mutationKey)}
+                  placeholder={
+                    details.locked ? "This conversation is locked" : "Leave a comment..."
+                  }
+                  currentUser={currentUser}
+                />
               </div>
             </ResourceSection>
           </div>

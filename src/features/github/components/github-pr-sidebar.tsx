@@ -3,14 +3,12 @@ import Badge from "@/ui/badge";
 import { ChatBubbleTextIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@/ui/icons";
 import { ResourceSection } from "@/ui/resource";
 import type { Label, PullRequestDetails } from "../types/github.types";
-import type { PullRequestStatus } from "../utils/github-pr-viewer-utils";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 import { GitHubUserChip } from "./github-chips";
-import { CIStatusIndicator, LabelBadges, LinkedIssuesList, MergeStatusBadge } from "./pr-status";
+import { CIStatusIndicator, LabelBadges, LinkedIssuesList } from "./pr-status";
 
 interface GitHubPRSidebarProps {
   pr: PullRequestDetails;
-  status: PullRequestStatus;
   checksSummary: string;
   availableLabels: Label[];
   onLabelsChange: (labels: Label[]) => void;
@@ -72,7 +70,6 @@ function ReviewDecisionBadge({ decision }: { decision: string | null }) {
 
 export function GitHubPRSidebar({
   pr,
-  status,
   checksSummary,
   availableLabels,
   onLabelsChange,
@@ -96,15 +93,6 @@ export function GitHubPRSidebar({
 
   return (
     <>
-      <ResourceSection title="Merge">
-        <MergeStatusBadge
-          status={status}
-          mergeStateStatus={pr.mergeStateStatus}
-          mergeable={pr.mergeable}
-          reviewDecision={pr.reviewDecision}
-        />
-      </ResourceSection>
-
       <ResourceSection title="Review" action={<ReviewDecisionBadge decision={pr.reviewDecision} />}>
         {reviewers.length > 0 ? (
           <ul className="space-y-2">

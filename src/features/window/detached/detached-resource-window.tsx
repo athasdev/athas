@@ -4,6 +4,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   isResourceBuffer,
+  ResourceBufferBadge,
   ResourceBufferIcon,
   ResourceBufferView,
 } from "@/features/panes/components/resource-buffer-view";
@@ -65,6 +66,7 @@ export default function DetachedResourceWindow() {
           )
         ) : null
       }
+      actions={resource ? <ResourceBufferBadge buffer={resource} /> : null}
       error={error ?? (payload && !request ? "This window has no content to show." : null)}
     >
       {resource ? (

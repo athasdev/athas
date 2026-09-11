@@ -1,4 +1,11 @@
 import { lazy } from "react";
+import { useGitHubStore } from "@/features/github/stores/github.store";
+import {
+  getPullRequestStatus,
+  PR_STATUS_BADGE_VARIANT,
+  PULL_REQUEST_STATUS_LABEL,
+} from "@/features/github/utils/github-pr-viewer-utils";
+import Badge from "@/ui/badge";
 import type { OpenContentSpec, PaneContent } from "@/features/panes/types/pane-content.types";
 import {
   BoltIcon,
@@ -140,4 +147,14 @@ export function toResourceContentSpec(buffer: ResourceBuffer): OpenContentSpec |
         defaultHead: buffer.defaultHead,
       };
   }
+}
+
+/** Live status of the resource, for chrome that sits outside the viewer. */
+export function ResourceBufferBadge({ buffer }: { buffer: ResourceBuffer }) {
+  const pr = useGitHubStore((state) => state.selectedPRDetails);
+  if (buffer.type !== "pullRequest" || !pr || pr.number !== buffer.prNumber) return null;
+  const status = getPullRequestStatus(pr);
+  return (
+    <Badge variant={PR_STATUS_BADGE_VARIANT[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
+  );
 }
