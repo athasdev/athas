@@ -1,5 +1,7 @@
 use crate::{ToolConfig, ToolError, ToolRuntime, platform, runtime::AthasAppHandle as AppHandle};
-use athas_runtime::{RuntimeManager, RuntimeType, process::configure_background_command};
+use athas_runtime::{
+   NodeRuntime, RuntimeManager, RuntimeType, process::configure_background_command,
+};
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use serde_json::Value;
@@ -356,10 +358,6 @@ impl ToolInstaller {
       }
    }
 
-   fn npm_bin_name() -> &'static str {
-      if cfg!(windows) { "npm.cmd" } else { "npm" }
-   }
-
    fn node_bin_names(name: &str) -> Vec<String> {
       if cfg!(windows) {
          vec![
@@ -647,24 +645,8 @@ impl ToolInstaller {
       Ok(())
    }
 
-   async fn npm_path(app_handle: &AppHandle) -> Result<PathBuf, ToolError> {
-      let runtime_root = Self::get_runtime_root(app_handle)?;
-      let node_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Node)
-         .await
-         .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
-
-      if let Some(parent) = node_path.parent() {
-         let adjacent = parent.join(Self::npm_bin_name());
-         if adjacent.exists() {
-            return Ok(adjacent);
-         }
-      }
-
-      Ok(which::which(Self::npm_bin_name()).unwrap_or_else(|_| PathBuf::from(Self::npm_bin_name())))
-   }
-
    fn install_node_package(
-      package_manager_path: &Path,
+      runtime: (&Path, Option<&Path>),
       package_manager_name: &str,
       package_dir: &Path,
       package: &str,
@@ -679,7 +661,18 @@ impl ToolInstaller {
          package_dir
       );
 
+      let (package_manager_path, npm_cli) = runtime;
       let mut command = Command::new(package_manager_path);
+      if let Some(npm_cli) = npm_cli {
+         command.arg(npm_cli);
+      }
+      if let Some(bin_dir) = package_manager_path.parent() {
+         let mut paths = vec![bin_dir.to_path_buf()];
+         paths.extend(env::split_paths(&env::var_os("PATH").unwrap_or_default()));
+         let path =
+            env::join_paths(paths).map_err(|error| ToolError::ConfigError(error.to_string()))?;
+         command.env("PATH", path);
+      }
       let mut args = vec![install_command];
       let packages = Self::node_packages_to_install(package, companion_packages);
       args.extend(packages.iter().map(String::as_str));
@@ -723,9 +716,15 @@ impl ToolInstaller {
       command_name: &str,
       companion_packages: &[String],
    ) -> Result<PathBuf, ToolError> {
-      let npm_path = Self::npm_path(app_handle).await?;
+      let runtime_root = Self::get_runtime_root(app_handle)?;
+      let node = NodeRuntime::get_or_install_with_npm(Some(&runtime_root))
+         .await
+         .map_err(|error| ToolError::RuntimeNotAvailable(error.to_string()))?;
+      let npm_cli = node.npm_cli_path().ok_or_else(|| {
+         ToolError::RuntimeNotAvailable("The Node.js runtime is missing npm-cli.js".to_string())
+      })?;
       Self::install_node_package(
-         &npm_path,
+         (node.binary_path(), Some(&npm_cli)),
          "npm",
          package_dir,
          package,
@@ -1097,7 +1096,7 @@ impl ToolInstaller {
       let bun_result =
          match RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Bun).await {
             Ok(bun_path) => Self::install_node_package(
-               &bun_path,
+               (&bun_path, None),
                "Bun",
                &package_dir,
                package,
@@ -1142,11 +1141,6 @@ impl ToolInstaller {
       command_name: &str,
       companion_packages: &[String],
    ) -> Result<PathBuf, ToolError> {
-      let runtime_root = Self::get_runtime_root(app_handle)?;
-      let node_path = RuntimeManager::get_runtime(Some(&runtime_root), RuntimeType::Node)
-         .await
-         .map_err(|e| ToolError::RuntimeNotAvailable(e.to_string()))?;
-
       let tools_dir = Self::get_tools_dir(app_handle)?;
       let package_dir = tools_dir
          .join("npm")
@@ -1154,27 +1148,14 @@ impl ToolInstaller {
       std::fs::create_dir_all(&package_dir)?;
       Self::ensure_node_package_manifest(&package_dir)?;
 
-      let npm_path = if let Some(parent) = node_path.parent() {
-         let adjacent = parent.join(Self::npm_bin_name());
-         if adjacent.exists() {
-            adjacent
-         } else {
-            which::which(Self::npm_bin_name())
-               .unwrap_or_else(|_| PathBuf::from(Self::npm_bin_name()))
-         }
-      } else {
-         which::which(Self::npm_bin_name()).unwrap_or_else(|_| PathBuf::from(Self::npm_bin_name()))
-      };
-
-      Self::install_node_package(
-         &npm_path,
-         "npm",
+      Self::install_node_package_with_npm(
+         app_handle,
          &package_dir,
          package,
          command_name,
          companion_packages,
-         "install",
       )
+      .await
    }
 
    /// Install a package via pip (user)

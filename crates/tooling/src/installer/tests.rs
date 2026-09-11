@@ -429,3 +429,48 @@ fn installs_binary_archive_using_configured_command_name() {
    assert_eq!(installed, install_dir.join(command_name));
    assert!(install_dir.join("launch.sh").exists());
 }
+
+#[test]
+#[cfg(unix)]
+fn npm_install_uses_explicit_runtime_and_exposes_it_to_package_scripts() {
+   use std::os::unix::fs::PermissionsExt;
+   let root = tempfile::tempdir().unwrap();
+   let bin = root.path().join("managed runtime/bin");
+   let package_dir = root.path().join("package");
+   fs::create_dir_all(&bin).unwrap();
+   fs::create_dir_all(package_dir.join("node_modules/test-agent")).unwrap();
+   let node = bin.join("node");
+   let npm_cli = root.path().join("npm-cli.js");
+   fs::write(&npm_cli, "").unwrap();
+   fs::write(
+      &node,
+      r#"#!/bin/sh
+[ "$1" = "--from-package-script" ] && exit 0
+[ "$2" = "install" ] || exit 11
+[ "$3" = "test-agent@1.0.0" ] || exit 12
+[ -f "$1" ] || exit 13
+[ "$(command -v node)" = "$0" ] || exit 14
+node --from-package-script || exit 15
+"#,
+   )
+   .unwrap();
+   fs::set_permissions(&node, fs::Permissions::from_mode(0o755)).unwrap();
+   fs::write(
+      package_dir.join("node_modules/test-agent/package.json"),
+      r#"{"name":"test-agent","bin":{"test-agent":"cli.js"}}"#,
+   )
+   .unwrap();
+   let cli = package_dir.join("node_modules/test-agent/cli.js");
+   fs::write(&cli, "").unwrap();
+   let installed = ToolInstaller::install_node_package(
+      (&node, Some(&npm_cli)),
+      "npm",
+      &package_dir,
+      "test-agent@1.0.0",
+      "test-agent",
+      &[],
+      "install",
+   )
+   .unwrap();
+   assert_eq!(installed, cli);
+}

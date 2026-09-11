@@ -65,6 +65,24 @@ impl NodeRuntime {
       Self::download_and_install(managed_root).await
    }
 
+   pub async fn get_or_install_with_npm(managed_root: Option<&Path>) -> Result<Self, RuntimeError> {
+      let runtime = Self::get_or_install(managed_root).await?;
+      if runtime.npm_cli_path().is_some() {
+         return Ok(runtime);
+      }
+      let managed_dir = Self::get_managed_dir(managed_root)?;
+      if let Ok(managed) = Self::from_managed_path(&managed_dir)
+         && managed.npm_cli_path().is_some()
+      {
+         return Ok(managed);
+      }
+      Self::download_and_install(managed_root).await
+   }
+
+   pub fn npm_cli_path(&self) -> Option<PathBuf> {
+      npm_cli_for_node(&self.binary_path)
+   }
+
    /// Get runtime status without installing
    pub async fn get_status(managed_root: Option<&Path>) -> RuntimeStatus {
       // Check system first
@@ -155,5 +173,43 @@ impl NodeRuntime {
    /// Get the path to the Node.js binary
    pub fn binary_path(&self) -> &PathBuf {
       &self.binary_path
+   }
+}
+
+fn npm_cli_for_node(node: &Path) -> Option<PathBuf> {
+   let resolved = std::fs::canonicalize(node).unwrap_or_else(|_| node.to_path_buf());
+   let bin = resolved.parent()?;
+   [
+      bin.join("node_modules/npm/bin/npm-cli.js"),
+      bin.join("../lib/node_modules/npm/bin/npm-cli.js"),
+      bin.join("../share/nodejs/npm/bin/npm-cli.js"),
+   ]
+   .into_iter()
+   .find(|path| path.is_file())
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn finds_npm_in_unix_and_windows_node_distributions() {
+      for (node, npm) in [
+         ("bin/node", "lib/node_modules/npm/bin/npm-cli.js"),
+         ("node.exe", "node_modules/npm/bin/npm-cli.js"),
+      ] {
+         let root = tempfile::tempdir().unwrap();
+         let node = root.path().join(node);
+         let npm = root.path().join(npm);
+         std::fs::create_dir_all(node.parent().unwrap()).unwrap();
+         std::fs::create_dir_all(npm.parent().unwrap()).unwrap();
+         std::fs::write(&node, "").unwrap();
+         assert!(npm_cli_for_node(&node).is_none());
+         std::fs::write(&npm, "").unwrap();
+         assert_eq!(
+            std::fs::canonicalize(npm_cli_for_node(&node).unwrap()).unwrap(),
+            std::fs::canonicalize(npm).unwrap()
+         );
+      }
    }
 }
