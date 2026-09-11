@@ -711,6 +711,7 @@ dependencies = [
  "agent-client-protocol",
  "anyhow",
  "async-trait",
+ "athas-exec-path",
  "athas-terminal",
  "libc",
  "log",
@@ -755,6 +756,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "athas-exec-path"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "tempfile",
+ "which",
+]
+
+[[package]]
 name = "athas-extensions"
 version = "0.1.0"
 dependencies = [
@@ -784,6 +794,7 @@ dependencies = [
 name = "athas-github"
 version = "0.1.0"
 dependencies = [
+ "athas-exec-path",
  "git2",
  "log",
  "reqwest 0.12.28",

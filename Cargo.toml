@@ -11,6 +11,7 @@ members = [
   "crates/extensions",
   "crates/terminal",
   "crates/ai",
+  "crates/exec-path",
   "crates/github",
   "crates/fff-search",
   "crates/debugger",

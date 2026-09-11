@@ -1,12 +1,15 @@
 use super::types::AgentConfig;
-use crate::{executable_path::find_executable, runtime::AthasAppHandle as AppHandle};
+use crate::{
+   executable_path::{find_executable, probe_command},
+   runtime::AthasAppHandle as AppHandle,
+};
 use semver::Version;
 use std::{
    collections::HashMap,
    fs,
    path::{Path, PathBuf},
    process::Command,
-   time::Instant,
+   time::{Duration, Instant},
 };
 use tauri::Manager;
 
@@ -126,7 +129,7 @@ fn managed_agent_version(managed_bin_dir: Option<&Path>, agent_id: &str) -> Opti
 }
 
 fn detect_binary_version(path: &Path) -> Option<String> {
-   let output = Command::new(path).arg("--version").output().ok()?;
+   let output = probe_command(Command::new(path).arg("--version"), Duration::from_secs(2)).ok()?;
    let text = format!(
       "{} {}",
       String::from_utf8_lossy(&output.stdout),

@@ -921,13 +921,14 @@ fn reconcile_installation_status(
 }
 
 fn read_codex_version(binary: &Path) -> Option<String> {
-   std::process::Command::new(binary)
-      .arg("--version")
-      .output()
-      .ok()
-      .filter(|output| output.status.success())
-      .and_then(|output| String::from_utf8(output.stdout).ok())
-      .map(|version| version.trim().to_string())
+   crate::executable_path::probe_command(
+      std::process::Command::new(binary).arg("--version"),
+      std::time::Duration::from_secs(2),
+   )
+   .ok()
+   .filter(|output| output.status.success())
+   .and_then(|output| String::from_utf8(output.stdout).ok())
+   .map(|version| version.trim().to_string())
 }
 
 fn configure_background_process(command: &mut Command) {

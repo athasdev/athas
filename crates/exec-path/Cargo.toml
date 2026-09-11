@@ -1,0 +1,9 @@
+[package]
+name = "athas-exec-path"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+libc = "0.2"
+tempfile = "3"
+which = "7.0"

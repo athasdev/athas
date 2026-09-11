@@ -21,6 +21,7 @@ serde_json = "1.0"
 tauri = { version = "2", default-features = false, features = ["test"] }
 tokio = { version = "1.0", features = ["full"] }
 tokio-util = { version = "0.7", features = ["compat"] }
+athas-exec-path = { path = "../exec-path" }
 athas-terminal = { path = "../terminal", default-features = false }
 tempfile = "3"
 uuid = { version = "1.0", features = ["v4", "serde"] }
