@@ -3,16 +3,10 @@ import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 
-export type GitHubPRInlineActionKind = "comment" | "approve" | "request-changes" | "merge";
+export type GitHubPRInlineActionKind = "approve" | "request-changes" | "merge";
 export type GitHubPRMergeMethod = "merge" | "squash" | "rebase";
 
 const actionCopy = {
-  comment: {
-    title: "Add comment",
-    placeholder: "Write a comment...",
-    submitLabel: "Comment",
-    requiresBody: true,
-  },
   approve: {
     title: "Approve pull request",
     placeholder: "Optional review note...",

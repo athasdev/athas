@@ -26,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/ui/alert-dialog";
-import { ResourceContentSection } from "@/ui/resource";
+import { ResourceSection } from "@/ui/resource";
 import { Spinner } from "@/ui/spinner";
 import { writeClipboardText } from "@/utils/clipboard";
 import type { Release, ReleaseAsset } from "../types/github-delivery.types";
@@ -106,7 +106,7 @@ export function ReleaseAssets({
     if (url) void openUrl(url).catch((error) => toast.error(String(error)));
   };
   return (
-    <ResourceContentSection title={`Assets (${release.assets.length})`}>
+    <ResourceSection title={`Assets (${release.assets.length})`}>
       <div className="flex flex-wrap items-center gap-2">
         {release.assets.length > 5 && (
           <Input
@@ -242,6 +242,6 @@ export function ReleaseAssets({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </ResourceContentSection>
+    </ResourceSection>
   );
 }

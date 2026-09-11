@@ -1,92 +1,70 @@
 import type { ReactNode } from "react";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/ui/breadcrumb";
 import { Button } from "@/ui/button";
 import { ChromeBar, ChromeGroup, ChromeLabel } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { DotsIcon } from "@/ui/icons";
 import { ScrollArea } from "@/ui/scroll-area";
 import Tooltip from "@/ui/tooltip";
-import { cn } from "@/utils/cn";
 
-interface ResourceViewerProps {
+interface ResourceShellProps {
   header: ReactNode;
+  summary?: ReactNode;
   children: ReactNode;
-  className?: string;
-  contentClassName?: string;
-  scrollMode?: "content" | "workspace";
 }
 
-export function ResourceViewer({
-  header,
-  children,
-  className,
-  contentClassName,
-  scrollMode = "content",
-}: ResourceViewerProps) {
-  if (scrollMode === "workspace") {
-    return (
-      <div
-        className={cn(
-          "@container/resource-viewer flex h-full min-h-0 flex-col overflow-hidden bg-background",
-          className,
-        )}
-        data-resource-viewer-scroll-mode="workspace"
-      >
-        {header}
-        <div className={cn("min-h-0 min-w-0 flex-1", contentClassName)}>{children}</div>
-      </div>
-    );
-  }
-
+export function ResourceDocument({ header, summary, children }: ResourceShellProps) {
   return (
-    <ScrollArea
-      className={cn("@container/resource-viewer h-full bg-background", className)}
-      data-resource-viewer-scroll-mode="content"
-    >
+    <ScrollArea className="@container/resource h-full bg-background" data-slot="resource-document">
       <div className="flex min-h-full flex-col">
         {header}
-        <div className={cn("min-w-0 px-4 pb-8 sm:px-6", contentClassName)}>{children}</div>
+        {summary ? (
+          <div className="border-border/60 border-b px-4 py-3 sm:px-6">
+            <div className="mx-auto w-full max-w-6xl">{summary}</div>
+          </div>
+        ) : null}
+        <div className="mx-auto w-full min-w-0 max-w-6xl px-4 pt-6 pb-8 sm:px-6">{children}</div>
       </div>
     </ScrollArea>
   );
 }
 
-interface ResourceViewerHeaderProps {
-  title: ReactNode;
-  meta?: ReactNode;
-  leading?: ReactNode;
-  actions?: ReactNode;
-  children?: ReactNode;
-  className?: string;
+export function ResourceWorkspace({ header, summary, children }: ResourceShellProps) {
+  return (
+    <div
+      className="@container/resource flex h-full min-h-0 flex-col overflow-hidden bg-background"
+      data-slot="resource-workspace"
+    >
+      {header}
+      {summary ? (
+        <div className="shrink-0 border-border/60 border-b px-4 py-3 sm:px-6">{summary}</div>
+      ) : null}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+    </div>
+  );
 }
 
-export function ResourceViewerHeader({
-  title,
-  meta,
-  leading,
-  actions,
-  children,
-  className,
-}: ResourceViewerHeaderProps) {
+interface ResourceHeaderProps {
+  title: ReactNode;
+  leading?: ReactNode;
+  meta?: ReactNode;
+  actions?: ReactNode;
+  toolbar?: ReactNode;
+}
+
+export function ResourceHeader({ title, leading, meta, actions, toolbar }: ResourceHeaderProps) {
   return (
-    <div className={cn("sticky top-0 z-20 shrink-0 bg-background/92 backdrop-blur-xl", className)}>
+    <div className="sticky top-0 z-20 shrink-0 bg-background/92 backdrop-blur-xl">
       <ChromeBar
-        data-slot="resource-viewer-header"
+        data-slot="resource-header"
         region="content"
-        separated={!children}
+        separated={!toolbar}
         className="justify-between"
       >
         <ChromeGroup grow gap="loose" className="overflow-hidden">
           {leading ? (
             <span className="flex shrink-0 items-center [&_svg]:size-3.5">{leading}</span>
           ) : null}
-          {title}
+          <ChromeLabel tone="strong">{title}</ChromeLabel>
           {meta ? (
             <ChromeLabel tone="muted" className="hidden shrink-0 sm:block">
               <span className="flex items-center gap-1.5">{meta}</span>
@@ -99,56 +77,14 @@ export function ResourceViewerHeader({
           </ChromeGroup>
         ) : null}
       </ChromeBar>
-      {children ? (
-        <div className="border-border/55 border-b bg-background px-2 py-1">{children}</div>
+      {toolbar ? (
+        <div className="border-border/55 border-b bg-background px-2 py-1">{toolbar}</div>
       ) : null}
     </div>
   );
 }
 
-interface ResourceViewerTitleProps {
-  kind: ReactNode;
-  number?: number;
-  title: ReactNode;
-  stats?: ReactNode;
-  ariaLabel?: string;
-}
-
-export function ResourceViewerTitle({
-  kind,
-  number,
-  title,
-  stats,
-  ariaLabel = "Resource",
-}: ResourceViewerTitleProps) {
-  return (
-    <span className="flex min-w-0 items-center gap-1.5">
-      <Breadcrumb aria-label={ariaLabel} className="min-w-0 overflow-hidden">
-        <BreadcrumbList className="flex-nowrap gap-0">
-          <BreadcrumbItem className="shrink-0 px-1 text-subtle-foreground">
-            {kind}
-            {number !== undefined ? ` #${number}` : null}
-          </BreadcrumbItem>
-          <BreadcrumbSeparator className="shrink-0" />
-          <BreadcrumbItem className="min-w-0">
-            <BreadcrumbPage className="min-w-0 truncate px-1">{title}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-      {stats ? (
-        <span className="hidden shrink-0 items-center gap-1.5 sm:inline-flex">{stats}</span>
-      ) : null}
-    </span>
-  );
-}
-
-export function ResourceViewerActionsMenu({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
+export function ResourceActionsMenu({ label, children }: { label: string; children: ReactNode }) {
   return (
     <DropdownMenu>
       <Tooltip content={label}>
@@ -163,100 +99,76 @@ export function ResourceViewerActionsMenu({
   );
 }
 
-export function ResourceViewerBody({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return <div className={cn("mx-auto w-full min-w-0 max-w-6xl pt-6", className)}>{children}</div>;
-}
-
-export function ResourceContentSection({
-  title,
-  children,
-  className,
-}: {
+interface ResourceSummaryProps {
+  icon?: ReactNode;
   title: ReactNode;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <section className={cn("min-w-0 space-y-3", className)}>
-      <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">{title}</h2>
-      {children}
-    </section>
-  );
+  badges?: ReactNode;
+  description?: ReactNode;
+  meta?: ReactNode;
+  aside?: ReactNode;
 }
 
-export function ResourceMetadataList({ children }: { children: ReactNode }) {
+export function ResourceSummary({
+  icon,
+  title,
+  badges,
+  description,
+  meta,
+  aside,
+}: ResourceSummaryProps) {
   return (
-    <dl className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-1 border-border/70 border-b pb-3">
-      {children}
-    </dl>
-  );
-}
-
-export function ResourceMetadataItem({
-  label,
-  children,
-  mono,
-}: {
-  label: ReactNode;
-  children: ReactNode;
-  mono?: boolean;
-}) {
-  return (
-    <div className="ui-text-sm flex min-w-0 items-baseline gap-1.5">
-      <dt className="shrink-0 text-subtle-foreground">{label}</dt>
-      <dd className={cn("min-w-0 truncate text-foreground", mono && "font-mono")}>{children}</dd>
+    <div
+      className="flex min-w-0 flex-wrap items-start justify-between gap-x-6 gap-y-3"
+      data-slot="resource-summary"
+    >
+      <div className="min-w-0 flex-1 basis-80">
+        <div className="flex min-w-0 items-center gap-2">
+          {icon ? <span className="flex shrink-0 items-center [&_svg]:size-5">{icon}</span> : null}
+          <div className="min-w-0 font-semibold text-foreground ui-text-lg">{title}</div>
+          {badges ? <span className="flex shrink-0 items-center gap-1.5">{badges}</span> : null}
+        </div>
+        {description ? (
+          <p className="mt-1 truncate text-subtle-foreground ui-text-sm">{description}</p>
+        ) : null}
+        {meta ? (
+          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">{meta}</div>
+        ) : null}
+      </div>
+      {aside ? <div className="w-full max-w-80 shrink-0 basis-72">{aside}</div> : null}
     </div>
   );
 }
 
-interface ResourceDetailLayoutProps {
+interface ResourceSidebarLayoutProps {
   children: ReactNode;
-  sidebar?: ReactNode;
-  className?: string;
+  sidebar: ReactNode;
 }
 
-export function ResourceDetailLayout({ children, sidebar, className }: ResourceDetailLayoutProps) {
+export function ResourceSidebarLayout({ children, sidebar }: ResourceSidebarLayoutProps) {
   return (
-    <ResourceViewerBody
-      className={cn(
-        "grid gap-8 @min-[52rem]/resource-viewer:grid-cols-[minmax(0,1fr)_15rem] @min-[52rem]/resource-viewer:gap-12",
-        className,
-      )}
-    >
+    <div className="grid gap-8 @min-[52rem]/resource:grid-cols-[minmax(0,1fr)_15rem] @min-[52rem]/resource:gap-12">
       <main className="min-w-0">{children}</main>
-      {sidebar ? (
-        <aside className="min-w-0 border-border/60 border-t pt-6 @min-[52rem]/resource-viewer:border-t-0 @min-[52rem]/resource-viewer:pt-0">
-          {sidebar}
-        </aside>
-      ) : null}
-    </ResourceViewerBody>
+      <aside className="min-w-0 space-y-6 border-border/60 border-t pt-6 font-sans ui-text-sm text-foreground @min-[52rem]/resource:border-t-0 @min-[52rem]/resource:pt-0">
+        {sidebar}
+      </aside>
+    </div>
   );
 }
 
-export function ResourceDetailSidebar({ children }: { children: ReactNode }) {
-  return <div className="space-y-6">{children}</div>;
-}
-
-interface ResourceDetailSectionProps {
-  label: ReactNode;
-  children: ReactNode;
+interface ResourceSectionProps {
+  title: ReactNode;
   action?: ReactNode;
+  children: ReactNode;
 }
 
-export function ResourceDetailSection({ label, children, action }: ResourceDetailSectionProps) {
+export function ResourceSection({ title, action, children }: ResourceSectionProps) {
   return (
-    <section className="min-w-0 space-y-2">
+    <section className="min-w-0 space-y-3">
       <div className="flex min-w-0 items-center justify-between gap-2">
-        <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">{label}</h2>
+        <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">{title}</h2>
         {action}
       </div>
-      <div className="font-sans ui-text-sm min-w-0 text-foreground">{children}</div>
+      <div className="min-w-0">{children}</div>
     </section>
   );
 }

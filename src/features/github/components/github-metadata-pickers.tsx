@@ -7,10 +7,12 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
+  ComboboxTrigger,
 } from "@/ui/combobox";
 import { PlusIcon, TagIcon, UserIcon, XIcon } from "@/ui/icons";
 import Input from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
+import Tooltip from "@/ui/tooltip";
 import { matchesSearchQuery } from "@/utils/search-match";
 import type { Label } from "../types/github.types";
 
@@ -32,12 +34,6 @@ export function GitHubLabelPicker({
     () => labels.filter((label) => selectedNames.has(label.name)),
     [labels, selectedNames],
   );
-  const summary =
-    selectedLabels.length === 0
-      ? "Labels"
-      : selectedLabels.length === 1
-        ? selectedLabels[0]?.name
-        : `${selectedLabels.length} labels`;
 
   return (
     <Combobox<Label, true>
@@ -59,16 +55,23 @@ export function GitHubLabelPicker({
       autoHighlight
       modal={false}
     >
-      <div className="w-44 min-w-0">
-        <ComboboxInput
-          leftIcon={TagIcon}
-          placeholder={summary}
-          aria-label="Choose labels"
-          variant="ghost"
-          className="w-full bg-transparent hover:bg-accent/60"
-        />
-      </div>
+      <Tooltip content="Edit labels">
+        <ComboboxTrigger
+          render={<Button type="button" variant="ghost" iconOnly aria-label="Edit labels" />}
+        >
+          <TagIcon />
+        </ComboboxTrigger>
+      </Tooltip>
       <ComboboxContent size="wide" data-prevent-dialog-escape="true">
+        <div className="border-border/60 border-b p-1">
+          <ComboboxInput
+            placeholder="Search labels"
+            aria-label="Search labels"
+            variant="ghost"
+            showTrigger={false}
+            className="w-full"
+          />
+        </div>
         <ComboboxEmpty>{isLoading ? "Loading labels..." : "No matching labels"}</ComboboxEmpty>
         <ComboboxList>
           {(label: Label) => (
@@ -94,12 +97,6 @@ interface GitHubAssigneePickerProps {
 export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
-  const summary =
-    value.length === 0
-      ? "Assignees"
-      : value.length === 1
-        ? `@${value[0]}`
-        : `${value.length} people`;
 
   const addAssignees = () => {
     const nextValues = draft
@@ -113,13 +110,14 @@ export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerPr
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <span className="inline-flex min-w-0 max-w-44">
-        <PopoverTrigger render={<Button type="button" variant="ghost" align="start" truncate />}>
+      <Tooltip content="Edit assignees">
+        <PopoverTrigger
+          render={<Button type="button" variant="ghost" iconOnly aria-label="Edit assignees" />}
+        >
           <UserIcon />
-          <span className="truncate">{summary}</span>
         </PopoverTrigger>
-      </span>
-      <PopoverContent align="start" size="wide" className="gap-2 p-2">
+      </Tooltip>
+      <PopoverContent align="end" size="wide" className="gap-2 p-2">
         <div className="flex items-center gap-1.5">
           <Input
             value={draft}

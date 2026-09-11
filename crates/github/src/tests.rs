@@ -185,3 +185,46 @@ fn parses_issue_comment_identity_and_edit_metadata() {
    assert_eq!(comment.updated_at, "2026-08-02T10:00:00Z");
    assert!(comment.url.ends_with("issuecomment-123"));
 }
+
+#[test]
+fn collapses_reviews_to_latest_verdict_per_reviewer() {
+   use crate::api::{RestReview, RestUser, collapse_reviews, review_decision};
+
+   let review = |login: &str, state: &str| RestReview {
+      user: Some(RestUser {
+         login: login.to_string(),
+         avatar_url: None,
+      }),
+      state: Some(state.to_string()),
+      body: None,
+      submitted_at: None,
+   };
+   let reviews = collapse_reviews(vec![
+      review("ada", "CHANGES_REQUESTED"),
+      review("bob", "COMMENTED"),
+      review("ada", "COMMENTED"),
+      review("ada", "APPROVED"),
+      review("eve", "PENDING"),
+      RestReview {
+         user: None,
+         state: Some("APPROVED".to_string()),
+         body: None,
+         submitted_at: None,
+      },
+   ]);
+
+   assert_eq!(reviews.len(), 2);
+   assert_eq!(reviews[0].login, "ada");
+   assert_eq!(reviews[0].state, "APPROVED");
+   assert_eq!(reviews[1].login, "bob");
+   assert_eq!(reviews[1].state, "COMMENTED");
+   assert_eq!(review_decision(&reviews, &[]).as_deref(), Some("APPROVED"));
+
+   let mut blocked = reviews.clone();
+   blocked[1].state = "CHANGES_REQUESTED".to_string();
+   assert_eq!(
+      review_decision(&blocked, &[]).as_deref(),
+      Some("CHANGES_REQUESTED")
+   );
+   assert_eq!(review_decision(&[], &[]), None);
+}

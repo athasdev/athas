@@ -4,7 +4,6 @@ import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { Checkbox } from "@/ui/checkbox";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/ui/field";
-import { ResourceViewerBody } from "@/ui/resource";
 import { Spinner } from "@/ui/spinner";
 import { GitHubMarkdownEditor } from "../../components/github-markdown-editor";
 import { ViewerErrorState } from "@/features/viewer/components/viewer-state";
@@ -115,114 +114,106 @@ export function ReleaseEditor({
     }
   };
   return (
-    <ResourceViewerBody>
-      <form
-        className="space-y-6"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
-      >
-        <FieldGroup>
-          <div className="grid gap-4 @min-[36rem]/resource-viewer:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor={`${fieldId}-tag`}>Tag</FieldLabel>
-              <Input
-                id={`${fieldId}-tag`}
-                required
-                placeholder="v1.0.0"
-                disabled={Boolean(busy)}
-                value={input.tag_name}
-                onChange={(event) => setInput({ ...input, tag_name: event.target.value })}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`${fieldId}-target`}>Target branch or commit</FieldLabel>
-              <Input
-                id={`${fieldId}-target`}
-                required
-                placeholder="Branch name or commit SHA"
-                disabled={Boolean(busy)}
-                value={input.target_commitish}
-                onChange={(event) => setInput({ ...input, target_commitish: event.target.value })}
-              />
-              <FieldDescription>Used when the tag does not already exist.</FieldDescription>
-            </Field>
-          </div>
+    <form
+      className="space-y-6"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void save();
+      }}
+    >
+      <FieldGroup>
+        <div className="grid gap-4 @min-[36rem]/resource:grid-cols-2">
           <Field>
-            <FieldLabel htmlFor={`${fieldId}-name`}>Release title</FieldLabel>
+            <FieldLabel htmlFor={`${fieldId}-tag`}>Tag</FieldLabel>
             <Input
-              id={`${fieldId}-name`}
-              placeholder="Defaults to the tag name"
+              id={`${fieldId}-tag`}
+              required
+              placeholder="v1.0.0"
               disabled={Boolean(busy)}
-              value={input.name}
-              onChange={(event) => setInput({ ...input, name: event.target.value })}
+              value={input.tag_name}
+              onChange={(event) => setInput({ ...input, tag_name: event.target.value })}
             />
-          </Field>
-          <Field orientation="horizontal">
-            <Checkbox
-              id={`${fieldId}-prerelease`}
-              checked={input.prerelease}
-              disabled={Boolean(busy)}
-              onCheckedChange={(checked) => setInput({ ...input, prerelease: checked })}
-            />
-            <FieldLabel htmlFor={`${fieldId}-prerelease`}>Mark as prerelease</FieldLabel>
           </Field>
           <Field>
-            <FieldLabel htmlFor={`${fieldId}-previous`}>
-              Previous tag for generated notes
-            </FieldLabel>
+            <FieldLabel htmlFor={`${fieldId}-target`}>Target branch or commit</FieldLabel>
             <Input
-              id={`${fieldId}-previous`}
-              placeholder="Automatic"
+              id={`${fieldId}-target`}
+              required
+              placeholder="Branch name or commit SHA"
               disabled={Boolean(busy)}
-              value={previousTag}
-              onChange={(event) => setPreviousTag(event.target.value)}
+              value={input.target_commitish}
+              onChange={(event) => setInput({ ...input, target_commitish: event.target.value })}
             />
-            <FieldDescription>
-              Generated notes are appended to your current description.
-            </FieldDescription>
+            <FieldDescription>Used when the tag does not already exist.</FieldDescription>
           </Field>
-        </FieldGroup>
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="ui-text-sm text-subtle-foreground">Release notes</span>
-            <Button
-              type="button"
-              disabled={!valid || Boolean(busy)}
-              onClick={() => void generate()}
-            >
-              {busy === "generate" && <Spinner compact />} Generate Notes
-            </Button>
-          </div>
-          <GitHubMarkdownEditor
-            value={input.body}
-            onChange={(body) => setInput((current) => ({ ...current, body }))}
-            disabled={Boolean(busy)}
-            placeholder="Describe what changed in this release…"
-          />
         </div>
-        {error && <ViewerErrorState layout="section" message={error} />}
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {onCancel && (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={Boolean(busy)}
-              onClick={() => {
-                removeDraft();
-                onCancel();
-              }}
-            >
-              Cancel
-            </Button>
-          )}
-          <Button type="submit" variant="accent" disabled={!valid || Boolean(busy)}>
-            {busy === "save" && <Spinner compact />}
-            {release ? "Save Changes" : "Save Draft"}
+        <Field>
+          <FieldLabel htmlFor={`${fieldId}-name`}>Release title</FieldLabel>
+          <Input
+            id={`${fieldId}-name`}
+            placeholder="Defaults to the tag name"
+            disabled={Boolean(busy)}
+            value={input.name}
+            onChange={(event) => setInput({ ...input, name: event.target.value })}
+          />
+        </Field>
+        <Field orientation="horizontal">
+          <Checkbox
+            id={`${fieldId}-prerelease`}
+            checked={input.prerelease}
+            disabled={Boolean(busy)}
+            onCheckedChange={(checked) => setInput({ ...input, prerelease: checked })}
+          />
+          <FieldLabel htmlFor={`${fieldId}-prerelease`}>Mark as prerelease</FieldLabel>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor={`${fieldId}-previous`}>Previous tag for generated notes</FieldLabel>
+          <Input
+            id={`${fieldId}-previous`}
+            placeholder="Automatic"
+            disabled={Boolean(busy)}
+            value={previousTag}
+            onChange={(event) => setPreviousTag(event.target.value)}
+          />
+          <FieldDescription>
+            Generated notes are appended to your current description.
+          </FieldDescription>
+        </Field>
+      </FieldGroup>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="ui-text-sm text-subtle-foreground">Release notes</span>
+          <Button type="button" disabled={!valid || Boolean(busy)} onClick={() => void generate()}>
+            {busy === "generate" && <Spinner compact />} Generate Notes
           </Button>
         </div>
-      </form>
-    </ResourceViewerBody>
+        <GitHubMarkdownEditor
+          value={input.body}
+          onChange={(body) => setInput((current) => ({ ...current, body }))}
+          disabled={Boolean(busy)}
+          placeholder="Describe what changed in this release…"
+        />
+      </div>
+      {error && <ViewerErrorState layout="section" message={error} />}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={Boolean(busy)}
+            onClick={() => {
+              removeDraft();
+              onCancel();
+            }}
+          >
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" variant="accent" disabled={!valid || Boolean(busy)}>
+          {busy === "save" && <Spinner compact />}
+          {release ? "Save Changes" : "Save Draft"}
+        </Button>
+      </div>
+    </form>
   );
 }

@@ -22,8 +22,8 @@ pub use gh_cli::{gh_cli_token, is_gh_cli_installed};
 pub use models::{
    GitHubNotification, IssueComment, IssueDetails, IssueListItem, IssueMilestone, IssueType, Label,
    LinkedIssue, PullRequest, PullRequestAuthor, PullRequestComment, PullRequestDetails,
-   PullRequestFile, ReviewRequest, StatusCheck, WorkflowListItem, WorkflowRunDetails,
-   WorkflowRunJob, WorkflowRunListItem, WorkflowRunStep,
+   PullRequestFile, PullRequestReview, ReviewRequest, StatusCheck, WorkflowListItem,
+   WorkflowRunDetails, WorkflowRunJob, WorkflowRunListItem, WorkflowRunStep,
 };
 
 #[cfg(test)]

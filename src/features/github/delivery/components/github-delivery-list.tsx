@@ -3,6 +3,7 @@ import { useDeferredValue, useMemo } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { GitHubSidebarRow } from "../../components/github-sidebar-row";
+import { openGitHubContentInNewWindow } from "../../utils/open-in-new-window";
 import { useGitHubStore } from "../../stores/github.store";
 import { getSidebarTime } from "../../utils/github-viewer-utils";
 import { SidebarScrollArea, SidebarSection } from "@/ui/sidebar";
@@ -165,6 +166,15 @@ export default function GitHubDeliveryList({
                   }
                   active={item.id === activeId}
                   onClick={() => select(item)}
+                  onOpenInNewWindow={() =>
+                    openGitHubContentInNewWindow(repoPath, {
+                      type: "githubDelivery",
+                      kind,
+                      repoPath,
+                      resourceId: item.id,
+                      name: title,
+                    })
+                  }
                   onContextMenu={(event) => {
                     event.stopPropagation();
                     menu.open(event, item);

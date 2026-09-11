@@ -80,6 +80,20 @@ pub struct ReviewRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PullRequestReview {
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub login: String,
+   #[serde(rename = "avatarUrl", default)]
+   pub avatar_url: Option<String>,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub state: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
+   pub body: String,
+   #[serde(rename = "submittedAt", default)]
+   pub submitted_at: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Label {
    #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub name: String,
@@ -174,6 +188,14 @@ pub struct PullRequestDetails {
    pub merge_state_status: Option<String>,
    #[serde(default)]
    pub mergeable: Option<String>,
+   #[serde(rename = "mergedAt", default)]
+   pub merged_at: Option<String>,
+   #[serde(rename = "mergedBy", default)]
+   pub merged_by: Option<PullRequestAuthor>,
+   #[serde(rename = "closedAt", default)]
+   pub closed_at: Option<String>,
+   #[serde(default, deserialize_with = "deserialize_vec_or_default")]
+   pub reviews: Vec<PullRequestReview>,
    #[serde(default, deserialize_with = "deserialize_vec_or_default")]
    pub labels: Vec<Label>,
    #[serde(default, deserialize_with = "deserialize_vec_or_default")]

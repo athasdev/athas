@@ -59,6 +59,7 @@ import {
 } from "../utils/github-workflow-status";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
+import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { WorkflowStatusIcon } from "./github-workflow-status-icon";
 
 interface WorkflowRunRowProps {
@@ -68,6 +69,7 @@ interface WorkflowRunRowProps {
   pendingAction: string | undefined;
   repoPath: string | null;
   onSelect: (run: WorkflowRunListItem) => void;
+  onOpenInNewWindow: (run: WorkflowRunListItem) => void;
   onPrefetch: (run: WorkflowRunListItem) => void;
   onContextMenu: (event: React.MouseEvent, run: WorkflowRunListItem) => void;
 }
@@ -80,6 +82,7 @@ const WorkflowRunRow = memo(
     pendingAction,
     repoPath,
     onSelect,
+    onOpenInNewWindow,
     onPrefetch,
     onContextMenu,
   }: WorkflowRunRowProps) => {
@@ -123,6 +126,7 @@ const WorkflowRunRow = memo(
         title={title}
         description={[state.label, run.headBranch].filter(Boolean).join(" · ")}
         onClick={() => onSelect(run)}
+        onOpenInNewWindow={() => onOpenInNewWindow(run)}
         onPrefetch={() => onPrefetch(run)}
         onContextMenu={(event) => onContextMenu(event, run)}
         draggable
@@ -293,6 +297,19 @@ const GitHubActionsView = memo(
             { ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
           )
           .catch(() => undefined);
+      },
+      [repoPath],
+    );
+
+    const openRunInNewWindow = useCallback(
+      (run: WorkflowRunListItem) => {
+        openGitHubContentInNewWindow(repoPath, {
+          type: "githubAction",
+          runId: run.databaseId,
+          repoPath: repoPath ?? undefined,
+          name: getWorkflowRunTitle(run),
+          url: run.url,
+        });
       },
       [repoPath],
     );
@@ -487,6 +504,7 @@ const GitHubActionsView = memo(
                       pendingAction={pendingActions[run.databaseId]}
                       repoPath={repoPath}
                       onSelect={openRun}
+                      onOpenInNewWindow={openRunInNewWindow}
                       onPrefetch={prefetchWorkflowRun}
                       onContextMenu={handleContextMenu}
                     />

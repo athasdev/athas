@@ -18,7 +18,7 @@ import { EmptyState } from "@/ui/empty";
 import { Card, CardContent } from "@/ui/card";
 import { Spinner } from "@/ui/spinner";
 import { WorkbenchContent } from "@/ui/workbench";
-import { ResourceContentSection } from "@/ui/resource";
+import { ResourceSection } from "@/ui/resource";
 import {
   Item,
   ItemActions,
@@ -219,7 +219,7 @@ export function ExtensionDetailView({
           </Alert>
         ) : null}
 
-        <ResourceContentSection title="Extension details">
+        <ResourceSection title="Extension details">
           <Card variant="outline">
             <CardContent>
               <Table>
@@ -236,10 +236,10 @@ export function ExtensionDetailView({
               </Table>
             </CardContent>
           </Card>
-        </ResourceContentSection>
+        </ResourceSection>
 
         {isAppearanceExtension(extension) && extension.appearanceOptions?.length ? (
-          <ResourceContentSection title={extension.category === "theme" ? "Themes" : "Icon themes"}>
+          <ResourceSection title={extension.category === "theme" ? "Themes" : "Icon themes"}>
             <Card variant="outline">
               <CardContent>
                 <ItemGroup>
@@ -282,11 +282,11 @@ export function ExtensionDetailView({
                 </ItemGroup>
               </CardContent>
             </Card>
-          </ResourceContentSection>
+          </ResourceSection>
         ) : null}
 
         {extension.category === "skill" ? (
-          <ResourceContentSection title="Instructions">
+          <ResourceSection title="Instructions">
             <Accordion
               key={extension.id}
               defaultValue={[]}
@@ -326,10 +326,10 @@ export function ExtensionDetailView({
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-          </ResourceContentSection>
+          </ResourceSection>
         ) : null}
 
-        <ResourceContentSection title="Contributions">
+        <ResourceSection title="Contributions">
           <Card variant="outline">
             <CardContent>
               <ItemGroup>
@@ -351,7 +351,7 @@ export function ExtensionDetailView({
               </ItemGroup>
             </CardContent>
           </Card>
-        </ResourceContentSection>
+        </ResourceSection>
       </div>
     </WorkbenchContent>
   );

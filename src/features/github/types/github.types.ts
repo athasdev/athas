@@ -27,6 +27,14 @@ interface ReviewRequest {
   avatarUrl?: string | null;
 }
 
+export interface PullRequestReview {
+  login: string;
+  avatarUrl?: string | null;
+  state: string;
+  body: string;
+  submittedAt: string | null;
+}
+
 export interface PullRequest {
   number: number;
   title: string;
@@ -66,6 +74,10 @@ export interface PullRequestDetails {
   reviewRequests: ReviewRequest[];
   mergeStateStatus: string | null;
   mergeable: string | null;
+  mergedAt: string | null;
+  mergedBy: PullRequestAuthor | null;
+  closedAt: string | null;
+  reviews: PullRequestReview[];
   labels: Label[];
   assignees: PullRequestAuthor[];
 }

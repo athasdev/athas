@@ -2,8 +2,8 @@ pub mod delivery;
 use crate::models::{
    GitHubNotification, IssueComment, IssueDetails, IssueListItem, IssueMilestone, IssueType, Label,
    PullRequest, PullRequestAuthor, PullRequestComment, PullRequestDetails, PullRequestFile,
-   ReviewRequest, StatusCheck, WorkflowListItem, WorkflowRunDetails, WorkflowRunJob,
-   WorkflowRunListItem, WorkflowRunStep,
+   PullRequestReview, ReviewRequest, StatusCheck, WorkflowListItem, WorkflowRunDetails,
+   WorkflowRunJob, WorkflowRunListItem, WorkflowRunStep,
 };
 use git2::Repository;
 use reqwest::{
@@ -63,9 +63,9 @@ struct GitHubApi {
 }
 
 #[derive(Clone, Deserialize)]
-struct RestUser {
-   login: String,
-   avatar_url: Option<String>,
+pub(crate) struct RestUser {
+   pub(crate) login: String,
+   pub(crate) avatar_url: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -99,8 +99,19 @@ struct RestPullRequest {
    body: Option<String>,
    mergeable: Option<bool>,
    mergeable_state: Option<String>,
+   merged_at: Option<String>,
+   merged_by: Option<RestUser>,
+   closed_at: Option<String>,
    labels: Option<Vec<RestLabel>>,
    assignees: Option<Vec<RestUser>>,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct RestReview {
+   pub(crate) user: Option<RestUser>,
+   pub(crate) state: Option<String>,
+   pub(crate) body: Option<String>,
+   pub(crate) submitted_at: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -758,12 +769,33 @@ fn pr_from_rest(pr: RestPullRequest) -> PullRequest {
    }
 }
 
+pub(crate) fn review_decision(
+   reviews: &[PullRequestReview],
+   review_requests: &[ReviewRequest],
+) -> Option<String> {
+   if reviews
+      .iter()
+      .any(|review| review.state == "CHANGES_REQUESTED")
+   {
+      return Some("CHANGES_REQUESTED".to_string());
+   }
+   if reviews.iter().any(|review| review.state == "APPROVED") {
+      return Some("APPROVED".to_string());
+   }
+   if !review_requests.is_empty() {
+      return Some("REVIEW_REQUIRED".to_string());
+   }
+   None
+}
+
 fn pr_details_from_rest(
    pr: RestPullRequest,
    commits: Vec<serde_json::Value>,
    review_requests: Vec<ReviewRequest>,
    status_checks: Vec<StatusCheck>,
+   reviews: Vec<PullRequestReview>,
 ) -> PullRequestDetails {
+   let review_decision = review_decision(&reviews, &review_requests);
    PullRequestDetails {
       number: pr.number,
       title: pr.title.unwrap_or_default(),
@@ -773,7 +805,7 @@ fn pr_details_from_rest(
       created_at: pr.created_at.unwrap_or_default(),
       updated_at: pr.updated_at.unwrap_or_default(),
       is_draft: pr.draft.unwrap_or_default(),
-      review_decision: None,
+      review_decision,
       url: pr.html_url.unwrap_or_default(),
       head_ref: pr.head.and_then(|head| head.ref_name).unwrap_or_default(),
       base_ref: pr.base.and_then(|base| base.ref_name).unwrap_or_default(),
@@ -786,6 +818,13 @@ fn pr_details_from_rest(
       review_requests,
       merge_state_status: pr.mergeable_state,
       mergeable: pr.mergeable.map(|value| value.to_string()),
+      merged_at: pr.merged_at,
+      merged_by: pr.merged_by.map(|user| PullRequestAuthor {
+         login: user.login,
+         avatar_url: user.avatar_url,
+      }),
+      closed_at: pr.closed_at,
+      reviews,
       labels: labels_from_rest(pr.labels),
       assignees: users_to_authors(pr.assignees),
    }
@@ -1049,12 +1088,14 @@ fn pr_details_from_current_rest(
       .as_deref()
       .map(|sha| get_status_checks(api, slug, sha).unwrap_or_default())
       .unwrap_or_default();
+   let reviews = get_reviews(api, slug, pr_number).unwrap_or_default();
 
    Ok(pr_details_from_rest(
       pr,
       commits,
       review_requests,
       status_checks,
+      reviews,
    ))
 }
 
@@ -1900,22 +1941,8 @@ pub fn github_get_pr_details(
    let slug = resolve_repo_slug(&repo_path_value)?;
    let api = GitHubApi::new_authenticated(github_token)?;
    let pr: RestPullRequest = api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}")))?;
-   let head_sha = pr.head.as_ref().and_then(|head| head.sha.clone());
-   let commits: Vec<serde_json::Value> =
-      api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}/commits")))?;
-   let commits = commits.into_iter().map(commit_value_from_rest).collect();
-   let review_requests = get_review_requests(&api, &slug, pr_number).unwrap_or_default();
-   let status_checks = head_sha
-      .as_deref()
-      .map(|sha| get_status_checks(&api, &slug, sha).unwrap_or_default())
-      .unwrap_or_default();
 
-   Ok(pr_details_from_rest(
-      pr,
-      commits,
-      review_requests,
-      status_checks,
-   ))
+   pr_details_from_current_rest(&api, &slug, pr_number, pr)
 }
 
 fn get_review_requests(
@@ -1951,6 +1978,51 @@ fn get_review_requests(
    );
 
    Ok(requests)
+}
+
+fn get_reviews(
+   api: &GitHubApi,
+   slug: &RepoSlug,
+   pr_number: i64,
+) -> Result<Vec<PullRequestReview>, String> {
+   let response: Vec<RestReview> = api.get_json(&repo_path(
+      slug,
+      &format!("pulls/{pr_number}/reviews?per_page=100"),
+   ))?;
+   Ok(collapse_reviews(response))
+}
+
+/// GitHub returns reviews oldest first. Keep one row per reviewer: the latest
+/// approval or change request wins, and a plain comment only counts when the
+/// reviewer never gave a verdict.
+pub(crate) fn collapse_reviews(response: Vec<RestReview>) -> Vec<PullRequestReview> {
+   let mut reviews: Vec<PullRequestReview> = Vec::new();
+   for review in response {
+      let Some(user) = review.user else { continue };
+      let state = review.state.unwrap_or_default();
+      if state != "APPROVED" && state != "CHANGES_REQUESTED" && state != "COMMENTED" {
+         continue;
+      }
+      let next = PullRequestReview {
+         login: user.login,
+         avatar_url: user.avatar_url,
+         state,
+         body: review.body.unwrap_or_default(),
+         submitted_at: review.submitted_at,
+      };
+      match reviews
+         .iter_mut()
+         .find(|existing| existing.login == next.login)
+      {
+         Some(existing) => {
+            if next.state != "COMMENTED" || existing.state == "COMMENTED" {
+               *existing = next;
+            }
+         }
+         None => reviews.push(next),
+      }
+   }
+   reviews
 }
 
 fn get_status_checks(

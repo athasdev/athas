@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vite-plus/test";
-import { GitHubPRViewerHeader } from "../components/github-pr-viewer-header";
+import { GitHubPRHeader } from "../components/github-pr-header";
 import type { Commit } from "../types/github-pr-viewer.types";
 import type { PullRequestDetails } from "../types/github.types";
 
@@ -26,6 +26,10 @@ const pr: PullRequestDetails = {
   reviewRequests: [],
   mergeStateStatus: "CLEAN",
   mergeable: "MERGEABLE",
+  mergedAt: null,
+  mergedBy: null,
+  closedAt: null,
+  reviews: [],
   labels: [],
   assignees: [],
 };
@@ -55,17 +59,15 @@ const actions = {
   onClosePR: vi.fn(),
 };
 
-describe("GitHubPRViewerHeader", () => {
+describe("GitHubPRHeader", () => {
   it("keeps commits between overview and files in the top navigation", () => {
     const markup = renderToStaticMarkup(
-      <GitHubPRViewerHeader
+      <GitHubPRHeader
         pr={pr}
         activeView="activity"
         changedFilesCount={37}
         commits={commits}
         repoPath="/repo"
-        additions={1088}
-        deletions={955}
         isRefreshingDetails={false}
         {...actions}
       />,

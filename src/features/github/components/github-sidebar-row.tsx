@@ -38,6 +38,7 @@ interface GitHubSidebarRowProps {
   preview?: GitHubSidebarPreview;
   draggable?: boolean;
   onClick: () => void;
+  onOpenInNewWindow?: () => void;
   onContextMenu?: MouseEventHandler<HTMLElement>;
   onDragStart?: DragEventHandler<HTMLElement>;
   onPrefetch?: () => void;
@@ -66,6 +67,7 @@ export function GitHubSidebarRow({
   draggable = false,
   leading,
   onClick,
+  onOpenInNewWindow,
   onContextMenu,
   onDragStart,
   onPrefetch,
@@ -85,11 +87,7 @@ export function GitHubSidebarRow({
       description={description}
       density="compact"
       active={active}
-      leading={
-        <span className="flex size-[1em] shrink-0 items-center justify-center overflow-hidden">
-          {leading}
-        </span>
-      }
+      leading={leading}
       trailing={
         trailing ? (
           <span className="inline-flex items-center gap-1 tabular-nums">
@@ -100,6 +98,7 @@ export function GitHubSidebarRow({
       }
       draggable={draggable}
       onClick={onClick}
+      onDoubleClick={onOpenInNewWindow}
       onContextMenu={onContextMenu}
       onDragStart={onDragStart}
       onFocus={onPrefetch}

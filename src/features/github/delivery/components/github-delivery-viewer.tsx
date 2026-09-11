@@ -13,12 +13,7 @@ import { resolveProjectGitHubRepository } from "@/features/views/lib/view-github
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { Button } from "@/ui/button";
 import { ArrowClockwiseIcon, CopyIcon, OpenExternalIcon, RocketIcon, TagIcon } from "@/ui/icons";
-import {
-  ResourceViewer,
-  ResourceViewerActionsMenu,
-  ResourceViewerHeader,
-  ResourceViewerTitle,
-} from "@/ui/resource";
+import { ResourceActionsMenu, ResourceDocument, ResourceHeader } from "@/ui/resource";
 import { DropdownMenuItem } from "@/ui/dropdown";
 import {
   AlertDialog,
@@ -42,8 +37,8 @@ import {
   safeDeliveryUrl,
 } from "../utils/github-delivery";
 import type { Release } from "../types/github-delivery.types";
-import { ReleaseDetails } from "./release-details";
-import { DeploymentDetails } from "./deployment-details";
+import { ReleaseDetails, ReleaseSummary } from "./release-details";
+import { DeploymentDetails, DeploymentSummary } from "./deployment-details";
 import { ReleaseEditor } from "./release-editor";
 
 type Confirmation = "publish" | "delete" | "deactivate";
@@ -181,15 +176,10 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
   const environmentUrl = safeDeliveryUrl(deployment?.statuses[0]?.environment_url);
   const logUrl = safeDeliveryUrl(deployment?.statuses[0]?.log_url);
   return (
-    <ResourceViewer
+    <ResourceDocument
       header={
-        <ResourceViewerHeader
-          title={
-            <ResourceViewerTitle
-              kind={kind === "releases" ? "Release" : "Deployment"}
-              title={title}
-            />
-          }
+        <ResourceHeader
+          title={title}
           leading={kind === "releases" ? <TagIcon /> : <RocketIcon />}
           actions={
             !editing && (
@@ -239,7 +229,7 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
                 >
                   {loading ? <Spinner compact /> : <ArrowClockwiseIcon />}
                 </Button>
-                <ResourceViewerActionsMenu label="More actions">
+                <ResourceActionsMenu label="More actions">
                   <DropdownMenuItem disabled={!browserUrl} onClick={() => open(browserUrl)}>
                     <OpenExternalIcon /> Open on GitHub
                   </DropdownMenuItem>
@@ -301,11 +291,18 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
                       Delete Release…
                     </DropdownMenuItem>
                   )}
-                </ResourceViewerActionsMenu>
+                </ResourceActionsMenu>
               </>
             )
           }
         />
+      }
+      summary={
+        editing ? null : release ? (
+          <ReleaseSummary release={release} />
+        ) : deployment ? (
+          <DeploymentSummary deployment={deployment} />
+        ) : null
       }
     >
       {error && data && (
@@ -367,6 +364,6 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </ResourceViewer>
+    </ResourceDocument>
   );
 }

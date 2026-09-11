@@ -11,6 +11,7 @@ import type { IssueDetails, IssueFilter, IssueListItem } from "../types/github.t
 import { groupIssues } from "../utils/github-sidebar-groups";
 import { getTimeAgo, getSidebarTime } from "../utils/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
+import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { SidebarScrollArea, SidebarSection } from "@/ui/sidebar";
@@ -27,68 +28,72 @@ interface IssueListItemProps {
   issue: IssueListItem;
   isActive: boolean;
   onSelect: () => void;
+  onOpenInNewWindow: () => void;
   onPrefetch?: () => void;
   repoPath?: string | null;
 }
 
-const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: IssueListItemProps) => {
-  const updatedLabel = getTimeAgo(issue.updatedAt);
-  const labels = issue.labels.slice(0, 3);
-  const isOpen = issue.state.toUpperCase() === "OPEN";
-  const badges: GitHubSidebarPreviewBadge[] = [
-    { label: issue.state, tone: isOpen ? "success" : "muted" },
-    ...labels.map((label) => ({ label: label.name, tone: "default" as const })),
-  ];
-  const authorAvatar = (
-    <GitHubAvatar
-      login={issue.author.login}
-      avatarUrl={issue.author.avatarUrl}
-      size={40}
-      className="size-full"
-    />
-  );
+const IssueRow = memo(
+  ({ issue, isActive, onSelect, onOpenInNewWindow, onPrefetch, repoPath }: IssueListItemProps) => {
+    const updatedLabel = getTimeAgo(issue.updatedAt);
+    const labels = issue.labels.slice(0, 3);
+    const isOpen = issue.state.toUpperCase() === "OPEN";
+    const badges: GitHubSidebarPreviewBadge[] = [
+      { label: issue.state, tone: isOpen ? "success" : "muted" },
+      ...labels.map((label) => ({ label: label.name, tone: "default" as const })),
+    ];
+    const authorAvatar = (
+      <GitHubAvatar
+        login={issue.author.login}
+        avatarUrl={issue.author.avatarUrl}
+        size={48}
+        displaySize="md"
+      />
+    );
 
-  return (
-    <GitHubSidebarRow
-      title={issue.title}
-      description={`#${issue.number} · ${issue.author.login}`}
-      onClick={onSelect}
-      onPrefetch={onPrefetch}
-      draggable
-      onDragStart={(event) => {
-        writeSidebarResourceDragData(event.dataTransfer, {
-          type: "github-issue",
-          repoPath: repoPath ?? undefined,
-          number: issue.number,
+    return (
+      <GitHubSidebarRow
+        title={issue.title}
+        description={`#${issue.number} · ${issue.author.login}`}
+        onClick={onSelect}
+        onOpenInNewWindow={onOpenInNewWindow}
+        onPrefetch={onPrefetch}
+        draggable
+        onDragStart={(event) => {
+          writeSidebarResourceDragData(event.dataTransfer, {
+            type: "github-issue",
+            repoPath: repoPath ?? undefined,
+            number: issue.number,
+            title: issue.title,
+            authorAvatarUrl: getGitHubAvatarUrl(issue.author),
+            url: issue.url,
+            name: `Issue #${issue.number}`,
+          });
+        }}
+        active={isActive}
+        leading={authorAvatar}
+        trailing={getSidebarTime(issue.updatedAt)}
+        preview={{
           title: issue.title,
-          authorAvatarUrl: getGitHubAvatarUrl(issue.author),
-          url: issue.url,
-          name: `Issue #${issue.number}`,
-        });
-      }}
-      active={isActive}
-      leading={authorAvatar}
-      trailing={getSidebarTime(issue.updatedAt)}
-      preview={{
-        title: issue.title,
-        subtitle: `#${issue.number} by ${issue.author.login}`,
-        icon: authorAvatar,
-        badges,
-        details: [
-          { label: "Updated", value: updatedLabel },
-          { label: "Author", value: issue.author.login, mono: true },
-          {
-            label: "Labels",
-            value: issue.labels.length
-              ? issue.labels.map((label) => label.name).join(", ")
-              : "None",
-          },
-          { label: "State", value: issue.state },
-        ],
-      }}
-    />
-  );
-});
+          subtitle: `#${issue.number} by ${issue.author.login}`,
+          icon: authorAvatar,
+          badges,
+          details: [
+            { label: "Updated", value: updatedLabel },
+            { label: "Author", value: issue.author.login, mono: true },
+            {
+              label: "Labels",
+              value: issue.labels.length
+                ? issue.labels.map((label) => label.name).join(", ")
+                : "None",
+            },
+            { label: "State", value: issue.state },
+          ],
+        }}
+      />
+    );
+  },
+);
 
 IssueRow.displayName = "IssueRow";
 
@@ -252,6 +257,16 @@ const GitHubIssuesView = memo(
                             authorAvatarUrl: getGitHubAvatarUrl(issue.author),
                             url: issue.url,
                           });
+                        })
+                      }
+                      onOpenInNewWindow={() =>
+                        openGitHubContentInNewWindow(repoPath, {
+                          type: "githubIssue",
+                          issueNumber: issue.number,
+                          repoPath: repoPath ?? undefined,
+                          authorAvatarUrl: getGitHubAvatarUrl(issue.author),
+                          name: issue.title,
+                          url: issue.url,
                         })
                       }
                     />

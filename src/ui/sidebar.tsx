@@ -605,7 +605,7 @@ export function SidebarListItem({
       children: (
         <>
           {leading ? (
-            <span className="flex size-[1em] shrink-0 items-center justify-center">{leading}</span>
+            <span className="flex shrink-0 items-center justify-center">{leading}</span>
           ) : null}
           <span className={cn("min-w-0 flex-1 overflow-hidden", description && "flex flex-col")}>
             <span

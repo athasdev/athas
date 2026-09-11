@@ -1,12 +1,21 @@
 import { invoke } from "@tauri-apps/api/core";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
-import { ResourceDetailLayout, ResourceViewer, ResourceViewerHeader } from "@/ui/resource";
+import Badge, { badgeVariants } from "@/ui/badge";
+import type { VariantProps } from "class-variance-authority";
+import { GitPullRequestIcon } from "@/ui/icons";
+import {
+  ResourceDocument,
+  ResourceHeader,
+  ResourceSidebarLayout,
+  ResourceSummary,
+  ResourceWorkspace,
+} from "@/ui/resource";
 import { toast } from "sonner";
 import type { Label, PullRequestDetails } from "../types/github.types";
 import type { Commit, FilePatchState, TabType } from "../types/github-pr-viewer.types";
@@ -18,17 +27,19 @@ import {
 import {
   buildDiffSectionIndex,
   extractFilePatch,
-  getCommentKey,
+  getPullRequestStatus,
   normalizeCommit,
+  PULL_REQUEST_STATUS_LABEL,
+  type PullRequestStatus,
   resolveSafeRepoFilePath,
   toFileDiffFromMetadata,
 } from "../utils/github-pr-viewer-utils";
 import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { useGitHubStore } from "../stores/github.store";
-import { PRActivityPanel } from "./pr-activity-panel";
+import { PRTimeline } from "./pr-timeline";
 import { PRFilesPanel } from "./pr-files-panel";
-import { GitHubPRViewerHeader } from "./github-pr-viewer-header";
+import { GitHubPRHeader } from "./github-pr-header";
 import { GitHubPRSidebar } from "./github-pr-sidebar";
 import {
   GitHubPRInlineAction,
@@ -37,7 +48,24 @@ import {
 } from "./github-pr-inline-action";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubInlineTitle } from "./github-inline-editors";
-import { GitHubBranchChip, GitHubMetaChip, GitHubUserChip } from "./github-resource-chips";
+import { GitHubBranchChip, GitHubMetaChip, GitHubUserChip } from "./github-chips";
+
+const PR_STATUS_BADGE_VARIANT: Record<
+  PullRequestStatus,
+  VariantProps<typeof badgeVariants>["variant"]
+> = {
+  open: "success",
+  draft: "muted",
+  merged: "accent",
+  closed: "error",
+};
+
+const PR_STATUS_ICON_CLASS: Record<PullRequestStatus, string> = {
+  open: "text-success",
+  draft: "text-subtle-foreground",
+  merged: "text-primary",
+  closed: "text-destructive",
+};
 
 interface GitHubPRViewerProps {
   prNumber: number;
@@ -81,6 +109,9 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   const [labels, setLabels] = useState<Label[]>([]);
   const [inlineAction, setInlineAction] = useState<GitHubPRInlineActionKind | null>(null);
   const [mutationKey, setMutationKey] = useState<string | null>(null);
+  const [commentDraft, setCommentDraft] = useState("");
+  const composerRef = useRef<HTMLDivElement | null>(null);
+  const currentUser = useGitHubStore((state) => state.currentUser);
 
   useEffect(() => {
     if (repoPath && prNumber) {
@@ -263,13 +294,6 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       .length;
   }, [selectedPRDetails?.statusChecks]);
 
-  const activityItems = useMemo(() => {
-    return selectedPRComments.map((comment, index) => ({
-      id: getCommentKey(comment) || `comment-${index}`,
-      comment,
-    }));
-  }, [selectedPRComments]);
-
   const availableLabels = useMemo(() => {
     const labelsByName = new Map(labels.map((label) => [label.name, label]));
     for (const label of selectedPRDetails?.labels ?? []) labelsByName.set(label.name, label);
@@ -367,28 +391,56 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     [mutationKey, prNumber, refreshPR, repoPath, selectedPRDetails],
   );
 
+  const showActivityTab = useCallback(() => {
+    if (prBuffer) {
+      updateBuffer({
+        ...prBuffer,
+        path: buildPRBufferPath(prNumber, null, "activity"),
+      });
+    }
+    setActiveTab("activity");
+  }, [prBuffer, prNumber, updateBuffer]);
+
   const openInlineAction = useCallback(
     (kind: GitHubPRInlineActionKind) => {
-      if (prBuffer) {
-        updateBuffer({
-          ...prBuffer,
-          path: buildPRBufferPath(prNumber, null, "activity"),
-        });
-      }
-      setActiveTab("activity");
+      showActivityTab();
       setInlineAction(kind);
     },
-    [prBuffer, prNumber, updateBuffer],
+    [showActivityTab],
   );
+
+  const focusComposer = useCallback(() => {
+    showActivityTab();
+    requestAnimationFrame(() => {
+      const composer = composerRef.current;
+      if (!composer) return;
+      composer.scrollIntoView({ behavior: "smooth", block: "center" });
+      composer.querySelector("textarea")?.focus();
+    });
+  }, [showActivityTab]);
+
+  const submitComment = useCallback(async () => {
+    const body = commentDraft.trim();
+    if (!repoPath || !body || mutationKey) return;
+    setMutationKey("comment");
+    try {
+      await invoke("github_add_pr_comment", { repoPath, prNumber, body });
+      setCommentDraft("");
+      await refreshPR("comments");
+      toast.success("Comment added");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not add the comment");
+    } finally {
+      setMutationKey(null);
+    }
+  }, [commentDraft, mutationKey, prNumber, refreshPR, repoPath]);
 
   const submitInlineAction = useCallback(
     async (body: string, method: GitHubPRMergeMethod) => {
       if (!repoPath || !inlineAction || mutationKey) return;
       setMutationKey(inlineAction);
       try {
-        if (inlineAction === "comment") {
-          await invoke("github_add_pr_comment", { repoPath, prNumber, body });
-        } else if (inlineAction === "approve" || inlineAction === "request-changes") {
+        if (inlineAction === "approve" || inlineAction === "request-changes") {
           await invoke("github_submit_pr_review", {
             repoPath,
             prNumber,
@@ -403,13 +455,11 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
         const completedAction = inlineAction;
         setInlineAction(null);
         toast.success(
-          completedAction === "comment"
-            ? "Comment added"
-            : completedAction === "approve"
-              ? "Pull request approved"
-              : completedAction === "request-changes"
-                ? "Changes requested"
-                : "Pull request merged",
+          completedAction === "approve"
+            ? "Pull request approved"
+            : completedAction === "request-changes"
+              ? "Changes requested"
+              : "Pull request merged",
         );
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Pull request action failed");
@@ -499,9 +549,9 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
 
   if (!selectedPRDetails) {
     return (
-      <ResourceViewer
+      <ResourceDocument
         header={
-          <ResourceViewerHeader
+          <ResourceHeader
             title={prBuffer?.name || `PR #${prNumber}`}
             meta={detailsError && !isLoadingDetails ? detailsError : `Pull request #${prNumber}`}
             leading={
@@ -526,12 +576,13 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
         {detailsError && !isLoadingDetails ? null : (
           <ViewerLoadingState label={`Loading PR #${prNumber}`} layout="section" />
         )}
-      </ResourceViewer>
+      </ResourceDocument>
     );
   }
 
   const isRefreshingDetails = isLoadingDetails && !!selectedPRDetails;
   const pr = selectedPRDetails;
+  const status = getPullRequestStatus(pr);
   const changedFilesCount = pr.changedFiles || selectedPRFiles.length || 0;
   const checksSummary =
     pr.statusChecks?.length > 0
@@ -539,119 +590,89 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       : pr.mergeable === "CONFLICTING"
         ? "Has conflicts"
         : "No checks reported";
-  const reviewSummary =
-    pr.reviewDecision === "CHANGES_REQUESTED"
-      ? "changes requested"
-      : pr.reviewDecision === "REVIEW_REQUIRED"
-        ? "review required"
-        : null;
   const repositoryUrl = pr.url.replace(/\/pull\/\d+$/, "");
-  return (
-    <ResourceViewer
-      scrollMode={activeTab === "files" ? "workspace" : "content"}
-      contentClassName={
-        activeTab === "files" ? "flex min-h-0 flex-1 flex-col px-0 pb-0 sm:px-0" : undefined
+
+  const header = (
+    <GitHubPRHeader
+      pr={pr}
+      activeView={activeTab}
+      changedFilesCount={changedFilesCount}
+      commits={commits}
+      repoPath={repoPath ?? undefined}
+      isRefreshingDetails={isRefreshingDetails}
+      onRefresh={handleRefresh}
+      onCheckout={() => {
+        void handleCheckout();
+      }}
+      onOpenInBrowser={handleOpenInBrowser}
+      onCopyPRLink={handleCopyPRLink}
+      onCopyBranchName={handleCopyBranchName}
+      onShowOverview={handleShowOverview}
+      onShowFiles={handleShowFiles}
+      onComment={focusComposer}
+      onApprove={() => openInlineAction("approve")}
+      onRequestChanges={() => openInlineAction("request-changes")}
+      onMerge={() => openInlineAction("merge")}
+      onClosePR={() => void closePullRequest()}
+    />
+  );
+
+  const summary = (
+    <ResourceSummary
+      icon={<GitPullRequestIcon className={PR_STATUS_ICON_CLASS[status]} />}
+      title={<GitHubInlineTitle value={pr.title} onSave={(title) => updatePR({ title })} />}
+      badges={
+        <Badge variant={PR_STATUS_BADGE_VARIANT[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
       }
-      header={
-        <GitHubPRViewerHeader
-          pr={pr}
-          activeView={activeTab}
-          changedFilesCount={changedFilesCount}
-          commits={commits}
-          repoPath={repoPath ?? undefined}
-          additions={pr.additions}
-          deletions={pr.deletions}
-          isRefreshingDetails={isRefreshingDetails}
-          onRefresh={handleRefresh}
-          onCheckout={() => {
-            void handleCheckout();
-          }}
-          onOpenInBrowser={handleOpenInBrowser}
-          onCopyPRLink={handleCopyPRLink}
-          onCopyBranchName={handleCopyBranchName}
-          onShowOverview={handleShowOverview}
-          onShowFiles={handleShowFiles}
-          onComment={() => openInlineAction("comment")}
-          onApprove={() => openInlineAction("approve")}
-          onRequestChanges={() => openInlineAction("request-changes")}
-          onMerge={() => openInlineAction("merge")}
-          onClosePR={() => void closePullRequest()}
-        />
+      meta={
+        <>
+          <GitHubUserChip
+            login={pr.author.login}
+            avatarUrl={pr.author.avatarUrl}
+            className="text-foreground"
+            avatarSize="sm"
+          />
+          <GitHubMetaChip title={new Date(pr.createdAt).toLocaleString()}>
+            {`Opened ${getTimeAgo(pr.createdAt)}`}
+          </GitHubMetaChip>
+          <span className="flex min-w-0 items-center gap-1">
+            <GitHubBranchChip name={pr.headRef} repositoryUrl={repositoryUrl} />
+            <span aria-hidden="true" className="text-subtle-foreground">
+              →
+            </span>
+            <GitHubBranchChip name={pr.baseRef} repositoryUrl={repositoryUrl} />
+          </span>
+          <GitHubMetaChip title="Changed files" onClick={handleShowFiles}>
+            <span className="flex items-center gap-1.5">
+              <span>{`${changedFilesCount} files`}</span>
+              <span className="flex items-center gap-1 font-mono">
+                <span className="text-git-added">+{pr.additions}</span>
+                <span className="text-git-deleted">-{pr.deletions}</span>
+              </span>
+            </span>
+          </GitHubMetaChip>
+          <GitHubMetaChip title="Comments">
+            {`${selectedPRComments.length} comment${selectedPRComments.length === 1 ? "" : "s"}`}
+          </GitHubMetaChip>
+        </>
       }
-    >
-      {detailsError && (
-        <ViewerErrorState
-          message={detailsError}
-          actionLabel="Retry"
-          onAction={handleRefresh}
-          layout="section"
-          className="mb-3 min-h-0 shrink-0"
-        />
-      )}
+    />
+  );
 
-      {activeTab === "activity" && (
-        <ResourceDetailLayout
-          sidebar={
-            <GitHubPRSidebar
-              pr={pr}
-              changedFilesCount={changedFilesCount}
-              checksSummary={checksSummary}
-              reviewSummary={reviewSummary}
-              commentCount={selectedPRComments.length}
-              onShowFiles={handleShowFiles}
-              availableLabels={availableLabels}
-              onLabelsChange={(nextLabels) => void updatePR({ labels: nextLabels })}
-              onAssigneesChange={(assignees) => void updatePR({ assignees })}
-              repoPath={repoPath ?? undefined}
-              repositoryUrl={repositoryUrl}
-            />
-          }
-        >
-          <div className="space-y-8">
-            <section className="space-y-2">
-              <GitHubInlineTitle value={pr.title} onSave={(title) => updatePR({ title })} />
-              <div className="font-sans ui-text-sm flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-subtle-foreground">
-                <GitHubUserChip
-                  login={pr.author.login}
-                  avatarUrl={pr.author.avatarUrl}
-                  className="text-foreground"
-                  avatarSize="sm"
-                />
-                <GitHubMetaChip title={new Date(pr.createdAt).toLocaleString()}>
-                  {`Opened ${getTimeAgo(pr.createdAt)}`}
-                </GitHubMetaChip>
-                <span className="flex min-w-0 items-center gap-1">
-                  <GitHubBranchChip name={pr.headRef} repositoryUrl={repositoryUrl} />
-                  <span aria-hidden="true">→</span>
-                  <GitHubBranchChip name={pr.baseRef} repositoryUrl={repositoryUrl} />
-                </span>
-              </div>
-            </section>
+  const errorState = detailsError ? (
+    <ViewerErrorState
+      message={detailsError}
+      actionLabel="Retry"
+      onAction={handleRefresh}
+      layout="section"
+      className="mb-3 min-h-0 shrink-0"
+    />
+  ) : null;
 
-            {inlineAction ? (
-              <GitHubPRInlineAction
-                kind={inlineAction}
-                isSubmitting={mutationKey === inlineAction}
-                onCancel={() => setInlineAction(null)}
-                onSubmit={submitInlineAction}
-              />
-            ) : null}
-
-            <PRActivityPanel
-              body={pr.body}
-              repositoryUrl={repositoryUrl}
-              repoPath={repoPath ?? undefined}
-              activityItems={activityItems}
-              isLoadingContent={isLoadingContent}
-              contentError={contentError}
-              onRetry={handleRefresh}
-              onBodySave={(body) => updatePR({ body })}
-            />
-          </div>
-        </ResourceDetailLayout>
-      )}
-
-      {activeTab === "files" && (
+  if (activeTab === "files") {
+    return (
+      <ResourceWorkspace header={header} summary={summary}>
+        {errorState}
         <div className="min-h-0 min-w-0 flex-1">
           <PRFilesPanel
             selectedPRDiff={selectedPRDiff}
@@ -667,8 +688,55 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
             onOpenChangedFile={handleOpenChangedFile}
           />
         </div>
-      )}
-    </ResourceViewer>
+      </ResourceWorkspace>
+    );
+  }
+
+  return (
+    <ResourceDocument header={header} summary={summary}>
+      {errorState}
+      <ResourceSidebarLayout
+        sidebar={
+          <GitHubPRSidebar
+            pr={pr}
+            status={status}
+            checksSummary={checksSummary}
+            availableLabels={availableLabels}
+            onLabelsChange={(nextLabels) => void updatePR({ labels: nextLabels })}
+            onAssigneesChange={(assignees) => void updatePR({ assignees })}
+            repoPath={repoPath ?? undefined}
+            repositoryUrl={repositoryUrl}
+          />
+        }
+      >
+        <PRTimeline
+          pr={pr}
+          commits={commits}
+          comments={selectedPRComments}
+          repositoryUrl={repositoryUrl}
+          repoPath={repoPath ?? undefined}
+          currentUser={currentUser}
+          isLoadingContent={isLoadingContent}
+          contentError={contentError}
+          onRetry={handleRefresh}
+          onBodySave={(body) => updatePR({ body })}
+          commentDraft={commentDraft}
+          onCommentDraftChange={setCommentDraft}
+          onSubmitComment={() => void submitComment()}
+          isSubmittingComment={mutationKey === "comment"}
+          composerRef={composerRef}
+        >
+          {inlineAction ? (
+            <GitHubPRInlineAction
+              kind={inlineAction}
+              isSubmitting={mutationKey === inlineAction}
+              onCancel={() => setInlineAction(null)}
+              onSubmit={submitInlineAction}
+            />
+          ) : null}
+        </PRTimeline>
+      </ResourceSidebarLayout>
+    </ResourceDocument>
   );
 });
 

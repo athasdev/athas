@@ -1,19 +1,17 @@
-import { CheckCircleIcon, ChevronRightIcon, GitPullRequestIcon } from "@/ui/icons";
-import { Button } from "@/ui/button";
-import { ResourceDetailSection, ResourceDetailSidebar } from "@/ui/resource";
+import type { ReactNode } from "react";
+import Badge from "@/ui/badge";
+import { ChatBubbleTextIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@/ui/icons";
+import { ResourceSection } from "@/ui/resource";
 import type { Label, PullRequestDetails } from "../types/github.types";
-import { getTimeAgo } from "../utils/github-viewer-utils";
+import type { PullRequestStatus } from "../utils/github-pr-viewer-utils";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
-import { GitHubUserChip } from "./github-resource-chips";
+import { GitHubUserChip } from "./github-chips";
 import { CIStatusIndicator, LabelBadges, LinkedIssuesList, MergeStatusBadge } from "./pr-status";
 
 interface GitHubPRSidebarProps {
   pr: PullRequestDetails;
-  changedFilesCount: number;
+  status: PullRequestStatus;
   checksSummary: string;
-  reviewSummary: string | null;
-  commentCount: number;
-  onShowFiles: () => void;
   availableLabels: Label[];
   onLabelsChange: (labels: Label[]) => void;
   onAssigneesChange: (assignees: PullRequestDetails["assignees"]) => void;
@@ -21,61 +19,113 @@ interface GitHubPRSidebarProps {
   repositoryUrl?: string;
 }
 
+type ReviewerState = "requested" | "approved" | "changes-requested" | "commented";
+
+interface ReviewerRow {
+  login: string;
+  avatarUrl?: string | null;
+  state: ReviewerState;
+}
+
+const REVIEWER_STATE: Record<ReviewerState, { label: string; icon: ReactNode }> = {
+  requested: { label: "Requested", icon: <ClockIcon className="text-subtle-foreground" /> },
+  approved: { label: "Approved", icon: <CheckCircleIcon className="text-success" /> },
+  "changes-requested": {
+    label: "Changes requested",
+    icon: <XCircleIcon className="text-destructive" />,
+  },
+  commented: {
+    label: "Commented",
+    icon: <ChatBubbleTextIcon className="text-subtle-foreground" />,
+  },
+};
+
+function toReviewerState(reviewState: string): ReviewerState {
+  if (reviewState === "APPROVED") return "approved";
+  if (reviewState === "CHANGES_REQUESTED") return "changes-requested";
+  return "commented";
+}
+
+function getReviewerRows(pr: PullRequestDetails): ReviewerRow[] {
+  const requested = pr.reviewRequests.map<ReviewerRow>((request) => ({
+    login: request.login,
+    avatarUrl: request.avatarUrl,
+    state: "requested",
+  }));
+  const requestedLogins = new Set(requested.map((row) => row.login.toLowerCase()));
+  const reviewed = pr.reviews
+    .filter((review) => !requestedLogins.has(review.login.toLowerCase()))
+    .map<ReviewerRow>((review) => ({
+      login: review.login,
+      avatarUrl: review.avatarUrl,
+      state: toReviewerState(review.state),
+    }));
+  return [...reviewed, ...requested];
+}
+
+function ReviewDecisionBadge({ decision }: { decision: string | null }) {
+  if (decision === "APPROVED") return <Badge variant="success">Approved</Badge>;
+  if (decision === "CHANGES_REQUESTED") return <Badge variant="error">Changes requested</Badge>;
+  if (decision === "REVIEW_REQUIRED") return <Badge variant="warning">Review required</Badge>;
+  return null;
+}
+
 export function GitHubPRSidebar({
   pr,
-  changedFilesCount,
+  status,
   checksSummary,
-  reviewSummary,
-  commentCount,
-  onShowFiles,
   availableLabels,
   onLabelsChange,
   onAssigneesChange,
   repoPath,
   repositoryUrl,
 }: GitHubPRSidebarProps) {
-  const isClosed = pr.state === "closed";
+  const reviewers = getReviewerRows(pr);
 
   return (
-    <ResourceDetailSidebar>
-      <ResourceDetailSection label="Status">
-        <div className="flex items-center gap-2">
-          <GitPullRequestIcon className={isClosed ? "text-destructive" : "text-success"} />
-          <span className="capitalize">{pr.isDraft ? "Draft" : pr.state}</span>
-        </div>
-      </ResourceDetailSection>
-
-      <ResourceDetailSection label="Merge">
+    <>
+      <ResourceSection title="Merge">
         <MergeStatusBadge
+          status={status}
           mergeStateStatus={pr.mergeStateStatus}
           mergeable={pr.mergeable}
           reviewDecision={pr.reviewDecision}
         />
-      </ResourceDetailSection>
+      </ResourceSection>
 
-      <ResourceDetailSection label="Reviewers">
-        {pr.reviewRequests.length > 0 ? (
-          <div className="space-y-2">
-            {pr.reviewRequests.map((reviewer) => (
-              <div key={reviewer.login} className="flex min-w-0 items-center">
-                <GitHubUserChip
-                  login={reviewer.login}
-                  avatarUrl={reviewer.avatarUrl}
-                  className="text-foreground"
-                  avatarSize="sm"
-                />
-              </div>
-            ))}
-            {reviewSummary ? (
-              <p className="capitalize text-subtle-foreground">{reviewSummary}</p>
-            ) : null}
-          </div>
+      <ResourceSection title="Review" action={<ReviewDecisionBadge decision={pr.reviewDecision} />}>
+        {reviewers.length > 0 ? (
+          <ul className="space-y-2">
+            {reviewers.map((reviewer) => {
+              const reviewerState = REVIEWER_STATE[reviewer.state];
+              return (
+                <li
+                  key={reviewer.login}
+                  className="flex min-w-0 items-center justify-between gap-2"
+                >
+                  <GitHubUserChip
+                    login={reviewer.login}
+                    avatarUrl={reviewer.avatarUrl}
+                    className="text-foreground"
+                    avatarSize="sm"
+                  />
+                  <span
+                    className="flex shrink-0 items-center [&_svg]:size-3.5"
+                    title={reviewerState.label}
+                    aria-label={reviewerState.label}
+                  >
+                    {reviewerState.icon}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         ) : (
-          <span className="text-subtle-foreground">{reviewSummary ?? "No reviewers"}</span>
+          <span className="text-subtle-foreground">No reviewers</span>
         )}
-      </ResourceDetailSection>
+      </ResourceSection>
 
-      <ResourceDetailSection label="Checks">
+      <ResourceSection title="Checks">
         {pr.statusChecks.length > 0 ? (
           <CIStatusIndicator
             checks={pr.statusChecks}
@@ -83,47 +133,12 @@ export function GitHubPRSidebar({
             repositoryUrl={repositoryUrl}
           />
         ) : (
-          <div className="flex items-center gap-2 text-subtle-foreground">
-            <CheckCircleIcon />
-            <span>{checksSummary}</span>
-          </div>
+          <span className="text-subtle-foreground">{checksSummary}</span>
         )}
-      </ResourceDetailSection>
+      </ResourceSection>
 
-      <ResourceDetailSection
-        label="Changes"
-        action={
-          <Button
-            type="button"
-            variant="ghost"
-            iconOnly
-            onClick={onShowFiles}
-            tooltip="Show changed files"
-          >
-            <ChevronRightIcon />
-          </Button>
-        }
-      >
-        <div className="flex min-w-0 items-center justify-between gap-2">
-          <span>{`${changedFilesCount} files changed`}</span>
-          <span className="flex shrink-0 items-center gap-1.5 font-mono">
-            <span className="text-git-added">+{pr.additions}</span>
-            <span className="text-git-deleted">-{pr.deletions}</span>
-          </span>
-        </div>
-      </ResourceDetailSection>
-
-      <ResourceDetailSection label="Activity">
-        <div className="space-y-1 text-subtle-foreground">
-          <p>{`${pr.commits.length} commits`}</p>
-          <p>{`${commentCount} comments`}</p>
-          <p>{`Opened ${getTimeAgo(pr.createdAt)}`}</p>
-          <p>{`Updated ${getTimeAgo(pr.updatedAt)}`}</p>
-        </div>
-      </ResourceDetailSection>
-
-      <ResourceDetailSection
-        label="Assignees"
+      <ResourceSection
+        title="Assignees"
         action={
           <GitHubAssigneePicker
             value={pr.assignees.map((assignee) => assignee.login)}
@@ -138,35 +153,25 @@ export function GitHubPRSidebar({
         }
       >
         {pr.assignees.length > 0 ? (
-          <div className="space-y-2">
+          <ul className="space-y-2">
             {pr.assignees.map((assignee) => (
-              <div key={assignee.login} className="flex min-w-0 items-center">
+              <li key={assignee.login} className="flex min-w-0 items-center">
                 <GitHubUserChip
                   login={assignee.login}
                   avatarUrl={assignee.avatarUrl}
                   className="text-foreground"
                   avatarSize="sm"
                 />
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         ) : (
           <span className="text-subtle-foreground">No assignees</span>
         )}
-      </ResourceDetailSection>
+      </ResourceSection>
 
-      {pr.linkedIssues.length > 0 ? (
-        <ResourceDetailSection label="Linked issues">
-          <LinkedIssuesList
-            issues={pr.linkedIssues}
-            repoPath={repoPath}
-            repositoryUrl={repositoryUrl}
-          />
-        </ResourceDetailSection>
-      ) : null}
-
-      <ResourceDetailSection
-        label="Labels"
+      <ResourceSection
+        title="Labels"
         action={
           <GitHubLabelPicker
             labels={availableLabels}
@@ -182,7 +187,17 @@ export function GitHubPRSidebar({
         ) : (
           <span className="text-subtle-foreground">No labels</span>
         )}
-      </ResourceDetailSection>
-    </ResourceDetailSidebar>
+      </ResourceSection>
+
+      {pr.linkedIssues.length > 0 ? (
+        <ResourceSection title="Linked issues">
+          <LinkedIssuesList
+            issues={pr.linkedIssues}
+            repoPath={repoPath}
+            repositoryUrl={repositoryUrl}
+          />
+        </ResourceSection>
+      ) : null}
+    </>
   );
 }

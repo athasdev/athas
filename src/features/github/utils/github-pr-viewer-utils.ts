@@ -5,7 +5,7 @@ import type {
   FileDiff,
   FilePatchData,
 } from "../types/github-pr-viewer.types";
-import type { PullRequestFile } from "../types/github.types";
+import type { PullRequestDetails, PullRequestFile } from "../types/github.types";
 
 function inferFileStatus(additions: number, deletions: number): FileDiff["status"] {
   if (additions > 0 && deletions === 0) return "added";
@@ -129,14 +129,6 @@ export function resolveSafeRepoFilePath(repoPath: string, relativePath: string):
   return `${normalizedBase}${separator}${segments.join(separator)}`;
 }
 
-export function getCommentKey(comment: {
-  author: { login: string };
-  createdAt: string;
-  body: string;
-}): string {
-  return `${comment.author.login}:${comment.createdAt}:${comment.body.slice(0, 32)}`;
-}
-
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (typeof value !== "object" || value === null) return null;
   return value as Record<string, unknown>;
@@ -204,4 +196,21 @@ export function normalizeCommit(raw: unknown, index: number): Commit | null {
     url: asNonEmptyString(record.url) ?? undefined,
     authors: normalizedAuthors,
   };
+}
+
+export type PullRequestStatus = "open" | "draft" | "merged" | "closed";
+
+export const PULL_REQUEST_STATUS_LABEL: Record<PullRequestStatus, string> = {
+  open: "Open",
+  draft: "Draft",
+  merged: "Merged",
+  closed: "Closed",
+};
+
+export function getPullRequestStatus(
+  pr: Pick<PullRequestDetails, "state" | "isDraft" | "mergedAt">,
+): PullRequestStatus {
+  if (pr.mergedAt) return "merged";
+  if (pr.state.toLowerCase() === "closed") return "closed";
+  return pr.isDraft ? "draft" : "open";
 }

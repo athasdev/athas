@@ -30,12 +30,7 @@ import {
 } from "@/ui/icons";
 import Input from "@/ui/input";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";
-import {
-  ResourceViewer,
-  ResourceViewerBody,
-  ResourceViewerHeader,
-  ResourceViewerTitle,
-} from "@/ui/resource";
+import { ResourceDocument, ResourceHeader } from "@/ui/resource";
 import Select from "@/ui/select";
 import {
   SidebarFooter,
@@ -219,7 +214,7 @@ function OverviewContent({
   const totalRuns = tasks.reduce((total, task) => total + task.runCount, 0);
 
   return (
-    <ResourceViewerBody className="space-y-8">
+    <div className="space-y-8">
       <Card variant="muted">
         <CardHeader>
           <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -346,7 +341,7 @@ function OverviewContent({
           </Card>
         )}
       </section>
-    </ResourceViewerBody>
+    </div>
   );
 }
 
@@ -410,7 +405,7 @@ function CreateContent({ onCreated }: { onCreated: (taskId: string) => void }) {
   };
 
   return (
-    <ResourceViewerBody className="space-y-5">
+    <div className="space-y-5">
       <Card variant="muted">
         <CardHeader>
           <div className="mb-1 flex items-center gap-2">
@@ -526,7 +521,7 @@ function CreateContent({ onCreated }: { onCreated: (taskId: string) => void }) {
           Start continuous agent
         </Button>
       </div>
-    </ResourceViewerBody>
+    </div>
   );
 }
 
@@ -547,7 +542,7 @@ function TaskContent({
   const cadence = getContinuousAgentCadence(task.cadence);
 
   return (
-    <ResourceViewerBody className="space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={isRunning || task.enabled ? "success" : "muted"}>
           {isRunning
@@ -662,7 +657,7 @@ function TaskContent({
           </Button>
         </span>
       </div>
-    </ResourceViewerBody>
+    </div>
   );
 }
 
@@ -736,17 +731,11 @@ export default function ContinuousAgentsResource() {
       />
 
       <main className="min-w-0 flex-1">
-        <ResourceViewer
+        <ResourceDocument
           header={
-            <ResourceViewerHeader
+            <ResourceHeader
               leading={<ArrowsClockwiseIcon />}
-              title={
-                <ResourceViewerTitle
-                  kind="Continuous Agents"
-                  title={pageTitle}
-                  ariaLabel="Continuous Agents"
-                />
-              }
+              title={pageTitle}
               meta={`${workspaceTasks.length} agent${workspaceTasks.length === 1 ? "" : "s"}`}
               actions={
                 selection !== "create" ? (
@@ -778,7 +767,7 @@ export default function ContinuousAgentsResource() {
               onSelectTask={(taskId) => setSelection(getTaskSelection(taskId))}
             />
           )}
-        </ResourceViewer>
+        </ResourceDocument>
       </main>
     </div>
   );

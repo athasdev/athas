@@ -11,7 +11,7 @@ import {
 } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { getTimeAgo } from "../utils/github-viewer-utils";
-import { GitHubUserChip } from "./github-resource-chips";
+import { GitHubUserChip } from "./github-chips";
 import GitHubMarkdown from "./github-markdown";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 

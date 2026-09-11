@@ -3,6 +3,7 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   CircleDotIcon,
+  ClockIcon,
   GitMergeIcon,
   LinkIcon,
   UserIcon,
@@ -24,6 +25,7 @@ import {
   isGitHubEntityLinkForRepository,
   parseGitHubEntityLink,
 } from "../utils/github-link-utils";
+import type { PullRequestStatus } from "../utils/github-pr-viewer-utils";
 
 // CI Status Indicator
 interface CIStatusProps {
@@ -44,6 +46,16 @@ function getCheckBadgeVariant(check: StatusCheck): BadgeVariant {
     return "warning";
   }
   return "muted";
+}
+
+/** Failed first, then running, then passed, then skipped or neutral. */
+function getCheckPriority(check: StatusCheck): number {
+  if (check.conclusion === "FAILURE" || check.conclusion === "ERROR") return 0;
+  if (check.status === "IN_PROGRESS" || check.status === "PENDING" || check.status === "QUEUED") {
+    return 1;
+  }
+  if (check.conclusion === "SUCCESS") return 2;
+  return 3;
 }
 
 export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CIStatusProps) => {
@@ -112,6 +124,11 @@ export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CISt
     };
   }, [checks]);
 
+  const orderedChecks = useMemo(
+    () => [...checks].sort((left, right) => getCheckPriority(left) - getCheckPriority(right)),
+    [checks],
+  );
+
   if (!summary) return null;
 
   return (
@@ -127,8 +144,8 @@ export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CISt
           )}
         </PopoverTrigger>
       </span>
-      <PopoverContent align="start" size="panel" className="p-1.5">
-        {checks.map((check, idx) => (
+      <PopoverContent align="start" size="panel" className="max-h-80 overflow-y-auto p-1.5">
+        {orderedChecks.map((check, idx) => (
           <button
             key={idx}
             type="button"
@@ -167,68 +184,65 @@ CIStatusIndicator.displayName = "CIStatusIndicator";
 
 // Merge Status Badge
 interface MergeStatusProps {
+  status: PullRequestStatus;
   mergeStateStatus: string | null;
   mergeable: string | null;
   reviewDecision: string | null;
 }
 
-export const MergeStatusBadge = memo(
-  ({ mergeStateStatus, mergeable, reviewDecision }: MergeStatusProps) => {
-    const getStatusInfo = (): {
-      text: string;
-      variant: BadgeVariant;
-      icon: typeof WarningCircleIcon;
-    } | null => {
-      if (mergeable === "CONFLICTING") {
-        return { text: "Has conflicts", variant: "error", icon: WarningCircleIcon };
-      }
-      if (mergeStateStatus === "BLOCKED") {
-        if (reviewDecision === "CHANGES_REQUESTED") {
-          return {
-            text: "Changes requested",
-            variant: "error",
-            icon: WarningCircleIcon,
-          };
-        }
-        if (!reviewDecision || reviewDecision === "REVIEW_REQUIRED") {
-          return {
-            text: "Review required",
-            variant: "warning",
-            icon: WarningCircleIcon,
-          };
-        }
-        return { text: "Blocked", variant: "warning", icon: WarningCircleIcon };
-      }
-      if (
-        mergeStateStatus === "CLEAN" ||
-        mergeStateStatus === "HAS_HOOKS" ||
-        mergeStateStatus === "UNSTABLE"
-      ) {
-        return { text: "Ready to merge", variant: "success", icon: GitMergeIcon };
-      }
-      if (mergeStateStatus === "BEHIND") {
-        return {
-          text: "Behind base",
-          variant: "warning",
-          icon: WarningCircleIcon,
-        };
-      }
-      return null;
-    };
+interface MergeStatusInfo {
+  text: string;
+  variant: BadgeVariant;
+  icon: typeof WarningCircleIcon;
+}
 
-    const status = getStatusInfo();
-    if (!status) return null;
+function getMergeStatusInfo({
+  status,
+  mergeStateStatus,
+  mergeable,
+  reviewDecision,
+}: MergeStatusProps): MergeStatusInfo {
+  if (status === "merged") return { text: "Merged", variant: "accent", icon: GitMergeIcon };
+  if (status === "closed") {
+    return { text: "Closed without merging", variant: "muted", icon: XCircleIcon };
+  }
 
-    const Icon = status.icon;
+  const mergeState = (mergeStateStatus ?? "").toLowerCase();
+  const hasConflicts =
+    mergeable === "false" || mergeable === "CONFLICTING" || mergeState === "dirty";
+  if (hasConflicts) return { text: "Has conflicts", variant: "error", icon: WarningCircleIcon };
+  if (status === "draft") return { text: "Draft", variant: "muted", icon: CircleDotIcon };
 
-    return (
-      <Badge variant={status.variant}>
-        <Icon />
-        <span>{status.text}</span>
-      </Badge>
-    );
-  },
-);
+  switch (mergeState) {
+    case "blocked":
+      if (reviewDecision === "CHANGES_REQUESTED") {
+        return { text: "Changes requested", variant: "error", icon: WarningCircleIcon };
+      }
+      if (!reviewDecision || reviewDecision === "REVIEW_REQUIRED") {
+        return { text: "Review required", variant: "warning", icon: WarningCircleIcon };
+      }
+      return { text: "Blocked by checks", variant: "warning", icon: WarningCircleIcon };
+    case "behind":
+      return { text: "Behind base branch", variant: "warning", icon: WarningCircleIcon };
+    case "unstable":
+      return { text: "Mergeable, checks failing", variant: "warning", icon: WarningCircleIcon };
+    case "clean":
+    case "has_hooks":
+      return { text: "Ready to merge", variant: "success", icon: GitMergeIcon };
+    default:
+      return { text: "Checking mergeability", variant: "muted", icon: ClockIcon };
+  }
+}
+
+export const MergeStatusBadge = memo((props: MergeStatusProps) => {
+  const { text, variant, icon: Icon } = getMergeStatusInfo(props);
+  return (
+    <Badge variant={variant}>
+      <Icon />
+      <span>{text}</span>
+    </Badge>
+  );
+});
 
 MergeStatusBadge.displayName = "MergeStatusBadge";
 

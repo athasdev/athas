@@ -109,6 +109,10 @@ export function normalizePullRequestDetails(details: PullRequestDetails): PullRe
     baseRef: getStringValue(record, ["baseRef", "baseRefName", "base_ref"]),
     statusChecks,
     linkedIssues,
+    reviews: Array.isArray(details.reviews) ? details.reviews : [],
+    mergedAt: details.mergedAt ?? null,
+    mergedBy: details.mergedBy ?? null,
+    closedAt: details.closedAt ?? null,
   };
 }
 

@@ -20,7 +20,7 @@ import { hasProductCapability } from "@/features/window/lib/product-capabilities
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import Input from "@/ui/input";
-import { ResourceViewer, ResourceViewerHeader } from "@/ui/resource";
+import { ResourceDocument, ResourceHeader } from "@/ui/resource";
 import Select from "@/ui/select";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
@@ -39,6 +39,7 @@ import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { getRepositoryDisplayName } from "../utils/github-viewer-utils";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
+import { LabelBadges } from "./pr-status";
 
 export type GitHubCreateKind = "pull-request" | "issue" | "action";
 
@@ -389,9 +390,9 @@ ${statusSummary}`;
   };
 
   return (
-    <ResourceViewer
+    <ResourceDocument
       header={
-        <ResourceViewerHeader
+        <ResourceHeader
           title={
             <span className="flex min-w-0 items-center gap-2">
               {kind === "pull-request" ? (
@@ -415,7 +416,7 @@ ${statusSummary}`;
         />
       }
     >
-      <div className="mx-auto w-full max-w-4xl pt-7 pb-16">
+      <div>
         {kind === "action" ? (
           <div>
             <div className="space-y-2 pb-6">
@@ -572,7 +573,13 @@ ${statusSummary}`;
                   onChange={setSelectedLabels}
                   isLoading={isLoadingMetadata}
                 />
+                <LabelBadges labels={labels.filter((label) => selectedLabels.has(label.name))} />
                 <GitHubAssigneePicker value={assignees} onChange={setAssignees} />
+                {assignees.length > 0 ? (
+                  <span className="truncate font-sans ui-text-sm text-subtle-foreground">
+                    {assignees.map((assignee) => `@${assignee}`).join(", ")}
+                  </span>
+                ) : null}
                 {kind === "issue" && milestones.length > 0 ? (
                   <Select
                     value={milestone}
@@ -629,6 +636,6 @@ ${statusSummary}`;
           </div>
         )}
       </div>
-    </ResourceViewer>
+    </ResourceDocument>
   );
 }

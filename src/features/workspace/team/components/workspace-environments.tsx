@@ -8,7 +8,7 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { FieldDescription } from "@/ui/field";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/ui/item";
-import { ResourceContentSection } from "@/ui/resource";
+import { ResourceSection } from "@/ui/resource";
 import {
   inspectWorkspaceEnvironment,
   type WorkspaceEnvironmentInfo,
@@ -72,7 +72,7 @@ export function WorkspaceEnvironments({ root, reportError }: WorkspaceSectionPro
           </Button>
         </ItemActions>
       </Item>
-      <ResourceContentSection title="Declared tool requirements">
+      <ResourceSection title="Declared tool requirements">
         <FieldDescription>
           Read from project manifests. These are the project's requirements; installed versions have
           not been verified.
@@ -90,8 +90,8 @@ export function WorkspaceEnvironments({ root, reportError }: WorkspaceSectionPro
             No runtime requirements found in the supported project manifests.
           </FieldDescription>
         ) : null}
-      </ResourceContentSection>
-      <ResourceContentSection title="Saved SSH connections on this device">
+      </ResourceSection>
+      <ResourceSection title="Saved SSH connections on this device">
         <FieldDescription>
           Open a saved remote environment using Athas's existing SSH connection and authentication
           flow.
@@ -118,7 +118,7 @@ export function WorkspaceEnvironments({ root, reportError }: WorkspaceSectionPro
         <Button onClick={() => useUIState.getState().openProjectPicker("addRemote")}>
           Add SSH connection
         </Button>
-      </ResourceContentSection>
+      </ResourceSection>
       {info?.files.includes(".devcontainer") || info?.files.includes(".devcontainer.json") ? (
         <FieldDescription>
           This project contains Dev Container configuration. Starting a Dev Container from Athas is

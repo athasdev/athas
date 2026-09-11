@@ -17,15 +17,14 @@ import {
 } from "@/features/viewer/components/viewer-state";
 import { Button } from "@/ui/button";
 import { DropdownMenuItem } from "@/ui/dropdown";
+import Badge from "@/ui/badge";
 import {
-  ResourceContentSection,
-  ResourceDetailLayout,
-  ResourceDetailSection,
-  ResourceDetailSidebar,
-  ResourceViewer,
-  ResourceViewerActionsMenu,
-  ResourceViewerHeader,
-  ResourceViewerTitle,
+  ResourceActionsMenu,
+  ResourceDocument,
+  ResourceHeader,
+  ResourceSection,
+  ResourceSidebarLayout,
+  ResourceSummary,
 } from "@/ui/resource";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
@@ -48,7 +47,7 @@ import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
 import { CommentItem } from "./comment-item";
 import { GitHubInlineMarkdown, GitHubInlineTitle } from "./github-inline-editors";
-import { GitHubMetaChip, GitHubUserChip } from "./github-resource-chips";
+import { GitHubMetaChip, GitHubUserChip } from "./github-chips";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
 import { GitHubAssigneePicker, GitHubLabelPicker } from "./github-metadata-pickers";
 import { LabelBadges } from "./pr-status";
@@ -387,34 +386,30 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
     [applyIssueDetails, details, repoPath, runMutation],
   );
 
+  const isOpen = details?.state.toLowerCase() === "open";
+
   return (
-    <ResourceViewer
+    <ResourceDocument
       header={
-        <ResourceViewerHeader
-          title={
-            <ResourceViewerTitle
-              ariaLabel="GitHub issue"
-              kind="Issue"
-              number={issueNumber}
-              title={details?.title ?? buffer?.name ?? "Loading issue"}
-            />
-          }
+        <ResourceHeader
+          title={details?.title ?? buffer?.name ?? "Loading issue"}
           meta={
             details ? (
               <>
+                <span>{`#${issueNumber}`}</span>
+                <span>&middot;</span>
                 <span className="capitalize">{details.state.toLowerCase()}</span>
                 <span>&middot;</span>
                 <span title={new Date(details.updatedAt).toLocaleString()}>
                   {`Updated ${getTimeAgo(details.updatedAt)}`}
                 </span>
-                <span>&middot;</span>
-                <span>{`${details.comments.length} comment${details.comments.length === 1 ? "" : "s"}`}</span>
+                {isLoading ? <Spinner label="Refreshing" compact /> : null}
               </>
             ) : null
           }
           actions={
             <>
-              {details?.state.toLowerCase() === "open" ? (
+              {isOpen ? (
                 <Button
                   type="button"
                   onClick={() => void updateIssueState("closed", "completed")}
@@ -443,8 +438,8 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   Reopen
                 </Button>
               )}
-              <ResourceViewerActionsMenu label="Issue actions">
-                {details?.state.toLowerCase() === "open" ? (
+              <ResourceActionsMenu label="Issue actions">
+                {isOpen ? (
                   <DropdownMenuItem
                     disabled={Boolean(mutationKey)}
                     onClick={() => void updateIssueState("closed", "not_planned")}
@@ -497,10 +492,63 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
                 <DropdownMenuItem onClick={handleCopyIssueLink}>Copy link</DropdownMenuItem>
-              </ResourceViewerActionsMenu>
+              </ResourceActionsMenu>
             </>
           }
         />
+      }
+      summary={
+        details ? (
+          <ResourceSummary
+            icon={<CircleDotIcon className={isOpen ? "text-success" : "text-subtle-foreground"} />}
+            title={
+              <GitHubInlineTitle value={details.title} onSave={(title) => updateIssue({ title })} />
+            }
+            badges={
+              <>
+                <Badge variant={isOpen ? "success" : "muted"}>
+                  {details.stateReason
+                    ? `${details.state.toLowerCase()} as ${details.stateReason.replace("_", " ")}`
+                    : details.state.toLowerCase()}
+                </Badge>
+                {details.locked ? (
+                  <Badge variant="warning">
+                    <LockIcon />
+                    {details.activeLockReason ? `Locked as ${details.activeLockReason}` : "Locked"}
+                  </Badge>
+                ) : null}
+              </>
+            }
+            meta={
+              <>
+                <GitHubUserChip
+                  login={details.author.login}
+                  avatarUrl={details.author.avatarUrl}
+                  className="text-foreground"
+                  avatarSize="sm"
+                />
+                <GitHubMetaChip title={new Date(details.createdAt).toLocaleString()}>
+                  {`Opened ${getTimeAgo(details.createdAt)}`}
+                </GitHubMetaChip>
+                {details.closedAt ? (
+                  <GitHubMetaChip title={new Date(details.closedAt).toLocaleString()}>
+                    {`Closed ${getTimeAgo(details.closedAt)}`}
+                  </GitHubMetaChip>
+                ) : null}
+                {details.closedBy ? (
+                  <GitHubUserChip
+                    login={details.closedBy.login}
+                    avatarUrl={details.closedBy.avatarUrl}
+                    prefix={<span className="mr-1 text-subtle-foreground">Closed by</span>}
+                  />
+                ) : null}
+                <GitHubMetaChip title="Comments">
+                  {`${details.comments.length} comment${details.comments.length === 1 ? "" : "s"}`}
+                </GitHubMetaChip>
+              </>
+            }
+          />
+        ) : null
       }
     >
       {error ? (
@@ -511,40 +559,10 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
           layout="section"
         />
       ) : details ? (
-        <ResourceDetailLayout
+        <ResourceSidebarLayout
           sidebar={
-            <ResourceDetailSidebar>
-              <ResourceDetailSection label="Status">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <CircleDotIcon
-                      className={
-                        details.state.toLowerCase() === "open"
-                          ? "text-success"
-                          : "text-subtle-foreground"
-                      }
-                    />
-                    <span className="capitalize">{details.state.toLowerCase()}</span>
-                  </div>
-                  {details.stateReason ? (
-                    <p className="capitalize text-subtle-foreground">
-                      {details.stateReason.replace("_", " ")}
-                    </p>
-                  ) : null}
-                  {details.locked ? (
-                    <div className="flex items-center gap-2 text-subtle-foreground">
-                      <LockIcon />
-                      <span>
-                        {details.activeLockReason
-                          ? `Locked as ${details.activeLockReason}`
-                          : "Locked"}
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-              </ResourceDetailSection>
-
-              <ResourceDetailSection label="Type">
+            <>
+              <ResourceSection title="Type">
                 <Select
                   value={details.issueType?.name ?? "none"}
                   options={[
@@ -563,10 +581,10 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   align="start"
                   aria-label="Issue type"
                 />
-              </ResourceDetailSection>
+              </ResourceSection>
 
-              <ResourceDetailSection
-                label="Milestone"
+              <ResourceSection
+                title="Milestone"
                 action={
                   details.milestone && repositoryUrl ? (
                     <Button
@@ -604,10 +622,10 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   align="start"
                   aria-label="Issue milestone"
                 />
-              </ResourceDetailSection>
+              </ResourceSection>
 
-              <ResourceDetailSection
-                label="Assignees"
+              <ResourceSection
+                title="Assignees"
                 action={
                   <GitHubAssigneePicker
                     value={details.assignees.map((assignee) => assignee.login)}
@@ -640,10 +658,10 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 ) : (
                   <span className="text-subtle-foreground">Unassigned</span>
                 )}
-              </ResourceDetailSection>
+              </ResourceSection>
 
-              <ResourceDetailSection
-                label="Labels"
+              <ResourceSection
+                title="Labels"
                 action={
                   <GitHubLabelPicker
                     labels={availableLabels}
@@ -661,43 +679,12 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 ) : (
                   <span className="text-subtle-foreground">No labels</span>
                 )}
-              </ResourceDetailSection>
-
-              <ResourceDetailSection label="Activity">
-                <div className="space-y-1 text-subtle-foreground">
-                  <p>{`${details.comments.length} comments`}</p>
-                  <p>{`Opened ${getTimeAgo(details.createdAt)}`}</p>
-                  <p>{`Updated ${getTimeAgo(details.updatedAt)}`}</p>
-                  {details.closedAt ? <p>{`Closed ${getTimeAgo(details.closedAt)}`}</p> : null}
-                  {details.closedBy ? (
-                    <GitHubUserChip
-                      login={details.closedBy.login}
-                      avatarUrl={details.closedBy.avatarUrl}
-                      prefix={<span className="mr-1 text-subtle-foreground">Closed by</span>}
-                    />
-                  ) : null}
-                </div>
-              </ResourceDetailSection>
-            </ResourceDetailSidebar>
+              </ResourceSection>
+            </>
           }
         >
           <div className="space-y-8">
-            <section className="space-y-2">
-              <GitHubInlineTitle value={details.title} onSave={(title) => updateIssue({ title })} />
-              <div className="font-sans ui-text-sm flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-subtle-foreground">
-                <GitHubUserChip
-                  login={details.author.login}
-                  avatarUrl={details.author.avatarUrl}
-                  className="text-foreground"
-                  avatarSize="sm"
-                />
-                <GitHubMetaChip title={new Date(details.createdAt).toLocaleString()}>
-                  {`Opened ${getTimeAgo(details.createdAt)}`}
-                </GitHubMetaChip>
-              </div>
-            </section>
-
-            <ResourceContentSection title="Description">
+            <ResourceSection title="Description">
               <GitHubInlineMarkdown
                 value={details.body}
                 emptyLabel="No description provided"
@@ -705,9 +692,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 repoPath={repoPath}
                 onSave={(body) => updateIssue({ body })}
               />
-            </ResourceContentSection>
+            </ResourceSection>
 
-            <ResourceContentSection title="Activity">
+            <ResourceSection title="Activity">
               <div className="w-full space-y-3">
                 {details.comments.length > 0 ? (
                   visibleComments.map((comment, index) => (
@@ -766,13 +753,13 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   </div>
                 </div>
               </div>
-            </ResourceContentSection>
+            </ResourceSection>
           </div>
-        </ResourceDetailLayout>
+        </ResourceSidebarLayout>
       ) : (
         <ViewerLoadingState label="Loading issue" layout="section" />
       )}
-    </ResourceViewer>
+    </ResourceDocument>
   );
 });
 

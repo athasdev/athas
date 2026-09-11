@@ -13,6 +13,7 @@ import {
   FilterIcon,
   GitBranchIcon,
   GitPullRequestIcon,
+  WindowExpandIcon,
   PlusIcon,
 } from "@/ui/icons";
 import { GithubMark } from "@/ui/brand-marks";
@@ -62,6 +63,7 @@ import { writeClipboardText } from "@/utils/clipboard";
 import { useGitHubStore } from "../stores/github.store";
 import { getTimeAgo, getSidebarTime } from "../utils/github-viewer-utils";
 import { getGitHubAvatarUrl } from "../utils/github-avatar-url";
+import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
 import { groupPullRequests } from "../utils/github-sidebar-groups";
 import type {
   IssueFilter,
@@ -106,6 +108,7 @@ interface PRListItemProps {
   isActive: boolean;
   onSelect: () => void;
   onSelectChanges: () => void;
+  onOpenInNewWindow: () => void;
   onPrefetch?: () => void;
   onContextMenu: (event: React.MouseEvent, pr: PullRequest) => void;
   repoPath?: string | null;
@@ -117,6 +120,7 @@ const PRListItem = memo(
     isActive,
     onSelect,
     onSelectChanges,
+    onOpenInNewWindow,
     onPrefetch,
     onContextMenu,
     repoPath,
@@ -138,8 +142,8 @@ const PRListItem = memo(
       <GitHubAvatar
         login={pr.author.login}
         avatarUrl={pr.author.avatarUrl}
-        size={40}
-        className="size-full"
+        size={48}
+        displaySize="md"
       />
     );
 
@@ -148,6 +152,7 @@ const PRListItem = memo(
         title={pr.title}
         description={`#${pr.number} · ${pr.author.login}`}
         onClick={onSelect}
+        onOpenInNewWindow={onOpenInNewWindow}
         onPrefetch={onPrefetch}
         onContextMenu={(event) => onContextMenu(event, pr)}
         draggable
@@ -478,6 +483,19 @@ const GitHubPRsView = memo(() => {
     [effectiveRepoPath, openPRBuffer],
   );
 
+  const handleOpenPRInNewWindow = useCallback(
+    (pr: PullRequest) => {
+      openGitHubContentInNewWindow(effectiveRepoPath, {
+        type: "pullRequest",
+        prNumber: pr.number,
+        repoPath: effectiveRepoPath ?? undefined,
+        authorAvatarUrl: getGitHubAvatarUrl(pr.author),
+        name: pr.title,
+      });
+    },
+    [effectiveRepoPath],
+  );
+
   const handleSelectPRChanges = useCallback(
     (pr: PullRequest) => {
       startTransition(() => {
@@ -518,6 +536,14 @@ const GitHubPRsView = memo(() => {
           icon: <GitPullRequestIcon />,
           onClick: () => {
             handleSelectPR(selectedPR);
+          },
+        },
+        {
+          id: "open-pr-new-window",
+          label: "Open in New Window",
+          icon: <WindowExpandIcon />,
+          onClick: () => {
+            handleOpenPRInNewWindow(selectedPR);
           },
         },
         {
@@ -894,6 +920,7 @@ const GitHubPRsView = memo(() => {
                                 isActive={activePRNumber === pr.number}
                                 onSelect={() => handleSelectPR(pr)}
                                 onSelectChanges={() => handleSelectPRChanges(pr)}
+                                onOpenInNewWindow={() => handleOpenPRInNewWindow(pr)}
                                 onPrefetch={() => handlePrefetchPR(pr)}
                                 onContextMenu={handlePRContextMenu}
                                 repoPath={effectiveRepoPath}
