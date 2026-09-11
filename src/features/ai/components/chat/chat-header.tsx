@@ -10,7 +10,7 @@ import {
   XIcon,
 } from "@/ui/icons";
 import { useEffect, useMemo, useRef } from "react";
-import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
+import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { Button } from "@/ui/button";
@@ -63,7 +63,11 @@ export function ChatHeader({
   const handleNewAgent = useNewAgentAction({ agentId: currentAgentId });
   const messageSearchInputRef = useRef<HTMLInputElement>(null);
   const workspaceChats = useMemo(
-    () => filterChatsByWorkspace(chats, workspacePath),
+    () => selectAgentSessions(chats, { workspacePath, keepIds: [effectiveChatId] }),
+    [chats, effectiveChatId, workspacePath],
+  );
+  const archivedChats = useMemo(
+    () => selectAgentSessions(chats, { workspacePath, includeArchived: "only" }),
     [chats, workspacePath],
   );
   const hasSearchQuery = messageSearchQuery.trim().length > 0;
@@ -181,6 +185,7 @@ export function ChatHeader({
               {!standalone && (
                 <ChatHistoryDropdown
                   chats={workspaceChats}
+                  archivedChats={archivedChats}
                   currentChatId={effectiveChatId}
                   onSwitchToChat={onSwitchChat}
                   onSetChatArchived={setChatArchived}

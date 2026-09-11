@@ -1,5 +1,4 @@
 import { useCallback, type ReactNode } from "react";
-import { ContinuousAgentsCallout } from "@/features/ai/continuous-agents/continuous-agents-callout";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -13,7 +12,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/ui/context-menu";
-import { Empty, EmptyHeader, EmptyTitle } from "@/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   FileTextIcon,
   FolderOpenIcon,
@@ -89,14 +88,15 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
   ];
 
   const startView = (
-    <Empty className="m-auto max-w-2xl gap-4 px-6 py-8" data-slot="agent-start-view">
-      <EmptyHeader>
-        <EmptyTitle>Where should we begin?</EmptyTitle>
+    <Empty className="m-auto max-w-2xl gap-6 px-6 py-8" data-slot="agent-start-view">
+      <EmptyHeader className="max-w-md gap-1.5">
+        <EmptyTitle className="ui-text-lg">Where should we begin?</EmptyTitle>
+        <EmptyDescription>
+          Describe a change, ask about this codebase, or pull in files with @.
+        </EmptyDescription>
       </EmptyHeader>
 
       {children}
-
-      <ContinuousAgentsCallout />
 
       {showQuickActions ? (
         <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">
@@ -144,7 +144,7 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
         <ContextMenuSeparator />
         <ContextMenuItem onClick={handleOpenTerminal}>
           <TerminalWindowIcon />
-          New TerminalWindowIcon
+          New Terminal
         </ContextMenuItem>
         <ContextMenuItem onClick={handleOpenAgent}>
           <SparkleIcon />

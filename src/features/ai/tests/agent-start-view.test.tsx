@@ -13,8 +13,7 @@ describe("AgentStartView", () => {
     expect(markup).toContain('data-slot="agent-start-view"');
     expect(markup).toContain('data-slot="test-composer"');
     expect(markup).toContain("Where should we begin?");
-    expect(markup).toContain("Try Continuous Agents");
-    expect(markup).toContain('data-slot="continuous-agents-callout"');
+    expect(markup).not.toContain('data-slot="continuous-agents-callout"');
     expect(markup).not.toContain("<canvas");
     expect(markup).not.toContain("New file");
     expect(markup).not.toContain("Open file");

@@ -18,6 +18,24 @@ vi.mock("@/features/window/stores/project.store", () => ({
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 
 describe("AI chat surface sessions", () => {
+  it("updates only the chosen API session model and preserves CLI sessions", () => {
+    const actions = useAIChatStore.getState().actions;
+    const first = actions.createNewChat("custom");
+    const second = actions.createNewChat("custom");
+    const codex = actions.createNewChat("codex");
+    const previous = useAIChatStore.getState().chats.find((chat) => chat.id === second)?.modelId;
+    actions.setChatModel(first, "anthropic", "claude-test");
+    actions.setChatModel(codex, "anthropic", "claude-test");
+    expect(useAIChatStore.getState().chats.find((chat) => chat.id === first)).toMatchObject({
+      providerId: "anthropic",
+      modelId: "claude-test",
+    });
+    expect(useAIChatStore.getState().chats.find((chat) => chat.id === second)?.modelId).toBe(
+      previous,
+    );
+    expect(useAIChatStore.getState().chats.find((chat) => chat.id === codex)?.modelId).toBeNull();
+  });
+
   it("preserves image-only queued prompts through reordering and dequeue", () => {
     const actions = useAIChatStore.getState().actions;
     const chatId = actions.createNewChat("codex");

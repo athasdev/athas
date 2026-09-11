@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { AgentSessionSidebarItem } from "@/features/ai/components/agent-session-sidebar-item";
-import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
+import { resolveAgentSessionIconId } from "@/features/ai/lib/agent-session-icon";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
-import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
+import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
@@ -18,8 +19,8 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuPopup,
-  createContextMenuGroups,
   ContextMenuTrigger,
+  createContextMenuGroups,
 } from "@/ui/context-menu";
 import type { MenuItem } from "@/ui/dropdown";
 import { DotsIcon, PencilLineIcon, PlusIcon, SparkleIcon, TrashIcon } from "@/ui/icons";
@@ -81,7 +82,7 @@ export function ActivityAgentRow({
 
   if (isRenaming) {
     return (
-      <SidebarListEditor leading={<ProviderIcon providerId={chat.agentId || "custom"} size={16} />}>
+      <SidebarListEditor leading={<AgentSessionIcon session={chat} size={16} />}>
         <InlineRenameInput
           value={renameValue}
           onValueChange={setRenameValue}
@@ -103,9 +104,7 @@ export function ActivityAgentRow({
           title={chat.title}
           active={active}
           pinned={chat.isPinned}
-          providerIconId={
-            chat.agentId === "custom" ? chat.providerId || aiProviderId : chat.agentId || "custom"
-          }
+          providerIconId={resolveAgentSessionIconId(chat, aiProviderId)}
           agentLabel={
             chat.agentId === "custom"
               ? getProviderById(chat.providerId || aiProviderId)?.name ||
@@ -171,10 +170,12 @@ export function ActivityAgentHistory({ workspacePath }: { workspacePath: string 
   });
   const sortedChats = useMemo(
     () =>
-      filterChatsByWorkspace(chats, workspacePath)
-        .filter((chat) => !chat.archivedAt && !chat.isPinned)
-        .sort((left, right) => right.lastMessageAt.getTime() - left.lastMessageAt.getTime()),
-    [chats, workspacePath],
+      selectAgentSessions(chats, {
+        workspacePath,
+        keepIds: [currentChatId],
+        includePinned: false,
+      }),
+    [chats, currentChatId, workspacePath],
   );
   const visibleChats = sortedChats.slice(0, AGENT_HISTORY_INLINE_LIMIT);
   const olderChats = sortedChats.slice(AGENT_HISTORY_INLINE_LIMIT);
@@ -193,7 +194,7 @@ export function ActivityAgentHistory({ workspacePath }: { workspacePath: string 
       olderChats.map((chat) => ({
         id: chat.id,
         label: chat.title,
-        icon: <ProviderIcon providerId={chat.agentId || "custom"} size={16} />,
+        icon: <AgentSessionIcon session={chat} size={16} />,
         onClick: () => handleOpenChat(chat.id),
       })),
     [handleOpenChat, olderChats],

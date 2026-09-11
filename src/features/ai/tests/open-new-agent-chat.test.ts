@@ -44,7 +44,10 @@ describe("open new agent chat", () => {
   it("creates and opens a new editor-tab chat immediately", () => {
     const bufferId = openNewAgentChat();
 
-    expect(mocks.createNewChat).toHaveBeenCalledWith("custom", { activate: false });
+    expect(mocks.createNewChat).toHaveBeenCalledWith("custom", {
+      activate: false,
+      reuseEmpty: true,
+    });
     expect(mocks.openAgentBuffer).toHaveBeenCalledWith("chat-1");
     expect(bufferId).toBe("agent://chat-1");
   });
@@ -52,7 +55,10 @@ describe("open new agent chat", () => {
   it("uses an explicit agent without replacing the sidebar session", () => {
     openNewAgentChat("codex");
 
-    expect(mocks.createNewChat).toHaveBeenCalledWith("codex", { activate: false });
+    expect(mocks.createNewChat).toHaveBeenCalledWith("codex", {
+      activate: false,
+      reuseEmpty: true,
+    });
   });
 
   it("opens terminal agents without creating a chat", () => {
@@ -108,6 +114,11 @@ describe("open new agent chat", () => {
     openNewAgentChat(undefined, { editorSelections: [editorSelection] });
 
     expect(mocks.openTerminalAgent).not.toHaveBeenCalled();
-    expect(mocks.createNewChat).toHaveBeenCalledWith("custom", { activate: false });
+    // A launch request carries its own prompt, so it must not land in a
+    // session the user already has open.
+    expect(mocks.createNewChat).toHaveBeenCalledWith("custom", {
+      activate: false,
+      reuseEmpty: false,
+    });
   });
 });

@@ -1,4 +1,5 @@
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat.types";
+import { hasAgentSessionActivity, selectAgentSessions } from "@/features/ai/lib/agent-session-list";
 import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { coalesceAssistantResponses } from "@/features/ai/lib/assistant-response";
 import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
@@ -53,12 +54,16 @@ function getNewChatMetadata(agentId: AgentType) {
 }
 
 function createChat(agentId: AgentType, id: string = createChatId()): Chat {
+  // One clock read for both, so "never received a message" stays detectable as
+  // lastMessageAt === createdAt.
+  const now = new Date();
+
   return {
     id,
     title: "New Session",
     messages: [],
-    createdAt: new Date(),
-    lastMessageAt: new Date(),
+    createdAt: now,
+    lastMessageAt: new Date(now),
     agentId,
     acpSessionId: null,
     workspacePath: getCurrentWorkspacePath(),
@@ -191,7 +196,32 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
     createNewChat: (agentId, options = {}) => {
       const state = get();
       const activate = options.activate ?? true;
-      const newChat = createChat(agentId || state.selectedAgentId);
+      const nextAgentId = agentId || state.selectedAgentId;
+
+      // "New Agent" used to mint a row per click, so the history filled up with
+      // identical untouched sessions. Hand back the one that is already waiting.
+      if (options.reuseEmpty) {
+        const workspacePath = getCurrentWorkspacePath();
+        const reusable = state.chats.find(
+          (chat) =>
+            chat.agentId === nextAgentId &&
+            !chat.archivedAt &&
+            isChatInWorkspace(chat, workspacePath) &&
+            !hasAgentSessionActivity(chat),
+        );
+
+        if (reusable) {
+          if (activate) {
+            set((draft) => {
+              draft.currentChatId = reusable.id;
+              draft.pendingAgentLaunchRequest = null;
+            });
+          }
+          return reusable.id;
+        }
+      }
+
+      const newChat = createChat(nextAgentId);
 
       set((draft) => {
         draft.chats.unshift(newChat);
@@ -278,10 +308,10 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         }
 
         if (chatId === state.currentChatId) {
-          const workspacePath = getCurrentWorkspacePath();
-          const mostRecentChat = state.chats
-            .filter((chat) => !chat.archivedAt && isChatInWorkspace(chat, workspacePath))
-            .sort((left, right) => right.lastMessageAt.getTime() - left.lastMessageAt.getTime())[0];
+          const [mostRecentChat] = selectAgentSessions(state.chats, {
+            workspacePath: getCurrentWorkspacePath(),
+            includeEmpty: true,
+          });
           state.currentChatId = mostRecentChat?.id ?? null;
         }
         delete state.agentRuns[chatId];
@@ -292,6 +322,17 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       void deleteChatFromDb(chatId).catch((error) =>
         console.error("Failed to delete chat from database:", error),
       );
+    },
+    setChatModel: (chatId, providerId, modelId) => {
+      set((state) => {
+        const chat = state.chats.find((candidate) => candidate.id === chatId);
+        if (chat?.agentId === "custom") {
+          chat.providerId = providerId;
+          chat.modelId = modelId;
+        }
+      });
+      const chat = get().chats.find((candidate) => candidate.id === chatId);
+      if (chat?.agentId === "custom") void saveChatMetadataToDb(chat);
     },
     updateChatTitle: (chatId, title) => {
       set((state) => {
@@ -339,14 +380,10 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
 
         if (isArchived && state.currentChatId === chatId) {
           const workspacePath = getCurrentWorkspacePath();
-          const nextChat = state.chats
-            .filter(
-              (candidate) =>
-                candidate.id !== chatId &&
-                !candidate.archivedAt &&
-                isChatInWorkspace(candidate, workspacePath),
-            )
-            .sort((left, right) => right.lastMessageAt.getTime() - left.lastMessageAt.getTime())[0];
+          const [nextChat] = selectAgentSessions(
+            state.chats.filter((candidate) => candidate.id !== chatId),
+            { workspacePath, includeEmpty: true },
+          );
           state.currentChatId = nextChat?.id ?? null;
         }
       });

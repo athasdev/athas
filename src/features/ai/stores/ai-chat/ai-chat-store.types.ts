@@ -79,7 +79,10 @@ export interface AIChatActions {
   dequeueAgentMessage: (chatId: string) => QueuedAgentMessage | null;
   moveQueuedAgentMessage: (chatId: string, fromIndex: number, toIndex: number) => void;
   removeQueuedAgentMessage: (chatId: string, index: number) => void;
-  createNewChat: (agentId?: AgentType, options?: { activate?: boolean }) => string;
+  createNewChat: (
+    agentId?: AgentType,
+    options?: { activate?: boolean; reuseEmpty?: boolean },
+  ) => string;
   ensureChatSession: (
     chatId: string,
     agentId?: AgentType,
@@ -88,6 +91,7 @@ export interface AIChatActions {
   ensureChatForAgent: (agentId: AgentType) => string;
   switchToChat: (chatId: string) => void;
   deleteChat: (chatId: string) => void;
+  setChatModel: (chatId: string, providerId: string, modelId: string) => void;
   updateChatTitle: (chatId: string, title: string) => void;
   setChatPinned: (chatId: string, isPinned: boolean) => void;
   setChatArchived: (chatId: string, isArchived: boolean) => void;

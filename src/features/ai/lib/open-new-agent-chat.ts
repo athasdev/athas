@@ -25,7 +25,11 @@ export function openNewAgentChat(
     return openTerminalAgent(nextAgentId);
   }
 
-  const chatId = chatStore.actions.createNewChat(nextAgentId, { activate: false });
+  const chatId = chatStore.actions.createNewChat(nextAgentId, {
+    activate: false,
+    // A pending launch request needs its own session; a bare "New Agent" does not.
+    reuseEmpty: !options.editorSelections?.length,
+  });
   if (options.editorSelections?.length) {
     chatStore.actions.setPendingAgentLaunchRequest({
       chatId,
