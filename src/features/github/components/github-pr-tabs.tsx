@@ -27,6 +27,7 @@ export function GitHubPRTabs({
       <Button
         type="button"
         variant="ghost"
+        size="chrome"
         active={activeView === "activity"}
         aria-pressed={activeView === "activity"}
         onClick={onShowOverview}
@@ -38,6 +39,7 @@ export function GitHubPRTabs({
       <Button
         type="button"
         variant="ghost"
+        size="chrome"
         active={activeView === "files"}
         aria-pressed={activeView === "files"}
         onClick={onShowChanges}

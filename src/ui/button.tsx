@@ -5,17 +5,15 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 export const buttonVariants = cva(
-  "min-w-0 max-w-full rounded-chrome font-sans inline-flex shrink-0 items-center justify-center whitespace-nowrap border border-transparent leading-row transition-[background-color,border-color,color,box-shadow,opacity] duration-fast ease-smooth select-none outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "min-w-0 max-w-full rounded-full font-sans inline-flex shrink-0 items-center justify-center whitespace-nowrap border border-transparent leading-row transition-[background-color,border-color,color,box-shadow,opacity] duration-fast ease-smooth select-none outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default: "bg-accent text-foreground hover:bg-selected",
         accent:
-          "border-primary/30 bg-primary/12 text-primary hover:bg-primary/20 data-[active=true]:border-primary/45 data-[active=true]:bg-primary/24",
+          "border-primary bg-primary text-background hover:border-primary/90 hover:bg-primary/90 data-[active=true]:border-primary/80 data-[active=true]:bg-primary/80",
         "accent-ghost":
           "bg-transparent text-primary hover:bg-primary/10 data-[active=true]:bg-primary/12",
-        solid:
-          "border-primary bg-primary text-background hover:border-primary/90 hover:bg-primary/90",
         ghost:
           "bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground",
         text: "h-auto rounded-none border-0 bg-transparent p-0 text-primary hover:text-primary/80",

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Button } from "@/ui/button";
+import { Button, type ButtonProps } from "@/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { DotsIcon } from "@/ui/icons";
 import { ScrollArea } from "@/ui/scroll-area";
@@ -69,12 +69,20 @@ export function ResourceContent({ children }: { children: ReactNode }) {
   );
 }
 
-export function ResourceActionsMenu({ label, children }: { label: string; children: ReactNode }) {
+export function ResourceActionsMenu({
+  label,
+  size,
+  children,
+}: {
+  label: string;
+  size?: ButtonProps["size"];
+  children: ReactNode;
+}) {
   return (
     <DropdownMenu>
       <Tooltip content={label}>
         <DropdownMenuTrigger
-          render={<Button type="button" variant="ghost" iconOnly aria-label={label} />}
+          render={<Button type="button" variant="ghost" size={size} iconOnly aria-label={label} />}
         >
           <DotsIcon />
         </DropdownMenuTrigger>

@@ -612,17 +612,17 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     <>
       <Badge variant={PR_STATUS_BADGE_VARIANT[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
       {mergeStatus.ready ? (
-        <Button onClick={() => openInlineAction("merge")} variant="solid">
+        <Button onClick={() => openInlineAction("merge")} variant="accent" size="chrome">
           <GitMergeIcon />
           Merge
         </Button>
       ) : (
-        <Button variant="default" disabled tooltip={mergeStatus.text}>
+        <Button variant="default" size="chrome" disabled tooltip={mergeStatus.text}>
           <MergeStatusIcon />
           {mergeStatus.text}
         </Button>
       )}
-      <ResourceActionsMenu label="Pull request actions">
+      <ResourceActionsMenu label="Pull request actions" size="chrome">
         <DropdownMenuItem onClick={() => void handleCheckout()}>Checkout branch</DropdownMenuItem>
         <DropdownMenuItem disabled={isClosed} onClick={() => openInlineAction("approve")}>
           Approve

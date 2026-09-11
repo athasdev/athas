@@ -2,7 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type { HTMLAttributes } from "react";
 
 const badgeVariants = cva(
-  "ui-text-sm inline-flex max-w-full items-center justify-center gap-1 rounded-chrome border-0 px-1.5 py-0.5 font-normal leading-none tabular-nums",
+  "ui-text-sm inline-flex max-w-full items-center justify-center gap-1 rounded-full border-0 px-2 py-0.5 font-normal leading-none tabular-nums",
   {
     variants: {
       variant: {
