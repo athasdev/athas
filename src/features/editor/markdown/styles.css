@@ -210,6 +210,50 @@
   margin: 0.2em 0;
 }
 
+.markdown-preview blockquote > :first-child {
+  margin-top: 0;
+}
+
+.markdown-preview blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* GitHub alerts: > [!NOTE] and friends */
+.markdown-preview .markdown-alert {
+  --markdown-alert-color: var(--primary, #82aaff);
+  margin: 0.75em 0;
+  padding: 0.5em 1em;
+  border-left: 4px solid var(--markdown-alert-color);
+  background-color: var(--accent, rgba(255, 255, 255, 0.05));
+  border-radius: 0 var(--radius-md, 6px) var(--radius-md, 6px) 0;
+}
+
+.markdown-preview .markdown-alert-tip {
+  --markdown-alert-color: var(--success, #3fb950);
+}
+
+.markdown-preview .markdown-alert-important {
+  --markdown-alert-color: var(--primary, #a371f7);
+}
+
+.markdown-preview .markdown-alert-warning {
+  --markdown-alert-color: var(--warning, #d29922);
+}
+
+.markdown-preview .markdown-alert-caution {
+  --markdown-alert-color: var(--destructive, #f85149);
+}
+
+.markdown-preview .markdown-alert-title {
+  margin: 0 0 0.35em;
+  font-weight: 600;
+  color: var(--markdown-alert-color);
+}
+
+.markdown-preview .markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+
 /* Horizontal rules */
 .markdown-preview hr {
   margin: 1em 0;

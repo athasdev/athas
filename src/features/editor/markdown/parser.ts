@@ -167,6 +167,35 @@ function renderFrontMatter(frontMatter: string[]): string | null {
   return `<section class="markdown-front-matter" aria-label="Document properties">${headerParts}${propertyGrid}</section>`;
 }
 
+const MARKDOWN_ALERT_TYPES = {
+  NOTE: "Note",
+  TIP: "Tip",
+  IMPORTANT: "Important",
+  WARNING: "Warning",
+  CAUTION: "Caution",
+} as const;
+
+/**
+ * Renders the inner lines of a `>` block. The content is parsed as a full
+ * document, so headings, lists, code fences and nested quotes all work, and a
+ * leading `[!NOTE]`-style marker turns the quote into a GitHub alert.
+ */
+function renderBlockquote(quotedLines: string[]): string {
+  const firstLine = quotedLines[0]?.trim() ?? "";
+  const alertMatch = firstLine.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]$/i);
+  const alertType = alertMatch
+    ? (alertMatch[1].toUpperCase() as keyof typeof MARKDOWN_ALERT_TYPES)
+    : null;
+  const bodyLines = alertType ? quotedLines.slice(1) : quotedLines;
+  const inner = parseMarkdown(bodyLines.join("\n"), { frontMatter: "preserve" });
+
+  if (!alertType) return `<blockquote>\n${inner}\n</blockquote>`;
+
+  const className = `markdown-alert markdown-alert-${alertType.toLowerCase()}`;
+  const title = MARKDOWN_ALERT_TYPES[alertType];
+  return `<div class="${className}">\n<p class="markdown-alert-title">${title}</p>\n${inner}\n</div>`;
+}
+
 export function parseMarkdown(content: string, options: ParseMarkdownOptions = {}): string {
   const frontMatterMode = options.frontMatter ?? "preserve";
   const { frontMatter, body } =
@@ -180,13 +209,12 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
   let inOrderedList = false;
   let inTaskList = false;
   let inCodeBlock = false;
-  let inBlockquote = false;
   let codeBlockContent = "";
   let codeBlockLanguage = "";
   const isTaskListLine = (value: string) => /^\s*[-*+]\s\[([ xX])\]\s/.test(value);
   const isUnorderedListLine = (value: string) => /^\s*[-*+]\s/.test(value);
   const isOrderedListLine = (value: string) => /^\s*\d+\.\s/.test(value);
-  const isBlockquoteLine = (value: string) => /^>\s/.test(value);
+  const isBlockquoteLine = (value: string) => value.startsWith(">");
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -207,10 +235,6 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
       if (inOrderedList && (trimmedLine === "" || !isOrderedListLine(line))) {
         processedLines.push("</ol>");
         inOrderedList = false;
-      }
-      if (inBlockquote && (trimmedLine === "" || !isBlockquoteLine(line))) {
-        processedLines.push("</blockquote>");
-        inBlockquote = false;
       }
     }
 
@@ -255,11 +279,14 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
     } else if (line.match(/^(---+|___+|\*\*\*+)$/)) {
       processedLines.push("<hr />");
     } else if (isBlockquoteLine(line)) {
-      if (!inBlockquote) {
-        processedLines.push("<blockquote>");
-        inBlockquote = true;
+      const quotedLines: string[] = [];
+      let j = i;
+      while (j < lines.length && isBlockquoteLine(lines[j])) {
+        quotedLines.push(lines[j].replace(/^>\s?/, ""));
+        j++;
       }
-      processedLines.push(`<p>${processInline(line.replace(/^>\s/, ""), footnotes)}</p>`);
+      processedLines.push(renderBlockquote(quotedLines));
+      i = j - 1;
     } else if (isTaskListLine(line)) {
       if (!inTaskList) {
         processedLines.push('<ul class="task-list">');
@@ -309,7 +336,6 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
   if (inUnorderedList) processedLines.push("</ul>");
   if (inTaskList) processedLines.push("</ul>");
   if (inOrderedList) processedLines.push("</ol>");
-  if (inBlockquote) processedLines.push("</blockquote>");
   if (inCodeBlock) {
     const lang = normalizeCodeFenceLanguage(codeBlockLanguage || "plaintext");
     const escaped = escapeHtml(codeBlockContent.trim());

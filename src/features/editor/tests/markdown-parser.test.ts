@@ -85,4 +85,36 @@ Body text`,
     expect(html).toContain('<a href="https://docs.github.com/dependabot"');
     expect(html).not.toContain("<em>score");
   });
+
+  it("renders block content inside blockquotes", () => {
+    const html = parseMarkdown(`> ### Title
+> - first
+> - second
+>
+> Second paragraph`);
+
+    expect(html).toContain("<blockquote>\n<h3>Title</h3>");
+    expect(html).toContain("<ul>\n<li>first</li>\n<li>second</li>\n</ul>");
+    expect(html).toContain("<p>Second paragraph</p>\n</blockquote>");
+    expect(html).not.toContain("<p>&gt;</p>");
+  });
+
+  it("renders GitHub alerts from blockquote markers", () => {
+    const html = parseMarkdown(`> [!WARNING]
+> Be careful.`);
+
+    expect(html).toContain('<div class="markdown-alert markdown-alert-warning">');
+    expect(html).toContain('<p class="markdown-alert-title">Warning</p>');
+    expect(html).toContain("<p>Be careful.</p>\n</div>");
+    expect(html).not.toContain("[!WARNING]");
+  });
+
+  it("nests blockquotes", () => {
+    const html = parseMarkdown(`> outer
+> > inner`);
+
+    expect(html).toContain(
+      "<blockquote>\n<p>outer</p>\n<blockquote>\n<p>inner</p>\n</blockquote>\n</blockquote>",
+    );
+  });
 });
