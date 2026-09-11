@@ -5,23 +5,23 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 export const buttonVariants = cva(
-  "min-w-0 max-w-full rounded-chrome font-sans inline-flex shrink-0 items-center justify-center whitespace-nowrap leading-row transition-[background-color,border-color,color,box-shadow,opacity] duration-fast ease-smooth select-none outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "min-w-0 max-w-full rounded-chrome font-sans inline-flex shrink-0 items-center justify-center whitespace-nowrap border border-transparent leading-row transition-[background-color,border-color,color,box-shadow,opacity] duration-fast ease-smooth select-none outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "border-0 bg-accent text-foreground hover:bg-selected",
+        default: "bg-accent text-foreground hover:bg-selected",
         accent:
-          "border border-primary/30 bg-primary/12 text-primary hover:bg-primary/20 data-[active=true]:border-primary/45 data-[active=true]:bg-primary/24",
+          "border-primary/30 bg-primary/12 text-primary hover:bg-primary/20 data-[active=true]:border-primary/45 data-[active=true]:bg-primary/24",
         "accent-ghost":
-          "border-0 bg-transparent text-primary hover:bg-primary/10 data-[active=true]:bg-primary/12",
+          "bg-transparent text-primary hover:bg-primary/10 data-[active=true]:bg-primary/12",
         ghost:
-          "border-0 bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground",
+          "bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground",
         text: "h-auto rounded-none border-0 bg-transparent p-0 text-primary hover:text-primary/80",
         list: "h-auto min-h-7 rounded-none border-0 bg-transparent px-2.5 py-1.5 text-foreground hover:bg-accent focus-visible:bg-accent data-[active=true]:bg-selected",
         choice:
-          "h-auto rounded-chrome border border-border bg-background px-3 py-2 text-foreground hover:bg-accent data-[active=true]:border-primary data-[active=true]:bg-primary/10",
+          "h-auto rounded-chrome border-border bg-background px-3 py-2 text-foreground hover:bg-accent data-[active=true]:border-primary data-[active=true]:bg-primary/10",
         danger:
-          "border-0 bg-transparent text-foreground hover:bg-destructive/10 hover:text-destructive data-[active=true]:bg-destructive/12 data-[active=true]:text-destructive",
+          "bg-transparent text-foreground hover:bg-destructive/10 hover:text-destructive data-[active=true]:bg-destructive/12 data-[active=true]:text-destructive",
       },
       tone: {
         default: "",
