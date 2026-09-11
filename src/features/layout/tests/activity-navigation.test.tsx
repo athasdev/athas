@@ -29,6 +29,25 @@ const sourceControlItems: ActivityNavigationItem[] = [
 ];
 
 describe("activity navigation", () => {
+  it.each([ActivityRailNavigation, ActivitySidebarNavigation])(
+    "moves secondary views into More while retaining primary navigation",
+    (Navigation) => {
+      const secondary = ["views", "debugger", "databases", "workspaces", "docker"].map((id) => ({
+        id,
+        label: id,
+        icon: <span>icon</span>,
+        active: id === "docker",
+        onClick: () => {},
+        ariaLabel: id,
+      }));
+      const markup = renderToStaticMarkup(<Navigation items={[...items, ...secondary]} />);
+      expect(markup).toContain('aria-label="Files"');
+      expect(markup).toContain('aria-label="More views: docker"');
+      expect(markup).toContain('aria-haspopup="menu"');
+      for (const item of secondary) expect(markup).not.toContain(`aria-label="${item.id}"`);
+    },
+  );
+
   it("uses an icon-only navigation contract in the collapsed rail", () => {
     const markup = renderToStaticMarkup(<ActivityRailNavigation items={items} />);
 
