@@ -392,21 +392,6 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
     <ResourceDocument
       header={
         <ResourceHeader
-          title={details?.title ?? buffer?.name ?? "Loading issue"}
-          meta={
-            details ? (
-              <>
-                <span>{`#${issueNumber}`}</span>
-                <span>&middot;</span>
-                <span className="capitalize">{details.state.toLowerCase()}</span>
-                <span>&middot;</span>
-                <span title={new Date(details.updatedAt).toLocaleString()}>
-                  {`Updated ${getTimeAgo(details.updatedAt)}`}
-                </span>
-                {isLoading ? <Spinner label="Refreshing" compact /> : null}
-              </>
-            ) : null
-          }
           actions={
             <>
               {isOpen ? (
@@ -521,6 +506,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
             }
             meta={
               <>
+                <GitHubMetaChip title="Issue number">{`#${issueNumber}`}</GitHubMetaChip>
                 <GitHubUserChip
                   login={details.author.login}
                   avatarUrl={details.author.avatarUrl}
@@ -530,6 +516,10 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 <GitHubMetaChip title={new Date(details.createdAt).toLocaleString()}>
                   {`Opened ${getTimeAgo(details.createdAt)}`}
                 </GitHubMetaChip>
+                <GitHubMetaChip title={new Date(details.updatedAt).toLocaleString()}>
+                  {`Updated ${getTimeAgo(details.updatedAt)}`}
+                </GitHubMetaChip>
+                {isLoading ? <Spinner label="Refreshing" compact /> : null}
                 {details.closedAt ? (
                   <GitHubMetaChip title={new Date(details.closedAt).toLocaleString()}>
                     {`Closed ${getTimeAgo(details.closedAt)}`}

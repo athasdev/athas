@@ -23,6 +23,8 @@ export interface DetachedWindowHandle<Message> {
 
 export interface OpenDetachedWindowOptions<Message> {
   kind: DetachedWindowKind;
+  /** Serialized content the window opens by itself, without waiting for a message. */
+  payload?: string;
   /** Messages the base protocol does not handle itself. */
   onMessage: (message: Message, handle: DetachedWindowHandle<Message>) => void;
   /** The native window went away: closed by the user, crashed, or torn down after a timeout. */
@@ -96,7 +98,12 @@ export function openDetachedWindow<Message extends { type: string }>(
 
   const open = async () => {
     try {
-      const label = await createAppWindow({ detached: { kind: options.kind, channel: id } });
+      const label = await createAppWindow({
+        detached:
+          options.payload === undefined
+            ? { kind: options.kind, channel: id }
+            : { kind: options.kind, channel: id, payload: options.payload },
+      });
       native = new Window(label);
       unlisten = await native.once("tauri://destroyed", () => {
         if (released) return;

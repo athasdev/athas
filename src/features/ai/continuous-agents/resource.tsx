@@ -30,7 +30,7 @@ import {
 } from "@/ui/icons";
 import Input from "@/ui/input";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";
-import { ResourceDocument, ResourceHeader } from "@/ui/resource";
+import { ResourceDocument, ResourceHeader, ResourceSummary } from "@/ui/resource";
 import Select from "@/ui/select";
 import {
   SidebarFooter,
@@ -734,9 +734,6 @@ export default function ContinuousAgentsResource() {
         <ResourceDocument
           header={
             <ResourceHeader
-              leading={<ArrowsClockwiseIcon />}
-              title={pageTitle}
-              meta={`${workspaceTasks.length} agent${workspaceTasks.length === 1 ? "" : "s"}`}
               actions={
                 selection !== "create" ? (
                   <Button type="button" variant="ghost" onClick={() => setSelection("create")}>
@@ -745,6 +742,13 @@ export default function ContinuousAgentsResource() {
                   </Button>
                 ) : undefined
               }
+            />
+          }
+          summary={
+            <ResourceSummary
+              icon={<ArrowsClockwiseIcon className="text-subtle-foreground" />}
+              title={pageTitle}
+              description={`${workspaceTasks.length} agent${workspaceTasks.length === 1 ? "" : "s"}`}
             />
           }
         >

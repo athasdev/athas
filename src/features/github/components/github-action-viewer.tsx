@@ -562,34 +562,9 @@ const GitHubActionViewer = memo((props: GitHubActionViewerProps) => {
     <ResourceWorkspace
       header={
         <ResourceHeader
-          title={runTitle}
-          leading={
-            details ? (
-              <WorkflowStatusIcon status={details.status} conclusion={details.conclusion} />
-            ) : null
-          }
-          meta={
-            details ? (
-              <>
-                {details.runNumber ? (
-                  <>
-                    <span>{`#${details.runNumber}`}</span>
-                    <span>&middot;</span>
-                  </>
-                ) : null}
-                <span className={WORKFLOW_TONE_TEXT_CLASS[runState.tone]}>{runState.label}</span>
-                {jobSummary.total > 0 ? (
-                  <>
-                    <span>&middot;</span>
-                    <span>{jobsLabel}</span>
-                  </>
-                ) : null}
-                {isRefreshing ? <Spinner label="Refreshing" compact /> : null}
-              </>
-            ) : null
-          }
           actions={
             <>
+              {isRefreshing ? <Spinner label="Refreshing" compact /> : null}
               {cancelButton}
               {rerunButton}
               <Button

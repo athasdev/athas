@@ -4,9 +4,23 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { type DetachedWindowHandle, openDetachedWindow } from "./detached-window-owner";
 import type { DetachedWindowBaseMessage } from "./detached-window-protocol";
 
-export type ResourceWindowMessage =
-  | DetachedWindowBaseMessage
-  | { type: "initialize"; workspacePath: string | undefined; content: OpenContentSpec };
+export type ResourceWindowMessage = DetachedWindowBaseMessage;
+
+export interface ResourceWindowPayload {
+  workspacePath: string | undefined;
+  content: OpenContentSpec;
+}
+
+export function parseResourceWindowPayload(payload: string | null): ResourceWindowPayload | null {
+  if (!payload) return null;
+  try {
+    const parsed = JSON.parse(payload) as Partial<ResourceWindowPayload>;
+    if (!parsed.content || typeof parsed.content !== "object") return null;
+    return { workspacePath: parsed.workspacePath, content: parsed.content };
+  } catch {
+    return null;
+  }
+}
 
 const windows = new Map<string, DetachedWindowHandle<ResourceWindowMessage>>();
 
@@ -40,12 +54,12 @@ export function openResourceInDetachedWindow(
   const forget = () => {
     if (windows.get(key) === handle) windows.delete(key);
   };
+  const payload: ResourceWindowPayload = { workspacePath, content };
   const handle = openDetachedWindow<ResourceWindowMessage>({
     kind: "resource",
+    payload: JSON.stringify(payload),
     onMessage: (message, handle) => {
-      if (message.type !== "ready") return;
-      handle.post({ type: "initialize", workspacePath, content });
-      handle.markInitialized();
+      if (message.type === "ready") handle.markInitialized();
     },
     onDestroyed: forget,
     onOpenTimeout: () => {

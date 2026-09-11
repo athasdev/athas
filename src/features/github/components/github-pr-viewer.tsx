@@ -6,6 +6,7 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
+import { Spinner } from "@/ui/spinner";
 import Badge, { badgeVariants } from "@/ui/badge";
 import type { VariantProps } from "class-variance-authority";
 import { GitPullRequestIcon } from "@/ui/icons";
@@ -551,25 +552,31 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     return (
       <ResourceDocument
         header={
-          <ResourceHeader
-            title={prBuffer?.name || `PR #${prNumber}`}
-            meta={detailsError && !isLoadingDetails ? detailsError : `Pull request #${prNumber}`}
-            leading={
+          detailsError && !isLoadingDetails ? (
+            <ResourceHeader
+              actions={
+                <Button onClick={handleRefresh} variant="ghost">
+                  Retry
+                </Button>
+              }
+            />
+          ) : undefined
+        }
+        summary={
+          <ResourceSummary
+            icon={
               prBuffer?.authorAvatarUrl ? (
                 <GitHubAvatar
                   name={prBuffer.name}
                   avatarUrl={prBuffer.authorAvatarUrl}
                   displaySize="md"
                 />
-              ) : null
+              ) : (
+                <GitPullRequestIcon className="text-subtle-foreground" />
+              )
             }
-            actions={
-              detailsError && !isLoadingDetails ? (
-                <Button onClick={handleRefresh} variant="ghost">
-                  Retry
-                </Button>
-              ) : null
-            }
+            title={<span className="block truncate">{prBuffer?.name || `PR #${prNumber}`}</span>}
+            description={detailsError && !isLoadingDetails ? detailsError : `#${prNumber}`}
           />
         }
       >
@@ -626,6 +633,7 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
       }
       meta={
         <>
+          <GitHubMetaChip title="Pull request number">{`#${pr.number}`}</GitHubMetaChip>
           <GitHubUserChip
             login={pr.author.login}
             avatarUrl={pr.author.avatarUrl}
@@ -635,6 +643,10 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
           <GitHubMetaChip title={new Date(pr.createdAt).toLocaleString()}>
             {`Opened ${getTimeAgo(pr.createdAt)}`}
           </GitHubMetaChip>
+          <GitHubMetaChip title={new Date(pr.updatedAt).toLocaleString()}>
+            {`Updated ${getTimeAgo(pr.updatedAt)}`}
+          </GitHubMetaChip>
+          {isRefreshingDetails ? <Spinner label="Refreshing" compact /> : null}
           <span className="flex min-w-0 items-center gap-1">
             <GitHubBranchChip name={pr.headRef} repositoryUrl={repositoryUrl} />
             <span aria-hidden="true" className="text-subtle-foreground">

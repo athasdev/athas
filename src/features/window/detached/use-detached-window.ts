@@ -1,5 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { OpenContentSpec } from "@/features/panes/types/pane-content.types";
 import { initializeSettingsStore } from "@/features/settings/stores/settings.store";
@@ -44,6 +44,7 @@ export function useDetachedWindow<Message extends { type: string }>({
   onCloseRequest,
 }: UseDetachedWindowOptions<Message>) {
   const [error, setError] = useState<string | null>(null);
+  const target = useMemo(() => parseDetachedWindowUrl(new URL(window.location.href)), []);
   const channelRef = useRef<BroadcastChannel | null>(null);
   const onMessageRef = useRef(onMessage);
   const onCloseRequestRef = useRef(onCloseRequest);
@@ -63,7 +64,6 @@ export function useDetachedWindow<Message extends { type: string }>({
 
   useEffect(() => {
     applyPlatformClass();
-    const target = parseDetachedWindowUrl(new URL(window.location.href));
     if (!target || target.kind !== kind) {
       setError("This window has no source window.");
       return;
@@ -152,7 +152,7 @@ export function useDetachedWindow<Message extends { type: string }>({
       window.removeEventListener("keydown", onKeyDown);
       channel.close();
     };
-  }, [kind, openLocally, post]);
+  }, [kind, openLocally, post, target]);
 
-  return { error, post, openLocally };
+  return { error, post, openLocally, payload: target?.payload ?? null };
 }

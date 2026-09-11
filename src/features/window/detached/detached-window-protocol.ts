@@ -11,6 +11,11 @@ export type DetachedWindowKind = "agent" | "resource";
 export interface DetachedWindowTarget {
   kind: DetachedWindowKind;
   channel: string;
+  /**
+   * Kind-specific JSON the window needs to show its content on its own. A
+   * window that gets everything here works without the owner answering.
+   */
+  payload?: string;
 }
 
 const DETACHED_WINDOW_KINDS: readonly DetachedWindowKind[] = ["agent", "resource"];
@@ -23,7 +28,10 @@ export function parseDetachedWindowUrl(url: URL): DetachedWindowTarget | null {
   if (!kind || !channel) return null;
   if (!DETACHED_WINDOW_KINDS.includes(kind as DetachedWindowKind)) return null;
   if (!CHANNEL_PATTERN.test(channel)) return null;
-  return { kind: kind as DetachedWindowKind, channel };
+  const payload = url.searchParams.get("payload");
+  return payload
+    ? { kind: kind as DetachedWindowKind, channel, payload }
+    : { kind: kind as DetachedWindowKind, channel };
 }
 
 export function getDetachedWindowChannelName(channel: string) {

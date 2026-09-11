@@ -1,19 +1,20 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   isResourceBuffer,
   ResourceBufferIcon,
   ResourceBufferView,
-  toResourceContentSpec,
 } from "@/features/panes/components/resource-buffer-view";
 import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import { Button } from "@/ui/button";
+import { Avatar } from "@/ui/avatar";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
-import { ArrowCounterClockwiseIcon } from "@/ui/icons";
-import type { ResourceWindowMessage } from "./detached-resource-service";
+import {
+  parseResourceWindowPayload,
+  type ResourceWindowMessage,
+} from "./detached-resource-service";
 import { DetachedWindowShell } from "./detached-window-shell";
 import { useDetachedWindow } from "./use-detached-window";
 
@@ -22,56 +23,49 @@ function closeWindow() {
 }
 
 /**
- * A bare window showing one resource, such as a pull request or an issue. The
- * owner window keeps its own copy; closing this window just closes it.
+ * A bare window showing one resource, such as a pull request or an issue. It
+ * gets everything it needs from its URL, so it stands on its own; the owner
+ * window is only asked to open links that belong in the workbench.
  */
 export default function DetachedResourceWindow() {
-  const [ready, setReady] = useState(false);
   const buffer = useBufferStore(
     (state) => state.buffers.find((item) => item.id === state.activeBufferId) ?? null,
   );
-  const { error, post } = useDetachedWindow<ResourceWindowMessage>({
+  const { error, openLocally, payload } = useDetachedWindow<ResourceWindowMessage>({
     kind: "resource",
-    onMessage: (message, connection) => {
-      if (message.type !== "initialize") return;
-      useProjectStore.getState().actions.setRootFolderPath(message.workspacePath);
-      useFileSystemStore.setState({ rootFolderPath: message.workspacePath });
-      connection.openLocally(message.content);
-      setReady(true);
-    },
+    onMessage: () => undefined,
     onCloseRequest: closeWindow,
   });
-  const resource = buffer && isResourceBuffer(buffer) ? buffer : null;
+  const request = useMemo(() => parseResourceWindowPayload(payload), [payload]);
+  const opened = useRef(false);
 
-  const moveToOwner = () => {
-    const content = resource ? toResourceContentSpec(resource) : null;
-    if (!content) return;
-    post({ type: "workbench", content });
-    closeWindow();
-  };
+  useEffect(() => {
+    if (!request || opened.current) return;
+    opened.current = true;
+    useProjectStore.getState().actions.setRootFolderPath(request.workspacePath);
+    useFileSystemStore.setState({ rootFolderPath: request.workspacePath });
+    openLocally(request.content);
+  }, [openLocally, request]);
+
+  const resource = buffer && isResourceBuffer(buffer) ? buffer : null;
+  const avatarUrl =
+    resource?.type === "pullRequest" || resource?.type === "githubIssue"
+      ? resource.authorAvatarUrl
+      : undefined;
 
   return (
     <DetachedWindowShell
       title={resource?.name ?? "Athas"}
-      icon={resource ? <ResourceBufferIcon buffer={resource} /> : null}
-      actions={
+      icon={
         resource ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="chrome"
-            onClick={moveToOwner}
-            tooltip="Open this in the main window and close this one"
-            shortcut="mod+w"
-            aria-label="Open in the main window"
-          >
-            <ArrowCounterClockwiseIcon />
-            Main window
-          </Button>
+          avatarUrl ? (
+            <Avatar name={resource.name} src={avatarUrl} size="xs" />
+          ) : (
+            <ResourceBufferIcon buffer={resource} />
+          )
         ) : null
       }
-      error={error}
-      pending={ready ? null : { title: "Opening…", description: "Connecting to the main window." }}
+      error={error ?? (payload && !request ? "This window has no content to show." : null)}
     >
       {resource ? (
         <main className="min-h-0 min-w-0 flex-1">
@@ -79,6 +73,8 @@ export default function DetachedResourceWindow() {
             <ResourceBufferView buffer={resource} />
           </Suspense>
         </main>
+      ) : request ? (
+        <ViewerLoadingState label="Opening" layout="fill" />
       ) : (
         <Empty>
           <EmptyHeader>

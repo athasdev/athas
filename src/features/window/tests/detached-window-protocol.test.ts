@@ -14,6 +14,13 @@ describe("parseDetachedWindowUrl", () => {
     ).toEqual({ kind: "resource", channel: "r-1" });
   });
 
+  it("passes the payload through untouched", () => {
+    const payload = JSON.stringify({ content: { type: "pullRequest", prNumber: 5 } });
+    const url = new URL("http://localhost/?view=detached&kind=resource&channel=r-1");
+    url.searchParams.set("payload", payload);
+    expect(parseDetachedWindowUrl(url)).toEqual({ kind: "resource", channel: "r-1", payload });
+  });
+
   it("ignores partial, unknown or unsafe requests", () => {
     for (const query of [
       "",

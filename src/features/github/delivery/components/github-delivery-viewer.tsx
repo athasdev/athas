@@ -12,8 +12,13 @@ import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buff
 import { resolveProjectGitHubRepository } from "@/features/views/lib/view-github";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { Button } from "@/ui/button";
-import { ArrowClockwiseIcon, CopyIcon, OpenExternalIcon, RocketIcon, TagIcon } from "@/ui/icons";
-import { ResourceActionsMenu, ResourceDocument, ResourceHeader } from "@/ui/resource";
+import { ArrowClockwiseIcon, CopyIcon, OpenExternalIcon, TagIcon } from "@/ui/icons";
+import {
+  ResourceActionsMenu,
+  ResourceDocument,
+  ResourceHeader,
+  ResourceSummary,
+} from "@/ui/resource";
 import { DropdownMenuItem } from "@/ui/dropdown";
 import {
   AlertDialog,
@@ -179,8 +184,6 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
     <ResourceDocument
       header={
         <ResourceHeader
-          title={title}
-          leading={kind === "releases" ? <TagIcon /> : <RocketIcon />}
           actions={
             !editing && (
               <>
@@ -298,7 +301,12 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
         />
       }
       summary={
-        editing ? null : release ? (
+        editing ? (
+          <ResourceSummary
+            icon={<TagIcon className="text-subtle-foreground" />}
+            title={<span className="block truncate">{title}</span>}
+          />
+        ) : release ? (
           <ReleaseSummary release={release} />
         ) : deployment ? (
           <DeploymentSummary deployment={deployment} />

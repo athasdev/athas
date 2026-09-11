@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
-import { ChromeBar, ChromeGroup, ChromeLabel } from "@/ui/chrome";
+import { ChromeBar, ChromeGroup } from "@/ui/chrome";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
 import { DotsIcon } from "@/ui/icons";
 import { ScrollArea } from "@/ui/scroll-area";
 import Tooltip from "@/ui/tooltip";
 
 interface ResourceShellProps {
-  header: ReactNode;
+  header?: ReactNode;
   summary?: ReactNode;
   children: ReactNode;
 }
@@ -44,42 +44,24 @@ export function ResourceWorkspace({ header, summary, children }: ResourceShellPr
 }
 
 interface ResourceHeaderProps {
-  title: ReactNode;
-  leading?: ReactNode;
-  meta?: ReactNode;
-  actions?: ReactNode;
   toolbar?: ReactNode;
+  actions?: ReactNode;
 }
 
-export function ResourceHeader({ title, leading, meta, actions, toolbar }: ResourceHeaderProps) {
+export function ResourceHeader({ toolbar, actions }: ResourceHeaderProps) {
+  if (!toolbar && !actions) return null;
   return (
     <div className="sticky top-0 z-20 shrink-0 bg-background/92 backdrop-blur-xl">
-      <ChromeBar
-        data-slot="resource-header"
-        region="content"
-        separated={!toolbar}
-        className="justify-between"
-      >
-        <ChromeGroup grow gap="loose" className="overflow-hidden">
-          {leading ? (
-            <span className="flex shrink-0 items-center [&_svg]:size-3.5">{leading}</span>
-          ) : null}
-          <ChromeLabel tone="strong">{title}</ChromeLabel>
-          {meta ? (
-            <ChromeLabel tone="muted" className="hidden shrink-0 sm:block">
-              <span className="flex items-center gap-1.5">{meta}</span>
-            </ChromeLabel>
-          ) : null}
+      <ChromeBar data-slot="resource-header" region="content" separated className="justify-between">
+        <ChromeGroup grow gap="tight" className="overflow-hidden">
+          {toolbar}
         </ChromeGroup>
         {actions ? (
-          <ChromeGroup gap="tight" className="scrollbar-none ml-auto max-w-[70%] overflow-x-auto">
+          <ChromeGroup gap="tight" className="scrollbar-none ml-auto overflow-x-auto">
             {actions}
           </ChromeGroup>
         ) : null}
       </ChromeBar>
-      {toolbar ? (
-        <div className="border-border/55 border-b bg-background px-2 py-1">{toolbar}</div>
-      ) : null}
     </div>
   );
 }

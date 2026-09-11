@@ -46,6 +46,7 @@ pub struct CreateAppWindowRequest {
 pub struct DetachedWindowRequest {
    pub kind: String,
    pub channel: String,
+   pub payload: Option<String>,
 }
 
 #[cfg(test)]
@@ -64,11 +65,13 @@ mod agent_window_tests {
       assert_eq!(window_title_for_request(Some(&request)), "Agents - Athas");
 
       let request: CreateAppWindowRequest = serde_json::from_value(serde_json::json!({
-         "detached": { "kind": "resource", "channel": "abc" }
+         "detached": { "kind": "resource", "channel": "abc", "payload": "{\"a\":1}" }
       }))
       .unwrap();
       let url = build_window_open_url(Some(&request), "main-3", 123);
-      assert!(url.starts_with("/?view=detached&kind=resource&channel=abc&"));
+      assert!(
+         url.starts_with("/?view=detached&kind=resource&channel=abc&payload=%7B%22a%22%3A1%7D&")
+      );
       assert_eq!(window_title_for_request(Some(&request)), "Athas");
    }
 
@@ -111,6 +114,9 @@ fn build_window_open_url(
       serializer.append_pair("view", "detached");
       serializer.append_pair("kind", &detached.kind);
       serializer.append_pair("channel", &detached.channel);
+      if let Some(payload) = &detached.payload {
+         serializer.append_pair("payload", payload);
+      }
       return append_window_trace_params(
          format!("/?{}", serializer.finish()),
          label,
