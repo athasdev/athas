@@ -67,7 +67,6 @@ const QuickOpen = () => {
                 ? "Type to search symbols across the project..."
                 : "Type to search files..."
           }
-          className="font-sans"
         />
         {isSymbolMode ? (
           <CommandHeaderBadge>

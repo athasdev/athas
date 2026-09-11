@@ -51,14 +51,6 @@ export const EDITOR_CONSTANTS = {
   // Textarea
   HIDDEN_TEXTAREA_POSITION: -9999,
 
-  // Dropdowns
-  DROPDOWN_MIN_WIDTH: 200,
-  DROPDOWN_MAX_WIDTH: 400,
-  BREADCRUMB_DROPDOWN_MAX_HEIGHT: 300,
-
-  // Context Menu
-  CONTEXT_MENU_EDGE_MARGIN: 10,
-
   // Performance & Caching
   SMALL_FILE_THRESHOLD: 500, // Lines - always tokenize fully for small files
   RENDER_VIRTUALIZATION_THRESHOLD: 5000, // Lines - enable render virtualization only for very large files

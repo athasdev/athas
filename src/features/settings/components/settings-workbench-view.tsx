@@ -15,7 +15,7 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
-import { Dropdown } from "@/ui/dropdown";
+import { Popover, PopoverContent } from "@/ui/popover";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import { XIcon } from "@/ui/icons";
 import { Workbench, WorkbenchContent } from "@/ui/workbench";
@@ -309,44 +309,49 @@ const SettingsWorkbenchView = () => {
           </WorkbenchContent>
         </SettingsNavigation>
       </Workbench>
-      <Dropdown
-        isOpen={isSearchDropdownOpen && searchQuery.trim().length > 0}
-        anchorRef={searchInputAnchorRef}
-        anchorSide="bottom"
-        anchorAlign="start"
-        onClose={() => setIsSearchDropdownOpen(false)}
-        matchAnchorWidth
-        className="min-w-0"
+      <Popover
+        open={isSearchDropdownOpen && searchQuery.trim().length > 0}
+        onOpenChange={(open) => !open && setIsSearchDropdownOpen(false)}
       >
-        <div className="max-h-80 overflow-y-auto p-1">
-          {visibleSearchDropdownResults.length > 0 ? (
-            visibleSearchDropdownResults.map((result) => {
-              const isSelected = selectedResultId === result.id;
+        <PopoverContent
+          anchor={searchInputAnchorRef}
+          side="bottom"
+          align="start"
+          size="trigger"
+          initialFocus={false}
+          finalFocus={false}
+          className="gap-0 p-0"
+        >
+          <div className="max-h-80 overflow-y-auto p-1">
+            {visibleSearchDropdownResults.length > 0 ? (
+              visibleSearchDropdownResults.map((result) => {
+                const isSelected = selectedResultId === result.id;
 
-              return (
-                <button
-                  key={result.id}
-                  type="button"
-                  onClick={() => navigateToSearchResult(result)}
-                  className={cn(
-                    "flex w-full flex-col items-start rounded-chrome px-2 py-1.5 text-left font-sans transition-colors duration-fast",
-                    isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-accent",
-                  )}
-                >
-                  <span className="w-full truncate ui-text-sm font-medium">{result.label}</span>
-                  <span className="w-full truncate text-subtle-foreground ui-text-sm">
-                    {SETTINGS_SEARCH_TAB_LABELS[result.tab]} / {result.section}
-                  </span>
-                </button>
-              );
-            })
-          ) : (
-            <Empty className="min-h-0 flex-none items-start px-2 py-1.5 text-left">
-              <EmptyDescription>No matching settings</EmptyDescription>
-            </Empty>
-          )}
-        </div>
-      </Dropdown>
+                return (
+                  <button
+                    key={result.id}
+                    type="button"
+                    onClick={() => navigateToSearchResult(result)}
+                    className={cn(
+                      "flex w-full flex-col items-start rounded-chrome px-2 py-1.5 text-left font-sans transition-colors duration-fast",
+                      isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-accent",
+                    )}
+                  >
+                    <span className="w-full truncate ui-text-sm font-medium">{result.label}</span>
+                    <span className="w-full truncate text-subtle-foreground ui-text-sm">
+                      {SETTINGS_SEARCH_TAB_LABELS[result.tab]} / {result.section}
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <Empty variant="inline" className="px-2 py-1.5">
+                <EmptyDescription>No matching settings</EmptyDescription>
+              </Empty>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
     </>
   );
 };

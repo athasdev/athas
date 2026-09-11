@@ -217,7 +217,8 @@ export function CustomThemeCreatorDialog({
               setManualJson(event.target.value);
               setIssues([]);
             }}
-            className="min-h-72 resize-y font-mono"
+            font="mono"
+            className="min-h-72"
           />
           <FieldError errors={issues.slice(0, 8).map((message) => ({ message }))} />
         </Field>

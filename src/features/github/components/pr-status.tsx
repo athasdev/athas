@@ -127,7 +127,7 @@ export const CIStatusIndicator = memo(({ checks, repoPath, repositoryUrl }: CISt
           )}
         </PopoverTrigger>
       </span>
-      <PopoverContent align="start" className="min-w-[320px] p-1.5">
+      <PopoverContent align="start" size="panel" className="p-1.5">
         {checks.map((check, idx) => (
           <button
             key={idx}

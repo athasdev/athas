@@ -67,7 +67,14 @@ export function SidebarScrollArea({
   className,
   ...props
 }: Omit<ComponentProps<typeof ScrollArea>, "contentClassName">) {
-  return <ScrollArea className={className} contentClassName="px-chrome-inline py-2" {...props} />;
+  return (
+    <ScrollArea
+      // A sidebar scroll area always fills the space its section leaves it.
+      className={cn("min-h-0 flex-1", className)}
+      contentClassName="px-chrome-inline py-2"
+      {...props}
+    />
+  );
 }
 
 export function SidebarTitleBar({

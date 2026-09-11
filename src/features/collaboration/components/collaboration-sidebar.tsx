@@ -53,13 +53,13 @@ import { Card, CardContent } from "@/ui/card";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { EmptyState } from "@/ui/empty";
 import {
-  Dropdown,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
   useDropdownMenu,
+  usePointAnchor,
   type MenuItem,
 } from "@/ui/dropdown";
 import Input, { InlineRenameInput } from "@/ui/input";
@@ -942,7 +942,8 @@ export function CollaborationSidebarView() {
     <div className="h-full min-h-0 overflow-hidden">
       {openConversation === null ? (
         <ScrollArea
-          className="h-full select-none"
+          fill="block"
+          className="select-none"
           contentPadding="xs"
           viewportProps={{ onContextMenu: (event) => channelsContextMenu.open(event) }}
         >
@@ -1115,7 +1116,7 @@ export function CollaborationSidebarView() {
               ))}
             </div>
           </div>
-          <ScrollArea className="min-h-0 flex-1" contentPadding="md">
+          <ScrollArea fill="flex" contentPadding="md">
             <div className="space-y-1.5">
               {model.chatGroups.length > 0 ? (
                 model.chatGroups.slice(-10).map((group) => (
@@ -1187,7 +1188,7 @@ export function CollaborationSidebarView() {
               </>
             ) : null}
           </div>
-          <ScrollArea className="min-h-0 flex-1" contentPadding="md">
+          <ScrollArea fill="flex" contentPadding="md">
             <div className="space-y-1.5">
               {privateChatEntries.length > 0 ? (
                 privateChatEntries.map((entry) => {
@@ -1232,7 +1233,7 @@ export function CollaborationSidebarView() {
   );
 
   const peopleContent = (
-    <ScrollArea className="h-full" contentPadding="xs">
+    <ScrollArea fill="block" contentPadding="xs">
       <SidebarHeader>
         <SidebarSearchPopover
           value={peopleSearchQuery}
@@ -1326,7 +1327,7 @@ export function CollaborationSidebarView() {
 
   const notesContent = (
     <ScrollArea
-      className="h-full"
+      fill="block"
       contentPadding="xs"
       viewportProps={{ onContextMenu: (event) => notesContextMenu.open(event) }}
     >
@@ -1500,12 +1501,10 @@ export function CollaborationSidebarView() {
         onClose={notesContextMenu.close}
       />
 
-      <Dropdown
+      <ChannelIconMenu
         isOpen={channelContextMenu.isOpen}
         point={channelContextMenu.position}
         onClose={channelContextMenu.close}
-        className="min-w-0 p-1"
-        style={{ width: 256 }}
       >
         {channelContextMenu.data ? (
           <ChannelIconPicker
@@ -1524,7 +1523,32 @@ export function CollaborationSidebarView() {
             }}
           />
         ) : null}
-      </Dropdown>
+      </ChannelIconMenu>
     </SidebarWorkspace>
+  );
+}
+
+/** Channel icon picker opened from a right-click. The picker owns its own width. */
+function ChannelIconMenu({
+  isOpen,
+  point,
+  onClose,
+  children,
+}: {
+  isOpen: boolean;
+  point: { x: number; y: number };
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const anchor = usePointAnchor(point);
+
+  if (!isOpen) return null;
+
+  return (
+    <DropdownMenu open onOpenChange={(open) => !open && onClose()}>
+      <DropdownMenuContent anchor={anchor} positionMethod="fixed" align="start" size="auto">
+        {children}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

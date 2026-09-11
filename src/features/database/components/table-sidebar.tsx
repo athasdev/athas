@@ -53,7 +53,7 @@ export default function TableSidebar({
           <PlusIcon />
         </SidebarIconButton>
       </SidebarTitleBar>
-      <SidebarScrollArea className="min-h-0 flex-1">
+      <SidebarScrollArea>
         <div className="space-y-1">
           {objectGroups.length === 0 ? (
             <EmptyState layout="sidebar" message="No database objects" />

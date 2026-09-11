@@ -59,7 +59,7 @@ export function ProviderSelector({
       tooltip={tooltip}
       className={cn(isComposer ? "w-fit max-w-32" : "w-fit max-w-full", className)}
       menuWidth="content"
-      menuMinWidth={isComposer ? 220 : 0}
+      menuSize={isComposer ? "default" : "trigger"}
       menuAnimated={!isComposer}
     />
   );

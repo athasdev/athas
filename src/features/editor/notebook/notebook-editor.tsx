@@ -771,7 +771,7 @@ export function NotebookEditor() {
         data-notebook-editor
         tone="error"
         role="alert"
-        className="h-full overflow-auto rounded-none bg-background px-5.5 py-4.5 pb-[calc(2rem+env(safe-area-inset-bottom))]"
+        className="h-full overflow-auto bg-background px-5.5 py-4.5 pb-[calc(2rem+env(safe-area-inset-bottom))]"
         style={{ fontSize, fontFamily: uiFontFamily }}
       >
         <EmptyMedia>

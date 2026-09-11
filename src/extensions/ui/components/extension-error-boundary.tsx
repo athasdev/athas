@@ -39,7 +39,7 @@ export class ExtensionErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <Empty className="h-full rounded-none p-4" tone="warning" role="alert">
+        <Empty className="h-full p-4" tone="warning" role="alert">
           <EmptyHeader>
             <EmptyMedia>
               <WarningIcon className="size-8" />

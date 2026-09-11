@@ -497,7 +497,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       ) : null}
 
       <ScrollArea
-        className="min-h-0 flex-1"
+        fill="flex"
         contentClassName={surface === "panel" ? "px-chrome-inline py-2" : "p-1"}
         reserveScrollbarGutter
         scrollbarVisibility={surface === "panel" ? "always" : "hover"}

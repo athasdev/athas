@@ -45,7 +45,7 @@ export default function PostgresSubscriptionSchemaView({
   ];
 
   return (
-    <ScrollArea className="flex-1" orientation="both">
+    <ScrollArea fill="flex" orientation="both">
       <div className="flex items-center gap-2 px-3 py-3">
         <BroadcastIcon className="text-subtle-foreground" />
         <div>

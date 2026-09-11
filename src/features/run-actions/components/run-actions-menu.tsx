@@ -1,17 +1,18 @@
 import { openWorkspaceManagement } from "@/features/workspace/team/services/open-workspace-management";
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useMemo, useRef, type KeyboardEvent } from "react";
 import {
   DropdownMenuContent,
   DropdownMenuFooter,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuEmpty,
   DropdownMenuSearch,
   DropdownMenuViewport,
 } from "@/ui/dropdown";
+import { useMenuSearch } from "@/ui/menu-search";
 import { ArrowClockwiseIcon, PlusIcon } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
-import { matchesSearchQuery } from "@/utils/search-match";
 import type { RunActionItem } from "../types/run-action.types";
 import RunActionRow from "./run-action-row";
 
@@ -42,7 +43,7 @@ export default function RunActionsMenu({
   onEdit,
   onDelete,
 }: RunActionsMenuProps) {
-  const [query, setQuery] = useState("");
+  const search = useMenuSearch();
   const menuRef = useRef<HTMLDivElement>(null);
   const groups = useMemo(() => {
     const projectGroups = new Map<string, RunActionItem[]>();
@@ -63,17 +64,15 @@ export default function RunActionsMenu({
     ]
       .map((group) => ({
         ...group,
-        actions: group.actions.filter((action) =>
-          matchesSearchQuery(query, [
-            action.name,
-            action.command ?? "",
-            action.description ?? "",
-            action.sourceLabel,
-          ]),
-        ),
+        actions: search.filter(group.actions, (action) => [
+          action.name,
+          action.command ?? "",
+          action.description ?? "",
+          action.sourceLabel,
+        ]),
       }))
       .filter((group) => group.actions.length > 0);
-  }, [customActions, lspActions, projectActions, query]);
+  }, [customActions, lspActions, projectActions, search.filter]);
 
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.nativeEvent.isComposing) return;
@@ -96,12 +95,12 @@ export default function RunActionsMenu({
       ref={menuRef}
       align="end"
       viewport="searchable"
-      className="w-64"
+      size="wide"
       aria-label="Run actions"
     >
       <DropdownMenuSearch
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        value={search.query}
+        onChange={(event) => search.setQuery(event.target.value)}
         onKeyDown={handleSearchKeyDown}
         placeholder="Search actions"
         autoFocus
@@ -122,18 +121,18 @@ export default function RunActionsMenu({
           </DropdownMenuGroup>
         ))}
         {groups.length === 0 ? (
-          <DropdownMenuItem disabled>
+          <DropdownMenuEmpty>
             {isDiscovering ? (
               <>
                 <Spinner compact />
                 Finding commands…
               </>
-            ) : query.trim() ? (
+            ) : search.isSearching ? (
               "No actions match"
             ) : (
               "No actions found"
             )}
-          </DropdownMenuItem>
+          </DropdownMenuEmpty>
         ) : null}
         {discoveryError ? (
           <DropdownMenuLabel className="whitespace-normal" role="status">

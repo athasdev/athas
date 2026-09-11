@@ -6,7 +6,7 @@ import { classifySessionConfigOption } from "@/features/ai/lib/session-config-op
 import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import { Button } from "@/ui/button";
-import { ArrowCounterClockwiseIcon, BoltIcon, ChevronDownIcon } from "@/ui/icons";
+import { ArrowCounterClockwiseIcon, BoltIcon } from "@/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Slider } from "@/ui/slider";
 
@@ -59,9 +59,8 @@ function EffortPopover({
         }
       >
         <span className="min-w-0 truncate">{selected?.label}</span>
-        <ChevronDownIcon className="text-subtle-foreground" />
       </PopoverTrigger>
-      <PopoverContent align="end" side="top" className="w-64 gap-2.5 p-3">
+      <PopoverContent align="end" side="top" size="wide" className="gap-2.5 p-3">
         <div className="flex items-center gap-2">
           <BoltIcon className="size-3.5 shrink-0 text-subtle-foreground" />
           <div className="min-w-0 flex-1 text-center">

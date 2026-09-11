@@ -318,7 +318,7 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
             </span>
           </div>
         </CommandHeader>
-        <Empty className="min-h-56 rounded-none px-6" role="status" aria-live="polite">
+        <Empty className="min-h-56 px-6" role="status" aria-live="polite">
           <EmptyDescription>
             <Spinner
               label={source === "clone" ? "Cloning repository" : "Preparing project"}

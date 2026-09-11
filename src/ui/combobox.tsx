@@ -4,6 +4,7 @@ import { cva } from "class-variance-authority";
 import { forwardRef } from "react";
 import { Button } from "@/ui/button";
 import { menuItemVariants, menuSurfaceVariants } from "@/ui/dropdown";
+import { OVERLAY_MIN_SIZES, type OverlaySize } from "@/ui/overlay-size";
 import { cn } from "@/utils/cn";
 
 const Combobox = ComboboxPrimitive.Root;
@@ -157,6 +158,7 @@ function ComboboxContent({
   alignOffset = 0,
   anchor,
   portalContainer,
+  size = "default",
   ...props
 }: ComboboxPrimitive.Popup.Props &
   Pick<
@@ -164,6 +166,11 @@ function ComboboxContent({
     "side" | "align" | "sideOffset" | "alignOffset" | "anchor"
   > & {
     portalContainer?: HTMLElement | ShadowRoot | null;
+    /**
+     * Minimum width preset from the shared overlay scale. A combobox popup
+     * always matches its anchor's width; the preset only sets the floor.
+     */
+    size?: OverlaySize;
   }) {
   return (
     <ComboboxPrimitive.Portal container={portalContainer}>
@@ -180,7 +187,8 @@ function ComboboxContent({
           data-chips={Boolean(anchor)}
           className={cn(
             menuSurfaceVariants(),
-            "group/combobox-content relative w-(--anchor-width) max-w-(--available-width) min-w-60 overflow-hidden text-foreground duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+            "group/combobox-content relative w-(--anchor-width) max-w-(--available-width) overflow-hidden text-foreground duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+            OVERLAY_MIN_SIZES[size],
             className,
           )}
           {...props}

@@ -10,7 +10,6 @@ import type { MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { Settings } from "@/features/settings/types/settings.types";
 import {
-  Dropdown,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -18,6 +17,7 @@ import {
   DropdownMenuTrigger,
   useDropdownMenu,
 } from "@/ui/dropdown";
+import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import { SearchInput } from "@/ui/search";
@@ -224,10 +224,10 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
           setEditingSkillId(undefined);
         }}
       />
-      <Dropdown
+      <ContextMenuPopup
         isOpen={extensionContextMenu.isOpen}
         point={extensionContextMenu.position}
-        items={extensionContextMenuItems}
+        groups={createContextMenuGroups(extensionContextMenuItems)}
         onClose={extensionContextMenu.close}
       />
     </>

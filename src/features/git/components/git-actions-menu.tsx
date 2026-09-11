@@ -212,7 +212,7 @@ const GitActionsMenu = ({
       >
         <DotsIcon />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-48">
+      <DropdownMenuContent align="end" size="default">
         {hasGitRepo ? (
           <>
             <DropdownMenuItem
@@ -276,7 +276,7 @@ const GitActionsMenu = ({
             <EyeIcon />
             Visibility
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="min-w-44">
+          <DropdownMenuSubContent size="compact">
             <DropdownMenuGroup>
               <DropdownMenuLabel>Views</DropdownMenuLabel>
               {GIT_SIDEBAR_TAB_IDS.map((itemId) => (

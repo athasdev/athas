@@ -544,7 +544,7 @@ export function SkillsCommand({
           </div>
         </CommandHeader>
 
-        <ScrollArea className="flex-1" contentPadding="lg" contentGap="md">
+        <ScrollArea fill="flex" contentPadding="lg" contentGap="md">
           <div className="space-y-1.5">
             <label
               className="font-sans ui-text-base text-subtle-foreground"
@@ -574,7 +574,8 @@ export function SkillsCommand({
               value={content}
               onChange={(event) => setContent(event.target.value)}
               placeholder="Write the instructions or reusable context for this skill..."
-              className="min-h-36 resize-none"
+              resize="none"
+              className="min-h-36"
             />
           </div>
         </ScrollArea>

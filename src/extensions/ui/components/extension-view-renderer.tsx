@@ -103,7 +103,7 @@ function renderNode(
           {node.title || node.actions?.length ? (
             <SidebarTitleBar title={node.title ?? ""}>{actions}</SidebarTitleBar>
           ) : null}
-          <ScrollArea className="min-h-0 flex-1">
+          <ScrollArea fill="flex">
             <div className="flex flex-col gap-2 p-2">
               {node.children.map((child, index) => renderNode(child, execute, index, surface))}
             </div>

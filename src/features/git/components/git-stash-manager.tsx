@@ -32,7 +32,7 @@ export function GitStashManager({
   }
 
   return (
-    <SidebarScrollArea className="min-h-0 flex-1">
+    <SidebarScrollArea>
       {stashes.map((stash) => {
         const title = getStashDisplayTitle(stash.message);
         const loading = isActionLoading(stash.index);

@@ -336,7 +336,7 @@ const GitCommitPanel = ({
               >
                 <ChevronDownIcon />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-37.5">
+              <DropdownMenuContent align="end" size="compact">
                 <DropdownMenuRadioGroup
                   value={commitMessageMode}
                   onValueChange={(value) => {

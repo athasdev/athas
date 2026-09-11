@@ -34,7 +34,7 @@ export default function InfoView({
   const objectGroups = groupDatabaseObjects(tables);
 
   return (
-    <ScrollArea className="flex-1 font-sans" orientation="both">
+    <ScrollArea fill="flex" className="font-sans" orientation="both">
       <div className="divide-y divide-border">
         {/* Database stats */}
         <div className="p-3">

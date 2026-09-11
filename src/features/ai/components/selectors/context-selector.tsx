@@ -11,12 +11,15 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuEmpty,
   DropdownMenuSearch,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
+  DropdownMenuViewport,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
+import { useMenuSearch } from "@/ui/menu-search";
 import {
   DatabaseIcon,
   FileTextIcon,
@@ -29,7 +32,6 @@ import {
   UploadIcon,
 } from "@/ui/icons";
 import { GithubMark } from "@/ui/brand-marks";
-import { matchesSearchQuery } from "@/utils/search-match";
 import { AIFileSelector } from "../mentions/ai-file-selector";
 import {
   getGitContextFiles,
@@ -79,8 +81,8 @@ export function ContextSelector({
   onOpenChange,
   triggerRef,
 }: ContextSelectorProps) {
-  const [bufferQuery, setBufferQuery] = useState("");
-  const [githubQuery, setGithubQuery] = useState("");
+  const bufferSearch = useMenuSearch();
+  const githubSearch = useMenuSearch();
   const [fileQuery, setFileQuery] = useState("");
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const fileSearchInputRef = useRef<HTMLInputElement>(null);
@@ -92,29 +94,17 @@ export function ContextSelector({
     () => groupContextBuffers(buffers),
     [buffers],
   );
-  const filteredBuffers = useMemo(
-    () =>
-      openTabs.filter((buffer) =>
-        matchesSearchQuery(bufferQuery, [
-          buffer.name,
-          buffer.path,
-          buffer.type,
-          getBufferContextDescription(buffer),
-        ]),
-      ),
-    [bufferQuery, openTabs],
-  );
-  const filteredGithubBuffers = useMemo(
-    () =>
-      githubBuffers.filter((buffer) =>
-        matchesSearchQuery(githubQuery, [
-          buffer.name,
-          buffer.path,
-          getBufferContextDescription(buffer),
-        ]),
-      ),
-    [githubBuffers, githubQuery],
-  );
+  const filteredBuffers = bufferSearch.filter(openTabs, (buffer) => [
+    buffer.name,
+    buffer.path,
+    buffer.type,
+    getBufferContextDescription(buffer),
+  ]);
+  const filteredGithubBuffers = githubSearch.filter(githubBuffers, (buffer) => [
+    buffer.name,
+    buffer.path,
+    getBufferContextDescription(buffer),
+  ]);
   const selectableBuffers = useMemo(
     () => [...openTabs, ...githubBuffers],
     [githubBuffers, openTabs],
@@ -153,7 +143,7 @@ export function ContextSelector({
         </DropdownMenuCheckboxItem>
       ))
     ) : (
-      <DropdownMenuItem disabled>{emptyLabel}</DropdownMenuItem>
+      <DropdownMenuEmpty>{emptyLabel}</DropdownMenuEmpty>
     );
 
   return (
@@ -161,8 +151,8 @@ export function ContextSelector({
       open={isOpen}
       onOpenChange={(open) => {
         if (!open) {
-          setBufferQuery("");
-          setGithubQuery("");
+          bufferSearch.reset();
+          githubSearch.reset();
           setFileQuery("");
           setSelectedFileIndex(0);
         }
@@ -183,7 +173,7 @@ export function ContextSelector({
       >
         <PlusIcon />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-52">
+      <DropdownMenuContent align="start" size="default">
         <DropdownMenuItem onClick={() => void handleAttachFiles()}>
           <UploadIcon />
           Attach files…
@@ -195,7 +185,8 @@ export function ContextSelector({
             Project files
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent
-            className="h-80 min-w-80"
+            size="panel"
+            className="h-80"
             onKeyDown={(event) => event.stopPropagation()}
           >
             <AIFileSelector
@@ -229,7 +220,7 @@ export function ContextSelector({
               {gitContextFiles.length}
             </span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="max-h-80 min-w-72">
+          <DropdownMenuSubContent size="wide" viewport="list">
             {gitContextFiles.length > 0 ? (
               gitContextFiles.map((file) => (
                 <DropdownMenuCheckboxItem
@@ -246,7 +237,7 @@ export function ContextSelector({
                 </DropdownMenuCheckboxItem>
               ))
             ) : (
-              <DropdownMenuItem disabled>No attachable Git changes</DropdownMenuItem>
+              <DropdownMenuEmpty>No attachable Git changes</DropdownMenuEmpty>
             )}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
@@ -259,14 +250,16 @@ export function ContextSelector({
               {githubBuffers.length}
             </span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="max-h-80 min-w-72">
+          <DropdownMenuSubContent size="wide" viewport="searchable">
             <DropdownMenuSearch
-              value={githubQuery}
-              onChange={(event) => setGithubQuery(event.target.value)}
+              value={githubSearch.query}
+              onChange={(event) => githubSearch.setQuery(event.target.value)}
               placeholder="Search GitHub tabs..."
               autoFocus
             />
-            {renderBufferOptions(filteredGithubBuffers, "No open GitHub tabs")}
+            <DropdownMenuViewport>
+              {renderBufferOptions(filteredGithubBuffers, "No open GitHub tabs")}
+            </DropdownMenuViewport>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
 
@@ -276,14 +269,16 @@ export function ContextSelector({
             <span className="min-w-0 flex-1 truncate">Open tabs</span>
             <span className="shrink-0 text-subtle-foreground tabular-nums">{openTabs.length}</span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="max-h-80 min-w-72">
+          <DropdownMenuSubContent size="wide" viewport="searchable">
             <DropdownMenuSearch
-              value={bufferQuery}
-              onChange={(event) => setBufferQuery(event.target.value)}
+              value={bufferSearch.query}
+              onChange={(event) => bufferSearch.setQuery(event.target.value)}
               placeholder="Search open tabs..."
               autoFocus
             />
-            {renderBufferOptions(filteredBuffers, "No matching open tabs")}
+            <DropdownMenuViewport>
+              {renderBufferOptions(filteredBuffers, "No matching open tabs")}
+            </DropdownMenuViewport>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
       </DropdownMenuContent>

@@ -447,7 +447,7 @@ const GitHubActionsView = memo(
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-busy={entry.isLoading}>
-        <SidebarScrollArea className="min-h-0 flex-1">
+        <SidebarScrollArea>
           {entry.error && runs.length === 0 ? (
             <EmptyState
               layout="sidebar"

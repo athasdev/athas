@@ -82,7 +82,6 @@ describe("title bar controls", () => {
     expect(branchManagerSource).toContain("<DropdownMenuFooter>");
     expect(branchManagerSource).toContain("<BranchDropdownActions");
     expect(branchManagerSource).toContain("New branch…");
-    expect(dropdownSource).toContain('searchable: "flex max-h-80 flex-col overflow-hidden p-0"');
     expect(dropdownSource).toContain(
       'className="sticky top-0 z-20 shrink-0 overflow-clip border-border/60 border-b bg-surface p-1"',
     );

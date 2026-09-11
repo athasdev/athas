@@ -17,9 +17,11 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuPopup,
+  createContextMenuGroups,
   ContextMenuTrigger,
 } from "@/ui/context-menu";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import type { MenuItem } from "@/ui/dropdown";
 import { DotsIcon, PencilLineIcon, PlusIcon, SparkleIcon, TrashIcon } from "@/ui/icons";
 import { InlineRenameInput } from "@/ui/input";
 import { SidebarIconButton, SidebarListEditor, SidebarListItem } from "@/ui/sidebar";
@@ -225,10 +227,10 @@ export function ActivityAgentHistory({ workspacePath }: { workspacePath: string 
           More
         </SidebarListItem>
       ) : null}
-      <Dropdown
+      <ContextMenuPopup
         isOpen={olderAgentsMenu.isOpen}
         point={olderAgentsMenu.position}
-        items={olderAgentMenuItems}
+        groups={createContextMenuGroups(olderAgentMenuItems)}
         onClose={() => setOlderAgentsMenu((current) => ({ ...current, isOpen: false }))}
       />
     </ActivitySidebarSection>

@@ -1112,7 +1112,7 @@ export function DockerSidebar() {
           />
         ) : (
           <>
-            <ScrollArea className="min-h-0 flex-1" contentPadding="md" contentGap="sm">
+            <ScrollArea fill="flex" contentPadding="md" contentGap="sm">
               {renderSection(
                 "containers",
                 filteredContainers.length > 0 ? (

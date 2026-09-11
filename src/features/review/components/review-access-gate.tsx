@@ -21,7 +21,7 @@ export function ReviewAccessGate() {
   const services = getServiceUrls();
 
   return (
-    <SidebarScrollArea className="min-h-0 flex-1">
+    <SidebarScrollArea>
       <div className="flex flex-col gap-2 py-4">
         <Empty>
           <EmptyHeader>

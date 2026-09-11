@@ -177,7 +177,8 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
 
   return (
     <ScrollArea
-      className="h-full bg-background"
+      fill="block"
+      className="bg-background"
       contentClassName="mx-auto flex w-full max-w-3xl flex-col px-6 pt-10 pb-16"
     >
       <div className="mb-7 space-y-2">

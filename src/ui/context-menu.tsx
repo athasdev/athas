@@ -1,8 +1,13 @@
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { Fragment, type ReactNode, useMemo } from "react";
+import { Fragment, type ReactNode } from "react";
 import { CheckIcon, ChevronRightIcon } from "@/ui/icons";
-import { menuItemVariants, menuSeparatorVariants, menuSurfaceVariants } from "@/ui/dropdown";
+import {
+  menuItemVariants,
+  menuSeparatorVariants,
+  menuSurfaceVariants,
+  usePointAnchor,
+} from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 
 export interface ContextMenuAction {
@@ -213,23 +218,7 @@ function ContextMenuSeparator(props: Omit<ContextMenuPrimitive.Separator.Props, 
 }
 
 function ContextMenuPopup({ isOpen, point, groups, onClose }: ContextMenuPopupProps) {
-  const anchor = useMemo(
-    () => ({
-      getBoundingClientRect: () =>
-        ({
-          x: point.x,
-          y: point.y,
-          top: point.y,
-          right: point.x,
-          bottom: point.y,
-          left: point.x,
-          width: 0,
-          height: 0,
-          toJSON: () => undefined,
-        }) as DOMRect,
-    }),
-    [point.x, point.y],
-  );
+  const anchor = usePointAnchor(point);
 
   if (!isOpen) return null;
   const normalizedGroups = normalizeContextMenuGroups(groups);

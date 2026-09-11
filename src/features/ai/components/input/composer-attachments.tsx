@@ -135,7 +135,7 @@ export function ComposerAttachments({
                   <span>{group.noun}</span>
                   <ChevronDownIcon className="size-3 shrink-0 text-subtle-foreground transition-transform duration-fast group-data-popup-open:rotate-180 motion-reduce:transition-none" />
                 </PopoverTrigger>
-                <PopoverContent side="top" align="start" className="w-80 max-w-[calc(100vw-16px)]">
+                <PopoverContent side="top" align="start" size="panel">
                   <div className="flex items-center justify-between gap-2 px-1">
                     <PopoverHeader>
                       <PopoverTitle>{group.label}</PopoverTitle>

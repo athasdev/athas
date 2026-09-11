@@ -313,7 +313,7 @@ export const KeyboardSettings = () => {
             </div>
 
             <div className="flex-1 overflow-hidden">
-              <ScrollArea className="h-full" orientation="both">
+              <ScrollArea fill="block" orientation="both">
                 <Table className={keybindingTableMinWidth()}>
                   <colgroup>
                     <col className="w-[32%]" />

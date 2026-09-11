@@ -146,7 +146,9 @@ function SqlEditor({
             highlightRef.current.scrollTop = event.currentTarget.scrollTop;
             highlightRef.current.scrollLeft = event.currentTarget.scrollLeft;
           }}
-          className="relative h-full resize-none border-0 bg-transparent font-mono ui-text-sm leading-5 text-transparent caret-foreground placeholder:text-transparent selection:bg-primary/30 focus:ring-0"
+          font="mono"
+          resize="none"
+          className="relative h-full border-0 bg-transparent ui-text-sm leading-5 text-transparent caret-foreground placeholder:text-transparent selection:bg-primary/30 focus:ring-0"
           placeholder="SELECT * FROM table_name"
           spellCheck={false}
           disabled={disabled}

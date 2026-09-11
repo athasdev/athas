@@ -65,7 +65,7 @@ export function ModelSelector({
       tooltip={tooltip}
       className={cn(isComposer ? "w-fit max-w-44" : "w-fit max-w-full", className)}
       menuWidth="content"
-      menuMinWidth={isComposer ? 260 : 0}
+      menuSize={isComposer ? "wide" : "trigger"}
       menuAnimated={!isComposer}
       menuHeader={
         modelFetchError ? (

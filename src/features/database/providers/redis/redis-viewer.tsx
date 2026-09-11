@@ -136,7 +136,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             }
           />
           <ScrollArea
-            className="flex-1"
+            fill="flex"
             contentPadding="sm"
             contentGap="xs"
             viewportProps={{ ref: keyListRef }}

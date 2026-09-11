@@ -41,7 +41,7 @@ export function DiagnosticsToolbar({
             value={query}
             onChange={onQueryChange}
             placeholder="Search problems..."
-            className="font-sans min-w-0"
+
             aria-label="Search problems"
             autoComplete="off"
             spellCheck={false}

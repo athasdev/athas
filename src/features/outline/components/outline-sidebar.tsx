@@ -325,7 +325,7 @@ export function OutlineSidebar() {
       </SidebarHeader>
 
       <ScrollArea
-        className="min-h-0 min-w-0 flex-1"
+        fill="flex"
         viewportClassName="overscroll-contain"
         viewportProps={{
           ref: scrollViewportRef,

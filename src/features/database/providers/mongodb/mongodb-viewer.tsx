@@ -88,7 +88,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
       <div className="flex min-h-0 flex-1">
         <div className={databasePanelClassName("w-56 shrink-0 border-border/60 border-r")}>
           <PaneContentHeader leading={<StackIcon />} title="Collections" />
-          <ScrollArea className="flex-1" contentPadding="sm" contentGap="xs">
+          <ScrollArea fill="flex" contentPadding="sm" contentGap="xs">
             {store.collections.map((col) => (
               <Button
                 key={col.name}

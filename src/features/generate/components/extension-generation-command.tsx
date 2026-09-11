@@ -564,7 +564,8 @@ export function ExtensionGenerationCommand() {
                   }
                 }}
                 placeholder={selectedOption.detailPrompt}
-                className="min-h-28 resize-none bg-background/70 ui-text-base leading-[1.45]"
+                resize="none"
+                className="min-h-28 bg-background/70 ui-text-base leading-[1.45]"
               />
             </div>
           </CommandList>
@@ -592,7 +593,7 @@ export function ExtensionGenerationCommand() {
               Generating {selectedOption.label.toLowerCase()}
             </div>
           </CommandHeader>
-          <Empty className="min-h-40 rounded-none" role="status" aria-live="polite">
+          <Empty className="min-h-40" role="status" aria-live="polite">
             <EmptyDescription>
               <Spinner
                 label={GENERATING_MESSAGES[generationMessageIndex]}

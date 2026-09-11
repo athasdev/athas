@@ -20,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuEmpty,
   DropdownMenuSearch,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -27,6 +28,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuViewport,
 } from "@/ui/dropdown";
+import { useMenuSearch } from "@/ui/menu-search";
 import {
   ChevronExpandYIcon,
   DotsIcon,
@@ -41,7 +43,6 @@ import {
   getClosedRemoteConnections,
   getProjectRemoteConnectionId,
 } from "@/features/layout/utils/project-switcher-items";
-import { matchesSearchQuery } from "@/utils/search-match";
 import { getProjectNameFromPath, isRemoteProjectPath, ProjectGlyph } from "./sidebar/project-glyph";
 
 export function ProjectSwitcher({
@@ -62,7 +63,7 @@ export function ProjectSwitcher({
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const removeFromRecents = useRecentFoldersStore((state) => state.actions.removeFromRecents);
   const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const search = useMenuSearch();
   const [remoteConnections, setRemoteConnections] = useState<RemoteConnection[]>([]);
   const [connectingRemoteId, setConnectingRemoteId] = useState<string | null>(null);
   const [passwordPromptConnection, setPasswordPromptConnection] = useState<RemoteConnection | null>(
@@ -81,20 +82,15 @@ export function ProjectSwitcher({
     () => getClosedRemoteConnections(projects, remoteConnections),
     [projects, remoteConnections],
   );
-  const filteredProjects = useMemo(
-    () =>
-      projects.filter((availableProject) =>
-        matchesSearchQuery(query, [availableProject.name, availableProject.path]),
-      ),
-    [projects, query],
-  );
-  const filteredRemoteConnections = useMemo(
-    () =>
-      closedRemoteConnections.filter((connection) =>
-        matchesSearchQuery(query, [connection.name, connection.host, connection.username]),
-      ),
-    [closedRemoteConnections, query],
-  );
+  const filteredProjects = search.filter(projects, (availableProject) => [
+    availableProject.name,
+    availableProject.path,
+  ]);
+  const filteredRemoteConnections = search.filter(closedRemoteConnections, (connection) => [
+    connection.name,
+    connection.host,
+    connection.username,
+  ]);
   const hasProjectMatches = filteredProjects.length > 0 || filteredRemoteConnections.length > 0;
 
   const refreshRemoteConnections = useCallback(async () => {
@@ -203,7 +199,7 @@ export function ProjectSwitcher({
         onOpenChange={(open) => {
           setIsOpen(open);
           if (open) void refreshRemoteConnections();
-          else setQuery("");
+          else search.reset();
         }}
       >
         <span className="inline-flex min-w-0 max-w-48">
@@ -223,10 +219,10 @@ export function ProjectSwitcher({
             }
           />
         </span>
-        <DropdownMenuContent side="bottom" align="start" viewport="searchable" className="w-64">
+        <DropdownMenuContent side="bottom" align="start" viewport="searchable" size="wide">
           <DropdownMenuSearch
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            value={search.query}
+            onChange={(event) => search.setQuery(event.target.value)}
             placeholder="Search projects"
             autoFocus
           />
@@ -281,8 +277,8 @@ export function ProjectSwitcher({
                 ))}
               </>
             ) : null}
-            {!hasProjectMatches && query.trim() ? (
-              <DropdownMenuItem disabled>No projects match</DropdownMenuItem>
+            {!hasProjectMatches && search.isSearching ? (
+              <DropdownMenuEmpty>No projects match</DropdownMenuEmpty>
             ) : null}
           </DropdownMenuViewport>
           <DropdownMenuFooter>
@@ -339,7 +335,7 @@ function ProjectRowActions({
       >
         <DotsIcon />
       </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="min-w-44">
+      <DropdownMenuSubContent size="compact">
         {onSelectIcon ? (
           <DropdownMenuItem onClick={onSelectIcon}>
             <ImageIcon />

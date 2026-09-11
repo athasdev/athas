@@ -147,7 +147,7 @@ function ExpandedCellValue({
           <span>{label}</span>
         </PopoverTrigger>
       </span>
-      <PopoverContent align="start" className="max-h-80 w-96 max-w-[min(24rem,calc(100vw-16px))]">
+      <PopoverContent align="start" size="panel" className="max-h-80">
         <pre className="overflow-auto whitespace-pre-wrap wrap-break-word font-mono ui-text-sm text-foreground">
           {value}
         </pre>

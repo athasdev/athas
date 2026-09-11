@@ -568,7 +568,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       ) : null}
 
       {isIndexingDiffs && multiDiff.files.length === 0 ? (
-        <Empty className="rounded-none bg-background" role="status" aria-live="polite">
+        <Empty className="bg-background" role="status" aria-live="polite">
           <EmptyDescription>{indexingLabel}</EmptyDescription>
         </Empty>
       ) : null}
@@ -607,7 +607,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               />
             </div>
           ) : (
-            <Empty className="h-full rounded-none bg-background">
+            <Empty className="h-full bg-background">
               <EmptyDescription>No changed file selected</EmptyDescription>
             </Empty>
           )}

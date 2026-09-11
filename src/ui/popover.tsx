@@ -8,6 +8,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { OVERLAY_MAX_WIDTH, type OverlaySize, OVERLAY_SIZES } from "@/ui/overlay-size";
 import { instantTransition, overlayEntrance } from "@/utils/motion";
 import { cn } from "@/utils/cn";
 
@@ -113,6 +114,7 @@ function PopoverContent({
   collisionPadding = 8,
   anchor,
   portalContainer,
+  size = "wide",
   ...props
 }: PopoverPrimitive.Popup.Props &
   Pick<
@@ -120,6 +122,8 @@ function PopoverContent({
     "align" | "alignOffset" | "anchor" | "collisionPadding" | "side" | "sideOffset"
   > & {
     portalContainer?: HTMLElement | ShadowRoot | null;
+    /** Width preset from the shared overlay scale. See `@/ui/overlay-size`. */
+    size?: OverlaySize;
   }) {
   return (
     <PopoverPrimitive.Portal data-slot="popover-portal" container={portalContainer}>
@@ -135,7 +139,9 @@ function PopoverContent({
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "z-10070 flex w-72 origin-(--transform-origin) flex-col gap-2 rounded-lg bg-surface/98 p-2 font-sans text-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0 ui-text-chrome",
+            "z-10070 flex origin-(--transform-origin) flex-col gap-2 rounded-lg bg-surface/98 p-2 font-sans text-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0 ui-text-chrome",
+            OVERLAY_MAX_WIDTH,
+            OVERLAY_SIZES[size],
             className,
           )}
           {...props}

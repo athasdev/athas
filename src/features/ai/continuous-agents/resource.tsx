@@ -132,7 +132,7 @@ function ContinuousAgentsSidebar({
           </SidebarIconButton>
         }
       >
-        <SidebarScrollArea className="min-h-0 flex-1">
+        <SidebarScrollArea>
           <SidebarSection title="Workspace" forceExpanded>
             <SidebarListItem
               active={selection === "overview"}

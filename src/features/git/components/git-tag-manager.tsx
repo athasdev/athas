@@ -234,7 +234,7 @@ const GitTagManager = ({ query, repoPath, onRefresh, onViewTagComparison }: GitT
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <SidebarScrollArea className="min-h-0 flex-1">
+      <SidebarScrollArea>
         {isCreateOpen ? (
           <SidebarForm
             title="Create tag"

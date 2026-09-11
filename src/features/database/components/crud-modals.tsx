@@ -255,7 +255,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   { value: "REAL", label: "REAL" },
                   { value: "BLOB", label: "BLOB" },
                 ]}
-                className="bg-surface"
+                variant="surface"
               />
               <label
                 htmlFor={`column-not-null-${index}`}

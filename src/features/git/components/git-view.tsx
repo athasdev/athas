@@ -18,7 +18,13 @@ import { type GitActivitySection, useSidebarStore } from "@/features/layout/stor
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItems,
+  DropdownMenuTrigger,
+  type MenuItem,
+} from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { showAlertDialog } from "@/ui/dialog";
@@ -112,7 +118,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [isInitializingRepo, setIsInitializingRepo] = useState(false);
   const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
   const syncMenuAnchorRef = useRef<HTMLDivElement>(null);
-  const [isSyncMenuOpen, setIsSyncMenuOpen] = useState(false);
   const [remoteAction, setRemoteAction] = useState<GitRemoteAction | null>(null);
 
   const hiddenGitSidebarItems = useSettingsStore((state) => state.settings.hiddenGitSidebarItems);
@@ -382,7 +387,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         return;
       }
 
-      setIsSyncMenuOpen(false);
       setRemoteAction(action);
       const label = REMOTE_ACTION_LABELS[action];
       const toastId = toast.info(`${label.present} changes...`, {
@@ -841,28 +845,25 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 <span className="min-w-0 truncate whitespace-nowrap">{syncActionLabel}</span>
               </Button>
               <ButtonGroupSeparator />
-              <Button
-                type="button"
-                variant="default"
-                iconOnly
-                onClick={() => setIsSyncMenuOpen((open) => !open)}
-                disabled={!activeRepoPath || isRemoteActionLoading}
-                active={isSyncMenuOpen}
-                aria-label="Choose remote action"
-                aria-haspopup="menu"
-                aria-expanded={isSyncMenuOpen}
-              >
-                <ChevronDownIcon className="size-3" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="default"
+                      iconOnly
+                      disabled={!activeRepoPath || isRemoteActionLoading}
+                      aria-label="Choose remote action"
+                    />
+                  }
+                >
+                  <ChevronDownIcon className="size-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent anchor={syncMenuAnchorRef} align="end" size="compact">
+                  <DropdownMenuItems items={syncMenuItems} />
+                </DropdownMenuContent>
+              </DropdownMenu>
             </ButtonGroup>
-            <Dropdown
-              isOpen={isSyncMenuOpen}
-              anchorRef={syncMenuAnchorRef}
-              anchorAlign="end"
-              onClose={() => setIsSyncMenuOpen(false)}
-              items={syncMenuItems}
-              className="min-w-33"
-            />
             {renderActionsMenu({ hasGitRepo: true, onRefresh: refreshAfterAction })}
             {gitSection === "remotes" || gitSection === "tags" || gitSection === "stashes" ? (
               <SidebarSearchPopover

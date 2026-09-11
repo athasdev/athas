@@ -76,7 +76,8 @@ export function FileResultsWorkspace({
       {navigatorPosition === "left" ? navigator : null}
 
       <ScrollArea
-        className="min-h-0 min-w-0 flex-1 bg-background"
+        fill="flex"
+        className="bg-background"
         contentClassName={cn("min-h-full", contentInset && "px-2 pb-2")}
         orientation={orientation}
         reserveScrollbarGutter={reserveScrollbarGutter}

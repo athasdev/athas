@@ -1,7 +1,6 @@
 import type React from "react";
 import { ChevronLeftIcon } from "@/ui/icons";
 import { useRef, useState } from "react";
-import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
@@ -9,7 +8,15 @@ import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { Dropdown, menuSeparator, type MenuItem } from "@/ui/dropdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  menuSeparator,
+  type MenuItem,
+  usePointAnchor,
+} from "@/ui/dropdown";
 import { getBaseName, getRelativePath, joinPath, normalizePath } from "@/utils/path-helpers";
 import { PathBreadcrumb } from "./path-breadcrumb";
 
@@ -242,21 +249,52 @@ export function FilePathBreadcrumb({
         className={className}
       />
 
-      {interactive && dropdown && (
-        <Dropdown
-          isOpen={Boolean(dropdown)}
-          point={{ x: dropdown.x, y: dropdown.y }}
-          onClose={() => setDropdown(null)}
+      {interactive && dropdown ? (
+        <BreadcrumbDirectoryMenu
+          point={dropdown}
           items={dropdownItems}
-          closeOnSelect={false}
-          className="breadcrumb-dropdown min-w-0"
-          style={{
-            zIndex: EDITOR_CONSTANTS.Z_INDEX.DROPDOWN,
-            maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
-            minWidth: `${EDITOR_CONSTANTS.DROPDOWN_MIN_WIDTH}px`,
-          }}
+          onClose={() => setDropdown(null)}
         />
-      )}
+      ) : null}
     </>
+  );
+}
+
+/**
+ * Directory drill-down opened at a breadcrumb segment. Items keep the menu open
+ * because selecting a folder navigates inside it rather than committing a choice.
+ */
+function BreadcrumbDirectoryMenu({
+  point,
+  items,
+  onClose,
+}: {
+  point: { x: number; y: number };
+  items: MenuItem[];
+  onClose: () => void;
+}) {
+  const anchor = usePointAnchor(point);
+
+  return (
+    <DropdownMenu open onOpenChange={(open) => !open && onClose()}>
+      <DropdownMenuContent
+        anchor={anchor}
+        positionMethod="fixed"
+        align="start"
+        viewport="list"
+        size="default"
+      >
+        {items.map((item) =>
+          item.separator ? (
+            <DropdownMenuSeparator key={item.id} />
+          ) : (
+            <DropdownMenuItem key={item.id} closeOnClick={false} onClick={item.onClick}>
+              {item.icon}
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            </DropdownMenuItem>
+          ),
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -485,7 +485,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
               value={name}
               onChange={setName}
               placeholder={`${PROVIDER_REGISTRY[selectedDbType].label} connection`}
-              className="h-7 rounded-md bg-surface px-2"
+              variant="surface"
             />
             <div className="flex gap-2">
               <Input

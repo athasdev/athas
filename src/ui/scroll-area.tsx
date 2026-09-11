@@ -169,7 +169,22 @@ type ScrollAreaProps = React.ComponentProps<typeof ScrollAreaPrimitive.Root> & {
   contentPadding?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "inline";
   contentGap?: "none" | "xs" | "sm" | "md";
   scrollbarVisibility?: ScrollbarVisibility;
+  /**
+   * How the scroll area takes up the space it is given.
+   * `flex` for a flex parent, `block` for a normal one. Leave unset to size to
+   * content. Prefer this over writing `flex-1` / `h-full` into `className`.
+   */
+  fill?: "flex" | "block";
 };
+
+const scrollAreaFillVariants = cva("group/scroll-area relative min-h-0 overflow-hidden", {
+  variants: {
+    fill: {
+      flex: "min-w-0 flex-1",
+      block: "h-full",
+    },
+  },
+});
 
 function ScrollArea({
   className,
@@ -182,6 +197,7 @@ function ScrollArea({
   contentPadding = "none",
   contentGap = "none",
   scrollbarVisibility = "hover",
+  fill,
   ...props
 }: ScrollAreaProps) {
   const {
@@ -194,7 +210,7 @@ function ScrollArea({
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
-      className={cn("group/scroll-area relative min-h-0 overflow-hidden", className)}
+      className={cn(scrollAreaFillVariants({ fill }), className)}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport

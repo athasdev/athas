@@ -250,7 +250,7 @@ function BreakpointOptions({
           <PencilIcon />
         </PopoverTrigger>
       </span>
-      <PopoverContent align="end" className="w-80">
+      <PopoverContent align="end" size="panel">
         <PopoverTitle>Breakpoint options</PopoverTitle>
         <label className="flex flex-col gap-1 text-subtle-foreground ui-text-sm">
           Condition

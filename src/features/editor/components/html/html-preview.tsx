@@ -34,7 +34,7 @@ export function HtmlPreview() {
 
   if (!hasSourceBuffer) {
     return (
-      <Empty className="h-full rounded-none">
+      <Empty className="h-full">
         <EmptyDescription>No active buffer</EmptyDescription>
       </Empty>
     );

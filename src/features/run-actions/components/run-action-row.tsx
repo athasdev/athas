@@ -38,7 +38,7 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
             >
               <DotsIcon />
             </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="min-w-44">
+            <DropdownMenuSubContent size="compact">
               {onEdit ? (
                 <DropdownMenuItem onClick={onEdit}>
                   <PenIcon />

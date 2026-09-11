@@ -574,7 +574,11 @@ const GlobalSearchBuffer = () => {
             hasMoreResults={hasMoreResults}
           />
         ) : (
-          <ScrollArea className="h-full bg-background" viewportProps={{ ref: setScrollContainer }}>
+          <ScrollArea
+            fill="block"
+            className="bg-background"
+            viewportProps={{ ref: setScrollContainer }}
+          >
             <GlobalSearchState
               availability={availability}
               query={query}

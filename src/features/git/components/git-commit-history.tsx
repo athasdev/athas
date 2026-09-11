@@ -256,7 +256,7 @@ const GitCommitHistory = ({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden select-none">
-      <SidebarScrollArea className="min-h-0 flex-1">
+      <SidebarScrollArea>
         {(ahead > 0 || behind > 0) && (
           <div data-slot="git-history-sync-status" className="space-y-1 px-2 pb-1">
             {ahead > 0 ? (

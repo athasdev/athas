@@ -22,7 +22,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import Badge from "@/ui/badge";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
-import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
+import { useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import {
   Empty,
   EmptyDescription,
@@ -1004,10 +1004,10 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
         onClose={diagnosticContextMenu.close}
       />
 
-      <Dropdown
+      <ContextMenuPopup
         isOpen={filterContextMenu.isOpen}
         point={filterContextMenu.position}
-        items={filterContextMenuItems}
+        groups={createContextMenuGroups(filterContextMenuItems)}
         onClose={filterContextMenu.close}
       />
     </div>

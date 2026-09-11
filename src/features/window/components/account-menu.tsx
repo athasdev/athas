@@ -1,5 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { getServiceUrls } from "@/config/services";
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
@@ -12,7 +12,17 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Avatar } from "@/ui/avatar";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { Dropdown, type DropdownSection, type MenuItem } from "@/ui/dropdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItems,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  type DropdownSection,
+  type MenuItem,
+} from "@/ui/dropdown";
 import {
   BookOpenIcon,
   ChatBubbleTextIcon,
@@ -26,7 +36,6 @@ import {
   UsersIcon,
 } from "@/ui/icons";
 import { GithubMark } from "@/ui/brand-marks";
-import Tooltip from "@/ui/tooltip";
 
 const COMMUNITY_URL = "https://discord.gg/DD8F38wFMv";
 
@@ -56,7 +65,6 @@ export const AccountMenu = memo(function AccountMenu() {
   const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
 
   const [isOpen, setIsOpen] = useState(false);
-  const triggerRef = useRef<HTMLDivElement>(null);
   const { signIn, isSigningIn } = useDesktopSignIn({
     onSuccess: () => setIsOpen(false),
   });
@@ -251,32 +259,23 @@ export const AccountMenu = memo(function AccountMenu() {
 
   return (
     <>
-      <div ref={triggerRef}>
-        <Tooltip content={tooltipLabel}>
-          <Button
-            type="button"
-            variant="ghost"
-            iconOnly
-            size="chrome"
-            onClick={() => setIsOpen((open) => !open)}
-            active={isOpen}
-            aria-expanded={isOpen}
-            aria-haspopup="menu"
-            aria-label="Account"
-          >
-            <Avatar name={accountName} src={accountAvatarUrl} size="xs" />
-          </Button>
-        </Tooltip>
-      </div>
-      <Dropdown
-        isOpen={isOpen}
-        anchorRef={triggerRef}
-        anchorSide="bottom"
-        anchorAlign="end"
-        onClose={() => setIsOpen(false)}
-        className="w-fit min-w-64 max-w-72"
-        header={
-          isAuthenticated ? (
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              iconOnly
+              size="chrome"
+              tooltip={tooltipLabel}
+              aria-label="Account"
+            />
+          }
+        >
+          <Avatar name={accountName} src={accountAvatarUrl} size="xs" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" size="wide">
+          {isAuthenticated ? (
             <div role="presentation" className="flex min-w-0 items-center gap-2.5 px-2.5 py-2">
               <Avatar name={accountName} src={accountAvatarUrl} className="size-9" />
               <div className="min-w-0 flex-1">
@@ -287,10 +286,16 @@ export const AccountMenu = memo(function AccountMenu() {
               </div>
               <Badge variant="muted">{planLabel}</Badge>
             </div>
-          ) : undefined
-        }
-        sections={sections}
-      />
+          ) : null}
+          {sections.map((section, index) => (
+            <DropdownMenuGroup key={section.id}>
+              {index > 0 ? <DropdownMenuSeparator /> : null}
+              {section.label ? <DropdownMenuLabel>{section.label}</DropdownMenuLabel> : null}
+              <DropdownMenuItems items={section.items} />
+            </DropdownMenuGroup>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </>
   );
 });

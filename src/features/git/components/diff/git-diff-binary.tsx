@@ -3,7 +3,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 
 export function BinaryDiffViewer({ fileName }: { fileName: string }) {
   return (
-    <Empty className="min-h-40 rounded-none">
+    <Empty className="min-h-40">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <FileIcon />

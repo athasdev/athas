@@ -173,7 +173,7 @@ export const EnterpriseSettings = () => {
               value={allowlistInput}
               onChange={(event) => setAllowlistInput(event.target.value)}
               rows={8}
-              className="font-mono"
+              font="mono"
               placeholder="athas.typescript&#10;athas.python&#10;athas.go"
               disabled={!isAdmin || isSaving || !policy.managedMode}
             />

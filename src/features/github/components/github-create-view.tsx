@@ -444,8 +444,8 @@ ${statusSummary}`;
                   searchable
                   variant="ghost"
                   align="start"
-                  className="min-w-0 flex-1"
-                  menuMinWidth={280}
+                  width="flex"
+                  menuSize="wide"
                   aria-label="Choose workflow"
                 />
               </div>
@@ -460,8 +460,8 @@ ${statusSummary}`;
                   allowCustomValue
                   variant="ghost"
                   align="start"
-                  className="min-w-0 flex-1"
-                  menuMinWidth={240}
+                  width="flex"
+                  menuSize="default"
                   aria-label="Choose workflow ref"
                 />
               </div>
@@ -520,7 +520,7 @@ ${statusSummary}`;
                   variant="ghost"
                   align="start"
                   className="w-52"
-                  menuMinWidth={240}
+                  menuSize="default"
                   aria-label="Choose head branch"
                 />
                 <span className="font-sans ui-text-sm text-subtle-foreground">&rarr;</span>
@@ -535,7 +535,7 @@ ${statusSummary}`;
                   variant="ghost"
                   align="start"
                   className="w-52"
-                  menuMinWidth={240}
+                  menuSize="default"
                   aria-label="Choose base branch"
                 />
                 <label className="ml-auto flex h-7 items-center gap-2 rounded-lg px-2 font-sans ui-text-sm text-subtle-foreground hover:bg-accent/60">

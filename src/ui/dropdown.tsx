@@ -2,36 +2,38 @@ import { Menu as DropdownMenuPrimitive } from "@base-ui/react/menu";
 import { cva } from "class-variance-authority";
 import {
   type ComponentProps,
-  type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
-  type RefObject,
   useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
+  useMemo,
   useState,
 } from "react";
 import Input, { type InputProps } from "@/ui/input";
+import {
+  OVERLAY_MAX_HEIGHT,
+  OVERLAY_MAX_WIDTH,
+  type OverlaySize,
+  OVERLAY_SIZES,
+} from "@/ui/overlay-size";
 import { ScrollArea } from "@/ui/scroll-area";
-import { quickTransition } from "@/utils/motion";
-import { FloatingPopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
-import { matchesSearchQuery } from "@/utils/search-match";
 import { CheckIcon, ChevronRightIcon, SearchIcon } from "@/ui/icons";
 import Keybinding from "@/features/keymaps/components/keybinding";
 
 const menuSurfaceVariants = cva(
-  "max-h-(--available-height) w-fit min-w-32 max-w-[min(480px,calc(100vw-16px))] origin-(--transform-origin) rounded-lg bg-surface/98 font-sans text-subtle-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm ui-text-chrome",
+  `max-h-(--available-height) w-fit min-w-32 ${OVERLAY_MAX_WIDTH} origin-(--transform-origin) rounded-lg bg-surface/98 font-sans text-subtle-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm ui-text-chrome`,
   {
     variants: {
       viewport: {
         default: "overflow-x-hidden overflow-y-auto p-1",
-        searchable: "flex max-h-80 flex-col overflow-hidden p-0",
+        list: `overflow-x-hidden overflow-y-auto p-1 ${OVERLAY_MAX_HEIGHT}`,
+        searchable: `flex ${OVERLAY_MAX_HEIGHT} flex-col overflow-hidden p-0`,
       },
+      size: OVERLAY_SIZES,
     },
     defaultVariants: {
       viewport: "default",
+      size: "auto",
     },
   },
 );
@@ -95,6 +97,31 @@ export function isMenuActionItem(item: MenuItem): item is MenuActionItem {
   return item.separator !== true;
 }
 
+/**
+ * A virtual anchor for a menu positioned at a screen point rather than at a
+ * trigger element — context menus, and any menu opened from a coordinate.
+ * Pair it with `positionMethod="fixed"` on the content.
+ */
+export function usePointAnchor(point: { x: number; y: number }) {
+  return useMemo(
+    () => ({
+      getBoundingClientRect: () =>
+        ({
+          x: point.x,
+          y: point.y,
+          top: point.y,
+          right: point.x,
+          bottom: point.y,
+          left: point.x,
+          width: 0,
+          height: 0,
+          toJSON: () => undefined,
+        }) as DOMRect,
+    }),
+    [point.x, point.y],
+  );
+}
+
 interface DropdownMenuState<T> {
   isOpen: boolean;
   position: { x: number; y: number };
@@ -129,585 +156,10 @@ export function useDropdownMenu<T = unknown>() {
   return { ...state, open, openAt, close };
 }
 
-interface MenuItemsListProps {
-  items: MenuItem[];
-  onItemSelect?: () => void;
-  className?: string;
-  focusIndex?: number;
-}
-
-export function MenuItemsList({
-  items,
-  onItemSelect,
-  className,
-  focusIndex = -1,
-}: MenuItemsListProps) {
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  useEffect(() => {
-    if (focusIndex >= 0 && itemRefs.current[focusIndex]) {
-      itemRefs.current[focusIndex]?.scrollIntoView({ block: "nearest" });
-    }
-  }, [focusIndex]);
-
-  let selectableIdx = -1;
-  const iconVisibility = items.map(() => false);
-  let groupStart = 0;
-
-  for (let index = 0; index <= items.length; index++) {
-    const item = items[index];
-    if (item && !item.separator) continue;
-
-    const groupItems = items.slice(groupStart, index).filter(isMenuActionItem);
-    const showGroupIcons = groupItems.length > 0 && groupItems.every((entry) => entry.icon);
-    if (showGroupIcons) {
-      for (let groupIndex = groupStart; groupIndex < index; groupIndex++) {
-        iconVisibility[groupIndex] = true;
-      }
-    }
-    groupStart = index + 1;
-  }
-
-  return (
-    <div className={className}>
-      {items.map((item, itemIndex) => {
-        if (item.separator) {
-          return <div key={item.id} className={menuSeparatorVariants()} />;
-        }
-
-        selectableIdx++;
-        const isFocused = selectableIdx === focusIndex;
-        const isDisabled = item.disabled || !item.onClick;
-
-        return (
-          <button
-            key={item.id}
-            ref={(el) => {
-              if (!isDisabled) {
-                itemRefs.current[selectableIdx] = el;
-              }
-            }}
-            type="button"
-            role={item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
-            aria-checked={item.checked}
-            onClick={() => {
-              if (isDisabled) return;
-              item.onClick?.();
-              onItemSelect?.();
-            }}
-            disabled={isDisabled}
-            className={cn(
-              menuItemVariants({ tone: item.tone }),
-              isFocused && "bg-accent",
-              item.selected && "bg-selected",
-            )}
-            aria-current={item.selected ? "true" : undefined}
-          >
-            {iconVisibility[itemIndex] && item.icon && (
-              <span className="grid size-4 shrink-0 place-items-center [&>svg]:block [&>svg]:size-4">
-                {item.icon}
-              </span>
-            )}
-            <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.label}</span>
-            <span className="ml-auto flex shrink-0 items-center gap-2">
-              {item.shortcut ? <Keybinding binding={item.shortcut} /> : null}
-              {item.trailing === "disclosure" ? (
-                <ChevronRightIcon className="size-3 text-subtle-foreground" />
-              ) : item.trailing?.type === "text" ? (
-                <span className="text-subtle-foreground tabular-nums">{item.trailing.label}</span>
-              ) : null}
-              {item.checked !== undefined ? (
-                <span className="flex size-4 items-center justify-center">
-                  {item.checked ? <CheckIcon className="text-primary" /> : null}
-                </span>
-              ) : null}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 export interface DropdownSection {
   id: string;
   label?: string;
   items: MenuItem[];
-}
-
-type AnchorSide = "top" | "bottom";
-type AnchorAlign = "start" | "end";
-
-interface DropdownBaseProps {
-  isOpen: boolean;
-  onClose: () => void;
-  header?: ReactNode;
-  className?: string;
-  style?: CSSProperties;
-  portalContainer?: Element | DocumentFragment | null;
-  closeOnSelect?: boolean;
-  animated?: boolean;
-  matchAnchorWidth?: boolean;
-  anchorMinWidth?: number;
-}
-
-interface AnchorPositioning {
-  anchorRef: RefObject<HTMLElement | null>;
-  anchorSide?: AnchorSide;
-  anchorAlign?: AnchorAlign;
-  point?: never;
-}
-
-interface PointPositioning {
-  point: { x: number; y: number };
-  anchorRef?: never;
-  anchorSide?: never;
-  anchorAlign?: never;
-}
-
-type PositioningProps = AnchorPositioning | PointPositioning;
-
-interface ItemsContent {
-  items: MenuItem[];
-  sections?: never;
-  children?: never;
-  searchable?: boolean;
-  searchPlaceholder?: string;
-}
-
-interface SectionsContent {
-  sections: DropdownSection[];
-  items?: never;
-  children?: never;
-  searchable?: boolean;
-  searchPlaceholder?: string;
-}
-
-interface ChildrenContent {
-  children: ReactNode;
-  items?: never;
-  sections?: never;
-  searchable?: never;
-  searchPlaceholder?: never;
-}
-
-type ContentProps = ItemsContent | SectionsContent | ChildrenContent;
-
-export type DropdownProps = DropdownBaseProps & PositioningProps & ContentProps;
-
-const VIEWPORT_PADDING = 8;
-const RESIZE_REPOSITION_THRESHOLD = 2;
-
-function getNumericMaxHeight(value: CSSProperties["maxHeight"]) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string") {
-    const match = value.trim().match(/^(\d+(?:\.\d+)?)px$/);
-    if (match) {
-      return Number.parseFloat(match[1]);
-    }
-  }
-  return null;
-}
-
-function getViewportBounds() {
-  const vv = window.visualViewport;
-  if (!vv || !Number.isFinite(vv.width) || !Number.isFinite(vv.height)) {
-    return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-  }
-  return {
-    left: Number.isFinite(vv.offsetLeft) ? vv.offsetLeft : 0,
-    top: Number.isFinite(vv.offsetTop) ? vv.offsetTop : 0,
-    width: vv.width,
-    height: vv.height,
-  };
-}
-
-export function Dropdown(props: DropdownProps) {
-  const {
-    isOpen,
-    onClose,
-    header,
-    className,
-    style,
-    searchable,
-    searchPlaceholder,
-    portalContainer,
-    closeOnSelect = true,
-    animated = true,
-    matchAnchorWidth = false,
-    anchorMinWidth = 0,
-  } = props;
-
-  const menuRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
-  const lockedWidthRef = useRef<number | null>(null);
-  const lastMenuSizeRef = useRef<{ width: number; height: number } | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [focusIndex, setFocusIndex] = useState(-1);
-  const [resolvedSide, setResolvedSide] = useState<AnchorSide>("bottom");
-  const [isPositioned, setIsPositioned] = useState(false);
-
-  const isAnchorMode = "anchorRef" in props && props.anchorRef != null;
-  const anchorRef = isAnchorMode ? (props as AnchorPositioning).anchorRef : null;
-  const anchorSide = isAnchorMode
-    ? ((props as AnchorPositioning).anchorSide ?? "bottom")
-    : "bottom";
-  const anchorAlign = isAnchorMode
-    ? ((props as AnchorPositioning).anchorAlign ?? "start")
-    : "start";
-  const point = !isAnchorMode ? (props as PointPositioning).point : null;
-
-  const hasItems = "items" in props && props.items != null;
-  const hasSections = "sections" in props && props.sections != null;
-  const hasChildren = "children" in props && props.children != null;
-
-  const getAllItems = useCallback((): MenuItem[] => {
-    if (hasItems) return props.items!;
-    if (hasSections) return props.sections!.flatMap((s) => s.items);
-    return [];
-  }, [hasItems, hasSections, props]);
-
-  const getFilteredItems = useCallback((): MenuItem[] => {
-    const all = getAllItems();
-    if (!searchQuery.trim()) return all;
-    return all
-      .filter(isMenuActionItem)
-      .filter((item) => matchesSearchQuery(searchQuery, [item.label]));
-  }, [getAllItems, searchQuery]);
-
-  const getFilteredSections = useCallback((): DropdownSection[] => {
-    if (!hasSections) return [];
-    if (!searchQuery.trim()) return props.sections!;
-    return props
-      .sections!.map((section) => ({
-        ...section,
-        items: section.items
-          .filter(isMenuActionItem)
-          .filter((item) => matchesSearchQuery(searchQuery, [item.label])),
-      }))
-      .filter((section) => section.items.length > 0);
-  }, [hasSections, searchQuery, props]);
-
-  const positionMenu = useCallback(() => {
-    const menu = menuRef.current;
-    if (!menu) return;
-
-    const vp = getViewportBounds();
-    const userMaxHeight = getNumericMaxHeight(style?.maxHeight);
-    const hasExplicitWidth = style?.width != null;
-
-    const applyMaxHeight = (height: number) => {
-      const nextHeight = userMaxHeight == null ? height : Math.min(height, userMaxHeight);
-      menu.style.maxHeight = `${nextHeight}px`;
-    };
-
-    const applyAnchorWidth = (anchorRect: DOMRect) => {
-      if (!matchAnchorWidth || hasExplicitWidth) return;
-
-      const anchorWidth = Math.round(anchorRect.width);
-      if (Number.isFinite(anchorWidth)) {
-        menu.style.width = `${Math.max(anchorMinWidth, anchorWidth)}px`;
-      }
-    };
-
-    const applyLockedWidth = () => {
-      if (hasExplicitWidth || matchAnchorWidth) return;
-
-      if (lockedWidthRef.current == null) {
-        lockedWidthRef.current = menu.getBoundingClientRect().width;
-      }
-
-      if (lockedWidthRef.current != null) {
-        menu.style.width = `${lockedWidthRef.current}px`;
-      }
-    };
-
-    let x: number;
-    let y: number;
-    let finalSide: AnchorSide = "bottom";
-
-    if (anchorRef?.current) {
-      const anchorRect = anchorRef.current.getBoundingClientRect();
-      const viewportMaxHeight = Math.max(120, vp.height - VIEWPORT_PADDING * 2);
-      const spaceBelow = vp.top + vp.height - anchorRect.bottom - VIEWPORT_PADDING;
-      const spaceAbove = anchorRect.top - vp.top - VIEWPORT_PADDING;
-
-      if (anchorSide === "bottom") {
-        finalSide = spaceBelow >= spaceAbove ? "bottom" : "top";
-      } else {
-        finalSide = spaceAbove >= spaceBelow ? "top" : "bottom";
-      }
-
-      const availableHeight = finalSide === "bottom" ? spaceBelow : spaceAbove;
-      applyMaxHeight(Math.max(120, Math.min(viewportMaxHeight, availableHeight)));
-      applyAnchorWidth(anchorRect);
-      applyLockedWidth();
-
-      const menuRect = menu.getBoundingClientRect();
-
-      if (anchorAlign === "end") {
-        x = anchorRect.right - menuRect.width;
-      } else {
-        x = anchorRect.left;
-      }
-
-      if (finalSide === "bottom") {
-        if (menuRect.height <= spaceBelow || spaceBelow >= spaceAbove) {
-          y = anchorRect.bottom + 6;
-          finalSide = "bottom";
-        } else {
-          y = anchorRect.top - menuRect.height - 6;
-          finalSide = "top";
-        }
-      } else {
-        if (menuRect.height <= spaceAbove || spaceAbove >= spaceBelow) {
-          y = anchorRect.top - menuRect.height - 6;
-          finalSide = "top";
-        } else {
-          y = anchorRect.bottom + 6;
-          finalSide = "bottom";
-        }
-      }
-    } else if (point) {
-      const maxH = Math.max(120, vp.height - VIEWPORT_PADDING * 2);
-      applyMaxHeight(maxH);
-      applyLockedWidth();
-
-      const menuRect = menu.getBoundingClientRect();
-      x = point.x;
-      y = point.y;
-
-      if (x + menuRect.width > vp.left + vp.width - VIEWPORT_PADDING) {
-        x = point.x - menuRect.width;
-      }
-      if (y + menuRect.height > vp.top + vp.height - VIEWPORT_PADDING) {
-        y = point.y - menuRect.height;
-      }
-    } else {
-      return;
-    }
-
-    const menuRect = menu.getBoundingClientRect();
-
-    const minX = vp.left + VIEWPORT_PADDING;
-    const maxX = vp.left + vp.width - menuRect.width - VIEWPORT_PADDING;
-    const minY = vp.top + VIEWPORT_PADDING;
-    const maxY = vp.top + vp.height - menuRect.height - VIEWPORT_PADDING;
-
-    x = Math.max(minX, Math.min(x, maxX));
-    y = Math.max(minY, Math.min(y, maxY));
-
-    menu.style.left = `${Math.round(x)}px`;
-    menu.style.top = `${Math.round(y)}px`;
-    setResolvedSide(finalSide);
-    setIsPositioned(true);
-  }, [anchorRef, anchorSide, anchorAlign, point]);
-
-  useLayoutEffect(() => {
-    if (!isOpen) return;
-    positionMenu();
-  }, [isOpen, positionMenu, searchQuery]);
-
-  useEffect(() => {
-    if (isOpen) return;
-    lockedWidthRef.current = null;
-    lastMenuSizeRef.current = null;
-    setIsPositioned(false);
-    if (menuRef.current && style?.width == null) {
-      menuRef.current.style.width = "";
-    }
-  }, [isOpen, style?.width]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-
-      const { width, height } = entry.contentRect;
-      const previousSize = lastMenuSizeRef.current;
-      lastMenuSizeRef.current = { width, height };
-
-      if (!previousSize) {
-        positionMenu();
-        return;
-      }
-
-      const widthDelta = Math.abs(width - previousSize.width);
-      const heightDelta = Math.abs(height - previousSize.height);
-
-      if (widthDelta < RESIZE_REPOSITION_THRESHOLD && heightDelta < RESIZE_REPOSITION_THRESHOLD) {
-        return;
-      }
-
-      positionMenu();
-    });
-    if (menuRef.current) resizeObserver.observe(menuRef.current);
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (menuRef.current?.contains(target)) return;
-      if (anchorRef?.current?.contains(target)) return;
-      onClose();
-    };
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        onClose();
-      }
-    };
-
-    window.addEventListener("resize", positionMenu);
-    window.addEventListener("scroll", positionMenu, true);
-    window.visualViewport?.addEventListener("resize", positionMenu);
-    window.visualViewport?.addEventListener("scroll", positionMenu);
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape, true);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", positionMenu);
-      window.removeEventListener("scroll", positionMenu, true);
-      window.visualViewport?.removeEventListener("resize", positionMenu);
-      window.visualViewport?.removeEventListener("scroll", positionMenu);
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape, true);
-    };
-  }, [isOpen, onClose, positionMenu, anchorRef]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setSearchQuery("");
-      setFocusIndex(-1);
-      if (searchable) {
-        requestAnimationFrame(() => searchRef.current?.focus());
-      }
-    }
-  }, [isOpen, searchable]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      const items = getFilteredItems()
-        .filter(isMenuActionItem)
-        .filter((item) => !item.disabled && item.onClick);
-      if (items.length === 0) return;
-
-      switch (e.key) {
-        case "ArrowDown": {
-          e.preventDefault();
-          setFocusIndex((prev) => (prev + 1) % items.length);
-          break;
-        }
-        case "ArrowUp": {
-          e.preventDefault();
-          setFocusIndex((prev) => (prev <= 0 ? items.length - 1 : prev - 1));
-          break;
-        }
-        case "Home": {
-          e.preventDefault();
-          setFocusIndex(0);
-          break;
-        }
-        case "End": {
-          e.preventDefault();
-          setFocusIndex(items.length - 1);
-          break;
-        }
-        case "Enter": {
-          e.preventDefault();
-          if (focusIndex >= 0 && focusIndex < items.length) {
-            items[focusIndex].onClick?.();
-            if (closeOnSelect) {
-              onClose();
-            }
-          }
-          break;
-        }
-      }
-    },
-    [closeOnSelect, getFilteredItems, focusIndex, onClose],
-  );
-
-  if (typeof document === "undefined") return null;
-
-  const originMap: Record<string, string> = {
-    "bottom-start": "top left",
-    "bottom-end": "top right",
-    "top-start": "bottom left",
-    "top-end": "bottom right",
-  };
-  const transformOrigin =
-    originMap[`${resolvedSide}-${anchorAlign}`] ?? (point ? "top left" : "top left");
-
-  return (
-    <FloatingPopoverContent
-      isOpen={isOpen}
-      contentRef={menuRef}
-      portalContainer={portalContainer}
-      className={cn(menuSurfaceVariants(), className)}
-      style={{ transformOrigin, visibility: isPositioned ? "visible" : "hidden", ...style }}
-      animated={animated}
-      initial={{
-        opacity: 0,
-        scale: 1,
-        y: 0,
-        filter: "blur(0px)",
-      }}
-      animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-      exit={{
-        opacity: 0,
-        scale: 1,
-        y: 0,
-        filter: "blur(0px)",
-      }}
-      transition={quickTransition}
-    >
-      <div role="menu" onKeyDown={handleKeyDown}>
-        {header}
-        {searchable && (
-          <div className="border-border/60 border-b px-1.5 pb-1.5 pt-0.5">
-            <Input
-              ref={searchRef}
-              type="text"
-              placeholder={searchPlaceholder ?? "Search..."}
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setFocusIndex(-1);
-              }}
-              leftIcon={SearchIcon}
-              variant="ghost"
-            />
-          </div>
-        )}
-        {hasChildren && (props as ChildrenContent).children}
-        {hasItems && (
-          <MenuItemsList
-            items={getFilteredItems()}
-            focusIndex={focusIndex}
-            onItemSelect={closeOnSelect ? onClose : undefined}
-          />
-        )}
-        {hasSections &&
-          getFilteredSections().map((section, sectionIdx) => (
-            <div key={section.id}>
-              {sectionIdx > 0 ? <div className={menuSeparatorVariants()} /> : null}
-              {section.label && <div className={menuLabelVariants()}>{section.label}</div>}
-              <MenuItemsList
-                items={section.items}
-                onItemSelect={closeOnSelect ? onClose : undefined}
-              />
-            </div>
-          ))}
-      </div>
-    </FloatingPopoverContent>
-  );
 }
 
 function DropdownMenu(props: DropdownMenuPrimitive.Root.Props) {
@@ -799,9 +251,27 @@ function DropdownMenuFooter({ className, ...props }: ComponentProps<"div">) {
 type DropdownMenuContentProps = DropdownMenuPrimitive.Popup.Props &
   Pick<
     DropdownMenuPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset" | "collisionPadding"
+    | "align"
+    | "alignOffset"
+    | "side"
+    | "sideOffset"
+    | "collisionPadding"
+    | "anchor"
+    | "positionMethod"
   > & {
-    viewport?: "default" | "searchable";
+    viewport?: "default" | "list" | "searchable";
+    /**
+     * Width preset for the menu surface. Feature code picks a preset instead of
+     * setting `w-*` / `min-w-*` through `className`.
+     *
+     * - `compact` — short action submenus (rename, delete, copy)
+     * - `default` — standard action menus
+     * - `wide` — lists of labelled rows, usually searchable
+     * - `panel` — content-bearing surfaces (commit messages, value previews)
+     * - `trigger` — matches the anchor's width
+     * - `auto` — content-sized; only for menus with genuinely unpredictable width
+     */
+    size?: OverlaySize;
   };
 
 function DropdownMenuContent({
@@ -812,6 +282,9 @@ function DropdownMenuContent({
   sideOffset = 4,
   collisionPadding = 8,
   viewport = "default",
+  size = "auto",
+  anchor,
+  positionMethod,
   ...props
 }: DropdownMenuContentProps) {
   return (
@@ -822,12 +295,14 @@ function DropdownMenuContent({
         side={side}
         sideOffset={sideOffset}
         collisionPadding={collisionPadding}
+        anchor={anchor}
+        positionMethod={positionMethod}
         className="isolate z-10070 outline-none"
       >
         <DropdownMenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn(
-            menuSurfaceVariants({ viewport }),
+            menuSurfaceVariants({ viewport, size }),
             "z-10070 duration-75 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
             className,
           )}
@@ -1037,14 +512,95 @@ function DropdownMenuSubTrigger({
   );
 }
 
-function DropdownMenuSubContent(props: DropdownMenuContentProps) {
+function DropdownMenuSubContent({ className, ...props }: DropdownMenuContentProps) {
   return (
     <DropdownMenuContent
       data-slot="dropdown-menu-sub-content"
       side="right"
-      className="shadow-(--shadow-popover)"
       {...props}
+      className={cn("shadow-(--shadow-popover)", className)}
     />
+  );
+}
+
+/**
+ * Renders a `MenuItem[]` inside a `DropdownMenuContent`, for menus whose items
+ * are built as data rather than as JSX. Icons are shown only when every item in
+ * a separator-delimited group has one, so a partially-iconned group stays
+ * aligned.
+ */
+function DropdownMenuItems({ items }: { items: readonly MenuItem[] }) {
+  const iconVisibility = items.map(() => false);
+  let groupStart = 0;
+
+  for (let index = 0; index <= items.length; index++) {
+    const item = items[index];
+    if (item && !item.separator) continue;
+
+    const groupItems = items.slice(groupStart, index).filter(isMenuActionItem);
+    if (groupItems.length > 0 && groupItems.every((entry) => entry.icon)) {
+      for (let i = groupStart; i < index; i++) iconVisibility[i] = true;
+    }
+    groupStart = index + 1;
+  }
+
+  return items.map((item, index) => {
+    if (item.separator) return <DropdownMenuSeparator key={item.id} />;
+
+    return (
+      <DropdownMenuItem
+        key={item.id}
+        disabled={item.disabled || !item.onClick}
+        variant={item.tone === "destructive" ? "destructive" : "default"}
+        data-selected={item.selected ? "" : undefined}
+        onClick={item.onClick}
+      >
+        {iconVisibility[index] && item.icon ? (
+          <span className="grid size-4 shrink-0 place-items-center [&>svg]:block [&>svg]:size-4">
+            {item.icon}
+          </span>
+        ) : null}
+        <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.label}</span>
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          {item.shortcut ? <Keybinding binding={item.shortcut} /> : null}
+          {item.trailing === "disclosure" ? (
+            <ChevronRightIcon className="size-3 text-subtle-foreground" />
+          ) : item.trailing?.type === "text" ? (
+            <span className="text-subtle-foreground tabular-nums">{item.trailing.label}</span>
+          ) : null}
+          {item.checked !== undefined ? (
+            <span className="flex size-4 items-center justify-center">
+              {item.checked ? <CheckIcon className="text-primary" /> : null}
+            </span>
+          ) : null}
+        </span>
+      </DropdownMenuItem>
+    );
+  });
+}
+
+/**
+ * The "nothing to show" row inside a menu viewport. Use this instead of a
+ * `<DropdownMenuItem disabled>` holding a bare string, so every menu renders an
+ * empty result the same way.
+ */
+function DropdownMenuEmpty({
+  className,
+  children,
+  ...props
+}: ComponentProps<"div"> & { children: ReactNode }) {
+  return (
+    <div
+      data-slot="dropdown-menu-empty"
+      role="presentation"
+      className={cn(
+        "flex items-center justify-start gap-2 px-2 py-1 text-left font-sans text-subtle-foreground/70 ui-text-chrome",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -1052,9 +608,11 @@ export {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuEmpty,
   DropdownMenuFooter,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuItems,
   DropdownMenuLabel,
   DropdownMenuPortal,
   DropdownMenuRadioGroup,

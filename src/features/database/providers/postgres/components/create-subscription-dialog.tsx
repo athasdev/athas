@@ -101,7 +101,8 @@ export default function CreateSubscriptionDialog({
                 connection_string: e.target.value,
               }))
             }
-            className="h-20 resize-none rounded-xl border-border/70 bg-surface/60"
+            resize="none"
+            className="h-20 rounded-xl border-border/70 bg-surface/60"
             placeholder="host=127.0.0.1 port=5432 dbname=postgres user=replicator password=secret"
             disabled={isSubmitting}
           />

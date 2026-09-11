@@ -187,7 +187,7 @@ export const ChatMessage = memo(function ChatMessage({
                     }}
                     variant="ghost"
                     inset="flush"
-                    className="min-h-16 resize-y"
+                    className="min-h-16"
                     aria-label="Edit prompt"
                   />
                   <div className="flex justify-end gap-1">

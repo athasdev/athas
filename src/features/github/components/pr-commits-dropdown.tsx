@@ -1,15 +1,16 @@
-import { useMemo, useState } from "react";
 import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuEmpty,
   DropdownMenuItem,
   DropdownMenuSearch,
   DropdownMenuTrigger,
+  DropdownMenuViewport,
 } from "@/ui/dropdown";
+import { useMenuSearch } from "@/ui/menu-search";
 import { ChevronDownIcon, GitCommitIcon } from "@/ui/icons";
-import { matchesSearchQuery } from "@/utils/search-match";
 import { toast } from "sonner";
 import type { Commit } from "../types/github-pr-viewer.types";
 import { getTimeAgo } from "../utils/github-viewer-utils";
@@ -25,20 +26,14 @@ function getCommitAuthor(commit: Commit) {
 }
 
 export function PRCommitsDropdown({ commits, repoPath }: PRCommitsDropdownProps) {
-  const [query, setQuery] = useState("");
+  const search = useMenuSearch();
   const commitLabel = commits.length === 1 ? "commit" : "commits";
-  const filteredCommits = useMemo(
-    () =>
-      commits.filter((commit) =>
-        matchesSearchQuery(query, [
-          commit.messageHeadline,
-          commit.messageBody,
-          commit.oid,
-          ...commit.authors.flatMap((author) => [author.login, author.name, author.email]),
-        ]),
-      ),
-    [commits, query],
-  );
+  const filteredCommits = search.filter(commits, (commit) => [
+    commit.messageHeadline,
+    commit.messageBody,
+    commit.oid,
+    ...commit.authors.flatMap((author) => [author.login, author.name, author.email]),
+  ]);
 
   const openCommit = async (commit: Commit) => {
     if (!repoPath || !commit.oid) {
@@ -59,7 +54,7 @@ export function PRCommitsDropdown({ commits, repoPath }: PRCommitsDropdownProps)
   };
 
   return (
-    <DropdownMenu onOpenChange={(open) => !open && setQuery("")}>
+    <DropdownMenu {...search.menuProps}>
       <DropdownMenuTrigger
         render={
           <Button
@@ -73,38 +68,40 @@ export function PRCommitsDropdown({ commits, repoPath }: PRCommitsDropdownProps)
         <span>{`Commits ${commits.length}`}</span>
         <ChevronDownIcon />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-96 max-w-[calc(100vw-1rem)]">
+      <DropdownMenuContent align="start" size="panel" viewport="searchable">
         <DropdownMenuSearch
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          value={search.query}
+          onChange={(event) => search.setQuery(event.target.value)}
           placeholder="Search commits"
           autoFocus
         />
-        {filteredCommits.length > 0 ? (
-          filteredCommits.map((commit) => (
-            <DropdownMenuItem
-              key={commit.oid}
-              className="items-start"
-              disabled={!repoPath}
-              onClick={() => void openCommit(commit)}
-            >
-              <GitCommitIcon className="mt-0.5" />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-foreground">{commit.messageHeadline}</span>
-                <span className="block truncate text-subtle-foreground">
-                  {`${getCommitAuthor(commit)} · ${getTimeAgo(commit.authoredDate)}`}
+        <DropdownMenuViewport>
+          {filteredCommits.length > 0 ? (
+            filteredCommits.map((commit) => (
+              <DropdownMenuItem
+                key={commit.oid}
+                className="items-start"
+                disabled={!repoPath}
+                onClick={() => void openCommit(commit)}
+              >
+                <GitCommitIcon className="mt-0.5" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-foreground">{commit.messageHeadline}</span>
+                  <span className="block truncate text-subtle-foreground">
+                    {`${getCommitAuthor(commit)} · ${getTimeAgo(commit.authoredDate)}`}
+                  </span>
                 </span>
-              </span>
-              <span className="shrink-0 font-mono text-subtle-foreground">
-                {commit.oid.slice(0, 7)}
-              </span>
-            </DropdownMenuItem>
-          ))
-        ) : (
-          <DropdownMenuItem disabled>
-            {commits.length === 0 ? "No commits" : "No commits match"}
-          </DropdownMenuItem>
-        )}
+                <span className="shrink-0 font-mono text-subtle-foreground">
+                  {commit.oid.slice(0, 7)}
+                </span>
+              </DropdownMenuItem>
+            ))
+          ) : (
+            <DropdownMenuEmpty>
+              {commits.length === 0 ? "No commits" : "No commits match"}
+            </DropdownMenuEmpty>
+          )}
+        </DropdownMenuViewport>
       </DropdownMenuContent>
     </DropdownMenu>
   );

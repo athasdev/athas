@@ -998,7 +998,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
             const connectionId = buffer.connectionId;
             if (!connectionId) {
               return (
-                <Empty className="h-full rounded-none" tone="error" role="alert">
+                <Empty className="h-full" tone="error" role="alert">
                   <EmptyDescription>Missing database connection</EmptyDescription>
                 </Empty>
               );

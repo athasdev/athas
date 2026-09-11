@@ -740,7 +740,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
 
         <div className="flex min-h-0 min-w-0 flex-col">
           <TabsContent value="stack">
-            <ScrollArea className="h-full" orientation="both">
+            <ScrollArea fill="block" orientation="both">
               <DebugStackFrames
                 frames={stackFrames}
                 selectedFrameId={selectedFrameId}
@@ -750,7 +750,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
           </TabsContent>
 
           <TabsContent value="variables">
-            <ScrollArea className="h-full" orientation="both">
+            <ScrollArea fill="block" orientation="both">
               <DebugVariablesPanel
                 activeSessionId={activeSession?.id}
                 selectedFrameId={selectedFrameId}
@@ -763,7 +763,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
           </TabsContent>
 
           <TabsContent value="watch">
-            <ScrollArea className="h-full" orientation="both">
+            <ScrollArea fill="block" orientation="both">
               <DebugWatchPanel
                 activeSessionId={activeSession?.id}
                 selectedFrameId={selectedFrameId}
@@ -774,7 +774,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
           </TabsContent>
 
           <TabsContent value="console">
-            <ScrollArea className="h-full" orientation="both">
+            <ScrollArea fill="block" orientation="both">
               {activeAdapterOutput.length === 0 ? (
                 <EmptyState layout="sidebar" message="Adapter output appears here." />
               ) : (
@@ -796,7 +796,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
           </TabsContent>
 
           <TabsContent value="breakpoints">
-            <ScrollArea className="h-full" orientation="both">
+            <ScrollArea fill="block" orientation="both">
               <DebugExceptionBreakpointsList
                 filters={exceptionBreakpointFilters}
                 enabledFilters={enabledExceptionFilters}

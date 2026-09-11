@@ -299,7 +299,8 @@ export const FileTreeSettings = () => {
             }}
             placeholder="*.log, *.tmp, **/*.bak"
             rows={2}
-            className="w-56 max-w-full resize-none"
+            resize="none"
+            className="w-56 max-w-full"
           />
         </SettingRow>
 
@@ -326,7 +327,8 @@ export const FileTreeSettings = () => {
             }}
             placeholder="node_modules, .git, build/"
             rows={2}
-            className="w-56 max-w-full resize-none"
+            resize="none"
+            className="w-56 max-w-full"
           />
         </SettingRow>
       </Section>

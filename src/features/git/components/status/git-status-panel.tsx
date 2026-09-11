@@ -20,10 +20,10 @@ import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { Checkbox } from "@/ui/checkbox";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
 import {
-  Dropdown,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuItems,
   DropdownMenuTrigger,
   useDropdownMenu,
   type MenuItem,
@@ -103,7 +103,6 @@ const GitStatusPanel = ({
   const contextMenu = useDropdownMenu<ContextMenuState>();
   const diffMenuAnchorRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDiffMenuOpen, setIsDiffMenuOpen] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
   const [expandedSections, setExpandedSections] = useState<StatusSection[]>([
     "tracked",
@@ -481,13 +480,11 @@ const GitStatusPanel = ({
   const contextMenuData = contextMenu.data;
   const openScopedDiff = useCallback(
     (scope: GitStatusDiffScope) => {
-      setIsDiffMenuOpen(false);
       onViewDiff?.(scope);
     },
     [onViewDiff],
   );
   const openDiffPicker = useCallback((handler: (() => void) | undefined) => {
-    setIsDiffMenuOpen(false);
     handler?.();
   }, []);
   const diffMenuItems = useMemo<MenuItem[]>(
@@ -556,28 +553,25 @@ const GitStatusPanel = ({
                   View Diff
                 </Button>
                 <ButtonGroupSeparator />
-                <Button
-                  type="button"
-                  variant="default"
-                  iconOnly
-                  onClick={() => setIsDiffMenuOpen((open) => !open)}
-                  disabled={isLoading}
-                  active={isDiffMenuOpen}
-                  aria-label="Choose diff source"
-                  aria-haspopup="menu"
-                  aria-expanded={isDiffMenuOpen}
-                >
-                  <ChevronDownIcon className="size-3" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="default"
+                        iconOnly
+                        disabled={isLoading}
+                        aria-label="Choose diff source"
+                      />
+                    }
+                  >
+                    <ChevronDownIcon className="size-3" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent anchor={diffMenuAnchorRef} align="start" size="compact">
+                    <DropdownMenuItems items={diffMenuItems} />
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </ButtonGroup>
-              <Dropdown
-                isOpen={isDiffMenuOpen}
-                anchorRef={diffMenuAnchorRef}
-                anchorAlign="start"
-                onClose={() => setIsDiffMenuOpen(false)}
-                items={diffMenuItems}
-                className="min-w-37.5"
-              />
               {renderDiffStatsBadge(
                 allDiffStats,
                 "shrink-0 @max-[230px]/git-status-toolbar:hidden",
@@ -653,7 +647,7 @@ const GitStatusPanel = ({
               </DropdownMenu>
             </div>
           </SidebarToolbar>
-          <SidebarScrollArea className="min-h-0 flex-1">
+          <SidebarScrollArea>
             <Accordion
               multiple
               value={expandedSections}

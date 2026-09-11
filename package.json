@@ -8,6 +8,7 @@
     "check": "bash scripts/check.sh",
     "check:frontend": "bash scripts/check/frontend.sh",
     "check:services": "bun scripts/check/service-config.ts",
+    "check:design": "bun scripts/check/design-system.ts",
     "services:check": "bun run check:services",
     "test:rust": "cargo test --workspace --no-fail-fast",
     "lint": "vp lint .",

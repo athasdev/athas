@@ -5,6 +5,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuEmpty,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
@@ -127,7 +128,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
             />
           </DropdownMenuTrigger>
         </span>
-        <DropdownMenuContent align="start" className="w-72">
+        <DropdownMenuContent align="start" size="wide">
           {isDiscovering && availableRepoPaths.length === 0 ? (
             <DropdownMenuItem disabled>
               <Spinner compact />
@@ -136,7 +137,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
           ) : null}
 
           {!isDiscovering && sortedRepoPaths.length === 0 ? (
-            <DropdownMenuItem disabled>No repositories found</DropdownMenuItem>
+            <DropdownMenuEmpty>No repositories found</DropdownMenuEmpty>
           ) : null}
 
           <DropdownMenuRadioGroup

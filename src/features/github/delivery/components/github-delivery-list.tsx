@@ -103,7 +103,7 @@ export default function GitHubDeliveryList({
       ]
     : [];
   return (
-    <SidebarScrollArea className="min-h-0 flex-1">
+    <SidebarScrollArea>
       {error && (
         <EmptyState
           layout="sidebar"

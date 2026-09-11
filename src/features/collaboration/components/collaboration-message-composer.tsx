@@ -48,7 +48,8 @@ export function CollaborationMessageComposer({
           }}
           placeholder={placeholder}
           disabled={disabled || isSending}
-          className="max-h-24 min-h-12 resize-none"
+          resize="none"
+          className="max-h-24 min-h-12"
         />
       </SidebarComposerBody>
       <div className="mt-1 flex items-center justify-between gap-2 px-1 pb-1">

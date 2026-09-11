@@ -47,7 +47,22 @@ const commandItemVariants = cva(
 const commandHeaderContentClassName = "flex items-center gap-2 px-3 py-2.5";
 
 const commandInputClassName = cva(
-  "font-sans ui-text-sm h-8 min-w-0 flex-1 bg-transparent leading-[1.4] text-foreground placeholder-subtle-foreground outline-none",
+  "font-sans ui-text-sm min-w-0 flex-1 leading-[1.4] text-foreground placeholder-subtle-foreground outline-none",
+  {
+    variants: {
+      variant: {
+        /** Borderless input that sits inside a command header. */
+        inline: "h-8 bg-transparent",
+        /** Standalone bordered field, for a search box in a toolbar. */
+        field: "h-7 rounded-md border border-border/70 bg-background/65 px-2",
+        /** Same shape as `field`, on a raised surface. */
+        surface: "h-7 rounded-md bg-surface px-2",
+      },
+    },
+    defaultVariants: {
+      variant: "inline",
+    },
+  },
 );
 
 type CommandHeaderActionProps = Omit<ButtonProps, "className" | "variant">;
@@ -335,6 +350,8 @@ type CommandInputProps = Omit<React.ComponentProps<"input">, "onChange" | "size"
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   placeholder: string;
   className?: string;
+  /** How the input is framed. See `commandInputClassName`. */
+  variant?: "inline" | "field" | "surface";
   ref?: React.Ref<HTMLInputElement>;
 };
 
@@ -344,6 +361,7 @@ export const CommandInput = ({
   onKeyDown,
   placeholder,
   className,
+  variant = "inline",
   ref,
   ...props
 }: CommandInputProps) => (
@@ -354,7 +372,7 @@ export const CommandInput = ({
     onChange={(e) => onChange(e.target.value)}
     onKeyDown={onKeyDown}
     placeholder={placeholder}
-    className={cn(commandInputClassName(), className)}
+    className={cn(commandInputClassName({ variant }), className)}
     data-command-input=""
     {...props}
   />

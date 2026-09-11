@@ -81,7 +81,7 @@ export function ViewsSidebar({ projectPath }: ViewsSidebarProps) {
           action={{ label: "Create View", onClick: () => openView(), icon: <PlusIcon /> }}
         />
       ) : (
-        <SidebarScrollArea className="min-h-0 flex-1">
+        <SidebarScrollArea>
           <div className="space-y-1 overflow-x-hidden">
             {views.map((view) => (
               <SidebarListActionRow

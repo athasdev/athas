@@ -3,4 +3,5 @@
 set -euo pipefail
 
 bun check:services
+bun check:design
 vp check

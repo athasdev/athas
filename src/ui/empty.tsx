@@ -5,19 +5,31 @@ import { cn } from "@/utils/cn";
 
 type EmptyTone = "neutral" | "error" | "warning" | "success";
 
+const emptyVariants = cva("group/empty flex min-h-0 w-full min-w-0 flex-col gap-2", {
+  variants: {
+    variant: {
+      /** Fills the area it sits in, centred. The usual empty state for a pane. */
+      region: "flex-1 items-center justify-center p-3 text-center",
+      /** A compact left-aligned row, for an empty state inside a list or menu. */
+      inline: "flex-none items-start p-2 text-left",
+    },
+  },
+  defaultVariants: {
+    variant: "region",
+  },
+});
+
 function Empty({
   className,
   tone = "neutral",
+  variant = "region",
   ...props
-}: ComponentProps<"div"> & { tone?: EmptyTone }) {
+}: ComponentProps<"div"> & { tone?: EmptyTone } & VariantProps<typeof emptyVariants>) {
   return (
     <div
       data-slot="empty"
       data-tone={tone}
-      className={cn(
-        "group/empty flex min-h-0 w-full min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-lg border-dashed p-3 text-center",
-        className,
-      )}
+      className={cn(emptyVariants({ variant }), className)}
       {...props}
     />
   );
@@ -117,6 +129,7 @@ interface EmptyStateProps extends Omit<ComponentProps<typeof Empty>, "children" 
   icon?: ReactNode;
   action?: EmptyStateAction;
   secondaryAction?: EmptyStateAction;
+  tertiaryAction?: EmptyStateAction;
   layout?: "default" | "sidebar";
 }
 
@@ -126,6 +139,7 @@ function EmptyState({
   icon,
   action,
   secondaryAction,
+  tertiaryAction,
   layout = "default",
   className,
   ...props
@@ -160,10 +174,11 @@ function EmptyState({
       ) : message ? (
         <EmptyDescription>{message}</EmptyDescription>
       ) : null}
-      {action || secondaryAction ? (
-        <EmptyContent className="flex-row justify-center">
+      {action || secondaryAction || tertiaryAction ? (
+        <EmptyContent className="flex-row flex-wrap justify-center">
           {action ? renderAction(action) : null}
           {secondaryAction ? renderAction(secondaryAction) : null}
+          {tertiaryAction ? renderAction(tertiaryAction) : null}
         </EmptyContent>
       ) : null}
     </Empty>

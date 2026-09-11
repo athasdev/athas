@@ -205,7 +205,7 @@ export default function LinuxFolderPickerDialog() {
         </div>
 
         {error ? (
-          <Empty className="rounded-none px-6" tone="warning" role="alert">
+          <Empty className="px-6" tone="warning" role="alert">
             <EmptyHeader>
               <EmptyMedia>
                 <WarningIcon size={24} />
@@ -215,7 +215,7 @@ export default function LinuxFolderPickerDialog() {
             </EmptyHeader>
           </Empty>
         ) : isLoading ? (
-          <Empty className="rounded-none">
+          <Empty>
             <EmptyDescription>
               <Spinner label="Loading folders" showLabel compact />
             </EmptyDescription>

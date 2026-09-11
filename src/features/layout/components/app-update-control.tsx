@@ -1,8 +1,13 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { Button } from "@/ui/button";
-import { Dropdown } from "@/ui/dropdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItems,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { ClockIcon, DownloadIcon, FileTextIcon } from "@/ui/icons";
 
@@ -20,8 +25,6 @@ export function AppUpdateControl() {
     onRemindLater,
     onViewReleaseNotes,
   } = useAutoUpdate();
-  const [isUpdateMenuOpen, setIsUpdateMenuOpen] = useState(false);
-  const updateMenuRef = useRef<HTMLDivElement>(null);
   const updateBusy = downloading || installing;
 
   const updateMenuItems = useMemo(
@@ -78,18 +81,18 @@ export function AppUpdateControl() {
         : `Update available: ${updateInfo.version}`;
 
   return (
-    <div ref={updateMenuRef}>
-      <Button
-        type="button"
-        variant="ghost"
-        size="chrome"
-        active={isUpdateMenuOpen}
-        disabled={updateBusy}
-        onClick={() => setIsUpdateMenuOpen((open) => !open)}
-        aria-haspopup="menu"
-        aria-expanded={isUpdateMenuOpen}
-        aria-label={updateTooltip}
-        tooltip={updateTooltip}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="chrome"
+            disabled={updateBusy}
+            aria-label={updateTooltip}
+            tooltip={updateTooltip}
+          />
+        }
       >
         {updateBusy ? (
           <Spinner label={downloading ? "Downloading" : "Installing"} compact />
@@ -97,16 +100,10 @@ export function AppUpdateControl() {
           <DownloadIcon />
         )}
         <span>Update available</span>
-      </Button>
-      <Dropdown
-        isOpen={isUpdateMenuOpen}
-        onClose={() => setIsUpdateMenuOpen(false)}
-        anchorRef={updateMenuRef}
-        anchorSide="bottom"
-        anchorAlign="end"
-        items={updateMenuItems}
-        className="min-w-52"
-      />
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" size="default">
+        <DropdownMenuItems items={updateMenuItems} />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

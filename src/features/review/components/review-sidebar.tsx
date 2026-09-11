@@ -209,7 +209,7 @@ function ReviewSidebarContent() {
           if (activeRepoPath) reviewActions.setViewMode(activeRepoPath, value as ReviewViewMode);
         }}
       >
-        <SidebarScrollArea className="min-h-0 flex-1">
+        <SidebarScrollArea>
           {isLoading && timelineChangeSets.length === 0 ? (
             <EmptyState
               layout="sidebar"

@@ -1,7 +1,7 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cva } from "class-variance-authority";
-import type { CSSProperties, ReactElement, ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";
 import {
@@ -13,6 +13,7 @@ import {
   ComboboxList,
 } from "@/ui/combobox";
 import { menuItemVariants, menuSurfaceVariants } from "@/ui/dropdown";
+import { OVERLAY_MAX_HEIGHT, OVERLAY_MIN_SIZES, type OverlaySize } from "@/ui/overlay-size";
 import { CheckIcon, ChevronDownIcon, type Icon, SearchIcon } from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -33,10 +34,15 @@ export interface SelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
-  width?: "content" | "full";
+  width?: "content" | "full" | "flex";
   menuWidth?: "anchor" | "content";
   menuHeader?: ReactNode;
-  menuMinWidth?: number;
+  /**
+   * Minimum width of the popup, from the shared overlay scale. The popup always
+   * follows the trigger's width; this only sets the floor. Use `"trigger"` for
+   * no floor beyond the primitive's own minimum.
+   */
+  menuSize?: OverlaySize;
   menuAnimated?: boolean;
   disabled?: boolean;
   variant?: "default" | "ghost" | "surface";
@@ -63,6 +69,8 @@ const selectContainerVariants = cva("min-w-0", {
     width: {
       content: "w-fit max-w-72",
       full: "w-full max-w-full",
+      /** Takes the remaining space in a flex row. */
+      flex: "max-w-full flex-1",
     },
   },
   defaultVariants: {
@@ -143,7 +151,7 @@ function PlainSelect({
   width,
   menuWidth,
   menuHeader,
-  menuMinWidth,
+  menuSize = "trigger",
   menuAnimated,
   disabled,
   variant,
@@ -169,9 +177,6 @@ function PlainSelect({
   ariaLabel: string;
 }) {
   const selectedOption = options.find((option) => option.value === value);
-  const popupStyle = menuMinWidth
-    ? ({ minWidth: menuMinWidth } satisfies CSSProperties)
-    : undefined;
   const node = (
     <div
       className={cn(selectContainerVariants({ width: iconOnly ? "content" : width }), className)}
@@ -223,16 +228,21 @@ function PlainSelect({
           >
             <SelectPrimitive.Popup
               data-prevent-dialog-escape="true"
-              style={popupStyle}
               className={cn(
                 menuSurfaceVariants(),
                 "w-(--anchor-width) max-w-(--available-width) min-w-36 overflow-hidden text-foreground duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+                OVERLAY_MIN_SIZES[menuSize],
                 !menuAnimated && "duration-0 data-ending-style:transform-none",
                 menuWidth === "content" && "w-max min-w-(--anchor-width) max-w-(--available-width)",
               )}
             >
               {menuHeader}
-              <SelectPrimitive.List className="scrollbar-thin max-h-96 overflow-y-auto overscroll-contain">
+              <SelectPrimitive.List
+                className={cn(
+                  "scrollbar-thin overflow-y-auto overscroll-contain",
+                  OVERLAY_MAX_HEIGHT,
+                )}
+              >
                 {options.map((option) => (
                   <SelectPrimitive.Item
                     key={option.value}
@@ -273,7 +283,7 @@ function SearchableSelect({
   width,
   menuWidth,
   menuHeader,
-  menuMinWidth,
+  menuSize = "trigger",
   menuAnimated,
   disabled,
   variant,
@@ -326,9 +336,6 @@ function SearchableSelect({
   }, [allowCustomValue, customValueLabel, options, query]);
   const selectedOption = resolvedOptions.find((option) => option.value === value) ?? null;
   const componentIcon = isIconComponent(leftIcon) ? (leftIcon as Icon) : undefined;
-  const popupStyle = menuMinWidth
-    ? ({ minWidth: menuMinWidth } satisfies CSSProperties)
-    : undefined;
   const filter = useMemo(
     () => (option: SelectOption, query: string) =>
       matchesSearchQuery(query, [option.label, option.value, ...(option.keywords ?? [])]),
@@ -431,9 +438,9 @@ function SearchableSelect({
         align="start"
         initialFocus={searchableTrigger === "menu" ? searchInputRef : undefined}
         data-prevent-dialog-escape="true"
-        style={popupStyle}
         className={cn(
           "z-10070",
+          OVERLAY_MIN_SIZES[menuSize],
           !menuAnimated && "duration-0 data-ending-style:transform-none",
           menuWidth === "content" && "w-max min-w-(--anchor-width) max-w-(--available-width)",
         )}
@@ -466,7 +473,7 @@ export default function Select({
   width = "content",
   menuWidth,
   menuHeader,
-  menuMinWidth = 0,
+  menuSize = "trigger",
   menuAnimated = true,
   disabled = false,
   variant = "ghost",
@@ -501,7 +508,7 @@ export default function Select({
     width,
     menuWidth: resolvedMenuWidth,
     menuHeader,
-    menuMinWidth,
+    menuSize,
     menuAnimated,
     disabled,
     variant,

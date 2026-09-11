@@ -208,7 +208,7 @@ const GitHubIssuesView = memo(
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-busy={isLoading}>
-        <SidebarScrollArea className="min-h-0 flex-1">
+        <SidebarScrollArea>
           {error && (
             <EmptyState
               layout="sidebar"

@@ -57,7 +57,7 @@ export default function SchemaView({
   const fkMap = mapForeignKeysByColumn(foreignKeys);
 
   return (
-    <ScrollArea className="flex-1 font-sans" orientation="both">
+    <ScrollArea fill="flex" className="font-sans" orientation="both">
       <div className="px-3 py-3">
         <div className="ui-text-sm text-foreground">{tableName}</div>
         <div className="ui-text-sm text-subtle-foreground">{columns.length} columns</div>

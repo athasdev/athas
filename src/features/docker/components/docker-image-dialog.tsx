@@ -169,7 +169,8 @@ export function DockerImageDialog({
                 }))
               }
               placeholder="NODE_ENV=production"
-              className="min-h-20 font-mono"
+              font="mono"
+              className="min-h-20"
             />
           </div>
         </div>
@@ -213,7 +214,8 @@ export function DockerImageDialog({
                   setRunDraft((current) => ({ ...current, ports: event.target.value }))
                 }
                 placeholder="8080:80"
-                className="min-h-20 font-mono"
+                font="mono"
+                className="min-h-20"
               />
             </div>
             <div className="space-y-1.5">
@@ -227,7 +229,8 @@ export function DockerImageDialog({
                   setRunDraft((current) => ({ ...current, volumes: event.target.value }))
                 }
                 placeholder="/host:/container"
-                className="min-h-20 font-mono"
+                font="mono"
+                className="min-h-20"
               />
             </div>
           </div>
@@ -242,7 +245,8 @@ export function DockerImageDialog({
                 setRunDraft((current) => ({ ...current, env: event.target.value }))
               }
               placeholder="KEY=value"
-              className="min-h-20 font-mono"
+              font="mono"
+              className="min-h-20"
             />
           </div>
           <div className="space-y-1.5">
@@ -256,7 +260,8 @@ export function DockerImageDialog({
                 setRunDraft((current) => ({ ...current, envFiles: event.target.value }))
               }
               placeholder=".env"
-              className="min-h-16 font-mono"
+              font="mono"
+              className="min-h-16"
             />
           </div>
           <div className="space-y-1.5">

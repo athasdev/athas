@@ -132,7 +132,7 @@ export const GitCommitFilesPanel = memo(function GitCommitFilesPanel({
           message={<Spinner label="Loading commit files" showLabel compact />}
         />
       ) : (
-        <SidebarScrollArea className="min-h-0 flex-1">
+        <SidebarScrollArea>
           <SidebarSectionLabel>
             {fileRows.length} changed file{fileRows.length === 1 ? "" : "s"}
           </SidebarSectionLabel>

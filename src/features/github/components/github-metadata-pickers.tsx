@@ -68,7 +68,7 @@ export function GitHubLabelPicker({
           className="w-full bg-transparent hover:bg-accent/60"
         />
       </div>
-      <ComboboxContent className="min-w-72" data-prevent-dialog-escape="true">
+      <ComboboxContent size="wide" data-prevent-dialog-escape="true">
         <ComboboxEmpty>{isLoading ? "Loading labels..." : "No matching labels"}</ComboboxEmpty>
         <ComboboxList>
           {(label: Label) => (
@@ -119,7 +119,7 @@ export function GitHubAssigneePicker({ value, onChange }: GitHubAssigneePickerPr
           <span className="truncate">{summary}</span>
         </PopoverTrigger>
       </span>
-      <PopoverContent align="start" className="w-72 gap-2 p-2">
+      <PopoverContent align="start" size="wide" className="gap-2 p-2">
         <div className="flex items-center gap-1.5">
           <Input
             value={draft}

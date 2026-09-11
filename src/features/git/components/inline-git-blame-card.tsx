@@ -51,7 +51,8 @@ export function InlineGitBlameCard({
         align="start"
         sideOffset={6}
         collisionPadding={8}
-        className="w-80 gap-0 overflow-hidden p-0"
+        size="panel"
+        className="gap-0 overflow-hidden p-0"
         onMouseEnter={onPointerEnter}
         onMouseLeave={onPointerLeave}
       >

@@ -22,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuEmpty,
   DropdownMenuSearch,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -584,7 +585,7 @@ const GitBranchManager = ({
             <ChevronExpandYIcon className="text-subtle-foreground" />
           </DropdownMenuTrigger>
         </span>
-        <DropdownMenuContent align="start" viewport="searchable" className="w-64">
+        <DropdownMenuContent align="start" viewport="searchable" size="wide">
           <DropdownMenuSearch
             value={branchQuery}
             onChange={(event) => setBranchQuery(event.target.value)}
@@ -620,9 +621,9 @@ const GitBranchManager = ({
                 ))}
               </DropdownMenuRadioGroup>
             ) : (
-              <DropdownMenuItem disabled>
+              <DropdownMenuEmpty>
                 {branchQuery.trim() ? "No branches match" : "No branches found"}
-              </DropdownMenuItem>
+              </DropdownMenuEmpty>
             )}
           </DropdownMenuViewport>
           <DropdownMenuFooter>
@@ -972,7 +973,7 @@ function BranchDropdownActions({
       >
         <DotsIcon />
       </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="min-w-44">
+      <DropdownMenuSubContent size="compact">
         <DropdownMenuItem disabled={isLoading} onClick={onCreateFrom}>
           <PlusIcon />
           New branch from…
