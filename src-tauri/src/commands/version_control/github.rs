@@ -1,3 +1,8 @@
+use super::github_token::{
+   GitHubTokenSource, PERSONAL_ACCESS_TOKEN_SECRET_KEY, cached_gh_cli_token,
+   has_athas_account_token, has_personal_access_token, invalidate_gh_cli_token_cache,
+   resolve_github_token,
+};
 use crate::secure_storage::{get_secret, remove_secret, store_secret};
 pub use athas_github::{
    GitHubNotification, IssueComment, IssueDetails, IssueListItem, IssueMilestone, IssueType, Label,
@@ -15,19 +20,20 @@ where
       .map_err(|error| format!("GitHub command task failed: {}", error))?
 }
 
-fn get_stored_github_token(app: &crate::app_runtime::AppHandle) -> Option<String> {
-   get_secret(app, "github_token")
+/// Resolves the active GitHub token off the async runtime, since `gh` may be spawned.
+async fn resolve_github_token_async(app: &crate::app_runtime::AppHandle) -> Option<String> {
+   let app = app.clone();
+   tauri::async_runtime::spawn_blocking(move || resolve_github_token(&app).token)
+      .await
       .ok()
       .flatten()
-      .map(|token| token.trim().to_string())
-      .filter(|token| !token.is_empty())
 }
 
 #[tauri::command]
 pub async fn github_check_auth(
    app: crate::app_runtime::AppHandle,
 ) -> Result<athas_github::GitHubAuthStatus, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_check_auth(github_token)).await
 }
 
@@ -37,13 +43,13 @@ pub async fn github_list_prs(
    repo_path: String,
    filter: String,
 ) -> Result<Vec<PullRequest>, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_list_prs(repo_path, filter, github_token)).await
 }
 
 #[tauri::command]
 pub async fn github_get_current_user(app: crate::app_runtime::AppHandle) -> Result<String, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_get_current_user(github_token)).await
 }
 
@@ -51,7 +57,7 @@ pub async fn github_get_current_user(app: crate::app_runtime::AppHandle) -> Resu
 pub async fn github_list_notifications(
    app: crate::app_runtime::AppHandle,
 ) -> Result<Vec<GitHubNotification>, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_list_notifications(github_token)).await
 }
 
@@ -63,7 +69,7 @@ pub async fn github_resolve_notification_workflow_run(
    notification_title: String,
    notification_updated_at: String,
 ) -> Result<Option<WorkflowRunListItem>, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_resolve_notification_workflow_run(
          repository_full_name,
@@ -82,7 +88,7 @@ pub async fn github_list_issues(
    repo_path: String,
    state: Option<String>,
 ) -> Result<Vec<IssueListItem>, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_list_issues(
          repo_path,
@@ -98,7 +104,7 @@ pub async fn github_list_workflow_runs(
    app: crate::app_runtime::AppHandle,
    repo_path: String,
 ) -> Result<Vec<WorkflowRunListItem>, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_list_workflow_runs(repo_path, github_token)).await
 }
 
@@ -107,7 +113,7 @@ pub async fn github_list_workflows(
    app: crate::app_runtime::AppHandle,
    repo_path: String,
 ) -> Result<Vec<WorkflowListItem>, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_list_workflows(repo_path, github_token)).await
 }
 
@@ -116,7 +122,7 @@ pub async fn github_list_labels(
    app: crate::app_runtime::AppHandle,
    repo_path: String,
 ) -> Result<Vec<Label>, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_list_labels(repo_path, github_token)).await
 }
 
@@ -125,7 +131,7 @@ pub async fn github_list_milestones(
    app: crate::app_runtime::AppHandle,
    repo_path: String,
 ) -> Result<Vec<IssueMilestone>, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_list_milestones(repo_path, github_token)).await
 }
 
@@ -134,7 +140,7 @@ pub async fn github_list_issue_types(
    app: crate::app_runtime::AppHandle,
    repo_path: String,
 ) -> Result<Vec<IssueType>, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_list_issue_types(repo_path, github_token)).await
 }
 
@@ -149,7 +155,7 @@ pub async fn github_create_issue(
    milestone: Option<i64>,
    issue_type: Option<String>,
 ) -> Result<IssueListItem, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_create_issue(
          repo_path,
@@ -177,7 +183,7 @@ pub async fn github_update_issue(
    milestone: Option<i64>,
    issue_type: Option<String>,
 ) -> Result<IssueDetails, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_update_issue(
          repo_path,
@@ -202,7 +208,7 @@ pub async fn github_update_issue_state(
    state: String,
    state_reason: Option<String>,
 ) -> Result<IssueDetails, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_update_issue_state(
          repo_path,
@@ -222,7 +228,7 @@ pub async fn github_add_issue_comment(
    issue_number: i64,
    body: String,
 ) -> Result<IssueComment, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_add_issue_comment(repo_path, issue_number, body, github_token)
    })
@@ -236,7 +242,7 @@ pub async fn github_update_issue_comment(
    comment_id: i64,
    body: String,
 ) -> Result<IssueComment, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_update_issue_comment(repo_path, comment_id, body, github_token)
    })
@@ -249,7 +255,7 @@ pub async fn github_delete_issue_comment(
    repo_path: String,
    comment_id: i64,
 ) -> Result<(), String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_delete_issue_comment(repo_path, comment_id, github_token)
    })
@@ -263,7 +269,7 @@ pub async fn github_lock_issue(
    issue_number: i64,
    lock_reason: Option<String>,
 ) -> Result<(), String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_lock_issue(repo_path, issue_number, lock_reason, github_token)
    })
@@ -276,7 +282,7 @@ pub async fn github_unlock_issue(
    repo_path: String,
    issue_number: i64,
 ) -> Result<(), String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_unlock_issue(repo_path, issue_number, github_token))
       .await
 }
@@ -293,7 +299,7 @@ pub async fn github_create_pull_request(
    labels: Vec<String>,
    assignees: Vec<String>,
 ) -> Result<PullRequest, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_create_pull_request(
          repo_path,
@@ -320,7 +326,7 @@ pub async fn github_update_pull_request(
    labels: Vec<String>,
    assignees: Vec<String>,
 ) -> Result<PullRequestDetails, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_update_pull_request(
          repo_path,
@@ -342,7 +348,7 @@ pub async fn github_add_pr_comment(
    pr_number: i64,
    body: String,
 ) -> Result<PullRequestComment, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_add_pr_comment(repo_path, pr_number, body, github_token)
    })
@@ -357,7 +363,7 @@ pub async fn github_submit_pr_review(
    event: String,
    body: String,
 ) -> Result<(), String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_submit_pr_review(repo_path, pr_number, event, body, github_token)
    })
@@ -371,7 +377,7 @@ pub async fn github_merge_pull_request(
    pr_number: i64,
    method: String,
 ) -> Result<PullRequestDetails, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_merge_pull_request(repo_path, pr_number, method, github_token)
    })
@@ -384,7 +390,7 @@ pub async fn github_close_pull_request(
    repo_path: String,
    pr_number: i64,
 ) -> Result<PullRequestDetails, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_close_pull_request(repo_path, pr_number, github_token))
       .await
 }
@@ -396,7 +402,7 @@ pub async fn github_dispatch_workflow(
    workflow_id: i64,
    reference: String,
 ) -> Result<(), String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_dispatch_workflow(repo_path, workflow_id, reference, github_token)
    })
@@ -409,7 +415,7 @@ pub async fn github_checkout_pr(
    repo_path: String,
    pr_number: i64,
 ) -> Result<(), String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_checkout_pr(repo_path, pr_number, github_token)).await
 }
 
@@ -419,7 +425,7 @@ pub async fn github_get_pr_details(
    repo_path: String,
    pr_number: i64,
 ) -> Result<PullRequestDetails, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_get_pr_details(repo_path, pr_number, github_token))
       .await
 }
@@ -430,7 +436,7 @@ pub async fn github_get_pr_diff(
    repo_path: String,
    pr_number: i64,
 ) -> Result<String, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_get_pr_diff(repo_path, pr_number, github_token)).await
 }
 
@@ -440,7 +446,7 @@ pub async fn github_get_pr_files(
    repo_path: String,
    pr_number: i64,
 ) -> Result<Vec<PullRequestFile>, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_get_pr_files(repo_path, pr_number, github_token)).await
 }
 
@@ -450,7 +456,7 @@ pub async fn github_get_pr_comments(
    repo_path: String,
    pr_number: i64,
 ) -> Result<Vec<PullRequestComment>, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_get_pr_comments(repo_path, pr_number, github_token))
       .await
 }
@@ -461,7 +467,7 @@ pub async fn github_get_issue_details(
    repo_path: String,
    issue_number: i64,
 ) -> Result<IssueDetails, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_get_issue_details(repo_path, issue_number, github_token)
    })
@@ -474,7 +480,7 @@ pub async fn github_get_workflow_run_details(
    repo_path: String,
    run_id: i64,
 ) -> Result<WorkflowRunDetails, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_get_workflow_run_details(repo_path, run_id, github_token)
    })
@@ -488,7 +494,7 @@ pub async fn github_rerun_workflow_run(
    run_id: i64,
    failed_jobs_only: bool,
 ) -> Result<(), String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_rerun_workflow_run(repo_path, run_id, failed_jobs_only, github_token)
    })
@@ -501,7 +507,7 @@ pub async fn github_cancel_workflow_run(
    repo_path: String,
    run_id: i64,
 ) -> Result<(), String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_cancel_workflow_run(repo_path, run_id, github_token))
       .await
 }
@@ -512,7 +518,7 @@ pub async fn github_get_workflow_job_logs(
    repo_path: String,
    job_id: i64,
 ) -> Result<String, String> {
-   let github_token = get_stored_github_token(&app);
+   let github_token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_get_workflow_job_logs(repo_path, job_id, github_token))
       .await
 }
@@ -543,7 +549,7 @@ pub async fn github_list_releases(
    repo_path: String,
    page: u32,
 ) -> Result<Vec<athas_github::Release>, String> {
-   let token = get_stored_github_token(&app);
+   let token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_list_releases(repo_path, page, token)).await
 }
 
@@ -553,7 +559,7 @@ pub async fn github_get_release(
    repo_path: String,
    id: i64,
 ) -> Result<athas_github::Release, String> {
-   let token = get_stored_github_token(&app);
+   let token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_get_release(repo_path, id, token)).await
 }
 
@@ -564,7 +570,7 @@ pub async fn github_save_release(
    id: Option<i64>,
    input: athas_github::ReleaseInput,
 ) -> Result<athas_github::Release, String> {
-   let token = get_stored_github_token(&app);
+   let token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_save_release(repo_path, id, input, token)).await
 }
 
@@ -575,7 +581,7 @@ pub async fn github_publish_release(
    id: i64,
    make_latest: bool,
 ) -> Result<athas_github::Release, String> {
-   let token = get_stored_github_token(&app);
+   let token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_publish_release(repo_path, id, make_latest, token))
       .await
 }
@@ -586,7 +592,7 @@ pub async fn github_delete_release(
    repo_path: String,
    id: i64,
 ) -> Result<(), String> {
-   let token = get_stored_github_token(&app);
+   let token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_delete_release(repo_path, id, token)).await
 }
 
@@ -598,7 +604,7 @@ pub async fn github_generate_release_notes(
    target: String,
    previous_tag: Option<String>,
 ) -> Result<serde_json::Value, String> {
-   let token = get_stored_github_token(&app);
+   let token = resolve_github_token_async(&app).await;
    run_blocking(move || {
       athas_github::github_generate_release_notes(repo_path, tag, target, previous_tag, token)
    })
@@ -611,7 +617,7 @@ pub async fn github_list_deployments(
    repo_path: String,
    page: u32,
 ) -> Result<Vec<athas_github::Deployment>, String> {
-   let token = get_stored_github_token(&app);
+   let token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_list_deployments(repo_path, page, token)).await
 }
 
@@ -621,7 +627,7 @@ pub async fn github_get_deployment(
    repo_path: String,
    id: i64,
 ) -> Result<athas_github::Deployment, String> {
-   let token = get_stored_github_token(&app);
+   let token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_get_deployment(repo_path, id, token)).await
 }
 
@@ -631,7 +637,7 @@ pub async fn github_deactivate_deployment(
    repo_path: String,
    id: i64,
 ) -> Result<athas_github::DeploymentStatus, String> {
-   let token = get_stored_github_token(&app);
+   let token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_deactivate_deployment(repo_path, id, token)).await
 }
 
@@ -642,7 +648,7 @@ pub async fn github_upload_release_asset(
    id: i64,
    file_path: String,
 ) -> Result<athas_github::ReleaseAsset, String> {
-   let token = get_stored_github_token(&app);
+   let token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_upload_release_asset(repo_path, id, file_path, token))
       .await
 }
@@ -653,6 +659,89 @@ pub async fn github_delete_release_asset(
    repo_path: String,
    asset_id: i64,
 ) -> Result<(), String> {
-   let token = get_stored_github_token(&app);
+   let token = resolve_github_token_async(&app).await;
    run_blocking(move || athas_github::github_delete_release_asset(repo_path, asset_id, token)).await
+}
+
+/// What the GitHub auth indicator in Settings shows.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubTokenStatus {
+   /// Which source supplied the active token, or `None` when there is none.
+   pub source: Option<GitHubTokenSource>,
+   pub has_personal_access_token: bool,
+   pub has_athas_account_token: bool,
+   pub gh_cli_installed: bool,
+   /// The account the active token belongs to; `None` when GitHub rejected it.
+   pub login: Option<String>,
+   /// Scopes GitHub reports for the active token; `None` for fine-grained tokens.
+   pub scopes: Option<String>,
+}
+
+#[tauri::command]
+pub async fn github_token_status(
+   app: crate::app_runtime::AppHandle,
+) -> Result<GitHubTokenStatus, String> {
+   run_blocking(move || {
+      let resolved = resolve_github_token(&app);
+      let identity = athas_github::github_describe_token(resolved.token)?;
+
+      Ok(GitHubTokenStatus {
+         source: resolved.source,
+         has_personal_access_token: has_personal_access_token(&app),
+         has_athas_account_token: has_athas_account_token(&app),
+         gh_cli_installed: athas_github::is_gh_cli_installed(),
+         login: identity.as_ref().map(|identity| identity.login.clone()),
+         scopes: identity.and_then(|identity| identity.scopes),
+      })
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn store_github_personal_access_token(
+   app: crate::app_runtime::AppHandle,
+   token: String,
+) -> Result<(), String> {
+   let token = token.trim();
+   if token.is_empty() {
+      return Err("Personal access token cannot be empty.".to_string());
+   }
+
+   store_secret(&app, PERSONAL_ACCESS_TOKEN_SECRET_KEY, token)
+}
+
+#[tauri::command]
+pub async fn remove_github_personal_access_token(
+   app: crate::app_runtime::AppHandle,
+) -> Result<(), String> {
+   remove_secret(&app, PERSONAL_ACCESS_TOKEN_SECRET_KEY)
+}
+
+/// Forces the next resolution to re-read `gh`, for the "Retry" action in Settings.
+#[tauri::command]
+pub async fn refresh_github_gh_cli_token() -> Result<(), String> {
+   invalidate_gh_cli_token_cache();
+   Ok(())
+}
+
+/// Whether the `gh` CLI can supply a credential, for the one-click switch in empty states.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GhCliAvailability {
+   pub installed: bool,
+   /// True when `gh` is also logged in, so switching to it would actually work.
+   pub has_token: bool,
+}
+
+#[tauri::command]
+pub async fn github_gh_cli_availability() -> Result<GhCliAvailability, String> {
+   run_blocking(|| {
+      let installed = athas_github::is_gh_cli_installed();
+      Ok(GhCliAvailability {
+         installed,
+         has_token: installed && cached_gh_cli_token().is_some(),
+      })
+   })
+   .await
 }

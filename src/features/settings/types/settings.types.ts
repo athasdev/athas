@@ -140,6 +140,13 @@ export interface Settings {
   showGitHubReleases: boolean;
   showGitHubDeployments: boolean;
   githubActionNotifications: boolean;
+  /**
+   * Which credential Athas authenticates GitHub with. "auto" prefers a pasted
+   * personal access token, then the Athas account token, then the `gh` CLI.
+   * Pin a source when the Athas token authenticates but cannot see the repos
+   * you need — an organization that has not approved the Athas OAuth app.
+   */
+  githubTokenSource: "auto" | "athas" | "pat" | "gh";
   // Keyboard
   keybindingPreset:
     | "none"

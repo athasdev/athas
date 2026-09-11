@@ -114,6 +114,7 @@ export const defaultSettings: Settings = {
   showGitHubReleases: true,
   showGitHubDeployments: true,
   githubActionNotifications: true,
+  githubTokenSource: "auto",
   // Keyboard
   keybindingPreset: "none",
   vimMode: false,

@@ -1,6 +1,7 @@
 import { useShallow } from "zustand/react/shallow";
 import { getDefaultSetting } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { GitHubCredentials } from "./github-credentials";
 import Section, { SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
@@ -191,6 +192,8 @@ export const GitSettings = () => {
           />
         </SettingRow>
       </Section>
+
+      <GitHubCredentials />
 
       <Section title="GitHub">
         <SettingRow

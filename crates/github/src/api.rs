@@ -37,6 +37,15 @@ pub enum GitHubAuthStatus {
    NotAuthenticated,
 }
 
+/// The account behind the active GitHub token, surfaced in settings.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitHubTokenIdentity {
+   pub login: String,
+   /// Space-or-comma separated OAuth scopes; `None` for fine-grained tokens.
+   pub scopes: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 struct RepoSlug {
    owner: String,
@@ -988,6 +997,41 @@ fn workflow_job_from_rest(job: RestWorkflowJob) -> WorkflowRunJob {
 fn get_current_user(api: &GitHubApi) -> Result<String, String> {
    let user: RestUser = api.get_json("/user")?;
    Ok(user.login)
+}
+
+/// The account a token belongs to, plus the scopes GitHub reports for it.
+///
+/// Scopes come from the `X-OAuth-Scopes` response header, which is the only
+/// place GitHub exposes them. Fine-grained tokens omit the header entirely.
+fn get_token_identity(api: &GitHubApi) -> Result<(String, Option<String>), String> {
+   let response = send_github_request(api.get("/user", GITHUB_JSON_ACCEPT))?;
+   let scopes = response
+      .headers()
+      .get("x-oauth-scopes")
+      .and_then(|value| value.to_str().ok())
+      .map(str::trim)
+      .filter(|scopes| !scopes.is_empty())
+      .map(ToOwned::to_owned);
+   let user: RestUser = response
+      .json()
+      .map_err(|e| format!("Failed to parse GitHub API response: {e}"))?;
+
+   Ok((user.login, scopes))
+}
+
+/// Resolves the account and scopes for `github_token`, for the auth indicator.
+pub fn github_describe_token(
+   github_token: Option<String>,
+) -> Result<Option<GitHubTokenIdentity>, String> {
+   let Ok(api) = GitHubApi::new_authenticated(github_token) else {
+      return Ok(None);
+   };
+
+   match get_token_identity(&api) {
+      Ok((login, scopes)) => Ok(Some(GitHubTokenIdentity { login, scopes })),
+      Err(error) if is_github_authentication_error(&error) => Ok(None),
+      Err(error) => Err(error),
+   }
 }
 
 fn pr_details_from_current_rest(

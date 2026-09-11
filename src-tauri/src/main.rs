@@ -138,6 +138,11 @@ fn main() {
          git_blame_file,
          // GitHub commands
          store_github_token,
+         github_token_status,
+         store_github_personal_access_token,
+         remove_github_personal_access_token,
+         refresh_github_gh_cli_token,
+         github_gh_cli_availability,
          get_github_token,
          remove_github_token,
          github_check_auth,
