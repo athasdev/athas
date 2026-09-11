@@ -6,8 +6,6 @@ import {
   ArrowRightIcon,
   ArrowsInIcon,
   ArrowsOutIcon,
-  DotsIcon,
-  PlusIcon,
   SidebarIcon,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -35,12 +33,6 @@ import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-d
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/ui/dropdown";
 import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
 import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
@@ -51,6 +43,7 @@ import {
   setInternalTabDragData,
 } from "../utils/internal-tab-drag";
 import TabBarItem from "./tab-bar-item";
+import { NewTabMenu } from "./new-tab-menu";
 import TabContextMenu from "./tab-context-menu";
 
 interface TabBarProps {
@@ -69,8 +62,7 @@ const TabBar = ({
   const paneRoot = usePaneStore.use.root();
   const bottomRoot = usePaneStore.use.bottomRoot();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
-  const { closePane, setActivePane, togglePaneFullscreen, setPaneLocked } =
-    usePaneStore.use.actions();
+  const { closePane, togglePaneFullscreen, setPaneLocked } = usePaneStore.use.actions();
 
   const pane = useMemo(() => {
     if (!paneId) return null;
@@ -99,7 +91,6 @@ const TabBar = ({
     confirmCloseWithoutSaving,
     cancelPendingClose,
     convertPreviewToDefinite,
-    showNewTabView,
   } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
   const horizontalTabScroll = useSettingsStore((state) => state.settings.horizontalTabScroll);
@@ -198,12 +189,6 @@ const TabBar = ({
       await navigateToJumpEntry(entry);
     }
   }, [jumpListActions]);
-
-  const handleShowNewTab = useCallback(() => {
-    if (!paneId) return;
-    setActivePane(paneId);
-    showNewTabView();
-  }, [paneId, setActivePane, showNewTabView]);
 
   const handleTogglePaneFullscreen = useCallback(() => {
     if (!paneId) return;
@@ -646,7 +631,7 @@ const TabBar = ({
         <TabBarSurface
           ref={tabBarRef}
           data-tab-bar-pane-id={paneId ?? ""}
-          className="scrollbar-none overscroll-x-contain"
+          className="group/tab-bar scrollbar-none overscroll-x-contain"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
@@ -780,48 +765,34 @@ const TabBar = ({
             </div>
           </SortableContext>
 
-          <div className="flex h-8 shrink-0 items-center gap-1 pl-0.5">
-            {paneId && !isBottomPane && (
-              <Button
-                type="button"
-                onClick={handleShowNewTab}
-                variant="ghost"
-                iconOnly
-                tooltip="New Tab"
-                commandId="workbench.newTab"
-                aria-label="New tab"
-              >
-                <PlusIcon optical="md" />
-              </Button>
-            )}
+          <div className="pointer-events-none flex h-8 shrink-0 items-center gap-1 pl-0.5 opacity-0 group-hover/tab-bar:pointer-events-auto group-hover/tab-bar:opacity-100 group-focus-within/tab-bar:pointer-events-auto group-focus-within/tab-bar:opacity-100 has-data-[popup-open]:pointer-events-auto has-data-[popup-open]:opacity-100">
+            {paneId && !isBottomPane && <NewTabMenu paneId={paneId} />}
             {paneId && !disablePaneActions && !isBottomPane && (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      iconOnly
-                      tooltip="Pane actions"
-                      aria-label="Pane actions"
-                    />
-                  }
+              <>
+                <Button
+                  type="button"
+                  onClick={handleTogglePaneFullscreen}
+                  variant="ghost"
+                  iconOnly
+                  tooltip={isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
+                  aria-label={isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
+                  aria-pressed={isPaneFullscreen}
                 >
-                  <DotsIcon />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleTogglePaneFullscreen}>
-                    {isPaneFullscreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
-                    {isPaneFullscreen ? "Exit full screen" : "Full screen editor"}
-                  </DropdownMenuItem>
-                  {isInSplit ? (
-                    <DropdownMenuItem onClick={() => closePane(paneId)}>
-                      <SidebarIcon />
-                      Close split
-                    </DropdownMenuItem>
-                  ) : null}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  {isPaneFullscreen ? <ArrowsInIcon /> : <ArrowsOutIcon />}
+                </Button>
+                {isInSplit && (
+                  <Button
+                    type="button"
+                    onClick={() => closePane(paneId)}
+                    variant="ghost"
+                    iconOnly
+                    tooltip="Close split"
+                    aria-label="Close split"
+                  >
+                    <SidebarIcon />
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </TabBarSurface>
