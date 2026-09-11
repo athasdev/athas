@@ -5,7 +5,6 @@ import {
   GridIcon,
   PaletteIcon,
   PlugsConnectedIcon,
-  RobotIcon,
   SparkleIcon,
   TextIcon,
 } from "@/ui/icons";
@@ -21,7 +20,7 @@ function categoryIcon(category: UnifiedExtension["category"], className: string)
     ai: <SparkleIcon className={className} />,
     integration: <PlugsConnectedIcon className={className} />,
     skill: <BrainIcon className={className} />,
-    agent: <RobotIcon className={className} />,
+    agent: <SparkleIcon className={className} />,
   };
 
   return icons[category];

@@ -1,3 +1,10 @@
+import claudeImage from "../../extensions/official/claude-code/icon.svg";
+import geminiImage from "../../extensions/official/gemini-cli/icon.svg";
+import antigravityImage from "../../extensions/official/antigravity/icon.svg";
+import copilotImage from "../../extensions/official/github-copilot/icon.svg";
+import kimiImage from "../../extensions/official/kimi-cli/icon.svg";
+import opencodeImage from "../../extensions/official/opencode/icon.svg";
+import qwenImage from "../../extensions/official/qwen-code/icon.svg";
 import type { SVGProps } from "react";
 
 /**
@@ -30,3 +37,19 @@ export function GithubMark({ size = "1em", ...props }: BrandMarkProps) {
     </svg>
   );
 }
+
+export const agentBrandImages: Readonly<Record<string, string>> = {
+  "claude-acp": claudeImage,
+  "claude-code": claudeImage,
+  anthropic: claudeImage,
+  "gemini-cli": geminiImage,
+  google: geminiImage,
+  gemini: geminiImage,
+  "antigravity-acp": antigravityImage,
+  "antigravity-cli": antigravityImage,
+  "github-copilot-cli": copilotImage,
+  "kimi-cli": kimiImage,
+  opencode: opencodeImage,
+  "qwen-code": qwenImage,
+  qwen: qwenImage,
+};

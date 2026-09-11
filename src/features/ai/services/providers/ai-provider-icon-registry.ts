@@ -39,23 +39,13 @@ export function registerAIProviderIconUrl(params: {
   url: string;
 }): void {
   const ExtensionProviderIcon = ({ size = 14, className }: { size?: number; className?: string }) =>
-    createElement("span", {
-      "aria-hidden": true,
+    createElement("img", {
+      alt: "",
+      src: params.url,
       className,
-      style: {
-        backgroundColor: "currentColor",
-        display: "inline-block",
-        height: size,
-        maskImage: `url(${JSON.stringify(params.url)})`,
-        maskPosition: "center",
-        maskRepeat: "no-repeat",
-        maskSize: "contain",
-        width: size,
-        WebkitMaskImage: `url(${JSON.stringify(params.url)})`,
-        WebkitMaskPosition: "center",
-        WebkitMaskRepeat: "no-repeat",
-        WebkitMaskSize: "contain",
-      },
+      width: size,
+      height: size,
+      style: { objectFit: "contain" },
     });
 
   registerAIProviderIcon({

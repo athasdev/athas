@@ -30,6 +30,7 @@ export interface AgentOption {
   updateAvailable: boolean;
   action: AgentAction | null;
   needsSetup: boolean;
+  icon?: string | null;
 }
 
 export interface AgentAvailabilityResult {
@@ -117,6 +118,7 @@ export function buildAgentOptions({
     return {
       id: agentId,
       name: agent.name,
+      icon: agentConfig?.icon,
       description: agentConfig?.description ?? agent.description ?? "ACP-compatible coding agent",
       isInstalled,
       isCurrent: agent.id === currentAgentId,

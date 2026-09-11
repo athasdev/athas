@@ -1,4 +1,5 @@
 import { TagIcon, RocketIcon } from "@/ui/icons";
+import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
 import {
   ActivityIcon,
   ArrowsClockwiseIcon,
@@ -11,7 +12,6 @@ import {
   PinIcon,
   SearchIcon,
   SettingsIcon,
-  SparkleIcon,
   TerminalWindowIcon,
   WarningCircleIcon,
   XIcon,
@@ -175,7 +175,11 @@ const TabBarItem = memo(function TabBarItem({
             ) : buffer.type === "terminal" ? (
               <TerminalWindowIcon className="text-subtle-foreground" />
             ) : buffer.type === "agent" ? (
-              <SparkleIcon className="text-subtle-foreground" />
+              <AgentSessionIcon
+                sessionId={buffer.sessionId}
+                size={12}
+                className="text-subtle-foreground"
+              />
             ) : buffer.type === "database" ? (
               <DatabaseIcon className="text-subtle-foreground" />
             ) : buffer.type === "pullRequest" ? (

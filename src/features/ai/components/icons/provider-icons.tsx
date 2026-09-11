@@ -1,5 +1,7 @@
 import type { SVGProps } from "react";
 import { useAIProviderIcon } from "@/features/ai/services/providers/ai-provider-icon-registry";
+import { agentBrandImages } from "@/ui/brand-marks";
+import { SparkleIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
@@ -129,34 +131,32 @@ function V0Icon({ size, className, ...props }: IconProps) {
   );
 }
 
-function CustomAPIIcon({ size, className, ...props }: IconProps) {
-  return (
-    <svg
-      aria-hidden="true"
-      {...defaultProps(size, className)}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M4 17l6-6-6-6M12 19h8" />
-    </svg>
-  );
-}
-
 export function ProviderIcon({
   providerId,
+  iconUrl,
   size = 14,
   className,
 }: {
   providerId: string;
+  iconUrl?: string | null;
   size?: number;
   className?: string;
 }) {
   const props = { size, className: cn("shrink-0", className) };
   const ExtensionProviderIcon = useAIProviderIcon(providerId);
+
+  const imageUrl = iconUrl || agentBrandImages[providerId];
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt=""
+        width={size}
+        height={size}
+        className={cn("shrink-0 object-contain", className)}
+      />
+    );
+  }
 
   if (ExtensionProviderIcon) {
     return <ExtensionProviderIcon {...props} />;
@@ -200,8 +200,8 @@ export function ProviderIcon({
       return <V0Icon {...props} />;
     case "opencode":
     case "custom":
-      return <CustomAPIIcon {...props} />;
+      return <SparkleIcon {...props} />;
     default:
-      return <CustomAPIIcon {...props} />;
+      return <SparkleIcon {...props} />;
   }
 }

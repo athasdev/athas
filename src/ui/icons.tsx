@@ -315,7 +315,6 @@ export const PuzzlePieceIcon = createIconComponent(
 );
 export const QuestionIcon = createIconComponent(Nucleo.IconCircleQuestionOutline18, "QuestionIcon");
 export const RemoteIcon = createIconComponent(Nucleo.IconComputerOutline18, "RemoteIcon");
-export const RobotIcon = createIconComponent(Nucleo.IconRobotOutline18, "RobotIcon");
 export const RocketIcon = createIconComponent(Nucleo.IconRocketOutline18, "RocketIcon");
 export const RowsIcon = createIconComponent(Nucleo.IconTableRowsOutline18, "RowsIcon");
 export const RowsPlusTopIcon = createIconComponent(
