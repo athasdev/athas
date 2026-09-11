@@ -31,7 +31,9 @@ static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateAppWindowRequest {
-   pub agent_window: Option<String>,
+   /// A bare window that hosts one thing (an agent session, a pull request)
+   /// and talks to its owner window over a broadcast channel.
+   pub detached: Option<DetachedWindowRequest>,
    pub path: Option<String>,
    pub is_directory: Option<bool>,
    pub line: Option<u32>,
@@ -39,20 +41,35 @@ pub struct CreateAppWindowRequest {
    pub remote_connection_name: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DetachedWindowRequest {
+   pub kind: String,
+   pub channel: String,
+}
+
 #[cfg(test)]
 mod agent_window_tests {
    use super::*;
 
    #[test]
-   fn opens_agents_without_a_workspace_open_request() {
+   fn opens_detached_windows_without_a_workspace_open_request() {
       let request: CreateAppWindowRequest = serde_json::from_value(serde_json::json!({
-         "agentWindow": "test-channel"
+         "detached": { "kind": "agent", "channel": "test-channel" }
       }))
       .unwrap();
       let url = build_window_open_url(Some(&request), "main-2", 123);
-      assert!(url.starts_with("/?view=agents&agentWindow=test-channel&"));
+      assert!(url.starts_with("/?view=detached&kind=agent&channel=test-channel&"));
       assert!(!url.contains("target=open"));
       assert_eq!(window_title_for_request(Some(&request)), "Agents - Athas");
+
+      let request: CreateAppWindowRequest = serde_json::from_value(serde_json::json!({
+         "detached": { "kind": "resource", "channel": "abc" }
+      }))
+      .unwrap();
+      let url = build_window_open_url(Some(&request), "main-3", 123);
+      assert!(url.starts_with("/?view=detached&kind=resource&channel=abc&"));
+      assert_eq!(window_title_for_request(Some(&request)), "Athas");
    }
 
    #[test]
@@ -63,7 +80,7 @@ mod agent_window_tests {
       .unwrap();
       let url = build_window_open_url(Some(&request), "main-2", 123);
       assert!(url.contains("target=open&type=directory&path="));
-      assert!(!url.contains("view=agents"));
+      assert!(!url.contains("view=detached"));
       assert_eq!(window_title_for_request(Some(&request)), "project - Athas");
    }
 
@@ -89,10 +106,11 @@ fn build_window_open_url(
       return append_window_trace_params("/".to_string(), label, created_at_ms);
    };
 
-   if let Some(channel) = &request.agent_window {
+   if let Some(detached) = &request.detached {
       let mut serializer = url::form_urlencoded::Serializer::new(String::new());
-      serializer.append_pair("view", "agents");
-      serializer.append_pair("agentWindow", channel);
+      serializer.append_pair("view", "detached");
+      serializer.append_pair("kind", &detached.kind);
+      serializer.append_pair("channel", &detached.channel);
       return append_window_trace_params(
          format!("/?{}", serializer.finish()),
          label,
@@ -153,8 +171,12 @@ fn window_open_created_at_ms() -> u128 {
 }
 
 fn window_title_for_request(request: Option<&CreateAppWindowRequest>) -> String {
-   if request.is_some_and(|request| request.agent_window.is_some()) {
-      return "Agents - Athas".to_string();
+   if let Some(detached) = request.and_then(|request| request.detached.as_ref()) {
+      return if detached.kind == "agent" {
+         "Agents - Athas".to_string()
+      } else {
+         "Athas".to_string()
+      };
    }
    let name = request.and_then(|request| {
       request

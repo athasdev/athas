@@ -1,31 +1,31 @@
-import { Window, getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { toast } from "sonner";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useProjectStore } from "@/features/window/stores/project.store";
-import { createAppWindow } from "@/features/window/utils/create-app-window";
-import { captureAgentDrafts, restoreAgentDrafts } from "./agent-window-drafts";
-import { getAgentWindowTransferBlocker, type AgentWindowSnapshot } from "./agent-window-state";
-import { useAgentWindowStore } from "./agent-window.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useGitHubStore } from "@/features/github/stores/github.store";
+import {
+  type DetachedWindowHandle,
+  openDetachedWindow,
+} from "@/features/window/detached/detached-window-owner";
+import type { DetachedWindowBaseMessage } from "@/features/window/detached/detached-window-protocol";
 import { getAccountIdentity } from "@/features/window/lib/account-identity";
-import { useUIState } from "@/features/window/stores/ui-state.store";
-import { type SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
-import type { AgentAccountIdentity } from "./agent-window-state";
+import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { captureAgentDrafts, restoreAgentDrafts } from "./agent-window-drafts";
+import {
+  type AgentAccountIdentity,
+  type AgentWindowSnapshot,
+  getAgentWindowTransferBlocker,
+} from "./agent-window-state";
+import { useAgentWindowStore } from "./agent-window.store";
 
 export type AgentWindowMessage =
+  | DetachedWindowBaseMessage
   | { type: "identity"; identity: AgentAccountIdentity }
-  | { type: "settings"; tab?: SettingsTab; section?: string }
-  | { type: "ready" }
   | { type: "initialize" | "snapshot" | "return"; snapshot: AgentWindowSnapshot }
-  | { type: "returned" | "focus" | "recall" }
-  | {
-      type: "workbench";
-      content: Parameters<ReturnType<typeof useBufferStore.getState>["actions"]["openContent"]>[0];
-    };
+  | { type: "returned" | "recall" };
 
-const channels = new Map<string, BroadcastChannel>();
+const windows = new Map<string, DetachedWindowHandle<AgentWindowMessage>>();
 let localSessionOpener: ((chatId: string) => string) | null = null;
 
 export function setAgentWindowSessionOpener(opener: ((chatId: string) => string) | null) {
@@ -102,7 +102,7 @@ export function restoreAgentWindowSnapshot(snapshot: AgentWindowSnapshot, chatId
 }
 
 export function focusAgentWindow(chatId: string) {
-  channels.get(chatId)?.postMessage({ type: "focus" });
+  windows.get(chatId)?.post({ type: "focus" });
 }
 
 /**
@@ -110,9 +110,9 @@ export function focusAgentWindow(chatId: string) {
  * home is a keyboard shortcut inside the other window.
  */
 export function recallAgentWindow(chatId: string) {
-  const channel = channels.get(chatId);
-  if (!channel) return false;
-  channel.postMessage({ type: "recall" });
+  const handle = windows.get(chatId);
+  if (!handle) return false;
+  handle.post({ type: "recall" });
   return true;
 }
 
@@ -121,7 +121,7 @@ export async function openAgentInNewWindow(chatId: string) {
     void getCurrentWindow().setFocus().catch(console.error);
     return;
   }
-  if (channels.has(chatId)) {
+  if (windows.has(chatId)) {
     focusAgentWindow(chatId);
     return;
   }
@@ -131,22 +131,17 @@ export async function openAgentInNewWindow(chatId: string) {
     return;
   }
   if (!useAIChatStore.getState().chats.some((chat) => chat.id === chatId)) return;
+
   const initial = captureAgentWindowSnapshot(chatId);
   initial.activeBufferId =
     initial.buffers.find((buffer) => buffer.type === "agent" && buffer.sessionId === chatId)?.id ??
     null;
-  const id = crypto.randomUUID();
-  const connection = new BroadcastChannel(`athas-agents-${id}`);
-  channels.set(chatId, connection);
   let latest = initial;
-  let initialized = false;
   let returned = false;
-  let unlisten: (() => void) | undefined;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let detachedWindow: Window | undefined;
-  let cleaned = false;
+  const setStatus = (status: "attached" | "opening" | "detached") =>
+    useAgentWindowStore.getState().actions.setStatus(chatId, status);
   const publishIdentity = () =>
-    connection.postMessage({ type: "identity", identity: captureAccountIdentity() });
+    windows.get(chatId)?.post({ type: "identity", identity: captureAccountIdentity() });
   const unsubscribeAuth = useAuthStore.subscribe((state, previous) => {
     if (state.user !== previous.user) publishIdentity();
   });
@@ -157,93 +152,60 @@ export async function openAgentInNewWindow(chatId: string) {
     )
       publishIdentity();
   });
-  const setStatus = (status: "attached" | "opening" | "detached") =>
-    useAgentWindowStore.getState().actions.setStatus(chatId, status);
-  setStatus("opening");
-
-  const cleanup = () => {
-    if (cleaned) return;
-    cleaned = true;
-    clearTimeout(timer);
-    unlisten?.();
+  const finish = () => {
     unsubscribeAuth();
     unsubscribeGithub();
-    connection.close();
-    if (channels.get(chatId) === connection) channels.delete(chatId);
+    if (windows.get(chatId) === handle) windows.delete(chatId);
     setStatus("attached");
   };
-  connection.onmessage = ({ data }: MessageEvent<AgentWindowMessage>) => {
-    if (cleaned) return;
-    if (returned) {
-      if (data.type === "return") connection.postMessage({ type: "returned" });
-      return;
-    }
-    if (data.type === "ready") {
-      connection.postMessage({
-        type: "initialize",
-        snapshot: { ...initial, accountIdentity: captureAccountIdentity() },
-      });
-    } else if (data.type === "settings") {
-      useUIState.getState().openSettingsDialog(data.tab, data.section);
-      void getCurrentWindow().setFocus().catch(console.error);
-    } else if (data.type === "workbench") {
-      useBufferStore.getState().actions.openContent(data.content);
-      void getCurrentWindow().setFocus().catch(console.error);
-    } else if (data.type === "snapshot" || data.type === "return") {
-      initialized = true;
-      clearTimeout(timer);
-      latest = data.snapshot;
-      restoreAgentWindowSnapshot(latest, chatId);
-      setStatus("detached");
-      if (data.type === "return") {
-        returned = true;
-        const active = latest.buffers.find((buffer) => buffer.id === latest.activeBufferId);
-        if (
-          active?.type === "agent" &&
-          latest.workspacePath === useProjectStore.getState().rootFolderPath
-        ) {
-          useBufferStore.getState().actions.openAgentBuffer(active.sessionId);
-        }
-        connection.postMessage({ type: "returned" });
-        void getCurrentWindow().setFocus().catch(console.error);
-      }
-    }
-  };
-  try {
-    const label = await createAppWindow({ agentWindow: id });
-    detachedWindow = new Window(label);
-    unlisten = await detachedWindow.once("tauri://destroyed", () => {
-      if (!returned) {
-        restoreAgentWindowSnapshot(latest, chatId);
-      }
-      cleanup();
-    });
-    if (!initialized) {
-      timer = setTimeout(() => {
-        if (initialized) return;
-        void detachedWindow!
-          .destroy()
-          .then(() => {
-            restoreAgentWindowSnapshot(initial, chatId);
-            cleanup();
-            toast.error("The agent window did not finish opening. Your session stayed here.");
-          })
-          .catch((error) => {
-            toast.error(`Could not close the unresponsive Agents window: ${String(error)}`);
-          });
-      }, 30_000);
-    }
-  } catch (error) {
-    if (detachedWindow) {
-      try {
-        await detachedWindow.destroy();
-      } catch (closeError) {
-        toast.error(`Could not recover the Agents window: ${String(closeError)}`);
+
+  setStatus("opening");
+  const handle = openDetachedWindow<AgentWindowMessage>({
+    kind: "agent",
+    onMessage: (data, handle) => {
+      if (returned) {
+        if (data.type === "return") handle.post({ type: "returned" });
         return;
       }
-    }
-    restoreAgentWindowSnapshot(initial, chatId);
-    cleanup();
-    toast.error(`Could not open the Agents window: ${String(error)}`);
-  }
+      if (data.type === "ready") {
+        handle.post({
+          type: "initialize",
+          snapshot: { ...initial, accountIdentity: captureAccountIdentity() },
+        });
+      } else if (data.type === "snapshot" || data.type === "return") {
+        handle.markInitialized();
+        latest = data.snapshot;
+        restoreAgentWindowSnapshot(latest, chatId);
+        setStatus("detached");
+        if (data.type === "return") {
+          returned = true;
+          const active = latest.buffers.find((buffer) => buffer.id === latest.activeBufferId);
+          if (
+            active?.type === "agent" &&
+            latest.workspacePath === useProjectStore.getState().rootFolderPath
+          ) {
+            useBufferStore.getState().actions.openAgentBuffer(active.sessionId);
+          }
+          handle.post({ type: "returned" });
+          void getCurrentWindow().setFocus().catch(console.error);
+        }
+      }
+    },
+    onDestroyed: () => {
+      if (!returned) restoreAgentWindowSnapshot(latest, chatId);
+      finish();
+    },
+    onOpenTimeout: () => {
+      restoreAgentWindowSnapshot(initial, chatId);
+      finish();
+      toast.error("The agent window did not finish opening. Your session stayed here.");
+    },
+    onError: (error) => {
+      restoreAgentWindowSnapshot(initial, chatId);
+      finish();
+      toast.error(`Could not open the Agents window: ${String(error)}`);
+    },
+  });
+  windows.set(chatId, handle);
+  await handle.opened;
 }

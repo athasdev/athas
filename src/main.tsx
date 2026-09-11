@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import App from "./App.tsx";
-import { parseAgentWindowChannel } from "./features/ai/detached/agent-window-state";
+import { parseDetachedWindowUrl } from "./features/window/detached/detached-window-protocol";
 import { installDevelopmentPerformanceMeasureCleanup } from "./features/bootstrap/performance-measure-retention.ts";
 import { recordStartupMilestone } from "./features/bootstrap/startup-performance.ts";
 import { initializeFrontendTerminalSession } from "./features/terminal/utils/frontend-terminal-session.ts";
@@ -18,7 +18,7 @@ const renderStartedAt = performance.now();
 traceWindowOpen("reactRender:start");
 
 const terminalSessionReady = (
-  parseAgentWindowChannel(new URL(window.location.href))
+  parseDetachedWindowUrl(new URL(window.location.href))
     ? Promise.resolve()
     : initializeFrontendTerminalSession()
 ).catch((error) => {

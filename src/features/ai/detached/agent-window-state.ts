@@ -33,9 +33,3 @@ export function getAgentWindowTransferBlocker(
   }
   return null;
 }
-
-export function parseAgentWindowChannel(url: URL) {
-  if (url.searchParams.get("view") !== "agents") return null;
-  const channel = url.searchParams.get("agentWindow");
-  return channel && /^[a-zA-Z0-9-]+$/.test(channel) ? channel : null;
-}

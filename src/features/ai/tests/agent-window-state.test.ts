@@ -6,10 +6,7 @@ import {
   takeAgentDraft,
   type AgentWindowDraft,
 } from "@/features/ai/detached/agent-window-drafts";
-import {
-  getAgentWindowTransferBlocker,
-  parseAgentWindowChannel,
-} from "@/features/ai/detached/agent-window-state";
+import { getAgentWindowTransferBlocker } from "@/features/ai/detached/agent-window-state";
 
 const idle = {
   agentRuns: {},
@@ -71,21 +68,6 @@ describe("Agents window transfer", () => {
     expect(
       getAgentWindowTransferBlocker({ ...idle, chatMessageLoadStates: { old: "loading" } }),
     ).toBeNull();
-  });
-
-  it("only recognizes an explicit Agents window URL", () => {
-    expect(
-      parseAgentWindowChannel(new URL("http://localhost/?view=agents&agentWindow=abc-123")),
-    ).toBe("abc-123");
-    for (const query of [
-      "",
-      "?agentWindow=abc",
-      "?view=agents",
-      "?view=agents&agentWindow=../bad",
-      "?target=open&type=directory&path=/workspace",
-    ]) {
-      expect(parseAgentWindowChannel(new URL(`http://localhost/${query}`))).toBeNull();
-    }
   });
 });
 

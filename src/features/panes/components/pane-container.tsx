@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { ResourceBufferView } from "./resource-buffer-view";
 import { useShallow } from "zustand/react/shallow";
 import { AgentLaunchInput } from "@/features/ai/components/agent-launch-input";
 import { AgentStartView } from "@/features/ai/components/agent-start-view";
@@ -99,17 +100,6 @@ const ExtensionDetails = lazy(() =>
   })),
 );
 const OnboardingView = lazy(() => import("@/features/onboarding/components/onboarding-view"));
-const GitHubPRViewer = lazy(() => import("@/features/github/components/github-pr-viewer"));
-const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
-const GitHubDeliveryViewer = lazy(
-  () => import("@/features/github/delivery/components/github-delivery-viewer"),
-);
-const GitHubActionViewer = lazy(() => import("@/features/github/components/github-action-viewer"));
-const GitHubCreateView = lazy(() =>
-  import("@/features/github/components/github-create-view").then((module) => ({
-    default: module.GitHubCreateView,
-  })),
-);
 const CustomView = lazy(() =>
   import("@/features/views/components/custom-view").then((module) => ({
     default: module.CustomView,
@@ -913,32 +903,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           return <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />;
 
         case "pullRequest":
-          return <GitHubPRViewer prNumber={buffer.prNumber} bufferId={buffer.id} />;
-
         case "githubIssue":
-          return (
-            <GitHubIssueViewer
-              issueNumber={buffer.issueNumber}
-              repoPath={buffer.repoPath}
-              bufferId={buffer.id}
-            />
-          );
-
         case "githubDelivery":
-          return <GitHubDeliveryViewer key={buffer.id} buffer={buffer} />;
-
         case "githubAction":
-          return (
-            <GitHubActionViewer
-              runId={buffer.runId}
-              notification={buffer.notification}
-              repoPath={buffer.repoPath}
-              bufferId={buffer.id}
-            />
-          );
-
         case "githubForm":
-          return <GitHubCreateView buffer={buffer} />;
+          return <ResourceBufferView buffer={buffer} />;
 
         case "customView":
           return <CustomView buffer={buffer} />;

@@ -1,8 +1,10 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import type { DetachedWindowTarget } from "@/features/window/detached/detached-window-protocol";
 
 export interface WindowOpenRequest {
-  agentWindow?: string;
+  /** Open a bare window that hosts one thing and talks to this window over the channel. */
+  detached?: DetachedWindowTarget;
   type?: "path" | "remote" | "web" | "terminal" | "settings";
   source?: "app" | "cli" | "deepLink";
   path?: string;

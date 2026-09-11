@@ -122,7 +122,9 @@ afterEach(() => {
 describe("Agent session window ownership", () => {
   it("opens a dedicated agent route without changing folder-window preferences", async () => {
     await openAgentInNewWindow("chat");
-    expect(mocks.create).toHaveBeenCalledWith({ agentWindow: expect.any(String) });
+    expect(mocks.create).toHaveBeenCalledWith({
+      detached: { kind: "agent", channel: expect.any(String) },
+    });
     expect(useAgentWindowStore.getState().sessions.chat).toBe("opening");
     TestChannel.current.receive({ type: "ready" });
     expect(TestChannel.current.postMessage).toHaveBeenCalledWith({
