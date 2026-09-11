@@ -19,7 +19,7 @@ export type AgentWindowMessage =
   | { type: "settings"; tab?: SettingsTab; section?: string }
   | { type: "ready" }
   | { type: "initialize" | "snapshot" | "return"; snapshot: AgentWindowSnapshot }
-  | { type: "returned" | "focus" }
+  | { type: "returned" | "focus" | "recall" }
   | {
       type: "workbench";
       content: Parameters<ReturnType<typeof useBufferStore.getState>["actions"]["openContent"]>[0];
@@ -103,6 +103,17 @@ export function restoreAgentWindowSnapshot(snapshot: AgentWindowSnapshot, chatId
 
 export function focusAgentWindow(chatId: string) {
   channels.get(chatId)?.postMessage({ type: "focus" });
+}
+
+/**
+ * Ask the detached window to hand the session back. Without this the only way
+ * home is a keyboard shortcut inside the other window.
+ */
+export function recallAgentWindow(chatId: string) {
+  const channel = channels.get(chatId);
+  if (!channel) return false;
+  channel.postMessage({ type: "recall" });
+  return true;
 }
 
 export async function openAgentInNewWindow(chatId: string) {

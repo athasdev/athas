@@ -44,6 +44,8 @@ interface TitleBarProps {
   showMinimal?: boolean;
   title?: string;
   titleIcon?: ReactNode;
+  /** Trailing controls for the minimal bar, placed before the window buttons. */
+  titleActions?: ReactNode;
   activityBarExpanded?: boolean;
   onActivityBarExpandedChange?: (expanded: boolean) => void;
 }
@@ -52,6 +54,7 @@ const TitleBar = ({
   showMinimal = false,
   title,
   titleIcon,
+  titleActions,
   activityBarExpanded: controlledActivityBarExpanded,
   onActivityBarExpandedChange,
 }: TitleBarProps) => {
@@ -322,6 +325,8 @@ const TitleBar = ({
           {titleIcon}
           {title ? <ChromeLabel tone="strong">{title}</ChromeLabel> : null}
         </ChromeGroup>
+
+        {titleActions ? <ChromeGroup align="center">{titleActions}</ChromeGroup> : null}
 
         {showAppWindowControls && (
           <WindowControls

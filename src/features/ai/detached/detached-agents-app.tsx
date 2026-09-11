@@ -31,7 +31,9 @@ import {
 } from "./agent-window-service";
 import { getAgentWindowTransferBlocker, parseAgentWindowChannel } from "./agent-window-state";
 import { useAgentWindowStore } from "./agent-window.store";
-import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-icon";
+import { Button } from "@/ui/button";
+import { ArrowCounterClockwiseIcon } from "@/ui/icons";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 
 enableMapSet();
@@ -142,6 +144,8 @@ export default function DetachedAgentsApp() {
           });
       } else if (data.type === "focus" && sessionId.current) {
         void getCurrentWindow().setFocus().catch(console.error);
+      } else if (data.type === "recall") {
+        returnToOwner();
       }
     };
     const bufferActions = useBufferStore.getState().actions;
@@ -229,14 +233,22 @@ export default function DetachedAgentsApp() {
           <TitleBar
             showMinimal
             title={chat?.title ?? "Agent"}
-            titleIcon={
-              <ProviderIcon
-                providerId={
-                  chat?.agentId === "custom"
-                    ? (chat.providerId ?? "custom")
-                    : (chat?.agentId ?? "custom")
-                }
-              />
+            titleIcon={<AgentSessionIcon session={chat} />}
+            titleActions={
+              ready && !returning ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="chrome"
+                  onClick={returnToOwner}
+                  tooltip="Move this session back to the main window"
+                  shortcut="mod+w"
+                  aria-label="Return session to the main window"
+                >
+                  <ArrowCounterClockwiseIcon />
+                  Return
+                </Button>
+              ) : null
             }
           />
           {error ? (
@@ -248,7 +260,14 @@ export default function DetachedAgentsApp() {
             </Empty>
           ) : !ready || returning ? (
             <Empty>
-              <EmptyTitle>{returning ? "Returning agent…" : "Loading agent…"}</EmptyTitle>
+              <EmptyHeader>
+                <EmptyTitle>{returning ? "Returning session…" : "Opening session…"}</EmptyTitle>
+                <EmptyDescription>
+                  {returning
+                    ? "Handing this session back to the main window."
+                    : "Connecting to the main window."}
+                </EmptyDescription>
+              </EmptyHeader>
             </Empty>
           ) : buffer?.type === "agent" ? (
             <main className="min-h-0 min-w-0 flex-1">
