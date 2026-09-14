@@ -21,6 +21,7 @@
     "commitlint": "commitlint",
     "setup": "bun scripts/setup.ts",
     "dev": "bun scripts/dev.ts",
+    "cli": "bun scripts/cli.ts",
     "dev:stable": "WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev",
     "dev:preview": "WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev --config src-tauri/tauri.preview.conf.json",
     "dev:linux": "cargo tauri dev --config src-tauri/tauri.dev.conf.json -- --no-default-features --features linux -- --ozone-platform=x11 --disable-vulkan --disable-features=Vulkan",

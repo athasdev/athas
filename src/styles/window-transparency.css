@@ -39,7 +39,7 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-layout-shell {
+  .athas-layout-shell:not([data-window-surface="content"]) {
   background: var(--athas-glass-shell-bg) !important;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
@@ -146,7 +146,7 @@ html[data-window-transparency="disabled"] .window-container {
   background: var(--background) !important;
 }
 
-html[data-window-transparency="disabled"] .athas-layout-shell,
+html[data-window-transparency="disabled"] .athas-layout-shell:not([data-window-surface="content"]),
 html[data-window-transparency="disabled"] .athas-resizable-pane {
   background: var(--surface) !important;
 }
