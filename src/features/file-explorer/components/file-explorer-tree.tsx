@@ -49,6 +49,7 @@ import { getNativeWorkspaceRootPaths } from "@/features/file-search/utils/file-s
 import { useGitStore } from "@/features/git/stores/git.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
+import { ButtonGroup } from "@/ui/button-group";
 import Dialog from "@/ui/dialog";
 import { EmptyState } from "@/ui/empty";
 import {
@@ -63,7 +64,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import { SidebarHeader, SidebarIconButton, SidebarSearchPopover } from "@/ui/sidebar";
+import { SidebarIconButton, SidebarSearchPopover } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
@@ -1098,7 +1099,7 @@ function FileExplorerTreeComponent({
   return (
     <div
       className={cn(
-        "relative flex min-h-0 min-w-0 flex-1 select-none flex-col overflow-hidden p-0",
+        "group/file-explorer relative flex min-h-0 min-w-0 flex-1 select-none flex-col overflow-hidden px-0 py-(--app-scrollbar-size)",
         dragState.dragOverPath === "__ROOT__" &&
           "border-2! border-dashed! border-primary! bg-primary! bg-opacity-10!",
       )}
@@ -1276,8 +1277,15 @@ function FileExplorerTreeComponent({
       onMouseUp={handleContainerMouseUp}
       onMouseLeave={handleContainerMouseLeave}
     >
-      <SidebarHeader
-        className="justify-end"
+      <ButtonGroup
+        aria-label="File explorer controls"
+        className={cn(
+          "absolute top-1 right-2 z-30 max-w-full transition-opacity duration-fast motion-reduce:transition-none",
+          "group-hover/file-explorer:pointer-events-auto group-hover/file-explorer:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100",
+          treeSearchOpen || isTreeSearchActive
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0",
+        )}
         onClick={(event) => event.stopPropagation()}
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -1488,7 +1496,7 @@ function FileExplorerTreeComponent({
             </DropdownMenuCheckboxItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </SidebarHeader>
+      </ButtonGroup>
       <FileExplorerViewport
         ref={viewportRef}
         id="file-tree-results"

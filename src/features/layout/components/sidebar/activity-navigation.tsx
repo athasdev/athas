@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -7,7 +6,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
 } from "@/ui/dropdown";
-import { DotsIcon, ChevronDownIcon } from "@/ui/icons";
+import { DotsIcon, ChevronRightIcon } from "@/ui/icons";
 import type { ActivityNavigationItem } from "@/features/layout/hooks/use-activity-navigation-items";
 import { SidebarIconButton, SidebarListItem } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
@@ -40,7 +39,6 @@ function NavigationItem({ item, collapsed }: { item: ActivityNavigationItem; col
 }
 
 function MoreViews({ items, collapsed }: { items: ActivityNavigationItem[]; collapsed: boolean }) {
-  const [open, setOpen] = useState(false);
   const activeItem = items.find((item) => item.active);
   const groups = [
     items.filter((item) => item.id === "views" || item.id === "workspaces"),
@@ -48,27 +46,31 @@ function MoreViews({ items, collapsed }: { items: ActivityNavigationItem[]; coll
   ].filter((group) => group.length > 0);
   const label = activeItem ? `More views: ${activeItem.label}` : "More views";
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu>
       {collapsed ? (
         <Tooltip content={label}>
           <DropdownMenuTrigger
-            render={<SidebarIconButton active={Boolean(activeItem) || open} aria-label={label} />}
+            render={<SidebarIconButton active={Boolean(activeItem)} aria-label={label} />}
           >
             <DotsIcon />
           </DropdownMenuTrigger>
         </Tooltip>
       ) : (
-        <SidebarListItem
-          render={<DropdownMenuTrigger />}
-          active={Boolean(activeItem) || open}
-          leading={<DotsIcon />}
-          trailing={<ChevronDownIcon />}
-          aria-label={label}
-        >
-          More
-        </SidebarListItem>
+        <DropdownMenuTrigger
+          render={(props, state) => (
+            <SidebarListItem
+              {...props}
+              active={Boolean(activeItem) || state.open}
+              leading={<DotsIcon />}
+              trailing={<ChevronRightIcon />}
+              aria-label={label}
+            >
+              More
+            </SidebarListItem>
+          )}
+        />
       )}
-      <DropdownMenuContent side={collapsed ? "right" : "bottom"} align="start" size="default">
+      <DropdownMenuContent side="right" align="start" size="default">
         <DropdownMenuRadioGroup value={activeItem?.id ?? ""}>
           {groups.map((group, index) => (
             <div key={group[0].id}>
@@ -77,6 +79,7 @@ function MoreViews({ items, collapsed }: { items: ActivityNavigationItem[]; coll
                 <DropdownMenuRadioItem
                   key={item.id}
                   value={item.id}
+                  closeOnClick
                   onClick={item.onClick}
                   aria-label={item.ariaLabel}
                 >
@@ -122,7 +125,7 @@ function ActivityNavigationList({
     <nav
       data-slot={collapsed ? "activity-rail-navigation" : "activity-sidebar-navigation"}
       aria-label="Activity views"
-      className="flex w-full flex-col gap-2"
+      className="flex w-full flex-col gap-chrome-tight"
     >
       {groups
         .filter((group) => group.items.length > 0 || (group.more && moreItems.length > 0))
