@@ -38,7 +38,6 @@ import { Button } from "@/ui/button";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
-import { ScrollArea } from "@/ui/scroll-area";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
@@ -259,12 +258,12 @@ export const KeyboardSettings = () => {
   };
 
   return (
-    <SettingsView layout="fill">
+    <SettingsView>
       <AnimatePresence mode="wait" initial={false}>
         {isEditingKeybindings ? (
           <motion.div
             key="keyboard-editor"
-            className="flex h-full flex-col"
+            className="flex min-w-0 flex-col"
             {...editorStepTransition}
           >
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -307,50 +306,48 @@ export const KeyboardSettings = () => {
                     label: "Preset Changes",
                     icon: <DownloadIcon optical="md" />,
                   },
-                  { value: "extension", label: "Extension", icon: <CubeIcon /> },
+                  { value: "extension", label: "Integration", icon: <CubeIcon /> },
                 ]}
               />
             </div>
 
-            <div className="flex-1 overflow-hidden">
-              <ScrollArea fill="block" orientation="both">
-                <Table className={keybindingTableMinWidth()}>
-                  <colgroup>
-                    <col className="w-[32%]" />
-                    <col className="w-[23%]" />
-                    <col className="w-[20%]" />
-                    <col className="w-[11%]" />
-                    <col className="w-[14%]" />
-                  </colgroup>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Command</TableHead>
-                      <TableHead>Keybinding</TableHead>
-                      <TableHead>When</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Actions</TableHead>
+            <div className="min-w-0 overflow-x-auto">
+              <Table className={keybindingTableMinWidth()}>
+                <colgroup>
+                  <col className="w-[32%]" />
+                  <col className="w-[23%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[14%]" />
+                </colgroup>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Command</TableHead>
+                    <TableHead>Keybinding</TableHead>
+                    <TableHead>When</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCommands.length === 0 ? (
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={5} className="p-0">
+                        <Empty className="min-h-36 py-8">
+                          <EmptyDescription>No keybindings found</EmptyDescription>
+                        </Empty>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCommands.length === 0 ? (
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={5} className="p-0">
-                          <Empty className="min-h-36 py-8">
-                            <EmptyDescription>No keybindings found</EmptyDescription>
-                          </Empty>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredCommands.map((command) => {
-                        const binding = getKeybindingForCommand(command.id);
-                        return (
-                          <KeybindingRow key={command.id} command={command} keybinding={binding} />
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
+                  ) : (
+                    filteredCommands.map((command) => {
+                      const binding = getKeybindingForCommand(command.id);
+                      return (
+                        <KeybindingRow key={command.id} command={command} keybinding={binding} />
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </motion.div>
         ) : (
