@@ -238,10 +238,7 @@ function PlainSelect({
             >
               {menuHeader}
               <SelectPrimitive.List
-                className={cn(
-                  "scrollbar-thin overflow-y-auto overscroll-contain",
-                  OVERLAY_MAX_HEIGHT,
-                )}
+                className={cn("scrollbar-thin overflow-y-auto overscroll-none", OVERLAY_MAX_HEIGHT)}
               >
                 {options.map((option) => (
                   <SelectPrimitive.Item

@@ -476,7 +476,7 @@ export default function DebuggerView({ isFullScreen, onClose, onFullScreen }: De
     >
       <ContextMenu>
         <ContextMenuTrigger
-          render={<TabBarSurface className="scrollbar-none justify-between overscroll-x-contain" />}
+          render={<TabBarSurface className="scrollbar-none justify-between overscroll-x-none" />}
         >
           <BugIcon className="text-subtle-foreground" />
           <div className="scrollbar-none min-w-0 flex-1 overflow-x-auto">

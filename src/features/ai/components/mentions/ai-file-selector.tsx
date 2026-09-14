@@ -224,7 +224,7 @@ export function AIFileSelector({
 
       <ComboboxList
         className={cn(
-          "items-container min-h-0 flex-1 overflow-y-auto bg-surface/95 p-1.5 overscroll-contain",
+          "items-container min-h-0 flex-1 overflow-y-auto bg-surface/95 p-1.5 overscroll-none",
           compact && "p-0",
           presentation === "menu" ? "max-h-66" : "max-h-full",
         )}

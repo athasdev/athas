@@ -85,7 +85,7 @@ export function FloatingPopoverContent({
       exit={shouldAnimate ? exit : { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
       transition={shouldAnimate ? transition : instantTransition}
       className={cn(
-        "pointer-events-auto fixed z-10070 min-w-60 max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-lg bg-surface/98 p-1 font-sans text-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm overscroll-contain ui-text-chrome",
+        "pointer-events-auto fixed z-10070 min-w-60 max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-lg bg-surface/98 p-1 font-sans text-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm overscroll-none ui-text-chrome",
         className,
       )}
       style={style}

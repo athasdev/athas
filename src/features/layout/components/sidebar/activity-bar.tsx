@@ -202,7 +202,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
             onScroll={projectCarouselEnabled ? handleProjectScroll : undefined}
             data-slot="project-carousel"
             className={cn(
-              "scrollbar-none flex min-h-0 w-full flex-1 shrink-0 overflow-y-hidden overscroll-x-contain",
+              "scrollbar-none flex min-h-0 w-full flex-1 shrink-0 overflow-y-hidden overscroll-x-none",
               projectCarouselEnabled
                 ? "snap-x snap-mandatory overflow-x-auto"
                 : "overflow-x-hidden",

@@ -238,7 +238,7 @@ export const CommandList = ({
 }: CommandListProps) => (
   <ScrollArea
     className={cn("isolate flex min-h-0 flex-1", className)}
-    viewportClassName="h-auto min-h-0 flex-1 overscroll-contain"
+    viewportClassName="h-auto min-h-0 flex-1 overscroll-none"
     contentPadding={padding === "spacious" ? "xl" : "sm"}
     viewportProps={{ ref, ...props }}
   >

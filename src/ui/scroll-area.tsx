@@ -217,7 +217,7 @@ function ScrollArea({
         ref={viewportRef}
         data-slot="scroll-area-viewport"
         className={cn(
-          "size-full min-h-0 overscroll-contain rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+          "size-full min-h-0 overscroll-none rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
           reserveScrollbarGutter && orientation !== "horizontal" && "pr-2.5",
           reserveScrollbarGutter && orientation !== "vertical" && "pb-2.5",
           viewportClassName,

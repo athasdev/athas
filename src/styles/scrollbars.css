@@ -1,3 +1,18 @@
+@utility overflow-auto {
+  overflow: auto;
+  overscroll-behavior: none;
+}
+
+@utility overflow-x-auto {
+  overflow-x: auto;
+  overscroll-behavior-x: none;
+}
+
+@utility overflow-y-auto {
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+}
+
 :root {
   --app-scrollbar-size: 11px;
   --app-scrollbar-thin-size: 9px;

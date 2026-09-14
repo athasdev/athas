@@ -377,7 +377,7 @@ export function SidebarTabBar<TValue extends string>({
           className,
         )}
       >
-        <div className="scrollbar-none min-w-0 overflow-x-auto overscroll-x-contain">
+        <div className="scrollbar-none min-w-0 overflow-x-auto overscroll-x-none">
           <TabsList variant="sidebar" aria-label={label}>
             {items.map((item) => (
               <TabsTrigger

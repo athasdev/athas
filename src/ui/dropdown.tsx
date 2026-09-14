@@ -228,7 +228,7 @@ function DropdownMenuViewport({
     <ScrollArea
       data-slot="dropdown-menu-viewport"
       className={cn("isolate flex min-h-0 flex-1", className)}
-      viewportClassName="h-auto min-h-0 flex-1 overscroll-contain scrollbar-gutter-stable"
+      viewportClassName="h-auto min-h-0 flex-1 overscroll-none scrollbar-gutter-stable"
       contentClassName={cn("p-1", contentClassName)}
       {...props}
     />

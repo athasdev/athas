@@ -12,6 +12,7 @@
 
   body {
     overflow: hidden;
+    overscroll-behavior: none;
     background: transparent;
     font-size: var(--ui-text-base);
   }

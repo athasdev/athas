@@ -131,6 +131,7 @@
   padding: 0.5em;
   border-radius: 4px;
   overflow-x: auto;
+  overscroll-behavior-x: none;
   margin: 0.3em 0;
   border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
 }

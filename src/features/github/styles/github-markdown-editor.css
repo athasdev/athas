@@ -143,6 +143,7 @@
 
 .github-markdown-editor-content pre {
   overflow-x: auto;
+  overscroll-behavior-x: none;
   border: 1px solid color-mix(in srgb, var(--border) 62%, transparent);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--surface) 64%, transparent);

@@ -574,7 +574,7 @@ const TerminalTabBar = ({
       >
         <TabBarSurface
           ref={tabBarRef}
-          className="scrollbar-none justify-between overscroll-x-contain"
+          className="scrollbar-none justify-between overscroll-x-none"
           role="tablist"
           aria-label="Terminal tabs"
           onContextMenu={handleToolbarContextMenu}

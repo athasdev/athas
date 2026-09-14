@@ -150,7 +150,7 @@ export function ComposerAttachments({
                     </Button>
                   </div>
                   <ItemGroup
-                    className="max-h-64 overflow-y-auto overscroll-contain"
+                    className="max-h-64 overflow-y-auto overscroll-none"
                     aria-label={`Attached ${group.noun}`}
                   >
                     {group.items.map((item, index) => {

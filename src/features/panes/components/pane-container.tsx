@@ -1052,7 +1052,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           {paneBuffers.length === 0 ? null : shouldRenderCarousel ? (
             <div
               ref={carouselViewportRef}
-              className="scrollbar-none flex h-full items-stretch gap-4 overflow-x-auto overflow-y-hidden px-4 py-4 overscroll-x-contain"
+              className="scrollbar-none flex h-full items-stretch gap-4 overflow-x-auto overflow-y-hidden px-4 py-4 overscroll-x-none"
               onWheelCapture={handleCarouselWheel}
             >
               {paneBuffers.map((buffer) => {
