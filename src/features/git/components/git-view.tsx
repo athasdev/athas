@@ -27,7 +27,7 @@ import {
 import { EmptyState } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { showAlertDialog } from "@/ui/dialog";
-import { SidebarFooter, SidebarSearchPopover, SidebarWorkspace } from "@/ui/sidebar";
+import { SidebarSearchPopover, SidebarWorkspace } from "@/ui/sidebar";
 import { toast } from "sonner";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { getBranches } from "../api/git-branches-api";
@@ -953,7 +953,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             )}
           </div>
           {gitSection === "changes" || gitSection === "history" ? (
-            <SidebarFooter>
+            <div className="mx-2 mb-2 min-w-0 shrink-0 pt-1">
               <GitCommitPanel
                 stagedFilesCount={stagedFiles.length}
                 stagedFiles={stagedFiles}
@@ -963,7 +963,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 behind={gitStatus.behind}
                 onCommitSuccess={refreshAfterAction}
               />
-            </SidebarFooter>
+            </div>
           ) : null}
         </div>
       </SidebarWorkspace>
