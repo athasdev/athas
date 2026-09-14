@@ -11,7 +11,8 @@ import { classifySessionConfigOption } from "@/features/ai/lib/session-config-op
 import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import Badge from "@/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
+import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -87,7 +88,7 @@ function ModelItems({
         ) : null}
         <DropdownMenuRadioGroup value={selected} onValueChange={onSelect}>
           {filtered.map((model) => (
-            <DropdownMenuRadioItem key={model.id} value={model.id}>
+            <DropdownMenuRadioItem key={model.id} value={model.id} closeOnClick>
               {model.name}
             </DropdownMenuRadioItem>
           ))}
@@ -97,7 +98,7 @@ function ModelItems({
             Use {query.trim()}
           </DropdownMenuItem>
         ) : null}
-        {!filtered.length && !custom && !loading ? (
+        {!filtered.length && !custom && !loading && !error ? (
           <DropdownMenuEmpty>{emptyLabel}</DropdownMenuEmpty>
         ) : null}
       </DropdownMenuViewport>
@@ -155,8 +156,7 @@ interface ComposerAgentSelectorProps {
   modelId: string;
   sessionConfigOptions: SessionConfigOption[];
   onAgentChange?: (agentId: AgentType) => void;
-  onProviderChange: (providerId: string) => void;
-  onModelChange: (modelId: string, providerId?: string) => void;
+  onModelChange: (modelId: string, providerId: string) => void;
   onSessionConfigChange: (optionId: string, value: SessionConfigValue) => void;
   onBeforeOpen?: () => void;
 }
@@ -168,12 +168,11 @@ export function ComposerAgentSelector({
   modelId,
   sessionConfigOptions,
   onAgentChange,
-  onProviderChange,
   onModelChange,
   onSessionConfigChange,
   onBeforeOpen,
 }: ComposerAgentSelectorProps) {
-  const [open, setOpen] = useState(false);
+  const [source, setSource] = useState(currentAgentId === "custom" ? "api" : "cli");
   const search = useMenuSearch();
   const [expanded, setExpanded] = useState<string | null>(null);
   const { options, isLoading, loadError, refresh, runAgentAction } =
@@ -203,11 +202,11 @@ export function ComposerAgentSelector({
   };
   return (
     <DropdownMenu
-      open={open}
       onOpenChange={(value) => {
-        setOpen(value);
-        if (value) onBeforeOpen?.();
-        else {
+        if (value) {
+          setSource(currentAgentId === "custom" ? "api" : "cli");
+          onBeforeOpen?.();
+        } else {
           search.reset();
           setExpanded(null);
         }
@@ -233,129 +232,146 @@ export function ComposerAgentSelector({
         </DropdownMenuTrigger>
       </span>
       <DropdownMenuContent align="start" side="top" viewport="searchable" size="wide">
-        <DropdownMenuSearch
-          value={search.query}
-          onChange={(event) => search.setQuery(event.target.value)}
-          placeholder="Search agents and providers..."
-          autoFocus
-        />
-        <DropdownMenuViewport>
-          {isLoading ? (
-            <DropdownMenuItem disabled>
-              <Spinner label="Checking agents" compact />
-              Checking agents…
-            </DropdownMenuItem>
-          ) : null}
-          {loadError ? (
-            <DropdownMenuItem closeOnClick={false} title={loadError} onClick={() => void refresh()}>
-              <WarningIcon />
-              Some agents could not be checked
-              <ArrowClockwiseIcon />
-            </DropdownMenuItem>
-          ) : null}
-          {agents.map((agent) => (
-            <DropdownMenuSub
-              key={agent.id}
-              open={expanded === agent.id}
-              onOpenChange={(value) => setExpanded(value ? agent.id : null)}
-            >
-              <DropdownMenuSubTrigger title={agent.description}>
-                <ProviderIcon providerId={agent.id} iconUrl={agent.icon} />
-                <span className="min-w-0 flex-1 truncate">{agent.name}</span>
-                <Badge variant="accent" size="compact">
-                  CLI
-                </Badge>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent viewport="searchable" size="wide">
-                {expanded === agent.id ? (
-                  <>
-                    {agent.isInstalled ? (
-                      agent.id === CODEX_INTEGRATION_ID ? (
-                        <CodexModels cwd={cwd} onSelect={() => selectAgent(agent.id)} />
-                      ) : agent.isCurrent && modelKind ? (
-                        <ModelItems
-                          models={modelKind.options}
-                          selected={modelKind.currentValue}
-                          onSelect={(value) => {
-                            if (model) onSessionConfigChange(model.id, value);
-                          }}
-                        />
+        <Tabs
+          value={source}
+          onValueChange={(value) => {
+            setSource(String(value));
+            search.reset();
+            setExpanded(null);
+          }}
+        >
+          <TabsList aria-label="Model source" className="mx-1 mt-1">
+            <TabsTrigger value="cli">CLI</TabsTrigger>
+            <TabsTrigger value="api">API</TabsTrigger>
+          </TabsList>
+          <DropdownMenuSearch
+            value={search.query}
+            onChange={(event) => search.setQuery(event.target.value)}
+            placeholder={source === "cli" ? "Search agents..." : "Search providers..."}
+            autoFocus
+          />
+          <TabsContent value="cli" className="flex min-h-0 flex-col">
+            <DropdownMenuViewport>
+              {isLoading ? (
+                <DropdownMenuItem disabled>
+                  <Spinner label="Checking agents" compact />
+                  Checking agents…
+                </DropdownMenuItem>
+              ) : null}
+              {loadError ? (
+                <DropdownMenuItem
+                  closeOnClick={false}
+                  title={loadError}
+                  onClick={() => void refresh()}
+                >
+                  <WarningIcon />
+                  Could not check all agents · Retry
+                  <ArrowClockwiseIcon />
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuRadioGroup value={currentAgentId} onValueChange={selectAgent}>
+                {agents.map((agent) =>
+                  agent.isInstalled ? (
+                    <DropdownMenuRadioItem
+                      key={agent.id}
+                      value={agent.id}
+                      closeOnClick
+                      disabled={!onAgentChange && !agent.isCurrent}
+                      title={agent.description}
+                    >
+                      <ProviderIcon providerId={agent.id} iconUrl={agent.icon} />
+                      <span className="min-w-0 flex-1 truncate">{agent.name}</span>
+                      {isTerminalAgent(agent.id) ? <span>Terminal</span> : null}
+                    </DropdownMenuRadioItem>
+                  ) : (
+                    <DropdownMenuItem
+                      key={agent.id}
+                      disabled={
+                        agent.isChecking || agent.isBusy || (!agent.action && !agent.needsSetup)
+                      }
+                      closeOnClick={agent.needsSetup}
+                      onClick={() => {
+                        if (agent.action) void runAgentAction(agent.id, agent.name, agent.action);
+                        else if (agent.needsSetup) useUIState.getState().openSettingsDialog("ai");
+                      }}
+                      title={agent.description}
+                    >
+                      <ProviderIcon providerId={agent.id} iconUrl={agent.icon} />
+                      <span className="min-w-0 flex-1 truncate">{agent.name}</span>
+                      {agent.isBusy ? (
+                        <Spinner label="Installing agent" compact />
+                      ) : agent.isChecking ? null : agent.action ? (
+                        "Install"
+                      ) : agent.needsSetup ? (
+                        "Set up"
                       ) : (
-                        <DropdownMenuItem
-                          disabled={!onAgentChange && !agent.isCurrent}
-                          onClick={() => selectAgent(agent.id)}
-                        >
-                          Use {agent.name}
-                        </DropdownMenuItem>
-                      )
+                        "Unavailable"
+                      )}
+                    </DropdownMenuItem>
+                  ),
+                )}
+              </DropdownMenuRadioGroup>
+              {!agents.length && !isLoading && !loadError ? (
+                <DropdownMenuEmpty>No matching agents</DropdownMenuEmpty>
+              ) : null}
+              {currentAgentId !== "custom" &&
+              (currentAgentId === CODEX_INTEGRATION_ID || modelKind) ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuSub
+                    open={expanded === "model"}
+                    onOpenChange={(value) => setExpanded(value ? "model" : null)}
+                  >
+                    <DropdownMenuSubTrigger>Model</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent viewport="searchable" size="wide">
+                      {expanded === "model" ? (
+                        currentAgentId === CODEX_INTEGRATION_ID ? (
+                          <CodexModels cwd={cwd} onSelect={() => {}} />
+                        ) : modelKind && model ? (
+                          <ModelItems
+                            models={modelKind.options}
+                            selected={modelKind.currentValue}
+                            onSelect={(value) => onSessionConfigChange(model.id, value)}
+                          />
+                        ) : null
+                      ) : null}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </>
+              ) : null}
+            </DropdownMenuViewport>
+          </TabsContent>
+          <TabsContent value="api" className="flex min-h-0 flex-col">
+            <DropdownMenuViewport>
+              {apis.map((provider) => (
+                <DropdownMenuSub
+                  key={provider.id}
+                  open={expanded === `api:${provider.id}`}
+                  onOpenChange={(value) => setExpanded(value ? `api:${provider.id}` : null)}
+                >
+                  <DropdownMenuSubTrigger>
+                    <ProviderIcon providerId={provider.id} />
+                    <span className="min-w-0 flex-1 truncate">{provider.name}</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent viewport="searchable" size="wide">
+                    {expanded === `api:${provider.id}` ? (
+                      <ApiModels
+                        providerId={provider.id}
+                        modelId={
+                          currentAgentId === "custom" && providerId === provider.id ? modelId : ""
+                        }
+                        onSelect={(id) => {
+                          onModelChange(id, provider.id);
+                        }}
+                      />
                     ) : null}
-                    {agent.action ? (
-                      <>
-                        {agent.isInstalled ? <DropdownMenuSeparator /> : null}
-                        <DropdownMenuItem
-                          closeOnClick={false}
-                          disabled={agent.isBusy}
-                          onClick={() => {
-                            if (agent.action)
-                              void runAgentAction(agent.id, agent.name, agent.action);
-                          }}
-                        >
-                          {agent.isBusy ? <Spinner label="Installing agent" compact /> : null}
-                          {agent.isBusy
-                            ? "Working…"
-                            : `${agent.action === "update" ? "Update" : "Install"} ${agent.name}`}
-                        </DropdownMenuItem>
-                      </>
-                    ) : null}
-                    {agent.needsSetup ? (
-                      <DropdownMenuItem
-                        onClick={() => useUIState.getState().openSettingsDialog("ai")}
-                      >
-                        Set up {agent.name}
-                      </DropdownMenuItem>
-                    ) : null}
-                    {!agent.isInstalled && !agent.action && !agent.needsSetup ? (
-                      <DropdownMenuItem disabled>Unavailable on this platform</DropdownMenuItem>
-                    ) : null}
-                  </>
-                ) : null}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          ))}
-          {apis.map((provider) => (
-            <DropdownMenuSub
-              key={provider.id}
-              open={expanded === `api:${provider.id}`}
-              onOpenChange={(value) => setExpanded(value ? `api:${provider.id}` : null)}
-            >
-              <DropdownMenuSubTrigger>
-                <ProviderIcon providerId={provider.id} />
-                <span className="min-w-0 flex-1 truncate">{provider.name}</span>
-                <Badge variant="muted" size="compact">
-                  API
-                </Badge>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent viewport="searchable" size="wide">
-                {expanded === `api:${provider.id}` ? (
-                  <ApiModels
-                    providerId={provider.id}
-                    modelId={
-                      currentAgentId === "custom" && providerId === provider.id ? modelId : ""
-                    }
-                    onSelect={(id) => {
-                      onProviderChange(provider.id);
-                      onModelChange(id, provider.id);
-                      selectAgent("custom");
-                    }}
-                  />
-                ) : null}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          ))}
-          {!agents.length && !apis.length ? (
-            <DropdownMenuEmpty>No matching agents or providers</DropdownMenuEmpty>
-          ) : null}
-        </DropdownMenuViewport>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              ))}
+              {!apis.length ? <DropdownMenuEmpty>No matching providers</DropdownMenuEmpty> : null}
+            </DropdownMenuViewport>
+          </TabsContent>
+        </Tabs>
       </DropdownMenuContent>
     </DropdownMenu>
   );

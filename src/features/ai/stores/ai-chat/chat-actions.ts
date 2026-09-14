@@ -130,7 +130,51 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       return state.selectedAgentId;
     },
     changeCurrentChatAgent: (agentId) => {
-      get().actions.createNewChat(agentId);
+      get().actions.selectChatAgent(get().currentChatId, agentId);
+    },
+    selectChatAgent: (chatId, agentId, options = {}) => {
+      const state = get();
+      const chat = state.chats.find((candidate) => candidate.id === chatId);
+      if (!chat && !chatId) {
+        set((draft) => {
+          draft.selectedAgentId = agentId;
+        });
+        return null;
+      }
+      const reusable =
+        chat &&
+        !chat.archivedAt &&
+        state.chatMessageLoadStates[chat.id] === "loaded" &&
+        !hasAgentSessionActivity(chat) &&
+        !chat.acpSessionId &&
+        !state.agentRuns[chat.id] &&
+        !state.agentMessageQueues[chat.id]?.length &&
+        state.pendingAgentLaunchRequest?.chatId !== chat.id;
+      if (chat?.agentId === agentId || reusable) {
+        set((draft) => {
+          const target = draft.chats.find((candidate) => candidate.id === chatId)!;
+          if (target.agentId !== agentId) {
+            target.agentId = agentId;
+            target.providerId =
+              agentId === "custom" ? getNewChatMetadata(agentId).providerId : null;
+            target.modelId = agentId === "custom" ? getNewChatMetadata(agentId).modelId : null;
+          }
+          if (agentId === "custom" && options.model) Object.assign(target, options.model);
+          if (options.activate ?? true) draft.selectedAgentId = agentId;
+        });
+        void saveChatMetadataToDb(get().chats.find((candidate) => candidate.id === chatId)!).catch(
+          (error) => console.error("Failed to save agent selection:", error),
+        );
+        return chatId;
+      }
+      const nextChatId =
+        !chat && chatId
+          ? get().actions.ensureChatSession(chatId, agentId, options)
+          : get().actions.createNewChat(agentId, options);
+      if (agentId === "custom" && options.model) {
+        get().actions.setChatModel(nextChatId, options.model.providerId, options.model.modelId);
+      }
+      return nextChatId;
     },
     setMode: (mode) =>
       set((state) => {

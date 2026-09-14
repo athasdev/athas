@@ -4,6 +4,7 @@ export function useChatState() {
   return {
     chats: useAIChatStore((state) => state.chats),
     currentChatId: useAIChatStore((state) => state.currentChatId),
+    selectedAgentId: useAIChatStore((state) => state.selectedAgentId),
     hasApiKey: useAIChatStore((state) => state.hasApiKey),
     pendingAgentLaunchRequest: useAIChatStore((state) => state.pendingAgentLaunchRequest),
     agentRuns: useAIChatStore((state) => state.agentRuns),
@@ -29,6 +30,7 @@ export function useChatActions() {
     dequeueAgentMessage: useAIChatStore((state) => state.actions.dequeueAgentMessage),
     moveQueuedAgentMessage: useAIChatStore((state) => state.actions.moveQueuedAgentMessage),
     removeQueuedAgentMessage: useAIChatStore((state) => state.actions.removeQueuedAgentMessage),
+    selectChatAgent: useAIChatStore((state) => state.actions.selectChatAgent),
     createNewChat: useAIChatStore((state) => state.actions.createNewChat),
     ensureChatSession: useAIChatStore((state) => state.actions.ensureChatSession),
     ensureChatForAgent: useAIChatStore((state) => state.actions.ensureChatForAgent),

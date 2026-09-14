@@ -122,10 +122,15 @@ export interface AIChatInputBarProps {
   isActiveSurface?: boolean;
   presentation?: "default" | "initial";
   autoFocus?: boolean;
-  onAgentChange?: (agentId: AgentType) => void;
+  onAgentChange?: (agentId: AgentType, model?: ApiModelSelection) => void;
   onSendMessage: (message: string, images?: ImageContent[]) => AgentMessageSubmitResult;
   onInterruptAndSend: (message: string, images?: ImageContent[]) => AgentMessageSubmitResult;
   onMoveQueuedMessage: (fromIndex: number, toIndex: number) => void;
   onRemoveQueuedMessage: (index: number, reason: "edit" | "discard") => void;
   onStopStreaming: () => void;
+}
+
+export interface ApiModelSelection {
+  providerId: string;
+  modelId: string;
 }

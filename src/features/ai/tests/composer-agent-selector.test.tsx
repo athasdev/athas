@@ -26,6 +26,9 @@ vi.mock("@/ui/dropdown", async (importOriginal) => {
     DropdownMenu: group,
     DropdownMenuTrigger: group,
     DropdownMenuContent: group,
+    DropdownMenuItem: group,
+    DropdownMenuRadioGroup: group,
+    DropdownMenuRadioItem: group,
     DropdownMenuViewport: group,
     DropdownMenuSub: group,
     DropdownMenuSubTrigger: group,
@@ -34,23 +37,24 @@ vi.mock("@/ui/dropdown", async (importOriginal) => {
 });
 
 describe("Composer agent sources", () => {
-  it("keeps agents visible in a session composer even without an agent-change callback", () => {
+  it.each([
+    { agentId: "claude-acp", visible: "Claude Agent", hidden: "OpenAI", search: "agents" },
+    { agentId: "custom", visible: "OpenAI", hidden: "Claude Agent", search: "providers" },
+  ])("opens the matching source for $agentId", ({ agentId, visible, hidden, search }) => {
     const markup = renderToStaticMarkup(
       <ComposerAgentSelector
         cwd="/project"
-        currentAgentId="custom"
+        currentAgentId={agentId}
         providerId="openai"
         modelId="gpt-test"
         sessionConfigOptions={[]}
-        onProviderChange={vi.fn()}
         onModelChange={vi.fn()}
         onSessionConfigChange={vi.fn()}
       />,
     );
-    expect(markup).toContain("Claude Agent");
-    expect(markup).toContain("Codex");
-    expect(markup).toContain("OpenAI");
-    expect(markup).toContain("Search agents and providers");
+    expect(markup).toContain(visible);
+    expect(markup).not.toContain(hidden);
+    expect(markup).toContain(`Search ${search}...`);
     expect(markup).not.toContain("No models available");
   });
 });

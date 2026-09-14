@@ -21,44 +21,10 @@ type ProviderActions = Pick<
   | "setDynamicModels"
 >;
 
-async function buildProviderApiKeyMap(
-  subscription: ReturnType<typeof useAuthStore.getState>["subscription"],
+export function getProviderAccessFromMap(
+  providerId: string,
+  providerApiKeys: Map<string, boolean>,
 ) {
-  const entries = await Promise.all(
-    getAvailableProviders().map(async (provider) => {
-      try {
-        if (!provider.requiresApiKey) {
-          return [
-            provider.id,
-            canUseProviderWithoutApiKey({
-              providerId: provider.id,
-              subscription,
-              hasStoredKey: false,
-              requiresApiKey: false,
-            }),
-          ] as const;
-        }
-
-        const token = await getProviderApiToken(provider.id);
-        return [
-          provider.id,
-          canUseProviderWithoutApiKey({
-            providerId: provider.id,
-            subscription,
-            hasStoredKey: Boolean(token),
-            requiresApiKey: provider.requiresApiKey,
-          }),
-        ] as const;
-      } catch {
-        return [provider.id, false] as const;
-      }
-    }),
-  );
-
-  return new Map(entries);
-}
-
-function getProviderAccessFromMap(providerId: string, providerApiKeys: Map<string, boolean>) {
   const provider = getProviderById(providerId);
   if (!provider) return false;
   if (!provider.requiresApiKey && providerId !== "athas") return true;
@@ -66,51 +32,56 @@ function getProviderAccessFromMap(providerId: string, providerApiKeys: Map<strin
 }
 
 export function createProviderActions(set: SetAIChatStore, get: GetAIChatStore): ProviderActions {
+  const inFlight = new Map<string, Promise<void>>();
+  const revisions = new Map<string, number>();
+  const checkApiKey = (providerId: string): Promise<void> => {
+    const pending = inFlight.get(providerId);
+    if (pending) return pending;
+    const revision = revisions.get(providerId) ?? 0;
+    const request = (async () => {
+      const provider = getProviderById(providerId);
+      let hasStoredKey = false;
+      try {
+        hasStoredKey = provider?.requiresApiKey
+          ? Boolean(await getProviderApiToken(providerId))
+          : false;
+      } catch (error) {
+        console.error("Error checking API key:", error);
+      }
+      if ((revisions.get(providerId) ?? 0) !== revision) return;
+      const allowed =
+        Boolean(provider) &&
+        canUseProviderWithoutApiKey({
+          providerId,
+          subscription: useAuthStore.getState().subscription,
+          hasStoredKey,
+          requiresApiKey: provider?.requiresApiKey ?? true,
+        });
+      set((state) => {
+        state.providerApiKeys.set(providerId, allowed);
+        const defaultProviderId = useSettingsStore.getState().settings.aiProviderId;
+        state.hasApiKey = getProviderAccessFromMap(defaultProviderId, state.providerApiKeys);
+      });
+    })();
+    inFlight.set(providerId, request);
+    void request.finally(() => {
+      if (inFlight.get(providerId) === request) inFlight.delete(providerId);
+    });
+    return request;
+  };
   const refreshProviderAccess = async () => {
-    const subscription = useAuthStore.getState().subscription;
-    const providerApiKeys = await buildProviderApiKeyMap(subscription);
-    const currentProviderId = useSettingsStore.getState().settings.aiProviderId;
-
+    await Promise.all(getAvailableProviders().map((provider) => checkApiKey(provider.id)));
+  };
+  const invalidate = (providerId: string) => {
+    revisions.set(providerId, (revisions.get(providerId) ?? 0) + 1);
+    inFlight.delete(providerId);
     set((state) => {
-      state.providerApiKeys = providerApiKeys;
-      state.hasApiKey = getProviderAccessFromMap(currentProviderId, providerApiKeys);
+      delete state.dynamicModels[providerId];
     });
   };
 
   return {
-    checkApiKey: async (providerId) => {
-      try {
-        const provider = getProviderById(providerId);
-        const subscription = useAuthStore.getState().subscription;
-
-        if (provider && !provider.requiresApiKey) {
-          set((state) => {
-            state.hasApiKey = canUseProviderWithoutApiKey({
-              providerId,
-              subscription,
-              hasStoredKey: false,
-              requiresApiKey: false,
-            });
-          });
-          return;
-        }
-
-        const token = await getProviderApiToken(providerId);
-        set((state) => {
-          state.hasApiKey = canUseProviderWithoutApiKey({
-            providerId,
-            subscription,
-            hasStoredKey: Boolean(token),
-            requiresApiKey: provider?.requiresApiKey ?? true,
-          });
-        });
-      } catch (error) {
-        console.error("Error checking API key:", error);
-        set((state) => {
-          state.hasApiKey = false;
-        });
-      }
-    },
+    checkApiKey,
     checkAllProviderApiKeys: refreshProviderAccess,
     saveApiKey: async (providerId, apiKey) => {
       try {
@@ -119,7 +90,8 @@ export function createProviderActions(set: SetAIChatStore, get: GetAIChatStore):
         }
 
         await storeProviderApiToken(providerId, apiKey);
-        await refreshProviderAccess();
+        invalidate(providerId);
+        await checkApiKey(providerId);
         return true;
       } catch (error) {
         console.error("Error saving API key:", error);
@@ -129,13 +101,14 @@ export function createProviderActions(set: SetAIChatStore, get: GetAIChatStore):
     removeApiKey: async (providerId) => {
       try {
         await removeProviderApiToken(providerId);
-        await refreshProviderAccess();
+        invalidate(providerId);
+        await checkApiKey(providerId);
       } catch (error) {
         console.error("Error removing API key:", error);
         throw error;
       }
     },
-    hasProviderApiKey: (providerId) => get().providerApiKeys.get(providerId) ?? false,
+    hasProviderApiKey: (providerId) => getProviderAccessFromMap(providerId, get().providerApiKeys),
     setDynamicModels: (providerId, models) =>
       set((state) => {
         state.dynamicModels[providerId] = models;

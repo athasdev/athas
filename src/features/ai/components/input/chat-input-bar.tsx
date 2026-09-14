@@ -1,3 +1,4 @@
+import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import { ArrowUpIcon, BoltIcon, CommandIcon, MicrophoneIcon, StopIcon } from "@/ui/icons";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { registerAgentDraft, takeAgentDraft } from "@/features/ai/detached/agent-window-drafts";
@@ -22,7 +23,6 @@ import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import type { SlashCommand } from "@/features/ai/types/acp.types";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import { getProviderById } from "@/features/ai/types/providers.types";
 import { openSidebarResourceBuffer } from "@/features/sidebar/utils/open-sidebar-resource";
 import {
   hasSidebarResourceDragData,
@@ -129,16 +129,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
   });
   const slashCommandRangeRef = useRef({ startIndex: 0, endIndex: 0 });
 
-  const hasApiKey = useAIChatStore((state) => state.hasApiKey);
   const sessionConfigOptions = useAIChatStore((state) => state.sessionConfigOptions);
   const session = useAIChatStore((state) => state.chats.find((chat) => chat.id === chatId));
   const defaultProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const defaultModelId = useSettingsStore((state) => state.settings.aiModelId);
   const aiProviderId = session?.providerId ?? defaultProviderId;
   const aiModelId = session?.modelId ?? defaultModelId;
-  const aiCustomModelId = useSettingsStore((state) => state.settings.aiCustomModelId);
-  const aiAutocompleteCustomModelId = useSettingsStore(
-    (state) => state.settings.aiAutocompleteCustomModelId,
+  const hasApiKey = useAIChatStore((state) =>
+    getProviderAccessFromMap(aiProviderId, state.providerApiKeys),
   );
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
 
@@ -152,31 +150,18 @@ const AIChatInputBar = memo(function AIChatInputBar({
     (state) => state.actions.changeSessionConfigOption,
   );
 
-  const handleAthasProviderChange = useCallback(
-    (nextProviderId: string) => {
-      const provider = getProviderById(nextProviderId);
+  const handleApiModelChange = useCallback(
+    (nextModelId: string, nextProviderId: string) => {
       void updateSetting("aiProviderId", nextProviderId);
-      const nextModelId =
-        nextProviderId === "custom"
-          ? aiCustomModelId || aiAutocompleteCustomModelId
-          : provider?.models[0]?.id || "";
       void updateSetting("aiModelId", nextModelId);
-      if (chatId)
+      if (nextProviderId === "custom") void updateSetting("aiCustomModelId", nextModelId);
+      if (onAgentChange) {
+        onAgentChange("custom", { providerId: nextProviderId, modelId: nextModelId });
+      } else if (chatId && isCustomAgent) {
         useAIChatStore.getState().actions.setChatModel(chatId, nextProviderId, nextModelId);
-    },
-    [aiAutocompleteCustomModelId, aiCustomModelId, chatId, updateSetting],
-  );
-
-  const handleAthasModelChange = useCallback(
-    (nextModelId: string, nextProviderId = aiProviderId) => {
-      if (nextProviderId === "custom") {
-        void updateSetting("aiCustomModelId", nextModelId);
       }
-      void updateSetting("aiModelId", nextModelId);
-      if (chatId)
-        useAIChatStore.getState().actions.setChatModel(chatId, nextProviderId, nextModelId);
     },
-    [aiProviderId, chatId, updateSetting],
+    [chatId, isCustomAgent, onAgentChange, updateSetting],
   );
 
   const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
@@ -1161,8 +1146,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             modelId={aiModelId}
             sessionConfigOptions={sessionConfigOptions}
             onAgentChange={onAgentChange}
-            onProviderChange={handleAthasProviderChange}
-            onModelChange={handleAthasModelChange}
+            onModelChange={handleApiModelChange}
             onSessionConfigChange={(optionId, value) =>
               void changeSessionConfigOption(optionId, value)
             }

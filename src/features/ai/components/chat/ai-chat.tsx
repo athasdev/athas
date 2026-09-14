@@ -1,3 +1,4 @@
+import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
 import { listen } from "@tauri-apps/api/event";
@@ -121,7 +122,11 @@ const AIChat = memo(function AIChat({
     () => chatState.chats.find((chat) => chat.id === effectiveChatId),
     [chatState.chats, effectiveChatId],
   );
-  const currentAgentId = currentChat?.agentId ?? useAIChatStore.getState().selectedAgentId;
+  const currentAgentId = currentChat?.agentId ?? chatState.selectedAgentId;
+  const sessionProviderId = currentChat?.providerId ?? aiProviderId;
+  const hasSessionApiKey = useAIChatStore((state) =>
+    getProviderAccessFromMap(sessionProviderId, state.providerApiKeys),
+  );
   const assistantIconId =
     currentAgentId === "custom" ? (currentChat?.providerId ?? aiProviderId) : currentAgentId;
   const assistantLabel =
@@ -167,9 +172,8 @@ const AIChat = memo(function AIChat({
   }, [messageSearchMatches.length]);
 
   useEffect(() => {
-    chatActions.checkApiKey(aiProviderId);
-    chatActions.checkAllProviderApiKeys();
-  }, [aiProviderId, chatActions.checkApiKey, chatActions.checkAllProviderApiKeys]);
+    if (currentAgentId === "custom") void chatActions.checkApiKey(sessionProviderId);
+  }, [currentAgentId, sessionProviderId, subscription, chatActions.checkApiKey]);
 
   // Clear ACP events when switching chats
   useEffect(() => {
@@ -454,7 +458,10 @@ const AIChat = memo(function AIChat({
       : null;
     const currentAgentId = targetChat?.agentId ?? store.actions.getCurrentAgentId();
     const trimmedMessageContent = messageContent.trim();
-    const access = getAgentMessageAccess(currentAgentId, store.hasApiKey);
+    const access = getAgentMessageAccess(
+      currentAgentId,
+      getProviderAccessFromMap(targetChat?.providerId ?? aiProviderId, store.providerApiKeys),
+    );
     if (!trimmedMessageContent && !options.images?.length && !options.editedUserMessageId) return;
     if (!access.accepted) {
       showToast({
@@ -1009,7 +1016,7 @@ details: ${errorDetails || mainError}
       if (agentIsDetached(effectiveChatId))
         return { accepted: false, error: "This agent is open in another window." };
       if (!messageContent.trim() && !images?.length) return { accepted: false };
-      const access = getAgentMessageAccess(currentAgentId, chatState.hasApiKey);
+      const access = getAgentMessageAccess(currentAgentId, hasSessionApiKey);
       if (!access.accepted) {
         showToast({
           message:
@@ -1045,7 +1052,7 @@ details: ${errorDetails || mainError}
     },
     [
       chatActions.enqueueAgentMessage,
-      chatState.hasApiKey,
+      hasSessionApiKey,
       aiProviderId,
       currentChat?.providerId,
       currentAgentId,
@@ -1071,7 +1078,7 @@ details: ${errorDetails || mainError}
     (messageContent: string, images?: ImageContent[]): AgentMessageSubmitResult => {
       if (agentIsDetached(effectiveChatId)) return { accepted: false };
       if (!messageContent.trim() && !images?.length) return { accepted: false };
-      const access = getAgentMessageAccess(currentAgentId, chatState.hasApiKey);
+      const access = getAgentMessageAccess(currentAgentId, hasSessionApiKey);
       if (!access.accepted) {
         showToast({
           message:
@@ -1094,7 +1101,7 @@ details: ${errorDetails || mainError}
     },
     [
       chatActions.prependAgentMessage,
-      chatState.hasApiKey,
+      hasSessionApiKey,
       aiProviderId,
       currentChat?.providerId,
       currentAgentId,
@@ -1132,7 +1139,7 @@ details: ${errorDetails || mainError}
     chatActions.setPendingAgentLaunchRequest(null);
     if (!pendingLaunch.prompt && !pendingLaunch.images?.length) return;
 
-    const access = getAgentMessageAccess(pendingLaunch.agentId, chatState.hasApiKey);
+    const access = getAgentMessageAccess(pendingLaunch.agentId, hasSessionApiKey);
     if (!access.accepted) {
       showToast({
         message:
@@ -1148,7 +1155,7 @@ details: ${errorDetails || mainError}
   }, [
     chatActions,
     effectiveChatId,
-    chatState.hasApiKey,
+    hasSessionApiKey,
     aiProviderId,
     currentChat?.providerId,
     currentAgentId,
@@ -1199,14 +1206,17 @@ details: ${errorDetails || mainError}
       buffers={buffers}
       allProjectFiles={allProjectFiles}
       currentAgentId={currentAgentId}
-      onAgentChange={(agentId) => {
-        if (agentId === currentAgentId) return;
+      onAgentChange={(agentId, model) => {
         if (isTerminalAgent(agentId)) {
           openTerminalAgent(agentId);
           return;
         }
-        const nextChatId = chatActions.createNewChat(agentId, { activate: !chatId });
-        if (chatId) openAgentHistoryChat(nextChatId);
+        const nextChatId = chatActions.selectChatAgent(effectiveChatId, agentId, {
+          activate: !chatId,
+          model,
+        });
+        if (chatId && nextChatId && nextChatId !== effectiveChatId)
+          openAgentHistoryChat(nextChatId);
       }}
       isTyping={isSurfaceTyping}
       streamingMessageId={surfaceStreamingMessageId}
@@ -1297,7 +1307,7 @@ details: ${errorDetails || mainError}
                     onSendFollowUp={handleSendFollowUp}
                     onEditUserMessage={handleEditUserMessage}
                     canEditUserMessages={
-                      getAgentMessageAccess(currentAgentId, chatState.hasApiKey).accepted &&
+                      getAgentMessageAccess(currentAgentId, hasSessionApiKey).accepted &&
                       !isSurfaceTyping &&
                       !surfaceStreamingMessageId &&
                       !isAiChatBlockedByPolicy

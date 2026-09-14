@@ -7,6 +7,7 @@ import type {
 } from "@/features/ai/types/acp.types";
 import type {
   AgentType,
+  ApiModelSelection,
   Chat,
   ChatMode,
   Message,
@@ -69,6 +70,11 @@ export interface AIChatActions {
   setSelectedAgentId: (agentId: AgentType) => void;
   getCurrentAgentId: () => AgentType;
   changeCurrentChatAgent: (agentId: AgentType) => void;
+  selectChatAgent: (
+    chatId: string | null,
+    agentId: AgentType,
+    options?: { activate?: boolean; model?: ApiModelSelection },
+  ) => string | null;
   setMode: (mode: ChatMode) => void;
   setPendingAgentLaunchRequest: (request: PendingAgentLaunchRequest | null) => void;
   startAgentRun: (chatId: string, run: AgentRunState) => void;
