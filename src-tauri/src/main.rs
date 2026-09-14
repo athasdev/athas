@@ -27,6 +27,29 @@ mod terminal;
 
 #[cfg_attr(all(target_os = "linux", feature = "linux"), tauri::cef_entry_point)]
 fn main() {
+   let mut cli_args = std::env::args().skip(1).collect::<Vec<_>>();
+   let validate_cli = cli_args.first().is_some_and(|arg| arg == "--validate-cli");
+   if validate_cli {
+      cli_args.remove(0);
+   }
+   if cli_args
+      .first()
+      .is_some_and(|arg| matches!(arg.as_str(), "help" | "--help" | "-h"))
+   {
+      println!("{}", commands::development::cli::CLI_HELP_TEXT);
+      return;
+   }
+   let cli_requests = commands::development::cli_args::parse_cli_args(
+      &cli_args,
+      &std::env::current_dir().unwrap_or_default(),
+   );
+   if validate_cli {
+      if !cli_args.is_empty() && cli_requests.is_empty() {
+         eprintln!("athas: invalid arguments or inaccessible path. Run athas --help for usage.");
+         std::process::exit(1);
+      }
+      return;
+   }
    let startup_timing = StartupTiming::new();
 
    let _ = rustls::crypto::ring::default_provider().install_default();
@@ -37,12 +60,23 @@ fn main() {
    #[cfg(target_os = "macos")]
    bootstrap::macos::disable_macos_autofill_heuristics();
 
+   let mut context = tauri::generate_context!();
+   if !commands::development::cli_windows::requests_need_workbench(&cli_requests) {
+      for window in &mut context.config_mut().app.windows {
+         window.create = false;
+      }
+   }
    let builder = tauri::Builder::<AthasRuntime>::new();
 
    #[cfg(all(target_os = "linux", feature = "linux"))]
    let builder = builder.command_line_args(bootstrap::linux::cef_command_line_args());
 
    builder
+      .on_window_event(|window, event| {
+         if matches!(event, tauri::WindowEvent::Destroyed) {
+            terminal::close_window_terminals(window.app_handle(), window.label());
+         }
+      })
       .manage(startup_timing)
       .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
          app_setup::handle_single_instance_open(app, args, cwd);
@@ -463,7 +497,7 @@ fn main() {
          menu::rebuild_menu_themes,
          menu::sync_native_menu_state,
       ])
-      .build(tauri::generate_context!())
+      .build(context)
       .expect("error while building tauri application")
       .run(|app_handle, event| match event {
          #[cfg(target_os = "linux")]

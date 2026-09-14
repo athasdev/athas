@@ -30,6 +30,19 @@ struct StaleTerminalConnections {
 }
 
 impl FrontendTerminalSessions {
+   fn take_window(&self, label: &str) -> StaleTerminalConnections {
+      self
+         .windows
+         .lock()
+         .ok()
+         .and_then(|mut windows| windows.remove(label))
+         .map(|session| StaleTerminalConnections {
+            local_connection_ids: session.local_connection_ids.into_iter().collect(),
+            remote_connection_ids: session.remote_connection_ids.into_iter().collect(),
+         })
+         .unwrap_or_default()
+   }
+
    fn begin_session(
       &self,
       window_label: String,
@@ -119,6 +132,27 @@ impl FrontendTerminalSessions {
          session.remote_connection_ids.remove(connection_id);
       }
    }
+}
+
+pub fn close_window_terminals(app: &AppHandle, label: &str) {
+   use tauri::Manager;
+   let Some(sessions) = app.try_state::<FrontendTerminalSessions>() else {
+      return;
+   };
+   let stale = sessions.take_window(label);
+   let manager = app.state::<Arc<TerminalManager>>().inner().clone();
+   tauri::async_runtime::spawn(async move {
+      for id in stale.local_connection_ids {
+         if let Err(error) = manager.close_terminal(&id) {
+            log::warn!("Failed to close window terminal: {error}");
+         }
+      }
+      for id in stale.remote_connection_ids {
+         if let Err(error) = athas_remote::close_remote_terminal(id).await {
+            log::warn!("Failed to close remote window terminal: {error}");
+         }
+      }
+   });
 }
 
 #[tauri::command]
@@ -286,5 +320,36 @@ mod tests {
          .begin_session("secondary".to_string(), "session-4".to_string())
          .unwrap();
       assert_eq!(secondary.local_connection_ids, vec!["local-2"]);
+   }
+   #[test]
+   fn closing_a_window_releases_only_its_connections_and_rejects_late_registration() {
+      let sessions = FrontendTerminalSessions::default();
+      sessions
+         .begin_session("terminal".into(), "one".into())
+         .unwrap();
+      sessions
+         .begin_session("editor".into(), "two".into())
+         .unwrap();
+      sessions
+         .register_local("terminal", "one", "local".into())
+         .unwrap();
+      sessions
+         .register_remote("terminal", "one", "remote".into())
+         .unwrap();
+      sessions
+         .register_local("editor", "two", "keep".into())
+         .unwrap();
+      let closed = sessions.take_window("terminal");
+      assert_eq!(closed.local_connection_ids, vec!["local"]);
+      assert_eq!(closed.remote_connection_ids, vec!["remote"]);
+      assert!(
+         sessions
+            .register_local("terminal", "one", "late".into())
+            .is_err()
+      );
+      assert_eq!(
+         sessions.take_window("editor").local_connection_ids,
+         vec!["keep"]
+      );
    }
 }

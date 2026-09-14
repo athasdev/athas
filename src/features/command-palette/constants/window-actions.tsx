@@ -1,3 +1,8 @@
+import {
+  openStandaloneContentWindow,
+  openTerminalWindow,
+} from "@/features/window/detached/standalone-content-service";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ArrowsInIcon, ArrowsOutIcon } from "@/ui/icons";
 import type { Action } from "../types/action.types";
 
@@ -9,6 +14,29 @@ export const createWindowActions = (params: WindowActionsParams): Action[] => {
   const { onClose } = params;
 
   return [
+    ...(
+      [
+        ["terminal", "Terminal"],
+        ["settings", "Settings"],
+        ["extensions", "Extensions"],
+      ] as const
+    )
+      .filter(
+        ([type]) =>
+          type !== "terminal" || useSettingsStore.getState().settings.coreFeatures.terminal,
+      )
+      .map(([type, label]): Action => ({
+        id: `window-new-${type}`,
+        label: `Window: New ${label} Window`,
+        description: `Open ${label.toLowerCase()} in its own window`,
+        icon: <ArrowsOutIcon />,
+        category: "Window",
+        action: async () => {
+          onClose();
+          if (type === "terminal") await openTerminalWindow();
+          else await openStandaloneContentWindow({ type });
+        },
+      })),
     {
       id: "window-minimize",
       label: "Window: Minimize",

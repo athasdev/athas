@@ -8,6 +8,17 @@ const { getTerminalCommandConfirmationMessage } = __test__;
 const { createWindowOpenRequestQueue } = __test__;
 
 describe("parseWindowOpenUrl", () => {
+  it("hands content to an editor window without accepting content from deep links", () => {
+    const content = { type: "diff", path: "/repo/file.ts", name: "Changes", content: "diff" };
+    for (const origin of ["http://127.0.0.1:1420", "tauri://localhost", "http://tauri.localhost"]) {
+      const url = new URL(`${origin}/?target=open&athasWindowTraceId=main-2`);
+      url.searchParams.set("content", JSON.stringify(content));
+      expect(parseWindowOpenUrl(url)).toEqual({ content });
+    }
+    const url = new URL("athas://open?target=open&athasWindowTraceId=main-2");
+    url.searchParams.set("content", JSON.stringify({ type: "terminal", command: "untrusted" }));
+    expect(parseWindowOpenUrl(url)).toBeNull();
+  });
   it("parses file with line number", () => {
     const url = new URL("athas://open?path=/Users/test/foo.txt&line=42");
     const result = parseWindowOpenUrl(url);

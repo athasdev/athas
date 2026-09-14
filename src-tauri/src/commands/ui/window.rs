@@ -28,12 +28,15 @@ const ATHAS_WINDOWS_LIGHT_ACRYLIC_TINT: VibrancyColor = (245, 245, 245, 125);
 
 static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateAppWindowRequest {
    /// A bare window that hosts one thing (an agent session, a pull request)
    /// and talks to its owner window over a broadcast channel.
    pub detached: Option<DetachedWindowRequest>,
+   pub content: Option<serde_json::Value>,
+   pub workbench_content: Option<serde_json::Value>,
+   pub working_directory: Option<String>,
    pub path: Option<String>,
    pub is_directory: Option<bool>,
    pub line: Option<u32>,
@@ -76,6 +79,31 @@ mod agent_window_tests {
    }
 
    #[test]
+   fn standalone_content_is_self_contained_and_encoded() {
+      let request = CreateAppWindowRequest {
+         content: Some(
+            serde_json::json!({ "type": "terminal", "command": "echo 'a & b'", "workingDirectory": "/my project" }),
+         ),
+         working_directory: Some("/my project".into()),
+         ..Default::default()
+      };
+      let url = tauri::Url::parse(&format!(
+         "https://athas.local{}",
+         build_window_open_url(Some(&request), "main-4", 123)
+      ))
+      .unwrap();
+      let query = url
+         .query_pairs()
+         .collect::<std::collections::HashMap<_, _>>();
+      assert_eq!(query["kind"], "standalone");
+      let payload: serde_json::Value = serde_json::from_str(&query["payload"]).unwrap();
+      assert_eq!(payload["content"]["command"], "echo 'a & b'");
+      assert_eq!(payload["workspacePath"], "/my project");
+      assert_eq!(window_title_for_request(Some(&request)), "Terminal - Athas");
+      assert!(!query.contains_key("target"));
+   }
+
+   #[test]
    fn preserves_directory_window_requests() {
       let request: CreateAppWindowRequest = serde_json::from_value(serde_json::json!({
          "path": "/workspace/project", "isDirectory": true
@@ -108,6 +136,32 @@ fn build_window_open_url(
    let Some(request) = request else {
       return append_window_trace_params("/".to_string(), label, created_at_ms);
    };
+
+   if let Some(content) = &request.workbench_content {
+      let mut serializer = url::form_urlencoded::Serializer::new(String::new());
+      serializer.append_pair("target", "open");
+      serializer.append_pair("content", &content.to_string());
+      return append_window_trace_params(
+         format!("/?{}", serializer.finish()),
+         label,
+         created_at_ms,
+      );
+   }
+
+   if let Some(content) = &request.content {
+      let payload =
+         serde_json::json!({ "content": content, "workspacePath": request.working_directory });
+      let mut serializer = url::form_urlencoded::Serializer::new(String::new());
+      serializer.append_pair("view", "detached");
+      serializer.append_pair("kind", "standalone");
+      serializer.append_pair("channel", label);
+      serializer.append_pair("payload", &payload.to_string());
+      return append_window_trace_params(
+         format!("/?{}", serializer.finish()),
+         label,
+         created_at_ms,
+      );
+   }
 
    if let Some(detached) = &request.detached {
       let mut serializer = url::form_urlencoded::Serializer::new(String::new());
@@ -160,6 +214,9 @@ fn build_window_open_url(
 
 fn window_open_request_kind(request: Option<&CreateAppWindowRequest>) -> &'static str {
    match request {
+      Some(request) if request.content.is_some() => "standalone",
+      Some(request) if request.detached.is_some() => "detached",
+      Some(request) if request.workbench_content.is_some() => "content",
       Some(request) if request.remote_connection_id.is_some() => "remote",
       Some(request) if request.path.is_some() && request.is_directory.unwrap_or(false) => {
          "directory"
@@ -177,6 +234,15 @@ fn window_open_created_at_ms() -> u128 {
 }
 
 fn window_title_for_request(request: Option<&CreateAppWindowRequest>) -> String {
+   if let Some(content) = request.and_then(|request| request.content.as_ref()) {
+      let title = match content["type"].as_str() {
+         Some("terminal") => "Terminal",
+         Some("settings") => "Settings",
+         Some("extensions") => "Extensions",
+         _ => "Athas",
+      };
+      return format!("{title} - Athas");
+   }
    if let Some(detached) = request.and_then(|request| request.detached.as_ref()) {
       return if detached.kind == "agent" {
          "Agents - Athas".to_string()

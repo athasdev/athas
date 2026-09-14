@@ -1,28 +1,35 @@
 use serde::Serialize;
 use std::{
+   collections::HashMap,
    path::{Path, PathBuf},
    sync::Mutex,
 };
 use tauri::State;
 
 #[derive(Default)]
-pub struct PendingCliOpenRequests(Mutex<Vec<CliRequest>>);
+pub struct PendingCliOpenRequests(Mutex<HashMap<String, Vec<CliRequest>>>);
 
 impl PendingCliOpenRequests {
-   pub fn push_all(&self, requests: Vec<CliRequest>) {
+   pub fn push_all(&self, label: &str, requests: Vec<CliRequest>) {
       if requests.is_empty() {
          return;
       }
 
       let mut pending = self.0.lock().expect("pending CLI requests lock poisoned");
-      pending.extend(requests);
+      pending
+         .entry(label.to_string())
+         .or_default()
+         .extend(requests);
    }
 }
 
 #[tauri::command]
-pub fn take_pending_cli_open_requests(state: State<'_, PendingCliOpenRequests>) -> Vec<CliRequest> {
+pub fn take_pending_cli_open_requests(
+   window: tauri::WebviewWindow<crate::app_runtime::AthasRuntime>,
+   state: State<'_, PendingCliOpenRequests>,
+) -> Vec<CliRequest> {
    let mut pending = state.0.lock().expect("pending CLI requests lock poisoned");
-   let requests = std::mem::take(&mut *pending);
+   let requests = pending.remove(window.label()).unwrap_or_default();
    if !requests.is_empty() {
       log::info!("Drained {} pending CLI open request(s)", requests.len());
    }
@@ -39,6 +46,15 @@ pub struct OpenRequest {
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CliRequest {
+   NewWindow {
+      request: Box<CliRequest>,
+   },
+   Surface {
+      name: String,
+      working_directory: String,
+      resource_id: Option<u64>,
+   },
+   Empty,
    Path {
       path: String,
       is_directory: bool,
@@ -106,6 +122,21 @@ pub fn parse_open_arg(arg: &str, cwd: &Path) -> Option<OpenRequest> {
    })
 }
 
+fn quote_command_arg(arg: &str) -> String {
+   if !arg.is_empty()
+      && arg
+         .chars()
+         .all(|c| c.is_ascii_alphanumeric() || "_./:=+-".contains(c))
+   {
+      return arg.to_string();
+   }
+   if cfg!(windows) {
+      format!("\"{}\"", arg.replace('"', "\\\""))
+   } else {
+      format!("'{}'", arg.replace('\'', "'\\''"))
+   }
+}
+
 fn is_chromium_runtime_arg(arg: &str) -> bool {
    matches!(
       arg,
@@ -118,12 +149,8 @@ fn is_chromium_runtime_arg(arg: &str) -> bool {
    )
 }
 
-pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
-   let args = args
-      .iter()
-      .map(String::as_str)
-      .filter(|arg| !is_chromium_runtime_arg(arg))
-      .collect::<Vec<_>>();
+fn parse_reused_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
+   let args = args.iter().map(String::as_str).collect::<Vec<_>>();
 
    if args.is_empty() {
       return Vec::new();
@@ -133,10 +160,10 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
       "help" | "-h" | "--help" => Vec::new(),
       "open" => args[1..]
          .iter()
-         .filter(|arg| !arg.starts_with('-'))
-         .filter_map(|arg| parse_open_arg(arg, cwd).map(CliRequest::from))
-         .collect(),
-      "web" => args
+         .map(|arg| parse_open_arg(arg, cwd).map(CliRequest::from))
+         .collect::<Option<Vec<_>>>()
+         .unwrap_or_default(),
+      "web" if args.len() == 2 => args
          .get(1)
          .map(|url| {
             vec![CliRequest::Web {
@@ -151,7 +178,15 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
             .to_string_lossy()
             .into_owned();
          let command = if args.len() > 1 {
-            Some(args[1..].join(" "))
+            Some(if args.len() == 2 {
+               args[1].to_string()
+            } else {
+               args[1..]
+                  .iter()
+                  .map(|arg| quote_command_arg(arg))
+                  .collect::<Vec<_>>()
+                  .join(" ")
+            })
          } else {
             None
          };
@@ -174,9 +209,109 @@ pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
          .collect(),
       _ => args
          .iter()
-         .filter(|arg| !arg.starts_with('-'))
-         .filter_map(|arg| parse_open_arg(arg, cwd).map(CliRequest::from))
-         .collect(),
+         .map(|arg| parse_open_arg(arg, cwd).map(CliRequest::from))
+         .collect::<Option<Vec<_>>>()
+         .unwrap_or_default(),
+   }
+}
+
+pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
+   let mut args = args
+      .iter()
+      .skip_while(|arg| is_chromium_runtime_arg(arg))
+      .cloned()
+      .collect::<Vec<_>>();
+   let mut new_window = None;
+   let mut working_directory = cwd.to_path_buf();
+   let mut index = 0;
+   while index < args.len() {
+      match args[index].as_str() {
+         "--" => {
+            args.remove(index);
+            break;
+         }
+         "--new-window" | "-n" => {
+            new_window = Some(true);
+            args.remove(index);
+         }
+         "--reuse-window" | "-r" => {
+            new_window = Some(false);
+            args.remove(index);
+         }
+         "--cwd" => {
+            if index + 1 >= args.len() {
+               return Vec::new();
+            }
+            working_directory = cwd.join(&args[index + 1]);
+            if !working_directory.is_dir() {
+               return Vec::new();
+            }
+            args.drain(index..=index + 1);
+         }
+         "terminal" | "term" if index == 0 => {
+            index += 1;
+         }
+         value if value.starts_with('-') => return Vec::new(),
+         _ if index > 0
+            && matches!(args.first().map(String::as_str), Some("terminal" | "term")) =>
+         {
+            break;
+         }
+         _ => {
+            index += 1;
+         }
+      }
+   }
+   let command = args.first().map(String::as_str).unwrap_or("");
+   let standalone = matches!(
+      command,
+      "terminal" | "term" | "settings" | "extensions" | "pr" | "issue" | "action"
+   );
+   let requests = match command {
+      "window" if args.len() == 1 => vec![CliRequest::Empty],
+      "" if new_window == Some(true) => vec![CliRequest::Empty],
+      "settings" | "extensions" | "pr" | "issue" | "action" => {
+         let expected = if matches!(command, "pr" | "issue" | "action") {
+            2
+         } else {
+            1
+         };
+         if args.len() != expected {
+            return Vec::new();
+         }
+         let resource_id = if matches!(command, "pr" | "issue" | "action") {
+            match args
+               .get(1)
+               .and_then(|id| id.parse::<u64>().ok())
+               .filter(|id| *id > 0)
+            {
+               Some(id) => Some(id),
+               None => return Vec::new(),
+            }
+         } else {
+            None
+         };
+         vec![CliRequest::Surface {
+            name: command.to_string(),
+            working_directory: working_directory
+               .canonicalize()
+               .unwrap_or(working_directory)
+               .to_string_lossy()
+               .into_owned(),
+            resource_id,
+         }]
+      }
+      _ => parse_reused_cli_args(&args, &working_directory),
+   };
+   if new_window.unwrap_or(standalone || command == "window") {
+      requests
+         .into_iter()
+         .map(|request| CliRequest::NewWindow {
+            request: Box::new(request),
+         })
+         .collect()
+   } else {
+      requests
    }
 }
 
@@ -391,9 +526,11 @@ mod tests {
 
       assert_eq!(
          parse_cli_args(&args, &cwd),
-         vec![CliRequest::Terminal {
-            command: Some("npm test".to_string()),
-            working_directory: Some(cwd.canonicalize().unwrap().to_string_lossy().into_owned()),
+         vec![CliRequest::NewWindow {
+            request: Box::new(CliRequest::Terminal {
+               command: Some("npm test".to_string()),
+               working_directory: Some(cwd.canonicalize().unwrap().to_string_lossy().into_owned()),
+            })
          }]
       );
    }
@@ -458,10 +595,110 @@ mod tests {
 
       assert_eq!(
          parse_cli_argv(&args, &cwd),
-         vec![CliRequest::Terminal {
-            command: Some("bun test".to_string()),
-            working_directory: Some(cwd.canonicalize().unwrap().to_string_lossy().into_owned()),
+         vec![CliRequest::NewWindow {
+            request: Box::new(CliRequest::Terminal {
+               command: Some("bun test".to_string()),
+               working_directory: Some(cwd.canonicalize().unwrap().to_string_lossy().into_owned()),
+            })
          }]
       );
+   }
+   #[cfg(unix)]
+   #[test]
+   fn terminal_options_preserve_command_arguments() {
+      let args = [
+         "terminal",
+         "--cwd",
+         ".",
+         "--",
+         "printf",
+         "%s",
+         "two words",
+         "$(echo unsafe)",
+         "--new-window",
+         "--disable-gpu",
+      ];
+      let requests = parse_cli_args(&args.map(String::from), Path::new("/"));
+      let CliRequest::NewWindow { request } = &requests[0] else {
+         panic!("expected new window")
+      };
+      let CliRequest::Terminal {
+         command,
+         working_directory,
+      } = request.as_ref()
+      else {
+         panic!("expected terminal")
+      };
+      assert_eq!(
+         command.as_deref(),
+         Some("printf '%s' 'two words' '$(echo unsafe)' --new-window --disable-gpu")
+      );
+      assert_eq!(working_directory.as_deref(), Some("/"));
+   }
+
+   #[test]
+   fn cwd_after_resource_id_and_short_window_flags() {
+      let cwd = std::env::current_dir().unwrap();
+      let requests = parse_cli_args(&["issue", "42", "--cwd", "."].map(String::from), &cwd);
+      let CliRequest::NewWindow { request } = &requests[0] else {
+         panic!("expected new window")
+      };
+      assert!(matches!(
+         request.as_ref(),
+         CliRequest::Surface {
+            resource_id: Some(42),
+            ..
+         }
+      ));
+      assert!(matches!(
+         parse_cli_args(&["open", "-n", "."].map(String::from), &cwd)[0],
+         CliRequest::NewWindow { .. }
+      ));
+      assert!(matches!(
+         parse_cli_args(&["terminal", "-r"].map(String::from), &cwd)[0],
+         CliRequest::Terminal { .. }
+      ));
+      assert!(matches!(
+         parse_cli_args(&["-n"].map(String::from), &cwd)[0],
+         CliRequest::NewWindow { .. }
+      ));
+   }
+
+   #[test]
+   fn rejects_invalid_options_and_missing_targets() {
+      let cwd = std::env::current_dir().unwrap();
+      for args in [
+         vec!["terminal", "--cwd"],
+         vec!["terminal", "--cwd", "/athas-nonexistent-dir-123"],
+         vec!["--unknown"],
+         vec!["issue", "0"],
+         vec!["pr"],
+         vec!["settings", "extra"],
+         vec!["open", ".", "/athas-nonexistent-dir-123"],
+      ] {
+         assert!(
+            parse_cli_args(
+               &args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>(),
+               &cwd
+            )
+            .is_empty(),
+            "{args:?}"
+         );
+      }
+   }
+
+   #[test]
+   fn pending_requests_belong_to_the_target_window() {
+      let state = PendingCliOpenRequests::default();
+      state.push_all("main-1", vec![CliRequest::Empty]);
+      state.push_all(
+         "main-2",
+         vec![CliRequest::Web {
+            url: "https://athas.dev".into(),
+         }],
+      );
+      let mut pending = state.0.lock().unwrap();
+      assert_eq!(pending.remove("main-1").unwrap(), vec![CliRequest::Empty]);
+      assert_eq!(pending["main-2"].len(), 1);
    }
 }

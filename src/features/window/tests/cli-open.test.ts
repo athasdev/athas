@@ -4,6 +4,23 @@ import { __test__ } from "../hooks/use-cli-open";
 const { mapCliOpenPayloadToWindowOpenRequest } = __test__;
 
 describe("CLI open request mapping", () => {
+  it("opens tool and repository content when the CLI reuses an editor", () => {
+    expect(mapCliOpenPayloadToWindowOpenRequest({ kind: "surface", name: "settings" })).toEqual({
+      source: "cli",
+      content: { type: "settings" },
+    });
+    expect(
+      mapCliOpenPayloadToWindowOpenRequest({
+        kind: "surface",
+        name: "issue",
+        resource_id: 42,
+        working_directory: "/repo",
+      }),
+    ).toEqual({
+      source: "cli",
+      content: { type: "githubIssue", issueNumber: 42, repoPath: "/repo" },
+    });
+  });
   it("maps path payloads into queued window open requests", () => {
     expect(
       mapCliOpenPayloadToWindowOpenRequest({

@@ -23,7 +23,14 @@ pub fn configure_app(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn s
    app.state::<commands::ui::StartupTiming>()
       .record("native:setup:start");
    #[cfg(all(target_os = "linux", feature = "linux"))]
-   create_initial_linux_window(app)?;
+   if commands::development::cli_windows::requests_need_workbench(
+      &commands::development::cli_args::parse_cli_argv(
+         &std::env::args().collect::<Vec<_>>(),
+         &std::env::current_dir().unwrap_or_default(),
+      ),
+   ) {
+      create_initial_linux_window(app)?;
+   }
    configure_menu(app)?;
    #[cfg(target_os = "macos")]
    if let Err(error) = crate::bootstrap::macos::install_dock_menu(app.handle()) {
@@ -140,16 +147,7 @@ fn emit_cli_open_requests(app: &tauri::App<AthasRuntime>) {
    let args: Vec<String> = std::env::args().collect();
    let open_requests = commands::development::cli_args::parse_cli_argv(&args, &cwd);
 
-   if open_requests.is_empty() {
-      return;
-   }
-
-   log::info!(
-      "Queued {} CLI open request(s) for frontend",
-      open_requests.len()
-   );
-   app.state::<commands::development::cli_args::PendingCliOpenRequests>()
-      .push_all(open_requests);
+   queue_cli_requests(app.handle(), open_requests);
 }
 
 pub fn handle_single_instance_open(
@@ -157,38 +155,78 @@ pub fn handle_single_instance_open(
    args: Vec<String>,
    cwd: String,
 ) {
-   let cwd = PathBuf::from(cwd);
-   let open_requests = commands::development::cli_args::parse_cli_argv(&args, &cwd);
-   let app_handle = app_handle.clone();
-
-   tauri::async_runtime::spawn(async move {
-      focus_active_window(&app_handle);
-
+   let open_requests = commands::development::cli_args::parse_cli_argv(&args, &PathBuf::from(cwd));
+   let app = app_handle.clone();
+   if let Err(error) = app_handle.run_on_main_thread(move || {
       if open_requests.is_empty() {
-         return;
+         if get_active_webview_window(&app).is_none() {
+            if let Err(error) = commands::ui::window::create_app_window_internal(&app, None) {
+               log::error!("Failed to open window: {error}");
+            }
+         } else {
+            focus_active_window(&app);
+         }
+      } else {
+         queue_cli_requests(&app, open_requests);
       }
+   }) {
+      log::error!("Failed to route CLI request: {error}");
+   }
+}
 
-      queue_cli_requests(&app_handle, open_requests);
-   });
+fn get_workbench_window(
+   app: &tauri::AppHandle<AthasRuntime>,
+) -> Option<tauri::WebviewWindow<AthasRuntime>> {
+   let is_workbench = |window: &tauri::WebviewWindow<AthasRuntime>| {
+      window.url().is_ok_and(|url| {
+         !url
+            .query_pairs()
+            .any(|(key, value)| key == "view" && value == "detached")
+      })
+   };
+   get_active_webview_window(app)
+      .filter(is_workbench)
+      .or_else(|| app.webview_windows().into_values().find(is_workbench))
 }
 
 fn queue_cli_requests(
-   app_handle: &tauri::AppHandle<AthasRuntime>,
-   open_requests: Vec<commands::development::cli_args::CliRequest>,
+   app: &tauri::AppHandle<AthasRuntime>,
+   requests: Vec<commands::development::cli_args::CliRequest>,
 ) {
-   if open_requests.is_empty() {
+   use commands::development::{cli_args::CliRequest, cli_windows::window_request};
+   let mut pending = Vec::new();
+   for request in requests {
+      match request {
+         CliRequest::NewWindow { request } if !matches!(*request, CliRequest::Web { .. }) => {
+            if let Err(error) =
+               commands::ui::window::create_app_window_internal(app, Some(window_request(*request)))
+            {
+               log::error!("Failed to open CLI window: {error}");
+            }
+         }
+         CliRequest::NewWindow { request } => pending.push(*request),
+         request => pending.push(request),
+      }
+   }
+   if pending.is_empty() {
       return;
    }
-
-   let request_count = open_requests.len();
-   app_handle
-      .state::<commands::development::cli_args::PendingCliOpenRequests>()
-      .push_all(open_requests);
-
-   if let Err(error) = app_handle.emit("cli_open_requests_pending", ()) {
+   let window = get_workbench_window(app).or_else(|| {
+      commands::ui::window::create_app_window_internal(app, None)
+         .ok()
+         .and_then(|label| app.get_webview_window(&label))
+   });
+   let Some(window) = window else {
+      log::error!("Failed to create a workbench for CLI requests");
+      return;
+   };
+   app.state::<commands::development::cli_args::PendingCliOpenRequests>()
+      .push_all(window.label(), pending);
+   let _ = window.unminimize();
+   let _ = window.show();
+   let _ = window.set_focus();
+   if let Err(error) = app.emit_to(window.label(), "cli_open_requests_pending", ()) {
       log::error!("Failed to signal pending open requests: {error}");
-   } else {
-      log::info!("Queued {request_count} open request(s) for frontend");
    }
 }
 

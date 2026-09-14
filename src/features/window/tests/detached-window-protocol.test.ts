@@ -12,6 +12,11 @@ describe("parseDetachedWindowUrl", () => {
     expect(
       parseDetachedWindowUrl(new URL("http://localhost/?view=detached&kind=resource&channel=r-1")),
     ).toEqual({ kind: "resource", channel: "r-1" });
+    expect(
+      parseDetachedWindowUrl(
+        new URL("http://localhost/?view=detached&kind=standalone&channel=main-1"),
+      ),
+    ).toEqual({ kind: "standalone", channel: "main-1" });
   });
 
   it("passes the payload through untouched", () => {

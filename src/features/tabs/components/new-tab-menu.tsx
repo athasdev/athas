@@ -1,3 +1,4 @@
+import { openTerminalWindow } from "@/features/window/detached/standalone-content-service";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
@@ -52,6 +53,12 @@ export function NewTabMenu({ paneId }: { paneId: string }) {
           <DropdownMenuItem onClick={() => createInPane(openTerminalBuffer)}>
             <TerminalWindowIcon />
             New Terminal
+          </DropdownMenuItem>
+        )}
+        {terminalEnabled && (
+          <DropdownMenuItem onClick={() => void openTerminalWindow()}>
+            <TerminalWindowIcon />
+            New Terminal Window
           </DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={() => createInPane(openAgent)}>

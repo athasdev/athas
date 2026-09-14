@@ -7,6 +7,9 @@ import { initializeThemeSystem } from "@/extensions/themes/theme-initializer";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { REQUEST_WINDOW_CLOSE_EVENT } from "@/features/window/utils/request-window-close";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { initializeFrontendTerminalSession } from "@/features/terminal/utils/frontend-terminal-session";
+import { frontendTrace } from "@/utils/frontend-trace";
 import { applyPlatformClass } from "@/utils/platform";
 import {
   type DetachedWindowBaseMessage,
@@ -43,6 +46,7 @@ export function useDetachedWindow<Message extends { type: string }>({
   onMessage,
   onCloseRequest,
 }: UseDetachedWindowOptions<Message>) {
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const target = useMemo(() => parseDetachedWindowUrl(new URL(window.location.href)), []);
   const channelRef = useRef<BroadcastChannel | null>(null);
@@ -89,32 +93,60 @@ export function useDetachedWindow<Message extends { type: string }>({
       channel.postMessage({ type: "workbench", content });
       return "detached-workbench-request";
     };
-    useBufferStore.setState({
-      actions: {
-        ...bufferActions,
-        openContent: openInOwner,
-        openSettingsBuffer: () => {
-          const state = useUIState.getState();
-          channel.postMessage({
-            type: "settings",
-            tab: state.settingsInitialTab ?? undefined,
-            section: state.settingsInitialSection ?? undefined,
-          });
-          return "detached-settings-request";
-        },
-        setActiveBuffer: (id) => {
-          const item = useBufferStore.getState().buffers.find((candidate) => candidate.id === id);
-          if (item?.type === "editor") {
-            openInOwner({
-              type: "editor",
-              path: item.path,
-              name: item.name,
-              content: item.content,
+    if (kind !== "standalone")
+      useBufferStore.setState({
+        actions: {
+          ...bufferActions,
+          openContent: openInOwner,
+          openSettingsBuffer: () => {
+            const state = useUIState.getState();
+            channel.postMessage({
+              type: "settings",
+              tab: state.settingsInitialTab ?? undefined,
+              section: state.settingsInitialSection ?? undefined,
             });
-          }
+            return "detached-settings-request";
+          },
+          setActiveBuffer: (id) => {
+            const item = useBufferStore.getState().buffers.find((candidate) => candidate.id === id);
+            if (item?.type === "editor") {
+              openInOwner({
+                type: "editor",
+                path: item.path,
+                name: item.name,
+                content: item.content,
+              });
+            }
+          },
         },
-      },
-    });
+      });
+
+    if (kind === "standalone") {
+      useBufferStore.setState({
+        actions: {
+          ...bufferActions,
+          openContent: (content) => {
+            if (
+              [
+                "terminal",
+                "settings",
+                "extensions",
+                "extension",
+                "pullRequest",
+                "githubIssue",
+                "githubAction",
+                "githubDelivery",
+                "githubForm",
+              ].includes(content.type)
+            ) {
+              return bufferActions.openContent(content);
+            }
+            void createAppWindow({ workbenchContent: content }).catch(console.error);
+            return "standalone-workbench-request";
+          },
+        },
+      });
+    }
 
     const requestClose = () => onCloseRequestRef.current();
     const listeners = Promise.all([
@@ -135,9 +167,22 @@ export function useDetachedWindow<Message extends { type: string }>({
     window.addEventListener("keydown", onKeyDown);
 
     void useAuthStore.getState().actions.initialize().catch(console.error);
-    void Promise.all([initializeSettingsStore(), initializeThemeSystem(), listeners])
+    const startedAt = performance.now();
+    void Promise.all([
+      initializeSettingsStore(),
+      initializeThemeSystem(),
+      listeners,
+      kind === "standalone" ? initializeFrontendTerminalSession() : Promise.resolve(),
+    ])
       .then(() => {
-        if (!disposed) channel.postMessage({ type: "ready" });
+        if (!disposed) {
+          frontendTrace("info", "bench:detached-window", "ready", {
+            kind,
+            durationMs: Math.round(performance.now() - startedAt),
+          });
+          setReady(true);
+          channel.postMessage({ type: "ready" });
+        }
       })
       .catch((cause) => {
         if (!disposed) setError(String(cause));
@@ -154,5 +199,5 @@ export function useDetachedWindow<Message extends { type: string }>({
     };
   }, [kind, openLocally, post, target]);
 
-  return { error, post, openLocally, payload: target?.payload ?? null };
+  return { error, ready, post, openLocally, payload: target?.payload ?? null };
 }

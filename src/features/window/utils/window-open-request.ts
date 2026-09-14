@@ -5,6 +5,8 @@ import type { DetachedWindowTarget } from "@/features/window/detached/detached-w
 export interface WindowOpenRequest {
   /** Open a bare window that hosts one thing and talks to this window over the channel. */
   detached?: DetachedWindowTarget;
+  content?: import("@/features/panes/types/pane-content.types").OpenContentSpec;
+  workbenchContent?: import("@/features/panes/types/pane-content.types").OpenContentSpec;
   type?: "path" | "remote" | "web" | "terminal" | "settings";
   source?: "app" | "cli" | "deepLink";
   path?: string;
@@ -75,6 +77,19 @@ export function parseWindowOpenUrl(url: URL): WindowOpenRequest | null {
   const target = url.searchParams.get("target");
   if (target !== "open" && url.host !== "open") return null;
 
+  const content = url.searchParams.get("content");
+  const isAppUrl =
+    (url.protocol === "tauri:" && url.hostname === "localhost") ||
+    (["http:", "https:"].includes(url.protocol) &&
+      ["localhost", "127.0.0.1", "tauri.localhost"].includes(url.hostname));
+  if (content && isAppUrl && url.searchParams.has("athasWindowTraceId")) {
+    try {
+      return { content: JSON.parse(content) };
+    } catch {
+      return null;
+    }
+  }
+
   const type = url.searchParams.get("type");
   if (type === "remote") {
     const remoteConnectionId = url.searchParams.get("connectionId");
@@ -125,6 +140,11 @@ export function parseWindowOpenUrl(url: URL): WindowOpenRequest | null {
 }
 
 async function handleWindowOpenRequest(request: WindowOpenRequest) {
+  if (request.content) {
+    if (request.source === "deepLink") return;
+    useBufferStore.getState().actions.openContent(request.content);
+    return;
+  }
   const { handleFileSelect, handleOpenFolderByPath, handleOpenRemoteProject } =
     useFileSystemStore.getState();
 

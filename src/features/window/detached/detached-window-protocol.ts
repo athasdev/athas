@@ -6,7 +6,7 @@ import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-sta
  * its own window component, but they all share the window shell, the
  * BroadcastChannel transport and the base messages below.
  */
-export type DetachedWindowKind = "agent" | "resource";
+export type DetachedWindowKind = "agent" | "resource" | "standalone";
 
 export interface DetachedWindowTarget {
   kind: DetachedWindowKind;
@@ -18,7 +18,7 @@ export interface DetachedWindowTarget {
   payload?: string;
 }
 
-const DETACHED_WINDOW_KINDS: readonly DetachedWindowKind[] = ["agent", "resource"];
+const DETACHED_WINDOW_KINDS: readonly DetachedWindowKind[] = ["agent", "resource", "standalone"];
 const CHANNEL_PATTERN = /^[a-zA-Z0-9-]+$/;
 
 export function parseDetachedWindowUrl(url: URL): DetachedWindowTarget | null {

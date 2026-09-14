@@ -14,6 +14,10 @@ const DetachedResourceWindow = lazy(
   () => import("./features/window/detached/detached-resource-window"),
 );
 
+const StandaloneContentWindow = lazy(
+  () => import("./features/window/detached/standalone-content-window"),
+);
+
 function isBlankWindowOpen() {
   const diagnostics = getWindowOpenDiagnostics();
   return Boolean(diagnostics.traceId && !diagnostics.target);
@@ -88,6 +92,8 @@ function App({ terminalSessionReady }: AppProps) {
     <Suspense fallback={<InitialWindowShell />}>
       {detachedWindow?.kind === "agent" ? (
         <DetachedAgentWindow />
+      ) : detachedWindow?.kind === "standalone" ? (
+        <StandaloneContentWindow />
       ) : detachedWindow?.kind === "resource" ? (
         <DetachedResourceWindow />
       ) : (

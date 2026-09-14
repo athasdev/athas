@@ -1,3 +1,4 @@
+import { openTerminalWindow } from "@/features/window/detached/standalone-content-service";
 import {
   ArrowCounterClockwiseIcon,
   ColumnsIcon,
@@ -94,6 +95,18 @@ const TerminalTabContextMenu = ({
         {
           id: "terminal",
           items: [
+            {
+              id: "new-window",
+              label: "New Terminal Window Here",
+              icon: <TerminalWindowIcon />,
+              onClick: () => {
+                void openTerminalWindow({
+                  workingDirectory: terminal.currentDirectory,
+                  shell: terminal.shell,
+                  remoteConnectionId: terminal.remoteConnectionId,
+                });
+              },
+            },
             {
               id: "duplicate",
               label: "Duplicate Terminal",

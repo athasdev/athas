@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { enqueueWindowOpenRequest, type WindowOpenRequest } from "../utils/window-open-request";
 
 export interface CliOpenPayload {
-  kind: "path" | "web" | "terminal" | "remote";
+  kind: "path" | "web" | "terminal" | "remote" | "surface" | "empty";
   path?: string;
   is_directory?: boolean;
   line?: number | null;
@@ -14,6 +14,7 @@ export interface CliOpenPayload {
   working_directory?: string | null;
   connection_id?: string;
   name?: string | null;
+  resource_id?: number;
 }
 
 const toPositiveInteger = (value: number | null | undefined) =>
@@ -21,6 +22,24 @@ const toPositiveInteger = (value: number | null | undefined) =>
 
 function mapCliOpenPayloadToWindowOpenRequest(payload: CliOpenPayload): WindowOpenRequest | null {
   switch (payload.kind) {
+    case "surface": {
+      const repoPath = payload.working_directory ?? undefined;
+      const content =
+        payload.name === "pr"
+          ? { type: "pullRequest" as const, prNumber: payload.resource_id!, repoPath }
+          : payload.name === "issue"
+            ? { type: "githubIssue" as const, issueNumber: payload.resource_id!, repoPath }
+            : payload.name === "action"
+              ? { type: "githubAction" as const, runId: payload.resource_id!, repoPath }
+              : payload.name === "settings"
+                ? { type: "settings" as const }
+                : payload.name === "extensions"
+                  ? { type: "extensions" as const }
+                  : null;
+      return content ? { source: "cli", content } : null;
+    }
+    case "empty":
+      return null;
     case "web":
       if (!payload.url) return null;
       return {
@@ -87,7 +106,9 @@ export function useCliOpen() {
     };
 
     const unlistenPending = listen<void>("cli_open_requests_pending", drainPendingRequests);
-    drainPendingRequests();
+    void Promise.all([unlisten, unlistenPending]).then(() => {
+      if (!disposed) drainPendingRequests();
+    });
 
     return () => {
       disposed = true;

@@ -1,5 +1,6 @@
 pub mod cli;
 pub mod cli_args;
+pub mod cli_windows;
 pub mod debugger;
 pub mod docker;
 pub mod ide_recents;

@@ -8,13 +8,16 @@ interface CreateAppWindowPayload {
 
 export async function createAppWindow(request?: WindowOpenRequest | null) {
   const startedAt = performance.now();
-  const requestKind = request?.remoteConnectionId
-    ? "remote"
-    : request?.path
-      ? request.isDirectory
-        ? "directory"
-        : "file"
-      : "empty";
+  const requestKind =
+    request?.content?.type ??
+    request?.detached?.kind ??
+    (request?.remoteConnectionId
+      ? "remote"
+      : request?.path
+        ? request.isDirectory
+          ? "directory"
+          : "file"
+        : "empty");
 
   traceWindowOpen("createAppWindow:invoke:start", { requestKind });
 
