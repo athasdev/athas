@@ -4,7 +4,7 @@ import type { FileNavigatorItem } from "@/features/file-explorer/components/file
 import {
   getReviewFileNavigationDirection,
   ReviewFileStepper,
-} from "../components/review-file-stepper";
+} from "../components/diff/review-file-stepper";
 
 const items: FileNavigatorItem[] = [
   { key: "src/first.ts", path: "src/first.ts" },

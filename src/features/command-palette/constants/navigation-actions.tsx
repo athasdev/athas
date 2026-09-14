@@ -4,14 +4,12 @@ import {
   FolderOpenIcon,
   GitBranchIcon,
   GitPullRequestIcon,
-  ListChecksIcon,
   ListIcon,
   PackageIcon,
   SearchIcon,
   StackIcon,
 } from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import { setOutlineVisibilityPreference } from "@/features/outline/actions/outline-visibility";
 import type {
@@ -28,7 +26,6 @@ interface NavigationActionsParams {
   setIsQuickOpenVisible: (v: boolean) => void;
   openCommandPaletteView?: (view: "outline") => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
-  coreFeatures: { git: boolean };
   hasActiveEditor: boolean;
   onClose: () => void;
 }
@@ -41,7 +38,6 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     setBottomPaneActiveTab,
     setIsQuickOpenVisible,
     openCommandPaletteView,
-    coreFeatures,
     hasActiveEditor,
     onClose,
   } = params;
@@ -86,30 +82,6 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
         onClose();
       },
     },
-    ...(coreFeatures.git
-      ? [
-          {
-            id: "view-show-review",
-            label: "Source Control: Show Review",
-            description: "Open review checkpoints in Source Control",
-            icon: <ListChecksIcon />,
-            category: "Navigation",
-            action: () => {
-              useSidebarStore.getState().actions.setGitSection("review");
-              setIsSidebarVisible(true);
-              setActiveView("git");
-              window.setTimeout(() => {
-                window.dispatchEvent(
-                  new CustomEvent("athas:git-palette-action", {
-                    detail: { type: "show-tab", tab: "review" },
-                  }),
-                );
-              }, 0);
-              onClose();
-            },
-          } satisfies Action,
-        ]
-      : []),
     {
       id: "view-show-views",
       label: "View: Show Views",

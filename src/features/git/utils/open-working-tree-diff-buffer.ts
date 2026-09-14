@@ -44,12 +44,10 @@ export function openWorkingTreeDiffBuffer({
   repoPath,
   files,
   scope = "all",
-  reviewSession,
 }: {
   repoPath: string;
   files: GitFile[];
   scope?: WorkingTreeDiffScope;
-  reviewSession?: MultiFileDiff["reviewSession"];
 }): string | null {
   const diffEntries = getWorkingTreeDiffEntries(files, scope);
   if (diffEntries.length === 0) return null;
@@ -70,7 +68,6 @@ export function openWorkingTreeDiffBuffer({
       total: diffEntries.length,
       label: "Indexing",
     },
-    reviewSession,
   };
   const bufferId = useBufferStore
     .getState()

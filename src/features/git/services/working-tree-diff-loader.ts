@@ -100,7 +100,6 @@ export async function loadWorkingTreeDiffsProgressively({
         total,
         label: "Indexing",
       },
-      reviewSession: currentMultiDiff?.reviewSession,
     } satisfies MultiFileDiff);
     return true;
   };

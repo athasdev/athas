@@ -303,7 +303,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       setIsQuickOpenVisible,
       openCommandPaletteView,
       openSettingsDialog,
-      coreFeatures: commandSettings.coreFeatures,
       hasActiveEditor: activeBuffer?.type === "editor",
       onClose,
     }),

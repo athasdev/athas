@@ -3,11 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import { SourceControlNavigation } from "../components/source-control-navigation";
 
 describe("SourceControlNavigation", () => {
-  it("routes all six entries to sidebar sections", () => {
+  it("routes all five entries to sidebar sections", () => {
     const onSectionChange = vi.fn();
     const navigation = SourceControlNavigation({
       activeSection: "changes",
-      sectionOrder: ["changes", "history", "review"],
+      sectionOrder: ["changes", "history"],
       hiddenItemIds: [],
       changeCount: 4,
       commitCount: 12,
@@ -17,7 +17,6 @@ describe("SourceControlNavigation", () => {
     expect(items.map((item: { id: string }) => item.id)).toEqual([
       "changes",
       "history",
-      "review",
       "remotes",
       "tags",
       "stashes",
@@ -26,7 +25,6 @@ describe("SourceControlNavigation", () => {
     expect(onSectionChange.mock.calls).toEqual([
       ["changes"],
       ["history"],
-      ["review"],
       ["remotes"],
       ["tags"],
       ["stashes"],
@@ -35,27 +33,27 @@ describe("SourceControlNavigation", () => {
 
   it("preserves the configured order and hidden sections", () => {
     const navigation = SourceControlNavigation({
-      activeSection: "review",
-      sectionOrder: ["review", "changes", "history"],
-      hiddenItemIds: ["history", "tags"],
+      activeSection: "history",
+      sectionOrder: ["history", "changes"],
+      hiddenItemIds: ["tags"],
       changeCount: 4,
       commitCount: 12,
       onSectionChange: vi.fn(),
     });
     expect(navigation.props.items.map((item: { id: string }) => item.id)).toEqual([
-      "review",
+      "history",
       "changes",
       "remotes",
       "stashes",
     ]);
-    expect(navigation.props.value).toBe("review");
+    expect(navigation.props.value).toBe("history");
   });
 
   it("owns Source Control sections inside the secondary sidebar", () => {
     const markup = renderToStaticMarkup(
       <SourceControlNavigation
         activeSection="changes"
-        sectionOrder={["changes", "history", "review"]}
+        sectionOrder={["changes", "history"]}
         hiddenItemIds={["tags"]}
         changeCount={4}
         commitCount={12}

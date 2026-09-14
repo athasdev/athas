@@ -7,7 +7,7 @@ import {
   type FileNavigatorItem,
   type FileNavigatorTone,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
-import { ReviewWorkspace } from "@/features/review/components/review-workspace";
+import { ReviewWorkspace } from "@/features/git/components/diff/review-workspace";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";

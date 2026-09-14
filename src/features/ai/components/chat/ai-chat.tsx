@@ -34,7 +34,6 @@ import {
   sendAgentNativeNotification,
   type AgentNativeNotificationKind,
 } from "@/features/ai/services/agent-native-notifications";
-import { recordAgentToolDiffs } from "@/features/ai/lib/agent-session-changes";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { agentIsDetached } from "@/features/ai/detached/agent-window.store";
 import { peekAgentDraft } from "@/features/ai/detached/agent-window-drafts";
@@ -844,7 +843,6 @@ details: ${errorDetails || mainError}
           );
         },
         (toolName: string, toolId?: string, output?: unknown, error?: string) => {
-          if (!error) recordAgentToolDiffs(targetChatId, output);
           updateStreamingAssistantMessage(
             targetChatId,
             currentAssistantMessageId,

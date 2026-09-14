@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vite-plus/test";
 import type { FileNavigatorItem } from "@/features/file-explorer/components/file-navigator-sidebar";
-import { ReviewWorkspace } from "../components/review-workspace";
+import { ReviewWorkspace } from "../components/diff/review-workspace";
 
 const items: FileNavigatorItem[] = [
   { key: "src/first.ts", path: "src/first.ts" },

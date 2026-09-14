@@ -1,6 +1,6 @@
 import { memo, useMemo } from "react";
 import type { FileNavigatorItem } from "@/features/file-explorer/components/file-navigator-sidebar";
-import { ReviewWorkspace } from "@/features/review/components/review-workspace";
+import { ReviewWorkspace } from "@/features/git/components/diff/review-workspace";
 import {
   ViewerErrorState,
   ViewerLoadingState,

@@ -43,14 +43,7 @@ describe("orderChromeItems", () => {
       "docker",
       "extensions",
     ]);
-    expect(GIT_SIDEBAR_TAB_IDS).toEqual(["changes", "history", "review"]);
-    expect(GIT_SIDEBAR_ITEM_IDS).toEqual([
-      "changes",
-      "history",
-      "review",
-      "remotes",
-      "tags",
-      "stashes",
-    ]);
+    expect(GIT_SIDEBAR_TAB_IDS).toEqual(["changes", "history"]);
+    expect(GIT_SIDEBAR_ITEM_IDS).toEqual(["changes", "history", "remotes", "tags", "stashes"]);
   });
 });

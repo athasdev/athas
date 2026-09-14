@@ -11,7 +11,6 @@ interface OpenCommitDiffBufferOptions {
   author?: string;
   email?: string;
   date?: string;
-  reviewSession?: MultiFileDiff["reviewSession"];
 }
 
 export const openCommitDiffBuffer = async ({
@@ -22,7 +21,6 @@ export const openCommitDiffBuffer = async ({
   author,
   email,
   date,
-  reviewSession,
 }: OpenCommitDiffBufferOptions): Promise<string | null> => {
   const diffs = await getCommitDiff(repoPath, commitHash);
   if (!diffs || diffs.length === 0) {
@@ -44,7 +42,6 @@ export const openCommitDiffBuffer = async ({
     totalFiles: diffs.length,
     totalAdditions: additions,
     totalDeletions: deletions,
-    reviewSession,
   };
 
   const virtualPath = `diff://commit/${commitHash}/all-files`;

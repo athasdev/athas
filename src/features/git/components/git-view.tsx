@@ -13,7 +13,6 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import type { GitSidebarItemId } from "@/features/layout/config/item-order";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { ReviewSidebarPanel } from "@/features/review/components/review-sidebar";
 import { type GitActivitySection, useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
@@ -910,8 +909,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 searchQuery={historySearchQuery}
                 searchScope={historySearchScope}
               />
-            ) : gitSection === "review" ? (
-              <ReviewSidebarPanel />
             ) : gitSection === "remotes" ? (
               <GitRemoteManager
                 query={sidebarSearchQuery}

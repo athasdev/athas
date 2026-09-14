@@ -283,15 +283,15 @@ describe("settings normalization", () => {
     expect("energyEdge" in normalized.coreFeatures).toBe(false);
   });
 
-  it("removes legacy worktrees from git sidebar settings", () => {
+  it.each(["worktrees", "review"])("removes retired %s from git sidebar settings", (retired) => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
-      gitLastPanelMode: "worktrees" as never,
-      gitSidebarTabOrder: ["changes", "worktrees", "history"] as never,
+      gitLastPanelMode: retired as never,
+      gitSidebarTabOrder: ["changes", retired, "history"] as never,
     });
 
     expect(normalized.gitLastPanelMode).toBe("changes");
-    expect(normalized.gitSidebarTabOrder).toEqual(["changes", "history", "review"]);
+    expect(normalized.gitSidebarTabOrder).toEqual(["changes", "history"]);
   });
 
   it("preserves repository sections as the last Git sidebar mode", () => {
