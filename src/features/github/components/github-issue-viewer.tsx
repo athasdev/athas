@@ -326,8 +326,8 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
   );
 
   const addComment = useCallback(async () => {
-    if (!repoPath || !commentBody.trim()) return;
-    await runMutation(
+    if (!repoPath || !commentBody.trim() || details?.locked) return false;
+    return runMutation(
       "new-comment",
       () =>
         invoke<IssueComment>("github_add_issue_comment", {
@@ -723,13 +723,15 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 <GitHubCommentComposer
                   value={commentBody}
                   onChange={setCommentBody}
-                  onSubmit={() => void addComment()}
+                  onSubmit={addComment}
                   isSubmitting={mutationKey === "new-comment"}
                   disabled={details.locked || Boolean(mutationKey)}
                   placeholder={
                     details.locked ? "This conversation is locked" : "Leave a comment..."
                   }
                   currentUser={currentUser}
+                  repositoryUrl={repositoryUrl}
+                  repoPath={repoPath ?? undefined}
                 />
               </div>
             </ResourceSection>

@@ -400,15 +400,16 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
 
   const submitComment = useCallback(async () => {
     const body = commentDraft.trim();
-    if (!repoPath || !body || mutationKey) return;
+    if (!repoPath || !body || mutationKey) return false;
     setMutationKey("comment");
     try {
       await invoke("github_add_pr_comment", { repoPath, prNumber, body });
       setCommentDraft("");
-      await refreshPR("comments");
       toast.success("Comment added");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not add the comment");
+      void refreshPR("comments").catch(() => {
+        toast.error("Comment posted, but the conversation could not refresh. Reload to see it.");
+      });
+      return true;
     } finally {
       setMutationKey(null);
     }
@@ -742,8 +743,9 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
               onBodySave={(body) => updatePR({ body })}
               commentDraft={commentDraft}
               onCommentDraftChange={setCommentDraft}
-              onSubmitComment={() => void submitComment()}
+              onSubmitComment={submitComment}
               isSubmittingComment={mutationKey === "comment"}
+              commentDisabled={Boolean(mutationKey) || !repoPath}
               onEditComment={editComment}
               onDeleteComment={deleteComment}
               busyCommentId={

@@ -45,8 +45,9 @@ interface PRTimelineProps {
   onBodySave: (body: string) => Promise<boolean>;
   commentDraft: string;
   onCommentDraftChange: (value: string) => void;
-  onSubmitComment: () => void;
+  onSubmitComment: () => Promise<boolean>;
   isSubmittingComment: boolean;
+  commentDisabled?: boolean;
   onEditComment: (commentId: number, body: string) => Promise<boolean>;
   onDeleteComment: (commentId: number) => Promise<void>;
   busyCommentId: number | null;
@@ -175,6 +176,7 @@ export function PRTimeline({
   onCommentDraftChange,
   onSubmitComment,
   isSubmittingComment,
+  commentDisabled,
   onEditComment,
   onDeleteComment,
   busyCommentId,
@@ -370,6 +372,9 @@ export function PRTimeline({
             onChange={onCommentDraftChange}
             onSubmit={onSubmitComment}
             isSubmitting={isSubmittingComment}
+            disabled={commentDisabled}
+            repositoryUrl={repositoryUrl}
+            repoPath={repoPath}
             currentUser={currentUser}
             containerRef={composerRef}
           />
