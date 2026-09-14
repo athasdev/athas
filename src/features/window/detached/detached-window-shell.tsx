@@ -53,7 +53,10 @@ export function DetachedWindowShell({
       <TooltipProvider>
         <FontStyleInjector />
         <WindowResizeBorder />
-        <div className="athas-layout-shell flex h-dvh flex-col overflow-hidden bg-background">
+        <div
+          data-window-surface="content"
+          className="athas-layout-shell flex h-dvh flex-col overflow-hidden bg-background"
+        >
           <TitleBar showMinimal title={title} titleIcon={icon} titleActions={actions} />
           {error ? (
             <Empty tone="error">

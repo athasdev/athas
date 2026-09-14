@@ -1,5 +1,5 @@
 import { getCurrentWindow, type Window as TauriWindow } from "@tauri-apps/api/window";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -78,6 +78,8 @@ const TitleBar = ({
   const [isCompactMenuVisible, setIsCompactMenuVisible] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const titleControlsRef = useRef<HTMLDivElement>(null);
+  const [titleControlsWidth, setTitleControlsWidth] = useState(0);
   const [currentWindow, setCurrentWindow] = useState<TauriWindow | null>(null);
 
   const isMacOS = IS_MAC;
@@ -86,6 +88,16 @@ const TitleBar = ({
   const usesNativeWindowChrome = useNativeWindowChrome();
   const showAppWindowControls = !isMacOS && !usesNativeWindowChrome;
   const shouldUseNativeMenuBar = !isWindows && !isLinux && nativeMenuBar;
+
+  useEffect(() => {
+    const controls = titleControlsRef.current;
+    if (!showMinimal || !controls) return;
+    const updateWidth = () => setTitleControlsWidth(controls.getBoundingClientRect().width);
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(controls);
+    return () => observer.disconnect();
+  }, [showMinimal]);
 
   useEffect(() => {
     const initWindow = async () => {
@@ -319,22 +331,29 @@ const TitleBar = ({
         aria-label="Window toolbar"
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
-        className="athas-title-bar relative z-50 justify-between select-none ps-title-bar-leading"
+        className="athas-title-bar relative z-50 justify-end select-none"
       >
-        <ChromeGroup grow align="center" className="pointer-events-none overflow-hidden">
+        <ChromeGroup
+          align="center"
+          className="pointer-events-none absolute inset-y-0 overflow-hidden"
+          style={{
+            insetInline: `max(${isMacOS && !isFullscreen ? "var(--athas-title-bar-leading-inset)" : "var(--athas-chrome-padding-inline)"}, calc(${titleControlsWidth}px + var(--athas-chrome-padding-inline)))`,
+          }}
+        >
           {titleIcon}
           {title ? <ChromeLabel tone="strong">{title}</ChromeLabel> : null}
         </ChromeGroup>
 
-        {titleActions ? <ChromeGroup align="center">{titleActions}</ChromeGroup> : null}
-
-        {showAppWindowControls && (
-          <WindowControls
-            currentWindow={currentWindow}
-            isMaximized={isMaximized}
-            onMaximizedChange={setIsMaximized}
-          />
-        )}
+        <ChromeGroup ref={titleControlsRef}>
+          {titleActions}
+          {showAppWindowControls && (
+            <WindowControls
+              currentWindow={currentWindow}
+              isMaximized={isMaximized}
+              onMaximizedChange={setIsMaximized}
+            />
+          )}
+        </ChromeGroup>
       </ChromeBar>
     );
   }
