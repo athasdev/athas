@@ -1,11 +1,4 @@
-import {
-  ArrowsInIcon,
-  ArrowsOutIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  FileCodeIcon,
-  XIcon,
-} from "@/ui/icons";
+import { ArrowsInIcon, ArrowsOutIcon, FileCodeIcon, XIcon } from "@/ui/icons";
 import { useCallback, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { Empty, EmptyDescription } from "@/ui/empty";
@@ -13,6 +6,8 @@ import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import { Button } from "@/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
+import { SidebarListItem } from "@/ui/sidebar";
 import { useReferencesStore } from "../stores/references.store";
 import type { Reference } from "../types/reference.types";
 
@@ -54,10 +49,6 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
         items: items.sort((a, b) => a.line - b.line || a.column - b.column),
       }));
   }, [references]);
-
-  const toggleGroup = useCallback((filePath: string) => {
-    setCollapsedGroups((prev) => ({ ...prev, [filePath]: !prev[filePath] }));
-  }, []);
 
   const handleReferenceClick = useCallback(
     (ref: Reference) => {
@@ -111,47 +102,44 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
             </EmptyDescription>
           </Empty>
         ) : (
-          grouped.map((group) => {
-            const isCollapsed = collapsedGroups[group.filePath];
-            return (
-              <div key={group.filePath}>
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.filePath)}
-                  className="flex w-full items-center gap-1 px-2 py-1 text-left transition-colors hover:bg-accent/50"
+          <Accordion
+            multiple
+            value={grouped
+              .filter((group) => !collapsedGroups[group.filePath])
+              .map((group) => group.filePath)}
+            onValueChange={(expandedPaths) => {
+              setCollapsedGroups((previous) => ({
+                ...previous,
+                ...Object.fromEntries(
+                  grouped.map((group) => [group.filePath, !expandedPaths.includes(group.filePath)]),
+                ),
+              }));
+            }}
+          >
+            {grouped.map((group) => (
+              <AccordionItem key={group.filePath} value={group.filePath}>
+                <AccordionTrigger
+                  action={<span className="pr-2 tabular-nums">{group.items.length}</span>}
                 >
-                  {isCollapsed ? (
-                    <ChevronRightIcon size={12} className="shrink-0 text-subtle-foreground" />
-                  ) : (
-                    <ChevronDownIcon size={12} className="shrink-0 text-subtle-foreground" />
-                  )}
-                  <FileCodeIcon size={12} className="shrink-0 text-primary" />
-                  <span className="font-sans ui-text-sm truncate text-foreground">
-                    {group.fileName}
+                  <span className="flex min-w-0 items-center gap-1">
+                    <FileCodeIcon />
+                    <span className="truncate">{group.fileName}</span>
                   </span>
-                  <span className="font-sans ui-text-sm shrink-0 text-subtle-foreground">
-                    {group.items.length}
-                  </span>
-                </button>
-                {!isCollapsed &&
-                  group.items.map((ref, index) => (
-                    <button
-                      type="button"
+                </AccordionTrigger>
+                <AccordionContent className="pl-5">
+                  {group.items.map((ref, index) => (
+                    <SidebarListItem
                       key={`${ref.filePath}:${ref.line}:${ref.column}:${index}`}
                       onClick={() => void handleReferenceClick(ref)}
-                      className="group flex w-full items-baseline gap-2 py-0.5 pr-2 pl-7 text-left transition-colors hover:bg-accent/50"
+                      leading={<span className="tabular-nums">{ref.line + 1}</span>}
                     >
-                      <span className="font-sans ui-text-sm shrink-0 tabular-nums text-subtle-foreground">
-                        {ref.line + 1}
-                      </span>
-                      <span className="font-sans ui-text-sm truncate text-subtle-foreground group-hover:text-foreground">
-                        {ref.lineContent.trim()}
-                      </span>
-                    </button>
+                      {ref.lineContent.trim()}
+                    </SidebarListItem>
                   ))}
-              </div>
-            );
-          })
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         )}
       </ScrollArea>
     </div>

@@ -13,6 +13,7 @@ import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import {
   SidebarIconButton,
+  SidebarListItem,
   SidebarScrollArea,
   SidebarSearchPopover,
   SidebarSection,
@@ -149,12 +150,16 @@ const CommitItem = memo(
 
     return (
       <div className="mb-0.5">
-        <button
-          type="button"
+        <SidebarListItem
           onClick={handleCommitClick}
-          className={cn(
-            "ui-text-sm flex w-full items-start gap-2.5 rounded-md px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-accent/80 focus-visible:bg-accent/80",
-          )}
+          leading={<Avatar name={commit.author} src={avatarUrl} size="md" />}
+          description={
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate">{commit.author}</span>
+              <span className="shrink-0">{formatRelativeDate(commit.date)}</span>
+              <span className="shrink-0 font-mono">{shortHash}</span>
+            </span>
+          }
           draggable={!!repoPath}
           onDragStart={(event) => {
             if (!repoPath) return;
@@ -169,28 +174,17 @@ const CommitItem = memo(
             });
           }}
         >
-          <Avatar name={commit.author} src={avatarUrl} size="md" className="mt-0.5" />
-          <span className="min-w-0 flex-1">
-            <span className="flex min-w-0 items-center gap-2">
-              <span
-                className={cn(
-                  "truncate leading-tight",
-                  syncState === "local" ? "text-primary" : "text-foreground",
-                )}
-              >
-                {commit.message}
-              </span>
-              {syncState === "local" ? (
-                <span className="size-1.5 shrink-0 rounded-full bg-primary" />
-              ) : null}
+          <span className="flex min-w-0 items-center gap-2">
+            <span
+              className={cn("truncate", syncState === "local" ? "text-primary" : "text-foreground")}
+            >
+              {commit.message}
             </span>
-            <span className="ui-text-sm mt-1 flex min-w-0 items-center gap-2 text-subtle-foreground">
-              <span className="truncate">{commit.author}</span>
-              <span className="shrink-0">{formatRelativeDate(commit.date)}</span>
-              <span className="shrink-0 font-mono">{shortHash}</span>
-            </span>
+            {syncState === "local" ? (
+              <span className="size-1.5 shrink-0 rounded-full bg-primary" />
+            ) : null}
           </span>
-        </button>
+        </SidebarListItem>
       </div>
     );
   },

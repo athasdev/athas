@@ -19,6 +19,7 @@ import {
 import { EmptyState } from "@/ui/empty";
 import Input from "@/ui/input";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/ui/popover";
+import { SidebarListItem } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { getBaseName } from "@/utils/path-helpers";
@@ -65,25 +66,20 @@ export function DebugStackFrames({
       {frames.map((frame) => {
         const isSelected = frame.id === selectedFrameId;
         return (
-          <button
+          <SidebarListItem
             key={frame.id}
-            type="button"
-            className={cn(
-              "font-sans flex w-full items-start gap-2 px-3 py-1.5 text-left ui-text-sm hover:bg-accent/70",
-              isSelected && "bg-selected/70",
-            )}
+            active={isSelected}
+            aria-current={isSelected ? "location" : undefined}
+            leading={<StackIcon />}
+            description={
+              frame.sourcePath
+                ? `${getBaseName(frame.sourcePath, "file")}:${frame.line}`
+                : `Line ${frame.line}`
+            }
             onClick={() => void onSelect(frame.id, frame.sourcePath, frame.line)}
           >
-            <StackIcon size={13} className="mt-0.5 shrink-0 text-subtle-foreground" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-foreground">{frame.name}</span>
-              <span className="block truncate ui-text-sm text-subtle-foreground">
-                {frame.sourcePath
-                  ? `${getBaseName(frame.sourcePath, "file")}:${frame.line}`
-                  : `Line ${frame.line}`}
-              </span>
-            </span>
-          </button>
+            {frame.name}
+          </SidebarListItem>
         );
       })}
     </div>
