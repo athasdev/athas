@@ -1,3 +1,11 @@
+/* Keep per-frame viewport measurements out of content subtrees in WebKit. */
+[data-slot="scroll-area-content"] {
+  --scroll-area-overflow-x-start: 0px;
+  --scroll-area-overflow-x-end: 0px;
+  --scroll-area-overflow-y-start: 0px;
+  --scroll-area-overflow-y-end: 0px;
+}
+
 @utility overflow-auto {
   overflow: auto;
   overscroll-behavior: none;

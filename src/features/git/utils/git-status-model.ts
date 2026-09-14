@@ -44,7 +44,7 @@ const createEmptyGitStatusGroups = (): Record<GitStatusGroup, GitFile[]> => ({
 
 export function buildGitFolderTree(fileList: GitFile[]): GitFolderTree {
   const nodes = buildPathTree(fileList, {
-    getKey: (file) => `${file.path}:${file.staged ? "staged" : "unstaged"}:${file.status}`,
+    getKey: (file) => file.path,
     getPath: (file) => file.path,
   });
   const folderStateById = new Map<string, GitFolderState>();

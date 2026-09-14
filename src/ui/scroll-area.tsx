@@ -267,6 +267,36 @@ function ScrollArea({
   );
 }
 
+function NativeScrollArea({
+  className,
+  fill,
+  onWheel,
+  tabIndex = 0,
+  ...props
+}: React.ComponentProps<"div"> & { fill?: "flex" | "block" }) {
+  return (
+    <div
+      data-slot="native-scroll-area"
+      tabIndex={tabIndex}
+      className={cn(
+        "min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-none scrollbar-gutter-stable outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+        fill === "flex" && "flex-1",
+        fill === "block" && "h-full",
+        className,
+      )}
+      onWheel={
+        IS_LINUX
+          ? (event) => {
+              onWheel?.(event);
+              scheduleWheelFallback(event, "vertical");
+            }
+          : onWheel
+      }
+      {...props}
+    />
+  );
+}
+
 function ScrollBar({
   className,
   orientation = "vertical",
@@ -295,5 +325,5 @@ function ScrollBar({
   );
 }
 
-export { ScrollArea, ScrollBar };
+export { NativeScrollArea, ScrollArea, ScrollBar };
 export type { ScrollAreaOrientation, ScrollAreaProps };

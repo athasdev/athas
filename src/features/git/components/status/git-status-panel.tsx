@@ -1,3 +1,4 @@
+import isEqual from "fast-deep-equal";
 import {
   ArchiveIcon,
   CheckIcon,
@@ -9,11 +10,12 @@ import {
   TrashIcon,
 } from "@/ui/icons";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
+import { NativeScrollArea } from "@/ui/scroll-area";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
@@ -30,7 +32,7 @@ import {
 } from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { showConfirmDialog } from "@/ui/dialog";
-import { SidebarIconButton, SidebarScrollArea, SidebarToolbar } from "@/ui/sidebar";
+import { SidebarIconButton, SidebarToolbar } from "@/ui/sidebar";
 import { SidebarTree, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { compactPathTreeBranch, type PathTreeNode } from "@/features/sidebar/lib/path-tree";
 import { createStash } from "../../api/git-stash-api";
@@ -122,7 +124,7 @@ const GitStatusPanel = ({
   });
 
   useEffect(() => {
-    setOptimisticStageMap({});
+    setOptimisticStageMap((current) => (Object.keys(current).length === 0 ? current : {}));
   }, [files]);
 
   const {
@@ -346,30 +348,23 @@ const GitStatusPanel = ({
   };
 
   const renderFlatFileList = (groupedFiles: Record<GitStatusGroup, GitFile[]>) => {
-    return GIT_STATUS_ORDER.map((status) => {
-      const statusFiles = groupedFiles[status];
-      if (statusFiles.length === 0) return null;
-
-      return (
-        <div key={status}>
-          {statusFiles.map((file, index) => (
-            <GitFileItem
-              key={`${status}:${file.path}:${index}`}
-              file={file}
-              diffStats={getDiffStats(file)}
-              onClick={() => onFileSelect?.(file.path, getFileStaged(file))}
-              onContextMenu={(e) => handleContextMenu(e, file.path, getFileStaged(file))}
-              onStage={() => handleStageFile(file.path)}
-              onUnstage={() => handleUnstageFile(file.path)}
-              staged={getFileStaged(file)}
-              disabled={isLoading || pendingStagePaths.has(file.path)}
-              showFileIcon
-              repoPath={repoPath}
-            />
-          ))}
-        </div>
-      );
-    });
+    return GIT_STATUS_ORDER.flatMap((status) =>
+      groupedFiles[status].map((file) => (
+        <GitFileItem
+          key={file.path}
+          file={file}
+          diffStats={getDiffStats(file)}
+          onClick={() => onFileSelect?.(file.path, getFileStaged(file))}
+          onContextMenu={(e) => handleContextMenu(e, file.path, getFileStaged(file))}
+          onStage={() => handleStageFile(file.path)}
+          onUnstage={() => handleUnstageFile(file.path)}
+          staged={getFileStaged(file)}
+          disabled={isLoading || pendingStagePaths.has(file.path)}
+          showFileIcon
+          repoPath={repoPath}
+        />
+      )),
+    );
   };
 
   const renderDiffStatsBadge = (stats: GitFileDiffStats, className?: string) => (
@@ -647,7 +642,12 @@ const GitStatusPanel = ({
               </DropdownMenu>
             </div>
           </SidebarToolbar>
-          <SidebarScrollArea>
+          <NativeScrollArea
+            fill="flex"
+            role="region"
+            aria-label="Changed files"
+            className="px-chrome-inline pb-2"
+          >
             <Accordion
               multiple
               value={expandedSections}
@@ -679,7 +679,7 @@ const GitStatusPanel = ({
                 </AccordionItem>
               ) : null}
             </Accordion>
-          </SidebarScrollArea>
+          </NativeScrollArea>
         </>
       ) : (
         <EmptyState
@@ -761,4 +761,4 @@ const GitStatusPanel = ({
   );
 };
 
-export default GitStatusPanel;
+export default memo(GitStatusPanel, isEqual);

@@ -241,6 +241,9 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     },
     [handleBackFromHistoryCommit, setGitSection],
   );
+  const handleShowStashes = useCallback(() => {
+    handleSelectGitSection("stashes");
+  }, [handleSelectGitSection]);
   const handleGitSidebarItemVisibleChange = useCallback(
     (itemId: GitSidebarItemId, visible: boolean) => {
       const nextHiddenItems = visible
@@ -891,12 +894,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 fileDiffStats={fileDiffStats}
                 onFileSelect={handleGitFileClick}
                 onOpenFile={handleOpenOriginalFile}
-                onViewDiff={(scope) => void handleViewWorkingTreeDiff(scope)}
+                onViewDiff={handleViewWorkingTreeDiff}
                 onShowCommitDiffPicker={handleShowCommitDiffList}
-                onShowBranchDiffPicker={() => void handleShowBranchDiffList()}
-                onShowStashDiffPicker={() => {
-                  handleSelectGitSection("stashes");
-                }}
+                onShowBranchDiffPicker={handleShowBranchDiffList}
+                onShowStashDiffPicker={handleShowStashes}
                 onRefresh={refreshAfterAction}
                 repoPath={activeRepoPath}
               />
