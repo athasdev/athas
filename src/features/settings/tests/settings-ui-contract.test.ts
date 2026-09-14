@@ -153,7 +153,7 @@ describe("settings UI contract", () => {
     expect(settingsViewSource).not.toContain("tabIndex: -1");
   });
 
-  it("keeps settings navigation in a persistent grouped sidebar", () => {
+  it("keeps settings navigation in a persistent flat sidebar", () => {
     const settingsViewSource = readFileSync(
       `${componentsDirectory}/settings-workbench-view.tsx`,
       "utf8",
@@ -174,9 +174,9 @@ describe("settings UI contract", () => {
     expect(settingsViewSource).not.toContain("<ResourcePageHeader");
     expect(settingsViewSource).not.toContain("<ResourceCategoryNav");
     expect(settingsViewSource).not.toContain("<SettingsBreadcrumb");
-    expect(navigationSource).toContain('ariaLabel="Settings sections"');
+    expect(navigationSource).toContain('ariaLabel="Settings pages"');
     expect(navigationSource).toContain("<WorkbenchNavigation");
-    expect(navigationSource).toContain("SETTINGS_TAB_GROUPS.map");
+    expect(navigationSource).not.toContain("SETTINGS_TAB_GROUPS");
     expect(sectionSource).toContain("<Card");
     expect(sectionSource).not.toContain("<Accordion");
     expect(sidebarPaneSource).not.toContain("SettingsSidebar");

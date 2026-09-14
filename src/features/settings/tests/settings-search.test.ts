@@ -55,6 +55,17 @@ describe("settings search", () => {
     expect(searchSettings("native notifications")[0]?.id).toBe("ai-agent-notifications");
   });
 
+  it.each([
+    "ai-agent-notifications",
+    "github-action-notifications",
+    "terminal-command-notifications",
+  ])("routes %s to the Notifications page", (id) => {
+    expect(settingsSearchIndex.find((record) => record.id === id)).toMatchObject({
+      tab: "notifications",
+      section: "Activity",
+    });
+  });
+
   it("creates stable DOM target keys for labels and sections", () => {
     expect(getSettingSearchTargetKey("Hide Root Folder")).toBe("hiderootfolder");
     expect(getSettingSearchTargetKey("File Tree")).toBe("filetree");

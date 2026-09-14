@@ -35,6 +35,7 @@ import { GeneralSettings } from "./tabs/general-settings";
 import { GitSettings } from "./tabs/git-settings";
 import { KeyboardSettings } from "./tabs/keyboard-settings";
 import { FileTreeSettings } from "./tabs/file-tree-settings";
+import { NotificationsSettings } from "./tabs/notifications-settings";
 import { TerminalSettings } from "./tabs/terminal-settings";
 
 const SettingsWorkbenchView = () => {
@@ -62,12 +63,20 @@ const SettingsWorkbenchView = () => {
   const selectSearchResult = useSettingsStore((state) => state.actions.selectSearchResult);
   const setSearchQuery = useSettingsStore((state) => state.actions.setSearchQuery);
   const contentRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const searchInputAnchorRef = useRef<HTMLDivElement>(null);
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (activeSidebarView === "settings") setActiveView("files");
   }, [activeSidebarView, setActiveView]);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
 
   const resolveVisibleTab = useCallback(
     (tab: SettingsTab) =>
@@ -215,6 +224,8 @@ const SettingsWorkbenchView = () => {
         return <AccountSettings />;
       case "sharing":
         return <SharingSettings />;
+      case "notifications":
+        return <NotificationsSettings />;
       case "general":
         return <GeneralSettings />;
       case "editor":
@@ -248,6 +259,7 @@ const SettingsWorkbenchView = () => {
   const searchInput = (
     <div ref={searchInputAnchorRef} className="w-full">
       <SearchInput
+        inputRef={searchInputRef}
         placeholder="Search settings..."
         value={searchQuery}
         onChange={(value) => {

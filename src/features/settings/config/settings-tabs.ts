@@ -1,5 +1,6 @@
 import {
   UploadIcon,
+  BellIcon,
   CodeBlockIcon,
   GearIcon,
   GitBranchIcon,
@@ -14,28 +15,16 @@ import {
   UserCircleIcon,
   UsersIcon,
 } from "@/ui/icons";
-import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
+import type { SettingsSection } from "@/features/settings/types/settings.types";
 
 export interface SettingsTabItem {
-  id: SettingsTab;
+  id: SettingsSection;
   label: string;
   description: string;
   icon: Icon;
 }
 
-export interface SettingsTabGroup {
-  id: string;
-  label: string;
-  tabs: SettingsTab[];
-}
-
 export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
-  {
-    id: "sharing",
-    label: "Sharing & Cloud",
-    description: "Shared links, live updates, and private cloud sessions.",
-    icon: UploadIcon,
-  },
   {
     id: "general",
     description: "Updates, setup, and application preferences.",
@@ -49,10 +38,22 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
     icon: UserCircleIcon,
   },
   {
+    id: "sharing",
+    label: "Cloud",
+    description: "Shared links, live updates, and private cloud sessions.",
+    icon: UploadIcon,
+  },
+  {
     id: "appearance",
     description: "Themes, typography, and workspace appearance.",
     label: "Appearance",
     icon: PaintBrushIcon,
+  },
+  {
+    id: "notifications",
+    description: "Alerts for agents, terminal commands, and GitHub workflows.",
+    label: "Notifications",
+    icon: BellIcon,
   },
   {
     id: "editor",
@@ -107,23 +108,5 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
     description: "Diagnostics and advanced application options.",
     label: "Advanced",
     icon: GearIcon,
-  },
-];
-
-export const SETTINGS_TAB_GROUPS: SettingsTabGroup[] = [
-  {
-    id: "application",
-    label: "Application",
-    tabs: ["general", "account", "sharing", "appearance"],
-  },
-  {
-    id: "workspace",
-    label: "Workspace",
-    tabs: ["editor", "file-explorer", "git", "terminal", "keyboard"],
-  },
-  {
-    id: "features",
-    label: "Features",
-    tabs: ["ai", "collaboration", "enterprise", "advanced"],
   },
 ];

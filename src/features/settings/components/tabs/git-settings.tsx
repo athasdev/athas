@@ -17,7 +17,6 @@ export const GitSettings = () => {
       enableInlineGitBlame: state.settings.enableInlineGitBlame,
       gitChangesFolderView: state.settings.gitChangesFolderView,
       gitDefaultDiffView: state.settings.gitDefaultDiffView,
-      githubActionNotifications: state.settings.githubActionNotifications,
       openDiffOnClick: state.settings.openDiffOnClick,
       rememberLastGitPanelMode: state.settings.rememberLastGitPanelMode,
       showStagedFirst: state.settings.showStagedFirst,
@@ -194,27 +193,6 @@ export const GitSettings = () => {
       </Section>
 
       <GitHubCredentials />
-
-      <Section title="GitHub">
-        <SettingRow
-          label="Workflow Run Notifications"
-          description="Notify when GitHub Actions runs start, pass, or fail for the active repository"
-          onReset={() =>
-            updateSetting(
-              "githubActionNotifications",
-              getDefaultSetting("githubActionNotifications"),
-            )
-          }
-          canReset={
-            settings.githubActionNotifications !== getDefaultSetting("githubActionNotifications")
-          }
-        >
-          <Switch
-            checked={settings.githubActionNotifications}
-            onChange={(checked) => updateSetting("githubActionNotifications", checked)}
-          />
-        </SettingRow>
-      </Section>
 
       <Section title="Editor">
         <SettingRow

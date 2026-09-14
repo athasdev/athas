@@ -2,6 +2,7 @@ export type SettingsTab =
   | "sharing"
   | "account"
   | "general"
+  | "notifications"
   | "editor"
   | "git"
   | "appearance"

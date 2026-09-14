@@ -94,7 +94,7 @@ export const defaultSettings: Settings = {
   aiAutocompleteCustomBaseUrl: DEFAULT_AI_AUTOCOMPLETE_CUSTOM_BASE_URL,
   aiAutocompleteCustomModelId: "",
   aiDefaultSessionMode: "",
-  aiAgentNotifications: false,
+  aiAgentNotifications: true,
   aiSkills: [],
   v0DesignSystems: [],
   activeV0DesignSystemId: "",
@@ -113,7 +113,7 @@ export const defaultSettings: Settings = {
   showGitHubActions: true,
   showGitHubReleases: true,
   showGitHubDeployments: true,
-  githubActionNotifications: true,
+  githubActionNotifications: false,
   githubTokenSource: "auto",
   // Keyboard
   keybindingPreset: "none",

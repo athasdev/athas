@@ -64,7 +64,8 @@ interface SettingsActionsParams {
 
 const settingsTabLabels: Record<SettingsTab, string> = {
   account: "Account",
-  sharing: "Sharing & Cloud",
+  sharing: "Cloud",
+  notifications: "Notifications",
   general: "General",
   editor: "Editor",
   git: "Git",
@@ -224,7 +225,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     },
     {
       id: "icon-theme",
-      label: "Preferences: Icon Theme",
+      label: "Preferences: Icons",
       description: "Choose an icon theme",
       icon: <GridIcon />,
       category: "Theme",
@@ -308,7 +309,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         : "Language: Enable Auto-detect Language",
       description: settings.autoDetectLanguage
         ? "Manually set language for files"
-        : "Automatically detect file language from extension",
+        : "Automatically detect file language from integration",
       icon: <TranslateIcon />,
       category: "Language",
       action: () => {

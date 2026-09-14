@@ -155,6 +155,7 @@ const EXTERNAL_EDITOR_MODES = new Set<Settings["externalEditor"]>([
   "custom",
 ]);
 const SETTINGS_SECTIONS = new Set<SettingsSection>([
+  "notifications",
   "account",
   "general",
   "editor",

@@ -10,8 +10,12 @@ describe("default settings", () => {
     expect(getDefaultSettingsSnapshot().openFoldersInNewWindow).toBe(true);
   });
 
-  it("requires users to opt in to native agent notifications", () => {
-    expect(getDefaultSettingsSnapshot().aiAgentNotifications).toBe(false);
+  it("enables agent and command notifications but disables workflow notifications by default", () => {
+    const settings = getDefaultSettingsSnapshot();
+
+    expect(settings.aiAgentNotifications).toBe(true);
+    expect(settings.terminalCommandNotifications).toBe(true);
+    expect(settings.githubActionNotifications).toBe(false);
   });
 
   it("defaults Anthropic chat to Claude Sonnet 5", () => {

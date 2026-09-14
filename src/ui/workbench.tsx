@@ -35,7 +35,7 @@ export interface WorkbenchNavigationItem<TValue extends string> {
 
 export interface WorkbenchNavigationGroup<TValue extends string> {
   id: string;
-  label: string;
+  label?: string;
   items: WorkbenchNavigationItem<TValue>[];
 }
 
@@ -103,7 +103,7 @@ export function WorkbenchNavigation<TValue extends string>({
               .filter((group) => group.items.length > 0)
               .map((group) => (
                 <section key={group.id}>
-                  <SidebarSectionLabel>{group.label}</SidebarSectionLabel>
+                  {group.label ? <SidebarSectionLabel>{group.label}</SidebarSectionLabel> : null}
                   <div className="flex flex-col gap-0.5">
                     {group.items.map((item) => (
                       <SidebarListItem

@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import {
   ArrowClockwiseIcon,
   ArrowCounterClockwiseIcon,
@@ -21,7 +20,7 @@ import { ProviderSelector } from "@/features/ai/components/selectors/provider-se
 import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
 import { useAIProviderSettingsActions } from "@/features/ai/services/providers/ai-provider-settings-registry";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import type { AgentConfig, SessionConfigOption } from "@/features/ai/types/acp.types";
+import type { SessionConfigOption } from "@/features/ai/types/acp.types";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { Spinner } from "@/ui/spinner";
@@ -59,7 +58,6 @@ import {
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
 import { CodexSettings } from "@/features/ai/integrations/codex/codex-settings";
-import { requestAgentNativeNotificationPermission } from "@/features/ai/services/agent-native-notifications";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
 
 function resolveAutocompleteDefaultModelId(models: Array<{ id: string; name: string }>): string {
@@ -79,7 +77,6 @@ export const AISettings = () => {
       aiCompletion: state.settings.aiCompletion,
       aiCustomBaseUrl: state.settings.aiCustomBaseUrl,
       aiCustomModelId: state.settings.aiCustomModelId,
-      aiAgentNotifications: state.settings.aiAgentNotifications,
       aiModelId: state.settings.aiModelId,
       aiProviderId: state.settings.aiProviderId,
       ollamaBaseUrl: state.settings.ollamaBaseUrl,
@@ -114,7 +111,6 @@ export const AISettings = () => {
   const [hasCustomChatApiKey, setHasCustomChatApiKey] = useState(false);
   const [isSavingCustomChatApiKey, setIsSavingCustomChatApiKey] = useState(false);
   const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
-  const [isUpdatingAgentNotifications, setIsUpdatingAgentNotifications] = useState(false);
 
   // Ollama URL state
   const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL);
@@ -137,17 +133,6 @@ export const AISettings = () => {
   const needsApiKey = isOllamaCloud;
   const providers = useAvailableProviders();
   const providerSettingsActions = useAIProviderSettingsActions(settings.aiProviderId);
-
-  useEffect(() => {
-    const detectAgents = async () => {
-      try {
-        await invoke<AgentConfig[]>("get_available_agents");
-      } catch {
-        // Failed to detect agents
-      }
-    };
-    detectAgents();
-  }, []);
 
   useEffect(() => {
     const unsubscribe = useAIChatStore.subscribe((state) => {
@@ -432,34 +417,6 @@ export const AISettings = () => {
     updateSetting("aiAutocompleteCustomBaseUrl", customAutocompleteBaseUrlInput);
   };
 
-  const handleAgentNotificationsChange = async (checked: boolean) => {
-    if (!checked) {
-      await updateSetting("aiAgentNotifications", false);
-      return;
-    }
-
-    setIsUpdatingAgentNotifications(true);
-    try {
-      const permission = await requestAgentNativeNotificationPermission();
-      if (permission === "granted") {
-        await updateSetting("aiAgentNotifications", true);
-        showToast({ message: "Agent notifications enabled", type: "success" });
-        return;
-      }
-
-      await updateSetting("aiAgentNotifications", false);
-      showToast({
-        message:
-          permission === "denied"
-            ? "Native notification permission was not granted"
-            : "Native notifications are unavailable",
-        type: permission === "denied" ? "warning" : "error",
-      });
-    } finally {
-      setIsUpdatingAgentNotifications(false);
-    }
-  };
-
   const providersNeedingAuth = providers.filter((p) => p.requiresAuth && !p.requiresApiKey);
 
   const isOllamaSelected = settings.aiProviderId === "ollama";
@@ -471,22 +428,6 @@ export const AISettings = () => {
   return (
     <SettingsView>
       <CodexSettings />
-      <Section title="Notifications">
-        <SettingRow
-          label="Agent Notifications"
-          description="Show native notifications when background agent work finishes, fails, or needs approval"
-          onReset={() =>
-            updateSetting("aiAgentNotifications", getDefaultSetting("aiAgentNotifications"))
-          }
-          canReset={settings.aiAgentNotifications !== getDefaultSetting("aiAgentNotifications")}
-        >
-          <Switch
-            checked={settings.aiAgentNotifications}
-            onChange={(checked) => void handleAgentNotificationsChange(checked)}
-            disabled={isUpdatingAgentNotifications}
-          />
-        </SettingRow>
-      </Section>
       <Section title="AI Chat">
         <SettingRow
           label="Provider"
@@ -560,7 +501,7 @@ export const AISettings = () => {
               key={action.id}
               label={action.label}
               description={
-                action.getDescription?.() || action.description || "Configure provider extension"
+                action.getDescription?.() || action.description || "Configure provider integration"
               }
             >
               <Button type="button" variant="default" onClick={() => void action.execute()}>

@@ -33,6 +33,7 @@ export type SettingsSection =
   | "sharing"
   | "account"
   | "general"
+  | "notifications"
   | "editor"
   | "git"
   | "appearance"

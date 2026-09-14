@@ -31,9 +31,9 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     id: "enterprise-extension-allowlist-toggle",
     tab: "enterprise",
     section: "Enterprise Controls",
-    label: "Require Extension Allowlist",
-    description: "Only approved extension IDs can be installed or updated",
-    keywords: ["enterprise", "extensions", "allowlist", "policy", "security"],
+    label: "Require Integration Allowlist",
+    description: "Only approved integration IDs can be installed or updated",
+    keywords: ["enterprise", "integrations", "extensions", "allowlist", "policy", "security"],
   },
   {
     id: "enterprise-allow-byok",
@@ -62,10 +62,10 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   {
     id: "enterprise-extension-allowlist-entries",
     tab: "enterprise",
-    section: "Extension Allowlist",
-    label: "Extension Allowlist",
-    description: "Approved extension IDs for enterprise-managed environments",
-    keywords: ["enterprise", "extensions", "ids", "allowlist", "approved"],
+    section: "Integration Allowlist",
+    label: "Integration Allowlist",
+    description: "Approved integration IDs for enterprise-managed environments",
+    keywords: ["enterprise", "integrations", "extensions", "ids", "allowlist", "approved"],
   },
 
   // Editor Settings
@@ -526,7 +526,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     id: "appearance-icon-theme",
     tab: "appearance",
     section: "Theme",
-    label: "Icon Theme",
+    label: "Icons",
     description: "Icons displayed in the file tree and tabs",
     keywords: ["icon", "theme", "file", "tree", "tabs"],
   },
@@ -671,8 +671,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "ai-agent-notifications",
-    tab: "ai",
-    section: "Notifications",
+    tab: "notifications",
+    section: "Activity",
     label: "Agent Notifications",
     description: "Show native notifications when background agent work needs attention",
     keywords: ["ai", "agent", "notification", "native", "system", "background", "permission"],
@@ -830,7 +830,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "editor",
     section: "Language Support",
     label: "Auto-detect Language",
-    description: "Automatically detect file language from extension",
+    description: "Automatically detect file language from integration",
     keywords: ["language", "auto", "detect", "extension"],
   },
   {
@@ -901,8 +901,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "github-action-notifications",
-    tab: "git",
-    section: "GitHub",
+    tab: "notifications",
+    section: "Activity",
     label: "Workflow Run Notifications",
     description: "Notify when GitHub Actions runs start, pass, or fail",
     keywords: ["github", "actions", "workflow", "ci", "notifications", "toast", "native"],
@@ -1015,8 +1015,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "terminal-command-notifications",
-    tab: "terminal",
-    section: "Launch",
+    tab: "notifications",
+    section: "Activity",
     label: "Command Notifications",
     description: "Notify when a long command finishes in a terminal you are not looking at",
     keywords: ["terminal", "notification", "command", "finished", "toast", "background"],
@@ -1176,7 +1176,16 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     section: "Telemetry",
     label: "Anonymous Usage Telemetry",
     description:
-      "Send anonymous operational metadata for updates, heartbeats, extensions, and crashes",
-    keywords: ["telemetry", "analytics", "tracking", "privacy", "crash", "updates", "extensions"],
+      "Send anonymous operational metadata for updates, heartbeats, integrations, and crashes",
+    keywords: [
+      "telemetry",
+      "analytics",
+      "tracking",
+      "privacy",
+      "crash",
+      "updates",
+      "integrations",
+      "extensions",
+    ],
   },
 ];
