@@ -41,7 +41,7 @@ export const useExtensionInstallPrompt = () => {
       }
 
       const toastId = showToast({
-        message: `${extensionName} extension not installed. Install it to enable language support?`,
+        message: `${extensionName} integration not installed. Install it to enable language support?`,
         type: "info",
         duration: 0, // Don't auto-dismiss
         action: {

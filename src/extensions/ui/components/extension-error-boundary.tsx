@@ -29,7 +29,7 @@ export class ExtensionErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error(`Extension "${this.props.extensionId}" crashed:`, error, info);
+    console.error(`Integration "${this.props.extensionId}" crashed:`, error, info);
   }
 
   handleRetry = () => {

@@ -89,7 +89,7 @@ export function registerExternalAIProvider(params: {
     (candidate) => candidate.id === params.providerId,
   );
   if (!provider) {
-    throw new Error(`Extension does not contribute AI provider ${params.providerId}`);
+    throw new Error(`Integration does not contribute AI provider ${params.providerId}`);
   }
 
   registerAIProviderExtension({
@@ -128,7 +128,7 @@ export function registerExternalAIProviderSettingsAction(params: {
       (provider) => provider.id === params.providerId,
     )
   ) {
-    throw new Error(`Extension does not contribute AI provider ${params.providerId}`);
+    throw new Error(`Integration does not contribute AI provider ${params.providerId}`);
   }
   registerAIProviderSettingsAction({
     id: params.id,

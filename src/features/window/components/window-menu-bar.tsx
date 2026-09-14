@@ -441,7 +441,7 @@ const WindowMenuBar = ({
             Preferences
           </MenubarItem>
           <MenubarItem onClick={() => handleClickEmit("menu_open_extensions")}>
-            Extensions
+            Integrations
           </MenubarItem>
           <MenubarItem onClick={() => handleCommand("workbench.openKeyboardShortcuts")}>
             Keyboard Shortcuts

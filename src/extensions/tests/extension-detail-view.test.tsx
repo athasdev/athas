@@ -22,7 +22,6 @@ function render(overrides: Partial<UnifiedExtension> = {}, busy = false) {
     isInstalled: true,
     isEnabled: true,
     isMarketplace: true,
-    publisher: "Athas",
     version: "2.0.0",
     installedVersion: "1.0.0",
     contributionSummary: ["Pull requests", "Issues"],
@@ -51,7 +50,7 @@ function render(overrides: Partial<UnifiedExtension> = {}, busy = false) {
   );
 }
 
-describe("extension detail management", () => {
+describe("integration detail management", () => {
   it("shows installed version and real contributions with management actions", () => {
     const markup = render();
     expect(markup).toContain("1.0.0");
@@ -63,7 +62,7 @@ describe("extension detail management", () => {
     expect(markup).not.toContain("License");
   });
 
-  it("does not offer uninstall or update for an uninstalled extension", () => {
+  it("does not offer uninstall or update for an uninstalled integration", () => {
     const markup = render({ isInstalled: false, installedVersion: null });
     expect(markup).toContain("Not installed");
     expect(markup).toContain("2.0.0");

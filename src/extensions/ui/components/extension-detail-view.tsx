@@ -70,7 +70,7 @@ export function ExtensionDetailView({
   skillPreview,
 }: ExtensionDetailViewProps) {
   if (!extension) {
-    return <EmptyState layout="sidebar" message="Extension not found." />;
+    return <EmptyState layout="sidebar" message="Integration not found." />;
   }
 
   const skillContent = extension.skill?.content ?? extension.marketplaceSkill?.content;
@@ -176,12 +176,11 @@ export function ExtensionDetailView({
 
   const metadata = [
     ["Category", getCategoryLabel(extension.category)],
-    ["Publisher", extension.publisher],
     ["Version", extension.installedVersion ?? extension.version],
     ["License", extension.license],
     [
       "Distribution",
-      extension.isBundled ? "Built-in" : extension.isMarketplace ? "Marketplace" : "Local",
+      extension.isBundled ? "Built-in" : extension.isMarketplace ? "Athas catalog" : "Local",
     ],
   ].filter((entry) => entry[1]);
 
@@ -219,7 +218,7 @@ export function ExtensionDetailView({
           </Alert>
         ) : null}
 
-        <ResourceSection title="Extension details">
+        <ResourceSection title="Integration details">
           <Card variant="outline">
             <CardContent>
               <Table>
@@ -239,7 +238,7 @@ export function ExtensionDetailView({
         </ResourceSection>
 
         {isAppearanceExtension(extension) && extension.appearanceOptions?.length ? (
-          <ResourceSection title={extension.category === "theme" ? "Themes" : "Icon themes"}>
+          <ResourceSection title={extension.category === "theme" ? "Themes" : "Icons"}>
             <Card variant="outline">
               <CardContent>
                 <ItemGroup>

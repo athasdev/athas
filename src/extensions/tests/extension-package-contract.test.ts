@@ -11,14 +11,14 @@ const validManifest = {
   id: "athas.example",
   name: "Example",
   displayName: "Example",
-  description: "Example extension",
+  description: "Example integration",
   version: "1.0.0",
   publisher: "Athas",
   categories: ["Language"],
   languages: [{ id: "example", extensions: [".example"] }],
 };
 
-describe("extension package contract", () => {
+describe("integration package contract", () => {
   it("accepts the canonical package metadata", () => {
     expect(parseExtensionPackageManifest(validManifest)).toEqual(validManifest);
   });
@@ -70,7 +70,7 @@ describe("extension package contract", () => {
     expect(normalizeExtensionCategories(undefined, "Language")).toEqual(["Language"]);
   });
 
-  it("accepts skill packages in the shared extension manifest", () => {
+  it("accepts skill packages in the shared integration manifest", () => {
     expect(
       parseExtensionPackageManifest({
         ...validManifest,

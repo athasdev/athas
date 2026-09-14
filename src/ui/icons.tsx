@@ -82,7 +82,6 @@ function createIconComponent(IconComponent: ComponentType<any>, displayName: str
 }
 
 export const ActivityIcon = createIconComponent(Nucleo.IconChartActivityOutline18, "ActivityIcon");
-export const AiLoadingIcon = createIconComponent(Nucleo.IconAiLoadingOutline18, "AiLoadingIcon");
 export const ArchiveIcon = createIconComponent(Nucleo.IconArchiveOutline18, "ArchiveIcon");
 export const ArrowClockwiseIcon = createIconComponent(
   Nucleo.IconArrowRotateClockwiseOutline18,
@@ -104,10 +103,6 @@ export const ArrowDownToLineIcon = createIconComponent(
 export const ArrowLeftIcon = createIconComponent(Nucleo.IconArrowLeftOutline18, "ArrowLeftIcon");
 export const ArrowRightIcon = createIconComponent(Nucleo.IconArrowRightOutline18, "ArrowRightIcon");
 export const ArrowUpIcon = createIconComponent(Nucleo.IconArrowUpOutline18, "ArrowUpIcon");
-export const ArrowUpRightIcon = createIconComponent(
-  Nucleo.IconArrowUpRightOutline18,
-  "ArrowUpRightIcon",
-);
 export const ArrowsClockwiseIcon = createIconComponent(
   Nucleo.IconArrowsRotateCenterOutline18,
   "ArrowsClockwiseIcon",
@@ -317,10 +312,6 @@ export const QuestionIcon = createIconComponent(Nucleo.IconCircleQuestionOutline
 export const RemoteIcon = createIconComponent(Nucleo.IconComputerOutline18, "RemoteIcon");
 export const RocketIcon = createIconComponent(Nucleo.IconRocketOutline18, "RocketIcon");
 export const RowsIcon = createIconComponent(Nucleo.IconTableRowsOutline18, "RowsIcon");
-export const RowsPlusTopIcon = createIconComponent(
-  Nucleo.IconTableRowNewTopOutline18,
-  "RowsPlusTopIcon",
-);
 export const SaveIcon = createIconComponent(Nucleo.IconFloppyDiskOutline18, "SaveIcon");
 export const ScissorsIcon = createIconComponent(Nucleo.IconScissorsOutline18, "ScissorsIcon");
 export const SearchIcon = createIconComponent(Nucleo.IconMagnifierOutline18, "SearchIcon");
@@ -330,10 +321,6 @@ export const ShieldCheckIcon = createIconComponent(
   "ShieldCheckIcon",
 );
 export const ShieldIcon = createIconComponent(Nucleo.IconShieldOutline18, "ShieldIcon");
-export const ShieldWarningIcon = createIconComponent(
-  Nucleo.IconShieldAlertOutline18,
-  "ShieldWarningIcon",
-);
 export const SidebarIcon = createIconComponent(Nucleo.IconSidebarLeftShowOutline18, "SidebarIcon");
 export const SignInIcon = createIconComponent(Nucleo.IconArrowDoorInOutline18, "SignInIcon");
 export const SignOutIcon = createIconComponent(Nucleo.IconArrowDoorOut3Outline18, "SignOutIcon");

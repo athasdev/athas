@@ -111,8 +111,8 @@ export const EnterpriseSettings = () => {
         </SettingRow>
 
         <SettingRow
-          label="Require Extension Allowlist"
-          description="Only approved extension IDs can be installed or updated"
+          label="Require Integration Allowlist"
+          description="Only approved integration IDs can be installed or updated"
         >
           <Switch
             checked={policy.requireExtensionAllowlist}
@@ -162,12 +162,14 @@ export const EnterpriseSettings = () => {
       </Section>
 
       <Section
-        title="Extension Allowlist"
-        description="Only approved extension IDs can be installed while the allowlist is enforced"
+        title="Integration Allowlist"
+        description="Only approved integration IDs can be installed while the allowlist is enforced"
       >
         <SettingBlock className="space-y-3">
           <Field>
-            <FieldLabel htmlFor="enterprise-extension-allowlist">Approved extension IDs</FieldLabel>
+            <FieldLabel htmlFor="enterprise-extension-allowlist">
+              Approved integration IDs
+            </FieldLabel>
             <Textarea
               id="enterprise-extension-allowlist"
               value={allowlistInput}
@@ -195,7 +197,7 @@ export const EnterpriseSettings = () => {
                 onClick={() =>
                   savePolicyPatch(
                     { allowedExtensionIds: parsedAllowlist },
-                    "Extension allowlist updated.",
+                    "Integration allowlist updated.",
                   )
                 }
                 disabled={!isAdmin || isSaving || !policy.managedMode}

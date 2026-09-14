@@ -5,7 +5,6 @@ import {
   PackageIcon,
   PlusIcon,
   TagIcon,
-  UserIcon,
   WarningCircleIcon,
   XCircleIcon,
 } from "@/ui/icons";
@@ -71,12 +70,6 @@ export function ExtensionCatalogCard({
               <TagIcon className="size-3.5" />
               {getCategoryLabel(extension.category)}
             </span>
-            {extension.publisher ? (
-              <span className="flex min-w-0 items-center gap-1">
-                <UserIcon className="size-3.5 shrink-0" />
-                <span className="truncate">{extension.publisher}</span>
-              </span>
-            ) : null}
             {extension.isBundled ? (
               <span className="flex shrink-0 items-center gap-1">
                 <PackageIcon className="size-3.5" />

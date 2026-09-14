@@ -104,7 +104,7 @@ function getUserFacingLspErrorMessage(error: unknown): string {
 
   switch (normalized.code) {
     case "tool_not_found":
-      return `${normalized.message} Open Extensions and reinstall the language tools.`;
+      return `${normalized.message} Open Integrations and reinstall the language tools.`;
     case "tool_not_executable":
       return `${normalized.message} The installed binary is present but cannot run.`;
     default:

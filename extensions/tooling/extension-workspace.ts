@@ -9,7 +9,6 @@ export const GENERATED_CDN_DIR = join(EXTENSIONS_ROOT, "generated", "cdn");
 export const EXTENSION_ARTIFACTS_PATH = join(EXTENSIONS_ROOT, "artifacts.json");
 export const CATALOG_DIR = join(import.meta.dirname, "catalog");
 const OFFICIAL_EXTENSIONS_DIR = join(EXTENSIONS_ROOT, "official");
-const COMMUNITY_EXTENSIONS_DIR = join(EXTENSIONS_ROOT, "community");
 const BUILD_ONLY_PACKAGE_ENTRIES = new Set([
   "build",
   "build.sh",
@@ -102,7 +101,7 @@ export async function listExtensionFolders(): Promise<string[]> {
     );
   }
 
-  await Promise.all([walk(OFFICIAL_EXTENSIONS_DIR), walk(COMMUNITY_EXTENSIONS_DIR)]);
+  await walk(OFFICIAL_EXTENSIONS_DIR);
   return folders.sort((a, b) => a.localeCompare(b));
 }
 
@@ -158,11 +157,7 @@ async function inspectPackageDirectories(
 }
 
 export async function inspectExtensionPackageLayout(): Promise<ExtensionPackageLayoutIssue[]> {
-  const issues = await Promise.all([
-    inspectPackageDirectories(OFFICIAL_EXTENSIONS_DIR, 1),
-    inspectPackageDirectories(COMMUNITY_EXTENSIONS_DIR, 2),
-  ]);
-  return issues.flat();
+  return inspectPackageDirectories(OFFICIAL_EXTENSIONS_DIR, 1);
 }
 
 export function getExtensionSourceDir(folder: string): string {

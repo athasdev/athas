@@ -51,7 +51,7 @@ function highlightResponse(): Response {
   return new Response("(identifier) @variable");
 }
 
-describe("extension installer", () => {
+describe("integration installer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.cacheSet.mockResolvedValue(undefined);
@@ -61,7 +61,7 @@ describe("extension installer", () => {
     vi.unstubAllGlobals();
   });
 
-  it("downloads, verifies, and stores a language extension", async () => {
+  it("downloads, verifies, and stores a language integration", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(wasmResponse())
@@ -265,7 +265,7 @@ describe("extension installer", () => {
       ),
     ).rejects.toEqual(
       new ExtensionStorageError({
-        message: "Failed to store language extension ruby",
+        message: "Failed to store language integration ruby",
         languageId: "ruby",
         reason: storageFailure,
       }),

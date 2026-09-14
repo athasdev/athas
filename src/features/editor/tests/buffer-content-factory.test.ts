@@ -29,19 +29,19 @@ describe("createPaneContent onboarding surfaces", () => {
   });
 });
 
-describe("createPaneContent extension surfaces", () => {
-  it("creates the singleton extension catalog tab", () => {
+describe("createPaneContent integration surfaces", () => {
+  it("creates the singleton integration catalog tab", () => {
     const content = createPaneContent("extensions", { type: "extensions" });
 
     expect(content).toMatchObject({
       type: "extensions",
-      name: "Extensions",
+      name: "Integrations",
       path: "extensions://marketplace",
       isPreview: false,
     });
   });
 
-  it("creates a tab-addressable page for one extension", () => {
+  it("creates a tab-addressable page for one integration", () => {
     const content = createPaneContent("extension", {
       type: "extension",
       extensionId: "athas.typescript",

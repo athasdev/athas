@@ -198,7 +198,7 @@ async function installExtensionFromDeepLink(extensionId: string) {
   const extension = availableExtensions.get(extensionId);
 
   if (!extension) {
-    toast.error(`Extension "${extensionId}" not found`);
+    toast.error(`Integration "${extensionId}" not found`);
     return;
   }
 
@@ -213,7 +213,7 @@ async function installExtensionFromDeepLink(extensionId: string) {
     toast.success(`${extension.manifest.displayName} installed successfully`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    toast.error(`Failed to install extension: ${message}`);
+    toast.error(`Failed to install integration: ${message}`);
   }
 }
 

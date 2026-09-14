@@ -51,7 +51,7 @@ export async function requestUIExtensionGeneration(params: {
       "error" in body &&
       typeof (body as { error?: unknown }).error === "string"
         ? (body as { error: string }).error
-        : `UI extension generation failed (${response.status})`;
+        : `UI integration generation failed (${response.status})`;
 
     if (response.status === 401) {
       message = "Sign in to use Athas Intelligence.";
@@ -65,9 +65,9 @@ export async function requestUIExtensionGeneration(params: {
   try {
     return parseUIExtensionGenerationResult(body);
   } catch (error) {
-    if (error instanceof Error && error.message !== "Invalid UI extension generation response.") {
+    if (error instanceof Error && error.message !== "Invalid UI integration generation response.") {
       throw new UIExtensionGenerationError(error.message, 500);
     }
-    throw new UIExtensionGenerationError("Invalid UI extension generation response.", 500);
+    throw new UIExtensionGenerationError("Invalid UI integration generation response.", 500);
   }
 }

@@ -4,12 +4,12 @@ import { ExtensionLoadError, runExtensionLoadBatch } from "../runtime/extension-
 const extension = (id: string) => ({
   manifest: {
     id,
-    displayName: `Extension ${id}`,
+    displayName: `Integration ${id}`,
   },
 });
 
-describe("extension load orchestrator", () => {
-  it("loads every extension and preserves registry order", async () => {
+describe("integration load orchestrator", () => {
+  it("loads every integration and preserves registry order", async () => {
     const extensions = [extension("a"), extension("b"), extension("c")];
     const completionOrder: string[] = [];
     let releaseFirstLoad = () => {};
@@ -37,7 +37,7 @@ describe("extension load orchestrator", () => {
     expect(results.every((result) => result.status === "loaded")).toBe(true);
   });
 
-  it("captures a typed failure without preventing other extensions from loading", async () => {
+  it("captures a typed failure without preventing other integrations from loading", async () => {
     const extensions = [extension("a"), extension("broken"), extension("c")];
     const loaded: string[] = [];
     const failure = new Error("activation failed");
@@ -55,14 +55,14 @@ describe("extension load orchestrator", () => {
       error: {
         _tag: "ExtensionLoadError",
         extensionId: "broken",
-        displayName: "Extension broken",
+        displayName: "Integration broken",
         reason: failure,
       },
     });
     expect(results[1]?.status === "failed" && results[1].error).toBeInstanceOf(ExtensionLoadError);
   });
 
-  it("bounds concurrent extension activation", async () => {
+  it("bounds concurrent integration activation", async () => {
     const extensions = [
       extension("a"),
       extension("b"),

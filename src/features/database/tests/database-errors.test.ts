@@ -22,26 +22,26 @@ describe("database error formatting", () => {
 
   it("normalizes sidecar protocol and response envelope errors", () => {
     expect(normalizeDatabaseError("Unsupported database sidecar protocol version: 2")).toBe(
-      "The database provider version is not compatible with this Athas build. Please update or reinstall the database extension.",
+      "The database provider version is not compatible with this Athas build. Please update or reinstall the database integration.",
     );
     expect(
       normalizeDatabaseError(
         "Unsupported database sidecar protocol version for provider postgres: 2",
       ),
     ).toBe(
-      "The database provider version is not compatible with this Athas build. Please update or reinstall the database extension.",
+      "The database provider version is not compatible with this Athas build. Please update or reinstall the database integration.",
     );
     expect(normalizeDatabaseError("Invalid database sidecar envelope: missing field `ok`")).toBe(
-      "The database provider returned an invalid response. Please update or reinstall the database extension.",
+      "The database provider returned an invalid response. Please update or reinstall the database integration.",
     );
     expect(normalizeDatabaseError("Database sidecar response was missing protocolVersion")).toBe(
-      "The database provider returned an incomplete response. Please update or reinstall the database extension.",
+      "The database provider returned an incomplete response. Please update or reinstall the database integration.",
     );
     expect(normalizeDatabaseError("Database sidecar response was missing result")).toBe(
-      "The database provider returned an incomplete response. Please update or reinstall the database extension.",
+      "The database provider returned an incomplete response. Please update or reinstall the database integration.",
     );
     expect(normalizeDatabaseError("Database sidecar returned an unknown error")).toBe(
-      "The database provider returned an incomplete error response. Please update or reinstall the database extension.",
+      "The database provider returned an incomplete error response. Please update or reinstall the database integration.",
     );
   });
 

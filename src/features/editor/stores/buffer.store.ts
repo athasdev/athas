@@ -318,10 +318,10 @@ const activateBufferInState = (state: BufferState, bufferId: string | null): Pan
  * Run extension checking and LSP logic for a newly opened editor file.
  */
 const checkExtensionSupport = (path: string) => {
-  logger.debug("BufferStore", `Checking extension support for ${path}`);
+  logger.debug("BufferStore", `Checking integration support for ${path}`);
   import("@/extensions/runtime/extension-runtime")
     .then(({ waitForExtensionRuntimeInitialization }) => {
-      logger.debug("BufferStore", "Waiting for extension runtime initialization...");
+      logger.debug("BufferStore", "Waiting for integration runtime initialization...");
       return waitForExtensionRuntimeInitialization();
     })
     .then(() => {
@@ -342,15 +342,15 @@ const checkExtensionSupport = (path: string) => {
         const installed = extension.isInstalled || isBundled;
         logger.debug(
           "BufferStore",
-          `Extension ${extension.manifest.name} for ${path}: installed=${installed}, bundled=${isBundled}`,
+          `Integration ${extension.manifest.name} for ${path}: installed=${installed}, bundled=${isBundled}`,
         );
 
         if (installed) {
-          logger.debug("BufferStore", `Extension ready for ${path}`);
+          logger.debug("BufferStore", `Integration ready for ${path}`);
         } else {
           logger.debug(
             "BufferStore",
-            `Extension ${extension.manifest.name} not installed for ${path}`,
+            `Integration ${extension.manifest.name} not installed for ${path}`,
           );
 
           window.dispatchEvent(
@@ -364,11 +364,11 @@ const checkExtensionSupport = (path: string) => {
           );
         }
       } else {
-        logger.debug("BufferStore", `No extension available for ${path}`);
+        logger.debug("BufferStore", `No integration available for ${path}`);
       }
     })
     .catch((error) => {
-      logger.error("BufferStore", "Failed to check extension support:", error);
+      logger.error("BufferStore", "Failed to check integration support:", error);
     });
 };
 

@@ -26,7 +26,7 @@ const foundationalBootstrapSteps = [
 
 const extensionBootstrapSteps = [
   {
-    name: "extension runtime",
+    name: "integration runtime",
     run: async () => {
       const { initializeExtensionRuntime } = await import("@/extensions/runtime/extension-runtime");
       await initializeExtensionRuntime();

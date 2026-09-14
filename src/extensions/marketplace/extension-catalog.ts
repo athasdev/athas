@@ -39,7 +39,7 @@ export async function fetchFirstAvailableExtensionCatalog<T>(
     }
   }
 
-  throw new Error(`Failed to load extension catalog. ${errors.join("; ")}`);
+  throw new Error(`Failed to load integration catalog. ${errors.join("; ")}`);
 }
 
 let catalogPromise: Promise<Record<string, unknown>> | null = null;

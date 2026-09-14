@@ -131,12 +131,12 @@ fn is_builtin_database_provider(provider_id: &str) -> bool {
 fn resolve_sidecar_path(app_handle: AppHandle, provider_id: &str) -> Result<PathBuf, String> {
    let extension_id = database_extension_id(provider_id)?;
    let installer = ExtensionInstaller::new(app_handle)
-      .map_err(|e| format!("Failed to initialize extension installer: {}", e))?;
+      .map_err(|e| format!("Failed to initialize integration installer: {}", e))?;
    let extension_dir = installer.get_extension_dir(&extension_id);
 
    if !extension_dir.exists() {
       return Err(format!(
-         "{} provider is not installed. Install it from Settings > Extensions.",
+         "{} provider is not installed. Install it from Integrations.",
          provider_id
       ));
    }

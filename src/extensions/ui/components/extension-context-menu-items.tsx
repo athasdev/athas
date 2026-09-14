@@ -143,7 +143,7 @@ export function buildExtensionContextMenuItems({
   if (hasLocalOverride) {
     items.push({
       id: "reset",
-      label: "Reset to Marketplace Version",
+      label: "Reset to Catalog Version",
       icon: <ArrowCounterClockwiseIcon className="size-3.5" />,
       disabled: isInstalling,
       onClick: () => {

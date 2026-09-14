@@ -111,7 +111,7 @@ export const AccountSettings = () => {
         {isAuthenticated && (
           <SettingRow
             label="Athas Intelligence"
-            description="Commit messages, inline edits, autocomplete, drafts, and extension generation. Athas Agent uses your configured provider."
+            description="Commit messages, inline edits, autocomplete, drafts, and integration generation. Athas Agent uses your configured provider."
             activateOnClick={false}
           >
             <Badge variant={hasIntelligence ? "success" : "muted"}>

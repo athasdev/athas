@@ -409,12 +409,7 @@ export function SkillsCommand({
                     onMouseEnter={() => setSelectedIndex(index)}
                     className="group"
                     title={skill.title}
-                    description={
-                      <>
-                        <span>{skill.description}</span>
-                        {skill.author ? <span>by {skill.author}</span> : null}
-                      </>
-                    }
+                    description={skill.description}
                     contentLayout="stacked"
                     accessory={
                       <>
@@ -469,7 +464,7 @@ export function SkillsCommand({
                   accessory={
                     <>
                       {skill.source === "marketplace" ? (
-                        <CommandItemBadge>Marketplace</CommandItemBadge>
+                        <CommandItemBadge>Athas catalog</CommandItemBadge>
                       ) : null}
                       {hasLocalOverride ? (
                         <CommandItemBadge>Local override</CommandItemBadge>

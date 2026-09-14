@@ -18,7 +18,7 @@ function manifest(overrides: Partial<ExtensionManifest>): ExtensionManifest {
     id: "athas.example",
     name: "example",
     displayName: "Example",
-    description: "Example extension",
+    description: "Example integration",
     version: "1.0.0",
     publisher: "Athas",
     categories: ["Other"],
@@ -26,7 +26,33 @@ function manifest(overrides: Partial<ExtensionManifest>): ExtensionManifest {
   };
 }
 
-describe("extension browser catalog", () => {
+describe("integration browser catalog", () => {
+  it("keeps personal and unknown skills out of the Athas catalog", () => {
+    const skill = {
+      title: "Skill",
+      content: "Instructions",
+      createdAt: "2026-09-11",
+      updatedAt: "2026-09-11",
+    };
+    const result = buildExtensionCatalog({
+      availableExtensions: new Map(),
+      agents: [],
+      marketplaceSkills: [
+        { id: "athas.review", title: "Review", description: "Review code", tags: [] },
+      ],
+      aiSkills: [
+        { ...skill, id: "personal", source: "local" },
+        { ...skill, id: "unknown", source: "marketplace" },
+        { ...skill, id: "installed-review", source: "marketplace", sourceId: "athas.review" },
+      ],
+      selectedThemeId: "athas-dark",
+      selectedIconThemeId: "pierre-icons-complete",
+    });
+    expect(result.filter((item) => item.category === "skill").map((item) => item.id)).toEqual([
+      "installed-review",
+    ]);
+  });
+
   it("surfaces managed ACP agent versions and updates", () => {
     const agentManifest = manifest({
       id: "athas.agent.example",
@@ -98,6 +124,9 @@ describe("extension browser catalog", () => {
       selectedIconThemeId: "pierre-icons-complete",
     });
 
+    expect(result.find((extension) => extension.id === language.id)).not.toHaveProperty(
+      "publisher",
+    );
     expect(result.find((extension) => extension.id === language.id)).toMatchObject({
       category: "language",
       extensions: ["example"],

@@ -133,7 +133,7 @@ export function buildExtensionCatalog({
         isEnabled: agent?.installed ?? false,
         version: agent?.availableVersion ?? ext.manifest.version,
         extensions: [agent?.binaryName ?? contribution.binaryName],
-        publisher: ext.manifest.publisher,
+
         isMarketplace: true,
         isBundled: false,
         runtimeIssues: ext.runtimeIssues,
@@ -162,7 +162,7 @@ export function buildExtensionCatalog({
         isEnabled: ext.isEnabled,
         version: ext.manifest.version,
         extensions: lang.extensions.map((e: string) => e.replace(".", "")),
-        publisher: ext.manifest.publisher,
+
         isMarketplace: !isBundled,
         isBundled,
         icon: ext.manifest.icon,
@@ -190,7 +190,7 @@ export function buildExtensionCatalog({
         isEnabled: ext.isEnabled,
         version: ext.manifest.version,
         extensions: provider.fileExtensions?.map((item) => item.replace(".", "")),
-        publisher: ext.manifest.publisher,
+
         isMarketplace: !isBuiltInDatabase,
         isBundled: isBuiltInDatabase,
         icon: ext.manifest.icon,
@@ -215,7 +215,7 @@ export function buildExtensionCatalog({
         isActive: ext.isEnabled && Boolean(activeThemeId),
         isEnabled: ext.isEnabled,
         version: ext.manifest.version,
-        publisher: ext.manifest.publisher,
+
         isMarketplace: true,
         isBundled: false,
         icon: ext.manifest.icon,
@@ -245,7 +245,7 @@ export function buildExtensionCatalog({
         isActive: ext.isEnabled && Boolean(activeIconThemeId),
         isEnabled: ext.isEnabled,
         version: ext.manifest.version,
-        publisher: ext.manifest.publisher,
+
         isMarketplace: true,
         isBundled: false,
         icon: ext.manifest.icon,
@@ -268,7 +268,7 @@ export function buildExtensionCatalog({
         isInstalled: ext.isInstalled,
         isEnabled: ext.isEnabled,
         version: ext.manifest.version,
-        publisher: ext.manifest.publisher,
+
         isMarketplace: true,
         isBundled: false,
         icon: ext.manifest.icon,
@@ -288,7 +288,7 @@ export function buildExtensionCatalog({
         isInstalled: ext.isInstalled,
         isEnabled: ext.isEnabled,
         version: ext.manifest.version,
-        publisher: ext.manifest.publisher,
+
         isMarketplace: true,
         isBundled: false,
         icon: ext.manifest.icon,
@@ -362,7 +362,7 @@ export function buildExtensionCatalog({
       isActive: Boolean(activeIconThemeId),
       isEnabled: true,
       version: manifest.version,
-      publisher: manifest.publisher,
+
       isMarketplace: false,
       isBundled: true,
       icon: manifest.icon,
@@ -406,13 +406,12 @@ export function buildExtensionCatalog({
   });
 
   for (const skill of aiSkills) {
+    if (skill.source !== "marketplace") continue;
+    const marketplaceSkill = marketplaceSkills.find(
+      (candidate) => candidate.id === (skill.sourceId || skill.id),
+    );
+    if (!marketplaceSkill) continue;
     const preview = skill.content.trim().replace(/\s+/g, " ").slice(0, 160);
-    const marketplaceSkill =
-      skill.source === "marketplace"
-        ? marketplaceSkills.find(
-            (candidate) => candidate.id === skill.sourceId || candidate.id === skill.id,
-          )
-        : undefined;
 
     allExtensions.push({
       id: skill.id,
@@ -421,11 +420,11 @@ export function buildExtensionCatalog({
       category: "skill",
       isInstalled: true,
       isEnabled: true,
-      version: skill.version || (skill.source === "marketplace" ? undefined : "Local"),
-      publisher: skill.author || (skill.source === "marketplace" ? "Marketplace" : "You"),
+      version: skill.version,
+
       license: skill.license,
       sourceUrl: skill.sourceUrl,
-      isMarketplace: skill.source === "marketplace",
+      isMarketplace: true,
       skill,
       marketplaceSkill,
       contributionSummary: ["skill"],
@@ -445,7 +444,7 @@ export function buildExtensionCatalog({
       isInstalled: false,
       isEnabled: false,
       version: skill.version,
-      publisher: skill.author,
+
       license: skill.license,
       sourceUrl: skill.sourceUrl,
       isMarketplace: true,
@@ -472,7 +471,7 @@ export function buildExtensionCatalog({
       isInstalled: agent.installed,
       isEnabled: agent.installed,
       extensions: [agent.binaryName],
-      publisher: "Marketplace",
+
       isMarketplace: true,
       agentId: agent.id,
       icon: agent.icon ?? undefined,

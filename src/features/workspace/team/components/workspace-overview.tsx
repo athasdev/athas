@@ -40,14 +40,14 @@ export function WorkspaceOverview({ root, config, onChange }: WorkspaceSectionPr
         </Card>
         <Card variant="muted">
           <CardHeader>
-            <CardTitle>Extensions</CardTitle>
+            <CardTitle>Integrations</CardTitle>
             <CardDescription>
               {config.recommendedExtensions?.length ?? 0} team recommendations
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="ghost" onClick={() => setSection("extensions")}>
-              Review extensions
+              Review integrations
             </Button>
           </CardContent>
         </Card>
@@ -77,7 +77,7 @@ export function WorkspaceOverview({ root, config, onChange }: WorkspaceSectionPr
           <ItemTitle>Shared with your repository</ItemTitle>
           <ItemDescription>
             Save and commit athas.workspace.json to share tasks, AI instructions, repositories and
-            extension recommendations. Local folder mappings stay on this device.
+            integration recommendations. Local folder mappings stay on this device.
           </ItemDescription>
         </ItemContent>
       </Item>

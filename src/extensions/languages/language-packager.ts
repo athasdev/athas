@@ -195,7 +195,7 @@ function convertLanguageManifest(
   const folder = folderMatch?.[1];
 
   if (!folder) {
-    throw new Error(`Could not resolve extension folder from path: ${path}`);
+    throw new Error(`Could not resolve integration folder from path: ${path}`);
   }
 
   const languages = getExternalLanguages(manifest).map((language) => ({
@@ -326,7 +326,7 @@ export async function initializeLanguagePackager(): Promise<void> {
       const manifests = await loadExtensionCatalog<ExternalLanguageManifest>();
       processManifests(manifests);
     } catch (error) {
-      console.warn("Failed to load extension manifests from CDN:", error);
+      console.warn("Failed to load integration manifests from CDN:", error);
       initialized = true;
     }
   })();

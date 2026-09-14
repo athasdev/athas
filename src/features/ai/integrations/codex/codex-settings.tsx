@@ -75,7 +75,7 @@ export function CodexSettings() {
   return (
     <Section
       title="Codex Integration"
-      description="Native Codex app-server integration. Codex is built into Athas and is not an extension agent."
+      description="Native Codex app-server integration. Codex is built into Athas and is not an integration agent."
     >
       <SettingRow
         label="Codex CLI"

@@ -848,7 +848,7 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          Some("CmdOrCtrl+Option+I"),
       )?)
       .separator()
-      .text("open_extensions", "Extensions")
+      .text("open_extensions", "Integrations")
       .text("command_keyboard_shortcuts", "Keyboard Shortcuts")
       .build()?;
 
@@ -865,7 +865,7 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       )?)
       .separator()
       .text("open_settings", "Preferences")
-      .text("open_extensions", "Extensions")
+      .text("open_extensions", "Integrations")
       .text("command_keyboard_shortcuts", "Keyboard Shortcuts")
       .build()?;
 

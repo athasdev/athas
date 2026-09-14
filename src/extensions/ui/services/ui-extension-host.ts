@@ -39,7 +39,7 @@ function dialogDimension(value: unknown, minimum: number, maximum: number): numb
 function assertNamespaced(extensionId: string, contributionId: unknown): string {
   const id = String(contributionId);
   if (!id.startsWith(`${extensionId}.`)) {
-    throw new Error(`Extension contribution ids must start with ${extensionId}.`);
+    throw new Error(`Integration contribution ids must start with ${extensionId}.`);
   }
   return id;
 }
@@ -111,7 +111,7 @@ class UIExtensionHost {
 
       await new Promise<void>((resolve, reject) => {
         const timeout = window.setTimeout(
-          () => reject(new Error("Extension activation timed out")),
+          () => reject(new Error("Integration activation timed out")),
           REQUEST_TIMEOUT_MS,
         );
         const onReady = (event: MessageEvent<ExtensionWorkerMessage>) => {
@@ -121,7 +121,9 @@ class UIExtensionHost {
           worker.removeEventListener("message", onReady);
           worker.removeEventListener("error", onError);
           if (event.data.event === "activation.error") {
-            reject(new Error(String(event.data.payload?.message ?? "Extension activation failed")));
+            reject(
+              new Error(String(event.data.payload?.message ?? "Integration activation failed")),
+            );
           } else {
             resolve();
           }
@@ -130,7 +132,7 @@ class UIExtensionHost {
           window.clearTimeout(timeout);
           worker.removeEventListener("message", onReady);
           worker.removeEventListener("error", onError);
-          reject(new Error(event.message || "Extension activation failed"));
+          reject(new Error(event.message || "Integration activation failed"));
         };
         worker.addEventListener("message", onReady);
         worker.addEventListener("error", onError);
@@ -262,12 +264,13 @@ class UIExtensionHost {
 
   private request(extensionId: string, method: string, params: unknown[]): Promise<unknown> {
     const loaded = this.loaded.get(extensionId);
-    if (!loaded?.worker) return Promise.reject(new Error(`Extension ${extensionId} is not active`));
+    if (!loaded?.worker)
+      return Promise.reject(new Error(`Integration ${extensionId} is not active`));
     const id = loaded.nextRequestId++;
     return new Promise((resolve, reject) => {
       const timeout = window.setTimeout(() => {
         loaded.pending.delete(id);
-        reject(new Error(`Extension request timed out: ${method}`));
+        reject(new Error(`Integration request timed out: ${method}`));
       }, REQUEST_TIMEOUT_MS);
       loaded.pending.set(id, { resolve, reject, timeout });
       loaded.worker?.postMessage({ type: "worker-call", id, method, params });
@@ -314,7 +317,7 @@ class UIExtensionHost {
     if (loaded.entryPointUrl) URL.revokeObjectURL(loaded.entryPointUrl);
     for (const request of loaded.pending.values()) {
       window.clearTimeout(request.timeout);
-      request.reject(new Error("Extension was unloaded"));
+      request.reject(new Error("Integration was unloaded"));
     }
     loaded.pending.clear();
   }

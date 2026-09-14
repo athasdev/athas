@@ -169,11 +169,11 @@ export function useActivityNavigationItems({
         : []),
       {
         id: "extensions",
-        label: "Extensions",
+        label: "Integrations",
         icon: <ExtensionsIcon />,
         active: isExtensionsActive,
         onClick: onOpenExtensions,
-        ariaLabel: "Extensions",
+        ariaLabel: "Integrations",
       },
       ...Array.from(extensionViews.values()).map(
         (view) =>

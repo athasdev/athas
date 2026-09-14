@@ -37,7 +37,6 @@ type RegistryEntry = {
   displayName: string;
   description: string;
   version: string;
-  publisher: string;
   category: string;
   icon: string;
   appearancePreviews?: CatalogAppearancePreview[];
@@ -58,14 +57,13 @@ type IndexEntry = {
   name: string;
   description: string;
   version: string;
-  author: string;
   category:
     | "Languages"
     | "Themes"
     | "Icon Themes"
     | "Databases"
     | "Agents"
-    | "Integrations"
+    | "Apps"
     | "AI"
     | "Skills";
   icon?: string;
@@ -103,7 +101,7 @@ function normalizeIndexCategory(raw?: string): IndexEntry["category"] {
   if (value === "database" || value === "databases") return "Databases";
   if (value === "agent" || value === "agents") return "Agents";
   if (value === "skill" || value === "skills") return "Skills";
-  if (value === "integration" || value === "integrations") return "Integrations";
+  if (value === "integration" || value === "integrations") return "Apps";
   if (value === "ai") return "AI";
   if (value === "theme" || value === "themes") return "Themes";
   return "Languages";
@@ -254,7 +252,6 @@ async function loadBuiltInThemeIndexEntries(): Promise<IndexEntry[]> {
       string,
       unknown
     >;
-    const author = optionalString(themeFile.author) ?? "Athas";
     const themes = Array.isArray(themeFile.themes)
       ? (themeFile.themes as Array<Record<string, unknown>>)
       : [];
@@ -268,7 +265,6 @@ async function loadBuiltInThemeIndexEntries(): Promise<IndexEntry[]> {
           optionalString(themeFile.description) ??
           `${appearance.name} color theme`,
         version: "built-in",
-        author,
         category: "Themes",
         appearancePreviews: [appearance],
         downloads: 0,
@@ -355,9 +351,8 @@ async function buildCatalog() {
         isLanguage && !displayName.toLowerCase().includes("support")
           ? `${displayName} Language Support`
           : displayName,
-      description: manifest.description || `${displayName} ${registryCategory} extension`,
+      description: manifest.description || `${displayName} ${registryCategory} integration`,
       version: manifest.version || "1.0.0",
-      publisher: manifest.publisher || "Athas",
       category: registryCategory,
       icon: artwork,
       appearancePreviews: appearancePreviews.length > 0 ? appearancePreviews : undefined,
@@ -393,7 +388,6 @@ async function buildCatalog() {
     name: entry.displayName || entry.name || entry.id,
     description: entry.description,
     version: entry.version,
-    author: entry.publisher,
     category: normalizeIndexCategory(entry.category),
     icon: entry.icon,
     appearancePreviews: entry.appearancePreviews,

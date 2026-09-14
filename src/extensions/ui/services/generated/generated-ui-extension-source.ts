@@ -22,14 +22,14 @@ const FORBIDDEN_GENERATED_SOURCE_PATTERNS = [
 ] as const;
 
 export function validateGeneratedExtensionSource(code: string): void {
-  if (!code.trim()) throw new Error("Generated extension source must not be empty");
+  if (!code.trim()) throw new Error("Generated integration source must not be empty");
   if (code.length > MAX_GENERATED_SOURCE_LENGTH) {
     throw new Error(
-      `Generated extension source must be at most ${MAX_GENERATED_SOURCE_LENGTH} characters`,
+      `Generated integration source must be at most ${MAX_GENERATED_SOURCE_LENGTH} characters`,
     );
   }
   const forbidden = FORBIDDEN_GENERATED_SOURCE_PATTERNS.find(({ pattern }) => pattern.test(code));
   if (forbidden) {
-    throw new Error(`Generated extension source must not use ${forbidden.label}`);
+    throw new Error(`Generated integration source must not use ${forbidden.label}`);
   }
 }

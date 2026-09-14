@@ -58,7 +58,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       : source === "default"
         ? "Default"
         : source === "extension"
-          ? "Extension"
+          ? "Integration"
           : "User";
 
   return (

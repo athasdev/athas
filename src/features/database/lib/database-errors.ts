@@ -23,19 +23,19 @@ export function normalizeDatabaseError(error: unknown): string {
   }
 
   if (/^Unsupported database sidecar protocol version(?: for provider .+)?:/i.test(message)) {
-    return "The database provider version is not compatible with this Athas build. Please update or reinstall the database extension.";
+    return "The database provider version is not compatible with this Athas build. Please update or reinstall the database integration.";
   }
 
   if (/^Invalid database sidecar (response|envelope):/i.test(message)) {
-    return "The database provider returned an invalid response. Please update or reinstall the database extension.";
+    return "The database provider returned an invalid response. Please update or reinstall the database integration.";
   }
 
   if (/^Database sidecar response was missing (protocolVersion|result)$/i.test(message)) {
-    return "The database provider returned an incomplete response. Please update or reinstall the database extension.";
+    return "The database provider returned an incomplete response. Please update or reinstall the database integration.";
   }
 
   if (/^Database sidecar returned an unknown error$/i.test(message)) {
-    return "The database provider returned an incomplete error response. Please update or reinstall the database extension.";
+    return "The database provider returned an incomplete error response. Please update or reinstall the database integration.";
   }
 
   if (/^Database sidecar timed out after \d+ seconds$/i.test(message)) {

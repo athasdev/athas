@@ -237,7 +237,7 @@ describe("buffer preview pane integration", () => {
           id: firstExtensionsId,
           type: "extensions",
           path: "extensions://marketplace",
-          name: "Extensions",
+          name: "Integrations",
         }),
         expect.objectContaining({
           id: firstContinuousAgentsId,
@@ -249,7 +249,7 @@ describe("buffer preview pane integration", () => {
     );
   });
 
-  it("opens singular extension pages as reusable tabs", async () => {
+  it("opens singular integration pages as reusable tabs", async () => {
     const { useBufferStore } = await import("../stores/buffer.store");
     const bufferActions = useBufferStore.getState().actions;
 

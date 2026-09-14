@@ -286,7 +286,7 @@ const api = Object.freeze({
     },
     execute(command: string, ...args: unknown[]) {
       const handler = commands.get(contributionId(command)) ?? commands.get(command);
-      if (!handler) throw new Error(`Unknown extension command: ${command}`);
+      if (!handler) throw new Error(`Unknown integration command: ${command}`);
       return handler(...args);
     },
   }),
@@ -729,7 +729,7 @@ listenToHost("message", (event: MessageEvent<ExtensionWorkerInboundMessage>) => 
           /* @vite-ignore */ message.entryPointUrl
         )) as ExtensionModule;
         if (typeof extensionModule.activate !== "function") {
-          throw new Error("Extension must export activate(api)");
+          throw new Error("Integration must export activate(api)");
         }
         await extensionModule.activate(api);
         sendEvent("ready");
@@ -747,7 +747,7 @@ listenToHost("message", (event: MessageEvent<ExtensionWorkerInboundMessage>) => 
       if (message.method === "renderView") {
         const viewId = String(message.params[0]);
         const render = views.get(viewId);
-        if (!render) throw new Error(`Unknown extension view: ${message.params[0]}`);
+        if (!render) throw new Error(`Unknown integration view: ${message.params[0]}`);
         const nextRenderContext = {
           viewId,
           nextActionId: 1,
@@ -776,14 +776,14 @@ listenToHost("message", (event: MessageEvent<ExtensionWorkerInboundMessage>) => 
       if (message.method === "executeCommand") {
         const command = String(message.params[0]);
         const handler = commands.get(command) ?? commands.get(contributionId(command));
-        if (!handler) throw new Error(`Unknown extension command: ${message.params[0]}`);
+        if (!handler) throw new Error(`Unknown integration command: ${message.params[0]}`);
         return handler(...message.params.slice(1));
       }
       if (message.method === "executeViewAction") {
         const viewId = contributionId(message.params[0]);
         const command = String(message.params[1]);
         const handler = commands.get(command) ?? commands.get(contributionId(command));
-        if (!handler) throw new Error(`Unknown extension command: ${message.params[1]}`);
+        if (!handler) throw new Error(`Unknown integration command: ${message.params[1]}`);
         const invalidationCount = viewInvalidationCounts.get(viewId) ?? 0;
         const result = await handler(...message.params.slice(2));
         if ((viewInvalidationCounts.get(viewId) ?? 0) === invalidationCount) {

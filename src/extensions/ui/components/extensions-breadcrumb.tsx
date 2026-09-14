@@ -19,7 +19,7 @@ export function ExtensionsBreadcrumb({
   onOpenCategory: (category: ExtensionCategory) => void;
 }) {
   const categoryLabel = EXTENSION_CATEGORIES.find((item) => item.id === category)?.label;
-  const segments = ["Extensions"];
+  const segments = ["Integrations"];
   const icons = [<ExtensionsIcon key="extensions" className="size-4" />];
 
   if (category && categoryLabel) {
@@ -34,7 +34,7 @@ export function ExtensionsBreadcrumb({
 
   return (
     <PathBreadcrumb
-      ariaLabel="Extension path"
+      ariaLabel="Integration path"
       segments={segments}
       icons={icons}
       interactive={(index) => index < segments.length - 1}

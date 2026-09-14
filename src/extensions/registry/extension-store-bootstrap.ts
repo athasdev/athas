@@ -75,7 +75,7 @@ export async function migrateBundledContributionInstallations(
       markBundledContributionExtensionUninstalled(extensionId);
       installedExternalPackage = true;
     } catch (error) {
-      console.warn(`Could not migrate bundled extension ${extensionId}:`, error);
+      console.warn(`Could not migrate bundled integration ${extensionId}:`, error);
     }
   }
 
@@ -153,7 +153,7 @@ export async function loadInstalledExtensionsSnapshot(
           aliases,
         });
       } catch (error) {
-        console.debug(`Could not load language extension ${languageId}:`, error);
+        console.debug(`Could not load language integration ${languageId}:`, error);
       }
     }),
   );
@@ -235,7 +235,7 @@ function scheduleExtensionUpdateChecks(
       if (refreshCatalog) await loadAvailableExtensions();
       await checkForUpdates();
     } catch (error) {
-      console.debug("Extension update check failed:", error);
+      console.debug("Integration update check failed:", error);
     }
   };
 

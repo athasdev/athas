@@ -252,7 +252,7 @@ export const AppearanceSettings = () => {
         ) : null}
 
         <SettingRow
-          label="Icon Theme"
+          label="Icons"
           description="Icons displayed in the file tree and tabs"
           onReset={() => updateSetting("iconTheme", getDefaultSetting("iconTheme"))}
           canReset={settings.iconTheme !== getDefaultSetting("iconTheme")}

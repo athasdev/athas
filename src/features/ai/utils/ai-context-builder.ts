@@ -69,9 +69,9 @@ export const buildContextPrompt = (context: ContextInfo): string => {
     !isTerminalAgent(context.agentId);
 
   if (isAcpAgent) {
-    contextPrompt += `Athas ACP client extensions:
-- If your adapter exposes client extension requests, use \`_athas/open_terminal\` and \`_athas/set_chat_title\`.
-- Invoke them only as ACP extension requests. Never imitate them with a shell command.
+    contextPrompt += `Athas ACP client integrations:
+- If your adapter exposes client integration requests, use \`_athas/open_terminal\` and \`_athas/set_chat_title\`.
+- Invoke them only as ACP integration requests. Never imitate them with a shell command.
 
 `;
   }

@@ -138,8 +138,8 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     },
     {
       id: "view-show-extensions",
-      label: "View: Show Extensions",
-      description: "Open the extensions tab",
+      label: "View: Show Integrations",
+      description: "Open the integrations tab",
       icon: <PackageIcon />,
       category: "Navigation",
       action: () => {

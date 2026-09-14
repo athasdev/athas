@@ -181,7 +181,7 @@ export const IconThemeSelectorContent = ({
           value={query}
           onChange={setQuery}
           onKeyDown={handleKeyDown}
-          placeholder="Search icon themes..."
+          placeholder="Search icons..."
           role="combobox"
           aria-autocomplete="list"
           aria-expanded="true"
@@ -196,10 +196,10 @@ export const IconThemeSelectorContent = ({
         ref={resultsRef}
         id="icon-theme-selector-results"
         role="listbox"
-        aria-label="Icon themes"
+        aria-label="Icons"
       >
         {filteredThemes.length === 0 ? (
-          <CommandEmpty>No icon themes found</CommandEmpty>
+          <CommandEmpty>No icons found</CommandEmpty>
         ) : (
           filteredThemes.map((theme, index) => {
             const isSelected = index === selectedIndex;

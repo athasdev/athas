@@ -45,21 +45,23 @@ function assertStaticPreviewNode(node: ExtensionViewNode): void {
     node.type === "choice" ||
     node.type === "tabs"
   ) {
-    throw new Error(`Generated extension preview must not include interactive ${node.type} nodes.`);
+    throw new Error(
+      `Generated integration preview must not include interactive ${node.type} nodes.`,
+    );
   }
 
   if (node.type === "screen") {
     if (node.actions?.length) {
-      throw new Error("Generated extension preview must not include actions.");
+      throw new Error("Generated integration preview must not include actions.");
     }
     node.children.forEach(assertStaticPreviewNode);
     return;
   }
   if (node.type === "listItem" && node.onSelect) {
-    throw new Error("Generated extension preview must not include actions.");
+    throw new Error("Generated integration preview must not include actions.");
   }
   if (node.type === "activity" && node.items.some((item) => item.onSelect)) {
-    throw new Error("Generated extension preview must not include actions.");
+    throw new Error("Generated integration preview must not include actions.");
   }
   if (node.type === "tree") {
     const pending = [...node.items];
@@ -67,14 +69,14 @@ function assertStaticPreviewNode(node: ExtensionViewNode): void {
       const item = pending.pop();
       if (!item) continue;
       if (item.onSelect) {
-        throw new Error("Generated extension preview must not include actions.");
+        throw new Error("Generated integration preview must not include actions.");
       }
       if (item.children) pending.push(...item.children);
     }
   }
   if (node.type === "disclosure") {
     if (node.onChange) {
-      throw new Error("Generated extension preview must not include actions.");
+      throw new Error("Generated integration preview must not include actions.");
     }
     node.children.forEach(assertStaticPreviewNode);
     return;
@@ -98,7 +100,7 @@ export function parseUIExtensionGenerationResult(value: unknown): UIExtensionGen
     typeof value.description !== "string" ||
     typeof value.code !== "string"
   ) {
-    throw new Error("Invalid UI extension generation response.");
+    throw new Error("Invalid UI integration generation response.");
   }
 
   validateGeneratedExtensionSource(value.code);

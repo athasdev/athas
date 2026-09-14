@@ -28,7 +28,6 @@ export interface UnifiedExtension {
   isEnabled: boolean;
   version?: string;
   extensions?: string[];
-  publisher?: string;
   license?: string;
   sourceUrl?: string;
   isMarketplace?: boolean;
@@ -53,10 +52,10 @@ export interface UnifiedExtension {
 export const EXTENSION_CATEGORIES = [
   { id: "language", label: "Languages" },
   { id: "theme", label: "Themes" },
-  { id: "icon-theme", label: "Icon Themes" },
+  { id: "icon-theme", label: "Icons" },
   { id: "database", label: "Databases" },
   { id: "ai", label: "AI" },
-  { id: "integration", label: "Integrations" },
+  { id: "integration", label: "Apps" },
   { id: "skill", label: "Skills" },
   { id: "agent", label: "Agents" },
 ] as const;

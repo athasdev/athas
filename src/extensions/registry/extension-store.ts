@@ -132,7 +132,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             state.isLoadingRegistry = false;
           });
         } catch (error) {
-          console.error("Failed to load available extensions:", error);
+          console.error("Failed to load available integrations:", error);
           set((state) => {
             state.isLoadingRegistry = false;
           });
@@ -177,7 +177,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             ),
           });
         } catch (error) {
-          console.error("Failed to load installed extensions:", error);
+          console.error("Failed to load installed integrations:", error);
           set((state) => {
             state.isLoadingInstalled = false;
           });
@@ -199,17 +199,17 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
       installExtension: async (extensionId: string) => {
         const extension = get().availableExtensions.get(extensionId);
         if (!extension) {
-          throw new Error(`Extension ${extensionId} not found in registry`);
+          throw new Error(`Integration ${extensionId} not found in registry`);
         }
 
         if (!isExtensionAllowedByEnterprisePolicy(extensionId)) {
           throw new Error(
-            `Installation blocked by enterprise policy. "${extensionId}" is not in the extension allowlist.`,
+            `Installation blocked by enterprise policy. "${extensionId}" is not in the integration allowlist.`,
           );
         }
 
         if (!extension.manifest.installation) {
-          throw new Error(`Extension ${extensionId} has no installation metadata`);
+          throw new Error(`Integration ${extensionId} has no installation metadata`);
         }
 
         set((state) => {
@@ -297,7 +297,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
       uninstallExtension: async (extensionId: string) => {
         const extension = get().availableExtensions.get(extensionId);
         if (!extension) {
-          throw new Error(`Extension ${extensionId} not found`);
+          throw new Error(`Integration ${extensionId} not found`);
         }
 
         try {
@@ -335,7 +335,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             version: extension.manifest.version,
           });
         } catch (error) {
-          console.error(`Failed to uninstall extension ${extensionId}:`, error);
+          console.error(`Failed to uninstall integration ${extensionId}:`, error);
           throw error;
         }
       },
@@ -356,10 +356,10 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
       enableExtension: async (extensionId: string) => {
         const extension = get().availableExtensions.get(extensionId);
         if (!extension) {
-          throw new Error(`Extension ${extensionId} not found`);
+          throw new Error(`Integration ${extensionId} not found`);
         }
         if (!extension.isInstalled) {
-          throw new Error(`Extension ${extensionId} is not installed`);
+          throw new Error(`Integration ${extensionId} is not installed`);
         }
 
         await enableExtensionLifecycle({ extensionId, extension });
@@ -382,10 +382,10 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
       disableExtension: async (extensionId: string) => {
         const extension = get().availableExtensions.get(extensionId);
         if (!extension) {
-          throw new Error(`Extension ${extensionId} not found`);
+          throw new Error(`Integration ${extensionId} not found`);
         }
         if (!extension.isInstalled) {
-          throw new Error(`Extension ${extensionId} is not installed`);
+          throw new Error(`Integration ${extensionId} is not installed`);
         }
 
         await disableExtensionLifecycle({ extensionId, extension });
@@ -437,7 +437,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
           return updates;
         } catch (error) {
-          console.error("Failed to check for extension updates:", error);
+          console.error("Failed to check for integration updates:", error);
           set((state) => {
             state.isCheckingUpdates = false;
           });
@@ -448,12 +448,12 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
       updateExtension: async (extensionId: string) => {
         const extension = get().availableExtensions.get(extensionId);
         if (!extension) {
-          throw new Error(`Extension ${extensionId} not found`);
+          throw new Error(`Integration ${extensionId} not found`);
         }
 
         if (!isExtensionAllowedByEnterprisePolicy(extensionId)) {
           throw new Error(
-            `Update blocked by enterprise policy. "${extensionId}" is not in the extension allowlist.`,
+            `Update blocked by enterprise policy. "${extensionId}" is not in the integration allowlist.`,
           );
         }
 

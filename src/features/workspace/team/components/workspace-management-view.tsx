@@ -55,7 +55,7 @@ const SECTIONS: WorkbenchNavigationGroup<WorkspaceSection>[] = [
     items: [
       { id: "tasks", label: "Tasks", icon: <TerminalIcon /> },
       { id: "ai", label: "AI & Context", icon: <SparkleIcon /> },
-      { id: "extensions", label: "Extensions", icon: <ExtensionsIcon /> },
+      { id: "extensions", label: "Integrations", icon: <ExtensionsIcon /> },
     ],
   },
 ];

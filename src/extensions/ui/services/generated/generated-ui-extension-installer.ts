@@ -89,7 +89,7 @@ export async function initializeGeneratedUIExtensions(): Promise<void> {
     try {
       await installGeneratedUIExtension(extension, { persist: false });
     } catch (error) {
-      console.error("Failed to initialize generated UI extension:", error);
+      console.error("Failed to initialize generated UI integration:", error);
     }
   }
 }

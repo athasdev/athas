@@ -91,7 +91,7 @@ export function ActivityBarMenu({
         </ContextMenuItem>
         <ContextMenuItem onClick={onOpenExtensions}>
           <ExtensionsIcon />
-          Extensions
+          Integrations
         </ContextMenuItem>
       </ContextMenuGroup>
       <ContextMenuSeparator />

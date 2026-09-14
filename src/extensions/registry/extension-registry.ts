@@ -29,7 +29,7 @@ class ExtensionRegistry {
   constructor() {
     this.platform = NODE_PLATFORM;
     this.initPromise = this.loadBundledExtensions().catch((error) => {
-      logger.error("ExtensionRegistry", "Failed to load bundled extensions:", error);
+      logger.error("ExtensionRegistry", "Failed to load bundled integrations:", error);
     });
   }
 
@@ -51,9 +51,9 @@ class ExtensionRegistry {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       basePath = await invoke<string>("get_bundled_extensions_path");
-      logger.info("ExtensionRegistry", `Bundled extensions path: ${basePath}`);
+      logger.info("ExtensionRegistry", `Bundled integrations path: ${basePath}`);
     } catch (error) {
-      logger.error("ExtensionRegistry", "Failed to get bundled extensions path:", error);
+      logger.error("ExtensionRegistry", "Failed to get bundled integrations path:", error);
       basePath = "./extensions/bundled";
     }
 
@@ -67,7 +67,7 @@ class ExtensionRegistry {
       };
 
       this.extensions.set(manifest.id, extension);
-      logger.info("ExtensionRegistry", `Loaded bundled extension: ${manifest.displayName}`);
+      logger.info("ExtensionRegistry", `Loaded bundled integration: ${manifest.displayName}`);
     }
   }
 

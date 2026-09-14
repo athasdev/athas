@@ -9,15 +9,16 @@ const extensionControlsPath = fileURLToPath(
   new URL("../ui/components/extension-view-controls.tsx", import.meta.url),
 );
 
-describe("extensions UI contract", () => {
+describe("integrations UI contract", () => {
   it("uses the shared workbench, search, and category navigation", () => {
     const source = readFileSync(extensionsViewPath, "utf8");
 
     expect(source).toContain("<WorkbenchContent");
-    expect(source).toContain("<WorkbenchNavigation");
+    expect(source).not.toContain("<WorkbenchNavigation");
+    expect(source).toContain("<TabsList");
     expect(source).toContain("<ExtensionsBreadcrumb");
     expect(source).toContain("<SearchInput");
-    expect(source).toContain('ariaLabel="Extension categories"');
+    expect(source).toContain('aria-label="Integration categories"');
   });
 
   it("makes form selectors full-width through the shared Select contract", () => {

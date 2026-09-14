@@ -448,7 +448,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                       useBufferStore.getState().actions.openExtensionsBuffer();
                     }}
                   >
-                    Open Extensions
+                    Open Integrations
                   </Button>
                 </div>
               </CommandEmpty>

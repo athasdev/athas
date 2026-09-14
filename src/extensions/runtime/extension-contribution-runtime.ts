@@ -165,7 +165,7 @@ async function resolveContributionExtensionPath(
   try {
     return await invoke<string>("get_extension_path", { extensionId });
   } catch (error) {
-    console.warn(`Failed to resolve extension path for ${extensionId}:`, error);
+    console.warn(`Failed to resolve integration path for ${extensionId}:`, error);
     return undefined;
   }
 }

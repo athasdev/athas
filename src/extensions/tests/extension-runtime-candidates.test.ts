@@ -8,15 +8,15 @@ function manifest(id: string): ExtensionManifest {
     id,
     name: id,
     displayName: id,
-    description: `${id} extension`,
+    description: `${id} integration`,
     version: "1.0.0",
     publisher: "Athas",
     categories: ["Other"],
   };
 }
 
-describe("extension runtime candidates", () => {
-  it("activates bundled registry extensions even when they are absent from the catalog", () => {
+describe("integration runtime candidates", () => {
+  it("activates bundled registry integrations even when they are absent from the catalog", () => {
     const pierreIcons = manifest("athas.icon-theme.pierre");
     const registered: BundledExtension = {
       manifest: pierreIcons,
@@ -34,7 +34,7 @@ describe("extension runtime candidates", () => {
     ]);
   });
 
-  it("deduplicates catalog entries against their registered runtime extension", () => {
+  it("deduplicates catalog entries against their registered runtime integration", () => {
     const pierreIcons = manifest("athas.icon-theme.pierre");
     const available: AvailableExtension = {
       manifest: pierreIcons,

@@ -552,7 +552,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                     </EmptyTitle>
                     <EmptyDescription>
                       Check notifications for the latest error. Reinstall the affected language
-                      tools from Extensions if the server binary is missing or failed to launch.
+                      tools from Integrations if the server binary is missing or failed to launch.
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>

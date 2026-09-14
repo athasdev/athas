@@ -47,7 +47,6 @@ import Keybinding from "@/features/keymaps/components/keybinding";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createDatabaseActions } from "../constants/database-actions";
 import { createFileActions } from "../constants/file-actions";
-import { createGenerateActions } from "../constants/generate-actions";
 import { createGitActions } from "../constants/git-actions";
 import { createGitHubActions } from "../constants/github-actions";
 import { createMarkdownActions } from "../constants/markdown-actions";
@@ -320,22 +319,19 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       },
       onClose,
     }),
-    ...createGenerateActions({
-      onClose,
-    }),
     ...Array.from(extensionCommands.values()).map((command): Action => ({
       id: `extension-command:${command.id}`,
       label: command.title,
       description: command.category
-        ? `${command.category} extension command`
-        : "Installed extension command",
+        ? `${command.category} integration command`
+        : "Installed integration command",
       icon: <PuzzlePieceIcon />,
-      category: command.category ?? "Extensions",
+      category: command.category ?? "Integrations",
       action: () => {
         onClose();
         void Promise.resolve(command.execute()).catch((error) => {
           showToast({
-            message: error instanceof Error ? error.message : "Extension command failed",
+            message: error instanceof Error ? error.message : "Integration command failed",
             type: "error",
           });
         });

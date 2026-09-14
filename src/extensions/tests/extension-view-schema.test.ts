@@ -5,7 +5,7 @@ import {
   parseExtensionViewNode,
 } from "../ui/services/extension-view-schema";
 
-describe("extension view schema", () => {
+describe("integration view schema", () => {
   it("accepts and normalizes a rich structured view", () => {
     const view = parseExtensionViewNode({
       type: "screen",
@@ -222,7 +222,7 @@ describe("extension view schema", () => {
         type: "stack",
         children: [{ type: "chart", values: [1, 2, 3] }],
       }),
-    ).toThrow('Invalid extension view at $.children[0].type: unsupported node type "chart"');
+    ).toThrow('Invalid integration view at $.children[0].type: unsupported node type "chart"');
   });
 
   it("rejects malformed actions before they reach the renderer", () => {
@@ -232,7 +232,7 @@ describe("extension view schema", () => {
         label: "Run",
         action: { command: "", args: [] },
       }),
-    ).toThrow("Invalid extension view at $.action.command: must not be empty");
+    ).toThrow("Invalid integration view at $.action.command: must not be empty");
   });
 
   it("bounds generated trees and table data", () => {
@@ -331,7 +331,7 @@ describe("extension view schema", () => {
         checked: "yes",
         onChange: { command: "athas.autoDeploy.change" },
       }),
-    ).toThrow("Invalid extension view at $.checked: expected a boolean");
+    ).toThrow("Invalid integration view at $.checked: expected a boolean");
 
     expect(() =>
       parseExtensionViewNode({
@@ -349,7 +349,7 @@ describe("extension view schema", () => {
         options: [{ label: "Europe", value: "eu" }],
         onChange: { command: "athas.regions.change" },
       }),
-    ).toThrow("Invalid extension view at $.value: expected an array");
+    ).toThrow("Invalid integration view at $.value: expected an array");
 
     expect(() =>
       parseExtensionViewNode({

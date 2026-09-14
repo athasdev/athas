@@ -308,7 +308,7 @@ export class ExtensionInstaller {
         try: () => indexedDBParserCache.set(cacheEntry),
         catch: (reason) =>
           new ExtensionStorageError({
-            message: `Failed to store language extension ${languageId}`,
+            message: `Failed to store language integration ${languageId}`,
             languageId,
             reason,
           }),
@@ -333,7 +333,7 @@ export class ExtensionInstaller {
     highlightQueryUrl: string,
     options: ExtensionInstallOptions = {},
   ): Promise<void> {
-    logger.info("ExtensionInstaller", `Installing language extension: ${languageId}`);
+    logger.info("ExtensionInstaller", `Installing language integration: ${languageId}`);
     this.cancelInstallation(languageId);
     const abortController = new AbortController();
     this.abortControllers.set(languageId, abortController);
@@ -377,7 +377,7 @@ export class ExtensionInstaller {
    * Uninstall a language extension
    */
   async uninstallLanguage(languageId: string): Promise<void> {
-    logger.info("ExtensionInstaller", `Uninstalling language extension: ${languageId}`);
+    logger.info("ExtensionInstaller", `Uninstalling language integration: ${languageId}`);
 
     try {
       await indexedDBParserCache.delete(languageId);

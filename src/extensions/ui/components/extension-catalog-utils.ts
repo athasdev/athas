@@ -27,7 +27,7 @@ export function getCategoryLabel(category: UnifiedExtension["category"]): string
   const labels: Record<UnifiedExtension["category"], string> = {
     language: "Language",
     theme: "Theme",
-    "icon-theme": "Icon Theme",
+    "icon-theme": "Icons",
     database: "Database",
     ai: "AI",
     integration: "Integration",

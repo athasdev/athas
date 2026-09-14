@@ -1,31 +1,21 @@
-import { BrainIcon, ExtensionsIcon, PackageIcon, PlusIcon, SparkleIcon } from "@/ui/icons";
+import { ExtensionsIcon, PackageIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { useGenerateStore } from "@/features/generate/stores/generate.store";
 import { loadMarketplaceSkills, resolveMarketplaceSkill } from "@/features/ai/lib/skill-library";
 import type { MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import type { Settings } from "@/features/settings/types/settings.types";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  useDropdownMenu,
-} from "@/ui/dropdown";
+import { useDropdownMenu } from "@/ui/dropdown";
 import { ContextMenuPopup, createContextMenuGroups } from "@/ui/context-menu";
-import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import { SearchInput } from "@/ui/search";
 import { Spinner } from "@/ui/spinner";
-import { Workbench, WorkbenchContent, WorkbenchNavigation } from "@/ui/workbench";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
+import { Workbench, WorkbenchContent } from "@/ui/workbench";
 import { buildExtensionCatalog } from "./build-extension-catalog";
 import { ExtensionCatalogCard } from "./extension-catalog-card";
-import { ExtensionCategoryIcon } from "./extension-catalog-icon";
 import {
   EXTENSION_CATEGORIES,
   type ExtensionCategory,
@@ -130,19 +120,12 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   const activeFilter = isExtensionFilter(settings.extensionsActiveTab)
     ? settings.extensionsActiveTab
     : "all";
-  const activeCategory = EXTENSION_CATEGORIES.find((category) => category.id === activeFilter)?.id;
-  const extensionCategories = EXTENSION_FILTERS.map((filter) => ({
-    id: filter.id,
-    label: filter.label,
-    icon: filter.id === "all" ? <ExtensionsIcon /> : <ExtensionCategoryIcon category={filter.id} />,
-  }));
   const visibleExtensions = extensions.filter((extension) => {
     const matchesCategory = activeFilter === "all" || extension.category === activeFilter;
     const matchesSearch =
       !normalizedSearchQuery ||
       extension.name.toLowerCase().includes(normalizedSearchQuery) ||
       extension.description.toLowerCase().includes(normalizedSearchQuery) ||
-      extension.publisher?.toLowerCase().includes(normalizedSearchQuery) ||
       extension.contributionSummary?.some((item) =>
         item.toLowerCase().includes(normalizedSearchQuery),
       );
@@ -272,128 +255,83 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
   ) : null;
 
   const isLoading = isLoadingSkills || isLoadingAgents;
-  const resultLabel = `${visibleExtensions.length} extension${visibleExtensions.length === 1 ? "" : "s"}`;
+  const resultLabel = `${visibleExtensions.length} integration${visibleExtensions.length === 1 ? "" : "s"}`;
 
   return (
     <Workbench>
-      <WorkbenchNavigation
-        title="Extensions"
-        search={
-          extensionId ? (
-            <Button variant="ghost" onClick={handleOpenCatalog}>
-              Browse extensions
-            </Button>
-          ) : (
+      {detail ?? (
+        <WorkbenchContent
+          title="Integrations"
+          actions={
             <SearchInput
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Search extensions..."
+              placeholder="Search integrations..."
             />
-          )
-        }
-        groups={[{ id: "catalog", label: "Browse", items: extensionCategories }]}
-        value={selectedExtension?.category ?? activeFilter}
-        onValueChange={(value) => {
-          void updateSetting("extensionsActiveTab", value as Settings["extensionsActiveTab"]);
-          if (extensionId) openExtensionsBuffer();
-        }}
-        ariaLabel="Extension categories"
-      >
-        {detail ?? (
-          <WorkbenchContent
-            title={
-              activeCategory
-                ? (EXTENSION_CATEGORIES.find((category) => category.id === activeCategory)?.label ??
-                  "All extensions")
-                : "All extensions"
-            }
-            description={
-              <span role="status">
-                {resultLabel} · {installedCount} installed
-                {updateCount > 0 ? ` · ${updateCount} update${updateCount === 1 ? "" : "s"}` : ""}
-              </span>
-            }
-            actions={
-              <DropdownMenu>
-                <DropdownMenuTrigger render={<Button variant="ghost" />}>
-                  <PlusIcon />
-                  Add
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setSearchQuery("");
-                      void updateSetting("extensionsActiveTab", "all");
-                    }}
-                  >
-                    <PackageIcon />
-                    Browse ExtensionsIcon
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setEditingSkillId(undefined);
-                      setIsSkillsCommandOpen(true);
-                    }}
-                  >
-                    <BrainIcon />
-                    Create Skill
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => useGenerateStore.getState().actions.openExtensionGeneration()}
-                  >
-                    <SparkleIcon />
-                    Generate Extension
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            }
+          }
+          description={
+            <span role="status">
+              {resultLabel} · {installedCount} installed
+              {updateCount > 0 ? ` · ${updateCount} update${updateCount === 1 ? "" : "s"}` : ""}
+            </span>
+          }
+        >
+          <Tabs
+            value={activeFilter}
+            onValueChange={(value) => {
+              if (typeof value === "string" && isExtensionFilter(value)) {
+                void updateSetting("extensionsActiveTab", value);
+              }
+            }}
           >
-            {isLoading ? (
-              <EmptyState
-                className="min-h-64"
-                icon={<ExtensionsIcon />}
-                title="Loading extensions"
-                message={<Spinner label="Loading extensions" showLabel compact />}
-              />
-            ) : visibleExtensions.length === 0 ? (
-              <EmptyState
-                className="min-h-64"
-                icon={<PackageIcon />}
-                title="No extensions found"
-                message="Try another search or category."
-                action={
-                  normalizedSearchQuery
-                    ? { label: "Clear search", onClick: () => setSearchQuery("") }
-                    : activeFilter === "skill"
-                      ? {
-                          label: "Create skill",
-                          onClick: () => {
-                            setEditingSkillId(undefined);
-                            setIsSkillsCommandOpen(true);
-                          },
-                        }
-                      : undefined
-                }
-              />
-            ) : (
-              <div className="grid grid-cols-1 gap-3 @min-[640px]/workbench-content:grid-cols-2">
-                {visibleExtensions.map((extension) => (
-                  <ExtensionCatalogCard
-                    key={extension.id}
-                    extension={extension}
-                    onSelect={() => openExtensionBuffer(extension.id, extension.name)}
-                    onContextMenu={handleExtensionContextMenu}
-                    isInstalling={actions.isInstalling(extension)}
-                    hasUpdate={actions.hasUpdate(extension)}
-                    hasRuntimeIssue={Boolean(extension.runtimeIssues?.length)}
-                  />
+            <div className="mb-4 min-w-0 overflow-x-auto">
+              <TabsList variant="bare" aria-label="Integration categories">
+                {EXTENSION_FILTERS.map((filter) => (
+                  <TabsTrigger key={filter.id} value={filter.id} className="flex-none">
+                    {filter.label}
+                  </TabsTrigger>
                 ))}
-              </div>
-            )}
-          </WorkbenchContent>
-        )}
-      </WorkbenchNavigation>
+              </TabsList>
+            </div>
+            <TabsContent value={activeFilter}>
+              {isLoading ? (
+                <EmptyState
+                  className="min-h-64"
+                  icon={<ExtensionsIcon />}
+                  title="Loading integrations"
+                  message={<Spinner label="Loading integrations" showLabel compact />}
+                />
+              ) : visibleExtensions.length === 0 ? (
+                <EmptyState
+                  className="min-h-64"
+                  icon={<PackageIcon />}
+                  title="No integrations found"
+                  message="Try another search or category."
+                  action={
+                    normalizedSearchQuery
+                      ? { label: "Clear search", onClick: () => setSearchQuery("") }
+                      : undefined
+                  }
+                />
+              ) : (
+                <div className="grid grid-cols-1 gap-3 @min-[640px]/workbench-content:grid-cols-2">
+                  {visibleExtensions.map((extension) => (
+                    <ExtensionCatalogCard
+                      key={extension.id}
+                      extension={extension}
+                      onSelect={() => openExtensionBuffer(extension.id, extension.name)}
+                      onContextMenu={handleExtensionContextMenu}
+                      isInstalling={actions.isInstalling(extension)}
+                      hasUpdate={actions.hasUpdate(extension)}
+                      hasRuntimeIssue={Boolean(extension.runtimeIssues?.length)}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </WorkbenchContent>
+      )}
       {overlays}
     </Workbench>
   );

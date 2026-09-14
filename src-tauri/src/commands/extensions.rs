@@ -11,13 +11,13 @@ use url::Url;
 
 fn validate_extension_key(key: &str) -> Result<(), String> {
    if key.is_empty() || key.len() > 128 {
-      return Err("Invalid extension key length".to_string());
+      return Err("Invalid integration key length".to_string());
    }
    if !key
       .chars()
       .all(|ch| ch.is_ascii_alphanumeric() || ch == '.' || ch == '_' || ch == '-')
    {
-      return Err("Invalid extension key characters".to_string());
+      return Err("Invalid integration key characters".to_string());
    }
    Ok(())
 }
@@ -36,7 +36,7 @@ fn validate_extension_entrypoint(entrypoint: &str) -> Result<(), String> {
          .components()
          .any(|component| !matches!(component, std::path::Component::Normal(_)))
    {
-      return Err("Invalid extension entrypoint".to_string());
+      return Err("Invalid integration entrypoint".to_string());
    }
    Ok(())
 }
@@ -46,20 +46,20 @@ fn is_allowed_extension_host(host: &str) -> bool {
 }
 
 fn validate_extension_download_url(input: &str) -> Result<(), String> {
-   let parsed = Url::parse(input).map_err(|_| "Invalid extension download URL".to_string())?;
+   let parsed = Url::parse(input).map_err(|_| "Invalid integration download URL".to_string())?;
    let host = parsed.host_str().unwrap_or_default();
    match parsed.scheme() {
       "https" => {
          if !cfg!(debug_assertions) && !is_allowed_extension_host(host) {
-            return Err("Extension download host is not allowed".to_string());
+            return Err("Integration download host is not allowed".to_string());
          }
       }
       "http" if cfg!(debug_assertions) => {
          if host != "localhost" && host != "127.0.0.1" {
-            return Err("Insecure extension download URL is not allowed".to_string());
+            return Err("Insecure integration download URL is not allowed".to_string());
          }
       }
-      _ => return Err("Extension download URL must use HTTPS".to_string()),
+      _ => return Err("Integration download URL must use HTTPS".to_string()),
    }
    Ok(())
 }
@@ -93,7 +93,7 @@ pub fn get_bundled_extensions_path<R: Runtime>(
       resource_path.join("bundled")
    };
 
-   log::info!("Bundled extensions path: {:?}", extensions_path);
+   log::info!("Bundled integrations path: {:?}", extensions_path);
 
    Ok(extensions_path
       .to_str()
@@ -112,7 +112,7 @@ pub async fn install_extension(
    validate_extension_id(&extension_id).map_err(|error| error.to_string())?;
    validate_extension_download_url(&url)?;
 
-   log::info!("Installing extension {} from {}", extension_id, url);
+   log::info!("Installing integration {} from {}", extension_id, url);
 
    let installer = ExtensionInstaller::new(app_handle)
       .map_err(|e| format!("Failed to create installer: {}", e))?;
@@ -126,21 +126,21 @@ pub async fn install_extension(
    installer
       .install_extension(extension_id, download_info)
       .await
-      .map_err(|e| format!("Failed to install extension: {}", e))
+      .map_err(|e| format!("Failed to install integration: {}", e))
 }
 
 #[command]
 pub fn uninstall_extension(app_handle: AppHandle, extension_id: String) -> Result<(), String> {
    validate_extension_id(&extension_id).map_err(|error| error.to_string())?;
 
-   log::info!("Uninstalling extension {}", extension_id);
+   log::info!("Uninstalling integration {}", extension_id);
 
    let installer = ExtensionInstaller::new(app_handle)
       .map_err(|e| format!("Failed to create installer: {}", e))?;
 
    installer
       .uninstall_extension(&extension_id)
-      .map_err(|e| format!("Failed to uninstall extension: {}", e))
+      .map_err(|e| format!("Failed to uninstall integration: {}", e))
 }
 
 #[command]
@@ -150,14 +150,14 @@ pub fn list_installed_extensions(app_handle: AppHandle) -> Result<Vec<ExtensionM
 
    installer
       .list_installed_extensions()
-      .map_err(|e| format!("Failed to list extensions: {}", e))
+      .map_err(|e| format!("Failed to list integrations: {}", e))
 }
 
 #[command]
 pub fn get_extension_path(app_handle: AppHandle, extension_id: String) -> Result<String, String> {
    validate_extension_id(&extension_id).map_err(|error| error.to_string())?;
 
-   log::info!("Getting path for extension {}", extension_id);
+   log::info!("Getting path for integration {}", extension_id);
 
    let installer = ExtensionInstaller::new(app_handle)
       .map_err(|e| format!("Failed to create installer: {}", e))?;
@@ -185,21 +185,21 @@ pub fn read_extension_entrypoint(
    let entrypoint_path = extension_dir.join(entrypoint);
    let canonical_extension_dir = extension_dir
       .canonicalize()
-      .map_err(|e| format!("Failed to resolve extension directory: {e}"))?;
+      .map_err(|e| format!("Failed to resolve integration directory: {e}"))?;
    let canonical_entrypoint = entrypoint_path
       .canonicalize()
-      .map_err(|e| format!("Failed to resolve extension entrypoint: {e}"))?;
+      .map_err(|e| format!("Failed to resolve integration entrypoint: {e}"))?;
    if !canonical_entrypoint.starts_with(&canonical_extension_dir) {
-      return Err("Extension entrypoint escaped its installation directory".to_string());
+      return Err("Integration entrypoint escaped its installation directory".to_string());
    }
    let metadata = fs::metadata(&canonical_entrypoint)
-      .map_err(|e| format!("Failed to inspect extension entrypoint: {e}"))?;
+      .map_err(|e| format!("Failed to inspect integration entrypoint: {e}"))?;
    if !metadata.is_file() || metadata.len() > 2 * 1024 * 1024 {
-      return Err("Extension entrypoint must be a file no larger than 2 MB".to_string());
+      return Err("Integration entrypoint must be a file no larger than 2 MB".to_string());
    }
 
    fs::read_to_string(canonical_entrypoint)
-      .map_err(|e| format!("Failed to read extension entrypoint: {e}"))
+      .map_err(|e| format!("Failed to read integration entrypoint: {e}"))
 }
 
 #[command]

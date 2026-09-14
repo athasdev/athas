@@ -125,7 +125,7 @@ export function parseTeamWorkspace(content: string): TeamWorkspace {
         (id: unknown) => typeof id !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,159}$/.test(id),
       )
     )
-      throw new Error("Use up to 100 valid extension IDs.");
+      throw new Error("Use up to 100 valid integration IDs.");
     extra.recommendedExtensions = [...new Set(value.recommendedExtensions as string[])];
   }
   return {

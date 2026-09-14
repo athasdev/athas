@@ -28,7 +28,7 @@ const notificationTimestamps = new Map<string, number[]>();
 
 function requirePermission(condition: boolean, capability: string): void {
   if (!condition) {
-    throw new Error(`Extension does not have ${capability} permission`);
+    throw new Error(`Integration does not have ${capability} permission`);
   }
 }
 
@@ -44,7 +44,7 @@ function consumeNotificationQuota(extensionId: string): void {
     (timestamp) => now - timestamp < NOTIFICATION_WINDOW_MS,
   );
   if (recent.length >= MAX_NOTIFICATIONS_PER_WINDOW) {
-    throw new Error("Extension notification rate limit exceeded");
+    throw new Error("Integration notification rate limit exceeded");
   }
   recent.push(now);
   notificationTimestamps.set(extensionId, recent);
@@ -62,7 +62,7 @@ function activeFilePath(): string | null {
 async function readLimitedResponseBody(response: Response): Promise<string> {
   const declaredLength = Number(response.headers.get("content-length") ?? 0);
   if (declaredLength > MAX_RESPONSE_BYTES) {
-    throw new Error("Extension response exceeded the 5 MB limit");
+    throw new Error("Integration response exceeded the 5 MB limit");
   }
 
   if (!response.body) return "";
@@ -77,7 +77,7 @@ async function readLimitedResponseBody(response: Response): Promise<string> {
     byteLength += value.byteLength;
     if (byteLength > MAX_RESPONSE_BYTES) {
       await reader.cancel();
-      throw new Error("Extension response exceeded the 5 MB limit");
+      throw new Error("Integration response exceeded the 5 MB limit");
     }
     body += decoder.decode(value, { stream: true });
   }
@@ -173,26 +173,26 @@ export async function callExtensionHostService(
     case "notifications.show": {
       const input = params[0];
       if (!input || typeof input !== "object" || Array.isArray(input)) {
-        throw new Error("Extension notification must be an object");
+        throw new Error("Integration notification must be an object");
       }
       const notification = input as Record<string, unknown>;
       const title = requireString(
         notification.title,
-        "Extension notification title",
+        "Integration notification title",
         MAX_NOTIFICATION_TITLE_CHARACTERS,
       ).trim();
-      if (!title) throw new Error("Extension notification title must not be empty");
+      if (!title) throw new Error("Integration notification title must not be empty");
       const description =
         notification.description == null
           ? undefined
           : requireString(
               notification.description,
-              "Extension notification description",
+              "Integration notification description",
               MAX_NOTIFICATION_DESCRIPTION_CHARACTERS,
             );
       const tone = notification.tone ?? "default";
       if (!["default", "info", "success", "warning", "error"].includes(String(tone))) {
-        throw new Error("Extension notification tone is invalid");
+        throw new Error("Integration notification tone is invalid");
       }
       const duration = notification.duration;
       if (
@@ -202,7 +202,7 @@ export async function callExtensionHostService(
           duration < 2_000 ||
           duration > 10_000)
       ) {
-        throw new Error("Extension notification duration must be between 2000 and 10000 ms");
+        throw new Error("Integration notification duration must be between 2000 and 10000 ms");
       }
       consumeNotificationQuota(extensionId);
       const options = { description, duration: duration as number | undefined };
@@ -215,7 +215,7 @@ export async function callExtensionHostService(
     }
     case "clipboard.writeText": {
       requirePermission(manifest.permissions?.clipboardWrite === true, "clipboard write");
-      const text = requireString(params[0], "Extension clipboard text", MAX_CLIPBOARD_CHARACTERS);
+      const text = requireString(params[0], "Integration clipboard text", MAX_CLIPBOARD_CHARACTERS);
       await writeClipboardText(text);
       return undefined;
     }
@@ -223,12 +223,12 @@ export async function callExtensionHostService(
       requirePermission(manifest.permissions?.openExternal === true, "external link");
       const url = new URL(String(params[0]));
       if (!["http:", "https:"].includes(url.protocol)) {
-        throw new Error("Extensions can only open HTTP or HTTPS links");
+        throw new Error("Integrations can only open HTTP or HTTPS links");
       }
       await openUrl(url.toString());
       return undefined;
     }
     default:
-      throw new Error(`Unknown extension host method: ${method}`);
+      throw new Error(`Unknown integration host method: ${method}`);
   }
 }

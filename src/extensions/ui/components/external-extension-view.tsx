@@ -52,7 +52,7 @@ export function ExternalExtensionView({
     return (
       <EmptyState
         layout={surface === "sidebar" ? "sidebar" : "default"}
-        title="Extension error"
+        title="Integration error"
         message={error}
         tone="error"
         role="alert"
@@ -63,7 +63,7 @@ export function ExternalExtensionView({
     return (
       <EmptyState
         layout={surface === "sidebar" ? "sidebar" : "default"}
-        message={<Spinner showLabel label="Loading extension" compact />}
+        message={<Spinner showLabel label="Loading integration" compact />}
       />
     );
   }

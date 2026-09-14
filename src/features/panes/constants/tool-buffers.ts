@@ -38,7 +38,7 @@ export const SINGLETON_TOOL_BUFFER_METADATA: Record<
   },
   extensions: {
     path: "extensions://marketplace",
-    name: "Extensions",
+    name: "Integrations",
   },
 };
 

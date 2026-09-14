@@ -8,7 +8,7 @@ export const commandPaletteFilters = [
   { id: "git", label: "Git" },
   { id: "github", label: "GitHub" },
   { id: "settings", label: "Settings" },
-  { id: "extensions", label: "Extensions" },
+  { id: "extensions", label: "Integrations" },
 ] as const;
 
 export type CommandPaletteFilter = (typeof commandPaletteFilters)[number]["id"];
@@ -27,7 +27,7 @@ const categoryFilters: Record<string, Exclude<CommandPaletteFilter, "all">> = {
   Settings: "settings",
   Theme: "settings",
   Features: "settings",
-  Extensions: "extensions",
+  Integrations: "extensions",
   Database: "extensions",
   Generate: "extensions",
   AI: "extensions",

@@ -29,7 +29,7 @@ async function initializeExtensionRuntimeServices(): Promise<void> {
     if (result.status === "failed") {
       logger.error(
         "ExtensionRuntime",
-        `Failed to activate extension ${result.error.displayName}:`,
+        `Failed to activate integration ${result.error.displayName}:`,
         result.error.reason,
       );
     }

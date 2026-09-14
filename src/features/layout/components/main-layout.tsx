@@ -42,11 +42,6 @@ const ConnectionDialog = lazy(() =>
 const LinuxFolderPickerDialog = lazy(
   () => import("@/features/file-system/components/linux-folder-picker-dialog"),
 );
-const ExtensionGenerationCommand = lazy(() =>
-  import("@/features/generate/components/extension-generation-command").then((module) => ({
-    default: module.ExtensionGenerationCommand,
-  })),
-);
 const QuickOpen = lazy(() => import("@/features/quick-open/components/quick-open"));
 const WindowCloseGuard = lazy(() =>
   import("@/features/window/components/window-close-guard").then((module) => ({
@@ -377,7 +372,6 @@ export function MainLayout() {
         <Suspense fallback={null}>
           <QuickOpen />
           <CommandPalette />
-          <ExtensionGenerationCommand />
           <ConnectionDialog
             isOpen={isDatabaseConnectionVisible}
             onClose={() => setIsDatabaseConnectionVisible(false)}

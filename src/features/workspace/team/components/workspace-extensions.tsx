@@ -20,7 +20,7 @@ export function WorkspaceExtensions({ config, onChange, reportError }: Workspace
   return (
     <div className="space-y-5">
       <FieldDescription>
-        Recommend extensions for teammates. Installation is explicit and follows existing
+        Recommend integrations for teammates. Installation is explicit and follows existing
         organization policies. Recommendations do not change personal settings automatically.
       </FieldDescription>
       {ids.map((id) => {
@@ -77,10 +77,10 @@ export function WorkspaceExtensions({ config, onChange, reportError }: Workspace
           </Item>
         );
       })}
-      {!ids.length ? <FieldDescription>No extensions recommended yet.</FieldDescription> : null}
+      {!ids.length ? <FieldDescription>No integrations recommended yet.</FieldDescription> : null}
       <div className="flex flex-wrap items-center gap-2">
         <Select
-          aria-label="Extension to recommend"
+          aria-label="Integration to recommend"
           width="full"
           searchable
           value={selected}
@@ -90,7 +90,7 @@ export function WorkspaceExtensions({ config, onChange, reportError }: Workspace
             label: extension.manifest.name,
             keywords: [id],
           })).filter((option) => !ids.includes(option.value))}
-          placeholder={loading ? "Loading extensions…" : "Choose an extension"}
+          placeholder={loading ? "Loading integrations…" : "Choose an integration"}
         />
         <Button
           disabled={!selected || ids.includes(selected) || ids.length >= 100}
@@ -99,7 +99,7 @@ export function WorkspaceExtensions({ config, onChange, reportError }: Workspace
             setSelected("");
           }}
         >
-          Recommend extension
+          Recommend integration
         </Button>
         <Button
           variant="ghost"

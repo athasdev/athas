@@ -137,7 +137,7 @@ export function validateExtensionPackageContract(value: unknown): ExtensionPacka
       ) {
         issues.push({
           path: `categories.${index}`,
-          message: `Unknown extension category '${String(category)}'`,
+          message: `Unknown integration category '${String(category)}'`,
         });
       }
     }

@@ -47,14 +47,14 @@ export async function loadMarketplaceContributionExtensions(): Promise<Extension
         ...manifest,
         icon: resolveMarketplaceIcon(path, manifest.icon),
         displayName: manifest.displayName || manifest.name,
-        description: manifest.description || `${manifest.name} extension`,
+        description: manifest.description || `${manifest.name} integration`,
         version: manifest.version || "1.0.0",
         publisher: manifest.publisher || "Athas",
         categories: normalizeExtensionCategories(manifest.categories),
       })),
     ).filter(isContributionExtension);
   } catch (error) {
-    console.warn("Failed to load marketplace contribution extensions:", error);
+    console.warn("Failed to load marketplace contribution integrations:", error);
     return [];
   }
 }

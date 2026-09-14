@@ -46,7 +46,7 @@ interface ParseContext {
 
 export class ExtensionViewValidationError extends Error {
   constructor(path: string, message: string) {
-    super(`Invalid extension view at ${path}: ${message}`);
+    super(`Invalid integration view at ${path}: ${message}`);
     this.name = "ExtensionViewValidationError";
   }
 }

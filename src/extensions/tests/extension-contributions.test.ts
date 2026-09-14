@@ -16,7 +16,7 @@ function createManifest(overrides: Partial<ExtensionManifest> = {}): ExtensionMa
     id: "athas.test",
     name: "Test",
     displayName: "Test",
-    description: "Test extension",
+    description: "Test integration",
     version: "1.0.0",
     publisher: "Athas",
     categories: ["Language"],
@@ -24,7 +24,7 @@ function createManifest(overrides: Partial<ExtensionManifest> = {}): ExtensionMa
   };
 }
 
-describe("extension contribution normalization", () => {
+describe("integration contribution normalization", () => {
   it("reads languages from manifest contributes blocks", () => {
     const manifest = createManifest({
       contributes: {
@@ -153,7 +153,7 @@ describe("extension contribution normalization", () => {
     ]);
   });
 
-  it("reads skill contributions from extension manifests", () => {
+  it("reads skill contributions from integration manifests", () => {
     const manifest = createManifest({
       contributes: {
         skills: [

@@ -75,7 +75,7 @@ class LanguageProviderRegistry {
         await import("@/extensions/runtime/extension-runtime");
       await waitForExtensionRuntimeInitialization();
     } catch (error) {
-      logger.debug("LanguageProviderRegistry", "Failed to wait for extension runtime:", error);
+      logger.debug("LanguageProviderRegistry", "Failed to wait for integration runtime:", error);
     }
 
     return this.get(languageIdOrExtension);
