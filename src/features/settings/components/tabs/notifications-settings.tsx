@@ -87,7 +87,7 @@ export function NotificationsSettings() {
         </SettingRow>
         <SettingRow
           label="Workflow Run Notifications"
-          description="Notify when GitHub Actions runs start, pass, or fail for the active repository"
+          description="Notify about runs you trigger and pull requests you author, are assigned to, or are asked to review"
           onReset={() =>
             updateSetting(
               "githubActionNotifications",

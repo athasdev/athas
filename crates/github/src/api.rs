@@ -274,10 +274,18 @@ struct RestWorkflowRun {
    run_attempt: Option<i64>,
    workflow_id: Option<i64>,
    actor: Option<RestUser>,
+   triggering_actor: Option<RestUser>,
+   #[serde(default)]
+   pull_requests: Vec<RestWorkflowPullRequest>,
    head_commit: Option<RestHeadCommit>,
    html_url: Option<String>,
    head_branch: Option<String>,
    head_sha: Option<String>,
+}
+
+#[derive(Clone, Deserialize)]
+struct RestWorkflowPullRequest {
+   number: i64,
 }
 
 #[derive(Clone, Deserialize)]
@@ -966,6 +974,10 @@ fn workflow_run_from_rest(run: RestWorkflowRun) -> WorkflowRunListItem {
       run_attempt: run.run_attempt,
       workflow_id: run.workflow_id,
       actor: run.actor.map(|actor| user_to_author(Some(actor))),
+      triggering_actor: run
+         .triggering_actor
+         .map(|actor| user_to_author(Some(actor))),
+      pull_request_numbers: run.pull_requests.into_iter().map(|pr| pr.number).collect(),
       head_commit_message: head_commit_summary(run.head_commit),
       url: run.html_url.unwrap_or_default(),
       head_branch: run.head_branch,
@@ -2207,11 +2219,28 @@ mod api_tests {
          run_attempt: None,
          workflow_id: None,
          actor: None,
+         triggering_actor: None,
+         pull_requests: vec![],
          head_commit: None,
          html_url: None,
          head_branch: Some(branch.to_string()),
          head_sha: None,
       }
+   }
+
+   #[test]
+   fn workflow_runs_preserve_notification_participants() {
+      let run: super::RestWorkflowRun = serde_json::from_value(serde_json::json!({
+         "id": 42,
+         "actor": { "login": "author" },
+         "triggering_actor": { "login": "reviewer" },
+         "pull_requests": [{ "number": 17 }, { "number": 19 }]
+      }))
+      .unwrap();
+      let run = super::workflow_run_from_rest(run);
+      assert_eq!(run.actor.unwrap().login, "author");
+      assert_eq!(run.triggering_actor.unwrap().login, "reviewer");
+      assert_eq!(run.pull_request_numbers, vec![17, 19]);
    }
 
    #[test]

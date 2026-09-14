@@ -439,6 +439,10 @@ pub struct WorkflowRunListItem {
    pub workflow_id: Option<i64>,
    #[serde(default)]
    pub actor: Option<PullRequestAuthor>,
+   #[serde(rename = "triggeringActor", default)]
+   pub triggering_actor: Option<PullRequestAuthor>,
+   #[serde(rename = "pullRequestNumbers", default)]
+   pub pull_request_numbers: Vec<i64>,
    #[serde(rename = "headCommitMessage", default)]
    pub head_commit_message: Option<String>,
    #[serde(default, deserialize_with = "deserialize_string_or_default")]

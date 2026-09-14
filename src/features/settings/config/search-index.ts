@@ -904,7 +904,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "notifications",
     section: "Activity",
     label: "Workflow Run Notifications",
-    description: "Notify when GitHub Actions runs start, pass, or fail",
+    description: "Workflow updates for your runs and pull requests",
     keywords: ["github", "actions", "workflow", "ci", "notifications", "toast", "native"],
   },
   // Terminal Settings

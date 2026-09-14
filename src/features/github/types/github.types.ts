@@ -208,6 +208,8 @@ export interface WorkflowRunSummary {
   runAttempt: number | null;
   workflowId: number | null;
   actor: PullRequestAuthor | null;
+  triggeringActor?: PullRequestAuthor | null;
+  pullRequestNumbers?: number[];
   headCommitMessage: string | null;
   url: string;
   headBranch: string | null;

@@ -1,6 +1,7 @@
 import { isPermissionGranted, sendNotification } from "@tauri-apps/plugin-notification";
 import { isAnyAthasWindowFocused } from "@/features/ai/services/agent-native-notifications";
 import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type {
   NotificationType,
   ToastInput,
@@ -127,7 +128,7 @@ export function createWorkflowRunNotifier(dependencies: WorkflowNotificationDepe
 
     try {
       if (await dependencies.isAppFocused()) return;
-      if (!(await dependencies.isPermissionGranted())) return;
+      if (!(await dependencies.isPermissionGranted()) || !dependencies.isEnabled()) return;
 
       const failures = notifications.filter((notification) => notification.type === "error");
       const headline = failures[0] ?? shown[0];
@@ -147,7 +148,7 @@ export function createWorkflowRunNotifier(dependencies: WorkflowNotificationDepe
 }
 
 export const notifyWorkflowRunChanges = createWorkflowRunNotifier({
-  isEnabled: () => true,
+  isEnabled: () => useSettingsStore.getState().settings.githubActionNotifications,
   showToast: (value) => showToast(value),
   record: (notification) => useNotificationsStore.getState().actions.record(notification),
   isAppFocused: isAnyAthasWindowFocused,
