@@ -8,10 +8,15 @@ const TRAILING_URL_PUNCTUATION = /[.,;:!?'"]+$/;
 export function normalizeGitHubMarkdown(content: string, repositoryUrl?: string): string {
   const normalizedRepositoryUrl = normalizeRepositoryUrl(repositoryUrl);
   let activeFence: "`" | "~" | null = null;
+  let pendingLinkDestination = false;
 
   return content
     .split("\n")
     .map((line) => {
+      if (pendingLinkDestination) {
+        pendingLinkDestination = false;
+        if (line.trim()) return line;
+      }
       const fenceMarker = getFenceMarker(line);
       if (fenceMarker) {
         activeFence = activeFence === fenceMarker ? null : (activeFence ?? fenceMarker);
@@ -19,6 +24,10 @@ export function normalizeGitHubMarkdown(content: string, repositoryUrl?: string)
       }
 
       if (activeFence) return line;
+      if (/^ {0,3}\[[^\]^]+\]:/.test(line)) {
+        pendingLinkDestination = /^ {0,3}\[[^\]^]+\]:\s*$/.test(line);
+        return line;
+      }
 
       const attachmentUrl = parseStandaloneGitHubAttachmentUrl(line);
       if (attachmentUrl) {

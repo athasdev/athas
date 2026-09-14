@@ -68,17 +68,19 @@
 
 .github-markdown.github-markdown-pr img,
 .github-markdown.github-markdown-pr video {
-  display: block;
-  width: auto;
+  display: inline-block;
+  vertical-align: middle;
   max-width: 100%;
   max-height: min(70vh, 48rem);
   object-fit: contain;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 .github-markdown.github-markdown-pr video {
+  display: block;
   margin: 0.75em 0;
 }
 

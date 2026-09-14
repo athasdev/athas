@@ -32,7 +32,7 @@ async function getCachedRenderedMarkdown(content: string): Promise<string> {
   const cached = getRenderedMarkdownSnapshot(content);
   if (cached) return cached;
 
-  const rendered = await highlightMarkdownCodeBlocks(stripRedundantBreaks(parseMarkdown(content)));
+  const rendered = await highlightMarkdownCodeBlocks(parseMarkdown(content));
   markdownRenderCache.set(content, rendered);
 
   if (markdownRenderCache.size > MARKDOWN_RENDER_CACHE_LIMIT) {
@@ -43,13 +43,6 @@ async function getCachedRenderedMarkdown(content: string): Promise<string> {
   }
 
   return rendered;
-}
-
-function stripRedundantBreaks(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, "")
-    .replace(/(?:\s*\n\s*){2,}/g, "\n")
-    .trim();
 }
 
 // GitHub-flavored markdown renderer for PR descriptions and comments
@@ -169,6 +162,12 @@ const GitHubMarkdown = memo(
       <div
         className={`markdown-preview github-markdown ${className ?? ""}`.trim()}
         onClick={handleClick}
+        onErrorCapture={(event) => {
+          const target = event.target;
+          if (target instanceof HTMLImageElement) {
+            target.replaceWith(document.createTextNode(target.alt || "Image unavailable"));
+          }
+        }}
       >
         <div className={`markdown-content ${contentClassName ?? ""}`.trim()}>
           {renderedHtml !== null ? (

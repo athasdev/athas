@@ -28,7 +28,50 @@ function applyInlineFormatting(text: string): string {
     .replace(/~~([^~]+)~~/g, "<del>$1</del>");
 }
 
-function processInline(text: string, footnotes: Footnote[]): string {
+interface MarkdownLink {
+  destination: string;
+  title?: string;
+}
+
+type MarkdownLinks = Map<string, MarkdownLink>;
+
+function normalizeLinkLabel(label: string): string {
+  return label.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function escapeAttribute(value: string): string {
+  return escapeHtml(value).replace(/"/g, "&quot;");
+}
+
+function extractLinkDefinitions(lines: string[]): { lines: string[]; links: MarkdownLinks } {
+  const links: MarkdownLinks = new Map();
+  const body = [...lines];
+  let fence: { marker: string; length: number } | null = null;
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (marker) {
+      if (!fence) fence = { marker: marker[1][0], length: marker[1].length };
+      else if (marker[1][0] === fence.marker && marker[1].length >= fence.length) fence = null;
+      continue;
+    }
+    if (fence) continue;
+    const definition = line.match(/^ {0,3}\[([^\]^]+)\]:\s*(.*)$/);
+    if (!definition) continue;
+    const nextLine = !definition[2] ? lines[index + 1]?.trim() : undefined;
+    const value = (definition[2] || nextLine || "").match(
+      /^(?:<([^<>]*)>|(\S+?))(?:\s+["'](.*)["'])?\s*$/,
+    );
+    if (!value) continue;
+    const label = normalizeLinkLabel(definition[1]);
+    if (!links.has(label)) links.set(label, { destination: value[1] ?? value[2], title: value[3] });
+    body[index] = "";
+    if (nextLine !== undefined) body[++index] = "";
+  }
+  return { lines: body, links };
+}
+
+function processInline(text: string, footnotes: Footnote[], links: MarkdownLinks): string {
   const protectedSegments: string[] = [];
   const protect = (html: string): string => {
     const token = `\u0000ATHAS${protectedSegments.length}\u0000`;
@@ -36,8 +79,25 @@ function processInline(text: string, footnotes: Footnote[]): string {
     return token;
   };
 
+  const reference = (match: string, label: string, id: string | undefined, image: boolean) => {
+    const link = links.get(normalizeLinkLabel(id || label));
+    if (!link) return match;
+    const title = link.title ? ` title="${escapeAttribute(link.title)}"` : "";
+    const destination = escapeAttribute(link.destination);
+    return protect(
+      image
+        ? `<img src="${destination}" alt="${escapeAttribute(label)}"${title} />`
+        : `<a href="${destination}"${title} target="_blank" rel="noopener noreferrer">${applyInlineFormatting(label)}</a>`,
+    );
+  };
+
   let processed = text
-    .replace(/`([^`]+)`/g, (_, code) => protect(`<code>${code}</code>`))
+    .replace(/`([^`]+)`/g, (_, code) => protect(`<code>${escapeHtml(code)}</code>`))
+    .replace(/<code\b[^>]*>[\s\S]*?<\/code>|<[^>]+>/gi, (html) => protect(html))
+    .replace(/!\[([^\]]*)\](?:\[([^\]]*)\])?(?![[(])/g, (match, label, id) =>
+      reference(match, label, id, true),
+    )
+    .replace(/\[([^\]]+)\]\[([^\]]*)\]/g, (match, label, id) => reference(match, label, id, false))
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, source) =>
       protect(`<img src="${source}" alt="${alt}" />`),
     )
@@ -56,6 +116,9 @@ function processInline(text: string, footnotes: Footnote[]): string {
       ),
     );
 
+  processed = processed.replace(/\[([^\]^]+)\](?![[(])/g, (match, label) =>
+    reference(match, label, undefined, false),
+  );
   processed = applyInlineFormatting(processed);
 
   for (let index = protectedSegments.length - 1; index >= 0; index--) {
@@ -65,7 +128,7 @@ function processInline(text: string, footnotes: Footnote[]): string {
   return processed;
 }
 
-function processTable(lines: string[], footnotes: Footnote[]): string {
+function processTable(lines: string[], footnotes: Footnote[], links: MarkdownLinks): string {
   if (lines.length < 2) return lines.join("\n");
 
   const tableHtml: string[] = ["<table>"];
@@ -73,7 +136,7 @@ function processTable(lines: string[], footnotes: Footnote[]): string {
   const headerCells = lines[0]
     .split("|")
     .filter((cell) => cell.trim() !== "")
-    .map((cell) => `<th>${processInline(cell.trim(), footnotes)}</th>`);
+    .map((cell) => `<th>${processInline(cell.trim(), footnotes, links)}</th>`);
   tableHtml.push(`<thead><tr>${headerCells.join("")}</tr></thead>`);
 
   if (lines.length > 2) {
@@ -82,7 +145,7 @@ function processTable(lines: string[], footnotes: Footnote[]): string {
       const cells = lines[i]
         .split("|")
         .filter((cell) => cell.trim() !== "")
-        .map((cell) => `<td>${processInline(cell.trim(), footnotes)}</td>`);
+        .map((cell) => `<td>${processInline(cell.trim(), footnotes, links)}</td>`);
       tableHtml.push(`<tr>${cells.join("")}</tr>`);
     }
     tableHtml.push("</tbody>");
@@ -202,7 +265,7 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
     frontMatterMode === "preserve"
       ? { frontMatter: [], body: content }
       : extractYamlFrontMatter(content);
-  const lines = body.split("\n");
+  const { lines, links } = extractLinkDefinitions(body.split("\n"));
   const processedLines: string[] = [];
   const footnotes: Footnote[] = [];
   let inUnorderedList = false;
@@ -265,17 +328,25 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
     }
 
     if (line.match(/^######\s/)) {
-      processedLines.push(`<h6>${processInline(line.replace(/^######\s/, ""), footnotes)}</h6>`);
+      processedLines.push(
+        `<h6>${processInline(line.replace(/^######\s/, ""), footnotes, links)}</h6>`,
+      );
     } else if (line.match(/^#####\s/)) {
-      processedLines.push(`<h5>${processInline(line.replace(/^#####\s/, ""), footnotes)}</h5>`);
+      processedLines.push(
+        `<h5>${processInline(line.replace(/^#####\s/, ""), footnotes, links)}</h5>`,
+      );
     } else if (line.match(/^####\s/)) {
-      processedLines.push(`<h4>${processInline(line.replace(/^####\s/, ""), footnotes)}</h4>`);
+      processedLines.push(
+        `<h4>${processInline(line.replace(/^####\s/, ""), footnotes, links)}</h4>`,
+      );
     } else if (line.match(/^###\s/)) {
-      processedLines.push(`<h3>${processInline(line.replace(/^###\s/, ""), footnotes)}</h3>`);
+      processedLines.push(
+        `<h3>${processInline(line.replace(/^###\s/, ""), footnotes, links)}</h3>`,
+      );
     } else if (line.match(/^##\s/)) {
-      processedLines.push(`<h2>${processInline(line.replace(/^##\s/, ""), footnotes)}</h2>`);
+      processedLines.push(`<h2>${processInline(line.replace(/^##\s/, ""), footnotes, links)}</h2>`);
     } else if (line.match(/^#\s/)) {
-      processedLines.push(`<h1>${processInline(line.replace(/^#\s/, ""), footnotes)}</h1>`);
+      processedLines.push(`<h1>${processInline(line.replace(/^#\s/, ""), footnotes, links)}</h1>`);
     } else if (line.match(/^(---+|___+|\*\*\*+)$/)) {
       processedLines.push("<hr />");
     } else if (isBlockquoteLine(line)) {
@@ -297,7 +368,7 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
         const checked = match[1].toLowerCase() === "x";
         const taskContent = match[2];
         processedLines.push(
-          `<li class="task-list-item"><input type="checkbox" ${checked ? "checked" : ""} disabled /> ${processInline(taskContent, footnotes)}</li>`,
+          `<li class="task-list-item"><input type="checkbox" ${checked ? "checked" : ""} disabled /> ${processInline(taskContent, footnotes, links)}</li>`,
         );
       }
     } else if (isUnorderedListLine(line)) {
@@ -305,13 +376,17 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
         processedLines.push("<ul>");
         inUnorderedList = true;
       }
-      processedLines.push(`<li>${processInline(line.replace(/^\s*[-*+]\s/, ""), footnotes)}</li>`);
+      processedLines.push(
+        `<li>${processInline(line.replace(/^\s*[-*+]\s/, ""), footnotes, links)}</li>`,
+      );
     } else if (isOrderedListLine(line)) {
       if (!inOrderedList) {
         processedLines.push("<ol>");
         inOrderedList = true;
       }
-      processedLines.push(`<li>${processInline(line.replace(/^\s*\d+\.\s/, ""), footnotes)}</li>`);
+      processedLines.push(
+        `<li>${processInline(line.replace(/^\s*\d+\.\s/, ""), footnotes, links)}</li>`,
+      );
     } else if (line.match(/^\[\^([^\]]+)\]:\s(.+)$/)) {
       const match = line.match(/^\[\^([^\]]+)\]:\s(.+)$/);
       if (match) {
@@ -324,12 +399,12 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
         tableLines.push(lines[j]);
         j++;
       }
-      processedLines.push(processTable(tableLines, footnotes));
+      processedLines.push(processTable(tableLines, footnotes, links));
       i = j - 1;
     } else if (trimmedLine === "") {
       continue;
     } else {
-      processedLines.push(`<p>${processInline(line, footnotes)}</p>`);
+      processedLines.push(`<p>${processInline(line, footnotes, links)}</p>`);
     }
   }
 
@@ -348,7 +423,7 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
     processedLines.push("<ol>");
     for (const footnote of footnotes) {
       processedLines.push(
-        `<li id="fn-${footnote.id}"><span>${processInline(footnote.text, footnotes)}</span> <a href="#fnref-${footnote.id}" class="footnote-backref">↩</a></li>`,
+        `<li id="fn-${footnote.id}"><span>${processInline(footnote.text, footnotes, links)}</span> <a href="#fnref-${footnote.id}" class="footnote-backref">↩</a></li>`,
       );
     }
     processedLines.push("</ol>");

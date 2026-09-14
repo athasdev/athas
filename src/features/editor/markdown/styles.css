@@ -314,14 +314,16 @@
 }
 
 .markdown-preview .task-list-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5em;
+  display: block;
+  position: relative;
   margin: 0.25em 0;
 }
 
 .markdown-preview .task-list-item input[type="checkbox"] {
-  margin-top: 0.3em;
+  position: absolute;
+  top: 0.3em;
+  left: -1.5em;
+  margin: 0;
   cursor: default;
 }
 
