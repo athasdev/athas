@@ -61,6 +61,14 @@ describe("Linux release packaging", () => {
     expect(script).toContain("is_glibc_runtime_library");
     expect(script).toContain("patchelf --add-rpath '$ORIGIN'");
     expect(script).toContain("${app_dir_name}/libexec/libgdk_pixbuf-2.0.so.0");
+    // Launcher protects CEF graphics libs while preloading host copies for
+    // every other bundled library — preventing ABI drift without a manually
+    // maintained whitelist.
+    expect(script).toContain("protected_libs=(");
+    expect(script).toContain("is_protected");
+    expect(script).toContain("system_lib_dirs=(");
+    expect(script).toContain('export LD_PRELOAD="${preload_str}${LD_PRELOAD:+:$LD_PRELOAD}"');
+    expect(script).not.toContain("export LD_LIBRARY_PATH=");
   });
 
   it("preserves the root-owned setuid sandbox contract in Debian packages", () => {

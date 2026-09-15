@@ -76,6 +76,84 @@ if resolved_path="$(readlink -f "$script_path" 2>/dev/null)"; then
 fi
 
 bin_dir="$(cd "$(dirname "$script_path")" && pwd)"
+
+# CEF ships its own graphics runtime that must remain bundled — loading host
+# versions of these libraries causes ABI/rendering failures.  Every other
+# library in libexec/ may safely be replaced by the host copy when one exists,
+# which keeps system-integration libraries (xkbcommon, fontconfig, NSS, …) in
+# sync with the running distro.
+protected_libs=(
+  libcef.so
+  libEGL.so
+  libGLESv2.so
+  libvk_swiftshader.so
+  libvulkan.so.1
+)
+
+is_protected() {
+  local name="$1"
+  for p in "${protected_libs[@]}"; do
+    [[ "$name" == "$p" ]] && return 0
+  done
+  return 1
+}
+
+case "$(uname -m)" in
+  x86_64 | amd64)
+    system_lib_dirs=(
+      /usr/lib/x86_64-linux-gnu
+      /usr/lib64
+      /usr/lib
+      /usr/local/lib64
+      /usr/local/lib
+      /lib/x86_64-linux-gnu
+      /lib64
+      /lib
+    )
+    ;;
+  aarch64 | arm64)
+    system_lib_dirs=(
+      /usr/lib/aarch64-linux-gnu
+      /usr/lib64
+      /usr/lib
+      /usr/local/lib
+      /lib/aarch64-linux-gnu
+      /lib64
+      /lib
+    )
+    ;;
+  *)
+    system_lib_dirs=(
+      /usr/lib64
+      /usr/lib
+      /usr/local/lib64
+      /usr/local/lib
+      /lib64
+      /lib
+    )
+    ;;
+esac
+
+libexec_dir="${bin_dir}/../libexec"
+preloads=()
+for lib_path in "${libexec_dir}"/*.so "${libexec_dir}"/*.so.*; do
+  [[ -f "$lib_path" ]] || continue
+  lib="$(basename "$lib_path")"
+  is_protected "$lib" && continue
+
+  for dir in "${system_lib_dirs[@]}"; do
+    if [[ -f "${dir}/${lib}" ]]; then
+      preloads+=("${dir}/${lib}")
+      break
+    fi
+  done
+done
+
+if [[ ${#preloads[@]} -gt 0 ]]; then
+  preload_str="$(IFS=:; echo "${preloads[*]}")"
+  export LD_PRELOAD="${preload_str}${LD_PRELOAD:+:$LD_PRELOAD}"
+fi
+
 exec "${bin_dir}/../libexec/athas" \
   --ozone-platform=x11 \
   --disable-vulkan \
