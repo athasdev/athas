@@ -1,5 +1,5 @@
 import { toOpenAIMessage } from "@/features/ai/lib/image-attachments";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { tauriFetch } from "@/utils/tauri-fetch";
 import {
   AIProvider,
   type ProviderHeaders,

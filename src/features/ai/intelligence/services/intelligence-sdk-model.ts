@@ -2,7 +2,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogle } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { tauriFetch } from "@/utils/tauri-fetch";
 import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import {

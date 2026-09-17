@@ -2,7 +2,7 @@ import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { getApiBase } from "@/utils/api-base";
 import { getAuthToken } from "@/features/window/services/auth-api";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { tauriFetch } from "@/utils/tauri-fetch";
 import {
   AIProvider,
   type StreamRequest,

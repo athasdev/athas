@@ -5,7 +5,7 @@ import {
   getIntelligenceConnection,
 } from "../intelligence/services/intelligence-connection";
 import { loadWorkspaceTeamContext } from "@/features/workspace/team/services/workspace-team-context";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { tauriFetch } from "@/utils/tauri-fetch";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat.types";
 import type { AcpEvent } from "@/features/ai/types/acp.types";

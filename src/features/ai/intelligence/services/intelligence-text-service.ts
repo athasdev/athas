@@ -1,4 +1,4 @@
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { tauriFetch } from "@/utils/tauri-fetch";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
 import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";

@@ -1,4 +1,4 @@
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { tauriFetch } from "@/utils/tauri-fetch";
 import { getAuthToken } from "@/features/window/services/auth-api";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { getApiBase } from "@/utils/api-base";
