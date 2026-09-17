@@ -16,7 +16,6 @@ import { getGitStatus } from "@/features/git/api/git-status-api";
 import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
-import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import Input from "@/ui/input";
@@ -309,15 +308,11 @@ function GitHubCreateViewContent({
 
     try {
       const enterprisePolicy = subscription?.enterprise?.policy;
-      const hasIntelligence = hasProductCapability(subscription, "intelligence");
       if (enterprisePolicy?.managedMode && enterprisePolicy.aiCompletionEnabled === false) {
         setError("AI generation is disabled by your organization policy.");
         return;
       }
 
-      const useByok = enterprisePolicy
-        ? enterprisePolicy.allowByok && !hasIntelligence
-        : !hasIntelligence;
       const status = await getGitStatus(repoPath);
       const diffSummary =
         kind === "pull-request" ? summarizeDiffs(await getRefDiff(repoPath, base, head)) : "";
@@ -360,20 +355,17 @@ Existing body: ${body || "(empty)"}
 Git status:
 ${statusSummary}`;
 
-      const { editedText } = await requestInlineEdit(
-        {
-          model: aiAutocompleteModelId,
-          feature: "github-draft",
-          beforeSelection: "",
-          selectedText: prompt,
-          afterSelection: "",
-          instruction:
-            "Generate a GitHub issue or pull request draft. Return valid JSON only with title and body string fields. Do not include markdown fences or explanation.",
-          filePath: kind === "pull-request" ? "github-pull-request" : "github-issue",
-          languageId: "json",
-        },
-        { useByok },
-      );
+      const { editedText } = await requestInlineEdit({
+        model: aiAutocompleteModelId,
+        feature: "github-draft",
+        beforeSelection: "",
+        selectedText: prompt,
+        afterSelection: "",
+        instruction:
+          "Generate a GitHub issue or pull request draft. Return valid JSON only with title and body string fields. Do not include markdown fences or explanation.",
+        filePath: kind === "pull-request" ? "github-pull-request" : "github-issue",
+        languageId: "json",
+      });
 
       const draft = extractJsonObject(editedText);
       if (!draft.title?.trim() && !draft.body?.trim()) {

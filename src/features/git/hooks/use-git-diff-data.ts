@@ -20,10 +20,9 @@ interface UseDiffDataReturn {
   switchToView: (viewType: "staged" | "unstaged") => void;
 }
 
-export const useDiffData = (): UseDiffDataReturn => {
-  const activeBuffer = useBufferStore((state) => {
-    if (!state.activeBufferId) return null;
-    return getBufferById(state.buffers, state.activeBufferId);
+export const useDiffData = (bufferId: string): UseDiffDataReturn => {
+  const diffBuffer = useBufferStore((state) => {
+    return getBufferById(state.buffers, bufferId);
   });
   const { updateBufferContent, closeBuffer } = useBufferStore.use.actions();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
@@ -35,25 +34,25 @@ export const useDiffData = (): UseDiffDataReturn => {
 
   const rawDiffData = useMemo<GitDiff | MultiFileDiff | null>(
     () =>
-      (activeBuffer?.type === "diff" && activeBuffer.diffData) ||
-      (activeBuffer?.type === "diff" && activeBuffer.content
+      (diffBuffer?.type === "diff" && diffBuffer.diffData) ||
+      (diffBuffer?.type === "diff" && diffBuffer.content
         ? (() => {
             try {
-              return JSON.parse(activeBuffer.content) as GitDiff | MultiFileDiff;
+              return JSON.parse(diffBuffer.content) as GitDiff | MultiFileDiff;
             } catch {
               return null;
             }
           })()
         : null),
-    [activeBuffer],
+    [diffBuffer],
   );
 
   const diff = rawDiffData && "file_path" in rawDiffData ? rawDiffData : null;
 
-  const stagedMatch = activeBuffer?.path.match(/^diff:\/\/(staged|unstaged)\/(.+)$/);
+  const stagedMatch = diffBuffer?.path.match(/^diff:\/\/(staged|unstaged)\/(.+)$/);
   const isStaged = stagedMatch?.[1] === "staged";
   const isWorkingTreeFileDiff = Boolean(stagedMatch);
-  const filePath = getDiffBufferFilePath(activeBuffer?.path);
+  const filePath = getDiffBufferFilePath(diffBuffer?.path);
 
   const switchToView = useCallback(
     (viewType: "staged" | "unstaged") => {
@@ -88,7 +87,7 @@ export const useDiffData = (): UseDiffDataReturn => {
       !isWorkingTreeFileDiff ||
       !rootFolderPath ||
       !filePath ||
-      !activeBuffer ||
+      !diffBuffer ||
       isRefreshing.current
     ) {
       return;
@@ -102,15 +101,15 @@ export const useDiffData = (): UseDiffDataReturn => {
       const currentViewDiff = await getFileDiff(rootFolderPath, filePath, isStaged);
 
       if (hasGitDiffChanges(currentViewDiff)) {
-        updateBufferContent(activeBuffer.id, "", false, currentViewDiff);
+        updateBufferContent(diffBuffer.id, "", false, currentViewDiff);
       } else {
         const otherViewDiff = await getFileDiff(rootFolderPath, filePath, !isStaged);
 
         if (hasGitDiffChanges(otherViewDiff)) {
           switchToView(isStaged ? "unstaged" : "staged");
-          setTimeout(() => closeBuffer(activeBuffer.id), 100);
+          setTimeout(() => closeBuffer(diffBuffer.id), 100);
         } else {
-          closeBuffer(activeBuffer.id);
+          closeBuffer(diffBuffer.id);
         }
       }
     } catch (err) {
@@ -125,7 +124,7 @@ export const useDiffData = (): UseDiffDataReturn => {
     filePath,
     isStaged,
     isWorkingTreeFileDiff,
-    activeBuffer,
+    diffBuffer,
     updateBufferContent,
     closeBuffer,
     switchToView,
@@ -134,7 +133,7 @@ export const useDiffData = (): UseDiffDataReturn => {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = subscribeToGitChanges((change) => {
-      if (!isWorkingTreeFileDiff || !rootFolderPath || !filePath || !activeBuffer) return;
+      if (!isWorkingTreeFileDiff || !rootFolderPath || !filePath || !diffBuffer) return;
       if (!isGitChangeRelevant(change, rootFolderPath, filePath)) return;
 
       if (isRefreshing.current) return;
@@ -151,7 +150,7 @@ export const useDiffData = (): UseDiffDataReturn => {
       clearTimeout(timer);
       unsubscribe();
     };
-  }, [refresh, rootFolderPath, filePath, activeBuffer, isWorkingTreeFileDiff]);
+  }, [refresh, rootFolderPath, filePath, diffBuffer, isWorkingTreeFileDiff]);
 
   return {
     diff,

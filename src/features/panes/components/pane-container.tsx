@@ -900,7 +900,14 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           return <AgentTab buffer={buffer} isActive={isActivePane} />;
 
         case "diff":
-          return <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />;
+          return (
+            <DiffViewer
+              key={buffer.id}
+              bufferId={buffer.id}
+              onStageHunk={handleStageHunk}
+              onUnstageHunk={handleUnstageHunk}
+            />
+          );
 
         case "pullRequest":
         case "githubIssue":

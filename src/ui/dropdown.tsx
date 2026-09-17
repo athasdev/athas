@@ -21,7 +21,7 @@ import { CheckIcon, ChevronRightIcon, SearchIcon } from "@/ui/icons";
 import Keybinding from "@/features/keymaps/components/keybinding";
 
 const menuSurfaceVariants = cva(
-  `max-h-(--available-height) w-fit min-w-32 ${OVERLAY_MAX_WIDTH} origin-(--transform-origin) rounded-lg bg-surface/98 font-sans text-subtle-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm ui-text-chrome`,
+  `max-h-(--available-height) w-fit min-w-32 ${OVERLAY_MAX_WIDTH} origin-(--transform-origin) rounded bg-surface/98 font-sans text-subtle-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm ui-text-chrome`,
   {
     variants: {
       viewport: {
@@ -39,7 +39,7 @@ const menuSurfaceVariants = cva(
 );
 
 const menuItemVariants = cva(
-  "relative flex w-full cursor-default items-center justify-start gap-2 whitespace-nowrap rounded-md px-2 py-1 text-left font-sans text-subtle-foreground outline-hidden select-none transition-colors hover:bg-accent focus:bg-accent/70 focus:text-foreground data-highlighted:bg-accent/70 data-highlighted:text-foreground data-selected:bg-selected disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50 ui-text-chrome [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "relative flex w-full cursor-default items-center justify-start gap-2 whitespace-nowrap rounded px-2 py-1 text-left font-sans text-subtle-foreground outline-hidden select-none transition-colors hover:bg-accent focus:bg-accent/70 focus:text-foreground data-highlighted:bg-accent/70 data-highlighted:text-foreground data-selected:bg-selected disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50 ui-text-chrome [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       tone: {

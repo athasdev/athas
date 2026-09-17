@@ -1,3 +1,4 @@
+import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import { ArrowCornerDownLeftIcon, XIcon } from "@/ui/icons";
 import { forwardRef } from "react";
 import { Alert, AlertDescription } from "@/ui/alert";
@@ -53,6 +54,11 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                 }
               }}
               onKeyDown={(event) => {
+                if (event.defaultPrevented) return;
+                if (isComposingKeyboardEvent(event.nativeEvent)) {
+                  event.stopPropagation();
+                  return;
+                }
                 if (
                   (event.metaKey || event.ctrlKey) &&
                   !event.altKey &&

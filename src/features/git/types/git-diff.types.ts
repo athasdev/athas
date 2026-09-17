@@ -2,6 +2,7 @@ import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-pa
 import type { GitDiff, GitDiffLine, GitHunk } from "./git.types";
 
 export interface DiffViewerProps {
+  bufferId: string;
   onStageHunk?: (hunk: GitHunk) => void;
   onUnstageHunk?: (hunk: GitHunk) => void;
 }

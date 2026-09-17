@@ -1,6 +1,6 @@
+import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
-import { AnimatePresence, motion, useReducedMotionConfig } from "motion/react";
 import { ArrowClockwiseIcon, DotsIcon, XIcon } from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
@@ -8,7 +8,6 @@ import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
 import { Button, buttonVariants, type ButtonProps } from "@/ui/button";
-import { instantTransition, quickTransition } from "@/utils/motion";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
@@ -30,7 +29,7 @@ const commandContentVariants = cva(
 );
 
 const commandItemVariants = cva(
-  "group/command-item font-sans ui-text-sm mb-0.5 flex h-auto min-h-10 w-full items-center justify-start gap-2.5 rounded-chrome px-2.5 py-2 text-left leading-row transition-colors",
+  "group/command-item font-sans ui-text-sm mb-0.5 flex h-auto min-h-10 w-full items-center justify-start gap-2.5 rounded px-2.5 py-2 text-left leading-row transition-none",
   {
     variants: {
       selected: {
@@ -54,9 +53,9 @@ const commandInputClassName = cva(
         /** Borderless input that sits inside a command header. */
         inline: "h-8 bg-transparent",
         /** Standalone bordered field, for a search box in a toolbar. */
-        field: "h-7 rounded-md border border-border/70 bg-background/65 px-2",
+        field: "h-7 rounded border border-border/70 bg-background/65 px-2",
         /** Same shape as `field`, on a raised surface. */
-        surface: "h-7 rounded-md bg-surface px-2",
+        surface: "h-7 rounded bg-surface px-2",
       },
     },
     defaultVariants: {
@@ -125,62 +124,43 @@ const Command = ({
   autoFocus = true,
 }: CommandProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
-  const prefersReducedMotion = useReducedMotionConfig();
   const getInitialFocusTarget = useCallback(
     () => popupRef.current?.querySelector<HTMLElement>(commandInputSelector) ?? true,
     [],
   );
 
+  if (!isVisible) return null;
+
   return (
-    <AnimatePresence>
-      {isVisible && (
-        <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
-          <DialogPrimitive.Portal>
-            <div
-              className="fixed inset-0 z-10060 flex items-start justify-center bg-black/10 pt-[10vh]"
-              onMouseDown={(event) => {
-                if (event.target !== event.currentTarget) return;
-                event.preventDefault();
-                event.stopPropagation();
-                onClose?.();
-              }}
-            >
-              <DialogPrimitive.Popup
-                ref={popupRef}
-                aria-describedby={undefined}
-                initialFocus={autoFocus ? getInitialFocusTarget : false}
-                render={
-                  <motion.div
-                    initial={
-                      prefersReducedMotion
-                        ? false
-                        : { opacity: 0, scale: 1, y: -4, filter: "blur(0px)" }
-                    }
-                    animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-                    exit={
-                      prefersReducedMotion
-                        ? { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }
-                        : { opacity: 0, scale: 1, y: -4, filter: "blur(0px)" }
-                    }
-                    transition={prefersReducedMotion ? instantTransition : quickTransition}
-                  />
-                }
-                className={cn(
-                  "rounded-xl bg-background text-foreground shadow-(--shadow-dialog) ring-1 ring-border/70 outline-none",
-                  commandContentVariants(),
-                  "pointer-events-auto",
-                  className,
-                )}
-                data-command-surface=""
-              >
-                <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
-                {children}
-              </DialogPrimitive.Popup>
-            </div>
-          </DialogPrimitive.Portal>
-        </DialogPrimitive.Root>
-      )}
-    </AnimatePresence>
+    <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
+      <DialogPrimitive.Portal>
+        <div
+          className="fixed inset-0 z-10060 flex items-start justify-center bg-black/10 pt-[10vh]"
+          onMouseDown={(event) => {
+            if (event.target !== event.currentTarget) return;
+            event.preventDefault();
+            event.stopPropagation();
+            onClose?.();
+          }}
+        >
+          <DialogPrimitive.Popup
+            ref={popupRef}
+            aria-describedby={undefined}
+            initialFocus={autoFocus ? getInitialFocusTarget : false}
+            className={cn(
+              "rounded bg-background text-foreground shadow-(--shadow-dialog) ring-1 ring-border/70 outline-none",
+              commandContentVariants(),
+              "pointer-events-auto",
+              className,
+            )}
+            data-command-surface=""
+          >
+            <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+            {children}
+          </DialogPrimitive.Popup>
+        </div>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 };
 
@@ -274,7 +254,7 @@ export const CommandForm = ({
   onCancel,
 }: CommandFormProps) => (
   <div className="shrink-0 p-2 pb-0">
-    <form data-command-form="" className="rounded-chrome bg-surface/55 p-2" onSubmit={onSubmit}>
+    <form data-command-form="" className="rounded bg-surface/55 p-2" onSubmit={onSubmit}>
       <div className="mb-2 flex min-w-0 items-center gap-2">
         {icon ? <CommandItemIcon>{icon}</CommandItemIcon> : null}
         <span className="min-w-0 flex-1 truncate font-medium text-foreground ui-text-sm">
@@ -665,6 +645,8 @@ export function useCommandListNavigation({
 
   const onInputKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.defaultPrevented || isComposingKeyboardEvent(event.nativeEvent)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey || itemCount === 0) return;
       if (event.key === "ArrowDown") {
         event.preventDefault();
         setSelectedIndex((index) => moveCommandListIndex(index, itemCount, "next"));

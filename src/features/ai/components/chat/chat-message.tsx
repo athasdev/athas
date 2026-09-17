@@ -32,6 +32,7 @@ import { PlanBlockDisplay } from "../messages/plan-block-display";
 import { ToolCallGroupDisplay } from "../messages/tool-call-display";
 
 interface ChatMessageProps {
+  onRetry?: () => void | Promise<void>;
   message: AIMessage;
   isLastMessage: boolean;
   showActions?: boolean;
@@ -96,17 +97,25 @@ function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
   );
 }
 
-function AssistantMessageAvatar({ iconId, label }: { iconId: string; label: string }) {
+function AssistantMessageAvatar({
+  iconId,
+  label,
+  isStatus = false,
+}: {
+  iconId: string;
+  label: string;
+  isStatus?: boolean;
+}) {
   return (
     <MessageAvatar
       placement="content"
       variant="assistant"
       size="compact"
-      className="mt-1.5"
+      className={isStatus ? "self-center" : "mt-0.5"}
       title={label}
       aria-label={label}
     >
-      <ProviderIcon providerId={iconId} />
+      <ProviderIcon providerId={iconId} size={20} className="size-5" />
     </MessageAvatar>
   );
 }
@@ -116,6 +125,7 @@ export const ChatMessage = memo(function ChatMessage({
   isLastMessage,
   showActions = true,
   onApplyCode,
+  onRetry,
   onEditUserMessage,
   canEditUserMessage = false,
   searchQuery = "",
@@ -171,7 +181,7 @@ export const ChatMessage = memo(function ChatMessage({
           <Avatar name={userName} src={userAvatarUrl} className="size-full" />
         </MessageAvatar>
         <MessageContent>
-          <Bubble variant="ghost">
+          <Bubble variant="user">
             <BubbleContent title={messageTime} className="w-full">
               {isEditing ? (
                 <form onSubmit={submitEdit} className="flex min-w-0 flex-col gap-2">
@@ -187,7 +197,9 @@ export const ChatMessage = memo(function ChatMessage({
                     }}
                     variant="ghost"
                     inset="flush"
-                    className="min-h-16"
+                    font="inherit"
+                    resize="none"
+                    autoSize
                     aria-label="Edit prompt"
                   />
                   <div className="flex justify-end gap-1">
@@ -246,8 +258,8 @@ export const ChatMessage = memo(function ChatMessage({
     (!message.toolCalls || message.toolCalls.length === 0)
   ) {
     return (
-      <Message>
-        <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
+      <Message className="items-center">
+        <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} isStatus />
         <MessageContent>
           <ChatResponseStatus phase={message.responsePhase} />
         </MessageContent>
@@ -323,6 +335,7 @@ export const ChatMessage = memo(function ChatMessage({
                   />
                 ) : (
                   <MarkdownRenderer
+                    onRetry={onRetry}
                     content={message.content}
                     onApplyCode={onApplyCode}
                     chatId={chatId}

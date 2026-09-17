@@ -105,7 +105,7 @@ export function AgentStartView({ children, showQuickActions = false }: AgentStar
               key={item.id}
               type="button"
               onClick={item.action}
-              variant="default"
+              variant="outline-dashed"
               width="full"
               align="start"
               truncate

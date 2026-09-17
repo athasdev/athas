@@ -97,6 +97,7 @@ export interface AIChatProps {
 }
 
 export interface MarkdownRendererProps {
+  onRetry?: () => void | Promise<void>;
   content: string;
   onApplyCode?: (code: string) => void;
   chatId?: string | null;

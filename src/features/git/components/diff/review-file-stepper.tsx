@@ -1,11 +1,9 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "@/ui/icons";
-import { motion } from "motion/react";
 import { memo, useEffect, useMemo } from "react";
 import type { FileNavigatorItem } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { Button } from "@/ui/button";
 import { Kbd } from "@/ui/kbd";
 import { ProgressCircle } from "@/ui/progress";
-import { quickTransition } from "@/utils/motion";
 
 interface ReviewFileStepperProps {
   items: FileNavigatorItem[];
@@ -32,7 +30,11 @@ function isEditableTarget(target: EventTarget | null) {
   return (
     target instanceof HTMLElement &&
     (target.isContentEditable ||
-      Boolean(target.closest("input, textarea, select, [contenteditable]")))
+      Boolean(
+        target.closest(
+          'input, textarea, select, [contenteditable], [role="menu"], [role="listbox"], [role="dialog"], [role="alertdialog"]',
+        ),
+      ))
   );
 }
 
@@ -44,8 +46,13 @@ function ReviewFileProgress({ current, total }: { current: number; total: number
       aria-label={`File ${current} of ${total}`}
     >
       <ProgressCircle value={total > 0 ? (current / total) * 100 : 0} />
-      <span className="ui-text-sm text-foreground tabular-nums">
-        {current}/{total}
+      <span className="grid ui-text-sm text-foreground tabular-nums" aria-hidden="true">
+        <span className="invisible col-start-1 row-start-1">
+          {total}/{total}
+        </span>
+        <span className="col-start-1 row-start-1 text-center">
+          {current}/{total}
+        </span>
       </span>
     </span>
   );
@@ -79,20 +86,14 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
       onSelect(item.key);
     };
 
-    document.addEventListener("keydown", handleNavigationShortcut, { capture: true });
-    return () =>
-      document.removeEventListener("keydown", handleNavigationShortcut, { capture: true });
+    document.addEventListener("keydown", handleNavigationShortcut);
+    return () => document.removeEventListener("keydown", handleNavigationShortcut);
   }, [isActive, nextItem, onSelect, previousItem]);
 
   if (items.length < 2 || !selectedItem) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={quickTransition}
-      className="pointer-events-auto w-fit max-w-full"
-    >
+    <div className="pointer-events-auto w-fit max-w-full">
       <div
         role="group"
         aria-label="Changed file navigation"
@@ -127,6 +128,6 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
           <ChevronRightIcon />
         </Button>
       </div>
-    </motion.div>
+    </div>
   );
 });

@@ -1,4 +1,12 @@
-import { type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   canUseIntelligenceProvider,
   canUseProviderWithoutApiKey,
@@ -7,6 +15,9 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { getProviderById } from "@/features/ai/types/providers.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
+import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
+import { resolveIntelligenceConnection } from "@/features/ai/intelligence/lib/resolve-intelligence-connection";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { toast } from "sonner";
 import {
@@ -120,6 +131,24 @@ export function useInlineEdit({
     value: string;
   }>({ sessionKey: null, value: "" });
   const [isInlineEditRunning, setIsInlineEditRunning] = useState(false);
+  const requestScopeRef = useRef<{ content: string } | null>(null);
+  const pendingRequestRef = useRef<object | null>(null);
+
+  useLayoutEffect(() => {
+    const scope = { content: "" };
+    requestScopeRef.current = scope;
+    pendingRequestRef.current = null;
+    setIsInlineEditRunning(false);
+    return () => {
+      requestScopeRef.current = null;
+      pendingRequestRef.current = null;
+    };
+  }, [buffer?.id, inlineEditSessionKey]);
+
+  useLayoutEffect(() => {
+    if (requestScopeRef.current) requestScopeRef.current.content = inlineEditContent;
+  }, [inlineEditContent, buffer?.id, inlineEditSessionKey]);
+
   const [inlineEditErrorState, setInlineEditErrorState] = useState<{
     sessionKey: string | null;
     value: string | null;
@@ -129,11 +158,33 @@ export function useInlineEdit({
     value: InlineEditAnchor | null;
   }>({ sessionKey: null, value: null });
 
-  const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
-  const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
-  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
+  const personalProviderId = useSettingsStore((state) => state.settings.aiProviderId);
+  const personalModelId = useSettingsStore((state) => state.settings.aiModelId);
+  const intelligencePreferences = useIntelligenceSettingsStore((state) => state.preferences);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const subscription = useAuthStore((state) => state.subscription);
+  const connection = resolveIntelligenceConnection({
+    task: "inline-edit",
+    preferences: intelligencePreferences,
+    hasIntelligence: hasProductCapability(subscription, "intelligence"),
+    personalConnection: { providerId: personalProviderId, modelId: personalModelId },
+  });
+  const aiProviderId = connection.providerId;
+  const aiModelId = connection.modelId;
+  const updateSetting = (key: "aiProviderId" | "aiModelId", value: string) => {
+    const state = useIntelligenceSettingsStore.getState();
+    state.actions.change({
+      ...state.preferences,
+      tasks: {
+        ...state.preferences.tasks,
+        "inline-edit":
+          key === "aiProviderId"
+            ? { providerId: value, modelId: "" }
+            : { providerId: aiProviderId, modelId: value },
+      },
+    });
+    void state.actions.save();
+  };
   const checkAllProviderApiKeys = useAIChatStore((state) => state.actions.checkAllProviderApiKeys);
 
   const getSelectionAnchorPosition = useCallback((): { line: number; column: number } | null => {
@@ -333,11 +384,7 @@ export function useInlineEdit({
   }, [enabled, getCursorOffset, inputRef, lineOffsets, lines, selection]);
 
   const handleApplyInlineEdit = useCallback(async () => {
-    if (!enabled) {
-      inlineEditToolbarActions.hide();
-      return;
-    }
-
+    if (!inlineEditVisible || pendingRequestRef.current) return;
     if (!buffer) {
       toast.warning("Inline edit requires an open buffer.");
       inlineEditToolbarActions.hide();
@@ -362,55 +409,62 @@ export function useInlineEdit({
       return;
     }
 
-    const enterprisePolicy = subscription?.enterprise?.policy;
-    const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-
-    const hasStoredProviderKey =
-      useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
-    const canUseProvider =
-      canUseIntelligenceProvider(aiProviderId, subscription) ||
-      canUseProviderWithoutApiKey({
-        providerId: aiProviderId,
-        subscription,
-        hasStoredKey: hasStoredProviderKey,
-        requiresApiKey: provider?.requiresApiKey ?? true,
-      });
-
-    if (!canUseProvider) {
-      await checkAllProviderApiKeys();
-      const hasProviderKeyAfterRefresh =
-        useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
-      if (!hasProviderKeyAfterRefresh) {
-        toast.error(`${provider?.name ?? aiProviderId} API key is required for inline edit.`);
-        return;
-      }
-    }
-
-    const hasProviderKey = useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
-    const useHosted = !hasProviderKey && canUseIntelligenceProvider(aiProviderId, subscription);
-
-    if (useHosted && !isAuthenticated) {
-      toast.error("Please sign in to use Athas Intelligence.");
-      return;
-    }
-
-    if (useHosted && managedPolicy && !managedPolicy.aiCompletionEnabled) {
-      toast.error("Inline edit is disabled by your organization policy.");
-      return;
-    }
-
-    if (!useHosted && managedPolicy && !managedPolicy.allowByok) {
-      toast.error("BYOK is disabled by your organization policy.");
-      return;
-    }
-
-    const beforeSelection = buffer.content.slice(Math.max(0, startOffset - 12000), startOffset);
-    const afterSelection = buffer.content.slice(endOffset, endOffset + 12000);
-
+    const scope = requestScopeRef.current;
+    if (!scope) return;
+    const request = {};
+    pendingRequestRef.current = request;
+    const isCurrentRequest = () =>
+      requestScopeRef.current === scope && pendingRequestRef.current === request;
     setInlineEditError(null);
     setIsInlineEditRunning(true);
 
     try {
+      const enterprisePolicy = subscription?.enterprise?.policy;
+      const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
+
+      const hasStoredProviderKey =
+        useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
+      const canUseProvider =
+        canUseIntelligenceProvider(aiProviderId, subscription) ||
+        canUseProviderWithoutApiKey({
+          providerId: aiProviderId,
+          subscription,
+          hasStoredKey: hasStoredProviderKey,
+          requiresApiKey: provider?.requiresApiKey ?? true,
+        });
+
+      if (!canUseProvider) {
+        await checkAllProviderApiKeys();
+        if (!isCurrentRequest()) return;
+        const hasProviderKeyAfterRefresh =
+          useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
+        if (!hasProviderKeyAfterRefresh) {
+          toast.error(`${provider?.name ?? aiProviderId} API key is required for inline edit.`);
+          return;
+        }
+      }
+
+      const hasProviderKey = useAIChatStore.getState().providerApiKeys.get(aiProviderId) || false;
+      const useHosted = !hasProviderKey && canUseIntelligenceProvider(aiProviderId, subscription);
+
+      if (useHosted && !isAuthenticated) {
+        toast.error("Please sign in to use Athas Intelligence.");
+        return;
+      }
+
+      if (useHosted && managedPolicy && !managedPolicy.aiCompletionEnabled) {
+        toast.error("Inline edit is disabled by your organization policy.");
+        return;
+      }
+
+      if (!useHosted && managedPolicy && !managedPolicy.allowByok) {
+        toast.error("BYOK is disabled by your organization policy.");
+        return;
+      }
+
+      const beforeSelection = buffer.content.slice(Math.max(0, startOffset - 12000), startOffset);
+      const afterSelection = buffer.content.slice(endOffset, endOffset + 12000);
+
       const { editedText } = await requestInlineEdit(
         {
           provider: aiProviderId,
@@ -425,6 +479,14 @@ export function useInlineEdit({
         },
         { useHosted },
       );
+
+      if (!isCurrentRequest()) return;
+      if (scope.content !== buffer.content) {
+        setInlineEditError(
+          "The file changed while the edit was running. Run the edit again with the latest content.",
+        );
+        return;
+      }
 
       if (!editedText.trim()) {
         toast.warning("Inline edit returned an empty result.");
@@ -460,6 +522,7 @@ export function useInlineEdit({
 
       toast.success("Inline edit applied.");
     } catch (error) {
+      if (!isCurrentRequest()) return;
       const errorMessage =
         error instanceof InlineEditError ? error.message : "Inline edit failed. Please try again.";
       setInlineEditError(errorMessage);
@@ -469,10 +532,14 @@ export function useInlineEdit({
         toast.error("Inline edit failed. Please try again.");
       }
     } finally {
-      setIsInlineEditRunning(false);
+      if (isCurrentRequest()) {
+        pendingRequestRef.current = null;
+        setIsInlineEditRunning(false);
+      }
     }
   }, [
     buffer,
+    inlineEditVisible,
     resolveInlineEditRange,
     isAuthenticated,
     subscription,
@@ -480,7 +547,6 @@ export function useInlineEdit({
     aiProviderId,
     aiModelId,
     inlineEditInstruction,
-    inlineEditError,
     applyInlineEdit,
     updateBufferContent,
     setCursorPosition,

@@ -9,10 +9,9 @@ import { cn } from "@/utils/cn";
 
 const Combobox = ComboboxPrimitive.Root;
 type ComboboxVariant = "default" | "ghost" | "button" | "surface";
-type ComboboxShape = "default" | "pill";
 
 const comboboxInputGroupVariants = cva(
-  "group/combobox-input relative flex h-7 min-w-0 items-center font-sans ui-text-sm transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth outline-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
+  "rounded group/combobox-input relative flex h-7 min-w-0 items-center font-sans ui-text-sm transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth outline-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
   {
     variants: {
       variant: {
@@ -24,14 +23,9 @@ const comboboxInputGroupVariants = cva(
         surface:
           "border-0 bg-surface text-foreground focus-within:ring-1 focus-within:ring-border-strong/35",
       },
-      shape: {
-        default: "rounded-chrome",
-        pill: "rounded-full",
-      },
     },
     defaultVariants: {
       variant: "default",
-      shape: "default",
     },
   },
 );
@@ -89,7 +83,6 @@ type ComboboxInputProps = Omit<ComboboxPrimitive.Input.Props, "size"> & {
   leftIconSize?: number;
   htmlSize?: number;
   variant?: ComboboxVariant;
-  shape?: ComboboxShape;
   showTrigger?: boolean;
   showClear?: boolean;
 };
@@ -102,7 +95,6 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
     leftIconSize,
     htmlSize,
     variant = "default",
-    shape = "default",
     children,
     disabled = false,
     showTrigger = true,
@@ -118,7 +110,7 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
   return (
     <div
       data-slot="combobox-input-group"
-      className={cn(comboboxInputGroupVariants({ variant, shape }), className)}
+      className={cn(comboboxInputGroupVariants({ variant }), className)}
     >
       {LeftIcon ? (
         <LeftIcon

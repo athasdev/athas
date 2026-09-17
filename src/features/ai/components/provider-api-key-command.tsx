@@ -23,6 +23,7 @@ interface ProviderApiKeyCommandProps {
 }
 
 const DASHBOARD_LINKS: Partial<Record<string, string>> = {
+  vercel: "https://vercel.com/dashboard/ai-gateway",
   openrouter: "https://openrouter.ai/keys",
   grok: "https://console.x.ai",
   openai: "https://platform.openai.com/api-keys",

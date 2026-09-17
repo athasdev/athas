@@ -12,7 +12,6 @@ export interface InputProps extends Omit<
   style?: never;
   containerClassName?: never;
   variant?: "default" | "ghost" | "inline" | "bare" | "group" | "title";
-  shape?: "default" | "pill";
   size?: "default" | "compact";
   align?: "start" | "center";
   grow?: boolean;
@@ -23,7 +22,7 @@ export interface InputProps extends Omit<
 }
 
 const inputVariants = cva(
-  "w-full min-w-0 px-2 py-1 ui-text-sm text-foreground outline-none transition-[box-shadow,background-color,color] duration-fast ease-smooth disabled:cursor-not-allowed disabled:opacity-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none placeholder:text-subtle-foreground aria-invalid:ring-1 aria-invalid:ring-destructive/45 aria-invalid:focus:ring-destructive/45",
+  "rounded w-full min-w-0 px-2 py-1 ui-text-sm text-foreground outline-none transition-[box-shadow,background-color,color] duration-fast ease-smooth disabled:cursor-not-allowed disabled:opacity-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none placeholder:text-subtle-foreground aria-invalid:ring-1 aria-invalid:ring-destructive/45 aria-invalid:focus:ring-destructive/45",
   {
     variants: {
       font: {
@@ -32,17 +31,15 @@ const inputVariants = cva(
         inherit: "[font-family:inherit] [font-size:inherit]",
       },
       variant: {
-        default:
-          "rounded-chrome border-0 bg-surface focus:bg-surface focus:ring-1 focus:ring-border-strong/35",
+        default: "border-0 bg-surface focus:bg-surface focus:ring-1 focus:ring-border-strong/35",
         ghost: "border-none bg-transparent focus:ring-0",
         inline:
-          "rounded-none border-0 border-foreground border-b bg-transparent focus:border-subtle-foreground focus:ring-0",
-        bare: "rounded-none border-0 bg-transparent px-0 focus:ring-0",
-        group: "rounded-none border-0 bg-transparent shadow-none ring-0 focus-visible:ring-0",
+          "border-0 border-foreground border-b bg-transparent focus:border-subtle-foreground focus:ring-0",
+        bare: "border-0 bg-transparent px-0 focus:ring-0",
+        group: "border-0 bg-transparent shadow-none ring-0 focus-visible:ring-0",
         title:
-          "rounded-none border-0 bg-transparent px-0 font-semibold leading-normal ui-text-base focus:ring-0",
+          "border-0 bg-transparent px-0 font-semibold leading-normal ui-text-base focus:ring-0",
       },
-      shape: { default: "", pill: "rounded-full" },
       size: { default: "h-7", compact: "h-6" },
       align: { start: "text-left", center: "text-center" },
       grow: { true: "flex-1", false: "" },
@@ -52,7 +49,6 @@ const inputVariants = cva(
     compoundVariants: [{ variant: "title", className: "h-auto" }],
     defaultVariants: {
       variant: "default",
-      shape: "default",
       font: "default",
       size: "default",
       align: "start",
@@ -63,7 +59,6 @@ const inputVariants = cva(
 const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   {
     variant,
-    shape,
     size,
     align,
     grow,
@@ -89,7 +84,6 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       className={cn(
         inputVariants({
           variant,
-          shape,
           size,
           align,
           grow,
@@ -155,7 +149,6 @@ type InlineRenameInputProps = Omit<
   | "variant"
   | "className"
   | "style"
-  | "shape"
   | "font"
   | "leftIcon"
   | "rightIcon"

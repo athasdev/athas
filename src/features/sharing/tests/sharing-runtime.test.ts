@@ -4,6 +4,7 @@ import type { Chat } from "@/features/ai/types/ai-chat.types";
 const state = vi.hoisted(() => ({
   effect: undefined as (() => (() => void) | undefined) | undefined,
   chats: [] as Chat[],
+  userId: 1,
   loadAll: vi.fn(),
   loadChat: vi.fn(),
   options: vi.fn(),
@@ -17,7 +18,9 @@ vi.mock("react", () => ({
 }));
 vi.mock("@/features/window/services/auth-api", () => ({ getAuthToken: async () => "token" }));
 vi.mock("@/features/window/stores/auth.store", () => ({
-  useAuthStore: Object.assign(() => 1, { getState: () => ({ user: { id: 1 } }) }),
+  useAuthStore: Object.assign(() => state.userId, {
+    getState: () => ({ user: { id: state.userId } }),
+  }),
 }));
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({
   useAIChatStore: { getState: () => ({ chats: state.chats }) },
@@ -53,12 +56,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("window", { dispatchEvent: state.dispatch });
   state.chats = [];
+  state.userId = 1;
   state.options.mockResolvedValue({ sessionsEnabled: true, items: [], excludedSources: [] });
   state.request.mockResolvedValue({ id: "cloud", revision: 1 });
 });
 afterEach(() => {
   cleanup?.();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 async function sync() {
   SharingRuntime();
@@ -112,4 +117,23 @@ describe("private session sync", () => {
     await sync();
     expect(state.request).not.toHaveBeenCalled();
   });
+  it.each(["unmount", "account change"])(
+    "ignores a late sync completion after %s",
+    async (change) => {
+      const request = Promise.withResolvers<{ id: string; revision: number }>();
+      state.chats = [chat("active", 300)];
+      state.loadAll.mockResolvedValue([]);
+      state.request.mockReturnValueOnce(request.promise);
+      SharingRuntime();
+      cleanup = state.effect?.();
+      await vi.waitFor(() => expect(state.request).toHaveBeenCalledTimes(1));
+      const schedule = vi.spyOn(globalThis, "setTimeout");
+      if (change === "unmount") cleanup?.();
+      else state.userId = 2;
+      request.resolve({ id: "cloud", revision: 1 });
+      await request.promise;
+      expect(state.dispatch).not.toHaveBeenCalled();
+      expect(schedule).not.toHaveBeenCalled();
+    },
+  );
 });

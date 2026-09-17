@@ -6,7 +6,7 @@ export function TextLink({ className, ...props }: ComponentProps<"a">) {
     <a
       data-slot="text-link"
       className={cn(
-        "rounded-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary/20",
+        "rounded text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary/20",
         className,
       )}
       {...props}

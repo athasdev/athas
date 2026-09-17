@@ -37,8 +37,8 @@ const messageAvatarVariants = cva(
   {
     variants: {
       variant: {
-        default: "rounded-full bg-surface",
-        assistant: "rounded-md bg-accent text-subtle-foreground",
+        default: "rounded bg-surface",
+        assistant: "rounded bg-accent text-subtle-foreground",
       },
       size: {
         default: "",

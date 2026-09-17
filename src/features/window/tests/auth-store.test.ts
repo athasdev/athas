@@ -56,7 +56,7 @@ describe("auth store", () => {
       subscription: null,
       isAuthenticated: true,
       isLoading: false,
-      error: null,
+      error: "offline",
     });
     expect(dependencies.removeAuthToken).not.toHaveBeenCalled();
   });
@@ -104,5 +104,124 @@ describe("auth store", () => {
       isAuthenticated: false,
       error: null,
     });
+  });
+});
+
+describe("sign-out recovery", () => {
+  it("clears local state without waiting for the server", async () => {
+    const dependencies = createDependencies({
+      logoutFromServer: vi.fn(() => new Promise<void>(() => {})),
+    });
+    const store = createAuthStore(dependencies);
+    store.setState({ user, subscription, isAuthenticated: true, isLoading: true });
+
+    await store.getState().actions.logout();
+
+    expect(dependencies.removeAuthToken).toHaveBeenCalledOnce();
+    expect(store.getState()).toMatchObject({
+      user: null,
+      subscription: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
+  });
+
+  it("still removes the saved token when remote logout rejects", async () => {
+    const dependencies = createDependencies({
+      logoutFromServer: vi.fn(async () => {
+        throw new Error("offline");
+      }),
+    });
+    const store = createAuthStore(dependencies);
+    store.setState({ user, subscription, isAuthenticated: true });
+    await store.getState().actions.logout();
+    expect(dependencies.removeAuthToken).toHaveBeenCalledOnce();
+    expect(store.getState().isAuthenticated).toBe(false);
+  });
+
+  it.each(["initialize", "refreshUser", "handleAuthCallback"] as const)(
+    "does not restore a signed-out account when %s resolves late",
+    async (action) => {
+      const pending = Promise.withResolvers<AuthUser>();
+      const dependencies = createDependencies({ fetchCurrentUser: vi.fn(() => pending.promise) });
+      const store = createAuthStore(dependencies);
+      store.setState({ user, subscription, isAuthenticated: true });
+      const request =
+        action === "handleAuthCallback"
+          ? store.getState().actions.handleAuthCallback("token")
+          : store.getState().actions[action]();
+      await Promise.resolve();
+      await store.getState().actions.logout();
+      pending.resolve(user);
+      await request;
+      expect(store.getState()).toMatchObject({
+        user: null,
+        subscription: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+    },
+  );
+
+  it("does not restore subscription data after sign-out", async () => {
+    const pending = Promise.withResolvers<SubscriptionInfo>();
+    const store = createAuthStore(
+      createDependencies({
+        fetchSubscriptionStatus: vi.fn(() => pending.promise),
+      }),
+    );
+    store.setState({ user, subscription, isAuthenticated: true });
+    const request = store.getState().actions.refreshSubscription();
+    await store.getState().actions.logout();
+    pending.resolve(subscription);
+    await request;
+    expect(store.getState().subscription).toBeNull();
+  });
+
+  it("shows a secure storage error while keeping the current session signed out", async () => {
+    const store = createAuthStore(
+      createDependencies({
+        removeAuthToken: vi.fn(async () => {
+          throw new Error("keychain unavailable");
+        }),
+      }),
+    );
+    store.setState({ user, subscription, isAuthenticated: true });
+    await store.getState().actions.logout();
+    expect(store.getState()).toMatchObject({
+      user: null,
+      isAuthenticated: false,
+      error: "Could not remove the saved session from secure storage.",
+    });
+  });
+});
+
+describe("connection failure recovery", () => {
+  it("returns a failed refresh with its actual reason", async () => {
+    const store = createAuthStore(
+      createDependencies({
+        fetchSubscriptionStatus: vi.fn(async () => {
+          throw new Error("Service unavailable (503)");
+        }),
+      }),
+    );
+    store.setState({ user, subscription, isAuthenticated: true });
+    expect(await store.getState().actions.refreshSubscription()).toBe(false);
+    expect(store.getState().error).toBe("Service unavailable (503)");
+    expect(store.getState().isAuthenticated).toBe(true);
+  });
+  it("turns an expired session into a sign-in action", async () => {
+    const store = createAuthStore(
+      createDependencies({
+        fetchSubscriptionStatus: vi.fn(async () => {
+          throw new Error("expired");
+        }),
+        isAuthInvalidError: vi.fn(() => true),
+      }),
+    );
+    store.setState({ user, subscription, isAuthenticated: true });
+    expect(await store.getState().actions.refreshSubscription()).toBe(false);
+    expect(store.getState().isAuthenticated).toBe(false);
+    expect(store.getState().error).toContain("Sign in again");
   });
 });

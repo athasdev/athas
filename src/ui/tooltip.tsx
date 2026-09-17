@@ -1,5 +1,4 @@
 import { Tooltip as TooltipPrimitive } from "@base-ui/react";
-import { cva } from "class-variance-authority";
 import type React from "react";
 import Keybinding from "@/features/keymaps/components/keybinding";
 import { cn } from "@/utils/cn";
@@ -14,10 +13,6 @@ interface TooltipProps {
 interface AnchoredTooltipProps extends Omit<TooltipProps, "children"> {
   anchor: Element | null;
 }
-
-const tooltipContentVariants = cva(
-  "ui-text-chrome pointer-events-none z-99999 whitespace-nowrap rounded-lg border border-border/50 bg-surface/90 px-2.5 py-1.5 text-subtle-foreground shadow-(--shadow-card) backdrop-blur-md transition-[opacity,transform] duration-fast ease-smooth data-ending-style:opacity-0 data-[side=bottom]:data-ending-style:-translate-y-0.5 data-[side=bottom]:data-starting-style:-translate-y-0.5 data-[side=bottom]:data-starting-style:opacity-0 data-[side=left]:data-ending-style:translate-x-0.5 data-[side=left]:data-starting-style:translate-x-0.5 data-[side=left]:data-starting-style:opacity-0 data-[side=right]:data-ending-style:-translate-x-0.5 data-[side=right]:data-starting-style:-translate-x-0.5 data-[side=right]:data-starting-style:opacity-0 data-[side=top]:data-ending-style:translate-y-0.5 data-[side=top]:data-starting-style:translate-y-0.5 data-[side=top]:data-starting-style:opacity-0",
-);
 
 export function TooltipProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -43,7 +38,10 @@ function TooltipContent({
         className="z-99999"
       >
         <TooltipPrimitive.Popup
-          className={cn(tooltipContentVariants(), shortcut && "flex items-center gap-2")}
+          className={cn(
+            "ui-text-chrome pointer-events-none z-99999 whitespace-nowrap rounded-lg border border-border/50 bg-surface/90 px-2.5 py-1.5 text-subtle-foreground shadow-(--shadow-card) backdrop-blur-md transition-[opacity,transform] duration-fast ease-smooth data-instant:transition-none motion-reduce:transition-none data-ending-style:opacity-0 data-[side=bottom]:data-ending-style:-translate-y-0.5 data-[side=bottom]:data-starting-style:-translate-y-0.5 data-[side=bottom]:data-starting-style:opacity-0 data-[side=left]:data-ending-style:translate-x-0.5 data-[side=left]:data-starting-style:translate-x-0.5 data-[side=left]:data-starting-style:opacity-0 data-[side=right]:data-ending-style:-translate-x-0.5 data-[side=right]:data-starting-style:-translate-x-0.5 data-[side=right]:data-starting-style:opacity-0 data-[side=top]:data-ending-style:translate-y-0.5 data-[side=top]:data-starting-style:translate-y-0.5 data-[side=top]:data-starting-style:opacity-0",
+            shortcut && "flex items-center gap-2",
+          )}
         >
           {content}
           {shortcut ? (

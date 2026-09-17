@@ -1,3 +1,9 @@
+import { getApiErrorCode } from "@/features/ai/lib/api-error";
+import { cancelIntelligenceAgent } from "@/features/ai/intelligence/services/intelligence-agent-session";
+import {
+  respondToIntelligencePermission,
+  isIntelligencePermissionPending,
+} from "@/features/ai/intelligence/services/intelligence-agent-permissions";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { openTerminalAgent } from "@/features/ai/lib/terminal-agent-terminal";
@@ -61,7 +67,6 @@ import { claimContextualTip } from "@/features/onboarding/lib/contextual-teachin
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { getAccountIdentity } from "@/features/window/lib/account-identity";
 import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
-import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
@@ -174,6 +179,13 @@ const AIChat = memo(function AIChat({
   useEffect(() => {
     if (currentAgentId === "custom") void chatActions.checkApiKey(sessionProviderId);
   }, [currentAgentId, sessionProviderId, subscription, chatActions.checkApiKey]);
+
+  // A surface can be handed a history row that nothing has fetched yet (a
+  // restored tab, a reused empty session). Ask for it instead of waiting.
+  useEffect(() => {
+    if (!effectiveChatId || !currentChat || chatMessageLoadState !== undefined) return;
+    void useAIChatStore.getState().actions.loadChatMessages(effectiveChatId);
+  }, [effectiveChatId, currentChat, chatMessageLoadState]);
 
   // Clear ACP events when switching chats
   useEffect(() => {
@@ -288,33 +300,18 @@ const AIChat = memo(function AIChat({
       const fallbackTitle = getFallbackAgentSessionTitle(userMessage);
       chatActions.updateChatTitle(chatId, fallbackTitle);
 
-      const authState = useAuthStore.getState();
-      const enterprisePolicy = authState.subscription?.enterprise?.policy;
-      const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-      const hasIntelligence = hasProductCapability(authState.subscription, "intelligence");
-
-      if (!hasIntelligence || (managedPolicy && !managedPolicy.aiCompletionEnabled)) {
-        return;
-      }
-
-      const model = useSettingsStore.getState().settings.aiAutocompleteModelId;
-      if (!model) return;
-
       try {
-        const { editedText } = await requestInlineEdit(
-          {
-            model,
-            feature: "chat-title",
-            beforeSelection: "",
-            selectedText: userMessage,
-            afterSelection: "",
-            instruction:
-              "Name the software feature or task being worked on. Return exactly one or two words, no punctuation, no quotes, no explanation. Prefer a concrete product feature label over a generic verb.",
-            filePath: "agent-session-title",
-            languageId: "text",
-          },
-          { useByok: false },
-        );
+        const { editedText } = await requestInlineEdit({
+          model: "",
+          feature: "chat-title",
+          beforeSelection: "",
+          selectedText: userMessage,
+          afterSelection: "",
+          instruction:
+            "Name the software feature or task being worked on. Return exactly one or two words, no punctuation, no quotes, no explanation. Prefer a concrete product feature label over a generic verb.",
+          filePath: "agent-session-title",
+          languageId: "text",
+        });
 
         const generatedTitle = normalizeAgentSessionTitle(editedText);
         if (!generatedTitle) return;
@@ -392,7 +389,9 @@ const AIChat = memo(function AIChat({
     }
     const run = effectiveChatId ? useAIChatStore.getState().agentRuns[effectiveChatId] : undefined;
 
-    if (currentAgentId === CODEX_INTEGRATION_ID) {
+    if (currentAgentId === "custom" && effectiveChatId) {
+      cancelIntelligenceAgent(effectiveChatId);
+    } else if (currentAgentId === CODEX_INTEGRATION_ID) {
       try {
         await CodexIntegrationService.cancel();
         await Promise.all(
@@ -533,7 +532,7 @@ const AIChat = memo(function AIChat({
       role: "assistant",
       timestamp: new Date(),
       isStreaming: true,
-      responsePhase: "starting",
+      responsePhase: "waiting",
     };
 
     if (options.editedUserMessageId) {
@@ -551,7 +550,7 @@ const AIChat = memo(function AIChat({
       runId,
       assistantMessageId,
       agentId: currentAgentId,
-      phase: "starting",
+      phase: "waiting",
     });
 
     const currentMessages = useAIChatStore.getState().actions.getMessagesForChat(targetChatId);
@@ -631,6 +630,13 @@ const AIChat = memo(function AIChat({
           }));
         },
         (completion) => {
+          setPermissionQueue((queue) =>
+            queue.filter(
+              (item) =>
+                !item.requestId.startsWith("intelligence:") ||
+                isIntelligencePermissionPending(item.requestId),
+            ),
+          );
           const wasCancelled = completion?.outcome === "cancelled";
           const currentMessage = chatActions
             .getMessagesForChat(targetChatId)
@@ -687,6 +693,13 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
           if (!wasCancelled) notifyAgent("complete");
         },
         (error: string, canReconnect?: boolean) => {
+          setPermissionQueue((queue) =>
+            queue.filter(
+              (item) =>
+                !item.requestId.startsWith("intelligence:") ||
+                isIntelligencePermissionPending(item.requestId),
+            ),
+          );
           console.error("Streaming error:", error);
 
           let errorTitle = "API Error";
@@ -700,16 +713,22 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
             errorDetails = parts[1];
           }
 
-          const codeMatch = mainError.match(/error:\s*(\d+)/i);
-          if (codeMatch) {
-            errorCode = codeMatch[1];
+          errorCode = getApiErrorCode(mainError);
+          if (errorCode) {
             if (errorCode === "429") {
               errorTitle = "Rate Limit Exceeded";
               errorMessage =
                 "The API is temporarily rate-limited. Please wait a moment and try again.";
             } else if (errorCode === "401") {
               errorTitle = "Authentication Error";
-              errorMessage = "Invalid API key. Please check your API settings.";
+              errorMessage =
+                (targetChat?.providerId ?? settings.aiProviderId) === "athas"
+                  ? "Your Athas session has expired. Sign in to continue."
+                  : "The provider rejected your API key. Check its configuration to continue.";
+            } else if (errorCode === "402") {
+              errorTitle = "Payment required";
+              errorMessage =
+                "Check your balance and spending limits to continue, or choose another model.";
             } else if (errorCode === "403") {
               errorTitle = "Access Denied";
               errorMessage = "You don't have permission to access this resource.";
@@ -728,6 +747,18 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
                   errorMessage = mainError;
                 }
               }
+            }
+          }
+
+          if (errorDetails) {
+            try {
+              const parsed = JSON.parse(errorDetails);
+              const detailMessage =
+                parsed.error?.message ??
+                (typeof parsed.error === "string" ? parsed.error : parsed.message);
+              if (typeof detailMessage === "string") errorMessage = detailMessage;
+            } catch {
+              // Non-JSON provider responses remain available under Details.
             }
           }
 
@@ -773,6 +804,7 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
           const formattedError = `[ERROR_BLOCK]
 title: ${errorTitle}
 code: ${errorCode}
+provider: ${targetChat?.providerId ?? settings.aiProviderId}
 message: ${errorMessage}
 details: ${errorDetails || mainError}
 [/ERROR_BLOCK]`;
@@ -781,7 +813,9 @@ details: ${errorDetails || mainError}
             targetChatId,
             currentAssistantMessageId,
             (currentMessage) => ({
-              content: currentMessage?.content || formattedError,
+              content: currentMessage?.content
+                ? `${currentMessage.content}\n\n${formattedError}`
+                : formattedError,
               isStreaming: false,
             }),
           );
@@ -1183,7 +1217,9 @@ details: ${errorDetails || mainError}
         detail: option?.name || (approved ? "allow" : "deny"),
         state: approved ? "success" : "info",
       });
-      if (currentAgentId === CODEX_INTEGRATION_ID) {
+      if (currentPermission.requestId.startsWith("intelligence:")) {
+        respondToIntelligencePermission(currentPermission.requestId, approved);
+      } else if (currentAgentId === CODEX_INTEGRATION_ID) {
         await CodexIntegrationService.respond(currentPermission.requestId, approved);
       } else {
         await AcpStreamHandler.respondToPermission(

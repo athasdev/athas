@@ -48,7 +48,7 @@ export function ModelSelector({
       searchable
       searchableTrigger="menu"
       openDirection={isComposer ? "up" : "down"}
-      allowCustomValue={isCustomProvider || providerId === "openrouter"}
+      allowCustomValue={isCustomProvider || providerId === "openrouter" || providerId === "vercel"}
       customValueLabel={(customValue) => `Use ${customValue}`}
       emptyLabel={
         isLoadingModels

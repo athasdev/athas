@@ -136,6 +136,7 @@ export function SharingRuntime() {
           }
         }
         if (syncError) throw syncError;
+        if (!current()) return;
         window.dispatchEvent(
           new CustomEvent("athas:sharing-status", {
             detail: { error: null, syncedAt: Date.now() },

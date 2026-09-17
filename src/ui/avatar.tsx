@@ -58,7 +58,7 @@ export const Avatar = memo(function Avatar({ name, src, className, size }: Avata
     <AvatarPrimitive.Root
       data-slot="avatar"
       className={cn(
-        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface",
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded bg-surface",
         avatarSizeVariants({ size }),
         className,
       )}

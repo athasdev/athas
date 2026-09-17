@@ -17,6 +17,7 @@ const bubbleVariants = cva(
   {
     variants: {
       variant: {
+        user: "w-full max-w-full *:data-[slot=bubble-content]:w-full *:data-[slot=bubble-content]:bg-surface",
         default:
           "*:data-[slot=bubble-content]:bg-primary/15 *:data-[slot=bubble-content]:text-foreground",
         secondary:
@@ -62,7 +63,7 @@ function BubbleContent({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="bubble-content"
       className={cn(
-        "w-fit max-w-full min-w-0 overflow-hidden rounded-2xl border border-transparent px-3 py-2.5 leading-relaxed wrap-break-word group-data-[align=end]/bubble:self-end",
+        "w-fit max-w-full min-w-0 overflow-hidden rounded border border-transparent px-3 py-2.5 leading-relaxed wrap-break-word group-data-[align=end]/bubble:self-end",
         className,
       )}
       {...props}

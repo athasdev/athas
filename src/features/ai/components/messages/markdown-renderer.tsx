@@ -1,3 +1,5 @@
+import { ApiErrorActions } from "./api-error-actions";
+import { getApiErrorCode } from "@/features/ai/lib/api-error";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -194,7 +196,15 @@ function CodeBlock({
 }
 
 // Error Block Component
-function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string | null }) {
+function ErrorBlock({
+  errorData,
+  chatId,
+  onRetry,
+}: {
+  errorData: string;
+  chatId?: string | null;
+  onRetry?: () => void | Promise<void>;
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRestartingSession, setIsRestartingSession] = useState(false);
   const [isOpeningTerminal, setIsOpeningTerminal] = useState(false);
@@ -208,7 +218,16 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
     return chatAgentId ?? state.selectedAgentId;
   });
 
+  const chatProviderId = useAIChatStore(
+    (state) => state.chats.find((chat) => chat.id === chatId)?.providerId,
+  );
   const lines = errorData.split("\n");
+  const providerId =
+    lines
+      .find((line) => line.startsWith("provider:"))
+      ?.slice("provider:".length)
+      .trim() || (/athas API/i.test(errorData) ? "athas" : chatProviderId || agentId);
+
   const title =
     lines
       .find((l) => l.startsWith("title:"))
@@ -294,6 +313,13 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
         {message && message !== summary ? (
           <span className="text-destructive/80">{message}</span>
         ) : null}
+        {!canRecoverAgent && (
+          <ApiErrorActions
+            code={code || getApiErrorCode(message)}
+            providerId={providerId}
+            onRetry={onRetry}
+          />
+        )}
         {canRecoverAgent && (
           <span className="flex flex-wrap items-center gap-2">
             <Button
@@ -872,14 +898,26 @@ function renderContent(
 }
 
 // Simple markdown renderer for AI responses
-export default function MarkdownRenderer({ content, onApplyCode, chatId }: MarkdownRendererProps) {
+export default function MarkdownRenderer({
+  content,
+  onApplyCode,
+  chatId,
+  onRetry,
+}: MarkdownRendererProps) {
   const normalizedContent = normalizePlainTextFence(content);
 
   // Check for error blocks first
   if (normalizedContent.includes("[ERROR_BLOCK]")) {
     const errorMatch = normalizedContent.match(/\[ERROR_BLOCK\]([\s\S]*?)\[\/ERROR_BLOCK\]/);
     if (errorMatch) {
-      return <ErrorBlock errorData={errorMatch[1]} chatId={chatId} />;
+      const errorStart = errorMatch.index ?? 0;
+      return (
+        <>
+          {renderContent(normalizedContent.slice(0, errorStart), onApplyCode)}
+          <ErrorBlock errorData={errorMatch[1]} chatId={chatId} onRetry={onRetry} />
+          {renderContent(normalizedContent.slice(errorStart + errorMatch[0].length), onApplyCode)}
+        </>
+      );
     }
   }
 

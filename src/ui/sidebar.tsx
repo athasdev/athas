@@ -239,7 +239,7 @@ export function SidebarSectionHeader({
       <button
         type="button"
         className={cn(
-          "athas-chrome-control font-sans ui-text-sm flex min-h-chrome-control min-w-0 items-center gap-chrome rounded-chrome px-1.5 py-0.5 font-normal select-none text-left text-subtle-foreground/80 transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[1em]",
+          "athas-chrome-control font-sans ui-text-sm flex min-h-chrome-control min-w-0 items-center gap-chrome rounded px-1.5 py-0.5 font-normal select-none text-left text-subtle-foreground/80 transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[1em]",
           className,
         )}
         aria-expanded={expanded}
@@ -425,7 +425,7 @@ export function SidebarTabPanels<TValue extends string>({
 }
 
 const sidebarListRowClassName =
-  "athas-chrome-control flex min-h-chrome-control w-full min-w-0 items-center gap-chrome rounded-chrome px-1.5 py-0.5 font-sans font-normal ui-text-sm [&_svg]:size-[1em]";
+  "athas-chrome-control flex min-h-chrome-control w-full min-w-0 items-center gap-chrome rounded px-1.5 py-0.5 font-sans font-normal ui-text-sm [&_svg]:size-[1em]";
 
 export const SidebarIconButton = forwardRef<
   HTMLButtonElement,
@@ -460,7 +460,7 @@ export function SidebarListActionRow({
     <div
       data-slot="sidebar-list-action-row"
       className={cn(
-        "group/sidebar-list-action-row relative flex w-full min-w-0 items-center rounded-chrome",
+        "group/sidebar-list-action-row relative flex w-full min-w-0 items-center rounded",
         "has-[[data-slot=button]:focus-visible]:bg-accent",
         "has-[[data-slot=button][aria-expanded=true]]:bg-accent",
         className,
@@ -481,7 +481,7 @@ export function SidebarListActionRow({
       >
         <ButtonGroup
           variant="ghost"
-          className="rounded-chrome bg-surface shadow-xs ring-1 ring-border/60 [&>[data-slot=button]]:size-5"
+          className="rounded bg-surface shadow-xs ring-1 ring-border/60 [&>[data-slot=button]]:size-5"
         >
           {actionItems.map((action, index) => (
             <Fragment key={(isValidElement(action) && action.key) || index}>

@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+import { renameTerminalWithIntelligence } from "../services/intelligence-terminal-title";
 import { openTerminalWindow } from "@/features/window/detached/standalone-content-service";
 import {
   ArrowCounterClockwiseIcon,
@@ -5,6 +7,7 @@ import {
   CopyIcon,
   DownloadIcon,
   PenIcon,
+  SparkleIcon,
   PinIcon,
   PinSlashIcon,
   RowsIcon,
@@ -124,6 +127,22 @@ const TerminalTabContextMenu = ({
               label: "Rename Terminal",
               icon: <PenIcon />,
               onClick: () => onRename(terminal.id),
+            },
+            {
+              id: "intelligence-title",
+              label: "Generate Terminal Name",
+              icon: <SparkleIcon />,
+              onClick: () => {
+                toast.promise(renameTerminalWithIntelligence(terminal.id), {
+                  loading: "Generating terminal name…",
+                  success: (applied) =>
+                    applied
+                      ? "Terminal name generated"
+                      : "Terminal changed; generated name was not applied",
+                  error: (error) =>
+                    error instanceof Error ? error.message : "Could not generate terminal name",
+                });
+              },
             },
             {
               id: "export",

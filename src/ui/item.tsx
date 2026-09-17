@@ -28,7 +28,7 @@ function ItemSeparator({ className, ...props }: ComponentProps<typeof Separator>
 }
 
 const itemVariants = cva(
-  "group/item flex w-full flex-wrap items-center gap-2 rounded-lg border px-2 py-1.5 font-sans ui-text-sm text-foreground outline-none transition-colors duration-fast focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 [a]:hover:bg-accent [button]:hover:bg-accent",
+  "group/item flex w-full flex-wrap items-center gap-2 rounded border px-2 py-1.5 font-sans ui-text-sm text-foreground outline-none transition-colors duration-fast focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 [a]:hover:bg-accent [button]:hover:bg-accent",
   {
     variants: {
       variant: {
@@ -38,7 +38,7 @@ const itemVariants = cva(
       },
       size: {
         default: "",
-        compact: "min-h-chrome-control rounded-md px-1 py-0.5",
+        compact: "min-h-chrome-control rounded px-1 py-0.5",
       },
     },
     defaultVariants: {
@@ -74,7 +74,7 @@ const itemMediaVariants = cva(
       variant: {
         default: "bg-transparent",
         icon: "[&_svg:not([class*='size-'])]:size-4",
-        image: "size-6 overflow-hidden rounded-md [&_img]:size-full [&_img]:object-cover",
+        image: "size-6 overflow-hidden rounded [&_img]:size-full [&_img]:object-cover",
       },
     },
     defaultVariants: {

@@ -126,9 +126,10 @@ export function AgentSessionSidebarItem({
         align="start"
         sideOffset={10}
         collisionPadding={10}
-        className="z-10080 w-[19rem] overflow-hidden p-0"
+        size="wide"
+        variant="preview"
       >
-        <div className="flex min-w-0 items-start gap-3 bg-[color-mix(in_srgb,var(--accent)_45%,transparent)] p-3">
+        <div className="flex min-w-0 items-start gap-3 bg-accent/45 p-3">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background ring-1 ring-border/60">
             <ProviderIcon providerId={providerIconId} size={16} />
           </span>

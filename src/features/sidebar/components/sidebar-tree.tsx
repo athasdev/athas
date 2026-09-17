@@ -118,10 +118,14 @@ export const SidebarTree = forwardRef<HTMLDivElement, SidebarTreeProps>(function
             break;
           }
           if (expanded === "true") {
-            const child = items
-              .slice(currentIndex + 1)
-              .find((item) => getTreeItemDepth(item) === currentDepth + 1);
-            focusItem(child);
+            for (const candidate of items.slice(currentIndex + 1)) {
+              const depth = getTreeItemDepth(candidate);
+              if (depth <= currentDepth) break;
+              if (depth === currentDepth + 1) {
+                focusItem(candidate);
+                break;
+              }
+            }
           }
           break;
         case "ArrowLeft":

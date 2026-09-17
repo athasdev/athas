@@ -1,6 +1,7 @@
 import { KeyIcon } from "@/ui/icons";
 import type { AcpEvent, AcpPermissionOption } from "@/features/ai/types/acp.types";
 import Badge from "@/ui/badge";
+import Textarea from "@/ui/textarea";
 import { Button, type ButtonVariant } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { chatContentWidth } from "./chat-content-width";
@@ -83,6 +84,20 @@ export function AcpPermissionPrompt({
 
   return (
     <div className={cn(chatContentWidth(), "mb-1 ui-text-sm")}>
+      {permission.requestId.startsWith("intelligence:") ? (
+        <Textarea
+          aria-label={
+            permission.permissionType === "intelligence-command"
+              ? "Proposed shell command"
+              : "Proposed workspace edit"
+          }
+          readOnly
+          font="mono"
+          resize="y"
+          rows={12}
+          value={permission.description}
+        />
+      ) : null}
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl border border-border/70 bg-background/92 px-2 py-1.5 shadow-(--shadow-card)">
         <KeyIcon className="size-3.5 shrink-0 text-subtle-foreground" />
         <div

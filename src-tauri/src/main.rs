@@ -227,6 +227,12 @@ fn main() {
          github_rerun_workflow_run,
          github_cancel_workflow_run,
          // AI Provider token commands
+         intelligence_read_file,
+         intelligence_list_files,
+         intelligence_edit_file,
+         intelligence_run_command,
+         intelligence_cancel_command,
+         intelligence_search_files,
          store_ai_provider_token,
          get_ai_provider_token,
          remove_ai_provider_token,

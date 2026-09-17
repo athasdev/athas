@@ -1,7 +1,9 @@
+import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -33,32 +35,53 @@ export const useKeyboardNavigation = ({
   listenGlobally = true,
   resetKey,
 }: UseKeyboardNavigationProps) => {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selection, setSelection] = useState<{
+    index: number;
+    path: string | null;
+    resetKey?: string;
+  }>({
+    index: 0,
+    path: null,
+    resetKey,
+  });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const prevResultsLengthRef = useRef(allResults.length);
-  const previousResetKeyRef = useRef(resetKey);
+  const resultIndexByPath = useMemo(
+    () => new Map(allResults.map((item, index) => [item.path, index])),
+    [allResults],
+  );
+  const resolveIndex = useCallback(
+    (current: typeof selection) =>
+      current.resetKey !== resetKey
+        ? 0
+        : ((current.path === null ? undefined : resultIndexByPath.get(current.path)) ??
+          Math.min(current.index, Math.max(0, allResults.length - 1))),
+    [allResults.length, resetKey, resultIndexByPath],
+  );
+  const selectedIndex = resolveIndex(selection);
 
   useEffect(() => {
-    if (resetKey !== undefined && previousResetKeyRef.current !== resetKey) {
-      setSelectedIndex(0);
-      previousResetKeyRef.current = resetKey;
-      prevResultsLengthRef.current = allResults.length;
-      return;
-    }
+    const path = allResults[selectedIndex]?.path ?? null;
+    setSelection((previous) =>
+      previous.index === selectedIndex && previous.path === path && previous.resetKey === resetKey
+        ? previous
+        : { index: selectedIndex, path, resetKey },
+    );
+  }, [allResults, resetKey, selectedIndex]);
 
-    if (resetKey === undefined && prevResultsLengthRef.current !== allResults.length) {
-      setSelectedIndex(0);
-    } else {
-      setSelectedIndex((current) =>
-        allResults.length === 0 ? 0 : Math.min(current, allResults.length - 1),
-      );
-    }
-    prevResultsLengthRef.current = allResults.length;
-  }, [allResults.length, resetKey]);
+  const moveSelection = useCallback(
+    (direction: number) => {
+      setSelection((previous) => {
+        const index = (resolveIndex(previous) + direction + allResults.length) % allResults.length;
+        return { index, path: allResults[index]?.path ?? null, resetKey };
+      });
+    },
+    [allResults, resetKey, resolveIndex],
+  );
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent | ReactKeyboardEvent<HTMLElement>) => {
       if (!isVisible || event.defaultPrevented) return;
+      if (isComposingKeyboardEvent("nativeEvent" in event ? event.nativeEvent : event)) return;
 
       if (event.key === KEY_ESCAPE || (event.key === KEY_K && (event.metaKey || event.ctrlKey))) {
         event.preventDefault();
@@ -73,17 +96,17 @@ export const useKeyboardNavigation = ({
 
       if (event.key === KEY_ARROW_DOWN) {
         event.preventDefault();
-        setSelectedIndex((prev) => (prev + 1) % totalItems);
+        moveSelection(1);
       } else if (event.key === KEY_ARROW_UP) {
         event.preventDefault();
-        setSelectedIndex((prev) => (prev - 1 + totalItems) % totalItems);
+        moveSelection(-1);
       } else if (event.key === KEY_ENTER) {
         event.preventDefault();
         const item = allResults[selectedIndex];
         if (item) onSelect(item.path);
       }
     },
-    [allResults, isVisible, onClose, onSelect, selectedIndex],
+    [allResults, isVisible, moveSelection, onClose, onSelect, selectedIndex],
   );
 
   useEffect(() => {
@@ -109,7 +132,7 @@ export const useKeyboardNavigation = ({
 
     if (selectedElement) {
       selectedElement.scrollIntoView({
-        behavior: "auto",
+        behavior: "instant",
         block: "nearest",
       });
     }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProviderById } from "@/features/ai/hooks/use-available-providers";
 import { getCustomModelOptions } from "@/features/ai/lib/custom-model-options";
 import { resolveModelOptions } from "@/features/ai/lib/model-options";
@@ -15,6 +15,7 @@ export function useAIModelOptions(
   modelId: string,
   onChange?: (modelId: string) => void,
 ) {
+  const [attempt, setAttempt] = useState(0);
   const [modelLoadState, setModelLoadState] = useState<{
     providerId: string;
     status: "loading" | "settled";
@@ -68,8 +69,8 @@ export function useAIModelOptions(
         if (config?.requiresApiKey && !canUseWithoutApiKey && !canFetchWithoutApiKey) return;
 
         const models = await getModels.call(providerInstance, apiKey || undefined);
-        setDynamicModels(providerId, models);
         if (!isCurrent) return;
+        if (models.length > 0) setDynamicModels(providerId, models);
         if (models.length === 0) {
           setModelFetchError({
             providerId,
@@ -79,9 +80,12 @@ export function useAIModelOptions(
                 : "No models found.",
           });
         }
-      } catch {
+      } catch (error) {
         if (isCurrent) {
-          setModelFetchError({ providerId, message: "Failed to fetch models" });
+          setModelFetchError({
+            providerId,
+            message: error instanceof Error ? error.message : "Could not connect to the provider.",
+          });
         }
       } finally {
         if (isCurrent) setModelLoadState({ providerId, status: "settled" });
@@ -94,6 +98,7 @@ export function useAIModelOptions(
       isCurrent = false;
     };
   }, [
+    attempt,
     canFetchDynamicModels,
     hasCachedDynamicModels,
     providerId,
@@ -151,5 +156,6 @@ export function useAIModelOptions(
     isCustomProvider,
     isLoadingModels,
     modelFetchError: visibleModelFetchError,
+    retry: useCallback(() => setAttempt((value) => value + 1), []),
   };
 }

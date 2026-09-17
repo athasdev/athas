@@ -1,3 +1,4 @@
+import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import { ChevronLeftIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -100,6 +101,7 @@ export const IconThemeSelectorContent = ({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.defaultPrevented || isComposingKeyboardEvent(e.nativeEvent)) return;
       if (!filteredThemes.length) return;
 
       let nextIndex = selectedIndex;
@@ -151,7 +153,7 @@ export const IconThemeSelectorContent = ({
   // Scroll selected item into view
   useEffect(() => {
     const selectedElement = resultsRef.current?.querySelector(`[data-index="${selectedIndex}"]`);
-    selectedElement?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    selectedElement?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [selectedIndex]);
 
   const handleClose = useCallback(() => {
@@ -220,17 +222,11 @@ export const IconThemeSelectorContent = ({
                   onThemeChange(theme.id);
                   onClose();
                 }}
-                onMouseEnter={() => {
+                onMouseMove={() => {
                   setSelectedIndex(index);
-                  setPreviewTheme(theme.id);
-                  onThemeChange(theme.id);
-                }}
-                onMouseLeave={() => {
-                  if (previewTheme === theme.id) {
-                    setPreviewTheme(null);
-                    if (initialTheme) {
-                      onThemeChange(initialTheme);
-                    }
+                  if (previewTheme !== theme.id) {
+                    setPreviewTheme(theme.id);
+                    onThemeChange(theme.id);
                   }
                 }}
                 isSelected={isSelected}

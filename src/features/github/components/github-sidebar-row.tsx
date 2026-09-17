@@ -121,7 +121,8 @@ export function GitHubSidebarRow({
         align="start"
         sideOffset={10}
         collisionPadding={10}
-        className="z-10080 w-84 overflow-hidden p-0"
+        size="wide"
+        variant="preview"
       >
         <div className="border-border/70 border-b p-3">
           <div className="flex min-w-0 items-start gap-2.5">

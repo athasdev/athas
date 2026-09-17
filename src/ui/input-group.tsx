@@ -6,7 +6,7 @@ import Textarea from "@/ui/textarea";
 import { cn } from "@/utils/cn";
 
 const inputGroupVariants = cva(
-  "group/input-group relative flex min-h-7 w-full min-w-0 items-center rounded-chrome bg-surface text-foreground outline-none transition-colors has-disabled:opacity-50 has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-border-strong/35 has-[[data-slot][aria-invalid=true]]:border-destructive has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto",
+  "group/input-group relative flex min-h-7 w-full min-w-0 items-center rounded bg-surface text-foreground outline-none transition-colors has-disabled:opacity-50 has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-border-strong/35 has-[[data-slot][aria-invalid=true]]:border-destructive has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto",
   {
     variants: {
       variant: {
@@ -114,10 +114,8 @@ const InputGroupTextarea = forwardRef<HTMLTextAreaElement, ComponentProps<"texta
         ref={ref}
         data-slot="input-group-control"
         variant="ghost"
-        className={cn(
-          "min-w-0 flex-1 resize-none rounded-none border-0 bg-transparent shadow-none ring-0 focus-visible:ring-0",
-          className,
-        )}
+        resize="none"
+        className={cn("flex-1", className)}
         {...props}
       />
     );

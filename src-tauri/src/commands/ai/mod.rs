@@ -9,3 +9,6 @@ pub use auth::*;
 pub use chat_history::*;
 pub use codex::*;
 pub use tokens::*;
+
+pub mod intelligence;
+pub use intelligence::*;

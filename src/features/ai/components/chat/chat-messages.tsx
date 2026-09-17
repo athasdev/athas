@@ -175,6 +175,17 @@ export const ChatMessages = memo(function ChatMessages({
               message={message}
               isLastMessage={isLastMessage}
               onApplyCode={onApplyCode}
+              onRetry={
+                isLastMessage && canEditUserMessages && onEditUserMessage
+                  ? () => {
+                      const prompt = messages
+                        .slice(0, index)
+                        .reverse()
+                        .find((item) => item.role === "user");
+                      if (prompt) return onEditUserMessage(prompt.id, prompt.content);
+                    }
+                  : undefined
+              }
               onEditUserMessage={onEditUserMessage}
               canEditUserMessage={canEditUserMessages}
               searchQuery={searchQuery}
