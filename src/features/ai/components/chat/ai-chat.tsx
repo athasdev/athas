@@ -24,6 +24,11 @@ import {
 import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
+import {
+  discardToolEditSnapshot,
+  resolveToolEditDiff,
+  snapshotToolEdit,
+} from "@/features/ai/lib/edit-diff-capture";
 import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
 import { startAssistantResponseContinuation } from "@/features/ai/lib/assistant-response";
 import {
@@ -575,6 +580,8 @@ const AIChat = memo(function AIChat({
         trimmedMessageContent,
       );
       if (!didReplace) return;
+      // The edited prompt was just re-stamped; its answer must come after it.
+      assistantMessage.timestamp = new Date();
     } else {
       chatActions.addMessage(targetChatId, userMessage);
     }
@@ -889,6 +896,15 @@ details: ${errorDetails || mainError}
         },
         (event) => {
           chatActions.updateAgentRun(targetChatId, runId, { phase: "tool" });
+          const toolCall = createToolCall(
+            event.toolName,
+            event.input,
+            event.toolId,
+            event.kind,
+            event.status,
+            event.locations,
+          );
+          void snapshotToolEdit(toolCall);
           updateStreamingAssistantMessage(
             targetChatId,
             currentAssistantMessageId,
@@ -897,17 +913,7 @@ details: ${errorDetails || mainError}
               toolName: event.toolName,
               toolCalls: [
                 ...(currentMessage?.toolCalls || []),
-                {
-                  ...createToolCall(
-                    event.toolName,
-                    event.input,
-                    event.toolId,
-                    event.kind,
-                    event.status,
-                    event.locations,
-                  ),
-                  contentOffset: (currentMessage?.content ?? "").length,
-                },
+                { ...toolCall, contentOffset: (currentMessage?.content ?? "").length },
               ],
             }),
           );
@@ -944,6 +950,30 @@ details: ${errorDetails || mainError}
               ),
             }),
           );
+          const completed = chatActions
+            .getMessagesForChat(targetChatId)
+            .find((message) => message.id === currentAssistantMessageId)
+            ?.toolCalls?.find((toolCall) =>
+              toolId ? toolCall.id === toolId : toolCall.name === toolName && toolCall.isComplete,
+            );
+          if (!completed?.id || error) {
+            discardToolEditSnapshot(completed?.id ?? toolId);
+            return;
+          }
+          const completedId = completed.id;
+          void resolveToolEditDiff(completed).then((nextOutput) => {
+            if (!nextOutput) return;
+            updateStreamingAssistantMessage(
+              targetChatId,
+              currentAssistantMessageId,
+              (currentMessage) => ({
+                toolCalls: updateToolCall(currentMessage?.toolCalls || [], {
+                  id: completedId,
+                  output: nextOutput,
+                }),
+              }),
+            );
+          });
         },
         (event) => {
           chatActions.updateAgentRun(targetChatId, runId, { phase: "approval" });

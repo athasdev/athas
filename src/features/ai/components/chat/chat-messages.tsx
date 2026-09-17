@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo } from "react";
+import { buildChatTimeline } from "@/features/ai/lib/chat-timeline";
 import { getFollowUpActionsForMessage } from "@/features/ai/lib/follow-up-actions";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
@@ -32,12 +33,6 @@ interface ChatMessagesProps {
   assistantLabel: string;
 }
 
-const getTimestampMs = (value: Date | string): number => {
-  const date = value instanceof Date ? value : new Date(value);
-  const timestamp = date.getTime();
-  return Number.isFinite(timestamp) ? timestamp : 0;
-};
-
 export const ChatMessages = memo(function ChatMessages({
   onApplyCode,
   onSendFollowUp,
@@ -61,30 +56,7 @@ export const ChatMessages = memo(function ChatMessages({
   const messages = currentChat?.messages || [];
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const timelineItems = useMemo(
-    () =>
-      [
-        ...messages.map((message, messageIndex) => ({
-          id: `message-${message.id}`,
-          type: "message" as const,
-          timestamp: getTimestampMs(message.timestamp),
-          order: messageIndex,
-          message,
-          messageIndex,
-        })),
-        ...(acpEvents || []).map((event, eventIndex) => ({
-          id: `acp-${event.id}`,
-          type: "acp" as const,
-          timestamp: getTimestampMs(event.timestamp),
-          order: messages.length + eventIndex,
-          event,
-        })),
-      ].sort((a, b) => {
-        if (a.timestamp !== b.timestamp) {
-          return a.timestamp - b.timestamp;
-        }
-
-        return a.order - b.order;
-      }),
+    () => buildChatTimeline(messages, acpEvents),
     [messages, acpEvents],
   );
 

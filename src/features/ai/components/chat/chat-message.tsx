@@ -12,6 +12,8 @@ import { formatTime } from "@/features/ai/lib/formatting";
 import { buildShareableOutcomeMarkdown } from "@/features/ai/lib/shareable-outcome";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
+import { badgeVariants } from "@/ui/badge";
+import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import { Button } from "@/ui/button";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import {
@@ -81,6 +83,42 @@ function HighlightedPlainText({ text, query }: { text: string; query: string }) 
   );
 }
 
+// The composer serializes an @file chip as `@[name]`; show it as a chip again.
+const MENTION_PATTERN = /@\[([^\]]+)\]/g;
+
+function UserMessageText({ text, query }: { text: string; query: string }) {
+  const parts: ReactNode[] = [];
+  let cursor = 0;
+  for (const match of text.matchAll(MENTION_PATTERN)) {
+    const index = match.index ?? 0;
+    if (index > cursor) {
+      parts.push(
+        <HighlightedPlainText
+          key={`text-${cursor}`}
+          text={text.slice(cursor, index)}
+          query={query}
+        />,
+      );
+    }
+    parts.push(
+      <span
+        key={`mention-${index}`}
+        data-mention="true"
+        className={cn(badgeVariants({ variant: "accent" }), "max-w-48 truncate align-baseline")}
+      >
+        {match[1]}
+      </span>,
+    );
+    cursor = index + match[0].length;
+  }
+  if (cursor < text.length) {
+    parts.push(
+      <HighlightedPlainText key={`text-${cursor}`} text={text.slice(cursor)} query={query} />,
+    );
+  }
+  return <>{parts}</>;
+}
+
 function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
   const isStarting = phase === "starting";
   const isThinking = phase === "thinking";
@@ -99,6 +137,9 @@ function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
   );
 }
 
+/** Matches the user bubble's `px-3` so both text columns start on the same x. */
+const ASSISTANT_CONTENT_INSET = "px-3";
+
 function AssistantMessageAvatar({
   iconId,
   label,
@@ -113,7 +154,7 @@ function AssistantMessageAvatar({
       placement="content"
       variant="assistant"
       size="compact"
-      className={isStatus ? "self-center" : "mt-0.5"}
+      className={isStatus ? "self-center" : "mt-px"}
       title={label}
       aria-label={label}
     >
@@ -165,8 +206,7 @@ export const ChatMessage = memo(function ChatMessage({
       setDraftContent(message.content);
       setIsEditing(false);
     };
-    const submitEdit = (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
+    const submitEdit = () => {
       const nextContent = draftContent.trim();
       if (!nextContent || nextContent === message.content) {
         cancelEditing();
@@ -176,25 +216,43 @@ export const ChatMessage = memo(function ChatMessage({
       setIsEditing(false);
       void onEditUserMessage?.(message.id, nextContent);
     };
+    const handleEditSubmit = (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      submitEdit();
+    };
 
     return (
       <Message>
-        <MessageAvatar placement="content" size="compact" className="mt-0.5">
-          <Avatar name={userName} src={userAvatarUrl} className="size-full" />
+        {/* Same box as the assistant's, dropped to the bubble's first text line. */}
+        <MessageAvatar placement="content" size="compact" className="mt-3">
+          <Avatar name={userName} src={userAvatarUrl} className="size-full rounded" />
         </MessageAvatar>
         <MessageContent>
           <Bubble variant="user">
             <BubbleContent title={messageTime} className="w-full">
               {isEditing ? (
-                <form onSubmit={submitEdit} className="flex min-w-0 flex-col gap-2">
+                <form onSubmit={handleEditSubmit} className="flex min-w-0 flex-col gap-2">
                   <Textarea
                     autoFocus
                     value={draftContent}
                     onChange={(event) => setDraftContent(event.target.value)}
+                    onFocus={(event) => {
+                      const end = event.currentTarget.value.length;
+                      event.currentTarget.setSelectionRange(end, end);
+                    }}
                     onKeyDown={(event) => {
                       if (event.key === "Escape") {
                         event.preventDefault();
                         cancelEditing();
+                        return;
+                      }
+                      if (event.key !== "Enter" || isComposingKeyboardEvent(event.nativeEvent)) {
+                        return;
+                      }
+                      // Enter sends like the composer does; Shift+Enter keeps a newline.
+                      if (!event.shiftKey || event.metaKey || event.ctrlKey) {
+                        event.preventDefault();
+                        submitEdit();
                       }
                     }}
                     variant="ghost"
@@ -220,11 +278,11 @@ export const ChatMessage = memo(function ChatMessage({
                   className="block w-full cursor-text text-left whitespace-pre-wrap wrap-break-word select-text"
                   aria-label="Edit prompt"
                 >
-                  <HighlightedPlainText text={message.content} query={searchQuery} />
+                  <UserMessageText text={message.content} query={searchQuery} />
                 </button>
               ) : (
                 <div className="select-text whitespace-pre-wrap wrap-break-word">
-                  <HighlightedPlainText text={message.content} query={searchQuery} />
+                  <UserMessageText text={message.content} query={searchQuery} />
                 </div>
               )}
             </BubbleContent>
@@ -246,7 +304,7 @@ export const ChatMessage = memo(function ChatMessage({
     return (
       <Message>
         <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
-        <MessageContent>
+        <MessageContent className={ASSISTANT_CONTENT_INSET}>
           <ToolCallList toolCalls={message.toolCalls!} isStreaming={message.isStreaming} />
         </MessageContent>
       </Message>
@@ -262,7 +320,7 @@ export const ChatMessage = memo(function ChatMessage({
     return (
       <Message className="items-center">
         <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} isStatus />
-        <MessageContent>
+        <MessageContent className={ASSISTANT_CONTENT_INSET}>
           <ChatResponseStatus phase={message.responsePhase} />
         </MessageContent>
       </Message>
@@ -272,7 +330,7 @@ export const ChatMessage = memo(function ChatMessage({
   return (
     <Message>
       <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
-      <MessageContent>
+      <MessageContent className={ASSISTANT_CONTENT_INSET}>
         <Bubble variant="ghost">
           <BubbleContent>
             {message.images?.length || message.resources?.length ? (

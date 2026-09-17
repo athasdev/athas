@@ -16,7 +16,7 @@ import {
   WrenchIcon,
   type Icon,
 } from "@/ui/icons";
-import { memo, useMemo, useState, type ReactNode } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   createAcpDiffViewNode,
   getAcpDiffOutputs,
@@ -226,6 +226,9 @@ const ToolCallRow = memo(function ToolCallRow({
   isStreaming?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  // Keep the body mounted after its first reveal so collapsing can animate too.
+  const [hasOpened, setHasOpened] = useState(false);
+  const userToggled = useRef(false);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const summary = useMemo(
     () => summarizeToolCall(toolCall, { isStreaming, rootFolderPath }),
@@ -280,6 +283,19 @@ const ToolCallRow = memo(function ToolCallRow({
   );
 
   const canExpand = body.length > 0;
+  // A finished edit opens on its own; that diff is what the row is for.
+  const autoExpand = summary.kind === "edit" && diffItems.length > 0;
+  useEffect(() => {
+    if (autoExpand && !userToggled.current) {
+      setIsExpanded(true);
+      setHasOpened(true);
+    }
+  }, [autoExpand]);
+  const toggle = () => {
+    userToggled.current = true;
+    setHasOpened(true);
+    setIsExpanded((current) => !current);
+  };
   const isRunning = summary.phase === "running";
   const isFailed = summary.phase === "failed";
   const KindIcon = KIND_ICONS[summary.kind];
@@ -314,12 +330,12 @@ const ToolCallRow = memo(function ToolCallRow({
 
   return (
     <div data-ai-element="tool-call" className="group/tool flex min-w-0 flex-col">
-      <div className="flex min-w-0 items-center gap-1">
+      <div className="flex w-fit max-w-full min-w-0 items-center gap-1">
         {canExpand ? (
           <button
             type="button"
             aria-expanded={isExpanded}
-            onClick={() => setIsExpanded((current) => !current)}
+            onClick={toggle}
             className="flex min-h-6 min-w-0 flex-1 items-center gap-2 rounded text-left text-subtle-foreground outline-none ui-text-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/20"
           >
             <ToolCallRowContent
@@ -388,8 +404,18 @@ const ToolCallRow = memo(function ToolCallRow({
           </span>
         ) : null}
       </div>
-      {canExpand && isExpanded ? (
-        <div className="mt-1 mb-1.5 ml-6 flex min-w-0 flex-col gap-1.5">{body}</div>
+      {canExpand && hasOpened ? (
+        <div
+          aria-hidden={!isExpanded}
+          className={cn(
+            "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
+            isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+          )}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="mt-1 mb-1.5 ml-6 flex min-w-0 flex-col gap-1.5">{body}</div>
+          </div>
+        </div>
       ) : null}
     </div>
   );
