@@ -76,6 +76,84 @@ if resolved_path="$(readlink -f "$script_path" 2>/dev/null)"; then
 fi
 
 bin_dir="$(cd "$(dirname "$script_path")" && pwd)"
+
+case "$(uname -m)" in
+  x86_64 | amd64)
+    system_lib_dirs=(
+      /usr/lib/x86_64-linux-gnu
+      /usr/lib64
+      /usr/lib
+      /usr/local/lib64
+      /usr/local/lib
+      /lib/x86_64-linux-gnu
+      /lib64
+      /lib
+    )
+    ;;
+  aarch64 | arm64)
+    system_lib_dirs=(
+      /usr/lib/aarch64-linux-gnu
+      /usr/lib64
+      /usr/lib
+      /usr/local/lib
+      /lib/aarch64-linux-gnu
+      /lib64
+      /lib
+    )
+    ;;
+  *)
+    system_lib_dirs=(
+      /usr/lib64
+      /usr/lib
+      /usr/local/lib64
+      /usr/local/lib
+      /lib64
+      /lib
+    )
+    ;;
+esac
+
+libexec_dir="${bin_dir}/../libexec"
+preloads=()
+
+prefer_host_libraries() {
+  local lib dir host_path
+  local group_preloads=()
+
+  for lib in "$@"; do
+    [[ -f "${libexec_dir}/${lib}" ]] || continue
+    host_path=""
+    for dir in "${system_lib_dirs[@]}"; do
+      if [[ -f "${dir}/${lib}" ]]; then
+        host_path="${dir}/${lib}"
+        break
+      fi
+    done
+
+    # Keep a dependency group bundled when any required host copy is missing.
+    [[ -n "$host_path" ]] || return 0
+    group_preloads+=("$host_path")
+  done
+
+  if [[ ${#group_preloads[@]} -gt 0 ]]; then
+    preloads+=("${group_preloads[@]}")
+  fi
+}
+
+# Only replace libraries that integrate with host data or runtime modules.
+# CEF graphics and compiler runtimes such as libstdc++ must stay bundled.
+prefer_host_libraries libxkbcommon.so.0 libxkbcommon-x11.so.0
+prefer_host_libraries libfontconfig.so.1
+prefer_host_libraries \
+  libnspr4.so libplc4.so libplds4.so \
+  libnssutil3.so libnss3.so libsmime3.so libssl3.so \
+  libfreebl3.so libfreeblpriv3.so libsoftokn3.so libnssckbi.so libnssdbm3.so
+
+if [[ ${#preloads[@]} -gt 0 ]]; then
+  preload_str="$(IFS=:; echo "${preloads[*]}")"
+  export LD_PRELOAD="${preload_str}${LD_PRELOAD:+:$LD_PRELOAD}"
+fi
+
 exec "${bin_dir}/../libexec/athas" \
   --ozone-platform=x11 \
   --disable-vulkan \

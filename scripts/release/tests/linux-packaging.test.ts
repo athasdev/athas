@@ -61,6 +61,7 @@ describe("Linux release packaging", () => {
     expect(script).toContain("is_glibc_runtime_library");
     expect(script).toContain("patchelf --add-rpath '$ORIGIN'");
     expect(script).toContain("${app_dir_name}/libexec/libgdk_pixbuf-2.0.so.0");
+    expect(script).not.toContain("export LD_LIBRARY_PATH=");
   });
 
   it("preserves the root-owned setuid sandbox contract in Debian packages", () => {
