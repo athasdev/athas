@@ -8,7 +8,11 @@ export function beginIntelligenceAgent(sessionId: string) {
 }
 
 export function cancelIntelligenceAgent(sessionId: string) {
-  active.get(sessionId)?.abort();
+  const controller = active.get(sessionId);
+  if (!controller) return;
+  controller.abort();
+  // Free the slot now so an interrupt-and-send can start its follow-up at once.
+  active.delete(sessionId);
 }
 
 export function finishIntelligenceAgent(sessionId: string, controller: AbortController) {

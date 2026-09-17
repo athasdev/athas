@@ -39,7 +39,27 @@ export interface ToolCallPatch {
 }
 
 export const updateToolCall = (toolCalls: ToolCall[], patch: ToolCallPatch): ToolCall[] => {
-  if (toolCalls.length === 0) return toolCalls;
+  // Some agents send the first update for a call before (or instead of) its
+  // start event; dropping it would leave the transcript without the call.
+  if (!toolCalls.some((toolCall) => toolCall.id === patch.id)) {
+    const created = createToolCall(
+      patch.name ?? "tool",
+      patch.input,
+      patch.id,
+      patch.kind ?? undefined,
+      patch.status ?? undefined,
+      patch.locations ?? undefined,
+    );
+    return [
+      ...toolCalls,
+      {
+        ...created,
+        output: patch.output,
+        error: patch.error ?? undefined,
+        isComplete: patch.status === "completed" || patch.status === "failed" ? true : undefined,
+      },
+    ];
+  }
 
   return toolCalls.map((toolCall) => {
     if (toolCall.id !== patch.id) return toolCall;

@@ -227,7 +227,7 @@ const AIChat = memo(function AIChat({
     let disposed = false;
 
     const setupAcpStateSync = async () => {
-      unlisten = await listen<AcpEvent>("acp-event", ({ payload }) => {
+      const stop = await listen<AcpEvent>("acp-event", ({ payload }) => {
         const store = useAIChatStore.getState();
         const { actions } = store;
 
@@ -269,6 +269,12 @@ const AIChat = memo(function AIChat({
             break;
         }
       });
+      // The surface may already be gone by the time the bridge answers.
+      if (disposed) {
+        stop();
+        return;
+      }
+      unlisten = stop;
     };
 
     setupAcpStateSync().catch((error) => {
@@ -288,6 +294,28 @@ const AIChat = memo(function AIChat({
   const appendAcpEvent = useCallback((event: ChatAcpEventInput) => {
     setAcpEvents((prev) => appendChatAcpEvent(prev, event));
   }, []);
+
+  const permissionQueueRef = useRef(permissionQueue);
+  permissionQueueRef.current = permissionQueue;
+  const currentAgentIdRef = useRef(currentAgentId);
+  currentAgentIdRef.current = currentAgentId;
+  useEffect(
+    () => () => {
+      // A prompt nobody can answer would leave the run waiting forever.
+      for (const request of permissionQueueRef.current) {
+        if (request.requestId.startsWith("intelligence:")) {
+          respondToIntelligencePermission(request.requestId, false);
+        } else if (currentAgentIdRef.current === CODEX_INTEGRATION_ID) {
+          void CodexIntegrationService.respond(request.requestId, false).catch(() => undefined);
+        } else {
+          void AcpStreamHandler.respondToPermission(request.requestId, false, true).catch(
+            () => undefined,
+          );
+        }
+      }
+    },
+    [],
+  );
 
   // Agent availability is handled dynamically by the agent selector.
 
@@ -378,7 +406,7 @@ const AIChat = memo(function AIChat({
     return context;
   };
 
-  const stopStreaming = async () => {
+  const stopStreaming = async (options: { continueQueue?: boolean } = {}) => {
     void recordFrictionSignal({ area: "agent", signal: "cancel" });
     const pendingPermissions = permissionQueue;
     setPermissionQueue([]);
@@ -415,7 +443,12 @@ const AIChat = memo(function AIChat({
       }
     }
     if (effectiveChatId && run) {
-      finishRunAndProcessQueue(effectiveChatId, run.runId);
+      // Stop means stop: queued follow-ups stay queued instead of launching.
+      if (options.continueQueue) {
+        finishRunAndProcessQueue(effectiveChatId, run.runId);
+      } else {
+        useAIChatStore.getState().actions.finishAgentRun(effectiveChatId, run.runId);
+      }
     }
   };
 
@@ -648,6 +681,17 @@ const AIChat = memo(function AIChat({
             currentMessage?.resources?.length,
           );
 
+          if (!hasVisibleResponse && wasCancelled) {
+            updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
+              content: "_Stopped._",
+              isStreaming: false,
+              responsePhase: undefined,
+            }));
+            finishRunAndProcessQueue(targetChatId, runId);
+            abortControllerRef.current = null;
+            return;
+          }
+
           if (!hasVisibleResponse) {
             if (isAcpAgent(currentAgentId) && acpProducedStateOnlyUpdate) {
               const slashCommand = trimmedMessageContent.match(/^\/([^\s]+)/)?.[1];
@@ -853,14 +897,17 @@ details: ${errorDetails || mainError}
               toolName: event.toolName,
               toolCalls: [
                 ...(currentMessage?.toolCalls || []),
-                createToolCall(
-                  event.toolName,
-                  event.input,
-                  event.toolId,
-                  event.kind,
-                  event.status,
-                  event.locations,
-                ),
+                {
+                  ...createToolCall(
+                    event.toolName,
+                    event.input,
+                    event.toolId,
+                    event.kind,
+                    event.status,
+                    event.locations,
+                  ),
+                  contentOffset: (currentMessage?.content ?? "").length,
+                },
               ],
             }),
           );
@@ -916,6 +963,7 @@ details: ${errorDetails || mainError}
               permissionType: event.permissionType,
               resource: event.resource,
               options: event.options,
+              preview: event.preview,
             },
           ]);
         },
@@ -1130,7 +1178,7 @@ details: ${errorDetails || mainError}
       }
 
       chatActions.prependAgentMessage(targetChatId, messageContent, images);
-      void stopStreaming();
+      void stopStreaming({ continueQueue: true });
       return { accepted: true };
     },
     [
@@ -1229,6 +1277,12 @@ details: ${errorDetails || mainError}
           optionId,
         );
       }
+    } catch (error) {
+      console.error("Failed to answer permission request:", error);
+      showToast({
+        message: "The agent did not accept the answer. Stop the agent and try again.",
+        type: "error",
+      });
     } finally {
       setPermissionQueue((prev) => prev.slice(1));
     }

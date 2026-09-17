@@ -11,6 +11,7 @@ import type { Message as AIMessage } from "@/features/ai/types/ai-chat.types";
 import { formatTime } from "@/features/ai/lib/formatting";
 import { buildShareableOutcomeMarkdown } from "@/features/ai/lib/shareable-outcome";
 import { writeClipboardText } from "@/utils/clipboard";
+import { cn } from "@/utils/cn";
 import { Button } from "@/ui/button";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import {
@@ -29,7 +30,8 @@ import Textarea from "@/ui/textarea";
 import { ProviderIcon } from "../icons/provider-icons";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
-import { ToolCallGroupDisplay } from "../messages/tool-call-display";
+import { ToolCallList } from "../messages/tool-call-display";
+import { buildAssistantTimeline } from "@/features/ai/lib/assistant-timeline";
 
 interface ChatMessageProps {
   onRetry?: () => void | Promise<void>;
@@ -245,7 +247,7 @@ export const ChatMessage = memo(function ChatMessage({
       <Message>
         <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
         <MessageContent>
-          <ToolCallGroupDisplay toolCalls={message.toolCalls!} isStreaming={message.isStreaming} />
+          <ToolCallList toolCalls={message.toolCalls!} isStreaming={message.isStreaming} />
         </MessageContent>
       </Message>
     );
@@ -325,32 +327,44 @@ export const ChatMessage = memo(function ChatMessage({
               </div>
             )}
 
-            {message.content && (
-              <MessageResponse>
-                {hasPlanBlock(message.content) ? (
+            {hasPlanBlock(message.content) ? (
+              <>
+                <MessageResponse>
                   <PlanBlockDisplay
                     plan={parsePlan(message.content)!}
                     isStreaming={message.isStreaming}
                     onExecuteStep={handleExecuteStep}
                   />
-                ) : (
-                  <MarkdownRenderer
-                    onRetry={onRetry}
-                    content={message.content}
-                    onApplyCode={onApplyCode}
-                    chatId={chatId}
+                </MessageResponse>
+                {message.toolCalls && message.toolCalls.length > 0 ? (
+                  <ToolCallList
+                    className="mt-2"
+                    toolCalls={message.toolCalls}
+                    isStreaming={message.isStreaming}
                   />
-                )}
-              </MessageResponse>
-            )}
-
-            {message.toolCalls && message.toolCalls.length > 0 && (
-              <div className="mt-2">
-                <ToolCallGroupDisplay
-                  toolCalls={message.toolCalls}
-                  isStreaming={message.isStreaming}
-                />
-              </div>
+                ) : null}
+              </>
+            ) : (
+              buildAssistantTimeline(message.content, message.toolCalls).map((segment, index) => (
+                <div
+                  key={`${message.id}-segment-${index}`}
+                  className={cn("flex min-w-0 flex-col gap-2", index > 0 && "mt-2")}
+                >
+                  {segment.text ? (
+                    <MessageResponse>
+                      <MarkdownRenderer
+                        onRetry={onRetry}
+                        content={segment.text}
+                        onApplyCode={onApplyCode}
+                        chatId={chatId}
+                      />
+                    </MessageResponse>
+                  ) : null}
+                  {segment.toolCalls.length > 0 ? (
+                    <ToolCallList toolCalls={segment.toolCalls} isStreaming={message.isStreaming} />
+                  ) : null}
+                </div>
+              ))
             )}
           </BubbleContent>
         </Bubble>

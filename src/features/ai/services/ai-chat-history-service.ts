@@ -44,6 +44,29 @@ interface ToolCallData {
   error: string | null;
   timestamp: number;
   is_complete: boolean;
+  meta?: string | null;
+}
+
+type ToolCallMeta = Pick<ToolCall, "id" | "kind" | "status" | "locations" | "contentOffset">;
+
+function serializeToolCallMeta(toolCall: ToolCall): string | null {
+  const meta: ToolCallMeta = {};
+  if (toolCall.id) meta.id = toolCall.id;
+  if (toolCall.kind) meta.kind = toolCall.kind;
+  if (toolCall.status) meta.status = toolCall.status;
+  if (toolCall.locations?.length) meta.locations = toolCall.locations;
+  if (typeof toolCall.contentOffset === "number") meta.contentOffset = toolCall.contentOffset;
+  return Object.keys(meta).length > 0 ? JSON.stringify(meta) : null;
+}
+
+function parseToolCallMeta(meta: string | null | undefined): ToolCallMeta {
+  if (!meta) return {};
+  try {
+    const parsed: unknown = JSON.parse(meta);
+    return parsed && typeof parsed === "object" ? (parsed as ToolCallMeta) : {};
+  } catch {
+    return {};
+  }
 }
 
 interface ChatWithMessages {
@@ -117,6 +140,7 @@ function chatToData(chat: Chat): {
           error: tc.error || null,
           timestamp: tc.timestamp.getTime(),
           is_complete: tc.isComplete || false,
+          meta: serializeToolCallMeta(tc),
         });
       }
     }
@@ -137,6 +161,7 @@ function dataToChat(data: ChatWithMessages): Chat {
       toolCallsMap.set(tc.message_id, []);
     }
     toolCallsMap.get(tc.message_id)!.push({
+      ...parseToolCallMeta(tc.meta),
       name: tc.name,
       input: tc.input ? JSON.parse(tc.input) : undefined,
       output: tc.output ? JSON.parse(tc.output) : undefined,

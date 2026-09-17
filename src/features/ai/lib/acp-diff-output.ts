@@ -31,7 +31,7 @@ function normalizePath(path: string): string {
   return path.replace(/\\/g, "/").replace(/^file:\/\//, "");
 }
 
-function toRelativeDisplayPath(path: string, rootFolderPath?: string | null): string {
+export function toRelativeDisplayPath(path: string, rootFolderPath?: string | null): string {
   const normalizedPath = normalizePath(path);
   const normalizedRoot = rootFolderPath ? normalizePath(rootFolderPath) : "";
   const prefix = `${normalizedRoot}/`;

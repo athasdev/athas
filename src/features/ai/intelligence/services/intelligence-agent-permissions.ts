@@ -1,4 +1,4 @@
-import type { AcpEvent } from "@/features/ai/types/acp.types";
+import type { AcpEvent, AcpPermissionPreview } from "@/features/ai/types/acp.types";
 
 const pending = new Map<string, (approved: boolean) => void>();
 
@@ -15,6 +15,7 @@ export function requestIntelligencePermission(params: {
   path: string;
   description: string;
   kind?: "edit" | "command";
+  preview?: AcpPermissionPreview;
   signal: AbortSignal;
   notify?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
 }): Promise<boolean> {
@@ -36,6 +37,7 @@ export function requestIntelligencePermission(params: {
       permissionType: `intelligence-${params.kind ?? "edit"}`,
       resource: params.path,
       description: params.description,
+      preview: params.preview,
       options: [
         { id: "deny", name: "Deny", kind: "reject_once" },
         {

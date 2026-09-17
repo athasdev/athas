@@ -555,8 +555,15 @@ export class AcpStreamHandler {
 
   private handleToolComplete(event: Extract<AcpEvent, { type: "tool_complete" }>): void {
     const toolName = this.activeTools.get(event.toolId);
-    if (toolName && this.handlers.onToolComplete) {
-      this.handlers.onToolComplete(toolName, event.toolId, event.output, event.error ?? undefined);
+    if (this.handlers.onToolComplete) {
+      // The id is what the transcript matches on; a missing name must not
+      // strand the call in its running state.
+      this.handlers.onToolComplete(
+        toolName ?? "tool",
+        event.toolId,
+        event.output,
+        event.error ?? undefined,
+      );
     }
     this.activeTools.delete(event.toolId);
     this.pendingNewMessage = true;

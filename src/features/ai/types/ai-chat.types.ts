@@ -29,6 +29,8 @@ export interface ToolCall {
   locations?: AcpToolCallLocation[];
   timestamp: Date;
   isComplete?: boolean;
+  /** Length of the assistant text when this call started, so the transcript can interleave them. */
+  contentOffset?: number;
 }
 
 export interface ImageContent {
