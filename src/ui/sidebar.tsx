@@ -458,6 +458,7 @@ export function SidebarListActionRow({
       data-slot="sidebar-list-action-row"
       className={cn(
         "group/sidebar-list-action-row relative flex w-full min-w-0 items-center rounded-md",
+        "hover:bg-accent [&:hover_[data-slot=sidebar-list-item]]:text-foreground",
         "has-[[data-slot=button]:focus-visible]:bg-accent",
         "has-[[data-slot=button][aria-expanded=true]]:bg-accent",
         className,
@@ -468,18 +469,14 @@ export function SidebarListActionRow({
       <span
         data-slot="sidebar-list-actions"
         className={cn(
-          "pointer-events-none absolute inset-y-0 right-0 flex items-center rounded-r-chrome pr-1 pl-6",
-          "bg-[linear-gradient(to_right,transparent,var(--accent)_1.25rem)]",
+          "pointer-events-none absolute inset-y-0 right-0 flex items-center rounded-r-md bg-accent pr-1 pl-2",
           "opacity-0 transition-opacity duration-fast ease-smooth motion-reduce:transition-none",
           "group-hover/sidebar-list-action-row:pointer-events-auto group-hover/sidebar-list-action-row:opacity-100",
           "group-focus-within/sidebar-list-action-row:pointer-events-auto group-focus-within/sidebar-list-action-row:opacity-100",
           "group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:pointer-events-auto group-has-[[data-slot=button][aria-expanded=true]]/sidebar-list-action-row:opacity-100",
         )}
       >
-        <ButtonGroup
-          variant="ghost"
-          className="rounded-md bg-overlay shadow-(--shadow-card) ring-1 ring-border [&>[data-slot=button]]:size-5"
-        >
+        <ButtonGroup variant="ghost" className="[&>[data-slot=button]]:size-5">
           {actionItems.map((action, index) => (
             <Fragment key={(isValidElement(action) && action.key) || index}>
               {index > 0 ? <ButtonGroupSeparator /> : null}
