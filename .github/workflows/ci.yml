@@ -62,3 +62,27 @@ jobs:
 
       - name: Run Rust checks
         run: bash scripts/check/rust.sh
+
+  audit:
+    if: github.repository == 'athasdev/athas'
+    name: Audit — cargo audit, bun audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
+      - name: Audit Rust dependencies
+        run: cargo audit
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Audit npm dependencies
+        run: bun audit

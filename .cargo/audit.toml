@@ -1,0 +1,10 @@
+# cargo-audit configuration. Run `cargo audit` locally or see the `audit` job in CI.
+
+[advisories]
+ignore = [
+  # rsa: Marvin Attack timing side channel (CVE-2023-49092). No patched release exists.
+  # Pulled in only by sqlx's `mysql` feature for server auth; Athas is a MySQL client,
+  # never a server decrypting RSA, so the timing oracle is not reachable. Revisit when
+  # rsa 0.10 or sqlx-mysql drops the dependency.
+  "RUSTSEC-2023-0071",
+]
