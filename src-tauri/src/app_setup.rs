@@ -22,6 +22,7 @@ use tokio::sync::Mutex;
 pub fn configure_app(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn std::error::Error>> {
    app.state::<commands::ui::StartupTiming>()
       .record("native:setup:start");
+   athas_version_control::configure_libgit2();
    #[cfg(all(target_os = "linux", feature = "linux"))]
    if commands::development::cli_windows::requests_need_workbench(
       &commands::development::cli_args::parse_cli_argv(

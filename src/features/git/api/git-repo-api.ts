@@ -61,8 +61,10 @@ function normalizePath(path: string): string {
   }
 
   const unixPath = path.replace(/\\/g, "/");
+  const isUncPath = /^\/\/[^/]/.test(unixPath);
   const collapsed = unixPath.replace(/\/{2,}/g, "/");
-  return collapsed.length > 1 ? collapsed.replace(/\/+$/, "") : collapsed;
+  const normalized = isUncPath ? `/${collapsed}` : collapsed;
+  return normalized.length > 1 ? normalized.replace(/\/+$/, "") : normalized;
 }
 
 function isAbsolutePath(path: string): boolean {

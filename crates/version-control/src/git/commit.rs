@@ -1,4 +1,4 @@
-use crate::git::{GitCommit, IntoStringError};
+use crate::git::{GitCommit, IntoStringError, RepositoryHost};
 use anyhow::{Context, Result};
 use git2::{Repository, Sort};
 
@@ -7,6 +7,16 @@ pub fn git_commit(repo_path: String, message: String) -> Result<(), String> {
 }
 
 fn _git_commit(repo_path: String, message: String) -> Result<()> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      host
+         .git()
+         .args(["commit", "-q", "-F", "-"])
+         .stdin(message.into_bytes())
+         .run("commit")?;
+      return Ok(());
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
    let mut index = repo.index().context("Failed to get index")?;
 

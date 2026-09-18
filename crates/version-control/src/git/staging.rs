@@ -1,5 +1,5 @@
-use crate::git::IntoStringError;
-use anyhow::{Context, Result};
+use crate::git::{IntoStringError, RepositoryHost, describe_failure};
+use anyhow::{Context, Result, bail};
 use git2::{ErrorCode, Repository};
 use std::path::Path;
 
@@ -8,6 +8,15 @@ pub fn git_add(repo_path: String, file_path: String) -> Result<(), String> {
 }
 
 fn _git_add(repo_path: String, file_path: String) -> Result<()> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      host
+         .git()
+         .args(["add", "-A", "--", &file_path])
+         .run("add")?;
+      return Ok(());
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
    let mut index = repo.index().context("Failed to get index")?;
 
@@ -51,6 +60,15 @@ pub fn git_reset(repo_path: String, file_path: String) -> Result<(), String> {
 }
 
 fn _git_reset(repo_path: String, file_path: String) -> Result<()> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      host
+         .git()
+         .args(["reset", "-q", "--", &file_path])
+         .run("reset")?;
+      return Ok(());
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
    let head = repo.head().context("Failed to get HEAD")?;
@@ -97,6 +115,12 @@ pub fn git_add_all(repo_path: String) -> Result<(), String> {
 }
 
 fn _git_add_all(repo_path: String) -> Result<()> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      host.git().args(["add", "-A"]).run("add all")?;
+      return Ok(());
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
    let mut index = repo.index().context("Failed to get index")?;
 
@@ -113,6 +137,12 @@ pub fn git_reset_all(repo_path: String) -> Result<(), String> {
 }
 
 fn _git_reset_all(repo_path: String) -> Result<()> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      host.git().args(["reset", "-q"]).run("reset all")?;
+      return Ok(());
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
    let head = repo.head().context("Failed to get HEAD")?;
@@ -133,6 +163,11 @@ pub fn git_discard_file_changes(repo_path: String, file_path: String) -> Result<
 }
 
 fn _git_discard_file_changes(repo_path: String, file_path: String) -> Result<()> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      return discard_file_changes_with_cli(&host, &file_path);
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
    let head = repo
@@ -155,7 +190,48 @@ pub fn git_discard_all_changes(repo_path: String) -> Result<(), String> {
    _git_discard_all_changes(repo_path).into_string_error()
 }
 
+/// Mirrors the libgit2 checkout above: a tracked file goes back to HEAD, a
+/// file that only exists in the index is dropped from the index and the
+/// working tree, and an untracked file is left alone.
+fn discard_file_changes_with_cli(host: &RepositoryHost, file_path: &str) -> Result<()> {
+   let checkout = host
+      .git()
+      .args(["checkout", "-q", "HEAD", "--", file_path])
+      .output()?;
+   if checkout.status.success() {
+      return Ok(());
+   }
+
+   let details = describe_failure(&checkout);
+   if !details.contains("did not match") {
+      bail!("Git checkout failed: {details}");
+   }
+
+   let tracked = host
+      .git()
+      .args(["ls-files", "--error-unmatch", "--", file_path])
+      .output()?;
+   if !tracked.status.success() {
+      return Ok(());
+   }
+
+   host
+      .git()
+      .args(["rm", "-q", "-f", "--", file_path])
+      .run("rm")?;
+   Ok(())
+}
+
 fn _git_discard_all_changes(repo_path: String) -> Result<()> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      host
+         .git()
+         .args(["reset", "-q", "--hard"])
+         .run("reset --hard")?;
+      return Ok(());
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
    let head = repo

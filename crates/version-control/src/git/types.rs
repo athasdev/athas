@@ -8,7 +8,7 @@ pub struct GitStatus {
    pub files: Vec<GitFile>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum FileStatus {
    Modified,
