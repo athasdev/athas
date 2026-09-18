@@ -1,12 +1,22 @@
 use serde::{Deserialize, Serialize};
 use std::{
+   collections::HashMap,
+   ffi::OsStr,
    io::Write,
    path::PathBuf,
    process::{Command, Stdio},
+   sync::{Mutex, OnceLock},
+   time::{Duration, Instant},
 };
 
 const WSL_EXE: &str = "wsl.exe";
 const WSL_URI_PREFIX: &str = "wsl://";
+const WSL_LOCALHOST_SERVER: &str = "wsl.localhost";
+const WSL_LEGACY_SERVER: &str = "wsl$";
+const WSLENV: &str = "WSLENV";
+const GIT_PROBE_RETRY_INTERVAL: Duration = Duration::from_secs(60);
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WslDistribution {
@@ -148,45 +158,202 @@ pub fn windows_path_to_wsl_path(path: &str) -> Option<String> {
       });
    }
 
-   for prefix in ["//wsl.localhost/", "//wsl$/"] {
-      if let Some(rest) = normalized.strip_prefix(prefix) {
-         let (_, linux_path) = rest.split_once('/')?;
-         return Some(normalize_linux_path(linux_path));
-      }
-   }
-
-   None
+   parse_windows_unc_path(path).map(|(parsed, _)| parsed.linux_path)
 }
 
 pub fn wsl_uri_to_windows_unc(path: &str) -> Result<String, String> {
    let parsed = parse_wsl_uri(path)?;
+   let flavor = resolve_unc_flavor(&parsed.distro);
    Ok(wsl_path_to_windows_unc(
       &parsed.distro,
       &parsed.linux_path,
-      WslUncFlavor::Localhost,
+      flavor,
    ))
 }
 
 pub fn windows_unc_to_wsl_uri(path: &str) -> Option<String> {
-   let normalized = path.replace('\\', "/");
-
-   for prefix in ["//wsl.localhost/", "//wsl$/"] {
-      if let Some(rest) = normalized.strip_prefix(prefix) {
-         let (distro, linux_path) = rest.split_once('/').unwrap_or((rest, ""));
-         if distro.is_empty() {
-            return None;
-         }
-         return Some(build_wsl_uri(distro, linux_path));
-      }
-   }
-
-   None
+   parse_windows_unc_path(path).map(|(parsed, _)| build_wsl_uri(&parsed.distro, &parsed.linux_path))
 }
 
-#[derive(Debug, Clone, Copy)]
+/// Parses a Windows share path that points into a WSL distribution, such as
+/// `\\wsl$\Ubuntu\home\me` or `\\wsl.localhost\Ubuntu\home\me`, in either
+/// separator style and including the `\\?\UNC\` form produced by path
+/// canonicalization.
+pub fn parse_windows_unc_path(path: &str) -> Option<(WslPath, WslUncFlavor)> {
+   let normalized = path.trim().replace('\\', "/");
+   let rest = normalized
+      .strip_prefix("//?/UNC/")
+      .or_else(|| normalized.strip_prefix("//"))?;
+   let (server, rest) = rest.split_once('/').unwrap_or((rest, ""));
+   let flavor = if server.eq_ignore_ascii_case(WSL_LOCALHOST_SERVER) {
+      WslUncFlavor::Localhost
+   } else if server.eq_ignore_ascii_case(WSL_LEGACY_SERVER) {
+      WslUncFlavor::Legacy
+   } else {
+      return None;
+   };
+   let (distro, linux_path) = rest.split_once('/').unwrap_or((rest, ""));
+   let distro = distro.trim();
+   if distro.is_empty() {
+      return None;
+   }
+
+   Some((
+      WslPath {
+         distro: distro.to_string(),
+         linux_path: normalize_linux_path(linux_path),
+      },
+      flavor,
+   ))
+}
+
+/// Recognizes both spellings of a WSL location: the `wsl://` scheme used by
+/// the app and the Windows share paths returned by native dialogs.
+pub fn parse_wsl_location(path: &str) -> Option<WslPath> {
+   if is_wsl_path(path) {
+      parse_wsl_uri(path).ok()
+   } else {
+      parse_windows_unc_path(path).map(|(parsed, _)| parsed)
+   }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WslUncFlavor {
    Localhost,
    Legacy,
+}
+
+fn unc_flavor_cache() -> &'static Mutex<HashMap<String, WslUncFlavor>> {
+   static CACHE: OnceLock<Mutex<HashMap<String, WslUncFlavor>>> = OnceLock::new();
+   CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Picks the share name that reaches a distribution on this machine.
+/// `\\wsl.localhost` only exists on newer WSL releases, so older Windows 10
+/// installs still need `\\wsl$`. The first successful probe is cached.
+pub fn resolve_unc_flavor(distro: &str) -> WslUncFlavor {
+   if !cfg!(target_os = "windows") {
+      return WslUncFlavor::Localhost;
+   }
+
+   let key = distro.trim().to_ascii_lowercase();
+   if let Some(flavor) = unc_flavor_cache()
+      .lock()
+      .ok()
+      .and_then(|cache| cache.get(&key).copied())
+   {
+      return flavor;
+   }
+
+   for flavor in [WslUncFlavor::Localhost, WslUncFlavor::Legacy] {
+      let root = wsl_path_to_windows_unc(distro, "/", flavor);
+      if std::fs::metadata(&root)
+         .map(|metadata| metadata.is_dir())
+         .unwrap_or(false)
+      {
+         if let Ok(mut cache) = unc_flavor_cache().lock() {
+            cache.insert(key, flavor);
+         }
+         return flavor;
+      }
+   }
+
+   WslUncFlavor::Localhost
+}
+
+/// Builds a command that runs `program` inside a distribution without a shell.
+pub fn exec_command(distro: &str) -> Command {
+   let mut command = Command::new(WSL_EXE);
+   command.args(["--distribution", distro.trim(), "--exec"]);
+   hide_console_window(&mut command);
+   command
+}
+
+/// Sets an environment variable on a `wsl.exe` command and lists it in
+/// `WSLENV` so the Linux process receives it too.
+pub fn forward_env(command: &mut Command, key: &str, value: impl AsRef<OsStr>) {
+   command.env(key, value);
+
+   let current = command
+      .get_envs()
+      .find(|(name, _)| *name == OsStr::new(WSLENV))
+      .and_then(|(_, value)| value.map(|value| value.to_string_lossy().into_owned()))
+      .or_else(|| std::env::var(WSLENV).ok())
+      .unwrap_or_default();
+   let already_listed = current
+      .split(':')
+      .any(|entry| entry.split('/').next() == Some(key));
+   if already_listed {
+      return;
+   }
+
+   let merged = if current.is_empty() {
+      key.to_string()
+   } else {
+      format!("{current}:{key}")
+   };
+   command.env(WSLENV, merged);
+}
+
+fn git_probe_cache() -> &'static Mutex<HashMap<String, (bool, Instant)>> {
+   static CACHE: OnceLock<Mutex<HashMap<String, (bool, Instant)>>> = OnceLock::new();
+   CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Reports whether `git` is installed inside a distribution. A positive result
+/// is cached for the process lifetime; a negative one is retried periodically.
+pub fn git_available(distro: &str) -> bool {
+   if !cfg!(target_os = "windows") {
+      return false;
+   }
+
+   let key = distro.trim().to_ascii_lowercase();
+   if let Some((available, checked_at)) = git_probe_cache()
+      .lock()
+      .ok()
+      .and_then(|cache| cache.get(&key).copied())
+      && (available || checked_at.elapsed() < GIT_PROBE_RETRY_INTERVAL)
+   {
+      return available;
+   }
+
+   let available = exec_command(distro)
+      .args(["git", "--version"])
+      .stdin(Stdio::null())
+      .stdout(Stdio::null())
+      .stderr(Stdio::null())
+      .status()
+      .map(|status| status.success())
+      .unwrap_or(false);
+   if let Ok(mut cache) = git_probe_cache().lock() {
+      cache.insert(key, (available, Instant::now()));
+   }
+   available
+}
+
+/// Converts a path argument so a process inside `distro` can use it: `wsl://`
+/// and share paths become Linux paths and drive paths become `/mnt` paths.
+/// Anything else, including relative and Linux paths, is passed through.
+pub fn linux_argument_path(distro: &str, path: &str) -> String {
+   let trimmed = path.trim();
+   if let Some(location) = parse_wsl_location(trimmed) {
+      if location.distro.eq_ignore_ascii_case(distro.trim()) {
+         return location.linux_path;
+      }
+      return trimmed.to_string();
+   }
+
+   windows_path_to_wsl_path(trimmed).unwrap_or_else(|| trimmed.to_string())
+}
+
+#[cfg(windows)]
+fn hide_console_window(command: &mut Command) {
+   use std::os::windows::process::CommandExt;
+   command.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(windows))]
+fn hide_console_window(_command: &mut Command) {
 }
 
 pub fn wsl_path_to_windows_unc(distro: &str, linux_path: &str, flavor: WslUncFlavor) -> String {
@@ -474,8 +641,10 @@ pub fn resolve_windows_path(path: &str) -> Result<String, String> {
 }
 
 fn run_host_wsl(args: &[&str]) -> Result<CommandOutput, String> {
-   let output = Command::new(WSL_EXE)
-      .args(args)
+   let mut command = Command::new(WSL_EXE);
+   command.args(args);
+   hide_console_window(&mut command);
+   let output = command
       .output()
       .map_err(|e| format!("Failed to run {WSL_EXE}: {e}"))?;
 
@@ -492,6 +661,7 @@ fn run_wsl(distro: &str, args: &[&str], stdin: Option<&[u8]>) -> Result<CommandO
    }
 
    let mut command = Command::new(WSL_EXE);
+   hide_console_window(&mut command);
    command
       .args(["--distribution", distro])
       .args(args)
@@ -727,5 +897,127 @@ mod tests {
          windows_unc_to_wsl_uri(r"\\wsl.localhost\Ubuntu\home\me\repo").as_deref(),
          Some("wsl://Ubuntu/home/me/repo")
       );
+      assert_eq!(
+         windows_unc_to_wsl_uri(r"\\wsl$\Ubuntu\home\me\repo").as_deref(),
+         Some("wsl://Ubuntu/home/me/repo")
+      );
+   }
+
+   #[test]
+   fn parses_every_spelling_of_a_wsl_share_path() {
+      let expected = WslPath {
+         distro: "Ubuntu".to_string(),
+         linux_path: "/home/me/repo".to_string(),
+      };
+
+      assert_eq!(
+         parse_windows_unc_path(r"\\wsl$\Ubuntu\home\me\repo\"),
+         Some((expected.clone(), WslUncFlavor::Legacy))
+      );
+      assert_eq!(
+         parse_windows_unc_path("//wsl.localhost/Ubuntu/home/me/repo"),
+         Some((expected.clone(), WslUncFlavor::Localhost))
+      );
+      assert_eq!(
+         parse_windows_unc_path(r"\\?\UNC\wsl$\Ubuntu\home\me\repo"),
+         Some((expected.clone(), WslUncFlavor::Legacy))
+      );
+      assert_eq!(
+         parse_windows_unc_path(r"\\WSL.LOCALHOST\Ubuntu"),
+         Some((
+            WslPath {
+               distro: "Ubuntu".to_string(),
+               linux_path: "/".to_string(),
+            },
+            WslUncFlavor::Localhost
+         ))
+      );
+      assert_eq!(parse_windows_unc_path(r"\\server\share\repo"), None);
+      assert_eq!(parse_windows_unc_path(r"\\wsl$\"), None);
+      assert_eq!(parse_windows_unc_path(r"C:\Users\me\repo"), None);
+   }
+
+   #[test]
+   fn recognizes_wsl_locations_in_both_forms() {
+      assert_eq!(
+         parse_wsl_location("wsl://Ubuntu/home/me").map(|p| p.linux_path),
+         Some("/home/me".to_string())
+      );
+      assert_eq!(
+         parse_wsl_location(r"\\wsl$\Ubuntu\home\me").map(|p| p.distro),
+         Some("Ubuntu".to_string())
+      );
+      assert_eq!(parse_wsl_location("/home/me"), None);
+      assert_eq!(parse_wsl_location(r"C:\repo"), None);
+   }
+
+   #[test]
+   fn converts_path_arguments_for_the_target_distribution() {
+      assert_eq!(
+         linux_argument_path("Ubuntu", "wsl://Ubuntu/home/me/worktree"),
+         "/home/me/worktree"
+      );
+      assert_eq!(
+         linux_argument_path("Ubuntu", r"\\wsl.localhost\Ubuntu\home\me\worktree"),
+         "/home/me/worktree"
+      );
+      assert_eq!(
+         linux_argument_path("Ubuntu", r"C:\Users\me\worktree"),
+         "/mnt/c/Users/me/worktree"
+      );
+      assert_eq!(
+         linux_argument_path("Ubuntu", "/home/me/worktree"),
+         "/home/me/worktree"
+      );
+      assert_eq!(linux_argument_path("Ubuntu", "../worktree"), "../worktree");
+      assert_eq!(
+         linux_argument_path("Ubuntu", "wsl://Debian/home/me/worktree"),
+         "wsl://Debian/home/me/worktree"
+      );
+   }
+
+   #[test]
+   fn forwards_environment_variables_through_wslenv() {
+      let mut command = Command::new("true");
+      command.env(WSLENV, "EXISTING/p");
+      forward_env(&mut command, "GIT_TERMINAL_PROMPT", "0");
+      forward_env(&mut command, "GIT_SSH_COMMAND", "ssh -oBatchMode=yes");
+      forward_env(&mut command, "GIT_TERMINAL_PROMPT", "0");
+
+      let envs: HashMap<String, String> = command
+         .get_envs()
+         .filter_map(|(key, value)| {
+            Some((
+               key.to_string_lossy().into_owned(),
+               value?.to_string_lossy().into_owned(),
+            ))
+         })
+         .collect();
+
+      assert_eq!(
+         envs.get(WSLENV).map(String::as_str),
+         Some("EXISTING/p:GIT_TERMINAL_PROMPT:GIT_SSH_COMMAND")
+      );
+      assert_eq!(
+         envs.get("GIT_TERMINAL_PROMPT").map(String::as_str),
+         Some("0")
+      );
+   }
+
+   #[test]
+   fn exec_command_targets_the_distribution_without_a_shell() {
+      let command = exec_command("Ubuntu");
+      let args: Vec<String> = command
+         .get_args()
+         .map(|arg| arg.to_string_lossy().into_owned())
+         .collect();
+
+      assert_eq!(command.get_program(), OsStr::new(WSL_EXE));
+      assert_eq!(args, vec!["--distribution", "Ubuntu", "--exec"]);
+   }
+
+   #[test]
+   fn unc_flavor_defaults_to_localhost_off_windows() {
+      assert_eq!(resolve_unc_flavor("Ubuntu"), WslUncFlavor::Localhost);
    }
 }
