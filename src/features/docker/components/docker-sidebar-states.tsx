@@ -60,7 +60,7 @@ export function DockerUnavailableState({
   return (
     <Empty className="min-h-0 flex-none gap-3 px-4 py-5" role="status">
       <EmptyHeader className="gap-1.5">
-        <EmptyMedia variant="icon" className="size-9 border border-border/70 bg-accent">
+        <EmptyMedia variant="icon" className="size-9 border border-border bg-accent">
           <WarningCircleIcon className="size-4.5 text-subtle-foreground" />
         </EmptyMedia>
         <EmptyTitle className="ui-text-base">{title ?? fallbackCopy.title}</EmptyTitle>
@@ -141,7 +141,7 @@ export function DockerCommandOutput({ output }: { output: string | null }) {
     <div
       role="status"
       aria-live="polite"
-      className="ui-text-sm mx-2 mb-1 max-h-16 select-text overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground"
+      className="ui-text-sm mx-2 mb-1 max-h-16 select-text overflow-auto whitespace-pre-wrap rounded border border-border bg-background px-2 py-1 font-mono text-subtle-foreground"
     >
       {output}
     </div>

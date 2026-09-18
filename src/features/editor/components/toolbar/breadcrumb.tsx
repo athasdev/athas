@@ -105,7 +105,7 @@ export default function Breadcrumb({
       actions={
         <>
           {defaultActions}
-          {defaultActions && rightContent ? <div className="mx-1 h-3.5 w-px bg-border/70" /> : null}
+          {defaultActions && rightContent ? <div className="mx-1 h-3.5 w-px bg-border" /> : null}
           {rightContent}
           {extensionActions.right.map((action) => (
             <ExtensionToolbarAction key={action.id} action={action} />

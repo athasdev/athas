@@ -273,7 +273,7 @@ const GitCommitPanel = ({
             <Button
               type="button"
               variant="ghost"
-              size="compact"
+              size="xs"
               iconOnly
               onClick={() => void handleGenerateCommitMessage()}
               disabled={isGenerateDisabled}
@@ -283,7 +283,7 @@ const GitCommitPanel = ({
             </Button>
             <Button
               type="button"
-              size="compact"
+              size="xs"
               onClick={() => void handleCommit()}
               disabled={isCommitDisabled}
               variant="accent"
@@ -297,7 +297,7 @@ const GitCommitPanel = ({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="compact"
+                    size="xs"
                     iconOnly
                     disabled={isGenerating || isCommitting || isRemoteActionLoading}
                     tooltip="Commit options"

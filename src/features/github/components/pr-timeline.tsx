@@ -120,7 +120,7 @@ function EventRow({
   return (
     <div className="flex min-w-0 items-start gap-3">
       <span
-        className={`relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full bg-background ring-1 ring-border/70 [&_svg]:size-3.5 ${tone}`}
+        className={`relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full bg-background ring-1 ring-border [&_svg]:size-3.5 ${tone}`}
       >
         {icon}
       </span>
@@ -129,7 +129,7 @@ function EventRow({
           type="button"
           onClick={onClick}
           aria-label={label}
-          className={`${contentClassName} -mx-1.5 -my-0.5 rounded-chrome px-1.5 py-0.5 text-left transition-colors duration-fast hover:bg-accent/60 focus-visible:bg-accent/60 focus-visible:outline-none`}
+          className={`${contentClassName} -mx-1.5 -my-0.5 rounded-chrome px-1.5 py-0.5 text-left transition-colors duration-fast hover:bg-accent focus-visible:bg-accent focus-visible:outline-none`}
         >
           {children}
         </button>
@@ -337,7 +337,7 @@ export function PRTimeline({
 
       <ResourceSection title="Activity">
         <div className="space-y-4">
-          <ol className="relative space-y-4 before:absolute before:top-3 before:bottom-3 before:left-3 before:w-px before:bg-border/60">
+          <ol className="relative space-y-4 before:absolute before:top-3 before:bottom-3 before:left-3 before:w-px before:bg-border">
             {events.map((event) => (
               <li key={eventKey(event)} className="relative">
                 {renderEvent(event)}

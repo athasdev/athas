@@ -106,17 +106,17 @@ export function CsvPreview() {
             <Button
               onClick={() => setHasHeader((v) => !v)}
               variant="default"
-              size="chrome"
+              size="sm"
               tooltip="Toggle header row"
             >
               <RowsIcon /> {hasHeader ? "Header On" : "Header Off"}
             </Button>
             {/* Copy CSV */}
-            <Button onClick={handleCopyCsv} variant="default" size="chrome" tooltip="Copy as CSV">
+            <Button onClick={handleCopyCsv} variant="default" size="sm" tooltip="Copy as CSV">
               <DownloadIcon optical="md" /> CSV
             </Button>
             {/* Copy JSON */}
-            <Button onClick={handleCopyJson} variant="default" size="chrome" tooltip="Copy as JSON">
+            <Button onClick={handleCopyJson} variant="default" size="sm" tooltip="Copy as JSON">
               <FileCodeIcon /> JSON
             </Button>
           </div>

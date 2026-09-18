@@ -13,7 +13,7 @@ function BreadcrumbList({ className, ...props }: ComponentProps<"ol">) {
     <ol
       data-slot="breadcrumb-list"
       className={cn(
-        "flex flex-wrap items-center gap-1.5 wrap-break-word text-subtle-foreground ui-text-sm",
+        "flex flex-wrap items-center gap-1.5 wrap-break-word text-muted-foreground ui-text-sm",
         className,
       )}
       {...props}
@@ -37,7 +37,7 @@ function BreadcrumbLink({ className, render, ...props }: useRender.ComponentProp
     props: mergeProps<"a">(
       {
         className: cn(
-          "rounded outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/20",
+          "rounded-sm outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus",
           className,
         ),
       },
@@ -69,7 +69,7 @@ function BreadcrumbSeparator({ children, className, ...props }: ComponentProps<"
       data-slot="breadcrumb-separator"
       role="presentation"
       aria-hidden="true"
-      className={cn("text-subtle-foreground/70 [&>svg]:size-3", className)}
+      className={cn("text-subtle-foreground [&>svg]:size-3", className)}
       {...props}
     >
       {children ?? <ChevronRightIcon className="rtl:rotate-180" />}

@@ -13,7 +13,7 @@ import { instantTransition, quickTransition } from "@/utils/motion";
 import { cn } from "@/utils/cn";
 
 const attachmentVariants = cva(
-  "group/attachment relative flex w-fit max-w-[min(16rem,100%)] min-w-0 shrink-0 ui-text-sm gap-2 rounded-lg bg-attachment text-foreground outline-none shadow-(--attachment-shadow) transition-[background-color,box-shadow] duration-fast ease-smooth motion-reduce:transition-none hover:bg-attachment-hover hover:shadow-(--attachment-hover-shadow) focus-within:ring-1 focus-within:ring-primary/35 focus-visible:ring-1 focus-visible:ring-primary/35 has-data-[slot=attachment-content]:px-2 has-data-[slot=attachment-content]:py-1.5 has-data-[slot=attachment-media]:p-1.5 data-[state=error]:ring-1 data-[state=error]:ring-destructive/30 data-[state=idle]:border data-[state=idle]:border-dashed data-[state=idle]:border-border",
+  "group/attachment relative flex w-fit max-w-[min(16rem,100%)] min-w-0 shrink-0 ui-text-sm gap-2 rounded-lg bg-surface text-foreground outline-none ring-1 ring-border transition-[background-color,box-shadow] duration-fast ease-smooth motion-reduce:transition-none hover:bg-accent focus-within:ring-2 focus-within:ring-focus focus-visible:ring-2 focus-visible:ring-focus has-data-[slot=attachment-content]:px-2 has-data-[slot=attachment-content]:py-1.5 has-data-[slot=attachment-media]:p-1.5 data-[state=error]:ring-destructive data-[state=idle]:ring-0 data-[state=idle]:border data-[state=idle]:border-dashed data-[state=idle]:border-border-strong",
   {
     variants: {
       orientation: {
@@ -66,7 +66,7 @@ const Attachment = forwardRef<HTMLDivElement, AttachmentProps>(function Attachme
 });
 
 const attachmentMediaVariants = cva(
-  "relative flex aspect-square w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-attachment-media text-muted-foreground group-data-[orientation=vertical]/attachment:w-full group-data-[state=error]/attachment:bg-destructive/10 group-data-[state=error]/attachment:text-destructive [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 group-data-[orientation=vertical]/attachment:[&_svg:not([class*='size-'])]:size-6",
+  "relative flex aspect-square w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-accent text-muted-foreground group-data-[orientation=vertical]/attachment:w-full group-data-[state=error]/attachment:bg-destructive-soft group-data-[state=error]/attachment:text-destructive [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 group-data-[orientation=vertical]/attachment:[&_svg:not([class*='size-'])]:size-6",
   {
     variants: {
       variant: {
@@ -127,7 +127,7 @@ function AttachmentDescription({ className, ...props }: React.ComponentProps<"sp
     <span
       data-slot="attachment-description"
       className={cn(
-        "mt-0.5 block max-w-full min-w-0 truncate text-subtle-foreground group-data-[state=error]/attachment:text-destructive/80",
+        "mt-0.5 block max-w-full min-w-0 truncate text-subtle-foreground group-data-[state=error]/attachment:text-destructive",
         className,
       )}
       {...props}

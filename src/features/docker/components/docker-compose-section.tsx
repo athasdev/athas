@@ -51,7 +51,7 @@ export function DockerComposeSection({
       <DockerResourceRow
         title="Compose project"
         description={project.files.map(getDockerFileName).join(", ")}
-        status={<Badge variant="muted">{project.services.length} services</Badge>}
+        status={<Badge>{project.services.length} services</Badge>}
         actions={
           <DockerActionMenu
             label="Compose project actions"

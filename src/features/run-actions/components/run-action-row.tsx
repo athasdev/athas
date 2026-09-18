@@ -31,7 +31,7 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
                 <Button
                   variant="ghost"
                   iconOnly
-                  size="chrome"
+                  size="sm"
                   aria-label={`Options for ${action.name}`}
                 />
               }

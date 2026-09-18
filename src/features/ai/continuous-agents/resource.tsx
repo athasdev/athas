@@ -110,7 +110,7 @@ function ContinuousAgentsSidebar({
 
   return (
     <aside
-      className="w-[clamp(12rem,24vw,15rem)] shrink-0 border-border/70 border-r"
+      className="w-[clamp(12rem,24vw,15rem)] shrink-0 border-border border-r"
       aria-label="Continuous Agents navigation"
       data-slot="continuous-agents-sidebar"
     >
@@ -215,10 +215,10 @@ function OverviewContent({
 
   return (
     <div className="space-y-8">
-      <Card variant="muted">
+      <Card>
         <CardHeader>
           <div className="mb-1 flex flex-wrap items-center gap-2">
-            <Badge variant="accent">Continuous</Badge>
+            <Badge tone="accent">Continuous</Badge>
             <span className="text-subtle-foreground ui-text-sm">Runs while Athas is open</span>
           </div>
           <CardTitle>Give Athas an outcome, not another reminder.</CardTitle>
@@ -273,7 +273,7 @@ function OverviewContent({
               Select one to inspect its goal, schedule, and latest run.
             </p>
           </div>
-          <Badge variant="muted">{tasks.length}</Badge>
+          <Badge>{tasks.length}</Badge>
         </div>
 
         {tasks.length > 0 ? (
@@ -298,7 +298,7 @@ function OverviewContent({
                   <ItemContent>
                     <ItemTitle>
                       {task.name}
-                      <Badge variant={isRunning || task.enabled ? "success" : "muted"}>
+                      <Badge tone={isRunning || task.enabled ? "success" : "neutral"}>
                         {isRunning
                           ? "Running"
                           : task.lastError
@@ -406,10 +406,10 @@ function CreateContent({ onCreated }: { onCreated: (taskId: string) => void }) {
 
   return (
     <div className="space-y-5">
-      <Card variant="muted">
+      <Card>
         <CardHeader>
           <div className="mb-1 flex items-center gap-2">
-            <Badge variant="accent">New continuous agent</Badge>
+            <Badge tone="accent">New continuous agent</Badge>
           </div>
           <CardTitle>Define the outcome once.</CardTitle>
           <CardDescription>
@@ -515,7 +515,7 @@ function CreateContent({ onCreated }: { onCreated: (taskId: string) => void }) {
         ))}
       </div>
 
-      <div className="flex justify-end border-border/70 border-t pt-5">
+      <div className="flex justify-end border-border border-t pt-5">
         <Button type="button" variant="accent" disabled={!canCreate} onClick={handleCreate}>
           <PlayIcon />
           Start continuous agent
@@ -544,7 +544,7 @@ function TaskContent({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={isRunning || task.enabled ? "success" : "muted"}>
+        <Badge tone={isRunning || task.enabled ? "success" : "neutral"}>
           {isRunning
             ? "Running"
             : task.lastError
@@ -632,7 +632,7 @@ function TaskContent({
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap items-center gap-2 border-border/70 border-t pt-5">
+      <div className="flex flex-wrap items-center gap-2 border-border border-t pt-5">
         <Button
           type="button"
           variant="accent"
@@ -651,7 +651,7 @@ function TaskContent({
           {task.enabled ? "Pause" : "Resume"}
         </Button>
         <span className="inline-flex min-w-0 ml-auto">
-          <Button type="button" variant="danger" onClick={onDelete}>
+          <Button type="button" variant="ghost" tone="danger" onClick={onDelete}>
             <TrashIcon />
             Delete
           </Button>

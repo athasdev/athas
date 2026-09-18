@@ -219,7 +219,7 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
       <div className="pointer-events-none flex min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border/60 bg-surface/80 px-2 py-4 ui-text-sm leading-5 text-subtle-foreground">
+        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border bg-surface px-2 py-4 ui-text-sm leading-5 text-subtle-foreground">
           {previewLines.map((_, index) => (
             <span key={`${buffer.id}-line-${index + 1}`}>{index + 1}</span>
           ))}
@@ -231,7 +231,7 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
         </div>
       </div>
 
-      <div className="border-t border-border/60 bg-surface/80 px-4 py-2">
+      <div className="border-t border-border bg-surface px-4 py-2">
         <div className="truncate ui-text-sm font-medium text-foreground">
           {buffer.type === "diff" ? formatDiffBufferLabel(buffer.name, buffer.path) : buffer.name}
         </div>
@@ -252,12 +252,12 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-      <div className="shrink-0 bg-surface/60 px-3 py-3">
+      <div className="shrink-0 bg-surface px-3 py-3">
         <div className="flex min-w-0 items-start gap-2">
-          <div className="mt-0.5 size-4 shrink-0 rounded-lg bg-success/80" />
+          <div className="mt-0.5 size-4 shrink-0 rounded-lg bg-success-soft" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge font="mono">#{buffer.prNumber ?? "--"}</Badge>
+              <Badge>#{buffer.prNumber ?? "--"}</Badge>
               <div className="min-w-0 truncate font-medium ui-text-sm text-foreground">
                 {buffer.name}
               </div>
@@ -278,15 +278,15 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
           </div>
         </div>
       </div>
-      <div className="min-h-0 flex-1 bg-background/40 px-3 py-3">
-        <div className="rounded-lg bg-surface/35 px-3 py-2">
+      <div className="min-h-0 flex-1 bg-background px-3 py-3">
+        <div className="rounded-lg bg-surface px-3 py-2">
           <div className="line-clamp-5 ui-text-sm leading-6 text-subtle-foreground">
             {details?.body?.trim()
               ? details.body
               : "Activate this card to inspect the full pull request description, changed files, comments, review state, and checkout actions."}
           </div>
         </div>
-        <div className="mt-3 rounded-lg bg-surface/35 px-3 py-2 ui-text-sm text-subtle-foreground">
+        <div className="mt-3 rounded-lg bg-surface px-3 py-2 ui-text-sm text-subtle-foreground">
           {buffer.path}
         </div>
       </div>
@@ -1031,7 +1031,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       data-pane-id={pane.id}
       className={cn(
         "relative flex size-full flex-col overflow-hidden bg-background",
-        isActivePane && "ring-1 ring-primary/30",
+        isActivePane && "ring-1 ring-focus",
         (isDragOver || internalHoverZone) && "ring-2 ring-primary",
       )}
       onMouseDownCapture={handlePaneMouseDownCapture}
@@ -1042,7 +1042,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       onDrop={handleDrop}
     >
       {(isDragOver || internalHoverZone) && !isTabDragOver && !internalHoverZone && (
-        <div className="pointer-events-none absolute inset-0 z-40 bg-primary/10" />
+        <div className="pointer-events-none absolute inset-0 z-40 bg-primary-soft" />
       )}
       <SplitDropOverlay
         visible={isTabDragOver || !!internalHoverZone}
@@ -1076,9 +1076,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     className={cn(
                       "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-normal ease-smooth",
                       isActiveBuffer
-                        ? "border-primary/50 bg-background shadow-[0_0_0_1px_rgba(99,102,241,0.15)]"
-                        : "border-border/70 bg-background hover:border-border/90",
-                      isDropTarget && "border-primary shadow-[0_0_0_1px_rgba(99,102,241,0.25)]",
+                        ? "border-primary bg-background ring-1 ring-focus"
+                        : "border-border bg-background hover:border-border-strong",
+                      isDropTarget && "border-primary ring-2 ring-focus",
                       draggedCarouselBufferId === buffer.id && "opacity-70",
                       isCarouselResizing && "transition-none",
                     )}
@@ -1150,7 +1150,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                       )}
                     </div>
                     <div
-                      className="absolute top-0 right-0 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary/20"
+                      className="absolute top-0 right-0 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary-soft"
                       onMouseDown={handleCarouselResizeStart}
                       role="separator"
                       tabIndex={0}

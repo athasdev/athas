@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentProps } from "react";
+import { useEffect, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useToast } from "@/features/layout/contexts/toast-context";
@@ -11,7 +11,7 @@ import {
   subscribeToTelemetryLog,
   type TelemetryLogEntry,
 } from "@/features/telemetry/services/telemetry";
-import Badge from "@/ui/badge";
+import Badge, { type BadgeTone } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/ui/item";
@@ -24,13 +24,11 @@ const telemetryDescription =
   "Athas sends anonymous operational metadata for updates and, when enabled, heartbeats, integrations, and crashes; it never sends file paths, project names, prompts, or editor content.";
 const telemetryLearnMoreUrl = getServiceUrls().telemetryDocsUrl;
 
-function getTelemetryStatusVariant(
-  status: TelemetryLogEntry["status"],
-): ComponentProps<typeof Badge>["variant"] {
-  if (status === "failed") return "error";
+function getTelemetryStatusVariant(status: TelemetryLogEntry["status"]): BadgeTone {
+  if (status === "failed") return "danger";
   if (status === "sent") return "success";
   if (status === "local") return "accent";
-  return "muted";
+  return "neutral";
 }
 
 export const AdvancedSettings = () => {
@@ -177,9 +175,7 @@ export const AdvancedSettings = () => {
                       <ItemDescription>{entry.error || entry.summary}</ItemDescription>
                     </ItemContent>
                     <ItemActions>
-                      <Badge variant={getTelemetryStatusVariant(entry.status)}>
-                        {entry.status}
-                      </Badge>
+                      <Badge tone={getTelemetryStatusVariant(entry.status)}>{entry.status}</Badge>
                       <time className="font-sans ui-text-sm text-subtle-foreground">
                         {new Date(entry.timestamp).toLocaleString()}
                       </time>

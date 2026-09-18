@@ -22,10 +22,12 @@ const tabsListVariants = cva(
   {
     variants: {
       variant: {
-        default: "gap-chrome-tight bg-transparent",
-        line: "gap-chrome bg-transparent",
-        bare: "gap-chrome bg-transparent",
-        sidebar: "min-w-0 max-w-full gap-chrome-tight bg-transparent",
+        /** Filled pills. The active tab takes the selected fill. */
+        default: "gap-chrome-tight",
+        /** Text with an underline marking the active tab. */
+        line: "gap-chrome",
+        /** Pills that shrink to their icon when inactive, for a narrow sidebar header. */
+        sidebar: "min-w-0 max-w-full gap-chrome-tight",
       },
     },
     defaultVariants: {
@@ -54,7 +56,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
       className={cn(
-        "relative inline-flex h-chrome-control flex-1 select-none items-center justify-center gap-chrome-loose whitespace-nowrap rounded border border-transparent px-2 font-sans font-normal ui-text-chrome text-subtle-foreground outline-none transition-[background-color,border-color,color,box-shadow] duration-fast ease-smooth hover:bg-accent/50 hover:text-foreground focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 data-active:bg-accent/80 data-active:text-foreground group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent group-data-[variant=bare]/tabs-list:bg-transparent group-data-[variant=bare]/tabs-list:data-active:bg-accent/80 group-data-[variant=sidebar]/tabs-list:min-w-0 group-data-[variant=sidebar]/tabs-list:flex-none group-data-[variant=sidebar]/tabs-list:data-active:shrink motion-reduce:transition-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+        "relative inline-flex h-chrome-control flex-1 select-none items-center justify-center gap-chrome-loose whitespace-nowrap rounded-md px-2 font-sans font-medium ui-text-chrome text-subtle-foreground outline-none transition-[background-color,color,box-shadow] duration-fast ease-smooth hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus disabled:pointer-events-none disabled:opacity-50 data-active:bg-selected data-active:text-foreground group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start group-data-[variant=line]/tabs-list:rounded-none group-data-[variant=line]/tabs-list:hover:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent group-data-[variant=line]/tabs-list:after:absolute group-data-[variant=line]/tabs-list:after:inset-x-2 group-data-[variant=line]/tabs-list:after:-bottom-px group-data-[variant=line]/tabs-list:after:h-0.5 group-data-[variant=line]/tabs-list:after:rounded-full group-data-[variant=line]/tabs-list:after:bg-transparent group-data-[variant=line]/tabs-list:data-active:after:bg-primary group-data-[variant=sidebar]/tabs-list:min-w-0 group-data-[variant=sidebar]/tabs-list:flex-none group-data-[variant=sidebar]/tabs-list:data-active:shrink motion-reduce:transition-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
         className,
       )}
       {...props}

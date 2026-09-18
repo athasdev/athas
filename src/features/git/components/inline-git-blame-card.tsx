@@ -75,7 +75,7 @@ export function InlineGitBlameCard({
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-border/70 border-t bg-surface/55 px-3 py-1.5">
+        <div className="flex items-center justify-between border-border border-t bg-surface px-3 py-1.5">
           <code
             className="select-text font-mono text-subtle-foreground ui-text-sm"
             title={presentation.commitHash}

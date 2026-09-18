@@ -459,9 +459,7 @@ const GitTagManager = ({ query, repoPath, onRefresh, onViewTagComparison }: GitT
                         <span className="ui-text-sm w-14 shrink-0 text-subtle-foreground">
                           Type
                         </span>
-                        <Badge variant="muted">
-                          {tag.is_annotated ? "Annotated" : "Lightweight"}
-                        </Badge>
+                        <Badge>{tag.is_annotated ? "Annotated" : "Lightweight"}</Badge>
                       </div>
                       {tag.message ? (
                         <div className="flex min-w-0 items-start gap-2">

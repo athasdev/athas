@@ -9,11 +9,11 @@ let root: Root;
 
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-  vi.spyOn(HTMLElement.prototype, "offsetParent", "get").mockImplementation(
-    function (this: HTMLElement) {
-      return this.parentElement;
-    },
-  );
+  vi.spyOn(HTMLElement.prototype, "offsetParent", "get").mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.parentElement;
+  });
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);

@@ -99,7 +99,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
       <div className="flex flex-1 overflow-hidden">
         {status === "added" ? (
           <div className="flex flex-1 flex-col">
-            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-added/20 py-1 font-medium ui-text-sm text-git-added">
+            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-added-soft py-1 font-medium ui-text-sm text-git-added">
               <PlusIcon />
               New Image
             </div>
@@ -114,7 +114,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           </div>
         ) : status === "deleted" ? (
           <div className="flex flex-1 flex-col">
-            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-deleted/20 py-1 font-medium ui-text-sm text-git-deleted">
+            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-deleted-soft py-1 font-medium ui-text-sm text-git-deleted">
               <MinusIcon />
               Removed Image
             </div>
@@ -132,7 +132,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
             {hasOldImage && (
               <ImageContainer
                 label="Removed"
-                labelColor="bg-git-deleted/20 text-git-deleted"
+                labelColor="bg-git-deleted-soft text-git-deleted"
                 base64={diff.old_blob_base64}
                 alt={`${fileName} (old)`}
                 filePath={fileName}
@@ -143,7 +143,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
             {hasNewImage && (
               <ImageContainer
                 label="Added"
-                labelColor="bg-git-added/20 text-git-added"
+                labelColor="bg-git-added-soft text-git-added"
                 base64={diff.new_blob_base64}
                 alt={`${fileName} (new)`}
                 filePath={fileName}

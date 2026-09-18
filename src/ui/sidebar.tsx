@@ -121,7 +121,7 @@ export function SidebarToolbar({ children, className, ...props }: ComponentProps
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome border-border/70 border-b px-chrome-inline",
+        "font-sans ui-text-chrome flex h-pane-header min-w-0 shrink-0 select-none items-center gap-chrome border-border border-b px-chrome-inline",
         className,
       )}
       {...props}
@@ -139,7 +139,7 @@ export const SidebarFooter = forwardRef<
     <div
       ref={ref}
       className={cn(
-        "ui-text-chrome mx-2 mb-2 shrink-0 rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--surface)_82%,var(--border)_18%)] p-0 pb-1",
+        "ui-text-chrome mx-2 mb-2 shrink-0 rounded-lg border border-border bg-surface p-0 pb-1",
         className,
       )}
       {...props}
@@ -181,8 +181,7 @@ export function SidebarComposerBody({
     <div
       className={cn(
         "overflow-hidden",
-        variant === "surface" &&
-          "rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--background)_96%,var(--surface)_4%)]",
+        variant === "surface" && "rounded-lg border border-border bg-surface",
         className,
       )}
       {...props}
@@ -239,7 +238,7 @@ export function SidebarSectionHeader({
       <button
         type="button"
         className={cn(
-          "athas-chrome-control font-sans ui-text-sm flex min-h-chrome-control min-w-0 items-center gap-chrome rounded px-1.5 py-0.5 font-normal select-none text-left text-subtle-foreground/80 transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[1em]",
+          "athas-chrome-control font-sans ui-text-sm flex min-h-chrome-control min-w-0 items-center gap-chrome rounded-md px-1.5 py-0.5 font-medium select-none text-left text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[1em]",
           className,
         )}
         aria-expanded={expanded}
@@ -294,9 +293,7 @@ export function SidebarSection({
           action={
             action ??
             (count !== undefined ? (
-              <span className="pr-2 tabular-nums ui-text-sm text-subtle-foreground/80">
-                {count}
-              </span>
+              <span className="pr-2 tabular-nums ui-text-sm text-subtle-foreground">{count}</span>
             ) : undefined)
           }
         >
@@ -322,7 +319,7 @@ export function SidebarSectionLabel({
   return (
     <div
       className={cn(
-        "font-sans ui-text-sm flex h-chrome-control min-w-0 select-none items-center gap-chrome px-1.5 font-normal text-subtle-foreground/80 [&_svg]:size-[1em]",
+        "font-sans ui-text-sm flex h-chrome-control min-w-0 select-none items-center gap-chrome px-1.5 font-medium text-muted-foreground [&_svg]:size-[1em]",
         className,
       )}
       {...props}
@@ -331,7 +328,7 @@ export function SidebarSectionLabel({
         <span className="flex shrink-0 items-center justify-center">{leading}</span>
       ) : null}
       <span className="min-w-0 flex-1 truncate">{children}</span>
-      {trailing ? <span className="shrink-0 text-subtle-foreground/80">{trailing}</span> : null}
+      {trailing ? <span className="shrink-0 text-subtle-foreground">{trailing}</span> : null}
     </div>
   );
 }
@@ -425,7 +422,7 @@ export function SidebarTabPanels<TValue extends string>({
 }
 
 const sidebarListRowClassName =
-  "athas-chrome-control flex min-h-chrome-control w-full min-w-0 items-center gap-chrome rounded px-1.5 py-0.5 font-sans font-normal ui-text-sm [&_svg]:size-[1em]";
+  "athas-chrome-control flex min-h-chrome-control w-full min-w-0 items-center gap-chrome rounded-md px-1.5 py-0.5 font-sans font-normal ui-text-sm [&_svg]:size-[1em]";
 
 export const SidebarIconButton = forwardRef<
   HTMLButtonElement,
@@ -437,9 +434,9 @@ export const SidebarIconButton = forwardRef<
     <Button
       ref={ref}
       type="button"
-      variant={tone === "danger" ? "danger" : "ghost"}
+      variant="ghost"
       iconOnly
-      size="chrome"
+      size="sm"
       tone={tone === "error" ? "danger" : tone}
       {...props}
     />
@@ -460,7 +457,7 @@ export function SidebarListActionRow({
     <div
       data-slot="sidebar-list-action-row"
       className={cn(
-        "group/sidebar-list-action-row relative flex w-full min-w-0 items-center rounded",
+        "group/sidebar-list-action-row relative flex w-full min-w-0 items-center rounded-md",
         "has-[[data-slot=button]:focus-visible]:bg-accent",
         "has-[[data-slot=button][aria-expanded=true]]:bg-accent",
         className,
@@ -481,7 +478,7 @@ export function SidebarListActionRow({
       >
         <ButtonGroup
           variant="ghost"
-          className="rounded bg-surface shadow-xs ring-1 ring-border/60 [&>[data-slot=button]]:size-5"
+          className="rounded-md bg-overlay shadow-(--shadow-card) ring-1 ring-border [&>[data-slot=button]]:size-5"
         >
           {actionItems.map((action, index) => (
             <Fragment key={(isValidElement(action) && action.key) || index}>
@@ -586,16 +583,16 @@ export function SidebarListItem({
       type: "button",
       className: cn(
         sidebarListRowClassName,
-        "text-left transition-colors duration-fast motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50",
+        "text-left transition-colors duration-fast motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:pointer-events-none disabled:opacity-50",
         tone === "default" &&
-          "text-subtle-foreground hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground",
+          "text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground",
         tone === "warning" &&
-          "bg-warning/10 text-warning hover:bg-warning/15 hover:text-warning focus-visible:bg-warning/15 focus-visible:text-warning",
+          "bg-warning-soft text-warning hover:text-warning focus-visible:text-warning",
         tone === "error" &&
-          "bg-destructive/8 text-destructive hover:bg-destructive/12 hover:text-destructive focus-visible:bg-destructive/12 focus-visible:text-destructive",
+          "bg-destructive-soft text-destructive hover:text-destructive focus-visible:text-destructive",
         active && tone === "default" && "bg-selected text-foreground",
-        active && tone === "warning" && "bg-warning/15 text-warning",
-        active && tone === "error" && "bg-destructive/12 text-destructive",
+        active && tone === "warning" && "bg-warning-soft text-warning",
+        active && tone === "error" && "bg-destructive-soft text-destructive",
         description && (density === "compact" ? "h-auto min-h-9 py-1" : "h-auto min-h-10 py-1.5"),
         width === "content" && "w-fit max-w-full",
       ),
@@ -620,7 +617,7 @@ export function SidebarListItem({
             {description ? (
               <span
                 className={cn(
-                  "block min-w-0 truncate font-normal leading-row text-subtle-foreground/80",
+                  "block min-w-0 truncate font-normal leading-row text-subtle-foreground",
                   density === "compact" ? "ui-text-caption" : "mt-0.5",
                 )}
               >
@@ -632,7 +629,7 @@ export function SidebarListItem({
             <span
               className={cn(
                 "ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right",
-                tone === "default" ? "text-subtle-foreground/80" : "text-current",
+                tone === "default" ? "text-subtle-foreground" : "text-current",
               )}
             >
               {trailing}

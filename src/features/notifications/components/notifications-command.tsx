@@ -318,7 +318,7 @@ export function NotificationsCommand({
             </CommandHeader>
             <CommandList>
               {activeNotification.description ? (
-                <pre className="font-sans max-h-40 whitespace-pre-wrap wrap-break-word rounded-chrome bg-surface/55 p-2 text-muted-foreground ui-text-sm">
+                <pre className="font-sans max-h-40 whitespace-pre-wrap wrap-break-word rounded-chrome bg-surface p-2 text-muted-foreground ui-text-sm">
                   {activeNotification.description}
                 </pre>
               ) : null}
@@ -333,7 +333,8 @@ export function NotificationsCommand({
                 </Button>
                 <Button
                   type="button"
-                  variant="danger"
+                  variant="ghost"
+                  tone="danger"
                   onClick={() => {
                     removeNotification(activeNotification.id);
                     closeDetails();

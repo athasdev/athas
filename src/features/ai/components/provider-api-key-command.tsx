@@ -278,7 +278,12 @@ function ProviderApiKeyCommandContent({
                 )}
                 <div className="flex items-center gap-1.5">
                   {hasExistingKey && (
-                    <Button type="button" variant="danger" onClick={() => void handleRemove()}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      tone="danger"
+                      onClick={() => void handleRemove()}
+                    >
                       <TrashIcon />
                       <span>Remove</span>
                     </Button>

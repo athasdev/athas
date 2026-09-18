@@ -36,11 +36,11 @@ interface MultipleToggleGroupProps<Value extends string> extends ToggleGroupComm
 }
 
 const toggleGroupVariants = cva(
-  "inline-flex max-w-full items-stretch self-start rounded bg-surface/55",
+  "inline-flex max-w-full items-stretch self-start rounded-md border border-border bg-surface",
   {
     variants: {
       variant: {
-        default: "gap-1 p-1",
+        default: "gap-0.5 p-0.5",
         segmented: "gap-0 overflow-hidden p-0",
       },
       wrap: {
@@ -60,12 +60,12 @@ const toggleGroupVariants = cva(
 );
 
 const toggleGroupItemVariants = cva(
-  "inline-flex min-h-6 shrink-0 items-center justify-center gap-1 rounded px-2.5 font-sans ui-text-sm text-subtle-foreground outline-none transition-[background-color,color] duration-fast ease-smooth hover:bg-accent/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/20 data-disabled:pointer-events-none data-disabled:opacity-50 data-pressed:bg-accent/80 data-pressed:text-foreground",
+  "inline-flex min-h-[calc(var(--spacing-chrome-control)-2px)] shrink-0 items-center justify-center gap-1 rounded-sm px-2.5 font-sans ui-text-sm font-medium text-muted-foreground outline-none transition-[background-color,color] duration-fast ease-smooth hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus data-disabled:pointer-events-none data-disabled:opacity-50 data-pressed:bg-selected data-pressed:text-foreground",
   {
     variants: {
       variant: {
         default: "",
-        segmented: "rounded border-border/60 border-r last:border-r-0",
+        segmented: "rounded-none border-border border-r last:border-r-0",
       },
       iconOnly: {
         true: "aspect-square px-0",

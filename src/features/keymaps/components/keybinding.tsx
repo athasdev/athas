@@ -20,7 +20,7 @@ export default function Keybinding({ keys, binding, className }: KeybindingProps
     <KbdGroup className={className}>
       {chords.map((chord, chordIndex) => (
         <Fragment key={`${chord.join("-")}-${chordIndex}`}>
-          {chordIndex > 0 ? <span className="text-subtle-foreground/75">then</span> : null}
+          {chordIndex > 0 ? <span className="text-subtle-foreground">then</span> : null}
           {chord.map((key, keyIndex) => (
             <Kbd key={`${key}-${keyIndex}`}>{key}</Kbd>
           ))}

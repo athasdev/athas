@@ -97,7 +97,7 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
       <div
         role="group"
         aria-label="Changed file navigation"
-        className="flex w-fit max-w-full items-center justify-between gap-1 rounded-xl border border-border/70 bg-surface/80 p-1 shadow-(--shadow-popover) backdrop-blur-xl"
+        className="flex w-fit max-w-full items-center justify-between gap-1 rounded-xl border border-border bg-surface p-1 shadow-(--shadow-popover) backdrop-blur-xl"
         data-slot="review-file-stepper"
       >
         <Button

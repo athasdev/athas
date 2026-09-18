@@ -11,17 +11,17 @@ const Combobox = ComboboxPrimitive.Root;
 type ComboboxVariant = "default" | "ghost" | "button" | "surface";
 
 const comboboxInputGroupVariants = cva(
-  "rounded group/combobox-input relative flex h-7 min-w-0 items-center font-sans ui-text-sm transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth outline-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
+  "group/combobox-input relative flex h-7 min-w-0 items-center rounded-md font-sans ui-text-sm transition-[border-color,box-shadow,background-color,color] duration-fast ease-smooth outline-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
   {
     variants: {
       variant: {
         default:
-          "border border-border bg-surface focus-within:border-border-strong focus-within:bg-surface focus-within:ring-1 focus-within:ring-border-strong/35",
-        ghost: "border-0 bg-transparent focus-within:ring-0",
+          "border border-border bg-surface focus-within:border-primary focus-within:ring-2 focus-within:ring-focus",
+        ghost: "border-0 bg-transparent",
         button:
-          "border-0 bg-accent text-foreground hover:bg-selected focus-within:ring-2 focus-within:ring-primary/20",
+          "border-0 bg-accent text-foreground hover:bg-selected focus-within:ring-2 focus-within:ring-focus",
         surface:
-          "border-0 bg-surface text-foreground focus-within:ring-1 focus-within:ring-border-strong/35",
+          "border border-border bg-surface text-foreground focus-within:border-primary focus-within:ring-2 focus-within:ring-focus",
       },
     },
     defaultVariants: {
@@ -229,7 +229,7 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
     <ComboboxPrimitive.Empty
       data-slot="combobox-empty"
       className={cn(
-        "flex w-full justify-center p-3 text-center text-subtle-foreground ui-text-sm empty:p-0",
+        "flex w-full justify-center p-3 text-center text-muted-foreground ui-text-sm empty:p-0",
         className,
       )}
       {...props}

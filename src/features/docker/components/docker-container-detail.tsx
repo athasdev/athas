@@ -7,6 +7,7 @@ import { cn } from "@/utils/cn";
 import type { DockerContainer, DockerContainerFileEntry } from "../types/docker.types";
 import type { DockerLogFilter, DockerLogLine } from "../hooks/use-docker-container-logs";
 import { formatDockerFileSize, getParentContainerPath } from "../utils/docker-sidebar-utils";
+import { capitalize } from "@/utils/capitalize";
 
 export type DockerContainerDetailTab = "logs" | "files";
 
@@ -56,7 +57,7 @@ export function DockerContainerDetail({
   onCopyFromContainer,
 }: DockerContainerDetailProps) {
   return (
-    <div className="max-h-72 shrink-0 border-t border-border/70 bg-surface/35">
+    <div className="max-h-72 shrink-0 border-t border-border bg-surface">
       <div className="flex h-8 items-center justify-between gap-2 px-2">
         <div className="min-w-0">
           <div className="truncate ui-text-sm font-medium text-foreground">{container.name}</div>
@@ -74,18 +75,17 @@ export function DockerContainerDetail({
               key={tab}
               type="button"
               variant={activeTab === tab ? "accent" : "ghost"}
-              size="chrome"
-              capitalize
+              size="sm"
               onClick={() => onTabChange(tab)}
             >
-              {tab}
+              {capitalize(tab)}
             </Button>
           ))}
           {activeTab === "logs" ? (
             <Button
               type="button"
               variant="ghost"
-              size="chrome"
+              size="sm"
               disabled={logLines.length === 0}
               onClick={onClearLogs}
             >
@@ -95,7 +95,7 @@ export function DockerContainerDetail({
             <Button
               type="button"
               variant="ghost"
-              size="chrome"
+              size="sm"
               onClick={() => void onCopyToContainer()}
             >
               <UploadIcon className="size-3.5" />
@@ -106,7 +106,7 @@ export function DockerContainerDetail({
       </div>
       {activeTab === "logs" ? (
         <>
-          <div className="flex items-center gap-1 border-t border-border/50 px-2 py-1">
+          <div className="flex items-center gap-1 border-t border-border px-2 py-1">
             <SearchField
               value={logQuery}
               onChange={onLogQueryChange}
@@ -119,20 +119,19 @@ export function DockerContainerDetail({
                 key={filter}
                 type="button"
                 variant={logFilter === filter ? "accent" : "ghost"}
-                size="chrome"
-                capitalize
+                size="sm"
                 onClick={() => onLogFilterChange(filter)}
               >
-                {filter === "stderr" ? "Err" : filter}
+                {filter === "stderr" ? "Err" : capitalize(filter)}
               </Button>
             ))}
           </div>
           {logError ? (
-            <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-destructive">
+            <div className="border-t border-border px-2 py-1 ui-text-sm text-destructive">
               {logError}
             </div>
           ) : null}
-          <div className="ui-text-sm max-h-36 overflow-auto border-t border-border/50 px-2 py-1 font-mono leading-4">
+          <div className="ui-text-sm max-h-36 overflow-auto border-t border-border px-2 py-1 font-mono leading-4">
             {filteredLogLines.length > 0 ? (
               filteredLogLines.map((entry) => (
                 <div
@@ -154,17 +153,17 @@ export function DockerContainerDetail({
         </>
       ) : (
         <>
-          <div className="flex items-center gap-1 border-t border-border/50 px-2 py-1">
+          <div className="flex items-center gap-1 border-t border-border px-2 py-1">
             <Button
               type="button"
               variant="ghost"
-              size="chrome"
+              size="sm"
               disabled={containerPath === "/"}
               onClick={() => onContainerPathChange(getParentContainerPath(containerPath))}
             >
               Up
             </Button>
-            <div className="ui-text-sm min-w-0 flex-1 truncate rounded border border-border/70 bg-background px-2 py-1 font-mono text-subtle-foreground">
+            <div className="ui-text-sm min-w-0 flex-1 truncate rounded border border-border bg-background px-2 py-1 font-mono text-subtle-foreground">
               {containerPath}
             </div>
             <Button
@@ -179,11 +178,11 @@ export function DockerContainerDetail({
             </Button>
           </div>
           {filesError ? (
-            <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-destructive">
+            <div className="border-t border-border px-2 py-1 ui-text-sm text-destructive">
               {filesError}
             </div>
           ) : null}
-          <div className="max-h-44 overflow-auto border-t border-border/50 py-1">
+          <div className="max-h-44 overflow-auto border-t border-border py-1">
             {isFilesLoading ? (
               <div className="px-2 py-2 ui-text-sm text-subtle-foreground">Loading files...</div>
             ) : containerFiles.length > 0 ? (

@@ -178,7 +178,7 @@ function CodeBlock({
                   type="button"
                   variant="default"
                   onClick={() => onApplyCode(code)}
-                  size="compact"
+                  size="xs"
                   tooltip="Apply this code to current buffer"
                 >
                   Apply
@@ -297,11 +297,11 @@ function ErrorBlock({
       <MarkerContent className="flex min-w-0 flex-col gap-1">
         <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
           <span className="font-medium">{summary}</span>
-          {code ? <span className="text-destructive/70">({code})</span> : null}
+          {code ? <span className="text-destructive">({code})</span> : null}
           {normalizedDetails ? (
             <Button
               type="button"
-              variant="text"
+              variant="link"
               onClick={() => setIsExpanded(!isExpanded)}
               tone="danger"
             >
@@ -311,7 +311,7 @@ function ErrorBlock({
           ) : null}
         </span>
         {message && message !== summary ? (
-          <span className="text-destructive/80">{message}</span>
+          <span className="text-destructive">{message}</span>
         ) : null}
         {!canRecoverAgent && (
           <ApiErrorActions
@@ -340,7 +340,7 @@ function ErrorBlock({
               <TerminalWindowIcon size={12} />
               {isOpeningTerminal ? "Opening..." : "Open Agent Terminal"}
             </Button>
-            <span className="text-destructive/70">
+            <span className="text-destructive">
               {isConfigurationRequired
                 ? "Finish the agent setup, then restart the session."
                 : "Complete login in the agent CLI, then restart the session."}
@@ -348,7 +348,7 @@ function ErrorBlock({
           </span>
         )}
         {normalizedDetails && isExpanded && (
-          <pre className="max-w-full overflow-x-auto rounded-md bg-destructive/8 p-2 font-mono text-destructive/90 ui-text-sm">
+          <pre className="max-w-full overflow-x-auto rounded-md bg-destructive-soft p-2 font-mono text-destructive ui-text-sm">
             {(() => {
               try {
                 const parsed = JSON.parse(normalizedDetails);
@@ -427,7 +427,7 @@ type MarkdownTable = {
 };
 
 const INLINE_CODE_CLASS_NAME =
-  "font-mono inline whitespace-break-spaces rounded bg-surface/80 px-1 py-0 text-[0.95em] leading-[inherit] text-foreground align-baseline";
+  "font-mono inline whitespace-break-spaces rounded bg-surface px-1 py-0 text-[0.95em] leading-[inherit] text-foreground align-baseline";
 
 function splitMarkdownTableRow(line: string): string[] {
   let value = line.trim();
@@ -544,7 +544,7 @@ function renderTable(table: MarkdownTable, key: string): React.ReactNode {
         </thead>
         <tbody>
           {table.rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="border-border/70 border-b last:border-b-0">
+            <tr key={rowIndex} className="border-border border-b last:border-b-0">
               {row.map((cell, cellIndex) => (
                 <td
                   key={cellIndex}

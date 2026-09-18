@@ -10,6 +10,7 @@ import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { parseGitPatchLines } from "@/features/git/utils/git-diff-parser";
 import type { FileDiff } from "../types/github-pr-viewer.types";
+import { SidebarListItem } from "@/ui/sidebar";
 
 interface FileDiffViewProps {
   file: FileDiff;
@@ -60,7 +61,7 @@ export const FileDiffView = memo(
     return (
       <div className="min-w-0 overflow-hidden bg-background">
         {showHeader && isStatic ? (
-          <div className="flex min-h-9 items-center gap-2 border-border/60 border-b px-3 py-1.5">
+          <div className="flex min-h-9 items-center gap-2 border-border border-b px-3 py-1.5">
             <div className="min-w-0 flex-1">
               <div className="ui-text-sm truncate text-foreground">{file.path}</div>
               {file.oldPath && (
@@ -79,33 +80,23 @@ export const FileDiffView = memo(
             </Button>
           </div>
         ) : showHeader ? (
-          <Button
-            type="button"
-            variant="list"
+          <SidebarListItem
             onClick={onToggle}
-            width="full"
-            align="start"
+            aria-expanded={isExpanded}
             aria-label={`${isExpanded ? "Collapse" : "Expand"} diff for ${file.path}`}
+            leading={isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
+            description={file.oldPath ? `from ${file.oldPath}` : undefined}
+            density="compact"
+            trailing={
+              <span className="inline-flex items-center gap-2">
+                <span className={cn("capitalize", statusColors[file.status])}>{file.status}</span>
+                <span className="text-git-added">+{file.additions}</span>
+                <span className="text-git-deleted">-{file.deletions}</span>
+              </span>
+            }
           >
-            {isExpanded ? (
-              <ChevronDownIcon className="text-subtle-foreground" />
-            ) : (
-              <ChevronRightIcon className="text-subtle-foreground" />
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="ui-text-sm truncate text-foreground">{file.path}</div>
-              {file.oldPath && (
-                <div className="ui-text-sm truncate text-subtle-foreground">
-                  from {file.oldPath}
-                </div>
-              )}
-            </div>
-            <span className={cn("ui-text-sm shrink-0 capitalize", statusColors[file.status])}>
-              {file.status}
-            </span>
-            <span className="ui-text-sm shrink-0 text-git-added">+{file.additions}</span>
-            <span className="ui-text-sm shrink-0 text-git-deleted">-{file.deletions}</span>
-          </Button>
+            {file.path}
+          </SidebarListItem>
         ) : null}
         {isExpanded && (
           <div className="bg-background">

@@ -28,7 +28,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
           aria-modal="false"
           aria-labelledby="inline-edit-title"
           aria-describedby="inline-edit-description"
-          className="pointer-events-auto absolute overflow-hidden rounded-md border border-border/70 bg-background shadow-(--shadow-popover)"
+          className="pointer-events-auto absolute overflow-hidden rounded-md border border-border bg-background shadow-(--shadow-popover)"
           style={{
             top: `${zoneTop ?? state.popoverPosition.top}px`,
             left: `${state.popoverPosition.left}px`,
@@ -114,7 +114,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               iconOnly
               onClick={() => void state.handleApplyInlineEdit()}
               disabled={state.isInlineEditRunning}
-              tone="primary"
+              tone="accent"
               aria-label={state.isInlineEditRunning ? "Applying inline edit" : "Apply inline edit"}
               tooltip="Apply inline edit"
               shortcut="enter"

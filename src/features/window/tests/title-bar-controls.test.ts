@@ -83,7 +83,7 @@ describe("title bar controls", () => {
     expect(branchManagerSource).toContain("<BranchDropdownActions");
     expect(branchManagerSource).toContain("New branch…");
     expect(dropdownSource).toContain(
-      'className="sticky top-0 z-20 shrink-0 overflow-clip border-border/60 border-b bg-surface p-1"',
+      'className="sticky top-0 z-20 shrink-0 overflow-clip border-border border-b bg-overlay p-1"',
     );
     expect(dropdownSource).toContain('data-slot="dropdown-menu-viewport"');
     expect(dropdownSource).toContain('data-slot="dropdown-menu-footer"');

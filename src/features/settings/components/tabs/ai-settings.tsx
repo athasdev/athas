@@ -579,7 +579,8 @@ export const AISettings = () => {
                   {hasStoredOllamaKey && (
                     <Button
                       type="button"
-                      variant="danger"
+                      variant="ghost"
+                      tone="danger"
                       onClick={handleRemoveOllamaApiKey}
                       tooltip="Remove saved API key"
                       iconOnly
@@ -613,7 +614,7 @@ export const AISettings = () => {
                       : "Could not connect. Check that Ollama is running at this address."
                   }
                 >
-                  <Badge variant="error">Error</Badge>
+                  <Badge tone="danger">Error</Badge>
                 </SettingRow>
               )}
             </Section>
@@ -641,7 +642,7 @@ export const AISettings = () => {
                   label={provider.name}
                   description="Requires OAuth authentication"
                 >
-                  <Badge variant="muted">Coming Soon</Badge>
+                  <Badge>Coming Soon</Badge>
                 </SettingRow>
               ))}
             </Section>
@@ -702,7 +703,7 @@ export const AISettings = () => {
             label="Enterprise Policy"
             description={`${aiCompletionAllowedByPolicy ? "AI completion enabled." : "AI completion disabled."} ${byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}`}
           >
-            <Badge variant="accent">Managed</Badge>
+            <Badge tone="accent">Managed</Badge>
           </SettingRow>
         ) : null}
       </Section>

@@ -1,3 +1,4 @@
+import type { AvatarSize } from "@/ui/avatar";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { GitBranchIcon, GitCommitIcon } from "@/ui/icons";
 import type { ReactNode } from "react";
@@ -59,7 +60,7 @@ export function GitHubMetaChip({
       }}
       className={cn(
         baseClassName,
-        "-mx-1 rounded-chrome px-1 transition-colors duration-fast hover:bg-accent/70 hover:text-foreground focus-visible:bg-accent/70 focus-visible:text-foreground focus-visible:outline-none",
+        "-mx-1 rounded-chrome px-1 transition-colors duration-fast hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none",
       )}
     >
       {content}
@@ -77,7 +78,7 @@ interface GitHubUserChipProps {
   title?: string;
   prefix?: ReactNode;
   className?: string;
-  avatarSize?: "xs" | "sm" | "md";
+  avatarSize?: AvatarSize;
 }
 
 export function GitHubUserChip({
@@ -86,7 +87,7 @@ export function GitHubUserChip({
   title,
   prefix,
   className,
-  avatarSize = "xs",
+  avatarSize = "sm",
 }: GitHubUserChipProps) {
   return (
     <GitHubMetaChip

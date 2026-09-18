@@ -346,7 +346,8 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending || assetBusy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              variant={confirm === "delete" ? "danger" : "accent"}
+              variant={confirm === "delete" ? "default" : "accent"}
+              tone={confirm === "delete" ? "danger" : "default"}
               disabled={pending || assetBusy}
               onClick={() => void mutate()}
             >

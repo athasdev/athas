@@ -10,8 +10,8 @@ import {
   TerminalWindowIcon,
   TrashIcon,
 } from "@/ui/icons";
-import { Fragment, type ComponentProps, type ReactNode } from "react";
-import Badge from "@/ui/badge";
+import { Fragment, type ReactNode } from "react";
+import Badge, { type BadgeTone } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -76,15 +76,13 @@ export function DockerActionMenu({
   );
 }
 
-function getContainerStateVariant(
-  container: DockerContainer,
-): ComponentProps<typeof Badge>["variant"] {
-  if (container.health === "unhealthy") return "error";
+function getContainerStateVariant(container: DockerContainer): BadgeTone {
+  if (container.health === "unhealthy") return "danger";
   if (container.health === "healthy") return "success";
   if (container.state === "running") return "success";
   if (container.state === "exited") return "warning";
   if (container.state === "paused") return "accent";
-  return "muted";
+  return "neutral";
 }
 
 export function DockerResourceRow({
@@ -234,7 +232,7 @@ export function ContainerRow({
       active={selected}
       title={container.name}
       status={
-        <Badge variant={getContainerStateVariant(container)}>
+        <Badge tone={getContainerStateVariant(container)}>
           {container.health ?? container.state}
         </Badge>
       }
@@ -261,14 +259,12 @@ export function ContainerRow({
   );
 }
 
-function getComposeServiceVariant(
-  service: DockerComposeService,
-): ComponentProps<typeof Badge>["variant"] {
-  if (service.health === "unhealthy") return "error";
+function getComposeServiceVariant(service: DockerComposeService): BadgeTone {
+  if (service.health === "unhealthy") return "danger";
   if (service.health === "healthy") return "success";
   if (service.state === "running") return "success";
   if (service.state === "exited") return "warning";
-  return "muted";
+  return "neutral";
 }
 
 function ComposeServiceActions({
@@ -350,7 +346,7 @@ export function ComposeServiceRow({
     <DockerResourceRow
       title={service.name}
       status={
-        <Badge variant={getComposeServiceVariant(service)}>{service.health ?? service.state}</Badge>
+        <Badge tone={getComposeServiceVariant(service)}>{service.health ?? service.state}</Badge>
       }
       actions={
         <ComposeServiceActions

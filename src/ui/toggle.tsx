@@ -5,27 +5,27 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 const toggleVariants = cva(
-  "inline-flex shrink-0 items-center justify-center rounded border border-transparent font-sans font-medium ui-text-sm text-subtle-foreground outline-none transition-[background-color,border-color,color,box-shadow] duration-fast ease-smooth hover:bg-accent hover:text-foreground focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 data-pressed:bg-selected data-pressed:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "inline-flex shrink-0 items-center justify-center rounded-md font-sans font-medium ui-text-sm text-subtle-foreground outline-none transition-[background-color,color,box-shadow] duration-fast ease-smooth hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus data-pressed:bg-selected data-pressed:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default: "bg-transparent",
-        outline: "border-border bg-surface/55",
+        outline: "border border-border bg-surface",
       },
       tone: {
         default: "",
         accent:
-          "data-pressed:bg-primary/10 data-pressed:text-primary hover:data-pressed:bg-primary/14 hover:data-pressed:text-primary",
+          "data-pressed:bg-primary-soft data-pressed:text-primary hover:data-pressed:bg-primary-soft hover:data-pressed:text-primary",
       },
       size: {
-        default: "size-7 [&_svg:not([class*='size-'])]:size-3.5",
-        chrome: "size-chrome-control [&_svg:not([class*='size-'])]:size-[1em]",
+        sm: "size-chrome-control [&_svg:not([class*='size-'])]:size-[1em]",
+        md: "size-7 [&_svg:not([class*='size-'])]:size-3.5",
       },
     },
     defaultVariants: {
       variant: "default",
       tone: "default",
-      size: "default",
+      size: "md",
     },
   },
 );
@@ -34,7 +34,7 @@ function Toggle({
   className,
   variant = "default",
   tone = "default",
-  size = "default",
+  size = "md",
   tooltip,
   shortcut,
   commandId,

@@ -844,7 +844,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       mentionSpan.setAttribute("contenteditable", "false");
       mentionSpan.title = file.path;
       mentionSpan.className = cn(
-        badgeVariants({ variant: "accent" }),
+        badgeVariants({ tone: "accent" }),
         "max-w-48 truncate align-baseline select-none",
       );
       mentionSpan.textContent = file.name;
@@ -887,7 +887,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       commandSpan.setAttribute("contenteditable", "false");
       commandSpan.title = command.description || `/${command.name}`;
       commandSpan.className = cn(
-        badgeVariants({ variant: "muted" }),
+        badgeVariants({ tone: "neutral" }),
         "max-w-48 truncate align-baseline select-none",
       );
       commandSpan.textContent = `/${command.name}`;
@@ -1077,7 +1077,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   type="button"
                   disabled={isSendDisabled}
                   onClick={handleInterruptAndSend}
-                  variant="accent-ghost"
+                  variant="ghost"
+                  tone="accent"
                   tooltip="Interrupt and send now"
                   iconOnly
                 >
@@ -1087,7 +1088,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 <Button
                   type="button"
                   onClick={onStopStreaming}
-                  variant="danger"
+                  variant="ghost"
+                  tone="danger"
                   tooltip="Stop generation"
                   shortcut="escape"
                   iconOnly
@@ -1212,7 +1214,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
             active={isListening}
             aria-pressed={isListening}
             onClick={toggleVoiceInput}
-            variant={isListening ? "accent-ghost" : "ghost"}
+            variant="ghost"
+            tone={isListening ? "accent" : "default"}
             iconOnly
             tooltip={
               isMacDevSpeechRecognitionBlocked

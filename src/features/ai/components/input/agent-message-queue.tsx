@@ -21,8 +21,9 @@ export function AgentMessageQueue({ messages, onEdit, onMove, onRemove }: AgentM
         render={
           <Button
             type="button"
-            variant="accent-ghost"
-            size="chrome"
+            variant="ghost"
+            tone="accent"
+            size="sm"
             tooltip="Review queued guidance"
             aria-label={`${messages.length} queued message${messages.length === 1 ? "" : "s"}`}
           />
@@ -80,7 +81,8 @@ export function AgentMessageQueue({ messages, onEdit, onMove, onRemove }: AgentM
                   </Button>
                   <Button
                     type="button"
-                    variant="danger"
+                    variant="ghost"
+                    tone="danger"
                     iconOnly
                     onClick={() => onRemove(index)}
                     tooltip="Remove queued guidance"

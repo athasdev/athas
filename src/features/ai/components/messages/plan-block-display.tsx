@@ -39,7 +39,7 @@ export const PlanBlockDisplay = memo(function PlanBlockDisplay({
         </div>
       )}
 
-      <Card className="my-2 border-primary/20 bg-primary/5">
+      <Card className="my-2 border-primary bg-primary-soft">
         <CardHeader className="flex flex-row items-center gap-1.5">
           <ListChecksIcon className="text-primary" />
           <CardTitle className="text-primary">
@@ -54,7 +54,7 @@ export const PlanBlockDisplay = memo(function PlanBlockDisplay({
         </CardContent>
 
         {!isStreaming && onExecuteStep && (
-          <CardFooter className="border-primary/20 bg-transparent">
+          <CardFooter className="border-primary bg-transparent">
             <Button type="button" variant="accent" onClick={handleExecutePlan}>
               <PlayIcon />
               Execute Plan

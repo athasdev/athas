@@ -2,41 +2,34 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type { HTMLAttributes } from "react";
 
 const badgeVariants = cva(
-  "ui-text-sm inline-flex max-w-full items-center justify-center gap-1 rounded-full border-0 px-2 py-0.5 font-normal leading-none tabular-nums",
+  "inline-flex h-5 max-w-full items-center justify-center gap-1 rounded-md px-1.5 font-sans ui-text-caption font-medium leading-none tabular-nums whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3",
   {
     variants: {
-      variant: {
-        default: "bg-background/70 text-subtle-foreground",
-        muted: "bg-accent/55 text-subtle-foreground",
-        accent: "bg-primary/10 text-primary",
-        success: "bg-success/10 text-success",
-        warning: "bg-warning/10 text-warning",
-        error: "bg-destructive/8 text-destructive",
+      tone: {
+        neutral: "bg-accent text-muted-foreground",
+        accent: "bg-primary-soft text-primary",
+        success: "bg-success-soft text-success",
+        warning: "bg-warning-soft text-warning",
+        danger: "bg-destructive-soft text-destructive",
+        info: "bg-info-soft text-info",
       },
-      size: { default: "h-6", compact: "h-5" },
-      font: { default: "font-sans", mono: "font-mono" },
       truncate: { true: "min-w-0 shrink overflow-hidden", false: "shrink-0" },
     },
-    defaultVariants: { variant: "default", size: "default", font: "default", truncate: false },
+    defaultVariants: { tone: "neutral", truncate: false },
   },
 );
+
+export type BadgeTone = NonNullable<VariantProps<typeof badgeVariants>["tone"]>;
 
 type BadgeProps = Omit<HTMLAttributes<HTMLSpanElement>, "className" | "style" | "color"> &
   VariantProps<typeof badgeVariants> & {
     className?: never;
     style?: never;
+    /** A hex colour supplied by the data (a GitHub label). Replaces the tone. */
     labelColor?: string;
   };
 
-export default function Badge({
-  variant,
-  size,
-  font,
-  truncate,
-  labelColor,
-  children,
-  ...props
-}: BadgeProps) {
+export default function Badge({ tone, truncate, labelColor, children, ...props }: BadgeProps) {
   const color =
     labelColor && /^#?[\da-f]{6}$/i.test(labelColor)
       ? `#${labelColor.replace(/^#/, "")}`
@@ -44,8 +37,14 @@ export default function Badge({
   return (
     <span
       {...props}
-      className={badgeVariants({ variant, size, font, truncate })}
-      style={color ? { color, backgroundColor: `${color}20` } : undefined}
+      data-slot="badge"
+      data-tone={color ? "custom" : (tone ?? "neutral")}
+      className={badgeVariants({ tone, truncate })}
+      style={
+        color
+          ? { color, backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)` }
+          : undefined
+      }
     >
       {truncate ? <span className="min-w-0 truncate">{children}</span> : children}
     </span>

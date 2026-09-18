@@ -288,7 +288,7 @@ export function MainLayout() {
     <div className="athas-layout-shell relative flex size-full flex-col overflow-hidden bg-surface">
       {/* Drag-and-drop overlay */}
       {isDraggingOver && !getInternalTabDragData() && (
-        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background backdrop-blur-sm">
           <div className="rounded-xl border-2 border-primary border-dashed bg-surface px-8 py-6">
             <p className="ui-text-base font-semibold text-foreground">
               Drop folder to open project, or file to open buffer
@@ -323,7 +323,7 @@ export function MainLayout() {
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div
               className={cn(
-                "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border/70 border-y border-r bg-background",
+                "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border border-y border-r bg-background",
                 roundMainContentLeftEdge &&
                   (isEditorBottomPaneVisible ? "rounded-tl-xl border-l" : "rounded-l-xl border-l"),
                 roundMainContentRightEdge &&

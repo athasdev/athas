@@ -11,7 +11,7 @@ const stateClassNames: Record<ActivityState, string> = {
   running: "text-primary",
   success: "text-success",
   error: "text-destructive",
-  info: "text-subtle-foreground/60",
+  info: "text-subtle-foreground",
 };
 
 interface ChatActivityLineProps {
@@ -67,7 +67,7 @@ export function ChatActivityLine({
         {actions ? <span className="shrink-0">{actions}</span> : null}
       </div>
       {canExpand && isExpanded && detailsVariant === "text" ? (
-        <pre className="mt-1.5 max-h-64 overflow-auto whitespace-pre-wrap pl-6 font-mono ui-text-sm text-subtle-foreground/55">
+        <pre className="mt-1.5 max-h-64 overflow-auto whitespace-pre-wrap pl-6 font-mono ui-text-sm text-subtle-foreground">
           {children}
         </pre>
       ) : canExpand && isExpanded ? (

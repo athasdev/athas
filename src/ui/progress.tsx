@@ -8,8 +8,7 @@ const progressIndicatorVariants = cva(
   {
     variants: {
       tone: {
-        default: "bg-foreground/55",
-        muted: "bg-subtle-foreground/55",
+        default: "bg-muted-foreground",
         accent: "bg-primary",
         success: "bg-success",
         warning: "bg-warning",
@@ -49,7 +48,7 @@ function ProgressTrack({ className, ...props }: ProgressPrimitive.Track.Props) {
     <ProgressPrimitive.Track
       data-slot="progress-track"
       className={cn(
-        "relative flex h-1 w-full items-center overflow-hidden rounded-full bg-surface",
+        "relative flex h-1 w-full items-center overflow-hidden rounded-full bg-accent",
         className,
       )}
       {...props}
@@ -85,7 +84,7 @@ function ProgressValue({ className, ...props }: ProgressPrimitive.Value.Props) {
   return (
     <ProgressPrimitive.Value
       data-slot="progress-value"
-      className={cn("ml-auto tabular-nums text-subtle-foreground", className)}
+      className={cn("ml-auto tabular-nums text-muted-foreground", className)}
       {...props}
     />
   );

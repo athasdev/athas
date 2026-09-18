@@ -44,7 +44,7 @@ export default function Section({ title, description, children, className }: Sec
   return (
     <section
       className={cn(
-        "scroll-mt-6 rounded-lg transition-[background-color,box-shadow] data-[settings-search-section-active=true]:bg-primary/5 data-[settings-search-section-active=true]:ring-1 data-[settings-search-section-active=true]:ring-primary/25",
+        "scroll-mt-6 rounded-lg transition-[background-color,box-shadow] data-[settings-search-section-active=true]:bg-primary-soft data-[settings-search-section-active=true]:ring-1 data-[settings-search-section-active=true]:ring-focus",
         className,
       )}
       data-settings-section={title}
@@ -56,7 +56,7 @@ export default function Section({ title, description, children, className }: Sec
           <p className="mt-0.5 text-subtle-foreground ui-text-sm">{description}</p>
         ) : null}
       </div>
-      <Card className="gap-0 divide-y divide-border/60 py-0">{children}</Card>
+      <Card className="gap-0 divide-y divide-border py-0">{children}</Card>
     </section>
   );
 }
@@ -190,7 +190,7 @@ export function SettingRow({
       data-setting-row-label={label}
       tabIndex={-1}
       className={cn(
-        "flex w-full min-w-0 max-w-full items-center justify-between gap-3 px-4 py-3 select-none transition-[background-color,box-shadow] hover:bg-accent/40 focus-within:bg-accent/40 focus:outline-none data-[settings-search-active=true]:bg-primary/15 data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-primary/50 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2 @max-[640px]/settings:flex-col @max-[640px]/settings:items-stretch @max-[640px]/settings:gap-2",
+        "flex w-full min-w-0 max-w-full items-center justify-between gap-3 px-4 py-3 select-none transition-[background-color,box-shadow] hover:bg-accent focus-within:bg-accent focus:outline-none data-[settings-search-active=true]:bg-primary-soft data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-focus max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2 @max-[640px]/settings:flex-col @max-[640px]/settings:items-stretch @max-[640px]/settings:gap-2",
         className,
       )}
       onClick={activateOnClick ? handleRowClick : undefined}

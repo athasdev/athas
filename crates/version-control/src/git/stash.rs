@@ -1,7 +1,8 @@
-use crate::git::{GitDiff, GitStash, IntoStringError, diff::parse_diff_to_lines, is_image_file};
+use crate::git::{
+   GitDiff, GitStash, IntoStringError, RepositoryHost, diff::parse_diff_to_lines, is_image_file,
+};
 use anyhow::{Context, Result, bail};
 use git2::Repository;
-use std::{path::Path, process::Command};
 
 pub fn git_get_stashes(repo_path: String) -> Result<Vec<GitStash>, String> {
    _git_get_stashes(repo_path).into_string_error()
@@ -39,14 +40,14 @@ fn clean_stash_subject(subject: &str) -> String {
 }
 
 fn _git_get_stashes(repo_path: String) -> Result<Vec<GitStash>> {
-   let repo_dir = Path::new(&repo_path);
+   let host = RepositoryHost::detect(&repo_path);
 
-   if !repo_dir.join(".git").exists() {
+   if !host.native_path().join(".git").exists() {
       bail!("Not a git repository");
    }
 
-   let output = Command::new("git")
-      .current_dir(repo_dir)
+   let output = host
+      .git()
       .args(["stash", "list", "--format=%gd|%s|%aI"])
       .output()
       .context("Failed to execute git stash list")?;
@@ -84,7 +85,7 @@ fn _git_create_stash(
    include_untracked: bool,
    files: Option<Vec<String>>,
 ) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
+   let host = RepositoryHost::detect(&repo_path);
    let mut args = vec!["stash", "push"];
    if include_untracked {
       args.push("-u");
@@ -103,18 +104,7 @@ fn _git_create_stash(
       }
    }
 
-   let output = Command::new("git")
-      .current_dir(repo_dir)
-      .args(&args)
-      .output()
-      .context("Failed to execute git stash push")?;
-
-   if !output.status.success() {
-      bail!(
-         "Git stash create failed: {}",
-         String::from_utf8_lossy(&output.stderr)
-      );
-   }
+   host.git().args(&args).run("stash create")?;
 
    Ok(())
 }
@@ -124,19 +114,10 @@ pub fn git_apply_stash(repo_path: String, stash_index: usize) -> Result<(), Stri
 }
 
 fn _git_apply_stash(repo_path: String, stash_index: usize) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
-   let output = Command::new("git")
-      .current_dir(repo_dir)
+   RepositoryHost::detect(&repo_path)
+      .git()
       .args(["stash", "apply", &format!("stash@{{{stash_index}}}")])
-      .output()
-      .context("Failed to execute git stash apply")?;
-
-   if !output.status.success() {
-      bail!(
-         "Git stash apply failed: {}",
-         String::from_utf8_lossy(&output.stderr)
-      );
-   }
+      .run("stash apply")?;
 
    Ok(())
 }
@@ -146,7 +127,6 @@ pub fn git_pop_stash(repo_path: String, stash_index: Option<usize>) -> Result<()
 }
 
 fn _git_pop_stash(repo_path: String, stash_index: Option<usize>) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
    let mut args = vec!["stash", "pop"];
    let index_str;
    if let Some(idx) = stash_index {
@@ -154,18 +134,10 @@ fn _git_pop_stash(repo_path: String, stash_index: Option<usize>) -> Result<()> {
       args.push(&index_str);
    }
 
-   let output = Command::new("git")
-      .current_dir(repo_dir)
+   RepositoryHost::detect(&repo_path)
+      .git()
       .args(&args)
-      .output()
-      .context("Failed to execute git stash pop")?;
-
-   if !output.status.success() {
-      bail!(
-         "Git stash pop failed: {}",
-         String::from_utf8_lossy(&output.stderr)
-      );
-   }
+      .run("stash pop")?;
 
    Ok(())
 }
@@ -175,19 +147,10 @@ pub fn git_drop_stash(repo_path: String, stash_index: usize) -> Result<(), Strin
 }
 
 fn _git_drop_stash(repo_path: String, stash_index: usize) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
-   let output = Command::new("git")
-      .current_dir(repo_dir)
+   RepositoryHost::detect(&repo_path)
+      .git()
       .args(["stash", "drop", &format!("stash@{{{stash_index}}}")])
-      .output()
-      .context("Failed to execute git stash drop")?;
-
-   if !output.status.success() {
-      bail!(
-         "Git stash drop failed: {}",
-         String::from_utf8_lossy(&output.stderr)
-      );
-   }
+      .run("stash drop")?;
 
    Ok(())
 }
@@ -197,22 +160,13 @@ pub fn git_stash_diff(repo_path: String, stash_index: usize) -> Result<Vec<GitDi
 }
 
 fn _git_stash_diff(repo_path: String, stash_index: usize) -> Result<Vec<GitDiff>> {
-   let repo_dir = Path::new(&repo_path);
    let stash_ref = format!("stash@{{{stash_index}}}");
 
    // Get the list of files changed in the stash using git stash show
-   let output = Command::new("git")
-      .current_dir(repo_dir)
+   let output = RepositoryHost::detect(&repo_path)
+      .git()
       .args(["stash", "show", "--name-status", &stash_ref])
-      .output()
-      .context("Failed to execute git stash show")?;
-
-   if !output.status.success() {
-      bail!(
-         "Git stash show failed: {}",
-         String::from_utf8_lossy(&output.stderr)
-      );
-   }
+      .run("stash show")?;
 
    let file_list = String::from_utf8_lossy(&output.stdout);
    let mut results: Vec<GitDiff> = Vec::new();

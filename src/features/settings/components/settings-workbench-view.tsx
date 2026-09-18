@@ -346,7 +346,9 @@ const SettingsWorkbenchView = () => {
                     onClick={() => navigateToSearchResult(result)}
                     className={cn(
                       "flex w-full flex-col items-start rounded-chrome px-2 py-1.5 text-left font-sans transition-colors duration-fast",
-                      isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-accent",
+                      isSelected
+                        ? "bg-primary-soft text-primary"
+                        : "text-foreground hover:bg-accent",
                     )}
                   >
                     <span className="w-full truncate ui-text-sm font-medium">{result.label}</span>

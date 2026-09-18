@@ -73,7 +73,7 @@ export function GitHubLabelPicker({
         </Tooltip>
       )}
       <ComboboxContent size="wide" data-prevent-dialog-escape="true">
-        <div className="border-border/60 border-b p-1">
+        <div className="border-border border-b p-1">
           <ComboboxInput
             placeholder="Search labels"
             aria-label="Search labels"

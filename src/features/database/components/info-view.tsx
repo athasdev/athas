@@ -1,8 +1,8 @@
-import { Button } from "@/ui/button";
 import { ScrollArea } from "@/ui/scroll-area";
 import { getDatabaseObjectOwner, groupDatabaseObjects } from "../lib/database-catalog";
 import type { ColumnFilter, DatabaseInfo, TableInfo } from "../types/common.types";
 import SqlHistoryList from "./sql-history-list";
+import { SidebarListItem } from "@/ui/sidebar";
 
 interface InfoViewProps {
   fileName: string;
@@ -61,23 +61,15 @@ export default function InfoView({
                   {group.objects.map((table) => {
                     const owner = getDatabaseObjectOwner(table);
                     return (
-                      <Button
+                      <SidebarListItem
                         key={table.name}
                         onClick={() => onTableChange(table.name)}
-                        variant="list"
-                        width="full"
-                        align="start"
                         active={selectedTable === table.name}
+                        description={owner ? `on ${owner}` : undefined}
+                        density="compact"
                       >
-                        <span className="flex min-w-0 flex-col items-start">
-                          <span className="max-w-full truncate">{table.name}</span>
-                          {owner && (
-                            <span className="max-w-full truncate ui-text-sm text-subtle-foreground">
-                              on {owner}
-                            </span>
-                          )}
-                        </span>
-                      </Button>
+                        {table.name}
+                      </SidebarListItem>
                     );
                   })}
                 </div>

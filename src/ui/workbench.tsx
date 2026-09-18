@@ -63,7 +63,7 @@ export function WorkbenchNavigation<TValue extends string>({
     <div className="flex size-full min-h-0 min-w-0 @max-[680px]/workbench:flex-col">
       <aside
         data-slot="workbench-navigation"
-        className="flex w-56 shrink-0 flex-col gap-4 bg-surface/55 p-3 @max-[680px]/workbench:w-full @max-[680px]/workbench:gap-3"
+        className="flex w-56 shrink-0 flex-col gap-4 border-border border-r bg-surface p-3 @max-[680px]/workbench:w-full @max-[680px]/workbench:gap-3 @max-[680px]/workbench:border-r-0 @max-[680px]/workbench:border-b"
       >
         <div className="flex shrink-0 flex-col gap-3">
           <h1 className="px-1.5 font-medium text-foreground ui-text-base">{title}</h1>
@@ -145,7 +145,7 @@ function WorkbenchContentTitle({
         {status}
       </div>
       {description ? (
-        <div className="mt-1 text-subtle-foreground ui-text-sm">{description}</div>
+        <div className="mt-1 text-muted-foreground ui-text-sm">{description}</div>
       ) : null}
     </div>
   );
@@ -175,7 +175,7 @@ export function WorkbenchContent({
   if (pinnedHeader) {
     return (
       <div className="flex size-full min-h-0 min-w-0 flex-col">
-        <header className="flex shrink-0 items-start justify-between gap-4 border-border/60 border-b px-6 pt-5 pb-4 @max-[680px]/workbench:px-3 @max-[680px]/workbench:pt-3 @max-[680px]/workbench:pb-3">
+        <header className="flex shrink-0 items-start justify-between gap-4 border-border border-b px-6 pt-5 pb-4 @max-[680px]/workbench:px-3 @max-[680px]/workbench:pt-3 @max-[680px]/workbench:pb-3">
           <WorkbenchContentTitle title={title} description={description} status={status} />
           {actions ? (
             <div className="-mt-1 -mr-2 flex shrink-0 items-center gap-2">{actions}</div>

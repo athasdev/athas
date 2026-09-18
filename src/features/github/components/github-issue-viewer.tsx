@@ -500,13 +500,13 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
             }
             badges={
               <>
-                <Badge variant={isOpen ? "success" : "muted"}>
+                <Badge tone={isOpen ? "success" : "neutral"}>
                   {details.stateReason
                     ? `${details.state.toLowerCase()} as ${details.stateReason.replace("_", " ")}`
                     : details.state.toLowerCase()}
                 </Badge>
                 {details.locked ? (
-                  <Badge variant="warning">
+                  <Badge tone="warning">
                     <LockIcon />
                     {details.activeLockReason ? `Locked as ${details.activeLockReason}` : "Locked"}
                   </Badge>

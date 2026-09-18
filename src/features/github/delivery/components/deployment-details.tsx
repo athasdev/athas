@@ -27,8 +27,8 @@ export function DeploymentSummary({
       title={<span className="block truncate">{deployment.environment}</span>}
       badges={
         <>
-          <Badge variant={state.tone}>{state.label}</Badge>
-          {deployment.production_environment ? <Badge variant="accent">Production</Badge> : null}
+          <Badge tone={state.tone}>{state.label}</Badge>
+          {deployment.production_environment ? <Badge tone="accent">Production</Badge> : null}
           {deployment.transient_environment ? <Badge>Preview</Badge> : null}
         </>
       }
@@ -96,7 +96,7 @@ export function DeploymentDetails({ deployment }: { deployment: Deployment }) {
                 <Item role="listitem" key={status.id} variant={index === 0 ? "muted" : "default"}>
                   <ItemContent>
                     <ItemTitle>
-                      <Badge variant={state.tone}>{state.label}</Badge>
+                      <Badge tone={state.tone}>{state.label}</Badge>
                       {index === 0 ? "Latest" : null}
                     </ItemTitle>
                     <ItemDescription>

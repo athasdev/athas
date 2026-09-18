@@ -2,7 +2,7 @@ import { lazy } from "react";
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import {
   getPullRequestStatus,
-  PR_STATUS_BADGE_VARIANT,
+  PR_STATUS_BADGE_TONE,
   PULL_REQUEST_STATUS_LABEL,
 } from "@/features/github/utils/github-pr-viewer-utils";
 import Badge from "@/ui/badge";
@@ -154,7 +154,5 @@ export function ResourceBufferBadge({ buffer }: { buffer: ResourceBuffer }) {
   const pr = useGitHubStore((state) => state.selectedPRDetails);
   if (buffer.type !== "pullRequest" || !pr || pr.number !== buffer.prNumber) return null;
   const status = getPullRequestStatus(pr);
-  return (
-    <Badge variant={PR_STATUS_BADGE_VARIANT[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
-  );
+  return <Badge tone={PR_STATUS_BADGE_TONE[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>;
 }

@@ -64,10 +64,10 @@ const DiffHeader = memo(
 
       const status = getFileStatus(diff);
       const statusColors: Record<string, string> = {
-        added: "bg-git-added/20 text-git-added",
-        deleted: "bg-git-deleted/20 text-git-deleted",
-        modified: "bg-git-modified/20 text-git-modified",
-        renamed: "bg-git-renamed/20 text-git-renamed",
+        added: "bg-git-added-soft text-git-added",
+        deleted: "bg-git-deleted-soft text-git-deleted",
+        modified: "bg-git-modified-soft text-git-modified",
+        renamed: "bg-git-renamed-soft text-git-renamed",
       };
 
       return (

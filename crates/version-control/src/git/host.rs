@@ -10,9 +10,11 @@ use std::{
 ///
 /// Repositories inside a WSL distribution are reachable from Windows through a
 /// `\\wsl$` or `\\wsl.localhost` share, which is enough for libgit2 to read
-/// them, but everything that mutates the repository or talks to a remote runs
-/// through the distribution's own `git` so that file modes, symlinks, hooks,
-/// SSH keys, and credential helpers behave exactly as they do in a WSL shell.
+/// them. Everything that mutates the repository or talks to a remote runs
+/// through the distribution's own `git` instead, so file modes, symlinks,
+/// hooks, SSH keys, and credential helpers behave exactly as they do in a WSL
+/// shell. When the distribution has no `git`, the host `git` and libgit2 are
+/// used over the share as a fallback.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RepositoryHost {
    Local {
@@ -54,11 +56,18 @@ impl RepositoryHost {
       }
    }
 
+   pub fn linux_path(&self) -> Option<&str> {
+      match self {
+         Self::Local { .. } => None,
+         Self::Wsl { linux_path, .. } => Some(linux_path),
+      }
+   }
+
    pub fn is_wsl(&self) -> bool {
       matches!(self, Self::Wsl { .. })
    }
 
-   /// True when git commands for this repository should run inside the WSL
+   /// True when git commands for this repository run inside the WSL
    /// distribution instead of on the host.
    pub fn uses_distro_git(&self) -> bool {
       match self {
@@ -92,15 +101,31 @@ impl RepositoryHost {
       }
    }
 
+   /// A git command for this repository, running inside the distribution when
+   /// that is possible and on the host otherwise.
    pub fn git(&self) -> GitCommand {
-      GitCommand::new(self.clone())
+      if self.uses_distro_git() {
+         return self
+            .distro_git()
+            .expect("WSL hosts always have a distribution");
+      }
+
+      GitCommand::new(GitRunner::Host {
+         directory: self.native_path().to_path_buf(),
+      })
    }
 
-   /// Rewrites a path argument so the git process can understand it.
-   pub fn argument_path(&self, path: &str) -> String {
+   /// A git command that always runs inside the distribution. Returns `None`
+   /// for local repositories.
+   pub fn distro_git(&self) -> Option<GitCommand> {
       match self {
-         Self::Local { .. } => path.to_string(),
-         Self::Wsl { distro, .. } => athas_wsl::linux_argument_path(distro, path),
+         Self::Local { .. } => None,
+         Self::Wsl {
+            distro, linux_path, ..
+         } => Some(GitCommand::new(GitRunner::Distro {
+            distro: distro.clone(),
+            linux_path: linux_path.clone(),
+         })),
       }
    }
 }
@@ -112,21 +137,39 @@ fn linux_parent(path: &str) -> String {
    }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum GitRunner {
+   Host { directory: PathBuf },
+   Distro { distro: String, linux_path: String },
+}
+
 /// A `git` invocation bound to a repository host.
 pub struct GitCommand {
-   host: RepositoryHost,
+   runner: GitRunner,
    args: Vec<OsString>,
    envs: Vec<(String, OsString)>,
    stdin: Option<Vec<u8>>,
 }
 
 impl GitCommand {
-   fn new(host: RepositoryHost) -> Self {
+   fn new(runner: GitRunner) -> Self {
       Self {
-         host,
+         runner,
          args: Vec::new(),
          envs: Vec::new(),
          stdin: None,
+      }
+   }
+
+   pub fn runs_in_distro(&self) -> bool {
+      matches!(self.runner, GitRunner::Distro { .. })
+   }
+
+   /// Rewrites a path argument so the git process can understand it.
+   pub fn argument_path(&self, path: &str) -> String {
+      match &self.runner {
+         GitRunner::Host { .. } => path.to_string(),
+         GitRunner::Distro { distro, .. } => athas_wsl::linux_argument_path(distro, path),
       }
    }
 
@@ -168,19 +211,17 @@ impl GitCommand {
    }
 
    fn build(&self) -> Command {
-      match &self.host {
-         RepositoryHost::Local { path } => {
+      match &self.runner {
+         GitRunner::Host { directory } => {
             let mut command = Command::new("git");
-            command.current_dir(path);
+            command.current_dir(directory);
             for (key, value) in &self.envs {
                command.env(key, value);
             }
             command.args(&self.args);
             command
          }
-         RepositoryHost::Wsl {
-            distro, linux_path, ..
-         } => {
+         GitRunner::Distro { distro, linux_path } => {
             let mut command = athas_wsl::exec_command(distro);
             command.arg("git").arg("-C").arg(linux_path);
             for (key, value) in &self.envs {
@@ -248,8 +289,8 @@ pub fn describe_failure(output: &Output) -> String {
 /// there. libgit2 never runs hooks, which is what the check protects against.
 pub fn configure_libgit2() {
    #[cfg(windows)]
-   // SAFETY: libgit2 options must be set before any other libgit2 call from
-   // another thread. This runs once during app setup, before any command that
+   // SAFETY: libgit2 options must not race with libgit2 calls on other
+   // threads. This runs once during app setup, before any command that
    // touches a repository can be invoked.
    unsafe {
       if let Err(error) = git2::opts::set_verify_owner_validation(false) {
@@ -283,6 +324,7 @@ mod tests {
          from_share.native_path(),
          Path::new(r"\\wsl$\Ubuntu\home\me\repo")
       );
+      assert_eq!(from_uri.linux_path(), Some("/home/me/repo"));
       assert!(matches!(
          RepositoryHost::detect("/home/me/repo"),
          RepositoryHost::Local { .. }
@@ -294,13 +336,13 @@ mod tests {
    }
 
    #[test]
-   fn wsl_commands_run_git_inside_the_distribution() {
+   fn distro_commands_run_git_inside_the_distribution() {
       let host = RepositoryHost::detect("wsl://Ubuntu/home/me/repo");
-      let command = host
-         .git()
-         .args(["status", "--porcelain=v2"])
-         .arg(host.argument_path(r"\\wsl$\Ubuntu\home\me\other"));
+      let command = host.distro_git().expect("wsl host");
+      let other = command.argument_path(r"\\wsl$\Ubuntu\home\me\other");
+      let command = command.args(["worktree", "add"]).arg(other);
 
+      assert!(command.runs_in_distro());
       assert_eq!(
          command.command_line(),
          vec![
@@ -311,11 +353,25 @@ mod tests {
             "git",
             "-C",
             "/home/me/repo",
-            "status",
-            "--porcelain=v2",
+            "worktree",
+            "add",
             "/home/me/other",
          ]
       );
+   }
+
+   #[test]
+   fn wsl_hosts_without_distro_git_fall_back_to_host_git_over_the_share() {
+      let host = RepositoryHost::detect("wsl://Ubuntu/home/me/repo");
+      let command = host.git();
+
+      assert!(!host.uses_distro_git());
+      assert!(!command.runs_in_distro());
+      assert_eq!(
+         command.argument_path(r"\\wsl$\Ubuntu\home\me\other"),
+         r"\\wsl$\Ubuntu\home\me\other"
+      );
+      assert_eq!(command.command_line(), vec!["git"]);
    }
 
    #[test]
@@ -323,15 +379,17 @@ mod tests {
       let host = RepositoryHost::detect("/home/me/repo");
       let command = host.git().args(["fetch", "origin"]);
 
+      assert!(host.distro_git().is_none());
       assert_eq!(command.command_line(), vec!["git", "fetch", "origin"]);
-      assert_eq!(host.argument_path("../worktree"), "../worktree");
+      assert_eq!(command.argument_path("../worktree"), "../worktree");
    }
 
    #[test]
-   fn wsl_commands_forward_environment_through_wslenv() {
+   fn distro_commands_forward_environment_through_wslenv() {
       let host = RepositoryHost::detect("wsl://Ubuntu/home/me/repo");
       let command = host
-         .git()
+         .distro_git()
+         .expect("wsl host")
          .env("GIT_TERMINAL_PROMPT", "0")
          .env("GIT_SSH_COMMAND", "ssh -oBatchMode=yes")
          .build();
@@ -353,10 +411,7 @@ mod tests {
    #[test]
    fn parent_host_moves_up_one_directory() {
       let host = RepositoryHost::detect("wsl://Ubuntu/home/me/repo/src/main.rs").parent();
-      match host {
-         RepositoryHost::Wsl { linux_path, .. } => assert_eq!(linux_path, "/home/me/repo/src"),
-         RepositoryHost::Local { .. } => panic!("expected a WSL host"),
-      }
+      assert_eq!(host.linux_path(), Some("/home/me/repo/src"));
       assert_eq!(linux_parent("/file"), "/");
       assert_eq!(linux_parent("/"), "/");
    }

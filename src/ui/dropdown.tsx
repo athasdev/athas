@@ -21,7 +21,7 @@ import { CheckIcon, ChevronRightIcon, SearchIcon } from "@/ui/icons";
 import Keybinding from "@/features/keymaps/components/keybinding";
 
 const menuSurfaceVariants = cva(
-  `max-h-(--available-height) w-fit min-w-32 ${OVERLAY_MAX_WIDTH} origin-(--transform-origin) rounded bg-surface/98 font-sans text-subtle-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm ui-text-chrome`,
+  `max-h-(--available-height) w-fit min-w-32 ${OVERLAY_MAX_WIDTH} origin-(--transform-origin) rounded-lg bg-overlay font-sans text-foreground shadow-(--shadow-popover) ring-1 ring-border outline-none ui-text-chrome`,
   {
     variants: {
       viewport: {
@@ -39,14 +39,14 @@ const menuSurfaceVariants = cva(
 );
 
 const menuItemVariants = cva(
-  "relative flex w-full cursor-default items-center justify-start gap-2 whitespace-nowrap rounded px-2 py-1 text-left font-sans text-subtle-foreground outline-hidden select-none transition-colors hover:bg-accent focus:bg-accent/70 focus:text-foreground data-highlighted:bg-accent/70 data-highlighted:text-foreground data-selected:bg-selected disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50 ui-text-chrome [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "relative flex w-full cursor-default items-center justify-start gap-2 whitespace-nowrap rounded-md px-2 py-1 text-left font-sans text-foreground outline-hidden select-none transition-colors hover:bg-accent focus:bg-accent data-highlighted:bg-accent data-selected:bg-selected disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50 ui-text-chrome [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:text-muted-foreground",
   {
     variants: {
       tone: {
         default: "",
-        accent: "text-primary",
+        accent: "text-primary [&_svg]:text-primary",
         destructive:
-          "hover:bg-destructive/8 hover:text-destructive focus:bg-destructive/10 focus:text-destructive data-[variant=destructive]:hover:bg-destructive/8 data-[variant=destructive]:hover:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive",
+          "text-destructive hover:bg-destructive-soft focus:bg-destructive-soft data-highlighted:bg-destructive-soft [&_svg]:text-destructive",
       },
     },
     defaultVariants: {
@@ -56,10 +56,10 @@ const menuItemVariants = cva(
 );
 
 const menuLabelVariants = cva(
-  "px-2 py-0.5 font-sans font-medium text-subtle-foreground ui-text-chrome",
+  "px-2 py-1 font-sans font-medium text-subtle-foreground ui-text-caption",
 );
 
-const menuSeparatorVariants = cva("-mx-1 my-0.5 h-px bg-border/60");
+const menuSeparatorVariants = cva("-mx-1 my-1 h-px bg-border");
 
 export type MenuItemTone = "default" | "accent" | "destructive";
 
@@ -184,7 +184,7 @@ function DropdownMenuSearch({
   return (
     <div
       data-slot="dropdown-menu-search"
-      className="sticky top-0 z-20 shrink-0 overflow-clip border-border/60 border-b bg-surface p-1"
+      className="sticky top-0 z-20 shrink-0 overflow-clip border-border border-b bg-overlay p-1"
     >
       <Input
         leftIcon={SearchIcon}
@@ -240,7 +240,7 @@ function DropdownMenuFooter({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="dropdown-menu-footer"
       className={cn(
-        "relative z-20 shrink-0 overflow-clip border-border/60 border-t bg-surface p-1",
+        "relative z-20 shrink-0 overflow-clip border-border border-t bg-overlay p-1",
         className,
       )}
       {...props}
@@ -594,7 +594,7 @@ function DropdownMenuEmpty({
       data-slot="dropdown-menu-empty"
       role="presentation"
       className={cn(
-        "flex items-center justify-start gap-2 px-2 py-1 text-left font-sans text-subtle-foreground/70 ui-text-chrome",
+        "flex items-center justify-start gap-2 px-2 py-1.5 text-left font-sans text-subtle-foreground ui-text-chrome",
         className,
       )}
       {...props}

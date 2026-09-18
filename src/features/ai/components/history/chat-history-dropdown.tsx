@@ -58,7 +58,7 @@ function SessionRow({
               <Button
                 type="button"
                 variant="ghost"
-                size="chrome"
+                size="sm"
                 iconOnly
                 aria-label={`Actions for ${chat.title}`}
               />

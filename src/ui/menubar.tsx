@@ -33,10 +33,7 @@ function Menubar({ className, value = "", onValueChange, ...props }: MenubarProp
     <MenubarContext.Provider value={contextValue}>
       <BaseMenubar
         data-slot="menubar"
-        className={cn(
-          "flex h-6 items-center gap-0.5 rounded bg-background/65 p-0.5 ring-1 ring-border/70",
-          className,
-        )}
+        className={cn("flex h-6 items-center gap-0.5 rounded-md p-0.5", className)}
         {...props}
       />
     </MenubarContext.Provider>
@@ -84,7 +81,7 @@ function MenubarTrigger({ className, ...props }: ComponentProps<typeof Menu.Trig
       data-slot="menubar-trigger"
       openOnHover
       className={cn(
-        "flex h-5 select-none items-center rounded px-1.5 font-sans ui-text-chrome text-subtle-foreground outline-none transition-colors hover:bg-accent/50 hover:text-foreground focus:bg-accent/50 focus:text-foreground data-popup-open:bg-accent/80 data-popup-open:text-foreground",
+        "flex h-5 select-none items-center rounded-md px-1.5 font-sans ui-text-chrome text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus data-popup-open:bg-selected data-popup-open:text-foreground",
         className,
       )}
       {...props}

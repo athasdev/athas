@@ -163,7 +163,7 @@ export default function RunActionsButton() {
                 type="button"
                 variant="ghost"
                 iconOnly
-                size="chrome"
+                size="sm"
                 tooltip="Run actions"
                 aria-label="Run actions"
                 active={isMenuOpen}

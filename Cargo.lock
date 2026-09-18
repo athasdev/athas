@@ -892,6 +892,7 @@ name = "athas-version-control"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "athas-wsl",
  "base64 0.21.7",
  "chrono",
  "git2",

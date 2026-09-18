@@ -369,7 +369,7 @@ const GitStatusPanel = ({
 
   const renderDiffStatsBadge = (stats: GitFileDiffStats, className?: string) => (
     <span className={className}>
-      <Badge variant="muted" size="compact">
+      <Badge>
         <span className="text-git-added">+{stats.additions}</span>
         <span className="text-git-deleted">-{stats.deletions}</span>
       </Badge>

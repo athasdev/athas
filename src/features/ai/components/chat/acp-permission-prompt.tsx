@@ -9,7 +9,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
 import Badge from "@/ui/badge";
 import Textarea from "@/ui/textarea";
-import { Button, type ButtonVariant } from "@/ui/button";
+import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { chatContentWidth } from "./chat-content-width";
 
@@ -36,7 +36,7 @@ function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
   return (
     <pre
       aria-label="Proposed shell command"
-      className="max-h-48 overflow-auto rounded-lg border border-border/70 bg-surface/45 px-2.5 py-2 font-mono whitespace-pre-wrap wrap-anywhere select-text text-foreground ui-text-sm"
+      className="max-h-48 overflow-auto rounded-lg border border-border bg-surface px-2.5 py-2 font-mono whitespace-pre-wrap wrap-anywhere select-text text-foreground ui-text-sm"
     >
       {preview.command}
     </pre>
@@ -86,17 +86,19 @@ function getOptionTooltip(option: AcpPermissionOption) {
   }
 }
 
-function getOptionVariant(option: AcpPermissionOption): ButtonVariant {
+function getOptionStyle(
+  option: AcpPermissionOption,
+): Partial<Pick<ButtonProps, "variant" | "tone">> {
   switch (option.kind) {
     case "allow_always":
-      return "accent";
+      return { variant: "accent" };
     case "allow_once":
-      return "default";
+      return { variant: "default" };
     case "reject_always":
     case "reject_once":
-      return "danger";
+      return { variant: "ghost", tone: "danger" };
     default:
-      return "ghost";
+      return { variant: "ghost" };
   }
 }
 
@@ -140,7 +142,7 @@ export function AcpPermissionPrompt({
           value={permission.description}
         />
       ) : null}
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl border border-border/70 bg-background/92 px-2 py-1.5 shadow-(--shadow-card)">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl border border-border bg-background px-2 py-1.5 shadow-(--shadow-card)">
         <KeyIcon className="size-3.5 shrink-0 text-subtle-foreground" />
         <div
           className="flex min-w-0 flex-1 basis-40 items-center text-foreground"
@@ -150,14 +152,14 @@ export function AcpPermissionPrompt({
           <span className="shrink-0 px-1.5 text-subtle-foreground">/</span>
           <span className="min-w-0 truncate font-mono">{summary}</span>
         </div>
-        {queuedCount > 0 ? <Badge variant="muted">+{queuedCount}</Badge> : null}
+        {queuedCount > 0 ? <Badge>+{queuedCount}</Badge> : null}
         <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1">
           {options.map((option) => {
             return (
               <Button
                 key={option.id}
                 type="button"
-                variant={getOptionVariant(option)}
+                {...getOptionStyle(option)}
                 onClick={() =>
                   onRespond(
                     isApproval(option),

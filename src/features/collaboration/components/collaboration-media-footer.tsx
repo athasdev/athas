@@ -30,7 +30,8 @@ export function CollaborationMediaFooter({
       <div className="flex min-w-0 items-center gap-1 px-1 py-1">
         <Button
           type="button"
-          variant={micState === "error" ? "danger" : "ghost"}
+          variant="ghost"
+          tone={micState === "error" ? "danger" : "default"}
           active={micState === "active"}
           tooltip={micState === "active" ? "Stop Mic" : "Start Mic"}
           onClick={onToggleMic}
@@ -40,7 +41,8 @@ export function CollaborationMediaFooter({
         </Button>
         <Button
           type="button"
-          variant={screenState === "error" ? "danger" : "ghost"}
+          variant="ghost"
+          tone={screenState === "error" ? "danger" : "default"}
           active={screenState === "active"}
           tooltip={screenState === "active" ? "Stop Screen Share" : "Share Screen"}
           onClick={onToggleScreenShare}

@@ -14,10 +14,10 @@ const buttonGroupVariants = cva(
       },
       variant: {
         default:
-          "rounded bg-accent *:data-[slot=button]:bg-transparent *:data-[slot=button]:hover:bg-selected",
+          "rounded-md bg-accent *:data-[slot=button]:bg-transparent *:data-[slot=button]:hover:bg-selected",
         accent:
-          "overflow-hidden rounded bg-primary/10 *:data-[slot=button]:text-primary *:data-[slot=button]:hover:bg-primary/10 *:data-[slot=button-group-separator]:bg-primary/25",
-        ghost: "rounded bg-transparent",
+          "overflow-hidden rounded-md bg-primary-soft *:data-[slot=button]:text-primary *:data-[slot=button]:hover:bg-primary-soft *:data-[slot=button-group-separator]:bg-primary",
+        ghost: "rounded-md bg-transparent",
       },
     },
     defaultVariants: {
@@ -55,7 +55,7 @@ function ButtonGroupSeparator({
       data-slot="button-group-separator"
       orientation={orientation}
       className={cn(
-        "relative m-0 self-stretch bg-border/70 data-[orientation=vertical]:h-auto",
+        "relative m-0 self-stretch bg-border data-[orientation=vertical]:h-auto",
         className,
       )}
       {...props}

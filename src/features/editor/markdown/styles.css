@@ -69,7 +69,7 @@
 .markdown-preview .markdown-front-matter {
   margin: 0 0 1.1em;
   padding: 0.75em 0;
-  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border-bottom: 1px solid var(--border);
 }
 
 .markdown-preview .markdown-front-matter-heading {
@@ -117,23 +117,23 @@
 
 /* Inline code */
 .markdown-preview code {
-  background-color: var(--accent, rgba(255, 255, 255, 0.1));
+  background-color: var(--accent);
   padding: 0.2em 0.4em;
   border-radius: 4px;
   font-family: var(--editor-font-family);
   font-size: 0.9em;
-  color: var(--syntax-string, #c3e88d);
+  color: var(--syntax-string);
 }
 
 /* Code blocks */
 .markdown-preview pre {
-  background-color: var(--surface, rgba(0, 0, 0, 0.2));
+  background-color: var(--surface);
   padding: 0.5em;
   border-radius: 4px;
   overflow-x: auto;
   overscroll-behavior-x: none;
   margin: 0.3em 0;
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--border);
 }
 
 .markdown-preview pre code {
@@ -172,14 +172,14 @@
 
 /* Links */
 .markdown-preview a {
-  color: var(--primary, #82aaff);
+  color: var(--primary);
   text-decoration: none;
   border-bottom: 1px solid transparent;
   transition: all 0.2s ease;
 }
 
 .markdown-preview a:hover {
-  border-bottom-color: var(--primary, #82aaff);
+  border-bottom-color: var(--primary);
 }
 
 /* Text formatting */
@@ -201,8 +201,8 @@
 .markdown-preview blockquote {
   margin: 0.75em 0;
   padding: 0.5em 1em;
-  border-left: 4px solid var(--primary, #82aaff);
-  background-color: var(--accent, rgba(255, 255, 255, 0.05));
+  border-left: 4px solid var(--primary);
+  background-color: var(--accent);
   color: var(--muted-foreground);
   font-style: italic;
 }
@@ -221,28 +221,28 @@
 
 /* GitHub alerts: > [!NOTE] and friends */
 .markdown-preview .markdown-alert {
-  --markdown-alert-color: var(--primary, #82aaff);
+  --markdown-alert-color: var(--primary);
   margin: 0.75em 0;
   padding: 0.5em 1em;
   border-left: 4px solid var(--markdown-alert-color);
-  background-color: var(--accent, rgba(255, 255, 255, 0.05));
+  background-color: var(--accent);
   border-radius: 0 var(--radius-md, 6px) var(--radius-md, 6px) 0;
 }
 
 .markdown-preview .markdown-alert-tip {
-  --markdown-alert-color: var(--success, #3fb950);
+  --markdown-alert-color: var(--success);
 }
 
 .markdown-preview .markdown-alert-important {
-  --markdown-alert-color: var(--primary, #a371f7);
+  --markdown-alert-color: var(--primary);
 }
 
 .markdown-preview .markdown-alert-warning {
-  --markdown-alert-color: var(--warning, #d29922);
+  --markdown-alert-color: var(--warning);
 }
 
 .markdown-preview .markdown-alert-caution {
-  --markdown-alert-color: var(--destructive, #f85149);
+  --markdown-alert-color: var(--destructive);
 }
 
 .markdown-preview .markdown-alert-title {
@@ -259,7 +259,7 @@
 .markdown-preview hr {
   margin: 1em 0;
   border: none;
-  border-top: 2px solid var(--border, rgba(255, 255, 255, 0.1));
+  border-top: 2px solid var(--border);
 }
 
 /* Images */
@@ -268,7 +268,7 @@
   height: auto;
   border-radius: 6px;
   margin: 0.75em 0;
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--border);
 }
 
 /* Tables */
@@ -276,28 +276,28 @@
   width: 100%;
   border-collapse: collapse;
   margin: 0.75em 0;
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--border);
 }
 
 .markdown-preview th {
-  background-color: var(--accent, rgba(255, 255, 255, 0.1));
+  background-color: var(--accent);
   padding: 0.75em 1em;
   text-align: left;
   font-weight: 600;
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--border);
 }
 
 .markdown-preview td {
   padding: 0.75em 1em;
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--border);
 }
 
 .markdown-preview tr:nth-child(even) {
-  background-color: var(--accent, rgba(255, 255, 255, 0.03));
+  background-color: var(--accent);
 }
 
 .markdown-preview tr:hover {
-  background-color: var(--accent, rgba(255, 255, 255, 0.08));
+  background-color: var(--accent);
 }
 
 /* Line breaks */
@@ -335,7 +335,7 @@
 
 .markdown-preview .footnote-ref a {
   text-decoration: none;
-  color: var(--primary, #82aaff);
+  color: var(--primary);
   font-weight: 600;
 }
 
@@ -346,7 +346,7 @@
 .markdown-preview .footnotes {
   margin-top: 2em;
   padding-top: 1em;
-  border-top: 2px solid var(--border, rgba(255, 255, 255, 0.1));
+  border-top: 2px solid var(--border);
   font-size: 0.9em;
   color: var(--subtle-foreground);
 }
@@ -361,7 +361,7 @@
 
 .markdown-preview .footnote-backref {
   text-decoration: none;
-  color: var(--primary, #82aaff);
+  color: var(--primary);
   font-weight: 600;
 }
 

@@ -279,7 +279,7 @@ export function GitHubActionLogPanel({
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label="Job logs">
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-border/60 border-b px-3 py-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-border border-b px-3 py-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {subject ? (
             <WorkflowStatusIcon
@@ -337,7 +337,7 @@ export function GitHubActionLogPanel({
                 type="button"
                 onClick={() => jumpToProblem(1)}
                 className={cn(
-                  "rounded-chrome px-1.5 py-0.5 ui-text-caption tabular-nums transition-colors hover:bg-accent/60",
+                  "rounded-chrome px-1.5 py-0.5 ui-text-caption tabular-nums transition-colors hover:bg-accent",
                   model.errorCount > 0
                     ? WORKFLOW_TONE_TEXT_CLASS.error
                     : WORKFLOW_TONE_TEXT_CLASS.warning,

@@ -174,7 +174,7 @@ function OutputBlock({ text, tone = "default" }: { text: string; tone?: "default
   return (
     <pre
       className={cn(
-        "max-h-64 overflow-auto rounded-lg border border-border/60 bg-surface/40 px-2.5 py-2 font-mono whitespace-pre-wrap wrap-anywhere select-text ui-text-sm",
+        "max-h-64 overflow-auto rounded-lg border border-border bg-surface px-2.5 py-2 font-mono whitespace-pre-wrap wrap-anywhere select-text ui-text-sm",
         tone === "error" ? "text-destructive" : "text-subtle-foreground",
       )}
     >
@@ -188,12 +188,12 @@ function ToolCallStats({ summary }: { summary: ToolCallSummary }) {
     return (
       <span className="shrink-0 text-destructive">
         failed
-        {summary.error ? <span className="text-destructive/70"> · {summary.error}</span> : null}
+        {summary.error ? <span className="text-destructive"> · {summary.error}</span> : null}
       </span>
     );
   }
   if (summary.phase === "declined") {
-    return <span className="shrink-0 text-subtle-foreground/70">declined</span>;
+    return <span className="shrink-0 text-subtle-foreground">declined</span>;
   }
   if (summary.additions > 0 || summary.deletions > 0) {
     return (
@@ -210,7 +210,7 @@ function ToolCallStats({ summary }: { summary: ToolCallSummary }) {
   }
   if (summary.count !== null && summary.phase === "done") {
     return (
-      <span className="shrink-0 text-subtle-foreground/70 tabular-nums">
+      <span className="shrink-0 text-subtle-foreground tabular-nums">
         {summary.count === 1 ? "1 result" : `${summary.count} results`}
       </span>
     );
@@ -336,7 +336,7 @@ const ToolCallRow = memo(function ToolCallRow({
             type="button"
             aria-expanded={isExpanded}
             onClick={toggle}
-            className="flex min-h-6 min-w-0 flex-1 items-center gap-2 rounded text-left text-subtle-foreground outline-none ui-text-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/20"
+            className="flex min-h-6 min-w-0 flex-1 items-center gap-2 rounded text-left text-subtle-foreground outline-none ui-text-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
           >
             <ToolCallRowContent
               icon={KindIcon}

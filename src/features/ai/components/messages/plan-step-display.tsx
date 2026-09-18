@@ -30,7 +30,7 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
   return (
     <Card
       variant={status === "current" ? "default" : "outline"}
-      className={status === "current" ? "border-primary/30 bg-primary/5" : undefined}
+      className={status === "current" ? "border-primary bg-primary-soft" : undefined}
     >
       <Button
         type="button"

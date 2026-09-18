@@ -18,6 +18,7 @@ import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import { databaseCodeBlockClassName, databasePanelClassName } from "../../utils/database-surface";
 import { createRedisStore } from "./stores/redis.store";
+import { SidebarListItem } from "@/ui/sidebar";
 
 interface RedisViewerProps {
   connectionId: string;
@@ -109,13 +110,13 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
       />
 
       <div className="flex min-h-0 flex-1">
-        <div className={databasePanelClassName("w-64 shrink-0 border-border/60 border-r")}>
+        <div className={databasePanelClassName("w-64 shrink-0 border-border border-r")}>
           <PaneContentHeader
             leading={<SearchIcon />}
             context={
               <Input
                 grow
-                variant="bare"
+                variant="ghost"
                 placeholder="Pattern (e.g. user:*)"
                 value={patternInput}
                 onChange={(e) => setPatternInput(e.target.value)}
@@ -142,27 +143,27 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             viewportProps={{ ref: keyListRef }}
           >
             {store.keys.map((keyInfo) => (
-              <Button
+              <SidebarListItem
                 key={keyInfo.key}
-                type="button"
-                variant="list"
                 onClick={() => actions.selectKey(keyInfo.key)}
-                width="full"
-                align="start"
                 active={store.selectedKey === keyInfo.key}
                 aria-label={`Select key ${keyInfo.key}`}
+                leading={
+                  <Badge tone={keyInfo.type === "string" ? "accent" : "neutral"}>
+                    {keyInfo.type.substring(0, 3)}
+                  </Badge>
+                }
+                trailing={
+                  keyInfo.ttl > 0 ? (
+                    <span className="inline-flex items-center gap-0.5">
+                      <ClockIcon />
+                      {keyInfo.ttl}s
+                    </span>
+                  ) : undefined
+                }
               >
-                <Badge variant={keyInfo.type === "string" ? "accent" : "muted"}>
-                  {keyInfo.type.substring(0, 3)}
-                </Badge>
-                <span className="flex-1 truncate leading-row">{keyInfo.key}</span>
-                {keyInfo.ttl > 0 && (
-                  <span className="flex items-center gap-0.5 text-subtle-foreground">
-                    <ClockIcon />
-                    <span className="ui-text-sm">{keyInfo.ttl}s</span>
-                  </span>
-                )}
-              </Button>
+                {keyInfo.key}
+              </SidebarListItem>
             ))}
             {store.hasMore && (
               <div
@@ -196,7 +197,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
 
           {!store.isLoading && showInfo && store.serverInfo && (
             <div className="flex-1 overflow-auto p-3">
-              <section className="border-y border-border/60 py-3">
+              <section className="border-y border-border py-3">
                 <div className="mb-3 text-subtle-foreground ui-text-sm uppercase tracking-[0.08em]">
                   Server Info
                 </div>
@@ -221,9 +222,9 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 actions={
                   <Button
                     onClick={() => actions.deleteKey(store.selectedKey!)}
-                    variant="danger"
-                    iconOnly
+                    variant="ghost"
                     tone="danger"
+                    iconOnly
                     aria-label="Delete key"
                   >
                     <TrashIcon />

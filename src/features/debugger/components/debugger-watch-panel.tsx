@@ -131,7 +131,7 @@ export function DebugWatchPanel({
             return (
               <ContextMenu key={watchExpression.id}>
                 <ContextMenuTrigger
-                  className="group rounded-lg border border-border/60 bg-surface/40 px-2 py-1.5"
+                  className="group rounded-lg border border-border bg-surface px-2 py-1.5"
                   onContextMenu={(event) => event.stopPropagation()}
                 >
                   <div className="flex items-start gap-2">
@@ -162,7 +162,7 @@ export function DebugWatchPanel({
                         ? result.error
                         : result?.value || "Not evaluated"}
                     {result?.type && !result.error ? (
-                      <span className="ml-1 text-subtle-foreground/70">({result.type})</span>
+                      <span className="ml-1 text-subtle-foreground">({result.type})</span>
                     ) : null}
                   </div>
                 </ContextMenuTrigger>

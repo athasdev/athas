@@ -420,7 +420,7 @@ ${statusSummary}`;
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 border-border/60 border-y py-3">
+            <div className="flex flex-wrap items-center gap-3 border-border border-y py-3">
               <div className="flex min-w-56 flex-1 items-center gap-2">
                 <span className="shrink-0 font-sans ui-text-sm text-subtle-foreground">
                   Workflow
@@ -457,7 +457,7 @@ ${statusSummary}`;
             </div>
 
             {error ? (
-              <div className="mt-3 rounded-lg bg-destructive/6 px-3 py-2 ui-text-sm text-destructive">
+              <div className="mt-3 rounded-lg bg-destructive-soft px-3 py-2 ui-text-sm text-destructive">
                 {error}
               </div>
             ) : null}
@@ -496,7 +496,7 @@ ${statusSummary}`;
             </div>
 
             {kind === "pull-request" ? (
-              <div className="flex flex-wrap items-center gap-2 border-border/60 border-y py-3">
+              <div className="flex flex-wrap items-center gap-2 border-border border-y py-3">
                 <GitBranchIcon className="text-subtle-foreground" />
                 <span className="font-sans ui-text-sm text-subtle-foreground">Head</span>
                 <Select
@@ -527,7 +527,7 @@ ${statusSummary}`;
                   menuSize="default"
                   aria-label="Choose base branch"
                 />
-                <label className="ml-auto flex h-7 items-center gap-2 rounded-lg px-2 font-sans ui-text-sm text-subtle-foreground hover:bg-accent/60">
+                <label className="ml-auto flex h-7 items-center gap-2 rounded-lg px-2 font-sans ui-text-sm text-subtle-foreground hover:bg-accent">
                   <Checkbox
                     checked={draft}
                     onCheckedChange={setDraft}
@@ -548,12 +548,12 @@ ${statusSummary}`;
             </div>
 
             {error ? (
-              <div className="mt-3 rounded-lg bg-destructive/6 px-3 py-2 ui-text-sm text-destructive">
+              <div className="mt-3 rounded-lg bg-destructive-soft px-3 py-2 ui-text-sm text-destructive">
                 {error}
               </div>
             ) : null}
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-border/60 border-t pt-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-border border-t pt-3">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <GitHubLabelPicker
                   labels={labels}

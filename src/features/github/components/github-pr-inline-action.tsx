@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
 import { GitHubMarkdownEditor } from "./github-markdown-editor";
+import { capitalize } from "@/utils/capitalize";
 
 export type GitHubPRInlineActionKind = "approve" | "request-changes" | "merge";
 export type GitHubPRMergeMethod = "merge" | "squash" | "rebase";
@@ -53,7 +54,7 @@ export function GitHubPRInlineAction({
   }, [kind]);
 
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-surface/35 p-3">
+    <section className="space-y-3 rounded-lg border border-border bg-surface p-3">
       <h2 className="font-sans ui-text-sm font-medium text-foreground">{copy.title}</h2>
       {kind === "merge" ? (
         <div className="flex flex-wrap items-center gap-1">
@@ -64,10 +65,9 @@ export function GitHubPRInlineAction({
               variant="ghost"
               active={method === option}
               onClick={() => setMethod(option)}
-              capitalize
               disabled={isSubmitting}
             >
-              {option}
+              {capitalize(option)}
             </Button>
           ))}
         </div>

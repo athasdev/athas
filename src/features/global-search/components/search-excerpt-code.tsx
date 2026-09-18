@@ -77,8 +77,8 @@ const SearchExcerptLine = memo(function SearchExcerptLine({
                   key={segment.startColumn}
                   className={cn(
                     segment.tokenClassName,
-                    isMatch && "rounded-sm bg-warning/20",
-                    isCurrent && "bg-warning/40 ring-1 ring-inset ring-warning/60",
+                    isMatch && "rounded-sm bg-warning-soft",
+                    isCurrent && "bg-warning-soft ring-1 ring-inset ring-warning",
                   )}
                 >
                   {segment.text}
@@ -114,7 +114,7 @@ const SearchExcerptLine = memo(function SearchExcerptLine({
   return (
     <button
       type="button"
-      className="flex w-full min-w-0 text-left hover:bg-accent/25 focus-visible:bg-accent/35 focus-visible:outline-none"
+      className="flex w-full min-w-0 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
       onClick={handleClick}
       aria-label={`Open line ${mappedLine}`}
     >

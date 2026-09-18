@@ -139,8 +139,8 @@ export const ChatMessages = memo(function ChatMessages({
               matchesSearch && "transition-colors",
               matchesSearch &&
                 (isActiveSearchMatch
-                  ? "bg-primary/10 ring-1 ring-inset ring-primary/30"
-                  : "bg-primary/5"),
+                  ? "bg-primary-soft ring-1 ring-inset ring-focus"
+                  : "bg-primary-soft"),
             )}
           >
             <ChatMessage

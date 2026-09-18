@@ -101,7 +101,7 @@ export function GitHubCommentComposer({
               </TabsList>
               {currentUser ? (
                 <span className="flex min-w-0 items-center gap-1.5 text-subtle-foreground ui-text-sm">
-                  <GitHubAvatar login={currentUser} displaySize="xs" />
+                  <GitHubAvatar login={currentUser} displaySize="sm" />
                   <span className="truncate">{currentUser}</span>
                 </span>
               ) : null}

@@ -181,7 +181,8 @@ export function ReleaseAssets({
               </Button>
               {!release.immutable && (
                 <Button
-                  variant="danger"
+                  variant="ghost"
+                  tone="danger"
                   iconOnly
                   tooltip={`Delete ${asset.name}`}
                   disabled={Boolean(busy)}
@@ -233,7 +234,8 @@ export function ReleaseAssets({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={Boolean(busy)}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              variant="danger"
+              variant="ghost"
+              tone="danger"
               disabled={Boolean(busy)}
               onClick={() => void remove()}
             >

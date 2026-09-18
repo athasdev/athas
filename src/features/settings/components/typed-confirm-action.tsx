@@ -70,7 +70,8 @@ export function TypedConfirmAction({
         </span>
         <Button
           type="button"
-          variant={variant}
+          variant="default"
+          tone={variant === "danger" ? "danger" : "default"}
           disabled={isBusy || value.trim().toLowerCase() !== confirmWord}
           onClick={() => void handleConfirm()}
         >
@@ -86,7 +87,8 @@ export function TypedConfirmAction({
   return (
     <Button
       type="button"
-      variant={variant}
+      variant="default"
+      tone={variant === "danger" ? "danger" : "default"}
       disabled={isBusy}
       onClick={() => setIsConfirming(true)}
       tooltip={tooltip}

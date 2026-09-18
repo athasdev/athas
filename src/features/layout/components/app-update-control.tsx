@@ -61,7 +61,7 @@ export function AppUpdateControl() {
       <Button
         type="button"
         variant="ghost"
-        size="chrome"
+        size="sm"
         onClick={() => void openWhatsNew()}
         tooltip="What's new in Athas"
         aria-label="What's new in Athas"
@@ -87,7 +87,7 @@ export function AppUpdateControl() {
           <Button
             type="button"
             variant="ghost"
-            size="chrome"
+            size="sm"
             disabled={updateBusy}
             aria-label={updateTooltip}
             tooltip={updateTooltip}

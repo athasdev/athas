@@ -173,7 +173,7 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
     >
       <div className="mb-7 space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Badge variant="muted">
+          <Badge>
             <SparkleIcon />
             Athas Intelligence
           </Badge>
@@ -234,7 +234,7 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
               {error}
             </p>
           ) : null}
-          <div className="flex items-center justify-between gap-3 border-border/60 border-t pt-4">
+          <div className="flex items-center justify-between gap-3 border-border border-t pt-4">
             <Button
               type="button"
               variant="ghost"
@@ -342,7 +342,7 @@ export function ViewSetup({ projectPath, view, onCancel, onSave }: ViewSetupProp
               {error}
             </p>
           ) : null}
-          <div className="flex items-center justify-between gap-3 border-border/60 border-t pt-4">
+          <div className="flex items-center justify-between gap-3 border-border border-t pt-4">
             {!view ? (
               <Button
                 type="button"

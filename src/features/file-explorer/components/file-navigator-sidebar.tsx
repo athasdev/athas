@@ -101,11 +101,11 @@ const fileNavigatorSurfaceVariants = cva(
   {
     variants: {
       surface: {
-        sidebar: "border-border/70 border-r bg-surface/20",
+        sidebar: "border-border border-r bg-surface",
         plain: "bg-transparent",
-        inset: "rounded-xl border border-border/70 bg-surface/20",
-        review: "border-border/60 border-r bg-surface/10",
-        panel: "bg-surface/55",
+        inset: "rounded-xl border border-border bg-surface",
+        review: "border-border border-r bg-surface",
+        panel: "bg-surface",
       },
     },
     defaultVariants: {
@@ -458,7 +458,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       className={cn(
         fileNavigatorSurfaceVariants({ surface }),
         surface === "panel" &&
-          (resizeEdge === "left" ? "border-border/70 border-l" : "border-border/70 border-r"),
+          (resizeEdge === "left" ? "border-border border-l" : "border-border border-r"),
         className,
       )}
       style={{ width: navigatorLayout.width }}
@@ -570,7 +570,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       </ScrollArea>
       <div
         className={cn(
-          "absolute top-0 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary/20",
+          "absolute top-0 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary-soft",
           resizeEdge === "right" ? "-right-1" : "-left-1",
         )}
         onPointerDown={handleResizeStart}

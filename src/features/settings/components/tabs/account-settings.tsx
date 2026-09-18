@@ -114,7 +114,7 @@ export const AccountSettings = () => {
             description="Commit messages, inline edits, autocomplete, drafts, and integration generation. Athas Agent uses your configured provider."
             activateOnClick={false}
           >
-            <Badge variant={hasIntelligence ? "success" : "muted"}>
+            <Badge tone={hasIntelligence ? "success" : "neutral"}>
               {hasIntelligence ? "Included in Pro" : "Pro required"}
             </Badge>
           </SettingRow>
@@ -123,7 +123,7 @@ export const AccountSettings = () => {
         {isAuthenticated && (
           <SettingRow label="Plan" description="Manage your Athas subscription and billing">
             <div className="flex items-center gap-2">
-              {isPaidPlan ? <Badge variant="accent">{planLabel}</Badge> : null}
+              {isPaidPlan ? <Badge tone="accent">{planLabel}</Badge> : null}
               <Button variant="default" onClick={handleManagePlan}>
                 {isPaidPlan ? "Manage plan" : "Upgrade plan"}
               </Button>

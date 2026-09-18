@@ -285,7 +285,7 @@ function ExtensionsSurface({ extensionId }: { extensionId?: string }) {
             }}
           >
             <div className="mb-4 min-w-0 overflow-x-auto">
-              <TabsList variant="bare" aria-label="Integration categories">
+              <TabsList aria-label="Integration categories">
                 {EXTENSION_FILTERS.map((filter) => (
                   <TabsTrigger key={filter.id} value={filter.id} className="flex-none">
                     {filter.label}

@@ -8,7 +8,7 @@ import {
   type ViewDisplayRow,
 } from "@/features/views/lib/view-presentation";
 import type { ViewPresentation, ViewTable } from "@/features/views/types/view.types";
-import Badge from "@/ui/badge";
+import Badge, { type BadgeTone } from "@/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { cn } from "@/utils/cn";
@@ -18,14 +18,14 @@ interface ViewDataDisplayProps {
   presentation: ViewPresentation;
 }
 
-function getStatusVariant(value: ViewCell): "success" | "warning" | "error" | "muted" {
+function getStatusTone(value: ViewCell): BadgeTone {
   const normalized = formatViewCell(value).toLowerCase();
   if (/success|complete|completed|active|merged|closed|passed|ready|yes|true/.test(normalized)) {
     return "success";
   }
-  if (/fail|failed|error|cancel|blocked|inactive|no|false/.test(normalized)) return "error";
+  if (/fail|failed|error|cancel|blocked|inactive|no|false/.test(normalized)) return "danger";
   if (/pending|queued|waiting|open|progress|running|draft/.test(normalized)) return "warning";
-  return "muted";
+  return "neutral";
 }
 
 function isStatusColumn(column: string): boolean {
@@ -54,7 +54,7 @@ function ViewValue({
   if (value === null) return <span className="text-subtle-foreground">—</span>;
 
   if (typeof value === "boolean" || isStatusColumn(column)) {
-    return <Badge variant={getStatusVariant(value)}>{formatViewCell(value)}</Badge>;
+    return <Badge tone={getStatusTone(value)}>{formatViewCell(value)}</Badge>;
   }
 
   const text = formatViewCell(value);
@@ -77,7 +77,7 @@ function GroupHeader({ label, count }: { label: string; count: number }) {
   return (
     <div className="flex items-center gap-2 px-1">
       <h2 className="font-sans ui-text-sm text-foreground">{label}</h2>
-      <Badge variant="muted">{count}</Badge>
+      <Badge>{count}</Badge>
     </div>
   );
 }
@@ -93,7 +93,7 @@ function ViewTableDisplay({ table, presentation }: ViewDataDisplayProps) {
             {presentation.groupBy ? (
               <GroupHeader label={group.label} count={group.rows.length} />
             ) : null}
-            <div className="overflow-hidden rounded-lg border border-border/70 bg-surface/25">
+            <div className="overflow-hidden rounded-lg border border-border bg-surface">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -226,9 +226,9 @@ function ViewBoardDisplay({ table, presentation }: ViewDataDisplayProps) {
       {groups.map((group) => (
         <section
           key={group.key}
-          className="flex min-w-64 max-w-80 flex-1 flex-col overflow-hidden rounded-lg bg-surface/45"
+          className="flex min-w-64 max-w-80 flex-1 flex-col overflow-hidden rounded-lg bg-surface"
         >
-          <div className="border-border/60 border-b p-2.5">
+          <div className="border-border border-b p-2.5">
             <GroupHeader label={group.label} count={group.rows.length} />
           </div>
           <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2">

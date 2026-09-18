@@ -216,7 +216,8 @@ export const TerminalSettings = () => {
                   </div>
                 </div>
                 <Button
-                  variant="danger"
+                  variant="ghost"
+                  tone="danger"
                   onClick={() => profileActions.deleteProfile(profile.id)}
                   aria-label={`Delete ${profile.name}`}
                   tooltip={`Delete ${profile.name}`}

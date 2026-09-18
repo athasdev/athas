@@ -74,7 +74,7 @@ function HighlightedPlainText({ text, query }: { text: string; query: string }) 
         if (part.toLowerCase() !== trimmedQuery.toLowerCase()) return part;
 
         return (
-          <mark key={`${part}-${index}`} className="rounded bg-primary/25 px-0.5 text-inherit">
+          <mark key={`${part}-${index}`} className="rounded bg-primary-soft px-0.5 text-inherit">
             {part}
           </mark>
         );
@@ -104,7 +104,7 @@ function UserMessageText({ text, query }: { text: string; query: string }) {
       <span
         key={`mention-${index}`}
         data-mention="true"
-        className={cn(badgeVariants({ variant: "accent" }), "max-w-48 truncate align-baseline")}
+        className={cn(badgeVariants({ tone: "accent" }), "max-w-48 truncate align-baseline")}
       >
         {match[1]}
       </span>,
@@ -225,7 +225,7 @@ export const ChatMessage = memo(function ChatMessage({
       <Message>
         {/* Same box as the assistant's, dropped to the bubble's first text line. */}
         <MessageAvatar placement="content" size="compact" className="mt-3">
-          <Avatar name={userName} src={userAvatarUrl} className="size-full rounded" />
+          <Avatar name={userName} src={userAvatarUrl} size="md" />
         </MessageAvatar>
         <MessageContent>
           <Bubble variant="user">

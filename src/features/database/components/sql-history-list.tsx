@@ -4,6 +4,7 @@ import { formatSqlHistoryPreview } from "../lib/sql-history";
 import { writeDatabaseClipboardText } from "../utils/clipboard";
 import { cn } from "@/utils/cn";
 import { databaseCardClassName } from "../utils/database-surface";
+import { SidebarListItem } from "@/ui/sidebar";
 
 interface SqlHistoryListProps {
   queries: string[];
@@ -47,23 +48,15 @@ export default function SqlHistoryList({
         {queries.map((query) => {
           const preview = formatSqlHistoryPreview(query);
           return (
-            <div
-              key={query}
-              className="group mx-1 flex items-center gap-1 rounded-lg hover:bg-accent"
-            >
-              <Button
-                type="button"
+            <div key={query} className="group mx-1 flex items-center gap-1">
+              <SidebarListItem
                 onClick={() => onSelect(query)}
-                variant="list"
-                width="grow"
-                align="start"
-                truncate
-                tooltip={query}
+                leading={<CodeIcon />}
+                title={query}
                 aria-label={`Open query: ${preview}`}
               >
-                <CodeIcon className="mr-1.5 shrink-0" />
-                <span className="truncate">{preview}</span>
-              </Button>
+                {preview}
+              </SidebarListItem>
               {onRun && (
                 <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
                   <Button
