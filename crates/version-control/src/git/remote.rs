@@ -18,6 +18,9 @@ fn _git_clone(repository_url: String, destination_path: String) -> Result<()> {
    if repository_url.starts_with('-') {
       bail!("Repository URL cannot start with an option prefix");
    }
+   if repository_url.len() >= 5 && repository_url[..5].eq_ignore_ascii_case("ext::") {
+      bail!("The ext transport can execute local commands and is not allowed");
+   }
 
    let destination = Path::new(&destination_path);
    if !destination.is_absolute() {
@@ -61,7 +64,7 @@ fn _git_clone(repository_url: String, destination_path: String) -> Result<()> {
       "Git returned a non-zero exit status without output.".to_string()
    };
 
-   bail!("Git clone failed: {details}");
+   bail!("Git clone failed: {}", redact_url_credentials(&details));
 }
 
 pub fn git_push(repo_path: String, branch: Option<String>, remote: String) -> Result<(), String> {
@@ -98,7 +101,37 @@ pub(crate) fn execute_remote_git_command(
       "Git returned a non-zero exit status without output.".to_string()
    };
 
-   bail!("Git {operation} failed: {details}");
+   bail!(
+      "Git {operation} failed: {}",
+      redact_url_credentials(&details)
+   );
+}
+
+/// Replace `user:password@` userinfo in URLs with `***` so embedded
+/// credentials never reach UI errors or logs.
+fn redact_url_credentials(text: &str) -> String {
+   let mut redacted = String::with_capacity(text.len());
+   let mut rest = text;
+   while let Some(scheme_end) = rest.find("://") {
+      let after_scheme = &rest[scheme_end + 3..];
+      let userinfo_end = after_scheme
+         .find(['@', '/', ' ', '\n', '"', '\''])
+         .map(|index| (index, after_scheme.as_bytes().get(index)));
+      match userinfo_end {
+         Some((index, Some(b'@'))) => {
+            redacted.push_str(&rest[..scheme_end + 3]);
+            redacted.push_str("***@");
+            rest = &after_scheme[index + 1..];
+         }
+         _ => {
+            let keep = scheme_end + 3;
+            redacted.push_str(&rest[..keep]);
+            rest = &rest[keep..];
+         }
+      }
+   }
+   redacted.push_str(rest);
+   redacted
 }
 
 fn _git_push(repo_path: String, branch: Option<String>, remote: String) -> Result<()> {
@@ -206,5 +239,28 @@ mod tests {
          "athas-clone-target".to_string(),
       );
       assert!(result.is_err());
+   }
+
+   #[test]
+   fn clone_rejects_ext_transport_urls() {
+      let result = _git_clone(
+         "ext::sh -c cp".to_string(),
+         "/tmp/athas-clone-target".to_string(),
+      );
+      assert!(result.unwrap_err().to_string().contains("ext transport"));
+   }
+
+   #[test]
+   fn redacts_embedded_credentials_from_git_output() {
+      assert_eq!(
+         redact_url_credentials(
+            "repository 'https://user:s3cret@github.com/org/repo.git' not found"
+         ),
+         "repository 'https://***@github.com/org/repo.git' not found"
+      );
+      assert_eq!(
+         redact_url_credentials("https://github.com/org/repo.git"),
+         "https://github.com/org/repo.git"
+      );
    }
 }
