@@ -75,8 +75,9 @@ impl AthasAcpClient {
       }
    }
 
-   fn resolve_path(&self, path: &str) -> PathBuf {
+   fn resolve_path(&self, path: &str) -> Result<PathBuf, String> {
       resolve_path_against_workspace(self.workspace_path.as_deref(), path)
+         .map_err(|e| format!("Path escapes the agent workspace: {}", e))
    }
 
    fn map_plan_priority(priority: acp::PlanEntryPriority) -> AcpPlanEntryPriority {
@@ -668,7 +669,10 @@ impl AthasAcpClient {
       args: acp::ReadTextFileRequest,
    ) -> acp::Result<acp::ReadTextFileResponse> {
       let path_str = args.path.to_string_lossy();
-      let path = self.resolve_path(&path_str);
+      let path = match self.resolve_path(&path_str) {
+         Ok(path) => path,
+         Err(message) => return Err(acp::Error::new(-32602, message)),
+      };
       match tokio::fs::read_to_string(&path).await {
          Ok(content) => {
             // Handle line and limit parameters for partial file reading
@@ -701,7 +705,10 @@ impl AthasAcpClient {
       args: acp::WriteTextFileRequest,
    ) -> acp::Result<acp::WriteTextFileResponse> {
       let path_str = args.path.to_string_lossy();
-      let path = self.resolve_path(&path_str);
+      let path = match self.resolve_path(&path_str) {
+         Ok(path) => path,
+         Err(message) => return Err(acp::Error::new(-32602, message)),
+      };
 
       // Create parent directories if needed
       if let Some(parent) = path.parent()
@@ -736,22 +743,50 @@ impl AthasAcpClient {
          ));
       }
 
-      let working_dir = args
-         .cwd
-         .as_ref()
-         .map(|p| p.to_string_lossy().to_string())
-         .or_else(|| self.workspace_path.as_deref().map(path_to_string));
+      let working_dir = match args.cwd.as_ref() {
+         Some(cwd) => {
+            let cwd_str = cwd.to_string_lossy();
+            match self.resolve_path(&cwd_str) {
+               Ok(path) => Some(path.to_string_lossy().to_string()),
+               Err(message) => return Err(acp::Error::new(-32602, message)),
+            }
+         }
+         None => self.workspace_path.as_deref().map(path_to_string),
+      };
 
+      // Agent-supplied environments must not smuggle loader or runtime
+      // options that execute code inside the spawned process.
       let env_map: Option<HashMap<String, String>> = if args.env.is_empty() {
          None
       } else {
-         Some(
-            args
-               .env
+         let filtered: HashMap<String, String> = args
+            .env
+            .iter()
+            .filter(|e| {
+               let upper = e.name.to_ascii_uppercase();
+               let blocked = [
+                  "PATH",
+                  "LD_PRELOAD",
+                  "LD_LIBRARY_PATH",
+                  "LD_AUDIT",
+                  "NODE_OPTIONS",
+                  "JAVA_TOOL_OPTIONS",
+                  "JDK_JAVA_OPTIONS",
+               ]
                .iter()
-               .map(|e| (e.name.clone(), e.value.clone()))
-               .collect(),
-         )
+               .any(|key| upper == *key || upper.starts_with("LD_") || upper.starts_with("DYLD_"));
+               if blocked {
+                  log::warn!("Dropping agent-supplied environment variable {}", e.name);
+               }
+               !blocked
+            })
+            .map(|e| (e.name.clone(), e.value.clone()))
+            .collect();
+         if filtered.is_empty() {
+            None
+         } else {
+            Some(filtered)
+         }
       };
       let command = args.command.clone();
       let command_args = if args.args.is_empty() {
