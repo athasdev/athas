@@ -25,6 +25,10 @@ type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>>;
 pub type LspServerEnv = HashMap<String, String>;
 static NEXT_CLIENT_ID: AtomicU64 = AtomicU64::new(1);
 
+/// Largest protocol frame accepted from a language server. Guards the
+/// stdout reader against a rogue server advertising gigabytes.
+const MAX_PROTOCOL_FRAME_BYTES: usize = 64 * 1024 * 1024;
+
 #[derive(Default)]
 struct LspServerContext {
    root_uri: Option<Url>,
@@ -311,6 +315,18 @@ impl LspClient {
 
             if content_length == 0 {
                continue;
+            }
+
+            // A rogue server must not be able to OOM the backend by
+            // advertising a gigabyte Content-Length.
+            if content_length > MAX_PROTOCOL_FRAME_BYTES {
+               log::warn!("LSP server advertised an oversized frame; stopping server");
+               mark_stopped(
+                  "LSP server sent an oversized protocol frame".to_string(),
+                  &pending_requests_clone,
+                  &is_running_clone,
+               );
+               return;
             }
 
             // Read content
