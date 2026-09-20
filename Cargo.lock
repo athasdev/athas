@@ -771,6 +771,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "flate2",
+ "futures-util",
  "log",
  "reqwest 0.12.28",
  "serde",
