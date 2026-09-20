@@ -3,6 +3,7 @@ import { dirname } from "@tauri-apps/api/path";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { emitGitChanged } from "@/features/git/events/git-events";
+import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/lib/file-tree-gitignore";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { useFileSystemStore } from "../stores/file-system.store";
 import { useFileWatcherStore } from "../stores/file-watcher.store";
@@ -33,6 +34,7 @@ export async function initializeFileWatcherListener() {
 
   unlistenFileChanged = await listen<FileChangeEvent>("file-changed", async (event) => {
     const { path, event_type } = event.payload;
+    invalidateFileTreeGitIgnoreCache(path);
     const workspaceId = workspaceRuntimeRegistry.getActiveWorkspaceId();
     const parentDirectory = await dirname(path);
 

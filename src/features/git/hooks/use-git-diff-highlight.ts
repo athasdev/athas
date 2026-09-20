@@ -4,7 +4,7 @@ import {
   fetchHighlightQuery,
   getDefaultParserWasmUrl,
 } from "@/features/editor/lib/wasm-parser/extension-assets";
-import { tokenizeByLine } from "@/features/editor/lib/wasm-parser/tokenizer";
+import { tokenizerWorkerClient } from "@/features/editor/lib/wasm-parser/tokenizer-worker-client";
 import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
 import { buildLineOffsetMap } from "@/features/editor/utils/html";
 import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
@@ -69,6 +69,17 @@ function mapTokensToDiffLines(
     }
   }
 
+  return result;
+}
+
+function groupTokensByLine(tokens: HighlightToken[]): Map<number, HighlightToken[]> {
+  const result = new Map<number, HighlightToken[]>();
+  for (const token of tokens) {
+    const line = token.startPosition.row;
+    const lineTokens = result.get(line) ?? [];
+    lineTokens.push(token);
+    result.set(line, lineTokens);
+  }
   return result;
 }
 
@@ -159,6 +170,7 @@ interface DiffTokenState {
 
 interface DiffHighlightInput {
   key: string;
+  filePath: string;
   languageId: string | null;
   oldContent: ReconstructedContent;
   newContent: ReconstructedContent;
@@ -186,14 +198,59 @@ export function createDiffHighlightKey(lines: GitDiffLine[], filePath: string) {
   return `${filePath}:${lines.length}:${hash.toString(16)}`;
 }
 
-function createDiffHighlightInput(lines: GitDiffLine[], filePath: string): DiffHighlightInput {
+export function createDiffHighlightInput(
+  lines: GitDiffLine[],
+  filePath: string,
+): DiffHighlightInput {
   return {
     key: createDiffHighlightKey(lines, filePath),
+    filePath,
     languageId: getLanguageId(filePath),
     oldContent: reconstructContent(lines, "old"),
     newContent: reconstructContent(lines, "new"),
     fallbackTokenMap: createLineBasedDiffTokenMap(lines, filePath),
   };
+}
+
+export async function tokenizeDiffContents({
+  input,
+  wasmPath,
+  highlightQuery,
+}: {
+  input: DiffHighlightInput;
+  wasmPath: string;
+  highlightQuery?: string;
+}): Promise<Map<number, HighlightToken[]>> {
+  const { filePath, languageId, oldContent, newContent, fallbackTokenMap } = input;
+  if (!languageId) return fallbackTokenMap;
+
+  const tokenizeVersion = async (version: "old" | "new", content: ReconstructedContent) => {
+    if (!content.content) return new Map<number, HighlightToken[]>();
+    const result = await tokenizerWorkerClient.tokenize({
+      bufferId: `git-diff:${filePath}:${version}`,
+      latestKey: `git-diff:${filePath}:${version}`,
+      content: content.content,
+      languageId,
+      wasmPath,
+      highlightQuery,
+      mode: "full",
+    });
+    return groupTokensByLine(result.tokens);
+  };
+
+  const [oldTokensByLine, newTokensByLine] = await Promise.all([
+    tokenizeVersion("old", oldContent),
+    tokenizeVersion("new", newContent),
+  ]);
+  const merged = new Map<number, HighlightToken[]>();
+  for (const [index, tokens] of mapTokensToDiffLines(oldTokensByLine, oldContent.lineMapping)) {
+    merged.set(index, tokens);
+  }
+  for (const [index, tokens] of mapTokensToDiffLines(newTokensByLine, newContent.lineMapping)) {
+    merged.set(index, tokens);
+  }
+
+  return merged.size > 0 ? merged : fallbackTokenMap;
 }
 
 export function useDiffHighlighting(
@@ -207,7 +264,7 @@ export function useDiffHighlighting(
   });
 
   useEffect(() => {
-    const { key, languageId, oldContent, newContent, fallbackTokenMap } = input;
+    const { key, languageId, fallbackTokenMap } = input;
     if (!languageId) {
       setTokenState({ key, tokenMap: new Map() });
       return;
@@ -241,34 +298,13 @@ export function useDiffHighlighting(
           }
         }
 
-        const config = { languageId: lang, wasmPath, highlightQuery };
-
-        const [oldTokensByLine, newTokensByLine] = await Promise.all([
-          oldContent.content
-            ? tokenizeByLine(oldContent.content, lang, config)
-            : Promise.resolve(new Map<number, HighlightToken[]>()),
-          newContent.content
-            ? tokenizeByLine(newContent.content, lang, config)
-            : Promise.resolve(new Map<number, HighlightToken[]>()),
-        ]);
+        const tokenMap = await tokenizeDiffContents({ input, wasmPath, highlightQuery });
 
         if (cancelled) return;
 
-        const oldTokenMap = mapTokensToDiffLines(oldTokensByLine, oldContent.lineMapping);
-        const newTokenMap = mapTokensToDiffLines(newTokensByLine, newContent.lineMapping);
-
-        const merged = new Map<number, HighlightToken[]>();
-
-        for (const [index, tokens] of oldTokenMap) {
-          merged.set(index, tokens);
-        }
-        for (const [index, tokens] of newTokenMap) {
-          merged.set(index, tokens);
-        }
-
         setTokenState({
           key,
-          tokenMap: merged.size > 0 ? merged : fallbackTokenMap,
+          tokenMap,
         });
       } catch {
         if (cancelled) return;

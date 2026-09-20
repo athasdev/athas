@@ -1,5 +1,10 @@
 import { EditorUndoGroupTracker } from "@/features/editor/history/undo-group-tracker";
-import type { EditorTextChange, Position, Range } from "@/features/editor/types/editor.types";
+import type {
+  EditorModelTextChange,
+  EditorTextChange,
+  Position,
+  Range,
+} from "@/features/editor/types/editor.types";
 import { useHistoryStore } from "@/features/editor/stores/history.store";
 
 const undoGroupTracker = new EditorUndoGroupTracker();
@@ -59,6 +64,7 @@ export function trackBufferHistoryChange({
   previousSelection,
   skipUndoGrouping,
   contentChange,
+  contentChanges,
 }: {
   bufferId: string;
   currentContent: string;
@@ -68,6 +74,7 @@ export function trackBufferHistoryChange({
   previousSelection?: Range;
   skipUndoGrouping?: boolean;
   contentChange?: EditorTextChange;
+  contentChanges?: readonly EditorModelTextChange[];
 }): void {
   if (skipUndoGrouping) {
     trackImmediateBufferHistoryChange({
@@ -81,17 +88,24 @@ export function trackBufferHistoryChange({
   }
 
   const lastTrackedContent = undoGroupTracker.getTrackedContent(bufferId);
-  const contentBeforeChange = lastTrackedContent ?? previousContent ?? currentContent;
+  const contentBeforeChange = contentChanges?.length
+    ? (previousContent ?? currentContent)
+    : (lastTrackedContent ?? previousContent ?? currentContent);
 
-  if (lastTrackedContent === undefined) {
+  if (!contentChanges?.length && lastTrackedContent === undefined) {
     undoGroupTracker.sync(bufferId, contentBeforeChange);
   }
 
-  const historyEntries = undoGroupTracker.track(bufferId, contentBeforeChange, nextContent, {
-    previousCursorPosition,
-    previousSelection,
-    contentChange,
-  });
+  const historyEntries = contentChanges?.length
+    ? undoGroupTracker.trackChanges(bufferId, contentBeforeChange, nextContent, contentChanges, {
+        previousCursorPosition,
+        previousSelection,
+      })
+    : undoGroupTracker.track(bufferId, contentBeforeChange, nextContent, {
+        previousCursorPosition,
+        previousSelection,
+        contentChange,
+      });
   const { pushHistory } = useHistoryStore.getState().actions;
   for (const entry of historyEntries) {
     pushHistory(bufferId, entry);

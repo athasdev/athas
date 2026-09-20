@@ -54,7 +54,13 @@ import EditorContextMenu from "../context-menu/context-menu";
 import { toggleCaseText } from "../utils/text-operations";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
-import type { EditorContentChangeOptions, Position, Range } from "../types/editor.types";
+import type {
+  EditorContentChangeOptions,
+  EditorDocumentChangeBatch,
+  EditorDocumentChangeResult,
+  Position,
+  Range,
+} from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
 import { createEditorSelectionContext } from "../utils/editor-agent-context";
 import { fileOpenBenchmark } from "../utils/file-open-benchmark";
@@ -62,10 +68,7 @@ import { getLanguageIdFromPath } from "../utils/language-id";
 import { editorAPI } from "../extensions/api";
 import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import { syncContainedEditorFontOptions } from "../engines/monaco/contained-editors";
-import {
-  consumeLocalContentSnapshot,
-  rememberLocalContentSnapshot,
-} from "../engines/monaco/content-sync";
+import { isExternalModelUpdate, runWithExternalModelUpdate } from "../engines/monaco/content-sync";
 import {
   clampMonacoHoverWidgets,
   mutationsContainMonacoHoverWidget,
@@ -73,7 +76,10 @@ import {
 } from "../engines/monaco/hover-widgets";
 import { toMonacoLanguageId } from "../engines/monaco/language";
 import { ensureMonacoLanguageTokenizer } from "../engines/monaco/language-contributions";
-import { acquireMonacoModel } from "../engines/monaco/model-lifecycle";
+import {
+  acquireMonacoModel,
+  markMonacoModelContentRevision,
+} from "../engines/monaco/model-lifecycle";
 import { getEditorBottomScrollPadding } from "../engines/monaco/scroll-padding";
 import { getMonacoScrollbarOptions } from "../engines/monaco/scrollbar-options";
 import {
@@ -95,6 +101,7 @@ registerMonacoCodeLensProvider();
 
 const EMPTY_DIAGNOSTICS: Diagnostic[] = [];
 const INACTIVE_CURSOR_POSITION: Position = { line: 0, column: 0, offset: 0 };
+let nextEditorSourceId = 1;
 
 function createBreakpointHoverDecorations(
   hoveredLine: number | null,
@@ -139,6 +146,11 @@ interface MonacoEditorProps {
     previousSelection?: Range,
     options?: EditorContentChangeOptions,
   ) => void;
+  onDocumentChange?: (
+    batch: EditorDocumentChangeBatch,
+    previousCursorPosition?: Position,
+    previousSelection?: Range,
+  ) => EditorDocumentChangeResult;
   onScrollOffsetChange?: (scrollTop: number, scrollLeft: number) => void;
   onModelPositionResolverChange?: (resolver: EditorModelPositionResolver | null) => void;
   onMouseMove?: MouseEventHandler<HTMLDivElement>;
@@ -162,6 +174,7 @@ export function MonacoEditor({
   lineNumberStart,
   lineNumberMap,
   onContentChange,
+  onDocumentChange,
   onScrollOffsetChange,
   onModelPositionResolverChange,
   onMouseMove,
@@ -175,9 +188,9 @@ export function MonacoEditor({
   const modelRef = useRef<Monaco.editor.ITextModel | null>(null);
   const vimAdapterRef = useRef<VimAdapterInstance | null>(null);
   const vimStatusRef = useRef<HTMLDivElement | null>(null);
-  const applyingExternalChangeRef = useRef(false);
-  const previousContentRef = useRef("");
-  const pendingLocalContentSnapshotsRef = useRef<string[]>([]);
+  const sourceIdRef = useRef(`monaco-editor-${nextEditorSourceId++}`);
+  const modelSessionIdRef = useRef("");
+  const appliedContentRevisionRef = useRef(0);
   const decorationsRef = useRef<string[]>([]);
   const breakpointDecorationRef = useRef<string[]>([]);
   const breakpointHoverDecorationRef = useRef<string[]>([]);
@@ -192,6 +205,7 @@ export function MonacoEditor({
   const syncSelectionAgentActionRef = useRef<() => void>(() => {});
   const isPointerSelectingRef = useRef(false);
   const latestContentChangeRef = useRef(onContentChange);
+  const latestDocumentChangeRef = useRef(onDocumentChange);
   const isActiveSurfaceRef = useRef(isActiveSurface);
   const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
   const activeBuffer = useBufferStore(
@@ -199,6 +213,7 @@ export function MonacoEditor({
   );
   const buffer = activeBuffer && activeBuffer.type === "editor" ? activeBuffer : null;
   const content = buffer?.content ?? "";
+  const contentRevision = buffer?.contentRevision ?? 0;
   const filePath = buffer?.path ?? "";
   const languageId = buffer?.languageOverride ?? getLanguageIdFromPath(filePath);
   const monacoLanguageId = toMonacoLanguageId(languageId);
@@ -378,8 +393,9 @@ export function MonacoEditor({
 
   useLayoutEffect(() => {
     latestContentChangeRef.current = onContentChange;
+    latestDocumentChangeRef.current = onDocumentChange;
     isActiveSurfaceRef.current = isActiveSurface;
-  }, [isActiveSurface, onContentChange]);
+  }, [isActiveSurface, onContentChange, onDocumentChange]);
 
   const syncSelectionAgentAction = useCallback(() => {
     const editor = editorRef.current;
@@ -704,8 +720,13 @@ export function MonacoEditor({
       },
     );
 
-    const acquiredModel = acquireMonacoModel(content, monacoLanguageId, modelUri);
+    const acquiredModel = acquireMonacoModel(content, monacoLanguageId, modelUri, contentRevision);
     const model = acquiredModel.model;
+    if (acquiredModel.contentRevision !== contentRevision) {
+      runWithExternalModelUpdate(model, () => model.setValue(content));
+      markMonacoModelContentRevision(model, contentRevision);
+    }
+    modelSessionIdRef.current = acquiredModel.sessionId;
     const editor = monacoEditor.create(container, {
       model,
       automaticLayout: true,
@@ -757,8 +778,7 @@ export function MonacoEditor({
 
     editorRef.current = editor;
     modelRef.current = model;
-    previousContentRef.current = content;
-    pendingLocalContentSnapshotsRef.current = [];
+    appliedContentRevisionRef.current = contentRevision;
     if (filePath && fileOpenBenchmark.has(filePath)) {
       fileOpenBenchmark.mark(filePath, "monaco-created", `${model.getLineCount()} lines`);
     }
@@ -1038,31 +1058,56 @@ export function MonacoEditor({
         selectEntireModel();
       }),
       editor.onDidChangeModelContent((event) => {
-        if (applyingExternalChangeRef.current) return;
-        const nextContent = model.getValue();
-        const previousContent = previousContentRef.current;
+        if (isExternalModelUpdate(model)) return;
         const editorState = useEditorStateStore.getState();
-        previousContentRef.current = nextContent;
-        rememberLocalContentSnapshot(pendingLocalContentSnapshotsRef.current, nextContent);
-        latestContentChangeRef.current?.(
-          nextContent,
-          previousContent,
+        const changes = event.changes.map((change) => ({
+          rangeOffset: change.rangeOffset,
+          rangeLength: change.rangeLength,
+          text: change.text,
+          startLine: change.range.startLineNumber - 1,
+          startColumn: change.range.startColumn - 1,
+          endLine: change.range.endLineNumber - 1,
+          endColumn: change.range.endColumn - 1,
+        }));
+        const batch: EditorDocumentChangeBatch = {
+          sourceId: sourceIdRef.current,
+          modelSessionId: modelSessionIdRef.current,
+          modelVersionId: event.versionId,
+          changes,
+          eol: event.eol === "\r\n" ? "\r\n" : "\n",
+          isEolChange: event.isEolChange,
+          isFlush: event.isFlush,
+          isUndoing: event.isUndoing,
+          isRedoing: event.isRedoing,
+        };
+        const result = latestDocumentChangeRef.current?.(
+          batch,
           editorState.cursorPosition,
           editorState.selection,
-          event.changes.length === 1
-            ? {
-                contentChange: {
-                  rangeOffset: event.changes[0].rangeOffset,
-                  rangeLength: event.changes[0].rangeLength,
-                  text: event.changes[0].text,
-                  startLine: event.changes[0].range.startLineNumber - 1,
-                  startColumn: event.changes[0].range.startColumn - 1,
-                  endLine: event.changes[0].range.endLineNumber - 1,
-                  endColumn: event.changes[0].range.endColumn - 1,
-                },
-              }
-            : undefined,
         );
+        if (result?.synchronized) {
+          appliedContentRevisionRef.current = Math.max(
+            appliedContentRevisionRef.current,
+            result.contentRevision,
+          );
+          markMonacoModelContentRevision(model, result.contentRevision);
+        } else if (result) {
+          const currentBuffer = getBufferById(useBufferStore.getState().buffers, activeBufferId);
+          if (currentBuffer?.type === "editor") {
+            runWithExternalModelUpdate(model, () => model.setValue(currentBuffer.content));
+            appliedContentRevisionRef.current = currentBuffer.contentRevision ?? 0;
+            markMonacoModelContentRevision(model, appliedContentRevisionRef.current);
+          }
+        } else if (latestContentChangeRef.current) {
+          const nextContent = model.getValue();
+          latestContentChangeRef.current(
+            nextContent,
+            undefined,
+            editorState.cursorPosition,
+            editorState.selection,
+            changes.length === 1 ? { contentChange: changes[0] } : undefined,
+          );
+        }
         syncCursorAndSelection();
         syncSelectionAgentActionRef.current();
       }),
@@ -1456,25 +1501,13 @@ export function MonacoEditor({
     const model = modelRef.current;
     if (!editor || !model) return;
 
-    const modelValue = model.getValue();
-    if (modelValue === content) {
-      consumeLocalContentSnapshot(pendingLocalContentSnapshotsRef.current, content);
-      previousContentRef.current = content;
-      return;
-    }
-
-    // React can deliver older store echoes after Monaco has already accepted more typing.
-    if (consumeLocalContentSnapshot(pendingLocalContentSnapshotsRef.current, content)) {
-      return;
-    }
-
-    applyingExternalChangeRef.current = true;
+    if (contentRevision <= appliedContentRevisionRef.current) return;
     const selection = editor.getSelection();
-    model.setValue(content);
+    runWithExternalModelUpdate(model, () => model.setValue(content));
     if (selection) editor.setSelection(selection);
-    previousContentRef.current = content;
-    applyingExternalChangeRef.current = false;
-  }, [content]);
+    appliedContentRevisionRef.current = contentRevision;
+    markMonacoModelContentRevision(model, contentRevision);
+  }, [content, contentRevision]);
 
   useEffect(() => {
     if (!isActiveSurface || readOnly || isPreviewMode) return;

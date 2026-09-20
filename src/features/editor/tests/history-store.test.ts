@@ -63,7 +63,9 @@ describe("history store", () => {
     pushHistory("buffer-1", entry(`${snapshot}3`));
 
     expect(
-      getHistoryState("buffer-1")?.past.map(({ content }) => content[content.length - 1]),
+      getHistoryState("buffer-1")?.past.map((storedEntry) =>
+        "content" in storedEntry ? storedEntry.content[storedEntry.content.length - 1] : undefined,
+      ),
     ).toEqual(["2", "3"]);
   });
 });

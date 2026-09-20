@@ -44,7 +44,12 @@ import {
   rMarkdownChunkShouldPersistOutput,
   updateRMarkdownChunkOutput,
 } from "../notebook/rmarkdown-chunks";
-import type { EditorContentChangeOptions, Position, Range } from "../types/editor.types";
+import type {
+  EditorContentChangeOptions,
+  EditorDocumentChangeBatch,
+  Position,
+  Range,
+} from "../types/editor.types";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
 import { MonacoEditor } from "./monaco-editor";
@@ -159,7 +164,7 @@ const CodeEditor = ({
     useCallback((state) => getBufferById(state.buffers, activeBufferId), [activeBufferId]),
   );
   const editorViewKey = paneId && activeBufferId ? `${paneId}:${activeBufferId}` : activeBufferId;
-  const { handleContentChange } = useEditorAppStore.use.actions();
+  const { handleContentChange, handleDocumentChange } = useEditorAppStore.use.actions();
   const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
   const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
   const codeLensEnabled = useSettingsStore((state) => state.settings.codeLens);
@@ -177,6 +182,14 @@ const CodeEditor = ({
   const onChange = activeBuffer
     ? (onContentChange ?? (isActiveSurface ? handleContentChange : () => {}))
     : () => {};
+  const onDocumentChange =
+    activeBuffer && !onContentChange
+      ? (
+          batch: EditorDocumentChangeBatch,
+          previousCursorPosition?: Position,
+          previousSelection?: Range,
+        ) => handleDocumentChange(activeBuffer.id, batch, previousCursorPosition, previousSelection)
+      : undefined;
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
   const showNotebookEditor =
     activeBuffer?.type === "editor" && filePath.toLowerCase().endsWith(".ipynb");
@@ -603,7 +616,8 @@ const CodeEditor = ({
                 currentHighlightIndex={currentHighlightIndex}
                 lineNumberStart={lineNumberStart}
                 lineNumberMap={lineNumberMap}
-                onContentChange={onChange}
+                onContentChange={onContentChange ? onChange : undefined}
+                onDocumentChange={onDocumentChange}
                 onScrollOffsetChange={syncLspOverlayTransform}
                 onModelPositionResolverChange={handleModelPositionResolverChange}
               />

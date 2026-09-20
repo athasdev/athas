@@ -14,8 +14,6 @@ interface UseLspIntegrationOptions {
   value: string;
 }
 
-const DOCUMENT_CHANGE_DEBOUNCE_MS = 75;
-
 export const useLspIntegration = ({
   enabled = true,
   filePath,
@@ -29,10 +27,7 @@ export const useLspIntegration = ({
     () => Boolean(activeFilePath && extensionRegistry.isLspSupported(activeFilePath)),
     [activeFilePath, installedExtensions],
   );
-  const documentChangeTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  const documentVersionsRef = useRef<Map<string, number>>(new Map());
   const latestValueRef = useRef(value);
-  const openedDocumentsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     latestValueRef.current = value;
@@ -53,7 +48,7 @@ export const useLspIntegration = ({
       );
       if (isStillOpen) return;
 
-      if (openedDocumentsRef.current.has(filePath)) {
+      if (lspClient.isDocumentOpen(filePath)) {
         lspClient.notifyDocumentClose(filePath).catch((error) => {
           console.error("LSP document close error:", error);
         });
@@ -62,23 +57,21 @@ export const useLspIntegration = ({
         });
       }
 
-      documentVersionsRef.current.delete(filePath);
-      openedDocumentsRef.current.delete(filePath);
     };
 
-    if (openedDocumentsRef.current.has(filePath)) {
+    if (lspClient.isDocumentOpen(filePath)) {
       return cleanupDocument;
     }
+
+    let cancelled = false;
 
     const initializeLsp = async () => {
       try {
         logger.debug("LspIntegration", `Starting LSP for ${filePath} in ${workspacePath}`);
-        documentVersionsRef.current.set(filePath, 1);
         const started = await lspClient.startForFile(filePath, workspacePath);
-        if (!started) return;
+        if (!started || cancelled) return;
 
         await lspClient.notifyDocumentOpen(filePath, latestValueRef.current);
-        openedDocumentsRef.current.add(filePath);
         logger.debug("LspIntegration", `LSP started and document opened for ${filePath}`);
       } catch (error) {
         console.error("LSP initialization error:", error);
@@ -90,36 +83,9 @@ export const useLspIntegration = ({
     });
 
     return () => {
+      cancelled = true;
       cancelInitialization();
       cleanupDocument();
     };
   }, [enabled, filePath, isLspSupported, lspClient, rootFolderPath]);
-
-  useEffect(() => {
-    if (!enabled || !filePath || !isLspSupported) return;
-    if (!openedDocumentsRef.current.has(filePath)) return;
-
-    if (documentChangeTimerRef.current) {
-      clearTimeout(documentChangeTimerRef.current);
-    }
-
-    documentChangeTimerRef.current = setTimeout(() => {
-      if (!openedDocumentsRef.current.has(filePath)) return;
-
-      const currentVersion = documentVersionsRef.current.get(filePath) || 1;
-      const newVersion = currentVersion + 1;
-      documentVersionsRef.current.set(filePath, newVersion);
-
-      lspClient.notifyDocumentChange(filePath, value, newVersion).catch((error) => {
-        console.error("LSP document change error:", error);
-      });
-    }, DOCUMENT_CHANGE_DEBOUNCE_MS);
-
-    return () => {
-      if (documentChangeTimerRef.current) {
-        clearTimeout(documentChangeTimerRef.current);
-        documentChangeTimerRef.current = undefined;
-      }
-    };
-  }, [enabled, filePath, isLspSupported, lspClient, value]);
 };

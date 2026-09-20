@@ -6,7 +6,7 @@ import {
   WarningCircleIcon,
 } from "@/ui/icons";
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { getAcpAuthenticationCommand } from "@/features/ai/lib/acp-authentication";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
@@ -127,6 +127,7 @@ function CodeBlock({
   languageHint: string;
   onApplyCode?: (code: string, language?: string) => void;
 }) {
+  const highlightRequestKey = `ai-code-highlight:${useId()}`;
   const explicitLanguage = languageHint ? normalizeCodeFenceLanguage(languageHint) : "";
   const inferredLanguage = explicitLanguage || inferCodeLanguage(code);
   const languageLabel = explicitLanguage || (inferredLanguage !== "clike" ? inferredLanguage : "");
@@ -138,7 +139,11 @@ function CodeBlock({
     setSegments(null);
 
     const loadHighlighting = async () => {
-      const nextSegments = await getCodeHighlightSegments(code, inferredLanguage);
+      const nextSegments = await getCodeHighlightSegments(
+        code,
+        inferredLanguage,
+        highlightRequestKey,
+      );
       if (!cancelled) {
         setSegments(nextSegments);
       }
@@ -149,7 +154,7 @@ function CodeBlock({
     return () => {
       cancelled = true;
     };
-  }, [code, inferredLanguage]);
+  }, [code, highlightRequestKey, inferredLanguage]);
 
   const renderedCode = useMemo(() => renderHighlightedCode(code, segments || []), [code, segments]);
 

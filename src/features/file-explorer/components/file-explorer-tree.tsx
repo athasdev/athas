@@ -34,10 +34,12 @@ import {
 } from "@/features/file-explorer/lib/file-tree-git-status";
 import {
   collectGitIgnoreFileReferences,
-  createFileTreeGitIgnoreRules,
+  getCachedFileTreeGitIgnoreRules,
+  invalidateFileTreeGitIgnoreCache,
   isPathGitIgnoredByFileTreeRules,
+  readFileTreeGitIgnoreContents,
+  subscribeToFileTreeGitIgnoreCacheInvalidation,
   type FileTreeGitIgnoreRules,
-  type GitIgnoreFileContent,
 } from "@/features/file-explorer/lib/file-tree-gitignore";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
@@ -191,6 +193,7 @@ function FileExplorerTreeComponent({
   const documentRef = useRef<Document>(document);
 
   const [gitIgnoreRules, setGitIgnoreRules] = useState<FileTreeGitIgnoreRules | null>(null);
+  const [gitIgnoreCacheVersion, setGitIgnoreCacheVersion] = useState(0);
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
   const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
 
@@ -318,6 +321,19 @@ function FileExplorerTreeComponent({
     [files, rootFolderPath],
   );
 
+  useEffect(
+    () =>
+      subscribeToFileTreeGitIgnoreCacheInvalidation((path) => {
+        if (!rootFolderPath || (path && !pathStartsWithRoot(path, rootFolderPath))) return;
+        setGitIgnoreCacheVersion((version) => version + 1);
+      }),
+    [rootFolderPath],
+  );
+
+  useEffect(() => {
+    invalidateFileTreeGitIgnoreCache();
+  }, [rootFolderPath]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -327,26 +343,10 @@ function FileExplorerTreeComponent({
         return;
       }
 
-      const ignoreFiles = await Promise.all(
-        gitIgnoreFileReferences.map(async (file): Promise<GitIgnoreFileContent | null> => {
-          try {
-            return {
-              ...file,
-              content: await readFile(file.path),
-            };
-          } catch {
-            return null;
-          }
-        }),
-      );
+      const ignoreFiles = await readFileTreeGitIgnoreContents(gitIgnoreFileReferences, readFile);
 
       if (!cancelled) {
-        setGitIgnoreRules(
-          createFileTreeGitIgnoreRules(
-            rootFolderPath,
-            ignoreFiles.filter((file): file is GitIgnoreFileContent => file !== null),
-          ),
-        );
+        setGitIgnoreRules(getCachedFileTreeGitIgnoreRules(rootFolderPath, ignoreFiles));
       }
     };
 
@@ -355,7 +355,7 @@ function FileExplorerTreeComponent({
     return () => {
       cancelled = true;
     };
-  }, [gitIgnoreFileReferences, rootFolderPath]);
+  }, [gitIgnoreCacheVersion, gitIgnoreFileReferences, rootFolderPath]);
 
   const gitStatus =
     currentWorkspaceRepoPath && currentWorkspaceRepoPath === rootFolderPath

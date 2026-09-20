@@ -27,6 +27,23 @@ interface GitIgnoreRuleSet {
   matcher: IgnoreMatcher;
 }
 
+type GitIgnoreReader = (path: string) => Promise<string>;
+type GitIgnoreCacheListener = (path: string | undefined) => void;
+interface GitIgnoreContentCacheEntry {
+  promise: Promise<GitIgnoreFileContent | null>;
+}
+
+const referenceCache = new WeakMap<FileEntry, GitIgnoreFileReference[]>();
+const contentCache = new Map<string, GitIgnoreContentCacheEntry>();
+const matcherCache = new Map<string, { content: string; matcher: IgnoreMatcher }>();
+const rulesCache = new Map<
+  string,
+  { ignoreFiles: readonly GitIgnoreFileContent[]; rules: FileTreeGitIgnoreRules | null }
+>();
+const cacheListeners = new Set<GitIgnoreCacheListener>();
+const MAX_CACHED_GITIGNORE_FILES = 256;
+const MAX_CACHED_GITIGNORE_ROOTS = 16;
+
 export interface FileTreeGitIgnoreRules {
   rootFolderPath: string;
   ruleSets: GitIgnoreRuleSet[];
@@ -54,6 +71,45 @@ function addGitIgnoreContent(matcher: IgnoreMatcher, content: string): void {
   }
 }
 
+function trimOldestCacheEntries<Key, Value>(cache: Map<Key, Value>, maxSize: number): void {
+  while (cache.size > maxSize) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey === undefined) return;
+    cache.delete(oldestKey);
+  }
+}
+
+function getCachedIgnoreMatcher(file: GitIgnoreFileContent): IgnoreMatcher {
+  const cacheKey = normalizePath(stripTrailingPathSeparators(file.path));
+  const cached = matcherCache.get(cacheKey);
+  if (cached?.content === file.content) {
+    matcherCache.delete(cacheKey);
+    matcherCache.set(cacheKey, cached);
+    return cached.matcher;
+  }
+
+  const matcher = ignore({ allowRelativePaths: true });
+  addGitIgnoreContent(matcher, file.content);
+  matcherCache.set(cacheKey, { content: file.content, matcher });
+  trimOldestCacheEntries(matcherCache, MAX_CACHED_GITIGNORE_FILES);
+  return matcher;
+}
+
+function collectGitIgnoreReferencesForEntry(entry: FileEntry): GitIgnoreFileReference[] {
+  const cached = referenceCache.get(entry);
+  if (cached) return cached;
+
+  const references: GitIgnoreFileReference[] = [];
+  if (entry.name === GITIGNORE_FILE_NAME && !entry.isDir) {
+    references.push({ path: entry.path, directoryPath: getDirName(entry.path) });
+  }
+  for (const child of entry.children ?? []) {
+    references.push(...collectGitIgnoreReferencesForEntry(child));
+  }
+  referenceCache.set(entry, references);
+  return references;
+}
+
 export function collectGitIgnoreFileReferences(
   files: FileEntry[],
   rootFolderPath: string | undefined,
@@ -73,21 +129,87 @@ export function collectGitIgnoreFileReferences(
 
   addReference(joinPath(rootFolderPath, GITIGNORE_FILE_NAME));
 
-  const walk = (entries: FileEntry[]) => {
-    for (const entry of entries) {
-      if (entry.name === GITIGNORE_FILE_NAME && !entry.isDir) {
-        addReference(entry.path);
-      }
-
-      if (entry.children) {
-        walk(entry.children);
-      }
+  for (const entry of files) {
+    for (const reference of collectGitIgnoreReferencesForEntry(entry)) {
+      addReference(reference.path);
     }
-  };
-
-  walk(files);
+  }
 
   return [...references.values()].sort(compareIgnoreReferences);
+}
+
+export async function readFileTreeGitIgnoreContents(
+  references: readonly GitIgnoreFileReference[],
+  read: GitIgnoreReader,
+): Promise<GitIgnoreFileContent[]> {
+  const ignoreFiles = await Promise.all(
+    references.map((reference) => {
+      const cacheKey = normalizePath(stripTrailingPathSeparators(reference.path));
+      let entry = contentCache.get(cacheKey);
+      if (!entry) {
+        const newEntry: GitIgnoreContentCacheEntry = { promise: Promise.resolve(null) };
+        newEntry.promise = read(reference.path)
+          .then((content) =>
+            contentCache.get(cacheKey) === newEntry ? { ...reference, content } : null,
+          )
+          .catch(() => null);
+        entry = newEntry;
+        contentCache.set(cacheKey, newEntry);
+        trimOldestCacheEntries(contentCache, MAX_CACHED_GITIGNORE_FILES);
+      } else {
+        contentCache.delete(cacheKey);
+        contentCache.set(cacheKey, entry);
+      }
+      return entry.promise;
+    }),
+  );
+
+  return ignoreFiles.filter((file): file is GitIgnoreFileContent => file !== null);
+}
+
+export function invalidateFileTreeGitIgnoreCache(path?: string): void {
+  if (path) {
+    const cacheKey = normalizePath(stripTrailingPathSeparators(path));
+    const pathParts = cacheKey.split("/");
+    if (pathParts[pathParts.length - 1] !== GITIGNORE_FILE_NAME) return;
+    contentCache.delete(cacheKey);
+    matcherCache.delete(cacheKey);
+    for (const [rootPath, cached] of rulesCache) {
+      if (cached.ignoreFiles.some((file) => normalizePath(file.path) === cacheKey)) {
+        rulesCache.delete(rootPath);
+      }
+    }
+  } else {
+    contentCache.clear();
+    matcherCache.clear();
+    rulesCache.clear();
+  }
+
+  for (const listener of cacheListeners) {
+    listener(path);
+  }
+}
+
+export function subscribeToFileTreeGitIgnoreCacheInvalidation(
+  listener: GitIgnoreCacheListener,
+): () => void {
+  cacheListeners.add(listener);
+  return () => cacheListeners.delete(listener);
+}
+
+function hasSameIgnoreFiles(
+  left: readonly GitIgnoreFileContent[],
+  right: readonly GitIgnoreFileContent[],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every(
+      (file, index) =>
+        file.path === right[index]?.path &&
+        file.directoryPath === right[index]?.directoryPath &&
+        file.content === right[index]?.content,
+    )
+  );
 }
 
 export function createFileTreeGitIgnoreRules(
@@ -99,15 +221,10 @@ export function createFileTreeGitIgnoreRules(
   const ruleSets = ignoreFiles
     .filter((file) => pathStartsWithRoot(file.directoryPath, rootFolderPath))
     .sort(compareIgnoreReferences)
-    .map((file) => {
-      const matcher = ignore({ allowRelativePaths: true });
-      addGitIgnoreContent(matcher, file.content);
-
-      return {
-        directoryPath: file.directoryPath,
-        matcher,
-      };
-    });
+    .map((file) => ({
+      directoryPath: file.directoryPath,
+      matcher: getCachedIgnoreMatcher(file),
+    }));
 
   if (ruleSets.length === 0) return null;
 
@@ -115,6 +232,24 @@ export function createFileTreeGitIgnoreRules(
     rootFolderPath,
     ruleSets,
   };
+}
+
+export function getCachedFileTreeGitIgnoreRules(
+  rootFolderPath: string | undefined,
+  ignoreFiles: GitIgnoreFileContent[],
+): FileTreeGitIgnoreRules | null {
+  if (!rootFolderPath) return null;
+
+  const cacheKey = normalizePath(stripTrailingPathSeparators(rootFolderPath));
+  const cached = rulesCache.get(cacheKey);
+  if (cached && hasSameIgnoreFiles(cached.ignoreFiles, ignoreFiles)) {
+    return cached.rules;
+  }
+
+  const rules = createFileTreeGitIgnoreRules(rootFolderPath, ignoreFiles);
+  rulesCache.set(cacheKey, { ignoreFiles: [...ignoreFiles], rules });
+  trimOldestCacheEntries(rulesCache, MAX_CACHED_GITIGNORE_ROOTS);
+  return rules;
 }
 
 function toMatcherPath(fullPath: string, directoryPath: string, isDir: boolean): string | null {

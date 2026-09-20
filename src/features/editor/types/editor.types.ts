@@ -26,6 +26,37 @@ export interface EditorTextChange {
   endColumn?: number;
 }
 
+export interface EditorModelTextChange extends EditorTextChange {
+  startLine: number;
+  startColumn: number;
+  endLine: number;
+  endColumn: number;
+}
+
+export interface EditorDocumentChangeBatch {
+  sourceId: string;
+  modelSessionId: string;
+  modelVersionId: number;
+  changes: readonly EditorModelTextChange[];
+  eol: "\n" | "\r\n";
+  isEolChange: boolean;
+  isFlush: boolean;
+  isUndoing: boolean;
+  isRedoing: boolean;
+  fullContent?: string;
+}
+
+export interface EditorDocumentChangeEvent extends EditorDocumentChangeBatch {
+  bufferId: string;
+  filePath: string;
+}
+
+export interface EditorDocumentChangeResult {
+  accepted: boolean;
+  synchronized: boolean;
+  contentRevision: number;
+}
+
 export interface EditorContentChangeOptions {
   contentAlreadyApplied?: boolean;
   skipUndoGrouping?: boolean;

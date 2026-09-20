@@ -5,8 +5,11 @@ import type {
   BufferHistory,
   HistoryEntry,
   HistoryState,
+  PatchHistoryEntry,
+  StoredHistoryEntry,
 } from "@/features/editor/types/history.types";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { applyHistoryPatchBatches } from "../history/history-patches";
 
 interface HistoryStoreState {
   bufferHistories: BufferHistory;
@@ -14,7 +17,7 @@ interface HistoryStoreState {
 }
 
 interface HistoryActions {
-  pushHistory: (bufferId: string, entry: HistoryEntry) => void;
+  pushHistory: (bufferId: string, entry: StoredHistoryEntry) => void;
   undo: (bufferId: string, currentEntry?: HistoryEntry) => HistoryEntry | null;
   redo: (bufferId: string, currentEntry?: HistoryEntry) => HistoryEntry | null;
   canUndo: (bufferId: string) => boolean;
@@ -33,7 +36,28 @@ const createDefaultHistoryState = (maxHistorySize = DEFAULT_MAX_HISTORY_SIZE): H
   maxHistorySize,
 });
 
-function cloneHistoryEntry(entry: HistoryEntry): HistoryEntry {
+function isPatchHistoryEntry(entry: StoredHistoryEntry): entry is PatchHistoryEntry {
+  return "kind" in entry && entry.kind === "patch";
+}
+
+function cloneStoredHistoryEntry(entry: StoredHistoryEntry): StoredHistoryEntry {
+  if (isPatchHistoryEntry(entry)) {
+    return {
+      ...entry,
+      patches: entry.patches.map((batch) => ({
+        ...batch,
+        changes: batch.changes.map((change) => ({ ...change })),
+      })),
+      cursorPosition: entry.cursorPosition ? { ...entry.cursorPosition } : undefined,
+      selection: entry.selection
+        ? {
+            start: { ...entry.selection.start },
+            end: { ...entry.selection.end },
+          }
+        : undefined,
+    };
+  }
+
   return {
     ...entry,
     cursorPosition: entry.cursorPosition ? { ...entry.cursorPosition } : undefined,
@@ -46,8 +70,42 @@ function cloneHistoryEntry(entry: HistoryEntry): HistoryEntry {
   };
 }
 
-function getHistoryEntryBytes(entry: HistoryEntry): number {
-  return entry.content.length * 2;
+function cloneHistoryEntry(entry: HistoryEntry): HistoryEntry {
+  return cloneStoredHistoryEntry(entry) as HistoryEntry;
+}
+
+function getHistoryEntryBytes(entry: StoredHistoryEntry): number {
+  if (!isPatchHistoryEntry(entry)) return entry.content.length * 2;
+  return entry.patches.reduce(
+    (total, batch) =>
+      total +
+      batch.changes.reduce(
+        (batchTotal, change) =>
+          batchTotal + (change.beforeText.length + change.afterText.length) * 2 + 16,
+        0,
+      ),
+    0,
+  );
+}
+
+function resolvePatchEntry(
+  entry: PatchHistoryEntry,
+  currentEntry: HistoryEntry,
+  direction: "forward" | "reverse",
+): HistoryEntry | null {
+  const content = applyHistoryPatchBatches(currentEntry.content, entry.patches, direction);
+  if (content === null) return null;
+  return {
+    content,
+    cursorPosition: entry.cursorPosition ? { ...entry.cursorPosition } : undefined,
+    selection: entry.selection
+      ? {
+          start: { ...entry.selection.start },
+          end: { ...entry.selection.end },
+        }
+      : undefined,
+    timestamp: entry.timestamp,
+  };
 }
 
 function trimHistoryToByteBudget(history: HistoryState): void {
@@ -75,7 +133,7 @@ export const useHistoryStore = createSelectors(
       bufferHistories: {},
 
       actions: {
-        pushHistory: (bufferId: string, entry: HistoryEntry) => {
+        pushHistory: (bufferId: string, entry: StoredHistoryEntry) => {
           set((state) => {
             if (!state.bufferHistories[bufferId]) {
               state.bufferHistories[bufferId] = createDefaultHistoryState();
@@ -84,7 +142,12 @@ export const useHistoryStore = createSelectors(
             const history = state.bufferHistories[bufferId];
             const lastEntry = history.past[history.past.length - 1];
 
-            if (lastEntry?.content === entry.content) {
+            if (
+              lastEntry &&
+              !isPatchHistoryEntry(lastEntry) &&
+              !isPatchHistoryEntry(entry) &&
+              lastEntry.content === entry.content
+            ) {
               return;
             }
 
@@ -113,12 +176,26 @@ export const useHistoryStore = createSelectors(
           set((state) => {
             const hist = state.bufferHistories[bufferId];
             if (hist && hist.past.length > 0) {
-              const lastEntry = hist.past.pop();
+              const lastEntry = hist.past[hist.past.length - 1];
               if (lastEntry) {
-                if (currentEntry) {
-                  hist.future.push(cloneHistoryEntry(currentEntry));
+                if (isPatchHistoryEntry(lastEntry)) {
+                  if (!currentEntry) return;
+                  const resolved = resolvePatchEntry(lastEntry, currentEntry, "reverse");
+                  if (!resolved) return;
+                  hist.past.pop();
+                  hist.future.push({
+                    ...cloneStoredHistoryEntry(lastEntry),
+                    cursorPosition: currentEntry.cursorPosition,
+                    selection: currentEntry.selection,
+                  });
+                  entry = resolved;
+                } else {
+                  hist.past.pop();
+                  if (currentEntry) {
+                    hist.future.push(cloneHistoryEntry(currentEntry));
+                  }
+                  entry = cloneHistoryEntry(lastEntry);
                 }
-                entry = cloneHistoryEntry(lastEntry);
                 trimHistoryToByteBudget(hist);
               }
             }
@@ -138,12 +215,26 @@ export const useHistoryStore = createSelectors(
           set((state) => {
             const hist = state.bufferHistories[bufferId];
             if (hist && hist.future.length > 0) {
-              const nextEntry = hist.future.pop();
+              const nextEntry = hist.future[hist.future.length - 1];
               if (nextEntry) {
-                if (currentEntry) {
-                  hist.past.push(cloneHistoryEntry(currentEntry));
+                if (isPatchHistoryEntry(nextEntry)) {
+                  if (!currentEntry) return;
+                  const resolved = resolvePatchEntry(nextEntry, currentEntry, "forward");
+                  if (!resolved) return;
+                  hist.future.pop();
+                  hist.past.push({
+                    ...cloneStoredHistoryEntry(nextEntry),
+                    cursorPosition: currentEntry.cursorPosition,
+                    selection: currentEntry.selection,
+                  });
+                  entry = resolved;
+                } else {
+                  hist.future.pop();
+                  if (currentEntry) {
+                    hist.past.push(cloneHistoryEntry(currentEntry));
+                  }
+                  entry = cloneHistoryEntry(nextEntry);
                 }
-                entry = cloneHistoryEntry(nextEntry);
                 trimHistoryToByteBudget(hist);
               }
             }
