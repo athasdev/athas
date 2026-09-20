@@ -133,8 +133,10 @@ async fn format_with_generic(
                   let formatted = if output_method == "stdout" {
                      String::from_utf8_lossy(&output.stdout).to_string()
                   } else {
-                     // For file output, read the file (TODO: implement file-based formatting)
-                     content.to_string()
+                     // For file output, read the formatted file
+                     let file_path =
+                        file_path.ok_or("file_path required for file output method")?;
+                     std::fs::read_to_string(file_path).unwrap_or_else(|_| content.to_string())
                   };
 
                   Ok(FormatResponse {
