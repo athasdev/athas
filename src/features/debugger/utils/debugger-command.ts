@@ -23,8 +23,11 @@ const joinCommand = (parts: Array<string | undefined>) =>
     .map(quoteShellArg)
     .join(" ");
 
-export function buildDebugTerminalCommand(args: string[], interpretedByShell = false): string {
-  return interpretedByShell ? args.join(" ") : joinCommand(args);
+export function buildDebugTerminalCommand(args: string[]): string {
+  // Always quote. A debug adapter can set argsCanBeInterpretedByShell, but
+  // honoring that flag would splice adapter-controlled shell metacharacters
+  // straight into the user's terminal.
+  return joinCommand(args);
 }
 
 export function inferDebuggerRuntime(file?: DebuggableFile | null): DebuggerRuntime {

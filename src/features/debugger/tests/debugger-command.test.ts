@@ -27,12 +27,15 @@ describe("debugger command helpers", () => {
     expect(buildDebugCommand(config)).toBe("bun --inspect-brk /repo/src/main.ts");
   });
 
-  test("quotes debug adapter terminal arguments unless they are shell-ready", () => {
+  test("quotes debug adapter terminal arguments even when shell-ready", () => {
     expect(buildDebugTerminalCommand(["java", "-cp", "/tmp/my app", "Main"])).toBe(
       "java -cp '/tmp/my app' Main",
     );
-    expect(buildDebugTerminalCommand(["java", "-cp '/tmp/my app' Main"], true)).toBe(
-      "java -cp '/tmp/my app' Main",
+    expect(buildDebugTerminalCommand(["java", "-cp '/tmp/my app' Main"])).toBe(
+      `java '-cp '\\''/tmp/my app'\\'' Main'`,
+    );
+    expect(buildDebugTerminalCommand(["run", "$(touch /tmp/pwned)"])).toBe(
+      `run '$(touch /tmp/pwned)'`,
     );
   });
 
