@@ -228,7 +228,7 @@ function PlainSelect({
               data-prevent-dialog-escape="true"
               className={cn(
                 menuSurfaceVariants(),
-                "w-(--anchor-width) max-w-(--available-width) min-w-36 overflow-hidden text-foreground duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+                "w-(--anchor-width) max-w-(--available-width) min-w-36 overflow-hidden text-foreground",
                 OVERLAY_MIN_SIZES[menuSize],
                 !menuAnimated && "duration-0 data-ending-style:transform-none",
                 menuWidth === "content" && "w-max min-w-(--anchor-width) max-w-(--available-width)",

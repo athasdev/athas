@@ -8,6 +8,7 @@ import {
   FunctionIcon,
   GridIcon,
   OpenExternalIcon,
+  XIcon,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
@@ -30,7 +31,7 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { EmptyState } from "@/ui/empty";
-import { SidebarHeader, SidebarIconButton, SidebarSearchPopover, SidebarPanel } from "@/ui/sidebar";
+import { SidebarHeader, SidebarIconButton, SidebarFilterBar, SidebarPanel } from "@/ui/sidebar";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Spinner } from "@/ui/spinner";
 import { useDocumentOutline } from "../hooks/use-document-outline";
@@ -73,7 +74,7 @@ function matchesOutlineFilter(kind: string, selectedFilters: Set<OutlineFilter>)
 
 export function OutlineSidebar() {
   const [query, setQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedFilters, setSelectedFilters] = useState<Set<OutlineFilter>>(
     () => new Set(OUTLINE_FILTER_OPTIONS.map((option) => option.id)),
   );
@@ -189,7 +190,8 @@ export function OutlineSidebar() {
   };
 
   const focusSearch = () => {
-    setIsSearchOpen(true);
+    searchInputRef.current?.focus();
+    searchInputRef.current?.select();
   };
 
   const handleSidebarKeyDown = (event: React.KeyboardEvent) => {
@@ -273,56 +275,83 @@ export function OutlineSidebar() {
 
   return (
     <SidebarPanel onKeyDownCapture={handleSidebarKeyDown}>
-      <SidebarHeader>
-        <SidebarSearchPopover
+      {isSupported && symbols.length > 0 ? (
+        <SidebarFilterBar
+          ref={searchInputRef}
           value={query}
           onChange={setQuery}
-          open={isSearchOpen}
-          onOpenChange={setIsSearchOpen}
-          aria-label="Search outline"
+          aria-label="Filter outline"
+          placeholder="Filter outline"
+          autoCapitalize="none"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
           onKeyDown={(event) => {
-            if (event.key === "ArrowDown" && visibleSymbols.length > 0) {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              setQuery("");
+            } else if (event.key === "ArrowDown" && visibleSymbols.length > 0) {
               event.preventDefault();
               focusSymbolAtIndex(0);
             }
           }}
+          actionsLabel="Outline controls"
+          actions={
+            <>
+              {query ? (
+                <SidebarIconButton
+                  tooltip="Clear filter"
+                  aria-label="Clear filter"
+                  onClick={() => {
+                    setQuery("");
+                    searchInputRef.current?.focus();
+                  }}
+                >
+                  <XIcon />
+                </SidebarIconButton>
+              ) : null}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <SidebarIconButton
+                      active={!areAllFiltersSelected}
+                      tooltip="Filter symbol kinds"
+                      aria-label="Filter symbol kinds"
+                    />
+                  }
+                >
+                  <FilterIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    disabled={areAllFiltersSelected}
+                    closeOnClick={false}
+                    onClick={setAllFilters}
+                  >
+                    <FilterIcon />
+                    Show All
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {OUTLINE_FILTER_OPTIONS.map((option) => (
+                    <DropdownMenuCheckboxItem
+                      key={option.id}
+                      checked={selectedFilters.has(option.id)}
+                      closeOnClick={false}
+                      onCheckedChange={() => toggleFilter(option.id)}
+                    >
+                      {option.icon}
+                      {option.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          }
         />
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <SidebarIconButton
-                active={!areAllFiltersSelected}
-                tooltip="Filter outline"
-                aria-label="Filter outline"
-              />
-            }
-          >
-            <FilterIcon />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem
-              disabled={areAllFiltersSelected}
-              closeOnClick={false}
-              onClick={setAllFilters}
-            >
-              <FilterIcon />
-              Show All
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {OUTLINE_FILTER_OPTIONS.map((option) => (
-              <DropdownMenuCheckboxItem
-                key={option.id}
-                checked={selectedFilters.has(option.id)}
-                closeOnClick={false}
-                onCheckedChange={() => toggleFilter(option.id)}
-              >
-                {option.icon}
-                {option.label}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarHeader>
+      ) : (
+        <SidebarHeader>Outline</SidebarHeader>
+      )}
 
       <ScrollArea
         fill="flex"
@@ -363,7 +392,6 @@ export function OutlineSidebar() {
                     }
                   }}
                   symbol={symbol}
-                  compact
                   selected={symbol.id === focusedSymbolId}
                   collapsed={collapsedIds.has(symbol.id)}
                   onClick={handleSymbolClick}

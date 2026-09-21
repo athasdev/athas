@@ -19,9 +19,9 @@ import { useGlobalSearchSessionStore } from "../stores/global-search-session.sto
 import { buildSearchExcerpts } from "../utils/search-excerpts";
 import { replaceAllInSources, replaceNextInSource } from "../utils/source-replace";
 import { GlobalSearchResults } from "./global-search-results";
+import type { MultibufferWorkspaceHandle } from "@/features/editor/components/multibuffer/multibuffer-workspace";
 import { GlobalSearchState } from "./global-search-state";
 import { GlobalSearchToolbar } from "./global-search-toolbar";
-import type { SearchExcerptScroller } from "./search-excerpt-results";
 
 const DEFAULT_CONTEXT_LINES = 2;
 const EXPANDED_CONTEXT_LINES = 7;
@@ -55,7 +55,7 @@ const GlobalSearchBuffer = () => {
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const pendingFileNavigatorPathRef = useRef<string | null>(null);
-  const scrollToExcerptRef = useRef<SearchExcerptScroller | null>(null);
+  const workspaceRef = useRef<MultibufferWorkspaceHandle | null>(null);
   const [isReplaceVisible, setIsReplaceVisible] = useState(false);
   const { replaceQuery, setReplaceQuery } = useGlobalSearchSessionStore(
     useShallow((state) => ({
@@ -217,7 +217,7 @@ const GlobalSearchBuffer = () => {
       const itemKey = navigationItems[index]?.path;
       const match = itemKey ? matchIndex.get(itemKey) : null;
       if (!match) return;
-      scrollToExcerptRef.current?.(match.excerptIndex, "auto");
+      workspaceRef.current?.scrollToSection(match.filePath, "nearest");
     },
     listenGlobally: false,
     resetKey: searchKey,
@@ -251,7 +251,7 @@ const GlobalSearchBuffer = () => {
 
       pendingFileNavigatorPathRef.current = null;
 
-      scrollToExcerptRef.current?.(excerptIndex, "start");
+      workspaceRef.current?.scrollToSection(filePath, "start");
     },
     [excerptIndexByFilePath],
   );
@@ -265,7 +265,7 @@ const GlobalSearchBuffer = () => {
 
     pendingFileNavigatorPathRef.current = null;
     const frame = requestAnimationFrame(() => {
-      scrollToExcerptRef.current?.(excerptIndex, "start");
+      workspaceRef.current?.scrollToSection(filePath, "start");
     });
 
     return () => cancelAnimationFrame(frame);
@@ -550,9 +550,8 @@ const GlobalSearchBuffer = () => {
       <div className="relative min-h-0 flex-1 overflow-hidden bg-background">
         {hasResults && !showInitialBusy ? (
           <GlobalSearchResults
+            workspaceRef={workspaceRef}
             scrollContainerRef={setScrollContainer}
-            scrollElement={scrollElement}
-            scrollToExcerptRef={scrollToExcerptRef}
             loadMoreRef={loadMoreRef}
             fileNavigatorItems={fileNavigatorItems}
             selectedFileNavigatorKey={selectedFileNavigatorKey}
@@ -561,6 +560,7 @@ const GlobalSearchBuffer = () => {
             onFileNavigatorViewModeChange={setFileNavigatorViewMode}
             navigatorSearchResetKey={searchKey}
             showFileNavigator={isFileNavigatorVisible}
+            onShowFileNavigatorChange={setIsFileNavigatorVisible}
             excerpts={excerpts}
             selectedItemKey={selectedItemKey}
             onOpen={handleFileClick}

@@ -72,7 +72,7 @@ function SplitDiffCodePanel({
         })}
       </div>
 
-      <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
+      <div className="min-w-0 flex-1 select-text overflow-x-auto overflow-y-hidden">
         <div className="min-w-max">
           {lines.map((line, index) => {
             const meta = getSplitLineMeta(line, side);

@@ -21,16 +21,21 @@ describe("MultibufferFileHeader", () => {
     expect(markup).toContain("sticky top-0");
   });
 
-  it("can delegate sticky positioning to a virtualized owner", () => {
-    const markup = renderToStaticMarkup(
+  it("renders a collapse control only when the owner can toggle the section", () => {
+    const collapsible = renderToStaticMarkup(
       <MultibufferFileHeader
         filePath="src/file.ts"
         fileName="file.ts"
         onOpen={vi.fn()}
-        sticky={false}
+        onToggle={vi.fn()}
+        expanded={false}
       />,
     );
+    const plain = renderToStaticMarkup(
+      <MultibufferFileHeader filePath="src/file.ts" fileName="file.ts" onOpen={vi.fn()} />,
+    );
 
-    expect(markup).not.toContain("sticky top-0");
+    expect(collapsible).toContain('aria-expanded="false"');
+    expect(plain).not.toContain("aria-expanded");
   });
 });

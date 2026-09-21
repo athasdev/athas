@@ -1,6 +1,5 @@
 import { ChevronDownIcon, ChevronRightIcon } from "@/ui/icons";
 import { memo, type ReactNode } from "react";
-import { cva } from "class-variance-authority";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { cn } from "@/utils/cn";
 
@@ -14,34 +13,8 @@ interface MultibufferFileHeaderProps {
   openAriaLabel?: string;
   trailing?: ReactNode;
   actions?: ReactNode;
-  surface?: "card" | "section";
   showFileIcon?: boolean;
-  sticky?: boolean;
 }
-
-const multibufferFileHeaderSurfaceVariants = cva(
-  "min-w-0 max-w-full overflow-hidden bg-background",
-  {
-    variants: {
-      surface: {
-        card: "border border-border shadow-(--shadow-card)",
-        section: "border-border border-b bg-surface",
-      },
-      expanded: {
-        true: "",
-        false: "",
-      },
-    },
-    compoundVariants: [
-      { surface: "card", expanded: true, className: "rounded-t-xl" },
-      { surface: "card", expanded: false, className: "rounded-xl" },
-    ],
-    defaultVariants: {
-      surface: "card",
-      expanded: true,
-    },
-  },
-);
 
 export const MultibufferFileHeader = memo(function MultibufferFileHeader({
   filePath,
@@ -53,13 +26,11 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
   openAriaLabel = `Open ${filePath}`,
   trailing,
   actions,
-  surface = "card",
   showFileIcon = true,
-  sticky = true,
 }: MultibufferFileHeaderProps) {
   return (
-    <div className={cn("min-w-0 max-w-full bg-background", sticky && "sticky top-0 z-50")}>
-      <div className={multibufferFileHeaderSurfaceVariants({ surface, expanded })}>
+    <div className="sticky top-0 z-50 min-w-0 max-w-full bg-background">
+      <div className="min-w-0 max-w-full overflow-hidden border-border border-b bg-surface">
         <div className="font-sans ui-text-sm flex min-w-0 items-center">
           {onToggle ? (
             <button

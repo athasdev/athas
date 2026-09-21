@@ -1,3 +1,5 @@
+import { usePerformanceExperiments } from "@/features/settings/stores/performance-experiments.store";
+import { useWebGpuSupport } from "./use-webgpu-support";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useShallow } from "zustand/react/shallow";
@@ -5,6 +7,10 @@ import { useEditorSettingsStore } from "../../stores/settings.store";
 import { calculateLineHeight } from "../../utils/lines";
 
 export function useMonacoEditorSettings() {
+  const webgpu = usePerformanceExperiments.use.webgpu();
+  const gpuSupport = useWebGpuSupport();
+  const experimentalGpuAcceleration: "on" | "off" =
+    webgpu && gpuSupport === "available" ? "on" : "off";
   const baseFontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
   const editorLineHeight = useEditorSettingsStore.use.lineHeight();
@@ -40,6 +46,7 @@ export function useMonacoEditorSettings() {
   const fontSize = baseFontSize * zoomLevel;
 
   return {
+    experimentalGpuAcceleration,
     fontFamily,
     fontSize,
     lineHeight: calculateLineHeight(fontSize, editorLineHeight),

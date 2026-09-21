@@ -1,16 +1,22 @@
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
 import { codeInspectorPlugin } from "code-inspector-plugin";
 import { defaultExclude, defineConfig } from "vite-plus";
+import { createReactCompilerPreset } from "./scripts/vite/react-compiler";
 
 const host = process.env.TAURI_DEV_HOST || "127.0.0.1";
 const isVitest = Boolean(process.env.VITEST);
+const enableReactCompiler = !isVitest && process.env.ATHAS_REACT_COMPILER !== "0";
 const enableCodeInspector = process.env.VITE_CODE_INSPECTOR === "true";
 const webviewTargets = ["chrome96", "edge96", "firefox94", "safari15"];
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  define: {
+    "import.meta.env.VITE_REACT_COMPILER_ENABLED": JSON.stringify(enableReactCompiler),
+  },
   fmt: {
     printWidth: 100,
   },
@@ -57,6 +63,7 @@ export default defineConfig({
         })
       : null,
     react(),
+    enableReactCompiler ? babel({ presets: [createReactCompilerPreset()] }) : null,
     tailwindcss(),
   ].filter(Boolean),
   resolve: {

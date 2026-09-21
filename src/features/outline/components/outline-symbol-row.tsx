@@ -11,11 +11,7 @@ import {
   TextIcon,
 } from "@/ui/icons";
 import { forwardRef } from "react";
-import {
-  SidebarTreeDisclosure,
-  SidebarTreeIcon,
-  SidebarTreeRow,
-} from "@/features/sidebar/components/sidebar-tree";
+import { SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import type { OutlineSymbol } from "../types/outline-symbol.types";
 
 function OutlineSymbolIcon({ kind, className = "size-3.5" }: { kind: string; className?: string }) {
@@ -60,7 +56,6 @@ function OutlineSymbolIcon({ kind, className = "size-3.5" }: { kind: string; cla
 interface OutlineSymbolRowProps {
   symbol: OutlineSymbol;
   selected?: boolean;
-  compact?: boolean;
   collapsed?: boolean;
   onClick: (symbol: OutlineSymbol) => void;
   onToggle?: (symbol: OutlineSymbol) => void;
@@ -75,7 +70,6 @@ export const OutlineSymbolRow = forwardRef<HTMLButtonElement, OutlineSymbolRowPr
     {
       symbol,
       selected = false,
-      compact = false,
       collapsed = false,
       onClick,
       onToggle,
@@ -87,7 +81,6 @@ export const OutlineSymbolRow = forwardRef<HTMLButtonElement, OutlineSymbolRowPr
     ref,
   ) {
     const hasChildren = symbol.childCount > 0;
-    const rowHeightClassName = compact ? "h-6" : "h-7";
 
     return (
       <SidebarTreeRow
@@ -99,27 +92,13 @@ export const OutlineSymbolRow = forwardRef<HTMLButtonElement, OutlineSymbolRowPr
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
         tabIndex={tabIndex}
-        className={rowHeightClassName}
-      >
-        <SidebarTreeDisclosure
-          visible={hasChildren}
-          expanded={!collapsed}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (hasChildren) onToggle?.(symbol);
-          }}
-        />
-
-        <SidebarTreeIcon icon={<OutlineSymbolIcon kind={symbol.kind} />} />
-        <span className="ml-1.5 min-w-0 flex-1 truncate">
-          <span className="ui-text-sm text-foreground">{symbol.name}</span>
-          {symbol.detail ? (
-            <span className="ml-1.5 ui-text-sm text-subtle-foreground opacity-70">
-              {symbol.detail}
-            </span>
-          ) : null}
-        </span>
-      </SidebarTreeRow>
+        label={symbol.name}
+        description={symbol.detail}
+        leading={<OutlineSymbolIcon kind={symbol.kind} />}
+        expanded={hasChildren ? !collapsed : undefined}
+        reserveDisclosureSpace
+        onToggle={() => onToggle?.(symbol)}
+      />
     );
   },
 );

@@ -120,7 +120,7 @@ function MenubarContent({
           data-slot="menubar-content"
           className={cn(
             menuSurfaceVariants(),
-            "z-10031 w-max min-w-60 max-w-[min(480px,calc(100vw-16px))] transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+            "z-10031 w-max min-w-60 max-w-[min(480px,calc(100vw-16px))]",
             className,
           )}
           {...props}
@@ -215,7 +215,7 @@ function MenubarSubContent({
           data-slot="menubar-sub-content"
           className={cn(
             menuSurfaceVariants(),
-            "z-10050 w-max min-w-60 max-w-[min(480px,calc(100vw-16px))] transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+            "z-10050 w-max min-w-60 max-w-[min(480px,calc(100vw-16px))]",
             className,
           )}
           {...props}

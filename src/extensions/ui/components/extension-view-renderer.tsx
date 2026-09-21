@@ -248,7 +248,7 @@ function renderNode(
         <pre
           key={key}
           className={cn(
-            "max-w-full overflow-x-auto rounded-lg bg-surface p-2 font-mono ui-text-sm text-foreground",
+            "max-w-full select-text overflow-x-auto rounded-lg bg-surface p-2 font-mono ui-text-sm text-foreground",
             node.wrap && "whitespace-pre-wrap break-words",
           )}
         >

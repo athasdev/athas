@@ -231,6 +231,7 @@ fn main() {
          intelligence_list_files,
          intelligence_edit_file,
          intelligence_run_command,
+         chat_run_terminal_command,
          intelligence_cancel_command,
          intelligence_search_files,
          store_ai_provider_token,

@@ -1,3 +1,4 @@
+import { usePerformanceExperiments } from "../../stores/performance-experiments.store";
 import { useEffect, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
@@ -32,6 +33,9 @@ function getTelemetryStatusVariant(status: TelemetryLogEntry["status"]): BadgeTo
 }
 
 export const AdvancedSettings = () => {
+  const webgpu = usePerformanceExperiments.use.webgpu();
+  const showMonitor = usePerformanceExperiments.use.showMonitor();
+  const { toggleWebgpu, toggleMonitor } = usePerformanceExperiments.use.actions();
   const telemetry = useSettingsStore((state) => state.settings.telemetry);
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const resetToDefaults = useSettingsStore((state) => state.actions.resetToDefaults);
@@ -117,6 +121,20 @@ export const AdvancedSettings = () => {
 
   return (
     <SettingsView>
+      <Section title="Performance experiments">
+        <SettingRow
+          label="Experimental WebGPU renderer"
+          description="Try GPU rendering in Monaco editors. Falls back to DOM when WebGPU is unavailable. Stored on this device only."
+        >
+          <Switch checked={webgpu} onChange={toggleWebgpu} />
+        </SettingRow>
+        <SettingRow
+          label="Show performance monitor"
+          description="Show frame callback FPS, longest frame interval, and renderer status. The monitor itself adds a small amount of work."
+        >
+          <Switch checked={showMonitor} onChange={toggleMonitor} />
+        </SettingRow>
+      </Section>
       <Section title="Data">
         <SettingRow label="Export Settings" description="Save all app settings to a JSON file">
           <Button variant="default" onClick={() => void handleExportSettings()}>

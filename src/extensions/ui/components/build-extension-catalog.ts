@@ -1,3 +1,4 @@
+import { getDatabaseBrandImage } from "@/ui/brand-marks";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { bundledExtensionManifests } from "@/extensions/bundled/bundled-extension-manifests";
 import type { AvailableExtension } from "@/extensions/registry/extension-store-types";
@@ -193,7 +194,7 @@ export function buildExtensionCatalog({
 
         isMarketplace: !isBuiltInDatabase,
         isBundled: isBuiltInDatabase,
-        icon: ext.manifest.icon,
+        icon: getDatabaseBrandImage(ext.manifest.id) ?? ext.manifest.icon,
         runtimeIssues: ext.runtimeIssues,
         packageSize: resolvePackageSize(ext.manifest),
         contributionSummary: [`database:${provider.id}`],

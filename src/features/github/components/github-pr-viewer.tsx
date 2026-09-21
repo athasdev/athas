@@ -289,10 +289,13 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
     return Array.from(labelsByName.values());
   }, [labels, selectedPRDetails?.labels]);
 
-  const selectedDiffFile = useMemo(() => {
-    if (diffFiles.length === 0) return null;
-    return diffFiles.find((file) => file.path === selectedFilePath) ?? diffFiles[0] ?? null;
-  }, [diffFiles, selectedFilePath]);
+  const patchErrors = useMemo(() => {
+    const errors: Record<string, string | undefined> = {};
+    for (const [path, patch] of Object.entries(filePatches)) {
+      if (patch.error) errors[path] = patch.error;
+    }
+    return errors;
+  }, [filePatches]);
 
   useEffect(() => {
     if (activeTab !== "files") return;
@@ -705,10 +708,9 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
             isLoadingContent={isLoadingContent}
             contentError={contentError}
             diffFiles={diffFiles}
-            selectedDiffFile={selectedDiffFile}
             selectedFilePath={selectedFilePath}
             isActive={isActiveBuffer}
-            patchError={selectedDiffFile ? filePatches[selectedDiffFile.path]?.error : undefined}
+            patchErrors={patchErrors}
             onRetry={handleRefresh}
             onSelectFile={setSelectedFilePath}
             onOpenChangedFile={handleOpenChangedFile}

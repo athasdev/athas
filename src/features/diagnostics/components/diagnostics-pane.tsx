@@ -9,9 +9,11 @@ import {
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
-import { MultibufferFileHeader } from "@/features/editor/components/multibuffer/multibuffer-file-header";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { FileResultsWorkspace } from "@/features/file-explorer/components/file-results-workspace";
+import {
+  type MultibufferSection,
+  MultibufferWorkspace,
+} from "@/features/editor/components/multibuffer/multibuffer-workspace";
 import {
   type FileNavigatorItem,
   type FileNavigatorViewMode,
@@ -41,7 +43,7 @@ import {
   ItemTitle,
 } from "@/ui/item";
 import { cn } from "@/utils/cn";
-import { getBaseName, getDirName, getRelativePath, normalizePath } from "@/utils/path-helpers";
+import { getBaseName, getRelativePath, normalizePath } from "@/utils/path-helpers";
 import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics.types";
 import { DiagnosticsToolbar } from "./diagnostics-toolbar";
 
@@ -881,6 +883,36 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
     </ItemGroup>
   );
 
+  const diagnosticFileSections = useMemo<MultibufferSection[]>(() => {
+    if (preferences.groupBy !== "file" || filteredDiagnostics.length === 0) return [];
+
+    return groupedDiagnostics.map((group) => {
+      const relativePath = getDiagnosticNavigatorPath(group.label, rootFolderPath);
+      const firstDiagnostic = group.items[0];
+      const navigatorItem = diagnosticFileItems.find((item) => item.key === group.label);
+
+      return {
+        key: group.label,
+        path: relativePath,
+        iconPath: group.label,
+        iconTone: navigatorItem?.iconTone,
+        metadata: navigatorItem?.metadata,
+        trailing: `${group.items.length} ${group.items.length === 1 ? "problem" : "problems"}`,
+        onOpen: firstDiagnostic ? () => onDiagnosticClick?.(firstDiagnostic) : undefined,
+        estimatedHeight: 32 + group.items.length * 56,
+        render: () => <div className="px-2 py-1">{renderDiagnosticItems(group.items)}</div>,
+      };
+    });
+  }, [
+    diagnosticFileItems,
+    filteredDiagnostics.length,
+    groupedDiagnostics,
+    onDiagnosticClick,
+    preferences.groupBy,
+    renderDiagnosticItems,
+    rootFolderPath,
+  ]);
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <DiagnosticsToolbar
@@ -897,25 +929,21 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
       />
 
       <div className="min-h-0 flex-1">
-        <FileResultsWorkspace
-          items={diagnosticFileItems}
+        <MultibufferWorkspace
+          sections={diagnosticFileSections}
+          navigatorItems={diagnosticFileItems}
           selectedKey={selectedFileNavigatorKey}
           onSelect={selectDiagnosticFile}
-          ariaLabel="Diagnostic files"
-          viewMode={preferences.fileNavigatorViewMode}
-          onViewModeChange={(fileNavigatorViewMode) =>
+          navigatorLabel="Diagnostic files"
+          navigatorOpen={isFileNavigatorVisible && hasDiagnosticFiles}
+          onNavigatorOpenChange={setIsFileNavigatorVisible}
+          navigatorViewMode={preferences.fileNavigatorViewMode}
+          onNavigatorViewModeChange={(fileNavigatorViewMode) =>
             setPreferences((prev) => ({
               ...prev,
               fileNavigatorViewMode,
             }))
           }
-          showNavigator={isFileNavigatorVisible && hasDiagnosticFiles}
-          navigatorPosition="right"
-          navigatorResponsiveOverlay
-          navigatorAppearance="panel"
-          contentInset={false}
-          scrollbarVisibility="always"
-          reserveScrollbarGutter
         >
           {diagnostics.length === 0 ? (
             <Empty>
@@ -938,42 +966,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
             <div className="px-2 py-1">
               {renderDiagnosticItems(groupedDiagnostics[0]?.items ?? [])}
             </div>
-          ) : preferences.groupBy === "file" ? (
-            <div className="min-w-0 max-w-full">
-              {groupedDiagnostics.map((group) => {
-                const relativePath = getDiagnosticNavigatorPath(group.label, rootFolderPath);
-                const fileName = getBaseName(relativePath, relativePath);
-                const directoryPath = getDirName(relativePath);
-                const expanded = !collapsedGroups[group.id];
-                const firstDiagnostic = group.items[0];
-
-                return (
-                  <section key={group.id} className="border-border border-b">
-                    <MultibufferFileHeader
-                      filePath={group.label}
-                      fileName={fileName}
-                      directoryPath={directoryPath}
-                      expanded={expanded}
-                      onToggle={() =>
-                        setCollapsedGroups((current) => ({
-                          ...current,
-                          [group.id]: !current[group.id],
-                        }))
-                      }
-                      onOpen={() => {
-                        if (firstDiagnostic) onDiagnosticClick?.(firstDiagnostic);
-                      }}
-                      trailing={`${group.items.length} ${group.items.length === 1 ? "problem" : "problems"}`}
-                      surface="section"
-                    />
-                    {expanded ? (
-                      <div className="px-2 py-1">{renderDiagnosticItems(group.items)}</div>
-                    ) : null}
-                  </section>
-                );
-              })}
-            </div>
-          ) : (
+          ) : preferences.groupBy === "file" ? undefined : (
             <Accordion
               multiple
               value={expandedGroupIds}
@@ -994,7 +987,7 @@ const DiagnosticsPane = ({ diagnostics, onDiagnosticClick }: DiagnosticsPaneProp
               ))}
             </Accordion>
           )}
-        </FileResultsWorkspace>
+        </MultibufferWorkspace>
       </div>
 
       <ContextMenuPopup

@@ -1,34 +1,34 @@
 import {
   ArrowLeftIcon,
-  DatabaseIcon,
-  FilePlusIcon,
+  ChevronRightIcon,
   FolderOpenIcon,
   PlugsConnectedIcon,
   PlusIcon,
   TrashIcon,
+  XIcon,
 } from "@/ui/icons";
 import { open } from "@tauri-apps/plugin-dialog";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import { DatabaseBrandMark } from "@/ui/brand-marks";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
+import { EmptyState } from "@/ui/empty";
+import { Field, FieldLabel, FieldSet, FieldLegend, FieldDescription } from "@/ui/field";
 import {
-  CommandEmpty,
-  CommandFooter,
-  CommandFooterAction,
-  CommandHeader,
-  CommandHeaderAction,
-  CommandInput,
-  CommandItemAction,
-  CommandItemBadge,
-  CommandItemRow,
-  CommandList,
-} from "@/ui/command";
+  SidebarPanel,
+  SidebarHeader,
+  SidebarFilterBar,
+  SidebarScrollArea,
+  SidebarIconButton,
+  SidebarListItem,
+  SidebarListActionRow,
+  SidebarSectionLabel,
+} from "@/ui/sidebar";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
-import { cn } from "@/utils/cn";
 import { normalizeDatabaseError } from "../lib/database-errors";
 import type { DatabaseType } from "../types/provider.types";
 import { PROVIDER_REGISTRY } from "../providers/provider-registry";
@@ -59,13 +59,7 @@ function getConnectionSubtitle(connection: SavedConnection) {
   return `${provider.label} ${connection.host}:${connection.port}${database}`;
 }
 
-interface DatabaseCommandContentProps {
-  isActive: boolean;
-  onBack: () => void;
-  onClose: () => void;
-}
-
-export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCommandContentProps) {
+export function DatabaseSidebar() {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const filesVersion = useFileSystemStore((state) => state.filesVersion);
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
@@ -81,7 +75,13 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
     storeCredential,
   } = useConnectionStore.use.actions();
   const openDatabaseBuffer = useBufferStore.use.actions().openDatabaseBuffer;
+  const activeDatabasePath = useBufferStore((state) => {
+    const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+    return buffer?.type === "database" ? buffer.path : undefined;
+  });
   const [query, setQuery] = useState("");
+  const [providerQuery, setProviderQuery] = useState("");
+  const filterInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<SidebarMode>("list");
   const [selectedDbType, setSelectedDbType] = useState<DatabaseType>("sqlite");
   const [name, setName] = useState("");
@@ -96,19 +96,10 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
   const [error, setError] = useState<string | null>(null);
   const [workspaceDatabaseFiles, setWorkspaceDatabaseFiles] = useState<WorkspaceDatabaseFile[]>([]);
   const [isScanningWorkspaceDatabases, setIsScanningWorkspaceDatabases] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void loadSavedConnections();
   }, [loadSavedConnections, rootFolderPath]);
-
-  useEffect(() => {
-    if (!isActive) return;
-    setQuery("");
-    setMode("list");
-    setError(null);
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }, [isActive]);
 
   const installedDbTypes = useMemo(() => getInstalledDatabaseTypes(new Map()), []);
   const savedFileConnectionPathKeys = useMemo(
@@ -194,6 +185,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
 
   const showProviderStep = () => {
     resetAddForm();
+    setProviderQuery("");
     setMode("choose-provider");
   };
 
@@ -235,14 +227,13 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
         await saveConnection(config);
         openDatabaseBuffer(filePath, config.name, dbType);
         setMode("list");
-        onClose();
       } catch (err) {
         setError(normalizeDatabaseError(err));
       } finally {
         setBusyConnectionId(null);
       }
     },
-    [onClose, openDatabaseBuffer, rootFolderPath, saveConnection],
+    [openDatabaseBuffer, rootFolderPath, saveConnection],
   );
 
   const chooseDatabaseFile = async (dbType: DatabaseType) => {
@@ -309,7 +300,6 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
       const connectionId = await connect(config, password || undefined);
       openDatabaseBuffer(`connection://${connectionId}`, config.name, selectedDbType, connectionId);
       setMode("list");
-      onClose();
     } catch (err) {
       setError(normalizeDatabaseError(err));
     } finally {
@@ -317,7 +307,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
     }
   };
 
-  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
     setIsDraggingFile(false);
@@ -331,14 +321,14 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
     await saveFileConnection(databasePath);
   };
 
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     if (!Array.from(event.dataTransfer.types).includes("Files")) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = "copy";
     setIsDraggingFile(true);
   };
 
-  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDragLeave = (event: DragEvent<HTMLDivElement>) => {
     if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
     setIsDraggingFile(false);
   };
@@ -354,7 +344,6 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
       }
 
       openDatabaseBuffer(connection.file_path, connection.name, connection.db_type);
-      onClose();
       return;
     }
 
@@ -371,7 +360,6 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
         connection.db_type,
         connectionId,
       );
-      onClose();
     } catch (err) {
       setError(normalizeDatabaseError(err));
     } finally {
@@ -382,7 +370,6 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
   const openDetectedDatabase = (file: WorkspaceDatabaseFile) => {
     setError(null);
     openDatabaseBuffer(file.path, file.name, file.dbType);
-    onClose();
   };
 
   const handleDeleteConnection = async (connectionId: string) => {
@@ -397,243 +384,336 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
     }
   };
 
-  const renderHeader = () =>
-    mode === "list" ? (
-      <CommandHeader onClose={onClose}>
-        <CommandHeaderAction type="button" onClick={onBack} aria-label="Back to commands">
-          <ArrowLeftIcon />
-        </CommandHeaderAction>
-        <CommandInput
-          ref={inputRef}
-          value={query}
-          onChange={setQuery}
-          placeholder="Search databases"
-        />
-        <CommandHeaderAction type="button" onClick={showProviderStep} aria-label="Add database">
-          <PlusIcon />
-        </CommandHeaderAction>
-      </CommandHeader>
-    ) : (
-      <CommandHeader onClose={onClose}>
-        <CommandHeaderAction iconOnly={false} type="button" onClick={() => setMode("list")}>
-          <ArrowLeftIcon />
-          <span>Databases</span>
-        </CommandHeaderAction>
-        <CommandHeaderAction type="button" onClick={showProviderStep} aria-label="Add database">
-          <PlusIcon />
-        </CommandHeaderAction>
-      </CommandHeader>
-    );
+  const hasWorkspaceDatabases =
+    Boolean(rootFolderPath) &&
+    (savedConnections.some((connection) => connection.workspace_path === rootFolderPath?.trim()) ||
+      workspaceDatabaseFiles.some(
+        (file) => !savedFileConnectionPathKeys.has(getDatabaseFilePathKey(file.path)),
+      ));
+  const isLoadingDatabases = isLoadingSaved || isScanningWorkspaceDatabases;
+  const showProviders =
+    mode === "choose-provider" ||
+    (mode === "list" && Boolean(rootFolderPath) && !hasWorkspaceDatabases && !isLoadingDatabases);
+  const filterQuery = mode === "choose-provider" ? providerQuery : query;
+  const setFilterQuery = mode === "choose-provider" ? setProviderQuery : setQuery;
+  const visibleProviders = installedDbTypes.filter(
+    (type) =>
+      !hasWorkspaceDatabases ||
+      mode === "list" ||
+      PROVIDER_REGISTRY[type].label.toLowerCase().includes(providerQuery.trim().toLowerCase()),
+  );
+  const backButton = (
+    <SidebarIconButton
+      aria-label={mode === "choose-provider" ? "Back to databases" : "Back to database providers"}
+      tooltip={mode === "choose-provider" ? "Back to databases" : "Back to database providers"}
+      onClick={() => {
+        setMode(mode === "choose-provider" || !hasWorkspaceDatabases ? "list" : "choose-provider");
+        setError(null);
+      }}
+    >
+      <ArrowLeftIcon />
+    </SidebarIconButton>
+  );
 
   return (
-    <div
-      className="relative flex min-h-0 flex-1 flex-col bg-background"
+    <SidebarPanel
+      className="relative"
       onDrop={(event) => void handleDrop(event)}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
-      {renderHeader()}
-
-      <CommandList>
-        {mode === "choose-provider" ? (
-          <>
-            {installedDbTypes.length === 0 ? (
-              <CommandEmpty>
-                <div className="space-y-2">
-                  <div>No database providers installed.</div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      useBufferStore.getState().actions.openExtensionsBuffer();
-                    }}
-                  >
-                    Open Integrations
-                  </Button>
-                </div>
-              </CommandEmpty>
-            ) : (
-              installedDbTypes.map((type) => (
-                <CommandItemRow
-                  key={type}
-                  onClick={() => chooseProvider(type)}
-                  icon={<DatabaseIcon className="size-4" />}
-                  title={PROVIDER_REGISTRY[type].label}
-                />
-              ))
-            )}
-          </>
+      {(mode === "list" || mode === "choose-provider") && hasWorkspaceDatabases ? (
+        <SidebarFilterBar
+          ref={filterInputRef}
+          value={filterQuery}
+          onChange={setFilterQuery}
+          aria-label={mode === "list" ? "Filter databases" : "Filter providers"}
+          placeholder={mode === "list" ? "Filter databases" : "Filter providers"}
+          autoCapitalize="none"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              setFilterQuery("");
+            }
+          }}
+          leading={mode === "choose-provider" ? backButton : undefined}
+          actionsLabel="Database controls"
+          actions={
+            <>
+              {filterQuery ? (
+                <SidebarIconButton
+                  aria-label="Clear filter"
+                  tooltip="Clear filter"
+                  onClick={() => {
+                    setFilterQuery("");
+                    filterInputRef.current?.focus();
+                  }}
+                >
+                  <XIcon />
+                </SidebarIconButton>
+              ) : null}
+              {mode === "list" ? (
+                <SidebarIconButton
+                  onClick={showProviderStep}
+                  aria-label="Add database"
+                  tooltip="Add database"
+                  disabled={!rootFolderPath || busyConnectionId !== null}
+                >
+                  <PlusIcon />
+                </SidebarIconButton>
+              ) : null}
+            </>
+          }
+        />
+      ) : (
+        <SidebarHeader>
+          {mode === "file-provider" || mode === "network-provider" ? (
+            <>
+              {backButton}
+              <DatabaseBrandMark provider={selectedDbType} />
+              <span className="truncate">{PROVIDER_REGISTRY[selectedDbType].label}</span>
+            </>
+          ) : (
+            <span className="truncate">{showProviders ? "Add database" : "Databases"}</span>
+          )}
+        </SidebarHeader>
+      )}
+      <SidebarScrollArea>
+        {showProviders ? (
+          installedDbTypes.length === 0 ? (
+            <EmptyState
+              layout="sidebar"
+              message="No database providers installed."
+              action={{
+                label: "Open Integrations",
+                onClick: () => useBufferStore.getState().actions.openExtensionsBuffer(),
+              }}
+            />
+          ) : visibleProviders.length === 0 ? (
+            <EmptyState layout="sidebar" message="No matching providers." />
+          ) : (
+            visibleProviders.map((type) => (
+              <SidebarListItem
+                key={type}
+                density="comfortable"
+                disabled={busyConnectionId !== null}
+                onClick={() => chooseProvider(type)}
+                leading={<DatabaseBrandMark provider={type} size="1.5em" />}
+                trailing={<ChevronRightIcon />}
+              >
+                {PROVIDER_REGISTRY[type].label}
+              </SidebarListItem>
+            ))
+          )
         ) : mode === "file-provider" ? (
-          <div>
-            <button
-              type="button"
-              className={cn(
-                "flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface px-3 py-4 text-center text-subtle-foreground transition-colors hover:border-primary hover:bg-primary-soft",
-                isDraggingFile && "border-primary bg-primary-soft text-foreground",
-              )}
-              onClick={() => void chooseDatabaseFile(selectedDbType)}
+          <div className="flex flex-col gap-4 px-2 py-2">
+            <FieldDescription>
+              Open an existing {PROVIDER_REGISTRY[selectedDbType].label} database. Choose a file or
+              drop it into this sidebar.
+            </FieldDescription>
+            <Button
+              variant="accent"
+              width="full"
+              disabled={busyConnectionId !== null}
+              onClick={() =>
+                void chooseDatabaseFile(selectedDbType).catch((err) =>
+                  setError(normalizeDatabaseError(err)),
+                )
+              }
             >
-              <FolderOpenIcon className="size-5" />
-              <span className="font-sans ui-text-sm">
-                Choose or drop a {PROVIDER_REGISTRY[selectedDbType].label} file
-              </span>
-            </button>
+              <FolderOpenIcon />
+              {busyConnectionId ? "Opening…" : "Choose database file"}
+            </Button>
           </div>
         ) : mode === "network-provider" ? (
-          <div className="space-y-2">
-            <CommandInput
-              value={name}
-              onChange={setName}
-              placeholder={`${PROVIDER_REGISTRY[selectedDbType].label} connection`}
-              variant="surface"
-            />
-            <div className="flex gap-2">
-              <Input
-                grow
-                value={host}
-                onChange={(event) => setHost(event.target.value)}
-                placeholder="Host"
-              />
-              <span className="inline-flex min-w-0 w-20">
+          <form
+            aria-label={`${PROVIDER_REGISTRY[selectedDbType].label} connection`}
+            className="flex min-w-0 flex-col gap-6 px-2 py-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!busyConnectionId) void saveNetworkConnection();
+            }}
+          >
+            <FieldSet disabled={busyConnectionId !== null}>
+              <Field>
+                <FieldLabel htmlFor="database-sidebar-name">Connection name</FieldLabel>
                 <Input
-                  type="number"
-                  value={port}
-                  onChange={(event) => setPort(Number(event.target.value))}
-                  placeholder="Port"
+                  id="database-sidebar-name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder={`${PROVIDER_REGISTRY[selectedDbType].label} connection`}
                 />
-              </span>
-            </div>
-            {selectedDbType !== "redis" ? (
-              <Input
-                value={databaseName}
-                onChange={(event) => setDatabaseName(event.target.value)}
-                placeholder="Database"
-              />
-            ) : null}
-            <div className="flex gap-2">
-              <Input
-                grow
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                placeholder="Username"
-              />
-              <Input
-                grow
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Password"
-              />
-            </div>
-            <label
-              htmlFor="database-sidebar-save-password"
-              className="flex items-center gap-2 px-1"
+              </Field>
+              <div className="grid grid-cols-[minmax(0,1fr)_5rem] gap-3">
+                <Field className="min-w-0 flex-1">
+                  <FieldLabel htmlFor="database-sidebar-host">Host</FieldLabel>
+                  <Input
+                    id="database-sidebar-host"
+                    value={host}
+                    onChange={(event) => setHost(event.target.value)}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="database-sidebar-port">Port</FieldLabel>
+                  <Input
+                    id="database-sidebar-port"
+                    type="number"
+                    value={port}
+                    onChange={(event) => setPort(Number(event.target.value))}
+                  />
+                </Field>
+              </div>
+              {selectedDbType !== "redis" ? (
+                <Field>
+                  <FieldLabel htmlFor="database-sidebar-database">Database</FieldLabel>
+                  <Input
+                    id="database-sidebar-database"
+                    value={databaseName}
+                    onChange={(event) => setDatabaseName(event.target.value)}
+                  />
+                </Field>
+              ) : null}
+            </FieldSet>
+            <FieldSet disabled={busyConnectionId !== null}>
+              <FieldLegend variant="label">Authentication</FieldLegend>
+              <Field>
+                <FieldLabel htmlFor="database-sidebar-username">Username</FieldLabel>
+                <Input
+                  id="database-sidebar-username"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="database-sidebar-password">Password</FieldLabel>
+                <Input
+                  id="database-sidebar-password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </Field>
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="database-sidebar-save-password"
+                  checked={saveCredential}
+                  onCheckedChange={setSaveCredential}
+                />
+                <FieldLabel htmlFor="database-sidebar-save-password">
+                  Save password securely
+                </FieldLabel>
+              </Field>
+            </FieldSet>
+            <Button
+              type="submit"
+              variant="accent"
+              width="full"
+              disabled={busyConnectionId !== null}
             >
-              <Checkbox
-                id="database-sidebar-save-password"
-                checked={saveCredential}
-                onCheckedChange={setSaveCredential}
-                aria-label="Save password securely"
-              />
-              <span className="font-sans text-subtle-foreground ui-text-sm">
-                Save password securely
-              </span>
-            </label>
-          </div>
+              {busyConnectionId ? "Connecting…" : "Add database"}
+            </Button>
+          </form>
         ) : !rootFolderPath ? (
-          <CommandEmpty>Open a workspace to add databases.</CommandEmpty>
-        ) : isLoadingSaved ? (
-          <CommandEmpty>
-            <Spinner label="Loading databases" showLabel compact />
-          </CommandEmpty>
-        ) : workspaceConnections.length === 0 &&
-          detectedWorkspaceDatabases.length === 0 &&
-          isScanningWorkspaceDatabases ? (
-          <CommandEmpty>
-            <Spinner label="Loading databases" showLabel compact />
-          </CommandEmpty>
+          <EmptyState layout="sidebar" message="Open a workspace to add databases." />
+        ) : isLoadingSaved ||
+          (workspaceConnections.length === 0 &&
+            detectedWorkspaceDatabases.length === 0 &&
+            isScanningWorkspaceDatabases) ? (
+          <EmptyState
+            layout="sidebar"
+            message={<Spinner label="Loading databases" showLabel compact />}
+          />
         ) : workspaceConnections.length === 0 && detectedWorkspaceDatabases.length === 0 ? (
-          <CommandEmpty>
-            {query.trim() ? "No matching databases." : "No databases in this workspace."}
-          </CommandEmpty>
+          <EmptyState
+            layout="sidebar"
+            message="No matching databases."
+            action={{
+              label: "Add database",
+              icon: <PlusIcon />,
+              onClick: showProviderStep,
+              disabled: busyConnectionId !== null,
+            }}
+          />
         ) : (
-          <div className="space-y-0.5">
+          <>
+            {workspaceConnections.length > 0 ? (
+              <SidebarSectionLabel>Connections</SidebarSectionLabel>
+            ) : null}
             {workspaceConnections.map((connection) => {
               const status = getActiveStatus(connection.id);
               const isBusy = busyConnectionId === connection.id || status === "connecting";
+              const isActive =
+                activeDatabasePath === (connection.file_path || `connection://${connection.id}`);
               return (
-                <CommandItemRow
+                <SidebarListActionRow
                   key={connection.id}
-                  as="div"
-                  className="group"
-                  disabled={isBusy}
-                  onClick={() => void openConnection(connection)}
-                  icon={<DatabaseIcon className="size-4" />}
-                  title={connection.name}
-                  description={getConnectionSubtitle(connection)}
-                  accessory={
-                    status === "connected" ? (
-                      <CommandItemBadge>
-                        <PlugsConnectedIcon className="size-3.5" />
-                        Connected
-                      </CommandItemBadge>
-                    ) : null
-                  }
-                  action={
-                    <CommandItemAction
-                      type="button"
+                  data-active={isActive}
+                  actions={
+                    <SidebarIconButton
                       tone="danger"
+                      tooltip={`Delete ${connection.name}`}
                       aria-label={`Delete ${connection.name}`}
                       disabled={isBusy}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleDeleteConnection(connection.id);
-                      }}
+                      onClick={() => void handleDeleteConnection(connection.id)}
                     >
                       <TrashIcon />
-                    </CommandItemAction>
+                    </SidebarIconButton>
                   }
-                />
+                >
+                  <SidebarListItem
+                    active={isActive}
+                    disabled={isBusy}
+                    onClick={() => void openConnection(connection)}
+                    leading={
+                      isBusy ? (
+                        <Spinner compact />
+                      ) : (
+                        <DatabaseBrandMark provider={connection.db_type} />
+                      )
+                    }
+                    description={getConnectionSubtitle(connection)}
+                    trailing={
+                      status === "connected" ? (
+                        <PlugsConnectedIcon aria-label="Connected" />
+                      ) : undefined
+                    }
+                  >
+                    {connection.name}
+                  </SidebarListItem>
+                </SidebarListActionRow>
               );
             })}
+            {detectedWorkspaceDatabases.length > 0 ? (
+              <SidebarSectionLabel>Detected in workspace</SidebarSectionLabel>
+            ) : null}
             {detectedWorkspaceDatabases.map((file) => (
-              <CommandItemRow
+              <SidebarListItem
                 key={file.id}
+                active={activeDatabasePath === file.path}
                 onClick={() => openDetectedDatabase(file)}
-                icon={<DatabaseIcon className="size-4" />}
-                title={file.name}
+                leading={<DatabaseBrandMark provider={file.dbType} />}
                 description={`${PROVIDER_REGISTRY[file.dbType].label} / ${file.relativePath}`}
-                accessory={<CommandItemBadge>Detected</CommandItemBadge>}
-              />
+              >
+                {file.name}
+              </SidebarListItem>
             ))}
-          </div>
+          </>
         )}
-      </CommandList>
-
-      {mode === "network-provider" ? (
-        <CommandFooter>
-          <CommandFooterAction
-            type="button"
-            disabled={busyConnectionId !== null}
-            onClick={() => void saveNetworkConnection()}
-          >
-            <FilePlusIcon />
-            Add DatabaseIcon
-          </CommandFooterAction>
-        </CommandFooter>
-      ) : null}
-
-      {error ? (
-        <div className="border-border border-t px-2 py-1.5 text-destructive ui-text-sm">
-          {error}
-        </div>
-      ) : null}
-
+        {error ? (
+          <p role="alert" className="px-2 py-1.5 text-destructive ui-text-sm">
+            {error}
+          </p>
+        ) : null}
+      </SidebarScrollArea>
       {isDraggingFile ? (
         <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-xl border border-primary bg-background text-primary ui-text-sm backdrop-blur-sm">
           Drop database file
         </div>
       ) : null}
-    </div>
+    </SidebarPanel>
   );
 }

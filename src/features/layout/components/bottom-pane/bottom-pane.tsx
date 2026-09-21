@@ -110,7 +110,10 @@ const BottomPane = ({
         if (rafId !== null) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(() => {
           if (frameEl) {
-            frameEl.style.height = `calc(${currentHeight}px + var(--athas-workbench-gap))`;
+            frameEl.style.setProperty(
+              "--bottom-pane-height",
+              `calc(${currentHeight}px + var(--athas-workbench-gap))`,
+            );
           }
         });
       };
@@ -121,7 +124,10 @@ const BottomPane = ({
           rafId = null;
         }
         if (frameEl) {
-          frameEl.style.height = `calc(${currentHeight}px + var(--athas-workbench-gap))`;
+          frameEl.style.setProperty(
+            "--bottom-pane-height",
+            `calc(${currentHeight}px + var(--athas-workbench-gap))`,
+          );
         }
         setHeight(currentHeight);
         setIsResizing(false);
@@ -287,9 +293,17 @@ const BottomPane = ({
   return (
     <div
       ref={paneFrameRef}
-      className={cn("flex shrink-0 flex-col", !isBottomPaneVisible && "hidden")}
+      className={cn(
+        // The height lives in a variable and a class, never an inline style, so the
+        // `starting:` (@starting-style) rule can win on the first visible frame and
+        // the pane animates open from 0.
+        "flex h-(--bottom-pane-height) shrink-0 flex-col",
+        !isResizing &&
+          "transition-[height] duration-fast ease-smooth starting:h-0 motion-reduce:transition-none",
+        !isBottomPaneVisible && "hidden",
+      )}
       style={{
-        height: `calc(${height}px + var(--athas-workbench-gap))`,
+        ["--bottom-pane-height" as string]: `calc(${height}px + var(--athas-workbench-gap))`,
       }}
     >
       {resizeGutter}

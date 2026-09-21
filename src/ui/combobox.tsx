@@ -179,7 +179,7 @@ function ComboboxContent({
           data-chips={Boolean(anchor)}
           className={cn(
             menuSurfaceVariants(),
-            "group/combobox-content relative w-(--anchor-width) max-w-(--available-width) overflow-hidden text-foreground duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+            "group/combobox-content relative w-(--anchor-width) max-w-(--available-width) overflow-hidden text-foreground",
             OVERLAY_MIN_SIZES[size],
             className,
           )}

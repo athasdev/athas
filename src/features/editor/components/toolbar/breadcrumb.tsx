@@ -17,6 +17,7 @@ export interface BreadcrumbProps {
   bufferId?: string;
   editorViewKey?: string | null;
   filePathOverride?: string;
+  leadingContent?: ReactNode;
   rightContent?: ReactNode;
   extraLeftContent?: ReactNode;
   showDefaultActions?: boolean;
@@ -28,6 +29,7 @@ export default function Breadcrumb({
   bufferId,
   editorViewKey,
   filePathOverride,
+  leadingContent,
   rightContent,
   extraLeftContent,
   showDefaultActions = true,
@@ -80,6 +82,7 @@ export default function Breadcrumb({
     <PaneContentHeader
       separated={false}
       className="select-none"
+      leading={leadingContent}
       context={
         <div className="font-sans flex min-w-0 items-center gap-1 text-subtle-foreground ui-text-sm">
           {showPath && showBreadcrumbPath ? (

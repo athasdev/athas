@@ -1,3 +1,4 @@
+import { PerformanceMonitor } from "./performance-monitor";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
@@ -73,11 +74,7 @@ export function MainLayout() {
   const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
   const responsiveLayout = useResponsiveWorkbenchLayout(activityRailExpanded);
   const renderedActivityRailExpanded = responsiveLayout.activityBarExpanded;
-  const isWorkspaceManagementActive = useBufferStore(
-    (state) => getBufferById(state.buffers, state.activeBufferId)?.type === "workspaces",
-  );
-  const renderedSidebarVisible =
-    isSidebarVisible && !responsiveLayout.narrow && !isWorkspaceManagementActive;
+  const renderedSidebarVisible = isSidebarVisible && !responsiveLayout.narrow;
   const activityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
   const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
@@ -317,7 +314,7 @@ export function MainLayout() {
             hidden={!renderedSidebarVisible}
             reservedWidth={leftPaneReservedWidth}
           >
-            <SidebarPane paneLevel="primary" />
+            <SidebarPane paneLevel="primary" visible={renderedSidebarVisible} />
           </ResizablePane>
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -351,6 +348,7 @@ export function MainLayout() {
           >
             <SidebarPane
               paneLevel="edge"
+              visible={renderedRightSidebarVisible}
               activeView={activeRightSidebarView}
               isGitActive={false}
               isGitHubPRsActive={false}
@@ -366,6 +364,8 @@ export function MainLayout() {
           </div>
         )}
       </div>
+
+      <PerformanceMonitor />
 
       {/* Global modals and overlays */}
       {deferredSurfacesReady ? (

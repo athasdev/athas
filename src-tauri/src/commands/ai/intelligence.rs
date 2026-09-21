@@ -26,6 +26,26 @@ pub async fn intelligence_run_command(
 }
 
 #[tauri::command]
+pub async fn chat_run_terminal_command(
+   root: String,
+   command: String,
+   id: String,
+   on_output: tauri::ipc::Channel<athas_ai::workspace_command::WorkspaceCommandChunk>,
+) -> Result<athas_ai::workspace_command::WorkspaceCommandOutput, String> {
+   let listener: athas_ai::workspace_command::CommandOutputListener =
+      std::sync::Arc::new(move |chunk| {
+         let _ = on_output.send(chunk);
+      });
+   athas_ai::workspace_command::run_workspace_command_with_output(
+      &root,
+      &command,
+      &id,
+      Some(listener),
+   )
+   .await
+}
+
+#[tauri::command]
 pub fn intelligence_cancel_command(id: String) {
    athas_ai::workspace_command::cancel_workspace_command(&id);
 }

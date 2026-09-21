@@ -1,3 +1,4 @@
+import { yieldToMain } from "@/utils/yield-to-main";
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 import {
   fetchHighlightQuery,
@@ -283,43 +284,32 @@ export async function highlightMarkdownCodeBlocks(
   requestKey?: string,
 ): Promise<string> {
   const codeBlockRegex = /<pre><code class="language-([^"]+)">([\s\S]*?)<\/code><\/pre>/g;
-  const matches: { full: string; lang: string; code: string }[] = [];
+  const parts: string[] = [];
+  let cursor = 0;
+  let deadline = 0;
+  let index = 0;
 
   for (const match of html.matchAll(codeBlockRegex)) {
-    matches.push({
-      full: match[0],
-      lang: match[1],
-      code: match[2],
-    });
+    if (performance.now() >= deadline) {
+      await yieldToMain();
+      deadline = performance.now() + 8;
+    }
+
+    const rawCode = match[2].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+    const segments = await getCodeHighlightSegments(
+      rawCode,
+      match[1],
+      requestKey ? `${requestKey}:${index}` : undefined,
+    );
+    index += 1;
+    const replacement = segments.length
+      ? `<pre><code class="language-${normalizeCodeFenceLanguage(match[1])}">${renderHighlightedCodeHtml(rawCode, segments)}</code></pre>`
+      : match[0];
+    parts.push(html.slice(cursor, match.index), replacement);
+    cursor = match.index + match[0].length;
   }
 
-  if (matches.length === 0) return html;
-
-  const highlightedMatches = await Promise.all(
-    matches.map(async (match, index) => {
-      const rawCode = match.code.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-      const segments = await getCodeHighlightSegments(
-        rawCode,
-        match.lang,
-        requestKey ? `${requestKey}:${index}` : undefined,
-      );
-      if (segments.length === 0) return null;
-
-      const highlighted = renderHighlightedCodeHtml(rawCode, segments);
-      const languageId = normalizeCodeFenceLanguage(match.lang);
-      return {
-        full: match.full,
-        replacement: `<pre><code class="language-${languageId}">${highlighted}</code></pre>`,
-      };
-    }),
-  );
-
-  let result = html;
-
-  for (const match of highlightedMatches) {
-    if (!match) continue;
-    result = result.replace(match.full, match.replacement);
-  }
-
-  return result;
+  if (cursor === 0) return html;
+  parts.push(html.slice(cursor));
+  return parts.join("");
 }

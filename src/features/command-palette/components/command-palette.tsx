@@ -5,7 +5,6 @@ import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
 import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
-import { DatabaseCommandContent } from "@/features/database/components/database-sidebar";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { isMarkdownFile } from "@/features/editor/utils/lines";
@@ -383,7 +382,11 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       onClose,
     }),
     ...createDatabaseActions({
-      openDatabaseCommand: () => pushView("databases"),
+      openDatabaseSidebar: () => {
+        setActiveView("databases");
+        setIsSidebarVisible(true);
+        onClose();
+      },
     }),
     ...createAdvancedActions({
       lspStatus,
@@ -474,12 +477,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       ) : currentView === "outline" ? (
         <OutlineCommandContent
           isActive={currentView === "outline"}
-          onBack={popView}
-          onClose={onClose}
-        />
-      ) : currentView === "databases" ? (
-        <DatabaseCommandContent
-          isActive={currentView === "databases"}
           onBack={popView}
           onClose={onClose}
         />

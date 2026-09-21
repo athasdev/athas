@@ -262,9 +262,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       setSelectedHistoryFilePath(null);
       setIsLoadingHistoryCommitFiles(true);
 
-      const diffs = await handleViewCommitDiff(commit.hash, undefined, {
-        fileNavigation: "external",
-      });
+      const diffs = await handleViewCommitDiff(commit.hash);
       if (historyCommitRequestRef.current !== requestId) return;
 
       const files = diffs ?? [];
@@ -295,9 +293,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         return;
       }
 
-      void handleViewCommitDiff(selectedHistoryCommit.hash, filePath, {
-        fileNavigation: "external",
-      });
+      void handleViewCommitDiff(selectedHistoryCommit.hash, filePath);
     },
     [activeBuffer, handleViewCommitDiff, selectedHistoryCommit, updateBufferContent],
   );
@@ -839,6 +835,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               <Button
                 type="button"
                 variant="default"
+                size="sm"
                 width="grow"
                 onClick={() => void handleRemoteAction(primaryRemoteAction)}
                 disabled={!activeRepoPath || isRemoteActionLoading}
@@ -853,6 +850,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                     <Button
                       type="button"
                       variant="default"
+                      size="sm"
                       iconOnly
                       disabled={!activeRepoPath || isRemoteActionLoading}
                       aria-label="Choose remote action"

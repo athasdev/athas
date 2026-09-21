@@ -322,6 +322,10 @@ export const ShieldCheckIcon = createIconComponent(
 );
 export const ShieldIcon = createIconComponent(Nucleo.IconShieldOutline18, "ShieldIcon");
 export const SidebarIcon = createIconComponent(Nucleo.IconSidebarLeftShowOutline18, "SidebarIcon");
+export const SidebarRightIcon = createIconComponent(
+  Nucleo.IconSidebarRightShowOutline18,
+  "SidebarRightIcon",
+);
 export const SignInIcon = createIconComponent(Nucleo.IconArrowDoorInOutline18, "SignInIcon");
 export const SignOutIcon = createIconComponent(Nucleo.IconArrowDoorOut3Outline18, "SignOutIcon");
 export const SitemapIcon = createIconComponent(Nucleo.IconSitemapOutline18, "SitemapIcon");

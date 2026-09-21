@@ -32,9 +32,6 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
   const activeSidebarView = useUIState((state) => state.activeSidebarView);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
-  const isCommandPaletteVisible = useUIState((state) => state.isCommandPaletteVisible);
-  const commandPaletteInitialView = useUIState((state) => state.commandPaletteInitialView);
-  const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const openProjectPicker = useUIState((state) => state.openProjectPicker);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
   const handleOpenGlobalSearch = useCallback(() => {
@@ -80,42 +77,21 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
     uiState.setBottomPaneActiveTab("debugger");
     uiState.setIsBottomPaneVisible(showingDebugger);
   }, []);
-  const handleOpenDatabases = useCallback(() => {
-    openCommandPaletteView("databases");
-  }, [openCommandPaletteView]);
   const railContentRef = useRef<HTMLDivElement>(null);
   const uiFontSize = useSettingsStore((state) => state.settings.uiFontSize);
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const activityBarVisibility = useActivityBarVisibility();
-  const handleSidebarViewChange = (view: typeof activeSidebarView) => {
-    const buffers = useBufferStore.getState();
-    if (
-      buffers.buffers.find((buffer) => buffer.id === buffers.activeBufferId)?.type === "workspaces"
-    ) {
-      const editor = [...buffers.buffers].reverse().find((buffer) => buffer.type === "editor");
-      if (editor) buffers.actions.setActiveBuffer(editor.id);
-      else buffers.actions.showNewTabView();
-      const ui = useUIState.getState();
-      ui.setActiveView(view);
-      ui.setIsSidebarVisible(true);
-      return;
-    }
-    openSidebarView(view);
-  };
-
   const activityNavigationItems = useActivityNavigationItems({
     activeSidebarView,
     isGitViewActive,
     isGitHubPRsViewActive,
     isSidebarVisible,
     coreFeatures,
-    onViewChange: handleSidebarViewChange,
+    onViewChange: openSidebarView,
     onOpenExtensions: openExtensionsBuffer,
     isExtensionsActive: isExtensionsBufferActive,
     isDebuggerActive: isBottomPaneVisible && bottomPaneActiveTab === "debugger",
-    isDatabasesActive: isCommandPaletteVisible && commandPaletteInitialView === "databases",
     onToggleDebugger: handleDebuggerToggle,
-    onOpenDatabases: handleOpenDatabases,
   });
   const visibleNavigationItems = activityNavigationItems.filter((item) =>
     activityBarVisibility.isNavigationItemVisible(item.id),
@@ -188,13 +164,13 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
     <ContextMenu>
       <ContextMenuTrigger
         ref={railRef}
-        className="relative flex h-full shrink-0 select-none overflow-hidden"
+        className="relative flex h-full shrink-0 select-none overflow-hidden transition-[width] duration-fast ease-smooth motion-reduce:transition-none"
         style={{
           width: renderedRailWidth,
         }}
       >
         <div
-          className="athas-sidebar-rail absolute inset-y-0 left-0 flex flex-col overflow-hidden py-1.5"
+          className="athas-sidebar-rail absolute inset-y-0 left-0 flex flex-col overflow-hidden py-1.5 transition-[width] duration-fast ease-smooth motion-reduce:transition-none"
           style={{ width: railPanelWidth }}
         >
           <div

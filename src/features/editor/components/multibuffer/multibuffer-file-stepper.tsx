@@ -5,20 +5,20 @@ import { Button } from "@/ui/button";
 import { Kbd } from "@/ui/kbd";
 import { ProgressCircle } from "@/ui/progress";
 
-interface ReviewFileStepperProps {
+interface MultibufferFileStepperProps {
   items: FileNavigatorItem[];
   selectedKey: string | null;
   onSelect: (key: string) => void;
   isActive?: boolean;
 }
 
-type ReviewFileNavigationShortcutEvent = Pick<
+type MultibufferFileNavigationShortcutEvent = Pick<
   KeyboardEvent,
   "altKey" | "ctrlKey" | "key" | "metaKey" | "shiftKey"
 >;
 
-export function getReviewFileNavigationDirection(
-  event: ReviewFileNavigationShortcutEvent,
+export function getMultibufferFileNavigationDirection(
+  event: MultibufferFileNavigationShortcutEvent,
 ): -1 | 1 | null {
   if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return null;
   if (event.key.toLowerCase() === "j") return -1;
@@ -38,7 +38,7 @@ function isEditableTarget(target: EventTarget | null) {
   );
 }
 
-function ReviewFileProgress({ current, total }: { current: number; total: number }) {
+function MultibufferFileProgress({ current, total }: { current: number; total: number }) {
   return (
     <span
       className="inline-flex shrink-0 items-center gap-1.5"
@@ -58,12 +58,12 @@ function ReviewFileProgress({ current, total }: { current: number; total: number
   );
 }
 
-export const ReviewFileStepper = memo(function ReviewFileStepper({
+export const MultibufferFileStepper = memo(function MultibufferFileStepper({
   items,
   selectedKey,
   onSelect,
   isActive = true,
-}: ReviewFileStepperProps) {
+}: MultibufferFileStepperProps) {
   const selectedIndex = useMemo(() => {
     const index = items.findIndex((item) => item.key === selectedKey);
     return index >= 0 ? index : 0;
@@ -78,7 +78,7 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
     const handleNavigationShortcut = (event: KeyboardEvent) => {
       if (event.defaultPrevented || isEditableTarget(event.target)) return;
 
-      const direction = getReviewFileNavigationDirection(event);
+      const direction = getMultibufferFileNavigationDirection(event);
       const item = direction === -1 ? previousItem : direction === 1 ? nextItem : null;
       if (!item) return;
 
@@ -96,33 +96,33 @@ export const ReviewFileStepper = memo(function ReviewFileStepper({
     <div className="pointer-events-auto w-fit max-w-full">
       <div
         role="group"
-        aria-label="Changed file navigation"
+        aria-label="File navigation"
         className="flex w-fit max-w-full items-center justify-between gap-1 rounded-xl border border-border bg-surface p-1 shadow-(--shadow-popover) backdrop-blur-xl"
-        data-slot="review-file-stepper"
+        data-slot="multibuffer-file-stepper"
       >
         <Button
           type="button"
           variant="ghost"
           onClick={() => previousItem && onSelect(previousItem.key)}
           disabled={!previousItem}
-          tooltip="Previous changed file"
+          tooltip="Previous file"
           shortcut="J"
-          aria-label="Previous changed file"
+          aria-label="Previous file"
         >
           <ChevronLeftIcon />
           <Kbd>J</Kbd>
         </Button>
         <div className="flex shrink-0 items-center justify-center px-1.5">
-          <ReviewFileProgress current={selectedIndex + 1} total={items.length} />
+          <MultibufferFileProgress current={selectedIndex + 1} total={items.length} />
         </div>
         <Button
           type="button"
           variant="ghost"
           onClick={() => nextItem && onSelect(nextItem.key)}
           disabled={!nextItem}
-          tooltip="Next changed file"
+          tooltip="Next file"
           shortcut="K"
-          aria-label="Next changed file"
+          aria-label="Next file"
         >
           <Kbd>K</Kbd>
           <ChevronRightIcon />

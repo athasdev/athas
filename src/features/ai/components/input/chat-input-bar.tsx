@@ -1,8 +1,21 @@
 import { ProviderConnectionAction } from "./provider-connection-action";
 import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
-import { ArrowUpIcon, BoltIcon, CommandIcon, MicrophoneIcon, StopIcon } from "@/ui/icons";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowUpIcon,
+  BoltIcon,
+  CommandIcon,
+  MicrophoneIcon,
+  PlayIcon,
+  StopIcon,
+  TerminalIcon,
+} from "@/ui/icons";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { runChatTerminalCommand } from "@/features/ai/services/chat-terminal-command";
+import { getFolderName } from "@/utils/path-helpers";
+import { getComposerTerminalCommand } from "@/features/ai/utils/composer-terminal-command";
+import { ChromeBar, ChromeGroup, ChromeLabel } from "@/ui/chrome";
+import { Kbd } from "@/ui/kbd";
 import { useAgentDraft } from "@/features/ai/hooks/use-agent-draft";
 import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
 import {
@@ -37,7 +50,7 @@ import {
 } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ComposerAttachments } from "./composer-attachments";
-import { badgeVariants } from "@/ui/badge";
+import Badge, { badgeVariants } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { cn } from "@/utils/cn";
@@ -73,6 +86,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   presentation = "default",
   autoFocus = false,
   onAgentChange,
+  onTerminalChatCreated,
   onSendMessage,
   onInterruptAndSend,
   onMoveQueuedMessage,
@@ -89,6 +103,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // Local state for input emptiness check (to avoid subscribing to full input text)
   const [hasInputText, setHasInputText] = useState(false);
+  const [terminalCommand, setTerminalCommand] = useState<string | null>(null);
+  const terminalHintId = useId();
+  const isTerminalMode = terminalCommand !== null;
+  const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
   const [isContextDragOver, setIsContextDragOver] = useState(false);
   const [isComposerFocused, setIsComposerFocused] = useState(false);
   const projectPath = useProjectStore((state) => state.rootFolderPath || ".");
@@ -108,6 +126,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       inputValueRef.current = draft.text;
       if (inputRef.current) inputRef.current.textContent = draft.text;
       setHasInputText(draft.text.trim().length > 0);
+      setTerminalCommand(getComposerTerminalCommand(draft.text));
       setPastedImages(draft.images);
     },
   });
@@ -143,6 +162,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // ACP agents don't need API key (they handle their own auth)
   const isInputEnabled = isCustomAgent ? hasApiKey : true;
+  const canEditInput = isInputEnabled || terminalEnabled;
   const isStreaming = isTyping && !!streamingMessageId;
   const changeSessionConfigOption = useAIChatStore(
     (state) => state.actions.changeSessionConfigOption,
@@ -177,6 +197,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const setInput = useCallback((input: string) => {
     inputValueRef.current = input;
+    setTerminalCommand(getComposerTerminalCommand(input));
   }, []);
   const removePastedImage = useCallback((imageId: string) => {
     setPastedImages((current) => current.filter((image) => image.id !== imageId));
@@ -356,7 +377,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // Computed state for send button
   const hasImages = pastedImages.length > 0;
-  const isSendDisabled = (!hasInputText && !hasImages) || !isInputEnabled;
+  const isSendDisabled = isTerminalMode
+    ? !terminalEnabled || !terminalCommand
+    : (!hasInputText && !hasImages) || !isInputEnabled;
   const getPlainTextFromDiv = useCallback(() => getComposerText(inputRef.current), []);
   const getTextBeforeCaret = useCallback(() => getComposerTextBeforeCaret(inputRef.current), []);
   const getCaretDropdownPosition = useCallback(
@@ -477,6 +500,21 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.defaultPrevented || isComposingKeyboardEvent(e.nativeEvent)) return;
+    if (getComposerTerminalCommand(inputValueRef.current) !== null) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        replaceInput(inputValueRef.current.trimStart().slice(1));
+        closeInlineMenus();
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!e.repeat) handleSendMessage();
+        return;
+      }
+    }
     // Handle slash command navigation
     if (slashCommandState.active) {
       if (e.key === "ArrowDown") {
@@ -582,6 +620,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
     performanceTimer.current = window.setTimeout(() => {
       if (!inputRef.current) return;
+      if (getComposerTerminalCommand(inputValueRef.current) !== null) return;
 
       const textBeforeCaret = getTextBeforeCaret();
       const lastAtIndex = textBeforeCaret.lastIndexOf("@");
@@ -616,6 +655,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       // Update local state for button enabled/disabled
       setHasInputText(plainTextFromDiv.trim().length > 0);
+
+      if (getComposerTerminalCommand(plainTextFromDiv) !== null) {
+        closeInlineMenus();
+        return;
+      }
 
       const textBeforeCaret = getTextBeforeCaret();
       const slashMatch = textBeforeCaret.match(/(?:^|\s)\/([^\s/]*)$/);
@@ -654,6 +698,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     getSlashDropdownPosition,
     isContextDropdownOpen,
     setIsContextDropdownOpen,
+    closeInlineMenus,
   ]);
 
   const handleEditableMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
@@ -915,6 +960,26 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const handleSendMessage = () => {
     const currentInput = inputValueRef.current;
+    const command = getComposerTerminalCommand(currentInput);
+    if (command !== null) {
+      if (!command || !terminalEnabled) return;
+      try {
+        const targetChatId = runChatTerminalCommand({
+          chatId,
+          agentId: currentAgentId,
+          command,
+          workingDirectory: projectPath,
+        });
+        setInput("");
+        setHasInputText(false);
+        if (inputRef.current) inputRef.current.textContent = "";
+        closeInlineMenus();
+        if (!chatId) onTerminalChatCreated?.(targetChatId);
+      } catch (error) {
+        showToast({ message: String(error), type: "error" });
+      }
+      return;
+    }
     const currentImages = pastedImages;
     const hasContent = currentInput.trim() || currentImages.length > 0;
     if (!hasContent || !isInputEnabled) return;
@@ -992,11 +1057,13 @@ const AIChatInputBar = memo(function AIChatInputBar({
     ? isInitialPresentation
       ? "What do you want to create?"
       : hasSlashCommands
-        ? "Ask anything... (@ files, / commands)"
-        : "Ask anything... (@ to mention files)"
-    : aiProviderId === "athas"
-      ? "Connect your Athas account to use Agent"
-      : "Connect your provider to use Agent";
+        ? "Ask anything... (@ files, / commands, ! terminal)"
+        : "Ask anything... (@ files, ! terminal)"
+    : terminalEnabled
+      ? "Type ! for terminal, or connect a provider to chat"
+      : aiProviderId === "athas"
+        ? "Connect your Athas account to use Agent"
+        : "Connect your provider to use Agent";
 
   useEffect(() => {
     if (!autoFocus || !isActiveSurface) return;
@@ -1022,27 +1089,43 @@ const AIChatInputBar = memo(function AIChatInputBar({
         onDrop={handleContextDrop}
         dragActive={isContextDragOver || isDraggingFiles}
       >
-        <ComposerAttachments
-          buffers={buffers}
-          selectedBufferIds={selectedBufferIds}
-          selectedFilesPaths={selectedFilesPaths}
-          selectedEditorContexts={selectedEditorContexts}
-          pastedImages={pastedImages}
-          contextTriggerRef={contextTriggerRef}
-          onRemove={(source) => {
-            if (source.type === "buffer") toggleBufferSelection(source.id);
-            else if (source.type === "file") toggleFileSelection(source.id);
-            else if (source.type === "selection") onRemoveEditorContext(source.id);
-            else removePastedImage(source.id);
-          }}
-        />
+        {isTerminalMode && (
+          <div className="px-1 pt-2">
+            <ChromeBar region="content" surface="transparent">
+              <Badge tone="accent">
+                <TerminalIcon />
+                Terminal
+              </Badge>
+              <ChromeLabel title={projectPath}>
+                {projectPath === "." ? "Default directory" : getFolderName(projectPath)}
+              </ChromeLabel>
+            </ChromeBar>
+          </div>
+        )}
+        {!isTerminalMode && (
+          <ComposerAttachments
+            buffers={buffers}
+            selectedBufferIds={selectedBufferIds}
+            selectedFilesPaths={selectedFilesPaths}
+            selectedEditorContexts={selectedEditorContexts}
+            pastedImages={pastedImages}
+            contextTriggerRef={contextTriggerRef}
+            onRemove={(source) => {
+              if (source.type === "buffer") toggleBufferSelection(source.id);
+              else if (source.type === "file") toggleFileSelection(source.id);
+              else if (source.type === "selection") onRemoveEditorContext(source.id);
+              else removePastedImage(source.id);
+            }}
+          />
+        )}
 
         <div className="flex min-w-0 items-end gap-1">
           <ComposerEditable
             ref={inputRef}
             data-ai-element="prompt-input-editable"
-            enabled={isInputEnabled}
-            contentEditable={isInputEnabled}
+            enabled={canEditInput}
+            contentEditable={canEditInput}
+            font={isTerminalMode ? "mono" : "sans"}
             onInput={handleInputChange}
             onKeyDown={handleKeyDown}
             onMouseDown={handleEditableMouseDown}
@@ -1052,12 +1135,25 @@ const AIChatInputBar = memo(function AIChatInputBar({
             data-placeholder={inputPlaceholder}
             role="textbox"
             aria-multiline
-            aria-label="Message input"
-            tabIndex={isInputEnabled ? 0 : -1}
+            aria-label={isTerminalMode ? "Terminal command" : "Message input"}
+            aria-describedby={isTerminalMode ? terminalHintId : undefined}
+            tabIndex={canEditInput ? 0 : -1}
             className="min-w-0 flex-1 pr-0"
           />
           <div className="flex shrink-0 items-center gap-1 pr-2 pb-2">
-            {!isInputEnabled ? (
+            {isTerminalMode ? (
+              <Button
+                type="button"
+                disabled={isSendDisabled}
+                onClick={handleSendMessage}
+                variant="accent"
+                tooltip="Run command"
+                shortcut="enter"
+                iconOnly
+              >
+                <PlayIcon />
+              </Button>
+            ) : !isInputEnabled ? (
               <ProviderConnectionAction key={aiProviderId} providerId={aiProviderId} />
             ) : isStreaming ? (
               <ButtonGroup variant="ghost">
@@ -1114,126 +1210,147 @@ const AIChatInputBar = memo(function AIChatInputBar({
         </div>
       </Composer>
 
-      <ComposerToolbar>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-          <ContextSelector
-            buffers={buffers}
-            selectedBufferIds={selectedBufferIds}
-            selectedFilesPaths={selectedFilesPaths}
-            onToggleBuffer={toggleBufferSelection}
-            onToggleFile={toggleFileSelection}
-            isOpen={isContextDropdownOpen}
-            triggerRef={contextTriggerRef}
-            onOpenChange={(open) => {
-              if (open) {
-                closeInlineMenus();
-              }
-              setIsContextDropdownOpen(open);
+      {isTerminalMode ? (
+        <ChromeBar region="content" surface="transparent" id={terminalHintId}>
+          <ChromeGroup grow>
+            <ChromeLabel>
+              {terminalEnabled
+                ? "Enter to run · Output appears in chat"
+                : "Enable Terminal in Settings to run commands"}
+            </ChromeLabel>
+          </ChromeGroup>
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => replaceInput(inputValueRef.current.trimStart().slice(1))}
+            tooltip="Back to chat"
+            shortcut="escape"
+          >
+            <Kbd>Esc</Kbd>Back to chat
+          </Button>
+        </ChromeBar>
+      ) : (
+        <ComposerToolbar>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+            <ContextSelector
+              buffers={buffers}
+              selectedBufferIds={selectedBufferIds}
+              selectedFilesPaths={selectedFilesPaths}
+              onToggleBuffer={toggleBufferSelection}
+              onToggleFile={toggleFileSelection}
+              isOpen={isContextDropdownOpen}
+              triggerRef={contextTriggerRef}
+              onOpenChange={(open) => {
+                if (open) {
+                  closeInlineMenus();
+                }
+                setIsContextDropdownOpen(open);
+              }}
+            />
+          </div>
+
+          <AgentMessageQueue
+            messages={queuedMessages}
+            onEdit={(index) => {
+              const message = queuedMessages[index];
+              if (!message) return;
+              onRemoveQueuedMessage(index, "edit");
+              replaceInput(message.content);
+              setPastedImages(restorePastedImages(message.images));
             }}
+            onMove={onMoveQueuedMessage}
+            onRemove={(index) => onRemoveQueuedMessage(index, "discard")}
           />
-        </div>
 
-        <AgentMessageQueue
-          messages={queuedMessages}
-          onEdit={(index) => {
-            const message = queuedMessages[index];
-            if (!message) return;
-            onRemoveQueuedMessage(index, "edit");
-            replaceInput(message.content);
-            setPastedImages(restorePastedImages(message.images));
-          }}
-          onMove={onMoveQueuedMessage}
-          onRemove={(index) => onRemoveQueuedMessage(index, "discard")}
-        />
+          <div className="ml-auto flex min-w-0 shrink items-center gap-1">
+            <ComposerAgentSelector
+              cwd={projectPath}
+              currentAgentId={currentAgentId}
+              providerId={aiProviderId}
+              modelId={aiModelId}
+              sessionConfigOptions={sessionConfigOptions}
+              onAgentChange={onAgentChange}
+              onModelChange={handleApiModelChange}
+              onSessionConfigChange={(optionId, value) =>
+                void changeSessionConfigOption(optionId, value)
+              }
+              onBeforeOpen={closeInlineMenus}
+            />
+            <ComposerEffortSelector
+              cwd={projectPath}
+              currentAgentId={currentAgentId}
+              sessionConfigOptions={sessionConfigOptions}
+              onSessionConfigChange={(optionId, value) =>
+                void changeSessionConfigOption(optionId, value)
+              }
+              onOpen={closeInlineMenus}
+            />
+            <ChatPreferencesMenu
+              currentAgentId={currentAgentId}
+              canChangeAgent={Boolean(onAgentChange)}
+              sessionConfigOptions={sessionConfigOptions}
+              onSessionConfigChange={(optionId, value) =>
+                void changeSessionConfigOption(optionId, value)
+              }
+              onSelectSkill={insertSkillAtCursor}
+              onSelectCodexSkill={insertCodexSkillAtCursor}
+              onBeforeOpen={closeInlineMenus}
+            />
+            {hasSlashCommands && (
+              <Button
+                type="button"
+                onClick={() => {
+                  if (!inputRef.current || !isInputEnabled) return;
+                  if (slashCommandState.active) {
+                    hideSlashCommands();
+                    return;
+                  }
+                  closeInlineMenus();
+                  const { startIndex, endIndex, search } = prepareComposerSlashCommand(
+                    inputRef.current,
+                  );
+                  syncInputFromEditable();
+                  slashCommandRangeRef.current = { startIndex, endIndex };
+                  showSlashCommands(getSlashDropdownPosition(), search);
+                }}
+                variant="ghost"
+                disabled={!isInputEnabled}
+                iconOnly
+                active={slashCommandState.active}
+                tooltip="Show slash commands"
+                aria-label="Show slash commands"
+              >
+                <CommandIcon />
+              </Button>
+            )}
 
-        <div className="ml-auto flex min-w-0 shrink items-center gap-1">
-          <ComposerAgentSelector
-            cwd={projectPath}
-            currentAgentId={currentAgentId}
-            providerId={aiProviderId}
-            modelId={aiModelId}
-            sessionConfigOptions={sessionConfigOptions}
-            onAgentChange={onAgentChange}
-            onModelChange={handleApiModelChange}
-            onSessionConfigChange={(optionId, value) =>
-              void changeSessionConfigOption(optionId, value)
-            }
-            onBeforeOpen={closeInlineMenus}
-          />
-          <ComposerEffortSelector
-            cwd={projectPath}
-            currentAgentId={currentAgentId}
-            sessionConfigOptions={sessionConfigOptions}
-            onSessionConfigChange={(optionId, value) =>
-              void changeSessionConfigOption(optionId, value)
-            }
-            onOpen={closeInlineMenus}
-          />
-          <ChatPreferencesMenu
-            currentAgentId={currentAgentId}
-            canChangeAgent={Boolean(onAgentChange)}
-            sessionConfigOptions={sessionConfigOptions}
-            onSessionConfigChange={(optionId, value) =>
-              void changeSessionConfigOption(optionId, value)
-            }
-            onSelectSkill={insertSkillAtCursor}
-            onSelectCodexSkill={insertCodexSkillAtCursor}
-            onBeforeOpen={closeInlineMenus}
-          />
-          {hasSlashCommands && (
             <Button
               type="button"
-              onClick={() => {
-                if (!inputRef.current || !isInputEnabled) return;
-                if (slashCommandState.active) {
-                  hideSlashCommands();
-                  return;
-                }
-                closeInlineMenus();
-                const { startIndex, endIndex, search } = prepareComposerSlashCommand(
-                  inputRef.current,
-                );
-                syncInputFromEditable();
-                slashCommandRangeRef.current = { startIndex, endIndex };
-                showSlashCommands(getSlashDropdownPosition(), search);
-              }}
+              disabled={!isInputEnabled || !isSpeechRecognitionSupported}
+              active={isListening}
+              aria-pressed={isListening}
+              onClick={toggleVoiceInput}
               variant="ghost"
-              disabled={!isInputEnabled}
+              tone={isListening ? "accent" : "default"}
               iconOnly
-              active={slashCommandState.active}
-              tooltip="Show slash commands"
-              aria-label="Show slash commands"
+              tooltip={
+                isMacDevSpeechRecognitionBlocked
+                  ? "Voice input is unavailable in macOS development builds. Use a packaged build."
+                  : !isSpeechRecognitionSupported
+                    ? "Voice input is not supported by this webview"
+                    : isListening
+                      ? interimTranscript || "Stop voice input"
+                      : "Start voice input"
+              }
+              aria-label={isListening ? "Stop voice input" : "Start voice input"}
             >
-              <CommandIcon />
+              <MicrophoneIcon className={cn(isListening && "animate-pulse")} />
             </Button>
-          )}
+          </div>
+        </ComposerToolbar>
+      )}
 
-          <Button
-            type="button"
-            disabled={!isInputEnabled || !isSpeechRecognitionSupported}
-            active={isListening}
-            aria-pressed={isListening}
-            onClick={toggleVoiceInput}
-            variant="ghost"
-            tone={isListening ? "accent" : "default"}
-            iconOnly
-            tooltip={
-              isMacDevSpeechRecognitionBlocked
-                ? "Voice input is unavailable in macOS development builds. Use a packaged build."
-                : !isSpeechRecognitionSupported
-                  ? "Voice input is not supported by this webview"
-                  : isListening
-                    ? interimTranscript || "Stop voice input"
-                    : "Start voice input"
-            }
-            aria-label={isListening ? "Stop voice input" : "Start voice input"}
-          >
-            <MicrophoneIcon className={cn(isListening && "animate-pulse")} />
-          </Button>
-        </div>
-      </ComposerToolbar>
-
-      {(isActiveSurface || isComposerFocused) && mentionState.active && (
+      {!isTerminalMode && (isActiveSurface || isComposerFocused) && mentionState.active && (
         <FileMentionDropdown
           files={mentionableFiles}
           mentionState={mentionState}
@@ -1246,7 +1363,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         />
       )}
 
-      {slashCommandState.active && (
+      {!isTerminalMode && slashCommandState.active && (
         <SlashCommandDropdown
           slashCommandState={slashCommandState}
           availableSlashCommands={availableSlashCommands}

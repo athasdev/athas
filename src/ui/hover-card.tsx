@@ -4,7 +4,7 @@ import { OVERLAY_MAX_WIDTH, OVERLAY_SIZES, type OverlaySize } from "@/ui/overlay
 import { cn } from "@/utils/cn";
 
 const hoverCardVariants = cva(
-  "z-10070 max-h-(--available-height) origin-(--transform-origin) overflow-y-auto rounded-lg bg-overlay font-sans text-foreground shadow-(--shadow-popover) ring-1 ring-border outline-none transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0 motion-reduce:transition-none ui-text-chrome",
+  "z-10070 max-h-(--available-height) origin-(--transform-origin) overflow-y-auto rounded-lg bg-overlay font-sans text-foreground shadow-(--shadow-popover) ring-1 ring-border outline-none transition-[opacity,transform,scale] duration-fast ease-smooth data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0 motion-reduce:transition-none ui-text-chrome",
   {
     variants: { variant: { default: "p-3", preview: "overflow-x-hidden p-0" } },
     defaultVariants: { variant: "default" },

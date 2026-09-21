@@ -1,3 +1,4 @@
+import { usePerformanceExperiments } from "@/features/settings/stores/performance-experiments.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   closeActiveEditorGroup,
@@ -632,6 +633,18 @@ const editCommands: Command[] = [
 
 const viewCommands: Command[] = [
   {
+    id: "workbench.togglePerformanceMonitor",
+    title: "Toggle Performance Monitor",
+    category: "View",
+    execute: () => usePerformanceExperiments.getState().actions.toggleMonitor(),
+  },
+  {
+    id: "editor.toggleWebgpu",
+    title: "Toggle Experimental WebGPU Renderer",
+    category: "View",
+    execute: () => usePerformanceExperiments.getState().actions.toggleWebgpu(),
+  },
+  {
     id: "workbench.toggleActivitySidebar",
     title: "Toggle Activity Sidebar",
     category: "View",
@@ -1130,7 +1143,9 @@ const databaseCommands: Command[] = [
     title: "Show Databases",
     category: "Database",
     execute: () => {
-      useUIState.getState().openCommandPaletteView("databases");
+      const ui = useUIState.getState();
+      ui.setActiveView("databases");
+      ui.setIsSidebarVisible(true);
     },
   },
 ];

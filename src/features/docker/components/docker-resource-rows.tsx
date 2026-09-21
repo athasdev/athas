@@ -102,8 +102,7 @@ export function DockerResourceRow({
 }) {
   const row = (
     <SidebarListItem
-      render={onClick ? undefined : <div />}
-      type={onClick ? "button" : undefined}
+      as={onClick ? "button" : "div"}
       active={active}
       onClick={onClick}
       description={description}
