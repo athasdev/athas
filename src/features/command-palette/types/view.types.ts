@@ -3,8 +3,7 @@ type BuiltInCommandPaletteViewId =
   | "color-theme"
   | "icon-theme"
   | "local-history"
-  | "outline"
-  | "databases";
+  | "outline";
 
 type ExtensionCommandPaletteViewId = `extension:${string}`;
 

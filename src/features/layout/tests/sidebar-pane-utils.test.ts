@@ -10,6 +10,7 @@ import {
 describe("getSidebarPaneLevel", () => {
   test("keeps ordinary workbench views in the primary sidebar", () => {
     expect(getSidebarPaneLevel("files")).toBe("primary");
+    expect(getSidebarPaneLevel("databases")).toBe("primary");
   });
 });
 

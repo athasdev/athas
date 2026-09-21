@@ -1,5 +1,3 @@
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { openWorkspaceManagement } from "@/features/workspace/team/services/open-workspace-management";
 import { useMemo, type ReactNode } from "react";
 import { normalizeItemOrder } from "@/features/layout/config/item-order";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
@@ -39,9 +37,7 @@ interface ActivityNavigationItemOptions {
   onOpenExtensions: () => void;
   isExtensionsActive: boolean;
   isDebuggerActive: boolean;
-  isDatabasesActive: boolean;
   onToggleDebugger: () => void;
-  onOpenDatabases: () => void;
 }
 
 function orderItems<T extends { id: string }>(items: T[], orderedIds: string[]) {
@@ -63,20 +59,13 @@ export function useActivityNavigationItems({
   onOpenExtensions,
   isExtensionsActive,
   isDebuggerActive,
-  isDatabasesActive,
   onToggleDebugger,
-  onOpenDatabases,
 }: ActivityNavigationItemOptions) {
   const extensionViews = useExtensionViews();
-  const isWorkspacesActive = useBufferStore(
-    (state) =>
-      state.buffers.find((buffer) => buffer.id === state.activeBufferId)?.type === "workspaces",
-  );
   const sidebarActivityItemsOrder = useSettingsStore(
     (state) => state.settings.sidebarActivityItemsOrder,
   );
-  const isBufferOwnedSurfaceActive = isExtensionsActive || isWorkspacesActive;
-  const isPrimarySidebarItemActive = isSidebarVisible && !isBufferOwnedSurfaceActive;
+  const isPrimarySidebarItemActive = isSidebarVisible && !isExtensionsActive;
 
   const items = useMemo<ActivityNavigationItem[]>(
     () => [
@@ -122,8 +111,8 @@ export function useActivityNavigationItems({
         id: "workspaces",
         label: "Workspaces",
         icon: <GridIcon />,
-        active: isWorkspacesActive,
-        onClick: openWorkspaceManagement,
+        active: isPrimarySidebarItemActive && activeSidebarView === "workspaces",
+        onClick: () => onViewChange("workspaces"),
         ariaLabel: "Workspaces",
       },
       {
@@ -151,8 +140,8 @@ export function useActivityNavigationItems({
         id: "databases",
         label: "Databases",
         icon: <DatabaseIcon />,
-        active: isDatabasesActive,
-        onClick: onOpenDatabases,
+        active: isPrimarySidebarItemActive && activeSidebarView === "databases",
+        onClick: () => onViewChange("databases"),
         ariaLabel: "Databases",
       },
       ...(coreFeatures.docker
@@ -195,14 +184,11 @@ export function useActivityNavigationItems({
       coreFeatures.github,
       extensionViews,
       isExtensionsActive,
-      isWorkspacesActive,
-      isDatabasesActive,
       isDebuggerActive,
       isGitHubPRsViewActive,
       isGitViewActive,
       isPrimarySidebarItemActive,
       onOpenExtensions,
-      onOpenDatabases,
       onToggleDebugger,
       onViewChange,
     ],

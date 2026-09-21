@@ -1,3 +1,5 @@
+import { getDatabaseBrandImage } from "@/ui/brand-marks";
+import { getDatabaseProviderContribution } from "@/extensions/database/database-provider-extensions";
 import { describe, expect, it } from "vite-plus/test";
 import { bundledExtensionManifests } from "@/extensions/bundled/bundled-extension-manifests";
 import { buildExtensionCatalog } from "@/extensions/ui/components/build-extension-catalog";
@@ -27,6 +29,29 @@ function manifest(overrides: Partial<ExtensionManifest>): ExtensionManifest {
 }
 
 describe("integration browser catalog", () => {
+  it.each(["sqlite", "duckdb", "postgres", "mysql", "mongodb", "redis"] as const)(
+    "shares the %s brand asset with database navigation",
+    (providerId) => {
+      const databaseManifest = manifest({
+        id: `athas.database.${providerId}`,
+        databases: [getDatabaseProviderContribution(providerId)!],
+        icon: "https://cdn.example.com/icon.svg",
+      });
+      const result = buildExtensionCatalog({
+        availableExtensions: new Map([[databaseManifest.id, available(databaseManifest)]]),
+        agents: [],
+        marketplaceSkills: [],
+        aiSkills: [],
+        selectedThemeId: "athas-dark",
+        selectedIconThemeId: "pierre-icons-complete",
+      });
+      const image = getDatabaseBrandImage(providerId);
+      expect(image).toBeTruthy();
+      expect(result.find((item) => item.id === databaseManifest.id)?.icon).toBe(image);
+      expect(getDatabaseBrandImage(`third-party.${providerId}`)).toBeUndefined();
+    },
+  );
+
   it("keeps personal and unknown skills out of the Athas catalog", () => {
     const skill = {
       title: "Skill",

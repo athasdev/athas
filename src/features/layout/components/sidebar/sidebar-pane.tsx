@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from "react";
+import { lazy, memo, type ReactNode, Suspense } from "react";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
 import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
@@ -17,6 +17,18 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
+
+const WorkspaceSidebar = lazy(() =>
+  import("@/features/workspace/team/components/workspace-sidebar").then((module) => ({
+    default: module.WorkspaceSidebar,
+  })),
+);
+
+const DatabaseSidebar = lazy(() =>
+  import("@/features/database/components/database-sidebar").then((module) => ({
+    default: module.DatabaseSidebar,
+  })),
+);
 
 interface SidebarPaneProps {
   paneLevel?: "primary" | "edge";
@@ -72,6 +84,22 @@ export const SidebarPane = memo(
         content: <ViewsSidebar projectPath={rootFolderPath ?? null} />,
       },
       ...(coreFeatures.docker ? [{ id: "docker" as const, content: <DockerSidebar /> }] : []),
+      {
+        id: "workspaces",
+        content: (
+          <Suspense fallback={null}>
+            <WorkspaceSidebar />
+          </Suspense>
+        ),
+      },
+      {
+        id: "databases",
+        content: (
+          <Suspense fallback={null}>
+            <DatabaseSidebar />
+          </Suspense>
+        ),
+      },
       { id: "files", content: <FileExplorerPane /> },
       { id: "outline", content: <OutlineSidebar /> },
       ...(hasTeamsCollaborationAccess && coreFeatures.teamCollaboration

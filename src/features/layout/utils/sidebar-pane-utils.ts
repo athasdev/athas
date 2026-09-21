@@ -2,6 +2,7 @@ export type SidebarView =
   | "files"
   | "git"
   | "github-prs"
+  | "workspaces"
   | "views"
   | "docker"
   | "outline"
@@ -23,7 +24,7 @@ interface SidebarPaneClickResult {
 
 export type SidebarPaneLevel = "primary" | "edge";
 
-const EDGE_SIDEBAR_VIEWS = new Set<SidebarView>(["outline", "databases", "collaboration"]);
+const EDGE_SIDEBAR_VIEWS = new Set<SidebarView>(["outline", "collaboration"]);
 
 export function getSidebarPaneLevel(view: SidebarView): SidebarPaneLevel {
   if (EDGE_SIDEBAR_VIEWS.has(view)) return "edge";

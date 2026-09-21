@@ -1130,7 +1130,9 @@ const databaseCommands: Command[] = [
     title: "Show Databases",
     category: "Database",
     execute: () => {
-      useUIState.getState().openCommandPaletteView("databases");
+      const ui = useUIState.getState();
+      ui.setActiveView("databases");
+      ui.setIsSidebarVisible(true);
     },
   },
 ];
