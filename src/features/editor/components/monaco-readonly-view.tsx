@@ -58,8 +58,14 @@ export function MonacoReadonlyView({
     onContentApplied?.(editor, appended),
   );
   const instanceId = useId();
-  const { fontFamily, fontSize, lineHeight, themeId, editorItalicComments } =
-    useMonacoEditorSettings();
+  const {
+    fontFamily,
+    fontSize,
+    lineHeight,
+    themeId,
+    editorItalicComments,
+    experimentalGpuAcceleration,
+  } = useMonacoEditorSettings();
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -69,6 +75,7 @@ export function MonacoReadonlyView({
     const model = monacoEditor.createModel(content, languageId, uri);
     const editor = monacoEditor.create(container, {
       model,
+      experimentalGpuAcceleration,
       readOnly: true,
       domReadOnly: true,
       automaticLayout: true,
@@ -130,7 +137,7 @@ export function MonacoReadonlyView({
     };
     // The editor is created once per language; everything else is synced below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instanceId, languageId]);
+  }, [instanceId, languageId, experimentalGpuAcceleration]);
 
   useLayoutEffect(() => {
     const editor = editorRef.current;

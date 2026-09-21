@@ -1,4 +1,4 @@
-import { lazy, memo, type ReactNode, Suspense } from "react";
+import { Activity, lazy, memo, type ReactNode, Suspense } from "react";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
 import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
@@ -38,6 +38,7 @@ const DatabaseSidebar = lazy(() =>
 );
 
 interface SidebarPaneProps {
+  visible?: boolean;
   paneLevel?: "primary" | "edge";
   activeView?: SidebarView;
   isGitActive?: boolean;
@@ -50,7 +51,13 @@ interface SidebarPaneEntry {
 }
 
 export const SidebarPane = memo(
-  ({ paneLevel = "primary", activeView, isGitActive, isGitHubPRsActive }: SidebarPaneProps) => {
+  ({
+    visible = true,
+    paneLevel = "primary",
+    activeView,
+    isGitActive,
+    isGitHubPRsActive,
+  }: SidebarPaneProps) => {
     const uiGitViewActive = useUIState((state) => state.isGitViewActive);
     const uiGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
     const uiActiveSidebarView = useUIState((state) => state.activeSidebarView);
@@ -138,10 +145,24 @@ export const SidebarPane = memo(
       ),
     ].filter((pane) => pane.id === activeSidebarView || getSidebarPaneLevel(pane.id) === paneLevel);
     const activePane = paneEntries.find((pane) => pane.id === activePaneId) ?? paneEntries[0];
+    const suspendWhenHidden =
+      activePane &&
+      [
+        "files",
+        "outline",
+        "docker",
+        "views",
+        "github-prs",
+        "agent",
+        "workspaces",
+        "databases",
+      ].includes(activePane.id);
 
     return (
       <div className="flex h-full min-h-0" data-external-file-drop-scope="sidebar">
-        <div className="h-full min-h-0 flex-1 overflow-hidden">{activePane?.content ?? null}</div>
+        <Activity mode={!visible && suspendWhenHidden ? "hidden" : "visible"}>
+          <div className="h-full min-h-0 flex-1 overflow-hidden">{activePane?.content ?? null}</div>
+        </Activity>
       </div>
     );
   },

@@ -66,13 +66,21 @@ function MessageScrollerContent({
 function MessageScrollerItem({
   className,
   scrollAnchor = false,
+  rendering = "eager",
   ...props
-}: React.ComponentProps<typeof MessageScrollerPrimitive.Item>) {
+}: React.ComponentProps<typeof MessageScrollerPrimitive.Item> & {
+  rendering?: "eager" | "deferred";
+}) {
   return (
     <MessageScrollerPrimitive.Item
       data-slot="message-scroller-item"
       scrollAnchor={scrollAnchor}
-      className={cn("min-w-0 shrink-0", className)}
+      className={cn(
+        "min-w-0 shrink-0",
+        rendering === "deferred" &&
+          "[content-visibility:auto] [contain-intrinsic-block-size:auto_12rem] focus-within:[content-visibility:visible]",
+        className,
+      )}
       {...props}
     />
   );

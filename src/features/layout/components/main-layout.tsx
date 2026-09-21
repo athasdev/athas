@@ -1,3 +1,4 @@
+import { PerformanceMonitor } from "./performance-monitor";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
@@ -313,7 +314,7 @@ export function MainLayout() {
             hidden={!renderedSidebarVisible}
             reservedWidth={leftPaneReservedWidth}
           >
-            <SidebarPane paneLevel="primary" />
+            <SidebarPane paneLevel="primary" visible={renderedSidebarVisible} />
           </ResizablePane>
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -347,6 +348,7 @@ export function MainLayout() {
           >
             <SidebarPane
               paneLevel="edge"
+              visible={renderedRightSidebarVisible}
               activeView={activeRightSidebarView}
               isGitActive={false}
               isGitHubPRsActive={false}
@@ -362,6 +364,8 @@ export function MainLayout() {
           </div>
         )}
       </div>
+
+      <PerformanceMonitor />
 
       {/* Global modals and overlays */}
       {deferredSurfacesReady ? (

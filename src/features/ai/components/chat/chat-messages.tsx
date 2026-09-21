@@ -86,7 +86,17 @@ export const ChatMessages = memo(function ChatMessages({
       {timelineItems.map((item) => {
         if (item.type === "acp") {
           return (
-            <MessageScrollerItem key={item.id} messageId={item.id}>
+            <MessageScrollerItem
+              key={item.id}
+              messageId={item.id}
+              rendering={
+                normalizedSearchQuery ||
+                item.event.category === "permission" ||
+                item.event.state === "running"
+                  ? "eager"
+                  : "deferred"
+              }
+            >
               <AcpInlineEvent event={item.event} />
             </MessageScrollerItem>
           );
@@ -146,7 +156,9 @@ export const ChatMessages = memo(function ChatMessages({
           <MessageScrollerItem
             key={item.id}
             messageId={message.id}
-
+            rendering={
+              normalizedSearchQuery || message.isStreaming || isLastMessage ? "eager" : "deferred"
+            }
             scrollAnchor={message.role === "user"}
             data-ai-message-id={message.id}
             className={cn(

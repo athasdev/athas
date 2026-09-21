@@ -4,6 +4,7 @@ import { getFileDiff } from "../api/git-diff-api";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff, GitFile } from "../types/git.types";
 import { countDiffStats, hasGitDiffChanges } from "../utils/git-diff-helpers";
+import { yieldToMain } from "@/utils/yield-to-main";
 
 export type WorkingTreeDiffScope = "all" | "unstaged" | "staged";
 export type WorkingTreeDiffEntry = readonly [fileKey: string, file: GitFile];
@@ -12,8 +13,6 @@ export type LoadedWorkingTreeDiff = { fileKey: string; diff: GitDiff };
 const WORKING_TREE_DIFF_BATCH_SIZE = 8;
 const WORKING_TREE_DIFF_FILE_LIMIT = 1_000;
 const activeLoads = new Map<string, AbortController>();
-
-const yieldToRenderer = () => new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
 
 function isBufferLoadCurrent(
   bufferId: string,
@@ -93,7 +92,6 @@ export async function loadWorkingTreeDiffsProgressively({
       initiallyExpandedFileKey: initiallyExpandedFileKey ?? loadedDiffs[0]?.fileKey,
       selectedFileKey: currentMultiDiff?.selectedFileKey,
       selectedFilePath: currentMultiDiff?.selectedFilePath,
-      fileNavigation: currentMultiDiff?.fileNavigation,
       isLoading,
       indexingProgress: {
         processed,
@@ -136,7 +134,7 @@ export async function loadWorkingTreeDiffsProgressively({
       stats.deletions += batchStats.deletions;
       loadedDiffs.push(...nextDiffs);
       if (!publish(processed, index + batch.length < diffEntriesToLoad.length)) break;
-      await yieldToRenderer();
+      if (index + batch.length < diffEntriesToLoad.length) await yieldToMain();
     }
   } finally {
     if (activeLoads.get(bufferId) === controller) {
