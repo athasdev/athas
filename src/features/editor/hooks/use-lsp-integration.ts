@@ -56,7 +56,6 @@ export const useLspIntegration = ({
           console.error("LSP stop for file error:", error);
         });
       }
-
     };
 
     if (lspClient.isDocumentOpen(filePath)) {

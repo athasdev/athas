@@ -42,10 +42,7 @@ export interface FilterFileTreeEntriesOptions {
 }
 
 const normalizedSortKeyCache = new WeakMap<FileEntry, string>();
-const sortedEntriesCache = new WeakMap<
-  readonly FileEntry[],
-  Map<FileTreeSortOrder, FileEntry[]>
->();
+const sortedEntriesCache = new WeakMap<readonly FileEntry[], Map<FileTreeSortOrder, FileEntry[]>>();
 
 function getNormalizedSortKey(entry: FileEntry): string {
   const cached = normalizedSortKeyCache.get(entry);

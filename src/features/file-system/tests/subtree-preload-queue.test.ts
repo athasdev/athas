@@ -10,11 +10,7 @@ describe("takeSubtreePreloadBatch", () => {
 
     const batch = takeSubtreePreloadBatch(queue, new Set(), 2, 3);
 
-    expect(batch.map((item) => item.path)).toEqual([
-      "/repo/dir-0",
-      "/repo/dir-1",
-      "/repo/dir-2",
-    ]);
+    expect(batch.map((item) => item.path)).toEqual(["/repo/dir-0", "/repo/dir-1", "/repo/dir-2"]);
     expect(queue).toHaveLength(9);
   });
 

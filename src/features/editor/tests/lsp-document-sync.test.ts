@@ -122,9 +122,7 @@ describe("LSP incremental document synchronization", () => {
     const opening = client.notifyDocumentOpen(filePath, "");
     publishEditorDocumentChange(event(2, 0, "a"));
     await vi.advanceTimersByTimeAsync(40);
-    expect(vi.mocked(invoke).mock.calls.map(([command]) => command)).toEqual([
-      "lsp_document_open",
-    ]);
+    expect(vi.mocked(invoke).mock.calls.map(([command]) => command)).toEqual(["lsp_document_open"]);
 
     finishOpen?.();
     await opening;

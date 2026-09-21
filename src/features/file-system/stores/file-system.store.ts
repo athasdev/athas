@@ -1665,12 +1665,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             return;
           }
 
-          const batch = takeSubtreePreloadBatch(
-            q,
-            visited,
-            maxDepth,
-            maxDirs - processed,
-          );
+          const batch = takeSubtreePreloadBatch(q, visited, maxDepth, maxDirs - processed);
           processed += batch.length;
           if (batch.length === 0) continue;
 

@@ -1267,7 +1267,7 @@ export class LspClient {
       return await this.invokeForDocument<string[]>(
         "lsp_get_on_type_formatting_trigger_characters",
         {
-        filePath,
+          filePath,
         },
       );
     } catch (error) {
@@ -1627,8 +1627,8 @@ export class LspClient {
       const result = await this.invokeForDocument<ApplyDiagnosticCodeActionResult>(
         "lsp_apply_code_action",
         {
-        filePath,
-        actionPayload,
+          filePath,
+          actionPayload,
         },
       );
 
