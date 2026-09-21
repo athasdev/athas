@@ -1,11 +1,11 @@
 import { memo, type KeyboardEventHandler, type RefObject } from "react";
-import { FilesIcon, SearchIcon, XIcon } from "@/ui/icons";
+import { SearchIcon, XIcon } from "@/ui/icons";
+import { MultibufferNavigatorToggle } from "@/features/editor/components/multibuffer/multibuffer-navigator-toggle";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { CommandInput } from "@/ui/command";
 import { SEARCH_TOGGLE_ICONS, SearchReplaceRow, SearchReplaceToggle } from "@/ui/search";
-import { Toggle } from "@/ui/toggle";
 import { ToggleGroup, type ToggleGroupOption } from "@/ui/toggle-group";
 import type { ContentSearchOptions } from "../types/global-search.types";
 import {
@@ -160,15 +160,11 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
                 {resultLabel}
               </Badge>
             ) : null}
-            {fileNavigatorAvailable ? (
-              <Toggle
-                pressed={fileNavigatorVisible}
-                onPressedChange={onFileNavigatorVisibleChange}
-                tooltip={fileNavigatorVisible ? "Hide result files" : "Show result files"}
-              >
-                <FilesIcon />
-              </Toggle>
-            ) : null}
+            <MultibufferNavigatorToggle
+              open={fileNavigatorVisible}
+              onOpenChange={onFileNavigatorVisibleChange}
+              disabled={!fileNavigatorAvailable}
+            />
           </>
         }
       />

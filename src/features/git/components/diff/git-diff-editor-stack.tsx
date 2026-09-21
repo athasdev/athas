@@ -1,13 +1,17 @@
-import { ColumnsIcon, DotsIcon, RowsIcon, SearchIcon } from "@/ui/icons";
+import { ColumnsIcon, GitBranchIcon, GitCommitIcon, RowsIcon, SearchIcon } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";
+import {
+  getMultibufferSectionSelector,
+  type MultibufferSection,
+  MultibufferWorkspace,
+  type MultibufferWorkspaceHandle,
+} from "@/features/editor/components/multibuffer/multibuffer-workspace";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import {
-  type FileNavigatorItem,
   type FileNavigatorTone,
+  type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
-import { ReviewWorkspace } from "@/features/git/components/diff/review-workspace";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -17,14 +21,10 @@ import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
 import { showAlertDialog } from "@/ui/dialog";
 import { Empty, EmptyDescription } from "@/ui/empty";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/ui/dropdown";
-import Tooltip from "@/ui/tooltip";
+import { DropdownMenuItem } from "@/ui/dropdown";
+import { ResourceActionsMenu } from "@/ui/resource";
 import { SEARCH_TOGGLE_ICONS, SearchPopover } from "@/ui/search";
+import { joinPath } from "@/utils/path-helpers";
 import { getFileDiff } from "../../api/git-diff-api";
 import { getRemotes } from "../../api/git-remotes-api";
 import { isGitChangeRelevant, subscribeToGitChanges } from "../../events/git-events";
@@ -35,7 +35,11 @@ import { getFileStatus } from "../../utils/git-diff-helpers";
 import { getGitAuthorAvatarUrl } from "../../utils/git-author-avatar";
 import { openCommitFileBuffer } from "../../utils/open-commit-file-buffer";
 import { findMultiDiffMatches, getMultiDiffSectionKey } from "../../utils/multi-diff-search";
-import { resolveMultiDiffSelection, selectMultiDiffFile } from "../../utils/multi-diff-selection";
+import {
+  getMultiDiffFilePath,
+  resolveMultiDiffSelection,
+  selectMultiDiffFile,
+} from "../../utils/multi-diff-selection";
 import { createSingleFileWorkingTreeDiff } from "../../utils/working-tree-multi-diff";
 import { DiffFileContent } from "./diff-file-content";
 
@@ -56,6 +60,11 @@ function countStats(diff: GitDiff) {
   }
 
   return { additions, deletions };
+}
+
+function estimateDiffSectionHeight(diff: GitDiff) {
+  if (diff.is_image || diff.is_binary) return 160;
+  return Math.min(760, 40 + diff.lines.length * 20);
 }
 
 function hasRenderableDiff(diff: GitDiff | null): diff is GitDiff {
@@ -115,19 +124,22 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const updateBufferContent = useBufferStore.use.actions().updateBufferContent;
   const closeBuffer = useBufferStore.use.actions().closeBuffer;
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const account = useAuthStore((state) => state.user);
   const isFindVisible = useUIState((state) => state.isFindVisible);
   const setIsFindVisible = useUIState((state) => state.setIsFindVisible);
   const [viewMode, setViewMode] = useState<"unified" | "split">("unified");
   const [showWhitespace, setShowWhitespace] = useState(false);
+  const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
+  const [navigatorViewMode, setNavigatorViewMode] = useState<FileNavigatorViewMode>("flat");
   const isWorkingTree = multiDiff.commitHash === "working-tree";
   const isCommitDiff = /^[0-9a-f]{7,40}$/i.test(multiDiff.commitHash);
   const isWorkingTreeBuffer = diffBuffer?.path === "diff://working-tree/all-files";
   const isActiveMultiDiff = isActiveBuffer && diffBuffer?.type === "diff";
   const isRefreshingRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const diffStackScrollRef = useRef<HTMLDivElement>(null);
-  const selectedSectionRef = useRef<HTMLDivElement>(null);
+  const workspaceRef = useRef<MultibufferWorkspaceHandle>(null);
+  const scrollElementRef = useRef<HTMLDivElement | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOptions, setSearchOptions] = useState<SearchOptions>({
     caseSensitive: false,
@@ -154,46 +166,48 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const indexedFileLabel = indexingProgress
     ? `${multiDiff.files.length.toLocaleString()} of ${indexingProgress.total.toLocaleString()} changed files`
     : `${multiDiff.totalFiles.toLocaleString()} changed file${multiDiff.totalFiles !== 1 ? "s" : ""}`;
-  const diffFileItems = useMemo<FileNavigatorItem[]>(
-    () =>
-      multiDiff.files.map((diff, index) => {
-        const filePath = diff.new_path || diff.old_path || diff.file_path;
-        const { additions, deletions } = countStats(diff);
-        const status = getFileStatus(diff);
-
-        return {
-          key: getMultiDiffSectionKey(multiDiff, diff, index),
-          path: filePath,
-          iconTone: statusTone[status] ?? "neutral",
-          metadata: [
-            ...(additions > 0 ? [{ label: `+${additions}`, tone: "added" as const }] : []),
-            ...(deletions > 0 ? [{ label: `-${deletions}`, tone: "deleted" as const }] : []),
-          ],
-        };
-      }),
-    [multiDiff],
-  );
-  const selectedFile = useMemo(() => resolveMultiDiffSelection(multiDiff), [multiDiff]);
-  const selectedFileKey = selectedFile?.key ?? null;
-  const selectedDiffFile = selectedFile
-    ? { diff: selectedFile.diff, sectionKey: selectedFile.key }
-    : null;
-  const canOpenCommitFile = Boolean(multiDiff.repoPath ?? rootFolderPath) && isCommitDiff;
+  const repoPath = multiDiff.repoPath ?? rootFolderPath;
+  const canOpenCommitFile = Boolean(repoPath) && isCommitDiff;
   const commitAuthor = multiDiff.commitAuthor?.trim() || "Unknown author";
   const commitAvatarUrl = isCommitDiff
     ? getGitAuthorAvatarUrl({ email: multiDiff.commitEmail }, account)
     : null;
+  const [selectedKey, setSelectedKey] = useState<string | null>(
+    () => resolveMultiDiffSelection(multiDiff)?.key ?? null,
+  );
+  const [activeKey, setActiveKey] = useState<string | null>(selectedKey);
+
+  useEffect(() => {
+    const externalKey = resolveMultiDiffSelection(multiDiff)?.key ?? null;
+    if (externalKey) setSelectedKey(externalKey);
+    // Only react to the buffer's own selection changing (source control sidebar,
+    // commit deep links), not to every republished diff payload.
+  }, [multiDiff.selectedFileKey, multiDiff.selectedFilePath]); // eslint-disable-line react-hooks/exhaustive-deps
+  const activeSection = useMemo(() => {
+    const index = multiDiff.files.findIndex(
+      (diff, fileIndex) => getMultiDiffSectionKey(multiDiff, diff, fileIndex) === activeKey,
+    );
+    const diff = multiDiff.files[index];
+    return diff ? { diff, sectionKey: activeKey as string } : null;
+  }, [activeKey, multiDiff]);
+
+  const findSectionDiff = useCallback(
+    (sectionKey: string) => {
+      const index = multiDiff.files.findIndex(
+        (diff, fileIndex) => getMultiDiffSectionKey(multiDiff, diff, fileIndex) === sectionKey,
+      );
+      return multiDiff.files[index] ?? null;
+    },
+    [multiDiff],
+  );
+
   const handleOpenCommitFile = useCallback(
     async (sectionKey: string) => {
-      const repoPath = multiDiff.repoPath ?? rootFolderPath;
       if (!repoPath || !canOpenCommitFile) return;
 
-      const fileIndex = multiDiff.files.findIndex(
-        (diff, index) => getMultiDiffSectionKey(multiDiff, diff, index) === sectionKey,
-      );
-      const diff = multiDiff.files[fileIndex];
+      const diff = findSectionDiff(sectionKey);
       if (!diff) return;
-      const filePath = diff.new_path || diff.old_path || diff.file_path;
+      const filePath = getMultiDiffFilePath(diff);
 
       try {
         await openCommitFileBuffer({ repoPath, commitHash: multiDiff.commitHash, filePath });
@@ -204,8 +218,19 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         );
       }
     },
-    [canOpenCommitFile, multiDiff, rootFolderPath],
+    [canOpenCommitFile, findSectionDiff, multiDiff.commitHash, repoPath],
   );
+
+  const handleOpenWorkingTreeFile = useCallback(
+    (sectionKey: string) => {
+      if (!repoPath) return;
+      const diff = findSectionDiff(sectionKey);
+      if (!diff || diff.is_deleted) return;
+      void handleFileSelect(joinPath(repoPath, getMultiDiffFilePath(diff)), false);
+    },
+    [findSectionDiff, handleFileSelect, repoPath],
+  );
+
   const navigateSearch = useCallback(
     (direction: 1 | -1) => {
       if (searchMatches.length === 0) return;
@@ -216,15 +241,14 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
     },
     [searchMatches.length],
   );
+
   const handleSelectFile = useCallback(
     (sectionKey: string) => {
+      setSelectedKey(sectionKey);
       const nextMultiDiff = selectMultiDiffFile(multiDiff, sectionKey);
       if (diffBuffer?.type === "diff" && nextMultiDiff !== multiDiff) {
         updateBufferContent(diffBuffer.id, diffBuffer.content, false, nextMultiDiff);
       }
-      window.requestAnimationFrame(() => {
-        diffStackScrollRef.current?.scrollTo({ top: 0, left: 0 });
-      });
     },
     [diffBuffer, multiDiff, updateBufferContent],
   );
@@ -246,13 +270,13 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   useEffect(() => {
     if (!currentSearchMatch) return;
 
-    handleSelectFile(currentSearchMatch.sectionKey);
+    workspaceRef.current?.scrollToSection(currentSearchMatch.sectionKey);
 
     let revealTimer: number | null = null;
     const revealFrame = window.requestAnimationFrame(() => {
       revealTimer = window.setTimeout(() => {
-        const line = selectedSectionRef.current?.querySelector(
-          `[data-diff-search-line="${currentSearchMatch.lineIndex}"]`,
+        const line = scrollElementRef.current?.querySelector(
+          `${getMultibufferSectionSelector(currentSearchMatch.sectionKey)} [data-diff-search-line="${currentSearchMatch.lineIndex}"]`,
         );
         line?.scrollIntoView({ block: "center", inline: "nearest" });
       }, 50);
@@ -262,7 +286,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       window.cancelAnimationFrame(revealFrame);
       if (revealTimer !== null) window.clearTimeout(revealTimer);
     };
-  }, [currentSearchMatch, handleSelectFile]);
+  }, [currentSearchMatch]);
 
   useEffect(() => {
     if (!isActiveMultiDiff) return;
@@ -295,7 +319,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       !isWorkingTreeBuffer ||
       !rootFolderPath ||
       !diffBuffer ||
-      !selectedDiffFile
+      !activeSection
     ) {
       return;
     }
@@ -305,7 +329,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
 
     try {
       gitDiffCache.invalidate(rootFolderPath);
-      const selectedFileKey = selectedDiffFile.sectionKey;
+      const selectedFileKey = activeSection.sectionKey;
       const selectedFilePath = selectedFileKey.replace(/^(staged|unstaged):/, "");
       let isStaged = selectedFileKey.startsWith("staged:");
       let nextDiff = await getFileDiff(rootFolderPath, selectedFilePath, isStaged);
@@ -336,13 +360,13 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       isRefreshingRef.current = false;
     }
   }, [
+    activeSection,
     diffBuffer,
     closeBuffer,
     isWorkingTree,
     isWorkingTreeBuffer,
     multiDiff.title,
     rootFolderPath,
-    selectedDiffFile,
     updateBufferContent,
   ]);
 
@@ -351,7 +375,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
 
     let timeoutId: number | null = null;
     const unsubscribe = subscribeToGitChanges((change) => {
-      const selectedFilePath = selectedDiffFile?.sectionKey.replace(/^(staged|unstaged):/, "");
+      const selectedFilePath = activeSection?.sectionKey.replace(/^(staged|unstaged):/, "");
       if (!isGitChangeRelevant(change, multiDiff.repoPath ?? rootFolderPath, selectedFilePath)) {
         return;
       }
@@ -366,11 +390,11 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
   }, [
+    activeSection?.sectionKey,
     isWorkingTree,
     multiDiff.repoPath,
     refreshWorkingTreeBuffer,
     rootFolderPath,
-    selectedDiffFile?.sectionKey,
   ]);
 
   useEffect(() => {
@@ -379,7 +403,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       return;
     }
 
-    const repoPath = multiDiff.repoPath ?? rootFolderPath;
     if (!repoPath) {
       setGitHubCommitUrl(null);
       return;
@@ -402,51 +425,123 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
     return () => {
       isCancelled = true;
     };
-  }, [isWorkingTree, multiDiff.commitHash, multiDiff.repoPath, rootFolderPath]);
+  }, [isWorkingTree, multiDiff.commitHash, repoPath]);
+
+  const sections = useMemo<MultibufferSection[]>(
+    () =>
+      multiDiff.files.map((diff, index) => {
+        const sectionKey = getMultiDiffSectionKey(multiDiff, diff, index);
+        const filePath = getMultiDiffFilePath(diff);
+        const { additions, deletions } = countStats(diff);
+        const status = getFileStatus(diff);
+        const sectionSearchMatches = isFindVisible
+          ? searchMatches.filter((match) => match.sectionKey === sectionKey)
+          : [];
+        const canOpen = isWorkingTree ? Boolean(repoPath) && !diff.is_deleted : canOpenCommitFile;
+
+        return {
+          key: sectionKey,
+          path: filePath,
+          iconTone: statusTone[status] ?? "neutral",
+          metadata: [
+            ...(additions > 0 ? [{ label: `+${additions}`, tone: "added" as const }] : []),
+            ...(deletions > 0 ? [{ label: `-${deletions}`, tone: "deleted" as const }] : []),
+          ],
+          trailing: (
+            <>
+              {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
+              {deletions > 0 ? <span className="text-git-deleted">-{deletions}</span> : null}
+            </>
+          ),
+          onOpen: canOpen
+            ? () =>
+                isWorkingTree
+                  ? handleOpenWorkingTreeFile(sectionKey)
+                  : void handleOpenCommitFile(sectionKey)
+            : undefined,
+          openAriaLabel: canOpen ? `Open ${filePath}` : `Go to ${filePath}`,
+          estimatedHeight: estimateDiffSectionHeight(diff),
+          render: () => (
+            <DiffFileContent
+              diff={diff}
+              sectionKey={sectionKey}
+              viewMode={viewMode}
+              showWhitespace={showWhitespace}
+              searchMatches={sectionSearchMatches}
+              currentSearchMatch={isFindVisible ? currentSearchMatch : null}
+              searchQuery={isFindVisible ? searchQuery : ""}
+              searchOptions={searchOptions}
+              canStageHunks={isWorkingTree}
+            />
+          ),
+        };
+      }),
+    [
+      canOpenCommitFile,
+      currentSearchMatch,
+      handleOpenCommitFile,
+      handleOpenWorkingTreeFile,
+      isFindVisible,
+      isWorkingTree,
+      multiDiff,
+      repoPath,
+      searchMatches,
+      searchOptions,
+      searchQuery,
+      showWhitespace,
+      viewMode,
+    ],
+  );
+
+  const setScrollContainer = useCallback((element: HTMLDivElement | null) => {
+    scrollElementRef.current = element;
+  }, []);
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-background">
-      <Breadcrumb
-        filePathOverride={multiDiff.title || "Uncommitted Changes"}
-        interactive={false}
-        showPath={false}
-        showDefaultActions={false}
-        extraLeftContent={
-          isCommitDiff ? (
-            <div className="ui-text-sm flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap">
+      <MultibufferWorkspace
+        ref={workspaceRef}
+        sections={sections}
+        selectedKey={selectedKey}
+        onSelect={handleSelectFile}
+        onActiveKeyChange={setActiveKey}
+        navigatorLabel="Changed files"
+        navigatorOpen={isNavigatorOpen}
+        onNavigatorOpenChange={setIsNavigatorOpen}
+        navigatorViewMode={navigatorViewMode}
+        onNavigatorViewModeChange={setNavigatorViewMode}
+        isActive={isActiveMultiDiff}
+        scrollContainerRef={setScrollContainer}
+        header={{
+          icon: isCommitDiff ? <GitCommitIcon /> : <GitBranchIcon />,
+          title: isCommitDiff ? (
+            <span className="flex min-w-0 items-center gap-1.5">
               <Avatar name={commitAuthor} src={commitAvatarUrl} size="sm" />
-              <span className="truncate font-medium text-foreground">
+              <span className="truncate">
                 {multiDiff.commitMessage || multiDiff.title || "Commit"}
               </span>
-            </div>
+            </span>
           ) : (
-            <div className="ui-text-sm flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap text-subtle-foreground">
-              <span className="shrink-0 font-medium text-foreground">
-                {multiDiff.title || "Uncommitted Changes"}
+            multiDiff.title || "Uncommitted Changes"
+          ),
+          detail: (
+            <span className="flex items-center gap-1.5">
+              {isCommitDiff ? (
+                <span className="font-mono">{multiDiff.commitHash.slice(0, 7)}</span>
+              ) : null}
+              <span>{indexedFileLabel}</span>
+              <span className="font-mono">
+                <span className="text-git-added">+{multiDiff.totalAdditions}</span>{" "}
+                <span className="text-git-deleted">-{multiDiff.totalDeletions}</span>
               </span>
-              <span className="truncate">{indexedFileLabel}</span>
-              <span className="shrink-0 text-git-added">+{multiDiff.totalAdditions}</span>
-              <span className="shrink-0 text-git-deleted">-{multiDiff.totalDeletions}</span>
               {isIndexingDiffs ? <span>{indexingLabel}</span> : null}
-            </div>
-          )
-        }
-        rightContent={
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              iconOnly
-              type="button"
-              active={isFindVisible}
-              onClick={() => setIsFindVisible(!isFindVisible)}
-              tooltip="Search changes"
-              aria-label="Search changes"
-            >
-              <SearchIcon />
-            </Button>
-            <div className="flex items-center gap-0.5">
+            </span>
+          ),
+          actions: (
+            <>
               <Button
                 variant="ghost"
+                size="sm"
                 iconOnly
                 type="button"
                 active={viewMode === "unified"}
@@ -458,6 +553,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               </Button>
               <Button
                 variant="ghost"
+                size="sm"
                 iconOnly
                 type="button"
                 active={viewMode === "split"}
@@ -467,20 +563,21 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               >
                 <ColumnsIcon />
               </Button>
-            </div>
-            <DropdownMenu>
-              <Tooltip content="Diff actions">
-                <DropdownMenuTrigger
-                  render={
-                    <Button type="button" variant="ghost" iconOnly aria-label="Diff actions" />
-                  }
-                >
-                  <DotsIcon />
-                </DropdownMenuTrigger>
-              </Tooltip>
-              <DropdownMenuContent>
-                {canOpenCommitFile && selectedFileKey ? (
-                  <DropdownMenuItem onClick={() => void handleOpenCommitFile(selectedFileKey)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                type="button"
+                active={isFindVisible}
+                onClick={() => setIsFindVisible(!isFindVisible)}
+                tooltip="Search changes"
+                aria-label="Search changes"
+              >
+                <SearchIcon />
+              </Button>
+              <ResourceActionsMenu label="Diff actions" size="sm">
+                {canOpenCommitFile && activeKey ? (
+                  <DropdownMenuItem onClick={() => void handleOpenCommitFile(activeKey)}>
                     Open file at {multiDiff.commitHash.slice(0, 7)}
                   </DropdownMenuItem>
                 ) : null}
@@ -492,130 +589,91 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 <DropdownMenuItem onClick={() => setShowWhitespace((current) => !current)}>
                   {showWhitespace ? "Hide whitespace" : "Show whitespace"}
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              </ResourceActionsMenu>
+            </>
+          ),
+        }}
+        overlay={
+          isFindVisible && isActiveMultiDiff ? (
+            <SearchPopover
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  setIsFindVisible(false);
+                } else if (event.key === "Enter") {
+                  event.preventDefault();
+                  navigateSearch(event.shiftKey ? -1 : 1);
+                }
+              }}
+              onClose={() => setIsFindVisible(false)}
+              placeholder="Search changes"
+              inputRef={searchInputRef}
+              matchLabel={
+                searchQuery
+                  ? isInvalidSearch
+                    ? "Invalid expression"
+                    : searchMatches.length > 0
+                      ? `${currentSearchMatchIndex + 1} of ${searchMatches.length}`
+                      : "No results"
+                  : null
+              }
+              matchTone={
+                isInvalidSearch || (searchQuery.length > 0 && searchMatches.length === 0)
+                  ? "warning"
+                  : "default"
+              }
+              onNext={() => navigateSearch(1)}
+              onPrevious={() => navigateSearch(-1)}
+              canNavigate={searchMatches.length > 0}
+              options={[
+                {
+                  id: "case-sensitive",
+                  label: "Match case",
+                  icon: SEARCH_TOGGLE_ICONS.caseSensitive,
+                  active: searchOptions.caseSensitive,
+                  onToggle: () =>
+                    setSearchOptions((current) => ({
+                      ...current,
+                      caseSensitive: !current.caseSensitive,
+                    })),
+                },
+                {
+                  id: "whole-word",
+                  label: "Match whole word",
+                  icon: SEARCH_TOGGLE_ICONS.wholeWord,
+                  active: searchOptions.wholeWord,
+                  onToggle: () =>
+                    setSearchOptions((current) => ({
+                      ...current,
+                      wholeWord: !current.wholeWord,
+                    })),
+                },
+                {
+                  id: "regex",
+                  label: "Use regular expression",
+                  icon: SEARCH_TOGGLE_ICONS.regex,
+                  active: searchOptions.useRegex,
+                  onToggle: () =>
+                    setSearchOptions((current) => ({
+                      ...current,
+                      useRegex: !current.useRegex,
+                    })),
+                },
+              ]}
+              className="absolute top-2 right-4 z-50 max-w-[calc(100%-2rem)]"
+            />
+          ) : null
+        }
+        emptyState={
+          <Empty className="h-full bg-background" role="status" aria-live="polite">
+            <EmptyDescription>
+              {isIndexingDiffs ? indexingLabel : "No changed files"}
+            </EmptyDescription>
+          </Empty>
         }
       />
-
-      {isFindVisible && isActiveMultiDiff ? (
-        <SearchPopover
-          value={searchQuery}
-          onChange={setSearchQuery}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              setIsFindVisible(false);
-            } else if (event.key === "Enter") {
-              event.preventDefault();
-              navigateSearch(event.shiftKey ? -1 : 1);
-            }
-          }}
-          onClose={() => setIsFindVisible(false)}
-          placeholder="Search changes"
-          inputRef={searchInputRef}
-          matchLabel={
-            searchQuery
-              ? isInvalidSearch
-                ? "Invalid expression"
-                : searchMatches.length > 0
-                  ? `${currentSearchMatchIndex + 1} of ${searchMatches.length}`
-                  : "No results"
-              : null
-          }
-          matchTone={
-            isInvalidSearch || (searchQuery.length > 0 && searchMatches.length === 0)
-              ? "warning"
-              : "default"
-          }
-          onNext={() => navigateSearch(1)}
-          onPrevious={() => navigateSearch(-1)}
-          canNavigate={searchMatches.length > 0}
-          options={[
-            {
-              id: "case-sensitive",
-              label: "Match case",
-              icon: SEARCH_TOGGLE_ICONS.caseSensitive,
-              active: searchOptions.caseSensitive,
-              onToggle: () =>
-                setSearchOptions((current) => ({
-                  ...current,
-                  caseSensitive: !current.caseSensitive,
-                })),
-            },
-            {
-              id: "whole-word",
-              label: "Match whole word",
-              icon: SEARCH_TOGGLE_ICONS.wholeWord,
-              active: searchOptions.wholeWord,
-              onToggle: () =>
-                setSearchOptions((current) => ({
-                  ...current,
-                  wholeWord: !current.wholeWord,
-                })),
-            },
-            {
-              id: "regex",
-              label: "Use regular expression",
-              icon: SEARCH_TOGGLE_ICONS.regex,
-              active: searchOptions.useRegex,
-              onToggle: () =>
-                setSearchOptions((current) => ({
-                  ...current,
-                  useRegex: !current.useRegex,
-                })),
-            },
-          ]}
-          className="absolute top-9 right-2 z-50 max-w-[calc(100%-1rem)]"
-        />
-      ) : null}
-
-      {isIndexingDiffs && multiDiff.files.length === 0 ? (
-        <Empty className="bg-background" role="status" aria-live="polite">
-          <EmptyDescription>{indexingLabel}</EmptyDescription>
-        </Empty>
-      ) : null}
-
-      {isIndexingDiffs && multiDiff.files.length === 0 ? null : (
-        <ReviewWorkspace
-          items={diffFileItems}
-          selectedKey={selectedFileKey}
-          onSelect={handleSelectFile}
-          isActive={isActiveMultiDiff}
-          fileNavigation={multiDiff.fileNavigation}
-          contentRef={diffStackScrollRef}
-        >
-          {selectedDiffFile ? (
-            <div
-              key={selectedDiffFile.sectionKey}
-              ref={selectedSectionRef}
-              className="min-w-0 max-w-full overflow-hidden bg-background"
-            >
-              <DiffFileContent
-                diff={selectedDiffFile.diff}
-                sectionKey={selectedDiffFile.sectionKey}
-                viewMode={viewMode}
-                showWhitespace={showWhitespace}
-                searchMatches={
-                  isFindVisible
-                    ? searchMatches.filter(
-                        (match) => match.sectionKey === selectedDiffFile.sectionKey,
-                      )
-                    : []
-                }
-                currentSearchMatch={isFindVisible ? currentSearchMatch : null}
-                searchQuery={isFindVisible ? searchQuery : ""}
-                searchOptions={searchOptions}
-                canStageHunks={isWorkingTree}
-              />
-            </div>
-          ) : (
-            <Empty className="h-full bg-background">
-              <EmptyDescription>No changed file selected</EmptyDescription>
-            </Empty>
-          )}
-        </ReviewWorkspace>
-      )}
     </div>
   );
 });

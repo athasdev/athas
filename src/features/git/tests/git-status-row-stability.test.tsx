@@ -8,7 +8,8 @@ import type { GitFile } from "../types/git.types";
 const settings = vi.hoisted(() => ({ gitChangesFolderView: false }));
 const renderIcon = vi.hoisted(() => vi.fn());
 vi.mock("@/features/settings/stores/settings.store", () => ({
-  useSettingsStore: (select: (state: unknown) => unknown) => select({ settings }),
+  useSettingsStore: (select: (state: unknown) => unknown) =>
+    select({ settings, actions: { updateSetting: vi.fn() } }),
 }));
 vi.mock("@/extensions/icon-themes/components/themed-file-icon", () => ({
   ThemedFileIcon: () => {
@@ -73,7 +74,7 @@ describe("Git status row stability", () => {
       settings.gitChangesFolderView = folderView;
       await render([file("src/existing.ts"), file("src/new.ts", "untracked")]);
       const row = container.querySelector<HTMLButtonElement>(
-        'button[role="treeitem"][title="src/existing.ts"]',
+        'button[role="treeitem"][data-path="src/existing.ts"]',
       )!;
       expect(row).not.toBeNull();
       await act(async () => row.focus());
@@ -82,14 +83,14 @@ describe("Git status row stability", () => {
         file("src/existing.ts"),
         file("src/new.ts", "untracked"),
       ]);
-      expect(container.querySelector('[title="src/existing.ts"]')).toBe(row);
+      expect(container.querySelector('[data-path="src/existing.ts"]')).toBe(row);
       expect(document.activeElement).toBe(row);
       await render([
         file("src/earlier.ts"),
         file("src/existing.ts", "added", true),
         file("src/new.ts", "untracked"),
       ]);
-      expect(container.querySelector('[title="src/existing.ts"]')).toBe(row);
+      expect(container.querySelector('[data-path="src/existing.ts"]')).toBe(row);
       expect(document.activeElement).toBe(row);
     },
   );

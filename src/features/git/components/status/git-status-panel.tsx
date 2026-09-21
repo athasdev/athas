@@ -5,18 +5,19 @@ import {
   ChevronDownIcon,
   DotsIcon,
   FileTextIcon,
+  ListIcon,
   MinusIcon,
   PlusIcon,
+  SitemapIcon,
   TrashIcon,
 } from "@/ui/icons";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/ui/accordion";
 import { NativeScrollArea } from "@/ui/scroll-area";
-import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { Checkbox } from "@/ui/checkbox";
@@ -32,9 +33,15 @@ import {
 } from "@/ui/dropdown";
 import { EmptyState } from "@/ui/empty";
 import { showConfirmDialog } from "@/ui/dialog";
-import { SidebarIconButton, SidebarToolbar } from "@/ui/sidebar";
+import {
+  SidebarFilterBar,
+  SidebarIconButton,
+  SidebarSectionHeader,
+  SidebarToolbar,
+} from "@/ui/sidebar";
 import { SidebarTree, SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { compactPathTreeBranch, type PathTreeNode } from "@/features/sidebar/lib/path-tree";
+import { cn } from "@/utils/cn";
 import { createStash } from "../../api/git-stash-api";
 import {
   discardFileChanges,
@@ -102,6 +109,8 @@ const GitStatusPanel = ({
 }: GitStatusPanelProps) => {
   const gitChangesFolderView = useSettingsStore((state) => state.settings.gitChangesFolderView);
   const confirmBeforeDiscard = useSettingsStore((state) => state.settings.confirmBeforeDiscard);
+  const updateSetting = useSettingsStore((state) => state.actions.updateSetting);
+  const [searchQuery, setSearchQuery] = useState("");
   const contextMenu = useDropdownMenu<ContextMenuState>();
   const diffMenuAnchorRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -127,6 +136,11 @@ const GitStatusPanel = ({
     setOptimisticStageMap((current) => (Object.keys(current).length === 0 ? current : {}));
   }, [files]);
 
+  const trimmedQuery = searchQuery.trim();
+  const filteredFiles = useMemo(() => {
+    if (!trimmedQuery) return files;
+    return files.filter((item) => fuzzyScore(item.path, trimmedQuery) > 0);
+  }, [files, trimmedQuery]);
   const {
     stagedFiles,
     unstagedFiles,
@@ -138,7 +152,7 @@ const GitStatusPanel = ({
     untrackedFiles,
     groupedTrackedFiles,
     groupedUntrackedFiles,
-  } = useMemo(() => buildGitStatusPresentation(files), [files]);
+  } = useMemo(() => buildGitStatusPresentation(filteredFiles), [filteredFiles]);
   const getDiffStats = useCallback(
     (file: GitFile) => {
       const primaryKey = `${file.staged ? "staged" : "unstaged"}:${file.path}`;
@@ -367,12 +381,15 @@ const GitStatusPanel = ({
     );
   };
 
-  const renderDiffStatsBadge = (stats: GitFileDiffStats, className?: string) => (
-    <span className={className}>
-      <Badge>
-        <span className="text-git-added">+{stats.additions}</span>
-        <span className="text-git-deleted">-{stats.deletions}</span>
-      </Badge>
+  const renderDiffStats = (stats: GitFileDiffStats, className?: string) => (
+    <span
+      className={cn(
+        "ui-text-chrome flex items-center gap-1 font-mono tabular-nums leading-chrome",
+        className,
+      )}
+    >
+      <span className="text-git-added">+{stats.additions}</span>
+      <span className="text-git-deleted">-{stats.deletions}</span>
     </span>
   );
 
@@ -432,6 +449,7 @@ const GitStatusPanel = ({
             }
             action={
               <Checkbox
+                size="sm"
                 checked={isFolderStaged}
                 onCheckedChange={(checked) =>
                   void handleSetFilesStaged(folderState.descendantFilePaths, checked)
@@ -466,7 +484,47 @@ const GitStatusPanel = ({
     return tree.nodes.map((node) => renderNode(node, 0));
   };
 
-  const hasFiles = visibleFiles.length > 0;
+  const hasFiles = files.length > 0;
+  const hasVisibleFiles = visibleFiles.length > 0;
+  const toggleSection = (section: StatusSection) => {
+    setExpandedSections((current) =>
+      current.includes(section)
+        ? current.filter((item) => item !== section)
+        : [...current, section],
+    );
+  };
+  const renderSection = (
+    section: StatusSection,
+    sectionFiles: GitFile[],
+    folderTree: GitFolderTree | null,
+    groupedFiles: Record<GitStatusGroup, GitFile[]>,
+  ) => {
+    if (sectionFiles.length === 0) return null;
+    const expanded = expandedSections.includes(section);
+
+    return (
+      <section data-slot="git-status-section" className="min-w-0">
+        <SidebarSectionHeader
+          expanded={expanded}
+          onToggle={() => toggleSection(section)}
+          action={
+            <span className="pr-1.5 tabular-nums ui-text-sm text-subtle-foreground">
+              {sectionFiles.length}
+            </span>
+          }
+        >
+          {SECTION_LABELS[section]}
+        </SidebarSectionHeader>
+        {expanded ? (
+          <SidebarTree label={`${SECTION_LABELS[section]} files`}>
+            {gitChangesFolderView
+              ? folderTree && renderFolderTree(folderTree, "changes")
+              : renderFlatFileList(groupedFiles)}
+          </SidebarTree>
+        ) : null}
+      </section>
+    );
+  };
 
   const contextMenuFile = useMemo(() => {
     if (!contextMenu.data) return null;
@@ -541,6 +599,7 @@ const GitStatusPanel = ({
                 <Button
                   type="button"
                   variant="default"
+                  size="sm"
                   onClick={() => openScopedDiff("all")}
                   disabled={!onViewDiff || isLoading}
                   aria-label="View all diffs"
@@ -554,6 +613,7 @@ const GitStatusPanel = ({
                       <Button
                         type="button"
                         variant="default"
+                        size="sm"
                         iconOnly
                         disabled={isLoading}
                         aria-label="Choose diff source"
@@ -567,10 +627,7 @@ const GitStatusPanel = ({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </ButtonGroup>
-              {renderDiffStatsBadge(
-                allDiffStats,
-                "shrink-0 @max-[230px]/git-status-toolbar:hidden",
-              )}
+              {renderDiffStats(allDiffStats, "shrink-0 @max-[230px]/git-status-toolbar:hidden")}
             </div>
             <div className="flex shrink-0 items-center gap-1 @max-[300px]/git-status-toolbar:hidden">
               {unstagedFiles.length > 0 && (
@@ -642,43 +699,52 @@ const GitStatusPanel = ({
               </DropdownMenu>
             </div>
           </SidebarToolbar>
+          <SidebarFilterBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            aria-label="Filter changed files"
+            placeholder="Filter changes"
+            actionsLabel="Changed files view"
+            actions={
+              <>
+                <SidebarIconButton
+                  active={!gitChangesFolderView}
+                  onClick={() => void updateSetting("gitChangesFolderView", false)}
+                  tooltip="Flat list"
+                  aria-label="Flat list"
+                >
+                  <ListIcon />
+                </SidebarIconButton>
+                <SidebarIconButton
+                  active={gitChangesFolderView}
+                  onClick={() => void updateSetting("gitChangesFolderView", true)}
+                  tooltip="File tree"
+                  aria-label="File tree"
+                >
+                  <SitemapIcon />
+                </SidebarIconButton>
+              </>
+            }
+          />
           <NativeScrollArea
             fill="flex"
             role="region"
             aria-label="Changed files"
             className="px-chrome-inline pb-2"
           >
-            <Accordion
-              multiple
-              value={expandedSections}
-              onValueChange={(value) => setExpandedSections(value as StatusSection[])}
-              className="gap-2"
-            >
-              {trackedFiles.length > 0 ? (
-                <AccordionItem value="tracked">
-                  <AccordionTrigger>{SECTION_LABELS.tracked}</AccordionTrigger>
-                  <AccordionContent>
-                    <SidebarTree label="Tracked files">
-                      {gitChangesFolderView
-                        ? trackedFolderTree && renderFolderTree(trackedFolderTree, "changes")
-                        : renderFlatFileList(groupedTrackedFiles)}
-                    </SidebarTree>
-                  </AccordionContent>
-                </AccordionItem>
-              ) : null}
-              {untrackedFiles.length > 0 ? (
-                <AccordionItem value="untracked">
-                  <AccordionTrigger>{SECTION_LABELS.untracked}</AccordionTrigger>
-                  <AccordionContent>
-                    <SidebarTree label="Untracked files">
-                      {gitChangesFolderView
-                        ? untrackedFolderTree && renderFolderTree(untrackedFolderTree, "changes")
-                        : renderFlatFileList(groupedUntrackedFiles)}
-                    </SidebarTree>
-                  </AccordionContent>
-                </AccordionItem>
-              ) : null}
-            </Accordion>
+            {hasVisibleFiles ? (
+              <div className="flex min-w-0 flex-col">
+                {renderSection("tracked", trackedFiles, trackedFolderTree, groupedTrackedFiles)}
+                {renderSection(
+                  "untracked",
+                  untrackedFiles,
+                  untrackedFolderTree,
+                  groupedUntrackedFiles,
+                )}
+              </div>
+            ) : (
+              <EmptyState layout="sidebar" message="No changed files match" />
+            )}
           </NativeScrollArea>
         </>
       ) : (

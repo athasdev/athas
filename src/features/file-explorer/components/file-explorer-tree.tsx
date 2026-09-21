@@ -49,7 +49,6 @@ import { getNativeWorkspaceRootPaths } from "@/features/file-search/utils/file-s
 import { useGitStore } from "@/features/git/stores/git.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
-import { ButtonGroup } from "@/ui/button-group";
 import Dialog from "@/ui/dialog";
 import { EmptyState } from "@/ui/empty";
 import {
@@ -64,7 +63,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
-import { SidebarIconButton, SidebarSearchPopover } from "@/ui/sidebar";
+import { SidebarFilterBar, SidebarIconButton } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
@@ -1099,7 +1098,7 @@ function FileExplorerTreeComponent({
   return (
     <div
       className={cn(
-        "group/file-explorer relative flex min-h-0 min-w-0 flex-1 select-none flex-col overflow-hidden px-0 py-(--app-scrollbar-size)",
+        "group/file-explorer relative flex min-h-0 min-w-0 flex-1 select-none flex-col overflow-hidden px-0 pb-(--app-scrollbar-size)",
         dragState.dragOverPath === "__ROOT__" &&
           "border-2! border-dashed! border-primary! bg-primary! bg-opacity-10!",
       )}
@@ -1277,25 +1276,17 @@ function FileExplorerTreeComponent({
       onMouseUp={handleContainerMouseUp}
       onMouseLeave={handleContainerMouseLeave}
     >
-      <ButtonGroup
-        aria-label="File explorer controls"
-        className={cn(
-          "absolute top-1 right-2 z-30 max-w-full transition-opacity duration-fast motion-reduce:transition-none",
-          "group-hover/file-explorer:pointer-events-auto group-hover/file-explorer:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 has-[[aria-expanded=true]]:pointer-events-auto has-[[aria-expanded=true]]:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:opacity-100",
-          treeSearchOpen || isTreeSearchActive
-            ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0",
-        )}
+      <div
+        className="shrink-0"
         onClick={(event) => event.stopPropagation()}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <SidebarSearchPopover
+        <SidebarFilterBar
           ref={searchInputRef}
           value={treeSearchQuery}
           onChange={setTreeSearchQuery}
-          open={treeSearchOpen}
-          onOpenChange={setTreeSearchOpen}
-          aria-label="Search files"
+          aria-label="Filter files"
+          placeholder="Filter files"
           aria-controls="file-tree-results"
           autoCapitalize="none"
           autoComplete="off"
@@ -1314,189 +1305,198 @@ function FileExplorerTreeComponent({
               navigateTreeSearchMatch(e.shiftKey ? -1 : 1);
             }
           }}
-        />
-        {treeSearchQuery.length > 0 ? (
-          <SidebarIconButton
-            tooltip="Clear search"
-            aria-label="Clear search"
-            onClick={() => {
-              setTreeSearchQuery("");
-              requestAnimationFrame(() => searchInputRef.current?.focus());
-            }}
-          >
-            <XIcon />
-          </SidebarIconButton>
-        ) : null}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <SidebarIconButton
-                tooltip="File explorer preferences"
-                aria-label="File explorer preferences"
-              />
-            }
-          >
-            <SlidersIcon />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <EyeIcon />
-                Visibility
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <DropdownMenuCheckboxItem
-                  checked={fileTreeSettings.showHiddenFilesInFileTree}
-                  closeOnClick={false}
-                  onCheckedChange={(checked) =>
-                    void updateSetting("showHiddenFilesInFileTree", checked)
-                  }
-                >
-                  Hidden Files
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={fileTreeSettings.showGitignoredFilesInFileTree}
-                  closeOnClick={false}
-                  onCheckedChange={(checked) =>
-                    void updateSetting("showGitignoredFilesInFileTree", checked)
-                  }
-                >
-                  Gitignored Files
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={fileTreeSettings.showGitStatusInFileTree}
-                  closeOnClick={false}
-                  onCheckedChange={(checked) =>
-                    void updateSetting("showGitStatusInFileTree", checked)
-                  }
-                >
-                  Git Status Decorations
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <PaletteIcon />
-                Appearance
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <DropdownMenuCheckboxItem
-                  checked={fileTreeSettings.showFileIconsInFileTree}
-                  closeOnClick={false}
-                  onCheckedChange={(checked) =>
-                    void updateSetting("showFileIconsInFileTree", checked)
-                  }
-                >
-                  File Icons
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={fileTreeSettings.showFolderArrowsInFileTree}
-                  closeOnClick={false}
-                  onCheckedChange={(checked) =>
-                    void updateSetting("showFolderArrowsInFileTree", checked)
-                  }
-                >
-                  Folder Arrows
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={fileTreeSettings.showIndentGuidesInFileTree}
-                  closeOnClick={false}
-                  onCheckedChange={(checked) =>
-                    void updateSetting("showIndentGuidesInFileTree", checked)
-                  }
-                >
-                  Indent Guides
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={fileTreeSettings.compactFoldersInFileTree}
-                  closeOnClick={false}
-                  onCheckedChange={(checked) =>
-                    void updateSetting("compactFoldersInFileTree", checked)
-                  }
-                >
-                  Compact Folders
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={fileTreeSettings.hideRootFolderInFileTree}
-                  closeOnClick={false}
-                  onCheckedChange={(checked) =>
-                    void updateSetting("hideRootFolderInFileTree", checked)
-                  }
-                >
-                  Hide Root Folder
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <ListIcon />
-                Sort Order
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <DropdownMenuRadioGroup
-                  value={fileTreeSettings.fileTreeSortOrder}
-                  onValueChange={(value) => {
-                    if (value === "folders-first" || value === "name") {
-                      void updateSetting("fileTreeSortOrder", value);
-                    }
+          actionsLabel="File explorer controls"
+          actions={
+            <>
+              {treeSearchQuery.length > 0 ? (
+                <SidebarIconButton
+                  tooltip="Clear search"
+                  aria-label="Clear search"
+                  onClick={() => {
+                    setTreeSearchQuery("");
+                    requestAnimationFrame(() => searchInputRef.current?.focus());
                   }}
                 >
-                  <DropdownMenuRadioItem value="folders-first" closeOnClick={false}>
-                    Folders First
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="name" closeOnClick={false}>
-                    Name
-                  </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <TextIndentIcon />
-                Indentation
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <DropdownMenuRadioGroup
-                  value={String(fileTreeSettings.fileTreeIndentSize)}
-                  onValueChange={(value) => void updateSetting("fileTreeIndentSize", Number(value))}
+                  <XIcon />
+                </SidebarIconButton>
+              ) : null}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <SidebarIconButton
+                      tooltip="File explorer preferences"
+                      aria-label="File explorer preferences"
+                    />
+                  }
                 >
-                  <DropdownMenuRadioItem value="12" closeOnClick={false}>
-                    Compact
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="16" closeOnClick={false}>
-                    Default
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="20" closeOnClick={false}>
-                    Spacious
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="24" closeOnClick={false}>
-                    Wide
-                  </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              checked={fileTreeSettings.autoRevealActiveFileInFileTree}
-              closeOnClick={false}
-              onCheckedChange={(checked) =>
-                void updateSetting("autoRevealActiveFileInFileTree", checked)
-              }
-            >
-              <ClickIcon />
-              Auto Reveal Active File
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={fileTreeSettings.confirmBeforeFileDelete}
-              closeOnClick={false}
-              onCheckedChange={(checked) => void updateSetting("confirmBeforeFileDelete", checked)}
-            >
-              <TrashIcon />
-              Confirm Before Delete
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </ButtonGroup>
+                  <SlidersIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <EyeIcon />
+                      Visibility
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuCheckboxItem
+                        checked={fileTreeSettings.showHiddenFilesInFileTree}
+                        closeOnClick={false}
+                        onCheckedChange={(checked) =>
+                          void updateSetting("showHiddenFilesInFileTree", checked)
+                        }
+                      >
+                        Hidden Files
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem
+                        checked={fileTreeSettings.showGitignoredFilesInFileTree}
+                        closeOnClick={false}
+                        onCheckedChange={(checked) =>
+                          void updateSetting("showGitignoredFilesInFileTree", checked)
+                        }
+                      >
+                        Gitignored Files
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem
+                        checked={fileTreeSettings.showGitStatusInFileTree}
+                        closeOnClick={false}
+                        onCheckedChange={(checked) =>
+                          void updateSetting("showGitStatusInFileTree", checked)
+                        }
+                      >
+                        Git Status Decorations
+                      </DropdownMenuCheckboxItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <PaletteIcon />
+                      Appearance
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuCheckboxItem
+                        checked={fileTreeSettings.showFileIconsInFileTree}
+                        closeOnClick={false}
+                        onCheckedChange={(checked) =>
+                          void updateSetting("showFileIconsInFileTree", checked)
+                        }
+                      >
+                        File Icons
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem
+                        checked={fileTreeSettings.showFolderArrowsInFileTree}
+                        closeOnClick={false}
+                        onCheckedChange={(checked) =>
+                          void updateSetting("showFolderArrowsInFileTree", checked)
+                        }
+                      >
+                        Folder Arrows
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem
+                        checked={fileTreeSettings.showIndentGuidesInFileTree}
+                        closeOnClick={false}
+                        onCheckedChange={(checked) =>
+                          void updateSetting("showIndentGuidesInFileTree", checked)
+                        }
+                      >
+                        Indent Guides
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem
+                        checked={fileTreeSettings.compactFoldersInFileTree}
+                        closeOnClick={false}
+                        onCheckedChange={(checked) =>
+                          void updateSetting("compactFoldersInFileTree", checked)
+                        }
+                      >
+                        Compact Folders
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem
+                        checked={fileTreeSettings.hideRootFolderInFileTree}
+                        closeOnClick={false}
+                        onCheckedChange={(checked) =>
+                          void updateSetting("hideRootFolderInFileTree", checked)
+                        }
+                      >
+                        Hide Root Folder
+                      </DropdownMenuCheckboxItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <ListIcon />
+                      Sort Order
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuRadioGroup
+                        value={fileTreeSettings.fileTreeSortOrder}
+                        onValueChange={(value) => {
+                          if (value === "folders-first" || value === "name") {
+                            void updateSetting("fileTreeSortOrder", value);
+                          }
+                        }}
+                      >
+                        <DropdownMenuRadioItem value="folders-first" closeOnClick={false}>
+                          Folders First
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="name" closeOnClick={false}>
+                          Name
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <TextIndentIcon />
+                      Indentation
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuRadioGroup
+                        value={String(fileTreeSettings.fileTreeIndentSize)}
+                        onValueChange={(value) =>
+                          void updateSetting("fileTreeIndentSize", Number(value))
+                        }
+                      >
+                        <DropdownMenuRadioItem value="12" closeOnClick={false}>
+                          Compact
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="16" closeOnClick={false}>
+                          Default
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="20" closeOnClick={false}>
+                          Spacious
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="24" closeOnClick={false}>
+                          Wide
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={fileTreeSettings.autoRevealActiveFileInFileTree}
+                    closeOnClick={false}
+                    onCheckedChange={(checked) =>
+                      void updateSetting("autoRevealActiveFileInFileTree", checked)
+                    }
+                  >
+                    <ClickIcon />
+                    Auto Reveal Active File
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={fileTreeSettings.confirmBeforeFileDelete}
+                    closeOnClick={false}
+                    onCheckedChange={(checked) =>
+                      void updateSetting("confirmBeforeFileDelete", checked)
+                    }
+                  >
+                    <TrashIcon />
+                    Confirm Before Delete
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          }
+        />
+      </div>
       <FileExplorerViewport
         ref={viewportRef}
         id="file-tree-results"

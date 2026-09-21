@@ -1,10 +1,10 @@
 import type { MouseEvent, RefObject } from "react";
-import { FilesIcon, FilterIcon, SearchIcon, XIcon } from "@/ui/icons";
+import { FilterIcon, SearchIcon, XIcon } from "@/ui/icons";
 import { PaneContentHeader } from "@/features/panes/components/pane-content-chrome";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { CommandInput } from "@/ui/command";
-import { Toggle } from "@/ui/toggle";
+import { MultibufferNavigatorToggle } from "@/features/editor/components/multibuffer/multibuffer-navigator-toggle";
 
 interface DiagnosticsToolbarProps {
   inputRef: RefObject<HTMLInputElement | null>;
@@ -79,13 +79,11 @@ export function DiagnosticsToolbar({
             {resultLabel}
           </Badge>
           {fileNavigatorAvailable ? (
-            <Toggle
-              pressed={fileNavigatorVisible}
-              onPressedChange={onFileNavigatorVisibleChange}
-              tooltip={fileNavigatorVisible ? "Hide problem files" : "Show problem files"}
-            >
-              <FilesIcon />
-            </Toggle>
+            <MultibufferNavigatorToggle
+              open={fileNavigatorVisible}
+              onOpenChange={onFileNavigatorVisibleChange}
+              disabled={!fileNavigatorAvailable}
+            />
           ) : null}
         </>
       }

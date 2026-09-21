@@ -78,7 +78,6 @@ function commitBuffer(id: string): DiffContent {
     totalFiles: 2,
     totalAdditions: 2,
     totalDeletions: 0,
-    fileNavigation: "external",
   });
 }
 
@@ -195,7 +194,7 @@ describe("Diff pane isolation", () => {
     expect(left.textContent).toContain("aaaaaaa/first.ts");
     expect(right.textContent).toContain("bbbbbbb/first.ts");
     await act(async () =>
-      left.querySelector<HTMLButtonElement>('[aria-label="Next changed file"]')!.click(),
+      left.querySelector<HTMLButtonElement>('[aria-label="Next file"]')!.click(),
     );
     expect(left.textContent).toContain("aaaaaaa/second.ts");
     expect(right.textContent).toContain("bbbbbbb/first.ts");

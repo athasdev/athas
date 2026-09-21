@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { ReviewFileStepper } from "../components/diff/review-file-stepper";
+import { MultibufferFileStepper } from "../components/multibuffer/multibuffer-file-stepper";
 
 vi.mock("@/features/keymaps/hooks/use-command-shortcut", () => ({
   useCommandShortcut: () => undefined,
@@ -29,7 +29,7 @@ afterEach(async () => {
 async function render(isActive = true, selectedKey = "second.ts") {
   await act(async () =>
     root.render(
-      <ReviewFileStepper
+      <MultibufferFileStepper
         items={items}
         selectedKey={selectedKey}
         onSelect={onSelect}
@@ -43,7 +43,7 @@ function press(target: EventTarget, key: string) {
   target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
 }
 
-describe("Review file keyboard navigation", () => {
+describe("Multibuffer file keyboard navigation", () => {
   it("navigates only while the review is active and respects file boundaries", async () => {
     await render();
     press(container, "j");

@@ -10,13 +10,11 @@ import {
   useState,
 } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { cva } from "class-variance-authority";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import { EmptyState } from "@/ui/empty";
 import {
-  SidebarHeader,
+  SidebarFilterBar,
   SidebarIconButton,
-  SidebarSearchPopover,
   SidebarListItem,
   SidebarSectionLabel,
 } from "@/ui/sidebar";
@@ -38,7 +36,6 @@ import {
 
 export type FileNavigatorViewMode = "flat" | "tree";
 type FileNavigatorSearchMode = "substring" | "fuzzy";
-type FileNavigatorSurface = "sidebar" | "plain" | "inset" | "review" | "panel";
 export type FileNavigatorTone =
   | "neutral"
   | "subtle"
@@ -89,30 +86,14 @@ interface FileNavigatorSidebarProps {
   ariaLabel?: string;
   viewMode?: FileNavigatorViewMode;
   onViewModeChange?: (viewMode: FileNavigatorViewMode) => void;
-  surface?: FileNavigatorSurface;
   searchMode?: FileNavigatorSearchMode;
   compactRows?: boolean;
   searchResetKey?: string;
   resizeEdge?: "left" | "right";
 }
 
-const fileNavigatorSurfaceVariants = cva(
-  "relative flex h-full min-h-0 min-w-0 shrink flex-col overflow-hidden",
-  {
-    variants: {
-      surface: {
-        sidebar: "border-border border-r bg-surface",
-        plain: "bg-transparent",
-        inset: "rounded-xl border border-border bg-surface",
-        review: "border-border border-r bg-surface",
-        panel: "bg-surface",
-      },
-    },
-    defaultVariants: {
-      surface: "sidebar",
-    },
-  },
-);
+const fileNavigatorClassName =
+  "relative flex h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden border-border border-r bg-surface";
 
 function getItemSearchText(item: FileNavigatorItem) {
   return [item.label, item.path, item.key, item.iconPath].filter(Boolean).join(" ").toLowerCase();
@@ -284,7 +265,6 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   ariaLabel = "Files",
   viewMode = "tree",
   onViewModeChange,
-  surface = "sidebar",
   searchMode = "substring",
   compactRows = false,
   searchResetKey,
@@ -455,52 +435,45 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   return (
     <aside
       ref={navigatorRef}
-      className={cn(
-        fileNavigatorSurfaceVariants({ surface }),
-        surface === "panel" &&
-          (resizeEdge === "left" ? "border-border border-l" : "border-border border-r"),
-        className,
-      )}
+      className={cn(fileNavigatorClassName, className)}
       style={{ width: navigatorLayout.width }}
       aria-label={ariaLabel}
     >
       {onViewModeChange ? (
-        <SidebarHeader>
-          <SidebarSearchPopover
-            value={searchQuery}
-            onChange={setSearchQuery}
-            aria-label="Search files"
-          />
-          <div
-            className="ml-auto flex shrink-0 items-center gap-chrome"
-            role="group"
-            aria-label="File navigator view"
-          >
-            <SidebarIconButton
-              active={viewMode === "flat"}
-              onClick={() => onViewModeChange("flat")}
-              tooltip="Flat list"
-              aria-label="Flat list"
-            >
-              <ListIcon />
-            </SidebarIconButton>
-            <SidebarIconButton
-              active={viewMode === "tree"}
-              onClick={() => onViewModeChange("tree")}
-              tooltip="File tree"
-              aria-label="File tree"
-            >
-              <SitemapIcon />
-            </SidebarIconButton>
-          </div>
-        </SidebarHeader>
+        <SidebarFilterBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          aria-label="Filter files"
+          placeholder="Filter files"
+          actionsLabel="File navigator view"
+          actions={
+            <>
+              <SidebarIconButton
+                active={viewMode === "flat"}
+                onClick={() => onViewModeChange("flat")}
+                tooltip="Flat list"
+                aria-label="Flat list"
+              >
+                <ListIcon />
+              </SidebarIconButton>
+              <SidebarIconButton
+                active={viewMode === "tree"}
+                onClick={() => onViewModeChange("tree")}
+                tooltip="File tree"
+                aria-label="File tree"
+              >
+                <SitemapIcon />
+              </SidebarIconButton>
+            </>
+          }
+        />
       ) : null}
 
       <ScrollArea
         fill="flex"
-        contentClassName={surface === "panel" ? "px-chrome-inline py-2" : "p-1"}
+        contentClassName="p-1"
         reserveScrollbarGutter
-        scrollbarVisibility={surface === "panel" ? "always" : "hover"}
+        scrollbarVisibility="hover"
         viewportProps={{ ref: navigatorScrollRef }}
       >
         {hiddenItemCount > 0 ? (

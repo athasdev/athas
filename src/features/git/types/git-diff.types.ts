@@ -112,7 +112,6 @@ export interface MultiFileDiff {
   initiallyExpandedFileKey?: string;
   selectedFileKey?: string;
   selectedFilePath?: string;
-  fileNavigation?: "embedded" | "external";
   isLoading?: boolean;
   indexingProgress?: {
     processed: number;

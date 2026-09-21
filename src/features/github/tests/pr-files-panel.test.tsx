@@ -22,14 +22,13 @@ const files = [
 ];
 
 describe("PRFilesPanel", () => {
-  it("keeps the changed-files sidebar and floating progress on the same file", () => {
+  it("stacks every changed file in one multibuffer with shared navigation", () => {
     const markup = renderToStaticMarkup(
       <PRFilesPanel
         selectedPRDiff="diff"
         isLoadingContent={false}
         contentError={null}
         diffFiles={files}
-        selectedDiffFile={null}
         selectedFilePath="src/second.ts"
         isActive
         onRetry={vi.fn()}
@@ -38,9 +37,10 @@ describe("PRFilesPanel", () => {
       />,
     );
 
-    expect(markup).toContain('aria-label="Changed files"');
-    expect(markup).toContain('aria-selected="true"');
+    expect(markup).toContain('data-slot="multibuffer-workspace"');
+    expect(markup).toContain('data-multibuffer-section="src/first.ts"');
+    expect(markup).toContain('data-multibuffer-section="src/second.ts"');
+    expect(markup).toContain("data-multibuffer-navigator-toggle");
     expect(markup).toContain("File 2 of 2");
-    expect(markup).not.toContain('data-slot="diff-file-navigation-file"');
   });
 });

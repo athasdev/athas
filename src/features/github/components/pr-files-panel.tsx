@@ -1,6 +1,9 @@
-import { memo, useMemo } from "react";
-import type { FileNavigatorItem } from "@/features/file-explorer/components/file-navigator-sidebar";
-import { ReviewWorkspace } from "@/features/git/components/diff/review-workspace";
+import { memo, useMemo, useState } from "react";
+import {
+  type MultibufferSection,
+  MultibufferWorkspace,
+} from "@/features/editor/components/multibuffer/multibuffer-workspace";
+import type { FileNavigatorViewMode } from "@/features/file-explorer/components/file-navigator-sidebar";
 import {
   ViewerErrorState,
   ViewerLoadingState,
@@ -22,13 +25,16 @@ interface PRFilesPanelProps {
   isLoadingContent: boolean;
   contentError: string | null;
   diffFiles: DiffFileItem[];
-  selectedDiffFile: DiffFileItem | null;
   selectedFilePath: string | null;
   isActive: boolean;
-  patchError?: string;
+  patchErrors?: Record<string, string | undefined>;
   onRetry: () => void;
   onSelectFile: (path: string) => void;
   onOpenChangedFile: (relativePath: string) => void;
+}
+
+function estimatePatchHeight(file: DiffFileItem) {
+  return Math.min(760, 40 + (file.lines?.length ?? 8) * 20);
 }
 
 export const PRFilesPanel = memo(
@@ -37,15 +43,16 @@ export const PRFilesPanel = memo(
     isLoadingContent,
     contentError,
     diffFiles,
-    selectedDiffFile,
     selectedFilePath,
     isActive,
-    patchError,
+    patchErrors,
     onRetry,
     onSelectFile,
     onOpenChangedFile,
   }: PRFilesPanelProps) => {
-    const diffNavigationItems = useMemo<FileNavigatorItem[]>(
+    const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
+    const [navigatorViewMode, setNavigatorViewMode] = useState<FileNavigatorViewMode>("flat");
+    const sections = useMemo<MultibufferSection[]>(
       () =>
         diffFiles.map((file) => ({
           key: file.path,
@@ -59,8 +66,33 @@ export const PRFilesPanel = memo(
               ? [{ label: `-${file.deletions}`, tone: "deleted" as const }]
               : []),
           ],
+          trailing: (
+            <>
+              {file.oldPath ? <span className="truncate">from {file.oldPath}</span> : null}
+              {file.additions > 0 ? (
+                <span className="text-git-added">+{file.additions}</span>
+              ) : null}
+              {file.deletions > 0 ? (
+                <span className="text-git-deleted">-{file.deletions}</span>
+              ) : null}
+            </>
+          ),
+          onOpen: file.status === "deleted" ? undefined : () => onOpenChangedFile(file.path),
+          estimatedHeight: estimatePatchHeight(file),
+          render: () => (
+            <FileDiffView
+              file={file}
+              isExpanded
+              isStatic
+              showHeader={false}
+              onToggle={() => {}}
+              onOpenFile={onOpenChangedFile}
+              isLoadingPatch={file.lines === undefined}
+              patchError={patchErrors?.[file.path]}
+            />
+          ),
         })),
-      [diffFiles],
+      [diffFiles, onOpenChangedFile, patchErrors],
     );
 
     if (isLoadingContent && !selectedPRDiff) {
@@ -84,27 +116,21 @@ export const PRFilesPanel = memo(
     }
 
     return (
-      <ReviewWorkspace
-        items={diffNavigationItems}
+      <MultibufferWorkspace
+        sections={sections}
         selectedKey={selectedFilePath}
         onSelect={onSelectFile}
+        navigatorLabel="Changed files"
+        navigatorOpen={isNavigatorOpen}
+        onNavigatorOpenChange={setIsNavigatorOpen}
+        navigatorViewMode={navigatorViewMode}
+        onNavigatorViewModeChange={setNavigatorViewMode}
         isActive={isActive}
-      >
-        {selectedDiffFile ? (
-          <FileDiffView
-            file={selectedDiffFile}
-            isExpanded
-            isStatic
-            showHeader={false}
-            onToggle={() => {}}
-            onOpenFile={onOpenChangedFile}
-            isLoadingPatch={false}
-            patchError={patchError}
-          />
-        ) : (
-          <ViewerState description="Select a file" className="h-full" />
-        )}
-      </ReviewWorkspace>
+        header={{
+          title: "Changed files",
+          detail: `${diffFiles.length} ${diffFiles.length === 1 ? "file" : "files"}`,
+        }}
+      />
     );
   },
 );
