@@ -11,6 +11,7 @@ import { useIntelligenceSettingsStore } from "../stores/intelligence-settings.st
 import { getIntelligenceSdkModel } from "./intelligence-sdk-model";
 import { toIntelligenceSdkPrompt } from "../lib/intelligence-sdk-prompt";
 import { requestIntelligencePermission } from "./intelligence-agent-permissions";
+import { parseExtensionViewNode } from "@/extensions/ui/services/extension-view-schema";
 
 import { beginIntelligenceAgent, finishIntelligenceAgent } from "./intelligence-agent-session";
 
@@ -136,6 +137,24 @@ export async function runIntelligenceAgent(params: {
                 },
                 { locations: [{ path: absolutePath(input.path), line: input.startLine }] },
               ),
+          }),
+          show_view: tool({
+            description:
+              "Show structured UI in the user's agent side panel instead of long prose: a comparison table, a checklist, a file tree, key metrics, a callout or a code block. Pass an Athas view node such as { type: 'table', columns: [{ key, label }], rows: [{ key: value }] }, { type: 'list', items: [{ title, description }] }, { type: 'metric', label, value }, { type: 'callout', tone: 'info' | 'warning', title, body }, { type: 'text', value } or { type: 'stack', children: [...] }. Keep it small and specific to what the user asked.",
+            inputSchema: z.object({
+              view: z.record(z.string(), z.unknown()),
+            }),
+            execute: async (input, { toolCallId }) => {
+              const view = parseExtensionViewNode(input.view);
+              return runTool(
+                "show_view",
+                "other",
+                input,
+                toolCallId,
+                async () => ({ shown: true }),
+                { display: () => ({ type: "athas_ui", view }) },
+              );
+            },
           }),
           ...(!params.readOnly
             ? {
