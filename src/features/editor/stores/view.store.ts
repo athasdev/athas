@@ -2,8 +2,13 @@ import isEqual from "fast-deep-equal";
 import { createWithEqualityFn } from "zustand/traditional";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import { createSelectors } from "@/utils/zustand-selectors";
-import type { EditorTextChange } from "../types/editor.types";
-import { createSparseLineArray, getLargeEditorModeInfo } from "../utils/large-file";
+import type { EditorDocumentChangeBatch, EditorTextChange } from "../types/editor.types";
+import {
+  applyEditorChangesToLargeEditorModeInfo,
+  createSparseLineArray,
+  getLargeEditorModeInfo,
+  type LargeEditorModeInfo,
+} from "../utils/large-file";
 import { useBufferStore } from "./buffer.store";
 
 interface EditorViewState {
@@ -49,7 +54,10 @@ export const useEditorViewStore = createSelectors(
 let previousActiveBufferSnapshot: {
   id: string;
   content: string;
+  contentRevision: number;
+  contentLength: number;
   lines: string[];
+  largeEditorInfo: LargeEditorModeInfo;
 } | null = null;
 
 const INCREMENTAL_LINE_EDIT_THRESHOLD = 1000;
@@ -199,25 +207,44 @@ export function applyEditorTextChangeToLines(
   ];
 }
 
+export function applyEditorTextChangesToLines(
+  previousLines: string[],
+  changes: readonly EditorTextChange[],
+): string[] | null {
+  let lines = previousLines;
+  const descendingChanges = [...changes].sort(
+    (left, right) =>
+      (right.startLine ?? 0) - (left.startLine ?? 0) ||
+      (right.startColumn ?? 0) - (left.startColumn ?? 0),
+  );
+  for (const change of descendingChanges) {
+    const nextLines = applyEditorTextChangeToLines(lines, change);
+    if (!nextLines) return null;
+    lines = nextLines;
+  }
+  return lines;
+}
+
 interface PendingEditorViewContentChange {
-  previousContent: string;
-  nextContent: string;
-  change: EditorTextChange;
+  previousContentRevision: number;
+  batch: EditorDocumentChangeBatch;
 }
 
 const pendingEditorViewContentChanges = new Map<string, PendingEditorViewContentChange>();
 
 export function queueEditorViewContentChange(
   bufferId: string,
-  previousContent: string,
-  nextContent: string,
-  change: EditorTextChange,
+  previousContentRevision: number,
+  batch: EditorDocumentChangeBatch,
 ): void {
   pendingEditorViewContentChanges.set(bufferId, {
-    previousContent,
-    nextContent,
-    change,
+    previousContentRevision,
+    batch,
   });
+}
+
+export function discardEditorViewContentChange(bufferId: string): void {
+  pendingEditorViewContentChanges.delete(bufferId);
 }
 
 // Subscribe to buffer changes and update computed values
@@ -229,18 +256,37 @@ useBufferStore.subscribe((state) => {
     if (
       previousSnapshot &&
       previousSnapshot.id === activeBuffer.id &&
+      previousSnapshot.contentRevision === (activeBuffer.contentRevision ?? 0) &&
       previousSnapshot.content === activeBuffer.content
     ) {
       return;
     }
 
-    const largeEditorInfo = getLargeEditorModeInfo(activeBuffer.content);
+    const pendingContentChange = pendingEditorViewContentChanges.get(activeBuffer.id);
+    pendingEditorViewContentChanges.delete(activeBuffer.id);
+    const canApplyPendingChange =
+      previousSnapshot?.id === activeBuffer.id &&
+      pendingContentChange?.previousContentRevision === previousSnapshot.contentRevision &&
+      !pendingContentChange.batch.isEolChange &&
+      !pendingContentChange.batch.isFlush;
+    const incrementalLargeEditorInfo = canApplyPendingChange
+      ? applyEditorChangesToLargeEditorModeInfo(
+          previousSnapshot.contentLength,
+          previousSnapshot.largeEditorInfo,
+          pendingContentChange.batch.changes,
+        )
+      : null;
+    const largeEditorInfo =
+      incrementalLargeEditorInfo ?? getLargeEditorModeInfo(activeBuffer.content);
     if (largeEditorInfo.largeContentMode) {
       const lines: string[] = [];
       previousActiveBufferSnapshot = {
         id: activeBuffer.id,
         content: activeBuffer.content,
+        contentRevision: activeBuffer.contentRevision ?? 0,
+        contentLength: activeBuffer.content.length,
         lines,
+        largeEditorInfo,
       };
       useEditorViewStore.setState({
         lines,
@@ -250,25 +296,21 @@ useBufferStore.subscribe((state) => {
     }
 
     const previousLines = previousSnapshot?.id === activeBuffer.id ? previousSnapshot.lines : [""];
-    const pendingContentChange = pendingEditorViewContentChanges.get(activeBuffer.id);
-    pendingEditorViewContentChanges.delete(activeBuffer.id);
-    const changedLines =
-      previousSnapshot?.id === activeBuffer.id &&
-      pendingContentChange?.previousContent === previousSnapshot.content &&
-      pendingContentChange.nextContent === activeBuffer.content
-        ? applyEditorTextChangeToLines(previousLines, pendingContentChange.change)
-        : null;
+    const changedLines = canApplyPendingChange
+      ? applyEditorTextChangesToLines(previousLines, pendingContentChange.batch.changes)
+      : null;
     const lines =
       previousSnapshot?.id === activeBuffer.id
-        ? (changedLines ??
-          applyIncrementalLineEdit(previousSnapshot.content, activeBuffer.content, previousLines) ??
-          activeBuffer.content.split("\n"))
+        ? (changedLines ?? activeBuffer.content.split("\n"))
         : activeBuffer.content.split("\n");
 
     previousActiveBufferSnapshot = {
       id: activeBuffer.id,
       content: activeBuffer.content,
+      contentRevision: activeBuffer.contentRevision ?? 0,
+      contentLength: activeBuffer.content.length,
       lines,
+      largeEditorInfo,
     };
 
     useEditorViewStore.setState({

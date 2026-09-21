@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { highlightMarkdownCodeBlocks } from "./code-highlight";
 import { parseMarkdown, type ParseMarkdownOptions } from "./parser";
 
@@ -7,6 +7,7 @@ export function useHighlightedMarkdown(
   options?: ParseMarkdownOptions,
 ) {
   const frontMatter = options?.frontMatter;
+  const requestKey = `markdown-preview:${useId()}`;
   const parsedHtml = useMemo(() => {
     if (!content) return "";
     return parseMarkdown(content, { frontMatter });
@@ -21,7 +22,7 @@ export function useHighlightedMarkdown(
       return undefined;
     }
 
-    void highlightMarkdownCodeBlocks(parsedHtml).then((highlightedHtml) => {
+    void highlightMarkdownCodeBlocks(parsedHtml, requestKey).then((highlightedHtml) => {
       if (!cancelled) {
         setHtml(highlightedHtml);
       }
@@ -30,7 +31,7 @@ export function useHighlightedMarkdown(
     return () => {
       cancelled = true;
     };
-  }, [parsedHtml]);
+  }, [parsedHtml, requestKey]);
 
   return html;
 }

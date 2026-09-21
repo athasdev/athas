@@ -22,6 +22,11 @@ import type {
   TokenizerWorkerResponse,
   ViewportRangePayload,
 } from "./worker-protocol";
+import {
+  filterTokensToRange,
+  intersectsTokenizerRange,
+  type TokenizerRangeBounds,
+} from "./tokenizer-range";
 
 interface WorkerSession {
   bufferId: string;
@@ -58,9 +63,9 @@ function buildLineStartOffsets(content: string): number[] {
 
 async function getLoadedParser(
   languageId: string,
-  assets?: { wasmPath?: string; highlightQueryUrl?: string },
+  assets?: { wasmPath?: string; highlightQuery?: string; highlightQueryUrl?: string },
 ): Promise<LoadedParser> {
-  if (wasmParserLoader.isLoaded(languageId)) {
+  if (wasmParserLoader.isLoaded(languageId) && !assets?.highlightQuery) {
     return wasmParserLoader.getParser(languageId);
   }
 
@@ -68,6 +73,7 @@ async function getLoadedParser(
   const config: ParserConfig = {
     languageId,
     wasmPath: assets?.wasmPath || defaultAssets.wasmPath,
+    highlightQuery: assets?.highlightQuery,
     highlightQueryUrl: assets?.highlightQueryUrl || defaultAssets.highlightQueryUrl,
   };
 
@@ -121,8 +127,11 @@ function toHighlightTokens(captures: QueryCapture[]): HighlightToken[] {
   return dedupeHighlightTokens(tokens);
 }
 
-function getRangeQueryOptions(content: string, viewportRange?: ViewportRangePayload) {
-  if (!viewportRange) return {};
+function getRangeQueryOptions(
+  content: string,
+  viewportRange?: ViewportRangePayload,
+): TokenizerRangeBounds | undefined {
+  if (!viewportRange) return undefined;
 
   const normalized = normalizeLineEndings(content);
   const lineOffsets = buildLineStartOffsets(normalized);
@@ -191,6 +200,7 @@ async function handleTokenize(
   const normalizedContent = normalizeLineEndings(message.content);
   const loadedParser = await getLoadedParser(message.languageId, {
     wasmPath: message.wasmPath,
+    highlightQuery: message.highlightQuery,
     highlightQueryUrl: message.highlightQueryUrl,
   });
   const existing = sessions.get(message.bufferId);
@@ -228,20 +238,17 @@ async function handleTokenize(
   }
 
   const query = loadedParser.highlightQuery;
-  const tokens = query
-    ? toHighlightTokens(
-        query.captures(
-          tree.rootNode,
-          message.mode === "range"
-            ? getRangeQueryOptions(normalizedContent, message.viewportRange)
-            : {},
-        ),
-      )
-    : [];
+  const range =
+    message.mode === "range"
+      ? getRangeQueryOptions(normalizedContent, message.viewportRange)
+      : undefined;
+  const tokens = query ? toHighlightTokens(query.captures(tree.rootNode, range ?? {})) : [];
 
   const injectionRules = getInjectionRules(message.languageId);
   if (injectionRules) {
-    const injectionNodes = findInjectionNodes(tree.rootNode, injectionRules);
+    const injectionNodes = findInjectionNodes(tree.rootNode, injectionRules).filter(({ node }) =>
+      range ? intersectsTokenizerRange(node, range) : true,
+    );
 
     const embeddedTokenGroups = await Promise.all(
       injectionNodes.map(async ({ rule, node, parentNode }) => {
@@ -293,7 +300,9 @@ async function handleTokenize(
     }
   }
 
-  tokens.push(...getLanguageOverlayTokens(message.languageId, normalizedContent));
+  tokens.push(
+    ...filterTokensToRange(getLanguageOverlayTokens(message.languageId, normalizedContent), range),
+  );
 
   const nextSession = upsertTree(
     existing,

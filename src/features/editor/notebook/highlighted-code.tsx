@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import {
   getCodeHighlightSegments,
   renderHighlightedCodeHtml,
@@ -11,13 +11,14 @@ interface HighlightedCodeProps {
 }
 
 export function HighlightedCode({ code, language, className }: HighlightedCodeProps) {
+  const requestKey = `notebook-highlight:${useId()}`;
   const [html, setHtml] = useState(() => renderHighlightedCodeHtml(code, []));
 
   useEffect(() => {
     let cancelled = false;
     setHtml(renderHighlightedCodeHtml(code, []));
 
-    void getCodeHighlightSegments(code, language).then((segments) => {
+    void getCodeHighlightSegments(code, language, requestKey).then((segments) => {
       if (!cancelled) {
         setHtml(renderHighlightedCodeHtml(code, segments));
       }
@@ -26,7 +27,7 @@ export function HighlightedCode({ code, language, className }: HighlightedCodePr
     return () => {
       cancelled = true;
     };
-  }, [code, language]);
+  }, [code, language, requestKey]);
 
   return (
     <pre className={className}>

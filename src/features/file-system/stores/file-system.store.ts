@@ -13,6 +13,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { getLineSlice } from "@/features/editor/utils/large-file";
+import { invalidateFileTreeGitIgnoreCache } from "@/features/file-explorer/lib/file-tree-gitignore";
 import { getAncestorDirectoryPaths } from "@/features/file-explorer/utils/file-explorer-tree-utils";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
@@ -108,6 +109,10 @@ import {
 } from "../services/workspace-initialization-router";
 import { resetWorkspaceResources } from "../services/workspace-reset";
 import { readWorkspaceDirectoryEntries } from "../services/workspace-resource-provider";
+import {
+  takeSubtreePreloadBatch,
+  type SubtreePreloadQueueItem,
+} from "../services/subtree-preload-queue";
 import { getSymlinkInfo, openFolder, readDirectory } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
 import { useRecentFilesStore } from "../stores/recent-files.store";
@@ -185,6 +190,30 @@ const wrapWithRootFolder = (
       children: files,
     },
   ];
+};
+
+const updateDirectoryChildrenBatch = (
+  files: FileEntry[],
+  childrenByPath: ReadonlyMap<string, FileEntry[]>,
+): FileEntry[] => {
+  let changed = false;
+  const updatedFiles = files.map((file) => {
+    const children = childrenByPath.get(file.path);
+    if (children && file.isDir && (!file.children || file.children.length === 0)) {
+      changed = true;
+      return { ...file, children };
+    }
+
+    if (!file.children) return file;
+
+    const updatedChildren = updateDirectoryChildrenBatch(file.children, childrenByPath);
+    if (updatedChildren === file.children) return file;
+
+    changed = true;
+    return { ...file, children: updatedChildren };
+  });
+
+  return changed ? updatedFiles : files;
 };
 
 const getWorkspaceFolderPaths = (get: FileSystemGet) =>
@@ -600,6 +629,7 @@ const scheduleInactiveWorkspacePrewarm = () => {
 const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemStoreState> => {
   let latestFileOpenRequestId = 0;
   let latestTreeRevealRequestId = 0;
+  let latestSubtreePreloadRequestId = 0;
   let pendingSessionBuffers: BufferSession[] = [];
   let resumePendingSessionRestore: (() => void) | null = null;
   let deferredAiSession: ReturnType<typeof readPersistedAiWorkspaceSession> | undefined;
@@ -1614,12 +1644,11 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
       // Preload subtree children up to a depth and directory budget
       preloadSubtree: async (rootPath: string, maxDepth = 2, maxDirs = 80) => {
+        const requestId = ++latestSubtreePreloadRequestId;
+        const workspaceRootPath = get().rootFolderPath;
+        let expectedFilesVersion = get().filesVersion;
         const visited = new Set<string>();
-        type QueueItem = {
-          path: string;
-          depth: number;
-        };
-        const q: QueueItem[] = [];
+        const q: SubtreePreloadQueueItem[] = [];
 
         q.push({
           path: rootPath,
@@ -1628,55 +1657,70 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         let processed = 0;
 
         while (q.length && processed < maxDirs) {
-          const batch = q.splice(0, 8);
-          await Promise.all(
+          if (
+            requestId !== latestSubtreePreloadRequestId ||
+            get().rootFolderPath !== workspaceRootPath ||
+            get().filesVersion !== expectedFilesVersion
+          ) {
+            return;
+          }
+
+          const batch = takeSubtreePreloadBatch(q, visited, maxDepth, maxDirs - processed);
+          processed += batch.length;
+          if (batch.length === 0) continue;
+
+          const treeSnapshot = get().files;
+          const results = await Promise.all(
             batch.map(async (item) => {
-              if (visited.has(item.path) || item.depth >= maxDepth) return;
-              visited.add(item.path);
-              processed++;
+              const node = findFileInTree(treeSnapshot, item.path);
+              if (!node || !node.isDir) return null;
+              if (node.children && node.children.length > 0) {
+                return { item, children: node.children, fetched: false };
+              }
 
               try {
-                // Skip if children already present
-                const node = findFileInTree(get().files, item.path);
-                if (!node || !node.isDir) return;
-                if (node.children && node.children.length > 0) {
-                  // Still enqueue subdirs to continue traversal
-                  node.children
-                    ?.filter((c) => c.isDir)
-                    .forEach((c) =>
-                      q.push({
-                        path: c.path,
-                        depth: item.depth + 1,
-                      }),
-                    );
-                  return;
-                }
-
                 const children = await readWorkspaceDirectoryEntries(
                   item.path,
-                  get().rootFolderPath ?? item.path,
+                  workspaceRootPath ?? item.path,
                 );
-
-                set((state) => {
-                  state.files = updateFileInTree(state.files, item.path, (it) => ({
-                    ...it,
-                    children,
-                  }));
-                  state.filesVersion++;
-                });
-
-                // Enqueue subdirs
-                children
-                  .filter((c) => c.isDir)
-                  .forEach((c) =>
-                    q.push({
-                      path: c.path,
-                      depth: item.depth + 1,
-                    }),
-                  );
-              } catch {}
+                return { item, children, fetched: true };
+              } catch {
+                return null;
+              }
             }),
           );
+
+          if (
+            requestId !== latestSubtreePreloadRequestId ||
+            get().rootFolderPath !== workspaceRootPath ||
+            get().filesVersion !== expectedFilesVersion
+          ) {
+            return;
+          }
+
+          const fetchedChildren = new Map<string, FileEntry[]>();
+          for (const result of results) {
+            if (!result) continue;
+            if (result.fetched) {
+              fetchedChildren.set(result.item.path, result.children);
+            }
+            for (const child of result.children) {
+              if (child.isDir) {
+                q.push({ path: child.path, depth: result.item.depth + 1 });
+              }
+            }
+          }
+
+          if (fetchedChildren.size > 0) {
+            set((state) => {
+              if (state.rootFolderPath !== workspaceRootPath) return;
+              const updatedFiles = updateDirectoryChildrenBatch(state.files, fetchedChildren);
+              if (updatedFiles === state.files) return;
+              state.files = updatedFiles;
+              state.filesVersion++;
+            });
+            expectedFilesVersion = get().filesVersion;
+          }
 
           // Yield to UI
           await new Promise((r) => setTimeout(r, 0));
@@ -1878,6 +1922,9 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             state.filesVersion++;
           }
         });
+        if (options?.force || parseRemotePath(directoryPath) || parseWslPath(directoryPath)) {
+          invalidateFileTreeGitIgnoreCache();
+        }
       },
 
       handleCollapseAllFolders: async () => {
@@ -1892,6 +1939,12 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         }
 
         await getWorkspaceEntryMutationProvider(oldPath).movePath(oldPath, newPath);
+        if (movedFile.isDir) {
+          invalidateFileTreeGitIgnoreCache();
+        } else {
+          invalidateFileTreeGitIgnoreCache(oldPath);
+          invalidateFileTreeGitIgnoreCache(newPath);
+        }
 
         // Remove from old location
         let updatedFiles = removeFileFromTree(get().files, oldPath);
@@ -2086,6 +2139,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           directoryPath,
           fileName,
         );
+        invalidateFileTreeGitIgnoreCache(filePath);
 
         const newFile: FileEntry = {
           name: fileName,
@@ -2127,6 +2181,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       deleteFile: async (path: string) => {
         const entry = findFileInTree(get().files, path);
         await getWorkspaceEntryMutationProvider(path).deletePath(path, !!entry?.isDir);
+        invalidateFileTreeGitIgnoreCache(entry?.isDir ? undefined : path);
 
         const { buffers, actions } = useBufferStore.getStore(workspaceId).getState();
         buffers
@@ -2309,6 +2364,13 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               path,
               newName,
             );
+            const renamedEntry = findFileInTree(get().files, path);
+            if (renamedEntry?.isDir) {
+              invalidateFileTreeGitIgnoreCache();
+            } else {
+              invalidateFileTreeGitIgnoreCache(path);
+              invalidateFileTreeGitIgnoreCache(targetPath);
+            }
 
             set((state) => {
               state.files = updateFileInTree(state.files, path, (item) => ({

@@ -4,7 +4,7 @@ import {
   fetchHighlightQuery,
   getLanguageAssetConfig,
 } from "@/features/editor/lib/wasm-parser/extension-assets";
-import { tokenizeCode } from "@/features/editor/lib/wasm-parser/tokenizer";
+import { tokenizerWorkerClient } from "@/features/editor/lib/wasm-parser/tokenizer-worker-client";
 import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
 import { normalizeCodeFenceLanguage } from "./language-map";
 
@@ -15,6 +15,8 @@ export interface CodeHighlightSegment {
 }
 
 const TOKEN_CACHE = new Map<string, CodeHighlightSegment[]>();
+const TOKEN_REQUESTS = new Map<string, Promise<CodeHighlightSegment[]>>();
+const TOKEN_CACHE_LIMIT = 200;
 
 const TREE_SITTER_LANGUAGE_ALIASES: Record<string, string> = {
   csharp: "csharp",
@@ -162,6 +164,7 @@ function resolveHighlightLanguage(language: string): string | null {
 async function tokenizeForLanguage(
   code: string,
   languageId: string,
+  requestKey: string,
 ): Promise<CodeHighlightSegment[] | null> {
   try {
     const cached = await indexedDBParserCache.get(languageId);
@@ -188,15 +191,19 @@ async function tokenizeForLanguage(
       } catch {}
     }
 
-    const tokens = await tokenizeCode(code, languageId, {
+    const result = await tokenizerWorkerClient.tokenize({
+      bufferId: requestKey,
+      latestKey: requestKey,
+      content: code,
       languageId,
       wasmPath,
       highlightQuery,
       highlightQueryUrl,
+      mode: "full",
     });
 
     return normalizeSegments(
-      tokens.map((token: HighlightToken) => ({
+      result.tokens.map((token: HighlightToken) => ({
         start: token.startIndex,
         end: token.endIndex,
         className: token.type,
@@ -208,36 +215,79 @@ async function tokenizeForLanguage(
   }
 }
 
+function hashCodeContent(code: string) {
+  let first = 2_166_136_261;
+  let second = 2_166_136_261;
+  for (let index = 0; index < code.length; index++) {
+    const value = code.charCodeAt(index);
+    first = Math.imul(first ^ value, 16_777_619);
+    second = Math.imul(second ^ (value + index), 16_777_619);
+  }
+  return `${code.length}:${(first >>> 0).toString(16)}:${(second >>> 0).toString(16)}`;
+}
+
+function cacheSegments(key: string, segments: CodeHighlightSegment[]) {
+  TOKEN_CACHE.delete(key);
+  TOKEN_CACHE.set(key, segments);
+  if (TOKEN_CACHE.size > TOKEN_CACHE_LIMIT) {
+    const oldestKey = TOKEN_CACHE.keys().next().value;
+    if (oldestKey) TOKEN_CACHE.delete(oldestKey);
+  }
+}
+
 export async function getCodeHighlightSegments(
   code: string,
   language: string,
+  requestKey?: string,
 ): Promise<CodeHighlightSegment[]> {
   const languageId = resolveHighlightLanguage(language);
   if (!languageId) return [];
 
-  const cacheKey = `${languageId}:${code}`;
+  const contentKey = hashCodeContent(code);
+  const cacheKey = `${languageId}:${contentKey}`;
   const cached = TOKEN_CACHE.get(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    TOKEN_CACHE.delete(cacheKey);
+    TOKEN_CACHE.set(cacheKey, cached);
+    return cached;
+  }
 
-  const treeSitterSegments = await tokenizeForLanguage(code, languageId);
-  const segments =
-    treeSitterSegments && treeSitterSegments.length > 0
-      ? treeSitterSegments
-      : fallbackSegmentsForLanguage(code, languageId);
+  const pending = TOKEN_REQUESTS.get(cacheKey);
+  if (pending) return pending;
 
-  TOKEN_CACHE.set(cacheKey, segments);
-  return segments;
+  const tokenRequest = (async () => {
+    const treeSitterSegments = await tokenizeForLanguage(
+      code,
+      languageId,
+      requestKey ?? `markdown-code:${languageId}:${contentKey}`,
+    );
+    const segments =
+      treeSitterSegments && treeSitterSegments.length > 0
+        ? treeSitterSegments
+        : fallbackSegmentsForLanguage(code, languageId);
+
+    cacheSegments(cacheKey, segments);
+    return segments;
+  })().finally(() => {
+    TOKEN_REQUESTS.delete(cacheKey);
+  });
+  TOKEN_REQUESTS.set(cacheKey, tokenRequest);
+  return tokenRequest;
 }
 
 export function renderHighlightedCodeHtml(code: string, segments: CodeHighlightSegment[]): string {
   return applySegmentsToHtml(code, segments);
 }
 
-export async function highlightMarkdownCodeBlocks(html: string): Promise<string> {
+export async function highlightMarkdownCodeBlocks(
+  html: string,
+  requestKey?: string,
+): Promise<string> {
   const codeBlockRegex = /<pre><code class="language-([^"]+)">([\s\S]*?)<\/code><\/pre>/g;
   const parts: string[] = [];
   let cursor = 0;
   let deadline = 0;
+  let index = 0;
 
   for (const match of html.matchAll(codeBlockRegex)) {
     if (performance.now() >= deadline) {
@@ -246,7 +296,12 @@ export async function highlightMarkdownCodeBlocks(html: string): Promise<string>
     }
 
     const rawCode = match[2].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-    const segments = await getCodeHighlightSegments(rawCode, match[1]);
+    const segments = await getCodeHighlightSegments(
+      rawCode,
+      match[1],
+      requestKey ? `${requestKey}:${index}` : undefined,
+    );
+    index += 1;
     const replacement = segments.length
       ? `<pre><code class="language-${normalizeCodeFenceLanguage(match[1])}">${renderHighlightedCodeHtml(rawCode, segments)}</code></pre>`
       : match[0];

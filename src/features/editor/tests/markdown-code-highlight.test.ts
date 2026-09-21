@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { tokenizeCode } from "../lib/wasm-parser/tokenizer";
 import { yieldToMain } from "@/utils/yield-to-main";
 
 vi.mock("@/utils/yield-to-main", () => ({ yieldToMain: vi.fn(async () => {}) }));
@@ -23,8 +22,10 @@ vi.mock("@/features/editor/lib/wasm-parser/extension-assets", () => ({
   })),
 }));
 
-vi.mock("@/features/editor/lib/wasm-parser/tokenizer", () => ({
-  tokenizeCode: vi.fn(async () => []),
+const { tokenize } = vi.hoisted(() => ({ tokenize: vi.fn() }));
+
+vi.mock("@/features/editor/lib/wasm-parser/tokenizer-worker-client", () => ({
+  tokenizerWorkerClient: { tokenize },
 }));
 
 import { highlightMarkdownCodeBlocks } from "../markdown/code-highlight";
@@ -35,13 +36,13 @@ describe("highlightMarkdownCodeBlocks", () => {
     let running = 0;
     let peak = 0;
     vi.spyOn(performance, "now").mockImplementation(() => clock);
-    vi.mocked(tokenizeCode).mockImplementation(async () => {
+    tokenize.mockImplementation(async () => {
       running++;
       peak = Math.max(peak, running);
       await Promise.resolve();
       clock += 10;
       running--;
-      return [];
+      return { tokens: [], normalizedText: "" };
     });
     const html = await highlightMarkdownCodeBlocks(
       '<p>Before</p><pre><code class="language-python">first = 91</code></pre><p>Between</p><pre><code class="language-python">second = 92</code></pre><p>After</p>',
@@ -60,6 +61,7 @@ describe("highlightMarkdownCodeBlocks", () => {
   });
 
   it("uses fallback highlighting for R, Python, and SQL preview code blocks", async () => {
+    tokenize.mockResolvedValue({ tokens: [], normalizedText: "" });
     const html = await highlightMarkdownCodeBlocks(
       [
         '<pre><code class="language-r">library(dplyr)\nvalue &lt;- 1</code></pre>',
@@ -74,5 +76,38 @@ describe("highlightMarkdownCodeBlocks", () => {
     expect(html).toContain('class="language-r"');
     expect(html).toContain('class="language-python"');
     expect(html).toContain('class="language-sql"');
+    expect(tokenize).toHaveBeenCalledTimes(3);
+    expect(tokenize).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: "full", content: expect.any(String) }),
+    );
+  });
+
+  it("renders worker token offsets without changing the code text", async () => {
+    tokenize.mockResolvedValueOnce({
+      normalizedText: "const answer = 42;",
+      tokens: [
+        {
+          type: "token-keyword",
+          startIndex: 0,
+          endIndex: 5,
+          startPosition: { row: 0, column: 0 },
+          endPosition: { row: 0, column: 5 },
+        },
+      ],
+    });
+
+    const html = await highlightMarkdownCodeBlocks(
+      '<pre><code class="language-typescript">const answer = 42;</code></pre>',
+      "markdown-test",
+    );
+
+    expect(html).toContain('<span class="token-keyword">const</span> answer = 42;');
+    expect(tokenize).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        bufferId: "markdown-test:0",
+        latestKey: "markdown-test:0",
+        languageId: "typescript",
+      }),
+    );
   });
 });

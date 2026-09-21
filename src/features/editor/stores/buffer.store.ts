@@ -50,6 +50,15 @@ import type {
   TerminalContent,
   TokenEntry,
 } from "@/features/panes/types/pane-content.types";
+import type {
+  EditorDocumentChangeBatch,
+  EditorDocumentChangeResult,
+} from "@/features/editor/types/editor.types";
+import { publishEditorDocumentChange } from "@/features/editor/services/editor-document-events";
+import {
+  applyEditorTextChanges,
+  normalizeEditorContentEol,
+} from "@/features/editor/utils/editor-text-changes";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import {
   isEditorContent,
@@ -61,6 +70,11 @@ import { createSelectors } from "@/utils/zustand-selectors";
 
 /** @deprecated Use `PaneContent` directly. Kept for backward compatibility. */
 export type Buffer = PaneContent;
+
+const lastAppliedModelVersionByBuffer = new Map<
+  string,
+  { modelSessionId: string; modelVersionId: number }
+>();
 
 interface PendingClose {
   bufferId: string;
@@ -165,6 +179,11 @@ interface BufferActions {
     markDirty?: boolean,
     diffData?: GitDiff | MultiFileDiff,
   ) => void;
+  applyBufferContentChanges: (
+    bufferId: string,
+    batch: EditorDocumentChangeBatch,
+    markDirty?: boolean,
+  ) => EditorDocumentChangeResult;
   updateBufferTokens: (bufferId: string, tokens: TokenEntry[]) => void;
   updateBufferLanguage: (bufferId: string, language: string) => void;
   markBufferDirty: (bufferId: string, isDirty: boolean) => void;
@@ -1241,11 +1260,15 @@ const createBufferStore = (workspaceId: string) => {
           if (buffer.content === content && !diffData) return;
 
           let promotedPreviewBufferId: string | null = null;
+          const contentRevision = buffer.type === "editor" ? (buffer.contentRevision ?? 0) + 1 : 0;
           set((state) => {
             const buf = state.buffers.find((b) => b.id === bufferId);
             if (!buf || !isEditableContent(buf)) return;
 
             buf.content = content;
+            if (buf.type === "editor") {
+              buf.contentRevision = contentRevision;
+            }
             if (diffData && buf.type === "diff") {
               buf.diffData = diffData;
             }
@@ -1268,6 +1291,88 @@ const createBufferStore = (workspaceId: string) => {
           if (promotedPreviewBufferId) {
             paneStore.getState().actions.clearPreviewBufferEverywhere(promotedPreviewBufferId);
           }
+
+          if (buffer.type === "editor") {
+            publishEditorDocumentChange({
+              bufferId,
+              filePath: buffer.path,
+              sourceId: "buffer-store",
+              modelSessionId: `buffer-${bufferId}`,
+              modelVersionId: contentRevision,
+              changes: [],
+              eol: content.includes("\r\n") ? "\r\n" : "\n",
+              isEolChange: false,
+              isFlush: true,
+              isUndoing: false,
+              isRedoing: false,
+              fullContent: content,
+            });
+          }
+        },
+
+        applyBufferContentChanges: (bufferId, batch, markDirty = true) => {
+          const buffer = getBufferById(get().buffers, bufferId);
+          if (!buffer || !isEditorContent(buffer)) {
+            return { accepted: false, synchronized: false, contentRevision: 0 };
+          }
+
+          const lastAppliedVersion = lastAppliedModelVersionByBuffer.get(bufferId);
+          if (
+            lastAppliedVersion?.modelSessionId === batch.modelSessionId &&
+            batch.modelVersionId <= lastAppliedVersion.modelVersionId
+          ) {
+            return {
+              accepted: false,
+              synchronized: true,
+              contentRevision: buffer.contentRevision ?? 0,
+            };
+          }
+
+          let nextContent = applyEditorTextChanges(buffer.content, batch.changes);
+          if (nextContent === null) {
+            return {
+              accepted: false,
+              synchronized: false,
+              contentRevision: buffer.contentRevision ?? 0,
+            };
+          }
+          if (batch.isEolChange) {
+            nextContent = normalizeEditorContentEol(nextContent, batch.eol);
+          }
+
+          const contentRevision = (buffer.contentRevision ?? 0) + 1;
+          let promotedPreviewBufferId: string | null = null;
+          set((state) => {
+            const current = state.buffers.find((item) => item.id === bufferId);
+            if (!current || !isEditorContent(current)) return;
+            current.content = nextContent;
+            current.contentRevision = contentRevision;
+            if (!markDirty) {
+              current.savedContent = nextContent;
+              current.isDirty = false;
+            } else {
+              current.isDirty = nextContent !== current.savedContent;
+              if (current.isPreview && current.isDirty) {
+                current.isPreview = false;
+                promotedPreviewBufferId = current.id;
+              }
+            }
+          });
+          lastAppliedModelVersionByBuffer.set(bufferId, {
+            modelSessionId: batch.modelSessionId,
+            modelVersionId: batch.modelVersionId,
+          });
+
+          if (promotedPreviewBufferId) {
+            paneStore.getState().actions.clearPreviewBufferEverywhere(promotedPreviewBufferId);
+          }
+
+          publishEditorDocumentChange({
+            ...batch,
+            bufferId,
+            filePath: buffer.path,
+          });
+          return { accepted: true, synchronized: true, contentRevision };
         },
 
         updateBufferTokens: (bufferId: string, tokens: TokenEntry[]) => {
@@ -1316,12 +1421,42 @@ const createBufferStore = (workspaceId: string) => {
         },
 
         updateBuffer: (updatedBuffer: PaneContent) => {
+          const currentBuffer = getBufferById(get().buffers, updatedBuffer.id);
+          const contentChanged =
+            currentBuffer?.type === "editor" &&
+            updatedBuffer.type === "editor" &&
+            currentBuffer.content !== updatedBuffer.content;
+          const nextBuffer =
+            currentBuffer?.type === "editor" && updatedBuffer.type === "editor"
+              ? {
+                  ...updatedBuffer,
+                  contentRevision: contentChanged
+                    ? (currentBuffer.contentRevision ?? 0) + 1
+                    : (currentBuffer.contentRevision ?? updatedBuffer.contentRevision ?? 0),
+                }
+              : updatedBuffer;
           set((state) => {
             const index = state.buffers.findIndex((b) => b.id === updatedBuffer.id);
             if (index !== -1) {
-              state.buffers[index] = updatedBuffer;
+              state.buffers[index] = nextBuffer;
             }
           });
+          if (contentChanged && nextBuffer.type === "editor") {
+            publishEditorDocumentChange({
+              bufferId: nextBuffer.id,
+              filePath: nextBuffer.path,
+              sourceId: "buffer-store",
+              modelSessionId: `buffer-${nextBuffer.id}`,
+              modelVersionId: nextBuffer.contentRevision ?? 0,
+              changes: [],
+              eol: nextBuffer.content.includes("\r\n") ? "\r\n" : "\n",
+              isEolChange: false,
+              isFlush: true,
+              isUndoing: false,
+              isRedoing: false,
+              fullContent: nextBuffer.content,
+            });
+          }
         },
 
         handleTabClick: (bufferId: string) => {

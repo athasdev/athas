@@ -123,6 +123,38 @@ pub struct LspClient {
 }
 
 impl LspClient {
+   pub(crate) fn text_document_sync_kind(&self) -> Option<TextDocumentSyncKind> {
+      self
+         .capabilities
+         .lock()
+         .unwrap()
+         .as_ref()
+         .and_then(|capabilities| capabilities.text_document_sync.as_ref())
+         .and_then(|capability| match capability {
+            TextDocumentSyncCapability::Kind(kind) => Some(*kind),
+            TextDocumentSyncCapability::Options(options) => options.change,
+         })
+   }
+
+   pub(crate) fn should_include_text_on_save(&self) -> bool {
+      self
+         .capabilities
+         .lock()
+         .unwrap()
+         .as_ref()
+         .and_then(|capabilities| capabilities.text_document_sync.as_ref())
+         .and_then(|capability| match capability {
+            TextDocumentSyncCapability::Kind(_) => None,
+            TextDocumentSyncCapability::Options(options) => options.save.as_ref(),
+         })
+         .is_some_and(|save| match save {
+            TextDocumentSyncSaveOptions::Supported(_) => false,
+            TextDocumentSyncSaveOptions::SaveOptions(options) => {
+               options.include_text.unwrap_or(false)
+            }
+         })
+   }
+
    pub async fn start(
       server_path: PathBuf,
       args: Vec<String>,

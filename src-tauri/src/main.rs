@@ -413,6 +413,7 @@ fn main() {
          lsp_get_java_class_file_contents,
          lsp_document_open,
          lsp_document_change,
+         lsp_document_change_batch,
          lsp_document_save,
          lsp_document_close,
          lsp_is_language_supported,

@@ -7,6 +7,7 @@ import type { TerminalInput, TerminalSize } from "../types/terminal.types";
 import type { TerminalTheme } from "./use-terminal-theme";
 import { parseOsc7Directory } from "../utils/terminal-osc";
 import { normalizeTerminalTitle } from "../utils/terminal-title";
+import { createTerminalOutputBuffer } from "../utils/terminal-output-buffer";
 import {
   getTerminalOutputFlowAction,
   getTerminalSize,
@@ -56,7 +57,6 @@ export function useTerminalConnection({
   const lastExitInfoRef = useRef<{ exitCode?: number | null; signal?: string | null } | null>(null);
   const hadTerminalErrorRef = useRef(false);
   const lastSizeRef = useRef<TerminalSize | null>(null);
-  const queuedOutputBytesRef = useRef(0);
   const outputPausedRef = useRef(false);
 
   const writeInput = useCallback(
@@ -134,7 +134,6 @@ export function useTerminalConnection({
     lastExitInfoRef.current = null;
     hadTerminalErrorRef.current = false;
     lastSizeRef.current = null;
-    queuedOutputBytesRef.current = 0;
     outputPausedRef.current = false;
     if (connectionId) updateSession(sessionId, { title: "" });
     void flush();
@@ -170,36 +169,29 @@ export function useTerminalConnection({
       applyTerminalTheme(getTerminalTheme());
     });
 
+    const outputBuffer = createTerminalOutputBuffer({
+      write: (bytes, callback) => terminal.write(bytes, callback),
+      onQueuedBytesChange: (queuedBytes) => {
+        const action = getTerminalOutputFlowAction(queuedBytes, outputPausedRef.current);
+        if (action === "pause") setOutputPaused(true);
+        if (action === "resume") setOutputPaused(false);
+      },
+      onWriteError: () => {
+        hadTerminalErrorRef.current = true;
+      },
+    });
+
     const unsubscribeEvents = subscribeToTerminalEvents(connectionId, (event) => {
       if (event.event === "output") {
-        const bytes = event.data;
-        queuedOutputBytesRef.current += bytes.byteLength;
-
-        if (
-          getTerminalOutputFlowAction(queuedOutputBytesRef.current, outputPausedRef.current) ===
-          "pause"
-        ) {
-          setOutputPaused(true);
-        }
-
-        terminal.write(bytes, () => {
-          queuedOutputBytesRef.current = Math.max(
-            0,
-            queuedOutputBytesRef.current - bytes.byteLength,
-          );
-          if (
-            getTerminalOutputFlowAction(queuedOutputBytesRef.current, outputPausedRef.current) ===
-            "resume"
-          ) {
-            setOutputPaused(false);
-          }
-        });
+        outputBuffer.enqueue(event.data);
         return;
       }
 
       if (event.event === "error") {
         hadTerminalErrorRef.current = true;
-        terminal.writeln(`\r\n\x1b[31mError: ${event.message}\x1b[0m`);
+        void outputBuffer.whenDrained().then(() => {
+          terminal.writeln(`\r\n\x1b[31mError: ${event.message}\x1b[0m`);
+        });
         return;
       }
 
@@ -208,34 +200,37 @@ export function useTerminalConnection({
         return;
       }
 
-      void closeTerminalConnection({ connectionId, remoteConnectionId }).catch(() => {});
-      releaseTerminalEventChannel(connectionId);
+      void outputBuffer.whenDrained().then(() => {
+        void closeTerminalConnection({ connectionId, remoteConnectionId }).catch(() => {});
+        releaseTerminalEventChannel(connectionId);
 
-      if (hadTerminalErrorRef.current) {
+        if (hadTerminalErrorRef.current) {
+          terminal.writeln("\x1b[90mOpen a new terminal tab or close this one manually.\x1b[0m");
+          return;
+        }
+
+        const exitCode = lastExitInfoRef.current?.exitCode;
+        const signal = lastExitInfoRef.current?.signal;
+        if (exitCode === 0 && signal == null) {
+          onTerminalExitRef.current?.(sessionId);
+          return;
+        }
+
+        const details =
+          signal != null
+            ? `signal ${signal}`
+            : exitCode != null
+              ? `exit code ${exitCode}`
+              : "unknown status";
+        terminal.writeln(`\r\n\x1b[33mTerminal process exited unexpectedly (${details}).\x1b[0m`);
         terminal.writeln("\x1b[90mOpen a new terminal tab or close this one manually.\x1b[0m");
-        return;
-      }
-
-      const exitCode = lastExitInfoRef.current?.exitCode;
-      const signal = lastExitInfoRef.current?.signal;
-      if (exitCode === 0 && signal == null) {
-        onTerminalExitRef.current?.(sessionId);
-        return;
-      }
-
-      const details =
-        signal != null
-          ? `signal ${signal}`
-          : exitCode != null
-            ? `exit code ${exitCode}`
-            : "unknown status";
-      terminal.writeln(`\r\n\x1b[33mTerminal process exited unexpectedly (${details}).\x1b[0m`);
-      terminal.writeln("\x1b[90mOpen a new terminal tab or close this one manually.\x1b[0m");
+      });
     });
 
     sendTerminalSize(terminal);
 
     return () => {
+      outputBuffer.flush();
       void flush();
       if (outputPausedRef.current) setOutputPaused(false);
       for (const disposable of disposables) disposable.dispose();

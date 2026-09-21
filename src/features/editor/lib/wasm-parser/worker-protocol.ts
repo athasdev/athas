@@ -14,6 +14,7 @@ export type TokenizerWorkerRequest =
       content: string;
       languageId: string;
       wasmPath?: string;
+      highlightQuery?: string;
       highlightQueryUrl?: string;
       mode: "full" | "range";
       viewportRange?: ViewportRangePayload;

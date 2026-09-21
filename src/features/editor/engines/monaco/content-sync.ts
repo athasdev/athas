@@ -1,22 +1,16 @@
-const MAX_PENDING_LOCAL_SNAPSHOTS = 8;
+const externalModelUpdateDepth = new WeakMap<object, number>();
 
-export function rememberLocalContentSnapshot(snapshots: string[], content: string): void {
-  const existingIndex = snapshots.indexOf(content);
-  if (existingIndex >= 0) {
-    snapshots.splice(existingIndex, 1);
-  }
-
-  snapshots.push(content);
-
-  while (snapshots.length > MAX_PENDING_LOCAL_SNAPSHOTS) {
-    snapshots.shift();
+export function runWithExternalModelUpdate<T>(model: object, update: () => T): T {
+  externalModelUpdateDepth.set(model, (externalModelUpdateDepth.get(model) ?? 0) + 1);
+  try {
+    return update();
+  } finally {
+    const nextDepth = (externalModelUpdateDepth.get(model) ?? 1) - 1;
+    if (nextDepth === 0) externalModelUpdateDepth.delete(model);
+    else externalModelUpdateDepth.set(model, nextDepth);
   }
 }
 
-export function consumeLocalContentSnapshot(snapshots: string[], content: string): boolean {
-  const index = snapshots.indexOf(content);
-  if (index === -1) return false;
-
-  snapshots.splice(index, 1);
-  return true;
+export function isExternalModelUpdate(model: object): boolean {
+  return (externalModelUpdateDepth.get(model) ?? 0) > 0;
 }

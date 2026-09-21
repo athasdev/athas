@@ -1,6 +1,7 @@
 use super::{
    client::{LspClient, LspServerEnv},
    config::{LspRegistry, LspSettings},
+   document_sync::{DocumentChangeBatch, DocumentSessions, PendingDocumentChanges, SyncMode},
    manager_state::{LspInstance, WorkspaceClients},
    manager_support,
    runtime::AthasAppHandle as AppHandle,
@@ -12,7 +13,7 @@ use serde_json::Value;
 use std::{
    fs,
    path::{Path, PathBuf},
-   time::Instant,
+   time::{Duration, Instant},
 };
 use tauri::Manager as TauriManager;
 
@@ -22,6 +23,21 @@ pub struct LspManager {
    registry: LspRegistry,
    app_handle: AppHandle,
    settings: LspSettings,
+   document_sessions: DocumentSessions,
+}
+
+fn send_document_changes(
+   client: &LspClient,
+   file_path: &str,
+   pending: &PendingDocumentChanges,
+) -> Result<()> {
+   client.text_document_did_change(DidChangeTextDocumentParams {
+      text_document: VersionedTextDocumentIdentifier {
+         uri: manager_support::text_document_identifier(file_path)?.uri,
+         version: pending.version,
+      },
+      content_changes: pending.changes.clone(),
+   })
 }
 
 impl LspManager {
@@ -31,6 +47,7 @@ impl LspManager {
          registry: LspRegistry::new(),
          app_handle,
          settings: LspSettings::default(),
+         document_sessions: DocumentSessions::default(),
       }
    }
 
@@ -350,11 +367,20 @@ impl LspManager {
    /// This will decrement the reference count and shutdown the server if it reaches 0
    pub fn stop_lsp_for_file(&self, file_path: &PathBuf) -> Result<()> {
       log::info!("Stopping LSP for file: {:?}", file_path);
+      self.document_sessions.close(&file_path.to_string_lossy());
       self.workspace_clients.stop_file(file_path);
       Ok(())
    }
 
    pub fn get_client_for_file(&self, file_path: &str) -> Option<LspClient> {
+      let client = self.raw_client_for_file(file_path)?;
+      if let Err(error) = self.flush_document_changes_with_client(file_path, &client) {
+         log::warn!("Failed to flush document changes before LSP request: {error}");
+      }
+      Some(client)
+   }
+
+   fn raw_client_for_file(&self, file_path: &str) -> Option<LspClient> {
       self
          .workspace_clients
          .get_client_for_file(&PathBuf::from(file_path))
@@ -1374,78 +1400,132 @@ impl LspManager {
       let _extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
 
       let client = self
-         .get_client_for_file(file_path)
+         .raw_client_for_file(file_path)
          .context("No LSP client for this file")?;
+
+      let sync_mode = match client.text_document_sync_kind() {
+         Some(kind) if kind == TextDocumentSyncKind::INCREMENTAL => SyncMode::Incremental,
+         Some(kind) if kind == TextDocumentSyncKind::FULL => SyncMode::Full,
+         _ => SyncMode::None,
+      };
 
       let params = DidOpenTextDocumentParams {
          text_document: TextDocumentItem {
             uri: manager_support::text_document_identifier(file_path)?.uri,
             language_id: language_id.unwrap_or_else(|| self.get_language_id_for_file(file_path)),
             version: 1,
-            text: content,
+            text: content.clone(),
          },
       };
 
-      client.text_document_did_open(params)
+      client.text_document_did_open(params)?;
+      self.document_sessions.open(file_path, content, sync_mode);
+      Ok(())
    }
 
+   /// Compatibility path for explicit full-document replacements. Ordinary editor
+   /// input uses `queue_document_changes` and never sends the complete document.
    pub fn notify_document_change(
       &self,
       file_path: &str,
       content: String,
-      version: i32,
+      version: i64,
    ) -> Result<()> {
-      let path = PathBuf::from(file_path);
-      let _extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
-
-      let client = self
-         .get_client_for_file(file_path)
-         .context("No LSP client for this file")?;
-
-      let params = DidChangeTextDocumentParams {
-         text_document: VersionedTextDocumentIdentifier {
-            uri: manager_support::text_document_identifier(file_path)?.uri,
-            version,
+      self.queue_document_changes(
+         file_path,
+         DocumentChangeBatch {
+            model_session_id: "legacy-full-document".to_string(),
+            model_version_id: version,
+            changes: Vec::new(),
+            is_eol_change: false,
+            is_flush: true,
+            full_content: Some(content),
          },
-         content_changes: vec![TextDocumentContentChangeEvent {
-            range: None,
-            range_length: None,
-            text: content,
-         }],
-      };
-
-      client.text_document_did_change(params)
+      )?;
+      self.flush_document_changes(file_path)
    }
 
-   pub fn notify_document_save(&self, file_path: &str, content: Option<String>) -> Result<()> {
-      let path = PathBuf::from(file_path);
-      let _extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
+   pub fn queue_document_changes(
+      &self,
+      file_path: &str,
+      batch: DocumentChangeBatch,
+   ) -> Result<i32> {
+      self.queue_document_change_batches(file_path, vec![batch])
+   }
 
+   pub fn queue_document_change_batches(
+      &self,
+      file_path: &str,
+      batches: Vec<DocumentChangeBatch>,
+   ) -> Result<i32> {
+      if batches.is_empty() {
+         bail!("LSP document change request is empty");
+      }
       let client = self
-         .get_client_for_file(file_path)
+         .raw_client_for_file(file_path)
          .context("No LSP client for this file")?;
+      let (epoch, generation, projected_version) =
+         self.document_sessions.queue_many(file_path, batches)?;
+      let sessions = self.document_sessions.clone();
+      let file_path = file_path.to_string();
+      tokio::spawn(async move {
+         tokio::time::sleep(Duration::from_millis(35)).await;
+         if let Err(error) =
+            sessions.emit_pending(&file_path, Some((epoch, generation)), |pending| {
+               send_document_changes(&client, &file_path, pending)
+            })
+         {
+            log::warn!("Failed to send debounced LSP document changes: {error}");
+         }
+      });
+      Ok(projected_version)
+   }
+
+   pub fn flush_document_changes(&self, file_path: &str) -> Result<()> {
+      let client = self
+         .raw_client_for_file(file_path)
+         .context("No LSP client for this file")?;
+      self.flush_document_changes_with_client(file_path, &client)
+   }
+
+   fn flush_document_changes_with_client(&self, file_path: &str, client: &LspClient) -> Result<()> {
+      self
+         .document_sessions
+         .emit_pending(file_path, None, |pending| {
+            send_document_changes(client, file_path, pending)
+         })
+   }
+
+   pub fn notify_document_save(&self, file_path: &str) -> Result<()> {
+      let client = self
+         .raw_client_for_file(file_path)
+         .context("No LSP client for this file")?;
+      self.flush_document_changes_with_client(file_path, &client)?;
 
       let params = DidSaveTextDocumentParams {
          text_document: manager_support::text_document_identifier(file_path)?,
-         text: content,
+         text: client
+            .should_include_text_on_save()
+            .then(|| self.document_sessions.content(file_path))
+            .flatten(),
       };
 
       client.text_document_did_save(params)
    }
 
    pub fn notify_document_close(&self, file_path: &str) -> Result<()> {
-      let path = PathBuf::from(file_path);
-      let _extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
-
       let client = self
-         .get_client_for_file(file_path)
+         .raw_client_for_file(file_path)
          .context("No LSP client for this file")?;
+      self.flush_document_changes_with_client(file_path, &client)?;
 
       let params = DidCloseTextDocumentParams {
          text_document: manager_support::text_document_identifier(file_path)?,
       };
 
-      client.text_document_did_close(params)
+      let result = client.text_document_did_close(params);
+      self.document_sessions.close(file_path);
+      result
    }
 
    pub fn shutdown(&self) {

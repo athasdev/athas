@@ -319,6 +319,7 @@ export function useTokenizer({
       try {
         const result = await tokenizerWorkerClient.tokenize({
           bufferId,
+          latestKey: `editor-tokenizer:${bufferId}`,
           content: normalizedText,
           languageId,
           wasmPath: languageAssets.wasmPath,
@@ -414,6 +415,7 @@ export function useTokenizer({
 
         const result = await tokenizerWorkerClient.tokenize({
           bufferId,
+          latestKey: `editor-tokenizer:${bufferId}`,
           content: normalizedText,
           languageId,
           wasmPath: languageAssets.wasmPath,

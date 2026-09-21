@@ -10,10 +10,43 @@ interface PendingRequest {
   reject: (reason?: unknown) => void;
 }
 
-class TokenizerWorkerClient {
+interface TokenizeParams {
+  bufferId: string;
+  content: string;
+  languageId: string;
+  wasmPath?: string;
+  highlightQuery?: string;
+  highlightQueryUrl?: string;
+  mode: "full" | "range";
+  viewportRange?: ViewportRangePayload;
+  latestKey?: string;
+}
+
+interface LatestRequest {
+  params: TokenizeParams;
+  generation: number;
+  resolve: (value: TokenizerWorkerResult) => void;
+  reject: (reason?: unknown) => void;
+}
+
+interface LatestRequestState {
+  generation: number;
+  running: boolean;
+  queued?: LatestRequest;
+}
+
+export class TokenizerRequestSupersededError extends Error {
+  constructor() {
+    super("Tokenizer request was superseded");
+    this.name = "TokenizerRequestSupersededError";
+  }
+}
+
+export class TokenizerWorkerClient {
   private worker: Worker | null = null;
   private requestId = 0;
   private pending = new Map<number, PendingRequest>();
+  private latestRequests = new Map<string, LatestRequestState>();
 
   private ensureWorker(): Worker {
     if (this.worker) return this.worker;
@@ -60,26 +93,72 @@ class TokenizerWorkerClient {
     await this.post({ id, type: "reset", bufferId });
   }
 
-  async tokenize(params: {
-    bufferId: string;
-    content: string;
-    languageId: string;
-    wasmPath?: string;
-    highlightQueryUrl?: string;
-    mode: "full" | "range";
-    viewportRange?: ViewportRangePayload;
-  }): Promise<TokenizerWorkerResult> {
+  private async tokenizeImmediately(params: TokenizeParams): Promise<TokenizerWorkerResult> {
     const id = ++this.requestId;
     const response = await this.post<Extract<TokenizerWorkerResponse, { ok: true }>>({
       id,
       type: "tokenize",
-      ...params,
+      bufferId: params.bufferId,
+      content: params.content,
+      languageId: params.languageId,
+      wasmPath: params.wasmPath,
+      highlightQuery: params.highlightQuery,
+      highlightQueryUrl: params.highlightQueryUrl,
+      mode: params.mode,
+      viewportRange: params.viewportRange,
     });
 
     return {
       tokens: response.tokens ?? [],
       normalizedText: response.normalizedText ?? params.content,
     };
+  }
+
+  private runLatestRequest(key: string, request: LatestRequest) {
+    const state = this.latestRequests.get(key);
+    if (!state) return;
+    state.running = true;
+
+    void this.tokenizeImmediately(request.params)
+      .then((result) => {
+        if (request.generation === state.generation) {
+          request.resolve(result);
+        } else {
+          request.reject(new TokenizerRequestSupersededError());
+        }
+      })
+      .catch(request.reject)
+      .finally(() => {
+        const queued = state.queued;
+        state.queued = undefined;
+        if (queued) {
+          this.runLatestRequest(key, queued);
+        } else {
+          this.latestRequests.delete(key);
+        }
+      });
+  }
+
+  tokenize(params: TokenizeParams): Promise<TokenizerWorkerResult> {
+    const key = params.latestKey;
+    if (!key) return this.tokenizeImmediately(params);
+
+    return new Promise((resolve, reject) => {
+      const state = this.latestRequests.get(key) ?? { generation: 0, running: false };
+      const generation = state.generation + 1;
+      state.generation = generation;
+      const request = { params, generation, resolve, reject };
+
+      if (state.running) {
+        state.queued?.reject(new TokenizerRequestSupersededError());
+        state.queued = request;
+        this.latestRequests.set(key, state);
+        return;
+      }
+
+      this.latestRequests.set(key, state);
+      this.runLatestRequest(key, request);
+    });
   }
 }
 

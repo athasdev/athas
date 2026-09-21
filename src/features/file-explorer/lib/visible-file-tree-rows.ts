@@ -41,6 +41,18 @@ export interface FilterFileTreeEntriesOptions {
   showHiddenFiles: boolean;
 }
 
+const normalizedSortKeyCache = new WeakMap<FileEntry, string>();
+const sortedEntriesCache = new WeakMap<readonly FileEntry[], Map<FileTreeSortOrder, FileEntry[]>>();
+
+function getNormalizedSortKey(entry: FileEntry): string {
+  const cached = normalizedSortKeyCache.get(entry);
+  if (cached !== undefined) return cached;
+
+  const key = entry.name.toLowerCase();
+  normalizedSortKeyCache.set(entry, key);
+  return key;
+}
+
 export function filterFileTreeEntries(
   files: FileEntry[],
   options: FilterFileTreeEntriesOptions,
@@ -137,13 +149,20 @@ function sortFileTreeEntriesForDisplay(
   entries: readonly FileEntry[],
   sortOrder: FileTreeSortOrder,
 ): FileEntry[] {
-  return [...entries].sort((left, right) => {
+  const cached = sortedEntriesCache.get(entries)?.get(sortOrder);
+  if (cached) return cached;
+
+  const sorted = [...entries].sort((left, right) => {
     if (sortOrder === "folders-first" && left.isDir !== right.isDir) {
       return left.isDir ? -1 : 1;
     }
 
-    return left.name.toLowerCase().localeCompare(right.name.toLowerCase());
+    return getNormalizedSortKey(left).localeCompare(getNormalizedSortKey(right));
   });
+  const entriesCache = sortedEntriesCache.get(entries) ?? new Map<FileTreeSortOrder, FileEntry[]>();
+  entriesCache.set(sortOrder, sorted);
+  sortedEntriesCache.set(entries, entriesCache);
+  return sorted;
 }
 
 export function buildVisibleFileTreeRows(

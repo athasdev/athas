@@ -19,6 +19,7 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         path: spec.path,
         name: spec.name,
         content: spec.content,
+        contentRevision: 0,
         savedContent: spec.content,
         isDirty: false,
         isVirtual: spec.isVirtual ?? false,

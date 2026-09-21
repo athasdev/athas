@@ -96,14 +96,16 @@ pub(super) async fn create_remote_terminal(
 }
 
 pub(super) async fn write_remote_terminal(id: String, input: TerminalInput) -> Result<(), String> {
-   let terminals = REMOTE_TERMINALS
-      .lock()
-      .map_err(|e| format!("Failed to lock remote terminals: {}", e))?;
-   let terminal = terminals
-      .get(&id)
-      .ok_or("Remote terminal connection not found")?;
-   let mut channel = terminal
-      .channel
+   let channel = {
+      let terminals = REMOTE_TERMINALS
+         .lock()
+         .map_err(|e| format!("Failed to lock remote terminals: {}", e))?;
+      terminals
+         .get(&id)
+         .map(|terminal| terminal.channel.clone())
+         .ok_or("Remote terminal connection not found")?
+   };
+   let mut channel = channel
       .lock()
       .map_err(|e| format!("Failed to lock remote terminal channel: {}", e))?;
    channel
@@ -117,14 +119,16 @@ pub(super) async fn write_remote_terminal(id: String, input: TerminalInput) -> R
 
 pub(super) async fn resize_remote_terminal(id: String, size: TerminalSize) -> Result<(), String> {
    let size = size.normalized();
-   let terminals = REMOTE_TERMINALS
-      .lock()
-      .map_err(|e| format!("Failed to lock remote terminals: {}", e))?;
-   let terminal = terminals
-      .get(&id)
-      .ok_or("Remote terminal connection not found")?;
-   let mut channel = terminal
-      .channel
+   let channel = {
+      let terminals = REMOTE_TERMINALS
+         .lock()
+         .map_err(|e| format!("Failed to lock remote terminals: {}", e))?;
+      terminals
+         .get(&id)
+         .map(|terminal| terminal.channel.clone())
+         .ok_or("Remote terminal connection not found")?
+   };
+   let mut channel = channel
       .lock()
       .map_err(|e| format!("Failed to lock remote terminal channel: {}", e))?;
    channel
@@ -139,21 +143,25 @@ pub(super) async fn resize_remote_terminal(id: String, size: TerminalSize) -> Re
 }
 
 pub(super) async fn set_remote_terminal_paused(id: String, paused: bool) -> Result<(), String> {
-   let terminals = REMOTE_TERMINALS
-      .lock()
-      .map_err(|e| format!("Failed to lock remote terminals: {}", e))?;
-   let terminal = terminals
-      .get(&id)
-      .ok_or("Remote terminal connection not found")?;
-   terminal.reader_control.set_paused(paused);
+   let reader_control = {
+      let terminals = REMOTE_TERMINALS
+         .lock()
+         .map_err(|e| format!("Failed to lock remote terminals: {}", e))?;
+      terminals
+         .get(&id)
+         .map(|terminal| terminal.reader_control.clone())
+         .ok_or("Remote terminal connection not found")?
+   };
+   reader_control.set_paused(paused);
    Ok(())
 }
 
 pub(super) async fn close_remote_terminal(id: String) -> Result<(), String> {
-   let mut terminals = REMOTE_TERMINALS
+   let terminal = REMOTE_TERMINALS
       .lock()
-      .map_err(|e| format!("Failed to lock remote terminals: {}", e))?;
-   if let Some(terminal) = terminals.remove(&id)
+      .map_err(|e| format!("Failed to lock remote terminals: {}", e))?
+      .remove(&id);
+   if let Some(terminal) = terminal
       && let Ok(mut channel) = terminal.channel.lock()
    {
       terminal.reader_control.set_paused(false);
