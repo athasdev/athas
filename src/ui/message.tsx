@@ -37,8 +37,8 @@ const messageAvatarVariants = cva(
   {
     variants: {
       variant: {
-        default: "rounded-full bg-surface",
-        assistant: "rounded-md bg-accent text-subtle-foreground",
+        default: "rounded-full bg-accent",
+        assistant: "rounded-full bg-accent text-muted-foreground",
       },
       size: {
         default: "",
@@ -93,7 +93,7 @@ function MessageHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="message-header"
       className={cn(
-        "flex max-w-full min-w-0 items-center px-3 font-medium text-subtle-foreground ui-text-sm group-has-data-[variant=ghost]/message:px-0",
+        "flex max-w-full min-w-0 items-center px-3 font-medium text-muted-foreground ui-text-sm group-has-data-[variant=ghost]/message:px-0",
         className,
       )}
       {...props}
@@ -110,7 +110,7 @@ function MessageFooter({
     <div
       data-slot="message-footer"
       className={cn(
-        "flex min-h-6 max-w-full min-w-0 items-center gap-0.5 px-2 text-subtle-foreground/60 transition-opacity duration-fast ui-text-sm group-has-data-[variant=ghost]/message:px-0 group-data-[align=end]/message:justify-end md:pointer-events-none md:opacity-0 md:group-hover/message:pointer-events-auto md:group-hover/message:opacity-100 md:group-focus-within/message:pointer-events-auto md:group-focus-within/message:opacity-100",
+        "flex min-h-6 max-w-full min-w-0 items-center gap-0.5 px-2 text-subtle-foreground transition-opacity duration-fast ui-text-sm group-has-data-[variant=ghost]/message:px-0 group-data-[align=end]/message:justify-end md:pointer-events-none md:opacity-0 md:group-hover/message:pointer-events-auto md:group-hover/message:opacity-100 md:group-focus-within/message:pointer-events-auto md:group-focus-within/message:opacity-100",
         !reserveSpace && "-mb-6",
         className,
       )}
@@ -164,7 +164,7 @@ function MessageAction({
       iconOnly
       tooltip={tooltip ?? label}
       aria-label={label}
-      size="chrome"
+      size="sm"
       {...props}
     >
       {children ?? <Icon className="size-3.5" />}

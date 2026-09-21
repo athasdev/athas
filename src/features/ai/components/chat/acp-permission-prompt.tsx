@@ -1,7 +1,15 @@
 import { KeyIcon } from "@/ui/icons";
-import type { AcpEvent, AcpPermissionOption } from "@/features/ai/types/acp.types";
+import type {
+  AcpEvent,
+  AcpPermissionOption,
+  AcpPermissionPreview,
+} from "@/features/ai/types/acp.types";
+import { createAcpDiffViewNode, toRelativeDisplayPath } from "@/features/ai/lib/acp-diff-output";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
 import Badge from "@/ui/badge";
-import { Button, type ButtonVariant } from "@/ui/button";
+import Textarea from "@/ui/textarea";
+import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { chatContentWidth } from "./chat-content-width";
 
@@ -11,7 +19,37 @@ export type AcpPermissionRequest = {
   permissionType: string;
   resource: string;
   options: Extract<AcpEvent, { type: "permission_request" }>["options"];
+  preview?: AcpPermissionPreview;
 };
+
+function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  if (preview.type === "diff") {
+    return (
+      <ExtensionViewRenderer
+        node={createAcpDiffViewNode(preview, rootFolderPath)}
+        execute={() => undefined}
+        surface="embedded"
+      />
+    );
+  }
+  return (
+    <pre
+      aria-label="Proposed shell command"
+      className="max-h-48 overflow-auto rounded-lg border border-border bg-surface px-2.5 py-2 font-mono whitespace-pre-wrap wrap-anywhere select-text text-foreground ui-text-sm"
+    >
+      {preview.command}
+    </pre>
+  );
+}
+
+function getPreviewSummary(preview: AcpPermissionPreview, rootFolderPath?: string | null) {
+  if (preview.type === "diff") {
+    const isNew = preview.oldText.length === 0;
+    return `${isNew ? "Create" : "Edit"} ${toRelativeDisplayPath(preview.path, rootFolderPath)}`;
+  }
+  return `Run ${preview.command.trim().split("\n")[0] ?? ""}`;
+}
 
 const fallbackOptions: AcpPermissionOption[] = [
   { id: "reject", name: "Deny", kind: "reject_once" },
@@ -48,17 +86,19 @@ function getOptionTooltip(option: AcpPermissionOption) {
   }
 }
 
-function getOptionVariant(option: AcpPermissionOption): ButtonVariant {
+function getOptionStyle(
+  option: AcpPermissionOption,
+): Partial<Pick<ButtonProps, "variant" | "tone">> {
   switch (option.kind) {
     case "allow_always":
-      return "accent";
+      return { variant: "accent" };
     case "allow_once":
-      return "default";
+      return { variant: "default" };
     case "reject_always":
     case "reject_once":
-      return "danger";
+      return { variant: "ghost", tone: "danger" };
     default:
-      return "ghost";
+      return { variant: "ghost" };
   }
 }
 
@@ -75,15 +115,34 @@ export function AcpPermissionPrompt({
   queuedCount: number;
   onRespond: (approved: boolean, optionId?: string) => void;
 }) {
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const summary = (
-    permission.description ||
-    [permission.permissionType, permission.resource].filter(Boolean).join(" ")
+    permission.preview
+      ? getPreviewSummary(permission.preview, rootFolderPath)
+      : permission.description ||
+        [permission.permissionType, permission.resource].filter(Boolean).join(" ")
   ).trim();
   const options = permission.options.length > 0 ? permission.options : fallbackOptions;
 
   return (
-    <div className={cn(chatContentWidth(), "mb-1 ui-text-sm")}>
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl border border-border/70 bg-background/92 px-2 py-1.5 shadow-(--shadow-card)">
+    <div className={cn(chatContentWidth(), "mb-1 flex flex-col gap-1.5 ui-text-sm")}>
+      {permission.preview ? (
+        <PermissionPreview preview={permission.preview} />
+      ) : permission.requestId.startsWith("intelligence:") ? (
+        <Textarea
+          aria-label={
+            permission.permissionType === "intelligence-command"
+              ? "Proposed shell command"
+              : "Proposed workspace edit"
+          }
+          readOnly
+          font="mono"
+          resize="y"
+          rows={12}
+          value={permission.description}
+        />
+      ) : null}
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-xl border border-border bg-background px-2 py-1.5 shadow-(--shadow-card)">
         <KeyIcon className="size-3.5 shrink-0 text-subtle-foreground" />
         <div
           className="flex min-w-0 flex-1 basis-40 items-center text-foreground"
@@ -93,14 +152,14 @@ export function AcpPermissionPrompt({
           <span className="shrink-0 px-1.5 text-subtle-foreground">/</span>
           <span className="min-w-0 truncate font-mono">{summary}</span>
         </div>
-        {queuedCount > 0 ? <Badge variant="muted">+{queuedCount}</Badge> : null}
+        {queuedCount > 0 ? <Badge>+{queuedCount}</Badge> : null}
         <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1">
           {options.map((option) => {
             return (
               <Button
                 key={option.id}
                 type="button"
-                variant={getOptionVariant(option)}
+                {...getOptionStyle(option)}
                 onClick={() =>
                   onRespond(
                     isApproval(option),

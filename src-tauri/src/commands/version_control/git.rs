@@ -23,17 +23,42 @@ fn resolve_backend_path(path: String) -> String {
    athas_wsl::resolve_windows_path(&path).unwrap_or(path)
 }
 
+/// Maps a path reported by the git backend back into the form the frontend
+/// used for the repository. Backends answer with a `\\wsl$` share path when
+/// libgit2 handled the request and with a Linux path when the distribution's
+/// own git did, so both are folded back into a `wsl://` URI or a share path
+/// matching the original.
 fn restore_provider_path(original_path: &str, backend_path: String) -> String {
-   if athas_wsl::is_wsl_path(original_path) {
-      athas_wsl::windows_unc_to_wsl_uri(&backend_path).unwrap_or(backend_path)
+   let Some(location) = athas_wsl::parse_wsl_location(original_path) else {
+      return backend_path;
+   };
+
+   let linux_path = if let Some((parsed, _)) = athas_wsl::parse_windows_unc_path(&backend_path) {
+      parsed.linux_path
+   } else if athas_wsl::is_wsl_path(&backend_path) {
+      return backend_path;
+   } else if backend_path.starts_with('/') {
+      athas_wsl::normalize_linux_path(&backend_path)
    } else {
-      backend_path
+      return backend_path;
+   };
+
+   if athas_wsl::is_wsl_path(original_path) {
+      return athas_wsl::build_wsl_uri(&location.distro, &linux_path);
    }
+
+   let flavor = athas_wsl::parse_windows_unc_path(original_path)
+      .map(|(_, flavor)| flavor)
+      .unwrap_or(athas_wsl::WslUncFlavor::Localhost);
+   athas_wsl::wsl_path_to_windows_unc(&location.distro, &linux_path, flavor)
 }
 
 #[tauri::command]
 pub async fn git_clone(repository_url: String, destination_path: String) -> Result<(), String> {
-   run_blocking(move || git_backend::git_clone(repository_url, destination_path)).await
+   run_blocking(move || {
+      git_backend::git_clone(repository_url, resolve_backend_path(destination_path))
+   })
+   .await
 }
 
 #[tauri::command]
@@ -41,8 +66,8 @@ pub async fn git_status(repo_path: String) -> Result<git_backend::GitStatus, Str
    let started_at = Instant::now();
    let short = short_repo_path(&repo_path);
    log::info!("[git] git_status:start {}", short);
-   let repo_path = resolve_backend_path(repo_path);
-   let result = run_blocking(move || git_backend::git_status(repo_path)).await;
+   let result =
+      run_blocking(move || git_backend::git_status(resolve_backend_path(repo_path))).await;
 
    match &result {
       Ok(status) => {
@@ -67,15 +92,18 @@ pub async fn git_status(repo_path: String) -> Result<git_backend::GitStatus, Str
 }
 
 #[tauri::command]
-pub fn git_init(repo_path: String) -> Result<(), String> {
-   git_backend::git_init(resolve_backend_path(repo_path))
+pub async fn git_init(repo_path: String) -> Result<(), String> {
+   run_blocking(move || git_backend::git_init(resolve_backend_path(repo_path))).await
 }
 
 #[tauri::command]
-pub fn git_discover_repo(path: String) -> Result<Option<String>, String> {
-   let backend_path = resolve_backend_path(path.clone());
-   git_backend::git_discover_repo(backend_path)
-      .map(|path_opt| path_opt.map(|repo_path| restore_provider_path(&path, repo_path)))
+pub async fn git_discover_repo(path: String) -> Result<Option<String>, String> {
+   run_blocking(move || {
+      let backend_path = resolve_backend_path(path.clone());
+      git_backend::git_discover_repo(backend_path)
+         .map(|path_opt| path_opt.map(|repo_path| restore_provider_path(&path, repo_path)))
+   })
+   .await
 }
 
 #[tauri::command]
@@ -98,8 +126,10 @@ pub async fn git_diff_file(
    file_path: String,
    staged: bool,
 ) -> Result<git_backend::GitDiff, String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_diff_file(repo_path, file_path, staged)).await
+   run_blocking(move || {
+      git_backend::git_diff_file(resolve_backend_path(repo_path), file_path, staged)
+   })
+   .await
 }
 
 #[tauri::command]
@@ -109,9 +139,13 @@ pub async fn git_diff_file_with_content(
    content: String,
    base: String,
 ) -> Result<git_backend::GitDiff, String> {
-   let repo_path = resolve_backend_path(repo_path);
    run_blocking(move || {
-      git_backend::git_diff_file_with_content(repo_path, file_path, content, base)
+      git_backend::git_diff_file_with_content(
+         resolve_backend_path(repo_path),
+         file_path,
+         content,
+         base,
+      )
    })
    .await
 }
@@ -120,8 +154,7 @@ pub async fn git_diff_file_with_content(
 pub async fn git_status_diff_stats(
    repo_path: String,
 ) -> Result<Vec<git_backend::GitDiffStat>, String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_status_diff_stats(repo_path)).await
+   run_blocking(move || git_backend::git_status_diff_stats(resolve_backend_path(repo_path))).await
 }
 
 #[tauri::command]
@@ -130,8 +163,10 @@ pub async fn git_commit_diff(
    commit_hash: String,
    file_path: Option<String>,
 ) -> Result<Vec<git_backend::GitDiff>, String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_commit_diff(repo_path, commit_hash, file_path)).await
+   run_blocking(move || {
+      git_backend::git_commit_diff(resolve_backend_path(repo_path), commit_hash, file_path)
+   })
+   .await
 }
 
 #[tauri::command]
@@ -140,8 +175,10 @@ pub async fn git_file_at_commit(
    commit_hash: String,
    file_path: String,
 ) -> Result<String, String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_file_at_commit(repo_path, commit_hash, file_path)).await
+   run_blocking(move || {
+      git_backend::git_file_at_commit(resolve_backend_path(repo_path), commit_hash, file_path)
+   })
+   .await
 }
 
 #[tauri::command]
@@ -150,8 +187,10 @@ pub async fn git_ref_diff(
    base_ref: String,
    target_ref: String,
 ) -> Result<Vec<git_backend::GitDiff>, String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_ref_diff(repo_path, base_ref, target_ref)).await
+   run_blocking(move || {
+      git_backend::git_ref_diff(resolve_backend_path(repo_path), base_ref, target_ref)
+   })
+   .await
 }
 
 #[tauri::command]
@@ -160,8 +199,10 @@ pub async fn git_blame_file(
    file_path: String,
    content: String,
 ) -> Result<git_backend::GitBlame, String> {
-   let root_path = resolve_backend_path(root_path);
-   run_blocking(move || git_backend::git_blame_file(&root_path, &file_path, &content)).await
+   run_blocking(move || {
+      git_backend::git_blame_file(&resolve_backend_path(root_path), &file_path, &content)
+   })
+   .await
 }
 
 #[tauri::command]
@@ -197,8 +238,8 @@ pub async fn git_push(
    branch: Option<String>,
    remote: String,
 ) -> Result<(), String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_push(repo_path, branch, remote)).await
+   run_blocking(move || git_backend::git_push(resolve_backend_path(repo_path), branch, remote))
+      .await
 }
 
 #[tauri::command]
@@ -207,14 +248,13 @@ pub async fn git_pull(
    branch: Option<String>,
    remote: String,
 ) -> Result<(), String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_pull(repo_path, branch, remote)).await
+   run_blocking(move || git_backend::git_pull(resolve_backend_path(repo_path), branch, remote))
+      .await
 }
 
 #[tauri::command]
 pub async fn git_fetch(repo_path: String, remote: Option<String>) -> Result<(), String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_fetch(repo_path, remote)).await
+   run_blocking(move || git_backend::git_fetch(resolve_backend_path(repo_path), remote)).await
 }
 
 #[tauri::command]
@@ -234,26 +274,22 @@ pub fn git_remove_remote(repo_path: String, name: String) -> Result<(), String> 
 
 #[tauri::command]
 pub async fn git_add(repo_path: String, file_path: String) -> Result<(), String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_add(repo_path, file_path)).await
+   run_blocking(move || git_backend::git_add(resolve_backend_path(repo_path), file_path)).await
 }
 
 #[tauri::command]
 pub async fn git_reset(repo_path: String, file_path: String) -> Result<(), String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_reset(repo_path, file_path)).await
+   run_blocking(move || git_backend::git_reset(resolve_backend_path(repo_path), file_path)).await
 }
 
 #[tauri::command]
 pub async fn git_add_all(repo_path: String) -> Result<(), String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_add_all(repo_path)).await
+   run_blocking(move || git_backend::git_add_all(resolve_backend_path(repo_path))).await
 }
 
 #[tauri::command]
 pub async fn git_reset_all(repo_path: String) -> Result<(), String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_reset_all(repo_path)).await
+   run_blocking(move || git_backend::git_reset_all(resolve_backend_path(repo_path))).await
 }
 
 #[tauri::command]
@@ -306,8 +342,8 @@ pub async fn git_stash_diff(
    repo_path: String,
    stash_index: usize,
 ) -> Result<Vec<git_backend::GitDiff>, String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_stash_diff(repo_path, stash_index)).await
+   run_blocking(move || git_backend::git_stash_diff(resolve_backend_path(repo_path), stash_index))
+      .await
 }
 
 #[tauri::command]
@@ -339,8 +375,8 @@ pub fn git_delete_tag(repo_path: String, name: String) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn git_push_tag(repo_path: String, name: String, remote: String) -> Result<(), String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_push_tag(repo_path, name, remote)).await
+   run_blocking(move || git_backend::git_push_tag(resolve_backend_path(repo_path), name, remote))
+      .await
 }
 
 #[tauri::command]
@@ -349,8 +385,10 @@ pub async fn git_delete_remote_tag(
    name: String,
    remote: String,
 ) -> Result<(), String> {
-   let repo_path = resolve_backend_path(repo_path);
-   run_blocking(move || git_backend::git_delete_remote_tag(repo_path, name, remote)).await
+   run_blocking(move || {
+      git_backend::git_delete_remote_tag(resolve_backend_path(repo_path), name, remote)
+   })
+   .await
 }
 
 #[tauri::command]
@@ -363,7 +401,14 @@ pub fn git_checkout_tag(
 
 #[tauri::command]
 pub fn git_get_worktrees(repo_path: String) -> Result<Vec<git_backend::GitWorktree>, String> {
-   git_backend::git_get_worktrees(resolve_backend_path(repo_path))
+   let worktrees = git_backend::git_get_worktrees(resolve_backend_path(repo_path.clone()))?;
+   Ok(worktrees
+      .into_iter()
+      .map(|mut worktree| {
+         worktree.path = restore_provider_path(&repo_path, worktree.path);
+         worktree
+      })
+      .collect())
 }
 
 #[tauri::command]
@@ -394,4 +439,68 @@ pub fn git_stage_hunk(repo_path: String, hunk: git_backend::GitHunk) -> Result<(
 #[tauri::command]
 pub fn git_unstage_hunk(repo_path: String, hunk: git_backend::GitHunk) -> Result<(), String> {
    git_backend::git_unstage_hunk(resolve_backend_path(repo_path), hunk)
+}
+
+#[cfg(test)]
+mod tests {
+   use super::restore_provider_path;
+
+   #[test]
+   fn restores_wsl_uris_from_share_and_linux_paths() {
+      assert_eq!(
+         restore_provider_path(
+            "wsl://Ubuntu/home/me/repo/src",
+            "//wsl.localhost/Ubuntu/home/me/repo/".to_string()
+         ),
+         "wsl://Ubuntu/home/me/repo"
+      );
+      assert_eq!(
+         restore_provider_path(
+            "wsl://Ubuntu/home/me/repo",
+            r"\\wsl$\Ubuntu\home\me\repo".to_string()
+         ),
+         "wsl://Ubuntu/home/me/repo"
+      );
+      assert_eq!(
+         restore_provider_path("wsl://Ubuntu/home/me/repo", "/home/me/repo\n".to_string()),
+         "wsl://Ubuntu/home/me/repo"
+      );
+      assert_eq!(
+         restore_provider_path(
+            "wsl://Ubuntu/home/me/repo",
+            "wsl://Ubuntu/home/me/repo".to_string()
+         ),
+         "wsl://Ubuntu/home/me/repo"
+      );
+   }
+
+   #[test]
+   fn restores_share_paths_in_the_flavor_the_frontend_used() {
+      assert_eq!(
+         restore_provider_path(
+            r"\\wsl$\Ubuntu\home\me\repo",
+            "/home/me/repo/worktree".to_string()
+         ),
+         r"\\wsl$\Ubuntu\home\me\repo\worktree"
+      );
+      assert_eq!(
+         restore_provider_path(
+            "//wsl.localhost/Ubuntu/home/me/repo",
+            "//wsl.localhost/Ubuntu/home/me/repo/".to_string()
+         ),
+         r"\\wsl.localhost\Ubuntu\home\me\repo"
+      );
+   }
+
+   #[test]
+   fn leaves_local_and_unrelated_paths_alone() {
+      assert_eq!(
+         restore_provider_path("/home/me/repo", "/home/me/repo/".to_string()),
+         "/home/me/repo/"
+      );
+      assert_eq!(
+         restore_provider_path("wsl://Ubuntu/home/me/repo", "relative/path".to_string()),
+         "relative/path"
+      );
+   }
 }

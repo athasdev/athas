@@ -13,22 +13,20 @@ function BubbleGroup({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const bubbleVariants = cva(
-  "group/bubble relative flex w-fit max-w-[80%] min-w-0 flex-col gap-1 group-data-[align=end]/message:self-end data-[align=end]:self-end data-[variant=ghost]:max-w-full",
+  "group/bubble relative flex w-fit max-w-[80%] min-w-0 flex-col gap-1 group-data-[align=end]/message:self-end data-[align=end]:self-end",
   {
     variants: {
       variant: {
+        /** A tinted reply from the assistant. */
         default:
-          "*:data-[slot=bubble-content]:bg-primary/15 *:data-[slot=bubble-content]:text-foreground",
-        secondary:
-          "*:data-[slot=bubble-content]:bg-accent *:data-[slot=bubble-content]:text-foreground [&>[data-slot=bubble-content]:is(button,a):hover]:bg-selected",
-        muted:
-          "*:data-[slot=bubble-content]:bg-accent/70 *:data-[slot=bubble-content]:text-foreground",
-        outline:
-          "*:data-[slot=bubble-content]:border-border *:data-[slot=bubble-content]:bg-background",
+          "*:data-[slot=bubble-content]:bg-accent *:data-[slot=bubble-content]:text-foreground",
+        /** The user's own message, on the surface plane with an edge. */
+        user: "w-full max-w-full *:data-[slot=bubble-content]:w-full *:data-[slot=bubble-content]:border-border *:data-[slot=bubble-content]:bg-surface",
+        /** Plain text with no box, for streamed prose. */
         ghost:
           "w-full max-w-full *:data-[slot=bubble-content]:w-full *:data-[slot=bubble-content]:rounded-none *:data-[slot=bubble-content]:border-0 *:data-[slot=bubble-content]:bg-transparent *:data-[slot=bubble-content]:p-0",
-        destructive:
-          "*:data-[slot=bubble-content]:bg-destructive/10 *:data-[slot=bubble-content]:text-destructive",
+        danger:
+          "*:data-[slot=bubble-content]:bg-destructive-soft *:data-[slot=bubble-content]:text-destructive",
       },
     },
     defaultVariants: {
@@ -62,7 +60,7 @@ function BubbleContent({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="bubble-content"
       className={cn(
-        "w-fit max-w-full min-w-0 overflow-hidden rounded-2xl border border-transparent px-3 py-2.5 leading-relaxed wrap-break-word group-data-[align=end]/bubble:self-end",
+        "w-fit max-w-full min-w-0 overflow-hidden rounded-lg border border-transparent px-3 py-2.5 leading-relaxed wrap-break-word group-data-[align=end]/bubble:self-end",
         className,
       )}
       {...props}

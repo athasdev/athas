@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { ExtensionDiffPreview } from "@/extensions/ui/components/extension-diff-preview";
 import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
-import Badge from "@/ui/badge";
+import Badge, { type BadgeTone } from "@/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
 import { EmptyState } from "@/ui/empty";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/ui/item";
@@ -47,8 +47,8 @@ interface ExtensionViewRendererProps {
   surface?: ExtensionViewSurface;
 }
 
-const badgeTone = (tone: ExtensionViewTone | undefined) =>
-  tone === "error" ? "error" : (tone ?? "default");
+const badgeTone = (tone: ExtensionViewTone | undefined): BadgeTone =>
+  tone === "error" ? "danger" : tone === "muted" || !tone || tone === "default" ? "neutral" : tone;
 
 const metricToneClassName = (tone: ExtensionViewTone | undefined) => {
   if (tone === "accent") return "text-primary";
@@ -138,7 +138,7 @@ function renderNode(
       );
     case "card":
       return (
-        <Card key={key} variant={node.variant ?? "default"}>
+        <Card key={key} variant={node.variant === "outline" ? "outline" : "default"}>
           {node.title || node.description ? (
             <CardHeader>
               {node.title ? <CardTitle>{node.title}</CardTitle> : null}
@@ -171,13 +171,13 @@ function renderNode(
       );
     case "badge":
       return (
-        <Badge key={key} variant={badgeTone(node.tone)}>
+        <Badge key={key} tone={badgeTone(node.tone)}>
           {node.label}
         </Badge>
       );
     case "metric":
       return (
-        <Card key={key} variant="muted" className="min-w-0 flex-1 basis-24">
+        <Card key={key} className="min-w-0 flex-1 basis-24">
           <CardContent className="flex min-w-0 items-end justify-between gap-2">
             <div className="min-w-0">
               <div className="text-subtle-foreground">{node.label}</div>
@@ -219,7 +219,7 @@ function renderNode(
       );
     case "table":
       return (
-        <div key={key} className="max-w-full overflow-x-auto rounded-lg border border-border/70">
+        <div key={key} className="max-w-full overflow-x-auto rounded-lg border border-border">
           <Table>
             {node.caption ? <TableCaption>{node.caption}</TableCaption> : null}
             <TableHeader className="static">
@@ -248,7 +248,7 @@ function renderNode(
         <pre
           key={key}
           className={cn(
-            "max-w-full overflow-x-auto rounded-lg bg-surface/55 p-2 font-mono ui-text-sm text-foreground",
+            "max-w-full overflow-x-auto rounded-lg bg-surface p-2 font-mono ui-text-sm text-foreground",
             node.wrap && "whitespace-pre-wrap break-words",
           )}
         >
@@ -375,7 +375,7 @@ function renderNode(
         node.meta || node.badges?.length ? (
           <span className="flex items-center gap-1">
             {node.badges?.map((badge) => (
-              <Badge key={badge.label} variant={badgeTone(badge.tone)}>
+              <Badge key={badge.label} tone={badgeTone(badge.tone)}>
                 {badge.label}
               </Badge>
             ))}
@@ -442,7 +442,7 @@ function renderNode(
         />
       );
     case "divider":
-      return <div key={key} className="h-px bg-border/70" />;
+      return <div key={key} className="h-px bg-border" />;
     default:
       return <Fragment key={key} />;
   }

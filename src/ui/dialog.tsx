@@ -41,7 +41,7 @@ const dialogBodyVariants = cva("", {
 });
 
 const dialogContentVariants = cva(
-  "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-9999 flex max-h-[90vh] w-full max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background text-foreground shadow-(--shadow-dialog) ring-1 ring-border/70 outline-none",
+  "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-9999 flex max-h-[90vh] w-full max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-overlay text-foreground shadow-(--shadow-dialog) ring-1 ring-border outline-none",
   {
     variants: {
       size: {
@@ -78,7 +78,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 z-9998 bg-black/20 transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
+        "fixed inset-0 z-9998 bg-scrim transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0",
         className,
       )}
       {...props}
@@ -112,7 +112,7 @@ function DialogContent({
         {showCloseButton ? (
           <DialogPrimitive.Close
             render={<Button variant="ghost" iconOnly />}
-            className="absolute top-2.5 right-2.5 text-subtle-foreground hover:text-foreground"
+            className="absolute top-2.5 right-2.5"
             aria-label="Close dialog"
           >
             <XIcon />
@@ -138,7 +138,7 @@ function DialogFooter({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex shrink-0 flex-col-reverse gap-2 border-border/70 border-t bg-surface/55 px-4 py-3 sm:flex-row sm:justify-end",
+        "flex shrink-0 flex-col-reverse gap-2 border-border border-t px-4 py-3 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}
@@ -160,7 +160,7 @@ function DialogDescription({ className, ...props }: DialogPrimitive.Description.
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("font-sans ui-text-sm leading-normal text-subtle-foreground", className)}
+      className={cn("font-sans ui-text-sm leading-normal text-muted-foreground", className)}
       {...props}
     />
   );
@@ -225,7 +225,7 @@ const AppDialog = ({
               transition={prefersReducedMotion ? instantTransition : quickTransition}
             />
           }
-          className="fixed inset-0 z-9998 bg-black/20 transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0"
+          className="fixed inset-0 z-9998 bg-scrim transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0"
         />
 
         <DialogPrimitive.Popup
@@ -244,9 +244,9 @@ const AppDialog = ({
           {hideHeader ? (
             <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
           ) : (
-            <div className="flex shrink-0 items-center justify-between bg-background px-4 py-3">
+            <div className="flex shrink-0 items-center justify-between px-4 py-3">
               <div className="flex min-w-0 items-center gap-2">
-                {Icon && <Icon className="text-subtle-foreground" />}
+                {Icon && <Icon className="text-muted-foreground" />}
                 <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium text-foreground">
                   {title}
                 </DialogPrimitive.Title>

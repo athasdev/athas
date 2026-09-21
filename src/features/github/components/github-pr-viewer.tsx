@@ -31,7 +31,7 @@ import {
   extractFilePatch,
   getPullRequestStatus,
   normalizeCommit,
-  PR_STATUS_BADGE_VARIANT,
+  PR_STATUS_BADGE_TONE,
   PULL_REQUEST_STATUS_LABEL,
   resolveSafeRepoFilePath,
   toFileDiffFromMetadata,
@@ -611,19 +611,19 @@ const GitHubPRViewer = memo(({ prNumber, bufferId }: GitHubPRViewerProps) => {
   const MergeStatusIcon = mergeStatus.icon;
   const actions = (
     <>
-      <Badge variant={PR_STATUS_BADGE_VARIANT[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
+      <Badge tone={PR_STATUS_BADGE_TONE[status]}>{PULL_REQUEST_STATUS_LABEL[status]}</Badge>
       {mergeStatus.ready ? (
-        <Button onClick={() => openInlineAction("merge")} variant="accent" size="chrome">
+        <Button onClick={() => openInlineAction("merge")} variant="accent" size="sm">
           <GitMergeIcon />
           Merge
         </Button>
       ) : (
-        <Button variant="default" size="chrome" disabled tooltip={mergeStatus.text}>
+        <Button variant="default" size="sm" disabled tooltip={mergeStatus.text}>
           <MergeStatusIcon />
           {mergeStatus.text}
         </Button>
       )}
-      <ResourceActionsMenu label="Pull request actions" size="chrome">
+      <ResourceActionsMenu label="Pull request actions" size="sm">
         <DropdownMenuItem onClick={() => void handleCheckout()}>Checkout branch</DropdownMenuItem>
         <DropdownMenuItem disabled={isClosed} onClick={() => openInlineAction("approve")}>
           Approve

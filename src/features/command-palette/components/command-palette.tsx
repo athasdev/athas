@@ -439,7 +439,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     const selectedElement = resultsRef.current?.querySelector(
       `[data-command-item-index="${selectedIndex}"]`,
     );
-    selectedElement?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    selectedElement?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [selectedIndex, paletteActions.length]);
 
   const extensionView = extensionViews.get(currentView);
@@ -562,7 +562,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
                           action.action();
                           pushAction(action.id);
                         }}
-                        onMouseEnter={() => setSelectedIndex(index)}
+                        onMouseMove={() => setSelectedIndex(index)}
                         isSelected={isSelected}
                         icon={action.icon}
                         contentLayout="stacked"

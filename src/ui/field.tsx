@@ -97,7 +97,7 @@ function FieldLabel({ className, ...props }: ComponentProps<typeof Label>) {
     <Label
       data-slot="field-label"
       className={cn(
-        "group/field-label peer/field-label w-fit leading-snug has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col has-[>[data-slot=field]]:rounded-lg has-[>[data-slot=field]]:border has-[>[data-slot=field]]:p-2.5",
+        "group/field-label peer/field-label w-fit leading-snug has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col has-[>[data-slot=field]]:rounded-lg has-[>[data-slot=field]]:border has-[>[data-slot=field]]:border-border has-[>[data-slot=field]]:p-2.5",
         className,
       )}
       {...props}
@@ -123,7 +123,7 @@ function FieldDescription({ className, ...props }: ComponentProps<"p">) {
     <p
       data-slot="field-description"
       className={cn(
-        "text-left font-sans ui-text-sm font-normal leading-normal text-subtle-foreground last:mt-0 nth-last-2:-mt-1 [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
+        "text-left font-sans ui-text-sm font-normal leading-normal text-muted-foreground last:mt-0 nth-last-2:-mt-1 [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
         className,
       )}
       {...props}

@@ -207,7 +207,7 @@ export function ProjectSwitcher({
             render={
               <Button
                 variant="ghost"
-                size="chrome"
+                size="sm"
                 truncate
                 aria-label={`Switch project. Current project: ${projectName}`}
                 title={projectPath || projectName}
@@ -328,7 +328,7 @@ function ProjectRowActions({
             type="button"
             variant="ghost"
             iconOnly
-            size="chrome"
+            size="sm"
             aria-label={`More actions for ${projectName}`}
           />
         }

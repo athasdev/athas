@@ -31,7 +31,7 @@ export function ReleaseSummary({ release, actions }: { release: Release; actions
       title={<span className="block truncate">{releaseTitle(release)}</span>}
       badges={
         <>
-          <Badge variant={release.draft ? "warning" : release.prerelease ? "accent" : "success"}>
+          <Badge tone={release.draft ? "warning" : release.prerelease ? "accent" : "success"}>
             {release.draft ? "Draft" : release.prerelease ? "Prerelease" : "Published"}
           </Badge>
           {release.immutable ? <Badge>Immutable</Badge> : null}

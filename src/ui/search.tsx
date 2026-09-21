@@ -87,7 +87,7 @@ export function SearchPopover({
   className,
 }: SearchPopoverProps) {
   return (
-    <div className={cn(menuSurfaceVariants(), "w-80", className)}>
+    <div className={cn(menuSurfaceVariants(), "w-80 p-2", className)}>
       <div className="flex items-center gap-1.5">
         {leadingControl}
 
@@ -237,8 +237,8 @@ export function SearchReplaceRow({
   replaceAllTooltip?: string;
 }) {
   return (
-    <div className="flex items-center gap-1.5 border-border/60 border-t pt-1.5">
-      <span className="flex size-8 shrink-0 items-center justify-center text-subtle-foreground">
+    <div className="flex items-center gap-1.5 border-border border-t pt-1.5">
+      <span className="flex size-7 shrink-0 items-center justify-center text-muted-foreground">
         <ArrowsLeftRightIcon />
       </span>
 

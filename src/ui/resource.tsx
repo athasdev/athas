@@ -25,7 +25,7 @@ function ResourceBands({ summary, tabs }: Pick<ResourceShellProps, "summary" | "
         </div>
       ) : null}
       {tabs ? (
-        <div className="sticky top-0 z-20 shrink-0 border-border/60 border-b bg-background/92 px-4 backdrop-blur-xl sm:px-6">
+        <div className="sticky top-0 z-20 shrink-0 border-border border-b bg-background px-4 sm:px-6">
           <ResourceRail>{tabs}</ResourceRail>
         </div>
       ) : null}
@@ -124,7 +124,7 @@ export function ResourceSummary({
           {badges ? <span className="flex shrink-0 items-center gap-1.5">{badges}</span> : null}
         </div>
         {description ? (
-          <p className="mt-1 truncate text-subtle-foreground ui-text-sm">{description}</p>
+          <p className="mt-1 truncate text-muted-foreground ui-text-sm">{description}</p>
         ) : null}
         {meta ? (
           <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">{meta}</div>
@@ -149,7 +149,7 @@ export function ResourceSidebarLayout({ children, sidebar }: ResourceSidebarLayo
   return (
     <div className="grid gap-8 @min-[52rem]/resource:grid-cols-[minmax(0,1fr)_15rem] @min-[52rem]/resource:gap-12">
       <main className="min-w-0">{children}</main>
-      <aside className="min-w-0 space-y-6 border-border/60 border-t pt-6 font-sans ui-text-sm text-foreground @min-[52rem]/resource:border-t-0 @min-[52rem]/resource:pt-0">
+      <aside className="min-w-0 space-y-6 border-border border-t pt-6 font-sans ui-text-sm text-foreground @min-[52rem]/resource:border-t-0 @min-[52rem]/resource:pt-0">
         {sidebar}
       </aside>
     </div>
@@ -166,7 +166,7 @@ export function ResourceSection({ title, action, children }: ResourceSectionProp
   return (
     <section className="min-w-0 space-y-3">
       <div className="flex min-w-0 items-center justify-between gap-2">
-        <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">{title}</h2>
+        <h2 className="font-sans ui-text-sm font-medium text-muted-foreground">{title}</h2>
         {action}
       </div>
       <div className="min-w-0">{children}</div>

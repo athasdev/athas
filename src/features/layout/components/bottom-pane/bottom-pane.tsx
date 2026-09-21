@@ -210,10 +210,10 @@ const BottomPane = ({
       onMouseDown={handleMouseDown}
       className={cn(
         "group relative z-20 flex h-workbench w-full shrink-0 cursor-ns-resize",
-        "transition-colors duration-fast ease-smooth hover:bg-primary/8",
-        embedded && "border-border/70 border-r bg-background",
+        "transition-colors duration-fast ease-smooth hover:bg-primary-soft",
+        embedded && "border-border border-r bg-background",
         embedded && roundLeftEdge && "border-l",
-        isResizing && "bg-primary/8",
+        isResizing && "bg-primary-soft",
       )}
       role="separator"
       tabIndex={0}
@@ -234,7 +234,7 @@ const BottomPane = ({
       data-bottom-pane-drop-target
       className={cn(
         "athas-glass-island relative flex min-h-0 flex-col overflow-hidden bg-background",
-        embedded ? "border-border/70 border-r border-b" : "rounded-xl border border-border/70",
+        embedded ? "border-border border-r border-b" : "rounded-xl border border-border",
         embedded && roundLeftEdge && "rounded-bl-xl border-l",
         embedded && roundRightEdge && "rounded-br-xl",
         isInternalHoverTarget && "ring-2 ring-primary ring-inset",

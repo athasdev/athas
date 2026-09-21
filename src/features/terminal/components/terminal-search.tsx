@@ -1,3 +1,4 @@
+import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { SEARCH_TOGGLE_ICONS, SearchPopover } from "@/ui/search";
@@ -43,28 +44,31 @@ export const TerminalSearch: React.FC<TerminalSearchProps> = ({
   }, [isVisible]);
 
   const handleNext = () => {
-    if (searchTerm) {
+    if (searchTerm && totalMatches > 0) {
       onNext(searchTerm, searchOptions);
     }
   };
 
   const handlePrevious = () => {
-    if (searchTerm) {
+    if (searchTerm && totalMatches > 0) {
       onPrevious(searchTerm, searchOptions);
     }
   };
 
   const toggleOption = (key: keyof TerminalSearchOptions) => {
-    setSearchOptions((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      if (searchTerm) {
-        onSearch(searchTerm, next);
-      }
-      return next;
-    });
+    const next = { ...searchOptions, [key]: !searchOptions[key] };
+    setSearchOptions(next);
+    if (searchTerm) {
+      onSearch(searchTerm, next);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.defaultPrevented || isComposingKeyboardEvent(e.nativeEvent)) return;
+    if (e.key === "Enter" || e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (e.key === "Enter") {
       if (e.shiftKey) {
         handlePrevious();

@@ -8,7 +8,7 @@ import type { ExtensionViewActivityState, ExtensionViewNode } from "../types/ext
 type ActivityNode = Extract<ExtensionViewNode, { type: "activity" }>;
 
 const stateClassNames: Record<ExtensionViewActivityState, string> = {
-  default: "text-subtle-foreground/60",
+  default: "text-subtle-foreground",
   running: "text-primary",
   success: "text-success",
   warning: "text-warning",

@@ -18,11 +18,11 @@ describe("default settings", () => {
     expect(settings.githubActionNotifications).toBe(false);
   });
 
-  it("defaults Anthropic chat to Claude Sonnet 5", () => {
+  it("defaults chat to Athas Automatic", () => {
     const settings = getDefaultSettingsSnapshot();
 
-    expect(settings.aiProviderId).toBe("anthropic");
-    expect(settings.aiModelId).toBe("claude-sonnet-5");
+    expect(settings.aiProviderId).toBe("athas");
+    expect(settings.aiModelId).toBe("auto");
   });
 
   it("preserves the established editor and terminal interaction behavior", () => {

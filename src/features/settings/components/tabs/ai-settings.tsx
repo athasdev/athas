@@ -1,5 +1,5 @@
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/collapsible";
 import {
-  ArrowClockwiseIcon,
   ArrowCounterClockwiseIcon,
   CheckCircleIcon,
   CloudIcon,
@@ -35,11 +35,7 @@ import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { TextLink } from "@/ui/text-link";
 import { ToggleGroup } from "@/ui/toggle-group";
-import { fetchAutocompleteModels } from "@/features/editor/services/editor-autocomplete-service";
-import {
-  CUSTOM_AUTOCOMPLETE_PROVIDER_ID,
-  CUSTOM_CHAT_PROVIDER_ID,
-} from "@/features/ai/lib/custom-provider-config";
+import { CUSTOM_CHAT_PROVIDER_ID } from "@/features/ai/lib/custom-provider-config";
 import {
   setCustomProviderBaseUrl,
   setOllamaApiKey,
@@ -58,22 +54,11 @@ import {
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
 import { CodexSettings } from "@/features/ai/integrations/codex/codex-settings";
-const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
-
-function resolveAutocompleteDefaultModelId(models: Array<{ id: string; name: string }>): string {
-  if (models.some((model) => model.id === DEFAULT_AUTOCOMPLETE_MODEL_ID)) {
-    return DEFAULT_AUTOCOMPLETE_MODEL_ID;
-  }
-  return models[0]?.id || DEFAULT_AUTOCOMPLETE_MODEL_ID;
-}
-
+import { IntelligencePreferences } from "../intelligence-preferences";
 export const AISettings = () => {
   const settings = useSettingsStore(
     useShallow((state) => ({
-      aiAutocompleteCustomBaseUrl: state.settings.aiAutocompleteCustomBaseUrl,
       aiAutocompleteCustomModelId: state.settings.aiAutocompleteCustomModelId,
-      aiAutocompleteModelId: state.settings.aiAutocompleteModelId,
-      aiAutocompleteProvider: state.settings.aiAutocompleteProvider,
       aiCompletion: state.settings.aiCompletion,
       aiCustomBaseUrl: state.settings.aiCustomBaseUrl,
       aiCustomModelId: state.settings.aiCustomModelId,
@@ -92,25 +77,12 @@ export const AISettings = () => {
 
   const [sessionConfigOptions, setSessionConfigOptions] = useState<SessionConfigOption[]>([]);
   const [isClearingChats, setIsClearingChats] = useState(false);
-  const [autocompleteModels, setAutocompleteModels] = useState<Array<{ id: string; name: string }>>(
-    [],
-  );
-  const [isLoadingAutocompleteModels, setIsLoadingAutocompleteModels] = useState(false);
-  const [autocompleteModelError, setAutocompleteModelError] = useState<string | null>(null);
-  const [customAutocompleteModelInput, setCustomAutocompleteModelInput] = useState(
-    settings.aiAutocompleteCustomModelId,
-  );
-  const [customAutocompleteBaseUrlInput, setCustomAutocompleteBaseUrlInput] = useState(
-    settings.aiAutocompleteCustomBaseUrl,
-  );
-  const [customAutocompleteApiKeyInput, setCustomAutocompleteApiKeyInput] = useState("");
-  const [hasCustomAutocompleteApiKey, setHasCustomAutocompleteApiKey] = useState(false);
-  const [isSavingCustomAutocompleteApiKey, setIsSavingCustomAutocompleteApiKey] = useState(false);
   const [customChatBaseUrlInput, setCustomChatBaseUrlInput] = useState(settings.aiCustomBaseUrl);
   const [customChatApiKeyInput, setCustomChatApiKeyInput] = useState("");
   const [hasCustomChatApiKey, setHasCustomChatApiKey] = useState(false);
   const [isSavingCustomChatApiKey, setIsSavingCustomChatApiKey] = useState(false);
   const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
+  const [providerSetupOpen, setProviderSetupOpen] = useState(false);
 
   // Ollama URL state
   const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL);
@@ -294,84 +266,16 @@ export const AISettings = () => {
     }
   };
 
-  const loadAutocompleteModels = async () => {
-    setIsLoadingAutocompleteModels(true);
-    setAutocompleteModelError(null);
-    try {
-      const models = await fetchAutocompleteModels();
-      if (models.length > 0) {
-        setAutocompleteModels(models);
-        setAutocompleteModelError(null);
-        if (!models.some((model) => model.id === settings.aiAutocompleteModelId)) {
-          updateSetting("aiAutocompleteModelId", resolveAutocompleteDefaultModelId(models));
-        }
-      } else {
-        setAutocompleteModels([]);
-        setAutocompleteModelError("Model list is empty. Refresh to try again.");
-      }
-    } catch {
-      setAutocompleteModels([]);
-      setAutocompleteModelError("Could not load model list. Refresh to try again.");
-    } finally {
-      setIsLoadingAutocompleteModels(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadAutocompleteModels();
-  }, []);
-
-  useEffect(() => {
-    setCustomAutocompleteModelInput(settings.aiAutocompleteCustomModelId);
-  }, [settings.aiAutocompleteCustomModelId]);
-
-  useEffect(() => {
-    setCustomAutocompleteBaseUrlInput(settings.aiAutocompleteCustomBaseUrl);
-  }, [settings.aiAutocompleteCustomBaseUrl]);
-
   useEffect(() => {
     setCustomChatBaseUrlInput(settings.aiCustomBaseUrl);
   }, [settings.aiCustomBaseUrl]);
 
   useEffect(() => {
     void (async () => {
-      const token = await getProviderApiToken(CUSTOM_AUTOCOMPLETE_PROVIDER_ID);
-      setHasCustomAutocompleteApiKey(Boolean(token));
       const customChatToken = await getProviderApiToken(CUSTOM_CHAT_PROVIDER_ID);
       setHasCustomChatApiKey(Boolean(customChatToken));
     })();
   }, []);
-
-  const handleSaveCustomAutocompleteApiKey = async () => {
-    const token = customAutocompleteApiKeyInput.trim();
-    if (!token) return;
-
-    setIsSavingCustomAutocompleteApiKey(true);
-    try {
-      await storeProviderApiToken(CUSTOM_AUTOCOMPLETE_PROVIDER_ID, token);
-      setHasCustomAutocompleteApiKey(true);
-      setCustomAutocompleteApiKeyInput("");
-      showToast({ message: "Custom autocomplete API key saved", type: "success" });
-    } catch {
-      showToast({ message: "Failed to save custom autocomplete API key", type: "error" });
-    } finally {
-      setIsSavingCustomAutocompleteApiKey(false);
-    }
-  };
-
-  const handleRemoveCustomAutocompleteApiKey = async () => {
-    setIsSavingCustomAutocompleteApiKey(true);
-    try {
-      await removeProviderApiToken(CUSTOM_AUTOCOMPLETE_PROVIDER_ID);
-      setHasCustomAutocompleteApiKey(false);
-      setCustomAutocompleteApiKeyInput("");
-      showToast({ message: "Custom autocomplete API key removed", type: "success" });
-    } catch {
-      showToast({ message: "Failed to remove custom autocomplete API key", type: "error" });
-    } finally {
-      setIsSavingCustomAutocompleteApiKey(false);
-    }
-  };
 
   const handleSaveCustomChatApiKey = async () => {
     const token = customChatApiKeyInput.trim();
@@ -409,364 +313,378 @@ export const AISettings = () => {
     setCustomProviderBaseUrl(customChatBaseUrlInput);
   };
 
-  const commitCustomAutocompleteModel = () => {
-    updateSetting("aiAutocompleteCustomModelId", customAutocompleteModelInput);
-  };
-
-  const commitCustomAutocompleteBaseUrl = () => {
-    updateSetting("aiAutocompleteCustomBaseUrl", customAutocompleteBaseUrlInput);
-  };
-
-  const providersNeedingAuth = providers.filter((p) => p.requiresAuth && !p.requiresApiKey);
+  const providersNeedingAuth = providers.filter(
+    (p) => p.id !== "athas" && p.requiresAuth && !p.requiresApiKey,
+  );
 
   const isOllamaSelected = settings.aiProviderId === "ollama";
   const isCustomProviderSelected = settings.aiProviderId === CUSTOM_CHAT_PROVIDER_ID;
   const showCustomProviderSettings =
     isCustomProviderSelected || Boolean(settings.aiCustomBaseUrl || settings.aiCustomModelId);
-  const hasAutocompleteModels = autocompleteModels.length > 0;
 
   return (
     <SettingsView>
-      <CodexSettings />
-      <Section title="AI Chat">
-        <SettingRow
-          label="Provider"
-          description="Choose the provider used by direct AI chat"
-          onReset={() => {
-            updateSetting("aiProviderId", getDefaultSetting("aiProviderId"));
-            updateSetting("aiModelId", getDefaultSetting("aiModelId"));
-          }}
-          canReset={
-            settings.aiProviderId !== getDefaultSetting("aiProviderId") ||
-            settings.aiModelId !== getDefaultSetting("aiModelId")
-          }
-        >
-          <ProviderSelector
-            providerId={settings.aiProviderId}
-            onChange={(id) => handleProviderChange(id)}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Model"
-          description={
-            isCustomProviderSelected
-              ? "Model name sent to the custom endpoint"
-              : "Choose the model used by direct AI chat"
-          }
-          onReset={() => {
-            if (isCustomProviderSelected) {
-              updateSetting("aiCustomModelId", getDefaultSetting("aiCustomModelId"));
-              updateSetting("aiModelId", getDefaultSetting("aiCustomModelId"));
-              return;
-            }
-            updateSetting("aiModelId", getDefaultSetting("aiModelId"));
-          }}
-          canReset={
-            isCustomProviderSelected
-              ? settings.aiCustomModelId !== getDefaultSetting("aiCustomModelId")
-              : settings.aiModelId !== getDefaultSetting("aiModelId")
-          }
-        >
-          {isCustomProviderSelected ? (
-            <ModelSelector
-              providerId={settings.aiProviderId}
-              modelId={settings.aiModelId || settings.aiCustomModelId}
-              onChange={(id) => {
-                updateSetting("aiCustomModelId", id);
-                updateSetting("aiModelId", id);
-              }}
-            />
-          ) : (
-            <ModelSelector
-              providerId={settings.aiProviderId}
-              modelId={settings.aiModelId}
-              onChange={(id) => updateSetting("aiModelId", id)}
-            />
-          )}
-        </SettingRow>
-
-        <SettingRow label="API Keys" description="Manage provider API keys separately">
-          <Button type="button" variant="default" onClick={() => setIsApiKeyManagerOpen(true)}>
-            <KeyIcon />
-            <span>Manage keys</span>
-          </Button>
-        </SettingRow>
-
-        {providerSettingsActions.map((action) => {
-          const Icon = action.icon === "sparkles" ? SparkleIcon : PaletteIcon;
-
-          return (
+      <IntelligencePreferences onConfigureProviders={() => setProviderSetupOpen(true)} />
+      <Collapsible open={providerSetupOpen} onOpenChange={setProviderSetupOpen}>
+        <CollapsibleTrigger render={<Button variant="ghost" width="full" align="start" />}>
+          {providerSetupOpen ? "Hide provider setup" : "Provider setup"}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-6 pt-4">
+          <Section title="Provider connections">
             <SettingRow
-              key={action.id}
-              label={action.label}
-              description={
-                action.getDescription?.() || action.description || "Configure provider integration"
+              label="Provider"
+              description="Configure your own connection. Choose it under Intelligence to use it across features."
+              onReset={() => {
+                updateSetting("aiProviderId", getDefaultSetting("aiProviderId"));
+                updateSetting("aiModelId", getDefaultSetting("aiModelId"));
+              }}
+              canReset={
+                settings.aiProviderId !== getDefaultSetting("aiProviderId") ||
+                settings.aiModelId !== getDefaultSetting("aiModelId")
               }
             >
-              <Button type="button" variant="default" onClick={() => void action.execute()}>
-                <Icon />
-                <span>{action.buttonLabel}</span>
-              </Button>
-            </SettingRow>
-          );
-        })}
-      </Section>
-
-      {showCustomProviderSettings && (
-        <Section title="Custom Provider">
-          <SettingRow
-            label="Base URL"
-            description="OpenAI-compatible endpoint base URL for direct AI chat"
-            onReset={() => {
-              updateSetting("aiCustomBaseUrl", getDefaultSetting("aiCustomBaseUrl"));
-              setCustomProviderBaseUrl(getDefaultSetting("aiCustomBaseUrl"));
-            }}
-            canReset={settings.aiCustomBaseUrl !== getDefaultSetting("aiCustomBaseUrl")}
-          >
-            <span className="inline-flex min-w-0 w-56 max-w-full">
-              <Input
-                value={customChatBaseUrlInput}
-                onChange={(event) => setCustomChatBaseUrlInput(event.currentTarget.value)}
-                onBlur={commitCustomChatBaseUrl}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.currentTarget.blur();
-                  }
-                }}
-                placeholder="http://localhost:11434/v1"
-                spellCheck={false}
-                leftIcon={GlobeIcon}
+              <ProviderSelector
+                providerId={settings.aiProviderId}
+                onChange={(id) => handleProviderChange(id)}
               />
-            </span>
-          </SettingRow>
-          <SettingRow
-            label="API Key"
-            description={
-              hasCustomChatApiKey
-                ? "Stored securely. Leave blank to keep the existing key."
-                : "Optional bearer token for the custom endpoint"
-            }
-          >
-            <div className="flex items-center gap-2">
-              <span className="inline-flex min-w-0 w-56 max-w-full">
-                <Input
-                  type="password"
-                  value={customChatApiKeyInput}
-                  onChange={(event) => setCustomChatApiKeyInput(event.currentTarget.value)}
-                  placeholder={hasCustomChatApiKey ? "Saved" : "API key"}
-                  spellCheck={false}
-                  autoComplete="off"
-                  disabled={isSavingCustomChatApiKey}
-                  leftIcon={KeyIcon}
-                />
-              </span>
-              <Button
-                type="button"
-                variant="default"
-                onClick={handleSaveCustomChatApiKey}
-                disabled={!customChatApiKeyInput.trim() || isSavingCustomChatApiKey}
-              >
-                Save
-              </Button>
-              {hasCustomChatApiKey && (
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={handleRemoveCustomChatApiKey}
-                  disabled={isSavingCustomChatApiKey}
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
-          </SettingRow>
-        </Section>
-      )}
+            </SettingRow>
 
-      {(isOllamaSelected || settings.ollamaBaseUrl !== DEFAULT_OLLAMA_BASE_URL) && (
-        <Section title="Ollama">
-          <SettingRow label="Mode" description="Run Ollama locally or use Ollama Cloud">
-            <ToggleGroup
-              value={isOllamaCloud ? "cloud" : "local"}
-              onValueChange={(nextValue) => {
-                if (nextValue === "local") {
-                  handleUseSelfHostedOllama();
+            <SettingRow
+              label="Model"
+              description={
+                isCustomProviderSelected
+                  ? "Model name sent to the custom endpoint"
+                  : "Model used with your own provider"
+              }
+              onReset={() => {
+                if (isCustomProviderSelected) {
+                  updateSetting("aiCustomModelId", getDefaultSetting("aiCustomModelId"));
+                  updateSetting("aiModelId", getDefaultSetting("aiCustomModelId"));
                   return;
                 }
-                handleUseOllamaCloud();
+                updateSetting("aiModelId", getDefaultSetting("aiModelId"));
               }}
-              ariaLabel="Ollama mode"
-              options={[
-                { value: "local", label: "Local", icon: <LaptopIcon /> },
-                { value: "cloud", label: "Cloud", icon: <CloudIcon /> },
-              ]}
-            />
-          </SettingRow>
-          <SettingRow
-            label="Endpoint"
-            description="Base URL for Ollama API (local, LAN, or cloud)"
-            onReset={handleResetOllamaUrl}
-            canReset={settings.ollamaBaseUrl !== getDefaultSetting("ollamaBaseUrl")}
-          >
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="inline-flex min-w-0 w-56 max-w-full">
-                <Input
-                  type="text"
-                  value={ollamaUrl}
-                  onChange={(e) => handleOllamaUrlChange(e.target.value)}
-                  onBlur={(e) => {
-                    void commitOllamaUrl(e.target.value);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    e.preventDefault();
-                    e.currentTarget.blur();
-                  }}
-                  placeholder={DEFAULT_OLLAMA_BASE_URL}
-                  spellCheck={false}
-                  leftIcon={GlobeIcon}
-                  aria-invalid={ollamaStatus === "error" || undefined}
-                />
-              </span>
-              {ollamaStatus === "checking" && <Spinner label="Checking" compact />}
-              {ollamaStatus === "ok" && <CheckCircleIcon className="text-success" />}
-              {ollamaStatus === "error" && <WarningCircleIcon className="text-destructive" />}
-              {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={handleResetOllamaUrl}
-                  title="Reset to default"
-                  aria-label="Reset Ollama URL to default"
-                  iconOnly
-                >
-                  <ArrowCounterClockwiseIcon />
-                </Button>
-              )}
-            </div>
-          </SettingRow>
-          <SettingRow
-            label="API Key"
-            description="Used for authenticated Ollama endpoints and Ollama Cloud"
-          >
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="inline-flex min-w-0 w-56 max-w-full">
-                <Input
-                  type="password"
-                  value={ollamaApiKeyInput}
-                  onChange={(e) => setOllamaApiKeyInput(e.target.value)}
-                  placeholder={hasStoredOllamaKey ? "••••••••  (saved)" : "ollama-…"}
-                  spellCheck={false}
-                  leftIcon={KeyIcon}
-                  aria-invalid={(needsApiKey && !hasStoredOllamaKey) || undefined}
-                  autoComplete="off"
-                  disabled={isSavingOllamaKey}
-                />
-              </span>
-              <Button
-                type="button"
-                variant="default"
-                onClick={handleSaveOllamaApiKey}
-                disabled={!ollamaApiKeyInput.trim() || isSavingOllamaKey}
-              >
-                {isSavingOllamaKey ? "Saving…" : "Save"}
-              </Button>
-              {hasStoredOllamaKey && (
-                <Button
-                  type="button"
-                  variant="danger"
-                  onClick={handleRemoveOllamaApiKey}
-                  tooltip="Remove saved API key"
-                  iconOnly
-                >
-                  <TrashIcon />
-                </Button>
-              )}
-            </div>
-          </SettingRow>
-          {needsApiKey && !hasStoredOllamaKey && (
-            <SettingRow label="Ollama Cloud Key" description="Ollama Cloud requires an API key">
-              <div className="flex items-center gap-2">
-                <WarningCircleIcon className="shrink-0 text-warning" />
-                <TextLink
-                  href="https://ollama.com/settings/keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1"
-                >
-                  Get key <OpenExternalIcon className="size-3" />
-                </TextLink>
-              </div>
-            </SettingRow>
-          )}
-          {ollamaStatus === "error" && (
-            <SettingRow
-              label="Connection Status"
-              description={
-                isOllamaCloud
-                  ? "Could not reach Ollama Cloud. Verify your API key and internet connection."
-                  : "Could not connect. Check that Ollama is running at this address."
+              canReset={
+                isCustomProviderSelected
+                  ? settings.aiCustomModelId !== getDefaultSetting("aiCustomModelId")
+                  : settings.aiModelId !== getDefaultSetting("aiModelId")
               }
             >
-              <Badge variant="error">Error</Badge>
+              {isCustomProviderSelected ? (
+                <ModelSelector
+                  providerId={settings.aiProviderId}
+                  modelId={settings.aiModelId || settings.aiCustomModelId}
+                  onChange={(id) => {
+                    updateSetting("aiCustomModelId", id);
+                    updateSetting("aiModelId", id);
+                  }}
+                />
+              ) : (
+                <ModelSelector
+                  providerId={settings.aiProviderId}
+                  modelId={settings.aiModelId}
+                  onChange={(id) => updateSetting("aiModelId", id)}
+                />
+              )}
             </SettingRow>
-          )}
-        </Section>
-      )}
 
-      <ProviderApiKeyCommand
-        isOpen={isApiKeyManagerOpen}
-        onClose={() => setIsApiKeyManagerOpen(false)}
-        initialProviderId={settings.aiProviderId}
-      />
-
-      {providersNeedingAuth.length > 0 && (
-        <Section title="Authentication">
-          {providersNeedingAuth.map((provider) => (
-            <SettingRow
-              key={provider.id}
-              label={provider.name}
-              description="Requires OAuth authentication"
-            >
-              <Badge variant="muted">Coming Soon</Badge>
+            <SettingRow label="API Keys" description="Manage provider API keys separately">
+              <Button type="button" variant="default" onClick={() => setIsApiKeyManagerOpen(true)}>
+                <KeyIcon />
+                <span>Manage keys</span>
+              </Button>
             </SettingRow>
-          ))}
-        </Section>
-      )}
 
-      {sessionConfigOptions.length > 0 && (
-        <Section title="ACP Session">
-          {sessionConfigOptions.map((option) => {
-            if (option.kind.type !== "select") {
-              return null;
-            }
+            {providerSettingsActions.map((action) => {
+              const Icon = action.icon === "sparkles" ? SparkleIcon : PaletteIcon;
 
-            return (
-              <SettingRow
-                key={option.id}
-                label={option.name}
-                description={option.description || "Session option exposed by the active ACP agent"}
-              >
-                <Select
-                  value={option.kind.currentValue}
-                  options={option.kind.options.map((value) => ({
-                    value: value.id,
-                    label: value.name,
-                  }))}
-                  onChange={(value) =>
-                    useAIChatStore.getState().actions.changeSessionConfigOption(option.id, value)
+              return (
+                <SettingRow
+                  key={action.id}
+                  label={action.label}
+                  description={
+                    action.getDescription?.() ||
+                    action.description ||
+                    "Configure provider integration"
                   }
-                  variant="default"
-                  searchable
-                  searchableTrigger="input"
+                >
+                  <Button type="button" variant="default" onClick={() => void action.execute()}>
+                    <Icon />
+                    <span>{action.buttonLabel}</span>
+                  </Button>
+                </SettingRow>
+              );
+            })}
+          </Section>
+
+          {showCustomProviderSettings && (
+            <Section title="Custom Provider">
+              <SettingRow
+                label="Base URL"
+                description="OpenAI-compatible endpoint base URL for direct AI chat"
+                onReset={() => {
+                  updateSetting("aiCustomBaseUrl", getDefaultSetting("aiCustomBaseUrl"));
+                  setCustomProviderBaseUrl(getDefaultSetting("aiCustomBaseUrl"));
+                }}
+                canReset={settings.aiCustomBaseUrl !== getDefaultSetting("aiCustomBaseUrl")}
+              >
+                <span className="inline-flex min-w-0 w-56 max-w-full">
+                  <Input
+                    value={customChatBaseUrlInput}
+                    onChange={(event) => setCustomChatBaseUrlInput(event.currentTarget.value)}
+                    onBlur={commitCustomChatBaseUrl}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    placeholder="http://localhost:11434/v1"
+                    spellCheck={false}
+                    leftIcon={GlobeIcon}
+                  />
+                </span>
+              </SettingRow>
+              <SettingRow
+                label="API Key"
+                description={
+                  hasCustomChatApiKey
+                    ? "Stored securely. Leave blank to keep the existing key."
+                    : "Optional bearer token for the custom endpoint"
+                }
+              >
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex min-w-0 w-56 max-w-full">
+                    <Input
+                      type="password"
+                      value={customChatApiKeyInput}
+                      onChange={(event) => setCustomChatApiKeyInput(event.currentTarget.value)}
+                      placeholder={hasCustomChatApiKey ? "Saved" : "API key"}
+                      spellCheck={false}
+                      autoComplete="off"
+                      disabled={isSavingCustomChatApiKey}
+                      leftIcon={KeyIcon}
+                    />
+                  </span>
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={handleSaveCustomChatApiKey}
+                    disabled={!customChatApiKeyInput.trim() || isSavingCustomChatApiKey}
+                  >
+                    Save
+                  </Button>
+                  {hasCustomChatApiKey && (
+                    <Button
+                      type="button"
+                      variant="default"
+                      onClick={handleRemoveCustomChatApiKey}
+                      disabled={isSavingCustomChatApiKey}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </SettingRow>
+            </Section>
+          )}
+
+          {(isOllamaSelected || settings.ollamaBaseUrl !== DEFAULT_OLLAMA_BASE_URL) && (
+            <Section title="Ollama">
+              <SettingRow label="Mode" description="Run Ollama locally or use Ollama Cloud">
+                <ToggleGroup
+                  value={isOllamaCloud ? "cloud" : "local"}
+                  onValueChange={(nextValue) => {
+                    if (nextValue === "local") {
+                      handleUseSelfHostedOllama();
+                      return;
+                    }
+                    handleUseOllamaCloud();
+                  }}
+                  ariaLabel="Ollama mode"
+                  options={[
+                    { value: "local", label: "Local", icon: <LaptopIcon /> },
+                    { value: "cloud", label: "Cloud", icon: <CloudIcon /> },
+                  ]}
                 />
               </SettingRow>
-            );
-          })}
-        </Section>
-      )}
+              <SettingRow
+                label="Endpoint"
+                description="Base URL for Ollama API (local, LAN, or cloud)"
+                onReset={handleResetOllamaUrl}
+                canReset={settings.ollamaBaseUrl !== getDefaultSetting("ollamaBaseUrl")}
+              >
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="inline-flex min-w-0 w-56 max-w-full">
+                    <Input
+                      type="text"
+                      value={ollamaUrl}
+                      onChange={(e) => handleOllamaUrlChange(e.target.value)}
+                      onBlur={(e) => {
+                        void commitOllamaUrl(e.target.value);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter") return;
+                        e.preventDefault();
+                        e.currentTarget.blur();
+                      }}
+                      placeholder={DEFAULT_OLLAMA_BASE_URL}
+                      spellCheck={false}
+                      leftIcon={GlobeIcon}
+                      aria-invalid={ollamaStatus === "error" || undefined}
+                    />
+                  </span>
+                  {ollamaStatus === "checking" && <Spinner label="Checking" compact />}
+                  {ollamaStatus === "ok" && <CheckCircleIcon className="text-success" />}
+                  {ollamaStatus === "error" && <WarningCircleIcon className="text-destructive" />}
+                  {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
+                    <Button
+                      type="button"
+                      variant="default"
+                      onClick={handleResetOllamaUrl}
+                      title="Reset to default"
+                      aria-label="Reset Ollama URL to default"
+                      iconOnly
+                    >
+                      <ArrowCounterClockwiseIcon />
+                    </Button>
+                  )}
+                </div>
+              </SettingRow>
+              <SettingRow
+                label="API Key"
+                description="Used for authenticated Ollama endpoints and Ollama Cloud"
+              >
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="inline-flex min-w-0 w-56 max-w-full">
+                    <Input
+                      type="password"
+                      value={ollamaApiKeyInput}
+                      onChange={(e) => setOllamaApiKeyInput(e.target.value)}
+                      placeholder={hasStoredOllamaKey ? "••••••••  (saved)" : "ollama-…"}
+                      spellCheck={false}
+                      leftIcon={KeyIcon}
+                      aria-invalid={(needsApiKey && !hasStoredOllamaKey) || undefined}
+                      autoComplete="off"
+                      disabled={isSavingOllamaKey}
+                    />
+                  </span>
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={handleSaveOllamaApiKey}
+                    disabled={!ollamaApiKeyInput.trim() || isSavingOllamaKey}
+                  >
+                    {isSavingOllamaKey ? "Saving…" : "Save"}
+                  </Button>
+                  {hasStoredOllamaKey && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      tone="danger"
+                      onClick={handleRemoveOllamaApiKey}
+                      tooltip="Remove saved API key"
+                      iconOnly
+                    >
+                      <TrashIcon />
+                    </Button>
+                  )}
+                </div>
+              </SettingRow>
+              {needsApiKey && !hasStoredOllamaKey && (
+                <SettingRow label="Ollama Cloud Key" description="Ollama Cloud requires an API key">
+                  <div className="flex items-center gap-2">
+                    <WarningCircleIcon className="shrink-0 text-warning" />
+                    <TextLink
+                      href="https://ollama.com/settings/keys"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1"
+                    >
+                      Get key <OpenExternalIcon className="size-3" />
+                    </TextLink>
+                  </div>
+                </SettingRow>
+              )}
+              {ollamaStatus === "error" && (
+                <SettingRow
+                  label="Connection Status"
+                  description={
+                    isOllamaCloud
+                      ? "Could not reach Ollama Cloud. Verify your API key and internet connection."
+                      : "Could not connect. Check that Ollama is running at this address."
+                  }
+                >
+                  <Badge tone="danger">Error</Badge>
+                </SettingRow>
+              )}
+            </Section>
+          )}
 
+          <ProviderApiKeyCommand
+            isOpen={isApiKeyManagerOpen}
+            onClose={() => setIsApiKeyManagerOpen(false)}
+            initialProviderId={settings.aiProviderId}
+          />
+        </CollapsibleContent>
+      </Collapsible>
+
+      <Collapsible>
+        <CollapsibleTrigger render={<Button variant="ghost" width="full" align="start" />}>
+          CLI agent settings
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-6 pt-4">
+          <CodexSettings />
+          {providersNeedingAuth.length > 0 && (
+            <Section title="Authentication">
+              {providersNeedingAuth.map((provider) => (
+                <SettingRow
+                  key={provider.id}
+                  label={provider.name}
+                  description="Requires OAuth authentication"
+                >
+                  <Badge>Coming Soon</Badge>
+                </SettingRow>
+              ))}
+            </Section>
+          )}
+
+          {sessionConfigOptions.length > 0 && (
+            <Section title="ACP Session">
+              {sessionConfigOptions.map((option) => {
+                if (option.kind.type !== "select") {
+                  return null;
+                }
+
+                return (
+                  <SettingRow
+                    key={option.id}
+                    label={option.name}
+                    description={
+                      option.description || "Session option exposed by the active ACP agent"
+                    }
+                  >
+                    <Select
+                      value={option.kind.currentValue}
+                      options={option.kind.options.map((value) => ({
+                        value: value.id,
+                        label: value.name,
+                      }))}
+                      onChange={(value) =>
+                        useAIChatStore
+                          .getState()
+                          .actions.changeSessionConfigOption(option.id, value)
+                      }
+                      variant="default"
+                      searchable
+                      searchableTrigger="input"
+                    />
+                  </SettingRow>
+                );
+              })}
+            </Section>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
       <Section title="Autocomplete">
         <SettingRow
           label="AI Autocomplete"
@@ -780,204 +698,12 @@ export const AISettings = () => {
             disabled={!aiCompletionAllowedByPolicy}
           />
         </SettingRow>
-        {settings.aiCompletion && (
-          <>
-            <SettingRow
-              label="Autocomplete Provider"
-              description="Use Athas/OpenRouter or an OpenAI-compatible endpoint"
-              onReset={() =>
-                updateSetting("aiAutocompleteProvider", getDefaultSetting("aiAutocompleteProvider"))
-              }
-              canReset={
-                settings.aiAutocompleteProvider !== getDefaultSetting("aiAutocompleteProvider")
-              }
-            >
-              <ToggleGroup
-                value={settings.aiAutocompleteProvider}
-                options={[
-                  { value: "openrouter", label: "OpenRouter" },
-                  { value: "custom", label: "Custom" },
-                ]}
-                onValueChange={(value) =>
-                  updateSetting(
-                    "aiAutocompleteProvider",
-                    value === "custom" ? "custom" : "openrouter",
-                  )
-                }
-                ariaLabel="Autocomplete provider"
-              />
-            </SettingRow>
-            <SettingRow
-              label={
-                settings.aiAutocompleteProvider === "custom" ? "Custom Model" : "Autocomplete Model"
-              }
-              description={
-                settings.aiAutocompleteProvider === "custom"
-                  ? "Model name sent to the custom endpoint"
-                  : "Choose any OpenRouter model for autocomplete"
-              }
-              onReset={() =>
-                settings.aiAutocompleteProvider === "custom"
-                  ? updateSetting(
-                      "aiAutocompleteCustomModelId",
-                      getDefaultSetting("aiAutocompleteCustomModelId"),
-                    )
-                  : updateSetting(
-                      "aiAutocompleteModelId",
-                      getDefaultSetting("aiAutocompleteModelId"),
-                    )
-              }
-              canReset={
-                settings.aiAutocompleteProvider === "custom"
-                  ? settings.aiAutocompleteCustomModelId !==
-                    getDefaultSetting("aiAutocompleteCustomModelId")
-                  : settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")
-              }
-            >
-              {settings.aiAutocompleteProvider === "custom" ? (
-                <span className="inline-flex min-w-0 w-56 max-w-full">
-                  <Input
-                    value={customAutocompleteModelInput}
-                    onChange={(event) => setCustomAutocompleteModelInput(event.currentTarget.value)}
-                    onBlur={commitCustomAutocompleteModel}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.currentTarget.blur();
-                      }
-                    }}
-                    placeholder="qwen2.5-coder:7b"
-                    disabled={!aiCompletionAllowedByPolicy}
-                  />
-                </span>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="default"
-                    onClick={loadAutocompleteModels}
-                    disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
-                    title="Refresh model list"
-                    iconOnly
-                  >
-                    {isLoadingAutocompleteModels ? (
-                      <Spinner label="Loading models" compact />
-                    ) : (
-                      <ArrowClockwiseIcon />
-                    )}
-                  </Button>
-                  <Select
-                    value={hasAutocompleteModels ? settings.aiAutocompleteModelId : ""}
-                    options={autocompleteModels.map((model) => ({
-                      value: model.id,
-                      label: model.name,
-                    }))}
-                    onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
-                    variant="default"
-                    searchable
-                    searchableTrigger="input"
-                    disabled={
-                      !aiCompletionAllowedByPolicy ||
-                      isLoadingAutocompleteModels ||
-                      !hasAutocompleteModels
-                    }
-                    placeholder={
-                      isLoadingAutocompleteModels ? "Loading models..." : "No models loaded"
-                    }
-                  />
-                </div>
-              )}
-            </SettingRow>
-            {settings.aiAutocompleteProvider === "custom" && (
-              <>
-                <SettingRow
-                  label="Custom Base URL"
-                  description="OpenAI-compatible endpoint base URL"
-                  onReset={() =>
-                    updateSetting(
-                      "aiAutocompleteCustomBaseUrl",
-                      getDefaultSetting("aiAutocompleteCustomBaseUrl"),
-                    )
-                  }
-                  canReset={
-                    settings.aiAutocompleteCustomBaseUrl !==
-                    getDefaultSetting("aiAutocompleteCustomBaseUrl")
-                  }
-                >
-                  <span className="inline-flex min-w-0 w-56 max-w-full">
-                    <Input
-                      value={customAutocompleteBaseUrlInput}
-                      onChange={(event) =>
-                        setCustomAutocompleteBaseUrlInput(event.currentTarget.value)
-                      }
-                      onBlur={commitCustomAutocompleteBaseUrl}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.currentTarget.blur();
-                        }
-                      }}
-                      placeholder="http://localhost:11434/v1"
-                      disabled={!aiCompletionAllowedByPolicy}
-                      leftIcon={GlobeIcon}
-                    />
-                  </span>
-                </SettingRow>
-                <SettingRow
-                  label="Custom API Key"
-                  description={
-                    hasCustomAutocompleteApiKey
-                      ? "Stored securely. Leave blank to keep the existing key."
-                      : "Optional bearer token for the custom endpoint"
-                  }
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex min-w-0 w-56 max-w-full">
-                      <Input
-                        type="password"
-                        value={customAutocompleteApiKeyInput}
-                        onChange={(event) =>
-                          setCustomAutocompleteApiKeyInput(event.currentTarget.value)
-                        }
-                        placeholder={hasCustomAutocompleteApiKey ? "Saved" : "API key"}
-                        disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
-                        leftIcon={KeyIcon}
-                      />
-                    </span>
-                    <Button
-                      variant="default"
-                      onClick={handleSaveCustomAutocompleteApiKey}
-                      disabled={
-                        !customAutocompleteApiKeyInput.trim() ||
-                        !aiCompletionAllowedByPolicy ||
-                        isSavingCustomAutocompleteApiKey
-                      }
-                    >
-                      Save
-                    </Button>
-                    {hasCustomAutocompleteApiKey && (
-                      <Button
-                        variant="default"
-                        onClick={handleRemoveCustomAutocompleteApiKey}
-                        disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                </SettingRow>
-              </>
-            )}
-            {autocompleteModelError && (
-              <SettingRow label="Model List" description={autocompleteModelError}>
-                <Badge variant="error">Error</Badge>
-              </SettingRow>
-            )}
-          </>
-        )}
         {managedPolicy ? (
           <SettingRow
             label="Enterprise Policy"
             description={`${aiCompletionAllowedByPolicy ? "AI completion enabled." : "AI completion disabled."} ${byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}`}
           >
-            <Badge variant="accent">Managed</Badge>
+            <Badge tone="accent">Managed</Badge>
           </SettingRow>
         ) : null}
       </Section>

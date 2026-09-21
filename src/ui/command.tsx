@@ -1,6 +1,6 @@
+import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
-import { AnimatePresence, motion, useReducedMotionConfig } from "motion/react";
 import { ArrowClockwiseIcon, DotsIcon, XIcon } from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
@@ -8,7 +8,6 @@ import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
 import { Button, buttonVariants, type ButtonProps } from "@/ui/button";
-import { instantTransition, quickTransition } from "@/utils/motion";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/ui/dropdown";
@@ -30,7 +29,7 @@ const commandContentVariants = cva(
 );
 
 const commandItemVariants = cva(
-  "group/command-item font-sans ui-text-sm mb-0.5 flex h-auto min-h-10 w-full items-center justify-start gap-2.5 rounded-chrome px-2.5 py-2 text-left leading-row transition-colors",
+  "group/command-item font-sans ui-text-sm mb-0.5 flex h-auto min-h-10 w-full items-center justify-start gap-2.5 rounded-md px-2.5 py-2 text-left font-normal leading-row transition-none",
   {
     variants: {
       selected: {
@@ -47,16 +46,16 @@ const commandItemVariants = cva(
 const commandHeaderContentClassName = "flex items-center gap-2 px-3 py-2.5";
 
 const commandInputClassName = cva(
-  "font-sans ui-text-sm min-w-0 flex-1 leading-[1.4] text-foreground placeholder-subtle-foreground outline-none",
+  "font-sans ui-text-sm min-w-0 flex-1 leading-[1.4] text-foreground placeholder:text-subtle-foreground outline-none",
   {
     variants: {
       variant: {
         /** Borderless input that sits inside a command header. */
         inline: "h-8 bg-transparent",
         /** Standalone bordered field, for a search box in a toolbar. */
-        field: "h-7 rounded-md border border-border/70 bg-background/65 px-2",
+        field: "h-7 rounded-md border border-border bg-surface px-2",
         /** Same shape as `field`, on a raised surface. */
-        surface: "h-7 rounded-md bg-surface px-2",
+        surface: "h-7 rounded-md bg-accent px-2",
       },
     },
     defaultVariants: {
@@ -85,7 +84,7 @@ type CommandItemActionProps = Omit<ButtonProps, "className" | "variant" | "tone"
 
 export const CommandItemAction = ({ tone = "neutral", ...props }: CommandItemActionProps) => (
   <span className="inline-flex shrink-0 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/command-item:opacity-100 sm:group-focus-within/command-item:opacity-100">
-    <Button variant={tone === "danger" ? "danger" : "ghost"} iconOnly {...props} />
+    <Button variant="ghost" tone={tone === "danger" ? "danger" : "default"} iconOnly {...props} />
   </span>
 );
 
@@ -125,62 +124,43 @@ const Command = ({
   autoFocus = true,
 }: CommandProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
-  const prefersReducedMotion = useReducedMotionConfig();
   const getInitialFocusTarget = useCallback(
     () => popupRef.current?.querySelector<HTMLElement>(commandInputSelector) ?? true,
     [],
   );
 
+  if (!isVisible) return null;
+
   return (
-    <AnimatePresence>
-      {isVisible && (
-        <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
-          <DialogPrimitive.Portal>
-            <div
-              className="fixed inset-0 z-10060 flex items-start justify-center bg-black/10 pt-[10vh]"
-              onMouseDown={(event) => {
-                if (event.target !== event.currentTarget) return;
-                event.preventDefault();
-                event.stopPropagation();
-                onClose?.();
-              }}
-            >
-              <DialogPrimitive.Popup
-                ref={popupRef}
-                aria-describedby={undefined}
-                initialFocus={autoFocus ? getInitialFocusTarget : false}
-                render={
-                  <motion.div
-                    initial={
-                      prefersReducedMotion
-                        ? false
-                        : { opacity: 0, scale: 1, y: -4, filter: "blur(0px)" }
-                    }
-                    animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-                    exit={
-                      prefersReducedMotion
-                        ? { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }
-                        : { opacity: 0, scale: 1, y: -4, filter: "blur(0px)" }
-                    }
-                    transition={prefersReducedMotion ? instantTransition : quickTransition}
-                  />
-                }
-                className={cn(
-                  "rounded-xl bg-background text-foreground shadow-(--shadow-dialog) ring-1 ring-border/70 outline-none",
-                  commandContentVariants(),
-                  "pointer-events-auto",
-                  className,
-                )}
-                data-command-surface=""
-              >
-                <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
-                {children}
-              </DialogPrimitive.Popup>
-            </div>
-          </DialogPrimitive.Portal>
-        </DialogPrimitive.Root>
-      )}
-    </AnimatePresence>
+    <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
+      <DialogPrimitive.Portal>
+        <div
+          className="fixed inset-0 z-10060 flex items-start justify-center bg-scrim pt-[10vh]"
+          onMouseDown={(event) => {
+            if (event.target !== event.currentTarget) return;
+            event.preventDefault();
+            event.stopPropagation();
+            onClose?.();
+          }}
+        >
+          <DialogPrimitive.Popup
+            ref={popupRef}
+            aria-describedby={undefined}
+            initialFocus={autoFocus ? getInitialFocusTarget : false}
+            className={cn(
+              "rounded-xl bg-overlay text-foreground shadow-(--shadow-dialog) ring-1 ring-border outline-none",
+              commandContentVariants(),
+              "pointer-events-auto",
+              className,
+            )}
+            data-command-surface=""
+          >
+            <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+            {children}
+          </DialogPrimitive.Popup>
+        </div>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 };
 
@@ -204,10 +184,7 @@ export const CommandHeader = ({
   return (
     <div
       data-command-header
-      className={cn(
-        "relative z-20 shrink-0 overflow-clip border-border border-b bg-background",
-        className,
-      )}
+      className={cn("relative z-20 shrink-0 overflow-clip border-border border-b", className)}
     >
       <div className={commandHeaderContentClassName}>
         {children}
@@ -274,7 +251,7 @@ export const CommandForm = ({
   onCancel,
 }: CommandFormProps) => (
   <div className="shrink-0 p-2 pb-0">
-    <form data-command-form="" className="rounded-chrome bg-surface/55 p-2" onSubmit={onSubmit}>
+    <form data-command-form="" className="rounded-lg bg-surface p-2" onSubmit={onSubmit}>
       <div className="mb-2 flex min-w-0 items-center gap-2">
         {icon ? <CommandItemIcon>{icon}</CommandItemIcon> : null}
         <span className="min-w-0 flex-1 truncate font-medium text-foreground ui-text-sm">
@@ -319,7 +296,7 @@ export const CommandFormField = ({
 }: CommandFormFieldProps) => (
   <div className={cn("min-w-0 space-y-1", span === "full" && "col-span-full")}>
     {label ? (
-      <label htmlFor={htmlFor} className="block truncate text-subtle-foreground ui-text-sm">
+      <label htmlFor={htmlFor} className="block truncate text-muted-foreground ui-text-sm">
         {label}
       </label>
     ) : null}
@@ -336,7 +313,7 @@ interface CommandFooterProps {
 export const CommandFooter = ({ children }: CommandFooterProps) => (
   <div
     data-command-footer
-    className="relative z-20 shrink-0 overflow-clip border-border border-t bg-background p-2"
+    className="relative z-20 shrink-0 overflow-clip border-border border-t p-2"
   >
     <div className="flex flex-wrap items-center gap-1.5">{children}</div>
   </div>
@@ -491,12 +468,9 @@ export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) =
     <Tabs
       value={activeItemId}
       onValueChange={(value) => items.find((item) => item.id === value)?.onSelect()}
-      className={cn(
-        "relative z-20 shrink-0 gap-0 overflow-clip bg-background px-2 pt-2",
-        className,
-      )}
+      className={cn("relative z-20 shrink-0 gap-0 overflow-clip px-2 pt-2", className)}
     >
-      <TabsList variant="bare" aria-label={ariaLabel}>
+      <TabsList aria-label={ariaLabel}>
         {items.map((item) => (
           <TabsTrigger key={item.id} value={item.id} className="w-fit flex-none justify-start">
             {item.icon}
@@ -523,7 +497,7 @@ export const CommandItemContent = ({ className, ...props }: React.ComponentProps
 CommandItemContent.displayName = "CommandItemContent";
 
 export const CommandItemMeta = ({ className, ...props }: React.ComponentProps<"span">) => (
-  <span className={cn("ml-1.5 min-w-0 truncate text-subtle-foreground/70", className)} {...props} />
+  <span className={cn("ml-1.5 min-w-0 truncate text-subtle-foreground", className)} {...props} />
 );
 
 CommandItemMeta.displayName = "CommandItemMeta";
@@ -531,7 +505,7 @@ CommandItemMeta.displayName = "CommandItemMeta";
 export const CommandItemDescription = ({ className, ...props }: React.ComponentProps<"span">) => (
   <span
     className={cn(
-      "mt-0.5 block min-w-0 truncate text-subtle-foreground/70 [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+      "mt-0.5 block min-w-0 truncate text-muted-foreground [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
       className,
     )}
     {...props}
@@ -545,7 +519,7 @@ type CommandItemIconProps = React.ComponentProps<"span">;
 export const CommandItemIcon = ({ className, ...props }: CommandItemIconProps) => (
   <span
     className={cn(
-      "inline-flex size-6 shrink-0 items-center justify-center text-subtle-foreground [&_svg:not([class*='size-'])]:size-4",
+      "inline-flex size-6 shrink-0 items-center justify-center text-muted-foreground [&_svg:not([class*='size-'])]:size-4",
       className,
     )}
     {...props}
@@ -555,7 +529,7 @@ export const CommandItemIcon = ({ className, ...props }: CommandItemIconProps) =
 CommandItemIcon.displayName = "CommandItemIcon";
 
 export const CommandItemBadge = (props: React.ComponentProps<typeof Badge>) => (
-  <Badge size="compact" truncate {...props} />
+  <Badge truncate {...props} />
 );
 
 CommandItemBadge.displayName = "CommandItemBadge";
@@ -615,7 +589,7 @@ export const CommandItemRow = ({
         <CommandItemDescription
           className={cn(
             contentLayout === "inline" &&
-              "mt-0 flex min-w-0 shrink items-center gap-1.5 text-subtle-foreground/80",
+              "mt-0 flex min-w-0 shrink items-center gap-1.5 text-muted-foreground",
           )}
         >
           {description}
@@ -665,6 +639,8 @@ export function useCommandListNavigation({
 
   const onInputKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.defaultPrevented || isComposingKeyboardEvent(event.nativeEvent)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey || itemCount === 0) return;
       if (event.key === "ArrowDown") {
         event.preventDefault();
         setSelectedIndex((index) => moveCommandListIndex(index, itemCount, "next"));
@@ -711,7 +687,7 @@ CommandFooterAction.displayName = "CommandFooterAction";
 export const CommandEmpty = ({ className, ...props }: React.ComponentProps<"div">) => (
   <div
     data-slot="command-empty"
-    className={cn("ui-text-sm p-3 text-center leading-row text-subtle-foreground", className)}
+    className={cn("ui-text-sm p-3 text-center leading-row text-muted-foreground", className)}
     {...props}
   />
 );

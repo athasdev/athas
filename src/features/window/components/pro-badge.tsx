@@ -1,5 +1,5 @@
 import Badge from "@/ui/badge";
 
 export function ProBadge() {
-  return <Badge variant="accent">Pro</Badge>;
+  return <Badge tone="accent">Pro</Badge>;
 }

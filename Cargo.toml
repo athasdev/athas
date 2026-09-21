@@ -32,6 +32,9 @@ new_without_default = "allow"
 lto = "thin"
 codegen-units = 1
 
+[profile.dev]
+incremental = false
+
 [profile.dev.package.libduckdb-sys]
 debug = 0
 

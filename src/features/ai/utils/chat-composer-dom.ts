@@ -125,6 +125,31 @@ export function getComposerTextRange(
   return range;
 }
 
+export function prepareComposerSlashCommand(element: HTMLDivElement) {
+  let text = getComposerText(element);
+  const match = text.match(/(?:^|\s)\/([^\s/]*)$/);
+  const existingStart = match ? text.length - match[1].length - 1 : text.length;
+  const existingRange = getComposerTextRange(element, existingStart, text.length);
+  const canReuseQuery =
+    match && !existingRange.cloneContents().querySelector("[data-slash-command],[data-mention]");
+
+  if (!canReuseQuery) {
+    element.append(document.createTextNode(`${text && !/\s$/.test(text) ? " " : ""}/`));
+    text = getComposerText(element);
+  }
+
+  element.focus();
+  const selection = window.getSelection();
+  const caret = document.createRange();
+  caret.selectNodeContents(element);
+  caret.collapse(false);
+  selection?.removeAllRanges();
+  selection?.addRange(caret);
+
+  const search = canReuseQuery ? match[1] : "";
+  return { startIndex: text.length - search.length - 1, endIndex: text.length, search };
+}
+
 export function getComposerDropdownPosition(
   element: HTMLDivElement | null,
 ): InlineDropdownPosition {

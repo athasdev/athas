@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "www",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd ../www && bun run dev"],
+      "port": 3000
+    }
+  ]
+}

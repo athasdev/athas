@@ -97,8 +97,8 @@ const renderHighlightedContent = (
         <mark
           key={`${key}-match-${rangeIndex}-${highlightStart}`}
           className={cn(
-            "rounded-sm bg-primary/25 text-inherit",
-            highlight.isCurrent && "bg-primary/55 outline outline-1 outline-primary/70",
+            "rounded-sm bg-primary-soft text-inherit",
+            highlight.isCurrent && "bg-primary-hover outline outline-1 outline-primary",
           )}
         >
           {renderWhitespace(content.slice(highlightStart, highlightEnd), showWhitespace)}

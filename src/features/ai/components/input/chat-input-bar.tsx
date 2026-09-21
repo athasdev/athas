@@ -1,7 +1,9 @@
+import { ProviderConnectionAction } from "./provider-connection-action";
+import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import { getProviderAccessFromMap } from "@/features/ai/stores/ai-chat/provider-actions";
 import { ArrowUpIcon, BoltIcon, CommandIcon, MicrophoneIcon, StopIcon } from "@/ui/icons";
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { registerAgentDraft, takeAgentDraft } from "@/features/ai/detached/agent-window-drafts";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAgentDraft } from "@/features/ai/hooks/use-agent-draft";
 import { shouldIgnoreSearchFile } from "@/features/file-search/utils/file-search-filtering";
 import {
   AI_CHAT_INSERT_SKILL_EVENT,
@@ -9,6 +11,8 @@ import {
 } from "@/features/ai/lib/skill-events";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useVoiceInput } from "@/features/ai/hooks/use-voice-input";
+import { useComposerFileDrop } from "@/features/ai/hooks/use-composer-file-drop";
+import { getImageMimeType } from "@/utils/image-file-types";
 import { parsePastedImages, restorePastedImages } from "@/features/ai/lib/image-attachments";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import {
@@ -17,6 +21,7 @@ import {
   getComposerTextBeforeCaret,
   getComposerTextRange,
   isComposerTokenElement,
+  prepareComposerSlashCommand,
 } from "@/features/ai/utils/chat-composer-dom";
 import type { InlineDropdownPosition, PastedImage } from "@/features/ai/types/chat-composer.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
@@ -75,6 +80,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   onStopStreaming,
 }: AIChatInputBarProps) {
   const inputRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
   const contextTriggerRef = useRef<HTMLButtonElement>(null);
   const aiChatContainerRef = useRef<HTMLDivElement>(null);
   const isUpdatingContentRef = useRef(false);
@@ -89,30 +95,22 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const inputValueRef = useRef("");
   const [pastedImages, setPastedImages] = useState<PastedImage[]>([]);
   const { showToast } = useToast();
-  const draftReader = useRef(() => ({
-    text: inputValueRef.current,
-    images: pastedImages,
-    bufferIds: [...selectedBufferIds],
-    filePaths: [...selectedFilesPaths],
-    editorContexts: selectedEditorContexts,
-  }));
-  draftReader.current = () => ({
-    text: inputValueRef.current,
-    images: pastedImages,
-    bufferIds: [...selectedBufferIds],
-    filePaths: [...selectedFilesPaths],
-    editorContexts: selectedEditorContexts,
-  });
-  useLayoutEffect(() => {
-    const draft = takeAgentDraft(surfaceId);
-    if (draft) {
+  useAgentDraft({
+    surfaceId,
+    readDraft: () => ({
+      text: inputValueRef.current,
+      images: pastedImages,
+      bufferIds: [...selectedBufferIds],
+      filePaths: [...selectedFilesPaths],
+      editorContexts: selectedEditorContexts,
+    }),
+    restoreDraft: (draft) => {
       inputValueRef.current = draft.text;
       if (inputRef.current) inputRef.current.textContent = draft.text;
       setHasInputText(draft.text.trim().length > 0);
       setPastedImages(draft.images);
-    }
-    return registerAgentDraft(surfaceId, () => draftReader.current());
-  }, [surfaceId]);
+    },
+  });
   const [isContextDropdownOpen, setIsContextDropdownOpen] = useState(false);
   const [mentionState, setMentionState] = useState({
     active: false,
@@ -152,14 +150,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const handleApiModelChange = useCallback(
     (nextModelId: string, nextProviderId: string) => {
-      void updateSetting("aiProviderId", nextProviderId);
-      void updateSetting("aiModelId", nextModelId);
-      if (nextProviderId === "custom") void updateSetting("aiCustomModelId", nextModelId);
-      if (onAgentChange) {
-        onAgentChange("custom", { providerId: nextProviderId, modelId: nextModelId });
-      } else if (chatId && isCustomAgent) {
+      if (chatId && isCustomAgent) {
         useAIChatStore.getState().actions.setChatModel(chatId, nextProviderId, nextModelId);
+        return;
       }
+      if (!chatId) {
+        void updateSetting("aiProviderId", nextProviderId);
+        void updateSetting("aiModelId", nextModelId);
+        if (nextProviderId === "custom") void updateSetting("aiCustomModelId", nextModelId);
+      }
+      onAgentChange?.("custom", { providerId: nextProviderId, modelId: nextModelId });
     },
     [chatId, isCustomAgent, onAgentChange, updateSetting],
   );
@@ -177,9 +177,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const setInput = useCallback((input: string) => {
     inputValueRef.current = input;
-  }, []);
-  const addPastedImage = useCallback((image: PastedImage) => {
-    setPastedImages((current) => [...current, image]);
   }, []);
   const removePastedImage = useCallback((imageId: string) => {
     setPastedImages((current) => current.filter((image) => image.id !== imageId));
@@ -272,9 +269,21 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [selectedFilesPaths, setSelectedFilesPaths],
   );
 
+  const { isDraggingFiles, attachImages, attachPaths, attachTransfer } = useComposerFileDrop({
+    targetRef: composerRef,
+    scopeId: JSON.stringify([surfaceId, chatId, currentAgentId]),
+    onImages: (images) => setPastedImages((current) => [...current, ...images]),
+    onPaths: (paths) => setSelectedFilesPaths(new Set([...selectedFilesPaths, ...paths])),
+    onError: (message) => showToast({ message, type: "error" }),
+  });
+
   const addSidebarResourceToContext = useCallback(
     async (resource: SidebarDragResource) => {
       if (resource.type === "file") {
+        if (!resource.isDir && getImageMimeType(resource.path)) {
+          await attachPaths([resource.path]);
+          return;
+        }
         const matchingBuffer = !resource.isDir
           ? buffers.find((buffer) => buffer.path === resource.path)
           : null;
@@ -296,7 +305,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         addBufferToContext(bufferId);
       }
     },
-    [addBufferToContext, addPathToContext, buffers],
+    [addBufferToContext, addPathToContext, attachPaths, buffers],
   );
 
   useEffect(() => {
@@ -313,7 +322,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
   }, [addSidebarResourceToContext, isActiveSurface, surfaceId]);
 
   const handleContextDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    if (!hasSidebarResourceDragData(event.dataTransfer)) return;
+    if (
+      !hasSidebarResourceDragData(event.dataTransfer) &&
+      !Array.from(event.dataTransfer.types).includes("Files")
+    )
+      return;
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = "copy";
@@ -330,14 +343,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const handleContextDrop = useCallback(
     async (event: React.DragEvent<HTMLDivElement>) => {
       const resource = readSidebarResourceDragData(event.dataTransfer);
-      if (!resource) return;
+      if (!resource && !Array.from(event.dataTransfer.types).includes("Files")) return;
 
       event.preventDefault();
       event.stopPropagation();
       setIsContextDragOver(false);
-      await addSidebarResourceToContext(resource);
+      if (resource) await addSidebarResourceToContext(resource);
+      else await attachTransfer(event.dataTransfer);
     },
-    [addSidebarResourceToContext],
+    [addSidebarResourceToContext, attachTransfer],
   );
 
   // Computed state for send button
@@ -462,6 +476,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   ]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.defaultPrevented || isComposingKeyboardEvent(e.nativeEvent)) return;
     // Handle slash command navigation
     if (slashCommandState.active) {
       if (e.key === "ArrowDown") {
@@ -772,21 +787,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           e.preventDefault();
 
           const file = items[i].getAsFile();
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              const dataUrl = event.target?.result as string;
-              if (dataUrl) {
-                addPastedImage({
-                  id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-                  dataUrl,
-                  name: file.name || `image-${Date.now()}.png`,
-                  size: file.size,
-                });
-              }
-            };
-            reader.readAsDataURL(file);
-          }
+          if (file) void attachImages([file]);
         }
       }
 
@@ -819,7 +820,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       // Trigger input change handler to update state
       handleInputChange();
     },
-    [handleInputChange, addPastedImage],
+    [handleInputChange, attachImages],
   );
 
   // Handle file mention selection
@@ -843,7 +844,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       mentionSpan.setAttribute("contenteditable", "false");
       mentionSpan.title = file.path;
       mentionSpan.className = cn(
-        badgeVariants({ variant: "accent" }),
+        badgeVariants({ tone: "accent" }),
         "max-w-48 truncate align-baseline select-none",
       );
       mentionSpan.textContent = file.name;
@@ -886,7 +887,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       commandSpan.setAttribute("contenteditable", "false");
       commandSpan.title = command.description || `/${command.name}`;
       commandSpan.className = cn(
-        badgeVariants({ variant: "muted" }),
+        badgeVariants({ tone: "neutral" }),
         "max-w-48 truncate align-baseline select-none",
       );
       commandSpan.textContent = `/${command.name}`;
@@ -993,7 +994,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
       : hasSlashCommands
         ? "Ask anything... (@ files, / commands)"
         : "Ask anything... (@ to mention files)"
-    : "Configure API key to enable Agent...";
+    : aiProviderId === "athas"
+      ? "Connect your Athas account to use Agent"
+      : "Connect your provider to use Agent";
 
   useEffect(() => {
     if (!autoFocus || !isActiveSurface) return;
@@ -1011,12 +1014,13 @@ const AIChatInputBar = memo(function AIChatInputBar({
       )}
     >
       <Composer
+        ref={composerRef}
         data-ai-element="prompt-input"
         data-ai-context-drop-target
         onDragOver={handleContextDragOver}
         onDragLeave={handleContextDragLeave}
         onDrop={handleContextDrop}
-        dragActive={isContextDragOver}
+        dragActive={isContextDragOver || isDraggingFiles}
       >
         <ComposerAttachments
           buffers={buffers}
@@ -1053,7 +1057,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
             className="min-w-0 flex-1 pr-0"
           />
           <div className="flex shrink-0 items-center gap-1 pr-2 pb-2">
-            {isStreaming ? (
+            {!isInputEnabled ? (
+              <ProviderConnectionAction key={aiProviderId} providerId={aiProviderId} />
+            ) : isStreaming ? (
               <ButtonGroup variant="ghost">
                 <Button
                   type="button"
@@ -1071,7 +1077,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   type="button"
                   disabled={isSendDisabled}
                   onClick={handleInterruptAndSend}
-                  variant="accent-ghost"
+                  variant="ghost"
+                  tone="accent"
                   tooltip="Interrupt and send now"
                   iconOnly
                 >
@@ -1081,7 +1088,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 <Button
                   type="button"
                   onClick={onStopStreaming}
-                  variant="danger"
+                  variant="ghost"
+                  tone="danger"
                   tooltip="Stop generation"
                   shortcut="escape"
                   iconOnly
@@ -1182,20 +1190,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   return;
                 }
                 closeInlineMenus();
-                inputRef.current.textContent = "/";
-                setInput("/");
-                setHasInputText(true);
-                inputRef.current.focus();
-                const selection = window.getSelection();
-                if (selection) {
-                  const range = document.createRange();
-                  range.selectNodeContents(inputRef.current);
-                  range.collapse(false);
-                  selection.removeAllRanges();
-                  selection.addRange(range);
-                }
-                slashCommandRangeRef.current = { startIndex: 0, endIndex: 1 };
-                showSlashCommands(getSlashDropdownPosition(), "");
+                const { startIndex, endIndex, search } = prepareComposerSlashCommand(
+                  inputRef.current,
+                );
+                syncInputFromEditable();
+                slashCommandRangeRef.current = { startIndex, endIndex };
+                showSlashCommands(getSlashDropdownPosition(), search);
               }}
               variant="ghost"
               disabled={!isInputEnabled}
@@ -1214,7 +1214,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
             active={isListening}
             aria-pressed={isListening}
             onClick={toggleVoiceInput}
-            variant={isListening ? "accent-ghost" : "ghost"}
+            variant="ghost"
+            tone={isListening ? "accent" : "default"}
             iconOnly
             tooltip={
               isMacDevSpeechRecognitionBlocked

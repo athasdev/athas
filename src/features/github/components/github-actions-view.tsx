@@ -60,7 +60,7 @@ import {
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { openGitHubContentInNewWindow } from "../utils/open-in-new-window";
-import { WorkflowStatusIcon } from "./github-workflow-status-icon";
+import { WORKFLOW_TONE_BADGE_TONE, WorkflowStatusIcon } from "./github-workflow-status-icon";
 
 interface WorkflowRunRowProps {
   run: WorkflowRunListItem;
@@ -104,7 +104,7 @@ const WorkflowRunRow = memo(
       <WorkflowStatusIcon status={run.status} conclusion={run.conclusion} />
     );
     const badges: GitHubSidebarPreviewBadge[] = [
-      { label: state.label, tone: state.tone === "error" ? "error" : state.tone },
+      { label: state.label, tone: WORKFLOW_TONE_BADGE_TONE[state.tone] },
       ...(run.runAttempt && run.runAttempt > 1
         ? [
             {
@@ -114,10 +114,10 @@ const WorkflowRunRow = memo(
           ]
         : []),
       ...(run.event
-        ? [{ label: run.event, tone: "muted" } satisfies GitHubSidebarPreviewBadge]
+        ? [{ label: run.event, tone: "neutral" } satisfies GitHubSidebarPreviewBadge]
         : []),
       ...(run.headBranch
-        ? [{ label: run.headBranch, tone: "default" } satisfies GitHubSidebarPreviewBadge]
+        ? [{ label: run.headBranch, tone: "neutral" } satisfies GitHubSidebarPreviewBadge]
         : []),
     ];
 

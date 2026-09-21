@@ -152,13 +152,7 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
               className="shrink-0"
             />
             {searchWarning ? (
-              <Badge
-                variant="warning"
-                truncate
-                title={searchWarning}
-                role="status"
-                aria-live="polite"
-              >
+              <Badge tone="warning" truncate title={searchWarning} role="status" aria-live="polite">
                 {searchWarning}
               </Badge>
             ) : resultLabel ? (
@@ -179,7 +173,7 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
         }
       />
       {detailsVisible ? (
-        <div className="space-y-2 border-border/55 border-b bg-background px-2 pb-2">
+        <div className="space-y-2 border-border border-b bg-background px-2 pb-2">
           <SearchReplaceRow
             value={replaceQuery}
             onChange={onReplaceQueryChange}

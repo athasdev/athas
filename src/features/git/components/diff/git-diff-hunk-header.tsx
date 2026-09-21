@@ -76,13 +76,13 @@ const DiffHunkHeader = memo(
 
     return (
       <div
-        className="flex min-w-full w-fit select-none items-stretch border-border/70 border-b bg-surface/40 font-mono code-editor-font-override text-subtle-foreground"
+        className="flex min-w-full w-fit select-none items-stretch border-border border-b bg-surface font-mono code-editor-font-override text-subtle-foreground"
         data-selection-scope-exclude="true"
         style={headerStyle}
       >
         <button
           type="button"
-          className="grid min-h-8 min-w-0 flex-1 grid-cols-[2.75rem_minmax(0,1fr)] items-stretch text-left outline-none transition-colors hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/20"
+          className="grid min-h-8 min-w-0 flex-1 grid-cols-[2.75rem_minmax(0,1fr)] items-stretch text-left outline-none transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
           onClick={onToggleCollapse}
           aria-expanded={!isCollapsed}
           aria-label={`${isCollapsed ? "Expand" : "Collapse"} diff hunk ${rangeLabel}`}
@@ -100,7 +100,7 @@ const DiffHunkHeader = memo(
 
           <span className="flex min-w-0 items-center gap-2 px-2.5">
             {typeof hiddenLineCount === "number" ? (
-              <span className="shrink-0 rounded-md bg-accent/70 px-1.5 text-muted-foreground tabular-nums">
+              <span className="shrink-0 rounded-md bg-accent px-1.5 text-muted-foreground tabular-nums">
                 {hiddenLineCount} hidden
               </span>
             ) : null}
@@ -125,7 +125,7 @@ const DiffHunkHeader = memo(
               type="button"
               variant="ghost"
               onClick={handleStageHunk}
-              tone={isStaged ? "removed" : "added"}
+              tone={isStaged ? "danger" : "success"}
               tooltip={isStaged ? "Unstage hunk" : "Stage hunk"}
             >
               {isStaged ? <MinusIcon size={iconSize} /> : <PlusIcon size={iconSize} />}

@@ -49,7 +49,13 @@ export function ExtensionViewTree({
             {item.badges?.map((badge, index) => (
               <Badge
                 key={`${badge.label}-${index}`}
-                variant={badge.tone === "error" ? "error" : (badge.tone ?? "default")}
+                tone={
+                  badge.tone === "error"
+                    ? "danger"
+                    : badge.tone === "muted" || !badge.tone || badge.tone === "default"
+                      ? "neutral"
+                      : badge.tone
+                }
               >
                 {badge.label}
               </Badge>

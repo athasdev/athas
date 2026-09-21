@@ -26,11 +26,7 @@ export default function CellRenderer({
   };
 
   if (value === null || value === undefined) {
-    return (
-      <Badge variant="muted" onContextMenu={handleContextMenu}>
-        NULL
-      </Badge>
-    );
+    return <Badge onContextMenu={handleContextMenu}>NULL</Badge>;
   }
 
   // JSON detection
@@ -69,9 +65,9 @@ export default function CellRenderer({
     return (
       <Button
         onClick={() => onFkClick(columnName, value)}
-        variant="text"
+        variant="link"
         align="start"
-        tone="primary"
+        tone="accent"
         truncate
         tooltip={`FK: ${foreignKey.to_table}.${foreignKey.to_column}`}
         onContextMenu={handleContextMenu}
@@ -135,9 +131,9 @@ function ExpandedCellValue({
           render={
             <Button
               type="button"
-              variant="text"
+              variant="link"
               align="start"
-              tone={primary ? "foreground" : "primary"}
+              tone={primary ? "neutral" : "accent"}
               truncate
               aria-label={ariaLabel}
               onContextMenu={onContextMenu}

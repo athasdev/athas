@@ -1,4 +1,4 @@
-use crate::git::IntoStringError;
+use crate::git::{IntoStringError, RepositoryHost, status::has_unstaged_changes_with_cli};
 use anyhow::{Context, Result};
 use git2::{BranchType, Repository, Status};
 use serde::Serialize;
@@ -37,6 +37,23 @@ pub fn git_checkout(repo_path: String, branch_name: String) -> Result<CheckoutRe
 }
 
 fn _git_checkout(repo_path: String, branch_name: String) -> Result<CheckoutResult> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      if has_unstaged_changes_with_cli(&host)? {
+         return Ok(unstaged_changes_block_checkout());
+      }
+
+      host
+         .git()
+         .args(["checkout", "-q", &branch_name])
+         .run("checkout")?;
+      return Ok(CheckoutResult {
+         success: true,
+         has_changes: false,
+         message: format!("Successfully checked out to branch '{}'", branch_name),
+      });
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
    let statuses = repo
@@ -53,13 +70,7 @@ fn _git_checkout(repo_path: String, branch_name: String) -> Result<CheckoutResul
    });
 
    if has_changes {
-      return Ok(CheckoutResult {
-         success: false,
-         has_changes: true,
-         message: "You have unstaged changes. Please stash or commit them before switching \
-                   branches."
-            .to_string(),
-      });
+      return Ok(unstaged_changes_block_checkout());
    }
 
    let obj = repo
@@ -81,6 +92,15 @@ fn _git_checkout(repo_path: String, branch_name: String) -> Result<CheckoutResul
    })
 }
 
+fn unstaged_changes_block_checkout() -> CheckoutResult {
+   CheckoutResult {
+      success: false,
+      has_changes: true,
+      message: "You have unstaged changes. Please stash or commit them before switching branches."
+         .to_string(),
+   }
+}
+
 pub fn git_create_branch(
    repo_path: String,
    branch_name: String,
@@ -94,6 +114,16 @@ fn _git_create_branch(
    branch_name: String,
    from_branch: Option<String>,
 ) -> Result<()> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      let mut args = vec!["checkout", "-q", "-b", &branch_name];
+      if let Some(from) = &from_branch {
+         args.push(from);
+      }
+      host.git().args(&args).run("branch create")?;
+      return Ok(());
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
    let target = if let Some(from) = from_branch {
@@ -135,6 +165,15 @@ pub fn git_delete_branch(repo_path: String, branch_name: String) -> Result<(), S
 }
 
 fn _git_delete_branch(repo_path: String, branch_name: String) -> Result<()> {
+   let host = RepositoryHost::detect(&repo_path);
+   if host.uses_distro_git() {
+      host
+         .git()
+         .args(["branch", "-D", &branch_name])
+         .run("branch delete")?;
+      return Ok(());
+   }
+
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
 
    let mut branch = repo

@@ -8,8 +8,6 @@ import {
 import type React from "react";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useAuthStore } from "@/features/window/stores/auth.store";
-import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import {
@@ -68,8 +66,6 @@ const GitCommitPanel = ({
   behind = 0,
   onCommitSuccess,
 }: GitCommitPanelProps) => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const subscription = useAuthStore((state) => state.subscription);
   const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
   const [commitMessage, setCommitMessage] = useState("");
   const [isCommitting, setIsCommitting] = useState(false);
@@ -109,26 +105,6 @@ const GitCommitPanel = ({
     if (!repoPath || stagedFilesCount === 0 || isGenerating || isCommitting) return;
     setError(null);
 
-    if (!isAuthenticated) {
-      setError("Please sign in to use AI commit message generation.");
-      return;
-    }
-
-    const enterprisePolicy = subscription?.enterprise?.policy;
-    const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-    const hasIntelligence = hasProductCapability(subscription, "intelligence");
-
-    if (managedPolicy && !managedPolicy.aiCompletionEnabled) {
-      setError("AI commit message generation is disabled by your organization policy.");
-      return;
-    }
-
-    const useByok = managedPolicy ? managedPolicy.allowByok && !hasIntelligence : !hasIntelligence;
-    if (managedPolicy && useByok && !managedPolicy.allowByok) {
-      setError("BYOK is disabled by your organization policy.");
-      return;
-    }
-
     const existingDraftHint = commitMessage.trim();
 
     setIsGenerating(true);
@@ -139,22 +115,19 @@ const GitCommitPanel = ({
         stagedFiles,
         existingDraftHint,
       });
-      const { editedText } = await requestInlineEdit(
-        {
-          model: aiAutocompleteModelId,
-          feature: "commit-message",
-          beforeSelection: "",
-          selectedText,
-          afterSelection: "",
-          instruction:
-            commitMessageMode === "title"
-              ? "Generate a concise Git commit subject from the staged changes. Return exactly one subject line and nothing else. Keep it under 72 characters when possible. Infer and match the repository's style from recent commit subjects. Do not force conventional commit format unless the recent commits clearly use it."
-              : "Generate a Git commit message from the staged changes. Return a subject line and a short body only when the body adds useful context. Keep the subject under 72 characters when possible. Infer and match the repository's style from recent commit subjects. Do not force conventional commit format unless the recent commits clearly use it.",
-          filePath: getRepoLabel(repoPath),
-          languageId: "git-commit",
-        },
-        { useByok },
-      );
+      const { editedText } = await requestInlineEdit({
+        model: aiAutocompleteModelId,
+        feature: "commit-message",
+        beforeSelection: "",
+        selectedText,
+        afterSelection: "",
+        instruction:
+          commitMessageMode === "title"
+            ? "Generate a concise Git commit subject from the staged changes. Return exactly one subject line and nothing else. Keep it under 72 characters when possible. Infer and match the repository's style from recent commit subjects. Do not force conventional commit format unless the recent commits clearly use it."
+            : "Generate a Git commit message from the staged changes. Return a subject line and a short body only when the body adds useful context. Keep the subject under 72 characters when possible. Infer and match the repository's style from recent commit subjects. Do not force conventional commit format unless the recent commits clearly use it.",
+        filePath: getRepoLabel(repoPath),
+        languageId: "git-commit",
+      });
 
       const message = normalizeGeneratedCommitMessage(editedText, commitMessageMode);
       if (!message) {
@@ -300,7 +273,7 @@ const GitCommitPanel = ({
             <Button
               type="button"
               variant="ghost"
-              size="compact"
+              size="xs"
               iconOnly
               onClick={() => void handleGenerateCommitMessage()}
               disabled={isGenerateDisabled}
@@ -310,7 +283,7 @@ const GitCommitPanel = ({
             </Button>
             <Button
               type="button"
-              size="compact"
+              size="xs"
               onClick={() => void handleCommit()}
               disabled={isCommitDisabled}
               variant="accent"
@@ -324,7 +297,7 @@ const GitCommitPanel = ({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="compact"
+                    size="xs"
                     iconOnly
                     disabled={isGenerating || isCommitting || isRemoteActionLoading}
                     tooltip="Commit options"

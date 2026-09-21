@@ -1,3 +1,4 @@
+import { isComposingKeyboardEvent } from "@/features/keymaps/utils/is-composing-keyboard-event";
 import { ChevronLeftIcon, SettingsIcon, UploadIcon } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getThemeAppearancePreview } from "@/extensions/appearance/appearance-preview";
@@ -102,6 +103,7 @@ export const ThemeSelectorContent = ({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.defaultPrevented || isComposingKeyboardEvent(e.nativeEvent)) return;
       if (!filteredThemes.length) return;
 
       let nextIndex = selectedIndex;
@@ -157,7 +159,7 @@ export const ThemeSelectorContent = ({
   // Scroll selected item into view
   useEffect(() => {
     const selectedElement = resultsRef.current?.querySelector(`[data-index="${selectedIndex}"]`);
-    selectedElement?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    selectedElement?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [selectedIndex]);
 
   const handleClose = useCallback(() => {
@@ -259,7 +261,7 @@ export const ThemeSelectorContent = ({
                   onThemeChange(theme.id);
                   onClose();
                 }}
-                onMouseEnter={() => {
+                onMouseMove={() => {
                   setSelectedIndex(index);
                 }}
                 isSelected={isSelected}

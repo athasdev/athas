@@ -115,7 +115,7 @@ export function DebugBreakpointsList({
       {breakpoints.map((breakpoint) => (
         <ContextMenu key={breakpoint.id}>
           <ContextMenuTrigger
-            className="group font-sans flex items-center gap-2 px-3 py-1.5 ui-text-sm hover:bg-accent/70"
+            className="group font-sans flex items-center gap-2 px-3 py-1.5 ui-text-sm hover:bg-accent"
             onContextMenu={(event) => event.stopPropagation()}
           >
             <button
@@ -127,7 +127,7 @@ export function DebugBreakpointsList({
                 breakpoint.enabled && breakpoint.verified !== false
                   ? "border-destructive bg-destructive"
                   : breakpoint.enabled
-                    ? "border-warning bg-warning/30"
+                    ? "border-warning bg-warning-soft"
                     : "border-subtle-foreground bg-transparent",
               )}
               onClick={() => onToggle(breakpoint)}
@@ -192,11 +192,11 @@ export function DebugExceptionBreakpointsList({
   if (filters.length === 0) return null;
 
   return (
-    <div className="border-border/60 border-b py-1">
+    <div className="border-border border-b py-1">
       {filters.map((filter) => (
         <label
           key={filter.filter}
-          className="font-sans flex items-start gap-2 px-3 py-1.5 ui-text-sm hover:bg-accent/70"
+          className="font-sans flex items-start gap-2 px-3 py-1.5 ui-text-sm hover:bg-accent"
           title={filter.description}
         >
           <Checkbox

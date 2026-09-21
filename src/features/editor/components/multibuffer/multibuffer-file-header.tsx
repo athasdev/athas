@@ -24,8 +24,8 @@ const multibufferFileHeaderSurfaceVariants = cva(
   {
     variants: {
       surface: {
-        card: "border border-border/70 shadow-[0_1px_0_rgba(0,0,0,0.04)]",
-        section: "border-border/60 border-b bg-surface/12",
+        card: "border border-border shadow-(--shadow-card)",
+        section: "border-border border-b bg-surface",
       },
       expanded: {
         true: "",
@@ -65,7 +65,7 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
             <button
               type="button"
               onClick={onToggle}
-              className="relative z-50 flex size-7 shrink-0 items-center justify-center text-subtle-foreground hover:bg-accent/30 hover:text-foreground"
+              className="relative z-50 flex size-7 shrink-0 items-center justify-center text-subtle-foreground hover:bg-accent hover:text-foreground"
               aria-label={expanded ? `Collapse ${fileName}` : `Expand ${fileName}`}
               aria-expanded={expanded}
             >
@@ -80,7 +80,7 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
             type="button"
             onClick={onOpen}
             className={cn(
-              "relative z-50 flex h-7 min-w-0 flex-1 items-center gap-1.5 overflow-hidden py-0 pr-2 text-left text-foreground hover:bg-accent/30",
+              "relative z-50 flex h-7 min-w-0 flex-1 items-center gap-1.5 overflow-hidden py-0 pr-2 text-left text-foreground hover:bg-accent",
               !onToggle && "pl-2",
             )}
             aria-label={openAriaLabel}

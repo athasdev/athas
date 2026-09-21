@@ -187,7 +187,7 @@ export const GeneralSettings = () => {
           description={
             <span className="flex flex-col gap-0.5">
               <span>Check for updates and install the latest app version.</span>
-              <span className="text-subtle-foreground/75">{updateStatus}</span>
+              <span className="text-subtle-foreground">{updateStatus}</span>
             </span>
           }
         >
@@ -238,7 +238,7 @@ export const GeneralSettings = () => {
           description={
             <span className="flex flex-col gap-0.5">
               <span>Install the athas command to open folders and files from your terminal.</span>
-              <span className="text-subtle-foreground/75">{cliStatus}</span>
+              <span className="text-subtle-foreground">{cliStatus}</span>
             </span>
           }
         >

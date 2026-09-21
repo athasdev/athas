@@ -217,7 +217,7 @@ function ScrollArea({
         ref={viewportRef}
         data-slot="scroll-area-viewport"
         className={cn(
-          "size-full min-h-0 overscroll-none rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+          "size-full min-h-0 overscroll-none rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-focus",
           reserveScrollbarGutter && orientation !== "horizontal" && "pr-2.5",
           reserveScrollbarGutter && orientation !== "vertical" && "pb-2.5",
           viewportClassName,
@@ -279,7 +279,7 @@ function NativeScrollArea({
       data-slot="native-scroll-area"
       tabIndex={tabIndex}
       className={cn(
-        "min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-none scrollbar-gutter-stable outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+        "min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-none scrollbar-gutter-stable outline-none focus-visible:ring-2 focus-visible:ring-focus",
         fill === "flex" && "flex-1",
         fill === "block" && "h-full",
         className,

@@ -15,3 +15,6 @@ pub use codex::{
    CodexAppServer, CodexIntegrationStatus, CodexProtocolEvent, CodexRequestDecision,
    CodexThreadSettings,
 };
+
+pub mod workspace_command;
+pub mod workspace_tools;

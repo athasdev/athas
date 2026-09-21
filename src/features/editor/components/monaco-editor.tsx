@@ -93,10 +93,12 @@ import {
 import { defineActiveMonacoTheme, defineMonacoTheme } from "../engines/monaco/theme";
 import { useMonacoEditorSettings } from "../engines/monaco/use-monaco-editor-settings";
 import { registerMonacoVimCommands, toEditorVimMode } from "../engines/monaco/vim-commands";
+import { registerIntelligenceCompletions } from "../engines/monaco/intelligence-completions";
 import { registerMonacoLspProviders } from "../engines/monaco/lsp-providers";
 import { registerMonacoCodeLensProvider } from "../engines/monaco/code-lens-provider";
 
 registerMonacoLspProviders();
+registerIntelligenceCompletions();
 registerMonacoCodeLensProvider();
 
 const EMPTY_DIAGNOSTICS: Diagnostic[] = [];

@@ -23,6 +23,7 @@ interface ProviderApiKeyCommandProps {
 }
 
 const DASHBOARD_LINKS: Partial<Record<string, string>> = {
+  vercel: "https://vercel.com/dashboard/ai-gateway",
   openrouter: "https://openrouter.ai/keys",
   grok: "https://console.x.ai",
   openai: "https://platform.openai.com/api-keys",
@@ -277,7 +278,12 @@ function ProviderApiKeyCommandContent({
                 )}
                 <div className="flex items-center gap-1.5">
                   {hasExistingKey && (
-                    <Button type="button" variant="danger" onClick={() => void handleRemove()}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      tone="danger"
+                      onClick={() => void handleRemove()}
+                    >
                       <TrashIcon />
                       <span>Remove</span>
                     </Button>

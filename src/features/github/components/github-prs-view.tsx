@@ -128,7 +128,7 @@ const PRListItem = memo(
     const updatedLabel = getTimeAgo(pr.updatedAt);
     const branchLabel = pr.baseRef && pr.headRef ? `${pr.baseRef} <- ${pr.headRef}` : undefined;
     const badges: GitHubSidebarPreviewBadge[] = [
-      { label: pr.isDraft ? "Draft" : pr.state, tone: pr.isDraft ? "muted" : "accent" },
+      { label: pr.isDraft ? "Draft" : pr.state, tone: pr.isDraft ? "neutral" : "accent" },
       ...(pr.reviewDecision
         ? [
             {

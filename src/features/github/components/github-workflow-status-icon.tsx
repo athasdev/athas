@@ -1,3 +1,4 @@
+import type { BadgeTone } from "@/ui/badge";
 import {
   CheckCircleIcon,
   CircleDotIcon,
@@ -36,15 +37,12 @@ export const WORKFLOW_TONE_TEXT_CLASS: Record<WorkflowRunTone, string> = {
   muted: "text-subtle-foreground",
 };
 
-export const WORKFLOW_TONE_BADGE_VARIANT: Record<
-  WorkflowRunTone,
-  "success" | "error" | "warning" | "accent" | "muted"
-> = {
+export const WORKFLOW_TONE_BADGE_TONE: Record<WorkflowRunTone, BadgeTone> = {
   success: "success",
-  error: "error",
+  error: "danger",
   warning: "warning",
   accent: "accent",
-  muted: "muted",
+  muted: "neutral",
 };
 
 interface WorkflowStatusIconProps {

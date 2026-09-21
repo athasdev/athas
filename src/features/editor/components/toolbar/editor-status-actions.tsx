@@ -101,7 +101,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
       default:
         return {
           icon: <BoltSlashIcon />,
-          tone: "muted",
+          tone: "default",
           title: "No active language servers",
         };
     }
@@ -463,7 +463,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                         onClick={() => void handleRestartAllServers()}
                         disabled={!canRunBulkLspAction}
                         variant="default"
-                        size="chrome"
+                        size="sm"
                         width="grow"
                       >
                         {bulkLspAction === "restart" ? "Restarting..." : "Restart all"}
@@ -473,7 +473,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                         onClick={() => void handleStopAllServers()}
                         disabled={!canRunBulkLspAction}
                         variant="default"
-                        size="chrome"
+                        size="sm"
                         width="grow"
                       >
                         {bulkLspAction === "stop" ? "Stopping..." : "Stop all"}
@@ -496,7 +496,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                             onClick={() => void handleRestartServer(entry.key)}
                             disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                             variant="default"
-                            size="chrome"
+                            size="sm"
                           >
                             {isBusy ? "..." : "Restart"}
                           </Button>
@@ -506,7 +506,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                             disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                             variant="default"
                             iconOnly
-                            size="chrome"
+                            size="sm"
                             aria-label={`Stop ${entry.displayName} language server`}
                           >
                             <SquareIcon />
@@ -529,7 +529,7 @@ export function EditorStatusActions({ bufferId }: EditorStatusActionsProps = {})
                           onClick={() => void handleStartCurrent()}
                           disabled={isRestartingCurrent || isBulkLspBusy}
                           variant="default"
-                          size="chrome"
+                          size="sm"
                         >
                           {isRestartingCurrent ? "Starting..." : "Start"}
                         </Button>

@@ -62,9 +62,9 @@ function getReviewerRows(pr: PullRequestDetails): ReviewerRow[] {
 }
 
 function ReviewDecisionBadge({ decision }: { decision: string | null }) {
-  if (decision === "APPROVED") return <Badge variant="success">Approved</Badge>;
-  if (decision === "CHANGES_REQUESTED") return <Badge variant="error">Changes requested</Badge>;
-  if (decision === "REVIEW_REQUIRED") return <Badge variant="warning">Review required</Badge>;
+  if (decision === "APPROVED") return <Badge tone="success">Approved</Badge>;
+  if (decision === "CHANGES_REQUESTED") return <Badge tone="danger">Changes requested</Badge>;
+  if (decision === "REVIEW_REQUIRED") return <Badge tone="warning">Review required</Badge>;
   return null;
 }
 

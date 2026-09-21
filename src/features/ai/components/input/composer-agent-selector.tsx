@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAgentOptions } from "@/features/ai/hooks/use-agent-options";
 import { useAIModelOptions } from "@/features/ai/hooks/use-ai-model-options";
@@ -8,11 +8,11 @@ import { useCodexModels } from "@/features/ai/integrations/codex/use-codex-model
 import { useCodexSettings } from "@/features/ai/integrations/codex/use-codex-settings";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
+import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { SessionConfigOption, SessionConfigValue } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
-import { isTerminalAgent } from "@/features/ai/lib/terminal-agents";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -20,131 +20,162 @@ import {
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuEmpty,
   DropdownMenuSearch,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   DropdownMenuViewport,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
+  DropdownMenuEmpty,
 } from "@/ui/dropdown";
-import { useMenuSearch } from "@/ui/menu-search";
-import { ArrowClockwiseIcon, WarningIcon } from "@/ui/icons";
+import { useMenuSearch, type MenuSearch } from "@/ui/menu-search";
+import { ArrowClockwiseIcon, SlidersIcon, WarningIcon } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 
-export interface ComposerModelOption {
+const ModelResultsContext = createContext<((id: string, count: number) => void) | null>(null);
+
+interface ModelOption {
   id: string;
   name: string;
   keywords?: string[];
 }
 
-function ModelItems({
+function ModelRows({
   models,
   selected,
   onSelect,
+  providerId,
+  providerName,
+  search,
   loading,
   error,
   retry,
-  allowCustom = false,
-  emptyLabel = "No models available",
+  disabled = false,
 }: {
-  models: ComposerModelOption[];
+  models: ModelOption[];
   selected: string;
   onSelect: (id: string) => void;
+  providerId: string;
+  providerName: string;
+  search: MenuSearch;
   loading?: boolean;
   error?: string | null;
   retry?: () => void;
-  allowCustom?: boolean;
-  emptyLabel?: string;
+  disabled?: boolean;
 }) {
-  const search = useMenuSearch();
   const filtered = search.filter(models, (model) => [
     model.name,
     model.id,
+    providerName,
     ...(model.keywords ?? []),
   ]);
-  const query = search.query;
-  const custom = allowCustom && query.trim() && !models.some((model) => model.id === query.trim());
+  const showStatus =
+    !search.isSearching ||
+    search.filter([{ name: providerName }], (provider) => [provider.name]).length > 0;
+  const reportResults = useContext(ModelResultsContext);
+  const count = filtered.length + (showStatus && (loading || error) ? 1 : 0);
+  useEffect(() => {
+    reportResults?.(providerId, count);
+    return () => reportResults?.(providerId, 0);
+  }, [count, providerId, reportResults]);
   return (
     <>
-      <DropdownMenuSearch
-        value={search.query}
-        onChange={(event) => search.setQuery(event.target.value)}
-        placeholder="Search models..."
-      />
-      <DropdownMenuViewport>
-        {loading ? (
-          <DropdownMenuItem disabled>
-            <Spinner label="Loading models" compact />
-            Loading models…
-          </DropdownMenuItem>
-        ) : null}
-        {error ? (
-          <DropdownMenuItem closeOnClick={false} title={error} disabled={!retry} onClick={retry}>
-            <WarningIcon />
-            Could not load models{retry ? <ArrowClockwiseIcon /> : null}
-          </DropdownMenuItem>
-        ) : null}
-        <DropdownMenuRadioGroup value={selected} onValueChange={onSelect}>
-          {filtered.map((model) => (
-            <DropdownMenuRadioItem key={model.id} value={model.id} closeOnClick>
-              {model.name}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-        {custom ? (
-          <DropdownMenuItem onClick={() => onSelect(query.trim())}>
-            Use {query.trim()}
-          </DropdownMenuItem>
-        ) : null}
-        {!filtered.length && !custom && !loading && !error ? (
-          <DropdownMenuEmpty>{emptyLabel}</DropdownMenuEmpty>
-        ) : null}
-      </DropdownMenuViewport>
+      {showStatus && loading ? (
+        <DropdownMenuItem disabled>
+          <Spinner label={`Loading ${providerName} models`} compact />
+          Loading {providerName}…
+        </DropdownMenuItem>
+      ) : null}
+      {showStatus && error ? (
+        <DropdownMenuItem closeOnClick={false} onClick={retry} disabled={!retry} title={error}>
+          <WarningIcon />
+          <span className="min-w-0 whitespace-normal">
+            {providerName}: {error}
+          </span>
+          {retry ? <ArrowClockwiseIcon /> : null}
+        </DropdownMenuItem>
+      ) : null}
+      <DropdownMenuRadioGroup value={selected} onValueChange={onSelect}>
+        {filtered.map((model) => (
+          <DropdownMenuRadioItem
+            key={model.id}
+            value={model.id}
+            closeOnClick
+            disabled={disabled}
+            title={`${model.name} via ${providerName}`}
+          >
+            <ProviderIcon providerId={providerId} />
+            <span className="min-w-0 truncate">{model.name}</span>
+            <span className="max-w-1/2 shrink-0 truncate text-subtle-foreground">
+              via {providerName}
+            </span>
+          </DropdownMenuRadioItem>
+        ))}
+      </DropdownMenuRadioGroup>
     </>
   );
 }
 
-function ApiModels({
+function ProviderModels({
   providerId,
-  modelId,
+  providerName,
+  selected,
+  search,
   onSelect,
 }: {
   providerId: string;
-  modelId: string;
-  onSelect: (id: string) => void;
+  providerName: string;
+  selected: string;
+  search: MenuSearch;
+  onSelect: (model: string) => void;
 }) {
-  const { availableModels, isCustomProvider, isLoadingModels, modelFetchError } = useAIModelOptions(
+  const { availableModels, isLoadingModels, modelFetchError, retry } = useAIModelOptions(
     providerId,
-    modelId,
+    selected,
   );
   return (
-    <ModelItems
+    <ModelRows
       models={availableModels}
-      selected={modelId}
+      selected={selected}
       onSelect={onSelect}
+      providerId={providerId}
+      providerName={providerName}
+      search={search}
       loading={isLoadingModels}
       error={modelFetchError}
-      allowCustom={isCustomProvider || providerId === "openrouter"}
+      retry={retry}
     />
   );
 }
 
-function CodexModels({ cwd, onSelect }: { cwd: string; onSelect: () => void }) {
+function CodexModels({
+  cwd,
+  active,
+  search,
+  onSelect,
+  disabled,
+}: {
+  cwd: string;
+  active: boolean;
+  search: MenuSearch;
+  onSelect: () => void;
+  disabled: boolean;
+}) {
   const { settings, update } = useCodexSettings();
   const { models, loading, error, retry } = useCodexModels(cwd);
   return (
-    <ModelItems
-      models={[{ id: "default", name: "Codex default" }, ...models]}
-      selected={settings.model || "default"}
+    <ModelRows
+      models={[{ id: "default", name: "Default" }, ...models]}
+      selected={active ? settings.model || "default" : ""}
       onSelect={(id) => {
         update(getCodexModelPatch(id === "default" ? undefined : id, models, settings));
         onSelect();
       }}
+      providerId={CODEX_INTEGRATION_ID}
+      providerName="Codex"
+      search={search}
       loading={loading}
       error={error}
       retry={retry}
+      disabled={disabled}
     />
   );
 }
@@ -172,12 +203,18 @@ export function ComposerAgentSelector({
   onSessionConfigChange,
   onBeforeOpen,
 }: ComposerAgentSelectorProps) {
-  const [source, setSource] = useState(currentAgentId === "custom" ? "api" : "cli");
+  const [isContentMounted, setIsContentMounted] = useState(false);
   const search = useMenuSearch();
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const { options, isLoading, loadError, refresh, runAgentAction } =
-    useAgentOptions(currentAgentId);
+  const [resultCounts, setResultCounts] = useState<Record<string, number>>({});
+  const reportResults = useCallback((id: string, count: number) => {
+    setResultCounts((previous) =>
+      previous[id] === count ? previous : { ...previous, [id]: count },
+    );
+  }, []);
+  const { options, isLoading, loadError, refresh } = useAgentOptions(currentAgentId);
   const providers = useAvailableProviders();
+  const providerKeys = useAIChatStore((state) => state.providerApiKeys);
+  const dynamicModels = useAIChatStore((state) => state.dynamicModels);
   const { settings } = useCodexSettings();
   const model = sessionConfigOptions.find(
     (option) => classifySessionConfigOption(option) === "model" && option.kind.type === "select",
@@ -185,31 +222,37 @@ export function ComposerAgentSelector({
   const modelKind = model?.kind.type === "select" ? model.kind : null;
   const currentAgent = options.find((option) => option.id === currentAgentId);
   const iconId = currentAgentId === "custom" ? providerId : currentAgentId;
+  const selectedProvider = providers.find((provider) => provider.id === providerId);
+  const selectedModel =
+    dynamicModels[providerId]?.find((model) => model.id === modelId) ??
+    selectedProvider?.models.find((model) => model.id === modelId);
   const label =
     currentAgentId === "custom"
-      ? modelId || providers.find((provider) => provider.id === providerId)?.name || "Choose model"
+      ? providerId === "athas" && (!modelId || modelId === "auto")
+        ? "Athas Automatic"
+        : selectedModel?.name || modelId || selectedProvider?.name || "Choose model"
       : currentAgentId === CODEX_INTEGRATION_ID
         ? settings.model || "Codex default"
         : modelKind?.options.find((option) => option.id === modelKind.currentValue)?.name ||
           currentAgent?.name ||
           currentAgentId;
-  const agents = search
-    .filter(options, (option) => [option.name, option.id])
-    .filter((option) => option.id !== "custom");
-  const apis = search.filter(providers, (provider) => [provider.name, provider.id]);
+  const configuredProviders = providers.filter(
+    (provider) =>
+      provider.id !== "athas" && (provider.id === providerId || providerKeys.get(provider.id)),
+  );
+  const agents = options.filter(
+    (option) => option.id !== "custom" && (option.isInstalled || option.isCurrent),
+  );
   const selectAgent = (id: AgentType) => {
     if (id !== currentAgentId) onAgentChange?.(id);
   };
+
   return (
     <DropdownMenu
-      onOpenChange={(value) => {
-        if (value) {
-          setSource(currentAgentId === "custom" ? "api" : "cli");
-          onBeforeOpen?.();
-        } else {
-          search.reset();
-          setExpanded(null);
-        }
+      onOpenChange={(open) => {
+        setIsContentMounted(open);
+        if (open) onBeforeOpen?.();
+        else search.reset();
       }}
     >
       <span className="inline-flex min-w-0 max-w-52">
@@ -220,7 +263,7 @@ export function ComposerAgentSelector({
               variant="ghost"
               truncate
               aria-label="Change model"
-              tooltip="Change agent and model"
+              tooltip="Change model"
             />
           }
         >
@@ -231,147 +274,114 @@ export function ComposerAgentSelector({
           <span className="min-w-0 truncate">{label}</span>
         </DropdownMenuTrigger>
       </span>
-      <DropdownMenuContent align="start" side="top" viewport="searchable" size="wide">
-        <Tabs
-          value={source}
-          onValueChange={(value) => {
-            setSource(String(value));
-            search.reset();
-            setExpanded(null);
-          }}
-        >
-          <TabsList aria-label="Model source" className="mx-1 mt-1">
-            <TabsTrigger value="cli">CLI</TabsTrigger>
-            <TabsTrigger value="api">API</TabsTrigger>
-          </TabsList>
-          <DropdownMenuSearch
-            value={search.query}
-            onChange={(event) => search.setQuery(event.target.value)}
-            placeholder={source === "cli" ? "Search agents..." : "Search providers..."}
-            autoFocus
-          />
-          <TabsContent value="cli" className="flex min-h-0 flex-col">
-            <DropdownMenuViewport>
-              {isLoading ? (
-                <DropdownMenuItem disabled>
-                  <Spinner label="Checking agents" compact />
-                  Checking agents…
-                </DropdownMenuItem>
-              ) : null}
-              {loadError ? (
-                <DropdownMenuItem
-                  closeOnClick={false}
-                  title={loadError}
-                  onClick={() => void refresh()}
-                >
-                  <WarningIcon />
-                  Could not check all agents · Retry
-                  <ArrowClockwiseIcon />
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuRadioGroup value={currentAgentId} onValueChange={selectAgent}>
-                {agents.map((agent) =>
-                  agent.isInstalled ? (
-                    <DropdownMenuRadioItem
-                      key={agent.id}
-                      value={agent.id}
-                      closeOnClick
-                      disabled={!onAgentChange && !agent.isCurrent}
-                      title={agent.description}
-                    >
-                      <ProviderIcon providerId={agent.id} iconUrl={agent.icon} />
-                      <span className="min-w-0 flex-1 truncate">{agent.name}</span>
-                      {isTerminalAgent(agent.id) ? <span>Terminal</span> : null}
-                    </DropdownMenuRadioItem>
-                  ) : (
-                    <DropdownMenuItem
-                      key={agent.id}
-                      disabled={
-                        agent.isChecking || agent.isBusy || (!agent.action && !agent.needsSetup)
-                      }
-                      closeOnClick={agent.needsSetup}
-                      onClick={() => {
-                        if (agent.action) void runAgentAction(agent.id, agent.name, agent.action);
-                        else if (agent.needsSetup) useUIState.getState().openSettingsDialog("ai");
-                      }}
-                      title={agent.description}
-                    >
-                      <ProviderIcon providerId={agent.id} iconUrl={agent.icon} />
-                      <span className="min-w-0 flex-1 truncate">{agent.name}</span>
-                      {agent.isBusy ? (
-                        <Spinner label="Installing agent" compact />
-                      ) : agent.isChecking ? null : agent.action ? (
-                        "Install"
-                      ) : agent.needsSetup ? (
-                        "Set up"
-                      ) : (
-                        "Unavailable"
-                      )}
-                    </DropdownMenuItem>
-                  ),
-                )}
-              </DropdownMenuRadioGroup>
-              {!agents.length && !isLoading && !loadError ? (
-                <DropdownMenuEmpty>No matching agents</DropdownMenuEmpty>
-              ) : null}
-              {currentAgentId !== "custom" &&
-              (currentAgentId === CODEX_INTEGRATION_ID || modelKind) ? (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuSub
-                    open={expanded === "model"}
-                    onOpenChange={(value) => setExpanded(value ? "model" : null)}
-                  >
-                    <DropdownMenuSubTrigger>Model</DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent viewport="searchable" size="wide">
-                      {expanded === "model" ? (
-                        currentAgentId === CODEX_INTEGRATION_ID ? (
-                          <CodexModels cwd={cwd} onSelect={() => {}} />
-                        ) : modelKind && model ? (
-                          <ModelItems
-                            models={modelKind.options}
-                            selected={modelKind.currentValue}
-                            onSelect={(value) => onSessionConfigChange(model.id, value)}
-                          />
-                        ) : null
-                      ) : null}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                </>
-              ) : null}
-            </DropdownMenuViewport>
-          </TabsContent>
-          <TabsContent value="api" className="flex min-h-0 flex-col">
-            <DropdownMenuViewport>
-              {apis.map((provider) => (
-                <DropdownMenuSub
-                  key={provider.id}
-                  open={expanded === `api:${provider.id}`}
-                  onOpenChange={(value) => setExpanded(value ? `api:${provider.id}` : null)}
-                >
-                  <DropdownMenuSubTrigger>
-                    <ProviderIcon providerId={provider.id} />
-                    <span className="min-w-0 flex-1 truncate">{provider.name}</span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent viewport="searchable" size="wide">
-                    {expanded === `api:${provider.id}` ? (
-                      <ApiModels
-                        providerId={provider.id}
-                        modelId={
-                          currentAgentId === "custom" && providerId === provider.id ? modelId : ""
-                        }
-                        onSelect={(id) => {
-                          onModelChange(id, provider.id);
-                        }}
-                      />
-                    ) : null}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              ))}
-              {!apis.length ? <DropdownMenuEmpty>No matching providers</DropdownMenuEmpty> : null}
-            </DropdownMenuViewport>
-          </TabsContent>
-        </Tabs>
+      <DropdownMenuContent align="start" side="top" viewport="searchable" size="panel">
+        <DropdownMenuSearch
+          value={search.query}
+          onChange={(event) => search.setQuery(event.target.value)}
+          placeholder="Select a model…"
+          autoFocus
+        />
+        <DropdownMenuViewport>
+          <ModelResultsContext value={reportResults}>
+            <ModelRows
+              models={[
+                { id: "auto", name: "Automatic" },
+                ...(currentAgentId === "custom" &&
+                providerId === "athas" &&
+                modelId &&
+                modelId !== "auto"
+                  ? [{ id: modelId, name: selectedModel?.name || modelId }]
+                  : []),
+              ]}
+              selected={
+                currentAgentId === "custom" && providerId === "athas" ? modelId || "auto" : ""
+              }
+              onSelect={(id) => onModelChange(id, "athas")}
+              providerId="athas"
+              providerName="Athas"
+              search={search}
+            />
+            {isContentMounted
+              ? configuredProviders.map((provider) => (
+                  <ProviderModels
+                    key={provider.id}
+                    providerId={provider.id}
+                    providerName={provider.name}
+                    selected={
+                      currentAgentId === "custom" && provider.id === providerId ? modelId : ""
+                    }
+                    search={search}
+                    onSelect={(id) => onModelChange(id, provider.id)}
+                  />
+                ))
+              : null}
+            {agents.map((agent) =>
+              agent.id === CODEX_INTEGRATION_ID ? (
+                isContentMounted ? (
+                  <CodexModels
+                    key={agent.id}
+                    cwd={cwd}
+                    active={currentAgentId === agent.id}
+                    search={search}
+                    onSelect={() => selectAgent(agent.id)}
+                    disabled={!onAgentChange && !agent.isCurrent}
+                  />
+                ) : null
+              ) : (
+                <ModelRows
+                  key={agent.id}
+                  models={
+                    agent.isCurrent && modelKind
+                      ? modelKind.options
+                      : [
+                          {
+                            id: "default",
+                            name: isTerminalAgent(agent.id) ? agent.name : "Default",
+                          },
+                        ]
+                  }
+                  selected={agent.isCurrent ? (modelKind?.currentValue ?? "default") : ""}
+                  onSelect={(value) => {
+                    if (agent.isCurrent && model) onSessionConfigChange(model.id, value);
+                    else selectAgent(agent.id);
+                  }}
+                  providerId={agent.id}
+                  providerName={isTerminalAgent(agent.id) ? "Terminal" : agent.name}
+                  search={search}
+                  disabled={!onAgentChange && !agent.isCurrent}
+                />
+              ),
+            )}
+            {!search.isSearching && isLoading ? (
+              <DropdownMenuItem disabled>
+                <Spinner compact label="Loading connections" />
+                Loading connections…
+              </DropdownMenuItem>
+            ) : null}
+            {!search.isSearching && loadError ? (
+              <DropdownMenuItem
+                closeOnClick={false}
+                onClick={() => void refresh()}
+                title={loadError}
+              >
+                <WarningIcon />
+                <span className="min-w-0 whitespace-normal">{loadError}</span>
+                <ArrowClockwiseIcon />
+              </DropdownMenuItem>
+            ) : null}
+          </ModelResultsContext>
+          {isContentMounted &&
+          !isLoading &&
+          !loadError &&
+          Object.values(resultCounts).every((count) => count === 0) ? (
+            <DropdownMenuEmpty>No matching models</DropdownMenuEmpty>
+          ) : null}
+        </DropdownMenuViewport>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => useUIState.getState().openSettingsDialog("ai")}>
+          <SlidersIcon />
+          Configure models…
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -65,7 +65,7 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
       />
 
       <ScrollArea fill="flex" contentPadding="inline">
-        <div className="mx-auto max-w-2xl divide-y divide-border/60">
+        <div className="mx-auto max-w-2xl divide-y divide-border">
           <section className="py-4">
             <h2 className="ui-text-sm mb-3 text-foreground">File Information</h2>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2">
@@ -86,9 +86,9 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
                 </div>
 
                 {metadata.wasmMetadata.sections.length > 0 && (
-                  <div className="mt-3 overflow-hidden border-y border-border/40">
+                  <div className="mt-3 overflow-hidden border-y border-border">
                     <Table>
-                      <TableHeader className="static bg-background/50">
+                      <TableHeader className="static bg-background">
                         <TableRow>
                           <TableHead className="px-3 font-normal">Section</TableHead>
                           <TableHead className="px-3 text-right font-normal">Size</TableHead>
@@ -99,8 +99,8 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
                           <TableRow
                             key={`${section.id}-${i}`}
                             className={cn(
-                              "border-border/20 border-b last:border-b-0",
-                              i % 2 === 0 ? "bg-transparent" : "bg-background/30",
+                              "border-border border-b last:border-b-0",
+                              i % 2 === 0 ? "bg-transparent" : "bg-background",
                             )}
                           >
                             <TableCell className="px-3">{section.name}</TableCell>

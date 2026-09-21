@@ -138,15 +138,15 @@ describe("git diff parser", () => {
 
   test("maps diff line types to shared visual state", () => {
     expect(getDiffLineVisualState("added")).toMatchObject({
-      lineBackground: "bg-git-added/14",
-      gutterBackground: "bg-git-added/18",
+      lineBackground: "bg-git-added-soft",
+      gutterBackground: "bg-git-added-soft",
       railClassName: "shadow-[inset_2px_0_0_var(--git-added)]",
       gutterTextColor: "text-git-added",
       contentColor: "text-foreground",
     });
     expect(getDiffLineVisualState("removed")).toMatchObject({
-      lineBackground: "bg-git-deleted/14",
-      gutterBackground: "bg-git-deleted/18",
+      lineBackground: "bg-git-deleted-soft",
+      gutterBackground: "bg-git-deleted-soft",
       railClassName: "shadow-[inset_2px_0_0_var(--git-deleted)]",
       gutterTextColor: "text-git-deleted",
       contentColor: "text-foreground",

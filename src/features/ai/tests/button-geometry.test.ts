@@ -4,23 +4,15 @@ import { buttonVariants, type ButtonVariant } from "@/ui/button";
 
 const source = readFileSync(new URL("../../../ui/button.tsx", import.meta.url), "utf8");
 
-const FIXED_HEIGHT_VARIANTS: ButtonVariant[] = [
-  "default",
-  "accent",
-  "accent-ghost",
-  "ghost",
-  "danger",
-];
+const FIXED_HEIGHT_VARIANTS: ButtonVariant[] = ["default", "accent", "ghost"];
 
 describe("Button geometry", () => {
-  it("reserves the same border on every fixed-height variant", () => {
-    // A variant that drops the border while a sibling keeps one makes the
-    // control jump a pixel whenever a component swaps between them.
+  it("keeps every fixed-height variant borderless", () => {
+    // A variant that adds a border while a sibling has none makes the control
+    // jump a pixel whenever a component swaps between them.
     for (const variant of FIXED_HEIGHT_VARIANTS) {
-      expect(buttonVariants({ variant }), variant).not.toMatch(/(^|\s)border-0(\s|$)/);
+      expect(buttonVariants({ variant }), variant).not.toMatch(/(^|\s)border(-[a-z]+)?(\s|$)/);
     }
-
-    expect(buttonVariants({})).toMatch(/(^|\s)border border-transparent(\s|$)/);
   });
 
   it("keeps state variants to paint-only properties", () => {

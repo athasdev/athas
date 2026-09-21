@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+import { renameTerminalWithIntelligence } from "@/features/terminal/services/intelligence-terminal-title";
 import {
   ArrowCounterClockwiseIcon,
   ArrowDownIcon,
@@ -10,6 +12,7 @@ import {
   ListIcon,
   RowsIcon,
   SearchIcon,
+  SparkleIcon,
   SelectAllIcon,
   SidebarIcon,
   TerminalWindowIcon,
@@ -232,6 +235,25 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       action: () => {
         onClose();
         void keymapRegistry.executeCommand("terminal.new");
+      },
+    },
+    {
+      id: "terminal-generate-name",
+      label: "Terminal: Generate Name",
+      description: "Name the active terminal using your Intelligence connection",
+      icon: <SparkleIcon />,
+      category: "Terminal",
+      action: () => {
+        onClose();
+        toast.promise(renameTerminalWithIntelligence(), {
+          loading: "Generating terminal name…",
+          success: (applied) =>
+            applied
+              ? "Terminal name generated"
+              : "Terminal changed; generated name was not applied",
+          error: (error) =>
+            error instanceof Error ? error.message : "Could not generate terminal name",
+        });
       },
     },
     {

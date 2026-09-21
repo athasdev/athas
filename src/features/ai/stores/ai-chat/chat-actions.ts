@@ -1,3 +1,7 @@
+import { useIntelligenceSettingsStore } from "@/features/ai/intelligence/stores/intelligence-settings.store";
+import { resolveIntelligenceConnection } from "@/features/ai/intelligence/lib/resolve-intelligence-connection";
+import { useAuthStore } from "@/features/window/stores/auth.store";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat.types";
 import { hasAgentSessionActivity, selectAgentSessions } from "@/features/ai/lib/agent-session-list";
 import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
@@ -43,10 +47,16 @@ const createChatId = () =>
 function getNewChatMetadata(agentId: AgentType) {
   const settings = useSettingsStore.getState().settings;
   const branch = useGitStore.getState().gitStatus?.branch ?? null;
+  const connection = resolveIntelligenceConnection({
+    task: "agent",
+    preferences: useIntelligenceSettingsStore.getState().preferences,
+    hasIntelligence: hasProductCapability(useAuthStore.getState().subscription, "intelligence"),
+    personalConnection: { providerId: settings.aiProviderId, modelId: settings.aiModelId },
+  });
 
   return {
-    providerId: agentId === "custom" ? settings.aiProviderId : null,
-    modelId: agentId === "custom" ? settings.aiModelId : null,
+    providerId: agentId === "custom" ? connection.providerId : null,
+    modelId: agentId === "custom" ? connection.modelId : null,
     branch,
     isPinned: false,
     archivedAt: null,
@@ -93,6 +103,9 @@ async function loadChatMessages(set: SetAIChatStore, chatId: string) {
       if (chatIndex !== -1) {
         state.chats[chatIndex] = fullChat;
         state.chatMessageLoadStates[chatId] = "loaded";
+      } else {
+        // The chat left the list mid-fetch; don't leave a stuck "loading" behind.
+        delete state.chatMessageLoadStates[chatId];
       }
     });
   } catch (error) {
@@ -111,6 +124,15 @@ async function loadChatMessages(set: SetAIChatStore, chatId: string) {
     });
     console.error(`Failed to load messages for chat ${chatId}:`, error);
   }
+}
+
+// History rows arrive from the database without messages and without a load
+// state. Anything that surfaces such a chat has to kick off its load, or the
+// view sits on "Loading session…" forever.
+function ensureChatMessagesLoaded(set: SetAIChatStore, get: GetAIChatStore, chatId: string) {
+  const loadState = get().chatMessageLoadStates[chatId];
+  if (loadState === "loaded" || loadState === "loading") return;
+  void loadChatMessages(set, chatId);
 }
 
 export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): ChatActions {
@@ -246,13 +268,17 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       // identical untouched sessions. Hand back the one that is already waiting.
       if (options.reuseEmpty) {
         const workspacePath = getCurrentWorkspacePath();
-        const reusable = state.chats.find(
-          (chat) =>
-            chat.agentId === nextAgentId &&
-            !chat.archivedAt &&
-            isChatInWorkspace(chat, workspacePath) &&
-            !hasAgentSessionActivity(chat),
-        );
+        const isReusable = (chat: Chat) =>
+          chat.agentId === nextAgentId &&
+          !chat.archivedAt &&
+          isChatInWorkspace(chat, workspacePath) &&
+          !hasAgentSessionActivity(chat);
+        // A session already in memory opens instantly; one that only exists as
+        // a history row still needs its messages fetched before it can render.
+        const reusable =
+          state.chats.find(
+            (chat) => isReusable(chat) && state.chatMessageLoadStates[chat.id] === "loaded",
+          ) ?? state.chats.find(isReusable);
 
         if (reusable) {
           if (activate) {
@@ -261,6 +287,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
               draft.pendingAgentLaunchRequest = null;
             });
           }
+          ensureChatMessagesLoaded(set, get, reusable.id);
           return reusable.id;
         }
       }
@@ -321,6 +348,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         set((draft) => {
           draft.currentChatId = matchingChat.id;
         });
+        ensureChatMessagesLoaded(set, get, matchingChat.id);
         return matchingChat.id;
       }
 
@@ -331,6 +359,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         set((draft) => {
           draft.currentChatId = fallbackChat.id;
         });
+        ensureChatMessagesLoaded(set, get, fallbackChat.id);
         return fallbackChat.id;
       }
 
@@ -340,9 +369,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       set((state) => {
         state.currentChatId = chatId;
       });
-      if (get().chatMessageLoadStates[chatId] !== "loaded") {
-        void loadChatMessages(set, chatId);
-      }
+      ensureChatMessagesLoaded(set, get, chatId);
     },
     deleteChat: (chatId) => {
       set((state) => {
@@ -362,6 +389,9 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         delete state.agentMessageQueues[chatId];
         delete state.chatMessageLoadStates[chatId];
       });
+
+      const nextChatId = get().currentChatId;
+      if (nextChatId) ensureChatMessagesLoaded(set, get, nextChatId);
 
       void deleteChatFromDb(chatId).catch((error) =>
         console.error("Failed to delete chat from database:", error),
@@ -431,6 +461,11 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
           state.currentChatId = nextChat?.id ?? null;
         }
       });
+
+      const nextChatId = get().currentChatId;
+      if (isArchived && nextChatId && nextChatId !== chatId) {
+        ensureChatMessagesLoaded(set, get, nextChatId);
+      }
 
       const chat = get().chats.find((candidate) => candidate.id === chatId);
       if (chat) {
@@ -527,9 +562,8 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
             ),
             ...state.chats.filter((chat) => !persistedIds.has(chat.id)),
           ];
-          for (const chat of chats) {
-            state.chatMessageLoadStates[chat.id] ??= "loading";
-          }
+          // Unloaded history has no load state; "loading" is reserved for a
+          // fetch that is actually in flight so nothing waits on a phantom one.
         });
       } catch (error) {
         console.error("Failed to load chats from database:", error);
@@ -565,9 +599,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       });
 
       if (snapshot?.currentChatId) {
-        if (get().chatMessageLoadStates[snapshot.currentChatId] !== "loaded") {
-          void loadChatMessages(set, snapshot.currentChatId);
-        }
+        ensureChatMessagesLoaded(set, get, snapshot.currentChatId);
       }
     },
     getCurrentChat: () => {

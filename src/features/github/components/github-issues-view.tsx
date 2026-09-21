@@ -39,8 +39,8 @@ const IssueRow = memo(
     const labels = issue.labels.slice(0, 3);
     const isOpen = issue.state.toUpperCase() === "OPEN";
     const badges: GitHubSidebarPreviewBadge[] = [
-      { label: issue.state, tone: isOpen ? "success" : "muted" },
-      ...labels.map((label) => ({ label: label.name, tone: "default" as const })),
+      { label: issue.state, tone: isOpen ? "success" : "neutral" },
+      ...labels.map((label) => ({ label: label.name, tone: "neutral" as const })),
     ];
     const authorAvatar = (
       <GitHubAvatar

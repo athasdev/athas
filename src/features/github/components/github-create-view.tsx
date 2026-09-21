@@ -16,7 +16,6 @@ import { getGitStatus } from "@/features/git/api/git-status-api";
 import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
-import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import Input from "@/ui/input";
@@ -309,15 +308,11 @@ function GitHubCreateViewContent({
 
     try {
       const enterprisePolicy = subscription?.enterprise?.policy;
-      const hasIntelligence = hasProductCapability(subscription, "intelligence");
       if (enterprisePolicy?.managedMode && enterprisePolicy.aiCompletionEnabled === false) {
         setError("AI generation is disabled by your organization policy.");
         return;
       }
 
-      const useByok = enterprisePolicy
-        ? enterprisePolicy.allowByok && !hasIntelligence
-        : !hasIntelligence;
       const status = await getGitStatus(repoPath);
       const diffSummary =
         kind === "pull-request" ? summarizeDiffs(await getRefDiff(repoPath, base, head)) : "";
@@ -360,20 +355,17 @@ Existing body: ${body || "(empty)"}
 Git status:
 ${statusSummary}`;
 
-      const { editedText } = await requestInlineEdit(
-        {
-          model: aiAutocompleteModelId,
-          feature: "github-draft",
-          beforeSelection: "",
-          selectedText: prompt,
-          afterSelection: "",
-          instruction:
-            "Generate a GitHub issue or pull request draft. Return valid JSON only with title and body string fields. Do not include markdown fences or explanation.",
-          filePath: kind === "pull-request" ? "github-pull-request" : "github-issue",
-          languageId: "json",
-        },
-        { useByok },
-      );
+      const { editedText } = await requestInlineEdit({
+        model: aiAutocompleteModelId,
+        feature: "github-draft",
+        beforeSelection: "",
+        selectedText: prompt,
+        afterSelection: "",
+        instruction:
+          "Generate a GitHub issue or pull request draft. Return valid JSON only with title and body string fields. Do not include markdown fences or explanation.",
+        filePath: kind === "pull-request" ? "github-pull-request" : "github-issue",
+        languageId: "json",
+      });
 
       const draft = extractJsonObject(editedText);
       if (!draft.title?.trim() && !draft.body?.trim()) {
@@ -428,7 +420,7 @@ ${statusSummary}`;
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 border-border/60 border-y py-3">
+            <div className="flex flex-wrap items-center gap-3 border-border border-y py-3">
               <div className="flex min-w-56 flex-1 items-center gap-2">
                 <span className="shrink-0 font-sans ui-text-sm text-subtle-foreground">
                   Workflow
@@ -465,7 +457,7 @@ ${statusSummary}`;
             </div>
 
             {error ? (
-              <div className="mt-3 rounded-lg bg-destructive/6 px-3 py-2 ui-text-sm text-destructive">
+              <div className="mt-3 rounded-lg bg-destructive-soft px-3 py-2 ui-text-sm text-destructive">
                 {error}
               </div>
             ) : null}
@@ -504,7 +496,7 @@ ${statusSummary}`;
             </div>
 
             {kind === "pull-request" ? (
-              <div className="flex flex-wrap items-center gap-2 border-border/60 border-y py-3">
+              <div className="flex flex-wrap items-center gap-2 border-border border-y py-3">
                 <GitBranchIcon className="text-subtle-foreground" />
                 <span className="font-sans ui-text-sm text-subtle-foreground">Head</span>
                 <Select
@@ -535,7 +527,7 @@ ${statusSummary}`;
                   menuSize="default"
                   aria-label="Choose base branch"
                 />
-                <label className="ml-auto flex h-7 items-center gap-2 rounded-lg px-2 font-sans ui-text-sm text-subtle-foreground hover:bg-accent/60">
+                <label className="ml-auto flex h-7 items-center gap-2 rounded-lg px-2 font-sans ui-text-sm text-subtle-foreground hover:bg-accent">
                   <Checkbox
                     checked={draft}
                     onCheckedChange={setDraft}
@@ -556,12 +548,12 @@ ${statusSummary}`;
             </div>
 
             {error ? (
-              <div className="mt-3 rounded-lg bg-destructive/6 px-3 py-2 ui-text-sm text-destructive">
+              <div className="mt-3 rounded-lg bg-destructive-soft px-3 py-2 ui-text-sm text-destructive">
                 {error}
               </div>
             ) : null}
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-border/60 border-t pt-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-border border-t pt-3">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <GitHubLabelPicker
                   labels={labels}

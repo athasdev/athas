@@ -60,7 +60,7 @@ export function Slider({
       {...props}
     >
       <SliderPrimitive.Control className="relative flex h-6 w-full touch-none items-center select-none data-disabled:opacity-50">
-        <span aria-hidden="true" className="absolute inset-0 rounded-full bg-accent" />
+        <span aria-hidden="true" className="absolute inset-0 rounded-full bg-selected" />
 
         <span
           aria-hidden="true"
@@ -73,7 +73,7 @@ export function Slider({
               <span
                 key={index}
                 aria-hidden="true"
-                className="-translate-x-1/2 -translate-y-1/2 pointer-events-none absolute top-1/2 size-1 rounded-full bg-foreground/25"
+                className="-translate-x-1/2 -translate-y-1/2 pointer-events-none absolute top-1/2 size-1 rounded-full bg-muted-foreground"
                 style={{ left: stopOffset(index / (stopCount - 1)) }}
               />
             ))
@@ -86,12 +86,12 @@ export function Slider({
         >
           <SliderPrimitive.Thumb
             className={cn(
-              "size-5 rounded-full bg-background shadow-(--shadow-card) ring-1 ring-border/50 outline-none",
+              "size-5 rounded-full bg-overlay shadow-(--shadow-card) ring-1 ring-border outline-none",
               "transition-[inset-inline-start,scale,box-shadow] duration-normal ease-smooth",
               // While dragging, follow the pointer with no positional easing.
               "group-data-[dragging]/slider:transition-[scale,box-shadow]",
               "hover:scale-105 group-data-[dragging]/slider:scale-110",
-              "focus-visible:ring-2 focus-visible:ring-primary/40",
+              "focus-visible:ring-2 focus-visible:ring-focus",
             )}
           />
         </SliderPrimitive.Track>

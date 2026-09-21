@@ -491,7 +491,8 @@ export function SkillsCommand({
                       <span className="inline-flex min-w-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
                         <Button
                           type="button"
-                          variant="danger"
+                          variant="ghost"
+                          tone="danger"
                           onClick={(event) => {
                             event.stopPropagation();
                             void handleDelete(skill.id);

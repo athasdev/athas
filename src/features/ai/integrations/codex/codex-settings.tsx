@@ -84,7 +84,7 @@ export function CodexSettings() {
         }
       >
         <div className="flex items-center gap-2">
-          <Badge variant={status?.initialized ? "success" : "muted"}>
+          <Badge tone={status?.initialized ? "success" : "neutral"}>
             {status?.initialized ? "Connected" : status?.installed ? "Installed" : "Unavailable"}
           </Badge>
           <Button
@@ -144,9 +144,9 @@ export function CodexSettings() {
         description={catalogError ?? "Loaded from app-server for the current workspace"}
       >
         <div className="flex items-center gap-1.5">
-          <Badge variant="default">{details.threads} threads</Badge>
-          <Badge variant="default">{details.skills} skills</Badge>
-          <Badge variant="default">{details.mcp} MCP</Badge>
+          <Badge>{details.threads} threads</Badge>
+          <Badge>{details.skills} skills</Badge>
+          <Badge>{details.mcp} MCP</Badge>
         </div>
       </SettingRow>
       <SettingRow label="Account" description="Uses the Codex CLI account on this device">

@@ -27,7 +27,7 @@ export function AppearancePreviewGraphic({
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center overflow-hidden border border-border/70 bg-background",
+        "flex shrink-0 items-center justify-center overflow-hidden border border-border bg-background",
         styles.frame,
         styles.radius,
         className,

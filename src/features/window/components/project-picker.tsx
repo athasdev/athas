@@ -503,7 +503,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
                         <>
                           {folder.pinned ? <PinIcon className="fill-current text-primary" /> : null}
                           {folder.missing ? (
-                            <CommandItemBadge variant="warning">Missing</CommandItemBadge>
+                            <CommandItemBadge tone="warning">Missing</CommandItemBadge>
                           ) : null}
                         </>
                       }
@@ -560,7 +560,7 @@ const ProjectPicker = memo(({ isOpen, initialStep = "picker", onClose }: Project
                           <span
                             className={cn(
                               "size-2 rounded-full",
-                              connection.isConnected ? "bg-success" : "bg-subtle-foreground/40",
+                              connection.isConnected ? "bg-success" : "bg-subtle-foreground",
                             )}
                           />
                           <span className="sr-only">

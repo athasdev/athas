@@ -173,6 +173,11 @@ export interface AcpToolCallLocation {
   line?: number | null;
 }
 
+/** What a permission request is about to do, so the prompt can show it instead of describing it. */
+export type AcpPermissionPreview =
+  | { type: "diff"; path: string; oldText: string; newText: string }
+  | { type: "command"; command: string; cwd?: string };
+
 // Prompt turn types
 type StopReason = "end_turn" | "max_tokens" | "max_turn_requests" | "refusal" | "cancelled";
 
@@ -238,6 +243,7 @@ export type AcpEvent =
       resource: string;
       description: string;
       options: AcpPermissionOption[];
+      preview?: AcpPermissionPreview;
     }
   | {
       type: "session_complete";

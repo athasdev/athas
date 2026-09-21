@@ -468,8 +468,8 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
             <button
               type="button"
               className={cn(
-                "flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface/35 px-3 py-4 text-center text-subtle-foreground transition-colors hover:border-primary/50 hover:bg-primary/5",
-                isDraggingFile && "border-primary bg-primary/10 text-foreground",
+                "flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface px-3 py-4 text-center text-subtle-foreground transition-colors hover:border-primary hover:bg-primary-soft",
+                isDraggingFile && "border-primary bg-primary-soft text-foreground",
               )}
               onClick={() => void chooseDatabaseFile(selectedDbType)}
             >
@@ -630,7 +630,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
       ) : null}
 
       {isDraggingFile ? (
-        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-xl border border-primary bg-background/85 text-primary ui-text-sm backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-xl border border-primary bg-background text-primary ui-text-sm backdrop-blur-sm">
           Drop database file
         </div>
       ) : null}

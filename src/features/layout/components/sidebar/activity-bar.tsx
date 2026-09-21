@@ -242,7 +242,7 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
             tabIndex={0}
             aria-label="Resize activity rail"
             aria-orientation="vertical"
-            className="group absolute top-0 right-0 z-20 flex h-full w-workbench cursor-col-resize items-center justify-center hover:bg-primary/8"
+            className="group absolute top-0 right-0 z-20 flex h-full w-workbench cursor-col-resize items-center justify-center hover:bg-primary-soft"
             onMouseDown={handleResizeStart}
           >
             <div className="h-full w-px bg-transparent transition-colors duration-fast ease-smooth group-hover:bg-primary" />

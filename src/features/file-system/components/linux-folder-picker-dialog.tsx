@@ -17,6 +17,7 @@ import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
 import { IS_LINUX } from "@/utils/platform";
+import { SidebarListItem } from "@/ui/sidebar";
 
 interface FolderEntry {
   name: string;
@@ -225,17 +226,13 @@ export default function LinuxFolderPickerDialog() {
         ) : (
           <div className="max-h-80 overflow-y-auto py-1">
             {entries.map((entry) => (
-              <Button
+              <SidebarListItem
                 key={entry.path}
-                type="button"
-                variant="list"
                 onClick={() => navigateToPath(entry.path)}
-                width="full"
-                align="start"
+                leading={<FolderIcon className="text-subtle-foreground" />}
               >
-                <FolderIcon className="shrink-0 text-subtle-foreground" />
-                <span className="truncate text-foreground">{entry.name}</span>
-              </Button>
+                {entry.name}
+              </SidebarListItem>
             ))}
           </div>
         )}

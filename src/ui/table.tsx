@@ -38,7 +38,7 @@ function TableFooter({ className, ...props }: ComponentProps<"tfoot">) {
   return (
     <tfoot
       data-slot="table-footer"
-      className={cn("border-border border-t bg-surface/55 font-medium", className)}
+      className={cn("border-border border-t bg-surface font-medium", className)}
       {...props}
     />
   );
@@ -62,7 +62,7 @@ function TableHead({ className, ...props }: ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-8 px-1.5 text-left align-middle font-medium text-subtle-foreground whitespace-nowrap",
+        "h-8 px-1.5 text-left align-middle font-medium text-muted-foreground whitespace-nowrap",
         className,
       )}
       {...props}
@@ -84,7 +84,7 @@ function TableCaption({ className, ...props }: ComponentProps<"caption">) {
   return (
     <caption
       data-slot="table-caption"
-      className={cn("mt-3 text-subtle-foreground", className)}
+      className={cn("mt-3 text-muted-foreground", className)}
       {...props}
     />
   );

@@ -235,10 +235,7 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
       : [output.ename, output.evalue].filter(Boolean).join(": ");
     return (
       <pre
-        className={cn(
-          outputClassName,
-          "whitespace-pre-wrap border-destructive/45 text-destructive",
-        )}
+        className={cn(outputClassName, "whitespace-pre-wrap border-destructive text-destructive")}
       >
         <code>{traceback}</code>
       </pre>
@@ -418,7 +415,7 @@ function NotebookCellView({
       aria-current={isSelected ? "true" : undefined}
       className={cn(
         "group relative mb-4 grid grid-cols-[58px_minmax(0,1fr)] gap-2.5 rounded-md border border-transparent py-1 pr-1 outline-none transition-colors",
-        isSelected && "border-primary/45 bg-primary/5",
+        isSelected && "border-primary bg-primary-soft",
         isDragging && "z-10 opacity-45",
       )}
       onFocus={() => onSelect(cellIndex)}

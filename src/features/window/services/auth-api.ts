@@ -1,20 +1,19 @@
 import { invoke } from "@tauri-apps/api/core";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import { DEFAULT_API_BASE, getApiBase, isLocalApiBase } from "@/utils/api-base";
+import { tauriFetch } from "@/utils/tauri-fetch";
+import { getApiBase, isLocalApiBase } from "@/utils/api-base";
 
 const API_BASE = getApiBase();
 const DESKTOP_AUTH_POLL_INTERVAL_MS = 1500;
 const DESKTOP_AUTH_TIMEOUT_MS = 5 * 60 * 1000;
 const DESKTOP_SESSION_SECRET_HEADER = "X-Desktop-Session-Secret";
-const AUTH_API_BASE_STORAGE_KEY = "athas_auth_api_base";
 let authTokenCache: string | null | undefined;
-let authApiBaseCache: string | null | undefined;
 let collaborationDeviceIdCache: string | null = null;
 const COLLABORATION_DEVICE_ID_STORAGE_KEY = "athas_collaboration_device_id";
 const COLLABORATION_CLIENT_SEQ_STORAGE_KEY = "athas_collaboration_client_seq";
 
 interface DesktopAuthApiOptions {
   apiBase?: string;
+  signal?: AbortSignal;
 }
 
 export interface AuthUser {
@@ -266,9 +265,9 @@ type DesktopAuthPollResponse =
   | { status: "missing" };
 
 type DesktopAuthInitResponse = {
-  sessionId?: unknown;
-  pollSecret?: unknown;
-  loginUrl?: unknown;
+  sessionId: string;
+  pollSecret: string;
+  loginUrl: string;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -434,7 +433,20 @@ export class AuthApiError extends Error {
   }
 }
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    signal?.throwIfAborted();
+    const cancel = () => {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", cancel);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", cancel, { once: true });
+  });
+}
 
 export function isAuthInvalidError(error: unknown): boolean {
   return error instanceof AuthApiError && (error.status === 401 || error.status === 403);
@@ -452,72 +464,8 @@ function normalizeApiBase(apiBase: string): string {
   return apiBase.replace(/\/+$/, "");
 }
 
-function getStoredAuthApiBase(): string | null {
-  if (authApiBaseCache !== undefined) return authApiBaseCache;
-  if (typeof window === "undefined") {
-    authApiBaseCache = null;
-    return authApiBaseCache;
-  }
-
-  try {
-    const value = window.localStorage.getItem(AUTH_API_BASE_STORAGE_KEY)?.trim();
-    authApiBaseCache = value ? normalizeApiBase(value) : null;
-  } catch {
-    authApiBaseCache = null;
-  }
-
-  return authApiBaseCache;
-}
-
-function rememberAuthApiBase(apiBase: string): void {
-  const normalized = normalizeApiBase(apiBase);
-  authApiBaseCache = normalized;
-
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(AUTH_API_BASE_STORAGE_KEY, normalized);
-  } catch {
-    // Auth still works without localStorage; the in-memory cache covers this session.
-  }
-}
-
-function clearAuthApiBase(): void {
-  authApiBaseCache = null;
-
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(AUTH_API_BASE_STORAGE_KEY);
-  } catch {
-    // Ignore storage failures while clearing local auth state.
-  }
-}
-
 function getPreferredAuthApiBase(apiBase?: string): string {
-  return normalizeApiBase(apiBase ?? getStoredAuthApiBase() ?? API_BASE);
-}
-
-function getAuthApiBaseCandidates(apiBase?: string): string[] {
-  const preferred = getPreferredAuthApiBase(apiBase);
-  const candidates = [preferred];
-  const productionBase = normalizeApiBase(DEFAULT_API_BASE);
-
-  if (isLocalApiBase(preferred) && preferred !== productionBase) {
-    candidates.push(productionBase);
-  }
-
-  return candidates;
-}
-
-function shouldFallbackFromAuthApiBase(apiBase: string): boolean {
-  return (
-    isLocalApiBase(apiBase) && normalizeApiBase(apiBase) !== normalizeApiBase(DEFAULT_API_BASE)
-  );
-}
-
-function shouldTryNextAuthApiBase(apiBase: string, status: number): boolean {
-  return (
-    shouldFallbackFromAuthApiBase(apiBase) && (status === 401 || status === 403 || status === 404)
-  );
+  return normalizeApiBase(apiBase ?? API_BASE);
 }
 
 // Secure token storage via Rust backend
@@ -541,7 +489,6 @@ export const storeAuthToken = async (token: string): Promise<void> => {
 
 export const removeAuthToken = async (): Promise<void> => {
   authTokenCache = null;
-  clearAuthApiBase();
   await invoke("remove_auth_token");
 };
 
@@ -565,31 +512,10 @@ export async function authenticatedFetch(
     },
   };
 
-  let fallbackError: unknown = null;
-  for (const apiBase of getAuthApiBaseCandidates()) {
-    try {
-      const response = await tauriFetch(`${apiBase}${path}`, requestOptions);
-      if (shouldTryNextAuthApiBase(apiBase, response.status)) {
-        fallbackError = new AuthApiError(
-          `Auth request was rejected at ${apiBase}: ${response.status}`,
-          response.status,
-        );
-        continue;
-      }
-
-      rememberAuthApiBase(apiBase);
-      return response;
-    } catch (error) {
-      fallbackError = error;
-      if (!shouldFallbackFromAuthApiBase(apiBase)) {
-        throw error;
-      }
-    }
-  }
-
-  throw fallbackError instanceof Error
-    ? fallbackError
-    : new Error(getApiBaseUnavailableMessage(getPreferredAuthApiBase()));
+  return tauriFetch(`${getPreferredAuthApiBase()}${path}`, {
+    ...requestOptions,
+    signal: options.signal ?? AbortSignal.timeout(10000),
+  });
 }
 
 export async function fetchCurrentUser(tokenOverride?: string): Promise<AuthUser> {
@@ -1081,8 +1007,15 @@ export async function pushSettingsSyncSnapshot(input: {
 }
 
 export async function logoutFromServer(): Promise<void> {
+  const apiBase = getPreferredAuthApiBase();
   try {
-    await authenticatedFetch("/api/auth/logout", { method: "DELETE" });
+    const token = await getAuthToken();
+    if (!token) return;
+    await tauriFetch(`${apiBase}/api/auth/logout`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    });
   } catch {
     // Even if server logout fails, we still clear the local token
   }
@@ -1094,78 +1027,35 @@ export async function beginDesktopAuthSession(options: DesktopAuthApiOptions = {
   loginUrl: string;
   apiBase: string;
 }> {
-  let fallbackError: DesktopAuthError | null = null;
-
-  for (const apiBase of getAuthApiBaseCandidates(options.apiBase)) {
-    let response: Response;
-    try {
-      response = await tauriFetch(`${apiBase}/api/auth/desktop/session/init`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-    } catch (error) {
-      fallbackError = new DesktopAuthError(
-        "failed",
-        error instanceof Error
-          ? `${getApiBaseUnavailableMessage(apiBase)} ${error.message}`
-          : getApiBaseUnavailableMessage(apiBase),
-      );
-
-      if (shouldFallbackFromAuthApiBase(apiBase)) {
-        continue;
-      }
-
-      throw fallbackError;
-    }
-
-    if (response.status === 404) {
-      fallbackError = new DesktopAuthError(
-        "endpoint_unavailable",
-        "Desktop auth session endpoint is unavailable on this server.",
-      );
-
-      if (shouldFallbackFromAuthApiBase(apiBase)) {
-        continue;
-      }
-
-      throw fallbackError;
-    }
-
-    if (!response.ok) {
-      throw new DesktopAuthError(
-        "failed",
-        `Failed to initialize desktop sign-in (${response.status}).`,
-      );
-    }
-
-    const payload = (await response.json()) as DesktopAuthInitResponse;
-    const parsed = parseDesktopAuthInitResponse(payload);
-    if (!parsed) {
-      throw new DesktopAuthError("failed", "Invalid desktop sign-in initialization response.");
-    }
-
-    return {
-      ...parsed,
-      apiBase,
-    };
+  const apiBase = getPreferredAuthApiBase(options.apiBase);
+  let response: Response;
+  try {
+    response = await tauriFetch(`${apiBase}/api/auth/desktop/session/init`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: options.signal
+        ? AbortSignal.any([options.signal, AbortSignal.timeout(10000)])
+        : AbortSignal.timeout(10000),
+    });
+  } catch {
+    options.signal?.throwIfAborted();
+    throw new DesktopAuthError("failed", getApiBaseUnavailableMessage(apiBase));
   }
-
-  throw (
-    fallbackError ??
-    new DesktopAuthError(
-      "failed",
-      getApiBaseUnavailableMessage(getPreferredAuthApiBase(options.apiBase)),
-    )
-  );
+  if (response.status === 404) {
+    throw new DesktopAuthError(
+      "endpoint_unavailable",
+      "Desktop sign-in is unavailable on this server.",
+    );
+  }
+  if (!response.ok) {
+    throw new DesktopAuthError("failed", `Desktop sign-in failed (${response.status}).`);
+  }
+  const parsed = parseDesktopAuthInitResponse(await response.json());
+  if (!parsed) throw new DesktopAuthError("failed", "Invalid desktop sign-in response.");
+  return { ...parsed, apiBase };
 }
 
-function parseDesktopAuthInitResponse(payload: unknown): {
-  sessionId: string;
-  pollSecret: string;
-  loginUrl: string;
-} | null {
+function parseDesktopAuthInitResponse(payload: unknown): DesktopAuthInitResponse | null {
   if (!payload || typeof payload !== "object") return null;
   const candidate = payload as {
     sessionId?: unknown;
@@ -1216,17 +1106,23 @@ export async function waitForDesktopAuthToken(
   const apiBase = getPreferredAuthApiBase(options.apiBase);
   const deadline = Date.now() + timeoutMs;
 
+  let interval = DESKTOP_AUTH_POLL_INTERVAL_MS;
   while (Date.now() < deadline) {
+    options.signal?.throwIfAborted();
     const url = `${apiBase}/api/auth/desktop/session?session=${encodeURIComponent(sessionId)}`;
     let response: Response;
     try {
       response = await tauriFetch(url, {
         method: "GET",
+        signal: options.signal
+          ? AbortSignal.any([options.signal, AbortSignal.timeout(10000)])
+          : AbortSignal.timeout(10000),
         headers: {
           [DESKTOP_SESSION_SECRET_HEADER]: pollSecret,
         },
       });
     } catch (error) {
+      options.signal?.throwIfAborted();
       throw new DesktopAuthError(
         "failed",
         error instanceof Error
@@ -1258,7 +1154,6 @@ export async function waitForDesktopAuthToken(
     }
 
     if (parsed.status === "ready") {
-      rememberAuthApiBase(apiBase);
       return parsed.token;
     }
 
@@ -1273,7 +1168,8 @@ export async function waitForDesktopAuthToken(
       );
     }
 
-    await sleep(DESKTOP_AUTH_POLL_INTERVAL_MS);
+    await sleep(Math.min(interval, Math.max(0, deadline - Date.now())), options.signal);
+    interval = Math.min(interval * 1.5, 5000);
   }
 
   throw new DesktopAuthError("timeout", "Desktop sign-in timed out. Please try again.");
@@ -1285,6 +1181,5 @@ export const __test__ = {
   parseSubscriptionInfoResponse,
   parseCollaborationSseBlock,
   getApiBaseUnavailableMessage,
-  getAuthApiBaseCandidates,
-  shouldTryNextAuthApiBase,
+  getPreferredAuthApiBase,
 };

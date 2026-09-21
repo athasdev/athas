@@ -41,6 +41,9 @@ pub struct ToolCallData {
    pub error: Option<String>,
    pub timestamp: i64,
    pub is_complete: bool,
+   /// Presentation details (id, kind, status, locations, content offset) as JSON.
+   #[serde(default)]
+   pub meta: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -137,6 +140,7 @@ impl ChatHistoryRepository {
             [],
          )
          .map_err(|e| format!("Failed to create tool_calls table: {}", e))?;
+      let _ = conn.execute("ALTER TABLE tool_calls ADD COLUMN meta TEXT", []);
 
       let has_images: bool = conn
          .query_row(
@@ -248,7 +252,7 @@ impl ChatHistoryRepository {
       for tool_call in tool_calls {
          match conn.execute(
             "INSERT INTO tool_calls (message_id, name, input, output, error, timestamp, \
-             is_complete) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+             is_complete, meta) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
                tool_call.message_id,
                tool_call.name,
@@ -256,7 +260,8 @@ impl ChatHistoryRepository {
                tool_call.output,
                tool_call.error,
                tool_call.timestamp,
-               tool_call.is_complete
+               tool_call.is_complete,
+               tool_call.meta
             ],
          ) {
             Ok(_) => {}
@@ -444,8 +449,8 @@ impl ChatHistoryRepository {
          .collect::<Vec<_>>()
          .join(",");
       let query = format!(
-         "SELECT message_id, name, input, output, error, timestamp, is_complete
-          FROM tool_calls WHERE message_id IN ({})",
+         "SELECT message_id, name, input, output, error, timestamp, is_complete, meta
+          FROM tool_calls WHERE message_id IN ({}) ORDER BY id",
          placeholders
       );
 
@@ -465,6 +470,7 @@ impl ChatHistoryRepository {
                error: row.get(4)?,
                timestamp: row.get(5)?,
                is_complete: row.get(6)?,
+               meta: row.get(7)?,
             })
          })
          .map_err(|e| format!("Failed to query tool_calls: {}", e))?

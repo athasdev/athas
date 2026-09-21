@@ -51,7 +51,6 @@ function EffortPopover({
           <Button
             type="button"
             variant="ghost"
-            capitalize
             truncate
             aria-label="Reasoning effort"
             tooltip="Reasoning effort for the next message"
@@ -80,7 +79,7 @@ function EffortPopover({
             type="button"
             variant="ghost"
             iconOnly
-            size="compact"
+            size="xs"
             disabled={!canReset}
             onClick={() => defaultIndex !== undefined && onSelectIndex(defaultIndex)}
             aria-label="Reset reasoning effort"

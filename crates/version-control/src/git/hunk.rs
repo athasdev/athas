@@ -1,7 +1,5 @@
-use crate::git::{DiffLineType, GitHunk, IntoStringError};
-use anyhow::{Context, Result, bail};
-use std::{io::Write, path::Path, process::Command};
-use tempfile::NamedTempFile;
+use crate::git::{DiffLineType, GitHunk, IntoStringError, RepositoryHost};
+use anyhow::{Result, bail};
 
 fn create_patch_from_hunk(hunk: &GitHunk) -> Result<String, String> {
    let mut patch = String::new();
@@ -58,20 +56,13 @@ pub fn git_stage_hunk(repo_path: String, hunk: GitHunk) -> Result<(), String> {
 }
 
 fn _git_stage_hunk(repo_path: String, hunk: GitHunk) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
    let patch_content = create_patch_from_hunk(&hunk).map_err(|e| anyhow::anyhow!(e))?;
 
-   let mut temp_file = NamedTempFile::new().context("Failed to create temp file")?;
-   temp_file
-      .write_all(patch_content.as_bytes())
-      .context("Failed to write patch")?;
-   temp_file.flush().context("Failed to flush temp file")?;
-
-   let output = Command::new("git")
-      .current_dir(repo_dir)
-      .args(["apply", "--cached", temp_file.path().to_str().unwrap()])
-      .output()
-      .context("Failed to apply patch")?;
+   let output = RepositoryHost::detect(&repo_path)
+      .git()
+      .args(["apply", "--cached", "-"])
+      .stdin(patch_content.into_bytes())
+      .output()?;
 
    if !output.status.success() {
       bail!(
@@ -88,25 +79,13 @@ pub fn git_unstage_hunk(repo_path: String, hunk: GitHunk) -> Result<(), String> 
 }
 
 fn _git_unstage_hunk(repo_path: String, hunk: GitHunk) -> Result<()> {
-   let repo_dir = Path::new(&repo_path);
    let patch_content = create_patch_from_hunk(&hunk).map_err(|e| anyhow::anyhow!(e))?;
 
-   let mut temp_file = NamedTempFile::new().context("Failed to create temp file")?;
-   temp_file
-      .write_all(patch_content.as_bytes())
-      .context("Failed to write patch")?;
-   temp_file.flush().context("Failed to flush temp file")?;
-
-   let output = Command::new("git")
-      .current_dir(repo_dir)
-      .args([
-         "apply",
-         "--reverse",
-         "--cached",
-         temp_file.path().to_str().unwrap(),
-      ])
-      .output()
-      .context("Failed to apply reverse patch")?;
+   let output = RepositoryHost::detect(&repo_path)
+      .git()
+      .args(["apply", "--reverse", "--cached", "-"])
+      .stdin(patch_content.into_bytes())
+      .output()?;
 
    if !output.status.success() {
       bail!(

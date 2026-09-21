@@ -179,7 +179,7 @@ function SearchExcerptItemComponent({
     <section
       ref={sectionRef}
       data-excerpt-index={index}
-      className="relative isolate min-w-0 max-w-full border-border/60 border-b bg-background"
+      className="relative isolate min-w-0 max-w-full border-border border-b bg-background"
     >
       <SearchExcerptFileHeader
         excerpt={excerpt}

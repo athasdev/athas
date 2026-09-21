@@ -250,7 +250,7 @@ const TitleBar = ({
               onClick={handleCompactMenuToggle}
               variant="ghost"
               iconOnly
-              size="chrome"
+              size="sm"
               active={isCompactMenuVisible}
               aria-label="Menu"
               aria-expanded={isCompactMenuVisible}
@@ -278,7 +278,7 @@ const TitleBar = ({
       pressed={effectiveActivityBarExpanded}
       tooltip={effectiveActivityBarExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
       commandId="workbench.toggleActivitySidebar"
-      size="chrome"
+      size="sm"
       onPressedChange={(pressed) => {
         if (onActivityBarExpandedChange) onActivityBarExpandedChange(pressed);
         else void updateSetting("activityRailExpanded", pressed);
@@ -300,7 +300,7 @@ const TitleBar = ({
       />
       {currentBranch && rootFolderPath ? (
         <>
-          <span aria-hidden="true" className="shrink-0 text-subtle-foreground/60">
+          <span aria-hidden="true" className="shrink-0 text-subtle-foreground">
             /
           </span>
           <GitBranchManager

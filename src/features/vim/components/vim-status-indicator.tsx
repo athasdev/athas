@@ -13,7 +13,7 @@ const VimStatusIndicator = () => {
 
   return (
     <span
-      className="font-sans inline-flex h-6 select-none items-center self-center px-1.5 ui-text-caption leading-none text-subtle-foreground/80"
+      className="font-sans inline-flex h-6 select-none items-center self-center px-1.5 ui-text-caption leading-none text-subtle-foreground"
       aria-label={`Vim mode: ${modeDisplay}`}
     >
       {modeDisplay}

@@ -28,17 +28,17 @@ function ItemSeparator({ className, ...props }: ComponentProps<typeof Separator>
 }
 
 const itemVariants = cva(
-  "group/item flex w-full flex-wrap items-center gap-2 rounded-lg border px-2 py-1.5 font-sans ui-text-sm text-foreground outline-none transition-colors duration-fast focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 [a]:hover:bg-accent [button]:hover:bg-accent",
+  "group/item flex w-full flex-wrap items-center gap-2 rounded-md border px-2 py-1.5 font-sans ui-text-sm text-foreground outline-none transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-focus [a]:hover:bg-accent [button]:hover:bg-accent",
   {
     variants: {
       variant: {
         default: "border-transparent",
         outline: "border-border",
-        muted: "border-transparent bg-surface/55",
+        muted: "border-transparent bg-surface",
       },
       size: {
         default: "",
-        compact: "min-h-chrome-control rounded-md px-1 py-0.5",
+        compact: "min-h-chrome-control px-1 py-0.5",
       },
     },
     defaultVariants: {
@@ -73,7 +73,7 @@ const itemMediaVariants = cva(
     variants: {
       variant: {
         default: "bg-transparent",
-        icon: "[&_svg:not([class*='size-'])]:size-4",
+        icon: "text-muted-foreground [&_svg:not([class*='size-'])]:size-4",
         image: "size-6 overflow-hidden rounded-md [&_img]:size-full [&_img]:object-cover",
       },
     },
@@ -129,7 +129,7 @@ function ItemDescription({ className, ...props }: ComponentProps<"p">) {
     <p
       data-slot="item-description"
       className={cn(
-        "line-clamp-2 text-left font-sans ui-text-sm font-normal leading-normal text-subtle-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
+        "line-clamp-2 text-left font-sans ui-text-sm font-normal leading-normal text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
         className,
       )}
       {...props}

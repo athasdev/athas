@@ -227,7 +227,7 @@ export const FileExplorerViewport = forwardRef<
           data-file-tree-sticky-ancestors=""
         >
           <div
-            className="pointer-events-auto relative w-full min-w-0 overflow-hidden bg-background shadow-[0_-1px_0_0_var(--background)] after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-border/60"
+            className="pointer-events-auto relative w-full min-w-0 overflow-hidden bg-background shadow-[0_-1px_0_0_var(--background)] after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-border"
             style={{ height: stickyIndexes.length * rowHeight }}
           >
             {stickyIndexes.map((index) => (

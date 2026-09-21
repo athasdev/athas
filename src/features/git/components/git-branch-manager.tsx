@@ -572,7 +572,7 @@ const GitBranchManager = ({
                 data-branch-manager-trigger="true"
                 disabled={isLoading}
                 variant="ghost"
-                size="chrome"
+                size="sm"
                 align="start"
                 active={isDropdownOpen}
                 truncate
@@ -676,7 +676,6 @@ const GitBranchManager = ({
           onClick={() => void handleOpenDropdown()}
           disabled={isLoading}
           variant="ghost"
-          size="default"
           align="start"
           active={isDropdownOpen}
           truncate
@@ -877,7 +876,7 @@ const GitBranchManager = ({
                 </CommandFooterAction>
               ) : null}
               {selectionError ? (
-                <span className="ui-text-sm min-w-0 flex-1 truncate text-destructive/90">
+                <span className="ui-text-sm min-w-0 flex-1 truncate text-destructive">
                   {selectionError}
                 </span>
               ) : null}
@@ -915,7 +914,7 @@ function BranchRow({
       disabled={isLoading}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
+      accessory={isCurrent ? <CommandItemBadge tone="success">current</CommandItemBadge> : null}
       action={
         !isCurrent ? (
           <CommandItemAction
@@ -966,7 +965,7 @@ function BranchDropdownActions({
             type="button"
             variant="ghost"
             iconOnly
-            size="chrome"
+            size="sm"
             aria-label={`More actions for ${branch}`}
           />
         }
@@ -1022,7 +1021,7 @@ function RepositoryRow({
       onClick={onSelect}
       accessory={
         <>
-          {isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
+          {isCurrent ? <CommandItemBadge tone="success">current</CommandItemBadge> : null}
           {isAdded ? <CommandItemBadge>added</CommandItemBadge> : null}
         </>
       }
@@ -1057,7 +1056,7 @@ function WorktreeRow({
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
+      accessory={isCurrent ? <CommandItemBadge tone="success">current</CommandItemBadge> : null}
     />
   );
 }

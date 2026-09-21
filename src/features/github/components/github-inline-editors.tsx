@@ -24,7 +24,7 @@ export function GitHubInlineTitle({ value, onSave }: GitHubInlineTitleProps) {
     return (
       <button
         type="button"
-        className="block w-full rounded-lg text-left outline-none hover:bg-accent/35 focus-visible:ring-2 focus-visible:ring-ring"
+        className="block w-full rounded-lg text-left outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => setIsEditing(true)}
         aria-label="Edit title"
       >
@@ -114,7 +114,7 @@ export function GitHubInlineMarkdown({
       <div
         role="button"
         tabIndex={0}
-        className="min-h-12 rounded-lg outline-none hover:bg-accent/25 focus-visible:ring-2 focus-visible:ring-ring"
+        className="min-h-12 rounded-lg outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
         onClick={(event) => {
           const interactiveTarget = (event.target as HTMLElement).closest(
             "a, button, input, [role='button']",

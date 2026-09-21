@@ -134,7 +134,7 @@ export function ResizablePane({
       }
       className={cn(
         "group absolute top-0 z-30 flex h-full w-workbench cursor-col-resize items-center justify-center",
-        "transition-colors duration-fast ease-smooth hover:bg-primary/8",
+        "transition-colors duration-fast ease-smooth hover:bg-primary-soft",
       )}
       role="separator"
       aria-orientation="vertical"
@@ -173,7 +173,7 @@ export function ResizablePane({
       >
         <div
           className={cn(
-            "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border-border/70 border-y bg-background",
+            "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border-border border-y bg-background",
             position === "left" && "border-l border-r",
             position === "right" && "border-r",
             !hidden && position === "left" && "rounded-l-xl",

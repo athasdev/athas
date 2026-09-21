@@ -41,10 +41,10 @@ function MetadataRow({
 }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <span className="flex size-4 shrink-0 items-center justify-center text-subtle-foreground/70">
+      <span className="flex size-4 shrink-0 items-center justify-center text-subtle-foreground">
         {icon}
       </span>
-      <dt className="w-14 shrink-0 text-subtle-foreground/80">{label}</dt>
+      <dt className="w-14 shrink-0 text-subtle-foreground">{label}</dt>
       <dd
         className={cn("min-w-0 flex-1 truncate text-right text-foreground", mono && "font-mono")}
         title={value}
@@ -126,10 +126,11 @@ export function AgentSessionSidebarItem({
         align="start"
         sideOffset={10}
         collisionPadding={10}
-        className="z-10080 w-[19rem] overflow-hidden p-0"
+        size="wide"
+        variant="preview"
       >
-        <div className="flex min-w-0 items-start gap-3 bg-[color-mix(in_srgb,var(--accent)_45%,transparent)] p-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background ring-1 ring-border/60">
+        <div className="flex min-w-0 items-start gap-3 bg-accent p-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-background ring-1 ring-border">
             <ProviderIcon providerId={providerIconId} size={16} />
           </span>
           <div className="min-w-0 flex-1">
@@ -137,7 +138,7 @@ export function AgentSessionSidebarItem({
             <div className="mt-1 flex min-w-0 items-center gap-1.5 text-subtle-foreground ui-text-sm">
               <span className="min-w-0 truncate">{formattedDate}</span>
               {pinned ? (
-                <span className="flex shrink-0 items-center gap-1 rounded-full bg-background px-1.5 py-0.5 text-subtle-foreground ring-1 ring-border/60">
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-background px-1.5 py-0.5 text-subtle-foreground ring-1 ring-border">
                   <PinIcon className="size-3" />
                   Pinned
                 </span>
@@ -146,7 +147,7 @@ export function AgentSessionSidebarItem({
           </div>
         </div>
 
-        <dl className="flex flex-col gap-1.5 border-border/60 border-t p-3 ui-text-sm">
+        <dl className="flex flex-col gap-1.5 border-border border-t p-3 ui-text-sm">
           <MetadataRow
             icon={<SparkleIcon className="size-3.5" />}
             label="Agent"
@@ -170,7 +171,7 @@ export function AgentSessionSidebarItem({
 
         {workspacePath ? (
           <div
-            className="min-w-0 truncate border-border/60 border-t px-3 py-2 font-mono text-subtle-foreground/80 ui-text-sm"
+            className="min-w-0 truncate border-border border-t px-3 py-2 font-mono text-subtle-foreground ui-text-sm"
             title={workspacePath}
             dir="rtl"
           >
@@ -178,7 +179,7 @@ export function AgentSessionSidebarItem({
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between gap-2 border-border/60 border-t bg-[color-mix(in_srgb,var(--accent)_30%,transparent)] px-3 py-2 text-subtle-foreground/80 ui-text-sm">
+        <div className="flex items-center justify-between gap-2 border-border border-t bg-[color-mix(in_srgb,var(--accent)_30%,transparent)] px-3 py-2 text-subtle-foreground ui-text-sm">
           <span>Click to open</span>
           <span>Double-click for new window</span>
         </div>

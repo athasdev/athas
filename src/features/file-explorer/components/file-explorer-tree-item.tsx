@@ -77,7 +77,7 @@ function renderHighlightedLabel(label: string, query: string | undefined) {
   return (
     <>
       {label.slice(0, matchIndex)}
-      <mark className="file-tree-search-highlight rounded-md bg-primary/30 px-px text-inherit">
+      <mark className="file-tree-search-highlight rounded-md bg-primary-soft px-px text-inherit">
         {label.slice(matchIndex, matchIndex + trimmedQuery.length)}
       </mark>
       {label.slice(matchIndex + trimmedQuery.length)}
@@ -125,7 +125,7 @@ function FileExplorerTreeItemComponent({
           return (
             <span
               key={level}
-              className="file-tree-guide pointer-events-auto absolute w-[7px] -translate-x-[3px] opacity-90 before:absolute before:inset-y-0 before:left-[3px] before:w-px before:bg-subtle-foreground/18"
+              className="file-tree-guide pointer-events-auto absolute w-[7px] -translate-x-[3px] opacity-90 before:absolute before:inset-y-0 before:left-[3px] before:w-px before:bg-border"
               data-file-path={target?.path}
               data-is-dir={target?.isDir}
               data-path={target?.path}
@@ -241,9 +241,7 @@ function FileExplorerTreeItemComponent({
       trailing={
         formattedDirectorySize === null ? null : (
           <span className="inline-flex min-w-0 opacity-0 group-hover/file-tree-row:opacity-100">
-            <Badge variant="muted" font="mono" title={`Folder size: ${formattedDirectorySize}`}>
-              {formattedDirectorySize}
-            </Badge>
+            <Badge title={`Folder size: ${formattedDirectorySize}`}>{formattedDirectorySize}</Badge>
           </span>
         )
       }

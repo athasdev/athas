@@ -13,6 +13,27 @@ function message(overrides: Partial<Message>): Message {
 }
 
 describe("buildConversationHistory", () => {
+  it("recovers persisted tool-only turns without replaying interrupted actions", () => {
+    const history = buildConversationHistory([
+      message({
+        role: "assistant",
+        content: "",
+        toolCalls: [
+          {
+            name: "edit_file",
+            input: { path: "file.ts" },
+            output: { applied: true },
+            isComplete: true,
+            timestamp: new Date(0),
+          },
+          { name: "run_command", input: { command: "bun test" }, timestamp: new Date(0) },
+        ],
+      }),
+    ]);
+    expect(history).toHaveLength(1);
+    expect(history[0].content).toContain("applied");
+    expect(history[0].content).toContain("interrupted; verify current state before retrying");
+  });
   it("retains images and image-only user messages in subsequent requests", () => {
     const images = [{ mediaType: "image/png", data: "YWJj" }];
     expect(buildConversationHistory([message({ content: "", images })])).toEqual([

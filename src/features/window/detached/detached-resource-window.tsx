@@ -60,7 +60,7 @@ export default function DetachedResourceWindow() {
       icon={
         resource ? (
           avatarUrl ? (
-            <Avatar name={resource.name} src={avatarUrl} size="xs" />
+            <Avatar name={resource.name} src={avatarUrl} size="sm" />
           ) : (
             <ResourceBufferIcon buffer={resource} />
           )

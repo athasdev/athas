@@ -8,15 +8,20 @@ vi.mock("@/features/ai/hooks/use-agent-options", () => ({
     options: [
       { id: "claude-acp", name: "Claude Agent", isInstalled: false, action: "install" },
       { id: "codex", name: "Codex", isInstalled: true },
+      { id: "gemini", name: "Gemini CLI", isInstalled: true },
     ],
     isLoading: false,
+    loadError: null,
+    refresh: vi.fn(),
   }),
 }));
 vi.mock("@/features/ai/hooks/use-available-providers", () => ({
-  useAvailableProviders: () => [{ id: "openai", name: "OpenAI" }],
+  useAvailableProviders: () => [
+    { id: "openai", name: "OpenAI", models: [{ id: "gpt-test", name: "GPT Test" }] },
+  ],
 }));
 vi.mock("@/features/ai/integrations/codex/use-codex-settings", () => ({
-  useCodexSettings: () => ({ settings: { model: "gpt-test" } }),
+  useCodexSettings: () => ({ settings: { model: "codex-mini" } }),
 }));
 vi.mock("@/ui/dropdown", async (importOriginal) => {
   const original = await importOriginal<Record<string, unknown>>();
@@ -30,31 +35,43 @@ vi.mock("@/ui/dropdown", async (importOriginal) => {
     DropdownMenuRadioGroup: group,
     DropdownMenuRadioItem: group,
     DropdownMenuViewport: group,
-    DropdownMenuSub: group,
-    DropdownMenuSubTrigger: group,
-    DropdownMenuSubContent: group,
+    DropdownMenuEmpty: group,
+    DropdownMenuSeparator: () => <hr />,
+    DropdownMenuSearch: ({ placeholder }: { placeholder?: string }) => (
+      <input placeholder={placeholder} />
+    ),
   };
 });
 
-describe("Composer agent sources", () => {
-  it.each([
-    { agentId: "claude-acp", visible: "Claude Agent", hidden: "OpenAI", search: "agents" },
-    { agentId: "custom", visible: "OpenAI", hidden: "Claude Agent", search: "providers" },
-  ])("opens the matching source for $agentId", ({ agentId, visible, hidden, search }) => {
-    const markup = renderToStaticMarkup(
-      <ComposerAgentSelector
-        cwd="/project"
-        currentAgentId={agentId}
-        providerId="openai"
-        modelId="gpt-test"
-        sessionConfigOptions={[]}
-        onModelChange={vi.fn()}
-        onSessionConfigChange={vi.fn()}
-      />,
-    );
-    expect(markup).toContain(visible);
-    expect(markup).not.toContain(hidden);
-    expect(markup).toContain(`Search ${search}...`);
-    expect(markup).not.toContain("No models available");
+const render = (agentId: string) =>
+  renderToStaticMarkup(
+    <ComposerAgentSelector
+      cwd="/project"
+      currentAgentId={agentId}
+      providerId="openai"
+      modelId="gpt-test"
+      sessionConfigOptions={[]}
+      onModelChange={vi.fn()}
+      onSessionConfigChange={vi.fn()}
+    />,
+  );
+
+describe("Composer agent selector", () => {
+  it("labels the trigger with the chosen API model", () => {
+    const markup = render("custom");
+
+    expect(markup).toContain("GPT Test");
+    expect(markup).toContain("Select a model…");
+  });
+
+  it("labels a CLI agent session with its own model", () => {
+    expect(render("codex")).toContain("codex-mini");
+  });
+
+  it("lists installed agents and hides ones that still need installing", () => {
+    const markup = render("custom");
+
+    expect(markup).toContain("Gemini CLI");
+    expect(markup).not.toContain("Claude Agent");
   });
 });

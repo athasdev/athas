@@ -3,7 +3,7 @@ import "monaco-editor/min/vs/editor/editor.main.css";
 import "../styles/monaco-editor.css";
 import { editor as monacoEditor, Uri } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
-import { useEffect, useId, useLayoutEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useId, useLayoutEffect, useRef } from "react";
 import { cn } from "@/utils/cn";
 import { getMonacoScrollbarOptions } from "../engines/monaco/scrollbar-options";
 import { defineMonacoTheme } from "../engines/monaco/theme";
@@ -54,25 +54,19 @@ export function MonacoReadonlyView({
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<MonacoReadonlyEditor | null>(null);
   const modelRef = useRef<Monaco.editor.ITextModel | null>(null);
-  const contentRef = useRef(content);
-  const onReadyRef = useRef(onReady);
-  const onContentAppliedRef = useRef(onContentApplied);
-  const lineNumberFormatterRef = useRef(lineNumberFormatter);
+  const contentApplied = useEffectEvent((editor: MonacoReadonlyEditor, appended: boolean) =>
+    onContentApplied?.(editor, appended),
+  );
   const instanceId = useId();
   const { fontFamily, fontSize, lineHeight, themeId, editorItalicComments } =
     useMonacoEditorSettings();
-
-  contentRef.current = content;
-  onReadyRef.current = onReady;
-  onContentAppliedRef.current = onContentApplied;
-  lineNumberFormatterRef.current = lineNumberFormatter;
 
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const uri = Uri.parse(`athas-readonly://view/${instanceId.replace(/[^a-zA-Z0-9]/g, "")}`);
-    const model = monacoEditor.createModel(contentRef.current, languageId, uri);
+    const model = monacoEditor.createModel(content, languageId, uri);
     const editor = monacoEditor.create(container, {
       model,
       readOnly: true,
@@ -87,10 +81,7 @@ export function MonacoReadonlyView({
       folding,
       showFoldingControls: "always",
       glyphMargin,
-      lineNumbers: (lineNumber) =>
-        lineNumberFormatterRef.current
-          ? lineNumberFormatterRef.current(lineNumber)
-          : String(lineNumber),
+      lineNumbers: lineNumberFormatter ?? "on",
       lineDecorationsWidth: 12,
       minimap: { enabled: false },
       stickyScroll: { enabled: false },
@@ -125,7 +116,7 @@ export function MonacoReadonlyView({
       editorAPI.clearActiveFindAdapter(ownerId);
     });
 
-    const cleanup = onReadyRef.current?.(editor);
+    const cleanup = onReady?.(editor);
 
     return () => {
       cleanup?.();
@@ -141,11 +132,12 @@ export function MonacoReadonlyView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instanceId, languageId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const editor = editorRef.current;
     const model = modelRef.current;
     if (!editor || !model || model.isDisposed()) return;
 
+    editor.updateOptions({ lineNumbers: lineNumberFormatter ?? "on" });
     const previous = model.getValue();
     if (previous === content) return;
 
@@ -167,8 +159,8 @@ export function MonacoReadonlyView({
     } else {
       model.setValue(content);
     }
-    onContentAppliedRef.current?.(editor, appended);
-  }, [content]);
+    contentApplied(editor, appended);
+  }, [content, lineNumberFormatter]);
 
   useEffect(() => {
     editorRef.current?.updateOptions({

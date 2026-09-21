@@ -85,7 +85,7 @@ export function FloatingPopoverContent({
       exit={shouldAnimate ? exit : { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
       transition={shouldAnimate ? transition : instantTransition}
       className={cn(
-        "pointer-events-auto fixed z-10070 min-w-60 max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-lg bg-surface/98 p-1 font-sans text-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm overscroll-none ui-text-chrome",
+        "pointer-events-auto fixed z-10070 min-w-60 max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-lg bg-overlay p-1 font-sans text-foreground shadow-(--shadow-popover) ring-1 ring-border outline-none overscroll-none ui-text-chrome",
         className,
       )}
       style={style}
@@ -139,7 +139,7 @@ function PopoverContent({
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "z-10070 flex origin-(--transform-origin) flex-col gap-2 rounded-lg bg-surface/98 p-2 font-sans text-foreground shadow-(--shadow-card) ring-1 ring-border/50 outline-none backdrop-blur-sm transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0 ui-text-chrome",
+            "z-10070 flex origin-(--transform-origin) flex-col gap-2 rounded-lg bg-overlay p-2 font-sans text-foreground shadow-(--shadow-popover) ring-1 ring-border outline-none transition-opacity duration-75 data-ending-style:opacity-0 data-starting-style:opacity-0 ui-text-chrome",
             OVERLAY_MAX_WIDTH,
             OVERLAY_SIZES[size],
             className,
@@ -185,7 +185,7 @@ function PopoverDescription({ className, ...props }: PopoverPrimitive.Descriptio
   return (
     <PopoverPrimitive.Description
       data-slot="popover-description"
-      className={cn("text-subtle-foreground", className)}
+      className={cn("text-muted-foreground", className)}
       {...props}
     />
   );

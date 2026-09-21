@@ -32,7 +32,7 @@ function SidebarTreeGuides({
         return (
           <span
             key={level}
-            className="file-tree-guide pointer-events-auto absolute w-[7px] -translate-x-[3px] opacity-90 before:absolute before:inset-y-0 before:left-[3px] before:w-px before:bg-subtle-foreground/18"
+            className="file-tree-guide pointer-events-auto absolute w-[7px] -translate-x-[3px] opacity-90 before:absolute before:inset-y-0 before:left-[3px] before:w-px before:bg-border"
             style={{
               left: `calc(${baseIndent + level * indentSize}px + 7px)`,
               top: startsHere ? "4px" : "0",
@@ -118,10 +118,14 @@ export const SidebarTree = forwardRef<HTMLDivElement, SidebarTreeProps>(function
             break;
           }
           if (expanded === "true") {
-            const child = items
-              .slice(currentIndex + 1)
-              .find((item) => getTreeItemDepth(item) === currentDepth + 1);
-            focusItem(child);
+            for (const candidate of items.slice(currentIndex + 1)) {
+              const depth = getTreeItemDepth(candidate);
+              if (depth <= currentDepth) break;
+              if (depth === currentDepth + 1) {
+                focusItem(candidate);
+                break;
+              }
+            }
           }
           break;
         case "ArrowLeft":
@@ -213,7 +217,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
     return (
       <div
         className={cn(
-          "file-tree-item relative flex w-full min-w-full items-center before:pointer-events-none before:absolute before:inset-0 before:z-0 before:rounded-chrome before:bg-transparent hover:before:bg-accent/68",
+          "file-tree-item relative flex w-full min-w-full items-center before:pointer-events-none before:absolute before:inset-0 before:z-0 before:rounded-chrome before:bg-transparent hover:before:bg-accent",
           rowHeight === "file-tree" && "h-(--file-tree-row-height)",
         )}
         data-sidebar-tree-row=""
@@ -241,7 +245,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
           data-depth={depth}
           tabIndex={tabIndex}
           className={cn(
-            "file-tree-row font-sans ui-text-sm flex w-full min-w-0 flex-1 select-none items-center whitespace-nowrap rounded-chrome border border-transparent bg-transparent text-left text-foreground outline-none transition-colors duration-fast ease-smooth focus-visible:border-primary/40 gap-1.5 px-1.5 py-1 leading-row",
+            "file-tree-row font-sans ui-text-sm flex w-full min-w-0 flex-1 select-none items-center whitespace-nowrap rounded-chrome border border-transparent bg-transparent text-left text-foreground outline-none transition-colors duration-fast ease-smooth focus-visible:border-primary gap-1.5 px-1.5 py-1 leading-row",
             active && "bg-selected",
             action && "pr-0",
             className,
@@ -262,7 +266,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
             <span className="relative z-1 flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden">
               <span className="min-w-0 truncate">{label}</span>
               {description ? (
-                <span className="min-w-0 flex-1 truncate text-subtle-foreground/80">
+                <span className="min-w-0 flex-1 truncate text-subtle-foreground">
                   {description}
                 </span>
               ) : null}

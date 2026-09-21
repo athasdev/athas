@@ -1,5 +1,5 @@
 import { getVersion } from "@tauri-apps/api/app";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { tauriFetch } from "@/utils/tauri-fetch";
 import { arch, platform } from "@tauri-apps/plugin-os";
 import { load, type Store } from "@tauri-apps/plugin-store";
 import { getSettingsStore } from "@/features/settings/lib/settings-persistence";

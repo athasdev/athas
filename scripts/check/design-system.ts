@@ -28,6 +28,13 @@ const WIDTH_UTILITY = /(?:^|\s)(?:min-|max-)?w-(?!full\b|fit\b|auto\b|0\b)[\w./[
 const HEIGHT_UTILITY = /(?:^|\s)max-h-[\w./[\]()-]+/;
 const ARBITRARY_SIZE = /\b(?:text|h|w|gap|p[xytblr]?)-\[[\d.]+(?:px|rem)\]/g;
 const RAW_HEX = /(?<![\w&])#[0-9a-fA-F]{6}\b/g;
+/**
+ * A theme color with an opacity modifier. The token layer already carries the
+ * tinted and de-emphasised steps (`*-soft`, the text ramp, `focus`), so an
+ * ad-hoc alpha is a private colour the theme cannot control.
+ */
+const ALPHA_COLOR =
+  /\b(?:bg|text|border|ring|outline|divide|from|via|to|fill|stroke|shadow|placeholder)-(?:background|surface|overlay|foreground|muted-foreground|subtle-foreground|border|border-strong|accent|selected|primary|destructive|success|warning|info|git-[a-z-]+)\/\d+\b/g;
 
 interface Finding {
   file: string;
@@ -176,6 +183,14 @@ function checkFile(file: string, findings: Finding[]) {
         line: i + 1,
         rule: "arbitrary-size",
         detail: `"${m[0]}" — use a token-backed utility (ui-text-*, spacing scale).`,
+      });
+    }
+    for (const m of text.matchAll(ALPHA_COLOR)) {
+      findings.push({
+        file,
+        line: i + 1,
+        rule: "alpha-color",
+        detail: `"${m[0]}" — use the token's semantic step instead (a *-soft fill, the text ramp, ring-focus).`,
       });
     }
     for (const m of text.matchAll(RAW_HEX)) {

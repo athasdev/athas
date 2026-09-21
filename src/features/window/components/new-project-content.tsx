@@ -429,7 +429,7 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
           ) : null}
 
           {destinationPath ? (
-            <Card variant="muted">
+            <Card>
               <CardHeader>
                 <CardTitle>Project location</CardTitle>
                 <CardDescription className="break-all font-mono">{destinationPath}</CardDescription>

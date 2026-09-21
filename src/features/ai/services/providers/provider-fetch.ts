@@ -1,4 +1,4 @@
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { tauriFetch } from "@/utils/tauri-fetch";
 
 type TauriFetchOptions = Parameters<typeof tauriFetch>[1];
 type TauriFetchResponse = Awaited<ReturnType<typeof tauriFetch>>;

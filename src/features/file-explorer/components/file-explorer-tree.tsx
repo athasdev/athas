@@ -1653,7 +1653,8 @@ function FileExplorerTreeComponent({
               <Button
                 onClick={() => void handleDeleteConfirm()}
                 disabled={isDeletingPath}
-                variant="danger"
+                variant="ghost"
+                tone="danger"
               >
                 {isDeletingPath ? "Deleting..." : "Delete"}
               </Button>

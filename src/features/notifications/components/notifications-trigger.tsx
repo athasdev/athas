@@ -46,7 +46,7 @@ export const NotificationsTrigger = () => {
           type="button"
           variant="ghost"
           iconOnly
-          size="chrome"
+          size="sm"
           onClick={() => {
             setInitialCategory("all");
             setIsCommandVisible(true);

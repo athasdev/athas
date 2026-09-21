@@ -8,10 +8,10 @@ type ExtensionDiffNode = Extract<ExtensionViewNode, { type: "diff" }>;
 type ExtensionDiffPreviewProps = Omit<ExtensionDiffNode, "type">;
 
 const lineClassNames: Record<ExtensionViewDiffLineType, string> = {
-  added: "bg-git-added/14 shadow-[inset_2px_0_0_var(--git-added)]",
-  removed: "bg-git-deleted/14 shadow-[inset_2px_0_0_var(--git-deleted)]",
+  added: "bg-git-added-soft shadow-[inset_2px_0_0_var(--git-added)]",
+  removed: "bg-git-deleted-soft shadow-[inset_2px_0_0_var(--git-deleted)]",
   context: "bg-background",
-  header: "bg-surface/60 text-subtle-foreground",
+  header: "bg-surface text-subtle-foreground",
 };
 
 function lineMarker(type: ExtensionViewDiffLineType): string {
@@ -33,10 +33,10 @@ export function ExtensionDiffPreview({
   return (
     <figure
       data-slot="diff-preview"
-      className="min-w-0 overflow-hidden rounded-lg border border-border/70 bg-background"
+      className="min-w-0 overflow-hidden rounded-lg border border-border bg-background"
       aria-label={`Diff for ${filePath}, ${additions} additions and ${deletions} deletions`}
     >
-      <figcaption className="flex min-h-8 min-w-0 items-center gap-2 border-border/70 border-b bg-surface/45 px-2.5 py-1.5 ui-text-sm">
+      <figcaption className="flex min-h-8 min-w-0 items-center gap-2 border-border border-b bg-surface px-2.5 py-1.5 ui-text-sm">
         <span className="min-w-0 flex-1">
           <span className="block truncate font-mono text-foreground" title={filePath}>
             {filePath}
@@ -74,7 +74,7 @@ export function ExtensionDiffPreview({
                 <span
                   role="cell"
                   aria-hidden="true"
-                  className="col-span-3 border-border/60 border-r px-2 py-0.5 text-right text-subtle-foreground"
+                  className="col-span-3 border-border border-r px-2 py-0.5 text-right text-subtle-foreground"
                 >
                   @@
                 </span>
@@ -87,14 +87,14 @@ export function ExtensionDiffPreview({
                 <span
                   role="cell"
                   aria-hidden="true"
-                  className="select-none border-border/60 border-r px-2 py-0.5 text-right text-subtle-foreground tabular-nums"
+                  className="select-none border-border border-r px-2 py-0.5 text-right text-subtle-foreground tabular-nums"
                 >
                   {line.oldLine ?? ""}
                 </span>
                 <span
                   role="cell"
                   aria-hidden="true"
-                  className="select-none border-border/60 border-r px-2 py-0.5 text-right text-subtle-foreground tabular-nums"
+                  className="select-none border-border border-r px-2 py-0.5 text-right text-subtle-foreground tabular-nums"
                 >
                   {line.newLine ?? ""}
                 </span>
@@ -119,7 +119,7 @@ export function ExtensionDiffPreview({
         ))}
       </div>
       {truncated ? (
-        <div className="border-border/70 border-t bg-surface/35 px-2.5 py-1.5 text-subtle-foreground ui-text-sm">
+        <div className="border-border border-t bg-surface px-2.5 py-1.5 text-subtle-foreground ui-text-sm">
           Diff preview truncated
         </div>
       ) : null}

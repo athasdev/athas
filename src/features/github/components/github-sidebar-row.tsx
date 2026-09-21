@@ -2,13 +2,12 @@ import { type DragEventHandler, type MouseEventHandler, type ReactNode, useCallb
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
 import { ClockIcon } from "@/ui/icons";
 import { SidebarListItem } from "@/ui/sidebar";
+import Badge, { type BadgeTone } from "@/ui/badge";
 import { cn } from "@/utils/cn";
-
-type PreviewBadgeTone = "default" | "accent" | "success" | "warning" | "error" | "muted";
 
 export interface GitHubSidebarPreviewBadge {
   label: ReactNode;
-  tone?: PreviewBadgeTone;
+  tone?: BadgeTone;
 }
 
 interface GitHubSidebarPreviewDetail {
@@ -42,23 +41,6 @@ interface GitHubSidebarRowProps {
   onContextMenu?: MouseEventHandler<HTMLElement>;
   onDragStart?: DragEventHandler<HTMLElement>;
   onPrefetch?: () => void;
-}
-
-function previewBadgeClassName(tone: PreviewBadgeTone = "default") {
-  switch (tone) {
-    case "accent":
-      return "bg-primary/12 text-primary";
-    case "success":
-      return "bg-success/12 text-success";
-    case "warning":
-      return "bg-warning/12 text-warning";
-    case "error":
-      return "bg-destructive/12 text-destructive";
-    case "muted":
-      return "bg-accent/70 text-subtle-foreground";
-    default:
-      return "bg-background text-subtle-foreground";
-  }
 }
 
 export function GitHubSidebarRow({
@@ -121,12 +103,13 @@ export function GitHubSidebarRow({
         align="start"
         sideOffset={10}
         collisionPadding={10}
-        className="z-10080 w-84 overflow-hidden p-0"
+        size="wide"
+        variant="preview"
       >
-        <div className="border-border/70 border-b p-3">
+        <div className="border-border border-b p-3">
           <div className="flex min-w-0 items-start gap-2.5">
             {preview.icon ? (
-              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-background">
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent">
                 {preview.icon}
               </span>
             ) : null}
@@ -144,15 +127,9 @@ export function GitHubSidebarRow({
           {preview.badges?.length ? (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {preview.badges.map((badge, index) => (
-                <span
-                  key={index}
-                  className={cn(
-                    "inline-flex h-5 max-w-full items-center rounded-full px-1.5 leading-none ui-text-sm",
-                    previewBadgeClassName(badge.tone),
-                  )}
-                >
-                  <span className="truncate">{badge.label}</span>
-                </span>
+                <Badge key={index} tone={badge.tone} truncate>
+                  {badge.label}
+                </Badge>
               ))}
             </div>
           ) : null}
@@ -169,7 +146,7 @@ export function GitHubSidebarRow({
                         type="button"
                         aria-label={detail.actionLabel}
                         className={cn(
-                          "-mx-1 -my-0.5 max-w-full truncate rounded px-1 py-0.5 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
+                          "-mx-1 -my-0.5 max-w-full truncate rounded-sm px-1 py-0.5 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
                           detail.mono && "font-mono",
                           detail.className,
                         )}
@@ -189,7 +166,7 @@ export function GitHubSidebarRow({
           </dl>
         ) : null}
         {preview.footer ? (
-          <div className="border-border/70 border-t px-3 py-2 text-subtle-foreground ui-text-sm">
+          <div className="border-border border-t px-3 py-2 text-subtle-foreground ui-text-sm">
             {preview.footer}
           </div>
         ) : null}

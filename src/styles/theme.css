@@ -1,3 +1,30 @@
+/*
+ * Design tokens.
+ *
+ * A theme file supplies the base palette (background, surface, foreground,
+ * muted-foreground, subtle-foreground, border, accent, selected, primary, and
+ * optionally the status, git, cursor and terminal colors). Everything else the
+ * UI needs is derived here so every theme, including custom ones, renders the
+ * same system.
+ *
+ * Planes, from recessed to floating:
+ *   surface    chrome: sidebars, panels, cards, inputs, footers
+ *   background content: the editor and document areas
+ *   overlay    floating: menus, popovers, tooltips, dialogs
+ *
+ * Interaction fills: accent is the hover fill, selected is the active or
+ * selected fill. Both sit on either plane.
+ *
+ * Text ramp: foreground > muted-foreground > subtle-foreground. Use the ramp,
+ * never an opacity modifier, to de-emphasise text.
+ *
+ * Borders: border is the only hairline. border-strong marks a focused or
+ * emphasised edge. Prefer plane contrast over borders.
+ *
+ * Status: primary, success, warning, destructive, info. Each has a `-soft`
+ * tint for fills behind status text. Text on a solid primary fill uses
+ * primary-foreground.
+ */
 @theme inline {
   --font-sans: var(--app-font-family);
   --font-heading: "Inter Display", var(--app-font-family);
@@ -20,52 +47,62 @@
   --spacing-chrome-loose: var(--athas-chrome-gap-loose);
   --spacing-chrome-inline: var(--athas-chrome-padding-inline);
 
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xs: calc(var(--radius) * 0.5);
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) * 1.5);
+  --radius-xl: calc(var(--radius) * 2);
+  --radius-2xl: calc(var(--radius) * 3);
+  --radius-3xl: calc(var(--radius) * 4);
+  --radius-4xl: calc(var(--radius) * 5);
   --radius-chrome: var(--athas-chrome-radius);
 
   --ease-smooth: var(--app-ease-smooth);
 
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-overlay: var(--overlay);
+  --color-scrim: var(--scrim);
   --color-foreground: var(--foreground);
   --color-muted-foreground: var(--app-muted-foreground);
   --color-subtle-foreground: var(--app-subtle-foreground);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
-  --color-attachment: var(--attachment-background);
-  --color-attachment-hover: var(--attachment-hover);
-  --color-attachment-media: var(--attachment-media);
   --color-selected: var(--selected);
   --color-selection: var(--selection);
+  --color-focus: var(--focus-ring);
   --color-scrollbar-thumb: var(--app-scrollbar-thumb);
   --color-scrollbar-thumb-hover: var(--app-scrollbar-thumb-hover);
 
-  --color-tab-hover: var(--tab-hover-bg);
-
   --color-primary: var(--app-primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
 
   --color-cursor: var(--cursor);
   --color-cursor-vim-normal: var(--cursor-vim-normal);
   --color-cursor-vim-insert: var(--cursor-vim-insert);
 
   --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
   --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
 
   --color-git-modified: var(--git-modified);
+  --color-git-modified-soft: var(--git-modified-soft);
   --color-git-modified-staged: var(--git-modified-staged);
   --color-git-added: var(--git-added);
+  --color-git-added-soft: var(--git-added-soft);
   --color-git-deleted: var(--git-deleted);
+  --color-git-deleted-soft: var(--git-deleted-soft);
   --color-git-untracked: var(--git-untracked);
   --color-git-renamed: var(--git-renamed);
+  --color-git-renamed-soft: var(--git-renamed-soft);
 
   --color-syntax-comment: var(--syntax-comment);
   --color-syntax-keyword: var(--syntax-keyword);
@@ -142,8 +179,8 @@
     --athas-chrome-gap: 4px;
     --athas-chrome-gap-loose: 6px;
     --athas-chrome-padding-inline: 8px;
-    --athas-chrome-radius: 6px;
-    --radius: 10px;
+    --athas-chrome-radius: var(--radius);
+    --radius: 0.25rem;
     --app-duration-fast: 150ms;
     --app-duration-normal: 200ms;
     --app-ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
@@ -152,21 +189,34 @@
     --app-subtle-foreground: var(--subtle-foreground);
     --app-primary: var(--primary);
     --athas-navigation-material: var(--surface);
-    --border-strong: color-mix(in srgb, var(--border) 72%, var(--foreground) 28%);
-    --composer-background: linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--background) 88%, var(--surface)),
-      color-mix(in srgb, var(--background) 64%, var(--surface))
-    );
-    --attachment-background: color-mix(in srgb, var(--foreground) 3%, var(--surface));
-    --attachment-hover: color-mix(in srgb, var(--foreground) 7%, var(--surface));
-    --attachment-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 50%, transparent);
-    --attachment-hover-shadow: inset 0 0 0 1px
-      color-mix(in srgb, var(--border-strong) 65%, transparent);
-    --attachment-media: color-mix(in srgb, var(--foreground) 6%, var(--surface));
-    --success: var(--primary);
-    --warning: var(--muted-foreground);
-    --tab-hover-bg: color-mix(in srgb, var(--accent) 72%, transparent);
+
+    /* Optional theme colors, derived from the palette every theme must have. */
+    --destructive: var(--terminal-red, var(--primary));
+    --success: var(--terminal-green, var(--primary));
+    --warning: var(--terminal-yellow, var(--primary));
+    --info: var(--terminal-blue, var(--primary));
+    --selection: color-mix(in srgb, var(--primary) 25%, transparent);
+    --cursor: var(--foreground);
+    --cursor-vim-normal: color-mix(in srgb, var(--primary) 60%, transparent);
+    --cursor-vim-insert: var(--primary);
+
+    /* Derived tokens. */
+    --overlay: var(--background);
+    --scrim: rgb(0 0 0 / 0.24);
+    --border-strong: color-mix(in srgb, var(--border) 60%, var(--foreground) 40%);
+    --focus-ring: color-mix(in srgb, var(--primary) 40%, transparent);
+    --primary-hover: color-mix(in srgb, var(--primary) 88%, var(--foreground) 12%);
+    --primary-foreground: var(--background);
+    --primary-soft: color-mix(in srgb, var(--primary) 12%, transparent);
+    --destructive-soft: color-mix(in srgb, var(--destructive) 12%, transparent);
+    --success-soft: color-mix(in srgb, var(--success) 12%, transparent);
+    --warning-soft: color-mix(in srgb, var(--warning) 14%, transparent);
+    --info-soft: color-mix(in srgb, var(--info) 12%, transparent);
+    --git-added-soft: color-mix(in srgb, var(--git-added) 16%, transparent);
+    --git-deleted-soft: color-mix(in srgb, var(--git-deleted) 16%, transparent);
+    --git-modified-soft: color-mix(in srgb, var(--git-modified) 16%, transparent);
+    --git-renamed-soft: color-mix(in srgb, var(--git-renamed) 16%, transparent);
+
     --shadow-card:
       0 1px 2px rgb(0 0 0 / 0.05), 0 2px 4px rgb(0 0 0 / 0.02), 0 0 0 0.5px rgb(0 0 0 / 0.08);
     --shadow-popover:
@@ -210,12 +260,9 @@
     outline-offset: -1px;
   }
 
-  .athas-sidebar-rail {
-    --athas-sidebar-rail-foreground: var(--muted-foreground);
-    --subtle-foreground: var(--athas-sidebar-rail-foreground);
-  }
-
   :root[data-theme-type="dark"] {
+    --overlay: color-mix(in srgb, var(--background) 92%, var(--foreground) 8%);
+    --scrim: rgb(0 0 0 / 0.45);
     --shadow-card:
       0 1px 2px rgb(0 0 0 / 0.24), 0 2px 4px rgb(0 0 0 / 0.18), 0 0 0 0.5px rgb(255 255 255 / 0.1);
     --shadow-popover:

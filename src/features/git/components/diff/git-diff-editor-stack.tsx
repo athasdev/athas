@@ -102,13 +102,16 @@ function buildGitHubReferenceUrl(remoteUrl: string, gitRef: string): string | nu
 }
 
 const GitDiffEditorStack = memo(function GitDiffEditorStack({
+  bufferId,
   multiDiff,
 }: {
+  bufferId: string;
   multiDiff: MultiFileDiff;
 }) {
-  const activeBuffer = useBufferStore((state) => {
-    return getBufferById(state.buffers, state.activeBufferId);
+  const diffBuffer = useBufferStore((state) => {
+    return getBufferById(state.buffers, bufferId);
   });
+  const isActiveBuffer = useBufferStore((state) => state.activeBufferId === bufferId);
   const updateBufferContent = useBufferStore.use.actions().updateBufferContent;
   const closeBuffer = useBufferStore.use.actions().closeBuffer;
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
@@ -119,8 +122,8 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const [showWhitespace, setShowWhitespace] = useState(false);
   const isWorkingTree = multiDiff.commitHash === "working-tree";
   const isCommitDiff = /^[0-9a-f]{7,40}$/i.test(multiDiff.commitHash);
-  const isWorkingTreeBuffer = activeBuffer?.path === "diff://working-tree/all-files";
-  const isActiveMultiDiff = activeBuffer?.type === "diff" && activeBuffer.diffData === multiDiff;
+  const isWorkingTreeBuffer = diffBuffer?.path === "diff://working-tree/all-files";
+  const isActiveMultiDiff = isActiveBuffer && diffBuffer?.type === "diff";
   const isRefreshingRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const diffStackScrollRef = useRef<HTMLDivElement>(null);
@@ -216,14 +219,14 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const handleSelectFile = useCallback(
     (sectionKey: string) => {
       const nextMultiDiff = selectMultiDiffFile(multiDiff, sectionKey);
-      if (activeBuffer?.type === "diff" && nextMultiDiff !== multiDiff) {
-        updateBufferContent(activeBuffer.id, activeBuffer.content, false, nextMultiDiff);
+      if (diffBuffer?.type === "diff" && nextMultiDiff !== multiDiff) {
+        updateBufferContent(diffBuffer.id, diffBuffer.content, false, nextMultiDiff);
       }
       window.requestAnimationFrame(() => {
         diffStackScrollRef.current?.scrollTo({ top: 0, left: 0 });
       });
     },
-    [activeBuffer, multiDiff, updateBufferContent],
+    [diffBuffer, multiDiff, updateBufferContent],
   );
 
   useEffect(() => {
@@ -291,7 +294,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       !isWorkingTree ||
       !isWorkingTreeBuffer ||
       !rootFolderPath ||
-      !activeBuffer ||
+      !diffBuffer ||
       !selectedDiffFile
     ) {
       return;
@@ -313,13 +316,13 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       }
 
       if (!hasRenderableDiff(nextDiff)) {
-        closeBuffer(activeBuffer.id);
+        closeBuffer(diffBuffer.id);
         return;
       }
 
       const nextFileKey = `${isStaged ? "staged" : "unstaged"}:${selectedFilePath}`;
       updateBufferContent(
-        activeBuffer.id,
+        diffBuffer.id,
         "",
         false,
         createSingleFileWorkingTreeDiff({
@@ -333,7 +336,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       isRefreshingRef.current = false;
     }
   }, [
-    activeBuffer,
+    diffBuffer,
     closeBuffer,
     isWorkingTree,
     isWorkingTreeBuffer,

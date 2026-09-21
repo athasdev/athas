@@ -42,7 +42,7 @@ export default function ColumnFilters({
   if (filters.length === 0) return null;
 
   return (
-    <div className={databaseCardClassName("mx-3 mb-2 bg-surface/60 px-3 py-2")}>
+    <div className={databaseCardClassName("mx-3 mb-2 bg-surface px-3 py-2")}>
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-sans ui-text-sm text-subtle-foreground">
@@ -99,7 +99,8 @@ export default function ColumnFilters({
             )}
             <Button
               onClick={() => onRemove(index)}
-              variant="danger"
+              variant="ghost"
+              tone="danger"
               iconOnly
               aria-label="Remove filter"
             >

@@ -34,6 +34,7 @@ import {
   SignOutIcon,
   UserIcon,
   UsersIcon,
+  XIcon,
 } from "@/ui/icons";
 import { GithubMark } from "@/ui/brand-marks";
 
@@ -65,7 +66,7 @@ export const AccountMenu = memo(function AccountMenu() {
   const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
 
   const [isOpen, setIsOpen] = useState(false);
-  const { signIn, isSigningIn } = useDesktopSignIn({
+  const { signIn, isSigningIn, cancel, reopen } = useDesktopSignIn({
     onSuccess: () => setIsOpen(false),
   });
   const settingsShortcut = useCommandShortcut("workbench.openSettings");
@@ -137,11 +138,13 @@ export const AccountMenu = memo(function AccountMenu() {
   const sessionItems: MenuItem[] = [
     {
       id: isAuthenticated ? "sign-out" : "sign-in",
-      label: isAuthenticated ? "Sign Out" : isSigningIn ? "Signing In..." : "Sign In",
+      label: isAuthenticated ? "Sign Out" : isSigningIn ? "Open sign-in page" : "Sign In",
       icon: isAuthenticated ? <SignOutIcon /> : <SignInIcon />,
-      onClick: isAuthenticated ? handleSignOut : handleSignIn,
-      disabled: !isAuthenticated && isSigningIn,
+      onClick: isAuthenticated ? handleSignOut : isSigningIn ? reopen : handleSignIn,
     },
+    ...(!isAuthenticated && isSigningIn
+      ? [{ id: "cancel-sign-in", label: "Cancel sign-in", icon: <XIcon />, onClick: cancel }]
+      : []),
   ];
 
   const signedInAccountItems: MenuItem[] = [
@@ -266,25 +269,25 @@ export const AccountMenu = memo(function AccountMenu() {
               type="button"
               variant="ghost"
               iconOnly
-              size="chrome"
+              size="sm"
               tooltip={tooltipLabel}
               aria-label="Account"
             />
           }
         >
-          <Avatar name={accountName} src={accountAvatarUrl} size="xs" />
+          <Avatar name={accountName} src={accountAvatarUrl} size="sm" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" size="wide">
           {isAuthenticated ? (
             <div role="presentation" className="flex min-w-0 items-center gap-2.5 px-2.5 py-2">
-              <Avatar name={accountName} src={accountAvatarUrl} className="size-9" />
+              <Avatar name={accountName} src={accountAvatarUrl} size="lg" />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium text-foreground">{accountName}</div>
                 {accountDetail ? (
                   <div className="truncate text-subtle-foreground">{accountDetail}</div>
                 ) : null}
               </div>
-              <Badge variant="muted">{planLabel}</Badge>
+              <Badge>{planLabel}</Badge>
             </div>
           ) : null}
           {sections.map((section, index) => (

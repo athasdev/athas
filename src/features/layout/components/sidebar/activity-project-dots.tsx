@@ -51,7 +51,7 @@ export function ActivityProjectDots({
                 role="button"
                 tabIndex={isSwitchingProject ? -1 : 0}
                 className={cn(
-                  "group pointer-events-auto flex size-4 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                  "group pointer-events-auto flex size-4 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus",
                   isSwitchingProject && "cursor-default",
                 )}
                 aria-label={`${isActive ? "Current project" : "Switch to"} ${project.name}`}
