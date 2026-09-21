@@ -15,6 +15,8 @@ import { AcpInlineEvent } from "./acp-inline-event";
 import { AgentShortcuts } from "./agent-shortcuts";
 import { ChatFollowUpActions } from "./chat-follow-up-actions";
 import { ChatMessage } from "./chat-message";
+import { ChatTerminalCommand } from "./chat-terminal-command";
+import { isChatTerminalCommand } from "../../services/chat-terminal-command";
 
 interface ChatMessagesProps {
   onApplyCode?: (code: string, language?: string) => void;
@@ -93,6 +95,18 @@ export const ChatMessages = memo(function ChatMessages({
         const message = item.message;
         const index = item.messageIndex;
         const isLastMessage = index === messages.length - 1;
+        if (isChatTerminalCommand(message)) {
+          return (
+            <MessageScrollerItem
+              key={item.id}
+              messageId={message.id}
+              scrollAnchor
+              data-ai-message-id={message.id}
+            >
+              <ChatTerminalCommand message={message} />
+            </MessageScrollerItem>
+          );
+        }
         const prevMessage = index > 0 ? messages[index - 1] : null;
         const isToolOnlyMessage =
           message.role === "assistant" &&
@@ -132,6 +146,7 @@ export const ChatMessages = memo(function ChatMessages({
           <MessageScrollerItem
             key={item.id}
             messageId={message.id}
+
             scrollAnchor={message.role === "user"}
             data-ai-message-id={message.id}
             className={cn(

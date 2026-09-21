@@ -21,15 +21,16 @@ export const Composer = forwardRef<
 
 export const ComposerEditable = forwardRef<
   HTMLDivElement,
-  ComponentProps<"div"> & { enabled?: boolean }
->(function ComposerEditable({ className, enabled = true, ...props }, ref) {
+  ComponentProps<"div"> & { enabled?: boolean; font?: "sans" | "mono" }
+>(function ComposerEditable({ className, enabled = true, font = "sans", ...props }, ref) {
   return (
     <div
       ref={ref}
       data-slot="composer-editable"
       aria-disabled={!enabled || undefined}
       className={cn(
-        "max-h-48 min-h-12 w-full overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-words bg-transparent px-3 pt-3 pb-2 text-left font-sans ui-text-base leading-relaxed text-foreground outline-none empty:before:pointer-events-none empty:before:text-subtle-foreground empty:before:content-[attr(data-placeholder)]",
+        "max-h-48 min-h-12 w-full overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-words bg-transparent px-3 pt-3 pb-2 text-left ui-text-base leading-relaxed text-foreground outline-none empty:before:pointer-events-none empty:before:text-subtle-foreground empty:before:content-[attr(data-placeholder)]",
+        font === "mono" ? "font-mono" : "font-sans",
         enabled ? "cursor-text" : "cursor-not-allowed opacity-50",
         className,
       )}

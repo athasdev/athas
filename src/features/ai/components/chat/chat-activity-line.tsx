@@ -22,6 +22,7 @@ interface ChatActivityLineProps {
   actions?: ReactNode;
   children?: ReactNode;
   detailsVariant?: "text" | "content";
+  defaultExpanded?: boolean;
 }
 
 export function ChatActivityLine({
@@ -32,8 +33,9 @@ export function ChatActivityLine({
   actions,
   children,
   detailsVariant = "text",
+  defaultExpanded = false,
 }: ChatActivityLineProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const canExpand = Boolean(children);
   const summary = detail ? `${title}: ${detail}` : title;
 

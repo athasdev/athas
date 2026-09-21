@@ -3,7 +3,7 @@ use std::{
    collections::HashMap,
    path::Path,
    process::Stdio,
-   sync::{LazyLock, Mutex},
+   sync::{Arc, LazyLock, Mutex},
    time::{Duration, Instant},
 };
 use tokio::{
@@ -24,6 +24,14 @@ pub struct WorkspaceCommandOutput {
    pub cancelled: bool,
    pub timed_out: bool,
 }
+
+#[derive(Serialize)]
+pub struct WorkspaceCommandChunk {
+   pub stream: &'static str,
+   pub data: Vec<u8>,
+}
+
+pub type CommandOutputListener = Arc<dyn Fn(WorkspaceCommandChunk) + Send + Sync>;
 
 pub fn cancel_workspace_command(id: &str) {
    let Ok(mut commands) = COMMANDS.lock() else {
@@ -68,7 +76,11 @@ impl Drop for ProcessGroup {
    }
 }
 
-async fn read_output(mut pipe: impl AsyncRead + Unpin) -> String {
+async fn read_output(
+   mut pipe: impl AsyncRead + Unpin,
+   stream: &'static str,
+   on_output: Option<CommandOutputListener>,
+) -> String {
    let mut result = Vec::new();
    let mut buffer = [0_u8; 4096];
    while let Ok(count) = pipe.read(&mut buffer).await {
@@ -77,6 +89,14 @@ async fn read_output(mut pipe: impl AsyncRead + Unpin) -> String {
       }
       let take = count.min(12000_usize.saturating_sub(result.len()));
       result.extend_from_slice(&buffer[..take]);
+      if take > 0
+         && let Some(listener) = &on_output
+      {
+         listener(WorkspaceCommandChunk {
+            stream,
+            data: buffer[..take].to_vec(),
+         });
+      }
    }
    String::from_utf8_lossy(&result).into_owned()
 }
@@ -95,6 +115,15 @@ pub async fn run_workspace_command(
    root: &str,
    command: &str,
    id: &str,
+) -> Result<WorkspaceCommandOutput, String> {
+   run_workspace_command_with_output(root, command, id, None).await
+}
+
+pub async fn run_workspace_command_with_output(
+   root: &str,
+   command: &str,
+   id: &str,
+   on_output: Option<CommandOutputListener>,
 ) -> Result<WorkspaceCommandOutput, String> {
    if command.trim().is_empty() || command.len() > 8000 || id.len() > 100 || id.is_empty() {
       return Err("Invalid command request.".into());
@@ -146,8 +175,16 @@ pub async fn run_workspace_command(
    }
    let mut child = process.spawn().map_err(|e| e.to_string())?;
    let group = ProcessGroup(child.id().ok_or("Missing command process")?);
-   let stdout = tokio::spawn(read_output(child.stdout.take().ok_or("Missing stdout")?));
-   let stderr = tokio::spawn(read_output(child.stderr.take().ok_or("Missing stderr")?));
+   let stdout = tokio::spawn(read_output(
+      child.stdout.take().ok_or("Missing stdout")?,
+      "stdout",
+      on_output.clone(),
+   ));
+   let stderr = tokio::spawn(read_output(
+      child.stderr.take().ok_or("Missing stderr")?,
+      "stderr",
+      on_output,
+   ));
    let mut cancelled = false;
    let mut timed_out = false;
    let status = tokio::select! {
@@ -174,6 +211,35 @@ pub async fn run_workspace_command(
 #[cfg(all(test, unix))]
 mod tests {
    use super::*;
+   #[tokio::test]
+   async fn streams_output_before_exit_and_keeps_the_final_result() {
+      let root = tempfile::tempdir().unwrap();
+      let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
+      let path = root.path().to_string_lossy().to_string();
+      let task = tokio::spawn(async move {
+         run_workspace_command_with_output(
+            &path,
+            "printf first; sleep 1; printf second; printf error >&2",
+            "command-stream-test",
+            Some(Arc::new(move |chunk| {
+               let _ = sender.send(chunk);
+            })),
+         )
+         .await
+      });
+      let first = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+         .await
+         .unwrap()
+         .unwrap();
+      assert_eq!(first.stream, "stdout");
+      assert_eq!(first.data, b"first");
+      assert!(!task.is_finished());
+      let result = task.await.unwrap().unwrap();
+      assert_eq!(result.stdout, "firstsecond");
+      assert_eq!(result.stderr, "error");
+      assert_eq!(result.exit_code, Some(0));
+   }
+
    #[tokio::test]
    async fn returns_command_output_and_exit_status() {
       let root = tempfile::tempdir().unwrap();

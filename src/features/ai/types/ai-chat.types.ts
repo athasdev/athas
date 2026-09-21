@@ -126,6 +126,7 @@ export interface AIChatInputBarProps {
   presentation?: "default" | "initial";
   autoFocus?: boolean;
   onAgentChange?: (agentId: AgentType, model?: ApiModelSelection) => void;
+  onTerminalChatCreated?: (chatId: string) => void;
   onSendMessage: (message: string, images?: ImageContent[]) => AgentMessageSubmitResult;
   onInterruptAndSend: (message: string, images?: ImageContent[]) => AgentMessageSubmitResult;
   onMoveQueuedMessage: (fromIndex: number, toIndex: number) => void;

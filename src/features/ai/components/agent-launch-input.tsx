@@ -98,6 +98,7 @@ export function AgentLaunchInput({
       presentation="initial"
       autoFocus={autoFocus}
       onAgentChange={setSelectedAgentId}
+      onTerminalChatCreated={openAgentBuffer}
       onSendMessage={submit}
       onInterruptAndSend={submit}
       onMoveQueuedMessage={() => {}}
