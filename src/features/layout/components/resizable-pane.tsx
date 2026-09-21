@@ -48,12 +48,16 @@ export function ResizablePane({
 
   const clampWidth = useCallback(
     (value: number) => {
-      return clampResponsivePaneWidth({
-        value,
-        minWidth: getMinWidth(),
-        viewportWidth: getViewportWidth(),
-        reservedWidth,
-      });
+      // Whole pixels only: a fractional pane edge puts everything to its right on
+      // a half pixel, and WebKit snaps that by 1px whenever a layer repaints.
+      return Math.round(
+        clampResponsivePaneWidth({
+          value,
+          minWidth: getMinWidth(),
+          viewportWidth: getViewportWidth(),
+          reservedWidth,
+        }),
+      );
     },
     [getMinWidth, reservedWidth],
   );
@@ -159,6 +163,8 @@ export function ResizablePane({
       style={{ width: totalWidth }}
       className={cn(
         "athas-resizable-pane relative flex h-full min-w-0 shrink-0 overflow-visible bg-transparent",
+        // Animate show/hide, but never fight the pointer while the user drags the edge.
+        !isResizing && "transition-[width] duration-fast ease-smooth motion-reduce:transition-none",
         hidden && "pointer-events-none",
         className,
       )}
@@ -169,7 +175,11 @@ export function ResizablePane({
       <div
         ref={contentRef}
         style={{ width: hidden ? "0px" : `${width}px` }}
-        className="flex min-h-0 shrink-0 flex-col overflow-hidden py-0"
+        className={cn(
+          "flex min-h-0 shrink-0 flex-col overflow-hidden py-0",
+          !isResizing &&
+            "transition-[width] duration-fast ease-smooth motion-reduce:transition-none",
+        )}
       >
         <div
           className={cn(

@@ -64,7 +64,7 @@ const SearchExcerptLine = memo(function SearchExcerptLine({
       ) : null}
       <span
         data-search-excerpt-code
-        className="min-w-0 flex-1 overflow-hidden px-4 whitespace-pre text-foreground"
+        className="min-w-0 flex-1 select-text overflow-hidden px-4 whitespace-pre text-foreground"
       >
         {line.segments.length > 0
           ? line.segments.map((segment) => {

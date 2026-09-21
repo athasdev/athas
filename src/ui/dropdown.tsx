@@ -21,7 +21,8 @@ import { CheckIcon, ChevronRightIcon, SearchIcon } from "@/ui/icons";
 import Keybinding from "@/features/keymaps/components/keybinding";
 
 const menuSurfaceVariants = cva(
-  `max-h-(--available-height) w-fit min-w-32 ${OVERLAY_MAX_WIDTH} origin-(--transform-origin) rounded-lg bg-overlay font-sans text-foreground shadow-(--shadow-popover) ring-1 ring-border outline-none ui-text-chrome`,
+  // One fast, smooth entrance for every menu-shaped surface: fade + a hint of scale from its anchor.
+  `max-h-(--available-height) w-fit min-w-32 ${OVERLAY_MAX_WIDTH} origin-(--transform-origin) rounded-lg bg-overlay font-sans text-foreground shadow-(--shadow-popover) ring-1 ring-border outline-none ui-text-chrome transition-[opacity,transform,scale] duration-fast ease-smooth data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0 motion-reduce:transition-none`,
   {
     variants: {
       viewport: {
@@ -301,11 +302,7 @@ function DropdownMenuContent({
       >
         <DropdownMenuPrimitive.Popup
           data-slot="dropdown-menu-content"
-          className={cn(
-            menuSurfaceVariants({ viewport, size }),
-            "z-10070 duration-75 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
-            className,
-          )}
+          className={cn(menuSurfaceVariants({ viewport, size }), "z-10070", className)}
           {...props}
         />
       </DropdownMenuPrimitive.Positioner>

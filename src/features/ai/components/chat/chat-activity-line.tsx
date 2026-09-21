@@ -67,7 +67,10 @@ export function ChatActivityLine({
         {actions ? <span className="shrink-0">{actions}</span> : null}
       </div>
       {canExpand && isExpanded && detailsVariant === "text" ? (
-        <pre className="mt-1.5 max-h-64 overflow-auto whitespace-pre-wrap pl-6 font-mono ui-text-sm text-subtle-foreground">
+        <pre
+          tabIndex={0}
+          className="mt-1.5 max-h-64 overflow-auto whitespace-pre-wrap pl-6 font-mono ui-text-sm text-subtle-foreground select-text"
+        >
           {children}
         </pre>
       ) : canExpand && isExpanded ? (

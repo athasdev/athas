@@ -188,13 +188,13 @@ export const ActivityBar = memo(({ expanded }: ActivityBarProps) => {
     <ContextMenu>
       <ContextMenuTrigger
         ref={railRef}
-        className="relative flex h-full shrink-0 select-none overflow-hidden"
+        className="relative flex h-full shrink-0 select-none overflow-hidden transition-[width] duration-fast ease-smooth motion-reduce:transition-none"
         style={{
           width: renderedRailWidth,
         }}
       >
         <div
-          className="athas-sidebar-rail absolute inset-y-0 left-0 flex flex-col overflow-hidden py-1.5"
+          className="athas-sidebar-rail absolute inset-y-0 left-0 flex flex-col overflow-hidden py-1.5 transition-[width] duration-fast ease-smooth motion-reduce:transition-none"
           style={{ width: railPanelWidth }}
         >
           <div

@@ -37,7 +37,7 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          "athas-chrome-control group/accordion-trigger inline-flex h-tab w-fit max-w-full select-none items-center gap-chrome-tight rounded-md px-2 text-left font-medium font-sans text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus aria-disabled:pointer-events-none aria-disabled:opacity-50 ui-text-chrome",
+          "group/accordion-trigger inline-flex h-tab w-fit max-w-full select-none items-center gap-chrome-tight rounded-md px-2 text-left font-medium font-sans text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus aria-disabled:pointer-events-none aria-disabled:opacity-50 ui-text-chrome",
           className,
         )}
         {...props}

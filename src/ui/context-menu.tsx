@@ -85,10 +85,7 @@ function normalizeContextMenuGroups(groups: ContextMenuGroupData[]): ContextMenu
   return normalizedGroups;
 }
 
-const contextMenuPopupClassName = cn(
-  menuSurfaceVariants(),
-  "z-10070 duration-75 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
-);
+const contextMenuPopupClassName = cn(menuSurfaceVariants(), "z-10070");
 
 function ContextMenu(props: ContextMenuPrimitive.Root.Props) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
