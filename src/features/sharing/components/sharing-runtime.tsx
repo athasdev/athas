@@ -9,9 +9,20 @@ import {
 } from "@/features/ai/services/ai-chat-history-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { conversationContent, conversationMessages } from "../lib/snapshot-content";
-import { fetchShareOptions, shareRequest, updateShare } from "../services/share-api";
+import {
+  fetchShareOptions,
+  isRejectedShareRequest,
+  shareRequest,
+  updateShare,
+} from "../services/share-api";
 import { getShareDeviceId } from "../services/share-device";
 import type { ShareDraft } from "../types/share.types";
+
+const maxTitleLength = 200;
+
+function sessionTitle(title: string | null | undefined) {
+  return (title ?? "").trim().slice(0, maxTitleLength) || "Untitled session";
+}
 
 export function SharingRuntime() {
   const userId = useAuthStore((state) => state.user?.id);
@@ -22,6 +33,7 @@ export function SharingRuntime() {
     const deviceId = getShareDeviceId();
     const sent = new Map<string, string>();
     const requests = new Map<string, string>();
+    const rejected = new Map<string, string>();
     const current = () => !cancelled && useAuthStore.getState().user?.id === userId;
     const sync = async () => {
       try {
@@ -61,7 +73,7 @@ export function SharingRuntime() {
                 : chat.lastMessageAt
               ).getTime(),
               kind: "agent",
-              title: summary.title,
+              title: sessionTitle(summary.title),
               content,
               messages: conversationMessages(messages),
               language: "markdown",
@@ -101,14 +113,26 @@ export function SharingRuntime() {
             ) {
               const requestId = requests.get(sourceId) || crypto.randomUUID();
               requests.set(sourceId, requestId);
-              await shareRequest(
-                "/api/cloud-sessions",
-                {
-                  method: "POST",
-                  body: JSON.stringify({ ...draft, requestId, visibility: "private", live: true }),
-                },
-                token,
-              );
+              const payload = JSON.stringify({
+                ...draft,
+                requestId,
+                visibility: "private",
+                live: true,
+              });
+              if (rejected.get(sourceId) !== payload) {
+                try {
+                  await shareRequest(
+                    "/api/cloud-sessions",
+                    { method: "POST", body: payload },
+                    token,
+                  );
+                  rejected.delete(sourceId);
+                } catch (error) {
+                  // A rejected payload is only retried once its content changes.
+                  if (isRejectedShareRequest(error)) rejected.set(sourceId, payload);
+                  throw error;
+                }
+              }
             }
             for (const item of options.items) {
               if (!current()) return;
