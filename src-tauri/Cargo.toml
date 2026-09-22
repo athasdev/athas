@@ -137,6 +137,7 @@ tauri-plugin-window-state = "2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 tauri-runtime-cef = { git = "https://github.com/tauri-apps/tauri", rev = "d3a685323977d5618cdc8fe1ad9b8f3c80c6c26c", optional = true }
+libc = "0.2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"

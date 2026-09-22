@@ -640,6 +640,7 @@ dependencies = [
  "futures-util",
  "git2",
  "keyring",
+ "libc",
  "log",
  "lsp-types",
  "mimalloc",
