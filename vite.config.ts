@@ -18,6 +18,8 @@ export default defineConfig({
     "import.meta.env.VITE_REACT_COMPILER_ENABLED": JSON.stringify(enableReactCompiler),
   },
   fmt: {
+    // Vendored agent skills stay byte-identical to upstream so `skills update` stays clean.
+    ignorePatterns: [".claude/skills/**"],
     printWidth: 100,
   },
   lint: {
