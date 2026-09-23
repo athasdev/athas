@@ -1078,19 +1078,12 @@ details: ${errorDetails || mainError}
               acpProducedStateOnlyUpdate = true;
               acpCommandResultLabel = "Slash commands refreshed.";
               break; // Not useful to show
-            case "plan_update": {
-              const summary =
-                event.entries.length > 0
-                  ? event.entries.map((entry) => entry.content).join(" | ")
-                  : "No plan steps";
-              appendAcpEvent({
-                category: "plan",
-                label: `Plan updated (${event.entries.length} steps)`,
-                detail: summary,
-                state: "info",
+            case "plan_update":
+              // ACP sends the full plan each time; the message shows the latest one.
+              chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
+                plan: event.entries.length > 0 ? event.entries : undefined,
               });
               break;
-            }
             case "usage_update": {
               break;
             }

@@ -133,10 +133,10 @@ interface SessionModeState {
   availableModes: SessionMode[];
 }
 
-type AcpPlanEntryPriority = "high" | "medium" | "low";
-type AcpPlanEntryStatus = "pending" | "in_progress" | "completed";
+export type AcpPlanEntryPriority = "high" | "medium" | "low";
+export type AcpPlanEntryStatus = "pending" | "in_progress" | "completed";
 
-interface AcpPlanEntry {
+export interface AcpPlanEntry {
   content: string;
   priority: AcpPlanEntryPriority;
   status: AcpPlanEntryStatus;

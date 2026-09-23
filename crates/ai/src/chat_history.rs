@@ -30,6 +30,9 @@ pub struct MessageData {
    pub tool_name: Option<String>,
    #[serde(default)]
    pub images: Option<String>,
+   /// The agent's latest ACP plan for this message, as JSON entries.
+   #[serde(default)]
+   pub plan: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -142,17 +145,22 @@ impl ChatHistoryRepository {
          .map_err(|e| format!("Failed to create tool_calls table: {}", e))?;
       let _ = conn.execute("ALTER TABLE tool_calls ADD COLUMN meta TEXT", []);
 
-      let has_images: bool = conn
-         .query_row(
-            "SELECT EXISTS(SELECT 1 FROM pragma_table_info('messages') WHERE name = 'images')",
-            [],
-            |row| row.get(0),
-         )
-         .map_err(|e| format!("Failed to inspect message columns: {e}"))?;
-      if !has_images {
-         conn
-            .execute("ALTER TABLE messages ADD COLUMN images TEXT", [])
-            .map_err(|e| format!("Failed to add message images: {e}"))?;
+      for column in ["images", "plan"] {
+         let exists: bool = conn
+            .query_row(
+               "SELECT EXISTS(SELECT 1 FROM pragma_table_info('messages') WHERE name = ?1)",
+               [column],
+               |row| row.get(0),
+            )
+            .map_err(|e| format!("Failed to inspect message columns: {e}"))?;
+         if !exists {
+            conn
+               .execute(
+                  &format!("ALTER TABLE messages ADD COLUMN {column} TEXT"),
+                  [],
+               )
+               .map_err(|e| format!("Failed to add message {column}: {e}"))?;
+         }
       }
 
       conn
@@ -228,7 +236,8 @@ impl ChatHistoryRepository {
       for message in messages {
          match conn.execute(
             "INSERT INTO messages (id, chat_id, role, content, timestamp, is_streaming, \
-             is_tool_use, tool_name, images) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+             is_tool_use, tool_name, images, plan) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, \
+             ?10)",
             params![
                message.id,
                message.chat_id,
@@ -238,7 +247,8 @@ impl ChatHistoryRepository {
                message.is_streaming,
                message.is_tool_use,
                message.tool_name,
-               message.images
+               message.images,
+               message.plan
             ],
          ) {
             Ok(_) => {}
@@ -339,7 +349,7 @@ impl ChatHistoryRepository {
       let mut stmt = conn
          .prepare(
             "SELECT id, chat_id, role, content, timestamp, is_streaming, is_tool_use, tool_name, \
-             images FROM messages WHERE chat_id = ?1 ORDER BY timestamp ASC",
+             images, plan FROM messages WHERE chat_id = ?1 ORDER BY timestamp ASC",
          )
          .map_err(|e| format!("Failed to prepare messages query: {}", e))?;
 
@@ -355,6 +365,7 @@ impl ChatHistoryRepository {
                is_tool_use: row.get(6)?,
                tool_name: row.get(7)?,
                images: row.get(8)?,
+               plan: row.get(9)?,
             })
          })
          .map_err(|e| format!("Failed to query messages: {}", e))?
@@ -501,7 +512,7 @@ mod tests {
    use super::*;
 
    #[test]
-   fn migrates_legacy_messages_and_round_trips_images() {
+   fn migrates_legacy_messages_and_round_trips_images_and_plans() {
       let directory = tempfile::tempdir().unwrap();
       let path = directory.path().join("history.db");
       let conn = Connection::open(&path).unwrap();
@@ -529,12 +540,16 @@ mod tests {
       }))
       .unwrap();
       assert!(message.images.is_none());
+      assert!(message.plan.is_none());
       let images = r#"[{"mediaType":"image/png","data":"YWJj"}]"#.to_string();
       message.images = Some(images.clone());
+      let plan = r#"[{"content":"Read","priority":"high","status":"completed"}]"#.to_string();
+      message.plan = Some(plan.clone());
       repository.save_chat(chat, vec![message], vec![]).unwrap();
       let reopened = ChatHistoryRepository::new(path);
       let loaded = reopened.load_chat("images").unwrap();
       assert_eq!(loaded.messages[0].images.as_deref(), Some(images.as_str()));
+      assert_eq!(loaded.messages[0].plan.as_deref(), Some(plan.as_str()));
       assert_eq!(loaded.messages[0].content, "");
    }
 }

@@ -1,3 +1,4 @@
+import type { AcpPlanEntry } from "@/features/ai/types/acp.types";
 import type {
   AcpToolCallLocation,
   AcpToolCallStatus,
@@ -62,6 +63,8 @@ export interface Message {
   resources?: ResourceContent[];
   ui?: GenerativeUIView[];
   followUpActions?: ChatFollowUpAction[];
+  /** The agent's latest ACP plan for this turn; each update replaces the whole list. */
+  plan?: AcpPlanEntry[];
 }
 
 // Agent types for AI chat

@@ -32,6 +32,7 @@ import Textarea from "@/ui/textarea";
 import { ProviderIcon } from "../icons/provider-icons";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
+import { AgentPlan } from "../messages/agent-plan";
 import { ToolCallList } from "../messages/tool-call-display";
 import { buildAssistantTimeline } from "@/features/ai/lib/assistant-timeline";
 
@@ -384,6 +385,10 @@ export const ChatMessage = memo(function ChatMessage({
                 ))}
               </div>
             )}
+
+            {message.plan?.length ? (
+              <AgentPlan entries={message.plan} isStreaming={message.isStreaming} />
+            ) : null}
 
             {hasPlanBlock(message.content) ? (
               <>
