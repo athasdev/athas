@@ -243,14 +243,14 @@ export const FileExplorerViewport = forwardRef<
         </div>
       ) : null}
       <div
-        className="file-tree-virtual-canvas relative min-h-full w-full min-w-0 contain-layout contain-style [overflow-anchor:none]"
+        className="relative min-h-full w-full min-w-0 contain-layout contain-style [overflow-anchor:none]"
         style={{ height: getFileTreeTotalHeight(rowCount, rowHeight) }}
       >
         {virtualIndexes.map((index) =>
           stickyIndexSet.has(index) ? null : (
             <div
               key={getRowKey(index)}
-              className="file-tree-virtual-row absolute inset-x-0 w-full min-w-0"
+              className="absolute inset-x-0 w-full min-w-0"
               style={{
                 height: rowHeight,
                 top: FILE_TREE_VIEWPORT_PADDING + index * rowHeight,

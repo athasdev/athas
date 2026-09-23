@@ -77,7 +77,7 @@ function renderHighlightedLabel(label: string, query: string | undefined) {
   return (
     <>
       {label.slice(0, matchIndex)}
-      <mark className="file-tree-search-highlight rounded-md bg-primary-soft px-px text-inherit">
+      <mark className="rounded-md bg-primary-soft px-px text-inherit">
         {label.slice(matchIndex, matchIndex + trimmedQuery.length)}
       </mark>
       {label.slice(matchIndex + trimmedQuery.length)}
@@ -117,7 +117,7 @@ function FileExplorerTreeItemComponent({
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
   const renderTreeGuides = () =>
     showIndentGuides ? (
-      <div className="file-tree-guides pointer-events-none absolute inset-0 z-1">
+      <div className="pointer-events-none absolute inset-0 z-1">
         {guideLevels.map((level) => {
           const target = guideTargets[level];
           const startsHere = previousDepth <= level;
@@ -125,7 +125,7 @@ function FileExplorerTreeItemComponent({
           return (
             <span
               key={level}
-              className="file-tree-guide pointer-events-auto absolute w-[7px] -translate-x-[3px] opacity-90 before:absolute before:inset-y-0 before:left-[3px] before:w-px before:bg-border"
+              className="pointer-events-auto absolute w-[7px] -translate-x-[3px] opacity-90 before:absolute before:inset-y-0 before:left-[3px] before:w-px before:bg-border"
               data-file-path={target?.path}
               data-is-dir={target?.isDir}
               data-path={target?.path}
@@ -147,12 +147,12 @@ function FileExplorerTreeItemComponent({
   if (file.isEditing || file.isRenaming) {
     return (
       <div
-        className="file-tree-item relative flex h-(--file-tree-row-height) w-full min-w-0 items-center"
+        className="relative flex h-(--file-tree-row-height) w-full min-w-0 items-center"
         data-depth={depth}
       >
         {renderTreeGuides()}
         <div
-          className="file-tree-row relative z-2 box-border flex h-full w-full min-w-0 max-w-full items-center justify-start overflow-hidden rounded-chrome border border-transparent gap-1.5 px-1.5 py-1 ui-text-sm leading-row"
+          className="relative z-2 box-border flex h-full w-full min-w-0 max-w-full items-center justify-start overflow-hidden rounded-chrome border border-transparent gap-1.5 px-1.5 py-1 ui-text-sm leading-row"
           style={{
             paddingLeft: `${paddingLeft}px`,
           }}

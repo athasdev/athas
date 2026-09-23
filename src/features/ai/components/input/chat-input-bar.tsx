@@ -1076,7 +1076,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     <div
       ref={aiChatContainerRef}
       className={cn(
-        "ai-chat-container relative z-20 flex min-w-0 shrink-0 flex-col gap-1",
+        "relative z-20 flex min-w-0 shrink-0 flex-col gap-1",
         isInitialPresentation ? "w-full" : [chatContentWidth(), "mb-3"],
       )}
     >

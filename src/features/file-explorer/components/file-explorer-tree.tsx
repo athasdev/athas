@@ -1512,7 +1512,7 @@ function FileExplorerTreeComponent({
         getStickyIndexes={getStickyRowIndexes}
         emptyState={
           !rootFolderPath ? (
-            <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center">
               <EmptyState
                 layout="sidebar"
                 message="No folder open"
@@ -1520,7 +1520,7 @@ function FileExplorerTreeComponent({
               />
             </div>
           ) : displayedFiles.length === 0 ? (
-            <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center">
               <EmptyState
                 layout="sidebar"
                 message={

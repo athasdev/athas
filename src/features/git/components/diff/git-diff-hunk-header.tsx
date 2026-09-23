@@ -76,7 +76,7 @@ const DiffHunkHeader = memo(
 
     return (
       <div
-        className="flex min-w-full w-fit select-none items-stretch border-border border-b bg-surface font-mono code-editor-font-override text-subtle-foreground"
+        className="flex min-w-full w-fit select-none items-stretch border-border border-b bg-surface font-mono text-subtle-foreground"
         data-selection-scope-exclude="true"
         style={headerStyle}
       >
