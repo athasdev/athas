@@ -6,7 +6,12 @@
     }
   },
   "rules": {
-    "shadcn/no-restyle": ["warn", { "allow": ["layout"] }],
+    "shadcn/no-restyle": [
+      "warn",
+      {
+        "allow": ["layout", "not-typeset"]
+      }
+    ],
     "shadcn/no-inline-styles": "warn",
     "shadcn/require-static-classes": "warn"
   }

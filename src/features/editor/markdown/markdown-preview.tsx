@@ -155,7 +155,7 @@ export function MarkdownPreview() {
       onWheelCapture={handleWheelCapture}
     >
       <div
-        className="markdown-content w-full max-w-3xl"
+        className="markdown-content typeset typeset-preview w-full max-w-3xl"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </div>

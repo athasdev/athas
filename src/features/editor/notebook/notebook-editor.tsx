@@ -201,7 +201,7 @@ function MarkdownCellPreview({ source }: { source: string }) {
   const html = useHighlightedMarkdown(source);
   return (
     <div
-      className="markdown-preview block! h-auto! overflow-visible! bg-transparent! p-0! py-1.5 [&_.markdown-content]:max-w-none"
+      className="markdown-preview typeset typeset-preview block! h-auto! overflow-visible! bg-transparent! p-0! py-1.5"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -211,7 +211,7 @@ function MarkdownOutput({ source }: { source: string }) {
   const html = useHighlightedMarkdown(source);
   return (
     <div
-      className="markdown-preview overflow-auto rounded-md border border-border bg-surface p-2.5 [&_.markdown-content]:max-w-none"
+      className="markdown-preview typeset typeset-preview overflow-auto rounded-md border border-border bg-surface p-2.5"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
