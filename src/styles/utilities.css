@@ -18,12 +18,6 @@
   font-size: var(--ui-text-lg);
 }
 
-/* Inline code sits in running text, so it follows the surrounding size. */
-@utility ui-text-code-inline {
-  font-size: 0.95em;
-  line-height: inherit;
-}
-
 @utility font-inherit {
   font-family: inherit;
   font-size: inherit;
