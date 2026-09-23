@@ -427,7 +427,7 @@ type MarkdownTable = {
 };
 
 const INLINE_CODE_CLASS_NAME =
-  "font-mono inline whitespace-break-spaces rounded bg-surface px-1 py-0 text-[0.95em] leading-[inherit] text-foreground align-baseline";
+  "font-mono inline whitespace-break-spaces rounded bg-surface px-1 py-0 ui-text-code-inline text-foreground align-baseline";
 
 function splitMarkdownTableRow(line: string): string[] {
   let value = line.trim();
@@ -768,7 +768,7 @@ function renderContent(
         elements.push(
           <p
             key={`p-${currentParagraphStartLine}-${paragraphText.length}`}
-            className="my-1.5 leading-[1.6]"
+            className="my-1.5 leading-relaxed"
           >
             {renderInlineFormatting(paragraphText)}
           </p>,

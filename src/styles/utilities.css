@@ -18,6 +18,32 @@
   font-size: var(--ui-text-lg);
 }
 
+/* Inline code sits in running text, so it follows the surrounding size. */
+@utility ui-text-code-inline {
+  font-size: 0.95em;
+  line-height: inherit;
+}
+
+@utility font-inherit {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+@utility leading-inherit {
+  line-height: inherit;
+}
+
+/* Bottom padding that clears the home indicator on devices with a safe area. */
+@utility pb-safe-* {
+  padding-bottom: calc(--spacing(--value(integer)) + env(safe-area-inset-bottom));
+}
+
+/* Transparency backdrop for image previews. */
+@utility bg-checkerboard {
+  background-image: repeating-conic-gradient(var(--surface) 0% 25%, var(--background) 0% 50%);
+  background-size: 16px 16px;
+}
+
 @utility duration-fast {
   transition-duration: var(--app-duration-fast);
 }

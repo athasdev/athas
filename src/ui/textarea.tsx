@@ -29,7 +29,7 @@ const textareaVariants = cva(
       font: {
         default: "font-sans",
         mono: "font-mono",
-        inherit: "[font-family:inherit] [font-size:inherit] [line-height:inherit]",
+        inherit: "font-inherit leading-inherit",
       },
       resize: {
         y: "resize-y",
