@@ -10,5 +10,6 @@
 @import "./styles/rendered-code-tokens.css";
 @import "./styles/window-transparency.css";
 @import "./styles/utilities.css";
+@import "./styles/shadcn-effects.css";
 
 @import "tw-animate-css";
