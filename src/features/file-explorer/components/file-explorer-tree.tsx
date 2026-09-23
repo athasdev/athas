@@ -1100,7 +1100,7 @@ function FileExplorerTreeComponent({
       className={cn(
         "group/file-explorer relative flex min-h-0 min-w-0 flex-1 select-none flex-col overflow-hidden px-0 pb-(--app-scrollbar-size)",
         dragState.dragOverPath === "__ROOT__" &&
-          "border-2! border-dashed! border-primary! bg-primary! bg-opacity-10!",
+          "border-2! border-dashed! border-primary! bg-primary-soft!",
       )}
       onFocusCapture={() => {
         setHasTreeFocus(true);

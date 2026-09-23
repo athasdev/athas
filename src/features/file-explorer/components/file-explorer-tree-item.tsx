@@ -217,7 +217,7 @@ function FileExplorerTreeItemComponent({
       title={file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined}
       className={cn(
         "group/file-tree-row box-border h-full max-w-full justify-start overflow-hidden",
-        isDragOver && "border-2! border-dashed! border-primary! bg-primary! bg-opacity-20!",
+        isDragOver && "border-2! border-dashed! border-primary! bg-primary-soft!",
         isDragging && "cursor-move",
         file.ignored && "opacity-50",
         isCut && "italic opacity-40",
