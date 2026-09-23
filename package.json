@@ -136,6 +136,7 @@
     "@commitlint/cli": "^21.1.0",
     "@derekstride/tree-sitter-sql": "^0.3.11",
     "@rolldown/plugin-babel": "^0.2.4",
+    "@shadcn/lint": "^0.2.0",
     "@tailwindcss/vite": "^4.3.1",
     "@tauri-apps/cli": "^2.11.3",
     "@tlaplus/tree-sitter-tlaplus": "^1.5.0",

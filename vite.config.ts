@@ -21,6 +21,14 @@ export default defineConfig({
     printWidth: 100,
   },
   lint: {
+    jsPlugins: ["@shadcn/lint"],
+    settings: {
+      shadcn: {
+        // Icons and brand marks take color from context.
+        ignoreImports: ["^@/ui/icons(/|$)", "^@/ui/brand-marks(/|$)"],
+        note: "See the UI Design System section of AGENTS.md.",
+      },
+    },
     options: {
       typeAware: true,
       typeCheck: true,
@@ -37,7 +45,58 @@ export default defineConfig({
       "typescript/no-useless-default-assignment": "off",
       "typescript/restrict-template-expressions": "off",
       "typescript/unbound-method": "off",
+      "shadcn/no-raw-colors": "error",
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          // Plain selectors that CSS or DOM queries rely on.
+          allow: [
+            "editor-container",
+            "file-tree-container",
+            "github-markdown-*",
+            "inline-edit-model-command",
+            "items-container",
+            "pdf-page-container",
+            "terminal-container",
+            "xterm-container",
+          ],
+        },
+      ],
+      "shadcn/no-arbitrary-values": [
+        "error",
+        // Layout sizes, transition property lists and inherited radii are structural.
+        { allow: ["layout", "transition", "rounded-[inherit]", "rounded-b-[inherit]"] },
+      ],
+      "shadcn/no-restyle": [
+        "error",
+        {
+          // Only overlay sizing is enforced so far; bun check:design reports the wider policy.
+          deny: [],
+          contracts: [
+            {
+              pattern:
+                "^(DropdownMenuContent|DropdownMenuSubContent|PopoverContent|PopoverListContent|SelectContent|ComboboxContent)$",
+              deny: ["w-*", "min-w-*", "max-w-*"],
+              message:
+                "<{{component}}> takes its width from the size preset in src/ui/overlay-size.ts, not {{className}}.",
+            },
+            {
+              pattern: "^(DropdownMenuContent|DropdownMenuSubContent)$",
+              deny: ["w-*", "min-w-*", "max-w-*", "max-h-*"],
+              message:
+                "<{{component}}> takes its width from the size preset and its scroll cap from the viewport variant, not {{className}}.",
+            },
+          ],
+        },
+      ],
     },
+    overrides: [
+      {
+        // Primitives compose each other and own their exact sizes.
+        files: ["src/ui/**"],
+        rules: { "shadcn/no-restyle": "off" },
+      },
+    ],
   },
   staged: {
     "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": "vp check --fix",
