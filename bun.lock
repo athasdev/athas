@@ -17,7 +17,7 @@
         "@lexical/react": "^0.48.0",
         "@lexical/rich-text": "^0.48.0",
         "@mdxeditor/editor": "^4.1.1",
-        "@shadcn/react": "^0.2.1",
+        "@shadcn/react": "^0.3.1",
         "@tanstack/react-virtual": "^3.14.4",
         "@tauri-apps/api": "^2.11.1",
         "@tauri-apps/plugin-clipboard-manager": "~2.3.2",
@@ -760,7 +760,7 @@
 
     "@shadcn/lint": ["@shadcn/lint@0.2.0", "", { "dependencies": { "@eslint/core": "^0.17.0", "cn": "0.3.2" }, "optionalDependencies": { "oxc-parser": "^0.148.0" }, "peerDependencies": { "@typescript-eslint/parser": ">=8.40.0", "eslint": ">=9.30.0" }, "optionalPeers": ["@typescript-eslint/parser", "eslint"] }, "sha512-DTYr427BR8cDc0J0Y++u1Uh12NAYGmdPiqgy4wKSogi7RNEhFanIcfBMPRPUvkunt9QiJUfI7B28TW39MrPCFA=="],
 
-    "@shadcn/react": ["@shadcn/react@0.2.1", "", { "peerDependencies": { "@types/react": ">=19", "react": ">=19" }, "optionalPeers": ["@types/react", "react"] }, "sha512-5krgi3dRMKb5jH6a+qPzVJUy/54s0kKE4Rw4LjDfLqOdVQTWKUgxWf1kW8r912I0jX/Lzxqc+pgjkjWxUIK5BQ=="],
+    "@shadcn/react": ["@shadcn/react@0.3.1", "", { "peerDependencies": { "@types/react": ">=19", "react": ">=19" }, "optionalPeers": ["@types/react", "react"] }, "sha512-2gOR0HDMtWeRsCZfNDaU0YDFdgH3zsDQ6lz67Fv/y/qjY9y+R8kJqAn6q56phqv7/zHi0wqURjntrNO9zL7vnQ=="],
 
     "@simple-libs/child-process-utils": ["@simple-libs/child-process-utils@1.0.2", "", { "dependencies": { "@simple-libs/stream-utils": "^1.2.0" } }, "sha512-/4R8QKnd/8agJynkNdJmNw2MBxuFTRcNFnE5Sg/G+jkSsV8/UBgULMzhizWWW42p8L5H7flImV2ATi79Ove2Tw=="],
 
