@@ -141,7 +141,7 @@ function WorkbenchContentTitle({
   return (
     <div className="min-w-0 flex-1 basis-64">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <h2 className="min-w-0 break-words font-medium text-foreground ui-text-lg">{title}</h2>
+        <h2 className="min-w-0 wrap-break-word font-medium text-foreground ui-text-lg">{title}</h2>
         {status}
       </div>
       {description ? (

@@ -21,12 +21,16 @@ export default defineConfig({
     printWidth: 100,
   },
   lint: {
-    jsPlugins: ["@shadcn/lint"],
+    jsPlugins: ["@shadcn/lint", "eslint-plugin-better-tailwindcss"],
     settings: {
       shadcn: {
         // Icons and brand marks take color from context.
         ignoreImports: ["^@/ui/icons(/|$)", "^@/ui/brand-marks(/|$)"],
         note: "See the UI Design System section of AGENTS.md.",
+      },
+      "better-tailwindcss": {
+        entryPoint: "src/styles.css",
+        rootFontSize: 16,
       },
     },
     options: {
@@ -45,6 +49,10 @@ export default defineConfig({
       "typescript/no-useless-default-assignment": "off",
       "typescript/restrict-template-expressions": "off",
       "typescript/unbound-method": "off",
+      // The editor's suggestCanonicalClasses hint as a lint error; vp check --fix rewrites them.
+      // Collapsing is off: text-sm + leading-6 -> text-sm/6 drops --tw-leading and breaks
+      // responsive size overrides.
+      "better-tailwindcss/enforce-canonical-classes": ["error", { collapse: false }],
       "shadcn/no-raw-colors": "error",
       "shadcn/no-unknown-classes": [
         "error",

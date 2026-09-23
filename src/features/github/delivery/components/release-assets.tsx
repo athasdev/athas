@@ -131,7 +131,7 @@ export function ReleaseAssets({
           </span>
         )}
       </div>
-      {error && !deleting && <FieldError className="break-words">{error}</FieldError>}
+      {error && !deleting && <FieldError className="wrap-break-word">{error}</FieldError>}
       <ItemGroup>
         {assets.map((asset) => (
           <Item role="listitem" key={asset.id}>
@@ -230,7 +230,7 @@ export function ReleaseAssets({
               {deleting?.name} will be permanently removed from this release.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {error && <FieldError className="break-words">{error}</FieldError>}
+          {error && <FieldError className="wrap-break-word">{error}</FieldError>}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={Boolean(busy)}>Cancel</AlertDialogCancel>
             <AlertDialogAction

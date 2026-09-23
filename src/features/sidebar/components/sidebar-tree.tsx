@@ -32,7 +32,7 @@ function SidebarTreeGuides({
         return (
           <span
             key={level}
-            className="pointer-events-auto absolute w-[7px] -translate-x-[3px] opacity-90 before:absolute before:inset-y-0 before:left-[3px] before:w-px before:bg-border"
+            className="pointer-events-auto absolute w-1.75 -translate-x-0.75 opacity-90 before:absolute before:inset-y-0 before:left-0.75 before:w-px before:bg-border"
             style={{
               left: `calc(${baseIndent + level * indentSize}px + 7px)`,
               top: startsHere ? "4px" : "0",

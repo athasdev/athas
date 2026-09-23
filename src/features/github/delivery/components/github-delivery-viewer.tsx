@@ -342,7 +342,7 @@ export default function GitHubDeliveryViewer({ buffer }: { buffer: GitHubDeliver
               <FieldLabel htmlFor={latestId}>Set as latest release</FieldLabel>
             </Field>
           )}
-          {actionError && <FieldError className="break-words">{actionError}</FieldError>}
+          {actionError && <FieldError className="wrap-break-word">{actionError}</FieldError>}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending || assetBusy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
