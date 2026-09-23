@@ -84,7 +84,10 @@ import { cn } from "@/utils/cn";
 import { AgentStartView } from "../agent-start-view";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import AIChatInputBar from "../input/chat-input-bar";
+import { useAcpQuestions } from "@/features/ai/hooks/use-acp-questions";
+import type { AcpElicitationResponse } from "@/features/ai/lib/acp-elicitation";
 import { AcpPermissionPrompt, type AcpPermissionRequest } from "./acp-permission-prompt";
+import { AcpQuestionPrompt } from "./acp-question-prompt";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
 
@@ -119,6 +122,7 @@ const AIChat = memo(function AIChat({
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const [permissionQueue, setPermissionQueue] = useState<AcpPermissionRequest[]>([]);
+  const agentQuestions = useAcpQuestions();
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
@@ -415,6 +419,7 @@ const AIChat = memo(function AIChat({
     void recordFrictionSignal({ area: "agent", signal: "cancel" });
     const pendingPermissions = permissionQueue;
     setPermissionQueue([]);
+    agentQuestions.cancelAll();
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -677,6 +682,7 @@ const AIChat = memo(function AIChat({
                 isIntelligencePermissionPending(item.requestId),
             ),
           );
+          agentQuestions.clear();
           const wasCancelled = completion?.outcome === "cancelled";
           const currentMessage = chatActions
             .getMessagesForChat(targetChatId)
@@ -751,6 +757,7 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
                 isIntelligencePermissionPending(item.requestId),
             ),
           );
+          agentQuestions.clear();
           console.error("Streaming error:", error);
 
           let errorTitle = "API Error";
@@ -999,6 +1006,19 @@ details: ${errorDetails || mainError}
         },
         (event) => {
           if (!isAcpAgent(currentAgentId) && currentAgentId !== CODEX_INTEGRATION_ID) return;
+          if (event.type === "elicitation_request") {
+            chatActions.updateAgentRun(targetChatId, runId, { phase: "approval" });
+            notifyAgent("question", event.requestId);
+            appendAcpEvent({
+              id: `question-${event.requestId}`,
+              category: "permission",
+              label: "Question asked",
+              detail: event.request.message,
+              state: "info",
+            });
+            agentQuestions.enqueue({ requestId: event.requestId, request: event.request });
+            return;
+          }
           // Only show meaningful events, skip noisy ones
           if (
             event.type === "content_chunk" ||
@@ -1283,7 +1303,27 @@ details: ${errorDetails || mainError}
   const currentPermission = permissionQueue[0];
   const isNewSession =
     isChatMessagesLoaded && (currentChat?.messages.length ?? 0) === 0 && acpEvents.length === 0;
-  const useInitialComposer = isNewSession && !currentPermission;
+  const currentQuestion = currentPermission ? undefined : agentQuestions.current;
+  const useInitialComposer = isNewSession && !currentPermission && !currentQuestion;
+  const handleQuestionAnswer = async (response: AcpElicitationResponse) => {
+    if (!currentQuestion) return;
+    appendAcpEvent({
+      id: `question-answer-${currentQuestion.requestId}`,
+      category: "permission",
+      label: "Question answered",
+      detail: response.action === "accept" ? "answered" : response.action,
+      state: response.action === "accept" ? "success" : "info",
+    });
+    try {
+      await agentQuestions.answer(currentQuestion.requestId, response);
+    } catch (error) {
+      console.error("Failed to answer agent question:", error);
+      showToast({
+        message: "The agent did not accept the answer. Stop the agent and try again.",
+        type: "error",
+      });
+    }
+  };
   const handlePermission = async (approved: boolean, optionId?: string) => {
     if (!currentPermission) return;
     try {
@@ -1452,6 +1492,16 @@ details: ${errorDetails || mainError}
               permission={currentPermission}
               queuedCount={permissionQueue.length - 1}
               onRespond={handlePermission}
+            />
+          ) : null}
+
+          {currentQuestion ? (
+            <AcpQuestionPrompt
+              key={currentQuestion.requestId}
+              question={currentQuestion}
+              agentLabel={assistantLabel}
+              queuedCount={agentQuestions.queuedCount}
+              onAnswer={handleQuestionAnswer}
             />
           ) : null}
 

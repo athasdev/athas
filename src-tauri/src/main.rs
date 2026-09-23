@@ -318,6 +318,7 @@ fn main() {
          send_acp_prompt,
          get_acp_status,
          respond_acp_permission,
+         respond_acp_elicitation,
          set_acp_session_mode,
          set_acp_session_config_option,
          list_acp_sessions,

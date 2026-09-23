@@ -3,7 +3,7 @@ use super::{
    bridge_commands::{AcpCommand, run_worker_loop},
    bridge_init::initialize_worker,
    bridge_prompt::run_prompt,
-   client::{AthasAcpClient, PermissionResponse},
+   client::{AthasAcpClient, ClientResponders, PermissionResponse},
    config::AgentRegistry,
    process::{stop_child_tree, terminate_process_group},
    types::{
@@ -117,7 +117,7 @@ impl AcpWorker {
       config: AgentConfig,
       app_handle: AppHandle,
       terminal_manager: Arc<TerminalManager>,
-   ) -> Result<(AcpAgentStatus, mpsc::Sender<PermissionResponse>)> {
+   ) -> Result<(AcpAgentStatus, ClientResponders)> {
       // Stop any existing agent first
       self.stop().await?;
 
@@ -160,7 +160,7 @@ impl AcpWorker {
          agent_capabilities: self.agent_capabilities.clone(),
       };
 
-      Ok((status, initialized.permission_sender))
+      Ok((status, initialized.responders))
    }
 
    pub(super) async fn send_prompt(&mut self, prompt: Vec<serde_json::Value>) -> Result<()> {
@@ -480,7 +480,7 @@ pub struct AcpAgentBridge {
    registry: AgentRegistry,
    command_tx: mpsc::Sender<AcpCommand>,
    status: Arc<Mutex<AcpAgentStatus>>,
-   permission_tx: Arc<Mutex<Option<mpsc::Sender<PermissionResponse>>>>,
+   responders: Arc<Mutex<Option<ClientResponders>>>,
    terminal_manager: Arc<TerminalManager>,
 }
 
@@ -508,7 +508,7 @@ impl AcpAgentBridge {
          registry,
          command_tx,
          status,
-         permission_tx: Arc::new(Mutex::new(None)),
+         responders: Arc::new(Mutex::new(None)),
          terminal_manager,
       }
    }
@@ -555,13 +555,10 @@ impl AcpAgentBridge {
          .await
          .context("Failed to send command to ACP worker")?;
 
-      let (status, permission_sender) = response_rx.await.context("Worker disconnected")??;
+      let (status, responders) = response_rx.await.context("Worker disconnected")??;
 
-      // Store permission sender for later use
-      {
-         let mut tx = self.permission_tx.lock().await;
-         *tx = Some(permission_sender);
-      }
+      // Keep the channels that deliver the user's answers to waiting agent requests
+      *self.responders.lock().await = Some(responders);
 
       // Emit status change
       self.emit_status_change(&status);
@@ -593,8 +590,8 @@ impl AcpAgentBridge {
       cancelled: bool,
       option_id: Option<String>,
    ) -> Result<()> {
-      let tx = self.permission_tx.lock().await;
-      if let Some(ref sender) = *tx {
+      let responders = self.responders.lock().await;
+      if let Some(sender) = responders.as_ref().map(|responders| &responders.permission) {
          sender
             .send(PermissionResponse {
                request_id,
@@ -604,6 +601,27 @@ impl AcpAgentBridge {
             })
             .await
             .ok();
+      }
+      Ok(())
+   }
+
+   /// Deliver the user's answer to a pending `elicitation/create` request. `response` is ACP
+   /// `CreateElicitationResponse` JSON: `{ "action": "accept", "content": {...} }`, `decline` or
+   /// `cancel`.
+   pub async fn respond_to_elicitation(
+      &self,
+      request_id: String,
+      response: serde_json::Value,
+   ) -> Result<()> {
+      let responders = self.responders.lock().await;
+      let pending = responders
+         .as_ref()
+         .map(|responders| responders.elicitations.clone());
+      drop(responders);
+      if let Some(pending) = pending
+         && let Some(answer_tx) = pending.lock().await.remove(&request_id)
+      {
+         answer_tx.send(response).ok();
       }
       Ok(())
    }
@@ -628,11 +646,8 @@ impl AcpAgentBridge {
 
       response_rx.await.context("Worker disconnected")??;
 
-      // Clear permission sender
-      {
-         let mut tx = self.permission_tx.lock().await;
-         *tx = None;
-      }
+      // Drop the answer channels; pending agent requests resolve as cancelled
+      *self.responders.lock().await = None;
 
       // Emit SessionComplete before StatusChanged
       if let Some(sid) = session_id {

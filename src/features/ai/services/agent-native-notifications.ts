@@ -7,7 +7,7 @@ import {
 import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
-export type AgentNativeNotificationKind = "complete" | "error" | "permission";
+export type AgentNativeNotificationKind = "complete" | "error" | "permission" | "question";
 export type AgentNativeNotificationResult =
   | "sent"
   | "disabled"
@@ -44,6 +44,11 @@ export function getAgentNativeNotificationContent(
   kind: AgentNativeNotificationKind,
 ): NativeNotificationOptions {
   switch (kind) {
+    case "question":
+      return {
+        title: "Agent has a question",
+        body: "Open Athas to answer it.",
+      };
     case "permission":
       return {
         title: "Agent needs your approval",

@@ -466,6 +466,14 @@ pub enum AcpEvent {
       description: String,
       options: Vec<AcpPermissionOption>,
    },
+   /// Agent asks the user a structured question (`elicitation/create`, form mode). `request`
+   /// is the ACP request as sent, so the frontend sees the schema and any `_meta`.
+   #[serde(rename_all = "camelCase")]
+   ElicitationRequest {
+      session_id: Option<String>,
+      request_id: String,
+      request: serde_json::Value,
+   },
    /// Session completed
    #[serde(rename_all = "camelCase")]
    SessionComplete { session_id: String },

@@ -1,3 +1,4 @@
+import type { AcpElicitationRequest } from "../lib/acp-elicitation";
 // Types for Agent Client Protocol (ACP) integration
 
 export interface AgentConfig {
@@ -244,6 +245,13 @@ export type AcpEvent =
       description: string;
       options: AcpPermissionOption[];
       preview?: AcpPermissionPreview;
+    }
+  | {
+      type: "elicitation_request";
+      /** Null when the agent asks outside a session (a request-scoped elicitation). */
+      sessionId: string | null;
+      requestId: string;
+      request: AcpElicitationRequest;
     }
   | {
       type: "session_complete";

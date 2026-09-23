@@ -1,6 +1,6 @@
 use super::{
    AcpConnection,
-   client::{AthasAcpClient, PermissionResponse},
+   client::{AthasAcpClient, ClientResponders},
    process::{force_kill_process_group, stop_child_tree_mut, terminate_process_group},
    types::{
       AcpAgentCapabilities, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
@@ -25,7 +25,7 @@ use std::{
 use tauri::Emitter;
 use tokio::{
    process::{Child, Command},
-   sync::{Mutex, mpsc},
+   sync::Mutex,
 };
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
@@ -38,7 +38,7 @@ pub(super) struct InitializedAcpWorker {
    pub process_group_id: Option<u32>,
    pub io_handle: tokio::task::JoinHandle<()>,
    pub client: Arc<AthasAcpClient>,
-   pub permission_sender: mpsc::Sender<PermissionResponse>,
+   pub responders: ClientResponders,
    pub workspace_path: Option<PathBuf>,
 }
 
@@ -71,7 +71,7 @@ pub(super) async fn initialize_worker(
       workspace_path.clone(),
       terminal_manager,
    ));
-   let permission_sender = client.permission_sender();
+   let responders = client.responders();
 
    let (connection_tx, connection_rx) = tokio::sync::oneshot::channel();
    let request_client = client.clone();
@@ -173,7 +173,7 @@ pub(super) async fn initialize_worker(
       process_group_id,
       io_handle,
       client,
-      permission_sender,
+      responders,
       workspace_path,
    })
 }
@@ -313,6 +313,9 @@ async fn initialize_connection(
             .write_text_file(true),
       )
       .terminal(true)
+      .elicitation(
+         acp::ElicitationCapabilities::new().form(acp::ElicitationFormCapabilities::new()),
+      )
       .session(
          acp::ClientSessionCapabilities::new().config_options(
             acp::SessionConfigOptionsCapabilities::new()

@@ -1,6 +1,6 @@
 use super::{
    bridge::AcpWorker,
-   client::PermissionResponse,
+   client::ClientResponders,
    types::{AcpAgentStatus, AcpSessionList, AgentConfig, SessionConfigValue},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
@@ -19,7 +19,7 @@ pub(super) enum AcpCommand {
       config: Box<AgentConfig>,
       app_handle: AppHandle,
       terminal_manager: Arc<TerminalManager>,
-      response_tx: oneshot::Sender<Result<(AcpAgentStatus, mpsc::Sender<PermissionResponse>)>>,
+      response_tx: oneshot::Sender<Result<(AcpAgentStatus, ClientResponders)>>,
    },
    SendPrompt {
       prompt: Vec<serde_json::Value>,

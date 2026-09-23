@@ -29,6 +29,20 @@ pub struct PermissionResponse {
    pub option_id: Option<String>,
 }
 
+/// Pending `elicitation/create` requests, keyed by the id sent to the frontend. Each waits for the
+/// user's answer as ACP `CreateElicitationResponse` JSON.
+pub type PendingElicitations = Arc<Mutex<HashMap<String, oneshot::Sender<serde_json::Value>>>>;
+
+/// Channels the bridge uses to deliver the user's answers back to waiting agent requests.
+#[derive(Clone)]
+pub struct ClientResponders {
+   pub permission: mpsc::Sender<PermissionResponse>,
+   pub elicitations: PendingElicitations,
+}
+
+/// How long an agent question waits for the user before it is cancelled.
+const ELICITATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(600);
+
 /// Athas ACP Client implementation
 /// Handles requests from the agent (file access, terminals, permissions)
 pub struct AthasAcpClient {
@@ -36,6 +50,7 @@ pub struct AthasAcpClient {
    workspace_path: Option<PathBuf>,
    permission_tx: mpsc::Sender<PermissionResponse>,
    permission_rx: Arc<Mutex<mpsc::Receiver<PermissionResponse>>>,
+   pending_elicitations: PendingElicitations,
    current_session_id: Arc<Mutex<Option<String>>>,
    terminal_manager: Arc<TerminalManager>,
    /// Maps ACP terminal IDs to terminal state (uses StdMutex for sync access from event listeners)
@@ -54,14 +69,18 @@ impl AthasAcpClient {
          workspace_path,
          permission_tx,
          permission_rx: Arc::new(Mutex::new(permission_rx)),
+         pending_elicitations: Arc::new(Mutex::new(HashMap::new())),
          current_session_id: Arc::new(Mutex::new(None)),
          terminal_manager,
          terminal_states: Arc::new(StdMutex::new(HashMap::new())),
       }
    }
 
-   pub fn permission_sender(&self) -> mpsc::Sender<PermissionResponse> {
-      self.permission_tx.clone()
+   pub fn responders(&self) -> ClientResponders {
+      ClientResponders {
+         permission: self.permission_tx.clone(),
+         elicitations: self.pending_elicitations.clone(),
+      }
    }
 
    pub async fn set_session_id(&self, session_id: String) {
@@ -281,6 +300,10 @@ impl AthasAcpClient {
             .kill_terminal_command(request)
             .await
             .map(acp::ClientResponse::KillTerminalResponse),
+         acp::AgentRequest::CreateElicitationRequest(request) => self
+            .create_elicitation(request)
+            .await
+            .map(acp::ClientResponse::CreateElicitationResponse),
          acp::AgentRequest::ExtMethodRequest(request) => self
             .ext_method(request)
             .await
@@ -304,6 +327,8 @@ impl AthasAcpClient {
          acp::AgentNotification::ExtNotification(notification) => {
             self.ext_notification(notification).await
          }
+         // Only sent for URL-mode elicitation, which Athas does not advertise.
+         acp::AgentNotification::CompleteElicitationNotification(_) => Ok(()),
          notification => {
             log::warn!("Unhandled ACP agent notification: {:?}", notification);
             Ok(())
@@ -316,12 +341,7 @@ impl AthasAcpClient {
       args: acp::RequestPermissionRequest,
    ) -> acp::Result<acp::RequestPermissionResponse> {
       let request_id = uuid::Uuid::new_v4().to_string();
-      let session_id = self
-         .current_session_id
-         .lock()
-         .await
-         .clone()
-         .unwrap_or_default();
+      let session_id = args.session_id.to_string();
 
       // Extract tool call info for the permission request
       let tool_call_id = args.tool_call.tool_call_id.clone();
@@ -444,6 +464,43 @@ impl AthasAcpClient {
             acp::RequestPermissionOutcome::Cancelled,
          )),
       }
+   }
+
+   /// Handles `elicitation/create`: the agent asks the user a structured question. Athas only
+   /// advertises form mode, so any other mode is declined. The full request, including `_meta`,
+   /// goes to the frontend, and its answer comes back as a `CreateElicitationResponse`.
+   async fn create_elicitation(
+      &self,
+      args: acp::CreateElicitationRequest,
+   ) -> acp::Result<acp::CreateElicitationResponse> {
+      let acp::ElicitationMode::Form(form) = &args.mode else {
+         return Ok(acp::CreateElicitationResponse::new(
+            acp::ElicitationAction::Decline,
+         ));
+      };
+      let session_id = match &form.scope {
+         acp::ElicitationScope::Session(scope) => Some(scope.session_id.to_string()),
+         _ => None,
+      };
+
+      let request_id = uuid::Uuid::new_v4().to_string();
+      let (answer_tx, answer_rx) = oneshot::channel();
+      self
+         .pending_elicitations
+         .lock()
+         .await
+         .insert(request_id.clone(), answer_tx);
+
+      let request = serde_json::to_value(&args).map_err(|_| acp_sdk::Error::internal_error())?;
+      self.emit_event(AcpEvent::ElicitationRequest {
+         session_id,
+         request_id: request_id.clone(),
+         request,
+      });
+
+      let answer = tokio::time::timeout(ELICITATION_TIMEOUT, answer_rx).await;
+      self.pending_elicitations.lock().await.remove(&request_id);
+      Ok(elicitation_response(answer.ok().and_then(Result::ok)))
    }
 
    async fn session_notification(&self, args: acp::SessionNotification) -> acp::Result<()> {
@@ -1003,9 +1060,73 @@ impl AthasAcpClient {
    }
 }
 
+/// Turns the frontend's answer into an ACP response. A missing or malformed answer cancels.
+fn elicitation_response(answer: Option<serde_json::Value>) -> acp::CreateElicitationResponse {
+   answer
+      .and_then(|value| serde_json::from_value(value).ok())
+      .unwrap_or_else(|| acp::CreateElicitationResponse::new(acp::ElicitationAction::Cancel))
+}
+
 #[cfg(test)]
 mod tests {
-   use super::{AthasAcpClient, SessionConfigOptionKind, acp};
+   use super::{AthasAcpClient, SessionConfigOptionKind, acp, elicitation_response};
+   use serde_json::json;
+
+   #[test]
+   fn forwards_form_elicitations_in_their_wire_shape() {
+      let request: acp::CreateElicitationRequest = serde_json::from_value(json!({
+         "sessionId": "sess_1",
+         "toolCallId": "call_1",
+         "mode": "form",
+         "message": "Which scope?",
+         "requestedSchema": {
+            "type": "object",
+            "properties": {
+               "scope": {
+                  "type": "string",
+                  "oneOf": [{ "const": "package", "title": "Package" }]
+               }
+            },
+            "required": ["scope"]
+         },
+         "_meta": { "source": "test" }
+      }))
+      .expect("valid form elicitation");
+
+      let forwarded = serde_json::to_value(&request).unwrap();
+      assert_eq!(forwarded["mode"], "form");
+      assert_eq!(forwarded["sessionId"], "sess_1");
+      assert_eq!(forwarded["toolCallId"], "call_1");
+      assert_eq!(forwarded["requestedSchema"]["required"], json!(["scope"]));
+      assert_eq!(
+         forwarded["requestedSchema"]["properties"]["scope"]["oneOf"][0]["const"],
+         "package"
+      );
+      assert_eq!(forwarded["_meta"]["source"], "test");
+   }
+
+   #[test]
+   fn maps_frontend_answers_to_elicitation_responses() {
+      let accepted = serde_json::to_value(elicitation_response(Some(json!({
+         "action": "accept",
+         "content": { "scope": "package", "checks": ["tests", "types"] }
+      }))))
+      .unwrap();
+      assert_eq!(accepted["action"], "accept");
+      assert_eq!(accepted["content"]["checks"], json!(["tests", "types"]));
+
+      for action in ["decline", "cancel"] {
+         let response =
+            serde_json::to_value(elicitation_response(Some(json!({ "action": action })))).unwrap();
+         assert_eq!(response["action"], action);
+      }
+
+      let missing = serde_json::to_value(elicitation_response(None)).unwrap();
+      assert_eq!(missing["action"], "cancel");
+      let malformed =
+         serde_json::to_value(elicitation_response(Some(json!({ "answer": 1 })))).unwrap();
+      assert_eq!(malformed["action"], "cancel");
+   }
 
    #[test]
    fn maps_boolean_model_configuration_options() {

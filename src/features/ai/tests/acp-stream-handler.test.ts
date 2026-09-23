@@ -184,6 +184,51 @@ describe("AcpStreamHandler", () => {
     );
   });
 
+  it("routes agent questions to the chat, including request-scoped ones", () => {
+    const onEvent = vi.fn();
+    const { handler } = createHandler({ onEvent });
+    const question = {
+      type: "elicitation_request" as const,
+      requestId: "question-1",
+      request: {
+        mode: "form" as const,
+        message: "Which scope?",
+        requestedSchema: { type: "object" as const, properties: {} },
+      },
+    };
+
+    handler.handleAcpEvent({ ...question, sessionId: "session-b" });
+    expect(onEvent).not.toHaveBeenCalled();
+
+    handler.handleAcpEvent({ ...question, sessionId: "session-a" });
+    handler.handleAcpEvent({ ...question, requestId: "question-2", sessionId: null });
+    expect(onEvent.mock.calls.map(([event]) => event.requestId)).toEqual([
+      "question-1",
+      "question-2",
+    ]);
+    expect(invoke).not.toHaveBeenCalledWith("respond_acp_elicitation", expect.anything());
+  });
+
+  it("declines agent questions when no chat can answer them", () => {
+    const { handler } = createHandler();
+
+    handler.handleAcpEvent({
+      type: "elicitation_request",
+      sessionId: "session-a",
+      requestId: "question-1",
+      request: {
+        mode: "form",
+        message: "Which scope?",
+        requestedSchema: { type: "object", properties: {} },
+      },
+    });
+
+    expect(invoke).toHaveBeenCalledWith("respond_acp_elicitation", {
+      requestId: "question-1",
+      response: { action: "decline" },
+    });
+  });
+
   it("starts a response continuation before reasoning that follows a completed tool", () => {
     const calls: string[] = [];
     const { handler } = createHandler({

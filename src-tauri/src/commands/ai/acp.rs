@@ -443,6 +443,22 @@ pub async fn respond_acp_permission(
       .map_err(|e| e.to_string())
 }
 
+/// Answers an agent's `elicitation/create` request. `response` is ACP `CreateElicitationResponse`
+/// JSON: `{ "action": "accept", "content": {...} }`, `{ "action": "decline" }` or `{ "action":
+/// "cancel" }`.
+#[tauri::command]
+pub async fn respond_acp_elicitation(
+   bridge: State<'_, AcpBridgeState>,
+   request_id: String,
+   response: serde_json::Value,
+) -> Result<(), String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .respond_to_elicitation(request_id, response)
+      .await
+      .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn set_acp_session_mode(
    bridge: State<'_, AcpBridgeState>,

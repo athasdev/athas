@@ -1,3 +1,4 @@
+import type { AcpElicitationResponse } from "../lib/acp-elicitation";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -343,6 +344,8 @@ export class AcpStreamHandler {
       ) {
         return;
       }
+    } else if (event.type === "elicitation_request" && event.sessionId === null) {
+      // Request-scoped questions belong to no session; the running prompt's chat answers them.
     } else if (
       !hasSessionId(event) ||
       !this.activeSessionId ||
@@ -385,6 +388,15 @@ export class AcpStreamHandler {
 
       case "permission_request":
         this.handlePermissionRequest(event);
+        break;
+
+      case "elicitation_request":
+        // The chat answers questions through onEvent. Without it nothing can, so decline.
+        if (!this.handlers.onEvent) {
+          AcpStreamHandler.respondToElicitation(event.requestId, { action: "decline" }).catch(
+            console.error,
+          );
+        }
         break;
 
       case "session_complete":
@@ -616,6 +628,7 @@ export class AcpStreamHandler {
       case "tool_update":
       case "tool_complete":
       case "permission_request":
+      case "elicitation_request":
       case "session_complete":
       case "error":
       case "plan_update":
@@ -686,6 +699,14 @@ export class AcpStreamHandler {
     await invoke("respond_acp_permission", {
       args: { requestId, approved, cancelled, optionId },
     });
+  }
+
+  /** Answers an agent's `elicitation/create` request. */
+  static async respondToElicitation(
+    requestId: string,
+    response: AcpElicitationResponse,
+  ): Promise<void> {
+    await invoke("respond_acp_elicitation", { requestId, response });
   }
 
   // Static method to get available agents
