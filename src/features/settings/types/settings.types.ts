@@ -1,5 +1,6 @@
 import type { CoreFeaturesState } from "./feature.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
+import type { McpServerSetting } from "@/features/ai/types/mcp-server.types";
 import type {
   GitSidebarItemId,
   GitSidebarTabId,
@@ -123,6 +124,8 @@ export interface Settings {
   aiDefaultSessionMode: string;
   aiAgentNotifications: boolean;
   aiSkills: AIChatSkill[];
+  /** MCP servers offered to ACP agents. Secrets live in secure storage, not here. */
+  mcpServers: McpServerSetting[];
   v0DesignSystems: LegacyV0DesignSystemProfile[];
   activeV0DesignSystemId: string;
   ollamaBaseUrl: string;

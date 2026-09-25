@@ -54,6 +54,7 @@ import {
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
 import { CodexSettings } from "@/features/ai/integrations/codex/codex-settings";
+import { McpServerSettings } from "@/features/ai/components/mcp/mcp-server-settings";
 import { IntelligencePreferences } from "../intelligence-preferences";
 export const AISettings = () => {
   const settings = useSettingsStore(
@@ -685,6 +686,7 @@ export const AISettings = () => {
           )}
         </CollapsibleContent>
       </Collapsible>
+      <McpServerSettings />
       <Section title="Autocomplete">
         <SettingRow
           label="AI Autocomplete"

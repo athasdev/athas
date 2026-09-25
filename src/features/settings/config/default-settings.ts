@@ -96,6 +96,7 @@ export const defaultSettings: Settings = {
   aiDefaultSessionMode: "",
   aiAgentNotifications: true,
   aiSkills: [],
+  mcpServers: [],
   v0DesignSystems: [],
   activeV0DesignSystemId: "",
   ollamaBaseUrl: "http://localhost:11434",
@@ -204,6 +205,7 @@ export function getDefaultSettingsSnapshot(): Settings {
     hiddenGitSidebarItems: [...defaultSettings.hiddenGitSidebarItems],
     collapsedActivityRailSections: [...defaultSettings.collapsedActivityRailSections],
     aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),
+    mcpServers: defaultSettings.mcpServers.map((server) => ({ ...server, args: [...server.args] })),
     v0DesignSystems: defaultSettings.v0DesignSystems.map((profile) => ({ ...profile })),
     uiFontSize: normalizeUiFontSize(defaultSettings.uiFontSize),
   };
