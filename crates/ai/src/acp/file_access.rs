@@ -1,8 +1,131 @@
 //! Helpers behind the ACP `fs/*` methods that do not need the client's state.
 
+use super::{
+   client::PermissionResponse,
+   types::{AcpPermissionOption, AcpPermissionOptionKind, AcpPermissionToolCall, AcpToolKind},
+   workspace_path::path_to_string,
+};
 use agent_client_protocol::schema::v1 as acp;
 use serde::Serialize;
 use std::{io, path::Path};
+
+/// What an agent wants to do with a file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum FileAccess {
+   Read,
+   Write,
+}
+
+/// The user's answer to an agent touching a file outside the workspace.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum OutsideAccess {
+   Once,
+   /// Reads in the same folder go ahead without asking again for the rest of the session.
+   FolderForSession,
+   Denied,
+   Cancelled,
+}
+
+const ALLOW_ONCE: &str = "allow_once";
+const ALLOW_FOLDER: &str = "allow_folder_for_session";
+const DENY: &str = "deny";
+
+/// The choices an outside-the-workspace prompt offers. Only reads can be allowed for the session;
+/// every write outside the workspace is asked about on its own.
+pub(super) fn outside_access_options(access: FileAccess) -> Vec<AcpPermissionOption> {
+   let mut options = vec![AcpPermissionOption {
+      id: ALLOW_ONCE.to_string(),
+      name: "Allow once".to_string(),
+      kind: AcpPermissionOptionKind::AllowOnce,
+   }];
+   if access == FileAccess::Read {
+      options.push(AcpPermissionOption {
+         id: ALLOW_FOLDER.to_string(),
+         name: "Allow reads in this folder for this session".to_string(),
+         kind: AcpPermissionOptionKind::AllowAlways,
+      });
+   }
+   options.push(AcpPermissionOption {
+      id: DENY.to_string(),
+      name: "Deny".to_string(),
+      kind: AcpPermissionOptionKind::RejectOnce,
+   });
+   options
+}
+
+/// Reads the frontend's answer. No answer (timed out, or the agent went away) denies, and a write
+/// is never allowed beyond this once, whatever option comes back.
+pub(super) fn outside_access_answer(
+   access: FileAccess,
+   response: Option<&PermissionResponse>,
+) -> OutsideAccess {
+   let Some(response) = response else {
+      return OutsideAccess::Denied;
+   };
+   if response.cancelled {
+      return OutsideAccess::Cancelled;
+   }
+   match response.option_id.as_deref() {
+      Some(ALLOW_ONCE) => OutsideAccess::Once,
+      Some(ALLOW_FOLDER) if access == FileAccess::Read => OutsideAccess::FolderForSession,
+      Some(ALLOW_FOLDER) => OutsideAccess::Once,
+      Some(_) => OutsideAccess::Denied,
+      None if response.approved => OutsideAccess::Once,
+      None => OutsideAccess::Denied,
+   }
+}
+
+/// What the permission prompt shows about the access: the path, why it asks, and for a write the
+/// change as a diff (`old_text` is `None` for a new file).
+pub(super) fn outside_access_tool_call(
+   request_id: &str,
+   access: FileAccess,
+   path: &Path,
+   old_text: Option<String>,
+   new_text: Option<&str>,
+) -> AcpPermissionToolCall {
+   let shown_path = path_to_string(path);
+   let (title, kind, reason) = match access {
+      FileAccess::Read => (
+         format!("Read {shown_path}"),
+         AcpToolKind::Read,
+         "The agent wants to read a file outside the workspace. Always lets it read other files \
+          in the same folder for the rest of this session.",
+      ),
+      FileAccess::Write => (
+         format!("Write {shown_path}"),
+         AcpToolKind::Edit,
+         "The agent wants to write a file outside the workspace.",
+      ),
+   };
+   let mut content = vec![acp::ToolCallContent::from(reason)];
+   if let Some(new_text) = new_text {
+      content.push(acp::Diff::new(path, new_text).old_text(old_text).into());
+   }
+   AcpPermissionToolCall {
+      tool_id: request_id.to_string(),
+      title: Some(title),
+      kind: Some(kind),
+      content: serde_json::to_value(content).ok(),
+      locations: Some(vec![super::types::AcpToolCallLocation {
+         path: shown_path,
+         line: None,
+      }]),
+      raw_input: None,
+   }
+}
+
+/// The error for an access the user did not allow.
+pub(super) fn access_denied(path: &Path) -> acp::Error {
+   acp::Error::new(
+      -32603,
+      format!(
+         "The user did not allow access to {}, which is outside the workspace",
+         path.display()
+      ),
+   )
+   .data(serde_json::json!({ "uri": path_to_string(path) }))
+}
 
 /// The `file-changed` event payload, in the shape the project file watcher emits and the
 /// frontend's file watcher listener reads.
@@ -127,6 +250,102 @@ mod tests {
          serde_json::to_value(created).unwrap()["event_type"],
          "opened"
       );
+   }
+
+   fn answer(approved: bool, cancelled: bool, option_id: Option<&str>) -> PermissionResponse {
+      PermissionResponse {
+         approved,
+         cancelled,
+         option_id: option_id.map(str::to_string),
+      }
+   }
+
+   #[test]
+   fn only_reads_can_be_allowed_for_the_session() {
+      let ids = |access| {
+         outside_access_options(access)
+            .into_iter()
+            .map(|option| option.id)
+            .collect::<Vec<_>>()
+      };
+      assert_eq!(
+         ids(FileAccess::Read),
+         ["allow_once", "allow_folder_for_session", "deny"]
+      );
+      assert_eq!(ids(FileAccess::Write), ["allow_once", "deny"]);
+
+      let folder = answer(true, false, Some("allow_folder_for_session"));
+      assert_eq!(
+         outside_access_answer(FileAccess::Read, Some(&folder)),
+         OutsideAccess::FolderForSession
+      );
+      // A write never gets more than this one time, whatever comes back.
+      assert_eq!(
+         outside_access_answer(FileAccess::Write, Some(&folder)),
+         OutsideAccess::Once
+      );
+   }
+
+   #[test]
+   fn reads_the_users_answer() {
+      let read = FileAccess::Read;
+      assert_eq!(
+         outside_access_answer(read, Some(&answer(true, false, Some("allow_once")))),
+         OutsideAccess::Once
+      );
+      assert_eq!(
+         outside_access_answer(read, Some(&answer(false, false, Some("deny")))),
+         OutsideAccess::Denied
+      );
+      assert_eq!(
+         outside_access_answer(read, Some(&answer(true, false, Some("unknown")))),
+         OutsideAccess::Denied
+      );
+      assert_eq!(
+         outside_access_answer(read, Some(&answer(true, false, None))),
+         OutsideAccess::Once
+      );
+      assert_eq!(
+         outside_access_answer(read, Some(&answer(false, false, None))),
+         OutsideAccess::Denied
+      );
+      assert_eq!(
+         outside_access_answer(read, Some(&answer(false, true, None))),
+         OutsideAccess::Cancelled
+      );
+      assert_eq!(outside_access_answer(read, None), OutsideAccess::Denied);
+   }
+
+   #[test]
+   fn write_prompts_show_the_change() {
+      let tool_call = outside_access_tool_call(
+         "req-1",
+         FileAccess::Write,
+         Path::new("/outside/a.txt"),
+         Some("old".to_string()),
+         Some("new"),
+      );
+      let tool_call = serde_json::to_value(tool_call).unwrap();
+
+      assert_eq!(tool_call["toolId"], "req-1");
+      assert_eq!(tool_call["kind"], "edit");
+      assert_eq!(tool_call["title"], "Write /outside/a.txt");
+      assert_eq!(tool_call["content"][0]["type"], "content");
+      assert_eq!(tool_call["content"][1]["type"], "diff");
+      assert_eq!(tool_call["content"][1]["oldText"], "old");
+      assert_eq!(tool_call["content"][1]["newText"], "new");
+      assert_eq!(tool_call["locations"][0]["path"], "/outside/a.txt");
+
+      let read = outside_access_tool_call(
+         "req-2",
+         FileAccess::Read,
+         Path::new("/outside/a.txt"),
+         None,
+         None,
+      );
+      let read = serde_json::to_value(read).unwrap();
+      assert_eq!(read["kind"], "read");
+      assert_eq!(read["content"].as_array().unwrap().len(), 1);
    }
 
    #[test]

@@ -1,12 +1,13 @@
 use super::{
-   AcpConnection, file_access,
+   AcpConnection,
+   file_access::{self, FileAccess, OutsideAccess},
    terminal_state::AcpTerminalState,
    types::{
       AcpContentBlock, AcpEvent, AcpPermissionToolCall, AcpPlanEntry, AcpPlanEntryPriority,
       AcpPlanEntryStatus, AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, AcpUsageUpdate,
       SessionConfigOption, SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
    },
-   workspace_path::{path_to_string, resolve_path_against_workspace},
+   workspace_path::{is_inside_roots, path_to_string, real_path, resolve_path_against_workspace},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
 use agent_client_protocol::{self as acp_sdk, schema::v1 as acp};
@@ -14,7 +15,7 @@ use athas_terminal::{
    TerminalConfig, TerminalEvent, TerminalEventHandler, TerminalManager, TerminalSize,
 };
 use std::{
-   collections::HashMap,
+   collections::{HashMap, HashSet},
    path::{Path, PathBuf},
    sync::{Arc, Mutex as StdMutex},
 };
@@ -161,6 +162,9 @@ impl<T> Drop for PendingRequest<T> {
    }
 }
 
+/// How long a permission prompt waits for the user before the request is refused.
+const PERMISSION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(300);
+
 /// How long an agent question waits for the user before it is cancelled.
 const ELICITATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(600);
 
@@ -169,6 +173,10 @@ const ELICITATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(
 pub struct AthasAcpClient {
    app_handle: AppHandle,
    workspace_path: Option<PathBuf>,
+   /// Where the workspace really is on disk; agent file access outside these asks the user.
+   workspace_roots: Vec<PathBuf>,
+   /// Folders outside the workspace the user let each session read from, by session id.
+   outside_read_grants: StdMutex<HashMap<String, HashSet<PathBuf>>>,
    pending_permissions: Pending<PermissionResponse>,
    pending_elicitations: Pending<serde_json::Value>,
    current_session_id: Arc<Mutex<Option<String>>>,
@@ -183,9 +191,16 @@ impl AthasAcpClient {
       workspace_path: Option<PathBuf>,
       terminal_manager: Arc<TerminalManager>,
    ) -> Self {
+      let workspace_roots = workspace_path
+         .as_deref()
+         .and_then(|path| std::fs::canonicalize(path).ok())
+         .into_iter()
+         .collect();
       Self {
          app_handle,
          workspace_path,
+         workspace_roots,
+         outside_read_grants: StdMutex::default(),
          pending_permissions: Arc::default(),
          pending_elicitations: Arc::default(),
          current_session_id: Arc::new(Mutex::new(None)),
@@ -602,7 +617,7 @@ impl AthasAcpClient {
       });
 
       // Wait for user response with timeout
-      let answer = tokio::time::timeout(std::time::Duration::from_secs(300), response_rx).await;
+      let answer = tokio::time::timeout(PERMISSION_TIMEOUT, response_rx).await;
       drop(pending);
       match answer {
          Ok(Ok(response)) => {
@@ -852,6 +867,9 @@ impl AthasAcpClient {
    ) -> acp::Result<acp::ReadTextFileResponse> {
       let path_str = args.path.to_string_lossy();
       let path = self.resolve_path(&path_str);
+      self
+         .ensure_file_access(&args.session_id.to_string(), &path, FileAccess::Read, None)
+         .await?;
       match tokio::fs::read_to_string(&path).await {
          Ok(content) => file_access::slice_lines(content, args.line, args.limit)
             .map(acp::ReadTextFileResponse::new),
@@ -865,8 +883,96 @@ impl AthasAcpClient {
    ) -> acp::Result<acp::WriteTextFileResponse> {
       let path_str = args.path.to_string_lossy();
       let path = self.resolve_path(&path_str);
+      self
+         .ensure_file_access(
+            &args.session_id.to_string(),
+            &path,
+            FileAccess::Write,
+            Some(&args.content),
+         )
+         .await?;
       self.apply_agent_write(&path, &args.content).await?;
       Ok(acp::WriteTextFileResponse::new())
+   }
+
+   /// Lets the agent at `path` when it lies inside the workspace. Anything outside asks the user
+   /// first, with the permission prompt the agent's own permission requests use; a write shows the
+   /// change it would make. Reads in a folder the user allowed for the session go ahead.
+   async fn ensure_file_access(
+      &self,
+      session_id: &str,
+      path: &Path,
+      access: FileAccess,
+      new_content: Option<&str>,
+   ) -> acp::Result<()> {
+      if is_inside_roots(path, &self.workspace_roots) {
+         return Ok(());
+      }
+      let folder = real_path(path).and_then(|real| real.parent().map(Path::to_path_buf));
+      if access == FileAccess::Read
+         && let Some(folder) = &folder
+         && self.has_outside_read_grant(session_id, folder)
+      {
+         return Ok(());
+      }
+
+      let old_text = match access {
+         FileAccess::Write => tokio::fs::read_to_string(path).await.ok(),
+         FileAccess::Read => None,
+      };
+      let (pending, answer_rx) = PendingRequest::open(
+         &self.pending_permissions,
+         &self.app_handle,
+         Some(session_id.to_string()),
+      );
+      let request_id = pending.request_id.clone();
+      let tool_call =
+         file_access::outside_access_tool_call(&request_id, access, path, old_text, new_content);
+      self.emit_event(AcpEvent::PermissionRequest {
+         session_id: session_id.to_string(),
+         request_id,
+         permission_type: match access {
+            FileAccess::Read => "file_read",
+            FileAccess::Write => "file_write",
+         }
+         .to_string(),
+         resource: path_to_string(path),
+         description: tool_call.title.clone().unwrap_or_default(),
+         options: file_access::outside_access_options(access),
+         tool_call,
+      });
+
+      let answer = tokio::time::timeout(PERMISSION_TIMEOUT, answer_rx)
+         .await
+         .ok()
+         .and_then(Result::ok);
+      drop(pending);
+      match file_access::outside_access_answer(access, answer.as_ref()) {
+         OutsideAccess::Once => Ok(()),
+         OutsideAccess::FolderForSession => {
+            if let Some(folder) = folder {
+               self
+                  .outside_read_grants
+                  .lock()
+                  .unwrap_or_else(|poisoned| poisoned.into_inner())
+                  .entry(session_id.to_string())
+                  .or_default()
+                  .insert(folder);
+            }
+            Ok(())
+         }
+         OutsideAccess::Denied => Err(file_access::access_denied(path)),
+         OutsideAccess::Cancelled => Err(acp::Error::request_cancelled()),
+      }
+   }
+
+   fn has_outside_read_grant(&self, session_id: &str, folder: &Path) -> bool {
+      self
+         .outside_read_grants
+         .lock()
+         .unwrap_or_else(|poisoned| poisoned.into_inner())
+         .get(session_id)
+         .is_some_and(|folders| folders.contains(folder))
    }
 
    /// Applies an agent's write to `path`, the one place agent writes land: the file is written,

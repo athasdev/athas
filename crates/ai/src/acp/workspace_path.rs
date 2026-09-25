@@ -35,15 +35,47 @@ pub(super) fn path_to_string(path: &Path) -> String {
    path.to_string_lossy().to_string()
 }
 
+/// The absolute path an agent means by `path`, with `.` and `..` resolved lexically. ACP paths
+/// are absolute; a relative one is taken against the workspace.
 pub(super) fn resolve_path_against_workspace(workspace_path: Option<&Path>, path: &str) -> PathBuf {
    let candidate = PathBuf::from(path);
-   if candidate.is_absolute() {
-      return candidate;
-   }
+   let absolute = if candidate.is_absolute() {
+      candidate
+   } else {
+      workspace_path
+         .map(|workspace| workspace.join(&candidate))
+         .unwrap_or_else(|| std::env::current_dir().unwrap_or_default().join(candidate))
+   };
+   lexical_normalize(&absolute)
+}
 
-   workspace_path
-      .map(|workspace| workspace.join(candidate.clone()))
-      .unwrap_or_else(|| std::env::current_dir().unwrap_or_default().join(candidate))
+/// Where `path` really is on disk: its deepest existing ancestor with symlinks resolved, plus the
+/// part that does not exist yet. `None` when an existing ancestor cannot be resolved, such as a
+/// dangling symlink, since a write through it could land anywhere.
+pub(super) fn real_path(path: &Path) -> Option<PathBuf> {
+   let path = lexical_normalize(path);
+   for ancestor in path.ancestors() {
+      if fs::symlink_metadata(ancestor).is_err() {
+         continue;
+      }
+      let real = fs::canonicalize(ancestor).ok()?;
+      let rest = path.strip_prefix(ancestor).ok()?;
+      return Some(if rest.as_os_str().is_empty() {
+         real
+      } else {
+         real.join(rest)
+      });
+   }
+   None
+}
+
+/// Whether `path` lies inside one of the workspace `roots`. Both sides are compared by where they
+/// really are, so `..` and symlinks cannot step out of a root.
+pub(super) fn is_inside_roots(path: &Path, roots: &[PathBuf]) -> bool {
+   let Some(path) = real_path(path) else {
+      return false;
+   };
+   roots.iter().any(|root| path.starts_with(root))
 }
 
 fn path_from_workspace_input(input: &str) -> Result<PathBuf> {
@@ -194,6 +226,90 @@ mod tests {
       let resolved = resolve_workspace_path(Some(uri)).unwrap();
 
       assert_eq!(resolved.as_deref(), Some(workspace.as_path()));
+   }
+
+   #[test]
+   fn resolves_dot_segments_lexically() {
+      let workspace = PathBuf::from("/workspace");
+
+      assert_eq!(
+         resolve_path_against_workspace(Some(&workspace), "/workspace/src/../../etc/passwd"),
+         PathBuf::from("/etc/passwd")
+      );
+      assert_eq!(
+         resolve_path_against_workspace(Some(&workspace), "../outside.txt"),
+         PathBuf::from("/outside.txt")
+      );
+      assert_eq!(
+         resolve_path_against_workspace(Some(&workspace), "./src/./a.ts"),
+         PathBuf::from("/workspace/src/a.ts")
+      );
+   }
+
+   fn workspace_roots(workspace: &Path) -> Vec<PathBuf> {
+      vec![fs::canonicalize(workspace).unwrap()]
+   }
+
+   #[test]
+   fn keeps_paths_inside_the_workspace() {
+      let temp_dir = tempfile::tempdir().unwrap();
+      let workspace = temp_dir.path().join("workspace");
+      fs::create_dir_all(workspace.join("src")).unwrap();
+      fs::write(workspace.join("src/a.ts"), "").unwrap();
+      let roots = workspace_roots(&workspace);
+
+      assert!(is_inside_roots(&workspace.join("src/a.ts"), &roots));
+      // Files and folders that do not exist yet are judged by where they would be created.
+      assert!(is_inside_roots(&workspace.join("new/dir/b.ts"), &roots));
+      assert!(is_inside_roots(&workspace, &roots));
+   }
+
+   #[test]
+   fn finds_paths_that_leave_the_workspace() {
+      let temp_dir = tempfile::tempdir().unwrap();
+      let workspace = temp_dir.path().join("workspace");
+      fs::create_dir_all(&workspace).unwrap();
+      fs::write(temp_dir.path().join("secret.txt"), "").unwrap();
+      let roots = workspace_roots(&workspace);
+
+      assert!(!is_inside_roots(
+         &temp_dir.path().join("secret.txt"),
+         &roots
+      ));
+      let escaped = resolve_path_against_workspace(Some(&workspace), "../secret.txt");
+      assert!(!is_inside_roots(&escaped, &roots));
+      let absolute = resolve_path_against_workspace(
+         Some(&workspace),
+         &path_to_string(&workspace.join("src/../../secret.txt")),
+      );
+      assert!(!is_inside_roots(&absolute, &roots));
+      // A sibling whose name starts with the workspace's is not inside it.
+      assert!(!is_inside_roots(
+         &temp_dir.path().join("workspace-other/a.txt"),
+         &roots
+      ));
+      assert!(!is_inside_roots(Path::new("/etc/hosts"), &roots));
+      assert!(!is_inside_roots(Path::new("/a.txt"), &[]));
+   }
+
+   #[cfg(unix)]
+   #[test]
+   fn follows_symlinks_out_of_the_workspace() {
+      let temp_dir = tempfile::tempdir().unwrap();
+      let workspace = temp_dir.path().join("workspace");
+      let outside = temp_dir.path().join("outside");
+      fs::create_dir_all(&workspace).unwrap();
+      fs::create_dir_all(&outside).unwrap();
+      std::os::unix::fs::symlink(&outside, workspace.join("link")).unwrap();
+      std::os::unix::fs::symlink(outside.join("gone"), workspace.join("dangling")).unwrap();
+      let roots = workspace_roots(&workspace);
+
+      assert!(!is_inside_roots(&workspace.join("link/a.txt"), &roots));
+      assert!(!is_inside_roots(&workspace.join("link"), &roots));
+      assert!(!is_inside_roots(&workspace.join("dangling"), &roots));
+      // A link that stays inside is fine.
+      std::os::unix::fs::symlink(&workspace, workspace.join("self")).unwrap();
+      assert!(is_inside_roots(&workspace.join("self/a.txt"), &roots));
    }
 
    #[test]

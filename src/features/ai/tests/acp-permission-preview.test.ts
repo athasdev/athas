@@ -105,4 +105,38 @@ describe("ACP permission preview", () => {
     );
     expect(getAcpPermissionPreview(permissionEvent())).toBeUndefined();
   });
+
+  it("shows a write outside the workspace as its diff, reason and path", () => {
+    // The shape the ACP client sends when an agent writes outside the workspace.
+    const preview = getAcpPermissionPreview({
+      ...permissionEvent({
+        toolId: "req-1",
+        title: "Write /outside/a.txt",
+        kind: "edit",
+        content: [
+          {
+            type: "content",
+            content: {
+              type: "text",
+              text: "The agent wants to write a file outside the workspace.",
+            },
+          },
+          { type: "diff", path: "/outside/a.txt", oldText: null, newText: "new" },
+        ],
+        locations: [{ path: "/outside/a.txt", line: null }],
+        rawInput: null,
+      }),
+      permissionType: "file_write",
+      resource: "/outside/a.txt",
+    });
+
+    expect(preview).toMatchObject({
+      type: "tool_call",
+      title: "Write /outside/a.txt",
+      kind: "edit",
+      text: "The agent wants to write a file outside the workspace.",
+      locations: [{ path: "/outside/a.txt", line: null }],
+    });
+    expect(preview?.type === "tool_call" && preview.diffs).toHaveLength(1);
+  });
 });
