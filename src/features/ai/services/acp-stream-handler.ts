@@ -7,6 +7,7 @@ import type {
   AcpEvent,
   AcpPromptContentBlock,
   AcpSessionList,
+  AcpStopReason,
   AgentConfig,
 } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
@@ -448,8 +449,8 @@ export class AcpStreamHandler {
       this.handlers.onComplete({ outcome: "cancelled" });
       return;
     }
-    // Treat all other stop reasons as completion in case no session_complete arrives
-    this.handleSessionComplete();
+    // Limits and refusals end the turn too; the chat explains them from the stop reason.
+    this.handleSessionComplete(event.stopReason);
   }
 
   private handleSessionModeUpdate(event: Extract<AcpEvent, { type: "session_mode_update" }>): void {
@@ -593,13 +594,15 @@ export class AcpStreamHandler {
     }
   }
 
-  private handleSessionComplete(): void {
+  private handleSessionComplete(stopReason?: AcpStopReason): void {
     if (this.sessionComplete) return;
     console.log("Session complete");
     this.sessionComplete = true;
     this.pendingNewMessage = false;
     this.cleanup();
-    this.handlers.onComplete({ outcome: "completed" });
+    this.handlers.onComplete(
+      stopReason ? { outcome: "completed", stopReason } : { outcome: "completed" },
+    );
   }
 
   private handleError(event: Extract<AcpEvent, { type: "error" }>): void {

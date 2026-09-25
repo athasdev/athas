@@ -33,6 +33,9 @@ pub struct MessageData {
    /// The agent's latest ACP plan for this message, as JSON entries.
    #[serde(default)]
    pub plan: Option<String>,
+   /// Why the agent's turn ended early (output limit, turn limit, refusal), if it did.
+   #[serde(default)]
+   pub stop_notice: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -145,7 +148,7 @@ impl ChatHistoryRepository {
          .map_err(|e| format!("Failed to create tool_calls table: {}", e))?;
       let _ = conn.execute("ALTER TABLE tool_calls ADD COLUMN meta TEXT", []);
 
-      for column in ["images", "plan"] {
+      for column in ["images", "plan", "stop_notice"] {
          let exists: bool = conn
             .query_row(
                "SELECT EXISTS(SELECT 1 FROM pragma_table_info('messages') WHERE name = ?1)",
@@ -236,8 +239,8 @@ impl ChatHistoryRepository {
       for message in messages {
          match conn.execute(
             "INSERT INTO messages (id, chat_id, role, content, timestamp, is_streaming, \
-             is_tool_use, tool_name, images, plan) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, \
-             ?10)",
+             is_tool_use, tool_name, images, plan, stop_notice) VALUES (?1, ?2, ?3, ?4, ?5, ?6, \
+             ?7, ?8, ?9, ?10, ?11)",
             params![
                message.id,
                message.chat_id,
@@ -248,7 +251,8 @@ impl ChatHistoryRepository {
                message.is_tool_use,
                message.tool_name,
                message.images,
-               message.plan
+               message.plan,
+               message.stop_notice
             ],
          ) {
             Ok(_) => {}
@@ -349,7 +353,7 @@ impl ChatHistoryRepository {
       let mut stmt = conn
          .prepare(
             "SELECT id, chat_id, role, content, timestamp, is_streaming, is_tool_use, tool_name, \
-             images, plan FROM messages WHERE chat_id = ?1 ORDER BY timestamp ASC",
+             images, plan, stop_notice FROM messages WHERE chat_id = ?1 ORDER BY timestamp ASC",
          )
          .map_err(|e| format!("Failed to prepare messages query: {}", e))?;
 
@@ -366,6 +370,7 @@ impl ChatHistoryRepository {
                tool_name: row.get(7)?,
                images: row.get(8)?,
                plan: row.get(9)?,
+               stop_notice: row.get(10)?,
             })
          })
          .map_err(|e| format!("Failed to query messages: {}", e))?
@@ -512,7 +517,7 @@ mod tests {
    use super::*;
 
    #[test]
-   fn migrates_legacy_messages_and_round_trips_images_and_plans() {
+   fn migrates_legacy_messages_and_round_trips_images_plans_and_stop_notices() {
       let directory = tempfile::tempdir().unwrap();
       let path = directory.path().join("history.db");
       let conn = Connection::open(&path).unwrap();
@@ -541,15 +546,21 @@ mod tests {
       .unwrap();
       assert!(message.images.is_none());
       assert!(message.plan.is_none());
+      assert!(message.stop_notice.is_none());
       let images = r#"[{"mediaType":"image/png","data":"YWJj"}]"#.to_string();
       message.images = Some(images.clone());
       let plan = r#"[{"content":"Read","priority":"high","status":"completed"}]"#.to_string();
       message.plan = Some(plan.clone());
+      message.stop_notice = Some("max_tokens".to_string());
       repository.save_chat(chat, vec![message], vec![]).unwrap();
       let reopened = ChatHistoryRepository::new(path);
       let loaded = reopened.load_chat("images").unwrap();
       assert_eq!(loaded.messages[0].images.as_deref(), Some(images.as_str()));
       assert_eq!(loaded.messages[0].plan.as_deref(), Some(plan.as_str()));
+      assert_eq!(
+         loaded.messages[0].stop_notice.as_deref(),
+         Some("max_tokens")
+      );
       assert_eq!(loaded.messages[0].content, "");
    }
 }

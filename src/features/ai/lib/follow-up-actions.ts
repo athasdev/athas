@@ -1,4 +1,5 @@
 import type { Message } from "@/features/ai/types/ai-chat.types";
+import { getAgentStopFollowUpActions } from "@/features/ai/lib/agent-stop-notice";
 
 const FOLLOW_UP_ACTIONS_START = "[FOLLOW_UP_ACTIONS]";
 const FOLLOW_UP_ACTIONS_END = "[/FOLLOW_UP_ACTIONS]";
@@ -129,5 +130,5 @@ export function getFollowUpActionsForMessage(
   message: Message | null | undefined,
 ): ChatFollowUpAction[] {
   if (!message || message.role !== "assistant" || message.isStreaming) return [];
-  return message.followUpActions || [];
+  return [...getAgentStopFollowUpActions(message), ...(message.followUpActions || [])];
 }

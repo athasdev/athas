@@ -33,6 +33,7 @@ import { ProviderIcon } from "../icons/provider-icons";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
 import { AgentPlan } from "../messages/agent-plan";
+import { AgentStopNotice } from "../messages/agent-stop-notice";
 import { ToolCallList } from "../messages/tool-call-display";
 import { buildAssistantTimeline } from "@/features/ai/lib/assistant-timeline";
 
@@ -307,6 +308,7 @@ export const ChatMessage = memo(function ChatMessage({
         <AssistantMessageAvatar iconId={assistantIconId} label={assistantLabel} />
         <MessageContent className={ASSISTANT_CONTENT_INSET}>
           <ToolCallList toolCalls={message.toolCalls!} isStreaming={message.isStreaming} />
+          {message.stopNotice ? <AgentStopNotice notice={message.stopNotice} /> : null}
         </MessageContent>
       </Message>
     );
@@ -429,6 +431,7 @@ export const ChatMessage = memo(function ChatMessage({
                 </div>
               ))
             )}
+            {message.stopNotice ? <AgentStopNotice notice={message.stopNotice} /> : null}
           </BubbleContent>
         </Bubble>
         {showActions && message.content.trim() ? (

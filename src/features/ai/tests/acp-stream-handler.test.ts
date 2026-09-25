@@ -292,8 +292,23 @@ describe("AcpStreamHandler", () => {
     });
 
     expect(handlers.onComplete).toHaveBeenCalledTimes(1);
-    expect(handlers.onComplete).toHaveBeenCalledWith({ outcome: "completed" });
+    expect(handlers.onComplete).toHaveBeenCalledWith({
+      outcome: "completed",
+      stopReason: "end_turn",
+    });
   });
+
+  it.each(["max_tokens", "max_turn_requests", "refusal"] as const)(
+    "passes the %s stop reason to the chat instead of a plain finish",
+    (stopReason) => {
+      const { handler, handlers } = createHandler();
+
+      handler.handleAcpEvent({ type: "prompt_complete", sessionId: "session-a", stopReason });
+
+      expect(handlers.onComplete).toHaveBeenCalledWith({ outcome: "completed", stopReason });
+      expect(handlers.onError).not.toHaveBeenCalled();
+    },
+  );
 
   it("reports cancelled prompt completion without treating it as finished work", () => {
     const { handler, handlers } = createHandler();

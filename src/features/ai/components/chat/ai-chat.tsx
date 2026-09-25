@@ -22,6 +22,7 @@ import {
   parseMentionsAndLoadFiles,
 } from "@/features/ai/lib/file-mentions";
 import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
+import { getAgentStopNotice } from "@/features/ai/lib/agent-stop-notice";
 import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
 import {
@@ -41,7 +42,7 @@ import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
 import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
-import type { ImageContent } from "@/features/ai/types/ai-chat.types";
+import type { ImageContent, RestoredComposerPrompt } from "@/features/ai/types/ai-chat.types";
 import {
   sendAgentNativeNotification,
   type AgentNativeNotificationKind,
@@ -129,6 +130,7 @@ const AIChat = memo(function AIChat({
   const allAgentQuestions = useAcpQuestionsStore.use.questions();
   const questionActions = useAcpQuestionsStore.use.actions();
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
+  const [refusedPrompt, setRefusedPrompt] = useState<RestoredComposerPrompt | null>(null);
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [activeMessageSearchIndex, setActiveMessageSearchIndex] = useState(0);
@@ -721,6 +723,31 @@ const AIChat = memo(function AIChat({
             currentMessage?.images?.length ||
             currentMessage?.resources?.length,
           );
+
+          const stopNotice = wasCancelled
+            ? undefined
+            : getAgentStopNotice(completion?.stopReason, currentMessage);
+          if (stopNotice) {
+            updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
+              stopNotice,
+              isStreaming: false,
+              responsePhase: undefined,
+            }));
+            if (stopNotice === "prompt_refused") {
+              // The prompt was rejected; hand it back so the user can rephrase it.
+              setRefusedPrompt({
+                id: currentAssistantMessageId,
+                content: userMessage.content,
+                images: userMessage.images,
+              });
+            }
+            finishRunAndProcessQueue(targetChatId, runId);
+            abortControllerRef.current = null;
+            notifyAgent(
+              stopNotice === "prompt_refused" || stopNotice === "refused" ? "error" : "complete",
+            );
+            return;
+          }
 
           if (!hasVisibleResponse && wasCancelled) {
             updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
@@ -1424,6 +1451,7 @@ details: ${errorDetails || mainError}
         }
       }}
       onStopStreaming={stopStreaming}
+      restoredPrompt={refusedPrompt}
     />
   );
 

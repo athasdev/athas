@@ -10,7 +10,16 @@ import {
   StopIcon,
   TerminalIcon,
 } from "@/ui/icons";
-import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { runChatTerminalCommand } from "@/features/ai/services/chat-terminal-command";
 import { getFolderName } from "@/utils/path-helpers";
 import { getComposerTerminalCommand } from "@/features/ai/utils/composer-terminal-command";
@@ -39,7 +48,10 @@ import {
 import type { InlineDropdownPosition, PastedImage } from "@/features/ai/types/chat-composer.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import type { SlashCommand } from "@/features/ai/types/acp.types";
-import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat.types";
+import type {
+  AIChatInputBarProps,
+  RestoredComposerPrompt,
+} from "@/features/ai/types/ai-chat.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { openSidebarResourceBuffer } from "@/features/sidebar/utils/open-sidebar-resource";
 import {
@@ -92,6 +104,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   onMoveQueuedMessage,
   onRemoveQueuedMessage,
   onStopStreaming,
+  restoredPrompt,
 }: AIChatInputBarProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
@@ -1020,6 +1033,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
     },
     [setInput],
   );
+
+  const restorePrompt = useEffectEvent((prompt: RestoredComposerPrompt) => {
+    // Never overwrite something the user already started typing.
+    if (inputValueRef.current.trim() || pastedImages.length > 0) return;
+    replaceInput(prompt.content);
+    setPastedImages(restorePastedImages(prompt.images));
+  });
+  useEffect(() => {
+    if (restoredPrompt) restorePrompt(restoredPrompt);
+  }, [restoredPrompt]);
 
   const handleInterruptAndSend = () => {
     const currentInput = inputValueRef.current;

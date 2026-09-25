@@ -180,7 +180,12 @@ export type AcpPermissionPreview =
   | { type: "command"; command: string; cwd?: string };
 
 // Prompt turn types
-type StopReason = "end_turn" | "max_tokens" | "max_turn_requests" | "refusal" | "cancelled";
+export type AcpStopReason =
+  | "end_turn"
+  | "max_tokens"
+  | "max_turn_requests"
+  | "refusal"
+  | "cancelled";
 
 // UI action types that agents can request
 type UiAction =
@@ -318,7 +323,7 @@ export type AcpEvent =
   | {
       type: "prompt_complete";
       sessionId: string;
-      stopReason: StopReason;
+      stopReason: AcpStopReason;
     }
   | {
       type: "ui_action";

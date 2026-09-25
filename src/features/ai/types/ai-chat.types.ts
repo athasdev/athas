@@ -14,6 +14,13 @@ export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
 export type AssistantResponsePhase = "starting" | "waiting" | "thinking";
 
+/**
+ * Why an agent's turn ended before it finished the work: it hit its output
+ * limit, hit its turn or tool request limit, refused the user's prompt, or
+ * refused to continue after tool output.
+ */
+export type AgentStopNotice = "max_tokens" | "max_turn_requests" | "prompt_refused" | "refused";
+
 export interface AgentMessageSubmitResult {
   accepted: boolean;
   error?: string;
@@ -47,6 +54,11 @@ export interface QueuedAgentMessage {
   images?: ImageContent[];
 }
 
+/** A sent prompt handed back to the composer, e.g. after the agent refused it. */
+export interface RestoredComposerPrompt extends QueuedAgentMessage {
+  id: string;
+}
+
 interface ResourceContent {
   uri: string;
   name: string | null;
@@ -68,6 +80,8 @@ export interface Message {
   followUpActions?: ChatFollowUpAction[];
   /** The agent's latest ACP plan for this turn; each update replaces the whole list. */
   plan?: AcpPlanEntry[];
+  /** Set when the turn ended early, so the chat can say why and offer to continue. */
+  stopNotice?: AgentStopNotice;
 }
 
 // Agent types for AI chat
@@ -138,6 +152,8 @@ export interface AIChatInputBarProps {
   onMoveQueuedMessage: (fromIndex: number, toIndex: number) => void;
   onRemoveQueuedMessage: (index: number, reason: "edit" | "discard") => void;
   onStopStreaming: () => void;
+  /** Put back into the composer when it is empty; a new `id` restores again. */
+  restoredPrompt?: RestoredComposerPrompt | null;
 }
 
 export interface ApiModelSelection {
