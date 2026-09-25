@@ -22,8 +22,11 @@ interface AcpQuestionsState {
     answer: (requestId: string, response: AcpElicitationResponse) => Promise<void>;
     /** `elicitation/complete`: the flow behind a URL question finished. Unknown ids are ignored. */
     complete: (elicitationId: string) => void;
-    /** Cancels every question a session is waiting on, plus request-scoped ones. */
-    cancelForSession: (sessionId: string | null | undefined) => void;
+    /**
+     * Drops a stopped session's URL questions (and request-scoped ones) that wait on a browser
+     * flow. Unanswered questions are cancelled by the bridge, which then closes them.
+     */
+    forgetWaitingForSession: (sessionId: string | null | undefined) => void;
   };
 }
 
@@ -69,16 +72,10 @@ const useAcpQuestionsStoreBase = create<AcpQuestionsState>()((set, get) => ({
           (item) => item.request.mode !== "url" || item.request.elicitationId !== elicitationId,
         ),
       })),
-    cancelForSession: (sessionId) => {
+    forgetWaitingForSession: (sessionId) => {
       for (const question of get().questions) {
         if (question.sessionId !== null && question.sessionId !== sessionId) continue;
-        if (question.waiting) {
-          get().actions.remove(question.requestId);
-          continue;
-        }
-        void get()
-          .actions.answer(question.requestId, { action: "cancel" })
-          .catch(() => undefined);
+        if (question.waiting) get().actions.remove(question.requestId);
       }
     },
   },

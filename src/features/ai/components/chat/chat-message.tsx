@@ -124,7 +124,13 @@ function UserMessageText({ text, query }: { text: string; query: string }) {
 function ChatResponseStatus({ phase }: { phase: AIMessage["responsePhase"] }) {
   const isStarting = phase === "starting";
   const isThinking = phase === "thinking";
-  const label = isStarting ? "Starting agent…" : isThinking ? "Thinking…" : "Waiting for response…";
+  const label = isStarting
+    ? "Starting agent…"
+    : isThinking
+      ? "Thinking…"
+      : phase === "stalled"
+        ? "Still waiting for the agent…"
+        : "Waiting for response…";
   const state: ThinkingOrbProps["state"] = isThinking ? "breathing" : "connecting";
 
   return (

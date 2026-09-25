@@ -36,16 +36,30 @@ interface AcpHandlers {
   onEvent?: (event: AcpEvent) => void;
   onImageChunk?: (data: string, mediaType: string) => void;
   onResourceChunk?: (uri: string, name: string | null) => void;
+  /** What the reply is waiting on before the agent's first activity arrives. */
+  onResponsePhase?: (phase: AcpWaitingPhase) => void;
 }
+
+/** `starting` while the agent process starts, `stalled` once a prompt has waited a while. */
+type AcpWaitingPhase = "starting" | "waiting" | "stalled";
 
 interface AcpListeners {
   event?: () => void;
 }
 
 const ACP_STATUS_TIMEOUT_MS = 5_000;
-const ACP_START_TIMEOUT_MS = 15_000;
+// The bridge bounds each startup step (initialize, which may include a first-run download,
+// authenticate, session/new) and reports failures itself. This only catches a bridge that
+// never answers, and it stops the startup when it gives up.
+const ACP_START_TIMEOUT_MS = 10 * 60_000;
 const ACP_PROMPT_TIMEOUT_MS = 10_000;
-const ACP_FIRST_RESPONSE_TIMEOUT_MS = 20_000;
+// Agents may think for a long time before their first update, so a quiet prompt only gets a
+// hint; the bridge enforces the hard turn limit and cancels the turn on the agent.
+const ACP_STILL_WAITING_MS = 20_000;
+// After Stop, updates keep flowing until the agent answers session/cancel. An agent that never
+// does must not keep the chat waiting forever.
+const ACP_CANCEL_GRACE_MS = 10_000;
+const ACP_STARTUP_STOPPED = "startup was stopped";
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout>;
@@ -65,13 +79,21 @@ export class AcpStreamHandler {
   private static startupQueue: Promise<void> = Promise.resolve();
   private listeners: AcpListeners = {};
   private activeTools = new Map<string, string>();
+  /** The turn is over and every handler that will be called has been. */
   private sessionComplete = false;
   private pendingNewMessage = false;
-  private cancelled = false;
+  /** Stop was pressed; the turn ends when the agent answers session/cancel. */
+  private cancelRequested = false;
   private wasRunning = false;
   private activeSessionId: string | null = null;
   private awaitingFirstResponse = false;
-  private firstResponseTimeout: ReturnType<typeof setTimeout> | null = null;
+  private stillWaitingTimeout: ReturnType<typeof setTimeout> | null = null;
+  private cancelGraceTimeout: ReturnType<typeof setTimeout> | null = null;
+  private resolveSettled: () => void = () => {};
+  /** Resolves once the handler has finished, however the turn ended. */
+  private readonly settled = new Promise<void>((resolve) => {
+    this.resolveSettled = resolve;
+  });
 
   constructor(
     private agentId: string,
@@ -93,15 +115,24 @@ export class AcpStreamHandler {
   }
 
   async start(userMessage: string, context: ContextInfo): Promise<void> {
-    if (AcpStreamHandler.activeHandler && AcpStreamHandler.activeHandler !== this) {
-      this.handlers.onError(
-        "Another agent session is already running. Stop it before sending this prompt.",
-      );
-      return;
+    const previous = AcpStreamHandler.activeHandler;
+    if (previous && previous !== this) {
+      if (!previous.cancelRequested) {
+        this.handlers.onError(
+          "Another agent session is already running. Stop it before sending this prompt.",
+        );
+        return;
+      }
+      // A stopped turn is winding down; it finishes within the cancel grace period.
+      await previous.settled;
     }
     try {
       AcpStreamHandler.activeHandler = this;
       await this.ensureAgentRunning();
+      if (this.cancelRequested) {
+        this.finishCancelled();
+        return;
+      }
       if (!this.activeSessionId) {
         throw new Error(`${this.agentId} did not create an active session`);
       }
@@ -116,13 +147,23 @@ export class AcpStreamHandler {
       }
       await this.setupListeners();
       this.awaitingFirstResponse = true;
-      await withTimeout(
-        invoke("send_acp_prompt", { prompt: this.buildPrompt(userMessage, context) }),
-        ACP_PROMPT_TIMEOUT_MS,
-        `${this.agentId} did not accept the prompt in time`,
-      );
-      this.armFirstResponseTimeout();
+      try {
+        await withTimeout(
+          invoke("send_acp_prompt", { prompt: this.buildPrompt(userMessage, context) }),
+          ACP_PROMPT_TIMEOUT_MS,
+          `${this.agentId} did not accept the prompt in time`,
+        );
+      } catch (error) {
+        // The prompt may still reach the agent; make sure it does not keep working unseen.
+        void AcpStreamHandler.cancelOnBackend();
+        throw error;
+      }
+      this.armStillWaitingHint();
     } catch (error) {
+      if (this.cancelRequested) {
+        this.finishCancelled();
+        return;
+      }
       console.error("ACP agent error:", error);
       this.fail(this.formatStartupError(error));
     }
@@ -168,35 +209,25 @@ export class AcpStreamHandler {
         shouldRestartForWorkspace
       ) {
         console.log(`Starting agent ${this.agentId}...`);
+        this.handlers.onResponsePhase?.("starting");
 
         let startStatus: AcpAgentStatus;
         try {
-          startStatus = await withTimeout(
-            invoke<AcpAgentStatus>("start_acp_agent", {
-              agentId: this.agentId,
-              workspacePath,
-              sessionId: desiredSessionId,
-            }),
-            ACP_START_TIMEOUT_MS,
-            `${this.agentId} startup timed out`,
-          );
+          startStatus = await this.startAgent(workspacePath, desiredSessionId);
         } catch (error) {
-          if (error instanceof Error && error.message.includes("startup timed out")) {
+          const message = error instanceof Error ? error.message : String(error);
+          if (
+            this.cancelRequested ||
+            message.includes("startup timed out") ||
+            message.includes(ACP_STARTUP_STOPPED)
+          ) {
             throw error;
           }
           const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
           const agent = availableAgents.find((item) => item.id === this.agentId);
           if (!agent?.installed && agent?.canInstall) {
             await invoke<AgentConfig>("install_acp_agent", { agentId: this.agentId });
-            startStatus = await withTimeout(
-              invoke<AcpAgentStatus>("start_acp_agent", {
-                agentId: this.agentId,
-                workspacePath,
-                sessionId: desiredSessionId,
-              }),
-              ACP_START_TIMEOUT_MS,
-              `${this.agentId} startup timed out`,
-            );
+            startStatus = await this.startAgent(workspacePath, desiredSessionId);
           } else {
             throw error;
           }
@@ -221,12 +252,36 @@ export class AcpStreamHandler {
 
         // Wait for initialization
         await new Promise((resolve) => setTimeout(resolve, 1000));
+        this.handlers.onResponsePhase?.("waiting");
       } else {
         this.activeSessionId = status.sessionId ?? null;
         this.wasRunning = true;
       }
     } catch (error) {
       throw new Error(`${this.agentId} is currently unavailable: ${error}`);
+    }
+  }
+
+  private async startAgent(
+    workspacePath: string | null,
+    sessionId: string | null,
+  ): Promise<AcpAgentStatus> {
+    try {
+      return await withTimeout(
+        invoke<AcpAgentStatus>("start_acp_agent", {
+          agentId: this.agentId,
+          workspacePath,
+          sessionId,
+        }),
+        ACP_START_TIMEOUT_MS,
+        `${this.agentId} startup timed out`,
+      );
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("startup timed out")) {
+        // Stop the startup that is still running so the next attempt starts clean.
+        void invoke("stop_acp_agent").catch(() => undefined);
+      }
+      throw error;
     }
   }
 
@@ -335,7 +390,9 @@ export class AcpStreamHandler {
   }
 
   private handleAcpEvent(event: AcpEvent): void {
-    if (this.cancelled) return;
+    // After Stop, updates still apply until the agent answers session/cancel: tool calls it
+    // already started report their final state on the way out.
+    if (this.sessionComplete) return;
     if (event.type === "status_changed") {
       if (event.status.agentId !== this.agentId) return;
       if (
@@ -441,12 +498,10 @@ export class AcpStreamHandler {
 
   private handlePromptComplete(event: Extract<AcpEvent, { type: "prompt_complete" }>): void {
     console.log("Prompt complete:", event.stopReason);
-    // Mark session as complete - this will call the handlers appropriately
-    // The stop reason can be used to determine how to handle the completion
-    if (event.stopReason === "cancelled") {
-      // User cancelled the prompt
-      this.cleanup();
-      this.handlers.onComplete({ outcome: "cancelled" });
+    // After session/cancel the agent must answer `cancelled`; an agent that finished anyway
+    // still ends a turn the user stopped.
+    if (event.stopReason === "cancelled" || this.cancelRequested) {
+      this.finishCancelled();
       return;
     }
     // Limits and refusals end the turn too; the chat explains them from the stop reason.
@@ -482,7 +537,11 @@ export class AcpStreamHandler {
     }
 
     // Detect unexpected agent crash: was running but now stopped without user action
-    if (this.wasRunning && !event.status.running && !this.sessionComplete && !this.cancelled) {
+    if (this.wasRunning && !event.status.running && !this.sessionComplete) {
+      if (this.cancelRequested) {
+        this.finishCancelled();
+        return;
+      }
       console.warn("Agent crashed unexpectedly");
       this.fail("Agent disconnected unexpectedly. Click retry to restart.", true);
     }
@@ -596,6 +655,10 @@ export class AcpStreamHandler {
 
   private handleSessionComplete(stopReason?: AcpStopReason): void {
     if (this.sessionComplete) return;
+    if (this.cancelRequested) {
+      this.finishCancelled();
+      return;
+    }
     console.log("Session complete");
     this.sessionComplete = true;
     this.pendingNewMessage = false;
@@ -606,7 +669,11 @@ export class AcpStreamHandler {
   }
 
   private handleError(event: Extract<AcpEvent, { type: "error" }>): void {
-    if (this.sessionComplete || this.cancelled) return;
+    if (this.sessionComplete) return;
+    if (this.cancelRequested) {
+      this.finishCancelled();
+      return;
+    }
     console.error("ACP error:", event.error);
     this.fail(event.error);
   }
@@ -629,26 +696,31 @@ export class AcpStreamHandler {
       case "prompt_complete":
       case "ui_action":
         this.awaitingFirstResponse = false;
-        if (this.firstResponseTimeout) {
-          clearTimeout(this.firstResponseTimeout);
-          this.firstResponseTimeout = null;
-        }
+        this.clearStillWaitingHint();
         break;
     }
   }
 
-  private armFirstResponseTimeout(): void {
-    if (!this.awaitingFirstResponse || this.sessionComplete || this.cancelled) return;
+  private armStillWaitingHint(): void {
+    if (!this.awaitingFirstResponse || this.sessionComplete || this.cancelRequested) return;
 
-    this.firstResponseTimeout = setTimeout(() => {
-      this.fail(
-        `${this.agentId} accepted the prompt but did not return any activity. Restart the agent session and try again.`,
-      );
-    }, ACP_FIRST_RESPONSE_TIMEOUT_MS);
+    this.stillWaitingTimeout = setTimeout(() => {
+      this.stillWaitingTimeout = null;
+      if (this.awaitingFirstResponse && !this.sessionComplete && !this.cancelRequested) {
+        this.handlers.onResponsePhase?.("stalled");
+      }
+    }, ACP_STILL_WAITING_MS);
+  }
+
+  private clearStillWaitingHint(): void {
+    if (this.stillWaitingTimeout) {
+      clearTimeout(this.stillWaitingTimeout);
+      this.stillWaitingTimeout = null;
+    }
   }
 
   private fail(error: string, canReconnect?: boolean): void {
-    if (this.sessionComplete || this.cancelled) return;
+    if (this.sessionComplete) return;
     this.sessionComplete = true;
     this.pendingNewMessage = false;
     this.cleanup();
@@ -658,9 +730,10 @@ export class AcpStreamHandler {
   private cleanup(): void {
     console.log("Cleaning up ACP listeners...");
     this.awaitingFirstResponse = false;
-    if (this.firstResponseTimeout) {
-      clearTimeout(this.firstResponseTimeout);
-      this.firstResponseTimeout = null;
+    this.clearStillWaitingHint();
+    if (this.cancelGraceTimeout) {
+      clearTimeout(this.cancelGraceTimeout);
+      this.cancelGraceTimeout = null;
     }
     this.pendingNewMessage = false;
     this.activeTools.clear();
@@ -673,14 +746,37 @@ export class AcpStreamHandler {
     if (AcpStreamHandler.activeHandler === this) {
       AcpStreamHandler.activeHandler = null;
     }
+    this.resolveSettled();
   }
 
-  private forceStop(): void {
-    if (this.sessionComplete || this.cancelled) return;
-    this.cancelled = true;
+  /** Stop was pressed: keep applying updates until the agent ends the turn, but not forever. */
+  private requestCancel(): void {
+    if (this.sessionComplete || this.cancelRequested) return;
+    this.cancelRequested = true;
+    this.clearStillWaitingHint();
+    this.cancelGraceTimeout = setTimeout(() => this.finishCancelled(), ACP_CANCEL_GRACE_MS);
+  }
+
+  private finishCancelled(): void {
+    if (this.sessionComplete) return;
+    this.cancelRequested = true;
+    this.sessionComplete = true;
     this.pendingNewMessage = false;
     this.cleanup();
     this.handlers.onComplete({ outcome: "cancelled" });
+  }
+
+  /** Ends the turn now, for when the agent itself is being stopped. */
+  private forceStop(): void {
+    this.finishCancelled();
+  }
+
+  private static async cancelOnBackend(): Promise<void> {
+    try {
+      await invoke("cancel_acp_prompt");
+    } catch (error) {
+      console.error("Failed to cancel ACP prompt on backend:", error);
+    }
   }
 
   // Static method to respond to permission requests
@@ -759,13 +855,13 @@ export class AcpStreamHandler {
     await invoke("stop_acp_agent");
   }
 
-  // Static method to cancel the current prompt turn
+  /**
+   * Cancels the current prompt turn. The bridge sends session/cancel and answers the turn's open
+   * permission requests and questions as cancelled; the chat keeps applying the agent's last
+   * updates until it ends the turn.
+   */
   static async cancelPrompt(): Promise<void> {
-    AcpStreamHandler.activeHandler?.forceStop();
-    try {
-      await invoke("cancel_acp_prompt");
-    } catch (error) {
-      console.error("Failed to cancel ACP prompt on backend:", error);
-    }
+    AcpStreamHandler.activeHandler?.requestCancel();
+    await AcpStreamHandler.cancelOnBackend();
   }
 }

@@ -192,8 +192,8 @@ function ToolCallStats({ summary }: { summary: ToolCallSummary }) {
       </span>
     );
   }
-  if (summary.phase === "declined") {
-    return <span className="shrink-0 text-subtle-foreground">declined</span>;
+  if (summary.phase === "declined" || summary.phase === "cancelled") {
+    return <span className="shrink-0 text-subtle-foreground">{summary.phase}</span>;
   }
   if (summary.additions > 0 || summary.deletions > 0) {
     return (

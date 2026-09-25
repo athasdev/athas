@@ -1,7 +1,7 @@
 use super::{
    AcpConnection,
    bridge_commands::{AcpCommand, run_worker_loop},
-   bridge_init::initialize_worker,
+   bridge_init::InitializedAcpWorker,
    bridge_prompt::run_prompt,
    client::{AthasAcpClient, ClientResponders, PermissionResponse},
    config::AgentRegistry,
@@ -125,42 +125,23 @@ impl AcpWorker {
       }
    }
 
-   fn map_config_options(options: Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption> {
+   pub(super) fn map_config_options(
+      options: Vec<acp::SessionConfigOption>,
+   ) -> Vec<SessionConfigOption> {
       options
          .into_iter()
          .filter_map(AthasAcpClient::map_session_config_option)
          .collect()
    }
 
-   pub(super) async fn initialize(
+   /// Takes over an agent that finished starting. The caller stopped any previous agent before
+   /// startup began.
+   pub(super) fn adopt(
       &mut self,
       agent_id: String,
-      workspace_path: Option<String>,
-      session_id: Option<String>,
-      config: AgentConfig,
       app_handle: AppHandle,
-      terminal_manager: Arc<TerminalManager>,
-   ) -> Result<(AcpAgentStatus, ClientResponders)> {
-      // Stop any existing agent first
-      self.stop().await?;
-
-      if !config.installed {
-         log::warn!(
-            "Agent '{}' not marked as installed; attempting to start anyway",
-            config.name
-         );
-      }
-
-      let initialized = initialize_worker(
-         &config,
-         workspace_path,
-         app_handle.clone(),
-         terminal_manager,
-         session_id,
-         Self::map_config_options,
-      )
-      .await?;
-
+      initialized: InitializedAcpWorker,
+   ) -> (AcpAgentStatus, ClientResponders) {
       self.connection = Some(initialized.connection);
       self.session_id = initialized.session_id.clone();
       self.auth_method_id = initialized.auth_method_id;
@@ -169,21 +150,11 @@ impl AcpWorker {
       self.io_handle = Some(initialized.io_handle);
       self.client = Some(initialized.client);
       self.workspace_path = initialized.workspace_path;
-      self.agent_id = Some(agent_id.clone());
+      self.agent_id = Some(agent_id);
       self.agent_capabilities = Some(initialized.agent_capabilities);
-      self.app_handle = Some(app_handle.clone());
+      self.app_handle = Some(app_handle);
 
-      let status = AcpAgentStatus {
-         agent_id,
-         running: true,
-         session_active: self.session_id.is_some(),
-         initialized: true,
-         session_id: self.session_id.as_ref().map(ToString::to_string),
-         workspace_path: self.workspace_path.as_deref().map(path_to_string),
-         agent_capabilities: self.agent_capabilities.clone(),
-      };
-
-      Ok((status, initialized.responders))
+      (self.get_status(), initialized.responders)
    }
 
    pub(super) async fn send_prompt(&mut self, prompt: Vec<serde_json::Value>) -> Result<()> {
@@ -816,8 +787,10 @@ impl AcpAgentBridge {
       response_rx.await.context("Worker disconnected")?
    }
 
-   /// Cancel the current prompt turn
+   /// Cancel the current prompt turn. While the agent is still starting, this stops the startup
+   /// instead, since there is no turn yet and the user asked for everything to stop.
    pub async fn cancel_prompt(&self) -> Result<()> {
+      let session_id = self.status.lock().await.session_id.clone();
       let (response_tx, response_rx) = oneshot::channel();
 
       self
@@ -826,7 +799,30 @@ impl AcpAgentBridge {
          .await
          .context("Failed to send command to ACP worker")?;
 
-      response_rx.await.context("Worker disconnected")?
+      let result = response_rx.await.context("Worker disconnected")?;
+
+      // After `session/cancel`, whatever the turn left waiting on the user is answered as
+      // cancelled here, not by whichever chat surface happens to show it.
+      if let Some(session_id) = session_id {
+         self.cancel_pending_requests(&session_id).await;
+      }
+
+      result
+   }
+
+   async fn cancel_pending_requests(&self, session_id: &str) {
+      let closed = self
+         .responders
+         .lock()
+         .await
+         .as_ref()
+         .map(|responders| responders.cancel_session(session_id))
+         .unwrap_or_default();
+      for request_id in closed {
+         let _ = self
+            .app_handle
+            .emit("acp-event", AcpEvent::RequestClosed { request_id });
+      }
    }
 
    fn emit_status_change(&self, status: &AcpAgentStatus) {

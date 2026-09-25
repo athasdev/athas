@@ -171,3 +171,16 @@ export const markToolCallComplete = (
       : toolCall,
   );
 };
+
+/**
+ * Marks the calls still pending or running when their turn ended (cancelled, cut off, or
+ * failed) as cancelled, so none of them keeps showing as running.
+ */
+export const cancelUnfinishedToolCalls = (
+  toolCalls: ToolCall[] | undefined,
+): ToolCall[] | undefined => {
+  if (!toolCalls?.some((toolCall) => !toolCall.isComplete)) return toolCalls;
+  return toolCalls.map((toolCall) =>
+    toolCall.isComplete ? toolCall : { ...toolCall, status: "cancelled", isComplete: true },
+  );
+};

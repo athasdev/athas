@@ -91,17 +91,15 @@ describe("agent question store", () => {
     expect(requestIds()).toEqual(["form"]);
   });
 
-  it("cancels a stopped session's questions and leaves other sessions alone", () => {
+  it("forgets a stopped session's browser flows and leaves cancelling to the bridge", () => {
     actions.add(question("a", "session-a"));
-    actions.add(question("b", "session-b"));
+    actions.add({ ...question("a-link", "session-a"), waiting: true });
+    actions.add({ ...question("b-link", "session-b"), waiting: true });
     actions.add(question("n", null));
 
-    actions.cancelForSession("session-a");
+    actions.forgetWaitingForSession("session-a");
 
-    const cancelled = vi.mocked(invoke).mock.calls.map(([, args]) => args);
-    expect(cancelled).toEqual([
-      { requestId: "a", response: { action: "cancel" } },
-      { requestId: "n", response: { action: "cancel" } },
-    ]);
+    expect(requestIds()).toEqual(["a", "b-link", "n"]);
+    expect(invoke).not.toHaveBeenCalled();
   });
 });

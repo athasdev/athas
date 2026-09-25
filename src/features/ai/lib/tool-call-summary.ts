@@ -3,7 +3,7 @@ import type { AcpToolKind } from "@/features/ai/types/acp.types";
 import { getAcpDiffOutputs, toRelativeDisplayPath } from "./acp-diff-output";
 import { diffTextLines } from "@/features/git/utils/line-diff";
 
-export type ToolCallPhase = "running" | "done" | "failed" | "declined";
+export type ToolCallPhase = "running" | "done" | "failed" | "declined" | "cancelled";
 
 export interface ToolCallSummary {
   kind: AcpToolKind;
@@ -67,6 +67,7 @@ function wasDeclined(output: unknown): boolean {
 export function getToolCallPhase(toolCall: ToolCall, isStreaming?: boolean): ToolCallPhase {
   if (toolCall.error || toolCall.status === "failed") return "failed";
   if (wasDeclined(toolCall.output)) return "declined";
+  if (toolCall.status === "cancelled") return "cancelled";
   if (toolCall.status === "completed" || toolCall.isComplete) return "done";
   if (toolCall.status === "pending" || toolCall.status === "in_progress") return "running";
   return isStreaming ? "running" : "done";

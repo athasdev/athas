@@ -33,6 +33,7 @@ import {
 import { getAgentMessageAccess } from "@/features/ai/lib/agent-message-access";
 import { startAssistantResponseContinuation } from "@/features/ai/lib/assistant-response";
 import {
+  cancelUnfinishedToolCalls,
   createToolCall,
   markToolCallComplete,
   updateToolCall,
@@ -450,7 +451,7 @@ const AIChat = memo(function AIChat({
     void recordFrictionSignal({ area: "agent", signal: "cancel" });
     const pendingPermissions = permissionQueue;
     setPermissionQueue([]);
-    questionActions.cancelForSession(chatSessionId);
+    questionActions.forgetWaitingForSession(chatSessionId);
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -470,18 +471,8 @@ const AIChat = memo(function AIChat({
         console.error("Failed to cancel Codex turn:", error);
       }
     } else if (isAcpAgent(currentAgentId)) {
-      try {
-        await AcpStreamHandler.cancelPrompt();
-        if (pendingPermissions.length > 0) {
-          await Promise.all(
-            pendingPermissions.map((item) =>
-              AcpStreamHandler.respondToPermission(item.requestId, false, true),
-            ),
-          );
-        }
-      } catch (error) {
-        console.error("Failed to cancel ACP prompt:", error);
-      }
+      // The bridge answers the turn's open permission requests and questions as cancelled.
+      await AcpStreamHandler.cancelPrompt();
     }
     if (effectiveChatId && run) {
       // Stop means stop: queued follow-ups stay queued instead of launching.
@@ -714,6 +705,16 @@ const AIChat = memo(function AIChat({
             ),
           );
           const wasCancelled = completion?.outcome === "cancelled";
+          if (wasCancelled || (completion?.stopReason && completion.stopReason !== "end_turn")) {
+            // The turn is over; a call the agent never finished must not stay running.
+            updateStreamingAssistantMessage(
+              targetChatId,
+              currentAssistantMessageId,
+              (currentMessage) => ({
+                toolCalls: cancelUnfinishedToolCalls(currentMessage?.toolCalls),
+              }),
+            );
+          }
           const currentMessage = chatActions
             .getMessagesForChat(targetChatId)
             .find((message) => message.id === currentAssistantMessageId);
@@ -928,6 +929,7 @@ details: ${errorDetails || mainError}
               content: currentMessage?.content
                 ? `${currentMessage.content}\n\n${formattedError}`
                 : formattedError,
+              toolCalls: cancelUnfinishedToolCalls(currentMessage?.toolCalls),
               isStreaming: false,
             }),
           );
@@ -1179,6 +1181,19 @@ details: ${errorDetails || mainError}
           );
         },
         targetChatId,
+        undefined,
+        (phase) => {
+          updateStreamingAssistantMessage(
+            targetChatId,
+            currentAssistantMessageId,
+            (currentMessage) =>
+              currentMessage?.isStreaming &&
+              !currentMessage.content &&
+              currentMessage.responsePhase !== "thinking"
+                ? { responsePhase: phase }
+                : {},
+          );
+        },
       );
     } catch (error) {
       console.error("Failed to start streaming:", error);

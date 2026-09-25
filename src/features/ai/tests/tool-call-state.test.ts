@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  cancelUnfinishedToolCalls,
   createToolCall,
   markToolCallComplete,
   updateToolCall,
 } from "@/features/ai/lib/tool-call-state";
+import { getToolCallPhase } from "@/features/ai/lib/tool-call-summary";
 
 describe("tool call state", () => {
   it("adds a call whose first event is an update instead of dropping it", () => {
@@ -103,5 +105,37 @@ describe("tool call state", () => {
 
     const updated = updateToolCall([started], { id: "call-1", output: terminal });
     expect(updated[0].output).toEqual(terminal);
+  });
+
+  it("marks calls still open when the turn ended as cancelled", () => {
+    const running = createToolCall("Run", {}, "run", "execute", "in_progress");
+    const pending = createToolCall("Read", {}, "read", "read", "pending");
+    const [done] = markToolCallComplete(
+      [createToolCall("Edit", {}, "edit", "edit", "in_progress")],
+      "Edit",
+      "edit",
+    );
+
+    const toolCalls = cancelUnfinishedToolCalls([running, pending, done])!;
+
+    expect(toolCalls.map((toolCall) => [toolCall.id, toolCall.status])).toEqual([
+      ["run", "cancelled"],
+      ["read", "cancelled"],
+      ["edit", "completed"],
+    ]);
+    expect(toolCalls.every((toolCall) => toolCall.isComplete)).toBe(true);
+    expect(toolCalls[2]).toBe(done);
+    expect(getToolCallPhase(toolCalls[0], true)).toBe("cancelled");
+  });
+
+  it("leaves finished turns untouched", () => {
+    const [done] = markToolCallComplete(
+      [createToolCall("Read", {}, "read", "read", "in_progress")],
+      "Read",
+      "read",
+    );
+    const toolCalls = [done];
+    expect(cancelUnfinishedToolCalls(toolCalls)).toBe(toolCalls);
+    expect(cancelUnfinishedToolCalls(undefined)).toBeUndefined();
   });
 });

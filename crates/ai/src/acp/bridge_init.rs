@@ -1,7 +1,9 @@
 use super::{
    AcpConnection,
    client::{AthasAcpClient, ClientResponders},
-   process::{force_kill_process_group, stop_child_tree_mut, terminate_process_group},
+   process::{
+      force_kill_process_group, stop_child_tree, stop_child_tree_mut, terminate_process_group,
+   },
    types::{
       AcpAgentCapabilities, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
       SessionModeState,
@@ -27,7 +29,10 @@ use tokio::{
    process::{Child, Command},
    sync::Mutex,
 };
-use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
+use tokio_util::{
+   compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt},
+   sync::CancellationToken,
+};
 
 pub(super) struct InitializedAcpWorker {
    pub connection: Arc<AcpConnection>,
@@ -42,7 +47,16 @@ pub(super) struct InitializedAcpWorker {
    pub workspace_path: Option<PathBuf>,
 }
 
+impl InitializedAcpWorker {
+   /// Stops an agent that finished starting after the user already asked to stop it.
+   pub(super) async fn shut_down(self) {
+      self.io_handle.abort();
+      stop_child_tree(self.process, self.process_group_id).await;
+   }
+}
+
 const MAX_RECENT_STDERR_LINES: usize = 20;
+pub(super) const ACP_STARTUP_STOPPED: &str = "ACP agent startup was stopped";
 type RecentAgentStderr = Arc<Mutex<VecDeque<String>>>;
 
 pub(super) async fn initialize_worker(
@@ -52,6 +66,7 @@ pub(super) async fn initialize_worker(
    terminal_manager: Arc<TerminalManager>,
    requested_session_id: Option<String>,
    map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
+   stop: CancellationToken,
 ) -> Result<InitializedAcpWorker> {
    let workspace_path = resolve_workspace_path(workspace_path)?;
    let mut child = spawn_agent_process(config, workspace_path.as_deref())?;
@@ -117,51 +132,72 @@ pub(super) async fn initialize_worker(
          log::error!("ACP I/O error: {}", e);
       }
    });
-   let connection = Arc::new(
-      connection_rx
-         .await
-         .map_err(|_| anyhow::anyhow!("Failed to establish ACP connection"))?,
-   );
+   // Startup can take minutes (a first `npx` download, a slow login), so Stop must be able to
+   // end it: the process is killed and the caller hears that startup was stopped.
+   let startup = async {
+      let connection = Arc::new(
+         connection_rx
+            .await
+            .map_err(|_| anyhow::anyhow!("Failed to establish ACP connection"))?,
+      );
 
-   let init_response = initialize_connection(connection.clone(), &mut child, &io_handle).await?;
-   let auth_methods = init_response.auth_methods.clone();
-   let auth_method_id = auth_methods.first().map(|method| method.id().to_string());
-   let supports_session_resume = init_response
-      .agent_capabilities
-      .session_capabilities
-      .resume
-      .is_some();
-   let agent_capabilities = init_response.agent_capabilities.into();
+      let init_response = initialize_connection(connection.clone(), &mut child, &io_handle).await?;
+      let auth_methods = init_response.auth_methods.clone();
+      let auth_method_id = auth_methods.first().map(|method| method.id().to_string());
+      let supports_session_resume = init_response
+         .agent_capabilities
+         .session_capabilities
+         .resume
+         .is_some();
+      let agent_capabilities: AcpAgentCapabilities = init_response.agent_capabilities.into();
 
-   let cwd = workspace_path
-      .clone()
-      .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-   log::info!(
-      "ACP workspace path resolved to {}",
-      path_to_string(cwd.as_path())
-   );
+      let cwd = workspace_path
+         .clone()
+         .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+      log::info!(
+         "ACP workspace path resolved to {}",
+         path_to_string(cwd.as_path())
+      );
 
-   let session_bootstrap = bootstrap_session(
-      connection.clone(),
-      client.clone(),
-      cwd,
-      requested_session_id,
-      SessionBootstrapContext {
-         auth_methods,
-         supports_session_resume,
-         map_config_options,
-         child: &mut child,
-         io_handle: &io_handle,
-      },
-   )
-   .await;
-   let session_bootstrap = match session_bootstrap {
-      Ok(session) => session,
-      Err(error) => {
-         tokio::task::yield_now().await;
-         return Err(with_agent_stderr(error, &recent_stderr).await);
-      }
+      let session_bootstrap = bootstrap_session(
+         connection.clone(),
+         client.clone(),
+         cwd,
+         requested_session_id,
+         SessionBootstrapContext {
+            auth_methods,
+            supports_session_resume,
+            map_config_options,
+            child: &mut child,
+            io_handle: &io_handle,
+         },
+      )
+      .await;
+      let session_bootstrap = match session_bootstrap {
+         Ok(session) => session,
+         Err(error) => {
+            tokio::task::yield_now().await;
+            return Err(with_agent_stderr(error, &recent_stderr).await);
+         }
+      };
+
+      Ok::<_, anyhow::Error>((
+         connection,
+         auth_method_id,
+         agent_capabilities,
+         session_bootstrap,
+      ))
    };
+   let outcome = tokio::select! {
+      result = startup => Some(result),
+      () = stop.cancelled() => None,
+   };
+   let Some(result) = outcome else {
+      io_handle.abort();
+      stop_child_tree_mut(&mut child, process_group_id).await;
+      bail!(ACP_STARTUP_STOPPED);
+   };
+   let (connection, auth_method_id, agent_capabilities, session_bootstrap) = result?;
 
    emit_initial_session_state(
       &app_handle,
@@ -336,7 +372,9 @@ async fn initialize_connection(
       .client_capabilities(client_capabilities)
       .client_info(acp::Implementation::new("athas", env!("CARGO_PKG_VERSION")).title("Athas"));
 
-   let initialize_timeout_secs = 30;
+   // A first run through `npx` downloads the agent before it can answer, so initialize gets
+   // longer than the other startup steps. Stop ends startup at any point.
+   let initialize_timeout_secs = 120;
    log::info!(
       "Sending ACP initialize request (timeout: {}s)...",
       initialize_timeout_secs

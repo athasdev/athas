@@ -59,6 +59,9 @@ function createHandler(
     onResponseContinuation: () => void;
     onEvent: (event: AcpEvent) => void;
     onPermissionRequest: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
+    onToolUpdate: (event: Extract<AcpEvent, { type: "tool_update" }>) => void;
+    onToolComplete: (toolName: string, toolId?: string, output?: unknown, error?: string) => void;
+    onResponsePhase: (phase: "starting" | "waiting" | "stalled") => void;
   }> = {},
 ) {
   const handlers = {
@@ -70,6 +73,7 @@ function createHandler(
   const handler = new AcpStreamHandler("codex", handlers, "chat-1") as unknown as {
     activeSessionId: string | null;
     handleAcpEvent: (event: AcpEvent) => void;
+    requestCancel: () => void;
   };
 
   handler.activeSessionId = "session-a";
@@ -127,6 +131,8 @@ describe("AcpStreamHandler", () => {
       }
     } finally {
       await AcpStreamHandler.cancelPrompt();
+      // Nothing answers the cancel here; let the grace period end the turn.
+      await vi.advanceTimersByTimeAsync(10_000);
       vi.mocked(useAIChatStore.getState).mockReturnValue(original);
     }
   });
@@ -415,8 +421,9 @@ describe("AcpStreamHandler", () => {
     const startup = stalled.ensureAgentRunning();
     const startupError = startup.catch((error) => error);
 
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
     expect((await startupError).message).toContain("startup timed out");
+    expect(invoke).toHaveBeenCalledWith("stop_acp_agent");
 
     const next = createHandler().handler as unknown as {
       ensureAgentRunning: () => Promise<void>;
@@ -429,34 +436,26 @@ describe("AcpStreamHandler", () => {
       vi.mocked(invoke).mock.calls.filter(([name]) => name === "start_acp_agent"),
     ).toHaveLength(2);
 
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
     expect((await nextStartupError).message).toContain("startup timed out");
   });
 
-  it("fails a prompt that produces no ACP activity", async () => {
-    vi.mocked(invoke).mockImplementation((command) => {
-      if (command === "get_acp_status") {
-        return Promise.resolve({
-          running: true,
-          initialized: true,
-          agentId: "codex",
-          sessionId: "session-a",
-          workspacePath: "/workspace",
-        });
-      }
-      if (command === "start_acp_agent") {
-        return Promise.resolve({
-          running: true,
-          initialized: true,
-          agentId: "codex",
-          sessionId: "session-a",
-          workspacePath: "/workspace",
-        });
-      }
-      return Promise.resolve(undefined);
-    });
+  it("hints that a quiet prompt is still waiting instead of failing it", async () => {
+    const status = {
+      running: true,
+      initialized: true,
+      agentId: "codex",
+      sessionId: "session-a",
+      workspacePath: "/workspace",
+    };
+    vi.mocked(invoke).mockImplementation((command) =>
+      Promise.resolve(
+        command === "get_acp_status" || command === "start_acp_agent" ? status : undefined,
+      ),
+    );
 
-    const { handler, handlers } = createHandler();
+    const onResponsePhase = vi.fn();
+    const { handler, handlers } = createHandler({ onResponsePhase });
     const start = (handler as unknown as AcpStreamHandler).start("Hey", {
       agentId: "codex",
       projectRoot: "/workspace",
@@ -464,13 +463,189 @@ describe("AcpStreamHandler", () => {
     await vi.advanceTimersByTimeAsync(1000);
     await start;
 
-    expect(handlers.onError).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(20_000);
+    expect(onResponsePhase).toHaveBeenLastCalledWith("stalled");
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(handlers.onError).not.toHaveBeenCalled();
+    expect(handlers.onComplete).not.toHaveBeenCalled();
 
-    expect(handlers.onError).toHaveBeenCalledWith(
-      expect.stringContaining("did not return any activity"),
-      undefined,
+    handler.handleAcpEvent({
+      type: "prompt_complete",
+      sessionId: "session-a",
+      stopReason: "end_turn",
+    });
+    expect(handlers.onComplete).toHaveBeenCalledWith({
+      outcome: "completed",
+      stopReason: "end_turn",
+    });
+  });
+
+  it("keeps applying tool updates after Stop until the agent ends the turn", () => {
+    const onToolUpdate = vi.fn();
+    const onToolComplete = vi.fn();
+    const { handler, handlers } = createHandler({ onToolUpdate, onToolComplete });
+    handler.handleAcpEvent({
+      type: "tool_start",
+      sessionId: "session-a",
+      toolName: "run",
+      toolId: "tool-1",
+      input: {},
+      kind: "execute",
+      status: "in_progress",
+      locations: [],
+    });
+
+    handler.requestCancel();
+    handler.handleAcpEvent({
+      type: "tool_update",
+      sessionId: "session-a",
+      toolId: "tool-1",
+      status: "failed",
+      error: "Interrupted",
+    });
+    handler.handleAcpEvent({
+      type: "tool_complete",
+      sessionId: "session-a",
+      toolId: "tool-1",
+      success: false,
+      error: "Interrupted",
+    });
+
+    expect(onToolUpdate).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+    expect(onToolComplete).toHaveBeenCalledWith("run", "tool-1", undefined, "Interrupted");
+    expect(handlers.onComplete).not.toHaveBeenCalled();
+
+    handler.handleAcpEvent({
+      type: "prompt_complete",
+      sessionId: "session-a",
+      stopReason: "cancelled",
+    });
+    expect(handlers.onComplete).toHaveBeenCalledExactlyOnceWith({ outcome: "cancelled" });
+
+    handler.handleAcpEvent({
+      type: "tool_update",
+      sessionId: "session-a",
+      toolId: "tool-1",
+      status: "completed",
+    });
+    expect(onToolUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("ends a stopped turn as cancelled whatever the agent answers", () => {
+    const stopReason = createHandler();
+    stopReason.handler.requestCancel();
+    stopReason.handler.handleAcpEvent({
+      type: "prompt_complete",
+      sessionId: "session-a",
+      stopReason: "end_turn",
+    });
+    expect(stopReason.handlers.onComplete).toHaveBeenCalledWith({ outcome: "cancelled" });
+
+    const failure = createHandler();
+    failure.handler.requestCancel();
+    failure.handler.handleAcpEvent({
+      type: "error",
+      sessionId: "session-a",
+      error: "Failed to run prompt",
+    });
+    expect(failure.handlers.onComplete).toHaveBeenCalledWith({ outcome: "cancelled" });
+    expect(failure.handlers.onError).not.toHaveBeenCalled();
+  });
+
+  it("finishes a stopped turn when the agent never answers the cancel", async () => {
+    const { handler, handlers } = createHandler();
+    handler.requestCancel();
+
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(handlers.onComplete).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(handlers.onComplete).toHaveBeenCalledExactlyOnceWith({ outcome: "cancelled" });
+  });
+
+  it("sends the next prompt once the stopped turn has finished", async () => {
+    const status = {
+      running: true,
+      initialized: true,
+      agentId: "codex",
+      sessionId: "session-a",
+      workspacePath: "/workspace",
+    };
+    vi.mocked(invoke).mockImplementation((command) =>
+      Promise.resolve(
+        command === "get_acp_status" || command === "start_acp_agent" ? status : undefined,
+      ),
     );
+    const first = createHandler();
+    const firstStart = (first.handler as unknown as AcpStreamHandler).start("First", {
+      projectRoot: "/workspace",
+    });
+    await vi.advanceTimersByTimeAsync(1000);
+    await firstStart;
+    await AcpStreamHandler.cancelPrompt();
+    expect(invoke).toHaveBeenCalledWith("cancel_acp_prompt");
+
+    const second = createHandler();
+    const secondStart = (second.handler as unknown as AcpStreamHandler).start("Second", {
+      projectRoot: "/workspace",
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    const prompts = () =>
+      vi.mocked(invoke).mock.calls.filter(([command]) => command === "send_acp_prompt");
+    expect(prompts()).toHaveLength(1);
+    expect(second.handlers.onError).not.toHaveBeenCalled();
+
+    first.handler.handleAcpEvent({
+      type: "prompt_complete",
+      sessionId: "session-a",
+      stopReason: "cancelled",
+    });
+    await vi.advanceTimersByTimeAsync(1000);
+    await secondStart;
+    expect(prompts()).toHaveLength(2);
+    expect(first.handlers.onComplete).toHaveBeenCalledWith({ outcome: "cancelled" });
+
+    second.handler.handleAcpEvent({
+      type: "prompt_complete",
+      sessionId: "session-a",
+      stopReason: "end_turn",
+    });
+  });
+
+  it("stops the startup instead of failing when Stop is pressed while the agent starts", async () => {
+    let rejectStart: ((error: Error) => void) | undefined;
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "get_acp_status") {
+        return Promise.resolve({
+          running: false,
+          initialized: false,
+          agentId: null,
+          sessionId: null,
+          workspacePath: null,
+        });
+      }
+      if (command === "start_acp_agent") {
+        return new Promise((_, reject) => {
+          rejectStart = reject;
+        });
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const onResponsePhase = vi.fn();
+    const { handler, handlers } = createHandler({ onResponsePhase });
+    const start = (handler as unknown as AcpStreamHandler).start("Hey", {
+      projectRoot: "/workspace",
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onResponsePhase).toHaveBeenCalledWith("starting");
+
+    await AcpStreamHandler.cancelPrompt();
+    rejectStart?.(new Error("ACP agent startup was stopped"));
+    await start;
+
+    expect(handlers.onComplete).toHaveBeenCalledWith({ outcome: "cancelled" });
+    expect(handlers.onError).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalledWith("install_acp_agent", expect.anything());
   });
 
   it("invokes ACP session delete and logout commands", async () => {

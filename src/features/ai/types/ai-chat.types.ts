@@ -12,7 +12,8 @@ import type { GenerativeUIView } from "@/extensions/ui/types/generative-ui";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
-export type AssistantResponsePhase = "starting" | "waiting" | "thinking";
+/** `stalled`: a prompt the agent has not answered for a while; it may still be thinking. */
+export type AssistantResponsePhase = "starting" | "waiting" | "stalled" | "thinking";
 
 /**
  * Why an agent's turn ended before it finished the work: it hit its output
@@ -26,6 +27,9 @@ export interface AgentMessageSubmitResult {
   error?: string;
 }
 
+/** ACP's tool call states, plus `cancelled` for a call still open when its turn ended. */
+export type ToolCallStatus = AcpToolCallStatus | "cancelled";
+
 export interface ToolCall {
   id?: string;
   name: string;
@@ -36,7 +40,7 @@ export interface ToolCall {
   rawOutput?: unknown;
   error?: string;
   kind?: AcpToolKind;
-  status?: AcpToolCallStatus;
+  status?: ToolCallStatus;
   locations?: AcpToolCallLocation[];
   timestamp: Date;
   isComplete?: boolean;

@@ -28,8 +28,21 @@ pub struct PermissionResponse {
    pub option_id: Option<String>,
 }
 
+/// An agent request waiting on the user, with the session it belongs to so a cancelled prompt
+/// turn can resolve it. `None` for request-scoped questions that belong to no session.
+pub struct PendingEntry<T> {
+   session_id: Option<String>,
+   tx: oneshot::Sender<T>,
+}
+
+impl<T> PendingEntry<T> {
+   pub fn new(session_id: Option<String>, tx: oneshot::Sender<T>) -> Self {
+      Self { session_id, tx }
+   }
+}
+
 /// Agent requests waiting on the user, keyed by the request id sent to the frontend.
-pub type Pending<T> = Arc<StdMutex<HashMap<String, oneshot::Sender<T>>>>;
+pub type Pending<T> = Arc<StdMutex<HashMap<String, PendingEntry<T>>>>;
 
 /// Where the bridge delivers the user's answers to waiting agent requests. Elicitation answers are
 /// ACP `CreateElicitationResponse` JSON.
@@ -43,19 +56,66 @@ impl ClientResponders {
    /// Hands the user's answer to the request waiting for it. False when nothing waits anymore: the
    /// agent cancelled it, it timed out, or it was already answered.
    pub fn answer_permission(&self, request_id: &str, response: PermissionResponse) -> bool {
-      take_pending(&self.permissions, request_id).is_some_and(|tx| tx.send(response).is_ok())
+      take_pending(&self.permissions, request_id)
+         .is_some_and(|entry| entry.tx.send(response).is_ok())
    }
 
    pub fn answer_elicitation(&self, request_id: &str, response: serde_json::Value) -> bool {
-      take_pending(&self.elicitations, request_id).is_some_and(|tx| tx.send(response).is_ok())
+      take_pending(&self.elicitations, request_id)
+         .is_some_and(|entry| entry.tx.send(response).is_ok())
+   }
+
+   /// Resolves what a cancelled prompt turn leaves waiting on the user: the session's permission
+   /// requests get the `cancelled` outcome and its questions a `cancel` action, as ACP requires
+   /// after `session/cancel`. Request-scoped questions are cancelled too, since the frontend shows
+   /// them with the running prompt. Returns the request ids so the UI can withdraw them.
+   pub fn cancel_session(&self, session_id: &str) -> Vec<String> {
+      let mut closed = Vec::new();
+      for (request_id, entry) in drain_session(&self.permissions, session_id, false) {
+         let _ = entry.tx.send(PermissionResponse {
+            approved: false,
+            cancelled: true,
+            option_id: None,
+         });
+         closed.push(request_id);
+      }
+      for (request_id, entry) in drain_session(&self.elicitations, session_id, true) {
+         let _ = entry.tx.send(serde_json::json!({ "action": "cancel" }));
+         closed.push(request_id);
+      }
+      closed
    }
 }
 
-fn take_pending<T>(pending: &Pending<T>, request_id: &str) -> Option<oneshot::Sender<T>> {
+fn take_pending<T>(pending: &Pending<T>, request_id: &str) -> Option<PendingEntry<T>> {
    pending
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner())
       .remove(request_id)
+}
+
+/// Removes the entries that belong to `session_id` (and, with `include_unscoped`, those that
+/// belong to no session).
+fn drain_session<T>(
+   pending: &Pending<T>,
+   session_id: &str,
+   include_unscoped: bool,
+) -> Vec<(String, PendingEntry<T>)> {
+   let mut pending = pending
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+   let request_ids: Vec<String> = pending
+      .iter()
+      .filter(|(_, entry)| match entry.session_id.as_deref() {
+         Some(owner) => owner == session_id,
+         None => include_unscoped,
+      })
+      .map(|(request_id, _)| request_id.clone())
+      .collect();
+   request_ids
+      .into_iter()
+      .filter_map(|request_id| pending.remove(&request_id).map(|entry| (request_id, entry)))
+      .collect()
 }
 
 /// A request the frontend is showing the user. However its handler ends (answered, timed out, or
@@ -68,13 +128,17 @@ struct PendingRequest<T> {
 }
 
 impl<T> PendingRequest<T> {
-   fn open(pending: &Pending<T>, app_handle: &AppHandle) -> (Self, oneshot::Receiver<T>) {
+   fn open(
+      pending: &Pending<T>,
+      app_handle: &AppHandle,
+      session_id: Option<String>,
+   ) -> (Self, oneshot::Receiver<T>) {
       let request_id = uuid::Uuid::new_v4().to_string();
       let (tx, rx) = oneshot::channel();
       pending
          .lock()
          .unwrap_or_else(|poisoned| poisoned.into_inner())
-         .insert(request_id.clone(), tx);
+         .insert(request_id.clone(), PendingEntry::new(session_id, tx));
       let request = Self {
          pending: pending.clone(),
          request_id,
@@ -470,10 +534,13 @@ impl AthasAcpClient {
       &self,
       args: acp::RequestPermissionRequest,
    ) -> acp::Result<acp::RequestPermissionResponse> {
-      let (pending, response_rx) =
-         PendingRequest::open(&self.pending_permissions, &self.app_handle);
-      let request_id = pending.request_id.clone();
       let session_id = args.session_id.to_string();
+      let (pending, response_rx) = PendingRequest::open(
+         &self.pending_permissions,
+         &self.app_handle,
+         Some(session_id.clone()),
+      );
+      let request_id = pending.request_id.clone();
 
       // Extract tool call info for the permission request
       let tool_call_id = args.tool_call.tool_call_id.clone();
@@ -609,7 +676,11 @@ impl AthasAcpClient {
          _ => None,
       };
 
-      let (pending, answer_rx) = PendingRequest::open(&self.pending_elicitations, &self.app_handle);
+      let (pending, answer_rx) = PendingRequest::open(
+         &self.pending_elicitations,
+         &self.app_handle,
+         session_id.clone(),
+      );
       let request = serde_json::to_value(&args).map_err(|_| acp_sdk::Error::internal_error())?;
       self.emit_event(AcpEvent::ElicitationRequest {
          session_id,
@@ -1102,8 +1173,8 @@ fn elicitation_response(answer: Option<serde_json::Value>) -> acp::CreateElicita
 #[cfg(test)]
 mod tests {
    use super::{
-      AthasAcpClient, ClientResponders, PermissionResponse, SessionConfigOptionKind, acp,
-      elicitation_response,
+      AthasAcpClient, ClientResponders, PendingEntry, PermissionResponse, SessionConfigOptionKind,
+      acp, elicitation_response,
    };
    use crate::acp::types::AcpEvent;
    use serde_json::json;
@@ -1227,7 +1298,7 @@ mod tests {
          .elicitations
          .lock()
          .unwrap()
-         .insert("q1".to_string(), tx);
+         .insert("q1".to_string(), PendingEntry::new(None, tx));
 
       assert!(!responders.answer_elicitation("q2", json!({ "action": "decline" })));
       assert!(responders.answer_elicitation("q1", json!({ "action": "decline" })));
@@ -1236,11 +1307,10 @@ mod tests {
       assert!(!responders.answer_elicitation("q1", json!({ "action": "cancel" })));
 
       let (tx, mut rx) = oneshot::channel();
-      responders
-         .permissions
-         .lock()
-         .unwrap()
-         .insert("p1".to_string(), tx);
+      responders.permissions.lock().unwrap().insert(
+         "p1".to_string(),
+         PendingEntry::new(Some("s".to_string()), tx),
+      );
       let answer = PermissionResponse {
          approved: true,
          cancelled: false,
@@ -1248,6 +1318,64 @@ mod tests {
       };
       assert!(responders.answer_permission("p1", answer));
       assert_eq!(rx.try_recv().unwrap().option_id.as_deref(), Some("allow"));
+   }
+
+   #[test]
+   fn cancelling_a_session_resolves_only_what_it_waits_on() {
+      let responders = ClientResponders {
+         permissions: Default::default(),
+         elicitations: Default::default(),
+      };
+      let permission = |id: &str, session: &str| {
+         let (tx, rx) = oneshot::channel();
+         responders.permissions.lock().unwrap().insert(
+            id.to_string(),
+            PendingEntry::new(Some(session.to_string()), tx),
+         );
+         rx
+      };
+      let question = |id: &str, session: Option<&str>| {
+         let (tx, rx) = oneshot::channel();
+         responders.elicitations.lock().unwrap().insert(
+            id.to_string(),
+            PendingEntry::new(session.map(str::to_string), tx),
+         );
+         rx
+      };
+      let mut own_permission = permission("p-a", "session-a");
+      let mut other_permission = permission("p-b", "session-b");
+      let mut own_question = question("q-a", Some("session-a"));
+      let mut other_question = question("q-b", Some("session-b"));
+      let mut unscoped_question = question("q-none", None);
+
+      let mut closed = responders.cancel_session("session-a");
+      closed.sort();
+      assert_eq!(closed, ["p-a", "q-a", "q-none"]);
+
+      let answer = own_permission.try_recv().unwrap();
+      assert!(answer.cancelled && !answer.approved && answer.option_id.is_none());
+      assert_eq!(
+         own_question.try_recv().unwrap(),
+         json!({ "action": "cancel" })
+      );
+      assert_eq!(
+         unscoped_question.try_recv().unwrap(),
+         json!({ "action": "cancel" })
+      );
+      assert!(other_permission.try_recv().is_err());
+      assert!(other_question.try_recv().is_err());
+
+      // The other session's requests still wait and can be answered.
+      assert!(responders.answer_permission(
+         "p-b",
+         PermissionResponse {
+            approved: true,
+            cancelled: false,
+            option_id: None,
+         }
+      ));
+      assert!(responders.answer_elicitation("q-b", json!({ "action": "decline" })));
+      assert!(responders.cancel_session("session-a").is_empty());
    }
 
    #[test]
