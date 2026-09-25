@@ -45,6 +45,11 @@ import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-reg
 import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import type { ImageContent, RestoredComposerPrompt } from "@/features/ai/types/ai-chat.types";
 import {
+  type AgentRunEnding,
+  continuesAgentQueue,
+  getAgentRunEnding,
+} from "@/features/ai/lib/agent-message-queue";
+import {
   sendAgentNativeNotification,
   type AgentNativeNotificationKind,
 } from "@/features/ai/services/agent-native-notifications";
@@ -477,7 +482,7 @@ const AIChat = memo(function AIChat({
     if (effectiveChatId && run) {
       // Stop means stop: queued follow-ups stay queued instead of launching.
       if (options.continueQueue) {
-        finishRunAndProcessQueue(effectiveChatId, run.runId);
+        finishRunAndProcessQueue(effectiveChatId, run.runId, "interrupted");
       } else {
         useAIChatStore.getState().actions.finishAgentRun(effectiveChatId, run.runId);
       }
@@ -497,10 +502,15 @@ const AIChat = memo(function AIChat({
     [chatActions.updateMessage],
   );
 
-  function finishRunAndProcessQueue(targetChatId: string, runId: string) {
+  function finishRunAndProcessQueue(
+    targetChatId: string,
+    runId: string,
+    ending: AgentRunEnding = "completed",
+  ) {
     if (useAIChatStore.getState().agentRuns[targetChatId]?.runId !== runId) return;
     const actions = useAIChatStore.getState().actions;
     actions.finishAgentRun(targetChatId, runId);
+    if (!continuesAgentQueue(ending)) return;
     const nextMessage = actions.dequeueAgentMessage(targetChatId);
     if (nextMessage) {
       queueMicrotask(
@@ -742,7 +752,7 @@ const AIChat = memo(function AIChat({
                 images: userMessage.images,
               });
             }
-            finishRunAndProcessQueue(targetChatId, runId);
+            finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(false, stopNotice));
             abortControllerRef.current = null;
             notifyAgent(
               stopNotice === "prompt_refused" || stopNotice === "refused" ? "error" : "complete",
@@ -756,7 +766,7 @@ const AIChat = memo(function AIChat({
               isStreaming: false,
               responsePhase: undefined,
             }));
-            finishRunAndProcessQueue(targetChatId, runId);
+            finishRunAndProcessQueue(targetChatId, runId, "stopped");
             abortControllerRef.current = null;
             return;
           }
@@ -772,7 +782,7 @@ const AIChat = memo(function AIChat({
                 content: fallbackContent,
                 isStreaming: false,
               }));
-              finishRunAndProcessQueue(targetChatId, runId);
+              finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(wasCancelled));
               abortControllerRef.current = null;
               if (!wasCancelled) notifyAgent("complete");
               return;
@@ -792,7 +802,7 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
 [/ERROR_BLOCK]`,
               isStreaming: false,
             }));
-            finishRunAndProcessQueue(targetChatId, runId);
+            finishRunAndProcessQueue(targetChatId, runId, wasCancelled ? "stopped" : "failed");
             abortControllerRef.current = null;
             if (!wasCancelled) notifyAgent("error");
             return;
@@ -801,7 +811,7 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
           chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
             isStreaming: false,
           });
-          finishRunAndProcessQueue(targetChatId, runId);
+          finishRunAndProcessQueue(targetChatId, runId, getAgentRunEnding(wasCancelled));
           abortControllerRef.current = null;
           if (!wasCancelled) notifyAgent("complete");
         },
@@ -940,7 +950,7 @@ details: ${errorDetails || mainError}
             });
           }
           notifyAgent("error");
-          finishRunAndProcessQueue(targetChatId, runId);
+          finishRunAndProcessQueue(targetChatId, runId, "failed");
           abortControllerRef.current = null;
         },
         conversationContext,
@@ -1201,7 +1211,7 @@ details: ${errorDetails || mainError}
           "Error: Failed to connect to Agent service. Please check your API key and try again.",
         isStreaming: false,
       });
-      finishRunAndProcessQueue(targetChatId, runId);
+      finishRunAndProcessQueue(targetChatId, runId, "failed");
       abortControllerRef.current = null;
     }
   }
@@ -1235,7 +1245,7 @@ details: ${errorDetails || mainError}
           showToast({
             message: "Message queued",
             description:
-              "Open the queue to edit, reorder, or remove guidance while the agent runs.",
+              "It sends when this turn ends. Edit, reorder, or send it now from the queue above.",
             type: "info",
           });
         }
@@ -1305,6 +1315,23 @@ details: ${errorDetails || mainError}
       showToast,
     ],
   );
+
+  const handleSendQueuedMessageNow = (index: number) => {
+    if (!effectiveChatId || agentIsDetached(effectiveChatId)) return;
+    const store = useAIChatStore.getState();
+    const message = store.agentMessageQueues[effectiveChatId]?.[index];
+    if (!message) return;
+    if (store.agentRuns[effectiveChatId]) {
+      // It runs next: the stopped turn winds down before this prompt starts.
+      store.actions.moveQueuedAgentMessage(effectiveChatId, index, 0);
+      void stopStreaming({ continueQueue: true });
+      return;
+    }
+    // The queue is held after a stop, refusal or error; send this one on its own.
+    if (sendMessage(message.content, message.images).accepted) {
+      store.actions.removeQueuedAgentMessage(effectiveChatId, index);
+    }
+  };
 
   const processMessageRef = useRef(processMessage);
   useLayoutEffect(() => {
@@ -1456,14 +1483,16 @@ details: ${errorDetails || mainError}
         if (effectiveChatId)
           chatActions.moveQueuedAgentMessage(effectiveChatId, fromIndex, toIndex);
       }}
-      onRemoveQueuedMessage={(index, reason) => {
+      onUpdateQueuedMessage={(index, message) => {
+        if (effectiveChatId) chatActions.updateQueuedAgentMessage(effectiveChatId, index, message);
+      }}
+      onRemoveQueuedMessage={(index) => {
         if (effectiveChatId) {
           chatActions.removeQueuedAgentMessage(effectiveChatId, index);
-          if (reason === "discard") {
-            void recordFrictionSignal({ area: "agent", signal: "queue_discard" });
-          }
+          void recordFrictionSignal({ area: "agent", signal: "queue_discard" });
         }
       }}
+      onSendQueuedMessageNow={handleSendQueuedMessageNow}
       onStopStreaming={stopStreaming}
       restoredPrompt={refusedPrompt}
     />

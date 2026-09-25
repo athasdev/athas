@@ -253,6 +253,11 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         const [message] = queue.splice(fromIndex, 1);
         if (message) queue.splice(toIndex, 0, message);
       }),
+    updateQueuedAgentMessage: (chatId, index, message) =>
+      set((state) => {
+        const queued = state.agentMessageQueues[chatId]?.[index];
+        if (queued) queued.content = message;
+      }),
     removeQueuedAgentMessage: (chatId, index) =>
       set((state) => {
         const queue = state.agentMessageQueues[chatId];

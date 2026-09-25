@@ -102,7 +102,9 @@ export function AgentLaunchInput({
       onSendMessage={submit}
       onInterruptAndSend={submit}
       onMoveQueuedMessage={() => {}}
+      onUpdateQueuedMessage={() => {}}
       onRemoveQueuedMessage={() => {}}
+      onSendQueuedMessageNow={() => {}}
       onStopStreaming={() => {}}
     />
   );

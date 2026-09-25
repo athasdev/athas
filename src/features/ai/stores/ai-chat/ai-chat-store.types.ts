@@ -82,6 +82,8 @@ export interface AIChatActions {
   prependAgentMessage: (chatId: string, message: string, images?: ImageContent[]) => void;
   dequeueAgentMessage: (chatId: string) => QueuedAgentMessage | null;
   moveQueuedAgentMessage: (chatId: string, fromIndex: number, toIndex: number) => void;
+  /** Rewrites a queued message's text; its images stay attached. */
+  updateQueuedAgentMessage: (chatId: string, index: number, message: string) => void;
   removeQueuedAgentMessage: (chatId: string, index: number) => void;
   createNewChat: (
     agentId?: AgentType,

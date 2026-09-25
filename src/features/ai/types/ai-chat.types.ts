@@ -154,7 +154,10 @@ export interface AIChatInputBarProps {
   onSendMessage: (message: string, images?: ImageContent[]) => AgentMessageSubmitResult;
   onInterruptAndSend: (message: string, images?: ImageContent[]) => AgentMessageSubmitResult;
   onMoveQueuedMessage: (fromIndex: number, toIndex: number) => void;
-  onRemoveQueuedMessage: (index: number, reason: "edit" | "discard") => void;
+  onUpdateQueuedMessage: (index: number, message: string) => void;
+  onRemoveQueuedMessage: (index: number) => void;
+  /** Sends a queued message next, stopping the running turn first. */
+  onSendQueuedMessageNow: (index: number) => void;
   onStopStreaming: () => void;
   /** Put back into the composer when it is empty; a new `id` restores again. */
   restoredPrompt?: RestoredComposerPrompt | null;

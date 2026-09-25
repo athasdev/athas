@@ -103,7 +103,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
   onSendMessage,
   onInterruptAndSend,
   onMoveQueuedMessage,
+  onUpdateQueuedMessage,
   onRemoveQueuedMessage,
+  onSendQueuedMessageNow,
   onStopStreaming,
   restoredPrompt,
 }: AIChatInputBarProps) {
@@ -1106,6 +1108,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
         isInitialPresentation ? "w-full" : [chatContentWidth(), "mb-3"],
       )}
     >
+      {!isTerminalMode && (
+        <AgentMessageQueue
+          messages={queuedMessages}
+          onUpdate={onUpdateQueuedMessage}
+          onMove={onMoveQueuedMessage}
+          onRemove={onRemoveQueuedMessage}
+          onSendNow={onSendQueuedMessageNow}
+        />
+      )}
       <Composer
         ref={composerRef}
         data-ai-element="prompt-input"
@@ -1274,19 +1285,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
               }}
             />
           </div>
-
-          <AgentMessageQueue
-            messages={queuedMessages}
-            onEdit={(index) => {
-              const message = queuedMessages[index];
-              if (!message) return;
-              onRemoveQueuedMessage(index, "edit");
-              replaceInput(message.content);
-              setPastedImages(restorePastedImages(message.images));
-            }}
-            onMove={onMoveQueuedMessage}
-            onRemove={(index) => onRemoveQueuedMessage(index, "discard")}
-          />
 
           <div className="ml-auto flex min-w-0 shrink items-center gap-1">
             <ComposerAgentSelector
