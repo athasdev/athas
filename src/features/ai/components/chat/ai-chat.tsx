@@ -39,6 +39,7 @@ import {
   updateToolCall,
 } from "@/features/ai/lib/tool-call-state";
 import { followAgentLocations, followAgentTo } from "@/features/ai/services/agent-follow-service";
+import { recordAgentFileWrite } from "@/features/ai/services/agent-edits-service";
 import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
@@ -1112,6 +1113,13 @@ details: ${errorDetails || mainError}
               break;
             case "agent_location":
               followAgentTo(targetChatId, { path: event.path, line: event.line });
+              break;
+            case "agent_file_write":
+              recordAgentFileWrite(targetChatId, {
+                path: event.path,
+                previousContent: event.previousContent,
+                content: event.content,
+              });
               break;
             case "tool_complete":
               break;
