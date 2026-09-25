@@ -16,7 +16,7 @@ use crate::runtime::AthasAppHandle as AppHandle;
 use agent_client_protocol::schema::v1 as acp;
 use anyhow::{Context, Result, bail};
 use athas_terminal::TerminalManager;
-use std::{path::PathBuf, sync::Arc, thread};
+use std::{path::PathBuf, sync::Arc, thread, time::Duration};
 use tauri::Emitter;
 use tokio::{
    process::Child,
@@ -24,6 +24,29 @@ use tokio::{
    sync::{Mutex, mpsc, oneshot},
    task::LocalSet,
 };
+
+/// How long session requests such as `session/set_mode` or `session/list` may
+/// take before the user gets an error instead of a hung control.
+const ACP_REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
+/// `session/close` is only sent while stopping, so it gets a short budget.
+const ACP_SESSION_CLOSE_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// Awaits an agent request, turning an agent error or a missing reply within
+/// `timeout` into an error that names the action.
+pub(super) async fn with_request_timeout<T, E: std::fmt::Display>(
+   action: &str,
+   timeout: Duration,
+   request: impl Future<Output = std::result::Result<T, E>>,
+) -> Result<T> {
+   match tokio::time::timeout(timeout, request).await {
+      Ok(Ok(response)) => Ok(response),
+      Ok(Err(error)) => bail!("Failed to {action}: {error}"),
+      Err(_) => bail!(
+         "Failed to {action}: the agent did not respond within {} seconds",
+         timeout.as_secs()
+      ),
+   }
+}
 
 /// Worker state running on the LocalSet thread
 pub(super) struct AcpWorker {
@@ -222,77 +245,84 @@ impl AcpWorker {
       Ok(())
    }
 
-   pub(super) async fn set_mode(&mut self, mode_id: &str) -> Result<()> {
+   /// Checks the agent is ready and returns the `session/set_mode` request. The
+   /// worker loop runs it in the background so a slow agent cannot hold up
+   /// Cancel or Stop.
+   pub(super) async fn set_mode(
+      &mut self,
+      mode_id: String,
+   ) -> Result<impl Future<Output = Result<()>> + use<>> {
       self.ensure_process_alive().await?;
 
-      let connection = self.connection.as_ref().context("No active connection")?;
-      let session_id = self.session_id.as_ref().context("No active session")?;
+      let connection = self.active_connection()?;
+      let session_id = self.active_session_id()?;
+      let request = acp::SetSessionModeRequest::new(session_id, mode_id);
 
-      // Use session/set_mode request
-      let request = acp::SetSessionModeRequest::new(session_id.clone(), mode_id.to_string());
-
-      connection
-         .send_request(request)
-         .block_task()
-         .await
-         .context("Failed to set session mode")?;
-
-      Ok(())
+      Ok(async move {
+         with_request_timeout(
+            "set session mode",
+            ACP_REQUEST_TIMEOUT,
+            connection.send_request(request).block_task(),
+         )
+         .await?;
+         Ok(())
+      })
    }
 
    pub(super) async fn set_config_option(
       &mut self,
-      config_id: &str,
-      value: &SessionConfigValue,
-   ) -> Result<()> {
+      config_id: String,
+      value: SessionConfigValue,
+   ) -> Result<impl Future<Output = Result<()>> + use<>> {
       self.ensure_process_alive().await?;
 
-      let connection = self.connection.as_ref().context("No active connection")?;
-      let session_id = self.session_id.as_ref().context("No active session")?;
+      let connection = self.active_connection()?;
+      let session_id = self.active_session_id()?;
       let app_handle = self
          .app_handle
          .as_ref()
-         .context("No app handle available")?;
+         .context("No app handle available")?
+         .clone();
 
       let value = match value {
-         SessionConfigValue::String(value) => {
-            acp::SessionConfigOptionValue::value_id(value.clone())
-         }
-         SessionConfigValue::Boolean(value) => acp::SessionConfigOptionValue::boolean(*value),
+         SessionConfigValue::String(value) => acp::SessionConfigOptionValue::value_id(value),
+         SessionConfigValue::Boolean(value) => acp::SessionConfigOptionValue::boolean(value),
       };
-      let request =
-         acp::SetSessionConfigOptionRequest::new(session_id.clone(), config_id.to_string(), value);
+      let request = acp::SetSessionConfigOptionRequest::new(session_id.clone(), config_id, value);
 
-      let response = connection
-         .send_request(request)
-         .block_task()
-         .await
-         .context("Failed to set session config option")?;
-      let config_options = Self::map_config_options(response.config_options);
+      Ok(async move {
+         let response = with_request_timeout(
+            "set session config option",
+            ACP_REQUEST_TIMEOUT,
+            connection.send_request(request).block_task(),
+         )
+         .await?;
+         let config_options = Self::map_config_options(response.config_options);
 
-      let _ = app_handle.emit(
-         "acp-event",
-         AcpEvent::ConfigOptionsUpdate {
-            session_id: session_id.to_string(),
-            config_options,
-         },
-      );
+         let _ = app_handle.emit(
+            "acp-event",
+            AcpEvent::ConfigOptionsUpdate {
+               session_id: session_id.to_string(),
+               config_options,
+            },
+         );
 
-      Ok(())
+         Ok(())
+      })
    }
 
    pub(super) async fn list_sessions(
       &mut self,
       cwd: Option<String>,
       cursor: Option<String>,
-   ) -> Result<AcpSessionList> {
+   ) -> Result<impl Future<Output = Result<AcpSessionList>> + use<>> {
       self.ensure_process_alive().await?;
 
       if !self.supports_session_list() {
          bail!("ACP agent does not support session/list");
       }
 
-      let connection = self.connection.as_ref().context("No active connection")?;
+      let connection = self.active_connection()?;
       let mut request = acp::ListSessionsRequest::new();
       if let Some(cwd) = cwd {
          let cwd = resolve_workspace_path(Some(cwd))?
@@ -303,77 +333,106 @@ impl AcpWorker {
          request = request.cursor(cursor);
       }
 
-      let response = connection
-         .send_request(request)
-         .block_task()
-         .await
-         .context("Failed to list ACP sessions")?;
+      Ok(async move {
+         let response = with_request_timeout(
+            "list ACP sessions",
+            ACP_REQUEST_TIMEOUT,
+            connection.send_request(request).block_task(),
+         )
+         .await?;
 
-      Ok(AcpSessionList {
-         sessions: response
-            .sessions
-            .into_iter()
-            .map(|session| AcpSessionInfo {
-               session_id: session.session_id.to_string(),
-               cwd: session.cwd.to_string_lossy().to_string(),
-               title: session.title,
-               updated_at: session.updated_at,
-               meta: session.meta.map(serde_json::Value::Object),
-            })
-            .collect(),
-         next_cursor: response.next_cursor,
+         Ok(AcpSessionList {
+            sessions: response
+               .sessions
+               .into_iter()
+               .map(|session| AcpSessionInfo {
+                  session_id: session.session_id.to_string(),
+                  cwd: session.cwd.to_string_lossy().to_string(),
+                  title: session.title,
+                  updated_at: session.updated_at,
+                  meta: session.meta.map(serde_json::Value::Object),
+               })
+               .collect(),
+            next_cursor: response.next_cursor,
+         })
       })
    }
 
-   pub(super) async fn delete_session(&mut self, session_id: &str) -> Result<()> {
+   /// Returns the `session/delete` request. Once it succeeds the worker loop
+   /// calls [`Self::forget_session`] to drop the session if it was active.
+   pub(super) async fn delete_session(
+      &mut self,
+      session_id: String,
+   ) -> Result<impl Future<Output = Result<()>> + use<>> {
       self.ensure_process_alive().await?;
 
       if !self.supports_session_delete() {
          bail!("ACP agent does not support session/delete");
       }
 
-      let connection = self.connection.as_ref().context("No active connection")?;
-      connection
-         .send_request(acp::DeleteSessionRequest::new(session_id.to_string()))
-         .block_task()
-         .await
-         .context("Failed to delete ACP session")?;
+      let connection = self.active_connection()?;
+      let request = acp::DeleteSessionRequest::new(session_id);
 
-      if self
-         .session_id
-         .as_ref()
-         .map(|active_session_id| active_session_id.to_string() == session_id)
-         .unwrap_or(false)
-      {
-         self.session_id = None;
-         if let Some(app_handle) = self.app_handle.as_ref() {
-            let _ = app_handle.emit(
-               "acp-event",
-               AcpEvent::SessionComplete {
-                  session_id: session_id.to_string(),
-               },
-            );
-         }
-      }
-
-      Ok(())
+      Ok(async move {
+         with_request_timeout(
+            "delete ACP session",
+            ACP_REQUEST_TIMEOUT,
+            connection.send_request(request).block_task(),
+         )
+         .await?;
+         Ok(())
+      })
    }
 
-   pub(super) async fn logout(&mut self) -> Result<()> {
+   /// Clears the active session after the agent deleted it.
+   pub(super) fn forget_session(&mut self, session_id: &str) {
+      let is_active = self
+         .session_id
+         .as_ref()
+         .is_some_and(|active_session_id| active_session_id.to_string() == session_id);
+      if !is_active {
+         return;
+      }
+
+      self.session_id = None;
+      if let Some(app_handle) = self.app_handle.as_ref() {
+         let _ = app_handle.emit(
+            "acp-event",
+            AcpEvent::SessionComplete {
+               session_id: session_id.to_string(),
+            },
+         );
+      }
+   }
+
+   pub(super) async fn logout(&mut self) -> Result<impl Future<Output = Result<()>> + use<>> {
       self.ensure_process_alive().await?;
 
       if !self.supports_logout() {
          bail!("ACP agent does not support logout");
       }
 
-      let connection = self.connection.as_ref().context("No active connection")?;
-      connection
-         .send_request(acp::LogoutRequest::new())
-         .block_task()
-         .await
-         .context("Failed to log out ACP agent")?;
+      let connection = self.active_connection()?;
 
-      Ok(())
+      Ok(async move {
+         with_request_timeout(
+            "log out ACP agent",
+            ACP_REQUEST_TIMEOUT,
+            connection
+               .send_request(acp::LogoutRequest::new())
+               .block_task(),
+         )
+         .await?;
+         Ok(())
+      })
+   }
+
+   fn active_connection(&self) -> Result<Arc<AcpConnection>> {
+      self.connection.clone().context("No active connection")
+   }
+
+   fn active_session_id(&self) -> Result<acp::SessionId> {
+      self.session_id.clone().context("No active session")
    }
 
    fn supports_session_list(&self) -> bool {
@@ -409,13 +468,19 @@ impl AcpWorker {
    }
 
    pub(super) async fn stop(&mut self) -> Result<()> {
+      // Closing is a courtesy before the process is stopped; an agent that
+      // does not answer quickly must not keep Stop waiting.
       if self.supports_session_close()
          && let (Some(connection), Some(session_id)) =
             (self.connection.as_ref(), self.session_id.as_ref())
-         && let Err(error) = connection
-            .send_request(acp::CloseSessionRequest::new(session_id.clone()))
-            .block_task()
-            .await
+         && let Err(error) = with_request_timeout(
+            "close ACP session",
+            ACP_SESSION_CLOSE_TIMEOUT,
+            connection
+               .send_request(acp::CloseSessionRequest::new(session_id.clone()))
+               .block_task(),
+         )
+         .await
       {
          log::warn!(
             "Failed to close ACP session before stopping agent: {}",
@@ -770,6 +835,48 @@ impl AcpAgentBridge {
          AcpEvent::StatusChanged {
             status: status.clone(),
          },
+      );
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::with_request_timeout;
+   use std::time::Duration;
+
+   #[tokio::test]
+   async fn request_timeout_returns_the_response() {
+      let result = with_request_timeout("do it", Duration::from_secs(1), async {
+         Ok::<_, String>(7)
+      })
+      .await;
+      assert_eq!(result.unwrap(), 7);
+   }
+
+   #[tokio::test]
+   async fn request_timeout_names_the_action_on_agent_errors() {
+      let result = with_request_timeout("set session mode", Duration::from_secs(1), async {
+         Err::<(), _>("mode not found")
+      })
+      .await;
+      assert_eq!(
+         result.unwrap_err().to_string(),
+         "Failed to set session mode: mode not found"
+      );
+   }
+
+   #[tokio::test]
+   async fn request_timeout_gives_up_on_a_silent_agent() {
+      let result = with_request_timeout(
+         "list ACP sessions",
+         Duration::from_millis(20),
+         std::future::pending::<Result<(), String>>(),
+      )
+      .await;
+      let message = result.unwrap_err().to_string();
+      assert!(
+         message.starts_with("Failed to list ACP sessions: the agent did not respond"),
+         "{message}"
       );
    }
 }

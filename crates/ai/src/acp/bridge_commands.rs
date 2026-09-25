@@ -54,11 +54,40 @@ pub(super) enum AcpCommand {
    },
 }
 
+/// Work that a background agent request hands back to the worker loop,
+/// which owns the worker state.
+enum WorkerFollowUp {
+   SessionDeleted {
+      session_id: String,
+      response_tx: oneshot::Sender<Result<()>>,
+   },
+}
+
+/// Runs a prepared agent request off the worker loop and answers the caller
+/// when it finishes. Agent requests can take a while (or never answer), and
+/// awaiting them inline would leave Cancel and Stop queued behind them.
+fn respond_in_background<T: 'static>(
+   prepared: Result<impl Future<Output = Result<T>> + 'static>,
+   response_tx: oneshot::Sender<Result<T>>,
+) {
+   match prepared {
+      Ok(request) => {
+         tokio::task::spawn_local(async move {
+            let _ = response_tx.send(request.await);
+         });
+      }
+      Err(error) => {
+         let _ = response_tx.send(Err(error));
+      }
+   }
+}
+
 pub(super) async fn run_worker_loop(
    mut command_rx: mpsc::Receiver<AcpCommand>,
    status: Arc<Mutex<AcpAgentStatus>>,
 ) {
    let mut worker = AcpWorker::new();
+   let (followup_tx, mut followup_rx) = mpsc::unbounded_channel::<WorkerFollowUp>();
    let mut health_check = tokio::time::interval(std::time::Duration::from_secs(1));
    health_check.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
@@ -112,24 +141,25 @@ pub(super) async fn run_worker_loop(
                   mode_id,
                   response_tx,
                } => {
-                  let result = worker.set_mode(&mode_id).await;
+                  respond_in_background(worker.set_mode(mode_id).await, response_tx);
                   {
                      let mut s = status.lock().await;
                      *s = worker.get_status();
                   }
-                  let _ = response_tx.send(result);
                }
                AcpCommand::SetConfigOption {
                   config_id,
                   value,
                   response_tx,
                } => {
-                  let result = worker.set_config_option(&config_id, &value).await;
+                  respond_in_background(
+                     worker.set_config_option(config_id, value).await,
+                     response_tx,
+                  );
                   {
                      let mut s = status.lock().await;
                      *s = worker.get_status();
                   }
-                  let _ = response_tx.send(result);
                }
                AcpCommand::CancelPrompt { response_tx } => {
                   let result = worker.cancel_prompt().await;
@@ -144,31 +174,44 @@ pub(super) async fn run_worker_loop(
                   cursor,
                   response_tx,
                } => {
-                  let result = worker.list_sessions(cwd, cursor).await;
+                  respond_in_background(worker.list_sessions(cwd, cursor).await, response_tx);
                   {
                      let mut s = status.lock().await;
                      *s = worker.get_status();
                   }
-                  let _ = response_tx.send(result);
                }
                AcpCommand::DeleteSession {
                   session_id,
                   response_tx,
-               } => {
-                  let result = worker.delete_session(&session_id).await;
-                  {
-                     let mut s = status.lock().await;
-                     *s = worker.get_status();
+               } => match worker.delete_session(session_id.clone()).await {
+                  Ok(request) => {
+                     let followup_tx = followup_tx.clone();
+                     tokio::task::spawn_local(async move {
+                        match request.await {
+                           Ok(()) => {
+                              // The worker owns the active session, so it clears it
+                              // before the caller hears back.
+                              let _ = followup_tx.send(WorkerFollowUp::SessionDeleted {
+                                 session_id,
+                                 response_tx,
+                              });
+                           }
+                           Err(error) => {
+                              let _ = response_tx.send(Err(error));
+                           }
+                        }
+                     });
                   }
-                  let _ = response_tx.send(result);
-               }
+                  Err(error) => {
+                     let _ = response_tx.send(Err(error));
+                  }
+               },
                AcpCommand::Logout { response_tx } => {
-                  let result = worker.logout().await;
+                  respond_in_background(worker.logout().await, response_tx);
                   {
                      let mut s = status.lock().await;
                      *s = worker.get_status();
                   }
-                  let _ = response_tx.send(result);
                }
                AcpCommand::Stop { response_tx } => {
                   let result = worker.stop().await;
@@ -182,6 +225,19 @@ pub(super) async fn run_worker_loop(
                }
             }
          }
+         Some(followup) = followup_rx.recv() => match followup {
+            WorkerFollowUp::SessionDeleted {
+               session_id,
+               response_tx,
+            } => {
+               worker.forget_session(&session_id);
+               {
+                  let mut s = status.lock().await;
+                  *s = worker.get_status();
+               }
+               let _ = response_tx.send(Ok(()));
+            }
+         },
          _ = health_check.tick() => {
             if let Err(err) = worker.ensure_process_alive().await {
                log::warn!("ACP worker process health check failed: {}", err);
@@ -192,5 +248,39 @@ pub(super) async fn run_worker_loop(
             }
          }
       }
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::respond_in_background;
+   use tokio::sync::oneshot;
+
+   #[tokio::test]
+   async fn a_hung_request_does_not_block_the_caller() {
+      tokio::task::LocalSet::new()
+         .run_until(async {
+            let (hung_tx, mut hung_rx) = oneshot::channel::<anyhow::Result<()>>();
+            respond_in_background(Ok(std::future::pending::<anyhow::Result<()>>()), hung_tx);
+
+            let (done_tx, done_rx) = oneshot::channel();
+            respond_in_background(Ok(async { Ok(5) }), done_tx);
+
+            assert_eq!(done_rx.await.unwrap().unwrap(), 5);
+            assert!(hung_rx.try_recv().is_err());
+         })
+         .await;
+   }
+
+   #[tokio::test]
+   async fn a_request_that_cannot_start_is_answered_right_away() {
+      let (response_tx, mut response_rx) = oneshot::channel::<anyhow::Result<()>>();
+      respond_in_background(
+         Err::<std::future::Ready<anyhow::Result<()>>, _>(anyhow::anyhow!("No active session")),
+         response_tx,
+      );
+
+      let error = response_rx.try_recv().unwrap().unwrap_err();
+      assert_eq!(error.to_string(), "No active session");
    }
 }
