@@ -61,6 +61,36 @@ describe("agent question store", () => {
     expect(requestIds()).toEqual([]);
   });
 
+  it("keeps an accepted URL question waiting until the agent reports it complete", async () => {
+    actions.add({
+      requestId: "link",
+      sessionId: "session-a",
+      request: {
+        mode: "url",
+        message: "Sign in to Linear",
+        elicitationId: "mcp-oauth-1",
+        url: "https://linear.app/oauth",
+      },
+    });
+    actions.add(question("form", "session-a"));
+
+    await actions.answer("link", { action: "accept" });
+    expect(invoke).toHaveBeenCalledWith("respond_acp_elicitation", {
+      requestId: "link",
+      response: { action: "accept" },
+    });
+    const shown = selectSessionQuestions(useAcpQuestionsStore.getState().questions, "session-a");
+    expect(shown.map((item) => [item.requestId, item.waiting ?? false])).toEqual([
+      ["form", false],
+      ["link", true],
+    ]);
+
+    actions.complete("unknown-id");
+    expect(requestIds()).toEqual(["link", "form"]);
+    actions.complete("mcp-oauth-1");
+    expect(requestIds()).toEqual(["form"]);
+  });
+
   it("cancels a stopped session's questions and leaves other sessions alone", () => {
     actions.add(question("a", "session-a"));
     actions.add(question("b", "session-b"));

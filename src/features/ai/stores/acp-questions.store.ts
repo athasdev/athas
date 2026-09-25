@@ -8,6 +8,8 @@ export interface AcpQuestion {
   /** Null for request-scoped questions, which belong to no session. */
   sessionId: string | null;
   request: AcpElicitationRequest;
+  /** A URL question the user accepted: the agent is waiting for the flow in the browser. */
+  waiting?: boolean;
 }
 
 interface AcpQuestionsState {
@@ -16,7 +18,10 @@ interface AcpQuestionsState {
     add: (question: AcpQuestion) => void;
     /** The agent stopped waiting (cancelled, timed out, or went away). */
     remove: (requestId: string) => void;
+    /** Accepting a URL question keeps it, marked waiting, until the agent reports completion. */
     answer: (requestId: string, response: AcpElicitationResponse) => Promise<void>;
+    /** `elicitation/complete`: the flow behind a URL question finished. Unknown ids are ignored. */
+    complete: (elicitationId: string) => void;
     /** Cancels every question a session is waiting on, plus request-scoped ones. */
     cancelForSession: (sessionId: string | null | undefined) => void;
   };
@@ -41,15 +46,36 @@ const useAcpQuestionsStoreBase = create<AcpQuestionsState>()((set, get) => ({
         questions: state.questions.filter((item) => item.requestId !== requestId),
       })),
     answer: async (requestId, response) => {
+      const question = get().questions.find((item) => item.requestId === requestId);
       try {
         await AcpStreamHandler.respondToElicitation(requestId, response);
-      } finally {
+      } catch (error) {
+        get().actions.remove(requestId);
+        throw error;
+      }
+      if (question?.request.mode === "url" && response.action === "accept") {
+        set((state) => ({
+          questions: state.questions.map((item) =>
+            item.requestId === requestId ? { ...item, waiting: true } : item,
+          ),
+        }));
+      } else {
         get().actions.remove(requestId);
       }
     },
+    complete: (elicitationId) =>
+      set((state) => ({
+        questions: state.questions.filter(
+          (item) => item.request.mode !== "url" || item.request.elicitationId !== elicitationId,
+        ),
+      })),
     cancelForSession: (sessionId) => {
       for (const question of get().questions) {
         if (question.sessionId !== null && question.sessionId !== sessionId) continue;
+        if (question.waiting) {
+          get().actions.remove(question.requestId);
+          continue;
+        }
         void get()
           .actions.answer(question.requestId, { action: "cancel" })
           .catch(() => undefined);
@@ -60,9 +86,13 @@ const useAcpQuestionsStoreBase = create<AcpQuestionsState>()((set, get) => ({
 
 export const useAcpQuestionsStore = createSelectors(useAcpQuestionsStoreBase);
 
-/** The questions a chat on `sessionId` should show: its own and request-scoped ones. */
+/**
+ * The questions a chat on `sessionId` should show: its own and request-scoped ones, with those
+ * still waiting on an answer ahead of URL flows already opened in the browser.
+ */
 export function selectSessionQuestions(questions: AcpQuestion[], sessionId: string | null) {
-  return questions.filter(
+  const own = questions.filter(
     (question) => question.sessionId === null || question.sessionId === sessionId,
   );
+  return [...own.filter((question) => !question.waiting), ...own.filter((q) => q.waiting)];
 }

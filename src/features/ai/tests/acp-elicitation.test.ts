@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
-  type AcpElicitationRequest,
+  type AcpFormElicitationRequest,
+  inspectElicitationUrl,
   toElicitationContent,
   toElicitationQuestions,
 } from "../lib/acp-elicitation";
@@ -12,7 +13,7 @@ function form(entries: Array<[string, string]>) {
 }
 
 // Shaped like claude-agent-acp's AskUserQuestion elicitation.
-const claudeRequest: AcpElicitationRequest = {
+const claudeRequest: AcpFormElicitationRequest = {
   mode: "form",
   message: "Claude has questions",
   sessionId: "sess_1",
@@ -122,5 +123,33 @@ describe("ACP elicitation forms", () => {
         ]),
       ),
     ).toEqual({ force: true, retries: 3 });
+  });
+});
+
+describe("ACP URL elicitation links", () => {
+  it("opens web links and flags ones worth a second look", () => {
+    expect(inspectElicitationUrl("https://auth.example.com/authorize?state=1")).toEqual({
+      openable: true,
+      href: "https://auth.example.com/authorize?state=1",
+      host: "auth.example.com",
+      insecure: false,
+      punycode: false,
+    });
+    expect(inspectElicitationUrl("http://localhost:8080/callback")).toMatchObject({
+      openable: true,
+      insecure: true,
+    });
+    // "аpple.com" with a Cyrillic "а" becomes punycode once parsed.
+    expect(inspectElicitationUrl("https://аpple.com/login")).toMatchObject({
+      openable: true,
+      host: "xn--pple-43d.com",
+      punycode: true,
+    });
+  });
+
+  it("refuses anything that is not a web link", () => {
+    for (const url of ["file:///etc/passwd", "javascript:alert(1)", "vscode://open", "not a url"]) {
+      expect(inspectElicitationUrl(url)).toMatchObject({ openable: false });
+    }
   });
 });

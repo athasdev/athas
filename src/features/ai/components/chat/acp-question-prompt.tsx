@@ -20,9 +20,9 @@ import {
   QuestionnaireTitle,
 } from "@/ui/questionnaire";
 import { cn } from "@/utils/cn";
-import type { AcpQuestion } from "../../stores/acp-questions.store";
 import {
   type AcpElicitationResponse,
+  type AcpFormElicitationRequest,
   type ElicitationQuestion,
   toElicitationContent,
   toElicitationQuestions,
@@ -92,17 +92,19 @@ function QuestionStep({ question }: { question: ElicitationQuestion }) {
  * (abandon the request) as the ACP spec asks clients to.
  */
 export function AcpQuestionPrompt({
-  question,
+  requestId,
+  request,
   agentLabel,
   queuedCount,
   onAnswer,
 }: {
-  question: AcpQuestion;
+  requestId: string;
+  request: AcpFormElicitationRequest;
   agentLabel: string;
   queuedCount: number;
   onAnswer: (response: AcpElicitationResponse) => void;
 }) {
-  const questions = useMemo(() => toElicitationQuestions(question.request), [question.request]);
+  const questions = useMemo(() => toElicitationQuestions(request), [request]);
 
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -123,7 +125,7 @@ export function AcpQuestionPrompt({
         <QuestionIcon className="mt-0.5 size-3.5 shrink-0 text-subtle-foreground" />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="text-subtle-foreground ui-text-caption">{agentLabel} is asking</span>
-          <p className="text-pretty text-foreground">{question.request.message}</p>
+          <p className="text-pretty text-foreground">{request.message}</p>
         </div>
         {queuedCount > 0 ? <Badge>+{queuedCount}</Badge> : null}
         <div className="flex shrink-0 items-center gap-1">
@@ -150,7 +152,7 @@ export function AcpQuestionPrompt({
       </div>
 
       {questions.length > 0 ? (
-        <Questionnaire key={question.requestId} onSubmit={submit} shortcuts="numbers">
+        <Questionnaire key={requestId} onSubmit={submit} shortcuts="numbers">
           {questions.length > 1 ? <QuestionnaireProgress /> : null}
           {questions.map((item) => (
             <QuestionStep key={item.name} question={item} />

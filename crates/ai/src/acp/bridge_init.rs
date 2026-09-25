@@ -320,7 +320,9 @@ async fn initialize_connection(
       )
       .terminal(true)
       .elicitation(
-         acp::ElicitationCapabilities::new().form(acp::ElicitationFormCapabilities::new()),
+         acp::ElicitationCapabilities::new()
+            .form(acp::ElicitationFormCapabilities::new())
+            .url(acp::ElicitationUrlCapabilities::new()),
       )
       .session(
          acp::ClientSessionCapabilities::new().config_options(

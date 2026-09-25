@@ -91,6 +91,7 @@ import {
 import type { AcpElicitationResponse } from "@/features/ai/lib/acp-elicitation";
 import { AcpPermissionPrompt, type AcpPermissionRequest } from "./acp-permission-prompt";
 import { AcpQuestionPrompt } from "./acp-question-prompt";
+import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
 
@@ -284,6 +285,9 @@ const AIChat = memo(function AIChat({
               sessionId: payload.sessionId,
               request: payload.request,
             });
+            break;
+          case "elicitation_complete":
+            useAcpQuestionsStore.getState().actions.complete(payload.elicitationId);
             break;
           case "request_closed":
             useAcpQuestionsStore.getState().actions.remove(payload.requestId);
@@ -1322,21 +1326,24 @@ details: ${errorDetails || mainError}
   const useInitialComposer = isNewSession && !currentPermission && !currentQuestion;
   const handleQuestionAnswer = async (response: AcpElicitationResponse) => {
     if (!currentQuestion) return;
+    const isLink = currentQuestion.request.mode === "url";
     appendAcpEvent({
       id: `question-answer-${currentQuestion.requestId}`,
       category: "permission",
-      label: "Question answered",
-      detail: response.action === "accept" ? "answered" : response.action,
+      label: isLink ? "Link request answered" : "Question answered",
+      detail:
+        response.action === "accept"
+          ? isLink
+            ? "opened in browser"
+            : "answered"
+          : response.action,
       state: response.action === "accept" ? "success" : "info",
     });
     try {
       await questionActions.answer(currentQuestion.requestId, response);
     } catch (error) {
       console.error("Failed to answer agent question:", error);
-      showToast({
-        message: "The agent did not accept the answer. Stop the agent and try again.",
-        type: "error",
-      });
+      showToast({ message: "The agent stopped waiting for this answer.", type: "error" });
     }
   };
   const handlePermission = async (approved: boolean, optionId?: string) => {
@@ -1510,10 +1517,21 @@ details: ${errorDetails || mainError}
             />
           ) : null}
 
-          {currentQuestion ? (
+          {currentQuestion?.request.mode === "url" ? (
+            <AcpUrlQuestionPrompt
+              key={currentQuestion.requestId}
+              request={currentQuestion.request}
+              agentLabel={assistantLabel}
+              queuedCount={agentQuestions.length - 1}
+              waiting={currentQuestion.waiting ?? false}
+              onAnswer={handleQuestionAnswer}
+              onDismiss={() => questionActions.remove(currentQuestion.requestId)}
+            />
+          ) : currentQuestion ? (
             <AcpQuestionPrompt
               key={currentQuestion.requestId}
-              question={currentQuestion}
+              requestId={currentQuestion.requestId}
+              request={currentQuestion.request}
               agentLabel={assistantLabel}
               queuedCount={agentQuestions.length - 1}
               onAnswer={handleQuestionAnswer}

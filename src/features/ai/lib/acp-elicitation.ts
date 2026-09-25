@@ -1,7 +1,7 @@
 /**
- * Maps ACP form elicitations (`elicitation/create`, https://agentclientprotocol.com/protocol/v1/elicitation)
- * onto questionnaire steps, and the user's answers back onto the response content the agent's schema
- * asked for. Athas advertises form mode only.
+ * ACP elicitations (`elicitation/create`, https://agentclientprotocol.com/protocol/v1/elicitation).
+ * Form mode maps onto questionnaire steps, and the user's answers back onto the response content
+ * the agent's schema asked for. URL mode asks the user to open a link, such as an MCP sign-in.
  */
 
 type Meta = Record<string, unknown>;
@@ -43,13 +43,22 @@ export type AcpElicitationProperty =
       _meta?: Meta;
     };
 
-/** The `elicitation/create` request as the agent sent it. */
-export type AcpElicitationRequest = {
+type ElicitationScope = { sessionId?: string; toolCallId?: string; requestId?: string };
+
+/** A URL-mode request: the agent asks the user to open `url` and finish something there. */
+export type AcpUrlElicitationRequest = ElicitationScope & {
+  mode: "url";
+  message: string;
+  /** Matches the `elicitation/complete` notification sent when the flow finishes. */
+  elicitationId: string;
+  url: string;
+  _meta?: Meta;
+};
+
+/** A form-mode request: the agent asks the questions in `requestedSchema`. */
+export type AcpFormElicitationRequest = ElicitationScope & {
   mode: "form";
   message: string;
-  sessionId?: string;
-  toolCallId?: string;
-  requestId?: string;
   requestedSchema: {
     type: "object";
     title?: string;
@@ -60,8 +69,14 @@ export type AcpElicitationRequest = {
   _meta?: Meta;
 };
 
+/** The `elicitation/create` request as the agent sent it. */
+export type AcpElicitationRequest = AcpFormElicitationRequest | AcpUrlElicitationRequest;
+
+export type ElicitationContent = Record<string, string | number | boolean | string[]>;
+
+/** URL mode accepts without content: it only means the user opened the link. */
 export type AcpElicitationResponse =
-  | { action: "accept"; content: Record<string, string | number | boolean | string[]> }
+  | { action: "accept"; content?: ElicitationContent }
   | { action: "decline" }
   | { action: "cancel" };
 
@@ -197,7 +212,7 @@ function toQuestion(
 }
 
 /** One questionnaire step per schema field, in schema order. Paired custom-answer fields fold in. */
-export function toElicitationQuestions(request: AcpElicitationRequest): ElicitationQuestion[] {
+export function toElicitationQuestions(request: AcpFormElicitationRequest): ElicitationQuestion[] {
   const { properties, required = [] } = request.requestedSchema;
   const questions = new Map<string, ElicitationQuestion>();
   const customFields = new Map<string, string>();
@@ -226,8 +241,8 @@ export function toElicitationQuestions(request: AcpElicitationRequest): Elicitat
 export function toElicitationContent(
   questions: ElicitationQuestion[],
   form: FormData,
-): Extract<AcpElicitationResponse, { action: "accept" }>["content"] {
-  const content: Extract<AcpElicitationResponse, { action: "accept" }>["content"] = {};
+): ElicitationContent {
+  const content: ElicitationContent = {};
 
   for (const question of questions) {
     const values = form
@@ -262,4 +277,40 @@ export function toElicitationContent(
     if (question.otherField && typed[0] !== undefined) content[question.otherField] = typed[0];
   }
   return content;
+}
+
+export type ElicitationLink =
+  | {
+      openable: true;
+      href: string;
+      host: string;
+      /** Plain http: the page and anything typed into it travel unencrypted. */
+      insecure: boolean;
+      /** The host has punycode (`xn--`) labels, which can imitate a familiar domain. */
+      punycode: boolean;
+    }
+  | { openable: false; reason: string };
+
+/**
+ * Checks a URL-mode link before the user is asked to open it. Only web links open; anything else
+ * (file:, javascript:, custom schemes) is shown but refused.
+ */
+export function inspectElicitationUrl(url: string): ElicitationLink {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { openable: false, reason: "This link is not a valid URL." };
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    return { openable: false, reason: `Athas only opens web links, not ${parsed.protocol} links.` };
+  }
+  if (!parsed.hostname) return { openable: false, reason: "This link has no host." };
+  return {
+    openable: true,
+    href: parsed.href,
+    host: parsed.host,
+    insecure: parsed.protocol === "http:",
+    punycode: parsed.hostname.split(".").some((label) => label.startsWith("xn--")),
+  };
 }
