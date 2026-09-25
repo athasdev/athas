@@ -77,6 +77,7 @@ import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
 import { AcpContextMeter } from "./acp-context-meter";
 import { AgentMessageQueue } from "./agent-message-queue";
+import { AgentEditsBar } from "./agent-edits-bar";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ContextSelector } from "../selectors/context-selector";
@@ -1111,6 +1112,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         isInitialPresentation ? "w-full" : [chatContentWidth(), "mb-3"],
       )}
     >
+      {!isTerminalMode && chatId ? <AgentEditsBar chatId={chatId} /> : null}
       {!isTerminalMode && (
         <AgentMessageQueue
           messages={queuedMessages}

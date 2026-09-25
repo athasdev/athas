@@ -27,6 +27,7 @@ import { TooltipProvider } from "./ui/tooltip";
 import { WindowResizeBorder } from "./features/window/components/window-resize-border";
 import { DialogServiceProvider } from "@/ui/dialog";
 import { ContinuousAgentsRuntime } from "@/features/ai/continuous-agents/continuous-agents-runtime";
+import { AgentEditsReview } from "@/features/ai/components/chat/agent-edits-review";
 import { AgentSessionsDialog } from "@/features/ai/components/history/agent-sessions-dialog";
 import { ProductFeedbackDialog } from "@/features/feedback/components/product-feedback-dialog";
 import { bucketFrictionDuration } from "@/features/telemetry/lib/friction-signals";
@@ -106,6 +107,7 @@ function WorkbenchApp() {
             <NotificationRecorder />
             <ContinuousAgentsRuntime />
             <AgentSessionsDialog />
+            <AgentEditsReview />
             <ProductFeedbackDialog />
             <ShareDialog />
             <SharingRuntime />

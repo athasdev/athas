@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  buildHunkPreviewLines,
   computeAgentHunks,
   countChangedLines,
   keepHunk,
@@ -195,5 +196,21 @@ describe("rebaseOnDisk", () => {
 
   it("gives up on an external edit that touches an agent hunk", () => {
     expect(rebaseOnDisk(log, lines("a", "BB", "c", "d", "e"))).toBeNull();
+  });
+});
+
+describe("buildHunkPreviewLines", () => {
+  it("shows the hunk with numbered context on both sides", () => {
+    const base = lines("a", "b", "c", "d", "e", "f");
+    const current = lines("a", "b", "x", "y", "d", "e", "f");
+    const [hunk] = computeAgentHunks(base, current);
+
+    expect(buildHunkPreviewLines(current, hunk, 1)).toEqual([
+      { type: "context", content: "b", oldLine: 2, newLine: 2 },
+      { type: "removed", content: "c", oldLine: 3 },
+      { type: "added", content: "x", newLine: 3 },
+      { type: "added", content: "y", newLine: 4 },
+      { type: "context", content: "d", oldLine: 4, newLine: 5 },
+    ]);
   });
 });

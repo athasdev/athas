@@ -199,3 +199,55 @@ export function countChangedLines(hunks: AgentEditHunk[]): { added: number; remo
   }
   return { added, removed };
 }
+
+export interface AgentHunkPreviewLine {
+  type: "context" | "added" | "removed";
+  content: string;
+  /** 1-based line in the baseline; absent on added lines. */
+  oldLine?: number;
+  /** 1-based line in the current text; absent on removed lines. */
+  newLine?: number;
+}
+
+/** A hunk's lines for display, with up to `contextLines` unchanged lines around it. */
+export function buildHunkPreviewLines(
+  current: string,
+  hunk: AgentEditHunk,
+  contextLines = 2,
+): AgentHunkPreviewLine[] {
+  const lines = splitLines(current);
+  const preview: AgentHunkPreviewLine[] = [];
+  const context = (newIndex: number, shift: number) =>
+    preview.push({
+      type: "context",
+      content: lines[newIndex],
+      oldLine: newIndex + shift + 1,
+      newLine: newIndex + 1,
+    });
+
+  const beforeShift = hunk.baseStart - hunk.currentStart;
+  for (
+    let index = Math.max(0, hunk.currentStart - contextLines);
+    index < hunk.currentStart;
+    index++
+  ) {
+    context(index, beforeShift);
+  }
+  hunk.baseLines.forEach((content, offset) =>
+    preview.push({ type: "removed", content, oldLine: hunk.baseStart + offset + 1 }),
+  );
+  hunk.currentLines.forEach((content, offset) =>
+    preview.push({ type: "added", content, newLine: hunk.currentStart + offset + 1 }),
+  );
+  const afterStart = hunk.currentStart + hunk.currentLines.length;
+  const afterShift = hunk.baseStart + hunk.baseLines.length - afterStart;
+  for (let index = afterStart; index < Math.min(lines.length, afterStart + contextLines); index++) {
+    context(index, afterShift);
+  }
+  return preview;
+}
+
+/** The 1-based line to open a hunk at in the current file. */
+export function hunkLine(hunk: AgentEditHunk): number {
+  return hunk.currentStart + 1;
+}
