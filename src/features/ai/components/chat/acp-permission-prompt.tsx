@@ -1,16 +1,11 @@
-import { FileTextIcon, KeyIcon } from "@/ui/icons";
+import { KeyIcon } from "@/ui/icons";
 import type {
   AcpEvent,
   AcpPermissionOption,
   AcpPermissionPreview,
-  AcpToolCallLocation,
 } from "@/features/ai/types/acp.types";
 import { createAcpDiffViewNode, toRelativeDisplayPath } from "@/features/ai/lib/acp-diff-output";
-import {
-  createAcpToolLocationTree,
-  OPEN_TOOL_LOCATION_COMMAND,
-} from "@/features/ai/lib/acp-tool-location-tree";
-import { openToolPath } from "@/features/ai/lib/open-tool-location";
+import { ToolLocations } from "@/features/ai/components/messages/tool-locations";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
 import Badge from "@/ui/badge";
@@ -39,48 +34,6 @@ function PreviewText({ label, text, mono }: { label: string; text: string; mono?
     >
       {text}
     </pre>
-  );
-}
-
-function PreviewLocations({
-  locations,
-  rootFolderPath,
-}: {
-  locations: AcpToolCallLocation[];
-  rootFolderPath?: string | null;
-}) {
-  const tree = createAcpToolLocationTree(locations);
-  if (tree) {
-    return (
-      <ExtensionViewRenderer
-        node={tree}
-        execute={(action) => {
-          const path = action.args?.[0];
-          if (action.command === OPEN_TOOL_LOCATION_COMMAND && typeof path === "string") {
-            return openToolPath(path);
-          }
-        }}
-        surface="embedded"
-      />
-    );
-  }
-  const [location] = locations;
-  if (!location) return null;
-  const path = toRelativeDisplayPath(location.path, rootFolderPath);
-  return (
-    <div className="flex min-w-0">
-      <Button
-        type="button"
-        variant="ghost"
-        size="xs"
-        truncate
-        tooltip="Open file"
-        onClick={() => void openToolPath(location.path)}
-      >
-        <FileTextIcon />
-        <span className="font-mono">{location.line ? `${path}:${location.line}` : path}</span>
-      </Button>
-    </div>
   );
 }
 
@@ -114,7 +67,7 @@ function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
           <PreviewText label="Tool call input" text={preview.inputSummary} mono />
         ) : null}
         {preview.locations.length > 0 ? (
-          <PreviewLocations locations={preview.locations} rootFolderPath={rootFolderPath} />
+          <ToolLocations locations={preview.locations} rootFolderPath={rootFolderPath} />
         ) : null}
       </div>
     );

@@ -32,16 +32,13 @@ import {
   getAcpTerminalOutputs,
   openAcpTerminalOutput,
 } from "@/features/ai/lib/acp-terminal-output";
-import {
-  createAcpToolLocationTree,
-  OPEN_TOOL_LOCATION_COMMAND,
-} from "@/features/ai/lib/acp-tool-location-tree";
 import { summarizeToolCall, type ToolCallSummary } from "@/features/ai/lib/tool-call-summary";
 import type { ToolCall } from "@/features/ai/types/ai-chat.types";
 import type { AcpToolKind } from "@/features/ai/types/acp.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openToolPath, resolveWorkspacePath } from "@/features/ai/lib/open-tool-location";
+import { ToolLocations } from "./tool-locations";
 import { getFileDiff } from "@/features/git/api/git-diff-api";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
@@ -221,10 +218,6 @@ const ToolCallRow = memo(function ToolCallRow({
   const structuredViews = getStructuredToolViews(toolCall.output);
   const diffItems = getAcpDiffOutputs(output);
   const terminalItems = getAcpTerminalOutputs(output);
-  const locationTree =
-    toolCall.locations && toolCall.locations.length > 1
-      ? createAcpToolLocationTree(toolCall.locations)
-      : undefined;
   const outputText = getOutputText(stripAcpDiffOutputs(output));
   const showInput =
     summary.kind === "other" || summary.kind === "think" || summary.kind === "switch_mode";
@@ -245,18 +238,12 @@ const ToolCallRow = memo(function ToolCallRow({
   );
   if (inputText) body.push(<OutputBlock key="input" text={inputText} />);
   if (outputText) body.push(<OutputBlock key="output" text={outputText} />);
-  if (locationTree) {
+  if (toolCall.locations?.some((location) => location.path)) {
     body.push(
-      <ExtensionViewRenderer
+      <ToolLocations
         key="locations"
-        node={locationTree}
-        execute={(action) => {
-          const path = action.args?.[0];
-          if (action.command === OPEN_TOOL_LOCATION_COMMAND && typeof path === "string") {
-            return openToolPath(path);
-          }
-        }}
-        surface="embedded"
+        locations={toolCall.locations}
+        rootFolderPath={rootFolderPath}
       />,
     );
   }
