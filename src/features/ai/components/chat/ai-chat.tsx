@@ -101,6 +101,7 @@ import {
 import type { AcpElicitationResponse } from "@/features/ai/lib/acp-elicitation";
 import { AcpPermissionPrompt, type AcpPermissionRequest } from "./acp-permission-prompt";
 import { markAgentChatVisible } from "@/features/ai/lib/visible-agent-chats";
+import { useAgentAttentionStore } from "@/features/ai/stores/agent-attention.store";
 import { getAcpPermissionPreview } from "@/features/ai/lib/acp-permission-preview";
 import { AcpQuestionPrompt } from "./acp-question-prompt";
 import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
@@ -361,6 +362,15 @@ const AIChat = memo(function AIChat({
   const appendAcpEvent = useCallback((event: ChatAcpEventInput) => {
     setAcpEvents((prev) => appendChatAcpEvent(prev, event));
   }, []);
+
+  const setPendingPermissions = useAgentAttentionStore(
+    (state) => state.actions.setPendingPermissions,
+  );
+  useEffect(() => {
+    if (!effectiveChatId) return;
+    setPendingPermissions(effectiveChatId, permissionQueue.length);
+    return () => setPendingPermissions(effectiveChatId, 0);
+  }, [effectiveChatId, permissionQueue.length, setPendingPermissions]);
 
   const permissionQueueRef = useRef(permissionQueue);
   permissionQueueRef.current = permissionQueue;

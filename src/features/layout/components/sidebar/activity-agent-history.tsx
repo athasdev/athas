@@ -5,6 +5,7 @@ import { resolveAgentSessionIconId } from "@/features/ai/lib/agent-session-icon"
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { useAgentWindowStore } from "@/features/ai/detached/agent-window.store";
 import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
+import { useChatAttention } from "@/features/ai/hooks/use-chat-attention";
 import { selectAgentSessions } from "@/features/ai/lib/agent-session-list";
 import { openAgentHistoryChat } from "@/features/ai/lib/open-agent-history";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -77,6 +78,7 @@ export function ActivityAgentRow({
   onDelete,
 }: ActivityAgentRowProps) {
   const isInAnotherWindow = useAgentWindowStore((state) => Boolean(state.sessions[chat.id]));
+  const attention = useChatAttention(chat.id);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(chat.title);
 
@@ -104,6 +106,7 @@ export function ActivityAgentRow({
           title={chat.title}
           active={active}
           pinned={chat.isPinned}
+          attention={attention}
           providerIconId={resolveAgentSessionIconId(chat, aiProviderId)}
           agentLabel={
             chat.agentId === "custom"

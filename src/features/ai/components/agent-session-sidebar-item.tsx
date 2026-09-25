@@ -1,4 +1,6 @@
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { AgentAttentionDot } from "@/features/ai/components/agent-attention-dot";
+import type { ChatAttention } from "@/features/ai/types/chat-attention.types";
 import type { ReactNode } from "react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
 import { ArchiveIcon, CubeIcon, FolderIcon, GitBranchIcon, PinIcon, SparkleIcon } from "@/ui/icons";
@@ -16,6 +18,8 @@ export interface AgentSessionSidebarItemProps {
   branch?: string | null;
   active?: boolean;
   pinned?: boolean;
+  /** What the session is waiting on the user for, if anything. */
+  attention?: ChatAttention | null;
   onOpen: () => void;
   onOpenInNewWindow?: () => void;
   actionsDisabled?: boolean;
@@ -58,6 +62,7 @@ function MetadataRow({
 export function AgentSessionSidebarItem({
   active = false,
   agentLabel,
+  attention,
   branch,
   createdAt,
   modelLabel,
@@ -114,6 +119,7 @@ export function AgentSessionSidebarItem({
             <SidebarListItem
               active={active}
               leading={<ProviderIcon providerId={providerIconId} size={16} />}
+              trailing={attention ? <AgentAttentionDot attention={attention} /> : undefined}
             >
               {title}
             </SidebarListItem>
