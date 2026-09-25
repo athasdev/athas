@@ -13,6 +13,8 @@ agent-client-protocol = "2"
 anyhow = "1.0"
 async-trait = "0.1"
 base64 = "0.22"
+bzip2 = "0.5"
+flate2 = "1.0"
 futures = "0.3"
 log = "0.4"
 libc = "0.2"
@@ -22,6 +24,7 @@ semver = "1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
+tar = "0.4"
 tauri = { version = "2", default-features = false, features = ["test"] }
 tokio = { version = "1.0", features = ["full"] }
 tokio-util = { version = "0.7", features = ["compat"] }
@@ -30,3 +33,4 @@ athas-terminal = { path = "../terminal", default-features = false }
 tempfile = "3"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 which = "7.0"
+zip = "2.2"

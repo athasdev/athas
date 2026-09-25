@@ -703,6 +703,8 @@ dependencies = [
  "athas-exec-path",
  "athas-terminal",
  "base64 0.22.1",
+ "bzip2 0.5.2",
+ "flate2",
  "futures",
  "libc",
  "log",
@@ -712,12 +714,14 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tar",
  "tauri",
  "tempfile",
  "tokio",
  "tokio-util",
  "uuid",
  "which",
+ "zip 2.4.2",
 ]
 
 [[package]]

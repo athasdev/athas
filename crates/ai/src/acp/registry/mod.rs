@@ -1,6 +1,8 @@
 //! The ACP Registry (https://agentclientprotocol.com/registry): the public list of ACP agents
 //! and how to install each one.
 
+pub mod archive;
+pub mod install;
 pub mod schema;
 pub mod store;
 
