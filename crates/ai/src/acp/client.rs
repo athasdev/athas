@@ -853,25 +853,8 @@ impl AthasAcpClient {
       let path_str = args.path.to_string_lossy();
       let path = self.resolve_path(&path_str);
       match tokio::fs::read_to_string(&path).await {
-         Ok(content) => {
-            // Handle line and limit parameters for partial file reading
-            let result = if args.line.is_some() || args.limit.is_some() {
-               let lines: Vec<&str> = content.lines().collect();
-               let start_line = args.line.unwrap_or(1).saturating_sub(1) as usize;
-               let limit = args.limit.map(|l| l as usize).unwrap_or(lines.len());
-
-               lines
-                  .iter()
-                  .skip(start_line)
-                  .take(limit)
-                  .copied()
-                  .collect::<Vec<_>>()
-                  .join("\n")
-            } else {
-               content
-            };
-            Ok(acp::ReadTextFileResponse::new(result))
-         }
+         Ok(content) => file_access::slice_lines(content, args.line, args.limit)
+            .map(acp::ReadTextFileResponse::new),
          Err(e) => Err(file_access::read_error(&path, &e)),
       }
    }
