@@ -1,6 +1,8 @@
 import type { AcpAgentStatus, AcpSessionState } from "@/features/ai/types/acp.types";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
+import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { normalizeAcpWorkspacePath } from "./acp-workspace-path";
+import { isTerminalAgent } from "./terminal-agents";
 
 /** What a session shows before the agent told anything about it. Shared so selectors stay stable. */
 export const EMPTY_ACP_SESSION_STATE: AcpSessionState = Object.freeze({
@@ -49,4 +51,19 @@ export function selectChatAcpSession(
 ): AcpSessionState {
   const sessionId = selectChatAcpSessionId(state, chatId);
   return (sessionId && state.acpSessions[sessionId]) || EMPTY_ACP_SESSION_STATE;
+}
+
+/**
+ * The ACP session to close when `chat` is deleted. Codex chats keep their thread id in the same
+ * field, and API-model and terminal chats have no ACP session.
+ */
+export function getChatAcpSessionToClose(
+  chat: Pick<Chat, "agentId" | "acpSessionId"> | null | undefined,
+): string | null {
+  if (!chat?.acpSessionId) return null;
+  const isAcpAgent =
+    chat.agentId !== "custom" &&
+    chat.agentId !== CODEX_INTEGRATION_ID &&
+    !isTerminalAgent(chat.agentId);
+  return isAcpAgent ? chat.acpSessionId : null;
 }
