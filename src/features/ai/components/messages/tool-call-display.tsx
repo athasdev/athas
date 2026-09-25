@@ -41,13 +41,14 @@ import type { ToolCall } from "@/features/ai/types/ai-chat.types";
 import type { AcpToolKind } from "@/features/ai/types/acp.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { openToolPath, resolveWorkspacePath } from "@/features/ai/lib/open-tool-location";
 import { getFileDiff } from "@/features/git/api/git-diff-api";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
 import { Shimmer } from "@/ui/shimmer";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
-import { getBaseName, joinPath } from "@/utils/path-helpers";
+import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
 
 const KIND_ICONS: Record<AcpToolKind, Icon> = {
@@ -75,25 +76,6 @@ function formatValue(value: unknown): string {
   } catch {
     return String(value);
   }
-}
-
-function isAbsolutePath(path: string): boolean {
-  return path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith("remote://");
-}
-
-function resolveWorkspacePath(path: string): string {
-  if (isAbsolutePath(path)) return path;
-  const rootFolderPath = useProjectStore.getState().rootFolderPath;
-  return rootFolderPath ? joinPath(rootFolderPath, path) : path;
-}
-
-async function openToolPath(path: string) {
-  const resolvedPath = resolveWorkspacePath(path);
-  const content = await readFileContent(resolvedPath);
-  const bufferId = useBufferStore
-    .getState()
-    .actions.openBuffer(resolvedPath, getBaseName(resolvedPath), content);
-  useBufferStore.getState().actions.setActiveBuffer(bufferId);
 }
 
 async function openToolDiff(path: string, output: unknown) {

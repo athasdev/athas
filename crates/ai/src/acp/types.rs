@@ -206,6 +206,20 @@ pub struct AcpToolCallLocation {
    pub line: Option<u32>,
 }
 
+/// The tool call a permission request is about, in the same shapes tool
+/// cards use, so the prompt can show what the agent is about to do.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpPermissionToolCall {
+   pub tool_id: String,
+   pub title: Option<String>,
+   pub kind: Option<AcpToolKind>,
+   /// The call's ACP `content` (diffs, terminals, text) when present.
+   pub content: Option<serde_json::Value>,
+   pub locations: Option<Vec<AcpToolCallLocation>>,
+   pub raw_input: Option<serde_json::Value>,
+}
+
 /// Configuration for an ACP-compatible agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -506,6 +520,7 @@ pub enum AcpEvent {
       resource: String,
       description: String,
       options: Vec<AcpPermissionOption>,
+      tool_call: AcpPermissionToolCall,
    },
    /// Agent asks the user something (`elicitation/create`): a form, or a URL to open. `request`
    /// is the ACP request as sent, so the frontend sees the schema, URL and any `_meta`.

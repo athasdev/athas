@@ -93,6 +93,7 @@ import {
 } from "@/features/ai/stores/acp-questions.store";
 import type { AcpElicitationResponse } from "@/features/ai/lib/acp-elicitation";
 import { AcpPermissionPrompt, type AcpPermissionRequest } from "./acp-permission-prompt";
+import { getAcpPermissionPreview } from "@/features/ai/lib/acp-permission-preview";
 import { AcpQuestionPrompt } from "./acp-question-prompt";
 import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
 import { ChatHeader } from "./chat-header";
@@ -1067,7 +1068,7 @@ details: ${errorDetails || mainError}
               permissionType: event.permissionType,
               resource: event.resource,
               options: event.options,
-              preview: event.preview,
+              preview: getAcpPermissionPreview(event),
             },
           ]);
         },

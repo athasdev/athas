@@ -1,10 +1,16 @@
-import { KeyIcon } from "@/ui/icons";
+import { FileTextIcon, KeyIcon } from "@/ui/icons";
 import type {
   AcpEvent,
   AcpPermissionOption,
   AcpPermissionPreview,
+  AcpToolCallLocation,
 } from "@/features/ai/types/acp.types";
 import { createAcpDiffViewNode, toRelativeDisplayPath } from "@/features/ai/lib/acp-diff-output";
+import {
+  createAcpToolLocationTree,
+  OPEN_TOOL_LOCATION_COMMAND,
+} from "@/features/ai/lib/acp-tool-location-tree";
+import { openToolPath } from "@/features/ai/lib/open-tool-location";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { ExtensionViewRenderer } from "@/extensions/ui/components/extension-view-renderer";
 import Badge from "@/ui/badge";
@@ -22,6 +28,62 @@ export type AcpPermissionRequest = {
   preview?: AcpPermissionPreview;
 };
 
+function PreviewText({ label, text, mono }: { label: string; text: string; mono?: boolean }) {
+  return (
+    <pre
+      aria-label={label}
+      className={cn(
+        "overflow-auto rounded-lg border border-border bg-surface px-2.5 py-2 whitespace-pre-wrap wrap-anywhere select-text text-foreground ui-text-sm",
+        mono ? "font-mono" : "font-sans",
+      )}
+    >
+      {text}
+    </pre>
+  );
+}
+
+function PreviewLocations({
+  locations,
+  rootFolderPath,
+}: {
+  locations: AcpToolCallLocation[];
+  rootFolderPath?: string | null;
+}) {
+  const tree = createAcpToolLocationTree(locations);
+  if (tree) {
+    return (
+      <ExtensionViewRenderer
+        node={tree}
+        execute={(action) => {
+          const path = action.args?.[0];
+          if (action.command === OPEN_TOOL_LOCATION_COMMAND && typeof path === "string") {
+            return openToolPath(path);
+          }
+        }}
+        surface="embedded"
+      />
+    );
+  }
+  const [location] = locations;
+  if (!location) return null;
+  const path = toRelativeDisplayPath(location.path, rootFolderPath);
+  return (
+    <div className="flex min-w-0">
+      <Button
+        type="button"
+        variant="ghost"
+        size="xs"
+        truncate
+        tooltip="Open file"
+        onClick={() => void openToolPath(location.path)}
+      >
+        <FileTextIcon />
+        <span className="font-mono">{location.line ? `${path}:${location.line}` : path}</span>
+      </Button>
+    </div>
+  );
+}
+
 function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   if (preview.type === "diff") {
@@ -31,6 +93,30 @@ function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
         execute={() => undefined}
         surface="embedded"
       />
+    );
+  }
+  if (preview.type === "tool_call") {
+    return (
+      <div className="flex max-h-72 min-w-0 flex-col gap-1.5 overflow-y-auto">
+        {preview.diffs.map((diff, index) => (
+          <ExtensionViewRenderer
+            key={`${diff.path}-${index}`}
+            node={createAcpDiffViewNode(diff, rootFolderPath)}
+            execute={() => undefined}
+            surface="embedded"
+          />
+        ))}
+        {preview.command ? (
+          <PreviewText label="Proposed shell command" text={preview.command} mono />
+        ) : null}
+        {preview.text ? <PreviewText label="Tool call details" text={preview.text} /> : null}
+        {preview.inputSummary ? (
+          <PreviewText label="Tool call input" text={preview.inputSummary} mono />
+        ) : null}
+        {preview.locations.length > 0 ? (
+          <PreviewLocations locations={preview.locations} rootFolderPath={rootFolderPath} />
+        ) : null}
+      </div>
     );
   }
   return (
@@ -43,7 +129,13 @@ function PermissionPreview({ preview }: { preview: AcpPermissionPreview }) {
   );
 }
 
-function getPreviewSummary(preview: AcpPermissionPreview, rootFolderPath?: string | null) {
+function getPreviewSummary(
+  preview: AcpPermissionPreview,
+  rootFolderPath?: string | null,
+): string | undefined {
+  if (preview.type === "tool_call") {
+    return preview.title ?? undefined;
+  }
   if (preview.type === "diff") {
     const isNew = preview.oldText.length === 0;
     return `${isNew ? "Create" : "Edit"} ${toRelativeDisplayPath(preview.path, rootFolderPath)}`;
@@ -117,10 +209,9 @@ export function AcpPermissionPrompt({
 }) {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const summary = (
-    permission.preview
-      ? getPreviewSummary(permission.preview, rootFolderPath)
-      : permission.description ||
-        [permission.permissionType, permission.resource].filter(Boolean).join(" ")
+    (permission.preview && getPreviewSummary(permission.preview, rootFolderPath)) ||
+    permission.description ||
+    [permission.permissionType, permission.resource].filter(Boolean).join(" ")
   ).trim();
   const options = permission.options.length > 0 ? permission.options : fallbackOptions;
 

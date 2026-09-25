@@ -2,9 +2,9 @@ use super::{
    AcpConnection,
    terminal_state::AcpTerminalState,
    types::{
-      AcpContentBlock, AcpEvent, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus,
-      AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, AcpUsageUpdate, SessionConfigOption,
-      SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
+      AcpContentBlock, AcpEvent, AcpPermissionToolCall, AcpPlanEntry, AcpPlanEntryPriority,
+      AcpPlanEntryStatus, AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, AcpUsageUpdate,
+      SessionConfigOption, SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
    },
    workspace_path::{path_to_string, resolve_path_against_workspace},
 };
@@ -372,6 +372,20 @@ impl AthasAcpClient {
       events
    }
 
+   /// What a permission request's `toolCall` shows the prompt, mapped with
+   /// the same helpers as tool call updates so the shapes match tool cards.
+   fn permission_tool_call(update: &acp::ToolCallUpdate) -> AcpPermissionToolCall {
+      let fields = &update.fields;
+      AcpPermissionToolCall {
+         tool_id: update.tool_call_id.to_string(),
+         title: fields.title.clone(),
+         kind: fields.kind.map(Self::map_tool_kind),
+         content: fields.content.clone().and_then(Self::map_tool_content),
+         locations: fields.locations.clone().map(Self::map_tool_locations),
+         raw_input: fields.raw_input.clone(),
+      }
+   }
+
    fn map_tool_kind(kind: acp::ToolKind) -> AcpToolKind {
       match kind {
          acp::ToolKind::Read => AcpToolKind::Read,
@@ -542,7 +556,6 @@ impl AthasAcpClient {
       );
       let request_id = pending.request_id.clone();
 
-      // Extract tool call info for the permission request
       let tool_call_id = args.tool_call.tool_call_id.clone();
       let tool_title = args
          .tool_call
@@ -550,13 +563,19 @@ impl AthasAcpClient {
          .title
          .as_deref()
          .unwrap_or("Tool call");
-      // Emit permission request to frontend
+      let tool_call = Self::permission_tool_call(&args.tool_call);
+      // Per ACP the request's tool call is a `tool_call_update`. Apply it to
+      // the transcript first, so the card shows what the prompt asks about.
+      for event in Self::tool_call_update_events(session_id.clone(), args.tool_call.clone()) {
+         self.emit_event(event);
+      }
       self.emit_event(AcpEvent::PermissionRequest {
          session_id,
          request_id: request_id.clone(),
          permission_type: "tool_call".to_string(),
          resource: tool_call_id.to_string(),
          description: format!("{} ({})", tool_title, tool_call_id),
+         tool_call,
          options: args
             .options
             .iter()
@@ -1258,6 +1277,48 @@ mod tests {
       assert_eq!(update_output.as_ref().unwrap()[0]["type"], "diff");
       assert_eq!(complete_output, update_output);
       assert_eq!(raw_output, &Some(json!({ "stdout": "x" })));
+   }
+
+   #[test]
+   fn permission_tool_call_carries_content_locations_and_raw_input() {
+      let update = acp::ToolCallUpdate::new(
+         "call-p",
+         acp::ToolCallUpdateFields::new()
+            .title("Edit a.txt")
+            .kind(acp::ToolKind::Edit)
+            .content(vec![diff_content()])
+            .locations(vec![acp::ToolCallLocation::new("/repo/a.txt").line(3)])
+            .raw_input(json!({ "path": "/repo/a.txt" })),
+      );
+
+      let event = AcpEvent::PermissionRequest {
+         session_id: "s".to_string(),
+         request_id: "r".to_string(),
+         permission_type: "tool_call".to_string(),
+         resource: "call-p".to_string(),
+         description: "Edit a.txt (call-p)".to_string(),
+         options: Vec::new(),
+         tool_call: AthasAcpClient::permission_tool_call(&update),
+      };
+      let event = serde_json::to_value(event).unwrap();
+      let tool_call = &event["toolCall"];
+
+      assert_eq!(tool_call["toolId"], "call-p");
+      assert_eq!(tool_call["title"], "Edit a.txt");
+      assert_eq!(tool_call["kind"], "edit");
+      assert_eq!(tool_call["content"][0]["type"], "diff");
+      assert_eq!(tool_call["content"][0]["oldText"], "old");
+      assert_eq!(tool_call["content"][0]["newText"], "new");
+      assert_eq!(tool_call["locations"][0]["path"], "/repo/a.txt");
+      assert_eq!(tool_call["locations"][0]["line"], 3);
+      assert_eq!(tool_call["rawInput"], json!({ "path": "/repo/a.txt" }));
+
+      // The same request also reaches the transcript as a tool update.
+      let events = AthasAcpClient::tool_call_update_events("s".to_string(), update);
+      let [AcpEvent::ToolUpdate { output, .. }] = events.as_slice() else {
+         panic!("expected a single tool update, got {events:?}");
+      };
+      assert_eq!(output.as_ref(), tool_call.get("content"));
    }
 
    #[test]

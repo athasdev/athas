@@ -196,10 +196,32 @@ export interface AcpToolCallLocation {
   line?: number | null;
 }
 
+/** The tool call an ACP permission request is about, in the shapes tool cards use. */
+export interface AcpPermissionToolCall {
+  toolId: string;
+  title?: string | null;
+  kind?: AcpToolKind | null;
+  /** The call's ACP `content`: diffs, terminals and content blocks. */
+  content?: unknown;
+  locations?: AcpToolCallLocation[] | null;
+  rawInput?: unknown;
+}
+
 /** What a permission request is about to do, so the prompt can show it instead of describing it. */
 export type AcpPermissionPreview =
   | { type: "diff"; path: string; oldText: string; newText: string }
-  | { type: "command"; command: string; cwd?: string };
+  | { type: "command"; command: string; cwd?: string }
+  | {
+      /** An ACP agent's tool call, reduced to what the prompt shows. */
+      type: "tool_call";
+      title: string | null;
+      kind: AcpToolKind | null;
+      diffs: { path: string; oldText: string; newText: string }[];
+      command: string | null;
+      text: string | null;
+      locations: AcpToolCallLocation[];
+      inputSummary: string | null;
+    };
 
 // Prompt turn types
 export type AcpStopReason =
@@ -275,6 +297,8 @@ export type AcpEvent =
       description: string;
       options: AcpPermissionOption[];
       preview?: AcpPermissionPreview;
+      /** Sent by ACP agents: the tool call the request is about. */
+      toolCall?: AcpPermissionToolCall;
     }
   | {
       type: "elicitation_request";
