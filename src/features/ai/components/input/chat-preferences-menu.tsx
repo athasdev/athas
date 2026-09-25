@@ -31,10 +31,11 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import { useMenuSearch } from "@/ui/menu-search";
-import { ArrowClockwiseIcon, SlidersIcon, WarningIcon } from "@/ui/icons";
+import { ArrowClockwiseIcon, SignOutIcon, SlidersIcon, WarningIcon } from "@/ui/icons";
 import { Spinner } from "@/ui/spinner";
 import { getChatPreferencesModel } from "@/features/ai/utils/chat-preferences-model";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
+import { canLogOutOfAcpAgent, logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
 import { useCodexSettings } from "@/features/ai/integrations/codex/use-codex-settings";
 
 const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
@@ -370,6 +371,7 @@ export function ChatPreferencesMenu({
   } | null>(null);
   const codexSkillsRequestId = useRef(0);
   const isCodex = currentAgentId === CODEX_INTEGRATION_ID;
+  const canLogOut = useAIChatStore((state) => canLogOutOfAcpAgent(state.acpStatus, currentAgentId));
 
   const ensureCodexStarted = useCallback(() => {
     if (codexStartRef.current?.cwd === cwd) {
@@ -482,6 +484,12 @@ export function ChatPreferencesMenu({
           )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        {canLogOut ? (
+          <DropdownMenuItem onClick={() => void logOutOfAcpAgent()}>
+            <SignOutIcon />
+            Log out of agent
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem onClick={() => useUIState.getState().openSettingsDialog("ai")}>
           AI settings…
         </DropdownMenuItem>

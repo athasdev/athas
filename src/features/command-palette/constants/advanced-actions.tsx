@@ -1,10 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
+import { logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
 import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   ArrowClockwiseIcon,
   ArrowsClockwiseIcon,
+  SignOutIcon,
   SparkleIcon,
   SquareIcon,
   TerminalWindowIcon,
@@ -23,6 +25,8 @@ interface AdvancedActionsParams {
     activeWorkspaces: string[];
     lastError?: string | null | undefined;
   };
+  /** The running agent advertises ACP logout. */
+  canLogOutOfAgent: boolean;
   vimMode: boolean;
   vimCommands: Array<{ name: string; description: string; execute: () => void }>;
   setMode: (mode: "normal" | "insert" | "visual") => void;
@@ -36,7 +40,16 @@ interface AdvancedActionsParams {
 }
 
 export const createAdvancedActions = (params: AdvancedActionsParams): Action[] => {
-  const { lspStatus, vimMode, vimCommands, setMode, openQuickEdit, showToast, onClose } = params;
+  const {
+    lspStatus,
+    canLogOutOfAgent,
+    vimMode,
+    vimCommands,
+    setMode,
+    openQuickEdit,
+    showToast,
+    onClose,
+  } = params;
 
   const baseActions: Action[] = [
     {
@@ -76,6 +89,21 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
         onClose();
       },
     },
+    ...(canLogOutOfAgent
+      ? [
+          {
+            id: "ai-log-out-agent",
+            label: "AI: Log Out of Agent",
+            description: "Sign out of the running agent; the next prompt asks how to sign in",
+            icon: <SignOutIcon />,
+            category: "AI",
+            action: () => {
+              onClose();
+              void logOutOfAcpAgent();
+            },
+          },
+        ]
+      : []),
     {
       id: "ai-quick-edit",
       label: "AI: Quick Edit Selection",

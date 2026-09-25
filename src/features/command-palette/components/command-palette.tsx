@@ -43,6 +43,8 @@ import Command, {
 import { Kbd } from "@/ui/kbd";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import Keybinding from "@/features/keymaps/components/keybinding";
+import { canLogOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createDatabaseActions } from "../constants/database-actions";
 import { createFileActions } from "../constants/file-actions";
@@ -161,6 +163,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const effectiveTheme = useEditorSettingsStore.use.theme();
   const { setMode } = useVimStore.use.actions();
   const lspStatus = useLspStore.use.lspStatus();
+  const canLogOutOfAgent = useAIChatStore((state) => canLogOutOfAcpAgent(state.acpStatus));
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const { checkAuth: checkGitHubAuth } = useGitHubStore.use.actions();
@@ -390,6 +393,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     }),
     ...createAdvancedActions({
       lspStatus,
+      canLogOutOfAgent,
       vimMode: commandSettings.vimMode,
       vimCommands,
       setMode,
