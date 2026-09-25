@@ -267,6 +267,11 @@ export class AcpStreamHandler {
       if (targetChat && targetChat.acpSessionId !== opened.sessionId) {
         store.actions.setChatAcpSessionId(targetChat.id, opened.sessionId);
       }
+      if (opened.contextLost) {
+        toast.warning(
+          `${this.agentId} could not restore this chat's earlier session, so it starts fresh without the earlier context.`,
+        );
+      }
       if (isStarting) {
         this.reportSkippedMcpServers(opened.status);
         this.handlers.onResponsePhase?.("waiting");

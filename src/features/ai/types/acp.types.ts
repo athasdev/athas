@@ -43,6 +43,11 @@ export interface AcpAgentStatus {
 export interface AcpOpenedSession {
   sessionId: string;
   status: AcpAgentStatus;
+  /**
+   * The chat asked for its earlier session, but the agent could not restore it, so the chat
+   * continues in a new session without the agent's earlier context.
+   */
+  contextLost?: boolean;
 }
 
 /** What an ACP session advertises: its slash commands, modes and config options. */

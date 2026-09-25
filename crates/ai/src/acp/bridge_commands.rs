@@ -1,6 +1,8 @@
 use super::{
    bridge::{AcpWorker, ResponderRegistry, Shutdown, connection_key},
-   bridge_init::{ACP_STARTUP_STOPPED, OpenedSession, StartedConnection, start_connection},
+   bridge_init::{
+      ACP_STARTUP_STOPPED, OpenedSession, SessionTarget, StartedConnection, start_connection,
+   },
    mcp_servers::McpServerConfig,
    sessions::{ConnectionKey, Startups},
    types::{AcpAgentStatus, AcpOpenedSession, AcpSessionList, AgentConfig, SessionConfigValue},
@@ -15,8 +17,8 @@ type Response<T> = oneshot::Sender<Result<T>>;
 
 /// A chat asking for its session on an agent.
 pub(super) struct OpenRequest {
-   /// The chat's earlier session, reattached when the agent still has it.
-   pub session_id: Option<String>,
+   /// The session the chat asks for.
+   pub target: SessionTarget,
    /// The sign-in method the user picked after an earlier attempt needed one.
    pub auth_method_id: Option<String>,
    pub mcp_servers: Vec<McpServerConfig>,

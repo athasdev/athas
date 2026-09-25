@@ -1,0 +1,170 @@
+//! What happens to a session's updates while `session/load` replays its history. The agent
+//! sends the whole conversation again as `session/update` notifications before it answers the
+//! load. Athas keeps its own history, so reattaching a chat drops the replayed messages.
+//! Everything else the replay carries (commands, modes, config options, session info, usage)
+//! still describes the session and is emitted as usual.
+//!
+//! The SDK handles notifications one at a time, in order, before it routes the response they
+//! precede, so every replayed update passes through here before the load returns.
+
+use super::types::AcpEvent;
+use std::{collections::HashMap, sync::Mutex};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ReplayMode {
+   /// Reattaching a chat Athas has the history for: drop the replayed conversation.
+   Suppress,
+   /// The load failed or timed out, and the chat moved on: drop whatever the agent still sends
+   /// for the session, so nothing reaches the chat's next session or turn.
+   Discard,
+}
+
+/// The sessions being loaded on one agent connection, by session id.
+#[derive(Debug, Default)]
+pub(super) struct ReplayRouter {
+   sessions: Mutex<HashMap<String, ReplayMode>>,
+}
+
+impl ReplayRouter {
+   fn sessions(&self) -> std::sync::MutexGuard<'_, HashMap<String, ReplayMode>> {
+      self
+         .sessions
+         .lock()
+         .unwrap_or_else(|poisoned| poisoned.into_inner())
+   }
+
+   /// Starts routing `session_id`'s updates with `mode`, before `session/load` is sent.
+   pub fn begin(&self, session_id: &str, mode: ReplayMode) {
+      self.sessions().insert(session_id.to_string(), mode);
+   }
+
+   /// The load succeeded: later updates are live again.
+   pub fn finish(&self, session_id: &str) {
+      self.sessions().remove(session_id);
+   }
+
+   /// The load failed: keep dropping the session's updates.
+   pub fn discard(&self, session_id: &str) {
+      self.begin(session_id, ReplayMode::Discard);
+   }
+
+   /// Returns the event when it should be emitted now; replayed history is dropped.
+   pub fn route(&self, event: AcpEvent) -> Option<AcpEvent> {
+      let Some(session_id) = session_id_of(&event) else {
+         return Some(event);
+      };
+      let mode = self.sessions().get(session_id).copied();
+      match mode {
+         None => Some(event),
+         Some(ReplayMode::Discard) => None,
+         Some(ReplayMode::Suppress) if is_history(&event) => None,
+         Some(ReplayMode::Suppress) => Some(event),
+      }
+   }
+}
+
+/// Whether the event is part of the conversation itself rather than the session's state.
+fn is_history(event: &AcpEvent) -> bool {
+   matches!(
+      event,
+      AcpEvent::UserMessageChunk { .. }
+         | AcpEvent::ContentChunk { .. }
+         | AcpEvent::ThoughtChunk { .. }
+         | AcpEvent::ToolStart { .. }
+         | AcpEvent::ToolUpdate { .. }
+         | AcpEvent::ToolComplete { .. }
+         | AcpEvent::PlanUpdate { .. }
+   )
+}
+
+fn session_id_of(event: &AcpEvent) -> Option<&str> {
+   match event {
+      AcpEvent::UserMessageChunk { session_id, .. }
+      | AcpEvent::ContentChunk { session_id, .. }
+      | AcpEvent::ThoughtChunk { session_id, .. }
+      | AcpEvent::ToolStart { session_id, .. }
+      | AcpEvent::ToolUpdate { session_id, .. }
+      | AcpEvent::ToolComplete { session_id, .. }
+      | AcpEvent::PermissionRequest { session_id, .. }
+      | AcpEvent::SessionComplete { session_id }
+      | AcpEvent::SlashCommandsUpdate { session_id, .. }
+      | AcpEvent::PlanUpdate { session_id, .. }
+      | AcpEvent::UsageUpdate { session_id, .. }
+      | AcpEvent::SessionModeUpdate { session_id, .. }
+      | AcpEvent::CurrentModeUpdate { session_id, .. }
+      | AcpEvent::ConfigOptionsUpdate { session_id, .. }
+      | AcpEvent::SessionInfoUpdate { session_id, .. }
+      | AcpEvent::PromptComplete { session_id, .. }
+      | AcpEvent::UiAction { session_id, .. } => Some(session_id),
+      AcpEvent::ElicitationRequest { session_id, .. }
+      | AcpEvent::Error { session_id, .. }
+      | AcpEvent::AuthRequired { session_id, .. } => session_id.as_deref(),
+      AcpEvent::ElicitationComplete { .. }
+      | AcpEvent::RequestClosed { .. }
+      | AcpEvent::StatusChanged { .. } => None,
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+   use crate::acp::types::AcpContentBlock;
+
+   fn message(session_id: &str, text: &str) -> AcpEvent {
+      AcpEvent::ContentChunk {
+         session_id: session_id.to_string(),
+         content: AcpContentBlock::Text {
+            text: text.to_string(),
+         },
+         is_complete: false,
+      }
+   }
+
+   fn current_mode(session_id: &str) -> AcpEvent {
+      AcpEvent::CurrentModeUpdate {
+         session_id: session_id.to_string(),
+         current_mode_id: "code".to_string(),
+      }
+   }
+
+   #[test]
+   fn suppressing_drops_replayed_history_but_keeps_session_state() {
+      let router = ReplayRouter::default();
+      router.begin("s1", ReplayMode::Suppress);
+
+      assert!(router.route(message("s1", "old answer")).is_none());
+      assert!(router.route(current_mode("s1")).is_some());
+      router.finish("s1");
+      assert!(router.route(message("s1", "new answer")).is_some());
+   }
+
+   #[test]
+   fn replay_of_one_session_leaves_other_sessions_alone() {
+      let router = ReplayRouter::default();
+      router.begin("loading", ReplayMode::Suppress);
+
+      assert!(router.route(message("other", "live")).is_some());
+      assert!(
+         router
+            .route(AcpEvent::StatusChanged {
+               status: Default::default(),
+               error: None,
+            })
+            .is_some()
+      );
+   }
+
+   #[test]
+   fn a_failed_load_drops_everything_the_session_still_sends() {
+      let router = ReplayRouter::default();
+      router.begin("s1", ReplayMode::Suppress);
+      router.discard("s1");
+
+      assert!(router.route(message("s1", "late replay")).is_none());
+      assert!(router.route(current_mode("s1")).is_none());
+
+      // Loading it again later routes it afresh.
+      router.begin("s1", ReplayMode::Suppress);
+      assert!(router.route(current_mode("s1")).is_some());
+   }
+}

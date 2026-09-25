@@ -337,6 +337,10 @@ pub struct AcpAgentStatus {
 pub struct AcpOpenedSession {
    pub session_id: String,
    pub status: AcpAgentStatus,
+   /// The chat asked for its earlier session, but the agent could not restore it; the chat
+   /// continues in a new session without the agent's earlier context.
+   #[serde(default)]
+   pub context_lost: bool,
 }
 
 /// How an ACP sign-in method is completed.

@@ -7,6 +7,7 @@ use super::{
    client::{AthasAcpClient, ClientResponders},
    mcp_servers::{AcpSkippedMcpServer, McpServerConfig, select_mcp_servers},
    process::{stop_child_tree, stop_child_tree_mut},
+   replay::{ReplayMode, ReplayRouter},
    types::{
       AcpAgentCapabilities, AcpAuthMethod, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
       SessionModeState,
@@ -229,17 +230,20 @@ pub(super) async fn start_connection(
 /// A session a chat can prompt.
 pub(super) struct OpenedSession {
    pub session_id: acp::SessionId,
+   /// The chat asked for its earlier session, but the agent could not restore it, so this is a
+   /// new session without the earlier context.
+   pub context_lost: bool,
    /// Configured MCP servers the agent cannot take, reported to the user.
    pub skipped_mcp_servers: Vec<AcpSkippedMcpServer>,
 }
 
-/// Opens a session on a running agent: loads (or resumes) `requested_session_id` when given and
-/// the agent still has it, otherwise creates a new one. The session's initial modes and config
-/// options are emitted as events. When the agent wants a sign-in Athas may not do on its own, an
-/// `auth_required` event is emitted and the open fails with [`AuthenticationRequired`].
+/// Opens the session `target` asks for on a running agent (see [`bootstrap_session`]). The
+/// session's initial modes and config options are emitted as events. When the agent wants a sign-in
+/// Athas may not do on its own, an `auth_required` event is emitted and the open fails with
+/// [`AuthenticationRequired`].
 pub(super) async fn open_session(
    handle: ConnectionHandle,
-   requested_session_id: Option<String>,
+   target: SessionTarget,
    startup_auth: StartupAuth,
    mcp_servers: Vec<McpServerConfig>,
    map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
@@ -267,11 +271,13 @@ pub(super) async fn open_session(
    let session_bootstrap = bootstrap_session(
       handle.connection.clone(),
       cwd,
-      requested_session_id,
+      target,
       SessionBootstrapContext {
          auth_methods: &handle.auth_methods,
          startup_auth,
-         supports_session_resume: handle.supports_session_resume,
+         can_load_session: handle.agent_capabilities.load_session,
+         can_resume_session: handle.supports_session_resume,
+         replay: handle.client.replay(),
          mcp_servers: &mcp_selection.servers,
          map_config_options,
       },
@@ -310,6 +316,7 @@ pub(super) async fn open_session(
 
    Ok(OpenedSession {
       session_id: session_bootstrap.session_id,
+      context_lost: session_bootstrap.context_lost,
       skipped_mcp_servers: mcp_selection.skipped,
    })
 }
@@ -318,6 +325,7 @@ struct SessionBootstrap {
    session_id: acp::SessionId,
    initial_modes: Option<SessionModeState>,
    initial_config_options: Option<Vec<SessionConfigOption>>,
+   context_lost: bool,
 }
 
 struct SessionBootstrapContext<'a, F>
@@ -326,7 +334,9 @@ where
 {
    auth_methods: &'a [acp::AuthMethod],
    startup_auth: StartupAuth,
-   supports_session_resume: bool,
+   can_load_session: bool,
+   can_resume_session: bool,
+   replay: &'a ReplayRouter,
    /// Sent in `session/new`, `session/load` and `session/resume`.
    mcp_servers: &'a [acp::McpServer],
    map_config_options: F,
@@ -512,12 +522,14 @@ fn check_protocol_version(version: ProtocolVersion) -> Result<()> {
    )
 }
 
-/// Opens the session through `session/load`, then `session/resume`, then `session/new`, signing
-/// in when the agent asks for it. Failing does not touch the agent process; the caller decides.
+/// Opens the session `target` asks for, signing in when the agent asks for it. An existing
+/// session is reopened in the order [`reopen_methods`] gives; when none of them works, the chat
+/// gets a new session with `context_lost` set. Failing does not touch the agent process; the
+/// caller decides.
 async fn bootstrap_session(
    connection: Arc<AcpConnection>,
    cwd: PathBuf,
-   requested_session_id: Option<String>,
+   target: SessionTarget,
    ctx: SessionBootstrapContext<
       '_,
       impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
@@ -554,115 +566,97 @@ async fn bootstrap_session(
       }
    };
 
-   if let Some(existing_session_id) = requested_session_id {
-      let mut load_result = load_session(
-         connection.clone(),
-         cwd.clone(),
-         existing_session_id.clone(),
-         ctx.mcp_servers,
-      )
-      .await;
+   let mut context_lost = false;
+   if let Some(existing_session_id) = target.session_id() {
+      for method in reopen_methods(&target, ctx.can_load_session, ctx.can_resume_session) {
+         let replay_mode = match method {
+            ReopenMethod::Resume => None,
+            ReopenMethod::Load => Some(ReplayMode::Suppress),
+         };
+         if let Some(mode) = replay_mode {
+            ctx.replay.begin(existing_session_id, mode);
+         }
+         let abandon_replay = || {
+            if replay_mode.is_some() {
+               ctx.replay.discard(existing_session_id);
+            }
+         };
 
-      if let Ok(Err(err)) = &load_result
-         && matches!(err.code, acp::ErrorCode::AuthRequired)
-      {
-         authenticate(connection.clone()).await?;
-         load_result = load_session(
+         let mut result = reopen_session(
             connection.clone(),
             cwd.clone(),
-            existing_session_id.clone(),
+            existing_session_id,
             ctx.mcp_servers,
+            method,
          )
          .await;
-      }
-
-      match load_result {
-         Ok(Ok(load_response)) => {
-            log::info!("ACP session loaded: {}", existing_session_id);
-            return Ok(SessionBootstrap {
-               session_id: acp::SessionId::new(existing_session_id),
-               initial_modes: load_response.modes.map(map_mode_state),
-               initial_config_options: load_response.config_options.map(&ctx.map_config_options),
-            });
-         }
-         Ok(Err(err))
-            if matches!(err.code, acp::ErrorCode::MethodNotFound)
-               && ctx.supports_session_resume =>
+         if let Ok(Err(err)) = &result
+            && matches!(err.code, acp::ErrorCode::AuthRequired)
          {
-            log::warn!(
-               "ACP session/load unavailable ({}), trying session/resume",
-               err
-            );
-            let mut resume_result = resume_session(
+            if let Err(error) = authenticate(connection.clone()).await {
+               abandon_replay();
+               return Err(error);
+            }
+            result = reopen_session(
                connection.clone(),
                cwd.clone(),
-               existing_session_id.clone(),
+               existing_session_id,
                ctx.mcp_servers,
+               method,
             )
             .await;
+         }
 
-            if let Ok(Err(err)) = &resume_result
-               && matches!(err.code, acp::ErrorCode::AuthRequired)
-            {
-               authenticate(connection.clone()).await?;
-               resume_result = resume_session(
-                  connection.clone(),
-                  cwd.clone(),
-                  existing_session_id.clone(),
-                  ctx.mcp_servers,
-               )
-               .await;
+         match result {
+            Ok(Ok(setup)) => {
+               log::info!(
+                  "ACP session {}: {}",
+                  method.past_tense(),
+                  existing_session_id
+               );
+               // Also clears what an earlier, failed load of this session left behind.
+               ctx.replay.finish(existing_session_id);
+               return Ok(SessionBootstrap {
+                  session_id: acp::SessionId::new(existing_session_id),
+                  initial_modes: setup.modes.map(map_mode_state),
+                  initial_config_options: setup.config_options.map(&ctx.map_config_options),
+                  context_lost: false,
+               });
             }
-
-            match resume_result {
-               Ok(Ok(resume_response)) => {
-                  log::info!("ACP session resumed: {}", existing_session_id);
-                  return Ok(SessionBootstrap {
-                     session_id: acp::SessionId::new(existing_session_id),
-                     initial_modes: resume_response.modes.map(map_mode_state),
-                     initial_config_options: resume_response
-                        .config_options
-                        .map(&ctx.map_config_options),
-                  });
-               }
-               Ok(Err(err))
-                  if matches!(
-                     err.code,
-                     acp::ErrorCode::MethodNotFound | acp::ErrorCode::ResourceNotFound
-                  ) =>
-               {
-                  log::warn!(
-                     "ACP session/resume unavailable or session missing ({}), falling back to \
-                      session/new",
-                     err
-                  );
-               }
-               Ok(Err(err)) => bail!(
-                  "Failed to resume ACP session {}: {}",
+            Ok(Err(err))
+               if matches!(
+                  err.code,
+                  acp::ErrorCode::MethodNotFound | acp::ErrorCode::ResourceNotFound
+               ) =>
+            {
+               abandon_replay();
+               log::warn!(
+                  "ACP {} unavailable or session missing ({})",
+                  method.method_name(),
+                  err
+               );
+            }
+            Ok(Err(err)) => {
+               abandon_replay();
+               bail!(
+                  "Failed to {} ACP session {}: {}",
+                  method.verb(),
                   existing_session_id,
                   err
-               ),
-               Err(_) => bail!("ACP session/resume timed out"),
+               );
+            }
+            Err(_) => {
+               abandon_replay();
+               bail!("ACP {} timed out", method.method_name());
             }
          }
-         Ok(Err(err))
-            if matches!(
-               err.code,
-               acp::ErrorCode::MethodNotFound | acp::ErrorCode::ResourceNotFound
-            ) =>
-         {
-            log::warn!(
-               "ACP session/load unavailable or session missing ({}), falling back to session/new",
-               err
-            );
-         }
-         Ok(Err(err)) => bail!(
-            "Failed to load ACP session {}: {}",
-            existing_session_id,
-            err
-         ),
-         Err(_) => bail!("ACP session/load timed out"),
       }
+
+      log::warn!(
+         "Could not restore ACP session {}; starting a new one",
+         existing_session_id
+      );
+      context_lost = true;
    }
 
    let mut session_result = create_session(connection.clone(), cwd.clone(), ctx.mcp_servers).await;
@@ -692,7 +686,106 @@ async fn bootstrap_session(
       session_id: session.session_id,
       initial_modes: session.modes.map(map_mode_state),
       initial_config_options: session.config_options.map(ctx.map_config_options),
+      context_lost,
    })
+}
+
+/// Which session a chat asks for.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) enum SessionTarget {
+   /// A fresh session.
+   New,
+   /// The chat's earlier session. Athas keeps the chat's history, so the agent's replay of it is
+   /// dropped.
+   Reattach(String),
+}
+
+impl SessionTarget {
+   pub(super) fn session_id(&self) -> Option<&str> {
+      match self {
+         Self::New => None,
+         Self::Reattach(session_id) => Some(session_id),
+      }
+   }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ReopenMethod {
+   Resume,
+   Load,
+}
+
+impl ReopenMethod {
+   fn method_name(self) -> &'static str {
+      match self {
+         Self::Resume => "session/resume",
+         Self::Load => "session/load",
+      }
+   }
+
+   fn verb(self) -> &'static str {
+      match self {
+         Self::Resume => "resume",
+         Self::Load => "load",
+      }
+   }
+
+   fn past_tense(self) -> &'static str {
+      match self {
+         Self::Resume => "resumed",
+         Self::Load => "loaded",
+      }
+   }
+}
+
+/// How to reopen `target`'s session, in order, from what the agent advertises. A chat prefers
+/// `session/resume`, which restores the agent's context without replaying history Athas already
+/// shows, and falls back to `session/load`.
+fn reopen_methods(target: &SessionTarget, can_load: bool, can_resume: bool) -> Vec<ReopenMethod> {
+   match target {
+      SessionTarget::New => Vec::new(),
+      SessionTarget::Reattach(_) => [
+         can_resume.then_some(ReopenMethod::Resume),
+         can_load.then_some(ReopenMethod::Load),
+      ]
+      .into_iter()
+      .flatten()
+      .collect(),
+   }
+}
+
+/// What `session/new`, `session/load` and `session/resume` answer in common.
+struct SessionSetup {
+   modes: Option<acp::SessionModeState>,
+   config_options: Option<Vec<acp::SessionConfigOption>>,
+}
+
+async fn reopen_session(
+   connection: Arc<AcpConnection>,
+   cwd: PathBuf,
+   session_id: &str,
+   mcp_servers: &[acp::McpServer],
+   method: ReopenMethod,
+) -> Result<Result<SessionSetup, acp::Error>, tokio::time::error::Elapsed> {
+   let session_id = session_id.to_string();
+   match method {
+      ReopenMethod::Load => load_session(connection, cwd, session_id, mcp_servers)
+         .await
+         .map(|result| {
+            result.map(|response| SessionSetup {
+               modes: response.modes,
+               config_options: response.config_options,
+            })
+         }),
+      ReopenMethod::Resume => resume_session(connection, cwd, session_id, mcp_servers)
+         .await
+         .map(|result| {
+            result.map(|response| SessionSetup {
+               modes: response.modes,
+               config_options: response.config_options,
+            })
+         }),
+   }
 }
 
 async fn create_session(
@@ -787,6 +880,27 @@ fn emit_initial_session_state(
 #[cfg(test)]
 mod tests {
    use super::*;
+
+   #[test]
+   fn reattaching_prefers_resume_then_load() {
+      let chat = SessionTarget::Reattach("s1".to_string());
+      assert_eq!(
+         reopen_methods(&chat, true, true),
+         vec![ReopenMethod::Resume, ReopenMethod::Load]
+      );
+      assert_eq!(
+         reopen_methods(&chat, false, true),
+         vec![ReopenMethod::Resume]
+      );
+      assert_eq!(reopen_methods(&chat, true, false), vec![ReopenMethod::Load]);
+      // Neither advertised: no request is sent; the chat gets a new session.
+      assert!(reopen_methods(&chat, false, false).is_empty());
+   }
+
+   #[test]
+   fn a_new_session_reopens_nothing() {
+      assert!(reopen_methods(&SessionTarget::New, true, true).is_empty());
+   }
 
    #[test]
    fn accepts_only_the_supported_protocol_version() {

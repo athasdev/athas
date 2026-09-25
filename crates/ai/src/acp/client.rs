@@ -1,6 +1,7 @@
 use super::{
    AcpConnection,
    file_access::{self, FileAccess, OutsideAccess},
+   replay::ReplayRouter,
    terminal_state::{AcpTerminalState, take_session_terminals},
    types::{
       ACP_BUFFER_READ_EVENT, AcpBufferReadRequest, AcpContentBlock, AcpEvent,
@@ -289,6 +290,7 @@ pub struct AthasAcpClient {
    terminal_manager: Arc<TerminalManager>,
    /// Maps ACP terminal IDs to terminal state (uses StdMutex for sync access from event listeners)
    terminal_states: Arc<StdMutex<HashMap<String, AcpTerminalState>>>,
+   replay: ReplayRouter,
 }
 
 impl AthasAcpClient {
@@ -313,6 +315,7 @@ impl AthasAcpClient {
          current_session_id: Arc::new(Mutex::new(None)),
          terminal_manager,
          terminal_states: Arc::new(StdMutex::new(HashMap::new())),
+         replay: ReplayRouter::default(),
       }
    }
 
@@ -370,6 +373,19 @@ impl AthasAcpClient {
       let mut current = self.current_session_id.lock().await;
       if session_id.is_none() || current.as_deref() == session_id {
          *current = None;
+      }
+   }
+
+   /// The replay router for this connection: session setup tells it which sessions are being
+   /// loaded.
+   pub fn replay(&self) -> &ReplayRouter {
+      &self.replay
+   }
+
+   /// Emits a `session/update`, unless it is history replayed by a `session/load`.
+   fn emit_session_update(&self, event: AcpEvent) {
+      if let Some(event) = self.replay.route(event) {
+         self.emit_event(event);
       }
    }
 
@@ -888,7 +904,7 @@ impl AthasAcpClient {
                return Ok(());
             };
 
-            self.emit_event(AcpEvent::UserMessageChunk {
+            self.emit_session_update(AcpEvent::UserMessageChunk {
                session_id,
                content,
                is_complete: false,
@@ -899,7 +915,7 @@ impl AthasAcpClient {
                return Ok(());
             };
 
-            self.emit_event(AcpEvent::ContentChunk {
+            self.emit_session_update(AcpEvent::ContentChunk {
                session_id,
                content,
                is_complete: false,
@@ -910,7 +926,7 @@ impl AthasAcpClient {
                return Ok(());
             };
 
-            self.emit_event(AcpEvent::ThoughtChunk {
+            self.emit_session_update(AcpEvent::ThoughtChunk {
                session_id,
                content,
                is_complete: false,
@@ -918,23 +934,23 @@ impl AthasAcpClient {
          }
          acp::SessionUpdate::ToolCall(tool_call) => {
             for event in Self::tool_call_events(session_id, tool_call) {
-               self.emit_event(event);
+               self.emit_session_update(event);
             }
          }
          acp::SessionUpdate::ToolCallUpdate(update) => {
             for event in Self::tool_call_update_events(session_id, update) {
-               self.emit_event(event);
+               self.emit_session_update(event);
             }
          }
          acp::SessionUpdate::CurrentModeUpdate(update) => {
             // Handle current mode change
-            self.emit_event(AcpEvent::CurrentModeUpdate {
+            self.emit_session_update(AcpEvent::CurrentModeUpdate {
                session_id,
                current_mode_id: update.current_mode_id.to_string(),
             });
          }
          acp::SessionUpdate::ConfigOptionUpdate(update) => {
-            self.emit_event(AcpEvent::ConfigOptionsUpdate {
+            self.emit_session_update(AcpEvent::ConfigOptionsUpdate {
                session_id,
                config_options: update
                   .config_options
@@ -944,14 +960,14 @@ impl AthasAcpClient {
             });
          }
          acp::SessionUpdate::SessionInfoUpdate(update) => {
-            self.emit_event(AcpEvent::SessionInfoUpdate {
+            self.emit_session_update(AcpEvent::SessionInfoUpdate {
                session_id,
                title: update.title.take(),
                updated_at: update.updated_at.take(),
             });
          }
          acp::SessionUpdate::AvailableCommandsUpdate(commands_update) => {
-            self.emit_event(AcpEvent::SlashCommandsUpdate {
+            self.emit_session_update(AcpEvent::SlashCommandsUpdate {
                session_id,
                commands: commands_update
                   .available_commands
@@ -974,7 +990,7 @@ impl AthasAcpClient {
             });
          }
          acp::SessionUpdate::Plan(plan) => {
-            self.emit_event(AcpEvent::PlanUpdate {
+            self.emit_session_update(AcpEvent::PlanUpdate {
                session_id,
                entries: plan
                   .entries
@@ -994,7 +1010,7 @@ impl AthasAcpClient {
                usage.used,
                usage.size
             );
-            self.emit_event(AcpEvent::UsageUpdate {
+            self.emit_session_update(AcpEvent::UsageUpdate {
                session_id,
                usage: AcpUsageUpdate {
                   used: usage.used,

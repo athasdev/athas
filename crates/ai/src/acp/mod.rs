@@ -8,6 +8,7 @@ mod config;
 mod file_access;
 pub mod mcp_servers;
 mod process;
+mod replay;
 mod sessions;
 mod terminal_state;
 pub mod types;

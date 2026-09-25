@@ -1,7 +1,7 @@
 use super::{
    auth::{ACP_AUTHENTICATE_TIMEOUT, authenticate_method, automatic_auth_method},
    bridge_commands::{AcpCommand, OpenRequest, WorkerFollowUp, run_worker_loop},
-   bridge_init::{ConnectionHandle, StartedConnection},
+   bridge_init::{ConnectionHandle, SessionTarget, StartedConnection},
    bridge_prompt::{PromptAuth, run_prompt},
    client::{AthasAcpClient, ClientResponders, PermissionResponse},
    config::AgentRegistry,
@@ -297,12 +297,13 @@ impl AcpWorker {
       };
       connection.touch();
 
-      if let Some(session_id) = request.session_id.as_deref() {
+      if let Some(session_id) = request.target.session_id() {
          if self.sessions.is_open_on(session_id, connection_id) {
             let status = self.status_of(connection_id).unwrap_or_default();
             let _ = request.response_tx.send(Ok(AcpOpenedSession {
                session_id: session_id.to_string(),
                status,
+               context_lost: false,
             }));
             return;
          }
@@ -331,7 +332,7 @@ impl AcpWorker {
       tokio::task::spawn_local(async move {
          let result = super::bridge_init::open_session(
             handle,
-            request.session_id.clone(),
+            request.target.clone(),
             startup_auth,
             request.mcp_servers,
             map_config_options,
@@ -339,7 +340,7 @@ impl AcpWorker {
          .await;
          let _ = followup_tx.send(WorkerFollowUp::SessionOpened {
             connection_id,
-            requested_session_id: request.session_id,
+            requested_session_id: request.target.session_id().map(str::to_string),
             signed_in_with_choice,
             result,
             response_tx: request.response_tx,
@@ -378,6 +379,7 @@ impl AcpWorker {
       match result {
          Ok(opened) => {
             let session_id = opened.session_id.to_string();
+            let context_lost = opened.context_lost;
             connection.skipped_mcp_servers = opened.skipped_mcp_servers;
             if signed_in_with_choice {
                let agent_id = connection.key.agent_id.clone();
@@ -397,6 +399,7 @@ impl AcpWorker {
                let _ = tx.send(Ok(AcpOpenedSession {
                   session_id: session_id.clone(),
                   status: status.clone(),
+                  context_lost,
                }));
             }
          }
@@ -995,7 +998,7 @@ impl AcpAgentBridge {
             config: Box::new(config),
             terminal_manager,
             request: OpenRequest {
-               session_id,
+               target: session_id.map_or(SessionTarget::New, SessionTarget::Reattach),
                auth_method_id,
                mcp_servers,
                response_tx,
