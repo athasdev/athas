@@ -62,6 +62,7 @@ export const AISettings = () => {
     useShallow((state) => ({
       aiAutocompleteCustomModelId: state.settings.aiAutocompleteCustomModelId,
       aiCompletion: state.settings.aiCompletion,
+      aiFollowAgent: state.settings.aiFollowAgent,
       aiCustomBaseUrl: state.settings.aiCustomBaseUrl,
       aiCustomModelId: state.settings.aiCustomModelId,
       aiModelId: state.settings.aiModelId,
@@ -692,6 +693,19 @@ export const AISettings = () => {
         </CollapsibleContent>
       </Collapsible>
       <McpServerSettings />
+      <Section title="Agents">
+        <SettingRow
+          label="Follow Agent"
+          description="Start new agent chats with the editor following the files the agent works in"
+          onReset={() => updateSetting("aiFollowAgent", getDefaultSetting("aiFollowAgent"))}
+          canReset={settings.aiFollowAgent !== getDefaultSetting("aiFollowAgent")}
+        >
+          <Switch
+            checked={settings.aiFollowAgent}
+            onChange={(checked) => updateSetting("aiFollowAgent", checked)}
+          />
+        </SettingRow>
+      </Section>
       <Section title="Autocomplete">
         <SettingRow
           label="AI Autocomplete"

@@ -38,6 +38,8 @@ import { useComposerFileDrop } from "@/features/ai/hooks/use-composer-file-drop"
 import { getImageMimeType } from "@/utils/image-file-types";
 import { parsePastedImages, restorePastedImages } from "@/features/ai/lib/image-attachments";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
+import { FollowAgentToggle } from "./follow-agent-toggle";
 import {
   getComposerDropdownPosition,
   getComposerText,
@@ -1323,6 +1325,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               onSelectCodexSkill={insertCodexSkillAtCursor}
               onBeforeOpen={closeInlineMenus}
             />
+            {chatId && isAcpAgent(currentAgentId) ? <FollowAgentToggle chatId={chatId} /> : null}
             {hasSlashCommands && (
               <Button
                 type="button"

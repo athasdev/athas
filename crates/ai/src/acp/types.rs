@@ -700,4 +700,12 @@ pub enum AcpEvent {
       session_id: String,
       action: UiAction,
    },
+   /// A file the agent just read or wrote through `fs/*`, so the editor can follow it there.
+   #[serde(rename_all = "camelCase")]
+   AgentLocation {
+      session_id: String,
+      path: String,
+      /// 1-based line the read started at, when the agent asked for one.
+      line: Option<u32>,
+   },
 }

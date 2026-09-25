@@ -1782,6 +1782,24 @@ export function MonacoEditor({
     }
   }, [isActiveSurface, pendingNavigation]);
 
+  const pendingReveal = useEditorStateStore((state) =>
+    state.pendingReveal?.bufferId === activeBufferId ? state.pendingReveal : null,
+  );
+
+  // Scrolls a line into view for whoever asked (the agent follower) without taking focus or
+  // moving the cursor, so it works in a pane the user is not typing in.
+  useEffect(() => {
+    const editor = editorRef.current;
+    const model = modelRef.current;
+    if (!editor || !model || !pendingReveal) return;
+
+    const line = Math.min(Math.max(1, pendingReveal.line), model.getLineCount());
+    editor.revealLineInCenter(line);
+    if (useEditorStateStore.getState().pendingReveal === pendingReveal) {
+      useEditorStateStore.getState().actions.requestReveal(null);
+    }
+  }, [modelUri, pendingReveal]);
+
   if (!buffer) return null;
 
   const shellStyle = {

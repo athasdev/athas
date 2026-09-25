@@ -1052,6 +1052,7 @@ impl AthasAcpClient {
             .await
             .map_err(|e| file_access::read_error(&path, &e))?,
       };
+      self.emit_event(agent_location_event(&args.session_id, &path, args.line));
       file_access::slice_lines(content, args.line, args.limit).map(acp::ReadTextFileResponse::new)
    }
 
@@ -1098,6 +1099,7 @@ impl AthasAcpClient {
          )
          .await?;
       self.apply_agent_write(&path, &args.content).await?;
+      self.emit_event(agent_location_event(&args.session_id, &path, None));
       Ok(acp::WriteTextFileResponse::new())
    }
 
@@ -1509,15 +1511,46 @@ fn elicitation_response(answer: Option<serde_json::Value>) -> acp::CreateElicita
       .unwrap_or_else(|| acp::CreateElicitationResponse::new(acp::ElicitationAction::Cancel))
 }
 
+/// Where an `fs/*` request put the agent. The frontend follows it when the chat asks to.
+fn agent_location_event(session_id: &acp::SessionId, path: &Path, line: Option<u32>) -> AcpEvent {
+   AcpEvent::AgentLocation {
+      session_id: session_id.to_string(),
+      path: path_to_string(path),
+      line: line.filter(|line| *line > 0),
+   }
+}
+
 #[cfg(test)]
 mod tests {
    use super::{
       AthasAcpClient, ClientResponders, PendingBufferRead, PendingEntry, PermissionResponse,
-      SessionConfigOptionKind, acp, elicitation_response, ext_request_session_id,
+      SessionConfigOptionKind, acp, agent_location_event, elicitation_response,
+      ext_request_session_id,
    };
    use crate::acp::types::{AcpBufferReadRequest, AcpEvent};
    use serde_json::json;
    use tokio::sync::oneshot;
+
+   #[test]
+   fn fs_requests_report_where_the_agent_is() {
+      let session = acp::SessionId::new("session-1");
+      let read = agent_location_event(&session, std::path::Path::new("/repo/src/a.rs"), Some(12));
+      assert_eq!(
+         serde_json::to_value(&read).unwrap(),
+         json!({
+            "type": "agent_location",
+            "sessionId": "session-1",
+            "path": "/repo/src/a.rs",
+            "line": 12,
+         })
+      );
+
+      // A write has no line, and a read from line 0 is treated as no line.
+      for line in [None, Some(0)] {
+         let event = agent_location_event(&session, std::path::Path::new("/repo/b.rs"), line);
+         assert_eq!(serde_json::to_value(&event).unwrap()["line"], json!(null));
+      }
+   }
 
    fn diff_content() -> acp::ToolCallContent {
       acp::ToolCallContent::Diff(acp::Diff::new("/repo/a.txt", "new").old_text("old".to_string()))

@@ -123,6 +123,8 @@ export interface Settings {
   aiAutocompleteCustomModelId: string;
   aiDefaultSessionMode: string;
   aiAgentNotifications: boolean;
+  /** Whether new agent chats start with "Follow agent" on. */
+  aiFollowAgent: boolean;
   aiSkills: AIChatSkill[];
   /** MCP servers offered to ACP agents. Secrets live in secure storage, not here. */
   mcpServers: McpServerSetting[];

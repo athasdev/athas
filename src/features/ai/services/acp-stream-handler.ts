@@ -514,6 +514,10 @@ export class AcpStreamHandler {
       case "ui_action":
         this.handleUiAction(event);
         break;
+
+      case "agent_location":
+        // The chat follows it when its "Follow agent" toggle is on.
+        break;
     }
   }
 

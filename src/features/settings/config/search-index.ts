@@ -697,6 +697,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     ],
   },
   {
+    id: "ai-follow-agent",
+    tab: "ai",
+    section: "Agents",
+    label: "Follow Agent",
+    description: "Start new agent chats with the editor following the files the agent works in",
+    keywords: ["ai", "agent", "follow", "acp", "editor", "location"],
+  },
+  {
     id: "ai-autocomplete",
     tab: "ai",
     section: "Autocomplete",

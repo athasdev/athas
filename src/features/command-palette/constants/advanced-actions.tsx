@@ -3,11 +3,14 @@ import { logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
 import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import { openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
+import { toggleFollowAgent } from "@/features/ai/services/agent-follow-service";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   ArrowClockwiseIcon,
   ArrowsClockwiseIcon,
   ArrowsLeftRightIcon,
+  CrosshairIcon,
   HistoryIcon,
   SignOutIcon,
   SparkleIcon,
@@ -70,6 +73,29 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
         const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
         if (buffer?.type === "agent") await openAgentInNewWindow(buffer.sessionId);
         else showToast({ message: "Open an agent tab first.", type: "info" });
+      },
+    },
+    {
+      id: "ai-toggle-follow-agent",
+      label: "AI: Toggle Follow Agent",
+      description: "Open the files the agent works in while its turn runs",
+      icon: <CrosshairIcon />,
+      category: "AI",
+      action: () => {
+        onClose();
+        const state = useBufferStore.getState();
+        const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+        const chatId =
+          buffer?.type === "agent" ? buffer.sessionId : useAIChatStore.getState().currentChatId;
+        if (!chatId) {
+          showToast({ message: "Open an agent tab first.", type: "info" });
+          return;
+        }
+        const following = toggleFollowAgent(chatId);
+        showToast({
+          message: following ? "Following the agent" : "Stopped following the agent",
+          type: "info",
+        });
       },
     },
     {

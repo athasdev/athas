@@ -444,6 +444,13 @@ export type AcpEvent =
       type: "ui_action";
       sessionId: string;
       action: UiAction;
+    }
+  | {
+      /** A file the agent just read or wrote through `fs/*`; the editor follows it there. */
+      type: "agent_location";
+      sessionId: string;
+      path: string;
+      line: number | null;
     };
 
 /** The ACP client asks each editor window what it holds for a file an agent is reading. */
