@@ -147,10 +147,7 @@ const AIChat = memo(function AIChat({
     [chatState.chats, effectiveChatId],
   );
   const currentAgentId = currentChat?.agentId ?? chatState.selectedAgentId;
-  const activeAcpSessionId = useAIChatStore((state) => state.acpStatus?.sessionId ?? null);
-  const chatSessionId =
-    currentChat?.acpSessionId ??
-    (effectiveChatId === chatState.currentChatId ? activeAcpSessionId : null);
+  const chatSessionId = currentChat?.acpSessionId ?? null;
   const agentQuestions = useMemo(
     () => selectSessionQuestions(allAgentQuestions, chatSessionId),
     [allAgentQuestions, chatSessionId],
@@ -260,24 +257,23 @@ const AIChat = memo(function AIChat({
 
         switch (payload.type) {
           case "slash_commands_update":
-            actions.setAvailableSlashCommands(payload.commands);
+            actions.setSessionSlashCommands(payload.sessionId, payload.commands);
             break;
           case "session_mode_update":
             actions.setSessionModeState(
+              payload.sessionId,
               payload.modeState.currentModeId,
               payload.modeState.availableModes,
             );
             break;
           case "current_mode_update":
-            actions.setCurrentModeId(payload.currentModeId);
+            actions.setSessionCurrentMode(payload.sessionId, payload.currentModeId);
             break;
           case "config_options_update":
-            actions.setSessionConfigOptions(payload.configOptions);
+            actions.setSessionConfigOptions(payload.sessionId, payload.configOptions);
             break;
           case "session_info_update": {
-            const chat =
-              store.chats.find((item) => item.acpSessionId === payload.sessionId) ??
-              (store.acpStatus?.sessionId === payload.sessionId ? actions.getCurrentChat() : null);
+            const chat = store.chats.find((item) => item.acpSessionId === payload.sessionId);
             const nextTitle = chat ? getChatTitleFromSessionInfo(chat.title, payload.title) : null;
             if (chat && nextTitle) {
               actions.updateChatTitle(chat.id, nextTitle);
@@ -308,12 +304,7 @@ const AIChat = memo(function AIChat({
             );
             break;
           case "status_changed":
-            actions.setAcpStatus(payload.status);
-            if (!payload.status.running) {
-              actions.setAvailableSlashCommands([]);
-              actions.setSessionModeState(null, []);
-              actions.setSessionConfigOptions([]);
-            }
+            actions.setAcpAgentStatus(payload.status);
             break;
           default:
             break;
@@ -481,7 +472,7 @@ const AIChat = memo(function AIChat({
       }
     } else if (isAcpAgent(currentAgentId)) {
       // The bridge answers the turn's open permission requests and questions as cancelled.
-      await AcpStreamHandler.cancelPrompt();
+      await AcpStreamHandler.cancelPrompt(effectiveChatId);
     }
     if (effectiveChatId && run) {
       // Stop means stop: queued follow-ups stay queued instead of launching.
@@ -1155,8 +1146,7 @@ details: ${errorDetails || mainError}
               break;
             }
             case "status_changed":
-              useAIChatStore.getState().actions.setAcpStatus(event.status);
-              break; // internal state sync
+              break; // The chat store follows agent status
             case "error":
               appendAcpEvent({
                 category: "error",

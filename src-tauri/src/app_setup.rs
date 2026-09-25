@@ -649,7 +649,7 @@ pub(crate) fn shutdown_background_services(app_handle: &tauri::AppHandle<AthasRu
       let acp_bridge = acp_bridge.inner().clone();
       tauri::async_runtime::block_on(async move {
          let bridge = acp_bridge.lock().await;
-         if let Err(error) = bridge.stop_agent().await {
+         if let Err(error) = bridge.stop_agent(None, None).await {
             log::debug!("ACP shutdown returned error: {}", error);
          }
       });

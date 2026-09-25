@@ -6,6 +6,7 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type {
   AcpAgentStatus,
   AcpEvent,
+  AcpOpenedSession,
   AcpPromptContentBlock,
   AcpSessionList,
   AcpStopReason,
@@ -21,7 +22,7 @@ import {
   isAcpAuthenticationError,
 } from "@/features/ai/lib/acp-authentication";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
-import { normalizeAcpWorkspacePath } from "@/features/ai/lib/acp-workspace-path";
+import { getAcpAgentKey, selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
 import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
 import { formatSkippedMcpServersNotice } from "@/features/ai/lib/mcp-servers";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -50,7 +51,6 @@ interface AcpListeners {
   event?: () => void;
 }
 
-const ACP_STATUS_TIMEOUT_MS = 5_000;
 // The bridge bounds each startup step (initialize, which may include a first-run download,
 // authenticate, session/new) and reports failures itself. This only catches a bridge that
 // never answers, and it stops the startup when it gives up.
@@ -63,6 +63,8 @@ const ACP_STILL_WAITING_MS = 20_000;
 // does must not keep the chat waiting forever.
 const ACP_CANCEL_GRACE_MS = 10_000;
 const ACP_STARTUP_STOPPED = "startup was stopped";
+/** Runs without a chat id belong to the current chat; they share this key. */
+const CURRENT_CHAT_KEY = "";
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout>;
@@ -77,9 +79,16 @@ function hasSessionId(event: AcpEvent): event is AcpEvent & { sessionId: string 
   return "sessionId" in event && typeof event.sessionId === "string";
 }
 
+/**
+ * Streams one prompt turn of an ACP agent into a chat. Every chat has its own session on the
+ * agent, and one agent process serves every chat that uses it in the workspace, so chats (with
+ * the same agent or different ones) run side by side. Within one chat, turns run one at a time.
+ */
 export class AcpStreamHandler {
-  private static activeHandler: AcpStreamHandler | null = null;
-  private static startupQueue: Promise<void> = Promise.resolve();
+  /** The turn running in each chat, by chat id. */
+  private static activeHandlers = new Map<string, AcpStreamHandler>();
+  /** Session opens in flight, by chat id: a chat opens its session once at a time. */
+  private static sessionQueues = new Map<string, Promise<void>>();
   private listeners: AcpListeners = {};
   private activeTools = new Map<string, string>();
   /** The turn is over and every handler that will be called has been. */
@@ -89,6 +98,11 @@ export class AcpStreamHandler {
   private cancelRequested = false;
   private wasRunning = false;
   private activeSessionId: string | null = null;
+  /** The agent holding the session, as of the latest status. */
+  private agentStatus: AcpAgentStatus | null = null;
+  private workspacePath: string | null = null;
+  /** The chat this turn is registered under while it runs. */
+  private registeredChatKey: string | null = null;
   private awaitingFirstResponse = false;
   private stillWaitingTimeout: ReturnType<typeof setTimeout> | null = null;
   private cancelGraceTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -116,15 +130,16 @@ export class AcpStreamHandler {
       },
       chatId,
     );
-    await handler.ensureAgentRunning();
+    await handler.ensureSession();
   }
 
   async start(userMessage: string, context: ContextInfo): Promise<void> {
-    const previous = AcpStreamHandler.activeHandler;
+    const chatKey = this.getChatKey();
+    const previous = AcpStreamHandler.activeHandlers.get(chatKey);
     if (previous && previous !== this) {
       if (!previous.cancelRequested) {
         this.handlers.onError(
-          "Another agent session is already running. Stop it before sending this prompt.",
+          "The agent is still answering in this chat. Stop it before sending this prompt.",
         );
         return;
       }
@@ -132,8 +147,9 @@ export class AcpStreamHandler {
       await previous.settled;
     }
     try {
-      AcpStreamHandler.activeHandler = this;
-      await this.ensureAgentRunning();
+      AcpStreamHandler.activeHandlers.set(chatKey, this);
+      this.registeredChatKey = chatKey;
+      await this.ensureSession();
       if (this.cancelRequested) {
         this.finishCancelled();
         return;
@@ -143,7 +159,7 @@ export class AcpStreamHandler {
       }
       if (
         context.images?.length &&
-        !useAIChatStore.getState().acpStatus?.agentCapabilities?.promptCapabilities.image
+        !this.agentStatus?.agentCapabilities?.promptCapabilities.image
       ) {
         this.fail(
           "This agent does not support image attachments. Choose an image-capable agent or remove the images.",
@@ -154,13 +170,16 @@ export class AcpStreamHandler {
       this.awaitingFirstResponse = true;
       try {
         await withTimeout(
-          invoke("send_acp_prompt", { prompt: this.buildPrompt(userMessage, context) }),
+          invoke("send_acp_prompt", {
+            sessionId: this.activeSessionId,
+            prompt: this.buildPrompt(userMessage, context),
+          }),
           ACP_PROMPT_TIMEOUT_MS,
           `${this.agentId} did not accept the prompt in time`,
         );
       } catch (error) {
         // The prompt may still reach the agent; make sure it does not keep working unseen.
-        void AcpStreamHandler.cancelOnBackend();
+        void this.cancelOnBackend();
         throw error;
       }
       this.armStillWaitingHint();
@@ -174,107 +193,97 @@ export class AcpStreamHandler {
     }
   }
 
-  private ensureAgentRunning(): Promise<void> {
-    const startup = AcpStreamHandler.startupQueue.then(() => this.ensureAgentRunningOnce());
-    AcpStreamHandler.startupQueue = startup.catch(() => undefined);
-    return startup;
+  /** The chat this turn runs in; turns without a chat id run in the current chat. */
+  private getChatKey(): string {
+    return this.chatId ?? this.getTargetChat()?.id ?? CURRENT_CHAT_KEY;
   }
 
-  private async ensureAgentRunningOnce(): Promise<void> {
+  /**
+   * Makes sure the chat's session is open on the agent. The agent starts when it is not running
+   * in this workspace yet; a running agent only opens (or finds) the chat's session, so other
+   * chats on it keep going. Opens for one chat run one at a time.
+   */
+  private ensureSession(): Promise<void> {
+    const chatKey = this.getChatKey();
+    const previous = AcpStreamHandler.sessionQueues.get(chatKey) ?? Promise.resolve();
+    const open = previous.then(() => this.ensureSessionOnce());
+    const settled = open.then(
+      () => undefined,
+      () => undefined,
+    );
+    AcpStreamHandler.sessionQueues.set(chatKey, settled);
+    void settled.then(() => {
+      if (AcpStreamHandler.sessionQueues.get(chatKey) === settled) {
+        AcpStreamHandler.sessionQueues.delete(chatKey);
+      }
+    });
+    return open;
+  }
+
+  private async ensureSessionOnce(): Promise<void> {
     try {
-      const status = await withTimeout(
-        invoke<AcpAgentStatus>("get_acp_status"),
-        ACP_STATUS_TIMEOUT_MS,
-        "Agent status check timed out",
-      );
       const targetChat = this.getTargetChat();
       const desiredSessionId =
         targetChat?.agentId === this.agentId ? (targetChat.acpSessionId ?? null) : null;
       const workspacePath = this.getWorkspacePath();
-      const statusWorkspacePath = normalizeAcpWorkspacePath(status.workspacePath);
-      const desiredWorkspacePath = normalizeAcpWorkspacePath(workspacePath);
-      const shouldRestartForSession =
-        status.running &&
-        status.agentId === this.agentId &&
-        (status.sessionId ?? null) !== desiredSessionId;
-      const shouldRestartForWorkspace =
-        status.running &&
-        status.agentId === this.agentId &&
-        statusWorkspacePath !== desiredWorkspacePath;
+      this.workspacePath = workspacePath;
+      const store = useAIChatStore.getState();
+      const isStarting = !selectAcpAgentStatus(store, this.agentId, workspacePath)?.running;
 
-      if (status.running) {
-        useAIChatStore.getState().actions.setAcpStatus(status);
-        this.activeSessionId = status.sessionId ?? null;
-      }
-
-      if (
-        !status.running ||
-        status.agentId !== this.agentId ||
-        shouldRestartForSession ||
-        shouldRestartForWorkspace
-      ) {
+      if (isStarting) {
         console.log(`Starting agent ${this.agentId}...`);
         this.handlers.onResponsePhase?.("starting");
-
-        let startStatus: AcpAgentStatus;
-        try {
-          startStatus = await this.startAgent(workspacePath, desiredSessionId);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          if (
-            this.cancelRequested ||
-            message.includes("startup timed out") ||
-            message.includes(ACP_STARTUP_STOPPED)
-          ) {
-            throw error;
-          }
-          const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
-          const agent = availableAgents.find((item) => item.id === this.agentId);
-          if (!agent?.installed && agent?.canInstall) {
-            await invoke<AgentConfig>("install_acp_agent", { agentId: this.agentId });
-            startStatus = await this.startAgent(workspacePath, desiredSessionId);
-          } else {
-            throw error;
-          }
-        }
-
-        if (!startStatus.running) {
-          throw new Error(`${this.agentId} failed to start`);
-        }
-
-        useAIChatStore.getState().actions.setAcpStatus(startStatus);
-        this.activeSessionId = startStatus.sessionId ?? null;
-        this.reportSkippedMcpServers(startStatus);
-
-        if (startStatus.sessionId) {
-          if (targetChat) {
-            useAIChatStore
-              .getState()
-              .actions.setChatAcpSessionId(targetChat.id, startStatus.sessionId);
-          }
-        }
-
-        this.wasRunning = true;
-
-        // Wait for initialization
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        this.handlers.onResponsePhase?.("waiting");
-      } else {
-        this.activeSessionId = status.sessionId ?? null;
-        this.wasRunning = true;
       }
+
+      let opened: AcpOpenedSession;
+      try {
+        opened = await this.openSession(workspacePath, desiredSessionId);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (
+          this.cancelRequested ||
+          message.includes("startup timed out") ||
+          message.includes(ACP_STARTUP_STOPPED)
+        ) {
+          throw error;
+        }
+        const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
+        const agent = availableAgents.find((item) => item.id === this.agentId);
+        if (!agent?.installed && agent?.canInstall) {
+          await invoke<AgentConfig>("install_acp_agent", { agentId: this.agentId });
+          opened = await this.openSession(workspacePath, desiredSessionId);
+        } else {
+          throw error;
+        }
+      }
+
+      if (!opened.status.running) {
+        throw new Error(`${this.agentId} failed to start`);
+      }
+
+      store.actions.setAcpAgentStatus(opened.status);
+      this.agentStatus = opened.status;
+      this.activeSessionId = opened.sessionId;
+      if (targetChat && targetChat.acpSessionId !== opened.sessionId) {
+        store.actions.setChatAcpSessionId(targetChat.id, opened.sessionId);
+      }
+      if (isStarting) {
+        this.reportSkippedMcpServers(opened.status);
+        this.handlers.onResponsePhase?.("waiting");
+      }
+      this.wasRunning = true;
     } catch (error) {
       throw new Error(`${this.agentId} is currently unavailable: ${error}`);
     }
   }
 
-  private async startAgent(
+  private async openSession(
     workspacePath: string | null,
     sessionId: string | null,
-  ): Promise<AcpAgentStatus> {
+  ): Promise<AcpOpenedSession> {
     try {
       return await withTimeout(
-        invoke<AcpAgentStatus>("start_acp_agent", {
+        invoke<AcpOpenedSession>("open_acp_session", {
           agentId: this.agentId,
           workspacePath,
           sessionId,
@@ -288,8 +297,13 @@ export class AcpStreamHandler {
       );
     } catch (error) {
       if (error instanceof Error && error.message.includes("startup timed out")) {
-        // Stop the startup that is still running so the next attempt starts clean.
-        void invoke("stop_acp_agent").catch(() => undefined);
+        // Stop the startup that is still running so the next attempt starts clean. Other chats
+        // already using the agent are not affected.
+        void invoke("cancel_acp_prompt", {
+          sessionId: null,
+          agentId: this.agentId,
+          workspacePath,
+        }).catch(() => undefined);
       }
       throw error;
     }
@@ -356,8 +370,7 @@ export class AcpStreamHandler {
     ];
 
     const supportsEmbeddedContext =
-      useAIChatStore.getState().acpStatus?.agentCapabilities?.promptCapabilities.embeddedContext ??
-      false;
+      this.agentStatus?.agentCapabilities?.promptCapabilities.embeddedContext ?? false;
 
     for (const file of context.mentionedFiles || []) {
       if (supportsEmbeddedContext) {
@@ -410,14 +423,7 @@ export class AcpStreamHandler {
     // already started report their final state on the way out.
     if (this.sessionComplete) return;
     if (event.type === "status_changed") {
-      if (event.status.agentId !== this.agentId) return;
-      if (
-        this.activeSessionId &&
-        event.status.sessionId &&
-        event.status.sessionId !== this.activeSessionId
-      ) {
-        return;
-      }
+      if (!this.isOwnAgent(event.status)) return;
     } else if (event.type === "elicitation_request" && event.sessionId === null) {
       // Request-scoped questions belong to no session; the running prompt's chat answers them.
     } else if (
@@ -477,19 +483,10 @@ export class AcpStreamHandler {
         break;
 
       case "session_mode_update":
-        this.handleSessionModeUpdate(event);
-        break;
-
       case "current_mode_update":
-        this.handleCurrentModeUpdate(event);
-        break;
-
       case "slash_commands_update":
-        useAIChatStore.getState().actions.setAvailableSlashCommands(event.commands);
-        break;
-
       case "config_options_update":
-        useAIChatStore.getState().actions.setSessionConfigOptions(event.configOptions);
+        // The chat store keeps each session's modes, commands and options.
         break;
 
       case "plan_update":
@@ -524,42 +521,31 @@ export class AcpStreamHandler {
     this.handleSessionComplete(event.stopReason);
   }
 
-  private handleSessionModeUpdate(event: Extract<AcpEvent, { type: "session_mode_update" }>): void {
-    console.log("Session mode state updated:", event.modeState);
-    useAIChatStore
-      .getState()
-      .actions.setSessionModeState(event.modeState.currentModeId, event.modeState.availableModes);
-  }
-
-  private handleCurrentModeUpdate(event: Extract<AcpEvent, { type: "current_mode_update" }>): void {
-    console.log("Current mode changed:", event.currentModeId);
-    useAIChatStore.getState().actions.setCurrentModeId(event.currentModeId);
+  /** Whether `status` is about the agent process holding this turn's session. */
+  private isOwnAgent(status: AcpAgentStatus): boolean {
+    if (this.activeSessionId && status.sessionIds?.includes(this.activeSessionId)) return true;
+    return (
+      getAcpAgentKey(status.agentId, status.workspacePath) ===
+      getAcpAgentKey(this.agentId, this.workspacePath)
+    );
   }
 
   private handleStatusChanged(event: Extract<AcpEvent, { type: "status_changed" }>): void {
-    console.log("Agent status changed:", event.status);
-    useAIChatStore.getState().actions.setAcpStatus(event.status);
-    if (event.status.agentId === this.agentId) {
-      this.activeSessionId = event.status.sessionId ?? this.activeSessionId;
+    if (event.status.running) {
+      this.agentStatus = event.status;
+      return;
     }
 
-    if (event.status.running && event.status.sessionId) {
-      const targetChat = this.getTargetChat();
-      if (targetChat && targetChat.agentId === this.agentId) {
-        useAIChatStore
-          .getState()
-          .actions.setChatAcpSessionId(targetChat.id, event.status.sessionId);
-      }
-    }
-
-    // Detect unexpected agent crash: was running but now stopped without user action
-    if (this.wasRunning && !event.status.running && !this.sessionComplete) {
+    // The agent went away without the user stopping it (it exited or crashed): every chat on it
+    // can reconnect.
+    if (this.wasRunning && !this.sessionComplete) {
       if (this.cancelRequested) {
         this.finishCancelled();
         return;
       }
-      console.warn("Agent crashed unexpectedly");
-      this.fail("Agent disconnected unexpectedly. Click retry to restart.", true);
+      console.warn("Agent stopped unexpectedly", event.error);
+      const reason = event.error ? ` (${event.error})` : "";
+      this.fail(`Agent disconnected unexpectedly${reason}. Click retry to restart.`, true);
     }
   }
 
@@ -759,8 +745,11 @@ export class AcpStreamHandler {
       this.listeners.event = undefined;
     }
 
-    if (AcpStreamHandler.activeHandler === this) {
-      AcpStreamHandler.activeHandler = null;
+    if (
+      this.registeredChatKey !== null &&
+      AcpStreamHandler.activeHandlers.get(this.registeredChatKey) === this
+    ) {
+      AcpStreamHandler.activeHandlers.delete(this.registeredChatKey);
     }
     this.resolveSettled();
   }
@@ -787,12 +776,29 @@ export class AcpStreamHandler {
     this.finishCancelled();
   }
 
-  private static async cancelOnBackend(): Promise<void> {
+  /** Cancels this turn on the bridge: its session's turn, or the agent's startup before then. */
+  private cancelOnBackend(): Promise<void> {
+    return AcpStreamHandler.cancelOnBackend({
+      sessionId: this.activeSessionId,
+      agentId: this.agentId,
+      workspacePath: this.workspacePath ?? this.getWorkspacePath(),
+    });
+  }
+
+  private static async cancelOnBackend(target: {
+    sessionId: string | null;
+    agentId: string | null;
+    workspacePath: string | null;
+  }): Promise<void> {
     try {
-      await invoke("cancel_acp_prompt");
+      await invoke("cancel_acp_prompt", target);
     } catch (error) {
       console.error("Failed to cancel ACP prompt on backend:", error);
     }
+  }
+
+  private static currentWorkspacePath(): string | null {
+    return useProjectStore.getState().rootFolderPath ?? null;
   }
 
   // Static method to respond to permission requests
@@ -827,32 +833,46 @@ export class AcpStreamHandler {
     return invoke("get_available_agents");
   }
 
-  static async listSessions(
-    args: {
-      cwd?: string;
-      cursor?: string | null;
-    } = {},
-  ): Promise<AcpSessionList> {
+  static async listSessions(args: {
+    agentId: string;
+    workspacePath?: string | null;
+    cwd?: string;
+    cursor?: string | null;
+  }): Promise<AcpSessionList> {
     return invoke<AcpSessionList>("list_acp_sessions", {
       args: {
+        agentId: args.agentId,
+        workspacePath: args.workspacePath ?? AcpStreamHandler.currentWorkspacePath(),
         cwd: args.cwd,
         cursor: args.cursor ?? undefined,
       },
     });
   }
 
-  static async deleteSession(sessionId: string): Promise<void> {
+  static async deleteSession(agentId: string, sessionId: string): Promise<void> {
     await invoke("delete_acp_session", {
-      args: { sessionId },
+      args: { agentId, workspacePath: AcpStreamHandler.currentWorkspacePath(), sessionId },
     });
   }
 
   /**
-   * Logs out of the running agent. Athas then leaves sign-in to the user: the next prompt that
-   * needs it shows the agent's sign-in methods.
+   * Lets go of a chat's session, for when the chat is deleted. The agent closes it when it
+   * supports `session/close` and keeps running for other chats.
    */
-  static async logoutAgent(): Promise<void> {
-    await invoke("logout_acp_agent");
+  static async closeSession(sessionId: string): Promise<void> {
+    await invoke("close_acp_session", { sessionId });
+    useAIChatStore.getState().actions.clearAcpSession(sessionId);
+  }
+
+  /**
+   * Logs out of the agent. Athas then leaves sign-in to the user: the next prompt that needs it
+   * shows the agent's sign-in methods.
+   */
+  static async logoutAgent(agentId: string): Promise<void> {
+    await invoke("logout_acp_agent", {
+      agentId,
+      workspacePath: AcpStreamHandler.currentWorkspacePath(),
+    });
   }
 
   /**
@@ -864,9 +884,15 @@ export class AcpStreamHandler {
     chatId: string | null | undefined,
     methodId: string,
   ): Promise<void> {
-    const status = await invoke<AcpAgentStatus>("get_acp_status");
-    if (status.running && status.agentId === agentId && status.sessionId) {
-      await invoke("authenticate_acp_agent", { methodId });
+    const workspacePath = AcpStreamHandler.currentWorkspacePath();
+    const agentKey = getAcpAgentKey(agentId, workspacePath);
+    const statuses = await invoke<AcpAgentStatus[]>("get_acp_status");
+    const isRunning = statuses.some(
+      (status) =>
+        status.running && getAcpAgentKey(status.agentId, status.workspacePath) === agentKey,
+    );
+    if (isRunning) {
+      await invoke("authenticate_acp_agent", { agentId, workspacePath, methodId });
       return;
     }
 
@@ -876,46 +902,67 @@ export class AcpStreamHandler {
       chatId ?? undefined,
     );
     handler.authMethodId = methodId;
-    await handler.ensureAgentRunning();
+    await handler.ensureSession();
   }
 
   /**
-   * Starts the agent again on the chat's session, for after the user signed in outside the
-   * agent's connection (a terminal sign-in).
+   * Starts the agent again and reopens the chat's session, for after the user signed in outside
+   * the agent's connection (a terminal sign-in). Every chat on the agent reconnects.
    */
   static async reconnectAgent(agentId: string, chatId?: string | null): Promise<void> {
-    AcpStreamHandler.activeHandler?.forceStop();
-    await invoke("stop_acp_agent");
+    await AcpStreamHandler.stopAgent(agentId);
     await AcpStreamHandler.warmup(agentId, chatId ?? undefined);
   }
 
+  /** Stops the agent and starts it again with a fresh session for the chat. */
   static async restartAgent(agentId: string, chatId?: string | null): Promise<void> {
-    AcpStreamHandler.activeHandler?.forceStop();
-    await invoke("stop_acp_agent");
+    await AcpStreamHandler.stopAgent(agentId);
 
     const actions = useAIChatStore.getState().actions;
+    const chat = chatId ? actions.getChatById(chatId) : undefined;
     if (chatId) {
       actions.setChatAcpSessionId(chatId, null);
     }
-    actions.setAvailableSlashCommands([]);
-    actions.setSessionModeState(null, []);
-    actions.setSessionConfigOptions([]);
+    if (chat?.acpSessionId) {
+      actions.clearAcpSession(chat.acpSessionId);
+    }
 
     await AcpStreamHandler.warmup(agentId, chatId ?? undefined);
   }
 
-  // Static method to stop the current agent
-  static async stopAgent(): Promise<void> {
-    await invoke("stop_acp_agent");
+  /**
+   * Stops the agent process for `agentId` in the current workspace. Every chat on it ends its
+   * turn; other agents keep running.
+   */
+  static async stopAgent(agentId: string): Promise<void> {
+    for (const handler of AcpStreamHandler.activeHandlers.values()) {
+      if (handler.agentId === agentId) handler.forceStop();
+    }
+    await invoke("stop_acp_agent", {
+      agentId,
+      workspacePath: AcpStreamHandler.currentWorkspacePath(),
+    });
   }
 
   /**
-   * Cancels the current prompt turn. The bridge sends session/cancel and answers the turn's open
-   * permission requests and questions as cancelled; the chat keeps applying the agent's last
-   * updates until it ends the turn.
+   * Cancels the prompt turn in a chat (the current chat without an id). The bridge sends
+   * session/cancel for that chat's session only and answers its open permission requests and
+   * questions as cancelled; the chat keeps applying the agent's last updates until it ends the
+   * turn. Before the chat has a session, the agent's startup is stopped instead.
    */
-  static async cancelPrompt(): Promise<void> {
-    AcpStreamHandler.activeHandler?.requestCancel();
-    await AcpStreamHandler.cancelOnBackend();
+  static async cancelPrompt(chatId?: string | null): Promise<void> {
+    const actions = useAIChatStore.getState().actions;
+    const chat = chatId ? actions.getChatById(chatId) : actions.getCurrentChat();
+    const handler = AcpStreamHandler.activeHandlers.get(chatId ?? chat?.id ?? CURRENT_CHAT_KEY);
+    if (handler) {
+      handler.requestCancel();
+      await handler.cancelOnBackend();
+      return;
+    }
+    await AcpStreamHandler.cancelOnBackend({
+      sessionId: chat?.acpSessionId ?? null,
+      agentId: chat?.agentId ?? null,
+      workspacePath: AcpStreamHandler.currentWorkspacePath(),
+    });
   }
 }

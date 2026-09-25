@@ -46,11 +46,11 @@ vi.mock("@/features/settings/stores/settings.store", () => ({
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({
   useAIChatStore: {
     getState: vi.fn(() => ({
-      acpStatus: null,
+      acpAgents: {},
       actions: {
         getChatById: vi.fn(),
         getCurrentChat: vi.fn(),
-        setAcpStatus: vi.fn(),
+        setAcpAgentStatus: vi.fn(),
         setChatAcpSessionId: vi.fn(),
       },
     })),
@@ -74,17 +74,17 @@ describe("ACP startup with MCP servers", () => {
 
   it("passes enabled servers and reports the ones the agent skipped once", async () => {
     vi.mocked(invoke).mockImplementation(async (command) => {
-      if (command === "get_acp_status") {
-        return { running: false, initialized: false, agentId: null, sessionId: null };
-      }
-      if (command === "start_acp_agent") {
+      if (command === "open_acp_session") {
         return {
-          running: true,
-          initialized: true,
-          agentId: "gemini",
           sessionId: "session-1",
-          workspacePath: "/workspace",
-          skippedMcpServers: [{ name: "linear", transport: "http" }],
+          status: {
+            running: true,
+            initialized: true,
+            agentId: "gemini",
+            workspacePath: "/workspace",
+            sessionIds: ["session-1"],
+            skippedMcpServers: [{ name: "linear", transport: "http" }],
+          },
         };
       }
       return undefined;
@@ -94,12 +94,10 @@ describe("ACP startup with MCP servers", () => {
       "gemini",
       { onChunk: vi.fn(), onComplete: vi.fn(), onError: vi.fn() },
       "chat-1",
-    ) as unknown as { ensureAgentRunning: () => Promise<void> };
-    const startup = handler.ensureAgentRunning();
-    await vi.advanceTimersByTimeAsync(1000);
-    await startup;
+    ) as unknown as { ensureSession: () => Promise<void> };
+    await handler.ensureSession();
 
-    const startCalls = vi.mocked(invoke).mock.calls.filter(([name]) => name === "start_acp_agent");
+    const startCalls = vi.mocked(invoke).mock.calls.filter(([name]) => name === "open_acp_session");
     expect(startCalls).toHaveLength(1);
     expect(startCalls[0][1]).toMatchObject({
       agentId: "gemini",

@@ -32,6 +32,7 @@ import {
   type AIChatSkillInsertDetail,
 } from "@/features/ai/lib/skill-events";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { selectChatAcpSession } from "@/features/ai/lib/acp-session-state";
 import { useVoiceInput } from "@/features/ai/hooks/use-voice-input";
 import { useComposerFileDrop } from "@/features/ai/hooks/use-composer-file-drop";
 import { getImageMimeType } from "@/utils/image-file-types";
@@ -159,8 +160,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
   });
   const slashCommandRangeRef = useRef({ startIndex: 0, endIndex: 0 });
 
-  const sessionConfigOptions = useAIChatStore((state) => state.sessionConfigOptions);
+  const acpSession = useAIChatStore((state) => selectChatAcpSession(state, chatId));
+  const sessionConfigOptions = acpSession.configOptions;
   const session = useAIChatStore((state) => state.chats.find((chat) => chat.id === chatId));
+  const acpSessionId = session?.acpSessionId ?? null;
   const defaultProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const defaultModelId = useSettingsStore((state) => state.settings.aiModelId);
   const aiProviderId = session?.providerId ?? defaultProviderId;
@@ -197,7 +200,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [chatId, isCustomAgent, onAgentChange, updateSetting],
   );
 
-  const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
+  const availableSlashCommands = acpSession.slashCommands;
   const filteredSlashCommands = useMemo(() => {
     const search = slashCommandState.search.trim().toLowerCase();
     if (!search) return availableSlashCommands;
@@ -1294,27 +1297,28 @@ const AIChatInputBar = memo(function AIChatInputBar({
               sessionConfigOptions={sessionConfigOptions}
               onAgentChange={onAgentChange}
               onModelChange={handleApiModelChange}
-              onSessionConfigChange={(optionId, value) =>
-                void changeSessionConfigOption(optionId, value)
-              }
+              onSessionConfigChange={(optionId, value) => {
+                if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
+              }}
               onBeforeOpen={closeInlineMenus}
             />
             <ComposerEffortSelector
               cwd={projectPath}
               currentAgentId={currentAgentId}
               sessionConfigOptions={sessionConfigOptions}
-              onSessionConfigChange={(optionId, value) =>
-                void changeSessionConfigOption(optionId, value)
-              }
+              onSessionConfigChange={(optionId, value) => {
+                if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
+              }}
               onOpen={closeInlineMenus}
             />
             <ChatPreferencesMenu
+              chatId={chatId ?? null}
               currentAgentId={currentAgentId}
               canChangeAgent={Boolean(onAgentChange)}
               sessionConfigOptions={sessionConfigOptions}
-              onSessionConfigChange={(optionId, value) =>
-                void changeSessionConfigOption(optionId, value)
-              }
+              onSessionConfigChange={(optionId, value) => {
+                if (acpSessionId) void changeSessionConfigOption(acpSessionId, optionId, value);
+              }}
               onSelectSkill={insertSkillAtCursor}
               onSelectCodexSkill={insertCodexSkillAtCursor}
               onBeforeOpen={closeInlineMenus}

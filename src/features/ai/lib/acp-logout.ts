@@ -14,12 +14,12 @@ export function canLogOutOfAcpAgent(
 }
 
 /**
- * Logs out of the running agent. Athas does not sign it back in on its own: the next prompt
- * that needs sign-in shows the agent's methods to choose from.
+ * Logs out of `agentId`. Athas does not sign it back in on its own: the next prompt that needs
+ * sign-in shows the agent's methods to choose from.
  */
-export async function logOutOfAcpAgent(): Promise<void> {
+export async function logOutOfAcpAgent(agentId: string): Promise<void> {
   try {
-    await AcpStreamHandler.logoutAgent();
+    await AcpStreamHandler.logoutAgent(agentId);
     useAcpAuthStore.getState().actions.clear();
     toast.success("Logged out of the agent");
   } catch (error) {

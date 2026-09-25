@@ -1,73 +1,99 @@
+import type { AcpSessionState } from "@/features/ai/types/acp.types";
+import { getAcpAgentKey } from "@/features/ai/lib/acp-session-state";
 import type { AIChatActions } from "./ai-chat-store.types";
 import type { GetAIChatStore, SetAIChatStore } from "./ai-chat-store-context";
 
 type AcpActions = Pick<
   AIChatActions,
-  | "setAvailableSlashCommands"
+  | "setAcpAgentStatus"
+  | "setSessionSlashCommands"
   | "setSessionModeState"
-  | "setCurrentModeId"
-  | "setAcpStatus"
-  | "changeSessionMode"
+  | "setSessionCurrentMode"
   | "setSessionConfigOptions"
+  | "clearAcpSession"
+  | "changeSessionMode"
   | "changeSessionConfigOption"
 >;
 
-export function createAcpActions(set: SetAIChatStore, get: GetAIChatStore): AcpActions {
+function emptySessionState(): AcpSessionState {
   return {
-    setAvailableSlashCommands: (commands) =>
+    slashCommands: [],
+    modeState: { currentModeId: null, availableModes: [] },
+    configOptions: [],
+  };
+}
+
+export function createAcpActions(set: SetAIChatStore, get: GetAIChatStore): AcpActions {
+  const updateSession = (sessionId: string, update: (session: AcpSessionState) => void) =>
+    set((state) => {
+      state.acpSessions[sessionId] ??= emptySessionState();
+      update(state.acpSessions[sessionId]);
+    });
+
+  return {
+    setAcpAgentStatus: (status) =>
       set((state) => {
-        state.availableSlashCommands = commands;
+        const key = getAcpAgentKey(status.agentId, status.workspacePath);
+        if (status.running) {
+          state.acpAgents[key] = status;
+          return;
+        }
+        // The sessions went away with the agent; a chat opens its session again when needed.
+        delete state.acpAgents[key];
+        for (const sessionId of status.sessionIds ?? []) {
+          delete state.acpSessions[sessionId];
+        }
       }),
-    setAcpStatus: (status) =>
+    setSessionSlashCommands: (sessionId, commands) =>
+      updateSession(sessionId, (session) => {
+        session.slashCommands = commands;
+      }),
+    setSessionModeState: (sessionId, currentModeId, availableModes) =>
+      updateSession(sessionId, (session) => {
+        session.modeState = { currentModeId, availableModes };
+      }),
+    setSessionCurrentMode: (sessionId, modeId) =>
+      updateSession(sessionId, (session) => {
+        session.modeState.currentModeId = modeId;
+      }),
+    setSessionConfigOptions: (sessionId, options) =>
+      updateSession(sessionId, (session) => {
+        session.configOptions = options;
+      }),
+    clearAcpSession: (sessionId) =>
       set((state) => {
-        state.acpStatus = status;
+        delete state.acpSessions[sessionId];
       }),
-    setSessionModeState: (currentModeId, availableModes) =>
-      set((state) => {
-        state.sessionModeState = {
-          currentModeId,
-          availableModes,
-        };
-      }),
-    setCurrentModeId: (modeId) =>
-      set((state) => {
-        state.sessionModeState.currentModeId = modeId;
-      }),
-    changeSessionMode: async (modeId) => {
+    changeSessionMode: async (sessionId, modeId) => {
       try {
         const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("set_acp_session_mode", { modeId });
+        await invoke("set_acp_session_mode", { sessionId, modeId });
       } catch (error) {
         console.error("Failed to change session mode:", error);
       }
     },
-    setSessionConfigOptions: (options) =>
-      set((state) => {
-        state.sessionConfigOptions = options;
-      }),
-    changeSessionConfigOption: async (configId, value) => {
-      const previousOptions = get().sessionConfigOptions;
+    changeSessionConfigOption: async (sessionId, configId, value) => {
+      const previousOptions = get().acpSessions[sessionId]?.configOptions ?? [];
 
-      set((state) => {
-        state.sessionConfigOptions = state.sessionConfigOptions.map((option) => {
-          if (option.id !== configId) return option;
+      updateSession(sessionId, (session) => {
+        for (const option of session.configOptions) {
+          if (option.id !== configId) continue;
           if (option.kind.type === "select" && typeof value === "string") {
             option.kind.currentValue = value;
           }
           if (option.kind.type === "boolean" && typeof value === "boolean") {
             option.kind.currentValue = value;
           }
-          return option;
-        });
+        }
       });
 
       try {
         const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("set_acp_session_config_option", { args: { configId, value } });
+        await invoke("set_acp_session_config_option", { args: { sessionId, configId, value } });
       } catch (error) {
         console.error("Failed to change session config option:", error);
-        set((state) => {
-          state.sessionConfigOptions = previousOptions;
+        updateSession(sessionId, (session) => {
+          session.configOptions = previousOptions;
         });
       }
     },

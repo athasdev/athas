@@ -1,5 +1,6 @@
 import type {
   AcpAgentStatus,
+  AcpSessionState,
   SessionConfigOption,
   SessionConfigValue,
   SessionMode,
@@ -57,13 +58,10 @@ export interface AIChatState {
   hasApiKey: boolean;
   providerApiKeys: Map<string, boolean>;
   dynamicModels: Record<string, ProviderModel[]>;
-  availableSlashCommands: SlashCommand[];
-  acpStatus: AcpAgentStatus | null;
-  sessionModeState: {
-    currentModeId: string | null;
-    availableModes: SessionMode[];
-  };
-  sessionConfigOptions: SessionConfigOption[];
+  /** Running ACP agent processes, by `getAcpAgentKey(agentId, workspacePath)`. */
+  acpAgents: Record<string, AcpAgentStatus>;
+  /** What each open ACP session advertises, by session id. */
+  acpSessions: Record<string, AcpSessionState>;
 }
 
 export interface AIChatActions {
@@ -118,13 +116,23 @@ export interface AIChatActions {
   hasProviderApiKey: (providerId: string) => boolean;
 
   setDynamicModels: (providerId: string, models: ProviderModel[]) => void;
-  setAvailableSlashCommands: (commands: SlashCommand[]) => void;
-  setSessionModeState: (currentModeId: string | null, availableModes: SessionMode[]) => void;
-  setCurrentModeId: (modeId: string) => void;
-  setAcpStatus: (status: AcpAgentStatus | null) => void;
-  changeSessionMode: (modeId: string) => Promise<void>;
-  setSessionConfigOptions: (options: SessionConfigOption[]) => void;
-  changeSessionConfigOption: (configId: string, value: SessionConfigValue) => Promise<void>;
+  /** Records a running agent, or forgets a stopped one together with its sessions. */
+  setAcpAgentStatus: (status: AcpAgentStatus) => void;
+  setSessionSlashCommands: (sessionId: string, commands: SlashCommand[]) => void;
+  setSessionModeState: (
+    sessionId: string,
+    currentModeId: string | null,
+    availableModes: SessionMode[],
+  ) => void;
+  setSessionCurrentMode: (sessionId: string, modeId: string) => void;
+  setSessionConfigOptions: (sessionId: string, options: SessionConfigOption[]) => void;
+  clearAcpSession: (sessionId: string) => void;
+  changeSessionMode: (sessionId: string, modeId: string) => Promise<void>;
+  changeSessionConfigOption: (
+    sessionId: string,
+    configId: string,
+    value: SessionConfigValue,
+  ) => Promise<void>;
 
   getWorkspaceSessionSnapshot: () => AIWorkspaceSessionSnapshot;
   restoreWorkspaceSession: (snapshot: AIWorkspaceSessionSnapshot | null | undefined) => void;

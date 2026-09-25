@@ -14,12 +14,7 @@ export function createInitialAIChatState(): AIChatState {
     hasApiKey: false,
     providerApiKeys: new Map(),
     dynamicModels: {},
-    availableSlashCommands: [],
-    sessionModeState: {
-      currentModeId: null,
-      availableModes: [],
-    },
-    acpStatus: null,
-    sessionConfigOptions: [],
+    acpAgents: {},
+    acpSessions: {},
   };
 }

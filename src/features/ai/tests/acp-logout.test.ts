@@ -15,7 +15,6 @@ function status(authCapabilities: unknown, running = true): AcpAgentStatus {
   return {
     agentId: "gemini",
     running,
-    sessionActive: running,
     initialized: running,
     agentCapabilities: {
       loadSession: false,
@@ -51,9 +50,9 @@ describe("agent logout", () => {
       methods: [{ id: "oauth", name: "OAuth", description: null, kind: "agent", terminal: null }],
     });
 
-    await logOutOfAcpAgent();
+    await logOutOfAcpAgent("gemini");
 
-    expect(AcpStreamHandler.logoutAgent).toHaveBeenCalled();
+    expect(AcpStreamHandler.logoutAgent).toHaveBeenCalledWith("gemini");
     expect(useAcpAuthStore.getState().request).toBeNull();
     expect(toast.success).toHaveBeenCalled();
   });
@@ -61,7 +60,7 @@ describe("agent logout", () => {
   it("reports a failed logout instead of throwing", async () => {
     vi.mocked(AcpStreamHandler.logoutAgent).mockRejectedValue(new Error("No active connection"));
 
-    await expect(logOutOfAcpAgent()).resolves.toBeUndefined();
+    await expect(logOutOfAcpAgent("gemini")).resolves.toBeUndefined();
     expect(toast.error).toHaveBeenCalledWith("Couldn't log out of the agent", {
       description: "No active connection",
     });

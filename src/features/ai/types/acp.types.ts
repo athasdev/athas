@@ -21,18 +21,38 @@ export interface AgentConfig {
   canInstall: boolean;
 }
 
+/**
+ * One running agent process. Every chat that uses the same agent in the same workspace shares it,
+ * each with its own session.
+ */
 export interface AcpAgentStatus {
   agentId: string;
   running: boolean;
-  sessionActive: boolean;
   initialized: boolean;
-  sessionId?: string | null;
   workspacePath?: string | null;
+  /** The sessions open on the agent; for a stopped agent, the sessions it had. */
+  sessionIds?: string[];
   agentCapabilities?: AcpAgentCapabilities | null;
   /** The sign-in methods the agent offered in `initialize`. */
   authMethods?: AcpAuthMethod[];
   /** Configured MCP servers left out because the agent does not support their transport. */
   skippedMcpServers?: AcpSkippedMcpServer[];
+}
+
+/** A chat's session, opened or found already open, and the agent that holds it. */
+export interface AcpOpenedSession {
+  sessionId: string;
+  status: AcpAgentStatus;
+}
+
+/** What an ACP session advertises: its slash commands, modes and config options. */
+export interface AcpSessionState {
+  slashCommands: SlashCommand[];
+  modeState: {
+    currentModeId: string | null;
+    availableModes: SessionMode[];
+  };
+  configOptions: SessionConfigOption[];
 }
 
 /** The command a terminal sign-in method runs in an Athas terminal. */
@@ -330,8 +350,11 @@ export type AcpEvent =
       error: string;
     }
   | {
+      /** An agent started, stopped, or opened or closed a session. */
       type: "status_changed";
       status: AcpAgentStatus;
+      /** Why an agent stopped on its own (it exited); null for a requested or idle stop. */
+      error?: string | null;
     }
   | {
       type: "auth_required";

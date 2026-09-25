@@ -11,7 +11,7 @@ use super::{
       AcpAgentCapabilities, AcpAuthMethod, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
       SessionModeState,
    },
-   workspace_path::{path_to_string, resolve_workspace_path},
+   workspace_path::path_to_string,
 };
 use crate::{executable_path::find_executable, runtime::AthasAppHandle as AppHandle};
 use agent_client_protocol::{
@@ -330,90 +330,6 @@ where
    /// Sent in `session/new`, `session/load` and `session/resume`.
    mcp_servers: &'a [acp::McpServer],
    map_config_options: F,
-}
-
-pub(super) struct InitializedAcpWorker {
-   pub connection: Arc<AcpConnection>,
-   pub session_id: Option<acp::SessionId>,
-   pub auth_methods: Vec<acp::AuthMethod>,
-   pub described_auth_methods: Vec<AcpAuthMethod>,
-   pub agent_capabilities: AcpAgentCapabilities,
-   /// Configured MCP servers the agent cannot take, reported to the user.
-   pub skipped_mcp_servers: Vec<AcpSkippedMcpServer>,
-   pub process: Child,
-   pub process_group_id: Option<u32>,
-   pub io_handle: tokio::task::JoinHandle<()>,
-   pub client: Arc<AthasAcpClient>,
-   pub responders: ClientResponders,
-   pub workspace_path: Option<PathBuf>,
-}
-
-impl InitializedAcpWorker {
-   /// Stops an agent that finished starting after the user already asked to stop it.
-   pub(super) async fn shut_down(self) {
-      self.io_handle.abort();
-      stop_child_tree(self.process, self.process_group_id).await;
-   }
-}
-
-#[allow(clippy::too_many_arguments)]
-pub(super) async fn initialize_worker(
-   config: &AgentConfig,
-   workspace_path: Option<String>,
-   app_handle: AppHandle,
-   terminal_manager: Arc<TerminalManager>,
-   requested_session_id: Option<String>,
-   startup_auth: StartupAuth,
-   mcp_servers: &[McpServerConfig],
-   map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
-   stop: CancellationToken,
-) -> Result<InitializedAcpWorker> {
-   let workspace_path = resolve_workspace_path(workspace_path)?;
-   let started = start_connection(
-      config,
-      workspace_path.clone(),
-      app_handle,
-      terminal_manager,
-      stop.clone(),
-   )
-   .await?;
-   let open = open_session(
-      started.handle.clone(),
-      requested_session_id,
-      startup_auth,
-      mcp_servers.to_vec(),
-      map_config_options,
-   );
-   let outcome = tokio::select! {
-      result = open => Some(result),
-      () = stop.cancelled() => None,
-   };
-   let opened = match outcome {
-      Some(Ok(opened)) => opened,
-      Some(Err(error)) => {
-         started.shut_down().await;
-         return Err(error);
-      }
-      None => {
-         started.shut_down().await;
-         bail!(ACP_STARTUP_STOPPED);
-      }
-   };
-   let handle = started.handle;
-   Ok(InitializedAcpWorker {
-      connection: handle.connection,
-      session_id: Some(opened.session_id),
-      auth_methods: handle.auth_methods,
-      described_auth_methods: handle.described_auth_methods,
-      agent_capabilities: handle.agent_capabilities,
-      skipped_mcp_servers: opened.skipped_mcp_servers,
-      process: started.process,
-      process_group_id: started.process_group_id,
-      io_handle: started.io_handle,
-      client: handle.client,
-      responders: started.responders,
-      workspace_path,
-   })
 }
 
 fn configure_background_agent_command(command: &mut Command) {

@@ -20,6 +20,7 @@ import { ProviderSelector } from "@/features/ai/components/selectors/provider-se
 import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
 import { useAIProviderSettingsActions } from "@/features/ai/services/providers/ai-provider-settings-registry";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { selectChatAcpSession, selectChatAcpSessionId } from "@/features/ai/lib/acp-session-state";
 import type { SessionConfigOption } from "@/features/ai/types/acp.types";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
@@ -107,11 +108,13 @@ export const AISettings = () => {
   const providers = useAvailableProviders();
   const providerSettingsActions = useAIProviderSettingsActions(settings.aiProviderId);
 
+  // The options of the current chat's ACP session.
   useEffect(() => {
     const unsubscribe = useAIChatStore.subscribe((state) => {
-      setSessionConfigOptions(state.sessionConfigOptions);
+      setSessionConfigOptions(selectChatAcpSession(state, state.currentChatId).configOptions);
     });
-    setSessionConfigOptions(useAIChatStore.getState().sessionConfigOptions);
+    const state = useAIChatStore.getState();
+    setSessionConfigOptions(selectChatAcpSession(state, state.currentChatId).configOptions);
     return unsubscribe;
   }, []);
 
@@ -670,11 +673,13 @@ export const AISettings = () => {
                         value: value.id,
                         label: value.name,
                       }))}
-                      onChange={(value) =>
-                        useAIChatStore
-                          .getState()
-                          .actions.changeSessionConfigOption(option.id, value)
-                      }
+                      onChange={(value) => {
+                        const state = useAIChatStore.getState();
+                        const sessionId = selectChatAcpSessionId(state, state.currentChatId);
+                        if (sessionId) {
+                          void state.actions.changeSessionConfigOption(sessionId, option.id, value);
+                        }
+                      }}
                       variant="default"
                       searchable
                       searchableTrigger="input"

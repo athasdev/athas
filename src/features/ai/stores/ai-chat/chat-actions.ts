@@ -30,12 +30,13 @@ type ChatActions = Omit<
   | "removeApiKey"
   | "hasProviderApiKey"
   | "setDynamicModels"
-  | "setAvailableSlashCommands"
+  | "setAcpAgentStatus"
+  | "setSessionSlashCommands"
   | "setSessionModeState"
-  | "setCurrentModeId"
-  | "setAcpStatus"
-  | "changeSessionMode"
+  | "setSessionCurrentMode"
   | "setSessionConfigOptions"
+  | "clearAcpSession"
+  | "changeSessionMode"
   | "changeSessionConfigOption"
 >;
 

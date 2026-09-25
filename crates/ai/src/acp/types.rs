@@ -309,24 +309,34 @@ impl AgentConfig {
    }
 }
 
-/// Status of an ACP agent connection
+/// Status of one running agent process. Every chat that uses the same agent in the same
+/// workspace shares it, each with its own session.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Default)]
 pub struct AcpAgentStatus {
    pub agent_id: String,
    pub running: bool,
-   pub session_active: bool,
    pub initialized: bool,
-   pub session_id: Option<String>,
    pub workspace_path: Option<String>,
    pub agent_capabilities: Option<AcpAgentCapabilities>,
    /// The sign-in methods the agent offered in `initialize`.
    pub auth_methods: Vec<AcpAuthMethod>,
-   /// Configured MCP servers left out of the session because the agent does not support their
-   /// transport.
+   /// Configured MCP servers left out of the latest session because the agent does not support
+   /// their transport.
    #[serde(default)]
    pub skipped_mcp_servers: Vec<super::mcp_servers::AcpSkippedMcpServer>,
+   /// The sessions open on this agent. When a stopped status is reported, the sessions it had.
+   #[serde(default)]
+   pub session_ids: Vec<String>,
+}
+
+/// A session opened (or found already open) for a chat, and the agent that holds it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpOpenedSession {
+   pub session_id: String,
+   pub status: AcpAgentStatus,
 }
 
 /// How an ACP sign-in method is completed.
@@ -562,9 +572,13 @@ pub enum AcpEvent {
       session_id: Option<String>,
       error: String,
    },
-   /// Agent status changed
+   /// An agent process started, stopped, or opened or closed a session. `error` says why an agent
+   /// stopped on its own (it exited or crashed); it is `None` for a requested or idle stop.
    #[serde(rename_all = "camelCase")]
-   StatusChanged { status: AcpAgentStatus },
+   StatusChanged {
+      status: AcpAgentStatus,
+      error: Option<String>,
+   },
    /// The agent needs the user to sign in and Athas will not pick a method on its own. The
    /// session id is set when a prompt hit this; startup failures carry none.
    #[serde(rename_all = "camelCase")]

@@ -5,8 +5,8 @@ mod executable_path;
 mod runtime;
 
 pub use acp::{
-   AcpAgentBridge, AcpAgentStatus, AcpSessionInfo, AcpSessionList, AgentConfig, AgentRuntime,
-   McpServerConfig, McpServerSecrets, McpServerSetting, SessionConfigValue,
+   AcpAgentBridge, AcpAgentStatus, AcpOpenedSession, AcpSessionInfo, AcpSessionList, AgentConfig,
+   AgentRuntime, McpServerConfig, McpServerSecrets, McpServerSetting, SessionConfigValue,
 };
 pub use chat_history::{
    ChatData, ChatHistoryRepository, ChatStats, ChatWithMessages, MessageData, ToolCallData,

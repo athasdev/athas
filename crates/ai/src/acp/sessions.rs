@@ -1,0 +1,297 @@
+//! Bookkeeping for running agents: which connection serves which (agent, workspace), which
+//! connection holds each open session, and the startups other chats can join. None of it
+//! touches processes, so the rules are tested on their own.
+
+use anyhow::{Result, bail};
+use std::{collections::HashMap, path::PathBuf};
+use tokio_util::sync::CancellationToken;
+
+/// One agent process serves every chat that uses the same agent in the same workspace.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(super) struct ConnectionKey {
+   pub agent_id: String,
+   /// The resolved workspace the process runs in; `None` without a project.
+   pub workspace_path: Option<PathBuf>,
+}
+
+#[derive(Debug)]
+struct SessionEntry {
+   connection_id: u64,
+   prompt_running: bool,
+}
+
+/// Which connection holds each open ACP session, and whether a prompt turn runs in it. Session
+/// ids come from the agents; every agent Athas knows uses unique ids, so a session lives on one
+/// connection at a time.
+#[derive(Debug, Default)]
+pub(super) struct SessionRegistry {
+   sessions: HashMap<String, SessionEntry>,
+}
+
+impl SessionRegistry {
+   /// Records that `connection_id` holds `session_id`. Returns the connection that held it
+   /// before, if it moved.
+   pub fn attach(&mut self, session_id: &str, connection_id: u64) -> Option<u64> {
+      let previous = self.sessions.insert(
+         session_id.to_string(),
+         SessionEntry {
+            connection_id,
+            prompt_running: false,
+         },
+      );
+      previous
+         .map(|entry| entry.connection_id)
+         .filter(|previous| *previous != connection_id)
+   }
+
+   pub fn connection_of(&self, session_id: &str) -> Option<u64> {
+      self
+         .sessions
+         .get(session_id)
+         .map(|entry| entry.connection_id)
+   }
+
+   pub fn is_open_on(&self, session_id: &str, connection_id: u64) -> bool {
+      self.connection_of(session_id) == Some(connection_id)
+   }
+
+   /// Forgets a closed or deleted session. Returns the connection that held it.
+   pub fn detach(&mut self, session_id: &str) -> Option<u64> {
+      self
+         .sessions
+         .remove(session_id)
+         .map(|entry| entry.connection_id)
+   }
+
+   /// The sessions `connection_id` holds, sorted so status updates are stable.
+   pub fn sessions_of(&self, connection_id: u64) -> Vec<String> {
+      let mut sessions: Vec<String> = self
+         .sessions
+         .iter()
+         .filter(|(_, entry)| entry.connection_id == connection_id)
+         .map(|(session_id, _)| session_id.clone())
+         .collect();
+      sessions.sort();
+      sessions
+   }
+
+   /// Forgets every session of a connection that went away and returns them.
+   pub fn remove_connection(&mut self, connection_id: u64) -> Vec<String> {
+      let sessions = self.sessions_of(connection_id);
+      for session_id in &sessions {
+         self.sessions.remove(session_id);
+      }
+      sessions
+   }
+
+   /// Marks a prompt turn as running in `session_id` and returns its connection. ACP allows one
+   /// turn per session at a time; other sessions on the same connection are not affected.
+   pub fn begin_prompt(&mut self, session_id: &str) -> Result<u64> {
+      let Some(entry) = self.sessions.get_mut(session_id) else {
+         bail!("The agent session {session_id} is not open");
+      };
+      if entry.prompt_running {
+         bail!("The agent is still answering the previous prompt in this chat");
+      }
+      entry.prompt_running = true;
+      Ok(entry.connection_id)
+   }
+
+   pub fn end_prompt(&mut self, session_id: &str) {
+      if let Some(entry) = self.sessions.get_mut(session_id) {
+         entry.prompt_running = false;
+      }
+   }
+}
+
+struct PendingStartup<W> {
+   id: u64,
+   token: CancellationToken,
+   waiters: Vec<W>,
+}
+
+/// Agent startups in progress, one per connection key. A chat that needs an agent that is
+/// already starting waits for that startup instead of starting a second process.
+pub(super) struct Startups<W> {
+   next_id: u64,
+   pending: HashMap<ConnectionKey, PendingStartup<W>>,
+}
+
+impl<W> Default for Startups<W> {
+   fn default() -> Self {
+      Self {
+         next_id: 0,
+         pending: HashMap::new(),
+      }
+   }
+}
+
+impl<W> Startups<W> {
+   /// Queues `waiter` on the startup for `key`. Returns the id and stop token of a startup the
+   /// caller must begin, or `None` when one is already running.
+   pub fn join(&mut self, key: ConnectionKey, waiter: W) -> Option<(u64, CancellationToken)> {
+      if let Some(pending) = self.pending.get_mut(&key) {
+         pending.waiters.push(waiter);
+         return None;
+      }
+      self.next_id += 1;
+      let token = CancellationToken::new();
+      self.pending.insert(
+         key,
+         PendingStartup {
+            id: self.next_id,
+            token: token.clone(),
+            waiters: vec![waiter],
+         },
+      );
+      Some((self.next_id, token))
+   }
+
+   /// Stops the startup for `key` and hands back its waiters to be told. `None` when nothing was
+   /// starting.
+   pub fn stop(&mut self, key: &ConnectionKey) -> Option<Vec<W>> {
+      self.pending.remove(key).map(|pending| {
+         pending.token.cancel();
+         pending.waiters
+      })
+   }
+
+   /// Stops every startup, for when every agent is being stopped.
+   pub fn stop_all(&mut self) -> Vec<W> {
+      let keys: Vec<ConnectionKey> = self.pending.keys().cloned().collect();
+      keys
+         .iter()
+         .filter_map(|key| self.stop(key))
+         .flatten()
+         .collect()
+   }
+
+   /// Startup `id` for `key` finished. Returns its waiters when it is still wanted; `None` when
+   /// it was stopped, so the caller shuts the started agent down.
+   pub fn finish(&mut self, key: &ConnectionKey, id: u64) -> Option<Vec<W>> {
+      let wanted = self
+         .pending
+         .get(key)
+         .is_some_and(|pending| pending.id == id && !pending.token.is_cancelled());
+      if !wanted {
+         return None;
+      }
+      self.pending.remove(key).map(|pending| pending.waiters)
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   fn key(agent_id: &str, workspace: &str) -> ConnectionKey {
+      ConnectionKey {
+         agent_id: agent_id.to_string(),
+         workspace_path: Some(PathBuf::from(workspace)),
+      }
+   }
+
+   #[test]
+   fn routes_each_session_to_its_connection() {
+      let mut registry = SessionRegistry::default();
+      assert_eq!(registry.attach("a", 1), None);
+      assert_eq!(registry.attach("b", 1), None);
+      assert_eq!(registry.attach("c", 2), None);
+
+      assert_eq!(registry.connection_of("a"), Some(1));
+      assert_eq!(registry.connection_of("c"), Some(2));
+      assert_eq!(registry.connection_of("missing"), None);
+      assert_eq!(registry.sessions_of(1), vec!["a", "b"]);
+      assert!(registry.is_open_on("b", 1));
+      assert!(!registry.is_open_on("b", 2));
+
+      assert_eq!(registry.detach("a"), Some(1));
+      assert_eq!(registry.sessions_of(1), vec!["b"]);
+      assert_eq!(registry.remove_connection(1), vec!["b"]);
+      assert_eq!(registry.sessions_of(2), vec!["c"]);
+   }
+
+   #[test]
+   fn reports_a_session_that_moved_to_another_connection() {
+      let mut registry = SessionRegistry::default();
+      registry.attach("a", 1);
+      assert_eq!(
+         registry.attach("a", 1),
+         None,
+         "reopening in place is not a move"
+      );
+      assert_eq!(registry.attach("a", 2), Some(1));
+      assert_eq!(registry.sessions_of(1), Vec::<String>::new());
+   }
+
+   #[test]
+   fn runs_one_prompt_per_session_and_many_per_connection() {
+      let mut registry = SessionRegistry::default();
+      registry.attach("a", 1);
+      registry.attach("b", 1);
+
+      assert_eq!(registry.begin_prompt("a").unwrap(), 1);
+      assert!(registry.begin_prompt("a").is_err(), "one turn per session");
+      assert_eq!(
+         registry.begin_prompt("b").unwrap(),
+         1,
+         "another chat streams at the same time"
+      );
+
+      registry.end_prompt("a");
+      registry.end_prompt("b");
+      assert!(
+         registry.begin_prompt("a").is_ok(),
+         "a finished turn frees the session"
+      );
+      assert!(registry.begin_prompt("missing").is_err());
+   }
+
+   #[test]
+   fn chats_needing_a_starting_agent_share_its_startup() {
+      let mut startups = Startups::default();
+      let (first, _) = startups.join(key("claude", "/w"), "chat-1").unwrap();
+      assert!(startups.join(key("claude", "/w"), "chat-2").is_none());
+      assert!(
+         startups.join(key("gemini", "/w"), "chat-3").is_some(),
+         "different agents start side by side"
+      );
+      assert!(
+         startups.join(key("claude", "/other"), "chat-4").is_some(),
+         "the same agent in another workspace gets its own process"
+      );
+
+      assert_eq!(
+         startups.finish(&key("claude", "/w"), first),
+         Some(vec!["chat-1", "chat-2"])
+      );
+      assert_eq!(startups.finish(&key("claude", "/w"), first), None);
+   }
+
+   #[test]
+   fn a_stopped_startup_hands_back_its_waiters_and_is_not_adopted() {
+      let mut startups = Startups::default();
+      let (id, token) = startups.join(key("claude", "/w"), "chat-1").unwrap();
+      assert!(startups.stop(&key("gemini", "/w")).is_none());
+      assert_eq!(startups.stop(&key("claude", "/w")), Some(vec!["chat-1"]));
+      assert!(token.is_cancelled());
+      assert_eq!(startups.finish(&key("claude", "/w"), id), None);
+
+      let (old, _) = startups.join(key("claude", "/w"), "chat-2").unwrap();
+      startups.join(key("gemini", "/w"), "chat-3");
+      let mut stopped = startups.stop_all();
+      stopped.sort();
+      assert_eq!(stopped, vec!["chat-2", "chat-3"]);
+
+      let (new, _) = startups.join(key("claude", "/w"), "chat-4").unwrap();
+      assert_eq!(
+         startups.finish(&key("claude", "/w"), old),
+         None,
+         "an older startup does not take over a newer one"
+      );
+      assert_eq!(
+         startups.finish(&key("claude", "/w"), new),
+         Some(vec!["chat-4"])
+      );
+   }
+}

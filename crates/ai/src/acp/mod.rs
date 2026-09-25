@@ -8,6 +8,7 @@ mod config;
 mod file_access;
 pub mod mcp_servers;
 mod process;
+mod sessions;
 mod terminal_state;
 pub mod types;
 mod workspace_path;
@@ -15,7 +16,8 @@ mod workspace_path;
 pub use bridge::AcpAgentBridge;
 pub use mcp_servers::{McpServerConfig, McpServerSecrets, McpServerSetting};
 pub use types::{
-   AcpAgentStatus, AcpSessionInfo, AcpSessionList, AgentConfig, AgentRuntime, SessionConfigValue,
+   AcpAgentStatus, AcpOpenedSession, AcpSessionInfo, AcpSessionList, AgentConfig, AgentRuntime,
+   SessionConfigValue,
 };
 
 pub(super) type AcpConnection = agent_client_protocol::ConnectionTo<agent_client_protocol::Agent>;

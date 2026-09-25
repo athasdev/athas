@@ -1,8 +1,8 @@
 use super::mcp::resolve_mcp_servers;
 use crate::{app_runtime::AppHandle, service_urls};
 use athas_ai::{
-   AcpAgentBridge, AcpAgentStatus, AcpSessionList, AgentConfig, AgentRuntime, McpServerSetting,
-   SessionConfigValue,
+   AcpAgentBridge, AcpAgentStatus, AcpOpenedSession, AcpSessionList, AgentConfig, AgentRuntime,
+   McpServerSetting, SessionConfigValue,
 };
 use athas_runtime::{RuntimeManager, RuntimeType};
 use athas_tooling::{ToolConfig, ToolInstaller, ToolRuntime};
@@ -54,10 +54,13 @@ pub async fn get_available_agents(
    Ok(bridge.detect_agents())
 }
 
+/// Opens a chat's session on `agent_id` in `workspace_path`, starting the agent when it is not
+/// running there yet. One agent process serves every chat that uses it in the workspace.
+/// `session_id` is the chat's earlier session, reattached when the agent still has it.
 /// `mcp_servers` is the user's MCP server list from settings; enabled servers are joined with
 /// their stored secrets and offered to the agent.
 #[tauri::command]
-pub async fn start_acp_agent(
+pub async fn open_acp_session(
    app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
    agent_id: String,
@@ -65,7 +68,7 @@ pub async fn start_acp_agent(
    session_id: Option<String>,
    auth_method_id: Option<String>,
    mcp_servers: Option<Vec<McpServerSetting>>,
-) -> Result<AcpAgentStatus, String> {
+) -> Result<AcpOpenedSession, String> {
    let mcp_servers = resolve_mcp_servers(&app_handle, mcp_servers.unwrap_or_default());
    let bridge = {
       let mut bridge = bridge.lock().await;
@@ -74,13 +77,26 @@ pub async fn start_acp_agent(
       bridge.clone()
    };
    bridge
-      .start_agent(
+      .open_session(
          &agent_id,
          workspace_path,
          session_id,
          auth_method_id,
          mcp_servers,
       )
+      .await
+      .map_err(|e| e.to_string())
+}
+
+/// Lets go of a chat's session (the chat was deleted); the agent keeps serving other chats.
+#[tauri::command]
+pub async fn close_acp_session(
+   bridge: State<'_, AcpBridgeState>,
+   session_id: String,
+) -> Result<(), String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .close_session(session_id)
       .await
       .map_err(|e| e.to_string())
 }
@@ -418,24 +434,40 @@ async fn refresh_registered_agents(bridge: &mut AcpAgentBridge) {
    }
 }
 
+/// Stops the agent running `agent_id` in `workspace_path`, ending every session on it. Without
+/// an agent id every agent is stopped.
 #[tauri::command]
-pub async fn stop_acp_agent(bridge: State<'_, AcpBridgeState>) -> Result<AcpAgentStatus, String> {
+pub async fn stop_acp_agent(
+   bridge: State<'_, AcpBridgeState>,
+   agent_id: Option<String>,
+   workspace_path: Option<String>,
+) -> Result<Vec<AcpAgentStatus>, String> {
    let bridge = { bridge.lock().await.clone() };
-   bridge.stop_agent().await.map_err(|e| e.to_string())?;
+   bridge
+      .stop_agent(agent_id, workspace_path)
+      .await
+      .map_err(|e| e.to_string())?;
    Ok(bridge.get_status().await)
 }
 
 #[tauri::command]
 pub async fn send_acp_prompt(
    bridge: State<'_, AcpBridgeState>,
+   session_id: String,
    prompt: Vec<serde_json::Value>,
 ) -> Result<(), String> {
    let bridge = { bridge.lock().await.clone() };
-   bridge.send_prompt(prompt).await.map_err(|e| e.to_string())
+   bridge
+      .send_prompt(session_id, prompt)
+      .await
+      .map_err(|e| e.to_string())
 }
 
+/// Every running agent and the sessions open on it.
 #[tauri::command]
-pub async fn get_acp_status(bridge: State<'_, AcpBridgeState>) -> Result<AcpAgentStatus, String> {
+pub async fn get_acp_status(
+   bridge: State<'_, AcpBridgeState>,
+) -> Result<Vec<AcpAgentStatus>, String> {
    let bridge = { bridge.lock().await.clone() };
    Ok(bridge.get_status().await)
 }
@@ -489,30 +521,46 @@ pub async fn respond_acp_buffer_read(
 #[tauri::command]
 pub async fn set_acp_session_mode(
    bridge: State<'_, AcpBridgeState>,
+   session_id: String,
    mode_id: String,
 ) -> Result<(), String> {
    let bridge = { bridge.lock().await.clone() };
    bridge
-      .set_session_mode(&mode_id)
+      .set_session_mode(session_id, mode_id)
       .await
       .map_err(|e| e.to_string())
 }
 
 #[derive(Deserialize)]
 pub struct SessionConfigOptionArgs {
+   #[serde(alias = "sessionId")]
+   session_id: String,
    #[serde(alias = "configId")]
    config_id: String,
    value: SessionConfigValue,
 }
 
+/// Names the agent process a request is for: `agent_id` running in `workspace_path`.
+#[derive(Deserialize)]
+pub struct AgentTargetArgs {
+   #[serde(alias = "agentId")]
+   agent_id: String,
+   #[serde(default, alias = "workspacePath")]
+   workspace_path: Option<String>,
+}
+
 #[derive(Deserialize)]
 pub struct SessionListArgs {
+   #[serde(flatten)]
+   agent: AgentTargetArgs,
    cwd: Option<String>,
    cursor: Option<String>,
 }
 
 #[derive(Deserialize)]
 pub struct SessionDeleteArgs {
+   #[serde(flatten)]
+   agent: AgentTargetArgs,
    #[serde(alias = "sessionId")]
    session_id: String,
 }
@@ -524,7 +572,7 @@ pub async fn set_acp_session_config_option(
 ) -> Result<(), String> {
    let bridge = { bridge.lock().await.clone() };
    bridge
-      .set_session_config_option(&args.config_id, args.value)
+      .set_session_config_option(args.session_id, args.config_id, args.value)
       .await
       .map_err(|e| e.to_string())
 }
@@ -536,7 +584,12 @@ pub async fn list_acp_sessions(
 ) -> Result<AcpSessionList, String> {
    let bridge = { bridge.lock().await.clone() };
    bridge
-      .list_sessions(args.cwd, args.cursor)
+      .list_sessions(
+         args.agent.agent_id,
+         args.agent.workspace_path,
+         args.cwd,
+         args.cursor,
+      )
       .await
       .map_err(|e| e.to_string())
 }
@@ -548,34 +601,57 @@ pub async fn delete_acp_session(
 ) -> Result<(), String> {
    let bridge = { bridge.lock().await.clone() };
    bridge
-      .delete_session(&args.session_id)
+      .delete_session(
+         args.agent.agent_id,
+         args.agent.workspace_path,
+         args.session_id,
+      )
       .await
       .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn logout_acp_agent(bridge: State<'_, AcpBridgeState>) -> Result<(), String> {
+pub async fn logout_acp_agent(
+   bridge: State<'_, AcpBridgeState>,
+   agent_id: String,
+   workspace_path: Option<String>,
+) -> Result<(), String> {
    let bridge = { bridge.lock().await.clone() };
-   bridge.logout().await.map_err(|e| e.to_string())
+   bridge
+      .logout(agent_id, workspace_path)
+      .await
+      .map_err(|e| e.to_string())
 }
 
 /// Signs in to the running agent with an `agent` method the user picked.
 #[tauri::command]
 pub async fn authenticate_acp_agent(
    bridge: State<'_, AcpBridgeState>,
+   agent_id: String,
+   workspace_path: Option<String>,
    method_id: String,
 ) -> Result<(), String> {
    let bridge = { bridge.lock().await.clone() };
    bridge
-      .authenticate(method_id)
+      .authenticate(agent_id, workspace_path, method_id)
       .await
       .map_err(|e| e.to_string())
 }
 
+/// Cancels the prompt turn in `session_id`; other chats keep running. Without a session (the
+/// chat's agent is still starting), the startup of `agent_id` in `workspace_path` is stopped.
 #[tauri::command]
-pub async fn cancel_acp_prompt(bridge: State<'_, AcpBridgeState>) -> Result<(), String> {
+pub async fn cancel_acp_prompt(
+   bridge: State<'_, AcpBridgeState>,
+   session_id: Option<String>,
+   agent_id: Option<String>,
+   workspace_path: Option<String>,
+) -> Result<(), String> {
    let bridge = { bridge.lock().await.clone() };
-   bridge.cancel_prompt().await.map_err(|e| e.to_string())
+   bridge
+      .cancel_prompt(session_id, agent_id, workspace_path)
+      .await
+      .map_err(|e| e.to_string())
 }
 
 fn tool_config_from_agent(agent: &AgentConfig) -> Result<ToolConfig, String> {

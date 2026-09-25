@@ -25,8 +25,8 @@ interface AdvancedActionsParams {
     activeWorkspaces: string[];
     lastError?: string | null | undefined;
   };
-  /** The running agent advertises ACP logout. */
-  canLogOutOfAgent: boolean;
+  /** The current chat's running agent, when it advertises ACP logout. */
+  logOutAgentId: string | null;
   vimMode: boolean;
   vimCommands: Array<{ name: string; description: string; execute: () => void }>;
   setMode: (mode: "normal" | "insert" | "visual") => void;
@@ -42,7 +42,7 @@ interface AdvancedActionsParams {
 export const createAdvancedActions = (params: AdvancedActionsParams): Action[] => {
   const {
     lspStatus,
-    canLogOutOfAgent,
+    logOutAgentId,
     vimMode,
     vimCommands,
     setMode,
@@ -89,7 +89,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
         onClose();
       },
     },
-    ...(canLogOutOfAgent
+    ...(logOutAgentId
       ? [
           {
             id: "ai-log-out-agent",
@@ -99,7 +99,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
             category: "AI",
             action: () => {
               onClose();
-              void logOutOfAcpAgent();
+              void logOutOfAcpAgent(logOutAgentId);
             },
           },
         ]

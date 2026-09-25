@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
-import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { AgentCompletionResult } from "@/features/ai/types/agent-completion.types";
 
@@ -14,19 +13,20 @@ vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(),
 }));
 
+const { chats } = vi.hoisted(() => ({
+  chats: new Map<string, { id: string; agentId: string; acpSessionId: string | null }>(),
+}));
+
 vi.mock("@/features/ai/stores/ai-chat.store", () => ({
   useAIChatStore: {
     getState: vi.fn(() => ({
-      acpStatus: null,
+      acpAgents: {},
       actions: {
-        getChatById: vi.fn(),
+        getChatById: vi.fn((chatId: string) => chats.get(chatId)),
         getCurrentChat: vi.fn(),
-        setAcpStatus: vi.fn(),
-        setAvailableSlashCommands: vi.fn(),
+        setAcpAgentStatus: vi.fn(),
         setChatAcpSessionId: vi.fn(),
-        setCurrentModeId: vi.fn(),
-        setSessionConfigOptions: vi.fn(),
-        setSessionModeState: vi.fn(),
+        clearAcpSession: vi.fn(),
         updateChatTitle: vi.fn(),
       },
     })),
@@ -80,14 +80,42 @@ function createHandler(
   return { handler, handlers };
 }
 
+function agentStatus(overrides: Record<string, unknown> = {}) {
+  return {
+    running: true,
+    initialized: true,
+    agentId: "codex",
+    workspacePath: "/workspace",
+    sessionIds: ["session-a"],
+    ...overrides,
+  };
+}
+
+/** Answers `open_acp_session` for each chat with that chat's session on one shared agent. */
+function mockOpenSessions(sessionsByChat: Record<string, string>) {
+  vi.mocked(invoke).mockImplementation(async (command, args) => {
+    if (command === "open_acp_session") {
+      const { sessionId } = (args ?? {}) as { sessionId?: string | null };
+      const opened = sessionId ?? Object.values(sessionsByChat)[0];
+      return { sessionId: opened, status: agentStatus({ sessionIds: [opened] }) };
+    }
+    return undefined;
+  });
+}
+
+const sentPrompts = () =>
+  vi
+    .mocked(invoke)
+    .mock.calls.filter(([command]) => command === "send_acp_prompt")
+    .map(([, args]) => (args as { sessionId: string }).sessionId);
+
 describe("AcpStreamHandler", () => {
   it.each([true, false])("honors the agent image prompt capability (%s)", async (image) => {
     const status = {
       running: true,
       initialized: true,
-      sessionActive: true,
       agentId: "codex",
-      sessionId: "session-a",
+      sessionIds: ["session-a"],
       workspacePath: "/workspace",
       agentCapabilities: {
         loadSession: false,
@@ -97,10 +125,8 @@ describe("AcpStreamHandler", () => {
         authCapabilities: null,
       },
     };
-    const original = useAIChatStore.getState();
-    vi.mocked(useAIChatStore.getState).mockReturnValue({ ...original, acpStatus: status });
     vi.mocked(invoke).mockImplementation(async (command) => {
-      if (command === "get_acp_status" || command === "start_acp_agent") return status;
+      if (command === "open_acp_session") return { sessionId: "session-a", status };
       return undefined;
     });
     const handlers = { onChunk: vi.fn(), onComplete: vi.fn(), onError: vi.fn() };
@@ -114,6 +140,7 @@ describe("AcpStreamHandler", () => {
       await start;
       if (image) {
         expect(invoke).toHaveBeenCalledWith("send_acp_prompt", {
+          sessionId: "session-a",
           prompt: [
             { type: "text", text: "/review" },
             { type: "image", mimeType: "image/png", data: "YWJj" },
@@ -130,10 +157,9 @@ describe("AcpStreamHandler", () => {
         );
       }
     } finally {
-      await AcpStreamHandler.cancelPrompt();
+      await AcpStreamHandler.cancelPrompt("chat-1");
       // Nothing answers the cancel here; let the grace period end the turn.
       await vi.advanceTimersByTimeAsync(10_000);
-      vi.mocked(useAIChatStore.getState).mockReturnValue(original);
     }
   });
 
@@ -145,6 +171,7 @@ describe("AcpStreamHandler", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+    chats.clear();
   });
 
   it("ignores streamed content from a different ACP session", () => {
@@ -340,100 +367,72 @@ describe("AcpStreamHandler", () => {
     expect(handlers.onComplete).not.toHaveBeenCalled();
   });
 
-  it("serializes concurrent ACP startup requests", async () => {
-    let resolveStart: ((status: unknown) => void) | undefined;
-    const startResult = new Promise((resolve) => {
-      resolveStart = resolve;
+  it("opens a chat's session once at a time but other chats in parallel", async () => {
+    const pending: Array<() => void> = [];
+    vi.mocked(invoke).mockImplementation((command, args) => {
+      if (command !== "open_acp_session") return Promise.resolve(undefined);
+      const sessionId = (args as { sessionId?: string | null }).sessionId ?? "session-new";
+      return new Promise((resolve) => {
+        pending.push(() => resolve({ sessionId, status: agentStatus() }));
+      });
     });
-    const runningStatus = {
-      running: true,
-      initialized: true,
-      agentId: "codex",
-      sessionId: null,
-      workspacePath: "/workspace",
-    };
+    chats.set("chat-2", { id: "chat-2", agentId: "codex", acpSessionId: "session-b" });
+    const opens = () =>
+      vi.mocked(invoke).mock.calls.filter(([name]) => name === "open_acp_session").length;
+    const handlerFor = (chatId: string) =>
+      new AcpStreamHandler(
+        "codex",
+        { onChunk: vi.fn(), onComplete: vi.fn(), onError: vi.fn() },
+        chatId,
+      ) as unknown as { ensureSession: () => Promise<void> };
 
-    vi.mocked(invoke).mockImplementation((command) => {
-      if (command === "get_acp_status") {
-        const startCalls = vi
-          .mocked(invoke)
-          .mock.calls.filter(([name]) => name === "start_acp_agent");
-        return Promise.resolve(
-          startCalls.length > 0
-            ? runningStatus
-            : {
-                ...runningStatus,
-                running: false,
-                initialized: false,
-              },
-        );
-      }
-      if (command === "start_acp_agent") {
-        return startResult;
-      }
-      return Promise.resolve(undefined);
-    });
-
-    const first = createHandler().handler as unknown as {
-      ensureAgentRunning: () => Promise<void>;
-    };
-    const second = createHandler().handler as unknown as {
-      ensureAgentRunning: () => Promise<void>;
-    };
-
-    const firstStartup = first.ensureAgentRunning();
-    const secondStartup = second.ensureAgentRunning();
+    const first = handlerFor("chat-1").ensureSession();
+    const second = handlerFor("chat-1").ensureSession();
+    const otherChat = handlerFor("chat-2").ensureSession();
     await vi.advanceTimersByTimeAsync(0);
+    expect(opens()).toBe(2);
 
-    expect(
-      vi.mocked(invoke).mock.calls.filter(([name]) => name === "start_acp_agent"),
-    ).toHaveLength(1);
-
-    resolveStart?.(runningStatus);
-    await vi.advanceTimersByTimeAsync(1000);
-    await Promise.all([firstStartup, secondStartup]);
-
-    expect(
-      vi.mocked(invoke).mock.calls.filter(([name]) => name === "start_acp_agent"),
-    ).toHaveLength(1);
+    pending.shift()?.();
+    pending.shift()?.();
+    await Promise.all([first, otherChat]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(opens()).toBe(3);
+    pending.shift()?.();
+    await second;
   });
 
-  it("releases the startup queue when agent startup stalls", async () => {
+  it("stops only the stalled startup when opening a session never answers", async () => {
     vi.mocked(invoke).mockImplementation((command) => {
-      if (command === "get_acp_status") {
-        return Promise.resolve({
-          running: false,
-          initialized: false,
-          agentId: null,
-          sessionId: null,
-          workspacePath: null,
-        });
-      }
-      if (command === "start_acp_agent") {
+      if (command === "open_acp_session") {
         return new Promise(() => {});
       }
       return Promise.resolve(undefined);
     });
 
     const stalled = createHandler().handler as unknown as {
-      ensureAgentRunning: () => Promise<void>;
+      ensureSession: () => Promise<void>;
     };
-    const startup = stalled.ensureAgentRunning();
+    const startup = stalled.ensureSession();
     const startupError = startup.catch((error) => error);
 
     await vi.advanceTimersByTimeAsync(10 * 60_000);
     expect((await startupError).message).toContain("startup timed out");
-    expect(invoke).toHaveBeenCalledWith("stop_acp_agent");
+    expect(invoke).toHaveBeenCalledWith("cancel_acp_prompt", {
+      sessionId: null,
+      agentId: "codex",
+      workspacePath: "/workspace",
+    });
+    expect(invoke).not.toHaveBeenCalledWith("stop_acp_agent", expect.anything());
 
     const next = createHandler().handler as unknown as {
-      ensureAgentRunning: () => Promise<void>;
+      ensureSession: () => Promise<void>;
     };
-    const nextStartup = next.ensureAgentRunning();
+    const nextStartup = next.ensureSession();
     const nextStartupError = nextStartup.catch((error) => error);
     await vi.advanceTimersByTimeAsync(0);
 
     expect(
-      vi.mocked(invoke).mock.calls.filter(([name]) => name === "start_acp_agent"),
+      vi.mocked(invoke).mock.calls.filter(([name]) => name === "open_acp_session"),
     ).toHaveLength(2);
 
     await vi.advanceTimersByTimeAsync(10 * 60_000);
@@ -441,18 +440,7 @@ describe("AcpStreamHandler", () => {
   });
 
   it("hints that a quiet prompt is still waiting instead of failing it", async () => {
-    const status = {
-      running: true,
-      initialized: true,
-      agentId: "codex",
-      sessionId: "session-a",
-      workspacePath: "/workspace",
-    };
-    vi.mocked(invoke).mockImplementation((command) =>
-      Promise.resolve(
-        command === "get_acp_status" || command === "start_acp_agent" ? status : undefined,
-      ),
-    );
+    mockOpenSessions({ "chat-1": "session-a" });
 
     const onResponsePhase = vi.fn();
     const { handler, handlers } = createHandler({ onResponsePhase });
@@ -563,26 +551,19 @@ describe("AcpStreamHandler", () => {
   });
 
   it("sends the next prompt once the stopped turn has finished", async () => {
-    const status = {
-      running: true,
-      initialized: true,
-      agentId: "codex",
-      sessionId: "session-a",
-      workspacePath: "/workspace",
-    };
-    vi.mocked(invoke).mockImplementation((command) =>
-      Promise.resolve(
-        command === "get_acp_status" || command === "start_acp_agent" ? status : undefined,
-      ),
-    );
+    mockOpenSessions({ "chat-1": "session-a" });
     const first = createHandler();
     const firstStart = (first.handler as unknown as AcpStreamHandler).start("First", {
       projectRoot: "/workspace",
     });
     await vi.advanceTimersByTimeAsync(1000);
     await firstStart;
-    await AcpStreamHandler.cancelPrompt();
-    expect(invoke).toHaveBeenCalledWith("cancel_acp_prompt");
+    await AcpStreamHandler.cancelPrompt("chat-1");
+    expect(invoke).toHaveBeenCalledWith("cancel_acp_prompt", {
+      sessionId: "session-a",
+      agentId: "codex",
+      workspacePath: "/workspace",
+    });
 
     const second = createHandler();
     const secondStart = (second.handler as unknown as AcpStreamHandler).start("Second", {
@@ -614,16 +595,7 @@ describe("AcpStreamHandler", () => {
   it("stops the startup instead of failing when Stop is pressed while the agent starts", async () => {
     let rejectStart: ((error: Error) => void) | undefined;
     vi.mocked(invoke).mockImplementation((command) => {
-      if (command === "get_acp_status") {
-        return Promise.resolve({
-          running: false,
-          initialized: false,
-          agentId: null,
-          sessionId: null,
-          workspacePath: null,
-        });
-      }
-      if (command === "start_acp_agent") {
+      if (command === "open_acp_session") {
         return new Promise((_, reject) => {
           rejectStart = reject;
         });
@@ -633,13 +605,19 @@ describe("AcpStreamHandler", () => {
 
     const onResponsePhase = vi.fn();
     const { handler, handlers } = createHandler({ onResponsePhase });
+    handler.activeSessionId = null;
     const start = (handler as unknown as AcpStreamHandler).start("Hey", {
       projectRoot: "/workspace",
     });
     await vi.advanceTimersByTimeAsync(0);
     expect(onResponsePhase).toHaveBeenCalledWith("starting");
 
-    await AcpStreamHandler.cancelPrompt();
+    await AcpStreamHandler.cancelPrompt("chat-1");
+    expect(invoke).toHaveBeenCalledWith("cancel_acp_prompt", {
+      sessionId: null,
+      agentId: "codex",
+      workspacePath: "/workspace",
+    });
     rejectStart?.(new Error("ACP agent startup was stopped"));
     await start;
 
@@ -648,46 +626,41 @@ describe("AcpStreamHandler", () => {
     expect(invoke).not.toHaveBeenCalledWith("install_acp_agent", expect.anything());
   });
 
-  it("invokes ACP session delete and logout commands", async () => {
-    await AcpStreamHandler.deleteSession("session-a");
-    await AcpStreamHandler.logoutAgent();
+  it("invokes ACP session delete, close and logout commands for the agent", async () => {
+    await AcpStreamHandler.deleteSession("gemini", "session-a");
+    await AcpStreamHandler.closeSession("session-b");
+    await AcpStreamHandler.logoutAgent("gemini");
 
     expect(invoke).toHaveBeenCalledWith("delete_acp_session", {
-      args: { sessionId: "session-a" },
+      args: { agentId: "gemini", workspacePath: "/workspace", sessionId: "session-a" },
     });
-    expect(invoke).toHaveBeenCalledWith("logout_acp_agent");
+    expect(invoke).toHaveBeenCalledWith("close_acp_session", { sessionId: "session-b" });
+    expect(invoke).toHaveBeenCalledWith("logout_acp_agent", {
+      agentId: "gemini",
+      workspacePath: "/workspace",
+    });
   });
 
   it("stops and eagerly starts a fresh ACP session", async () => {
     vi.mocked(invoke).mockImplementation((command) => {
-      if (command === "get_acp_status") {
+      if (command === "open_acp_session") {
         return Promise.resolve({
-          running: false,
-          initialized: false,
-          agentId: null,
-          sessionId: null,
-          workspacePath: null,
-        });
-      }
-      if (command === "start_acp_agent") {
-        return Promise.resolve({
-          running: true,
-          initialized: true,
-          agentId: "gemini-cli",
           sessionId: "fresh-session",
-          workspacePath: "/workspace",
+          status: agentStatus({ agentId: "gemini-cli", sessionIds: ["fresh-session"] }),
         });
       }
       return Promise.resolve(undefined);
     });
 
-    const restart = AcpStreamHandler.restartAgent("gemini-cli", "chat-1");
-    await vi.advanceTimersByTimeAsync(1000);
-    await restart;
+    await AcpStreamHandler.restartAgent("gemini-cli", "chat-1");
 
     const commands = vi.mocked(invoke).mock.calls.map(([command]) => command);
-    expect(commands.indexOf("stop_acp_agent")).toBeLessThan(commands.indexOf("start_acp_agent"));
-    expect(invoke).toHaveBeenCalledWith("start_acp_agent", {
+    expect(invoke).toHaveBeenCalledWith("stop_acp_agent", {
+      agentId: "gemini-cli",
+      workspacePath: "/workspace",
+    });
+    expect(commands.indexOf("stop_acp_agent")).toBeLessThan(commands.indexOf("open_acp_session"));
+    expect(invoke).toHaveBeenCalledWith("open_acp_session", {
       agentId: "gemini-cli",
       sessionId: null,
       workspacePath: "/workspace",
@@ -698,37 +671,34 @@ describe("AcpStreamHandler", () => {
   it("signs a running agent in place with the method the user picked", async () => {
     vi.mocked(invoke).mockImplementation(async (command) =>
       command === "get_acp_status"
-        ? { running: true, initialized: true, agentId: "gemini", sessionId: "session-a" }
+        ? [agentStatus({ agentId: "claude-acp" }), agentStatus({ agentId: "gemini" })]
         : undefined,
     );
 
     await AcpStreamHandler.authenticateAgent("gemini", "chat-1", "oauth-personal");
 
-    expect(invoke).toHaveBeenCalledWith("authenticate_acp_agent", { methodId: "oauth-personal" });
-    expect(vi.mocked(invoke).mock.calls.some(([command]) => command === "start_acp_agent")).toBe(
+    expect(invoke).toHaveBeenCalledWith("authenticate_acp_agent", {
+      agentId: "gemini",
+      workspacePath: "/workspace",
+      methodId: "oauth-personal",
+    });
+    expect(vi.mocked(invoke).mock.calls.some(([command]) => command === "open_acp_session")).toBe(
       false,
     );
   });
 
   it("starts a stopped agent with the method the user picked", async () => {
-    const status = {
-      running: true,
-      initialized: true,
-      agentId: "gemini",
-      sessionId: "session-b",
-      workspacePath: "/workspace",
-    };
     vi.mocked(invoke).mockImplementation(async (command) => {
-      if (command === "get_acp_status") return { running: false, agentId: "" };
-      if (command === "start_acp_agent") return status;
+      if (command === "get_acp_status") return [agentStatus({ agentId: "claude-acp" })];
+      if (command === "open_acp_session") {
+        return { sessionId: "session-b", status: agentStatus({ agentId: "gemini" }) };
+      }
       return undefined;
     });
 
-    const signIn = AcpStreamHandler.authenticateAgent("gemini", "chat-1", "gemini-api-key");
-    await vi.advanceTimersByTimeAsync(1000);
-    await signIn;
+    await AcpStreamHandler.authenticateAgent("gemini", "chat-1", "gemini-api-key");
 
-    expect(invoke).toHaveBeenCalledWith("start_acp_agent", {
+    expect(invoke).toHaveBeenCalledWith("open_acp_session", {
       agentId: "gemini",
       workspacePath: "/workspace",
       sessionId: null,
@@ -738,5 +708,107 @@ describe("AcpStreamHandler", () => {
     expect(
       vi.mocked(invoke).mock.calls.some(([command]) => command === "authenticate_acp_agent"),
     ).toBe(false);
+  });
+
+  it("runs prompts in two chats on the same agent at once, each in its own session", async () => {
+    chats.set("chat-1", { id: "chat-1", agentId: "codex", acpSessionId: "session-a" });
+    chats.set("chat-2", { id: "chat-2", agentId: "codex", acpSessionId: "session-b" });
+    mockOpenSessions({ "chat-1": "session-a", "chat-2": "session-b" });
+    const handlersFor = () => ({ onChunk: vi.fn(), onComplete: vi.fn(), onError: vi.fn() });
+    const firstHandlers = handlersFor();
+    const secondHandlers = handlersFor();
+    const first = new AcpStreamHandler("codex", firstHandlers, "chat-1");
+    const second = new AcpStreamHandler("codex", secondHandlers, "chat-2");
+
+    await Promise.all([
+      first.start("First", { projectRoot: "/workspace" }),
+      second.start("Second", { projectRoot: "/workspace" }),
+    ]);
+
+    expect(sentPrompts()).toEqual(["session-a", "session-b"]);
+    expect(firstHandlers.onError).not.toHaveBeenCalled();
+    expect(secondHandlers.onError).not.toHaveBeenCalled();
+
+    const route = (handler: AcpStreamHandler, event: AcpEvent) =>
+      (handler as unknown as { handleAcpEvent: (event: AcpEvent) => void }).handleAcpEvent(event);
+    const chunk = (sessionId: string, text: string): AcpEvent => ({
+      type: "content_chunk",
+      sessionId,
+      isComplete: false,
+      content: { type: "text", text },
+    });
+    for (const handler of [first, second]) {
+      route(handler, chunk("session-b", "for chat 2"));
+      route(handler, chunk("session-a", "for chat 1"));
+    }
+    expect(firstHandlers.onChunk.mock.calls).toEqual([["for chat 1"]]);
+    expect(secondHandlers.onChunk.mock.calls).toEqual([["for chat 2"]]);
+
+    // Stop in one chat cancels only that chat's session.
+    await AcpStreamHandler.cancelPrompt("chat-2");
+    expect(invoke).toHaveBeenCalledWith("cancel_acp_prompt", {
+      sessionId: "session-b",
+      agentId: "codex",
+      workspacePath: "/workspace",
+    });
+    const completion = (sessionId: string, stopReason: "end_turn" | "cancelled"): AcpEvent => ({
+      type: "prompt_complete",
+      sessionId,
+      stopReason,
+    });
+    route(second, completion("session-b", "cancelled"));
+    expect(secondHandlers.onComplete).toHaveBeenCalledWith({ outcome: "cancelled" });
+    expect(firstHandlers.onComplete).not.toHaveBeenCalled();
+
+    route(first, completion("session-a", "end_turn"));
+    expect(firstHandlers.onComplete).toHaveBeenCalledWith({
+      outcome: "completed",
+      stopReason: "end_turn",
+    });
+  });
+
+  it("refuses a second prompt in a chat whose turn is still running", async () => {
+    mockOpenSessions({ "chat-1": "session-a" });
+    const running = createHandler();
+    await (running.handler as unknown as AcpStreamHandler).start("First", {
+      projectRoot: "/workspace",
+    });
+
+    const second = createHandler();
+    await (second.handler as unknown as AcpStreamHandler).start("Second", {
+      projectRoot: "/workspace",
+    });
+
+    expect(second.handlers.onError).toHaveBeenCalledWith(
+      expect.stringContaining("still answering in this chat"),
+    );
+    expect(sentPrompts()).toEqual(["session-a"]);
+    running.handler.handleAcpEvent({
+      type: "prompt_complete",
+      sessionId: "session-a",
+      stopReason: "end_turn",
+    });
+  });
+
+  it("lets every chat on an agent that exited reconnect", () => {
+    const { handler, handlers } = createHandler();
+    (handler as unknown as { wasRunning: boolean }).wasRunning = true;
+
+    handler.handleAcpEvent({
+      type: "status_changed",
+      status: agentStatus({ agentId: "gemini", running: false, sessionIds: ["session-z"] }),
+      error: "ACP agent process exited: signal 9",
+    });
+    expect(handlers.onError).not.toHaveBeenCalled();
+
+    handler.handleAcpEvent({
+      type: "status_changed",
+      status: agentStatus({ running: false, initialized: false }),
+      error: "ACP agent process exited: signal 9",
+    });
+    expect(handlers.onError).toHaveBeenCalledWith(
+      "Agent disconnected unexpectedly (ACP agent process exited: signal 9). Click retry to restart.",
+      true,
+    );
   });
 });

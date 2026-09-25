@@ -87,6 +87,22 @@ impl ClientResponders {
          .is_some_and(|read| read.tx.send(content).is_ok())
    }
 
+   pub fn has_permission(&self, request_id: &str) -> bool {
+      is_pending(&self.permissions, request_id)
+   }
+
+   pub fn has_elicitation(&self, request_id: &str) -> bool {
+      is_pending(&self.elicitations, request_id)
+   }
+
+   pub fn has_buffer_read(&self, request_id: &str) -> bool {
+      self
+         .buffer_reads
+         .lock()
+         .unwrap_or_else(|poisoned| poisoned.into_inner())
+         .contains_key(request_id)
+   }
+
    /// Resolves what a cancelled prompt turn leaves waiting on the user: the session's permission
    /// requests get the `cancelled` outcome and its questions a `cancel` action, as ACP requires
    /// after `session/cancel`. Request-scoped questions are cancelled too, since the frontend shows
@@ -107,6 +123,13 @@ impl ClientResponders {
       }
       closed
    }
+}
+
+fn is_pending<T>(pending: &Pending<T>, request_id: &str) -> bool {
+   pending
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .contains_key(request_id)
 }
 
 fn take_pending<T>(pending: &Pending<T>, request_id: &str) -> Option<PendingEntry<T>> {
