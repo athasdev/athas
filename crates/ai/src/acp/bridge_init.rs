@@ -6,9 +6,7 @@ use super::{
    },
    client::{AthasAcpClient, ClientResponders},
    mcp_servers::{AcpSkippedMcpServer, McpServerConfig, select_mcp_servers},
-   process::{
-      force_kill_process_group, stop_child_tree, stop_child_tree_mut, terminate_process_group,
-   },
+   process::{stop_child_tree, stop_child_tree_mut},
    types::{
       AcpAgentCapabilities, AcpAuthMethod, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
       SessionModeState,
@@ -39,27 +37,48 @@ use tokio_util::{
    sync::CancellationToken,
 };
 
-pub(super) struct InitializedAcpWorker {
-   pub connection: Arc<AcpConnection>,
-   pub session_id: Option<acp::SessionId>,
-   pub auth_methods: Vec<acp::AuthMethod>,
-   pub described_auth_methods: Vec<AcpAuthMethod>,
-   pub agent_capabilities: AcpAgentCapabilities,
-   /// Configured MCP servers the agent cannot take, reported to the user.
-   pub skipped_mcp_servers: Vec<AcpSkippedMcpServer>,
+/// An agent process that finished `initialize` and can hold sessions.
+pub(super) struct StartedConnection {
+   pub handle: ConnectionHandle,
    pub process: Child,
    pub process_group_id: Option<u32>,
    pub io_handle: tokio::task::JoinHandle<()>,
-   pub client: Arc<AthasAcpClient>,
    pub responders: ClientResponders,
-   pub workspace_path: Option<PathBuf>,
 }
 
-impl InitializedAcpWorker {
-   /// Stops an agent that finished starting after the user already asked to stop it.
+impl StartedConnection {
+   /// Stops an agent that is not wanted anymore.
    pub(super) async fn shut_down(self) {
       self.io_handle.abort();
       stop_child_tree(self.process, self.process_group_id).await;
+   }
+}
+
+/// What session requests need from a running agent connection. Cheap to clone, so session setup
+/// can run off the worker loop.
+#[derive(Clone)]
+pub(super) struct ConnectionHandle {
+   pub agent_id: String,
+   pub agent_name: String,
+   pub connection: Arc<AcpConnection>,
+   pub client: Arc<AthasAcpClient>,
+   pub app_handle: AppHandle,
+   /// The resolved workspace the process runs in; `None` without a project.
+   pub workspace_path: Option<PathBuf>,
+   pub auth_methods: Vec<acp::AuthMethod>,
+   pub described_auth_methods: Vec<AcpAuthMethod>,
+   pub agent_capabilities: AcpAgentCapabilities,
+   pub supports_session_resume: bool,
+   recent_stderr: RecentAgentStderr,
+}
+
+impl ConnectionHandle {
+   /// The directory sessions are created in.
+   pub(super) fn cwd(&self) -> PathBuf {
+      self
+         .workspace_path
+         .clone()
+         .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
    }
 }
 
@@ -77,18 +96,16 @@ pub(super) struct StartupAuth {
    pub allow_automatic: bool,
 }
 
-pub(super) async fn initialize_worker(
+/// Starts the agent process and runs `initialize`. Sessions are opened on it afterwards with
+/// [`open_session`]. `stop` ends startup at any point: the process is killed and the caller hears
+/// that startup was stopped.
+pub(super) async fn start_connection(
    config: &AgentConfig,
-   workspace_path: Option<String>,
+   workspace_path: Option<PathBuf>,
    app_handle: AppHandle,
    terminal_manager: Arc<TerminalManager>,
-   requested_session_id: Option<String>,
-   startup_auth: StartupAuth,
-   mcp_servers: &[McpServerConfig],
-   map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
    stop: CancellationToken,
-) -> Result<InitializedAcpWorker> {
-   let workspace_path = resolve_workspace_path(workspace_path)?;
+) -> Result<StartedConnection> {
    let mut child = spawn_agent_process(config, workspace_path.as_deref())?;
    let process_group_id = child.id();
    let stdin = child
@@ -152,134 +169,153 @@ pub(super) async fn initialize_worker(
          log::error!("ACP I/O error: {}", e);
       }
    });
-   // Startup can take minutes (a first `npx` download, a slow login), so Stop must be able to
-   // end it: the process is killed and the caller hears that startup was stopped.
+   // Startup can take minutes (a first `npx` download), so Stop must be able to end it.
    let startup = async {
       let connection = Arc::new(
          connection_rx
             .await
             .map_err(|_| anyhow::anyhow!("Failed to establish ACP connection"))?,
       );
-
-      let init_response = initialize_connection(connection.clone(), &mut child, &io_handle).await?;
-      let auth_methods = init_response.auth_methods.clone();
-      let described_auth_methods = describe_auth_methods(&auth_methods, config);
-      let supports_session_resume = init_response
-         .agent_capabilities
-         .session_capabilities
-         .resume
-         .is_some();
-      let agent_capabilities: AcpAgentCapabilities = init_response.agent_capabilities.into();
-      let mcp_selection = select_mcp_servers(
-         mcp_servers,
-         &agent_capabilities.mcp_capabilities,
-         find_executable,
-      );
-      if !mcp_selection.servers.is_empty() || !mcp_selection.skipped.is_empty() {
-         log::info!(
-            "Offering {} MCP server(s) to {}; skipped {} the agent does not support",
-            mcp_selection.servers.len(),
-            config.name,
-            mcp_selection.skipped.len()
-         );
-      }
-
-      let cwd = workspace_path
-         .clone()
-         .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-      log::info!(
-         "ACP workspace path resolved to {}",
-         path_to_string(cwd.as_path())
-      );
-
-      let session_bootstrap = bootstrap_session(
-         connection.clone(),
-         client.clone(),
-         cwd,
-         requested_session_id,
-         SessionBootstrapContext {
-            auth_methods: &auth_methods,
-            startup_auth,
-            supports_session_resume,
-            mcp_servers: &mcp_selection.servers,
-            map_config_options,
-            child: &mut child,
-            io_handle: &io_handle,
-         },
-      )
-      .await;
-      let session_bootstrap = match session_bootstrap {
-         Ok(session) => session,
-         Err(error) => {
-            if error.is::<AuthenticationRequired>()
-               && let Err(emit_error) = app_handle.emit(
-                  "acp-event",
-                  AcpEvent::AuthRequired {
-                     agent_id: config.id.clone(),
-                     session_id: None,
-                     methods: described_auth_methods,
-                  },
-               )
-            {
-               log::warn!("Failed to emit ACP auth required event: {}", emit_error);
-            }
-            tokio::task::yield_now().await;
-            return Err(with_agent_stderr(error, &recent_stderr).await);
-         }
-      };
-
-      Ok::<_, anyhow::Error>((
-         connection,
-         auth_methods,
-         described_auth_methods,
-         agent_capabilities,
-         mcp_selection.skipped,
-         session_bootstrap,
-      ))
+      let init_response = initialize_connection(connection.clone()).await?;
+      Ok::<_, anyhow::Error>((connection, init_response))
    };
    let outcome = tokio::select! {
       result = startup => Some(result),
       () = stop.cancelled() => None,
    };
-   let Some(result) = outcome else {
-      io_handle.abort();
-      stop_child_tree_mut(&mut child, process_group_id).await;
-      bail!(ACP_STARTUP_STOPPED);
+   let result = match outcome {
+      Some(Ok(result)) => result,
+      Some(Err(error)) => {
+         io_handle.abort();
+         stop_child_tree_mut(&mut child, process_group_id).await;
+         return Err(with_agent_stderr(error, &recent_stderr).await);
+      }
+      None => {
+         io_handle.abort();
+         stop_child_tree_mut(&mut child, process_group_id).await;
+         bail!(ACP_STARTUP_STOPPED);
+      }
    };
-   let (
-      connection,
-      auth_methods,
-      described_auth_methods,
-      agent_capabilities,
-      skipped_mcp_servers,
-      session_bootstrap,
-   ) = result?;
+   let (connection, init_response) = result;
+   let auth_methods = init_response.auth_methods.clone();
+   let described_auth_methods = describe_auth_methods(&auth_methods, config);
+   let supports_session_resume = init_response
+      .agent_capabilities
+      .session_capabilities
+      .resume
+      .is_some();
 
+   Ok(StartedConnection {
+      handle: ConnectionHandle {
+         agent_id: config.id.clone(),
+         agent_name: config.name.clone(),
+         connection,
+         client,
+         app_handle,
+         workspace_path,
+         auth_methods,
+         described_auth_methods,
+         agent_capabilities: init_response.agent_capabilities.into(),
+         supports_session_resume,
+         recent_stderr,
+      },
+      process: child,
+      process_group_id,
+      io_handle,
+      responders,
+   })
+}
+
+/// A session a chat can prompt.
+pub(super) struct OpenedSession {
+   pub session_id: acp::SessionId,
+   /// Configured MCP servers the agent cannot take, reported to the user.
+   pub skipped_mcp_servers: Vec<AcpSkippedMcpServer>,
+}
+
+/// Opens a session on a running agent: loads (or resumes) `requested_session_id` when given and
+/// the agent still has it, otherwise creates a new one. The session's initial modes and config
+/// options are emitted as events. When the agent wants a sign-in Athas may not do on its own, an
+/// `auth_required` event is emitted and the open fails with [`AuthenticationRequired`].
+pub(super) async fn open_session(
+   handle: ConnectionHandle,
+   requested_session_id: Option<String>,
+   startup_auth: StartupAuth,
+   mcp_servers: Vec<McpServerConfig>,
+   map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
+) -> Result<OpenedSession> {
+   let mcp_selection = select_mcp_servers(
+      &mcp_servers,
+      &handle.agent_capabilities.mcp_capabilities,
+      find_executable,
+   );
+   if !mcp_selection.servers.is_empty() || !mcp_selection.skipped.is_empty() {
+      log::info!(
+         "Offering {} MCP server(s) to {}; skipped {} the agent does not support",
+         mcp_selection.servers.len(),
+         handle.agent_name,
+         mcp_selection.skipped.len()
+      );
+   }
+
+   let cwd = handle.cwd();
+   log::info!(
+      "ACP workspace path resolved to {}",
+      path_to_string(cwd.as_path())
+   );
+
+   let session_bootstrap = bootstrap_session(
+      handle.connection.clone(),
+      cwd,
+      requested_session_id,
+      SessionBootstrapContext {
+         auth_methods: &handle.auth_methods,
+         startup_auth,
+         supports_session_resume: handle.supports_session_resume,
+         mcp_servers: &mcp_selection.servers,
+         map_config_options,
+      },
+   )
+   .await;
+   let session_bootstrap = match session_bootstrap {
+      Ok(session) => session,
+      Err(error) => {
+         if error.is::<AuthenticationRequired>()
+            && let Err(emit_error) = handle.app_handle.emit(
+               "acp-event",
+               AcpEvent::AuthRequired {
+                  agent_id: handle.agent_id.clone(),
+                  session_id: None,
+                  methods: handle.described_auth_methods.clone(),
+               },
+            )
+         {
+            log::warn!("Failed to emit ACP auth required event: {}", emit_error);
+         }
+         tokio::task::yield_now().await;
+         return Err(with_agent_stderr(error, &handle.recent_stderr).await);
+      }
+   };
+
+   handle
+      .client
+      .set_session_id(session_bootstrap.session_id.to_string())
+      .await;
    emit_initial_session_state(
-      &app_handle,
-      session_bootstrap.session_id.as_ref(),
+      &handle.app_handle,
+      &session_bootstrap.session_id,
       session_bootstrap.initial_modes,
       session_bootstrap.initial_config_options,
    );
 
-   Ok(InitializedAcpWorker {
-      connection,
+   Ok(OpenedSession {
       session_id: session_bootstrap.session_id,
-      auth_methods,
-      described_auth_methods,
-      agent_capabilities,
-      skipped_mcp_servers,
-      process: child,
-      process_group_id,
-      io_handle,
-      client,
-      responders,
-      workspace_path,
+      skipped_mcp_servers: mcp_selection.skipped,
    })
 }
 
 struct SessionBootstrap {
-   session_id: Option<acp::SessionId>,
+   session_id: acp::SessionId,
    initial_modes: Option<SessionModeState>,
    initial_config_options: Option<Vec<SessionConfigOption>>,
 }
@@ -294,8 +330,90 @@ where
    /// Sent in `session/new`, `session/load` and `session/resume`.
    mcp_servers: &'a [acp::McpServer],
    map_config_options: F,
-   child: &'a mut Child,
-   io_handle: &'a tokio::task::JoinHandle<()>,
+}
+
+pub(super) struct InitializedAcpWorker {
+   pub connection: Arc<AcpConnection>,
+   pub session_id: Option<acp::SessionId>,
+   pub auth_methods: Vec<acp::AuthMethod>,
+   pub described_auth_methods: Vec<AcpAuthMethod>,
+   pub agent_capabilities: AcpAgentCapabilities,
+   /// Configured MCP servers the agent cannot take, reported to the user.
+   pub skipped_mcp_servers: Vec<AcpSkippedMcpServer>,
+   pub process: Child,
+   pub process_group_id: Option<u32>,
+   pub io_handle: tokio::task::JoinHandle<()>,
+   pub client: Arc<AthasAcpClient>,
+   pub responders: ClientResponders,
+   pub workspace_path: Option<PathBuf>,
+}
+
+impl InitializedAcpWorker {
+   /// Stops an agent that finished starting after the user already asked to stop it.
+   pub(super) async fn shut_down(self) {
+      self.io_handle.abort();
+      stop_child_tree(self.process, self.process_group_id).await;
+   }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) async fn initialize_worker(
+   config: &AgentConfig,
+   workspace_path: Option<String>,
+   app_handle: AppHandle,
+   terminal_manager: Arc<TerminalManager>,
+   requested_session_id: Option<String>,
+   startup_auth: StartupAuth,
+   mcp_servers: &[McpServerConfig],
+   map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
+   stop: CancellationToken,
+) -> Result<InitializedAcpWorker> {
+   let workspace_path = resolve_workspace_path(workspace_path)?;
+   let started = start_connection(
+      config,
+      workspace_path.clone(),
+      app_handle,
+      terminal_manager,
+      stop.clone(),
+   )
+   .await?;
+   let open = open_session(
+      started.handle.clone(),
+      requested_session_id,
+      startup_auth,
+      mcp_servers.to_vec(),
+      map_config_options,
+   );
+   let outcome = tokio::select! {
+      result = open => Some(result),
+      () = stop.cancelled() => None,
+   };
+   let opened = match outcome {
+      Some(Ok(opened)) => opened,
+      Some(Err(error)) => {
+         started.shut_down().await;
+         return Err(error);
+      }
+      None => {
+         started.shut_down().await;
+         bail!(ACP_STARTUP_STOPPED);
+      }
+   };
+   let handle = started.handle;
+   Ok(InitializedAcpWorker {
+      connection: handle.connection,
+      session_id: Some(opened.session_id),
+      auth_methods: handle.auth_methods,
+      described_auth_methods: handle.described_auth_methods,
+      agent_capabilities: handle.agent_capabilities,
+      skipped_mcp_servers: opened.skipped_mcp_servers,
+      process: started.process,
+      process_group_id: started.process_group_id,
+      io_handle: started.io_handle,
+      client: handle.client,
+      responders: started.responders,
+      workspace_path,
+   })
 }
 
 fn configure_background_agent_command(command: &mut Command) {
@@ -430,11 +548,7 @@ fn client_capabilities() -> acp::ClientCapabilities {
       .meta(client_meta)
 }
 
-async fn initialize_connection(
-   connection: Arc<AcpConnection>,
-   child: &mut Child,
-   io_handle: &tokio::task::JoinHandle<()>,
-) -> Result<acp::InitializeResponse> {
+async fn initialize_connection(connection: Arc<AcpConnection>) -> Result<acp::InitializeResponse> {
    let init_request = acp::InitializeRequest::new(ProtocolVersion::LATEST)
       .client_capabilities(client_capabilities())
       .client_info(acp::Implementation::new("athas", env!("CARGO_PKG_VERSION")).title("Athas"));
@@ -457,27 +571,18 @@ async fn initialize_connection(
          log::info!("ACP connection initialized successfully");
          Ok(response)
       }
-      Ok(Err(e)) => {
-         io_handle.abort();
-         let process_group_id = child.id();
-         stop_child_tree_mut(child, process_group_id).await;
-         bail!("Failed to initialize ACP connection: {}", e);
-      }
-      Err(_) => {
-         io_handle.abort();
-         let process_group_id = child.id();
-         stop_child_tree_mut(child, process_group_id).await;
-         bail!(
-            "ACP initialization timed out - agent may not support ACP protocol or requires \
-             different arguments"
-         );
-      }
+      Ok(Err(e)) => bail!("Failed to initialize ACP connection: {}", e),
+      Err(_) => bail!(
+         "ACP initialization timed out - agent may not support ACP protocol or requires different \
+          arguments"
+      ),
    }
 }
 
+/// Opens the session through `session/load`, then `session/resume`, then `session/new`, signing
+/// in when the agent asks for it. Failing does not touch the agent process; the caller decides.
 async fn bootstrap_session(
    connection: Arc<AcpConnection>,
-   client: Arc<AthasAcpClient>,
    cwd: PathBuf,
    requested_session_id: Option<String>,
    ctx: SessionBootstrapContext<
@@ -485,9 +590,9 @@ async fn bootstrap_session(
       impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
    >,
 ) -> Result<SessionBootstrap> {
-   log::info!("Creating ACP session in {:?}...", cwd);
+   log::info!("Opening ACP session in {:?}...", cwd);
 
-   // Terminal methods are never sent here: the user runs them, and startup is retried after.
+   // Terminal methods are never sent here: the user runs them, and the open is retried after.
    let authenticate = |connection: Arc<AcpConnection>| {
       let method = startup_auth_method(
          ctx.auth_methods,
@@ -528,12 +633,7 @@ async fn bootstrap_session(
       if let Ok(Err(err)) = &load_result
          && matches!(err.code, acp::ErrorCode::AuthRequired)
       {
-         if let Err(e) = authenticate(connection.clone()).await {
-            ctx.io_handle.abort();
-            terminate_process_group(ctx.child.id());
-            let _ = ctx.child.kill().await;
-            return Err(e);
-         }
+         authenticate(connection.clone()).await?;
          load_result = load_session(
             connection.clone(),
             cwd.clone(),
@@ -546,9 +646,8 @@ async fn bootstrap_session(
       match load_result {
          Ok(Ok(load_response)) => {
             log::info!("ACP session loaded: {}", existing_session_id);
-            client.set_session_id(existing_session_id.clone()).await;
             return Ok(SessionBootstrap {
-               session_id: Some(acp::SessionId::new(existing_session_id)),
+               session_id: acp::SessionId::new(existing_session_id),
                initial_modes: load_response.modes.map(map_mode_state),
                initial_config_options: load_response.config_options.map(&ctx.map_config_options),
             });
@@ -572,12 +671,7 @@ async fn bootstrap_session(
             if let Ok(Err(err)) = &resume_result
                && matches!(err.code, acp::ErrorCode::AuthRequired)
             {
-               if let Err(e) = authenticate(connection.clone()).await {
-                  ctx.io_handle.abort();
-                  terminate_process_group(ctx.child.id());
-                  let _ = ctx.child.kill().await;
-                  return Err(e);
-               }
+               authenticate(connection.clone()).await?;
                resume_result = resume_session(
                   connection.clone(),
                   cwd.clone(),
@@ -590,9 +684,8 @@ async fn bootstrap_session(
             match resume_result {
                Ok(Ok(resume_response)) => {
                   log::info!("ACP session resumed: {}", existing_session_id);
-                  client.set_session_id(existing_session_id.clone()).await;
                   return Ok(SessionBootstrap {
-                     session_id: Some(acp::SessionId::new(existing_session_id)),
+                     session_id: acp::SessionId::new(existing_session_id),
                      initial_modes: resume_response.modes.map(map_mode_state),
                      initial_config_options: resume_response
                         .config_options
@@ -611,22 +704,12 @@ async fn bootstrap_session(
                      err
                   );
                }
-               Ok(Err(err)) => {
-                  ctx.io_handle.abort();
-                  terminate_process_group(ctx.child.id());
-                  let _ = ctx.child.kill().await;
-                  bail!(
-                     "Failed to resume ACP session {}: {}",
-                     existing_session_id,
-                     err
-                  );
-               }
-               Err(_) => {
-                  ctx.io_handle.abort();
-                  force_kill_process_group(ctx.child.id());
-                  let _ = ctx.child.kill().await;
-                  bail!("ACP session/resume timed out");
-               }
+               Ok(Err(err)) => bail!(
+                  "Failed to resume ACP session {}: {}",
+                  existing_session_id,
+                  err
+               ),
+               Err(_) => bail!("ACP session/resume timed out"),
             }
          }
          Ok(Err(err))
@@ -640,22 +723,12 @@ async fn bootstrap_session(
                err
             );
          }
-         Ok(Err(err)) => {
-            ctx.io_handle.abort();
-            terminate_process_group(ctx.child.id());
-            let _ = ctx.child.kill().await;
-            bail!(
-               "Failed to load ACP session {}: {}",
-               existing_session_id,
-               err
-            );
-         }
-         Err(_) => {
-            ctx.io_handle.abort();
-            force_kill_process_group(ctx.child.id());
-            let _ = ctx.child.kill().await;
-            bail!("ACP session/load timed out");
-         }
+         Ok(Err(err)) => bail!(
+            "Failed to load ACP session {}: {}",
+            existing_session_id,
+            err
+         ),
+         Err(_) => bail!("ACP session/load timed out"),
       }
    }
 
@@ -663,12 +736,7 @@ async fn bootstrap_session(
    if let Ok(Err(err)) = &session_result
       && matches!(err.code, acp::ErrorCode::AuthRequired)
    {
-      if let Err(e) = authenticate(connection.clone()).await {
-         ctx.io_handle.abort();
-         terminate_process_group(ctx.child.id());
-         let _ = ctx.child.kill().await;
-         return Err(e);
-      }
+      authenticate(connection.clone()).await?;
       log::info!("ACP authentication succeeded, retrying session creation");
       session_result = create_session(connection.clone(), cwd, ctx.mcp_servers).await;
    }
@@ -677,25 +745,18 @@ async fn bootstrap_session(
       Ok(Ok(session)) => session,
       Ok(Err(e)) => {
          log::error!("Failed to create ACP session: {}", e);
-         ctx.io_handle.abort();
-         terminate_process_group(ctx.child.id());
-         let _ = ctx.child.kill().await;
          bail!("Failed to create ACP session: {}", e);
       }
       Err(_) => {
          log::error!("ACP session creation timed out");
-         ctx.io_handle.abort();
-         force_kill_process_group(ctx.child.id());
-         let _ = ctx.child.kill().await;
          bail!("ACP session creation timed out");
       }
    };
 
    log::info!("ACP session created: {}", session.session_id);
-   client.set_session_id(session.session_id.to_string()).await;
 
    Ok(SessionBootstrap {
-      session_id: Some(session.session_id),
+      session_id: session.session_id,
       initial_modes: session.modes.map(map_mode_state),
       initial_config_options: session.config_options.map(ctx.map_config_options),
    })
@@ -761,15 +822,15 @@ fn map_mode_state(modes: acp::SessionModeState) -> SessionModeState {
 
 fn emit_initial_session_state(
    app_handle: &AppHandle,
-   session_id: Option<&acp::SessionId>,
+   session_id: &acp::SessionId,
    initial_modes: Option<SessionModeState>,
    initial_config_options: Option<Vec<SessionConfigOption>>,
 ) {
-   if let (Some(sid), Some(mode_state)) = (session_id, initial_modes)
+   if let Some(mode_state) = initial_modes
       && let Err(e) = app_handle.emit(
          "acp-event",
          AcpEvent::SessionModeUpdate {
-            session_id: sid.to_string(),
+            session_id: session_id.to_string(),
             mode_state,
          },
       )
@@ -777,11 +838,11 @@ fn emit_initial_session_state(
       log::warn!("Failed to emit initial session mode state: {}", e);
    }
 
-   if let (Some(sid), Some(config_options)) = (session_id, initial_config_options)
+   if let Some(config_options) = initial_config_options
       && let Err(e) = app_handle.emit(
          "acp-event",
          AcpEvent::ConfigOptionsUpdate {
-            session_id: sid.to_string(),
+            session_id: session_id.to_string(),
             config_options,
          },
       )
