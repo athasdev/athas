@@ -1,11 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
 import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
+import { openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   ArrowClockwiseIcon,
   ArrowsClockwiseIcon,
+  HistoryIcon,
   SignOutIcon,
   SparkleIcon,
   SquareIcon,
@@ -27,6 +29,8 @@ interface AdvancedActionsParams {
   };
   /** The current chat's running agent, when it advertises ACP logout. */
   logOutAgentId: string | null;
+  /** The current chat's running agent, when it lists its sessions (ACP `session/list`). */
+  browseSessionsAgentId: string | null;
   vimMode: boolean;
   vimCommands: Array<{ name: string; description: string; execute: () => void }>;
   setMode: (mode: "normal" | "insert" | "visual") => void;
@@ -43,6 +47,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
   const {
     lspStatus,
     logOutAgentId,
+    browseSessionsAgentId,
     vimMode,
     vimCommands,
     setMode,
@@ -89,6 +94,21 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
         onClose();
       },
     },
+    ...(browseSessionsAgentId
+      ? [
+          {
+            id: "ai-import-agent-session",
+            label: "AI: Import Agent Session",
+            description: "Browse the running agent's sessions for this workspace and open one",
+            icon: <HistoryIcon />,
+            category: "AI",
+            action: () => {
+              onClose();
+              openAgentSessions(browseSessionsAgentId);
+            },
+          },
+        ]
+      : []),
     ...(logOutAgentId
       ? [
           {

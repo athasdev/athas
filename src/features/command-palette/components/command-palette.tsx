@@ -44,6 +44,7 @@ import { Kbd } from "@/ui/kbd";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import Keybinding from "@/features/keymaps/components/keybinding";
 import { canLogOutOfAcpAgent } from "@/features/ai/lib/acp-logout";
+import { canBrowseAgentSessions } from "@/features/ai/lib/open-agent-sessions";
 import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { createAdvancedActions } from "../constants/advanced-actions";
@@ -170,6 +171,12 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       state.chats.find((chat) => chat.id === state.currentChatId)?.agentId ?? state.selectedAgentId;
     const status = selectAcpAgentStatus(state, agentId, rootFolderPath);
     return canLogOutOfAcpAgent(status, agentId) ? agentId : null;
+  });
+  const browseSessionsAgentId = useAIChatStore((state) => {
+    const agentId =
+      state.chats.find((chat) => chat.id === state.currentChatId)?.agentId ?? state.selectedAgentId;
+    const status = selectAcpAgentStatus(state, agentId, rootFolderPath);
+    return canBrowseAgentSessions(status, agentId) ? agentId : null;
   });
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const { checkAuth: checkGitHubAuth } = useGitHubStore.use.actions();
@@ -400,6 +407,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     ...createAdvancedActions({
       lspStatus,
       logOutAgentId,
+      browseSessionsAgentId,
       vimMode: commandSettings.vimMode,
       vimCommands,
       setMode,

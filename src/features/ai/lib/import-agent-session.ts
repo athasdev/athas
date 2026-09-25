@@ -11,7 +11,7 @@ export interface ImportableAgentSession {
 }
 
 /** The chat that already holds `sessionId` on `agentId`, if any. */
-export function findChatForAgentSession(agentId: AgentType, sessionId: string): string | null {
+function findChatForAgentSession(agentId: AgentType, sessionId: string): string | null {
   const chat = useAIChatStore
     .getState()
     .chats.find(

@@ -97,7 +97,7 @@ interface AcpAgentCapabilities {
   authCapabilities: unknown;
 }
 
-interface AcpSessionInfo {
+export interface AcpSessionInfo {
   sessionId: string;
   cwd: string;
   title?: string | null;

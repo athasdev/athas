@@ -20,6 +20,8 @@ import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { useAIChatStore } from "../../stores/ai-chat.store";
 import ChatHistoryDropdown from "../history/chat-history-dropdown";
+import { selectAcpAgentStatus } from "@/features/ai/lib/acp-session-state";
+import { canBrowseAgentSessions, openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
 import { useNewAgentAction } from "../../hooks/use-new-agent-action";
 import { isAgentWindow, openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { requestWindowClose } from "@/features/window/utils/request-window-close";
@@ -68,6 +70,12 @@ export function ChatHeader({
   const currentChat = chats.find((chat) => chat.id === effectiveChatId);
   const currentAgentId = currentChat?.agentId ?? selectedAgentId;
   const handleNewAgent = useNewAgentAction({ agentId: currentAgentId });
+  const canBrowseSessions = useAIChatStore((state) =>
+    canBrowseAgentSessions(
+      selectAcpAgentStatus(state, currentAgentId, workspacePath),
+      currentAgentId,
+    ),
+  );
   const messageSearchInputRef = useRef<HTMLInputElement>(null);
   const workspaceChats = useMemo(
     () => selectAgentSessions(chats, { workspacePath, keepIds: [effectiveChatId] }),
@@ -212,6 +220,9 @@ export function ChatHeader({
                   onSwitchToChat={onSwitchChat}
                   onSetChatArchived={setChatArchived}
                   onDeleteChat={onDeleteChat ?? (() => {})}
+                  onBrowseAgentSessions={
+                    canBrowseSessions ? () => openAgentSessions(currentAgentId) : undefined
+                  }
                 />
               )}
 
