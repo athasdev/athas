@@ -1,4 +1,5 @@
 import type { AcpElicitationRequest } from "../lib/acp-elicitation";
+import type { AcpSkippedMcpServer } from "@/features/ai/types/mcp-server.types";
 // Types for Agent Client Protocol (ACP) integration
 
 export interface AgentConfig {
@@ -30,6 +31,8 @@ export interface AcpAgentStatus {
   agentCapabilities?: AcpAgentCapabilities | null;
   /** The sign-in methods the agent offered in `initialize`. */
   authMethods?: AcpAuthMethod[];
+  /** Configured MCP servers left out because the agent does not support their transport. */
+  skippedMcpServers?: AcpSkippedMcpServer[];
 }
 
 /** The command a terminal sign-in method runs in an Athas terminal. */

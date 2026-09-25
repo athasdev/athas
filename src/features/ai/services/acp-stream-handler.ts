@@ -1,6 +1,7 @@
 import type { AcpElicitationResponse } from "../lib/acp-elicitation";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { toast } from "sonner";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type {
   AcpAgentStatus,
@@ -22,6 +23,8 @@ import {
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { normalizeAcpWorkspacePath } from "@/features/ai/lib/acp-workspace-path";
 import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
+import { formatSkippedMcpServersNotice } from "@/features/ai/lib/mcp-servers";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { buildContextPrompt } from "../utils/ai-context-builder";
 
 interface AcpHandlers {
@@ -241,6 +244,7 @@ export class AcpStreamHandler {
 
         useAIChatStore.getState().actions.setAcpStatus(startStatus);
         this.activeSessionId = startStatus.sessionId ?? null;
+        this.reportSkippedMcpServers(startStatus);
 
         if (startStatus.sessionId) {
           if (targetChat) {
@@ -275,6 +279,9 @@ export class AcpStreamHandler {
           workspacePath,
           sessionId,
           ...(this.authMethodId ? { authMethodId: this.authMethodId } : {}),
+          mcpServers: useSettingsStore
+            .getState()
+            .settings.mcpServers.filter((server) => server.enabled),
         }),
         ACP_START_TIMEOUT_MS,
         `${this.agentId} startup timed out`,
@@ -286,6 +293,12 @@ export class AcpStreamHandler {
       }
       throw error;
     }
+  }
+
+  /** Tells the user once per agent start which configured MCP servers the agent left out. */
+  private reportSkippedMcpServers(status: AcpAgentStatus) {
+    const notice = formatSkippedMcpServersNotice(this.agentId, status.skippedMcpServers ?? []);
+    if (notice) toast.warning(notice);
   }
 
   private getWorkspacePath(): string | null {
