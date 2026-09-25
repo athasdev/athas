@@ -48,6 +48,8 @@ export interface AcpOpenedSession {
    * continues in a new session without the agent's earlier context.
    */
   contextLost?: boolean;
+  /** The conversation an imported session replayed, as the events a live turn would emit. */
+  history?: AcpEvent[];
 }
 
 /** What an ACP session advertises: its slash commands, modes and config options. */

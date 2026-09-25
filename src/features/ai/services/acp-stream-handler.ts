@@ -857,6 +857,28 @@ export class AcpStreamHandler {
     });
   }
 
+  /**
+   * Opens one of the agent's own sessions for a new chat with `session/load`. The agent replays
+   * the conversation, and the answer carries it so the chat can show it.
+   */
+  static async importSession(agentId: string, sessionId: string): Promise<AcpOpenedSession> {
+    const opened = await withTimeout(
+      invoke<AcpOpenedSession>("open_acp_session", {
+        agentId,
+        workspacePath: AcpStreamHandler.currentWorkspacePath(),
+        sessionId,
+        importSession: true,
+        mcpServers: useSettingsStore
+          .getState()
+          .settings.mcpServers.filter((server) => server.enabled),
+      }),
+      ACP_START_TIMEOUT_MS,
+      `${agentId} did not load the session in time`,
+    );
+    useAIChatStore.getState().actions.setAcpAgentStatus(opened.status);
+    return opened;
+  }
+
   static async deleteSession(agentId: string, sessionId: string): Promise<void> {
     await invoke("delete_acp_session", {
       args: { agentId, workspacePath: AcpStreamHandler.currentWorkspacePath(), sessionId },

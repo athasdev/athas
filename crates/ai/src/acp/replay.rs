@@ -1,8 +1,9 @@
 //! What happens to a session's updates while `session/load` replays its history. The agent
 //! sends the whole conversation again as `session/update` notifications before it answers the
-//! load. Athas keeps its own history, so reattaching a chat drops the replayed messages.
-//! Everything else the replay carries (commands, modes, config options, session info, usage)
-//! still describes the session and is emitted as usual.
+//! load. Athas keeps its own history, so reattaching a chat drops the replayed messages; importing
+//! an agent's session collects them so the new chat can show them. Everything else the replay
+//! carries (commands, modes, config options, session info, usage) still describes the session and
+//! is emitted as usual.
 //!
 //! The SDK handles notifications one at a time, in order, before it routes the response they
 //! precede, so every replayed update passes through here before the load returns.
@@ -14,19 +15,27 @@ use std::{collections::HashMap, sync::Mutex};
 pub(super) enum ReplayMode {
    /// Reattaching a chat Athas has the history for: drop the replayed conversation.
    Suppress,
+   /// Importing a session into a new chat: keep the replayed conversation for the caller.
+   Collect,
    /// The load failed or timed out, and the chat moved on: drop whatever the agent still sends
    /// for the session, so nothing reaches the chat's next session or turn.
    Discard,
 }
 
+#[derive(Debug)]
+struct Replay {
+   mode: ReplayMode,
+   collected: Vec<AcpEvent>,
+}
+
 /// The sessions being loaded on one agent connection, by session id.
 #[derive(Debug, Default)]
 pub(super) struct ReplayRouter {
-   sessions: Mutex<HashMap<String, ReplayMode>>,
+   sessions: Mutex<HashMap<String, Replay>>,
 }
 
 impl ReplayRouter {
-   fn sessions(&self) -> std::sync::MutexGuard<'_, HashMap<String, ReplayMode>> {
+   fn sessions(&self) -> std::sync::MutexGuard<'_, HashMap<String, Replay>> {
       self
          .sessions
          .lock()
@@ -35,12 +44,22 @@ impl ReplayRouter {
 
    /// Starts routing `session_id`'s updates with `mode`, before `session/load` is sent.
    pub fn begin(&self, session_id: &str, mode: ReplayMode) {
-      self.sessions().insert(session_id.to_string(), mode);
+      self.sessions().insert(
+         session_id.to_string(),
+         Replay {
+            mode,
+            collected: Vec::new(),
+         },
+      );
    }
 
-   /// The load succeeded: later updates are live again.
-   pub fn finish(&self, session_id: &str) {
-      self.sessions().remove(session_id);
+   /// The load succeeded: later updates are live again. Returns the collected history.
+   pub fn finish(&self, session_id: &str) -> Vec<AcpEvent> {
+      self
+         .sessions()
+         .remove(session_id)
+         .map(|replay| replay.collected)
+         .unwrap_or_default()
    }
 
    /// The load failed: keep dropping the session's updates.
@@ -48,17 +67,23 @@ impl ReplayRouter {
       self.begin(session_id, ReplayMode::Discard);
    }
 
-   /// Returns the event when it should be emitted now; replayed history is dropped.
+   /// Returns the event when it should be emitted now; replayed history is dropped or collected.
    pub fn route(&self, event: AcpEvent) -> Option<AcpEvent> {
       let Some(session_id) = session_id_of(&event) else {
          return Some(event);
       };
-      let mode = self.sessions().get(session_id).copied();
-      match mode {
-         None => Some(event),
-         Some(ReplayMode::Discard) => None,
-         Some(ReplayMode::Suppress) if is_history(&event) => None,
-         Some(ReplayMode::Suppress) => Some(event),
+      let mut sessions = self.sessions();
+      let Some(replay) = sessions.get_mut(session_id) else {
+         return Some(event);
+      };
+      match replay.mode {
+         ReplayMode::Discard => None,
+         _ if !is_history(&event) => Some(event),
+         ReplayMode::Suppress => None,
+         ReplayMode::Collect => {
+            replay.collected.push(event);
+            None
+         }
       }
    }
 }
@@ -134,8 +159,26 @@ mod tests {
 
       assert!(router.route(message("s1", "old answer")).is_none());
       assert!(router.route(current_mode("s1")).is_some());
-      router.finish("s1");
+      assert!(router.finish("s1").is_empty());
       assert!(router.route(message("s1", "new answer")).is_some());
+   }
+
+   #[test]
+   fn collecting_keeps_replayed_history_for_the_caller() {
+      let router = ReplayRouter::default();
+      router.begin("s1", ReplayMode::Collect);
+
+      assert!(router.route(message("s1", "one")).is_none());
+      assert!(router.route(current_mode("s1")).is_some());
+      assert!(router.route(message("s1", "two")).is_none());
+
+      let collected = router.finish("s1");
+      assert_eq!(collected.len(), 2);
+      assert!(matches!(
+         &collected[0],
+         AcpEvent::ContentChunk { content: AcpContentBlock::Text { text }, .. } if text == "one"
+      ));
+      assert!(router.route(message("s1", "live")).is_some());
    }
 
    #[test]
@@ -164,7 +207,7 @@ mod tests {
       assert!(router.route(current_mode("s1")).is_none());
 
       // Loading it again later routes it afresh.
-      router.begin("s1", ReplayMode::Suppress);
+      router.begin("s1", ReplayMode::Collect);
       assert!(router.route(current_mode("s1")).is_some());
    }
 }

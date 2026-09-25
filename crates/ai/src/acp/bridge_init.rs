@@ -233,6 +233,8 @@ pub(super) struct OpenedSession {
    /// The chat asked for its earlier session, but the agent could not restore it, so this is a
    /// new session without the earlier context.
    pub context_lost: bool,
+   /// The conversation an imported session replayed.
+   pub history: Vec<AcpEvent>,
    /// Configured MCP servers the agent cannot take, reported to the user.
    pub skipped_mcp_servers: Vec<AcpSkippedMcpServer>,
 }
@@ -317,6 +319,7 @@ pub(super) async fn open_session(
    Ok(OpenedSession {
       session_id: session_bootstrap.session_id,
       context_lost: session_bootstrap.context_lost,
+      history: session_bootstrap.history,
       skipped_mcp_servers: mcp_selection.skipped,
    })
 }
@@ -326,6 +329,7 @@ struct SessionBootstrap {
    initial_modes: Option<SessionModeState>,
    initial_config_options: Option<Vec<SessionConfigOption>>,
    context_lost: bool,
+   history: Vec<AcpEvent>,
 }
 
 struct SessionBootstrapContext<'a, F>
@@ -524,8 +528,8 @@ fn check_protocol_version(version: ProtocolVersion) -> Result<()> {
 
 /// Opens the session `target` asks for, signing in when the agent asks for it. An existing
 /// session is reopened in the order [`reopen_methods`] gives; when none of them works, the chat
-/// gets a new session with `context_lost` set. Failing does not touch the agent process; the
-/// caller decides.
+/// gets a new session with `context_lost` set, while an import fails. Failing does not touch the
+/// agent process; the caller decides.
 async fn bootstrap_session(
    connection: Arc<AcpConnection>,
    cwd: PathBuf,
@@ -569,9 +573,10 @@ async fn bootstrap_session(
    let mut context_lost = false;
    if let Some(existing_session_id) = target.session_id() {
       for method in reopen_methods(&target, ctx.can_load_session, ctx.can_resume_session) {
-         let replay_mode = match method {
-            ReopenMethod::Resume => None,
-            ReopenMethod::Load => Some(ReplayMode::Suppress),
+         let replay_mode = match (method, &target) {
+            (ReopenMethod::Resume, _) => None,
+            (ReopenMethod::Load, SessionTarget::Import(_)) => Some(ReplayMode::Collect),
+            (ReopenMethod::Load, _) => Some(ReplayMode::Suppress),
          };
          if let Some(mode) = replay_mode {
             ctx.replay.begin(existing_session_id, mode);
@@ -615,12 +620,13 @@ async fn bootstrap_session(
                   existing_session_id
                );
                // Also clears what an earlier, failed load of this session left behind.
-               ctx.replay.finish(existing_session_id);
+               let history = ctx.replay.finish(existing_session_id);
                return Ok(SessionBootstrap {
                   session_id: acp::SessionId::new(existing_session_id),
                   initial_modes: setup.modes.map(map_mode_state),
                   initial_config_options: setup.config_options.map(&ctx.map_config_options),
                   context_lost: false,
+                  history,
                });
             }
             Ok(Err(err))
@@ -652,6 +658,9 @@ async fn bootstrap_session(
          }
       }
 
+      if let SessionTarget::Import(session_id) = &target {
+         bail!("The agent could not load session {session_id}");
+      }
       log::warn!(
          "Could not restore ACP session {}; starting a new one",
          existing_session_id
@@ -687,6 +696,7 @@ async fn bootstrap_session(
       initial_modes: session.modes.map(map_mode_state),
       initial_config_options: session.config_options.map(ctx.map_config_options),
       context_lost,
+      history: Vec::new(),
    })
 }
 
@@ -698,13 +708,15 @@ pub(super) enum SessionTarget {
    /// The chat's earlier session. Athas keeps the chat's history, so the agent's replay of it is
    /// dropped.
    Reattach(String),
+   /// An agent session imported into a new chat. Its history is replayed and returned.
+   Import(String),
 }
 
 impl SessionTarget {
    pub(super) fn session_id(&self) -> Option<&str> {
       match self {
          Self::New => None,
-         Self::Reattach(session_id) => Some(session_id),
+         Self::Reattach(session_id) | Self::Import(session_id) => Some(session_id),
       }
    }
 }
@@ -740,7 +752,8 @@ impl ReopenMethod {
 
 /// How to reopen `target`'s session, in order, from what the agent advertises. A chat prefers
 /// `session/resume`, which restores the agent's context without replaying history Athas already
-/// shows, and falls back to `session/load`.
+/// shows, and falls back to `session/load`. An import needs the replay, so only `session/load`
+/// will do.
 fn reopen_methods(target: &SessionTarget, can_load: bool, can_resume: bool) -> Vec<ReopenMethod> {
    match target {
       SessionTarget::New => Vec::new(),
@@ -751,6 +764,7 @@ fn reopen_methods(target: &SessionTarget, can_load: bool, can_resume: bool) -> V
       .into_iter()
       .flatten()
       .collect(),
+      SessionTarget::Import(_) => can_load.then_some(ReopenMethod::Load).into_iter().collect(),
    }
 }
 
@@ -895,6 +909,17 @@ mod tests {
       assert_eq!(reopen_methods(&chat, true, false), vec![ReopenMethod::Load]);
       // Neither advertised: no request is sent; the chat gets a new session.
       assert!(reopen_methods(&chat, false, false).is_empty());
+   }
+
+   #[test]
+   fn importing_needs_load_session() {
+      let import = SessionTarget::Import("s1".to_string());
+      assert_eq!(
+         reopen_methods(&import, true, true),
+         vec![ReopenMethod::Load]
+      );
+      // Resume would not replay the history the new chat needs.
+      assert!(reopen_methods(&import, false, true).is_empty());
    }
 
    #[test]

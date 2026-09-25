@@ -56,7 +56,8 @@ pub async fn get_available_agents(
 
 /// Opens a chat's session on `agent_id` in `workspace_path`, starting the agent when it is not
 /// running there yet. One agent process serves every chat that uses it in the workspace.
-/// `session_id` is the chat's earlier session, reattached when the agent still has it.
+/// `session_id` is the chat's earlier session, reattached when the agent still has it; with
+/// `import_session` it is an agent session a new chat imports, and the answer carries its history.
 /// `mcp_servers` is the user's MCP server list from settings; enabled servers are joined with
 /// their stored secrets and offered to the agent.
 #[tauri::command]
@@ -66,6 +67,7 @@ pub async fn open_acp_session(
    agent_id: String,
    workspace_path: Option<String>,
    session_id: Option<String>,
+   import_session: Option<bool>,
    auth_method_id: Option<String>,
    mcp_servers: Option<Vec<McpServerSetting>>,
 ) -> Result<AcpOpenedSession, String> {
@@ -81,6 +83,7 @@ pub async fn open_acp_session(
          &agent_id,
          workspace_path,
          session_id,
+         import_session.unwrap_or(false),
          auth_method_id,
          mcp_servers,
       )

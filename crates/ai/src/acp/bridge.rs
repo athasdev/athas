@@ -297,6 +297,17 @@ impl AcpWorker {
       };
       connection.touch();
 
+      if let SessionTarget::Import(session_id) = &request.target
+         && (self.sessions.connection_of(session_id).is_some()
+            || self
+               .pending_session_opens
+               .contains_key(&(connection_id, session_id.clone())))
+      {
+         let _ = request.response_tx.send(Err(anyhow::anyhow!(
+            "This agent session is already open in a chat"
+         )));
+         return;
+      }
       if let Some(session_id) = request.target.session_id() {
          if self.sessions.is_open_on(session_id, connection_id) {
             let status = self.status_of(connection_id).unwrap_or_default();
@@ -304,6 +315,7 @@ impl AcpWorker {
                session_id: session_id.to_string(),
                status,
                context_lost: false,
+               history: Vec::new(),
             }));
             return;
          }
@@ -380,6 +392,7 @@ impl AcpWorker {
          Ok(opened) => {
             let session_id = opened.session_id.to_string();
             let context_lost = opened.context_lost;
+            let history = opened.history;
             connection.skipped_mcp_servers = opened.skipped_mcp_servers;
             if signed_in_with_choice {
                let agent_id = connection.key.agent_id.clone();
@@ -400,6 +413,7 @@ impl AcpWorker {
                   session_id: session_id.clone(),
                   status: status.clone(),
                   context_lost,
+                  history: history.clone(),
                }));
             }
          }
@@ -974,15 +988,24 @@ impl AcpAgentBridge {
    /// agent still has it (answered right away when it is already open), and a new session is
    /// created otherwise. `auth_method_id` is the sign-in method the user picked after an earlier
    /// attempt needed one. `mcp_servers` are offered to the agent in session setup, filtered by
-   /// what it supports.
+   /// what it supports. With `import`, `session_id` is an agent session a new chat takes over:
+   /// it is loaded and its replayed history is returned, and no new session is created when that
+   /// fails.
    pub async fn open_session(
       &self,
       agent_id: &str,
       workspace_path: Option<String>,
       session_id: Option<String>,
+      import: bool,
       auth_method_id: Option<String>,
       mcp_servers: Vec<McpServerConfig>,
    ) -> Result<AcpOpenedSession> {
+      let target = match (session_id, import) {
+         (Some(session_id), true) => SessionTarget::Import(session_id),
+         (Some(session_id), false) => SessionTarget::Reattach(session_id),
+         (None, true) => bail!("Choose an agent session to import"),
+         (None, false) => SessionTarget::New,
+      };
       let config = self
          .registry
          .get(agent_id)
@@ -998,7 +1021,7 @@ impl AcpAgentBridge {
             config: Box::new(config),
             terminal_manager,
             request: OpenRequest {
-               target: session_id.map_or(SessionTarget::New, SessionTarget::Reattach),
+               target,
                auth_method_id,
                mcp_servers,
                response_tx,

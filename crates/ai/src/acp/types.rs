@@ -341,6 +341,9 @@ pub struct AcpOpenedSession {
    /// continues in a new session without the agent's earlier context.
    #[serde(default)]
    pub context_lost: bool,
+   /// The conversation an imported session replayed, as the events a live turn would emit.
+   #[serde(default, skip_serializing_if = "Vec::is_empty")]
+   pub history: Vec<AcpEvent>,
 }
 
 /// How an ACP sign-in method is completed.
