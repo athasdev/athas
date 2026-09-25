@@ -1081,7 +1081,8 @@ impl AthasAcpClient {
 
    /// Applies an agent's write to `path`, the one place agent writes land: the file is written,
    /// then the frontend hears about it through `file-changed` so the file tree and any open editor
-   /// catch up.
+   /// catch up. An editor without unsaved changes reloads; one with unsaved changes keeps them and
+   /// offers a reload, so an agent write never discards what the user typed.
    async fn apply_agent_write(&self, path: &Path, content: &str) -> acp::Result<()> {
       let existed = tokio::fs::try_exists(path).await.unwrap_or(false);
       if let Some(parent) = path.parent()
