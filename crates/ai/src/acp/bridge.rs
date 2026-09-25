@@ -6,6 +6,7 @@ use super::{
    bridge_prompt::{PromptAuth, run_prompt},
    client::{AthasAcpClient, ClientResponders, PermissionResponse},
    config::AgentRegistry,
+   mcp_servers::{AcpSkippedMcpServer, McpServerConfig},
    process::{stop_child_tree, terminate_process_group},
    types::{
       AcpAgentCapabilities, AcpAgentStatus, AcpAuthMethod, AcpEvent, AcpSessionInfo,
@@ -67,6 +68,7 @@ pub(super) struct AcpWorker {
    workspace_path: Option<PathBuf>,
    agent_id: Option<String>,
    agent_capabilities: Option<AcpAgentCapabilities>,
+   skipped_mcp_servers: Vec<AcpSkippedMcpServer>,
    app_handle: Option<AppHandle>,
 }
 
@@ -85,6 +87,7 @@ impl AcpWorker {
          workspace_path: None,
          agent_id: None,
          agent_capabilities: None,
+         skipped_mcp_servers: Vec::new(),
          app_handle: None,
       }
    }
@@ -127,6 +130,7 @@ impl AcpWorker {
             self.workspace_path = None;
             self.agent_id = None;
             self.agent_capabilities = None;
+            self.skipped_mcp_servers.clear();
             self.app_handle = None;
 
             bail!("ACP agent process exited: {}", status);
@@ -164,6 +168,7 @@ impl AcpWorker {
       self.workspace_path = initialized.workspace_path;
       self.agent_id = Some(agent_id);
       self.agent_capabilities = Some(initialized.agent_capabilities);
+      self.skipped_mcp_servers = initialized.skipped_mcp_servers;
       self.app_handle = Some(app_handle);
 
       (self.get_status(), initialized.responders)
@@ -537,6 +542,7 @@ impl AcpWorker {
       self.workspace_path = None;
       self.agent_id = None;
       self.agent_capabilities = None;
+      self.skipped_mcp_servers.clear();
       self.app_handle = None;
       self.process_group_id = None;
 
@@ -554,6 +560,7 @@ impl AcpWorker {
             workspace_path: self.workspace_path.as_deref().map(path_to_string),
             agent_capabilities: self.agent_capabilities.clone(),
             auth_methods: self.described_auth_methods.clone(),
+            skipped_mcp_servers: self.skipped_mcp_servers.clone(),
          },
          None => AcpAgentStatus::default(),
       }
@@ -628,12 +635,14 @@ impl AcpAgentBridge {
 
    /// Start an ACP agent by ID. `auth_method_id` is the sign-in method the user picked after an
    /// earlier start needed one; startup uses it if the agent asks to authenticate.
+   /// `mcp_servers` are offered to the agent in session setup, filtered by what it supports.
    pub async fn start_agent(
       &self,
       agent_id: &str,
       workspace_path: Option<String>,
       session_id: Option<String>,
       auth_method_id: Option<String>,
+      mcp_servers: Vec<McpServerConfig>,
    ) -> Result<AcpAgentStatus> {
       let config = self
          .registry
@@ -650,6 +659,7 @@ impl AcpAgentBridge {
             workspace_path,
             session_id,
             auth_method_id,
+            mcp_servers,
             config: Box::new(config),
             app_handle: self.app_handle.clone(),
             terminal_manager: self.terminal_manager.clone(),

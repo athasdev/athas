@@ -1,6 +1,8 @@
+use super::mcp::resolve_mcp_servers;
 use crate::{app_runtime::AppHandle, service_urls};
 use athas_ai::{
-   AcpAgentBridge, AcpAgentStatus, AcpSessionList, AgentConfig, AgentRuntime, SessionConfigValue,
+   AcpAgentBridge, AcpAgentStatus, AcpSessionList, AgentConfig, AgentRuntime, McpServerSetting,
+   SessionConfigValue,
 };
 use athas_runtime::{RuntimeManager, RuntimeType};
 use athas_tooling::{ToolConfig, ToolInstaller, ToolRuntime};
@@ -52,14 +54,19 @@ pub async fn get_available_agents(
    Ok(bridge.detect_agents())
 }
 
+/// `mcp_servers` is the user's MCP server list from settings; enabled servers are joined with
+/// their stored secrets and offered to the agent.
 #[tauri::command]
 pub async fn start_acp_agent(
+   app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
    agent_id: String,
    workspace_path: Option<String>,
    session_id: Option<String>,
    auth_method_id: Option<String>,
+   mcp_servers: Option<Vec<McpServerSetting>>,
 ) -> Result<AcpAgentStatus, String> {
+   let mcp_servers = resolve_mcp_servers(&app_handle, mcp_servers.unwrap_or_default());
    let bridge = {
       let mut bridge = bridge.lock().await;
       refresh_registered_agents(&mut bridge).await;
@@ -67,7 +74,13 @@ pub async fn start_acp_agent(
       bridge.clone()
    };
    bridge
-      .start_agent(&agent_id, workspace_path, session_id, auth_method_id)
+      .start_agent(
+         &agent_id,
+         workspace_path,
+         session_id,
+         auth_method_id,
+         mcp_servers,
+      )
       .await
       .map_err(|e| e.to_string())
 }

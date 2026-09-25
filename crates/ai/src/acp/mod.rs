@@ -6,12 +6,14 @@ mod bridge_prompt;
 mod client;
 mod config;
 mod file_access;
+pub mod mcp_servers;
 mod process;
 mod terminal_state;
 pub mod types;
 mod workspace_path;
 
 pub use bridge::AcpAgentBridge;
+pub use mcp_servers::{McpServerConfig, McpServerSecrets, McpServerSetting};
 pub use types::{
    AcpAgentStatus, AcpSessionInfo, AcpSessionList, AgentConfig, AgentRuntime, SessionConfigValue,
 };

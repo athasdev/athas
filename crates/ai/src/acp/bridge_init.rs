@@ -5,6 +5,7 @@ use super::{
       describe_auth_methods, startup_auth_method,
    },
    client::{AthasAcpClient, ClientResponders},
+   mcp_servers::{AcpSkippedMcpServer, McpServerConfig, select_mcp_servers},
    process::{
       force_kill_process_group, stop_child_tree, stop_child_tree_mut, terminate_process_group,
    },
@@ -14,7 +15,7 @@ use super::{
    },
    workspace_path::{path_to_string, resolve_workspace_path},
 };
-use crate::runtime::AthasAppHandle as AppHandle;
+use crate::{executable_path::find_executable, runtime::AthasAppHandle as AppHandle};
 use agent_client_protocol::{
    self as acp_sdk,
    schema::{ProtocolVersion, v1 as acp},
@@ -44,6 +45,8 @@ pub(super) struct InitializedAcpWorker {
    pub auth_methods: Vec<acp::AuthMethod>,
    pub described_auth_methods: Vec<AcpAuthMethod>,
    pub agent_capabilities: AcpAgentCapabilities,
+   /// Configured MCP servers the agent cannot take, reported to the user.
+   pub skipped_mcp_servers: Vec<AcpSkippedMcpServer>,
    pub process: Child,
    pub process_group_id: Option<u32>,
    pub io_handle: tokio::task::JoinHandle<()>,
@@ -81,6 +84,7 @@ pub(super) async fn initialize_worker(
    terminal_manager: Arc<TerminalManager>,
    requested_session_id: Option<String>,
    startup_auth: StartupAuth,
+   mcp_servers: &[McpServerConfig],
    map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
    stop: CancellationToken,
 ) -> Result<InitializedAcpWorker> {
@@ -166,6 +170,19 @@ pub(super) async fn initialize_worker(
          .resume
          .is_some();
       let agent_capabilities: AcpAgentCapabilities = init_response.agent_capabilities.into();
+      let mcp_selection = select_mcp_servers(
+         mcp_servers,
+         &agent_capabilities.mcp_capabilities,
+         find_executable,
+      );
+      if !mcp_selection.servers.is_empty() || !mcp_selection.skipped.is_empty() {
+         log::info!(
+            "Offering {} MCP server(s) to {}; skipped {} the agent does not support",
+            mcp_selection.servers.len(),
+            config.name,
+            mcp_selection.skipped.len()
+         );
+      }
 
       let cwd = workspace_path
          .clone()
@@ -184,6 +201,7 @@ pub(super) async fn initialize_worker(
             auth_methods: &auth_methods,
             startup_auth,
             supports_session_resume,
+            mcp_servers: &mcp_selection.servers,
             map_config_options,
             child: &mut child,
             io_handle: &io_handle,
@@ -215,6 +233,7 @@ pub(super) async fn initialize_worker(
          auth_methods,
          described_auth_methods,
          agent_capabilities,
+         mcp_selection.skipped,
          session_bootstrap,
       ))
    };
@@ -227,8 +246,14 @@ pub(super) async fn initialize_worker(
       stop_child_tree_mut(&mut child, process_group_id).await;
       bail!(ACP_STARTUP_STOPPED);
    };
-   let (connection, auth_methods, described_auth_methods, agent_capabilities, session_bootstrap) =
-      result?;
+   let (
+      connection,
+      auth_methods,
+      described_auth_methods,
+      agent_capabilities,
+      skipped_mcp_servers,
+      session_bootstrap,
+   ) = result?;
 
    emit_initial_session_state(
       &app_handle,
@@ -243,6 +268,7 @@ pub(super) async fn initialize_worker(
       auth_methods,
       described_auth_methods,
       agent_capabilities,
+      skipped_mcp_servers,
       process: child,
       process_group_id,
       io_handle,
@@ -265,6 +291,8 @@ where
    auth_methods: &'a [acp::AuthMethod],
    startup_auth: StartupAuth,
    supports_session_resume: bool,
+   /// Sent in `session/new`, `session/load` and `session/resume`.
+   mcp_servers: &'a [acp::McpServer],
    map_config_options: F,
    child: &'a mut Child,
    io_handle: &'a tokio::task::JoinHandle<()>,
@@ -489,8 +517,13 @@ async fn bootstrap_session(
    };
 
    if let Some(existing_session_id) = requested_session_id {
-      let mut load_result =
-         load_session(connection.clone(), cwd.clone(), existing_session_id.clone()).await;
+      let mut load_result = load_session(
+         connection.clone(),
+         cwd.clone(),
+         existing_session_id.clone(),
+         ctx.mcp_servers,
+      )
+      .await;
 
       if let Ok(Err(err)) = &load_result
          && matches!(err.code, acp::ErrorCode::AuthRequired)
@@ -501,8 +534,13 @@ async fn bootstrap_session(
             let _ = ctx.child.kill().await;
             return Err(e);
          }
-         load_result =
-            load_session(connection.clone(), cwd.clone(), existing_session_id.clone()).await;
+         load_result = load_session(
+            connection.clone(),
+            cwd.clone(),
+            existing_session_id.clone(),
+            ctx.mcp_servers,
+         )
+         .await;
       }
 
       match load_result {
@@ -523,8 +561,13 @@ async fn bootstrap_session(
                "ACP session/load unavailable ({}), trying session/resume",
                err
             );
-            let mut resume_result =
-               resume_session(connection.clone(), cwd.clone(), existing_session_id.clone()).await;
+            let mut resume_result = resume_session(
+               connection.clone(),
+               cwd.clone(),
+               existing_session_id.clone(),
+               ctx.mcp_servers,
+            )
+            .await;
 
             if let Ok(Err(err)) = &resume_result
                && matches!(err.code, acp::ErrorCode::AuthRequired)
@@ -535,9 +578,13 @@ async fn bootstrap_session(
                   let _ = ctx.child.kill().await;
                   return Err(e);
                }
-               resume_result =
-                  resume_session(connection.clone(), cwd.clone(), existing_session_id.clone())
-                     .await;
+               resume_result = resume_session(
+                  connection.clone(),
+                  cwd.clone(),
+                  existing_session_id.clone(),
+                  ctx.mcp_servers,
+               )
+               .await;
             }
 
             match resume_result {
@@ -612,7 +659,7 @@ async fn bootstrap_session(
       }
    }
 
-   let mut session_result = create_session(connection.clone(), cwd.clone()).await;
+   let mut session_result = create_session(connection.clone(), cwd.clone(), ctx.mcp_servers).await;
    if let Ok(Err(err)) = &session_result
       && matches!(err.code, acp::ErrorCode::AuthRequired)
    {
@@ -623,7 +670,7 @@ async fn bootstrap_session(
          return Err(e);
       }
       log::info!("ACP authentication succeeded, retrying session creation");
-      session_result = create_session(connection.clone(), cwd).await;
+      session_result = create_session(connection.clone(), cwd, ctx.mcp_servers).await;
    }
 
    let session = match session_result {
@@ -657,8 +704,9 @@ async fn bootstrap_session(
 async fn create_session(
    connection: Arc<AcpConnection>,
    cwd: PathBuf,
+   mcp_servers: &[acp::McpServer],
 ) -> Result<Result<acp::NewSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
-   let session_request = acp::NewSessionRequest::new(cwd);
+   let session_request = acp::NewSessionRequest::new(cwd).mcp_servers(mcp_servers.to_vec());
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
       connection.send_request(session_request).block_task(),
@@ -670,8 +718,10 @@ async fn load_session(
    connection: Arc<AcpConnection>,
    cwd: PathBuf,
    existing_session_id: String,
+   mcp_servers: &[acp::McpServer],
 ) -> Result<Result<acp::LoadSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
-   let request = acp::LoadSessionRequest::new(existing_session_id, cwd);
+   let request =
+      acp::LoadSessionRequest::new(existing_session_id, cwd).mcp_servers(mcp_servers.to_vec());
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
       connection.send_request(request).block_task(),
@@ -683,8 +733,10 @@ async fn resume_session(
    connection: Arc<AcpConnection>,
    cwd: PathBuf,
    existing_session_id: String,
+   mcp_servers: &[acp::McpServer],
 ) -> Result<Result<acp::ResumeSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
-   let request = acp::ResumeSessionRequest::new(existing_session_id, cwd);
+   let request =
+      acp::ResumeSessionRequest::new(existing_session_id, cwd).mcp_servers(mcp_servers.to_vec());
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
       connection.send_request(request).block_task(),

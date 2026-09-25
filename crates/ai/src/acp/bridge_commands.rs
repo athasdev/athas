@@ -2,6 +2,7 @@ use super::{
    bridge::AcpWorker,
    bridge_init::{ACP_STARTUP_STOPPED, InitializedAcpWorker, StartupAuth, initialize_worker},
    client::ClientResponders,
+   mcp_servers::McpServerConfig,
    types::{AcpAgentStatus, AcpSessionList, AgentConfig, SessionConfigValue},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
@@ -21,6 +22,7 @@ pub(super) enum AcpCommand {
       workspace_path: Option<String>,
       session_id: Option<String>,
       auth_method_id: Option<String>,
+      mcp_servers: Vec<McpServerConfig>,
       config: Box<AgentConfig>,
       app_handle: AppHandle,
       terminal_manager: Arc<TerminalManager>,
@@ -162,6 +164,7 @@ pub(super) async fn run_worker_loop(
                   workspace_path,
                   session_id,
                   auth_method_id,
+                  mcp_servers,
                   config,
                   app_handle,
                   terminal_manager,
@@ -199,6 +202,7 @@ pub(super) async fn run_worker_loop(
                         terminal_manager,
                         session_id,
                         startup_auth,
+                        &mcp_servers,
                         AcpWorker::map_config_options,
                         stop,
                      )

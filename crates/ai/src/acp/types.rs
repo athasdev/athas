@@ -323,6 +323,10 @@ pub struct AcpAgentStatus {
    pub agent_capabilities: Option<AcpAgentCapabilities>,
    /// The sign-in methods the agent offered in `initialize`.
    pub auth_methods: Vec<AcpAuthMethod>,
+   /// Configured MCP servers left out of the session because the agent does not support their
+   /// transport.
+   #[serde(default)]
+   pub skipped_mcp_servers: Vec<super::mcp_servers::AcpSkippedMcpServer>,
 }
 
 /// How an ACP sign-in method is completed.

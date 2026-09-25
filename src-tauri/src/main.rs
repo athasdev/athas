@@ -237,6 +237,9 @@ fn main() {
          store_ai_provider_token,
          get_ai_provider_token,
          remove_ai_provider_token,
+         get_mcp_server_secrets,
+         store_mcp_server_secrets,
+         remove_mcp_server_secrets,
          // Auth token commands
          store_auth_token,
          get_auth_token,
