@@ -930,20 +930,16 @@ impl AthasAcpClient {
       args: acp::TerminalOutputRequest,
    ) -> acp::Result<acp::TerminalOutputResponse> {
       let terminal_id = args.terminal_id.to_string();
-      let mut states = self
+      let states = self
          .terminal_states
          .lock()
          .map_err(|_| acp::Error::new(-32603, "Lock poisoned".to_string()))?;
 
       let state = states
-         .get_mut(&terminal_id)
+         .get(&terminal_id)
          .ok_or_else(|| acp::Error::new(-32603, "Terminal not found".to_string()))?;
 
-      let output = std::mem::take(&mut state.output_buffer);
-      let truncated = state.truncated;
-      state.truncated = false;
-
-      Ok(acp::TerminalOutputResponse::new(output, truncated).exit_status(state.exit_status.clone()))
+      Ok(state.output_response())
    }
 
    async fn release_terminal(

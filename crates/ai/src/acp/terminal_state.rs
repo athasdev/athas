@@ -26,6 +26,15 @@ impl AcpTerminalState {
       }
    }
 
+   /// Builds a `terminal/output` response. Per the ACP spec this returns all
+   /// output retained so far (not only what arrived since the last read), so
+   /// the buffer is copied rather than drained. `truncated` stays set once any
+   /// output has been dropped to respect the byte limit.
+   pub fn output_response(&self) -> acp::TerminalOutputResponse {
+      acp::TerminalOutputResponse::new(self.output_buffer.clone(), self.truncated)
+         .exit_status(self.exit_status.clone())
+   }
+
    pub fn append_output(&mut self, data: &str) {
       self.output_buffer.push_str(data);
       self.truncate_from_beginning_to_limit();
@@ -159,6 +168,55 @@ mod tests {
 
       assert_eq!(state.output_buffer, "🙂b");
       assert!(state.truncated);
+   }
+
+   #[test]
+   fn output_response_retains_output_across_reads() {
+      let mut state = AcpTerminalState::new("terminal-5".to_string(), None);
+      state.append_output("first ");
+
+      let first = state.output_response();
+      assert_eq!(first.output, "first ");
+      assert!(!first.truncated);
+
+      state.append_output("second");
+      let second = state.output_response();
+      assert_eq!(second.output, "first second");
+
+      state.set_exit_status(Some(0), None);
+      let last = state.output_response();
+      assert_eq!(last.output, "first second");
+      assert_eq!(
+         last.exit_status.and_then(|status| status.exit_code),
+         Some(0)
+      );
+   }
+
+   #[test]
+   fn output_response_truncates_from_start_at_char_boundary() {
+      let mut state = AcpTerminalState::new("terminal-6".to_string(), Some(5));
+      state.append_output("ab🙂cd");
+
+      let response = state.output_response();
+      // Dropping 3 bytes would split the emoji, so the whole char goes.
+      assert_eq!(response.output, "cd");
+      assert!(response.truncated);
+   }
+
+   #[test]
+   fn output_response_truncated_flag_is_sticky() {
+      let mut state = AcpTerminalState::new("terminal-7".to_string(), Some(4));
+      state.append_output("123456");
+      assert!(state.output_response().truncated);
+
+      let again = state.output_response();
+      assert_eq!(again.output, "3456");
+      assert!(again.truncated);
+
+      state.append_output("7");
+      let later = state.output_response();
+      assert_eq!(later.output, "4567");
+      assert!(later.truncated);
    }
 
    #[test]
