@@ -74,8 +74,9 @@ export function AcpUrlQuestionPrompt({
             <span className="min-w-0 truncate">{link.host}</span>
           </span>
         ) : null}
+        {/* The parsed address, so a lookalike host reads the same here as above. */}
         <span className="font-mono wrap-anywhere select-text text-muted-foreground ui-text-caption">
-          {request.url}
+          {link.openable ? link.href : request.url}
         </span>
       </div>
 

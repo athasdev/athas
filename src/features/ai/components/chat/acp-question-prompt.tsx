@@ -1,4 +1,4 @@
-import { type SubmitEvent, useMemo } from "react";
+import { type SubmitEvent, useMemo, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { QuestionIcon } from "@/ui/icons";
@@ -24,6 +24,8 @@ import {
   type AcpElicitationResponse,
   type AcpFormElicitationRequest,
   type ElicitationQuestion,
+  findElicitationError,
+  hasUnanswerableFields,
   toElicitationContent,
   toElicitationQuestions,
 } from "../../lib/acp-elicitation";
@@ -55,6 +57,11 @@ function QuestionStep({ question }: { question: ElicitationQuestion }) {
                   <QuestionnaireChoiceDescription>
                     {option.description}
                   </QuestionnaireChoiceDescription>
+                ) : null}
+                {option.preview ? (
+                  <span className="mt-1 block max-h-32 overflow-auto rounded-md border border-border bg-background px-2 py-1.5 font-mono whitespace-pre-wrap wrap-anywhere text-muted-foreground ui-text-caption">
+                    {option.preview}
+                  </span>
                 ) : null}
               </QuestionnaireChoice>
             ))}
@@ -105,13 +112,19 @@ export function AcpQuestionPrompt({
   onAnswer: (response: AcpElicitationResponse) => void;
 }) {
   const questions = useMemo(() => toElicitationQuestions(request), [request]);
+  const unanswerable = useMemo(
+    () => hasUnanswerableFields(request, questions),
+    [request, questions],
+  );
+  const [error, setError] = useState<string | null>(null);
+  const { title: formTitle, description: formDescription } = request.requestedSchema;
 
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onAnswer({
-      action: "accept",
-      content: toElicitationContent(questions, new FormData(event.currentTarget)),
-    });
+    const content = toElicitationContent(questions, new FormData(event.currentTarget));
+    const problem = findElicitationError(questions, content);
+    setError(problem);
+    if (!problem) onAnswer({ action: "accept", content });
   };
 
   return (
@@ -151,12 +164,27 @@ export function AcpQuestionPrompt({
         </div>
       </div>
 
-      {questions.length > 0 ? (
+      {formTitle || formDescription ? (
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {formTitle ? <span className="font-medium text-foreground">{formTitle}</span> : null}
+          {formDescription ? (
+            <p className="text-pretty text-muted-foreground">{formDescription}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {unanswerable ? (
+        <p className="text-pretty text-muted-foreground">
+          This asks for something Athas can't show yet. Decline to let the agent continue without
+          it.
+        </p>
+      ) : questions.length > 0 ? (
         <Questionnaire key={requestId} onSubmit={submit} shortcuts="numbers">
           {questions.length > 1 ? <QuestionnaireProgress /> : null}
           {questions.map((item) => (
             <QuestionStep key={item.name} question={item} />
           ))}
+          {error ? <p className="text-pretty text-destructive">{error}</p> : null}
           <QuestionnaireActions>
             <QuestionnairePrevious />
             <QuestionnaireSkip />

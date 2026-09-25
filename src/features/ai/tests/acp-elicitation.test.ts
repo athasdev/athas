@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   type AcpFormElicitationRequest,
+  findElicitationError,
+  hasUnanswerableFields,
   inspectElicitationUrl,
   toElicitationContent,
   toElicitationQuestions,
@@ -123,6 +125,103 @@ describe("ACP elicitation forms", () => {
         ]),
       ),
     ).toEqual({ force: true, retries: 3 });
+  });
+});
+
+describe("ACP elicitation schema edge cases", () => {
+  function formRequest(
+    properties: Record<string, unknown>,
+    required: string[] = [],
+  ): AcpFormElicitationRequest {
+    return {
+      mode: "form",
+      message: "Question",
+      requestedSchema: {
+        type: "object",
+        properties: properties as AcpFormElicitationRequest["requestedSchema"]["properties"],
+        required,
+      },
+    };
+  }
+
+  it("leaves out fields it cannot render and blocks accepting when one is required", () => {
+    const request = formRequest(
+      {
+        name: { type: "string" },
+        location: { type: "object", properties: {} },
+        tags: { type: "array", items: { type: "number", enum: ["1", "2"] } },
+      },
+      ["location"],
+    );
+    const questions = toElicitationQuestions(request);
+
+    expect(questions.map((question) => question.name)).toEqual(["name"]);
+    expect(hasUnanswerableFields(request, questions)).toBe(true);
+    expect(
+      hasUnanswerableFields(
+        formRequest({ tags: { type: "array", items: { type: "number" } } }),
+        [],
+      ),
+    ).toBe(false);
+  });
+
+  it("enforces minItems and maxItems once something is chosen", () => {
+    const questions = toElicitationQuestions(
+      formRequest({
+        checks: {
+          type: "array",
+          title: "Checks",
+          minItems: 2,
+          maxItems: 3,
+          items: { type: "string", enum: ["lint", "types", "tests", "build"] },
+        },
+      }),
+    );
+
+    expect(findElicitationError(questions, {})).toBeNull();
+    expect(findElicitationError(questions, { checks: ["lint"] })).toBe(
+      "Checks: choose at least 2.",
+    );
+    expect(findElicitationError(questions, { checks: ["lint", "types", "tests", "build"] })).toBe(
+      "Checks: choose at most 3.",
+    );
+    expect(findElicitationError(questions, { checks: ["lint", "types"] })).toBeNull();
+  });
+
+  it("keeps Claude option previews, codex notes and unpaired custom answers", () => {
+    const questions = toElicitationQuestions(
+      formRequest({
+        layout: {
+          type: "string",
+          title: "Layout",
+          oneOf: [
+            {
+              const: "Grid",
+              title: "Grid",
+              _meta: { "_claude/askUserQuestionOption": { preview: "[ ][ ]\n[ ][ ]" } },
+            },
+          ],
+        },
+        layout_note: {
+          type: "string",
+          _meta: { codex: { questionId: "layout", role: "user_note" } },
+        },
+        extra_custom: {
+          type: "string",
+          title: "Other",
+          _meta: { _askUserQuestionCustomAnswer: { questionId: "missing", isCustomAnswer: true } },
+        },
+      }),
+    );
+
+    expect(questions[0]).toMatchObject({ options: [{ value: "Grid", preview: "[ ][ ]\n[ ][ ]" }] });
+    expect(questions[1]).toMatchObject({
+      name: "layout_note",
+      kind: "text",
+      title: "Anything to add?",
+      description: "Layout",
+    });
+    expect(questions[2]).toMatchObject({ name: "extra_custom", kind: "text", title: "Other" });
   });
 });
 

@@ -16,6 +16,7 @@ export type AcpElicitationProperty =
       default?: string;
       minLength?: number;
       maxLength?: number;
+      /** Not enforced here: the spec asks clients not to run untrusted regexes unbounded. */
       pattern?: string;
       format?: "email" | "uri" | "date" | "date-time";
       enum?: string[];
@@ -39,7 +40,7 @@ export type AcpElicitationProperty =
       default?: string[];
       minItems?: number;
       maxItems?: number;
-      items: { type?: "string"; enum?: string[]; anyOf?: EnumOption[] };
+      items: { type?: string; enum?: string[]; anyOf?: EnumOption[] };
       _meta?: Meta;
     };
 
@@ -80,7 +81,13 @@ export type AcpElicitationResponse =
   | { action: "decline" }
   | { action: "cancel" };
 
-export type ElicitationOption = { value: string; label: string; description?: string };
+export type ElicitationOption = {
+  value: string;
+  label: string;
+  description?: string;
+  /** Claude's AskUserQuestion option preview (`_meta["_claude/askUserQuestionOption"].preview`). */
+  preview?: string;
+};
 
 type QuestionBase = { name: string; title: string; description?: string; required: boolean };
 
@@ -90,6 +97,8 @@ export type ElicitationQuestion =
       multiple: boolean;
       options: ElicitationOption[];
       defaults: string[];
+      minItems?: number;
+      maxItems?: number;
       /** A free-text field the agent pairs with this question for answers outside the options. */
       otherField?: string;
     })
@@ -139,33 +148,63 @@ function isSecret(property: AcpElicitationProperty): boolean {
   return metaRecord(property._meta?.codex)?.isSecret === true;
 }
 
+/**
+ * codex-acp pairs a question with an optional `<id>_note` text field marked
+ * `_meta.codex = { questionId, role: "user_note" }`, sent alongside the chosen option.
+ */
+function noteTarget(property: AcpElicitationProperty): string | undefined {
+  const codex = metaRecord(property._meta?.codex);
+  return codex?.role === "user_note" && typeof codex.questionId === "string"
+    ? codex.questionId
+    : undefined;
+}
+
+function optionPreview(option: EnumOption): string | undefined {
+  const preview = metaRecord(option._meta?.["_claude/askUserQuestionOption"])?.preview;
+  return typeof preview === "string" && preview.trim() ? preview : undefined;
+}
+
 function toOptions(values: string[] | undefined, titled: EnumOption[] | undefined) {
   if (titled?.length) {
     return titled.map((option) => ({
       value: option.const,
       label: option.title || option.const,
       description: option.description,
+      preview: optionPreview(option),
     }));
   }
   return (values ?? []).map((value) => ({ value, label: value }));
 }
 
+/** A question for each field Athas can render; null for types it does not know. */
 function toQuestion(
   name: string,
   property: AcpElicitationProperty,
   required: boolean,
-): ElicitationQuestion {
+): ElicitationQuestion | null {
   const base = { name, title: property.title || name, description: property.description, required };
 
   switch (property.type) {
-    case "array":
+    case "array": {
+      // Multi-selects are titled `anyOf` items or string `enum` items. Other item types must not be
+      // shown as a string multi-select.
+      const { items } = property;
+      const options = items.anyOf?.length
+        ? toOptions(undefined, items.anyOf)
+        : items.enum?.length && (items.type === undefined || items.type === "string")
+          ? toOptions(items.enum, undefined)
+          : null;
+      if (!options) return null;
       return {
         ...base,
         kind: "choice",
         multiple: true,
-        options: toOptions(property.items.enum, property.items.anyOf),
+        options,
         defaults: property.default ?? [],
+        minItems: property.minItems,
+        maxItems: property.maxItems,
       };
+    }
     case "boolean":
       return {
         ...base,
@@ -208,10 +247,16 @@ function toQuestion(
         maxLength: property.maxLength,
       };
     }
+    default:
+      return null;
   }
 }
 
-/** One questionnaire step per schema field, in schema order. Paired custom-answer fields fold in. */
+/**
+ * One questionnaire step per schema field, in schema order. Claude's paired custom-answer fields
+ * fold into their choice question; a codex-acp note becomes an optional step after its question.
+ * Fields of unknown types are left out; see `hasUnanswerableFields`.
+ */
 export function toElicitationQuestions(request: AcpFormElicitationRequest): ElicitationQuestion[] {
   const { properties, required = [] } = request.requestedSchema;
   const questions = new Map<string, ElicitationQuestion>();
@@ -223,14 +268,66 @@ export function toElicitationQuestions(request: AcpFormElicitationRequest): Elic
       customFields.set(target, name);
       continue;
     }
-    questions.set(name, toQuestion(name, property, required.includes(name)));
+    const question = toQuestion(name, property, required.includes(name));
+    if (!question) continue;
+    const noteFor = noteTarget(property);
+    const notedField = noteFor ? properties[noteFor] : undefined;
+    questions.set(
+      name,
+      noteFor && notedField && question.kind === "text"
+        ? { ...question, title: "Anything to add?", description: notedField.title || noteFor }
+        : question,
+    );
   }
 
   for (const [target, field] of customFields) {
     const question = questions.get(target);
-    if (question?.kind === "choice") questions.set(target, { ...question, otherField: field });
+    if (question?.kind === "choice") {
+      questions.set(target, { ...question, otherField: field });
+      continue;
+    }
+    // No choice question to attach to: ask for the custom answer on its own.
+    const orphan = toQuestion(field, properties[field], required.includes(field));
+    if (orphan) questions.set(field, orphan);
   }
   return [...questions.values()];
+}
+
+/** True when a required field has a type Athas cannot render, so the form cannot be accepted. */
+export function hasUnanswerableFields(
+  request: AcpFormElicitationRequest,
+  questions: ElicitationQuestion[],
+): boolean {
+  const { properties, required = [] } = request.requestedSchema;
+  const answerable = new Set(
+    questions.flatMap((question) =>
+      question.kind === "choice" && question.otherField
+        ? [question.name, question.otherField]
+        : [question.name],
+    ),
+  );
+  return required.some((name) => name in properties && !answerable.has(name));
+}
+
+/** The first answer outside a multi-select's `minItems`/`maxItems`, as a message for the user. */
+export function findElicitationError(
+  questions: ElicitationQuestion[],
+  content: ElicitationContent,
+): string | null {
+  for (const question of questions) {
+    if (question.kind !== "choice" || !question.multiple) continue;
+    const answer = content[question.name];
+    const count = Array.isArray(answer) ? answer.length : 0;
+    // An optional question left unanswered is fine; min/max apply once something is chosen.
+    if (count === 0 && !question.required) continue;
+    if (question.minItems !== undefined && count < question.minItems) {
+      return `${question.title}: choose at least ${question.minItems}.`;
+    }
+    if (question.maxItems !== undefined && count > question.maxItems) {
+      return `${question.title}: choose at most ${question.maxItems}.`;
+    }
+  }
+  return null;
 }
 
 /**
