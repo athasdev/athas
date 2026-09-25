@@ -1,10 +1,13 @@
 use agent_client_protocol::schema::v1 as acp;
 use athas_terminal::TerminalEvent;
+use std::collections::HashMap;
 use tokio::sync::oneshot;
 
 /// Tracks state for an ACP terminal session
 pub(super) struct AcpTerminalState {
    pub athas_terminal_id: String,
+   /// The session that created the terminal; it is released when that session closes.
+   pub session_id: String,
    pub output_buffer: String,
    pub max_output_bytes: usize,
    pub truncated: bool,
@@ -17,6 +20,7 @@ impl AcpTerminalState {
    pub fn new(athas_terminal_id: String, max_output_bytes: Option<u32>) -> Self {
       Self {
          athas_terminal_id,
+         session_id: String::new(),
          output_buffer: String::new(),
          max_output_bytes: max_output_bytes.unwrap_or(1_000_000) as usize,
          truncated: false,
@@ -131,6 +135,11 @@ impl AcpTerminalState {
       }
    }
 
+   pub fn for_session(mut self, session_id: String) -> Self {
+      self.session_id = session_id;
+      self
+   }
+
    pub fn set_exit_status(&mut self, exit_code: Option<u32>, signal: Option<String>) {
       if self.exit_status.is_some() {
          return;
@@ -147,9 +156,56 @@ impl AcpTerminalState {
    }
 }
 
+/// Removes the terminals `session_id` created (every terminal with `None`), marking any still
+/// running as released so their `terminal/wait_for_exit` callers are answered. The caller closes
+/// the returned terminals.
+pub(super) fn take_session_terminals(
+   states: &mut HashMap<String, AcpTerminalState>,
+   session_id: Option<&str>,
+) -> Vec<AcpTerminalState> {
+   let terminal_ids: Vec<String> = states
+      .iter()
+      .filter(|(_, state)| session_id.is_none_or(|session_id| state.session_id == session_id))
+      .map(|(terminal_id, _)| terminal_id.clone())
+      .collect();
+   terminal_ids
+      .into_iter()
+      .filter_map(|terminal_id| states.remove(&terminal_id))
+      .map(|mut state| {
+         state.set_exit_status(Some(1), Some("released".to_string()));
+         state
+      })
+      .collect()
+}
+
 #[cfg(test)]
 mod tests {
-   use super::AcpTerminalState;
+   use super::{AcpTerminalState, take_session_terminals};
+   use std::collections::HashMap;
+
+   #[test]
+   fn releases_only_the_closed_sessions_terminals() {
+      let mut states = HashMap::new();
+      let mut waiting = AcpTerminalState::new("athas-1".to_string(), None).for_session("a".into());
+      let (exit_tx, mut exit_rx) = tokio::sync::oneshot::channel();
+      waiting.exit_waiters.push(exit_tx);
+      states.insert("t1".to_string(), waiting);
+      states.insert(
+         "t2".to_string(),
+         AcpTerminalState::new("athas-2".to_string(), None).for_session("b".into()),
+      );
+
+      let released = take_session_terminals(&mut states, Some("a"));
+
+      assert_eq!(released.len(), 1);
+      assert_eq!(released[0].athas_terminal_id, "athas-1");
+      assert!(exit_rx.try_recv().is_ok(), "a waiting caller is answered");
+      assert!(states.contains_key("t2"));
+
+      let rest = take_session_terminals(&mut states, None);
+      assert_eq!(rest.len(), 1);
+      assert!(states.is_empty());
+   }
 
    #[test]
    fn append_output_truncates_from_beginning() {

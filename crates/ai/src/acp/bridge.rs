@@ -119,6 +119,9 @@ impl AcpWorker {
             if let Some(io_handle) = self.io_handle.take() {
                io_handle.abort();
             }
+            if let Some(client) = self.client.as_ref() {
+               client.release_session(None).await;
+            }
 
             self.connection = None;
             self.session_id = None;
@@ -532,6 +535,9 @@ impl AcpWorker {
 
       if let Some(process) = self.process.take() {
          stop_child_tree(process, self.process_group_id.take()).await;
+      }
+      if let Some(client) = self.client.as_ref() {
+         client.release_session(None).await;
       }
 
       self.connection = None;

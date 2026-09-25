@@ -1,7 +1,7 @@
 use super::{
    AcpConnection,
    file_access::{self, FileAccess, OutsideAccess},
-   terminal_state::AcpTerminalState,
+   terminal_state::{AcpTerminalState, take_session_terminals},
    types::{
       ACP_BUFFER_READ_EVENT, AcpBufferReadRequest, AcpContentBlock, AcpEvent,
       AcpPermissionToolCall, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus,
@@ -290,9 +290,53 @@ impl AthasAcpClient {
       }
    }
 
+   /// Records the session that most recently opened or received a prompt. Extension requests
+   /// carry no session, so ones without a `sessionId` param are attributed to it.
    pub async fn set_session_id(&self, session_id: String) {
       let mut current = self.current_session_id.lock().await;
       *current = Some(session_id);
+   }
+
+   /// Frees what a closed session held: its terminals and the folders outside the workspace the
+   /// user let it read. `None` frees everything, for when the agent itself stops.
+   pub async fn release_session(&self, session_id: Option<&str>) {
+      let released = {
+         let mut states = self
+            .terminal_states
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+         take_session_terminals(&mut states, session_id)
+      };
+      for state in released {
+         if let Err(e) = self
+            .terminal_manager
+            .close_terminal(&state.athas_terminal_id)
+         {
+            log::warn!(
+               "Failed to close terminal {}: {}",
+               state.athas_terminal_id,
+               e
+            );
+         }
+      }
+
+      {
+         let mut grants = self
+            .outside_read_grants
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+         match session_id {
+            Some(session_id) => {
+               grants.remove(session_id);
+            }
+            None => grants.clear(),
+         }
+      }
+
+      let mut current = self.current_session_id.lock().await;
+      if session_id.is_none() || current.as_deref() == session_id {
+         *current = None;
+      }
    }
 
    fn emit_event(&self, event: AcpEvent) {
@@ -1178,7 +1222,8 @@ impl AthasAcpClient {
          Ok(athas_terminal_id) => {
             let terminal_id = athas_terminal_id.clone();
             let output_limit = args.output_byte_limit.map(|l| l as u32);
-            let state = AcpTerminalState::new(athas_terminal_id.clone(), output_limit);
+            let state = AcpTerminalState::new(athas_terminal_id.clone(), output_limit)
+               .for_session(args.session_id.to_string());
             {
                let mut states = self.terminal_states.lock().unwrap();
                states.insert(terminal_id.clone(), state);
@@ -1319,16 +1364,11 @@ impl AthasAcpClient {
    }
 
    async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
-      let session_id = self
-         .current_session_id
-         .lock()
-         .await
-         .clone()
-         .unwrap_or_default();
-
       // Parse params from RawValue to Value for easier access
       let params: serde_json::Value =
          serde_json::from_str(args.params.get()).unwrap_or(serde_json::Value::Null);
+      let session_id =
+         ext_request_session_id(&params, self.current_session_id.lock().await.as_deref());
 
       match &*args.method {
          "_athas/open_terminal" => {
@@ -1393,6 +1433,17 @@ fn is_editor_window<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) -> bool
    })
 }
 
+/// The session an extension request is about: its `sessionId` param when the agent sent one,
+/// otherwise the session that last opened or received a prompt on this connection.
+fn ext_request_session_id(params: &serde_json::Value, current: Option<&str>) -> String {
+   params
+      .get("sessionId")
+      .and_then(serde_json::Value::as_str)
+      .or(current)
+      .unwrap_or_default()
+      .to_string()
+}
+
 /// Turns the frontend's answer into an ACP response. A missing or malformed answer cancels.
 fn elicitation_response(answer: Option<serde_json::Value>) -> acp::CreateElicitationResponse {
    answer
@@ -1404,7 +1455,7 @@ fn elicitation_response(answer: Option<serde_json::Value>) -> acp::CreateElicita
 mod tests {
    use super::{
       AthasAcpClient, ClientResponders, PendingBufferRead, PendingEntry, PermissionResponse,
-      SessionConfigOptionKind, acp, elicitation_response,
+      SessionConfigOptionKind, acp, elicitation_response, ext_request_session_id,
    };
    use crate::acp::types::{AcpBufferReadRequest, AcpEvent};
    use serde_json::json;
@@ -1751,6 +1802,14 @@ mod tests {
          "package"
       );
       assert_eq!(forwarded["_meta"]["source"], "test");
+   }
+
+   #[test]
+   fn attributes_extension_requests_to_their_own_session() {
+      let params = json!({ "sessionId": "b", "title": "Fix" });
+      assert_eq!(ext_request_session_id(&params, Some("a")), "b");
+      assert_eq!(ext_request_session_id(&json!({}), Some("a")), "a");
+      assert_eq!(ext_request_session_id(&json!(null), None), "");
    }
 
    #[test]
