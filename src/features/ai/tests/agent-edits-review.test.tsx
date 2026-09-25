@@ -26,7 +26,7 @@ vi.mock("@/features/window/stores/project.store", () => ({
 
 import { AgentEditsReview } from "../components/chat/agent-edits-review";
 import { AgentEditsBar } from "../components/input/agent-edits-bar";
-import { useAgentEditsStore } from "../stores/agent-edits.store";
+import { pickAgentEditsChatId, useAgentEditsStore } from "../stores/agent-edits.store";
 
 const CHAT = "chat-1";
 
@@ -101,5 +101,18 @@ describe("agent edits review", () => {
     act(() => useAgentEditsStore.getState().actions.setEntry(CHAT, "/repo/src/a.ts", null));
 
     expect(useAgentEditsStore.getState().reviewChatId).toBeNull();
+  });
+});
+
+describe("pickAgentEditsChatId", () => {
+  it("prefers the chat in view and falls back to the last chat with edits", () => {
+    const entry = { path: "/a", baseline: "a", current: "b", created: false, revision: 1 };
+    useAgentEditsStore.setState({ byChat: { one: { "/a": entry }, two: { "/a": entry } } });
+
+    expect(pickAgentEditsChatId("one")).toBe("one");
+    expect(pickAgentEditsChatId("idle")).toBe("two");
+    expect(pickAgentEditsChatId(null)).toBe("two");
+    useAgentEditsStore.setState({ byChat: {} });
+    expect(pickAgentEditsChatId("one")).toBeNull();
   });
 });

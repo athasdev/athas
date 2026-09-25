@@ -52,3 +52,14 @@ export function getAgentEditEntries(chatId: string): Record<string, AgentEditEnt
 export function useAgentEditEntries(chatId: string | null | undefined) {
   return useAgentEditsStore((state) => (chatId ? state.byChat[chatId] : undefined) ?? NO_ENTRIES);
 }
+
+/**
+ * The chat an "agent changes" command acts on: `preferred` (the chat in view) when it has
+ * unreviewed edits, otherwise the most recently changed chat that does.
+ */
+export function pickAgentEditsChatId(preferred: string | null | undefined): string | null {
+  const { byChat } = useAgentEditsStore.getState();
+  if (preferred && byChat[preferred]) return preferred;
+  const chatIds = Object.keys(byChat);
+  return chatIds[chatIds.length - 1] ?? null;
+}

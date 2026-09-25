@@ -4,18 +4,23 @@ import { openNewAgentChat } from "@/features/ai/lib/open-new-agent-chat";
 import { openAgentSessions } from "@/features/ai/lib/open-agent-sessions";
 import { openAgentInNewWindow } from "@/features/ai/detached/agent-window-service";
 import { toggleFollowAgent } from "@/features/ai/services/agent-follow-service";
+import { keepAllAgentEdits, rejectAllAgentEdits } from "@/features/ai/services/agent-edits-service";
+import { pickAgentEditsChatId, useAgentEditsStore } from "@/features/ai/stores/agent-edits.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   ArrowClockwiseIcon,
   ArrowsClockwiseIcon,
   ArrowsLeftRightIcon,
+  CheckIcon,
   CrosshairIcon,
+  GitDiffIcon,
   HistoryIcon,
   SignOutIcon,
   SparkleIcon,
   SquareIcon,
   TerminalWindowIcon,
+  XIcon,
 } from "@/ui/icons";
 import {
   restartAllLanguageServers,
@@ -98,6 +103,47 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
         });
       },
     },
+    ...(
+      [
+        {
+          id: "ai-review-agent-changes",
+          label: "AI: Review Agent Changes",
+          description: "Keep or reject the agent's file edits hunk by hunk",
+          icon: <GitDiffIcon />,
+          run: (chatId: string) => useAgentEditsStore.getState().actions.openReview(chatId),
+        },
+        {
+          id: "ai-keep-all-agent-changes",
+          label: "AI: Keep All Agent Changes",
+          description: "Accept every unreviewed edit the agent made",
+          icon: <CheckIcon />,
+          run: (chatId: string) => void keepAllAgentEdits(chatId),
+        },
+        {
+          id: "ai-reject-all-agent-changes",
+          label: "AI: Reject All Agent Changes",
+          description: "Revert every unreviewed edit the agent made",
+          icon: <XIcon />,
+          run: (chatId: string) => void rejectAllAgentEdits(chatId),
+        },
+      ] as const
+    ).map(({ run, ...command }): Action => ({
+      ...command,
+      category: "AI",
+      action: () => {
+        onClose();
+        const state = useBufferStore.getState();
+        const buffer = state.buffers.find((item) => item.id === state.activeBufferId);
+        const chatId = pickAgentEditsChatId(
+          buffer?.type === "agent" ? buffer.sessionId : useAIChatStore.getState().currentChatId,
+        );
+        if (!chatId) {
+          showToast({ message: "No agent changes to review.", type: "info" });
+          return;
+        }
+        run(chatId);
+      },
+    })),
     {
       id: "ai-new-agent",
       label: "AI: New Agent",
