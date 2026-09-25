@@ -73,6 +73,7 @@ import { chatContentWidth } from "../chat/chat-content-width";
 import { ComposerEffortSelector } from "./composer-effort-selector";
 import { ComposerAgentSelector } from "./composer-agent-selector";
 import { ChatPreferencesMenu } from "./chat-preferences-menu";
+import { AcpContextMeter } from "./acp-context-meter";
 import { AgentMessageQueue } from "./agent-message-queue";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
@@ -1287,6 +1288,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           </div>
 
           <div className="ml-auto flex min-w-0 shrink items-center gap-1">
+            <AcpContextMeter usage={acpSession.usage} />
             <ComposerAgentSelector
               cwd={projectPath}
               currentAgentId={currentAgentId}

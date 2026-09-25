@@ -10,6 +10,7 @@ type AcpActions = Pick<
   | "setSessionModeState"
   | "setSessionCurrentMode"
   | "setSessionConfigOptions"
+  | "setSessionUsage"
   | "clearAcpSession"
   | "changeSessionMode"
   | "changeSessionConfigOption"
@@ -20,6 +21,7 @@ function emptySessionState(): AcpSessionState {
     slashCommands: [],
     modeState: { currentModeId: null, availableModes: [] },
     configOptions: [],
+    usage: null,
   };
 }
 
@@ -59,6 +61,10 @@ export function createAcpActions(set: SetAIChatStore, get: GetAIChatStore): AcpA
     setSessionConfigOptions: (sessionId, options) =>
       updateSession(sessionId, (session) => {
         session.configOptions = options;
+      }),
+    setSessionUsage: (sessionId, usage) =>
+      updateSession(sessionId, (session) => {
+        session.usage = usage;
       }),
     clearAcpSession: (sessionId) =>
       set((state) => {

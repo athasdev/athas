@@ -277,6 +277,9 @@ const AIChat = memo(function AIChat({
           case "config_options_update":
             actions.setSessionConfigOptions(payload.sessionId, payload.configOptions);
             break;
+          case "usage_update":
+            actions.setSessionUsage(payload.sessionId, payload.usage);
+            break;
           case "session_info_update": {
             const chat = store.chats.find((item) => item.acpSessionId === payload.sessionId);
             const nextTitle = chat ? getChatTitleFromSessionInfo(chat.title, payload.title) : null;
@@ -1152,9 +1155,8 @@ details: ${errorDetails || mainError}
                 plan: event.entries.length > 0 ? event.entries : undefined,
               });
               break;
-            case "usage_update": {
-              break;
-            }
+            case "usage_update":
+              break; // The chat store keeps the session's usage
             case "status_changed":
               break; // The chat store follows agent status
             case "error":

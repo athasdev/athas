@@ -9,6 +9,7 @@ export const EMPTY_ACP_SESSION_STATE: AcpSessionState = Object.freeze({
   slashCommands: [],
   modeState: Object.freeze({ currentModeId: null, availableModes: [] }),
   configOptions: [],
+  usage: null,
 }) as AcpSessionState;
 
 /**

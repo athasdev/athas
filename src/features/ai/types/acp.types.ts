@@ -79,6 +79,8 @@ export interface AcpSessionState {
     availableModes: SessionMode[];
   };
   configOptions: SessionConfigOption[];
+  /** The agent's latest context and cost report; null until it sends one. */
+  usage: AcpUsageUpdate | null;
 }
 
 /** The command a terminal sign-in method runs in an Athas terminal. */
@@ -213,9 +215,17 @@ export interface AcpPlanEntry {
   status: AcpPlanEntryStatus;
 }
 
-interface AcpUsageUpdate {
+/** Cumulative cost of a session, in an ISO 4217 currency. */
+export interface AcpCost {
+  amount: number;
+  currency: string;
+}
+
+/** Context window use of a session, from the agent's latest `usage_update`. */
+export interface AcpUsageUpdate {
   used: number;
   size: number;
+  cost?: AcpCost | null;
 }
 
 type AcpPermissionOptionKind = "allow_once" | "allow_always" | "reject_once" | "reject_always";

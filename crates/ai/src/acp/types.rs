@@ -106,8 +106,20 @@ pub struct AcpPlanEntry {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AcpUsageUpdate {
+   /// Tokens currently in the context window.
    pub used: u64,
+   /// Size of the context window in tokens.
    pub size: u64,
+   /// Cumulative session cost, when the agent reports one.
+   pub cost: Option<AcpCost>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpCost {
+   pub amount: f64,
+   /// ISO 4217 currency code, such as "USD".
+   pub currency: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

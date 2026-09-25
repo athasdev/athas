@@ -36,6 +36,7 @@ type ChatActions = Omit<
   | "setSessionModeState"
   | "setSessionCurrentMode"
   | "setSessionConfigOptions"
+  | "setSessionUsage"
   | "clearAcpSession"
   | "changeSessionMode"
   | "changeSessionConfigOption"

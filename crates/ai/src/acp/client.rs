@@ -4,7 +4,7 @@ use super::{
    replay::ReplayRouter,
    terminal_state::{AcpTerminalState, take_session_terminals},
    types::{
-      ACP_BUFFER_READ_EVENT, AcpBufferReadRequest, AcpContentBlock, AcpEvent,
+      ACP_BUFFER_READ_EVENT, AcpBufferReadRequest, AcpContentBlock, AcpCost, AcpEvent,
       AcpPermissionToolCall, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus,
       AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, AcpUsageUpdate, SessionConfigOption,
       SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
@@ -397,6 +397,17 @@ impl AthasAcpClient {
 
    fn resolve_path(&self, path: &str) -> PathBuf {
       resolve_path_against_workspace(self.workspace_path.as_deref(), path)
+   }
+
+   fn map_usage(usage: acp::UsageUpdate) -> AcpUsageUpdate {
+      AcpUsageUpdate {
+         used: usage.used,
+         size: usage.size,
+         cost: usage.cost.map(|cost| AcpCost {
+            amount: cost.amount,
+            currency: cost.currency,
+         }),
+      }
    }
 
    fn map_plan_priority(priority: acp::PlanEntryPriority) -> AcpPlanEntryPriority {
@@ -1012,10 +1023,7 @@ impl AthasAcpClient {
             );
             self.emit_session_update(AcpEvent::UsageUpdate {
                session_id,
-               usage: AcpUsageUpdate {
-                  used: usage.used,
-                  size: usage.size,
-               },
+               usage: Self::map_usage(usage),
             });
          }
          update => {
@@ -1513,6 +1521,24 @@ mod tests {
 
    fn diff_content() -> acp::ToolCallContent {
       acp::ToolCallContent::Diff(acp::Diff::new("/repo/a.txt", "new").old_text("old".to_string()))
+   }
+
+   #[test]
+   fn usage_update_keeps_the_session_cost() {
+      let usage = AthasAcpClient::map_usage(
+         acp::UsageUpdate::new(53_000, 200_000).cost(acp::Cost::new(0.045, "USD")),
+      );
+      let json = serde_json::to_value(&usage).unwrap();
+      assert_eq!(
+         json,
+         json!({ "used": 53_000, "size": 200_000, "cost": { "amount": 0.045, "currency": "USD" } })
+      );
+
+      let usage = AthasAcpClient::map_usage(acp::UsageUpdate::new(10, 100));
+      assert_eq!(
+         serde_json::to_value(&usage).unwrap()["cost"],
+         serde_json::Value::Null
+      );
    }
 
    #[test]

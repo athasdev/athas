@@ -31,6 +31,7 @@ describe("ACP session state", () => {
       slashCommands: [{ name: "review", description: "Review" }],
       modeState: { currentModeId: "plan", availableModes: [] },
       configOptions: [],
+      usage: null,
     };
     const state = {
       chats: [chat("chat-1", "gemini", "session-a"), chat("chat-2", "gemini", "session-b")],

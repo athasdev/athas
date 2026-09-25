@@ -90,11 +90,30 @@ function ProgressValue({ className, ...props }: ProgressPrimitive.Value.Props) {
   );
 }
 
-interface ProgressCircleProps extends Omit<SVGProps<SVGSVGElement>, "value"> {
+const progressCircleIndicatorVariants = cva(
+  "transition-[stroke-dashoffset] duration-normal ease-smooth",
+  {
+    variants: {
+      tone: {
+        accent: "stroke-primary",
+        warning: "stroke-warning",
+        error: "stroke-destructive",
+      },
+    },
+    defaultVariants: {
+      tone: "accent",
+    },
+  },
+);
+
+interface ProgressCircleProps
+  extends
+    Omit<SVGProps<SVGSVGElement>, "value">,
+    VariantProps<typeof progressCircleIndicatorVariants> {
   value: number;
 }
 
-function ProgressCircle({ className, value, ...props }: ProgressCircleProps) {
+function ProgressCircle({ className, value, tone = "accent", ...props }: ProgressCircleProps) {
   const progress = Math.min(100, Math.max(0, value)) / 100;
 
   return (
@@ -115,7 +134,7 @@ function ProgressCircle({ className, value, ...props }: ProgressCircleProps) {
         strokeDasharray="1"
         strokeDashoffset={1 - progress}
         strokeLinecap="round"
-        className="stroke-primary transition-[stroke-dashoffset] duration-normal ease-smooth"
+        className={progressCircleIndicatorVariants({ tone })}
       />
     </svg>
   );

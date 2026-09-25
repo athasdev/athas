@@ -1,6 +1,7 @@
 import type {
   AcpAgentStatus,
   AcpSessionState,
+  AcpUsageUpdate,
   SessionConfigOption,
   SessionConfigValue,
   SessionMode,
@@ -128,6 +129,8 @@ export interface AIChatActions {
   ) => void;
   setSessionCurrentMode: (sessionId: string, modeId: string) => void;
   setSessionConfigOptions: (sessionId: string, options: SessionConfigOption[]) => void;
+  /** Keeps the latest context and cost report of a session. */
+  setSessionUsage: (sessionId: string, usage: AcpUsageUpdate) => void;
   clearAcpSession: (sessionId: string) => void;
   changeSessionMode: (sessionId: string, modeId: string) => Promise<void>;
   changeSessionConfigOption: (
