@@ -15,7 +15,7 @@ use athas_terminal::{
 };
 use std::{
    collections::HashMap,
-   path::PathBuf,
+   path::{Path, PathBuf},
    sync::{Arc, Mutex as StdMutex},
 };
 use tauri::Emitter;
@@ -865,27 +865,37 @@ impl AthasAcpClient {
    ) -> acp::Result<acp::WriteTextFileResponse> {
       let path_str = args.path.to_string_lossy();
       let path = self.resolve_path(&path_str);
+      self.apply_agent_write(&path, &args.content).await?;
+      Ok(acp::WriteTextFileResponse::new())
+   }
 
-      // Create parent directories if needed
+   /// Applies an agent's write to `path`, the one place agent writes land: the file is written,
+   /// then the frontend hears about it through `file-changed` so the file tree and any open editor
+   /// catch up.
+   async fn apply_agent_write(&self, path: &Path, content: &str) -> acp::Result<()> {
+      let existed = tokio::fs::try_exists(path).await.unwrap_or(false);
       if let Some(parent) = path.parent()
          && let Err(e) = tokio::fs::create_dir_all(parent).await
       {
          log::warn!("Failed to create parent directories: {}", e);
       }
 
-      match tokio::fs::write(&path, &args.content).await {
-         Ok(_) => {
-            // Emit file change event so frontend can refresh
-            let _ = self
-               .app_handle
-               .emit("file-changed", path.to_string_lossy().to_string());
-            Ok(acp::WriteTextFileResponse::new())
-         }
-         Err(e) => Err(acp::Error::new(
-            -32603,
-            format!("Failed to write file: {}", e),
-         )),
+      tokio::fs::write(path, content)
+         .await
+         .map_err(|e| acp::Error::new(-32603, format!("Failed to write file: {}", e)))?;
+
+      let event = file_access::FileChangeEvent {
+         path: path_to_string(path),
+         event_type: if existed {
+            file_access::FileChangeType::Reloaded
+         } else {
+            file_access::FileChangeType::Opened
+         },
+      };
+      if let Err(e) = self.app_handle.emit("file-changed", &event) {
+         log::warn!("Failed to emit file change: {}", e);
       }
+      Ok(())
    }
 
    async fn create_terminal(

@@ -1,7 +1,25 @@
 //! Helpers behind the ACP `fs/*` methods that do not need the client's state.
 
 use agent_client_protocol::schema::v1 as acp;
+use serde::Serialize;
 use std::{io, path::Path};
+
+/// The `file-changed` event payload, in the shape the project file watcher emits and the
+/// frontend's file watcher listener reads.
+#[derive(Debug, Clone, Serialize)]
+pub(super) struct FileChangeEvent {
+   pub path: String,
+   pub event_type: FileChangeType,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum FileChangeType {
+   /// A file that did not exist before: its folder in the file tree refreshes.
+   Opened,
+   /// An existing file changed: an open editor for it reloads.
+   Reloaded,
+}
 
 /// The ACP error for a failed read. A missing file is `resource_not_found` (-32002), so agents can
 /// tell it apart from a real failure; anything else is an internal error.
@@ -88,6 +106,27 @@ mod tests {
 
       let error = slice_lines("a\n".to_string(), Some(3), None).unwrap_err();
       assert_eq!(serde_json::to_value(error).unwrap()["code"], -32602);
+   }
+
+   #[test]
+   fn file_change_events_match_the_file_watcher_payload() {
+      let event = FileChangeEvent {
+         path: "/repo/a.txt".to_string(),
+         event_type: FileChangeType::Reloaded,
+      };
+      assert_eq!(
+         serde_json::to_value(event).unwrap(),
+         json!({ "path": "/repo/a.txt", "event_type": "reloaded" })
+      );
+
+      let created = FileChangeEvent {
+         path: "/repo/b.txt".to_string(),
+         event_type: FileChangeType::Opened,
+      };
+      assert_eq!(
+         serde_json::to_value(created).unwrap()["event_type"],
+         "opened"
+      );
    }
 
    #[test]
