@@ -103,6 +103,17 @@ impl ClientResponders {
          .contains_key(request_id)
    }
 
+   /// Whether the agent is waiting on the user for anything: a permission or a question.
+   pub fn has_pending(&self) -> bool {
+      fn waiting<T>(pending: &Pending<T>) -> bool {
+         !pending
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .is_empty()
+      }
+      waiting(&self.permissions) || waiting(&self.elicitations)
+   }
+
    /// Resolves what a cancelled prompt turn leaves waiting on the user: the session's permission
    /// requests get the `cancelled` outcome and its questions a `cancel` action, as ACP requires
    /// after `session/cancel`. Request-scoped questions are cancelled too, since the frontend shows

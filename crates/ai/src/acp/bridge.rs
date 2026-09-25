@@ -7,7 +7,7 @@ use super::{
    config::AgentRegistry,
    mcp_servers::{AcpSkippedMcpServer, McpServerConfig},
    process::{stop_child_tree, terminate_process_group},
-   sessions::{ConnectionKey, SessionRegistry},
+   sessions::{ConnectionKey, SessionRegistry, is_idle},
    types::{
       AcpAgentStatus, AcpEvent, AcpOpenedSession, AcpSessionInfo, AcpSessionList, AgentConfig,
       SessionConfigOption, SessionConfigValue,
@@ -24,7 +24,7 @@ use std::{
    rc::Rc,
    sync::{Arc, Mutex as StdMutex},
    thread,
-   time::Duration,
+   time::{Duration, Instant},
 };
 use tauri::Emitter;
 use tokio::{
@@ -93,6 +93,8 @@ pub(super) fn connection_key(
 pub(super) enum Shutdown {
    /// The user stopped or restarted the agent, or the app is quitting.
    Requested,
+   /// Nothing used it for a while.
+   Idle,
    /// Its first session could not be opened, so nothing uses it.
    Unused,
    /// The process exited on its own.
@@ -108,11 +110,16 @@ pub(super) struct AgentConnection {
    io_handle: Option<tokio::task::JoinHandle<()>>,
    responders: ClientResponders,
    skipped_mcp_servers: Vec<AcpSkippedMcpServer>,
+   last_activity: Instant,
    /// Session opens still waiting on the agent.
    pending_opens: usize,
 }
 
 impl AgentConnection {
+   fn touch(&mut self) {
+      self.last_activity = Instant::now();
+   }
+
    fn supports_session_capability(&self, capability: &str) -> bool {
       self
          .handle
@@ -120,6 +127,10 @@ impl AgentConnection {
          .session_capabilities
          .get(capability)
          .is_some_and(|value| !value.is_null())
+   }
+
+   fn can_reattach_sessions(&self) -> bool {
+      self.handle.agent_capabilities.load_session || self.handle.supports_session_resume
    }
 
    fn supports_logout(&self) -> bool {
@@ -268,6 +279,7 @@ impl AcpWorker {
             io_handle: Some(started.io_handle),
             responders: started.responders,
             skipped_mcp_servers: Vec::new(),
+            last_activity: Instant::now(),
             pending_opens: 0,
          },
       );
@@ -277,12 +289,13 @@ impl AcpWorker {
 
    /// Opens the chat's session on a running agent, or answers right away when it is open there.
    pub(super) fn open_session_on(&mut self, connection_id: u64, request: OpenRequest) {
-      if !self.connections.contains_key(&connection_id) {
+      let Some(connection) = self.connections.get_mut(&connection_id) else {
          let _ = request.response_tx.send(Err(anyhow::anyhow!(
             "The agent stopped before the session opened"
          )));
          return;
-      }
+      };
+      connection.touch();
 
       if let Some(session_id) = request.session_id.as_deref() {
          if self.sessions.is_open_on(session_id, connection_id) {
@@ -360,6 +373,7 @@ impl AcpWorker {
          return;
       };
       connection.pending_opens = connection.pending_opens.saturating_sub(1);
+      connection.touch();
 
       match result {
          Ok(opened) => {
@@ -427,6 +441,7 @@ impl AcpWorker {
          self.sessions.end_prompt(&session_id);
          bail!("The agent is not running");
       };
+      connection.touch();
 
       let handle = connection.handle.clone();
       let agent_id = connection.key.agent_id.clone();
@@ -474,6 +489,13 @@ impl AcpWorker {
 
    pub(super) fn finish_prompt(&mut self, session_id: &str) {
       self.sessions.end_prompt(session_id);
+      if let Some(connection) = self
+         .sessions
+         .connection_of(session_id)
+         .and_then(|id| self.connections.get_mut(&id))
+      {
+         connection.touch();
+      }
    }
 
    /// Sends `session/cancel` for the session's turn and answers what the turn left waiting on the
@@ -486,6 +508,7 @@ impl AcpWorker {
       let Some(connection) = self.connections.get_mut(&connection_id) else {
          return Ok(());
       };
+      connection.touch();
       connection
          .handle
          .connection
@@ -567,6 +590,7 @@ impl AcpWorker {
       let Some(connection) = self.connections.get_mut(&connection_id) else {
          return;
       };
+      connection.touch();
       if connection.supports_session_capability("close") {
          let request = connection
             .handle
@@ -760,7 +784,7 @@ impl AcpWorker {
       };
       let error = match &reason {
          Shutdown::Exited(message) => Some(message.clone()),
-         Shutdown::Requested | Shutdown::Unused => None,
+         Shutdown::Requested | Shutdown::Idle | Shutdown::Unused => None,
       };
       if matches!(reason, Shutdown::Requested) {
          for session_id in &session_ids {
@@ -776,7 +800,7 @@ impl AcpWorker {
 
       // Closing is a courtesy before the process is stopped; an agent that does not answer
       // quickly must not keep Stop waiting. The requests go out now and share one budget.
-      let close_requests: Vec<_> = if matches!(reason, Shutdown::Requested)
+      let close_requests: Vec<_> = if matches!(reason, Shutdown::Requested | Shutdown::Idle)
          && connection.supports_session_capability("close")
       {
          session_ids
@@ -819,10 +843,12 @@ impl AcpWorker {
       })
    }
 
-   /// Finds agents that exited on their own. Every session on such an agent gets a
-   /// `status_changed` with the exit, so its chats can reconnect.
-   pub(super) fn sweep(&mut self) {
+   /// Finds agents that exited on their own and agents idle long enough to shut down. Every
+   /// session on an agent that exited gets a `status_changed` with the exit, so its chats can
+   /// reconnect.
+   pub(super) fn sweep(&mut self, now: Instant) {
       let mut exited = Vec::new();
+      let mut idle = Vec::new();
       for (id, connection) in &mut self.connections {
          let exit = connection
             .process
@@ -831,16 +857,34 @@ impl AcpWorker {
          match exit {
             Some(Ok(Some(status))) => {
                exited.push((*id, format!("ACP agent process exited: {}", status)));
+               continue;
             }
             Some(Err(error)) => {
                log::warn!("Failed to check ACP process status: {}", error);
             }
             _ => {}
          }
+         let busy = self.sessions.has_running_prompt(*id)
+            || connection.pending_opens > 0
+            || connection.responders.has_pending();
+         let has_sessions = !self.sessions.sessions_of(*id).is_empty();
+         if is_idle(
+            connection.last_activity,
+            now,
+            busy,
+            has_sessions,
+            connection.can_reattach_sessions(),
+         ) {
+            idle.push(*id);
+         }
       }
       for (id, message) in exited {
          log::warn!("{}", message);
          tokio::task::spawn_local(self.shut_down(id, Shutdown::Exited(message)));
+      }
+      for id in idle {
+         log::info!("Stopping an idle ACP agent");
+         tokio::task::spawn_local(self.shut_down(id, Shutdown::Idle));
       }
    }
 }

@@ -3,7 +3,11 @@
 //! touches processes, so the rules are tested on their own.
 
 use anyhow::{Result, bail};
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+   collections::HashMap,
+   path::PathBuf,
+   time::{Duration, Instant},
+};
 use tokio_util::sync::CancellationToken;
 
 /// One agent process serves every chat that uses the same agent in the same workspace.
@@ -102,6 +106,14 @@ impl SessionRegistry {
          entry.prompt_running = false;
       }
    }
+
+   /// Whether any session on `connection_id` is running a prompt turn.
+   pub fn has_running_prompt(&self, connection_id: u64) -> bool {
+      self
+         .sessions
+         .values()
+         .any(|entry| entry.connection_id == connection_id && entry.prompt_running)
+   }
 }
 
 struct PendingStartup<W> {
@@ -180,6 +192,24 @@ impl<W> Startups<W> {
    }
 }
 
+/// How long an agent with nothing to do keeps running before it is shut down.
+pub(super) const ACP_IDLE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
+
+/// Whether an agent connection can be shut down for being idle. Only a connection that is doing
+/// nothing qualifies, and only when shutting it down loses nothing: it holds no sessions, or the
+/// agent can reattach them later with `session/load` or `session/resume`.
+pub(super) fn is_idle(
+   last_activity: Instant,
+   now: Instant,
+   busy: bool,
+   has_sessions: bool,
+   can_reattach_sessions: bool,
+) -> bool {
+   !busy
+      && (!has_sessions || can_reattach_sessions)
+      && now.saturating_duration_since(last_activity) >= ACP_IDLE_TIMEOUT
+}
+
 #[cfg(test)]
 mod tests {
    use super::*;
@@ -237,13 +267,11 @@ mod tests {
          1,
          "another chat streams at the same time"
       );
+      assert!(registry.has_running_prompt(1));
 
       registry.end_prompt("a");
       registry.end_prompt("b");
-      assert!(
-         registry.begin_prompt("a").is_ok(),
-         "a finished turn frees the session"
-      );
+      assert!(!registry.has_running_prompt(1));
       assert!(registry.begin_prompt("missing").is_err());
    }
 
@@ -292,6 +320,28 @@ mod tests {
       assert_eq!(
          startups.finish(&key("claude", "/w"), new),
          Some(vec!["chat-4"])
+      );
+   }
+
+   #[test]
+   fn shuts_down_only_agents_that_lose_nothing() {
+      let start = Instant::now();
+      let later = start + ACP_IDLE_TIMEOUT;
+      let soon = start + ACP_IDLE_TIMEOUT / 2;
+
+      assert!(is_idle(start, later, false, false, false));
+      assert!(is_idle(start, later, false, true, true));
+      assert!(
+         !is_idle(start, soon, false, false, false),
+         "not idle long enough"
+      );
+      assert!(
+         !is_idle(start, later, true, true, true),
+         "a prompt is running"
+      );
+      assert!(
+         !is_idle(start, later, false, true, false),
+         "its sessions could not be reattached"
       );
    }
 }

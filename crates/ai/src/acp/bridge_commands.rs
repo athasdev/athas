@@ -8,7 +8,7 @@ use super::{
 use crate::runtime::AthasAppHandle as AppHandle;
 use anyhow::Result;
 use athas_terminal::TerminalManager;
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 use tokio::sync::{Mutex, mpsc, oneshot};
 
 type Response<T> = oneshot::Sender<Result<T>>;
@@ -160,7 +160,7 @@ pub(super) async fn run_worker_loop(
             handle_followup(followup, &mut worker, &mut startups);
          }
          _ = health_check.tick() => {
-            worker.sweep();
+            worker.sweep(Instant::now());
          }
       }
       *status.lock().await = worker.statuses();
