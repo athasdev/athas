@@ -19,25 +19,82 @@ use std::{
    sync::{Arc, Mutex as StdMutex},
 };
 use tauri::Emitter;
-use tokio::sync::{Mutex, mpsc, oneshot};
+use tokio::sync::{Mutex, oneshot};
 
 /// Response for permission requests
 pub struct PermissionResponse {
-   pub request_id: String,
    pub approved: bool,
    pub cancelled: bool,
    pub option_id: Option<String>,
 }
 
-/// Pending `elicitation/create` requests, keyed by the id sent to the frontend. Each waits for the
-/// user's answer as ACP `CreateElicitationResponse` JSON.
-pub type PendingElicitations = Arc<Mutex<HashMap<String, oneshot::Sender<serde_json::Value>>>>;
+/// Agent requests waiting on the user, keyed by the request id sent to the frontend.
+pub type Pending<T> = Arc<StdMutex<HashMap<String, oneshot::Sender<T>>>>;
 
-/// Channels the bridge uses to deliver the user's answers back to waiting agent requests.
+/// Where the bridge delivers the user's answers to waiting agent requests. Elicitation answers are
+/// ACP `CreateElicitationResponse` JSON.
 #[derive(Clone)]
 pub struct ClientResponders {
-   pub permission: mpsc::Sender<PermissionResponse>,
-   pub elicitations: PendingElicitations,
+   pub permissions: Pending<PermissionResponse>,
+   pub elicitations: Pending<serde_json::Value>,
+}
+
+impl ClientResponders {
+   /// Hands the user's answer to the request waiting for it. False when nothing waits anymore: the
+   /// agent cancelled it, it timed out, or it was already answered.
+   pub fn answer_permission(&self, request_id: &str, response: PermissionResponse) -> bool {
+      take_pending(&self.permissions, request_id).is_some_and(|tx| tx.send(response).is_ok())
+   }
+
+   pub fn answer_elicitation(&self, request_id: &str, response: serde_json::Value) -> bool {
+      take_pending(&self.elicitations, request_id).is_some_and(|tx| tx.send(response).is_ok())
+   }
+}
+
+fn take_pending<T>(pending: &Pending<T>, request_id: &str) -> Option<oneshot::Sender<T>> {
+   pending
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .remove(request_id)
+}
+
+/// A request the frontend is showing the user. However its handler ends (answered, timed out, or
+/// dropped because the agent sent `$/cancel_request`), the slot is freed, and a prompt nobody
+/// answered is withdrawn from the UI with a `request_closed` event.
+struct PendingRequest<T> {
+   pending: Pending<T>,
+   request_id: String,
+   app_handle: AppHandle,
+}
+
+impl<T> PendingRequest<T> {
+   fn open(pending: &Pending<T>, app_handle: &AppHandle) -> (Self, oneshot::Receiver<T>) {
+      let request_id = uuid::Uuid::new_v4().to_string();
+      let (tx, rx) = oneshot::channel();
+      pending
+         .lock()
+         .unwrap_or_else(|poisoned| poisoned.into_inner())
+         .insert(request_id.clone(), tx);
+      let request = Self {
+         pending: pending.clone(),
+         request_id,
+         app_handle: app_handle.clone(),
+      };
+      (request, rx)
+   }
+}
+
+impl<T> Drop for PendingRequest<T> {
+   fn drop(&mut self) {
+      if take_pending(&self.pending, &self.request_id).is_some() {
+         let event = AcpEvent::RequestClosed {
+            request_id: self.request_id.clone(),
+         };
+         if let Err(e) = self.app_handle.emit("acp-event", &event) {
+            log::error!("Failed to emit ACP event: {}", e);
+         }
+      }
+   }
 }
 
 /// How long an agent question waits for the user before it is cancelled.
@@ -48,9 +105,8 @@ const ELICITATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(
 pub struct AthasAcpClient {
    app_handle: AppHandle,
    workspace_path: Option<PathBuf>,
-   permission_tx: mpsc::Sender<PermissionResponse>,
-   permission_rx: Arc<Mutex<mpsc::Receiver<PermissionResponse>>>,
-   pending_elicitations: PendingElicitations,
+   pending_permissions: Pending<PermissionResponse>,
+   pending_elicitations: Pending<serde_json::Value>,
    current_session_id: Arc<Mutex<Option<String>>>,
    terminal_manager: Arc<TerminalManager>,
    /// Maps ACP terminal IDs to terminal state (uses StdMutex for sync access from event listeners)
@@ -63,13 +119,11 @@ impl AthasAcpClient {
       workspace_path: Option<PathBuf>,
       terminal_manager: Arc<TerminalManager>,
    ) -> Self {
-      let (permission_tx, permission_rx) = mpsc::channel(32);
       Self {
          app_handle,
          workspace_path,
-         permission_tx,
-         permission_rx: Arc::new(Mutex::new(permission_rx)),
-         pending_elicitations: Arc::new(Mutex::new(HashMap::new())),
+         pending_permissions: Arc::default(),
+         pending_elicitations: Arc::default(),
          current_session_id: Arc::new(Mutex::new(None)),
          terminal_manager,
          terminal_states: Arc::new(StdMutex::new(HashMap::new())),
@@ -78,7 +132,7 @@ impl AthasAcpClient {
 
    pub fn responders(&self) -> ClientResponders {
       ClientResponders {
-         permission: self.permission_tx.clone(),
+         permissions: self.pending_permissions.clone(),
          elicitations: self.pending_elicitations.clone(),
       }
    }
@@ -327,8 +381,13 @@ impl AthasAcpClient {
          acp::AgentNotification::ExtNotification(notification) => {
             self.ext_notification(notification).await
          }
-         // Only sent for URL-mode elicitation, which Athas does not advertise.
-         acp::AgentNotification::CompleteElicitationNotification(_) => Ok(()),
+         // The out-of-band flow behind an accepted URL elicitation finished.
+         acp::AgentNotification::CompleteElicitationNotification(notification) => {
+            self.emit_event(AcpEvent::ElicitationComplete {
+               elicitation_id: notification.elicitation_id.to_string(),
+            });
+            Ok(())
+         }
          notification => {
             log::warn!("Unhandled ACP agent notification: {:?}", notification);
             Ok(())
@@ -340,7 +399,9 @@ impl AthasAcpClient {
       &self,
       args: acp::RequestPermissionRequest,
    ) -> acp::Result<acp::RequestPermissionResponse> {
-      let request_id = uuid::Uuid::new_v4().to_string();
+      let (pending, response_rx) =
+         PendingRequest::open(&self.pending_permissions, &self.app_handle);
+      let request_id = pending.request_id.clone();
       let session_id = args.session_id.to_string();
 
       // Extract tool call info for the permission request
@@ -384,18 +445,10 @@ impl AthasAcpClient {
       });
 
       // Wait for user response with timeout
-      let mut rx = self.permission_rx.lock().await;
-      match tokio::time::timeout(std::time::Duration::from_secs(300), async {
-         while let Some(response) = rx.recv().await {
-            if response.request_id == request_id {
-               return Some(response);
-            }
-         }
-         None
-      })
-      .await
-      {
-         Ok(Some(response)) => {
+      let answer = tokio::time::timeout(std::time::Duration::from_secs(300), response_rx).await;
+      drop(pending);
+      match answer {
+         Ok(Ok(response)) => {
             if response.cancelled {
                return Ok(acp::RequestPermissionResponse::new(
                   acp::RequestPermissionOutcome::Cancelled,
@@ -466,40 +519,35 @@ impl AthasAcpClient {
       }
    }
 
-   /// Handles `elicitation/create`: the agent asks the user a structured question. Athas only
-   /// advertises form mode, so any other mode is declined. The full request, including `_meta`,
-   /// goes to the frontend, and its answer comes back as a `CreateElicitationResponse`.
+   /// Handles `elicitation/create`: the agent asks the user a structured question (form mode) or
+   /// asks them to open a URL (url mode). The full request, including `_meta`, goes to the
+   /// frontend, and its answer comes back as a `CreateElicitationResponse`. Modes Athas does not
+   /// know are rejected with invalid params, as the spec requires.
    async fn create_elicitation(
       &self,
       args: acp::CreateElicitationRequest,
    ) -> acp::Result<acp::CreateElicitationResponse> {
-      let acp::ElicitationMode::Form(form) = &args.mode else {
-         return Ok(acp::CreateElicitationResponse::new(
-            acp::ElicitationAction::Decline,
-         ));
-      };
-      let session_id = match &form.scope {
+      if !matches!(
+         args.mode,
+         acp::ElicitationMode::Form(_) | acp::ElicitationMode::Url(_)
+      ) {
+         return Err(acp_sdk::Error::invalid_params());
+      }
+      let session_id = match args.scope() {
          acp::ElicitationScope::Session(scope) => Some(scope.session_id.to_string()),
          _ => None,
       };
 
-      let request_id = uuid::Uuid::new_v4().to_string();
-      let (answer_tx, answer_rx) = oneshot::channel();
-      self
-         .pending_elicitations
-         .lock()
-         .await
-         .insert(request_id.clone(), answer_tx);
-
+      let (pending, answer_rx) = PendingRequest::open(&self.pending_elicitations, &self.app_handle);
       let request = serde_json::to_value(&args).map_err(|_| acp_sdk::Error::internal_error())?;
       self.emit_event(AcpEvent::ElicitationRequest {
          session_id,
-         request_id: request_id.clone(),
+         request_id: pending.request_id.clone(),
          request,
       });
 
       let answer = tokio::time::timeout(ELICITATION_TIMEOUT, answer_rx).await;
-      self.pending_elicitations.lock().await.remove(&request_id);
+      drop(pending);
       Ok(elicitation_response(answer.ok().and_then(Result::ok)))
    }
 
@@ -1069,8 +1117,72 @@ fn elicitation_response(answer: Option<serde_json::Value>) -> acp::CreateElicita
 
 #[cfg(test)]
 mod tests {
-   use super::{AthasAcpClient, SessionConfigOptionKind, acp, elicitation_response};
+   use super::{
+      AthasAcpClient, ClientResponders, PermissionResponse, SessionConfigOptionKind, acp,
+      elicitation_response,
+   };
    use serde_json::json;
+   use tokio::sync::oneshot;
+
+   #[test]
+   fn delivers_answers_only_to_requests_still_waiting() {
+      let responders = ClientResponders {
+         permissions: Default::default(),
+         elicitations: Default::default(),
+      };
+      let (tx, mut rx) = oneshot::channel();
+      responders
+         .elicitations
+         .lock()
+         .unwrap()
+         .insert("q1".to_string(), tx);
+
+      assert!(!responders.answer_elicitation("q2", json!({ "action": "decline" })));
+      assert!(responders.answer_elicitation("q1", json!({ "action": "decline" })));
+      assert_eq!(rx.try_recv().unwrap(), json!({ "action": "decline" }));
+      // Answered once; a second answer finds nothing waiting.
+      assert!(!responders.answer_elicitation("q1", json!({ "action": "cancel" })));
+
+      let (tx, mut rx) = oneshot::channel();
+      responders
+         .permissions
+         .lock()
+         .unwrap()
+         .insert("p1".to_string(), tx);
+      let answer = PermissionResponse {
+         approved: true,
+         cancelled: false,
+         option_id: Some("allow".to_string()),
+      };
+      assert!(responders.answer_permission("p1", answer));
+      assert_eq!(rx.try_recv().unwrap().option_id.as_deref(), Some("allow"));
+   }
+
+   #[test]
+   fn forwards_url_elicitations_and_accepts_without_content() {
+      let request: acp::CreateElicitationRequest = serde_json::from_value(json!({
+         "sessionId": "sess_1",
+         "mode": "url",
+         "elicitationId": "mcp-oauth-1",
+         "url": "https://auth.example.com/authorize?state=abc",
+         "message": "Authenticate with MCP server linear"
+      }))
+      .expect("valid url elicitation");
+      assert!(matches!(request.mode, acp::ElicitationMode::Url(_)));
+
+      let forwarded = serde_json::to_value(&request).unwrap();
+      assert_eq!(forwarded["mode"], "url");
+      assert_eq!(forwarded["sessionId"], "sess_1");
+      assert_eq!(forwarded["elicitationId"], "mcp-oauth-1");
+      assert_eq!(
+         forwarded["url"],
+         "https://auth.example.com/authorize?state=abc"
+      );
+
+      let accepted =
+         serde_json::to_value(elicitation_response(Some(json!({ "action": "accept" })))).unwrap();
+      assert_eq!(accepted, json!({ "action": "accept" }));
+   }
 
    #[test]
    fn forwards_form_elicitations_in_their_wire_shape() {

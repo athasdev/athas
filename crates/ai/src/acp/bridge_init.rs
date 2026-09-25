@@ -81,15 +81,21 @@ pub(super) async fn initialize_worker(
       let result = acp_sdk::Client
          .builder()
          .on_receive_request(
-            async move |request: acp::AgentRequest, responder, _connection| {
-               responder.respond_with_result(
-                  request_client
-                     .handle_agent_request(request)
+            // Requests like permissions and questions wait on the user, so they run off the
+            // dispatch loop: session updates, `$/cancel_request` and further requests keep
+            // flowing.
+            async move |request: acp::AgentRequest, responder, connection: AcpConnection| {
+               let client = request_client.clone();
+               let cancellation = responder.cancellation();
+               connection.spawn(async move {
+                  let response = cancellation
+                     .run_until_cancelled(client.handle_agent_request(request))
                      .await
                      .and_then(|response| {
                         serde_json::to_value(response).map_err(acp_sdk::Error::into_internal_error)
-                     }),
-               )
+                     });
+                  responder.respond_with_result(response)
+               })
             },
             acp_sdk::on_receive_request!(),
          )

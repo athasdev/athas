@@ -84,7 +84,10 @@ import { cn } from "@/utils/cn";
 import { AgentStartView } from "../agent-start-view";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import AIChatInputBar from "../input/chat-input-bar";
-import { useAcpQuestions } from "@/features/ai/hooks/use-acp-questions";
+import {
+  selectSessionQuestions,
+  useAcpQuestionsStore,
+} from "@/features/ai/stores/acp-questions.store";
 import type { AcpElicitationResponse } from "@/features/ai/lib/acp-elicitation";
 import { AcpPermissionPrompt, type AcpPermissionRequest } from "./acp-permission-prompt";
 import { AcpQuestionPrompt } from "./acp-question-prompt";
@@ -122,7 +125,8 @@ const AIChat = memo(function AIChat({
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const [permissionQueue, setPermissionQueue] = useState<AcpPermissionRequest[]>([]);
-  const agentQuestions = useAcpQuestions();
+  const allAgentQuestions = useAcpQuestionsStore.use.questions();
+  const questionActions = useAcpQuestionsStore.use.actions();
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
@@ -137,6 +141,14 @@ const AIChat = memo(function AIChat({
     [chatState.chats, effectiveChatId],
   );
   const currentAgentId = currentChat?.agentId ?? chatState.selectedAgentId;
+  const activeAcpSessionId = useAIChatStore((state) => state.acpStatus?.sessionId ?? null);
+  const chatSessionId =
+    currentChat?.acpSessionId ??
+    (effectiveChatId === chatState.currentChatId ? activeAcpSessionId : null);
+  const agentQuestions = useMemo(
+    () => selectSessionQuestions(allAgentQuestions, chatSessionId),
+    [allAgentQuestions, chatSessionId],
+  );
   const sessionProviderId = currentChat?.providerId ?? aiProviderId;
   const hasSessionApiKey = useAIChatStore((state) =>
     getProviderAccessFromMap(sessionProviderId, state.providerApiKeys),
@@ -266,6 +278,19 @@ const AIChat = memo(function AIChat({
             }
             break;
           }
+          case "elicitation_request":
+            useAcpQuestionsStore.getState().actions.add({
+              requestId: payload.requestId,
+              sessionId: payload.sessionId,
+              request: payload.request,
+            });
+            break;
+          case "request_closed":
+            useAcpQuestionsStore.getState().actions.remove(payload.requestId);
+            setPermissionQueue((queue) =>
+              queue.filter((item) => item.requestId !== payload.requestId),
+            );
+            break;
           case "status_changed":
             actions.setAcpStatus(payload.status);
             if (!payload.status.running) {
@@ -419,7 +444,7 @@ const AIChat = memo(function AIChat({
     void recordFrictionSignal({ area: "agent", signal: "cancel" });
     const pendingPermissions = permissionQueue;
     setPermissionQueue([]);
-    agentQuestions.cancelAll();
+    questionActions.cancelForSession(chatSessionId);
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -682,7 +707,6 @@ const AIChat = memo(function AIChat({
                 isIntelligencePermissionPending(item.requestId),
             ),
           );
-          agentQuestions.clear();
           const wasCancelled = completion?.outcome === "cancelled";
           const currentMessage = chatActions
             .getMessagesForChat(targetChatId)
@@ -757,7 +781,6 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
                 isIntelligencePermissionPending(item.requestId),
             ),
           );
-          agentQuestions.clear();
           console.error("Streaming error:", error);
 
           let errorTitle = "API Error";
@@ -1016,7 +1039,6 @@ details: ${errorDetails || mainError}
               detail: event.request.message,
               state: "info",
             });
-            agentQuestions.enqueue({ requestId: event.requestId, request: event.request });
             return;
           }
           // Only show meaningful events, skip noisy ones
@@ -1296,7 +1318,7 @@ details: ${errorDetails || mainError}
   const currentPermission = permissionQueue[0];
   const isNewSession =
     isChatMessagesLoaded && (currentChat?.messages.length ?? 0) === 0 && acpEvents.length === 0;
-  const currentQuestion = currentPermission ? undefined : agentQuestions.current;
+  const currentQuestion = currentPermission ? undefined : agentQuestions[0];
   const useInitialComposer = isNewSession && !currentPermission && !currentQuestion;
   const handleQuestionAnswer = async (response: AcpElicitationResponse) => {
     if (!currentQuestion) return;
@@ -1308,7 +1330,7 @@ details: ${errorDetails || mainError}
       state: response.action === "accept" ? "success" : "info",
     });
     try {
-      await agentQuestions.answer(currentQuestion.requestId, response);
+      await questionActions.answer(currentQuestion.requestId, response);
     } catch (error) {
       console.error("Failed to answer agent question:", error);
       showToast({
@@ -1493,7 +1515,7 @@ details: ${errorDetails || mainError}
               key={currentQuestion.requestId}
               question={currentQuestion}
               agentLabel={assistantLabel}
-              queuedCount={agentQuestions.queuedCount}
+              queuedCount={agentQuestions.length - 1}
               onAnswer={handleQuestionAnswer}
             />
           ) : null}

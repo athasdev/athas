@@ -466,14 +466,21 @@ pub enum AcpEvent {
       description: String,
       options: Vec<AcpPermissionOption>,
    },
-   /// Agent asks the user a structured question (`elicitation/create`, form mode). `request`
-   /// is the ACP request as sent, so the frontend sees the schema and any `_meta`.
+   /// Agent asks the user something (`elicitation/create`): a form, or a URL to open. `request`
+   /// is the ACP request as sent, so the frontend sees the schema, URL and any `_meta`.
    #[serde(rename_all = "camelCase")]
    ElicitationRequest {
       session_id: Option<String>,
       request_id: String,
       request: serde_json::Value,
    },
+   /// The flow behind an accepted URL elicitation finished (`elicitation/complete`).
+   #[serde(rename_all = "camelCase")]
+   ElicitationComplete { elicitation_id: String },
+   /// A permission request or elicitation stopped waiting before the user answered: the agent
+   /// cancelled it, it timed out, or the agent went away. The frontend withdraws its prompt.
+   #[serde(rename_all = "camelCase")]
+   RequestClosed { request_id: String },
    /// Session completed
    #[serde(rename_all = "camelCase")]
    SessionComplete { session_id: String },

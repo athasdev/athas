@@ -390,15 +390,6 @@ export class AcpStreamHandler {
         this.handlePermissionRequest(event);
         break;
 
-      case "elicitation_request":
-        // The chat answers questions through onEvent. Without it nothing can, so decline.
-        if (!this.handlers.onEvent) {
-          AcpStreamHandler.respondToElicitation(event.requestId, { action: "decline" }).catch(
-            console.error,
-          );
-        }
-        break;
-
       case "session_complete":
         this.handleSessionComplete();
         break;

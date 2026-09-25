@@ -590,38 +590,35 @@ impl AcpAgentBridge {
       cancelled: bool,
       option_id: Option<String>,
    ) -> Result<()> {
-      let responders = self.responders.lock().await;
-      if let Some(sender) = responders.as_ref().map(|responders| &responders.permission) {
-         sender
-            .send(PermissionResponse {
-               request_id,
+      if let Some(responders) = self.responders.lock().await.as_ref() {
+         responders.answer_permission(
+            &request_id,
+            PermissionResponse {
                approved,
                cancelled,
                option_id,
-            })
-            .await
-            .ok();
+            },
+         );
       }
       Ok(())
    }
 
    /// Deliver the user's answer to a pending `elicitation/create` request. `response` is ACP
    /// `CreateElicitationResponse` JSON: `{ "action": "accept", "content": {...} }`, `decline` or
-   /// `cancel`.
+   /// `cancel`. Fails when the agent is no longer waiting for it.
    pub async fn respond_to_elicitation(
       &self,
       request_id: String,
       response: serde_json::Value,
    ) -> Result<()> {
-      let responders = self.responders.lock().await;
-      let pending = responders
+      let delivered = self
+         .responders
+         .lock()
+         .await
          .as_ref()
-         .map(|responders| responders.elicitations.clone());
-      drop(responders);
-      if let Some(pending) = pending
-         && let Some(answer_tx) = pending.lock().await.remove(&request_id)
-      {
-         answer_tx.send(response).ok();
+         .is_some_and(|responders| responders.answer_elicitation(&request_id, response));
+      if !delivered {
+         anyhow::bail!("The agent is no longer waiting for this answer");
       }
       Ok(())
    }

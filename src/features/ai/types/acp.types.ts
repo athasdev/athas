@@ -254,6 +254,16 @@ export type AcpEvent =
       request: AcpElicitationRequest;
     }
   | {
+      /** The flow behind an accepted URL question finished. */
+      type: "elicitation_complete";
+      elicitationId: string;
+    }
+  | {
+      /** A permission request or question stopped waiting before anyone answered it. */
+      type: "request_closed";
+      requestId: string;
+    }
+  | {
       type: "session_complete";
       sessionId: string;
     }

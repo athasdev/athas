@@ -209,26 +209,6 @@ describe("AcpStreamHandler", () => {
     expect(invoke).not.toHaveBeenCalledWith("respond_acp_elicitation", expect.anything());
   });
 
-  it("declines agent questions when no chat can answer them", () => {
-    const { handler } = createHandler();
-
-    handler.handleAcpEvent({
-      type: "elicitation_request",
-      sessionId: "session-a",
-      requestId: "question-1",
-      request: {
-        mode: "form",
-        message: "Which scope?",
-        requestedSchema: { type: "object", properties: {} },
-      },
-    });
-
-    expect(invoke).toHaveBeenCalledWith("respond_acp_elicitation", {
-      requestId: "question-1",
-      response: { action: "decline" },
-    });
-  });
-
   it("starts a response continuation before reasoning that follows a completed tool", () => {
     const calls: string[] = [];
     const { handler } = createHandler({

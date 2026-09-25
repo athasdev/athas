@@ -20,7 +20,7 @@ import {
   QuestionnaireTitle,
 } from "@/ui/questionnaire";
 import { cn } from "@/utils/cn";
-import type { AcpQuestion } from "../../hooks/use-acp-questions";
+import type { AcpQuestion } from "../../stores/acp-questions.store";
 import {
   type AcpElicitationResponse,
   type ElicitationQuestion,
