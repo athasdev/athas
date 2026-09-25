@@ -814,55 +814,16 @@ impl AthasAcpClient {
                ));
             }
 
-            if response.approved {
-               // Prefer allow-once/allow-always options if available
-               let selected_option = args
-                  .options
-                  .iter()
-                  .find(|opt| {
-                     matches!(
-                        opt.kind,
-                        acp::PermissionOptionKind::AllowOnce
-                           | acp::PermissionOptionKind::AllowAlways
-                     )
-                  })
-                  .or_else(|| args.options.first())
-                  .map(|opt| acp::SelectedPermissionOutcome::new(opt.option_id.clone()));
-
-               if let Some(selected) = selected_option {
-                  Ok(acp::RequestPermissionResponse::new(
-                     acp::RequestPermissionOutcome::Selected(selected),
-                  ))
-               } else {
-                  Ok(acp::RequestPermissionResponse::new(
-                     acp::RequestPermissionOutcome::Cancelled,
-                  ))
-               }
-            } else {
-               // Prefer reject-once/reject-always options if available
-               let selected_option = args
-                  .options
-                  .iter()
-                  .find(|opt| {
-                     matches!(
-                        opt.kind,
-                        acp::PermissionOptionKind::RejectOnce
-                           | acp::PermissionOptionKind::RejectAlways
-                     )
-                  })
-                  .or_else(|| args.options.first())
-                  .map(|opt| acp::SelectedPermissionOutcome::new(opt.option_id.clone()));
-
-               if let Some(selected) = selected_option {
-                  Ok(acp::RequestPermissionResponse::new(
-                     acp::RequestPermissionOutcome::Selected(selected),
-                  ))
-               } else {
-                  Ok(acp::RequestPermissionResponse::new(
-                     acp::RequestPermissionOutcome::Cancelled,
-                  ))
-               }
-            }
+            // An answer without an option id is a plain yes or no, not a
+            // click on one of the agent's options. It may only pick a
+            // one-time option; with none on offer the request is cancelled.
+            let outcome = match automatic_permission_option(&args.options, response.approved) {
+               Some(option_id) => acp::RequestPermissionOutcome::Selected(
+                  acp::SelectedPermissionOutcome::new(option_id),
+               ),
+               None => acp::RequestPermissionOutcome::Cancelled,
+            };
+            Ok(acp::RequestPermissionResponse::new(outcome))
          }
          _ => Ok(acp::RequestPermissionResponse::new(
             acp::RequestPermissionOutcome::Cancelled,
@@ -1549,12 +1510,31 @@ fn agent_location_event(session_id: &acp::SessionId, path: &Path, line: Option<u
    }
 }
 
+/// The option a yes or no answer selects when the user did not click one of
+/// the agent's options. Only `allow_once` or `reject_once` qualify: an
+/// "always" option writes a standing rule, and only an explicit click may do
+/// that. `None` means there is no safe option to pick.
+fn automatic_permission_option(
+   options: &[acp::PermissionOption],
+   approved: bool,
+) -> Option<acp::PermissionOptionId> {
+   let kind = if approved {
+      acp::PermissionOptionKind::AllowOnce
+   } else {
+      acp::PermissionOptionKind::RejectOnce
+   };
+   options
+      .iter()
+      .find(|option| option.kind == kind)
+      .map(|option| option.option_id.clone())
+}
+
 #[cfg(test)]
 mod tests {
    use super::{
       AthasAcpClient, ClientResponders, PendingBufferRead, PendingEntry, PermissionResponse,
-      SessionConfigOptionKind, acp, agent_location_event, elicitation_response,
-      ext_request_session_id,
+      SessionConfigOptionKind, acp, agent_location_event, automatic_permission_option,
+      elicitation_response, ext_request_session_id,
    };
    use crate::acp::types::{AcpBufferReadRequest, AcpEvent};
    use serde_json::json;
@@ -1746,6 +1726,34 @@ mod tests {
          panic!("expected a single update");
       };
       assert_eq!(output, &Some(json!([])));
+   }
+
+   fn permission_options(kinds: &[acp::PermissionOptionKind]) -> Vec<acp::PermissionOption> {
+      kinds
+         .iter()
+         .enumerate()
+         .map(|(index, kind)| {
+            acp::PermissionOption::new(format!("option-{index}"), format!("{kind:?}"), *kind)
+         })
+         .collect()
+   }
+
+   #[test]
+   fn automatic_answers_pick_only_one_time_options() {
+      use acp::PermissionOptionKind::{AllowAlways, AllowOnce, RejectAlways, RejectOnce};
+      let pick = |kinds: &[acp::PermissionOptionKind], approved: bool| {
+         automatic_permission_option(&permission_options(kinds), approved).map(|id| id.to_string())
+      };
+
+      let all = [AllowAlways, AllowOnce, RejectAlways, RejectOnce];
+      assert_eq!(pick(&all, true).as_deref(), Some("option-1"));
+      assert_eq!(pick(&all, false).as_deref(), Some("option-3"));
+
+      // Never an "always" option, and never the opposite answer.
+      assert_eq!(pick(&[AllowAlways, RejectOnce], true), None);
+      assert_eq!(pick(&[RejectAlways, AllowOnce], false), None);
+      assert_eq!(pick(&[], true), None);
+      assert_eq!(pick(&[], false), None);
    }
 
    #[test]
