@@ -19,6 +19,25 @@ export interface AgentConfig {
   updateAvailable: boolean;
   managed: boolean;
   canInstall: boolean;
+  /** `extension` when Athas ships a manifest for the agent, `registry` when only the ACP Registry lists it. */
+  source?: "extension" | "registry";
+  registry?: RegistryAgentInfo | null;
+}
+
+/** What the ACP Registry says about an agent, shown before it is installed. */
+export interface RegistryAgentInfo {
+  id: string;
+  version: string;
+  repository: string | null;
+  website: string | null;
+  authors: string[];
+  license: string | null;
+  licenseUrl: string | null;
+  /** What Athas installs here: a checksummed binary, an npm package, or a uvx package. */
+  distribution: "binary" | "npx" | "uvx" | null;
+  installsFromRegistry: boolean;
+  unavailableReason: string | null;
+  quarantined: string | null;
 }
 
 /**

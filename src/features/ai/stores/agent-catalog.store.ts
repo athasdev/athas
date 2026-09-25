@@ -69,8 +69,16 @@ export const useAgentCatalogStore = createSelectors(
     }
     const refreshCodex = (force = false) =>
       load("codex", () => CodexIntegrationService.status(), force);
-    const refreshAgents = (force = false) =>
-      load("agents", () => invoke<AgentConfig[]>("get_available_agents"), force);
+    // `fromRegistry` downloads the ACP Registry again instead of using the hourly copy.
+    const refreshAgents = (force = false, fromRegistry = false) =>
+      load(
+        "agents",
+        () =>
+          invoke<AgentConfig[]>(
+            fromRegistry ? "refresh_acp_agent_registry" : "get_available_agents",
+          ),
+        force,
+      );
     return {
       agents: emptySource(),
       codex: emptySource(),
@@ -78,7 +86,7 @@ export const useAgentCatalogStore = createSelectors(
       actions: {
         refreshCodex,
         refresh: async (force = false) => {
-          await Promise.all([refreshAgents(force), refreshCodex(force)]);
+          await Promise.all([refreshAgents(force, force), refreshCodex(force)]);
         },
         runAgentAction: async (agentId, agentName, action) => {
           if (agentId === "custom" || agentId === CODEX_INTEGRATION_ID || get().pendingAction)
