@@ -8,6 +8,7 @@ use super::{
    mcp_servers::{AcpSkippedMcpServer, McpServerConfig},
    process::{stop_child_tree, terminate_process_group},
    sessions::{ConnectionKey, SessionRegistry, is_idle},
+   traffic::TrafficInspector,
    types::{
       AcpAgentStatus, AcpEvent, AcpOpenedSession, AcpSessionInfo, AcpSessionList, AgentConfig,
       SessionConfigOption, SessionConfigValue,
@@ -179,6 +180,7 @@ pub(super) struct AcpWorker {
    /// chooses a method again. Kept across restarts until a sign-in succeeds.
    logged_out_agents: Rc<RefCell<HashSet<String>>>,
    responders: ResponderRegistry,
+   traffic: TrafficInspector,
    followup_tx: mpsc::UnboundedSender<WorkerFollowUp>,
 }
 
@@ -186,6 +188,7 @@ impl AcpWorker {
    pub(super) fn new(
       app_handle: AppHandle,
       responders: ResponderRegistry,
+      traffic: TrafficInspector,
       followup_tx: mpsc::UnboundedSender<WorkerFollowUp>,
    ) -> Self {
       Self {
@@ -196,12 +199,17 @@ impl AcpWorker {
          pending_session_opens: HashMap::new(),
          logged_out_agents: Rc::default(),
          responders,
+         traffic,
          followup_tx,
       }
    }
 
    pub(super) fn app_handle(&self) -> AppHandle {
       self.app_handle.clone()
+   }
+
+   pub(super) fn traffic(&self) -> TrafficInspector {
+      self.traffic.clone()
    }
 
    fn emit(&self, event: AcpEvent) {
@@ -918,6 +926,7 @@ pub struct AcpAgentBridge {
    status: Arc<Mutex<Vec<AcpAgentStatus>>>,
    responders: ResponderRegistry,
    terminal_manager: Arc<TerminalManager>,
+   traffic: TrafficInspector,
 }
 
 impl AcpAgentBridge {
@@ -931,6 +940,14 @@ impl AcpAgentBridge {
       let worker_status = status.clone();
       let worker_responders = responders.clone();
       let worker_app_handle = app_handle.clone();
+      let traffic = TrafficInspector::default();
+      let traffic_app_handle = app_handle.clone();
+      traffic.set_emitter(move |event| {
+         if let Err(error) = traffic_app_handle.emit("acp-traffic", event) {
+            log::warn!("Failed to emit ACP traffic: {}", error);
+         }
+      });
+      let worker_traffic = traffic.clone();
 
       // Spawn the worker thread with its own runtime and LocalSet
       thread::spawn(move || {
@@ -943,6 +960,7 @@ impl AcpAgentBridge {
                worker_status,
                worker_app_handle,
                worker_responders,
+               worker_traffic,
             )
             .await;
          });
@@ -954,7 +972,13 @@ impl AcpAgentBridge {
          status,
          responders,
          terminal_manager,
+         traffic,
       }
+   }
+
+   /// The traffic log of every agent process, for the ACP inspector.
+   pub fn traffic(&self) -> TrafficInspector {
+      self.traffic.clone()
    }
    /// Detect which agents are installed on the system
    pub fn detect_agents(&mut self) -> Vec<AgentConfig> {

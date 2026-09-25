@@ -11,11 +11,13 @@ mod process;
 mod replay;
 mod sessions;
 mod terminal_state;
+pub mod traffic;
 pub mod types;
 mod workspace_path;
 
 pub use bridge::AcpAgentBridge;
 pub use mcp_servers::{McpServerConfig, McpServerSecrets, McpServerSetting};
+pub use traffic::TrafficInspector;
 pub use types::{
    AcpAgentStatus, AcpOpenedSession, AcpSessionInfo, AcpSessionList, AgentConfig, AgentRuntime,
    SessionConfigValue,

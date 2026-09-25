@@ -702,6 +702,7 @@ dependencies = [
  "async-trait",
  "athas-exec-path",
  "athas-terminal",
+ "futures",
  "libc",
  "log",
  "rusqlite",

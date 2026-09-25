@@ -5,6 +5,7 @@ use super::{
    },
    mcp_servers::McpServerConfig,
    sessions::{ConnectionKey, Startups},
+   traffic::TrafficInspector,
    types::{AcpAgentStatus, AcpOpenedSession, AcpSessionList, AgentConfig, SessionConfigValue},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
@@ -143,9 +144,10 @@ pub(super) async fn run_worker_loop(
    status: Arc<Mutex<Vec<AcpAgentStatus>>>,
    app_handle: AppHandle,
    responders: ResponderRegistry,
+   traffic: TrafficInspector,
 ) {
    let (followup_tx, mut followup_rx) = mpsc::unbounded_channel::<WorkerFollowUp>();
-   let mut worker = AcpWorker::new(app_handle, responders, followup_tx.clone());
+   let mut worker = AcpWorker::new(app_handle, responders, traffic, followup_tx.clone());
    let mut startups = Startups::<OpenRequest>::default();
    let mut health_check = tokio::time::interval(std::time::Duration::from_secs(1));
    health_check.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -205,6 +207,7 @@ fn handle_command(
             );
          }
          let app_handle = worker.app_handle();
+         let traffic = worker.traffic();
          let followup_tx = followup_tx.clone();
          tokio::task::spawn_local(async move {
             let result = start_connection(
@@ -212,6 +215,7 @@ fn handle_command(
                key.workspace_path.clone(),
                app_handle,
                terminal_manager,
+               traffic,
                stop,
             )
             .await

@@ -8,6 +8,7 @@ use super::{
    mcp_servers::{AcpSkippedMcpServer, McpServerConfig, select_mcp_servers},
    process::{stop_child_tree, stop_child_tree_mut},
    replay::{ReplayMode, ReplayRouter},
+   traffic::{TrafficDirection, TrafficInspector, TrafficTap, tapped_transport},
    types::{
       AcpAgentCapabilities, AcpAuthMethod, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
       SessionModeState,
@@ -105,9 +106,11 @@ pub(super) async fn start_connection(
    workspace_path: Option<PathBuf>,
    app_handle: AppHandle,
    terminal_manager: Arc<TerminalManager>,
+   traffic: TrafficInspector,
    stop: CancellationToken,
 ) -> Result<StartedConnection> {
    let mut child = spawn_agent_process(config, workspace_path.as_deref())?;
+   let tap = traffic.start_process(&config.id, &config.name, workspace_path.as_deref());
    let process_group_id = child.id();
    let stdin = child
       .stdin
@@ -117,7 +120,7 @@ pub(super) async fn start_connection(
       .stdout
       .take()
       .ok_or_else(|| anyhow::anyhow!("Failed to get stdout"))?;
-   let recent_stderr = spawn_stderr_logger(&mut child, config.name.clone());
+   let recent_stderr = spawn_stderr_logger(&mut child, config.name.clone(), tap.clone());
 
    let client = Arc::new(AthasAcpClient::new(
       app_handle.clone(),
@@ -130,7 +133,7 @@ pub(super) async fn start_connection(
    let request_client = client.clone();
    let notification_client = client.clone();
    let io_handle = tokio::task::spawn_local(async move {
-      let transport = acp_sdk::ByteStreams::new(stdin.compat_write(), stdout.compat());
+      let transport = tapped_transport(stdin.compat_write(), stdout.compat(), tap);
       let result = acp_sdk::Client
          .builder()
          .on_receive_request(
@@ -393,7 +396,11 @@ fn spawn_agent_process(config: &AgentConfig, workspace_path: Option<&Path>) -> R
    Ok(cmd.spawn()?)
 }
 
-fn spawn_stderr_logger(child: &mut Child, agent_name: String) -> RecentAgentStderr {
+fn spawn_stderr_logger(
+   child: &mut Child,
+   agent_name: String,
+   tap: TrafficTap,
+) -> RecentAgentStderr {
    let recent_stderr = Arc::new(Mutex::new(VecDeque::new()));
    if let Some(stderr) = child.stderr.take() {
       let captured_stderr = recent_stderr.clone();
@@ -402,6 +409,7 @@ fn spawn_stderr_logger(child: &mut Child, agent_name: String) -> RecentAgentStde
          let mut lines = BufReader::new(stderr).lines();
          while let Ok(Some(line)) = lines.next_line().await {
             log::warn!("[{}] stderr: {}", agent_name, line);
+            tap.record(TrafficDirection::Stderr, &line);
             let mut recent = captured_stderr.lock().await;
             recent.push_back(line);
             if recent.len() > MAX_RECENT_STDERR_LINES {
