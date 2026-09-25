@@ -726,6 +726,14 @@ impl AcpAgentBridge {
       Ok(())
    }
 
+   /// Hands the editor's contents for a file an agent is reading (`None` when it is not open) to
+   /// the read waiting for them. A read that already gave up and used the disk ignores it.
+   pub async fn respond_to_buffer_read(&self, request_id: String, content: Option<String>) {
+      if let Some(responders) = self.responders.lock().await.as_ref() {
+         responders.answer_buffer_read(&request_id, content);
+      }
+   }
+
    /// Stop the active agent
    pub async fn stop_agent(&self) -> Result<()> {
       // Get current session ID before stopping

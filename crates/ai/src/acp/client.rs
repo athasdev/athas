@@ -3,9 +3,10 @@ use super::{
    file_access::{self, FileAccess, OutsideAccess},
    terminal_state::AcpTerminalState,
    types::{
-      AcpContentBlock, AcpEvent, AcpPermissionToolCall, AcpPlanEntry, AcpPlanEntryPriority,
-      AcpPlanEntryStatus, AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, AcpUsageUpdate,
-      SessionConfigOption, SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
+      ACP_BUFFER_READ_EVENT, AcpBufferReadRequest, AcpContentBlock, AcpEvent,
+      AcpPermissionToolCall, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus,
+      AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, AcpUsageUpdate, SessionConfigOption,
+      SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
    },
    workspace_path::{is_inside_roots, path_to_string, real_path, resolve_path_against_workspace},
 };
@@ -19,7 +20,7 @@ use std::{
    path::{Path, PathBuf},
    sync::{Arc, Mutex as StdMutex},
 };
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 use tokio::sync::{Mutex, oneshot};
 
 /// Response for permission requests
@@ -51,6 +52,7 @@ pub type Pending<T> = Arc<StdMutex<HashMap<String, PendingEntry<T>>>>;
 pub struct ClientResponders {
    pub permissions: Pending<PermissionResponse>,
    pub elicitations: Pending<serde_json::Value>,
+   pub buffer_reads: BufferReads,
 }
 
 impl ClientResponders {
@@ -64,6 +66,25 @@ impl ClientResponders {
    pub fn answer_elicitation(&self, request_id: &str, response: serde_json::Value) -> bool {
       take_pending(&self.elicitations, request_id)
          .is_some_and(|entry| entry.tx.send(response).is_ok())
+   }
+
+   /// Takes one editor window's answer to a buffer read. The first window with the file open
+   /// answers the read; once every window said it is not open, the read goes to the disk.
+   pub fn answer_buffer_read(&self, request_id: &str, content: Option<String>) -> bool {
+      let mut reads = self
+         .buffer_reads
+         .lock()
+         .unwrap_or_else(|poisoned| poisoned.into_inner());
+      let Some(read) = reads.get_mut(request_id) else {
+         return false;
+      };
+      if content.is_none() && read.unanswered_windows > 1 {
+         read.unanswered_windows -= 1;
+         return true;
+      }
+      reads
+         .remove(request_id)
+         .is_some_and(|read| read.tx.send(content).is_ok())
    }
 
    /// Resolves what a cancelled prompt turn leaves waiting on the user: the session's permission
@@ -119,6 +140,53 @@ fn drain_session<T>(
       .collect()
 }
 
+/// A `fs/read_text_file` waiting to hear from the editor windows whether they have the file open.
+pub struct BufferReadWait {
+   unanswered_windows: usize,
+   tx: oneshot::Sender<Option<String>>,
+}
+
+/// Buffer reads waiting on the editor windows, keyed by the request id sent with them.
+pub type BufferReads = Arc<StdMutex<HashMap<String, BufferReadWait>>>;
+
+/// Frees a buffer read's slot however the read ends.
+struct PendingBufferRead {
+   reads: BufferReads,
+   request_id: String,
+}
+
+impl PendingBufferRead {
+   fn open(reads: &BufferReads, windows: usize) -> (Self, oneshot::Receiver<Option<String>>) {
+      let request_id = uuid::Uuid::new_v4().to_string();
+      let (tx, rx) = oneshot::channel();
+      reads
+         .lock()
+         .unwrap_or_else(|poisoned| poisoned.into_inner())
+         .insert(
+            request_id.clone(),
+            BufferReadWait {
+               unanswered_windows: windows,
+               tx,
+            },
+         );
+      let read = Self {
+         reads: reads.clone(),
+         request_id,
+      };
+      (read, rx)
+   }
+}
+
+impl Drop for PendingBufferRead {
+   fn drop(&mut self) {
+      self
+         .reads
+         .lock()
+         .unwrap_or_else(|poisoned| poisoned.into_inner())
+         .remove(&self.request_id);
+   }
+}
+
 /// A request the frontend is showing the user. However its handler ends (answered, timed out, or
 /// dropped because the agent sent `$/cancel_request`), the slot is freed, and a prompt nobody
 /// answered is withdrawn from the UI with a `request_closed` event.
@@ -165,6 +233,9 @@ impl<T> Drop for PendingRequest<T> {
 /// How long a permission prompt waits for the user before the request is refused.
 const PERMISSION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(300);
 
+/// How long a read waits for the editor to hand over an open file before it reads the disk.
+const BUFFER_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+
 /// How long an agent question waits for the user before it is cancelled.
 const ELICITATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(600);
 
@@ -179,6 +250,7 @@ pub struct AthasAcpClient {
    outside_read_grants: StdMutex<HashMap<String, HashSet<PathBuf>>>,
    pending_permissions: Pending<PermissionResponse>,
    pending_elicitations: Pending<serde_json::Value>,
+   pending_buffer_reads: BufferReads,
    current_session_id: Arc<Mutex<Option<String>>>,
    terminal_manager: Arc<TerminalManager>,
    /// Maps ACP terminal IDs to terminal state (uses StdMutex for sync access from event listeners)
@@ -203,6 +275,7 @@ impl AthasAcpClient {
          outside_read_grants: StdMutex::default(),
          pending_permissions: Arc::default(),
          pending_elicitations: Arc::default(),
+         pending_buffer_reads: Arc::default(),
          current_session_id: Arc::new(Mutex::new(None)),
          terminal_manager,
          terminal_states: Arc::new(StdMutex::new(HashMap::new())),
@@ -213,6 +286,7 @@ impl AthasAcpClient {
       ClientResponders {
          permissions: self.pending_permissions.clone(),
          elicitations: self.pending_elicitations.clone(),
+         buffer_reads: self.pending_buffer_reads.clone(),
       }
    }
 
@@ -870,11 +944,41 @@ impl AthasAcpClient {
       self
          .ensure_file_access(&args.session_id.to_string(), &path, FileAccess::Read, None)
          .await?;
-      match tokio::fs::read_to_string(&path).await {
-         Ok(content) => file_access::slice_lines(content, args.line, args.limit)
-            .map(acp::ReadTextFileResponse::new),
-         Err(e) => Err(file_access::read_error(&path, &e)),
+      let content = match self.read_open_buffer(&path).await {
+         Some(content) => content,
+         None => tokio::fs::read_to_string(&path)
+            .await
+            .map_err(|e| file_access::read_error(&path, &e))?,
+      };
+      file_access::slice_lines(content, args.line, args.limit).map(acp::ReadTextFileResponse::new)
+   }
+
+   /// What the editor holds for `path`, unsaved changes included, when a window has the file
+   /// open. The frontend owns the buffers, so each editor window is asked at the moment of the
+   /// read and answers with the buffer's current text, or `None` when it does not have the file
+   /// open. With no editor window, or none answering in time, the read goes to the disk.
+   async fn read_open_buffer(&self, path: &Path) -> Option<String> {
+      let windows = self
+         .app_handle
+         .webview_windows()
+         .values()
+         .filter(|window| is_editor_window(window))
+         .count();
+      if windows == 0 {
+         return None;
       }
+      let (pending, answer_rx) = PendingBufferRead::open(&self.pending_buffer_reads, windows);
+      let request = AcpBufferReadRequest {
+         request_id: pending.request_id.clone(),
+         path: path_to_string(path),
+      };
+      if let Err(e) = self.app_handle.emit(ACP_BUFFER_READ_EVENT, &request) {
+         log::warn!("Failed to ask the editor for {}: {}", request.path, e);
+         return None;
+      }
+      let answer = tokio::time::timeout(BUFFER_READ_TIMEOUT, answer_rx).await;
+      drop(pending);
+      answer.ok().and_then(Result::ok).flatten()
    }
 
    async fn write_text_file(
@@ -1278,6 +1382,16 @@ impl AthasAcpClient {
    }
 }
 
+/// Whether a window runs the editor workbench, which answers buffer reads. Detached windows (a
+/// chat popped out on its own) hold no editor buffers.
+fn is_editor_window<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) -> bool {
+   window.url().is_ok_and(|url| {
+      !url
+         .query_pairs()
+         .any(|(key, value)| key == "view" && value == "detached")
+   })
+}
+
 /// Turns the frontend's answer into an ACP response. A missing or malformed answer cancels.
 fn elicitation_response(answer: Option<serde_json::Value>) -> acp::CreateElicitationResponse {
    answer
@@ -1288,10 +1402,10 @@ fn elicitation_response(answer: Option<serde_json::Value>) -> acp::CreateElicita
 #[cfg(test)]
 mod tests {
    use super::{
-      AthasAcpClient, ClientResponders, PendingEntry, PermissionResponse, SessionConfigOptionKind,
-      acp, elicitation_response,
+      AthasAcpClient, ClientResponders, PendingBufferRead, PendingEntry, PermissionResponse,
+      SessionConfigOptionKind, acp, elicitation_response,
    };
-   use crate::acp::types::AcpEvent;
+   use crate::acp::types::{AcpBufferReadRequest, AcpEvent};
    use serde_json::json;
    use tokio::sync::oneshot;
 
@@ -1449,6 +1563,7 @@ mod tests {
       let responders = ClientResponders {
          permissions: Default::default(),
          elicitations: Default::default(),
+         buffer_reads: Default::default(),
       };
       let (tx, mut rx) = oneshot::channel();
       responders
@@ -1478,10 +1593,53 @@ mod tests {
    }
 
    #[test]
+   fn hands_open_editor_contents_to_the_waiting_read() {
+      let responders = ClientResponders {
+         permissions: Default::default(),
+         elicitations: Default::default(),
+         buffer_reads: Default::default(),
+      };
+
+      // Two editor windows: the one with the file open answers, whichever answers first.
+      let (read, mut open_rx) = PendingBufferRead::open(&responders.buffer_reads, 2);
+      assert!(responders.answer_buffer_read(&read.request_id, None));
+      assert!(open_rx.try_recv().is_err());
+      assert!(responders.answer_buffer_read(&read.request_id, Some("unsaved\n".to_string())));
+      assert_eq!(open_rx.try_recv().unwrap().as_deref(), Some("unsaved\n"));
+      // Answered; a late window finds nothing waiting.
+      assert!(!responders.answer_buffer_read(&read.request_id, None));
+
+      // No window has it open: the read goes to the disk once all of them said so.
+      let (read, mut closed_rx) = PendingBufferRead::open(&responders.buffer_reads, 2);
+      assert!(responders.answer_buffer_read(&read.request_id, None));
+      assert!(closed_rx.try_recv().is_err());
+      assert!(responders.answer_buffer_read(&read.request_id, None));
+      assert_eq!(closed_rx.try_recv().unwrap(), None);
+
+      // A read that gave up frees its slot. Buffer reads belong to no prompt, so cancelling a
+      // turn leaves them alone.
+      let (read, _rx) = PendingBufferRead::open(&responders.buffer_reads, 1);
+      let request_id = read.request_id.clone();
+      assert!(responders.cancel_session("s").is_empty());
+      drop(read);
+      assert!(!responders.answer_buffer_read(&request_id, Some("late".to_string())));
+
+      let request = AcpBufferReadRequest {
+         request_id: "b3".to_string(),
+         path: "/repo/a.txt".to_string(),
+      };
+      assert_eq!(
+         serde_json::to_value(request).unwrap(),
+         json!({ "requestId": "b3", "path": "/repo/a.txt" })
+      );
+   }
+
+   #[test]
    fn cancelling_a_session_resolves_only_what_it_waits_on() {
       let responders = ClientResponders {
          permissions: Default::default(),
          elicitations: Default::default(),
+         buffer_reads: Default::default(),
       };
       let permission = |id: &str, session: &str| {
          let (tx, rx) = oneshot::channel();

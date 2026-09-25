@@ -2,6 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
 import { useExtensionInstallPrompt } from "@/extensions/hooks/use-extension-install-prompt";
 import {
+  cleanupAcpBufferReads,
+  initializeAcpBufferReads,
+} from "@/features/ai/services/acp-buffer-reads";
+import {
   cleanupFileClipboardListener,
   initializeFileClipboardListener,
 } from "@/features/file-explorer/stores/file-explorer-clipboard-listener";
@@ -80,6 +84,14 @@ export function useAppBootstrap() {
 
     return () => {
       void cleanupFileWatcherListener();
+    };
+  }, []);
+
+  useEffect(() => {
+    void initializeAcpBufferReads();
+
+    return () => {
+      void cleanupAcpBufferReads();
     };
   }, []);
 

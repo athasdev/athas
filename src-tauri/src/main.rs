@@ -319,6 +319,7 @@ fn main() {
          get_acp_status,
          respond_acp_permission,
          respond_acp_elicitation,
+         respond_acp_buffer_read,
          set_acp_session_mode,
          set_acp_session_config_option,
          list_acp_sessions,

@@ -220,6 +220,18 @@ pub struct AcpPermissionToolCall {
    pub raw_input: Option<serde_json::Value>,
 }
 
+/// The Tauri event that asks the editor for an open file's contents.
+pub const ACP_BUFFER_READ_EVENT: &str = "acp-buffer-read";
+
+/// Asks the frontend what the editor holds for `path`. It answers through
+/// `respond_acp_buffer_read` with the buffer's text, or null when the file is not open.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpBufferReadRequest {
+   pub request_id: String,
+   pub path: String,
+}
+
 /// Configuration for an ACP-compatible agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

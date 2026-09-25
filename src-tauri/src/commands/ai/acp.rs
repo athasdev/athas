@@ -460,6 +460,19 @@ pub async fn respond_acp_elicitation(
       .map_err(|e| e.to_string())
 }
 
+/// Answers the ACP client's `acp-buffer-read` event: what the editor holds for the file an agent
+/// is reading, unsaved changes included, or null when the file is not open.
+#[tauri::command]
+pub async fn respond_acp_buffer_read(
+   bridge: State<'_, AcpBridgeState>,
+   request_id: String,
+   content: Option<String>,
+) -> Result<(), String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge.respond_to_buffer_read(request_id, content).await;
+   Ok(())
+}
+
 #[tauri::command]
 pub async fn set_acp_session_mode(
    bridge: State<'_, AcpBridgeState>,

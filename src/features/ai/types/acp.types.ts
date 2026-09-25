@@ -383,3 +383,9 @@ export type AcpEvent =
       sessionId: string;
       action: UiAction;
     };
+
+/** The ACP client asks each editor window what it holds for a file an agent is reading. */
+export interface AcpBufferReadRequest {
+  requestId: string;
+  path: string;
+}
