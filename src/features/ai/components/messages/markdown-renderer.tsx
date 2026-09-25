@@ -1,3 +1,4 @@
+import { AcpAuthChoice } from "./acp-auth-choice";
 import { ApiErrorActions } from "./api-error-actions";
 import { getApiErrorCode } from "@/features/ai/lib/api-error";
 import {
@@ -21,6 +22,7 @@ import {
   normalizeImplicitCodeFences,
   normalizePlainTextFence,
 } from "@/features/ai/lib/assistant-markdown";
+import { selectAgentAuthRequest, useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
@@ -253,6 +255,9 @@ function ErrorBlock({
   const isAuthRequired = code === "AUTH_REQUIRED";
   const isConfigurationRequired = code === "CONFIG_REQUIRED";
   const canRecoverAgent = isAuthRequired || isConfigurationRequired;
+  const authRequest = selectAgentAuthRequest(useAcpAuthStore.use.request(), agentId);
+  // Only the latest error offers sign-in, since signing in retries its prompt.
+  const showAuthChoice = isAuthRequired && authRequest !== null && onRetry !== undefined;
 
   const handleRestartAgentSession = async () => {
     setIsRestartingSession(true);
@@ -320,7 +325,10 @@ function ErrorBlock({
             onRetry={onRetry}
           />
         )}
-        {canRecoverAgent && (
+        {showAuthChoice && authRequest ? (
+          <AcpAuthChoice request={authRequest} chatId={chatId} onSignedIn={onRetry} />
+        ) : null}
+        {canRecoverAgent && !showAuthChoice && (
           <span className="flex flex-wrap items-center gap-2">
             <Button
               type="button"

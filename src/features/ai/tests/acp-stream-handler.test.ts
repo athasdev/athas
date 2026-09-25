@@ -693,4 +693,48 @@ describe("AcpStreamHandler", () => {
       workspacePath: "/workspace",
     });
   });
+
+  it("signs a running agent in place with the method the user picked", async () => {
+    vi.mocked(invoke).mockImplementation(async (command) =>
+      command === "get_acp_status"
+        ? { running: true, initialized: true, agentId: "gemini", sessionId: "session-a" }
+        : undefined,
+    );
+
+    await AcpStreamHandler.authenticateAgent("gemini", "chat-1", "oauth-personal");
+
+    expect(invoke).toHaveBeenCalledWith("authenticate_acp_agent", { methodId: "oauth-personal" });
+    expect(vi.mocked(invoke).mock.calls.some(([command]) => command === "start_acp_agent")).toBe(
+      false,
+    );
+  });
+
+  it("starts a stopped agent with the method the user picked", async () => {
+    const status = {
+      running: true,
+      initialized: true,
+      agentId: "gemini",
+      sessionId: "session-b",
+      workspacePath: "/workspace",
+    };
+    vi.mocked(invoke).mockImplementation(async (command) => {
+      if (command === "get_acp_status") return { running: false, agentId: "" };
+      if (command === "start_acp_agent") return status;
+      return undefined;
+    });
+
+    const signIn = AcpStreamHandler.authenticateAgent("gemini", "chat-1", "gemini-api-key");
+    await vi.advanceTimersByTimeAsync(1000);
+    await signIn;
+
+    expect(invoke).toHaveBeenCalledWith("start_acp_agent", {
+      agentId: "gemini",
+      workspacePath: "/workspace",
+      sessionId: null,
+      authMethodId: "gemini-api-key",
+    });
+    expect(
+      vi.mocked(invoke).mock.calls.some(([command]) => command === "authenticate_acp_agent"),
+    ).toBe(false);
+  });
 });

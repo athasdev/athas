@@ -58,6 +58,7 @@ pub async fn start_acp_agent(
    agent_id: String,
    workspace_path: Option<String>,
    session_id: Option<String>,
+   auth_method_id: Option<String>,
 ) -> Result<AcpAgentStatus, String> {
    let bridge = {
       let mut bridge = bridge.lock().await;
@@ -66,7 +67,7 @@ pub async fn start_acp_agent(
       bridge.clone()
    };
    bridge
-      .start_agent(&agent_id, workspace_path, session_id)
+      .start_agent(&agent_id, workspace_path, session_id, auth_method_id)
       .await
       .map_err(|e| e.to_string())
 }
@@ -530,6 +531,19 @@ pub async fn delete_acp_session(
 pub async fn logout_acp_agent(bridge: State<'_, AcpBridgeState>) -> Result<(), String> {
    let bridge = { bridge.lock().await.clone() };
    bridge.logout().await.map_err(|e| e.to_string())
+}
+
+/// Signs in to the running agent with an `agent` method the user picked.
+#[tauri::command]
+pub async fn authenticate_acp_agent(
+   bridge: State<'_, AcpBridgeState>,
+   method_id: String,
+) -> Result<(), String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .authenticate(method_id)
+      .await
+      .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

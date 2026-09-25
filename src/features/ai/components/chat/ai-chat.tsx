@@ -86,6 +86,7 @@ import { cn } from "@/utils/cn";
 import { AgentStartView } from "../agent-start-view";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import AIChatInputBar from "../input/chat-input-bar";
+import { useAcpAuthStore } from "@/features/ai/stores/acp-auth.store";
 import {
   selectSessionQuestions,
   useAcpQuestionsStore,
@@ -282,6 +283,13 @@ const AIChat = memo(function AIChat({
             }
             break;
           }
+          case "auth_required":
+            useAcpAuthStore.getState().actions.require({
+              agentId: payload.agentId,
+              sessionId: payload.sessionId,
+              methods: payload.methods,
+            });
+            break;
           case "elicitation_request":
             useAcpQuestionsStore.getState().actions.add({
               requestId: payload.requestId,

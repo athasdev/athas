@@ -324,6 +324,7 @@ fn main() {
          list_acp_sessions,
          delete_acp_session,
          logout_acp_agent,
+         authenticate_acp_agent,
          cancel_acp_prompt,
          get_codex_status,
          start_codex_integration,

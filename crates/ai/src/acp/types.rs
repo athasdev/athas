@@ -295,6 +295,40 @@ pub struct AcpAgentStatus {
    pub session_id: Option<String>,
    pub workspace_path: Option<String>,
    pub agent_capabilities: Option<AcpAgentCapabilities>,
+   /// The sign-in methods the agent offered in `initialize`.
+   pub auth_methods: Vec<AcpAuthMethod>,
+}
+
+/// How an ACP sign-in method is completed.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AcpAuthMethodKind {
+   /// The agent signs in itself when Athas calls `authenticate` with the method id.
+   Agent,
+   /// The user signs in by running a command in a terminal; `authenticate` is never called.
+   Terminal,
+}
+
+/// The command a terminal sign-in method runs, ready to start in an Athas terminal.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpTerminalAuthLaunch {
+   pub label: String,
+   pub command: String,
+   pub args: Vec<String>,
+   pub env: HashMap<String, String>,
+}
+
+/// A sign-in method an ACP agent offers, as the frontend shows it.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpAuthMethod {
+   pub id: String,
+   pub name: String,
+   pub description: Option<String>,
+   pub kind: AcpAuthMethodKind,
+   /// Set for terminal methods.
+   pub terminal: Option<AcpTerminalAuthLaunch>,
 }
 
 /// Content block types in ACP messages
@@ -500,6 +534,14 @@ pub enum AcpEvent {
    /// Agent status changed
    #[serde(rename_all = "camelCase")]
    StatusChanged { status: AcpAgentStatus },
+   /// The agent needs the user to sign in and Athas will not pick a method on its own. The
+   /// session id is set when a prompt hit this; startup failures carry none.
+   #[serde(rename_all = "camelCase")]
+   AuthRequired {
+      agent_id: String,
+      session_id: Option<String>,
+      methods: Vec<AcpAuthMethod>,
+   },
    /// Available slash commands updated
    #[serde(rename_all = "camelCase")]
    SlashCommandsUpdate {

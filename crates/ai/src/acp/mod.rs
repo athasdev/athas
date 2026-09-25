@@ -1,3 +1,4 @@
+mod auth;
 mod bridge;
 mod bridge_commands;
 mod bridge_init;

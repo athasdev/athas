@@ -1,11 +1,15 @@
 use super::{
    AcpConnection,
+   auth::{
+      ACP_AUTHENTICATE_TIMEOUT, AuthenticationRequired, LEGACY_TERMINAL_AUTH_META_KEY,
+      describe_auth_methods, startup_auth_method,
+   },
    client::{AthasAcpClient, ClientResponders},
    process::{
       force_kill_process_group, stop_child_tree, stop_child_tree_mut, terminate_process_group,
    },
    types::{
-      AcpAgentCapabilities, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
+      AcpAgentCapabilities, AcpAuthMethod, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
       SessionModeState,
    },
    workspace_path::{path_to_string, resolve_workspace_path},
@@ -37,7 +41,8 @@ use tokio_util::{
 pub(super) struct InitializedAcpWorker {
    pub connection: Arc<AcpConnection>,
    pub session_id: Option<acp::SessionId>,
-   pub auth_method_id: Option<String>,
+   pub auth_methods: Vec<acp::AuthMethod>,
+   pub described_auth_methods: Vec<AcpAuthMethod>,
    pub agent_capabilities: AcpAgentCapabilities,
    pub process: Child,
    pub process_group_id: Option<u32>,
@@ -59,12 +64,23 @@ const MAX_RECENT_STDERR_LINES: usize = 20;
 pub(super) const ACP_STARTUP_STOPPED: &str = "ACP agent startup was stopped";
 type RecentAgentStderr = Arc<Mutex<VecDeque<String>>>;
 
+/// How startup may sign in when the agent asks for it.
+#[derive(Debug, Clone, Default)]
+pub(super) struct StartupAuth {
+   /// The method the user picked after an earlier attempt needed sign-in.
+   pub chosen_method_id: Option<String>,
+   /// Whether a lone `authenticate` method may be used without asking. Off after a logout, so
+   /// the user chooses again.
+   pub allow_automatic: bool,
+}
+
 pub(super) async fn initialize_worker(
    config: &AgentConfig,
    workspace_path: Option<String>,
    app_handle: AppHandle,
    terminal_manager: Arc<TerminalManager>,
    requested_session_id: Option<String>,
+   startup_auth: StartupAuth,
    map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
    stop: CancellationToken,
 ) -> Result<InitializedAcpWorker> {
@@ -143,7 +159,7 @@ pub(super) async fn initialize_worker(
 
       let init_response = initialize_connection(connection.clone(), &mut child, &io_handle).await?;
       let auth_methods = init_response.auth_methods.clone();
-      let auth_method_id = auth_methods.first().map(|method| method.id().to_string());
+      let described_auth_methods = describe_auth_methods(&auth_methods, config);
       let supports_session_resume = init_response
          .agent_capabilities
          .session_capabilities
@@ -165,7 +181,8 @@ pub(super) async fn initialize_worker(
          cwd,
          requested_session_id,
          SessionBootstrapContext {
-            auth_methods,
+            auth_methods: &auth_methods,
+            startup_auth,
             supports_session_resume,
             map_config_options,
             child: &mut child,
@@ -176,6 +193,18 @@ pub(super) async fn initialize_worker(
       let session_bootstrap = match session_bootstrap {
          Ok(session) => session,
          Err(error) => {
+            if error.is::<AuthenticationRequired>()
+               && let Err(emit_error) = app_handle.emit(
+                  "acp-event",
+                  AcpEvent::AuthRequired {
+                     agent_id: config.id.clone(),
+                     session_id: None,
+                     methods: described_auth_methods,
+                  },
+               )
+            {
+               log::warn!("Failed to emit ACP auth required event: {}", emit_error);
+            }
             tokio::task::yield_now().await;
             return Err(with_agent_stderr(error, &recent_stderr).await);
          }
@@ -183,7 +212,8 @@ pub(super) async fn initialize_worker(
 
       Ok::<_, anyhow::Error>((
          connection,
-         auth_method_id,
+         auth_methods,
+         described_auth_methods,
          agent_capabilities,
          session_bootstrap,
       ))
@@ -197,7 +227,8 @@ pub(super) async fn initialize_worker(
       stop_child_tree_mut(&mut child, process_group_id).await;
       bail!(ACP_STARTUP_STOPPED);
    };
-   let (connection, auth_method_id, agent_capabilities, session_bootstrap) = result?;
+   let (connection, auth_methods, described_auth_methods, agent_capabilities, session_bootstrap) =
+      result?;
 
    emit_initial_session_state(
       &app_handle,
@@ -209,7 +240,8 @@ pub(super) async fn initialize_worker(
    Ok(InitializedAcpWorker {
       connection,
       session_id: session_bootstrap.session_id,
-      auth_method_id,
+      auth_methods,
+      described_auth_methods,
       agent_capabilities,
       process: child,
       process_group_id,
@@ -230,7 +262,8 @@ struct SessionBootstrapContext<'a, F>
 where
    F: Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
 {
-   auth_methods: Vec<acp::AuthMethod>,
+   auth_methods: &'a [acp::AuthMethod],
+   startup_auth: StartupAuth,
    supports_session_resume: bool,
    map_config_options: F,
    child: &'a mut Child,
@@ -332,11 +365,8 @@ fn relevant_agent_stderr(lines: &VecDeque<String>) -> Option<String> {
    (!normalized.is_empty()).then_some(normalized)
 }
 
-async fn initialize_connection(
-   connection: Arc<AcpConnection>,
-   child: &mut Child,
-   io_handle: &tokio::task::JoinHandle<()>,
-) -> Result<acp::InitializeResponse> {
+/// What Athas can do for agents, sent in `initialize`.
+fn client_capabilities() -> acp::ClientCapabilities {
    let mut client_meta = acp::Meta::new();
    client_meta.insert(
       "athas.dev".to_string(),
@@ -347,14 +377,17 @@ async fn initialize_connection(
          ]
       }),
    );
+   // Agents that predate `auth.terminal` describe terminal sign-in under this key instead.
+   client_meta.insert(LEGACY_TERMINAL_AUTH_META_KEY.to_string(), json!(true));
 
-   let client_capabilities = acp::ClientCapabilities::new()
+   acp::ClientCapabilities::new()
       .fs(
          acp::FileSystemCapabilities::new()
             .read_text_file(true)
             .write_text_file(true),
       )
       .terminal(true)
+      .auth(acp::AuthCapabilities::new().terminal(true))
       .elicitation(
          acp::ElicitationCapabilities::new()
             .form(acp::ElicitationFormCapabilities::new())
@@ -366,10 +399,16 @@ async fn initialize_connection(
                .boolean(acp::BooleanConfigOptionCapabilities::new()),
          ),
       )
-      .meta(client_meta);
+      .meta(client_meta)
+}
 
+async fn initialize_connection(
+   connection: Arc<AcpConnection>,
+   child: &mut Child,
+   io_handle: &tokio::task::JoinHandle<()>,
+) -> Result<acp::InitializeResponse> {
    let init_request = acp::InitializeRequest::new(ProtocolVersion::LATEST)
-      .client_capabilities(client_capabilities)
+      .client_capabilities(client_capabilities())
       .client_info(acp::Implementation::new("athas", env!("CARGO_PKG_VERSION")).title("Athas"));
 
    // A first run through `npx` downloads the agent before it can answer, so initialize gets
@@ -420,29 +459,31 @@ async fn bootstrap_session(
 ) -> Result<SessionBootstrap> {
    log::info!("Creating ACP session in {:?}...", cwd);
 
+   // Terminal methods are never sent here: the user runs them, and startup is retried after.
    let authenticate = |connection: Arc<AcpConnection>| {
-      let auth_methods = ctx.auth_methods.clone();
+      let method = startup_auth_method(
+         ctx.auth_methods,
+         ctx.startup_auth.chosen_method_id.as_deref(),
+         ctx.startup_auth.allow_automatic,
+      );
       async move {
-         if let Some(method) = auth_methods.first() {
-            log::info!(
-               "Agent requires authentication, attempting ACP authenticate with method: {}",
-               method.id()
-            );
-            let auth_request = acp::AuthenticateRequest::new(method.id().clone());
-            match tokio::time::timeout(
-               std::time::Duration::from_secs(30),
-               connection.send_request(auth_request).block_task(),
-            )
-            .await
-            {
-               Ok(Ok(_)) => Ok(()),
-               Ok(Err(e)) => Err(anyhow::anyhow!("ACP authentication failed: {}", e)),
-               Err(_) => Err(anyhow::anyhow!("ACP authentication timed out")),
-            }
-         } else {
-            Err(anyhow::anyhow!(
-               "Agent requires authentication but did not advertise auth methods"
-            ))
+         let Some(method_id) = method? else {
+            return Err(AuthenticationRequired.into());
+         };
+         log::info!(
+            "Agent requires authentication, attempting ACP authenticate with method: {}",
+            method_id
+         );
+         let auth_request = acp::AuthenticateRequest::new(method_id);
+         match tokio::time::timeout(
+            ACP_AUTHENTICATE_TIMEOUT,
+            connection.send_request(auth_request).block_task(),
+         )
+         .await
+         {
+            Ok(Ok(_)) => Ok(()),
+            Ok(Err(e)) => Err(anyhow::anyhow!("ACP authentication failed: {}", e)),
+            Err(_) => Err(anyhow::anyhow!("ACP authentication timed out")),
          }
       }
    };
@@ -458,7 +499,7 @@ async fn bootstrap_session(
             ctx.io_handle.abort();
             terminate_process_group(ctx.child.id());
             let _ = ctx.child.kill().await;
-            bail!("{}", e);
+            return Err(e);
          }
          load_result =
             load_session(connection.clone(), cwd.clone(), existing_session_id.clone()).await;
@@ -492,7 +533,7 @@ async fn bootstrap_session(
                   ctx.io_handle.abort();
                   terminate_process_group(ctx.child.id());
                   let _ = ctx.child.kill().await;
-                  bail!("{}", e);
+                  return Err(e);
                }
                resume_result =
                   resume_session(connection.clone(), cwd.clone(), existing_session_id.clone())
@@ -579,7 +620,7 @@ async fn bootstrap_session(
          ctx.io_handle.abort();
          terminate_process_group(ctx.child.id());
          let _ = ctx.child.kill().await;
-         bail!("{}", e);
+         return Err(e);
       }
       log::info!("ACP authentication succeeded, retrying session creation");
       session_result = create_session(connection.clone(), cwd).await;
@@ -700,6 +741,19 @@ fn emit_initial_session_state(
 #[cfg(test)]
 mod tests {
    use super::*;
+
+   #[test]
+   fn advertises_terminal_sign_in() {
+      let capabilities = client_capabilities();
+      assert!(capabilities.auth.terminal);
+      assert_eq!(
+         capabilities
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.get(LEGACY_TERMINAL_AUTH_META_KEY)),
+         Some(&json!(true))
+      );
+   }
 
    #[test]
    fn prefers_actionable_authentication_stderr() {

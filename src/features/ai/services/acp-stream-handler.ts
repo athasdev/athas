@@ -89,6 +89,8 @@ export class AcpStreamHandler {
   private awaitingFirstResponse = false;
   private stillWaitingTimeout: ReturnType<typeof setTimeout> | null = null;
   private cancelGraceTimeout: ReturnType<typeof setTimeout> | null = null;
+  /** The sign-in method the user picked; startup authenticates with it if the agent asks. */
+  private authMethodId: string | null = null;
   private resolveSettled: () => void = () => {};
   /** Resolves once the handler has finished, however the turn ended. */
   private readonly settled = new Promise<void>((resolve) => {
@@ -272,6 +274,7 @@ export class AcpStreamHandler {
           agentId: this.agentId,
           workspacePath,
           sessionId,
+          ...(this.authMethodId ? { authMethodId: this.authMethodId } : {}),
         }),
         ACP_START_TIMEOUT_MS,
         `${this.agentId} startup timed out`,
@@ -831,8 +834,46 @@ export class AcpStreamHandler {
     });
   }
 
+  /**
+   * Logs out of the running agent. Athas then leaves sign-in to the user: the next prompt that
+   * needs it shows the agent's sign-in methods.
+   */
   static async logoutAgent(): Promise<void> {
     await invoke("logout_acp_agent");
+  }
+
+  /**
+   * Signs in with an `agent` method the user picked. A running agent authenticates in place;
+   * otherwise the agent starts again and authenticates when its session asks for it.
+   */
+  static async authenticateAgent(
+    agentId: string,
+    chatId: string | null | undefined,
+    methodId: string,
+  ): Promise<void> {
+    const status = await invoke<AcpAgentStatus>("get_acp_status");
+    if (status.running && status.agentId === agentId && status.sessionId) {
+      await invoke("authenticate_acp_agent", { methodId });
+      return;
+    }
+
+    const handler = new AcpStreamHandler(
+      agentId,
+      { onChunk: () => {}, onComplete: () => {}, onError: () => {} },
+      chatId ?? undefined,
+    );
+    handler.authMethodId = methodId;
+    await handler.ensureAgentRunning();
+  }
+
+  /**
+   * Starts the agent again on the chat's session, for after the user signed in outside the
+   * agent's connection (a terminal sign-in).
+   */
+  static async reconnectAgent(agentId: string, chatId?: string | null): Promise<void> {
+    AcpStreamHandler.activeHandler?.forceStop();
+    await invoke("stop_acp_agent");
+    await AcpStreamHandler.warmup(agentId, chatId ?? undefined);
   }
 
   static async restartAgent(agentId: string, chatId?: string | null): Promise<void> {

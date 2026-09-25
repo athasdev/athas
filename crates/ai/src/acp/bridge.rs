@@ -1,14 +1,15 @@
 use super::{
    AcpConnection,
+   auth::{ACP_AUTHENTICATE_TIMEOUT, authenticate_method, automatic_auth_method},
    bridge_commands::{AcpCommand, run_worker_loop},
    bridge_init::InitializedAcpWorker,
-   bridge_prompt::run_prompt,
+   bridge_prompt::{PromptAuth, run_prompt},
    client::{AthasAcpClient, ClientResponders, PermissionResponse},
    config::AgentRegistry,
    process::{stop_child_tree, terminate_process_group},
    types::{
-      AcpAgentCapabilities, AcpAgentStatus, AcpEvent, AcpSessionInfo, AcpSessionList, AgentConfig,
-      SessionConfigOption, SessionConfigValue,
+      AcpAgentCapabilities, AcpAgentStatus, AcpAuthMethod, AcpEvent, AcpSessionInfo,
+      AcpSessionList, AgentConfig, SessionConfigOption, SessionConfigValue,
    },
    workspace_path::{path_to_string, resolve_workspace_path},
 };
@@ -16,7 +17,9 @@ use crate::runtime::AthasAppHandle as AppHandle;
 use agent_client_protocol::schema::v1 as acp;
 use anyhow::{Context, Result, bail};
 use athas_terminal::TerminalManager;
-use std::{path::PathBuf, sync::Arc, thread, time::Duration};
+use std::{
+   cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc, sync::Arc, thread, time::Duration,
+};
 use tauri::Emitter;
 use tokio::{
    process::Child,
@@ -52,7 +55,11 @@ pub(super) async fn with_request_timeout<T, E: std::fmt::Display>(
 pub(super) struct AcpWorker {
    connection: Option<Arc<AcpConnection>>,
    session_id: Option<acp::SessionId>,
-   auth_method_id: Option<String>,
+   auth_methods: Vec<acp::AuthMethod>,
+   described_auth_methods: Vec<AcpAuthMethod>,
+   /// Agents the user logged out of. Athas does not sign them back in on its own; the user
+   /// chooses a method again. Kept across restarts until a sign-in succeeds.
+   logged_out_agents: Rc<RefCell<HashSet<String>>>,
    process: Option<Child>,
    process_group_id: Option<u32>,
    io_handle: Option<tokio::task::JoinHandle<()>>,
@@ -68,7 +75,9 @@ impl AcpWorker {
       Self {
          connection: None,
          session_id: None,
-         auth_method_id: None,
+         auth_methods: Vec::new(),
+         described_auth_methods: Vec::new(),
+         logged_out_agents: Rc::default(),
          process: None,
          process_group_id: None,
          io_handle: None,
@@ -110,6 +119,8 @@ impl AcpWorker {
 
             self.connection = None;
             self.session_id = None;
+            self.auth_methods.clear();
+            self.described_auth_methods.clear();
             self.process = None;
             self.process_group_id = None;
             self.client = None;
@@ -144,7 +155,8 @@ impl AcpWorker {
    ) -> (AcpAgentStatus, ClientResponders) {
       self.connection = Some(initialized.connection);
       self.session_id = initialized.session_id.clone();
-      self.auth_method_id = initialized.auth_method_id;
+      self.auth_methods = initialized.auth_methods;
+      self.described_auth_methods = initialized.described_auth_methods;
       self.process_group_id = initialized.process_group_id;
       self.process = Some(initialized.process);
       self.io_handle = Some(initialized.io_handle);
@@ -175,7 +187,16 @@ impl AcpWorker {
          .as_ref()
          .context("No app handle available")?
          .clone();
-      let auth_method_id = self.auth_method_id.clone();
+      let agent_id = self.agent_id.clone().unwrap_or_default();
+      let auth = PromptAuth {
+         automatic_method_id: if self.allows_automatic_auth(&agent_id) {
+            automatic_auth_method(&self.auth_methods)
+         } else {
+            None
+         },
+         agent_id,
+         methods: self.described_auth_methods.clone(),
+      };
 
       tokio::task::spawn_local(async move {
          if let Err(err) = run_prompt(
@@ -183,7 +204,7 @@ impl AcpWorker {
             session_id.clone(),
             app_handle.clone(),
             prompt,
-            auth_method_id,
+            auth,
          )
          .await
          {
@@ -384,6 +405,8 @@ impl AcpWorker {
       }
 
       let connection = self.active_connection()?;
+      let agent_id = self.agent_id.clone().context("No active agent")?;
+      let logged_out_agents = self.logged_out_agents.clone();
 
       Ok(async move {
          with_request_timeout(
@@ -394,8 +417,47 @@ impl AcpWorker {
                .block_task(),
          )
          .await?;
+         logged_out_agents.borrow_mut().insert(agent_id);
          Ok(())
       })
+   }
+
+   /// Signs in to the running agent with a method the user picked. Only methods completed by
+   /// `authenticate` are accepted; terminal methods are run by the user and followed by a
+   /// restart instead.
+   pub(super) async fn authenticate(
+      &mut self,
+      method_id: String,
+   ) -> Result<impl Future<Output = Result<()>> + use<>> {
+      self.ensure_process_alive().await?;
+
+      let method_id = authenticate_method(&self.auth_methods, &method_id)?;
+      let connection = self.active_connection()?;
+      let agent_id = self.agent_id.clone().context("No active agent")?;
+      let logged_out_agents = self.logged_out_agents.clone();
+
+      Ok(async move {
+         with_request_timeout(
+            "sign in to the agent",
+            ACP_AUTHENTICATE_TIMEOUT,
+            connection
+               .send_request(acp::AuthenticateRequest::new(method_id))
+               .block_task(),
+         )
+         .await?;
+         logged_out_agents.borrow_mut().remove(&agent_id);
+         Ok(())
+      })
+   }
+
+   /// Whether a lone `authenticate` method may be used for `agent_id` without asking.
+   pub(super) fn allows_automatic_auth(&self, agent_id: &str) -> bool {
+      !self.logged_out_agents.borrow().contains(agent_id)
+   }
+
+   /// A startup signed in with a method the user picked.
+   pub(super) fn signed_in(&self, agent_id: &str) {
+      self.logged_out_agents.borrow_mut().remove(agent_id);
    }
 
    fn active_connection(&self) -> Result<Arc<AcpConnection>> {
@@ -469,7 +531,8 @@ impl AcpWorker {
 
       self.connection = None;
       self.session_id = None;
-      self.auth_method_id = None;
+      self.auth_methods.clear();
+      self.described_auth_methods.clear();
       self.client = None;
       self.workspace_path = None;
       self.agent_id = None;
@@ -490,6 +553,7 @@ impl AcpWorker {
             session_id: self.session_id.as_ref().map(ToString::to_string),
             workspace_path: self.workspace_path.as_deref().map(path_to_string),
             agent_capabilities: self.agent_capabilities.clone(),
+            auth_methods: self.described_auth_methods.clone(),
          },
          None => AcpAgentStatus::default(),
       }
@@ -562,12 +626,14 @@ impl AcpAgentBridge {
       self.registry.invalidate_detection_cache();
    }
 
-   /// Start an ACP agent by ID
+   /// Start an ACP agent by ID. `auth_method_id` is the sign-in method the user picked after an
+   /// earlier start needed one; startup uses it if the agent asks to authenticate.
    pub async fn start_agent(
       &self,
       agent_id: &str,
       workspace_path: Option<String>,
       session_id: Option<String>,
+      auth_method_id: Option<String>,
    ) -> Result<AcpAgentStatus> {
       let config = self
          .registry
@@ -583,6 +649,7 @@ impl AcpAgentBridge {
             agent_id: agent_id.to_string(),
             workspace_path,
             session_id,
+            auth_method_id,
             config: Box::new(config),
             app_handle: self.app_handle.clone(),
             terminal_manager: self.terminal_manager.clone(),
@@ -781,6 +848,22 @@ impl AcpAgentBridge {
       self
          .command_tx
          .send(AcpCommand::Logout { response_tx })
+         .await
+         .context("Failed to send command to ACP worker")?;
+
+      response_rx.await.context("Worker disconnected")?
+   }
+
+   /// Sign in to the running agent with an `authenticate` method the user picked
+   pub async fn authenticate(&self, method_id: String) -> Result<()> {
+      let (response_tx, response_rx) = oneshot::channel();
+
+      self
+         .command_tx
+         .send(AcpCommand::Authenticate {
+            method_id,
+            response_tx,
+         })
          .await
          .context("Failed to send command to ACP worker")?;
 

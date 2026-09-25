@@ -28,6 +28,28 @@ export interface AcpAgentStatus {
   sessionId?: string | null;
   workspacePath?: string | null;
   agentCapabilities?: AcpAgentCapabilities | null;
+  /** The sign-in methods the agent offered in `initialize`. */
+  authMethods?: AcpAuthMethod[];
+}
+
+/** The command a terminal sign-in method runs in an Athas terminal. */
+export interface AcpTerminalAuthLaunch {
+  label: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+}
+
+/**
+ * A way to sign in to an ACP agent. `agent` methods are completed by the agent through
+ * `authenticate`; `terminal` methods are completed by the user running `terminal`.
+ */
+export interface AcpAuthMethod {
+  id: string;
+  name: string;
+  description: string | null;
+  kind: "agent" | "terminal";
+  terminal: AcpTerminalAuthLaunch | null;
 }
 
 interface AcpAgentCapabilities {
@@ -283,6 +305,13 @@ export type AcpEvent =
   | {
       type: "status_changed";
       status: AcpAgentStatus;
+    }
+  | {
+      type: "auth_required";
+      agentId: string;
+      /** Set when a prompt needed sign-in; startup failures carry none. */
+      sessionId: string | null;
+      methods: AcpAuthMethod[];
     }
   | {
       type: "slash_commands_update";

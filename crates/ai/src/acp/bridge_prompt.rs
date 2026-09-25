@@ -1,6 +1,7 @@
 use super::{
    AcpConnection,
-   types::{AcpEvent, StopReason},
+   auth::ACP_AUTHENTICATE_TIMEOUT,
+   types::{AcpAuthMethod, AcpEvent, StopReason},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
 use agent_client_protocol::schema::v1 as acp;
@@ -8,17 +9,24 @@ use anyhow::{Context, Result, bail};
 use std::{sync::Arc, time::Duration};
 use tauri::Emitter;
 
-const ACP_PROMPT_AUTH_TIMEOUT_SECONDS: u64 = 90;
 const ACP_PROMPT_TURN_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 /// How long a timed-out turn gets to wind down after `session/cancel` before it is reported.
 const ACP_PROMPT_CANCEL_GRACE: Duration = Duration::from_secs(10);
+
+/// How a prompt signs in when the agent asks for it.
+pub(super) struct PromptAuth {
+   pub agent_id: String,
+   /// The method used without asking, if any; otherwise the user is shown `methods`.
+   pub automatic_method_id: Option<acp::AuthMethodId>,
+   pub methods: Vec<AcpAuthMethod>,
+}
 
 pub(super) async fn run_prompt(
    connection: Arc<AcpConnection>,
    session_id: acp::SessionId,
    app_handle: AppHandle,
    prompt: Vec<serde_json::Value>,
-   auth_method_id: Option<String>,
+   auth: PromptAuth,
 ) -> Result<()> {
    let prompt = prompt
       .into_iter()
@@ -26,7 +34,8 @@ pub(super) async fn run_prompt(
       .collect::<Result<Vec<acp::ContentBlock>, _>>()
       .context("Failed to decode ACP prompt content blocks")?;
    let prompt_request = acp::PromptRequest::new(session_id.clone(), prompt);
-   let response = send_prompt_with_auth_retry(connection, prompt_request, auth_method_id).await?;
+   let response =
+      send_prompt_with_auth_retry(connection, prompt_request, auth, &app_handle).await?;
 
    let stop_reason: StopReason = response.stop_reason.into();
    if let Err(e) = app_handle.emit(
@@ -45,20 +54,32 @@ pub(super) async fn run_prompt(
 async fn send_prompt_with_auth_retry(
    connection: Arc<AcpConnection>,
    prompt_request: acp::PromptRequest,
-   auth_method_id: Option<String>,
+   auth: PromptAuth,
+   app_handle: &AppHandle,
 ) -> Result<acp::PromptResponse> {
    let mut prompt_result = send_prompt(connection.clone(), prompt_request.clone()).await;
 
    if let Ok(Err(err)) = &prompt_result
       && matches!(err.code, acp::ErrorCode::AuthRequired)
    {
-      let Some(auth_method_id) = auth_method_id else {
+      let Some(auth_method_id) = auth.automatic_method_id else {
+         // The user picks a method in the chat; the prompt is sent again once they signed in.
+         if let Err(error) = app_handle.emit(
+            "acp-event",
+            AcpEvent::AuthRequired {
+               agent_id: auth.agent_id,
+               session_id: Some(prompt_request.session_id.to_string()),
+               methods: auth.methods,
+            },
+         ) {
+            log::warn!("Failed to emit ACP auth required event: {}", error);
+         }
          bail!("Authentication required before sending prompt");
       };
 
       let auth_request = acp::AuthenticateRequest::new(auth_method_id);
       match tokio::time::timeout(
-         std::time::Duration::from_secs(ACP_PROMPT_AUTH_TIMEOUT_SECONDS),
+         ACP_AUTHENTICATE_TIMEOUT,
          connection.send_request(auth_request).block_task(),
       )
       .await

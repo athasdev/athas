@@ -1,6 +1,6 @@
 use super::{
    bridge::AcpWorker,
-   bridge_init::{ACP_STARTUP_STOPPED, InitializedAcpWorker, initialize_worker},
+   bridge_init::{ACP_STARTUP_STOPPED, InitializedAcpWorker, StartupAuth, initialize_worker},
    client::ClientResponders,
    types::{AcpAgentStatus, AcpSessionList, AgentConfig, SessionConfigValue},
 };
@@ -20,6 +20,7 @@ pub(super) enum AcpCommand {
       agent_id: String,
       workspace_path: Option<String>,
       session_id: Option<String>,
+      auth_method_id: Option<String>,
       config: Box<AgentConfig>,
       app_handle: AppHandle,
       terminal_manager: Arc<TerminalManager>,
@@ -50,6 +51,10 @@ pub(super) enum AcpCommand {
    Logout {
       response_tx: oneshot::Sender<Result<()>>,
    },
+   Authenticate {
+      method_id: String,
+      response_tx: oneshot::Sender<Result<()>>,
+   },
    CancelPrompt {
       response_tx: oneshot::Sender<Result<()>>,
    },
@@ -68,6 +73,7 @@ enum WorkerFollowUp {
    Started {
       startup_id: u64,
       agent_id: String,
+      signed_in_with_choice: bool,
       app_handle: AppHandle,
       result: Result<Box<InitializedAcpWorker>>,
       response_tx: StartResponse,
@@ -155,6 +161,7 @@ pub(super) async fn run_worker_loop(
                   agent_id,
                   workspace_path,
                   session_id,
+                  auth_method_id,
                   config,
                   app_handle,
                   terminal_manager,
@@ -178,6 +185,11 @@ pub(super) async fn run_worker_loop(
                      );
                   }
 
+                  let signed_in_with_choice = auth_method_id.is_some();
+                  let startup_auth = StartupAuth {
+                     allow_automatic: worker.allows_automatic_auth(&agent_id),
+                     chosen_method_id: auth_method_id,
+                  };
                   let followup_tx = followup_tx.clone();
                   tokio::task::spawn_local(async move {
                      let result = initialize_worker(
@@ -186,6 +198,7 @@ pub(super) async fn run_worker_loop(
                         app_handle.clone(),
                         terminal_manager,
                         session_id,
+                        startup_auth,
                         AcpWorker::map_config_options,
                         stop,
                      )
@@ -194,6 +207,7 @@ pub(super) async fn run_worker_loop(
                      let _ = followup_tx.send(WorkerFollowUp::Started {
                         startup_id,
                         agent_id,
+                        signed_in_with_choice,
                         app_handle,
                         result,
                         response_tx,
@@ -292,6 +306,16 @@ pub(super) async fn run_worker_loop(
                      *s = worker.get_status();
                   }
                }
+               AcpCommand::Authenticate {
+                  method_id,
+                  response_tx,
+               } => {
+                  respond_in_background(worker.authenticate(method_id).await, response_tx);
+                  {
+                     let mut s = status.lock().await;
+                     *s = worker.get_status();
+                  }
+               }
                AcpCommand::Stop { response_tx } => {
                   startup.stop();
                   let result = worker.stop().await;
@@ -320,6 +344,7 @@ pub(super) async fn run_worker_loop(
             WorkerFollowUp::Started {
                startup_id,
                agent_id,
+               signed_in_with_choice,
                app_handle,
                result,
                response_tx,
@@ -327,6 +352,9 @@ pub(super) async fn run_worker_loop(
                let wanted = startup.finish(startup_id);
                let response = match result {
                   Ok(initialized) if wanted => {
+                     if signed_in_with_choice {
+                        worker.signed_in(&agent_id);
+                     }
                      Ok(worker.adopt(agent_id, app_handle, *initialized))
                   }
                   Ok(initialized) => {
