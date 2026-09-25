@@ -121,7 +121,8 @@ fn session_id_of(event: &AcpEvent) -> Option<&str> {
       | AcpEvent::SessionInfoUpdate { session_id, .. }
       | AcpEvent::PromptComplete { session_id, .. }
       | AcpEvent::UiAction { session_id, .. }
-      | AcpEvent::AgentLocation { session_id, .. } => Some(session_id),
+      | AcpEvent::AgentLocation { session_id, .. }
+      | AcpEvent::AgentFileWrite { session_id, .. } => Some(session_id),
       AcpEvent::ElicitationRequest { session_id, .. }
       | AcpEvent::Error { session_id, .. }
       | AcpEvent::AuthRequired { session_id, .. } => session_id.as_deref(),

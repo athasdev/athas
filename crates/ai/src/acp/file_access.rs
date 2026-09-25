@@ -144,6 +144,30 @@ pub(super) enum FileChangeType {
    Reloaded,
 }
 
+/// What a file held before an agent wrote it, kept so the write can be reviewed afterwards.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) enum PriorContent {
+   /// The write creates the file.
+   Missing,
+   Text(String),
+   /// The file existed but could not be read as text, so the write cannot be reviewed.
+   Unreadable,
+}
+
+impl PriorContent {
+   pub fn from_read(read: io::Result<Vec<u8>>) -> Self {
+      match read {
+         Ok(bytes) => String::from_utf8(bytes).map_or(Self::Unreadable, Self::Text),
+         Err(error) if error.kind() == io::ErrorKind::NotFound => Self::Missing,
+         Err(_) => Self::Unreadable,
+      }
+   }
+
+   pub fn existed(&self) -> bool {
+      !matches!(self, Self::Missing)
+   }
+}
+
 /// The ACP error for a failed read. A missing file is `resource_not_found` (-32002), so agents can
 /// tell it apart from a real failure; anything else is an internal error.
 pub(super) fn read_error(path: &Path, error: &io::Error) -> acp::Error {
@@ -250,6 +274,26 @@ mod tests {
          serde_json::to_value(created).unwrap()["event_type"],
          "opened"
       );
+   }
+
+   #[test]
+   fn prior_content_tells_new_text_and_unreadable_files_apart() {
+      assert_eq!(
+         PriorContent::from_read(Err(io::Error::from(io::ErrorKind::NotFound))),
+         PriorContent::Missing
+      );
+      assert_eq!(
+         PriorContent::from_read(Ok(b"fn main() {}\n".to_vec())),
+         PriorContent::Text("fn main() {}\n".to_string())
+      );
+      assert_eq!(
+         PriorContent::from_read(Ok(vec![0xff, 0xfe, 0x00])),
+         PriorContent::Unreadable
+      );
+      let denied = PriorContent::from_read(Err(io::Error::from(io::ErrorKind::PermissionDenied)));
+      assert_eq!(denied, PriorContent::Unreadable);
+      assert!(denied.existed());
+      assert!(!PriorContent::Missing.existed());
    }
 
    fn answer(approved: bool, cancelled: bool, option_id: Option<&str>) -> PermissionResponse {

@@ -1098,7 +1098,9 @@ impl AthasAcpClient {
             Some(&args.content),
          )
          .await?;
-      self.apply_agent_write(&path, &args.content).await?;
+      self
+         .apply_agent_write(&args.session_id, &path, &args.content)
+         .await?;
       self.emit_event(agent_location_event(&args.session_id, &path, None));
       Ok(acp::WriteTextFileResponse::new())
    }
@@ -1187,8 +1189,19 @@ impl AthasAcpClient {
    /// then the frontend hears about it through `file-changed` so the file tree and any open editor
    /// catch up. An editor without unsaved changes reloads; one with unsaved changes keeps them and
    /// offers a reload, so an agent write never discards what the user typed.
-   async fn apply_agent_write(&self, path: &Path, content: &str) -> acp::Result<()> {
-      let existed = tokio::fs::try_exists(path).await.unwrap_or(false);
+   ///
+   /// The write lands right away, since agents read their own writes back, and the chat hears
+   /// what the file held before through `agent_file_write`, so the user can keep or reject the
+   /// change hunk by hunk afterwards. A file that was not text before is written but not offered
+   /// for review.
+   async fn apply_agent_write(
+      &self,
+      session_id: &acp::SessionId,
+      path: &Path,
+      content: &str,
+   ) -> acp::Result<()> {
+      let prior = file_access::PriorContent::from_read(tokio::fs::read(path).await);
+      let existed = prior.existed();
       if let Some(parent) = path.parent()
          && let Err(e) = tokio::fs::create_dir_all(parent).await
       {
@@ -1198,6 +1211,22 @@ impl AthasAcpClient {
       tokio::fs::write(path, content)
          .await
          .map_err(|e| acp::Error::new(-32603, format!("Failed to write file: {}", e)))?;
+
+      // Sent before `file-changed`, so the chat knows the write is the agent's by the time the
+      // file watcher listener compares the disk with what the agent wrote.
+      let previous_content = match prior {
+         file_access::PriorContent::Missing => Some(None),
+         file_access::PriorContent::Text(text) => Some(Some(text)),
+         file_access::PriorContent::Unreadable => None,
+      };
+      if let Some(previous_content) = previous_content {
+         self.emit_event(AcpEvent::AgentFileWrite {
+            session_id: session_id.to_string(),
+            path: path_to_string(path),
+            previous_content,
+            content: content.to_string(),
+         });
+      }
 
       let event = file_access::FileChangeEvent {
          path: path_to_string(path),

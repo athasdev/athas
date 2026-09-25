@@ -518,6 +518,10 @@ export class AcpStreamHandler {
       case "agent_location":
         // The chat follows it when its "Follow agent" toggle is on.
         break;
+
+      case "agent_file_write":
+        // The chat keeps it in its agent edit log for review.
+        break;
     }
   }
 

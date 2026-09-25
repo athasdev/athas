@@ -451,6 +451,15 @@ export type AcpEvent =
       sessionId: string;
       path: string;
       line: number | null;
+    }
+  | {
+      /** A write the agent made through `fs/write_text_file`, kept for review after it landed. */
+      type: "agent_file_write";
+      sessionId: string;
+      path: string;
+      /** The file's text before the write; null when the write created the file. */
+      previousContent: string | null;
+      content: string;
     };
 
 /** The ACP client asks each editor window what it holds for a file an agent is reading. */

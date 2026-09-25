@@ -708,4 +708,14 @@ pub enum AcpEvent {
       /// 1-based line the read started at, when the agent asked for one.
       line: Option<u32>,
    },
+   /// A write the agent made through `fs/write_text_file`, with what the file held before, so the
+   /// user can review the change hunk by hunk after it landed.
+   #[serde(rename_all = "camelCase")]
+   AgentFileWrite {
+      session_id: String,
+      path: String,
+      /// The file's text before the write; `None` when the write created the file.
+      previous_content: Option<String>,
+      content: String,
+   },
 }
