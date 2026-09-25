@@ -1,4 +1,5 @@
 pub mod acp;
+pub mod acp_registry;
 pub mod acp_traffic;
 pub mod auth;
 pub mod chat_history;

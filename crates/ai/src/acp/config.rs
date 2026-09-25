@@ -1,4 +1,4 @@
-use super::types::AgentConfig;
+use super::types::{AgentConfig, AgentSource};
 use crate::{
    executable_path::{find_executable, probe_command},
    runtime::AthasAppHandle as AppHandle,
@@ -76,7 +76,11 @@ impl AgentRegistry {
             continue;
          }
 
-         if let Some(path) = find_executable(&config.binary_name) {
+         // Registry-only agents run from Athas's own install, never a same-named program.
+         let on_path = (config.source == AgentSource::Extension)
+            .then(|| find_executable(&config.binary_name))
+            .flatten();
+         if let Some(path) = on_path {
             config.installed = true;
             config.installed_version = detect_binary_version(&path);
             config.binary_path = Some(path.to_string_lossy().to_string());
@@ -176,9 +180,35 @@ fn wrapper_file_name(agent_id: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-   use super::{managed_agent_version, managed_wrapper_path, should_update_agent};
-   use crate::acp::types::AgentConfig;
+   use super::{AgentRegistry, managed_agent_version, managed_wrapper_path, should_update_agent};
+   use crate::acp::types::{AgentConfig, AgentSource};
    use std::fs;
+
+   #[cfg(unix)]
+   #[test]
+   fn registry_only_agents_are_not_taken_from_path() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let mut from_extension = AgentConfig::new("ext", "Extension", "sh");
+      from_extension.source = AgentSource::Extension;
+      let mut from_registry = AgentConfig::new("reg", "Registry", "sh");
+      from_registry.source = AgentSource::Registry;
+      let mut registry = AgentRegistry {
+         agents: Default::default(),
+         last_detection: None,
+         managed_bin_dir: Some(temp_dir.path().to_path_buf()),
+      };
+      registry.replace_agents(vec![from_extension, from_registry]);
+
+      registry.detect_installed();
+
+      assert!(registry.get("ext").unwrap().installed);
+      assert!(!registry.get("reg").unwrap().installed);
+
+      fs::write(temp_dir.path().join("reg"), "#!/bin/sh\n").expect("write launcher");
+      registry.invalidate_detection_cache();
+      registry.detect_installed();
+      assert!(registry.get("reg").unwrap().installed);
+   }
 
    #[test]
    fn managed_wrapper_path_prefers_expected_wrapper_name() {

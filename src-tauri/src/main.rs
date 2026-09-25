@@ -315,6 +315,7 @@ fn main() {
          get_available_agents,
          install_acp_agent,
          update_acp_agent,
+         refresh_acp_agent_registry,
          uninstall_acp_agent,
          open_acp_session,
          close_acp_session,

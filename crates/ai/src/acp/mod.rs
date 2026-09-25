@@ -21,7 +21,7 @@ pub use mcp_servers::{McpServerConfig, McpServerSecrets, McpServerSetting};
 pub use traffic::TrafficInspector;
 pub use types::{
    AcpAgentStatus, AcpOpenedSession, AcpSessionInfo, AcpSessionList, AgentConfig, AgentRuntime,
-   SessionConfigValue,
+   AgentSource, RegistryAgentInfo, SessionConfigValue,
 };
 
 pub(super) type AcpConnection = agent_client_protocol::ConnectionTo<agent_client_protocol::Agent>;

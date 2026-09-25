@@ -1,8 +1,14 @@
-use super::mcp::resolve_mcp_servers;
+use super::{
+   acp_registry::{
+      install_registry_agent, installs_from_registry, registry_snapshot, remove_registry_install,
+   },
+   mcp::resolve_mcp_servers,
+};
 use crate::{app_runtime::AppHandle, service_urls};
 use athas_ai::{
    AcpAgentBridge, AcpAgentStatus, AcpOpenedSession, AcpSessionList, AgentConfig, AgentRuntime,
-   McpServerSetting, SessionConfigValue,
+   AgentSource, McpServerSetting, SessionConfigValue,
+   acp::registry::{catalog::merge_registry_agents, current_registry_platform},
 };
 use athas_runtime::{RuntimeManager, RuntimeType};
 use athas_tooling::{ToolConfig, ToolInstaller, ToolRuntime};
@@ -47,11 +53,21 @@ pub struct PermissionResponseArgs {
 
 #[tauri::command]
 pub async fn get_available_agents(
+   app_handle: AppHandle,
    bridge: State<'_, AcpBridgeState>,
 ) -> Result<Vec<AgentConfig>, String> {
-   let mut bridge = bridge.lock().await;
-   refresh_registered_agents(&mut bridge).await;
-   Ok(bridge.detect_agents())
+   refresh_registered_agents(&app_handle, &bridge, false).await;
+   Ok(bridge.lock().await.detect_agents())
+}
+
+/// Downloads the ACP Registry again now instead of waiting for the hourly refresh.
+#[tauri::command]
+pub async fn refresh_acp_agent_registry(
+   app_handle: AppHandle,
+   bridge: State<'_, AcpBridgeState>,
+) -> Result<Vec<AgentConfig>, String> {
+   refresh_registered_agents(&app_handle, &bridge, true).await;
+   Ok(bridge.lock().await.detect_agents())
 }
 
 /// Opens a chat's session on `agent_id` in `workspace_path`, starting the agent when it is not
@@ -72,9 +88,9 @@ pub async fn open_acp_session(
    mcp_servers: Option<Vec<McpServerSetting>>,
 ) -> Result<AcpOpenedSession, String> {
    let mcp_servers = resolve_mcp_servers(&app_handle, mcp_servers.unwrap_or_default());
+   refresh_registered_agents(&app_handle, &bridge, false).await;
    let bridge = {
       let mut bridge = bridge.lock().await;
-      refresh_registered_agents(&mut bridge).await;
       bridge.detect_agents();
       bridge.clone()
    };
@@ -110,22 +126,8 @@ pub async fn install_acp_agent(
    bridge: State<'_, AcpBridgeState>,
    agent_id: String,
 ) -> Result<AgentConfig, String> {
-   let agent = {
-      let mut bridge = bridge.lock().await;
-      refresh_registered_agents(&mut bridge).await;
-      let agents = bridge.detect_agents();
-      agents
-         .into_iter()
-         .find(|agent| agent.id == agent_id)
-         .ok_or_else(|| format!("Unknown ACP agent: {}", agent_id))?
-   };
-
-   let tool_config = tool_config_from_agent(&agent)?;
-   let installed_binary = ToolInstaller::install_managed(&app_handle, &tool_config)
-      .await
-      .map_err(|e| e.to_string())?;
-   write_acp_wrapper(&app_handle, &agent, &tool_config, &installed_binary).await?;
-   write_acp_agent_metadata(&app_handle, &agent)?;
+   let agent = find_registered_agent(&app_handle, &bridge, &agent_id).await?;
+   install_agent(&app_handle, &agent).await?;
 
    let mut bridge = bridge.lock().await;
    bridge.invalidate_agent_detection_cache();
@@ -144,27 +146,11 @@ pub async fn update_acp_agent(
    bridge: State<'_, AcpBridgeState>,
    agent_id: String,
 ) -> Result<AgentConfig, String> {
-   let agent = {
-      let mut bridge = bridge.lock().await;
-      refresh_registered_agents(&mut bridge).await;
-      bridge.invalidate_agent_detection_cache();
-      bridge
-         .detect_agents()
-         .into_iter()
-         .find(|agent| agent.id == agent_id)
-         .ok_or_else(|| format!("Unknown ACP agent: {}", agent_id))?
-   };
-
+   let agent = find_registered_agent(&app_handle, &bridge, &agent_id).await?;
    if !agent.can_install {
       return Err(format!("{} does not support managed updates", agent.name));
    }
-
-   let tool_config = tool_config_from_agent(&agent)?;
-   let installed_binary = ToolInstaller::install_managed(&app_handle, &tool_config)
-      .await
-      .map_err(|e| e.to_string())?;
-   write_acp_wrapper(&app_handle, &agent, &tool_config, &installed_binary).await?;
-   write_acp_agent_metadata(&app_handle, &agent)?;
+   install_agent(&app_handle, &agent).await?;
 
    let mut bridge = bridge.lock().await;
    bridge.invalidate_agent_detection_cache();
@@ -181,21 +167,13 @@ pub async fn uninstall_acp_agent(
    bridge: State<'_, AcpBridgeState>,
    agent_id: String,
 ) -> Result<AgentConfig, String> {
-   let agent = {
-      let mut bridge = bridge.lock().await;
-      refresh_registered_agents(&mut bridge).await;
-      bridge.invalidate_agent_detection_cache();
-      let agents = bridge.detect_agents();
-      agents
-         .into_iter()
-         .find(|agent| agent.id == agent_id)
-         .ok_or_else(|| format!("Unknown ACP agent: {}", agent_id))?
-   };
-
-   let tool_config = tool_config_from_agent(&agent)?;
+   let agent = find_registered_agent(&app_handle, &bridge, &agent_id).await?;
    remove_acp_wrapper(&app_handle, &agent.id)?;
    remove_acp_agent_metadata(&app_handle, &agent.id)?;
-   remove_managed_tool(&app_handle, &tool_config)?;
+   remove_registry_install(&app_handle, &agent.id)?;
+   if let Ok(tool_config) = tool_config_from_agent(&agent) {
+      remove_managed_tool(&app_handle, &tool_config)?;
+   }
 
    let mut bridge = bridge.lock().await;
    bridge.invalidate_agent_detection_cache();
@@ -206,6 +184,46 @@ pub async fn uninstall_acp_agent(
       .ok_or_else(|| format!("Uninstalled ACP agent disappeared: {}", agent_id))?;
 
    Ok(detected)
+}
+
+async fn find_registered_agent(
+   app_handle: &AppHandle,
+   bridge: &AcpBridgeState,
+   agent_id: &str,
+) -> Result<AgentConfig, String> {
+   refresh_registered_agents(app_handle, bridge, false).await;
+   let mut bridge = bridge.lock().await;
+   bridge.invalidate_agent_detection_cache();
+   bridge
+      .detect_agents()
+      .into_iter()
+      .find(|agent| agent.id == agent_id)
+      .ok_or_else(|| format!("Unknown ACP agent: {}", agent_id))
+}
+
+/// Installs `agent` from the ACP Registry when the registry serves it, otherwise from its
+/// extension manifest.
+async fn install_agent(app_handle: &AppHandle, agent: &AgentConfig) -> Result<(), String> {
+   if installs_from_registry(agent) {
+      install_registry_agent(app_handle, agent).await?;
+      // An install made earlier from the extension manifest is no longer launched.
+      if let Ok(tool_config) = tool_config_from_agent(agent)
+         && let Err(error) = remove_managed_tool(app_handle, &tool_config)
+      {
+         log::warn!(
+            "Failed to remove the earlier install of {}: {error}",
+            agent.name
+         );
+      }
+      return Ok(());
+   }
+
+   let tool_config = tool_config_from_agent(agent)?;
+   let installed_binary = ToolInstaller::install_managed(app_handle, &tool_config)
+      .await
+      .map_err(|e| e.to_string())?;
+   write_acp_wrapper(app_handle, agent, &tool_config, &installed_binary).await?;
+   write_acp_agent_metadata(app_handle, agent)
 }
 
 #[derive(Clone)]
@@ -297,6 +315,8 @@ fn to_agent_config(contribution: MarketplaceAgentContribution) -> AgentConfig {
       install_download_url: None,
       install_command: None,
       can_install: false,
+      source: AgentSource::Extension,
+      registry: None,
    };
 
    if let Some(install) = contribution.install {
@@ -428,13 +448,23 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
    Ok(agents)
 }
 
-async fn refresh_registered_agents(bridge: &mut AcpAgentBridge) {
-   match load_marketplace_agents().await {
-      Ok(agents) => bridge.replace_registered_agents(agents),
+/// Rebuilds the agent catalog: extension manifests with the ACP Registry merged in.
+async fn refresh_registered_agents(app_handle: &AppHandle, bridge: &AcpBridgeState, force: bool) {
+   let manifest_agents = match load_marketplace_agents().await {
+      Ok(agents) => agents,
       Err(error) => {
          log::warn!("{}", error);
+         return;
       }
-   }
+   };
+   let snapshot = registry_snapshot(app_handle, force).await;
+   let agents = merge_registry_agents(
+      manifest_agents,
+      &snapshot,
+      current_registry_platform(),
+      is_acp_agent_id,
+   );
+   bridge.lock().await.replace_registered_agents(agents);
 }
 
 /// Stops the agent running `agent_id` in `workspace_path`, ending every session on it. Without

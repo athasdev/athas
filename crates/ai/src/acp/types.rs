@@ -255,6 +255,43 @@ pub struct AgentConfig {
    pub install_download_url: Option<String>,
    pub install_command: Option<String>,
    pub can_install: bool,
+   /// Where the agent's entry comes from: an Athas extension manifest, or only the ACP Registry.
+   #[serde(default)]
+   pub source: AgentSource,
+   /// The agent's ACP Registry entry, when the registry lists it.
+   #[serde(default)]
+   pub registry: Option<RegistryAgentInfo>,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum AgentSource {
+   /// Athas ships a manifest for the agent; a copy on PATH is detected by its binary name.
+   #[default]
+   Extension,
+   /// Only the ACP Registry lists the agent; it runs only from Athas's own install.
+   Registry,
+}
+
+/// What the ACP Registry says about an agent, shown before it is installed.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RegistryAgentInfo {
+   pub id: String,
+   pub version: String,
+   pub repository: Option<String>,
+   pub website: Option<String>,
+   pub authors: Vec<String>,
+   pub license: Option<String>,
+   pub license_url: Option<String>,
+   /// `binary`, `npx` or `uvx`: what Athas installs on this machine.
+   pub distribution: Option<String>,
+   /// Installs and updates come from the registry rather than the extension manifest.
+   pub installs_from_registry: bool,
+   /// Why the registry entry cannot be installed here, when it cannot.
+   pub unavailable_reason: Option<String>,
+   /// The registry's reason for quarantining the agent.
+   pub quarantined: Option<String>,
 }
 
 impl AgentConfig {
@@ -278,6 +315,8 @@ impl AgentConfig {
          install_download_url: None,
          install_command: None,
          can_install: false,
+         source: AgentSource::Extension,
+         registry: None,
       }
    }
 
