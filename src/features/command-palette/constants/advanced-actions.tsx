@@ -7,6 +7,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   ArrowClockwiseIcon,
   ArrowsClockwiseIcon,
+  ArrowsLeftRightIcon,
   HistoryIcon,
   SignOutIcon,
   SparkleIcon,
@@ -91,6 +92,17 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       category: "AI",
       action: () => {
         useBufferStore.getState().actions.openContinuousAgentsBuffer();
+        onClose();
+      },
+    },
+    {
+      id: "ai-open-acp-inspector",
+      label: "AI: Open ACP Inspector",
+      description: "Inspect the JSON-RPC traffic and capabilities of running ACP agents",
+      icon: <ArrowsLeftRightIcon />,
+      category: "AI",
+      action: () => {
+        useBufferStore.getState().actions.openAcpInspectorBuffer();
         onClose();
       },
     },
