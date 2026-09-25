@@ -1,5 +1,5 @@
 use super::{
-   AcpConnection,
+   AcpConnection, file_access,
    terminal_state::AcpTerminalState,
    types::{
       AcpContentBlock, AcpEvent, AcpPermissionToolCall, AcpPlanEntry, AcpPlanEntryPriority,
@@ -872,10 +872,7 @@ impl AthasAcpClient {
             };
             Ok(acp::ReadTextFileResponse::new(result))
          }
-         Err(e) => Err(acp::Error::new(
-            -32603,
-            format!("Failed to read file: {}", e),
-         )),
+         Err(e) => Err(file_access::read_error(&path, &e)),
       }
    }
 

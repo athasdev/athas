@@ -5,6 +5,7 @@ mod bridge_init;
 mod bridge_prompt;
 mod client;
 mod config;
+mod file_access;
 mod process;
 mod terminal_state;
 pub mod types;
