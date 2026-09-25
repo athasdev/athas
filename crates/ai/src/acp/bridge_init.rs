@@ -465,7 +465,7 @@ fn client_capabilities() -> acp::ClientCapabilities {
 }
 
 async fn initialize_connection(connection: Arc<AcpConnection>) -> Result<acp::InitializeResponse> {
-   let init_request = acp::InitializeRequest::new(ProtocolVersion::LATEST)
+   let init_request = acp::InitializeRequest::new(SUPPORTED_PROTOCOL_VERSION)
       .client_capabilities(client_capabilities())
       .client_info(acp::Implementation::new("athas", env!("CARGO_PKG_VERSION")).title("Athas"));
 
@@ -484,6 +484,7 @@ async fn initialize_connection(connection: Arc<AcpConnection>) -> Result<acp::In
    .await
    {
       Ok(Ok(response)) => {
+         check_protocol_version(response.protocol_version)?;
          log::info!("ACP connection initialized successfully");
          Ok(response)
       }
@@ -493,6 +494,22 @@ async fn initialize_connection(connection: Arc<AcpConnection>) -> Result<acp::In
           arguments"
       ),
    }
+}
+
+/// The ACP version Athas speaks. An agent answers `initialize` with the version it will use;
+/// any other version means the two cannot talk, and the spec asks the client to disconnect.
+const SUPPORTED_PROTOCOL_VERSION: ProtocolVersion = ProtocolVersion::V1;
+
+fn check_protocol_version(version: ProtocolVersion) -> Result<()> {
+   if version == SUPPORTED_PROTOCOL_VERSION {
+      return Ok(());
+   }
+   bail!(
+      "The agent uses ACP protocol version {}, but Athas supports version {}. Update the agent or \
+       Athas to a matching version.",
+      version.as_u16(),
+      SUPPORTED_PROTOCOL_VERSION.as_u16()
+   )
 }
 
 /// Opens the session through `session/load`, then `session/resume`, then `session/new`, signing
@@ -770,6 +787,17 @@ fn emit_initial_session_state(
 #[cfg(test)]
 mod tests {
    use super::*;
+
+   #[test]
+   fn accepts_only_the_supported_protocol_version() {
+      assert!(check_protocol_version(ProtocolVersion::V1).is_ok());
+      for unsupported in [0u16, 2, 7] {
+         let error = check_protocol_version(ProtocolVersion::from(unsupported))
+            .expect_err("unsupported versions must fail startup")
+            .to_string();
+         assert!(error.contains(&format!("protocol version {unsupported}")));
+      }
+   }
 
    #[test]
    fn advertises_terminal_sign_in() {

@@ -333,6 +333,9 @@ export class AcpStreamHandler {
     const normalized = message.toLowerCase();
     const details = getAcpStartupErrorDetails(message);
 
+    if (normalized.includes("acp protocol version")) {
+      return `${this.agentId} uses a protocol version Athas does not support. Update the agent or Athas.`;
+    }
     if (normalized.includes("runtime")) {
       return `${this.agentId} could not start because a required runtime is unavailable.`;
     }

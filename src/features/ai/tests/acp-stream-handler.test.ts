@@ -303,6 +303,22 @@ describe("AcpStreamHandler", () => {
     );
   });
 
+  it("explains an agent that speaks an unsupported protocol version", () => {
+    const handler = new AcpStreamHandler("codex", {
+      onChunk: vi.fn(),
+      onComplete: vi.fn(),
+      onError: vi.fn(),
+    }) as unknown as { formatStartupError: (error: unknown) => string };
+
+    expect(
+      handler.formatStartupError(
+        new Error(
+          "codex is currently unavailable: The agent uses ACP protocol version 2, but Athas supports version 1.",
+        ),
+      ),
+    ).toBe("codex uses a protocol version Athas does not support. Update the agent or Athas.");
+  });
+
   it("waits for ACP prompt completion instead of completing after inactivity", () => {
     const { handler, handlers } = createHandler();
 
