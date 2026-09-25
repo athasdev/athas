@@ -95,6 +95,8 @@ export const defaultSettings: Settings = {
   aiAutocompleteCustomModelId: "",
   aiDefaultSessionMode: "",
   aiAgentNotifications: true,
+  aiAgentFinishNotifications: true,
+  aiAgentNotificationSound: false,
   aiFollowAgent: false,
   aiSkills: [],
   mcpServers: [],

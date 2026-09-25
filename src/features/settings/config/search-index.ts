@@ -678,6 +678,22 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["ai", "agent", "notification", "native", "system", "background", "permission"],
   },
   {
+    id: "ai-agent-finish-notifications",
+    tab: "notifications",
+    section: "Activity",
+    label: "Agent Finished Notifications",
+    description: "Also notify when an agent turn finishes or fails",
+    keywords: ["ai", "agent", "notification", "finished", "complete", "error", "done"],
+  },
+  {
+    id: "ai-agent-notification-sound",
+    tab: "notifications",
+    section: "Activity",
+    label: "Agent Notification Sound",
+    description: "Play the system sound with agent notifications",
+    keywords: ["ai", "agent", "notification", "sound", "audio", "alert"],
+  },
+  {
     id: "ai-mcp-servers",
     tab: "ai",
     section: "MCP Servers",

@@ -419,6 +419,10 @@ function normalizeAISettings(settings: Settings): Settings {
   normalizedSettings.aiAutocompleteCustomModelId =
     normalizedSettings.aiAutocompleteCustomModelId?.trim() || "";
   normalizedSettings.aiAgentNotifications = normalizedSettings.aiAgentNotifications === true;
+  normalizedSettings.aiAgentFinishNotifications =
+    normalizedSettings.aiAgentFinishNotifications !== false;
+  normalizedSettings.aiAgentNotificationSound =
+    normalizedSettings.aiAgentNotificationSound === true;
   normalizedSettings.aiFollowAgent = normalizedSettings.aiFollowAgent === true;
   normalizedSettings.aiSkills = normalizeAISkills(normalizedSettings.aiSkills);
   normalizedSettings.mcpServers = normalizeMcpServers(normalizedSettings.mcpServers);

@@ -123,6 +123,9 @@ export interface Settings {
   aiAutocompleteCustomModelId: string;
   aiDefaultSessionMode: string;
   aiAgentNotifications: boolean;
+  /** Notify when an agent turn finishes or fails, not only when it waits on the user. */
+  aiAgentFinishNotifications: boolean;
+  aiAgentNotificationSound: boolean;
   /** Whether new agent chats start with "Follow agent" on. */
   aiFollowAgent: boolean;
   aiSkills: AIChatSkill[];

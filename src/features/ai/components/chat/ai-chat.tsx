@@ -100,6 +100,7 @@ import {
 } from "@/features/ai/stores/acp-questions.store";
 import type { AcpElicitationResponse } from "@/features/ai/lib/acp-elicitation";
 import { AcpPermissionPrompt, type AcpPermissionRequest } from "./acp-permission-prompt";
+import { markAgentChatVisible } from "@/features/ai/lib/visible-agent-chats";
 import { getAcpPermissionPreview } from "@/features/ai/lib/acp-permission-preview";
 import { AcpQuestionPrompt } from "./acp-question-prompt";
 import { AcpUrlQuestionPrompt } from "./acp-url-question-prompt";
@@ -149,6 +150,10 @@ const AIChat = memo(function AIChat({
     composerContext.inputProps;
   const effectiveChatId = chatId ?? chatState.currentChatId;
   const previousChatId = useRef(effectiveChatId);
+  useEffect(() => {
+    if (!effectiveChatId) return;
+    return markAgentChatVisible(effectiveChatId);
+  }, [effectiveChatId]);
   const currentChat = useMemo(
     () => chatState.chats.find((chat) => chat.id === effectiveChatId),
     [chatState.chats, effectiveChatId],
@@ -290,13 +295,24 @@ const AIChat = memo(function AIChat({
             }
             break;
           }
-          case "auth_required":
+          case "auth_required": {
             useAcpAuthStore.getState().actions.require({
               agentId: payload.agentId,
               sessionId: payload.sessionId,
               methods: payload.methods,
             });
+            const authChatId =
+              store.chats.find((item) => item.acpSessionId === payload.sessionId)?.id ??
+              store.currentChatId;
+            if (authChatId) {
+              void sendAgentNativeNotification({
+                kind: "auth",
+                dedupeId: `${payload.agentId}:${payload.sessionId ?? "startup"}`,
+                chatId: authChatId,
+              });
+            }
             break;
+          }
           case "elicitation_request":
             useAcpQuestionsStore.getState().actions.add({
               requestId: payload.requestId,
