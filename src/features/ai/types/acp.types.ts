@@ -212,6 +212,8 @@ export type AcpEvent =
       toolName: string;
       toolId: string;
       input: unknown;
+      output?: unknown;
+      rawOutput?: unknown;
       kind: AcpToolKind;
       status: AcpToolCallStatus;
       locations: AcpToolCallLocation[];
@@ -223,6 +225,7 @@ export type AcpEvent =
       toolName?: string | null;
       input?: unknown;
       output?: unknown;
+      rawOutput?: unknown;
       kind?: AcpToolKind | null;
       status?: AcpToolCallStatus | null;
       locations?: AcpToolCallLocation[] | null;

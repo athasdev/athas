@@ -47,4 +47,61 @@ describe("tool call state", () => {
     const byName = markToolCallComplete(calls, "Read", undefined, undefined, "boom");
     expect(byName[1]).toMatchObject({ isComplete: true, status: "failed", error: "boom" });
   });
+
+  const diff = [{ type: "diff", path: "/repo/a.ts", oldText: "a", newText: "b" }];
+
+  it("keeps a diff shown earlier when the completion carries no content", () => {
+    const started = createToolCall("Edit", null, "call-1", "edit", "in_progress", [], diff);
+    const updated = updateToolCall([started], { id: "call-1", status: "completed" });
+    const completed = markToolCallComplete(updated, "Edit", "call-1", undefined);
+
+    expect(completed[0].output).toEqual(diff);
+    expect(completed[0].isComplete).toBe(true);
+  });
+
+  it("shows content over raw output and falls back to raw output without content", () => {
+    const withBoth = createToolCall("Edit", null, "call-1", "edit", "in_progress", [], diff, {
+      ok: true,
+    });
+    expect(withBoth.output).toEqual(diff);
+    expect(withBoth.rawOutput).toEqual({ ok: true });
+
+    const rawOnly = createToolCall("Bash", null, "call-2", "execute", "in_progress", [], null, {
+      stdout: "hi",
+    });
+    expect(rawOnly.output).toEqual({ stdout: "hi" });
+  });
+
+  it("does not let a later raw output replace content", () => {
+    const started = createToolCall("Edit", null, "call-1", "edit", "in_progress", [], diff);
+    const updated = updateToolCall([started], {
+      id: "call-1",
+      output: null,
+      rawOutput: { ok: true },
+    });
+
+    expect(updated[0].output).toEqual(diff);
+    expect(updated[0].rawOutput).toEqual({ ok: true });
+  });
+
+  it("replaces content when an update carries new content and clears it when empty", () => {
+    const started = createToolCall("Edit", null, "call-1", "edit", "in_progress", [], diff);
+    const next = [{ type: "content", content: { type: "text", text: "done" } }];
+
+    const replaced = updateToolCall([started], { id: "call-1", output: next });
+    expect(replaced[0].output).toEqual(next);
+
+    const cleared = updateToolCall(replaced, { id: "call-1", output: [] });
+    expect(cleared[0].output).toBeUndefined();
+  });
+
+  it("upgrades raw output to content once the agent sends content", () => {
+    const started = createToolCall("Bash", null, "call-1", "execute", "in_progress", [], null, {
+      stdout: "partial",
+    });
+    const terminal = [{ type: "terminal", terminalId: "t-1" }];
+
+    const updated = updateToolCall([started], { id: "call-1", output: terminal });
+    expect(updated[0].output).toEqual(terminal);
+  });
 });

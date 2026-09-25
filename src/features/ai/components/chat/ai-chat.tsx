@@ -937,6 +937,8 @@ details: ${errorDetails || mainError}
             event.kind,
             event.status,
             event.locations,
+            event.output,
+            event.rawOutput,
           );
           void snapshotToolEdit(toolCall);
           updateStreamingAssistantMessage(
@@ -962,6 +964,7 @@ details: ${errorDetails || mainError}
                 name: event.toolName,
                 input: event.input,
                 output: event.output,
+                rawOutput: event.rawOutput,
                 error: event.error,
                 kind: event.kind,
                 status: event.status,

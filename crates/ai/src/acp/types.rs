@@ -430,6 +430,10 @@ pub enum AcpEvent {
       tool_name: String,
       tool_id: String,
       input: serde_json::Value,
+      /// The call's ACP `content`, when it has any.
+      output: Option<serde_json::Value>,
+      /// The agent's `rawOutput`, kept apart from the displayed content.
+      raw_output: Option<serde_json::Value>,
       kind: AcpToolKind,
       status: AcpToolCallStatus,
       locations: Vec<AcpToolCallLocation>,
@@ -441,7 +445,10 @@ pub enum AcpEvent {
       tool_id: String,
       tool_name: Option<String>,
       input: Option<serde_json::Value>,
+      /// The call's ACP `content` when the update carries it; an empty array
+      /// means the agent cleared it.
       output: Option<serde_json::Value>,
+      raw_output: Option<serde_json::Value>,
       kind: Option<AcpToolKind>,
       status: Option<AcpToolCallStatus>,
       locations: Option<Vec<AcpToolCallLocation>>,

@@ -222,19 +222,90 @@ impl AthasAcpClient {
       }
    }
 
+   /// Serializes ACP tool call content for the frontend. An empty collection
+   /// stays an empty array so an update can clear previously shown content.
    fn map_tool_content(content: Vec<acp::ToolCallContent>) -> Option<serde_json::Value> {
-      if content.is_empty() {
-         return None;
-      }
-
       serde_json::to_value(content).ok()
    }
 
-   fn map_tool_output(
-      content: Vec<acp::ToolCallContent>,
-      raw_output: Option<serde_json::Value>,
-   ) -> Option<serde_json::Value> {
-      raw_output.or_else(|| Self::map_tool_content(content))
+   fn failure_message(status: acp::ToolCallStatus) -> Option<String> {
+      matches!(status, acp::ToolCallStatus::Failed).then(|| "Tool call failed".to_string())
+   }
+
+   /// Events for a new `tool_call`. The call's content (diffs, terminals,
+   /// text) is the displayed output; `rawOutput` travels separately so the
+   /// frontend can fall back to it only when there is no content.
+   fn tool_call_events(session_id: String, tool_call: acp::ToolCall) -> Vec<AcpEvent> {
+      let tool_id = tool_call.tool_call_id.to_string();
+      let status = tool_call.status;
+      let output = if tool_call.content.is_empty() {
+         None
+      } else {
+         Self::map_tool_content(tool_call.content)
+      };
+
+      let mut events = vec![AcpEvent::ToolStart {
+         session_id: session_id.clone(),
+         tool_name: tool_call.title,
+         tool_id: tool_id.clone(),
+         input: tool_call.raw_input.unwrap_or(serde_json::Value::Null),
+         output: output.clone(),
+         raw_output: tool_call.raw_output,
+         kind: Self::map_tool_kind(tool_call.kind),
+         status: Self::map_tool_status(status),
+         locations: Self::map_tool_locations(tool_call.locations),
+      }];
+
+      if matches!(
+         status,
+         acp::ToolCallStatus::Completed | acp::ToolCallStatus::Failed
+      ) {
+         events.push(AcpEvent::ToolComplete {
+            session_id,
+            tool_id,
+            success: matches!(status, acp::ToolCallStatus::Completed),
+            output,
+            error: Self::failure_message(status),
+         });
+      }
+
+      events
+   }
+
+   /// Events for a `tool_call_update`. Per ACP, only fields that are present
+   /// change the call; `content`, when present, replaces the whole collection.
+   fn tool_call_update_events(session_id: String, update: acp::ToolCallUpdate) -> Vec<AcpEvent> {
+      let tool_id = update.tool_call_id.to_string();
+      let fields = update.fields;
+      let status = fields.status;
+      let output = fields.content.and_then(Self::map_tool_content);
+      let error = status.and_then(Self::failure_message);
+
+      let mut events = vec![AcpEvent::ToolUpdate {
+         session_id: session_id.clone(),
+         tool_id: tool_id.clone(),
+         tool_name: fields.title,
+         input: fields.raw_input,
+         output: output.clone(),
+         raw_output: fields.raw_output,
+         kind: fields.kind.map(Self::map_tool_kind),
+         status: status.map(Self::map_tool_status),
+         locations: fields.locations.map(Self::map_tool_locations),
+         error: error.clone(),
+      }];
+
+      if let Some(status @ (acp::ToolCallStatus::Completed | acp::ToolCallStatus::Failed)) = status
+      {
+         events.push(AcpEvent::ToolComplete {
+            session_id,
+            tool_id,
+            success: matches!(status, acp::ToolCallStatus::Completed),
+            output,
+            error,
+         });
+      }
+
+      events
    }
 
    fn map_tool_kind(kind: acp::ToolKind) -> AcpToolKind {
@@ -589,96 +660,13 @@ impl AthasAcpClient {
             });
          }
          acp::SessionUpdate::ToolCall(tool_call) => {
-            let tool_id = tool_call.tool_call_id.to_string();
-            let tool_name = tool_call.title.clone();
-            let status = tool_call.status;
-            let kind = tool_call.kind;
-            let raw_output = tool_call.raw_output.clone();
-            let content = tool_call.content.clone();
-
-            // Prefer raw_input; fallback to content serialization for display/debugging.
-            let input = tool_call.raw_input.clone().unwrap_or_else(|| {
-               if tool_call.content.is_empty() {
-                  serde_json::Value::Null
-               } else {
-                  serde_json::to_value(&tool_call.content).unwrap_or(serde_json::Value::Null)
-               }
-            });
-
-            self.emit_event(AcpEvent::ToolStart {
-               session_id: session_id.clone(),
-               tool_name,
-               tool_id: tool_id.clone(),
-               input,
-               kind: Self::map_tool_kind(kind),
-               status: Self::map_tool_status(status),
-               locations: Self::map_tool_locations(tool_call.locations),
-            });
-
-            if matches!(
-               status,
-               acp::ToolCallStatus::Completed | acp::ToolCallStatus::Failed
-            ) {
-               self.emit_event(AcpEvent::ToolComplete {
-                  session_id,
-                  tool_id,
-                  success: matches!(status, acp::ToolCallStatus::Completed),
-                  output: Self::map_tool_output(content, raw_output),
-                  error: if matches!(status, acp::ToolCallStatus::Failed) {
-                     Some("Tool call failed".to_string())
-                  } else {
-                     None
-                  },
-               });
+            for event in Self::tool_call_events(session_id, tool_call) {
+               self.emit_event(event);
             }
          }
          acp::SessionUpdate::ToolCallUpdate(update) => {
-            let status = update.fields.status;
-            let raw_output = update.fields.raw_output.clone();
-            let content = update.fields.content.clone().unwrap_or_default();
-            let output = Self::map_tool_output(content.clone(), raw_output.clone());
-            let error = if matches!(status, Some(acp::ToolCallStatus::Failed)) {
-               Some("Tool call failed".to_string())
-            } else {
-               None
-            };
-
-            self.emit_event(AcpEvent::ToolUpdate {
-               session_id: session_id.clone(),
-               tool_id: update.tool_call_id.to_string(),
-               tool_name: update.fields.title.clone(),
-               input: update.fields.raw_input.clone(),
-               output: output.clone(),
-               kind: update.fields.kind.map(Self::map_tool_kind),
-               status: status.map(Self::map_tool_status),
-               locations: update
-                  .fields
-                  .locations
-                  .clone()
-                  .map(Self::map_tool_locations),
-               error: error.clone(),
-            });
-
-            match status {
-               Some(acp::ToolCallStatus::Completed) => {
-                  self.emit_event(AcpEvent::ToolComplete {
-                     session_id,
-                     tool_id: update.tool_call_id.to_string(),
-                     success: true,
-                     output,
-                     error: None,
-                  });
-               }
-               Some(acp::ToolCallStatus::Failed) => {
-                  self.emit_event(AcpEvent::ToolComplete {
-                     session_id,
-                     tool_id: update.tool_call_id.to_string(),
-                     success: false,
-                     output,
-                     error,
-                  });
-               }
-               _ => {}
+            for event in Self::tool_call_update_events(session_id, update) {
+               self.emit_event(event);
             }
          }
          acp::SessionUpdate::CurrentModeUpdate(update) => {
@@ -1117,8 +1105,116 @@ mod tests {
       AthasAcpClient, ClientResponders, PermissionResponse, SessionConfigOptionKind, acp,
       elicitation_response,
    };
+   use crate::acp::types::AcpEvent;
    use serde_json::json;
    use tokio::sync::oneshot;
+
+   fn diff_content() -> acp::ToolCallContent {
+      acp::ToolCallContent::Diff(acp::Diff::new("/repo/a.txt", "new").old_text("old".to_string()))
+   }
+
+   #[test]
+   fn tool_call_start_carries_content_as_output_and_raw_output_apart() {
+      let tool_call = acp::ToolCall::new("call-1", "Edit a.txt")
+         .content(vec![diff_content()])
+         .raw_output(json!({ "ok": true }));
+
+      let events = AthasAcpClient::tool_call_events("s".to_string(), tool_call);
+      let [
+         AcpEvent::ToolStart {
+            input,
+            output,
+            raw_output,
+            ..
+         },
+      ] = events.as_slice()
+      else {
+         panic!("expected a single tool start, got {events:?}");
+      };
+
+      assert_eq!(input, &serde_json::Value::Null);
+      let output = output.as_ref().expect("content should be the output");
+      assert_eq!(output[0]["type"], "diff");
+      assert_eq!(output[0]["path"], "/repo/a.txt");
+      assert_eq!(raw_output, &Some(json!({ "ok": true })));
+   }
+
+   #[test]
+   fn completed_tool_call_keeps_content_when_raw_output_is_present() {
+      let tool_call = acp::ToolCall::new("call-2", "Edit a.txt")
+         .status(acp::ToolCallStatus::Completed)
+         .content(vec![diff_content()])
+         .raw_output(json!("done"));
+
+      let events = AthasAcpClient::tool_call_events("s".to_string(), tool_call);
+      let Some(AcpEvent::ToolComplete {
+         output, success, ..
+      }) = events.last()
+      else {
+         panic!("expected a completion, got {events:?}");
+      };
+
+      assert!(success);
+      assert_eq!(output.as_ref().unwrap()[0]["type"], "diff");
+   }
+
+   #[test]
+   fn tool_call_update_separates_content_from_raw_output() {
+      let update = acp::ToolCallUpdate::new(
+         "call-3",
+         acp::ToolCallUpdateFields::new()
+            .status(acp::ToolCallStatus::Completed)
+            .content(vec![diff_content()])
+            .raw_output(json!({ "stdout": "x" })),
+      );
+
+      let events = AthasAcpClient::tool_call_update_events("s".to_string(), update);
+      let [
+         AcpEvent::ToolUpdate {
+            output: update_output,
+            raw_output,
+            ..
+         },
+         AcpEvent::ToolComplete {
+            output: complete_output,
+            ..
+         },
+      ] = events.as_slice()
+      else {
+         panic!("expected an update and a completion, got {events:?}");
+      };
+
+      assert_eq!(update_output.as_ref().unwrap()[0]["type"], "diff");
+      assert_eq!(complete_output, update_output);
+      assert_eq!(raw_output, &Some(json!({ "stdout": "x" })));
+   }
+
+   #[test]
+   fn tool_call_update_distinguishes_missing_and_cleared_content() {
+      let missing = AthasAcpClient::tool_call_update_events(
+         "s".to_string(),
+         acp::ToolCallUpdate::new(
+            "call-4",
+            acp::ToolCallUpdateFields::new().status(acp::ToolCallStatus::Completed),
+         ),
+      );
+      let Some(AcpEvent::ToolComplete { output, .. }) = missing.last() else {
+         panic!("expected a completion");
+      };
+      assert_eq!(output, &None);
+
+      let cleared = AthasAcpClient::tool_call_update_events(
+         "s".to_string(),
+         acp::ToolCallUpdate::new(
+            "call-4",
+            acp::ToolCallUpdateFields::new().content(Vec::new()),
+         ),
+      );
+      let [AcpEvent::ToolUpdate { output, .. }] = cleared.as_slice() else {
+         panic!("expected a single update");
+      };
+      assert_eq!(output, &Some(json!([])));
+   }
 
    #[test]
    fn delivers_answers_only_to_requests_still_waiting() {

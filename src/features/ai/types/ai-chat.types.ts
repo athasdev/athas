@@ -23,7 +23,10 @@ export interface ToolCall {
   id?: string;
   name: string;
   input: any;
+  /** What the transcript shows: ACP content, or raw output when there is none. */
   output?: any;
+  /** The agent's ACP `rawOutput`, kept so later content can take precedence. */
+  rawOutput?: unknown;
   error?: string;
   kind?: AcpToolKind;
   status?: AcpToolCallStatus;
