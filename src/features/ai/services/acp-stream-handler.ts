@@ -961,6 +961,22 @@ export class AcpStreamHandler {
   }
 
   /**
+   * Restarts the agent process serving `agentId` in `workspacePath` (the ACP inspector's
+   * "Restart agent"). In the current workspace it starts again right away; elsewhere it starts
+   * when a chat there next needs it.
+   */
+  static async restartAgentProcess(agentId: string, workspacePath: string | null): Promise<void> {
+    for (const handler of AcpStreamHandler.activeHandlers.values()) {
+      if (handler.agentId === agentId) handler.forceStop();
+    }
+    await invoke("stop_acp_agent", { agentId, workspacePath });
+    const normalize = (path: string | null) => path?.replace(/[\\/]+$/, "") || null;
+    if (normalize(AcpStreamHandler.currentWorkspacePath()) === normalize(workspacePath)) {
+      await AcpStreamHandler.warmup(agentId);
+    }
+  }
+
+  /**
    * Stops the agent process for `agentId` in the current workspace. Every chat on it ends its
    * turn; other agents keep running.
    */

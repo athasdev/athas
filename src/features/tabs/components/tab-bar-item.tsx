@@ -3,6 +3,7 @@ import { AgentSessionIcon } from "@/features/ai/components/icons/agent-session-i
 import {
   ActivityIcon,
   ArrowsClockwiseIcon,
+  ArrowsLeftRightIcon,
   ChatBubbleTextIcon,
   DatabaseIcon,
   GitBranchIcon,
@@ -232,6 +233,8 @@ const TabBarItem = memo(function TabBarItem({
               <SearchIcon className="text-subtle-foreground" />
             ) : buffer.type === "continuousAgents" ? (
               <ArrowsClockwiseIcon className="text-subtle-foreground" />
+            ) : buffer.type === "acpInspector" ? (
+              <ArrowsLeftRightIcon className="text-subtle-foreground" />
             ) : buffer.type === "workspaces" ? (
               <GridIcon />
             ) : buffer.type === "settings" ? (
