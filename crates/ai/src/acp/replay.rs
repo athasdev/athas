@@ -9,7 +9,14 @@
 //! precede, so every replayed update passes through here before the load returns.
 
 use super::types::AcpEvent;
-use std::{collections::HashMap, sync::Mutex};
+use std::{
+   collections::{HashMap, VecDeque},
+   sync::Mutex,
+};
+
+/// How many failed loads a connection keeps dropping updates for. Agents stop sending for a
+/// failed load soon after; the oldest ones are forgotten so the list does not grow forever.
+const MAX_DISCARDED_SESSIONS: usize = 256;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum ReplayMode {
@@ -32,6 +39,8 @@ struct Replay {
 #[derive(Debug, Default)]
 pub(super) struct ReplayRouter {
    sessions: Mutex<HashMap<String, Replay>>,
+   /// Discarded sessions, oldest first.
+   discarded: Mutex<VecDeque<String>>,
 }
 
 impl ReplayRouter {
@@ -62,9 +71,33 @@ impl ReplayRouter {
          .unwrap_or_default()
    }
 
-   /// The load failed: keep dropping the session's updates.
+   /// The load failed: keep dropping the session's updates, for the most recent failed loads.
    pub fn discard(&self, session_id: &str) {
-      self.begin(session_id, ReplayMode::Discard);
+      let mut sessions = self.sessions();
+      sessions.insert(
+         session_id.to_string(),
+         Replay {
+            mode: ReplayMode::Discard,
+            collected: Vec::new(),
+         },
+      );
+      let mut discarded = self
+         .discarded
+         .lock()
+         .unwrap_or_else(|poisoned| poisoned.into_inner());
+      discarded.retain(|id| id != session_id);
+      discarded.push_back(session_id.to_string());
+      while discarded.len() > MAX_DISCARDED_SESSIONS {
+         let Some(oldest) = discarded.pop_front() else {
+            break;
+         };
+         if sessions
+            .get(&oldest)
+            .is_some_and(|replay| replay.mode == ReplayMode::Discard)
+         {
+            sessions.remove(&oldest);
+         }
+      }
    }
 
    /// Returns the event when it should be emitted now; replayed history is dropped or collected.
@@ -211,5 +244,24 @@ mod tests {
       // Loading it again later routes it afresh.
       router.begin("s1", ReplayMode::Collect);
       assert!(router.route(current_mode("s1")).is_some());
+   }
+
+   #[test]
+   fn only_the_most_recent_failed_loads_are_remembered() {
+      let router = ReplayRouter::default();
+      router.begin("loading", ReplayMode::Suppress);
+      for index in 0..=MAX_DISCARDED_SESSIONS {
+         router.discard(&format!("failed-{index}"));
+      }
+
+      assert!(router.route(current_mode("failed-0")).is_some());
+      assert!(router.route(current_mode("failed-1")).is_none());
+      assert!(
+         router
+            .route(current_mode(&format!("failed-{MAX_DISCARDED_SESSIONS}")))
+            .is_none()
+      );
+      assert_eq!(router.sessions().len(), MAX_DISCARDED_SESSIONS + 1);
+      assert!(router.route(message("loading", "replay")).is_none());
    }
 }
