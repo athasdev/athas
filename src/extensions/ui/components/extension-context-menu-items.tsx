@@ -30,6 +30,7 @@ export function buildExtensionContextMenuItems({
 }): MenuItem[] {
   if (!extension) return [];
 
+  // Activation and selection are separate for themes and icon themes.
   const items: MenuItem[] = [];
   const isInstalling = actions.isInstalling(extension);
   const hasUpdate = actions.hasUpdate(extension);
@@ -41,6 +42,7 @@ export function buildExtensionContextMenuItems({
   const primaryActionLabel = getPrimaryActionLabel(extension);
 
   if (extension.isBundled) {
+    // Bundled integrations are not user-removable or user-disableable.
     items.push({
       id: "built-in",
       label: "Built-in",
