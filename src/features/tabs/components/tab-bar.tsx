@@ -1,7 +1,7 @@
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { ArrowsInIcon, ArrowsOutIcon, SidebarIcon } from "@/ui/icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -24,10 +24,12 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import {
+  scrollTabIntoStrip,
   SortableTab,
   TabBarSurface,
   TabDndContext,
   TabDragOverlay,
+  TabStrip,
   useTabDragClickGuard,
 } from "@/ui/tab-bar";
 import { getRelativePath } from "@/utils/path-helpers";
@@ -118,6 +120,7 @@ const TabBar = ({
   const [srAnnouncement, setSrAnnouncement] = useState<string>("");
 
   const tabBarRef = useRef<HTMLDivElement>(null);
+  const tabStripRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
   const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -166,7 +169,7 @@ const TabBar = ({
   }, [isPaneLocked, paneId, setPaneLocked]);
 
   const canScrollTabsHorizontally = useCallback(() => {
-    const container = tabBarRef.current;
+    const container = tabStripRef.current;
     if (!container) return false;
 
     return container.scrollWidth > container.clientWidth + 1;
@@ -175,7 +178,7 @@ const TabBar = ({
   // Optional wheel-to-horizontal scrolling for overflowing tab strips.
   const handleWheel = useCallback(
     (e: React.WheelEvent<HTMLDivElement>) => {
-      const container = tabBarRef.current;
+      const container = tabStripRef.current;
       if (!container) return;
       if (!horizontalTabScroll) return;
       if (draggedBufferId) return;
@@ -277,27 +280,14 @@ const TabBar = ({
     }
   }, [buffers, maxOpenTabs, activeBufferId, handleTabClose]);
 
-  // Auto-scroll active tab into view
-  useEffect(() => {
+  // Bring the active tab into view whenever it changes or a tab opens, measured against the
+  // scrolling strip rather than the whole bar, whose trailing actions can cover a tab.
+  useLayoutEffect(() => {
     const activeIndex = activeBufferId ? (sortedBufferIndexById.get(activeBufferId) ?? -1) : -1;
-    if (activeIndex !== -1 && tabRefs.current[activeIndex] && tabBarRef.current) {
-      const activeTab = tabRefs.current[activeIndex];
-      const container = tabBarRef.current;
-
-      if (activeTab) {
-        const tabRect = activeTab.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-
-        // Check if tab is out of view
-        if (tabRect.left < containerRect.left || tabRect.right > containerRect.right) {
-          activeTab.scrollIntoView({
-            behavior: "smooth",
-            block: "nearest",
-            inline: "center",
-          });
-        }
-      }
-    }
+    if (activeIndex === -1) return;
+    const activeTab = tabRefs.current[activeIndex];
+    const strip = tabStripRef.current;
+    if (activeTab && strip) scrollTabIntoStrip(strip, activeTab);
   }, [activeBufferId, sortedBufferIndexById]);
 
   const handleDoubleClick = useCallback(
@@ -634,7 +624,7 @@ const TabBar = ({
         >
           {!isBottomPane && <TabHistoryNavigation />}
           <SortableContext items={sortedBufferIds} strategy={horizontalListSortingStrategy}>
-            <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-none">
+            <TabStrip ref={tabStripRef}>
               {sortedBuffers.map((buffer, index) => (
                 <SortableTab
                   key={buffer.id}
@@ -733,7 +723,7 @@ const TabBar = ({
                   )}
                 </SortableTab>
               ))}
-            </div>
+            </TabStrip>
           </SortableContext>
 
           {/* Close split shows on hover; new tab and full screen stay visible at the end of the row

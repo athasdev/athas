@@ -267,6 +267,43 @@ export const TabItem = forwardRef<HTMLDivElement, TabItemProps>(function TabItem
   );
 });
 
+/** How far the edge fade reaches into an overflowing tab strip; matches `scroll-fade-6`. */
+const TAB_STRIP_FADE_WIDTH = 24;
+
+/**
+ * Scrolls `tab` into its strip so it clears the edge fades, or does nothing when it is already
+ * fully in view. Only the strip scrolls; the page and panes around it stay put.
+ */
+export function scrollTabIntoStrip(strip: HTMLElement, tab: HTMLElement) {
+  const stripRect = strip.getBoundingClientRect();
+  const tabRect = tab.getBoundingClientRect();
+  const start = tabRect.left - stripRect.left - TAB_STRIP_FADE_WIDTH;
+  const end = tabRect.right - stripRect.right + TAB_STRIP_FADE_WIDTH;
+  const delta = start < 0 ? start : end > 0 ? end : 0;
+  if (delta === 0) return;
+  strip.scrollTo({ left: strip.scrollLeft + delta, behavior: "smooth" });
+}
+
+/**
+ * The scrolling row that holds a tab bar's tabs. An edge fades out while more tabs are hidden
+ * beyond it, so a clipped tab reads as "there is more" instead of as a cut-off label.
+ */
+export const TabStrip = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+  function TabStrip({ className, ...props }, ref) {
+    return (
+      <div
+        ref={ref}
+        data-slot="tab-strip"
+        className={cn(
+          "scrollbar-none scroll-fade-x scroll-fade-6 flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-x-none",
+          className,
+        )}
+        {...props}
+      />
+    );
+  },
+);
+
 export const TabBarSurface = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   function TabBarSurface({ className, ...props }, ref) {
     return (
