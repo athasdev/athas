@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
+import { buildAcpPrompt } from "@/features/ai/lib/acp-prompt";
 import { acpHistoryToMessages } from "@/features/ai/lib/acp-session-history";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 
@@ -186,6 +187,30 @@ describe("acpHistoryToMessages", () => {
     expect(messages[1].toolCalls?.[0].terminals).toEqual({
       t1: { output: "a.txt\n", truncated: false, exit: { exitCode: 0, signal: null } },
     });
+  });
+
+  it("shows only the user's words of prompts Athas sent with its context", () => {
+    const [prompt] = buildAcpPrompt(
+      "Fix the build\n\nIt fails on CI.",
+      { projectRoot: "/work", agentId: "gemini-cli" },
+      { embeddedContext: true },
+    );
+    if (prompt.type !== "text") throw new Error("expected a text block");
+    expect(prompt.text).toContain("Working directory: /work");
+    const half = Math.floor(prompt.text.length / 2);
+
+    const messages = convert([
+      user(prompt.text.slice(0, half)),
+      user(prompt.text.slice(half)),
+      agent("On it."),
+      user("/review"),
+      agent("Reviewed."),
+    ]);
+
+    expect(messages.filter((message) => message.role === "user").map((m) => m.content)).toEqual([
+      "Fix the build\n\nIt fails on CI.",
+      "/review",
+    ]);
   });
 
   it("returns no messages for an empty replay", () => {

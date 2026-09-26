@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { getAcpMimeType } from "@/features/ai/lib/acp-mime-type";
-import { buildAcpPrompt } from "@/features/ai/lib/acp-prompt";
+import { buildAcpPrompt, stripAcpContextPreamble } from "@/features/ai/lib/acp-prompt";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 
 const selection = {
@@ -78,5 +78,14 @@ describe("buildAcpPrompt", () => {
     expect(buildAcpPrompt("/review", context, { embeddedContext: true })).toEqual([
       { type: "text", text: "/review" },
     ]);
+  });
+});
+
+describe("stripAcpContextPreamble", () => {
+  it("leaves the user's words of a built prompt and text without context alone", () => {
+    const [prompt] = buildAcpPrompt("Explain this", context, { embeddedContext: false });
+    if (prompt.type !== "text") throw new Error("expected a text block");
+    expect(stripAcpContextPreamble(prompt.text)).toBe("Explain this");
+    expect(stripAcpContextPreamble("Plain message")).toBe("Plain message");
   });
 });

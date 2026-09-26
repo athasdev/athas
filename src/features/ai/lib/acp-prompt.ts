@@ -21,6 +21,17 @@ function withMimeType<T extends object>(block: T, path: string): T & { mimeType?
 }
 
 /**
+ * The user's own words in the text of a prompt {@link buildAcpPrompt} made: the context it puts
+ * first always ends with the follow-up actions instruction and a blank line, so everything up to
+ * there is dropped. Text without that preamble comes back unchanged.
+ */
+export function stripAcpContextPreamble(text: string): string {
+  const end = `${getFollowUpActionsInstruction()}\n\n`;
+  const index = text.indexOf(end);
+  return index < 0 ? text : text.slice(index + end.length);
+}
+
+/**
  * The ACP prompt for a user message and the chat's context. The context is described in the
  * leading text block; files and editor selections go as their own blocks: embedded resources
  * when the agent takes them, links to the files otherwise. Images come last.

@@ -1,5 +1,6 @@
 import { startAssistantResponseContinuation } from "./assistant-response";
 import { createToolCall, markToolCallComplete, updateToolCall } from "./tool-call-state";
+import { stripAcpContextPreamble } from "./acp-prompt";
 import { appendAcpTerminalOutput, getAcpTerminalOutputs } from "./acp-terminal-output";
 import type { AcpEvent, AcpTerminalSnapshot } from "@/features/ai/types/acp.types";
 import type { Message, ToolCall } from "@/features/ai/types/ai-chat.types";
@@ -225,6 +226,11 @@ export function acpHistoryToMessages(events: AcpEvent[], options: HistoryOptions
         break;
       }
     }
+  }
+
+  // A prompt Athas sent carries the chat's context before the user's words; show only the words.
+  for (const message of messages) {
+    if (message.role === "user") message.content = stripAcpContextPreamble(message.content);
   }
 
   // Replayed terminals keep their output with the calls that show them.
